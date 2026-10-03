@@ -56,7 +56,7 @@ Run the steps in this order, as
 `.qfai/assistant/rule/shared-skill-operating-baseline.md#a-parent-skill-invoked-by-name`
 states: read `.qfai/assistant/step/<id>/STEP.md` for the current step only, run
 it, then move to the next. A work order runs the steps it names, as
-`.qfai/assistant/rule/shared-skill-operating-baseline.md#a-work-orders-steps`
+`.qfai/assistant/rule/shared-skill-operating-baseline.md#a-plans-steps`
 states.
 
 | Step                   | File                                                | Runs                                                  |

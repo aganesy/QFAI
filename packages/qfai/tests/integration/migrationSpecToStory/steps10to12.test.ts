@@ -25,7 +25,7 @@ import { ensureRootGitignoreEntries } from "../../../src/core/init/rootGitignore
 import { collectTemplateFiles } from "../../../src/core/fs/templateCopy.js";
 import { loadConfig, readWorkflowMode } from "../../../src/core/config.js";
 import { validateProject } from "../../../src/core/validate.js";
-import { checkPlans } from "../../../src/core/workflow/plans.js";
+import { allPlanRefusals } from "../../../src/core/workflow/plans.js";
 import { isRecord } from "../../../src/core/workflow/parse.js";
 import { runStep } from "../../../src/migration/specToStory/harness.js";
 import { getInitAssetsDir } from "../../../src/shared/assets.js";
@@ -519,7 +519,7 @@ describe("migration steps 11 and 12: the free-text entry", () => {
   });
 
   // QFAI:AC-0004-0013-03
-  it("passes on a migrated project without writing, and workflow start is not refused", async () => {
+  it("passes on a migrated project without writing, and every plan loads", async () => {
     // QFAI:EX-0004-0013-05
     const root = await clone(migrated11);
     const before = await fingerprint(root);
@@ -530,7 +530,7 @@ describe("migration steps 11 and 12: the free-text entry", () => {
     expect(await lstat(path.join(root, ".qfai/run")).catch(() => null)).toBeNull();
     const loaded = await loadConfig(root);
     expect(readWorkflowMode(loaded.document)).toBe("active");
-    expect((await checkPlans(root, loaded.config)).cause).toBeUndefined();
+    expect(await allPlanRefusals(root, loaded.config)).toEqual([]);
   });
 
   // QFAI:AC-0004-0013-04

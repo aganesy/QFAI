@@ -65,7 +65,7 @@ is in place.
 
 Inside a workflow run, what the work order's `settled` field records is not
 asked again
-(`.qfai/assistant/rule/shared-skill-operating-baseline.md#a-work-orders-steps`),
+(`.qfai/assistant/rule/shared-skill-operating-baseline.md#a-plans-steps`),
 and the interview covers only the product scope it leaves unresolved.
 
 ## Writes that are not authoring

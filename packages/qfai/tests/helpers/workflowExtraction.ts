@@ -12,7 +12,6 @@ export function extraction(fields: Partial<WorkflowExtraction> = {}): WorkflowEx
     qualifiers: [],
     signals: [],
     risks: [],
-    gate: "none",
     artifacts: ["code", "tests"],
     confidence: "high",
     ...fields,

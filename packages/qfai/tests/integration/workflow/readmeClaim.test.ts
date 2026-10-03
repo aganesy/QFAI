@@ -105,7 +105,7 @@ it("Both READMEs put the free-text entry first and name the words the operator t
     cwd: REPOSITORY_ROOT,
     encoding: "utf8",
   });
-  const words = ["continue", "stop", "off", "shadow", "active"];
+  const words = ["stop", "off", "shadow", "active"];
 
   expect({
     alignment: alignment.status,

@@ -29,7 +29,7 @@ describe("the stage-skill entry check", () => {
   it("hands a request with no name and no work order to qfai-run, editing nothing", async () => {
     const passOn = rowOf(await entryCheck(), "`pass-on`");
     expect(passOn).toMatch(/`active`/);
-    expect(passOn).toMatch(/neither invoked by name nor handed a QFAI work order/i);
+    expect(passOn).toMatch(/neither invoked by name nor run by `qfai-run`/i);
     expect(passOn).toMatch(/edit nothing/i);
     expect(passOn).toMatch(/pass the request to `qfai-run` in the same turn/i);
     expect(passOn).toMatch(/at most one line, and no explanation of modes or stages/i);
@@ -40,22 +40,6 @@ describe("the stage-skill entry check", () => {
     const off = rowOf(await entryCheck(), "`off`");
     expect(off).toMatch(/`off` or `shadow`/);
     expect(off).toMatch(/no entry check\. behave as when invoked by name/i);
-  });
-
-  // QFAI:AC-0001-0195-02
-  // QFAI:EX-0001-0195-03
-  it("does only the work of a matching work order and says nothing to the operator", async () => {
-    const worker = rowOf(await entryCheck(), "`worker`");
-    expect(worker).toMatch(/matches an issued one/i);
-    expect(worker).toMatch(/check the run, stage and work-order IDs, then do only that work/i);
-    expect(worker).toMatch(/say nothing to the operator/i);
-  });
-
-  // QFAI:EX-0001-0195-04
-  it("edits nothing and returns the refusal for a work order that matches no issued one", async () => {
-    const mismatch = rowOf(await entryCheck(), "`error`");
-    expect(mismatch).toMatch(/matches no issued one/i);
-    expect(mismatch).toMatch(/edit nothing, and return the refusal to the harness/i);
   });
 
   // QFAI:AC-0001-0195-03
@@ -97,9 +81,9 @@ describe("governance inside a run", () => {
     expect(workflow).toMatch(
       /such as `fix-defect`, `add-feature` or `edit-text`, says which stages run/,
     );
-    expect(workflow).toMatch(/neither selects the other, and a run declares both/i);
+    expect(workflow).toMatch(/neither selects the other, and a change declares both/i);
     expect(workflow).toMatch(
-      /a `fix-defect` run may declare `Behavior`, and an `add-feature` run `Structural`/,
+      /a `fix-defect` change may declare `Behavior`, and an `add-feature` change `Structural`/,
     );
     expect(workflow).toMatch(/no route maps to a Change Type/i);
   });
@@ -166,7 +150,7 @@ describe("governance inside a run", () => {
   it("gives the two entry skills a reviewer remit", async () => {
     const remit = sectionOf(await readShipped(DELEGATION), "### Reviewer remit");
     expect(rowOf(remit, "`/qfai-maintain`")).toMatch(/changes no behaviour/i);
-    expect(rowOf(remit, "`/qfai-run`")).toMatch(/it writes no artifact/i);
+    expect(rowOf(remit, "`/qfai-run`")).toMatch(/the artifacts the session writes/i);
   });
 
   // QFAI:AC-0001-0002-02

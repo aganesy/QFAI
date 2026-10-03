@@ -176,10 +176,9 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
   {
     label: "workflow",
     lines: [
-      `${EXIT_CODES.ok} = the operation was processed, whatever state the run is left in,`,
-      `${EXIT_CODES.findings} = finish with an unmet target, a damaged run record, or a run file`,
-      "      that could not be written,",
-      `${EXIT_CODES.inputError} = every other refusal`,
+      `${EXIT_CODES.ok} = a plan or candidate routes,`,
+      `${EXIT_CODES.findings} = a file cannot be read or a shipped plan does not load,`,
+      `${EXIT_CODES.inputError} = the input is refused`,
     ],
   },
   {

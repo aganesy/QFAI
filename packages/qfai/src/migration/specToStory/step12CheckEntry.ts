@@ -17,7 +17,7 @@ function skillPath(skill: string, ...rest: string[]): string {
   return [".qfai/assistant/skill", skill, ...rest].join("/");
 }
 
-/** One `## For a person` item, named by the check that failed. */
+/** One `## For a person` item, named by its check as `workflow plan` names the reason. */
 function refusalItem(refusal: PlanRefusal): string {
   const [skill = refusal.subject, detail = ""] = refusal.subject.split(":");
   switch (refusal.reason) {

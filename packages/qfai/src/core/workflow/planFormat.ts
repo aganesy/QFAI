@@ -4,7 +4,13 @@ import { isModifier } from "./modifiers.js";
 import { isRecord } from "./parse.js";
 import { isWorkflowRoute, ROUTE_FAMILIES } from "./routes.js";
 import { SEAM_STEP } from "./steps.js";
-import type { PlanStep } from "./types.js";
+
+// One step of a stage, with the mode the route fixes for it and whether it is pass-through.
+export interface PlanStep {
+  name: string;
+  passThrough?: boolean;
+  mode?: string;
+}
 
 export interface PlanStage {
   id: string;
@@ -12,9 +18,9 @@ export interface PlanStage {
   steps: PlanStep[];
   after: string[];
   effects: string[];
-  // `none`: the stage's steps add no reviewer to its work order. A stage that omits it is
-  // reviewed by the reviewers of its steps.
-  review?: "none";
+  // `spec` or `code`: the review that follows the stage. `none` marks a triage stage that no
+  // review follows, as a stage with no `review` is.
+  review?: "spec" | "code" | "none";
 }
 
 // A step at which the run may change route, and where each outcome it reports sends the run:
@@ -36,6 +42,7 @@ export interface WorkflowPlanFile {
 
 export type PlanRefusalReason =
   | "file-missing"
+  | "unreadable"
   | "not-mapping"
   | "unknown-key"
   | "route-name"
@@ -48,6 +55,7 @@ export type PlanRefusalReason =
   | "pass-through"
   | "seam"
   | "after-missing"
+  | "after-order"
   | "cycle"
   | "unreachable"
   | "point"
@@ -272,7 +280,7 @@ function stageOf(value: unknown, refuse: Refuse): PlanStage | null {
   if (!effects || effects.some((effect) => !EFFECTS.includes(effect))) {
     refuse("effects", typeof id === "string" ? id : "stages");
   }
-  if (typeof id !== "string" || typeof kind !== "string" || !steps || !after) {
+  if (typeof id !== "string" || id === "" || typeof kind !== "string" || !steps || !after) {
     return refused(refuse, "shape", typeof id === "string" ? id : "stages");
   }
   if (!effects) return refused(refuse, "shape", id);
@@ -282,12 +290,19 @@ function stageOf(value: unknown, refuse: Refuse): PlanStage | null {
   return stage;
 }
 
-// A stage's `review`: absent, or `none` on a stage that changes no tracked file, which is a
-// triage stage.
-function reviewOf(value: unknown, kind: string, id: string, refuse: Refuse): "none" | undefined {
+// A stage's `review`: absent; `spec` or `code` on a stage that is not a triage stage; or `none`
+// on a triage stage, which changes no tracked file.
+function reviewOf(
+  value: unknown,
+  kind: string,
+  id: string,
+  refuse: Refuse,
+): PlanStage["review"] | undefined {
   if (value === undefined) return undefined;
-  if (value !== "none" || kind !== "triage") refuse("shape", id);
-  return value === "none" ? "none" : undefined;
+  if (kind === "triage" && value === "none") return value;
+  if (kind !== "triage" && (value === "spec" || value === "code")) return value;
+  refuse("shape", id);
+  return undefined;
 }
 
 function stagesOf(document: Record<string, unknown>, refuse: Refuse): PlanStage[] | null {
@@ -319,8 +334,10 @@ function reachedFrom(stages: PlanStage[], from: PlanStage[]): Set<string> {
 
 function graphRefusals(stages: PlanStage[], refuse: Refuse) {
   const ids = new Set(stages.map((stage) => stage.id));
-  for (const stage of stages) {
+  for (const [index, stage] of stages.entries()) {
     if (stage.after.some((id) => !ids.has(id))) refuse("after-missing", stage.id);
+    const earlier = new Set(stages.slice(0, index).map((each) => each.id));
+    if (stage.after.some((id) => ids.has(id) && !earlier.has(id))) refuse("after-order", stage.id);
   }
   for (const stage of stages) {
     if (reachedFrom(stages, followersOf(stages, stage.id)).has(stage.id)) refuse("cycle", stage.id);
@@ -418,12 +435,13 @@ function branchPointsOf(value: unknown, refuse: Refuse): PlanBranchPoint[] {
   return value.flatMap((entry) => branchPointOf(entry, refuse) ?? []);
 }
 
-// Each decision, release and branch point names a step the plan runs exactly once.
+// Each decision, release and branch point names a step the plan runs exactly once; a release
+// point of `end` names none.
 function pointRefusals(plan: WorkflowPlanFile, refuse: Refuse) {
   const names = plan.stages.flatMap(namesOf);
   const points = [
     ...plan.decisionPoints,
-    ...(plan.releasePoint === undefined ? [] : [plan.releasePoint]),
+    ...(plan.releasePoint === undefined || plan.releasePoint === "end" ? [] : [plan.releasePoint]),
     ...plan.branchPoints.map((point) => point.step),
   ];
   for (const point of points) {

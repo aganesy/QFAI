@@ -238,7 +238,7 @@ A finding outside the reviewing stage's remit is recorded and deferred, never bl
 | `/qfai-grill`              | The same, reported to the user rather than to a stage                                                                               | The merit of what the user decided; there is no artifact to review                      |
 | `/qfai-maintain`           | That the diff changes no behaviour, and the checks run over it                                                                      | Whether the new wording is the better one                                               |
 | `/qfai-triage`             | That no tracked file changed, the recorded outcome, each follow-up, and the sources an answer cites                                 | The work a follow-up request describes                                                  |
-| `/qfai-run`                | Nothing of its own: it writes no artifact, and each stage's reviewers review that stage's work                                      | Every artifact a stage writes, which that stage's remit covers                          |
+| `/qfai-run`                | The artifacts the session writes, in the specification or code review the plan names after a stage                                  | Whether the route the decision rules chose was the right one                            |
 
 Article VII excess in the reviewing stage's own artifacts is in scope;
 quality of downstream implementation code is deferred at upstream stages.
