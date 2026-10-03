@@ -670,7 +670,6 @@ const BARREL_EXPORT_EXEMPT: ReadonlySet<string> = new Set<string>([
   "validateContractConsistency",
   "validateContracts",
   "validateDiscussionMermaid",
-  "validateSkillsIntegrity",
   "validateClassification",
   "validateExplorationArtifacts",
   "validateSidecarMissing",

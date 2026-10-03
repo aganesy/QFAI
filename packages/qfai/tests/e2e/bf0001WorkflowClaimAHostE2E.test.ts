@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 
 import { afterEach, expect, it } from "vitest";
 
-import { hashAssistantAssetText } from "../../src/core/assistantAssetProvenance.js";
+import { hashAssistantAssetText } from "../../src/shared/text.js";
 import { claimProblems } from "../helpers/readmeClaim.js";
 import {
   evalRecordProblems,

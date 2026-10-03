@@ -1,5 +1,5 @@
 import { constants as fsConstants } from "node:fs";
-import { copyFile, lstat, mkdir, readdir, stat } from "node:fs/promises";
+import { copyFile, lstat, mkdir, readdir, rm, stat } from "node:fs/promises";
 import path from "node:path";
 
 /** The `code` of a Node filesystem error, or `undefined` for anything else thrown. */
@@ -31,6 +31,8 @@ export type CopyOptions = {
 export type CopyResult = {
   copied: string[];
   skipped: string[];
+  /** Destinations not written because a directory above them is a link. */
+  refused: string[];
 };
 
 export async function copyTemplateTree(
@@ -66,6 +68,7 @@ async function copyFiles(
 ): Promise<CopyResult> {
   const copied: string[] = [];
   const skipped: string[] = [];
+  const refused: string[] = [];
   const conflicts: string[] = [];
 
   const excludePrefixes = (options.exclude ?? [])
@@ -114,6 +117,22 @@ async function copyFiles(
       continue;
     }
 
+    // `copyFile` follows any linked directory above the destination, so the
+    // write would land wherever the link points: such a destination is refused.
+    if ((await linkedAncestor(destRoot, dest)) !== undefined) {
+      refused.push(dest);
+      continue;
+    }
+    // An overwrite follows a link at the destination, and truncates an inode
+    // every hard-linked name shares. Either one is replaced as an entry, so its
+    // target and its other names keep their content.
+    if (options.force && !options.dryRun) {
+      const existing = await lstatOrUndefined(dest);
+      if (existing !== undefined && (existing.isSymbolicLink() || existing.nlink > 1)) {
+        await rm(dest);
+      }
+    }
+
     if (!options.dryRun) {
       await mkdir(path.dirname(dest), { recursive: true });
       // EXCLUSIVE unless the caller asked to overwrite, and `copied` records only what this call
@@ -121,10 +140,8 @@ async function copyFiles(
       //
       // `shouldWrite` answered a question about a moment that has passed. A second process — another
       // `qfai init`, or the adopter's own editor — can create the file between that check and this
-      // copy, and a plain `copyFile` then OVERWRITES it. Worse than the lost bytes: the path lands
-      // in `copied`, so `recordInstalledWorkflows` stamps the packaged digest as QFAI's own, doctor
-      // reports no drift on a file QFAI never wrote, and the retired-workflow prune considers it
-      // QFAI's to delete. `COPYFILE_EXCL` makes the create the decision, and an `EEXIST` means the
+      // copy, and a plain `copyFile` then OVERWRITES it, and the path lands in `copied` as if
+      // this call had created it. `COPYFILE_EXCL` makes the create the decision, and an `EEXIST` means the
       // adopter won the race — which is the same outcome `shouldWrite` intended for a file that was
       // already there.
       if (!options.force) {
@@ -144,7 +161,28 @@ async function copyFiles(
     copied.push(dest);
   }
 
-  return { copied, skipped };
+  return { copied, skipped, refused };
+}
+
+/** `lstat`, or `undefined` when nothing is at `target`. Other faults propagate. */
+async function lstatOrUndefined(target: string) {
+  try {
+    return await lstat(target);
+  } catch (error) {
+    if (errorCode(error) === "ENOENT") return undefined;
+    throw error;
+  }
+}
+
+/** The first directory between `root` and `target` that is a symbolic link, if any. */
+async function linkedAncestor(root: string, target: string): Promise<string | undefined> {
+  let current = root;
+  for (const segment of path.relative(root, path.dirname(target)).split(path.sep)) {
+    if (segment === "") continue;
+    current = path.join(current, segment);
+    if ((await lstatOrUndefined(current))?.isSymbolicLink() === true) return current;
+  }
+  return undefined;
 }
 
 function resolveTemplateDestinationRelativePath(relative: string): string {

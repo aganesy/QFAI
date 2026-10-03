@@ -27,7 +27,7 @@ import { fileURLToPath } from "node:url";
 
 import { it } from "vitest";
 
-import { hashAssistantAssetText } from "../../src/core/assistantAssetProvenance.js";
+import { hashAssistantAssetText } from "../../src/shared/text.js";
 import { loadBuiltInPlans } from "../../src/core/workflow/plans.js";
 import {
   buildSeedFixture,

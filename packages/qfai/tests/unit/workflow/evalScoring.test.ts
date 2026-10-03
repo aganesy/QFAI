@@ -9,7 +9,7 @@ import { execPath } from "node:process";
 
 import { expect, it } from "vitest";
 
-import { hashAssistantAssetText } from "../../../src/core/assistantAssetProvenance.js";
+import { hashAssistantAssetText } from "../../../src/shared/text.js";
 import type { WorkflowPlanFile } from "../../../src/core/workflow/plans.js";
 import {
   evalRecordProblems,
