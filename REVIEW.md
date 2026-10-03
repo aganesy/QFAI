@@ -24,6 +24,10 @@ Await or return every promise. `.agents/rules/minimal-implementation.md`
 - Incomplete error messages
 - Type safety improvements (e.g., unnecessary `as` assertions)
 - Test coverage gaps (missing edge cases, incomplete assertions)
+- Code written only to pass a test: a value hard-coded to the test's inputs,
+  a branch written only for the test, or a wrong test or infeasible task worked
+  around instead of raised as a Change Request
+  (`.qfai/assistant/rule/test-layers.md#a-passing-test-is-not-the-solution`)
 - TODO/FIXME/HACK comments without tracking references
 - Traceability gaps (ID collisions, unregistered references, spec-to-code drift)
 - References against the one-way rule: a BR citing anything but EX, a contract citing another contract's BR, or a contract naming an implementation file

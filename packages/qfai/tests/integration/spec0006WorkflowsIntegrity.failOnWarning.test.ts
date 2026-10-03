@@ -35,13 +35,12 @@
  * requires ZERO warnings across the run, not merely that the advisory is not one.
  *
  * A freshly seeded adopter tree does not deliver that: `qfai init` reports success
- * and leaves FIVE warnings standing (`paths.srcDir`, `paths.testsDir`,
- * `paths.outDir`, `output.validateJson`, `traceability.testGlobs`). Every one is an
- * absence — a directory not created, a report not yet run, a glob list left
- * intentionally empty — which is the default state of a bare install rather than a
- * defect. `quietUnrelatedWarnings` answers each with the minimum its own condition
- * asks for; why each repair is minimal, and why only three of the five may be left
- * standing, is in that helper's docblock and is not restated here.
+ * and leaves a warning standing for `traceability.testGlobs`, an intentionally
+ * empty glob list. The absent default `paths.srcDir`, `paths.testsDir` and
+ * `paths.outDir`, and a missing `output.validateJson`, are reported at info.
+ * `quietUnrelatedWarnings` answers the warning with the minimum its own condition
+ * asks for; why the repair is minimal is in that helper's docblock and is not
+ * restated here.
  *
  * ## Guard #3 is scoped to OTHER ids, and the scope is load-bearing
  *
@@ -105,13 +104,13 @@ const pool = useAdopterTreePool();
 const STALE_NAME = "qfai-tests.yml";
 
 /**
- * The one unrelated warning the control leaves standing. `paths.testsDir` is a
- * missing directory, so the control differs from the first fixture by a single
- * `mkdir` — the smallest available difference between "exit 0" and "exit 1" on
+ * The one unrelated warning the control leaves standing. `traceability.testGlobs`
+ * is an empty glob list, so the control differs from the first fixture by a single
+ * config edit — the smallest available difference between "exit 0" and "exit 1" on
  * this flag, which is what makes the pair a control rather than two unrelated
- * measurements.
+ * measurements. An absent default `paths.testsDir` is `info`, so it cannot serve.
  */
-const UNRELATED_WARNING_ID = "paths.testsDir";
+const UNRELATED_WARNING_ID = "traceability.testGlobs";
 
 /** The check ids whose severity would make `--fail-on warning` exit 1. */
 function failingIdsOtherThanDrift(checks: { id: string; severity: string }[]): string[] {
@@ -196,7 +195,7 @@ describe("TC-0006-0032 (TDD-0034): a drift-only tree exits 0 under --fail-on war
 
     // CLAIM 3 — "`summary.info` is 1 or more". Asserted because the TC asks
     // for it; recorded in the header as non-discriminating, because the bare
-    // install already contributes four.
+    // install already contributes info checks.
     expect
       .soft(
         data.summary.info,

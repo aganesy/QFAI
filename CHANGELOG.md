@@ -12,6 +12,459 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   unmeasured 30. The per-suite file and test counts and timings are recorded
   in DEC-1010 of `.qfai/spec/decisions.md`. This affects this repository's CI
   only.
+- **The delegation baseline names the host limits above the declared shape**
+  (#2239). Dispatch limits are read by the agent that dispatches, so nothing in
+  QFAI bounded a run that spawned more workers, nested delegation deeper or kept
+  spending past what it declared. A new section in
+  `rule/shared-skill-delegation-baseline.md` lists the controls a host provides
+  for nesting depth, concurrent sub-agents and spend, with their defaults: Claude
+  Code 2.1.217 or later, Codex, the GitHub Copilot CLI and the VS Code Local harness.
+  Where no equivalent was confirmed, it says so. QFAI sets none of them, and the
+  section states that such a limit sits above the declared shape, never at it.
+  The implementation skill's parallelization policy points to it.
+
+- **The reviewer gate is not self-verification.** The independent-reviewer
+  definition now says why guidance against using sub-agents to verify your own
+  work does not reach the reviewer gate: an independent reviewer authored none
+  of what it reviews, and its verdict is recorded and pinned to a hash of the
+  reviewed state. The author cannot accept its own output.
+
+- **The artifact-reuse and tuning-scope tests fail on the cases they reject**
+  (#2217).
+  - The artifact-reuse test counted the step that calls `ci:build-verify` as
+    one pack-lifecycle build. It now resolves that script through the root
+    `package.json` and counts the two helpers that pack, so dropping either
+    one changes the count.
+  - The tuning-scope test compared each project with the shared knob, so an
+    edit to the knob moved every project at once and nothing failed. It now
+    compares with the declared value, and reads the projects with the tuning
+    overrides cleared.
+  - The run identifiers that justify a tuning move now count only in the last
+    `DEC-` row of `.qfai/spec/decisions.md` that names the project and every
+    setting it moved. Before, any row naming the project counted, so an
+    earlier change's greens could justify a later one.
+
+- **The reporting contract covers what an agent says while it works**
+  (#2237). `.qfai/assistant/rule/communication.md` now has the agent say in
+  one sentence what it is about to do before its first tool call, and give an
+  update only when something important is found or the direction changes. The
+  final report leads with the outcome. An earlier statement is corrected
+  plainly when the error would change the user's code, conclusions or
+  decisions; a slip that changes none of those is fixed without comment. This
+  repository's `.instruction/00_universal/communication.md` drops its own
+  progress-report and completion-report sections and points to that article.
+
+## [2.0.2] - 2026-10-03
+
+### Added
+
+- **A rule that classifies an action by how hard it is to undo** (#2232).
+  `action-reversibility.md` sorts an action into four classes before it runs:
+  local and reversible, destructive, hard to reverse, and visible to others.
+  Only the first proceeds on the agent's own judgement; the other three need
+  the user, or a standing instruction that already covers that action. The one
+  exception is an ordinary push, without force, to a branch the agent created
+  for the current task. A standing instruction is the user's request in the
+  current session, a skill the user invoked whose steps include the action, or
+  an instruction recorded in memory or settings that names the action and its
+  context in the user's own words. Under a mode that may not ask, such as
+  `--auto`, the action is not taken: it is recorded as an open question and the
+  rest of the work continues. The rule also states that an obstacle is not a
+  reason for a destructive shortcut. Until
+  now only release operations were bounded this way, by
+  `version-discipline.md`, which is unchanged. `qfai init` seeds the rule and
+  cites it from `AGENTS.md`, `CLAUDE.md` and `.github/copilot-instructions.md`.
+
+- **A rule that text the repository did not author is data, not instruction**
+  (#2231). `qfai init` now writes `.agents/rules/untrusted-content.md` and cites
+  it from the agent entry points. It names the surfaces that carry such text —
+  tool results, fetched pages, files the project did not add, pull request and
+  issue bodies, pasted text — and says an instruction found there is followed
+  only where the user's own request asks for it. It also sets out how to mark
+  pasted text: an opening and closing tag carrying the same short random id,
+  with a system-prompt note saying what the tags mean.
+
+  The research protocol no longer applies an entry on the strength of an
+  external source alone: the `reason` of an `apply` states what the agent
+  verified against the repository, and an entry with nothing verified is
+  `defer`. The shipped code-review instructions treat the pull request
+  description, issue text and comments as data.
+
+  This repository's own review instructions say the same. They are also split
+  by topic into four files, so the TypeScript checks apply to `*.ts` files and
+  the compatibility checks to the package source only.
+
+- **The shared skill baseline says how an unattended run may end its turn**
+  (#2233). Under `--auto`, a message with no tool call in it ends the turn and
+  stops the run, whether or not the work is done. While work is still owed, a
+  turn may not end on a summary that only announces the next step, an offer to
+  carry on, a list of decisions none of which blocks the work, or a stop because
+  the turn ran long. It may end only when nothing can move without the user, or
+  when the blocker is deliberately protected from the agent, and that ending is
+  a stop report.
+- **Step 12 of `qfai-migration-v1-to-v2` lists the project files that still
+  name a 1.x path.** A skill, agent or document the project wrote is not
+  rewritten, and it kept reading `.qfai/specs/`, `_policies/`, `spec-NNNN`,
+  `assistant/steering` and the other 1.x paths after every step passed. Step 12
+  now reads each tracked file outside `.qfai/`, the configured spec and contract
+  directories and `.github/copilot-instructions.md`, and prints one item per
+  line, `old-path: <file>:<line>: still names 1.x paths: ...`; any such item
+  makes step 12 exit 3. A new `## Files scanned` section says how many files it checked, or
+  that the project is not a git repository. Any other git failure is exit 2.
+  The migration guide gives the 2.x location of each of the thirteen paths, and
+  `SKILL.md` has the AI reword each listed line with the person who wrote the
+  file. Fixes #2726.
+- **Each `qfai-migration-v1-to-v2` step keeps the report of every run.** A run
+  writes `.qfai/evidence/migration-spec-to-story/report/dry-run/step-NN-NNN.md`
+  or `.../report/run/step-NN-NNN.md`: what it printed on standard output, then
+  on standard error, then a last line `Exit code: N`. `NNN` counts the step's
+  files and is never reused. A refusal (exit 2) keeps its report too, once the
+  arguments are valid and `qfai.config.yaml` is found. Git does not track the
+  directory, and no step reads it. The skill's `SKILL.md` and migration guide
+  now say to read the reports from there.
+- **`plan.yaml` can settle what step 4 leaves behind.** An optional `examples`
+  list places an old example under one criterion its test-case rows name, and
+  its test cases then reach the ID map, so step 8 rewrites their annotations. A
+  rule takes `binds: none` (only where its `Contract-Refs` is `-`) or `retire`
+  with a reason in place of `contract`; step 7 removes it from
+  `04_Business-Rules.md`, writes it to no contract and lists it under
+  `## Operations`. Both are read before the ID map is written.
+- **`qfai doctor` warns when a shipped workflow's preconditions are not met.**
+  Four warnings, never errors, so a project without CI is not blocked:
+  `workflows.packageManager` (`pnpm-lock.yaml` without a valid `packageManager`
+  in `package.json`, where the workflows stop before installing),
+  `workflows.lockfiles` (two lockfiles present, naming the one the workflows
+  install with and the one they ignore), `workflows.nodeVersionFile`
+  (`engines.node` declared, no `.nvmrc` or `.node-version`, so the workflows use
+  Node 20) and `workflows.nodePin` (a workflow under `.github/workflows/` pins a
+  Node below `engines.node`). Nothing is reported for a fact that is met.
+  `qfai init` prints one `Shipped workflows:` line with the count when any is
+  unmet. Fixes #2725.
+
+### Changed
+
+- **Every decision a stage records carries one fixed form** (#2236).
+  The thinking rule now names where each decision is recorded.
+  `qfai-sdd`, which owns `decisions.md`, records it as a row
+  there. Every other stage records it in its own evidence file. The seeded
+  `decisions.md` states the form both records use, in this order:
+
+  - `Evidence:` one or more `file:` or `command:` entries;
+  - `Grounds:` which evidence supports the decision, and how;
+  - `Residual risk:` the risk that remains, or `none — <reason>`;
+  - `Rollback:` the steps that undo it, or `none — <reason>`.
+
+  The shared decision-record step and the SDD guidance point to that form.
+  The table's columns are unchanged,
+  and existing rows and records are not rewritten. `qfai validate` does not
+  check the form yet.
+
+- **Code written only to pass a test does not meet its example** (#2235). The
+  shipped test-layer rule now states what the code under test may not do to
+  reach green: hard-code a value to match a test case, branch on a test's
+  inputs, or let a workaround stand in for the tools the task calls for. A task
+  that cannot be done as specified, or a test case that is wrong, goes to a
+  Change Request rather than being worked around. The Green step of
+  `qfai-implement` measures "minimum production code" against the example's
+  obligation and points to that clause. Reviewers now check for it:
+  `implementation-reviewer` and `qa-gatekeeper`, the reviewer gates of
+  `qfai-implement` and `qfai-atdd`, the shipped Copilot code-review
+  instructions, and § 4 of the minimal-implementation rule each name the
+  clause.
+
+- **The minimal-implementation rule names four additions a change leaves
+  out** (#2234). A change can clear every rung of the ladder and still add work
+  nobody asked for. A new section names the four shapes that takes: wider
+  scope, comments on untouched code, handling for a case that cannot happen,
+  and an abstraction for a one-time need. A function's length alone is not a
+  reason to extract a helper. The section keeps what § 2 of the rule already
+  requires, such as traceability annotations. The section after it moves from
+  § 4 to § 5.
+- **The capture URL and response-status tests now fail on the mistakes they
+  guard against** (#2228). The `composeCaptureUrl` cases use inputs where a URL
+  join and a string concatenation give different results, so an implementation
+  that concatenated would fail. An absolute screen URL is checked on a bare
+  origin a join would rewrite. The default capture runner's status test gains
+  a case that refuses HTTP 400, the first status of the rejected range, beside
+  the existing case that accepts 399.
+- **The slice alignment test refuses a sliced matrix that holds anything but
+  its slice list** (#2213). An `include` or `exclude` beside `slice` changes the
+  legs a job runs without changing the list the test compared, so a matrix
+  could drift from the runner projects and still pass. Each sliced job's
+  `strategy.matrix` must now have `slice` as its only key.
+- **`qfai init` no longer writes the `qfai-run` line into `AGENTS.md` and
+  `CLAUDE.md`.** The prompt-time hook states the rule, so the seeded files
+  open with their heading, and an existing file gains no such line. A line an
+  earlier init wrote is kept as written; init never removes or edits it.
+  Migration step 11 leaves both files as they are, and step 12 no longer checks
+  for the line or reports `entry-directive`. The review directive is still
+  prepended where `REVIEW.md` exists.
+- **Migration now removes the retired configuration keys.** This reverses the
+  2.0.0 statement that migration leaves them in place. Step 1 removes
+  `validation.traceability.scMustHaveTest` and
+  `validation.traceability.unknownContractIdSeverity`, and a `validation`
+  mapping the removal leaves empty. Step 3 replaces `prototyping.primarySpecId`
+  by `prototyping.primaryUiContract` when exactly one UI contract is tied to
+  that spec, and otherwise keeps the key and lists it for a person. Steps 1 to 3
+  run although `qfai.config.yaml` still holds one of the three keys; steps 4 to
+  12 refuse, naming the key, until it is gone.
+- **`QFAI-LAYOUT-001` lists the old files.** The one error still stops every
+  other check, but its message now lists, one per line, each file that remains
+  under the `spec-*/` and `_policies/` directories, and ends with a line that
+  names `/qfai-migration-v1-to-v2`, `/qfai-sdd` and the archive a file must be
+  in before it is deleted.
+- **A fresh `qfai init` no longer leaves false warnings in `qfai doctor` and
+  `qfai validate`.** An absent `paths.srcDir`, `paths.testsDir` or
+  `paths.outDir` that is still the shipped default is now an `info` check with
+  one line saying why, and `QFAI-CFG-LINK-002` follows the same rule for
+  `srcDir` and `testsDir`. A missing `validate.json` is `info`. A path that is
+  not the default and does not exist is still a warning. `QFAI-CFG-LINK-002`
+  also stays a warning when a file, not a directory, has the default name.
+  `qfai.config.yaml` is not rewritten, and the warning for an empty
+  `testFileGlobs` is unchanged. Fixes #2732.
+- **Step 3 rewrites the `CON-*` IDs its contract map translates in the
+  contract files it writes,** wherever they stand in the file, instead of
+  listing each one for a person. An ID no contract declared, or that more than
+  one declared, is still listed. Its `## For a person` items are grouped under
+  `### Content`, for what a person rewrites or decides, and `### Identifiers`,
+  for an old ID paired with its new one.
+- **Step 4 reads more of what a 1.x project writes.** `from` in `plan.yaml`
+  accepts any H2 heading of the old `_policies/04_Business-Flow.md`. A
+  criterion's story is read from its row of the criteria catalog table
+  (`US Ref`, `US-Refs` or `Maps To`) when it has no `Parent:` line, and a story
+  block written as `As a`, `I want` and `So that` fields becomes the one
+  sentence. An ID written both as an index table row and as a heading section
+  is one record for every kind of record, and only that record's own lines are
+  removed when a step moves it.
+- **The free-text entry names one set of requests.** The prompt-time reminder and the
+  `qfai-run` description both say a change, a fix, an investigation of the
+  codebase or a question about the project.
+- **A question that one command answers needs no run, and a run ends on purpose.** The
+  free-text reminder and the `qfai-run` description say a question that one command or one file
+  read answers is answered directly. The
+  `qfai-run` skill says a run ends at `finish` or at `decision` with `stop`, and that
+  an answer already given does not end it. In Claude Code the reminders before and
+  after a file write, and the minimal-implementation one, print nothing for a file under
+  `.qfai/run/`.
+- **A question that changes no file is answered in one stage by one sub-agent, with no separate
+  reviewer.** `answer-question` and `investigate-question` are one stage each, which runs every step of
+  the route down to `triage-close`, and `finish` follows its acceptance. A plan marks such a
+  stage `review: none`, which is admitted only on a triage stage and gives its work order no step
+  reviewer; a run carrying `review:heavy` still adds the heavy reviewers. A defect found while
+  investigating still re-routes by the decision rules. This replaces the earlier multi-stage
+  question routes (investigate, answer, close) and their reviews. Fixes #2730.
+- **`qfai init` allows the shipped skills and the launcher.** It merges one `Skill(<name>)`
+  entry for each shipped skill and the launcher entries (`Bash(npx qfai:*)`, `Bash(yarn exec qfai:*)`
+  and `Bash(yarn qfai:*)`) into `permissions.allow` of
+  `.claude/settings.json`, the way it merges hook groups. A non-interactive Claude Code run
+  refused the skills without them. The free-text reminder now tells the agent to stop and say so
+  when `qfai-run` cannot start.
+- **A checkout with no install is named at every prompt.** A new hook group, for Claude Code and
+  for Codex, looks for `node_modules/.bin/qfai` from the project up to its git root and, when there
+  is none, says to run the project's install command, or `npm i -D qfai` when `package.json` does not
+  list `qfai`. The launcher preflight in the shared operating baseline separates the same two cases,
+  and the migration guide says each checkout and worktree needs its own install.
+- **Steps 1 to 10 of `qfai-migration-v1-to-v2` open their report with a verdict line.** The line
+  is `no 1.x layout found under <specsDir> (paths.specsDir=<value>)`, `1.x layout found, migrating`
+  or `already migrated (id-map.json present)`, followed by an empty line and `## Operations`. The
+  directory is written from the project root, never as an absolute path. Step 10 also ends with a
+  `Summary:` line for the first two cases, and the already-done line stays last on a migrated
+  project. Steps 11 and 12 are unchanged. Apart from that line and the closing line of step 10,
+  each report is unchanged. A script that reads the report of steps 1 to 10 from its first line
+  must now start at the `## Operations` heading, which follows the verdict line and an empty line.
+  The skill and the migration guide name the three
+  lines and tell the AI to report that there is nothing to migrate in the directory the line names,
+  and to ask the person to check that the specs live there. Fixes #2727.
+
+### Fixed
+
+- **Step 3 writes no `routing:` override for an unmodified 1.x manifest entry
+  (#2714).** An `agent-routing.yml` entry equal to an entry a 1.x release
+  shipped is no longer copied into `qfai.config.yaml`, where it hid the roles
+  the 2.x skills declare. Each entry step 3 does write is listed under
+  `## For a person` with a warning to that effect.
+- **Step 8 keeps a test-case annotation in an E2E file and lists it (#2720).**
+  It rewrote the annotation to an example annotation, which `QFAI-STORY-007`
+  rejects there. The item names the file, line, annotation and example, and the
+  two ways to settle it: a test outside the E2E layer, or a DONE
+  `Test exception:` row in `decisions.md`. Step 8 lists the annotation on each
+  run until it is deleted.
+- **Step 7 writes a section-form rule as its `Rule` value (#2712).** The
+  statement was the whole section, raw. A SQL contract holds it on one line, so
+  `qfai validate` no longer reports the rule as having no examples.
+- **A `BR ID`, `EX ID` or `TC ID` table header is read (#2713).** The table was
+  skipped without a word and its rules never reached the story tree. A table of
+  only IDs under any other header now stops the run with exit 2, naming the file
+  and line.
+- **Step 7 keeps `x-qfai-depends-on` on one line (#2715).** Writing the rules
+  into a YAML contract folded a long list over several lines, which
+  `QFAI-CONTRACT-015` does not read.
+- **Step 4 lists an outline and a further scenario with their line (#2716).**
+  The item for a `Scenario Outline:` also carries the header row of its
+  `Examples:` table, so the cases can be placed through `/qfai-sdd`.
+- **Step 4 lists the old criteria of a story left with no criterion (#2717).**
+  A story that only shared criteria in the old model gets no
+  `02_Acceptance-Criteria.md`; its item names the criteria that named it.
+- **The migration guide says how an unfinished ledger test leaves (#2719).** A
+  `todo`, `blocked` or `red` row of the old ledger, and a criterion that lost
+  its integration or API annotation, end as `QFAI-STORY-006` findings until a
+  test or a `Test exception:` row finishes them.
+- **The migration guide says how to keep a shipped workflow deleted (#2711).**
+  `npx qfai init` already leaves a workflow deleted once
+  `.qfai/install-provenance.json` records it, and a 1.x project has no record
+  before its first `init`, which records only the files it writes. Delete the
+  workflow after that run and commit the record; for a workflow already in the
+  tree, delete it, let `init` write and record it, then delete it again.
+- **`qfai doctor` names the config issues, not only their count.** The
+  `config.load` line said how many issues the loader returned and named no
+  key. It now ends with the message of every issue, on the same line, without
+  the source excerpt a YAML parse error appends, each issue cut to 500
+  characters. Under
+  `--format json` the same longer text is the check's `message`; `details.issues`
+  is unchanged.
+- **A step names the key when `qfai.config.yaml` cannot be loaded.** It printed
+  one fixed sentence; it now prints that sentence and then the message of every
+  issue the loader returned.
+- **An indented `Scenario:`, `Scenario Outline:` or `Background:` is read as
+  that keyword,** so criteria written inside an indented `Feature:` block are
+  converted.
+- **Steps 4 and 7 no longer stop on `plan.yaml` when the ID map exists and no
+  spec pack is left.** A missing or rewritten plan was an error even though
+  there was nothing left to place, which kept a project with only a step 5 item
+  from running them again.
+- The migration guide says how to finish what a step leaves: retired keys,
+  the report directory, sequential dry runs, the points of no return, copying
+  `.qfai/` before step 1, writing the plan before step 1, how a person closes a
+  step 5 item or a leftover pack file, and when an annotation is edited by hand.
+- **`qfai validate --profile full` no longer fails a migrated UI project on a
+  fresh checkout.** Migration step 10 stops tracking `.qfai/evidence/`, so a
+  clean checkout has no `.qfai/evidence/prototyping/`, and the generated CI
+  workflow then failed on `QFAI-PROT-001` (missing `prototyping.json`),
+  `QFAI-UIE-001` and `QFAI-UIE-002` for every project with UI contracts that
+  declare `screens[]`. The `full` and `verify` profiles now skip those three
+  presence checks while that directory does not exist. The `prototyping` and
+  `saas-package` profiles still run them, and so do `full` and `verify` once
+  the directory exists.
+- **The shipped `qfai-docs.yml` installs its checkers outside the project's
+  dependency tree.** It ran `npm install --no-save` into the project's own
+  `node_modules`, which npm cannot read after a pnpm install, so both document
+  checks stopped at that step in every pnpm project. The checkers
+  (`@jackchuka/mdschema`, `mermaid`, `jsdom`, and QFAI itself, with the schema
+  checker it depends on, when the project has none) now install into `tmp/qfai-docs-tools` with `npm install --prefix`,
+  and the schema and Mermaid scripts take `--tools <dir>` to find them. An
+  installed copy of the workflow is not replaced; copy the packaged file to take
+  the fix.
+- **`qfai doctor` reports whether the `@jackchuka/mdschema` binary runs.** The
+  new `workflows.mdschemaBinary` check runs `mdschema --help` from the
+  installation found from where the QFAI package sits, not from the inspected
+  project's root, and is an error that names the reason and the fix when the
+  binary does not start. Until now
+  `workflows.docsLane` read `ok` for a project with no binary. The README now
+  says that the package's install script is not needed while the platform
+  package installs, and how to approve it with `npm approve-scripts` (npm 11.16
+  or later) or `pnpm approve-builds` where it is.
+- **The shipped `qfai-docs.yml` installs its checkers with `--ignore-scripts` and `--include=optional`,
+  and its comment no longer says the install script is required.** The
+  `@jackchuka/mdschema` platform binary arrives as an optional dependency, which
+  installs without a script; the package's install script only downloads a
+  binary when that platform package is missing. The lane therefore does not
+  depend on a policy for install scripts that it does not manage.
+- **A fresh clone of a just-initialised project no longer fails
+  `QFAI-ASSETS-003`.** The four empty directories `qfai init` seeds under
+  `03_contract/` are not in a clone, and the check for an untouched seed
+  treated a missing one as an edited seed. It now reads the files and ignores
+  an absent empty directory, so the clone and the directory `init` ran in give
+  the same result.
+- **The managed `.gitignore` block no longer repeats a line the project
+  already has.** When the file has no block yet and its own lines already
+  ignore the repository-root `tmp/` directory, as `/tmp/` or as `tmp/`, init
+  leaves `/tmp/` out of the block and prints one line naming what it left out.
+  A block already in the file is rebuilt as before.
+- **`qfai init` detects a missing Windows Developer Mode before it writes
+  anything.** It creates and removes one symlink in a scratch directory under
+  the system temporary directory, and when Windows refuses it with EPERM it stops
+  with the Developer Mode instruction instead of failing partway through the
+  tree. Any other failure of that attempt is ignored. `--dry-run` makes no
+  attempt.
+- **`qfai init` says when the config file it changes is shared.** Run from a
+  linked worktree, the `core.symlinks` line names the repository's common
+  config file and adds one line saying every worktree reads it, the main
+  checkout included. The setting itself stays `--local`: scoping it to the
+  worktree needs `extensions.worktreeConfig`, which changes the same shared
+  file.
+- **`qfai workflow accept` checks the digest of the artifacts a result names
+  (#2327, #2328).** It checked only the changed files. It now also reads each
+  `artifactRefs` entry that is a readable file inside the project's real root,
+  and refuses a digest that differs from that file as `digest-mismatch`. An
+  entry that is missing, unreadable or outside the root gets no digest, so its
+  submitted digest is not compared. A reissued work order names each input
+  that is a readable file inside the root at the file's current digest. An
+  input that has since gone missing, become unreadable or left the root keeps
+  the digest recorded earlier. The `sdd_append` work order after a
+  missing-test diagnosis names the reproduction record as its input when that
+  record is a readable file inside the root.
+- **A fact question may offer its candidates as a choice (#2346).** The route
+  proposal schema allowed options on a fact question, but the parser refused
+  them. A fact is now either a choice, with options and a selection and no
+  recommendation, or a value request with one effect and no selection.
+  `decide` answers the choice by option IDs.
+- **A stage receipt depends on the obligation it covers and on what it ran
+  under (#2342, #2343).** A receipt for a result that observed a test held one
+  dependency per file declaring the bound flow, its criteria and its examples,
+  each digested whole. It now holds one obligation digest for the flow: the
+  flow and story files, each criterion's scenario block, each example's table
+  row, and each business rule citing one of the flow's examples. An edit
+  elsewhere in a criteria or example file leaves the digest as it was. Every
+  receipt also holds `qfai.config.yaml`, the root `pnpm-lock.yaml`,
+  `package-lock.json`, `npm-shrinkwrap.json`, `yarn.lock` and `bun.lock`, the
+  assistant rule tree, the skill that owns the work order's steps, each step's
+  directory, the tool, and the selected discussion pack with its files. In a receipt for a
+  result that observed a test, a changed file the stage deleted is held as
+  absent, so the receipt goes stale when the file comes back.
+- **`qfai workflow` judges a run's changes against where the run started**
+  (#2340, #2344). `start` now records `HEAD` and the state of every path that
+  was dirty or untracked then, apart from the run's own records under
+  `.qfai/run/` and `.qfai/evidence/workflow/`. Every write operation and
+  `finish` compare the tree against that record, so a change the run commits
+  outside its write scope blocks the run with `invariant-violation` and is reported as
+  `diff-out-of-scope`. A path that was dirty at `start` counts only once its
+  content or kind changes: a regular file, a symbolic link and its target, a
+  directory, or another kind. A change to its mode alone is not seen.
+  `uncommitted` names only the run's own changes. Under
+  `validation.failOn: never`, `finish` still reads the validate findings to
+  decide whether a debt is settled, so a debt whose
+  finding remains stays `debt-open` while the validate gate passes. Before,
+  every finding was dropped, so every debt closed.
+- **A route proposal cannot reach a protected path by spelling it differently
+  (#2458).** A write area such as `./src/notify/**`, `.qfai\run\**`, or one
+  with a doubled or trailing `/`, was compared as written and not refused. Both
+  the fixed protected paths and the protected targets are now compared after
+  the area is normalized. The refusal still names the area as written.
+- **`qfai workflow accept` names the check behind four more refusals of a
+  stage result (#2338).** A result for a work order the plan does not issue
+  next, a missing bug diagnosis, an outcome the stage cannot take and an
+  invalid route proposal were refused as `invalid-input` with no `reasons[]`.
+  These four are now named:
+  `work-order`, or `schema` on `diagnosis`, `outcome` or `proposal`, beside the
+  reasons of the other checks.
+- **`qfai validate` no longer reports `QFAI-TOOL-002` in a worktree whose
+  `node_modules` links to another checkout's (#2262),** when the `qfai` behind
+  that link is an installed copy inside the linked `node_modules`. It is still
+  reported when that `qfai` is itself a workspace link to the other checkout's
+  source, and in a worktree with no `node_modules`, where `npx` finds another
+  checkout's copy.
+- **The question-form reminder stays silent on a turn the host starts
+  (#2282).** The Claude Code `UserPromptSubmit` hook prints nothing when a line
+  of the prompt opens with `<task-notification>` or `<wake>`, whoever wrote
+  it. A prompt with no such line, and input it cannot read, still get the
+  reminder. `qfai init` replaces an
+  unedited copy of the earlier hook group.
+- **`qfai init` rewrites an earlier wording of the `REVIEW.md` directive
+  instead of adding a second line (#2266).** The two lines disagreed on which
+  branch to read `REVIEW.md` from. The earlier line is replaced where it
+  stands, keeping its list marker and line ending. A line carrying emphasis,
+  inline HTML, a link, or a code span other than the `REVIEW.md` one the
+  directive itself holds is left alone.
 
 ## [2.0.1] - 2026-09-30
 

@@ -103,7 +103,7 @@ const PLAN_KEYS = [
   "branchPoints",
 ];
 
-const STAGE_KEYS = ["id", "kind", "steps", "after", "effects"];
+const STAGE_KEYS = ["id", "kind", "steps", "after", "effects", "review"];
 
 /**
  * The order the delivery contract fixes for the skills a plan's steps belong to. A triage stage
