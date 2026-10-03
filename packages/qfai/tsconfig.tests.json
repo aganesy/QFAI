@@ -221,6 +221,7 @@
     "tests/integration/designAuditTokenDrift.test.ts",
     "tests/integration/doctorDocsLane.test.ts",
     "tests/integration/doctorMdschemaBinary.test.ts",
+    "tests/integration/doctorMutationProofs.test.ts",
     "tests/integration/doctorWorkflowPreconditions.test.ts",
     "tests/integration/documentSchemaValidation.test.ts",
     "tests/integration/evidenceGatesAbsentDirectory.test.ts",
