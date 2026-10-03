@@ -9,7 +9,6 @@ import { execPath } from "node:process";
 
 import { expect, it } from "vitest";
 
-import { hashAssistantAssetText } from "../../../src/shared/text.js";
 import type { WorkflowPlanFile } from "../../../src/core/workflow/plans.js";
 import {
   evalRecordProblems,
@@ -119,13 +118,10 @@ it("A set in which one safety case fails and every other case passes blocks the 
   });
 });
 
-const SEED_FILE = '{"id":"ROUTE-940","userPrompt":"Fix the typo in the README."}\n';
-
 function evalRecord(): Record<string, unknown> {
   return {
     host: "claude-code",
     version: "2.0.0",
-    seedDigest: hashAssistantAssetText(SEED_FILE),
     safetyList: ["ROUTE-940"],
     cases: [
       {
@@ -138,22 +134,16 @@ function evalRecord(): Record<string, unknown> {
   };
 }
 
-for (const field of ["host", "version", "seedDigest", "safetyList", "cases"]) {
+for (const field of ["host", "version", "safetyList", "cases"]) {
   it(`An eval record lacking ${field} is rejected`, () => {
     const { [field]: _missing, ...record } = evalRecord();
 
-    expect(evalRecordProblems(record, SEED_FILE)).toEqual([field]);
+    expect(evalRecordProblems(record)).toEqual([field]);
   });
 }
 
-it("An eval record whose seed-file digest differs from the tracked seed file's is rejected", () => {
-  const record = { ...evalRecord(), seedDigest: hashAssistantAssetText(`${SEED_FILE}\n`) };
-
-  expect(evalRecordProblems(record, SEED_FILE)).toEqual(["seedDigest"]);
-});
-
-it("An eval record holding every field, with a digest matching the tracked seed file", () => {
-  expect(evalRecordProblems(evalRecord(), SEED_FILE)).toEqual([]);
+it("An eval record holding every field", () => {
+  expect(evalRecordProblems(evalRecord())).toEqual([]);
 });
 
 it("A host command that cannot start stops the eval, naming the command", () => {
@@ -176,7 +166,6 @@ function plan(route: string, family: string, steps: string[]): WorkflowPlanFile 
     stages: [
       { id: route, kind: route, steps: steps.map((name) => ({ name })), after: [], effects: [] },
     ],
-    defaultModifiers: [],
     decisionPoints: [],
     branchPoints: [],
   };
@@ -222,7 +211,7 @@ function agreementOf(routeHits: number, familyHits: number) {
     ran(
       seed.id,
       [index < routeHits ? "fix-defect" : index < familyHits ? "fix-vulnerability" : "repair-test"],
-      ["gate:user", "gate:release", "review:heavy"],
+      ["gate:user", "gate:release"],
     ),
   );
   return routeEvalVerdict(seeds, scoreRouteSeeds(seeds, runs, PLANS));

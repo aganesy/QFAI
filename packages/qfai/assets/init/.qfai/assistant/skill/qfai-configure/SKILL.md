@@ -10,7 +10,6 @@ roles:
     delivery-planner,
     qa-strategist,
     devops-ci-engineer,
-    completion-reviewer,
     qa-gatekeeper,
     implementation-reviewer,
   ]
@@ -103,9 +102,8 @@ Use the shared schema.
   - tool-count heuristics are signals, not gates.
 - Route specialist reviewers from `.qfai/assistant/rule/agent-selection.md`.
 - Default configure review set:
-  - `completion-reviewer`
   - `qa-gatekeeper`
-- Do not declare DONE or handoff until all routed blocking reviewers return `PASS`.
+- Do not declare DONE or handoff until every finding of its one review is fixed or answered.
 
 ### Work order template (copy/paste)
 
@@ -229,7 +227,7 @@ When the orchestrator delegates, it uses the platform's native sub-agent mechani
 
 Use `.qfai/assistant/rule/agent-selection.md` as the routing SSOT.
 
-- Routed phases, in order: `analysis` (`delivery-planner`, `qa-strategist`) -> `config` (`devops-ci-engineer`) -> `review` (`completion-reviewer`, `qa-gatekeeper`).
+- Routed phases, in order: `analysis` (`delivery-planner`, `qa-strategist`) -> `config` (`devops-ci-engineer`) -> `review` (`qa-gatekeeper`).
 
 ### Delegation contract (tool-neutral)
 
@@ -253,7 +251,7 @@ Return:
 
 ## Completion Separation (mandatory)
 
-- Config changes (`devops-ci-engineer`) and completion approval (`completion-reviewer`) must be separate.
+- Config changes (`devops-ci-engineer`) and their approval (`qa-gatekeeper`) must be separate.
 - `qa-gatekeeper` must confirm evidence sampling before approval.
 
 ## Context Refresh (mandatory for long tasks)

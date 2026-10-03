@@ -12,7 +12,6 @@ roles:
   - acceptance-test-engineer
   - implementation-reviewer
   - qa-gatekeeper
-  - completion-reviewer
 routing-profile: runtime-heavy
 ---
 

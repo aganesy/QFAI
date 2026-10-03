@@ -3,7 +3,7 @@ name: prototyping-grill
 owner: qfai-prototyping
 purpose: "Settle by a delegated grilling session what the prototype is for, before the loop builds anything."
 requires: [common-grilling-record]
-roles: [orchestrator, product-experience-architect, completion-reviewer]
+roles: [orchestrator, product-experience-architect]
 routing-profile: default
 ---
 

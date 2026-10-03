@@ -3,8 +3,7 @@ name: verify-repeat-run
 owner: qfai-verify
 purpose: "Show that the named tests pass on a recorded number of consecutive runs, which is also what lifts a quarantine."
 requires: [common-gate-run]
-roles:
-  [orchestrator, devops-ci-engineer, qa-gatekeeper, completion-reviewer, implementation-reviewer]
+roles: [orchestrator, devops-ci-engineer, qa-gatekeeper, implementation-reviewer]
 routing-profile: runtime-heavy
 ---
 

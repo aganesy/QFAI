@@ -1,6 +1,5 @@
 import { parse as parseYaml } from "yaml";
 
-import { isModifier } from "./modifiers.js";
 import { isRecord } from "./parse.js";
 import { isWorkflowRoute, ROUTE_FAMILIES } from "./routes.js";
 import { SEAM_STEP } from "./steps.js";
@@ -18,9 +17,8 @@ export interface PlanStage {
   steps: PlanStep[];
   after: string[];
   effects: string[];
-  // `spec` or `code`: the review that follows the stage. `none` marks a triage stage that no
-  // review follows, as a stage with no `review` is.
-  review?: "spec" | "code" | "none";
+  // The review that follows the stage: the specification review or the code review.
+  review?: "spec" | "code";
 }
 
 // A step at which the run may change route, and where each outcome it reports sends the run:
@@ -34,7 +32,6 @@ export interface WorkflowPlanFile {
   route: string;
   family: string;
   stages: PlanStage[];
-  defaultModifiers: string[];
   decisionPoints: string[];
   releasePoint?: string;
   branchPoints: PlanBranchPoint[];
@@ -75,15 +72,7 @@ export interface PlanRefusal {
 export type PlanLoad =
   { ok: true; plan: WorkflowPlanFile } | { ok: false; refusals: PlanRefusal[] };
 
-const PLAN_KEYS = [
-  "route",
-  "family",
-  "stages",
-  "defaultModifiers",
-  "decisionPoints",
-  "releasePoint",
-  "branchPoints",
-];
+const PLAN_KEYS = ["route", "family", "stages", "decisionPoints", "releasePoint", "branchPoints"];
 const STAGE_KEYS = ["id", "kind", "steps", "after", "effects", "review"];
 const STEP_KEYS = ["step", "mode", "passThrough"];
 const BRANCH_KEYS = ["step", "outcomes"];
@@ -94,12 +83,7 @@ const MODES: Record<string, string> = { settled: "sdd-triage", "read-only": "imp
 
 const SDD_APPEND = ["sdd-story", "sdd-gate"];
 
-const VERIFY_BLOCK = [
-  "verify-change-note",
-  "verify-context",
-  "verify-qfai-gate",
-  "verify-repo-gate",
-];
+const VERIFY_BLOCK = ["verify-qfai-gate", "verify-repo-gate"];
 
 // Each stage kind, with the steps a stage of that kind may run.
 const KINDS: Record<string, string[]> = {
@@ -138,12 +122,13 @@ const KINDS: Record<string, string[]> = {
     "prototyping-loop",
     "prototyping-handoff",
   ],
-  acceptance: ["atdd-scaffold", "atdd-credentials", "atdd-author"],
-  test_fix: ["atdd-test-fix", "implement-test-fix"],
+  test_fix: ["implement-test-fix"],
   regression_fix: ["implement-regression-fix"],
   maintenance: ["maintain-edit"],
   verify: [
+    "verify-change-note",
     ...VERIFY_BLOCK,
+    "verify-context",
     "verify-repeat-run",
     "verify-advisory",
     "verify-external",
@@ -151,6 +136,9 @@ const KINDS: Record<string, string[]> = {
     "verify-release-notes",
   ],
   implement: [
+    "implement-scaffold",
+    "implement-credentials",
+    "implement-acceptance",
     "implement-tdd",
     "implement-checkpoint",
     "implement-refactor",
@@ -177,10 +165,15 @@ export const PASS_THROUGH_STEPS = [
   "sdd-cycle",
   "sdd-story",
   "common-design-md",
-  "atdd-credentials",
-  "atdd-author",
+  "discussion-pack",
   "discussion-uiux",
-  "atdd-test-fix",
+  "triage-investigate",
+  "implement-bisect",
+  "implement-minimize",
+  "implement-scaffold",
+  "implement-tdd",
+  "implement-credentials",
+  "implement-sweep",
   "implement-test-fix",
   "maintain-edit",
   "verify-change-note",
@@ -290,19 +283,20 @@ function stageOf(value: unknown, refuse: Refuse): PlanStage | null {
   return stage;
 }
 
-// A stage's `review`: absent; `spec` or `code` on a stage that is not a triage stage; or `none`
-// on a triage stage, which changes no tracked file.
+// A stage's `review`: absent, or `spec` or `code` on a stage that is not a triage stage, which
+// changes no tracked file.
 function reviewOf(
   value: unknown,
   kind: string,
   id: string,
   refuse: Refuse,
-): PlanStage["review"] | undefined {
+): "spec" | "code" | undefined {
   if (value === undefined) return undefined;
-  if (kind === "triage" && value === "none") return value;
-  if (kind !== "triage" && (value === "spec" || value === "code")) return value;
-  refuse("shape", id);
-  return undefined;
+  if ((value !== "spec" && value !== "code") || kind === "triage") {
+    refuse("shape", id);
+    return undefined;
+  }
+  return value;
 }
 
 function stagesOf(document: Record<string, unknown>, refuse: Refuse): PlanStage[] | null {
@@ -336,8 +330,8 @@ function graphRefusals(stages: PlanStage[], refuse: Refuse) {
   const ids = new Set(stages.map((stage) => stage.id));
   for (const [index, stage] of stages.entries()) {
     if (stage.after.some((id) => !ids.has(id))) refuse("after-missing", stage.id);
-    const earlier = new Set(stages.slice(0, index).map((each) => each.id));
-    if (stage.after.some((id) => ids.has(id) && !earlier.has(id))) refuse("after-order", stage.id);
+    const later = stages.slice(index + 1).filter((each) => stage.after.includes(each.id));
+    for (const each of later) refuse("after-order", `${stage.id}:${each.id}`);
   }
   for (const stage of stages) {
     if (reachedFrom(stages, followersOf(stages, stage.id)).has(stage.id)) refuse("cycle", stage.id);
@@ -389,18 +383,6 @@ function terminalRefusals(stages: PlanStage[], refuse: Refuse) {
   if (ends.length !== 1 || !end || !runs(end, "triage-close")) {
     refuse("terminal", ends.map((stage) => stage.id).join(",") || "stages");
   }
-}
-
-function modifiersOf(value: unknown, refuse: Refuse): string[] {
-  const modifiers = stringList(value);
-  if (!modifiers) {
-    refuse("shape", "defaultModifiers");
-    return [];
-  }
-  for (const modifier of modifiers) {
-    if (!isModifier(modifier)) refuse("out-of-vocabulary", modifier);
-  }
-  return modifiers;
 }
 
 function outcomeOf(value: unknown, refuse: Refuse): PlanBranchPoint["outcomes"][number] | null {
@@ -472,7 +454,6 @@ function headerOf(document: Record<string, unknown>, route: string, refuse: Refu
   }
   return {
     family,
-    defaultModifiers: modifiersOf(document.defaultModifiers, refuse),
     decisionPoints: decisionPoints ?? [],
     ...(typeof releasePoint === "string" ? { releasePoint } : {}),
     branchPoints: branchPointsOf(document.branchPoints, refuse),

@@ -8,8 +8,8 @@ roles:
     orchestrator,
     product-experience-architect,
     devops-ci-engineer,
-    completion-reviewer,
     product-surface-reviewer,
+    implementation-reviewer,
   ]
 routing-profile: ui-bearing
 ---

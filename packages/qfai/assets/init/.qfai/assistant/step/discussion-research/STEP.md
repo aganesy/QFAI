@@ -3,7 +3,7 @@ name: discussion-research
 owner: qfai-discussion
 purpose: "Record the research the interview reads."
 requires: [common-steering-refresh]
-roles: [delivery-planner, discovery-analyst, completion-reviewer]
+roles: [delivery-planner, discovery-analyst]
 routing-profile: default
 ---
 

@@ -3,7 +3,7 @@ name: verify-change-note
 owner: qfai-verify
 purpose: "Write the changelog entry, the migration steps and the breaking changes a user needs for this change, or show that none is needed."
 requires: []
-roles: [orchestrator, doc-steward, completion-reviewer]
+roles: [orchestrator, doc-steward]
 routing-profile: default
 ---
 
@@ -63,4 +63,4 @@ changed behaviour.
 - Every change a user sees has an entry, or the pass names why none is needed.
 - Every breaking change names its migration step.
 - No version, release heading or tag was written.
-- The completion reviewer checked the entries against the change.
+- The code review checked the entries against the change.

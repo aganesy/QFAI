@@ -3,7 +3,7 @@ name: discussion-oq
 owner: qfai-discussion
 purpose: "Register every open question the discussion leaves, and drive the open count to zero."
 requires: []
-roles: [requirements-analyst, completion-reviewer, requirements-reviewer]
+roles: [requirements-analyst, requirements-reviewer]
 routing-profile: requirements-heavy
 ---
 

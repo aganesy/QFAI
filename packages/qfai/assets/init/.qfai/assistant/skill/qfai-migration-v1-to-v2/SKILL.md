@@ -9,7 +9,6 @@ roles:
     requirements-analyst,
     solution-architect,
     devops-ci-engineer,
-    completion-reviewer,
     architecture-reviewer,
   ]
 routing-profile: architecture-heavy
@@ -174,7 +173,7 @@ saying it is already done. The complete write boundary is in
 ### Reviewer Gate
 
 The architecture reviewer checks the old-to-new mapping and preservation of
-unplaced content. The completion reviewer checks the twelve reports, rerun
+unplaced content. The reviewer checks the twelve reports, rerun
 behavior, and validation result. Enforce the Drift Protocol and
 `rule/test-layers.md` when reviewing test obligations. Counts and effort
 estimates are signals, not gates. Record PASS or REVISE on the final tree.

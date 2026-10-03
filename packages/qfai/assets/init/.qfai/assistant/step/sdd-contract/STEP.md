@@ -4,13 +4,7 @@ owner: qfai-sdd
 purpose: "Write the contracts and business rules the flow's examples need, or repair one named contract."
 requires: []
 roles:
-  [
-    solution-architect,
-    test-design-analyst,
-    product-experience-architect,
-    architecture-reviewer,
-    completion-reviewer,
-  ]
+  [solution-architect, test-design-analyst, product-experience-architect, architecture-reviewer]
 routing-profile: architecture-heavy
 ---
 

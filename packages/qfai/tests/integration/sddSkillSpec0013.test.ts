@@ -97,7 +97,7 @@ describe("shipped qfai-sdd story-tree contract", () => {
     const content = await skill();
     expect(content).toContain("npx qfai validate --profile sdd --fail-on error --flow BF-NNNN");
     expect(content).toContain("Report, per flow, in the stage report");
-    expect(content).toContain("every blocking reviewer returned PASS");
+    expect(content).toContain("every finding of the specification review is fixed or answered");
   });
 
   it("gates each changed flow separately without inheriting a sibling worker's findings", async () => {

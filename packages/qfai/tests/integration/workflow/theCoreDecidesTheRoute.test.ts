@@ -16,7 +16,6 @@ import {
   type WorkflowExtraction,
 } from "../../../src/core/workflow/extraction.js";
 import { planOf, type PlanDocument } from "../../../src/core/workflow/plan.js";
-import { routeDefaults } from "../../../src/core/workflow/routeDecision.js";
 import { isWorkflowRoute } from "../../../src/core/workflow/routes.js";
 import { extraction } from "../../helpers/workflowExtraction.js";
 import { minimalProject, removeProjects } from "./workflowProject.js";
@@ -87,23 +86,19 @@ function readingsOf(intent: RoutingReading["intent"], size: number): RoutingRead
 // QFAI:EX-0001-0211-33
 // SIMPLIFIED: combines at most three facts per extraction, not every subset of them.
 // Lift when: a rule reads more than three facts together.
-it("Every extraction reaches exactly one catalog route by a rule, and an unsignalled release is handed off", async () => {
-  const { defaultsOf } = await routeDefaults();
+it("Every extraction reaches exactly one catalog route by a rule, an unsignalled release by rule 14", () => {
   const unrouted: string[] = [];
   const outside: string[] = [];
   let decided = 0;
   for (const intent of INTENTS) {
     for (const reading of readingsOf(intent, 3)) {
-      const choice = decideRoute({ ...reading, artifacts: ["code"] }, defaultsOf);
+      const choice = decideRoute(reading);
       decided += 1;
       if (!isWorkflowRoute(choice.route)) outside.push(choice.route);
       if (choice.rule === null) unrouted.push(JSON.stringify(reading));
     }
   }
-  const bareRelease = decideRoute(
-    { ...extraction({ intent: "release" }), artifacts: ["release"] },
-    defaultsOf,
-  );
+  const bareRelease = decideRoute(extraction({ intent: "release" }));
 
   expect({
     decided: decided > 100_000,
@@ -152,6 +147,6 @@ it("Two fix-defect requests plan the same stages and steps, whatever their risks
 
   expect({
     same: JSON.stringify(risky) === JSON.stringify(plain),
-    inOrder: ["diagnose", "spec", "implement", "verify"].map((id) => ids.indexOf(id)),
-  }).toEqual({ same: true, inOrder: [0, 1, ids.length - 2, ids.length - 1] });
+    inOrder: ["diagnose", "spec", "implement", "note", "verify"].map((id) => ids.indexOf(id)),
+  }).toEqual({ same: true, inOrder: [0, 1, ids.length - 3, ids.length - 2, ids.length - 1] });
 });

@@ -79,8 +79,8 @@ specialization_tags:
 
 ## When to use
 
-- Use when this review domain is required by the resolved routing entry or explicitly requested.
-- Use when an independent specialist check is needed before completion.
+- Use only when a completion audit is asked for by name. No routing entry or route review
+  requires this reviewer: a route's reviews are the specification review and the code review.
 
 ## When not to use
 

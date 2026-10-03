@@ -54,7 +54,7 @@ contracts and evidence only.
 
 Use `.qfai/assistant/rule/agent-selection.md` as the routing SSOT.
 
-- Routed phases, in order: `plan` (`delivery-planner`, `qa-strategist`) -> `execution` (`devops-ci-engineer`) -> `review` (`qa-gatekeeper`, `completion-reviewer`, optional `implementation-reviewer` when code fixes are in scope).
+- Routed phases, in order: `plan` (`delivery-planner`, `qa-strategist`) -> `execution` (`devops-ci-engineer`) -> `review` (`qa-gatekeeper`, optional `implementation-reviewer` when code fixes are in scope).
 
 ```text
 Role: delivery-planner

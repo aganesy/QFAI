@@ -3,7 +3,7 @@ name: sdd-cycle
 owner: qfai-sdd
 purpose: "Check the business rules against the examples they generalize, and apply what at most two cycles adopt."
 requires: []
-roles: [test-design-analyst, requirements-analyst, solution-architect, completion-reviewer]
+roles: [test-design-analyst, requirements-analyst, solution-architect]
 routing-profile: default
 ---
 

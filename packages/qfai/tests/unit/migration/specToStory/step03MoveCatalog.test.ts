@@ -1096,13 +1096,18 @@ describe("migration catalog move", () => {
     const context = await fixture();
     const legacy = await legacyRoutingEntries();
     const defaults = await defaultRoutingEntries();
-    const differing = legacy.filter(
+    // The 1.x manifest as a project left it, with one entry already equal to an installed
+    // default: the default `qfai-configure` entry stands in for its 1.x copy.
+    const configure = defaults.find((entry) => entry.skill === "qfai-configure");
+    if (!configure) throw new Error("the installed defaults hold no qfai-configure entry");
+    const manifest = [...legacy.filter((entry) => entry.skill !== "qfai-configure"), configure];
+    const differing = manifest.filter(
       (entry) => !defaults.some((candidate) => isDeepStrictEqual(candidate, entry)),
     );
     // Premise: the manifest holds an entry equal to an installed default and one that differs.
     expect(differing.length).toBeGreaterThan(0);
-    expect(differing.length).toBeLessThan(legacy.length);
-    await putManifests(context, legacy);
+    expect(differing.length).toBeLessThan(manifest.length);
+    await putManifests(context, manifest);
     const result = await run(context);
     const config = await readConfig(context.root);
     expect(config.routing).toEqual(differing);

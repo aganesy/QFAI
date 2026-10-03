@@ -92,7 +92,7 @@ See [Invoking a stage directly](#invoking-a-stage-directly-expert-path).
 
 You state the change once, in your own words.
 The `qfai-run` skill reads it into facts: what it asks for, its risks, and how sure that reading is.
-`npx qfai workflow plan` then picks one of 39 fixed routes from those facts by ordered decision rules
+`npx qfai workflow plan` then picks one of 34 fixed routes from those facts by ordered decision rules
 and returns the route's plan, writing nothing. The session runs each step of the plan in order and
 asks you only the decisions that are yours and each release. You type no stage name.
 
@@ -115,8 +115,7 @@ parent directory. Where it is missing the hook says to run the project's install
 `npm i -D qfai` when `package.json` does not list `qfai`.
 
 - Every run on a route runs the same steps. A step with nothing to do records why and passes.
-- Three modifiers, `review:heavy`, `gate:user` and `gate:release`, can raise the review or add a
-  stop for your approval. They never change the steps, and a run never loses one.
+- Two modifiers, `gate:user` and `gate:release`, can add a stop for your approval. They never change the steps, and a run never loses one.
 - A question, a duplicate, a request missing information or an operation only a person can run
   takes a route that changes no file, run by `qfai-triage`.
 - When a diagnosis shows the work is on the wrong route, it moves at a point its route

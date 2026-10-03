@@ -11,7 +11,6 @@ roles:
   - backend-engineer
   - implementation-reviewer
   - qa-gatekeeper
-  - completion-reviewer
   - product-surface-reviewer
 routing-profile: implementation-heavy
 ---

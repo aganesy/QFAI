@@ -9,7 +9,6 @@ roles:
     orchestrator,
     delivery-planner,
     discovery-analyst,
-    completion-reviewer,
     requirements-analyst,
     solution-architect,
     product-experience-architect,
@@ -90,10 +89,9 @@ the whole classified surface set — `primary_surface` **and** every
 ## Review
 
 After the last step, run one review of the pack under work with
-`.qfai/assistant/step/common-review-cycle/STEP.md`. The reviewers are the union
-of the reviewers of the steps that ran: `completion-reviewer` and
-`requirements-reviewer` always, `product-surface-reviewer` when
-`discussion-uiux` ran, and `architecture-reviewer` when the pack records an
+`.qfai/assistant/step/common-review-cycle/STEP.md`: the specification review,
+by `requirements-reviewer`, joined by `product-surface-reviewer` when
+`discussion-uiux` ran and by `architecture-reviewer` when the pack records an
 architecture-affecting decision. Roles are selected under
 `.qfai/assistant/rule/shared-skill-delegation-baseline.md`.
 
@@ -114,7 +112,7 @@ The full logic, including the UI-bearing conditions, is
   with `.qfai/assistant/step/common-gate-run/STEP.md`, passes with no
   discussion-owned finding. Repair a failure under
   `.qfai/assistant/rule/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol`.
-- Every blocking reviewer returned `PASS` on the final revision.
+- Every finding of the one review is fixed or answered.
 
 ## Completion Message & Next Actions (MUST)
 

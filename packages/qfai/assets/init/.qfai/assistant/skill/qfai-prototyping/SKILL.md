@@ -8,9 +8,9 @@ roles:
   [
     orchestrator,
     product-experience-architect,
-    completion-reviewer,
     devops-ci-engineer,
     product-surface-reviewer,
+    implementation-reviewer,
   ]
 steps: [prototyping-grill, prototyping-preflight, prototyping-loop, prototyping-handoff]
 requires: [common-review-cycle]
@@ -84,8 +84,9 @@ intent.
 
 ### Reviewer Gate
 
-After the last step, run one review through `common-review-cycle`, with the
-union of the reviewers of the steps that ran. The reviewers judge the rendered
+After the last step, run one review through `common-review-cycle`: the code
+review, by `implementation-reviewer` and `product-surface-reviewer`. The
+reviewers judge the rendered
 prototype, never the code alone. Their findings inform the user; they do not
 decide completion.
 

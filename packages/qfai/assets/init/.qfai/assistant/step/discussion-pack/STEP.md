@@ -8,7 +8,6 @@ roles:
     requirements-analyst,
     solution-architect,
     product-experience-architect,
-    completion-reviewer,
     requirements-reviewer,
     architecture-reviewer,
   ]
@@ -28,6 +27,12 @@ and `Ended` is `confirmed`, `user-closed` or `no-question`. Without that row,
 or with `Ended: stopped`, write no pack file and stop. A pack drafted
 mid-session records a design that was still being decided, and the draft is
 what the rest of the run then defends.
+
+## Passes when
+
+Read first: the pack under work and the interview's answers. The step passes
+when the pack already records every answer the interview gave, so there is
+nothing to write. The pass names the pack path.
 
 ## Reads
 

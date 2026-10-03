@@ -189,6 +189,7 @@ request that merely resembles it does not count.
 | `backport`                 | Asks for a backport or a cherry-pick to a release branch                  |
 | `release-notes`            | Asks for the release notes or the changelog of a release                  |
 | `test-plan`                | Is a manual test plan or a verification item for a build                  |
+| `acceptance-bodies`        | Asks to write the bodies of the empty acceptance tests                    |
 
 ## Artifacts
 
