@@ -158,11 +158,21 @@ function main() {
       reports: [],
     };
     manifest.snapshots.push(snapshot);
+    snapshot.pnpmVersion = text("pnpm", ["--version"], cwd);
+    snapshot.corepackVersion = text("corepack", ["--version"], cwd);
+    snapshot.requiredPnpmVersion = /^pnpm@(\d+\.\d+\.\d+)$/.exec(pkg.packageManager)?.[1];
     saveManifest();
+    if (
+      snapshot.requiredPnpmVersion === undefined ||
+      snapshot.pnpmVersion !== snapshot.requiredPnpmVersion
+    ) {
+      throw new Error(
+        `Snapshot pnpm ${snapshot.pnpmVersion} does not match ${pkg.packageManager}.`,
+      );
+    }
     run("bash", ["--noprofile", "--norc", "-e", "-o", "pipefail", "-c", body], cwd, {
       env: { ...process.env, QFAI_SNAPSHOT_ACTION_PATH: actionPath },
     });
-    snapshot.pnpmVersion = text("pnpm", ["--version"], cwd);
     run("pnpm", ["build"], cwd);
     const cli = path.join(cwd, "packages", "qfai", "dist", "cli", "index.mjs");
     snapshot.cliSha256 = digest(readFileSync(cli));

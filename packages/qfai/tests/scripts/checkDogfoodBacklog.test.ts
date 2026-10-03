@@ -52,7 +52,7 @@ type Guard = {
     report: { issues?: Issue[] },
     file: string,
   ) => Array<{ code?: string; message?: string }>;
-  countPinnedFiles: (pinned: Record<string, unknown>) => string[];
+  invalidPinnedFiles: (pinned: Record<string, unknown>) => string[];
   pinEntry: (found: Found) => Pinned;
 };
 
@@ -426,20 +426,20 @@ describe("the pin's shape", () => {
   ];
 
   it.each(invalidCounts)("refuses a %s finding count", async (_name, value) => {
-    const { countPinnedFiles } = await load();
-    expect(countPinnedFiles({ [PINNED]: { "QFAI-X m": value } })).toEqual([PINNED]);
+    const { invalidPinnedFiles } = await load();
+    expect(invalidPinnedFiles({ [PINNED]: { "QFAI-X m": value } })).toEqual([PINNED]);
   });
 
   it("accepts a positive safe boundary and an empty profile", async () => {
-    const { countPinnedFiles } = await load();
-    expect(countPinnedFiles({ [PINNED]: { "QFAI-X m": Number.MAX_SAFE_INTEGER } })).toEqual([]);
-    expect(countPinnedFiles({})).toEqual([]);
+    const { invalidPinnedFiles } = await load();
+    expect(invalidPinnedFiles({ [PINNED]: { "QFAI-X m": Number.MAX_SAFE_INTEGER } })).toEqual([]);
+    expect(invalidPinnedFiles({})).toEqual([]);
   });
 
   it("names a file still pinned as a bare count, which cannot say what it holds", async () => {
-    const { countPinnedFiles } = await load();
+    const { invalidPinnedFiles } = await load();
 
-    const counted = countPinnedFiles({
+    const counted = invalidPinnedFiles({
       [PINNED]: 11,
       [CLEAN]: { "QFAI-STORY-006 EX-0001-0002-01": 1 },
     });

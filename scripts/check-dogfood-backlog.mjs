@@ -135,7 +135,7 @@ export function errorsByFile(report) {
  * Files whose saved finding counts are not positive safe integers.
  * Bare file counts cannot identify findings and are refused too.
  */
-export function countPinnedFiles(pinned) {
+export function invalidPinnedFiles(pinned) {
   return Object.entries(pinned)
     .filter(
       ([, held]) =>
@@ -253,7 +253,7 @@ function main() {
     return;
   }
 
-  const counted = countPinnedFiles(pinned);
+  const counted = invalidPinnedFiles(pinned);
   if (counted.length > 0) {
     console.error(
       `check-dogfood-backlog: the ${profile} pin holds ${String(counted.length)} invalid file entry/entries. ` +
