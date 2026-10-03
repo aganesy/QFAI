@@ -146,8 +146,7 @@ it("a repair whose change request is not in force stays outside the boundary", a
   const finished = workflow(root, ["finish", "--run", runId]);
   const subjects = outOfScope(finished.json);
   expect(subjects).toHaveLength(1);
-  expect(subjects[0]).toEqual(expect.stringContaining("docs/guide.md"));
-  expect(subjects[0]).toEqual(expect.stringContaining(".qfai/spec/decisions.md"));
+  expect(subjects[0]).toBe("docs/guide.md");
 });
 
 it("finish refuses a repair changed again after resume admitted its digest", async () => {
