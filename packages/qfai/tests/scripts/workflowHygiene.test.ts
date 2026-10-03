@@ -3329,8 +3329,7 @@ describe("TC-0017-0049 (TDD-0049): hygiene findings use the bare lint namespace"
       );
 
       // `BR-0016-0040` is a NAMESPACE decision and nothing more: the bare `R-` form, matching
-      // the `check-pack-locations` precedent. It does not decide catalog membership, which is
-      // settled by severity class and deferred as a lockstep change.
+      // the `check-pack-locations` precedent.
       expect
         .soft([...codes].sort(), `findings must use one bare-R code (rule ${rule})`)
         .toEqual(["R-WORKFLOW-HYGIENE-DRIFT"]);

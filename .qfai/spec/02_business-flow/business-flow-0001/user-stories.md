@@ -128,7 +128,6 @@
 | US-0001-0169 | SKILL.md `## Default Autopilot Policy` section                                         | `user-story-0001-0169/` |
 | US-0001-0171 | Cross-skill `handoff.yaml` schema                                                      | `user-story-0001-0171/` |
 | US-0001-0174 | Cross-skill documentation realignment to implementation                                | `user-story-0001-0174/` |
-| US-0001-0175 | Reviewer-Gate ingests workflow-hygiene and shipped-shape drift                         | `user-story-0001-0175/` |
 | US-0001-0176 | Standard Research Pipeline Execution                                                   | `user-story-0001-0176/` |
 | US-0001-0177 | MCP Server Integration for Web Research                                                | `user-story-0001-0177/` |
 | US-0001-0178 | Research Skill Packaging                                                               | `user-story-0001-0178/` |
