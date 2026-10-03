@@ -1528,7 +1528,10 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // input prints the reminder as before. Still one `node -e` reader, the `reminders.json` path and
   // one message key, no shell and no network. Events, matchers and markers are unchanged; the
   // previous group is listed as superseded so the merge refreshes it.
-  [".claude/settings.json", "d3c9b6f5b4d4adde281fe0c36dec12dc1673eb8f07d06c4c854a0ce5ffa2897c"],
+  //
+  // Re-pinned for the removal of the `Skill(qfai-atdd)` permission, the skill no longer shipping.
+  // The whole delta is that one line; restoring it reproduces `d3c9b6f5…` byte for byte.
+  [".claude/settings.json", "cd45ee4f53f7ed63cb2bb2522e5d3b6ab7400437ec66a189684f048b103dbc99"],
   // Inside `.codex/`, and pinned for the reason `.claude/settings.json` is: its commands are a
   // program an adopter's agent runs. Two `UserPromptSubmit` groups, structured-question and
   // free-text entry. Codex takes one command string, so each runs the same `node -e` reader
@@ -1601,7 +1604,10 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // `Component catalogue` row of the Stack table in `tech.md` as the place that
   // says which registry is primary. The whole delta is those two comment lines:
   // restoring the previous wording reproduces `3c3c1be3…` byte for byte.
-  ["qfai.config.yaml", "1fea21e9a7d7d534920245d200b72a1a6d30aa0119855966b321d4886833e3b3"],
+  //
+  // Re-pinned for the removal of the `atdd` block and its `scaffoldEscalateCycles` key, which
+  // nothing reads any more. Restoring the block reproduces `1fea21e9…` byte for byte.
+  ["qfai.config.yaml", "c1f4c390e39091db076203f135787ce9860f9462939f519675d7a884a1f62662"],
 ]);
 
 /**

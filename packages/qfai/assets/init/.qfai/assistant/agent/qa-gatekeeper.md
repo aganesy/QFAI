@@ -101,9 +101,8 @@ its evidence on the revision submitted for review.
 - Reject a GREEN written for the test: no value hard-coded to the test's inputs and no branch written only for the test, and a wrong test or infeasible task raised as a Change Request, not worked around
   (`.qfai/assistant/rule/test-layers.md#a-passing-test-is-not-the-solution`).
 
-Use `skill/qfai-implement/references/red-admissibility.md`,
-`skill/qfai-implement/references/red-not-observable.md`, and
-`skill/qfai-atdd/references/red-provenance.md` for the three evidence
+Use `skill/qfai-implement/references/red-admissibility.md` and
+`skill/qfai-implement/references/red-not-observable.md` for the evidence
 forms. A verdict covers only the observed round. It does not approve
 scope or the whole flow.
 

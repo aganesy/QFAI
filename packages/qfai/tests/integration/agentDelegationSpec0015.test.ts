@@ -306,7 +306,6 @@ describe("TC-0015-0012: Capability Probe First Real Delegation Contract", () => 
 // status vocabulary has to admit the value the taxonomy mandates.
 describe("delegation failure taxonomy is actionable", () => {
   const SKILLS_WITH_STATUS_VOCABULARY = [
-    "qfai-atdd",
     "qfai-configure",
     "qfai-verify",
     "qfai-sdd",

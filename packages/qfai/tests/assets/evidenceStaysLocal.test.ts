@@ -37,22 +37,6 @@ describe("shipped instructions keep evidence local", () => {
     expect(orchestrator).toContain("rule/drift-protocol.md#evidence-stays-local");
   });
 
-  // QFAI:EX-0001-0071-04
-  it("keeps the ATDD evidence file local and lets the annotated tests carry the coverage", async () => {
-    const atdd = await read("step/atdd-author/STEP.md");
-    const evidence = await read("step/common-evidence-record/STEP.md");
-    expect(atdd).toContain(".qfai/evidence/atdd-BF-NNNN.md");
-    expect(atdd).toContain("`common-evidence-record`");
-    expect(evidence).toContain("stays local and is never committed");
-    expect(atdd).toContain("The annotated tests carry the coverage");
-  });
-
-  // QFAI:EX-0001-0002-08
-  it("lets implement find the acceptance tests without the local handoff", async () => {
-    const implement = await read("step/implement-tdd/STEP.md");
-    expect(implement).toContain("where this checkout lacks it, find the tests by their");
-  });
-
   // QFAI:EX-0001-0002-08
   it("keeps prototyping outputs and checks local", async () => {
     const grill = await read("step/prototyping-grill/STEP.md");

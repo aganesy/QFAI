@@ -2,7 +2,7 @@
  * Reviewer-Gate validators for the second-wave findings:
  *   - R-CERTIFY-VERIFY-CIRCULAR: emitted when a prototyping-phase
  *     certify path reads a verify.json whose scope requires
- *     `/qfai-atdd` or `/qfai-implement` artifacts (option-B violation).
+ *     `/qfai-implement` artifacts (option-B violation).
  *   - R-PROMPT-SCANNER-DRIFT: emitted when the
  *     designMdViolations.ts ↔ generator-prompt.md SSOT-sync pair
  *     drifts (a contract clause is present in one side but absent
@@ -31,9 +31,8 @@ const SCANNER_REL = "packages/qfai/src/core/prototyping/designMdViolations.ts";
 const PROMPT_REL =
   "packages/qfai/assets/init/.qfai/assistant/skill/qfai-prototyping/references/generator-prompt.md";
 
-// Verify.json scopes that pull in /qfai-atdd or /qfai-implement
-// artifacts. Reading them at the prototyping phase forms the
-// circular-read pattern that option-B forbids.
+// Verify.json scopes that pull in /qfai-implement artifacts. Reading them at
+// the prototyping phase forms the circular-read pattern that option-B forbids.
 const NON_PROTOTYPING_SCOPES = new Set(["atdd", "full", "implement"]);
 
 /**
@@ -121,7 +120,7 @@ async function detectCertifyVerifyCircular(root: string): Promise<Issue[]> {
     `R-CERTIFY-VERIFY-CIRCULAR: ${verifyRel} records scope="${scopeRaw}" while a ` +
     `prototyping loop is iterating (canonical ${PROTOTYPING_JSON_REL} has ` +
     `stopReason=null), so \`qfai prototyping certify\` will refuse it: option-B ` +
-    `forbids the prototyping certify gate from depending on /qfai-atdd or ` +
+    `forbids the prototyping certify gate from depending on ` +
     `/qfai-implement validator outputs (justification: certify=${verifyRel}, ` +
     `profile=${scopeRaw}, contract=option-B phase-isolation clause). ` +
     `This is not a defect in the run that wrote it — a full-profile run records ` +

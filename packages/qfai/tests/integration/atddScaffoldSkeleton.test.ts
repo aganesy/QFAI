@@ -5,8 +5,8 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { runAtddScaffold } from "../../src/cli/commands/atddScaffold.js";
-import { defaultConfig } from "../../src/core/config.js";
-import { validateScaffoldPlaceholder } from "../../src/core/validators/scaffoldPlaceholder.js";
+import { buildSkeleton } from "../../src/core/atdd/scaffold.js";
+import { resolveScaffoldDialect } from "../../src/core/atdd/scaffoldDialect.js";
 
 let root: string;
 const flowId = "BF-0008";
@@ -32,6 +32,23 @@ async function seedStory(ids: string[] = acIds): Promise<void> {
   );
 }
 
+/**
+ * Runs a vitest skeleton against a stand-in for `describe` and `it`, and
+ * returns the names of the tests that ran to the end. A skipped or todo test
+ * is not reached through `it` itself, so it would be missing from the result.
+ */
+function runVitestSkeleton(body: string): string[] {
+  const ran: string[] = [];
+  const source = body.replace(/^import .*$/m, "");
+  const describeBlock = (_name: string, block: () => void): void => block();
+  const test = (name: string, block: () => void): void => {
+    block();
+    ran.push(name);
+  };
+  new Function("describe", "it", source)(describeBlock, test);
+  return ran;
+}
+
 beforeEach(async () => {
   root = await mkdtemp(path.join(os.tmpdir(), "qfai-scaffold-story-"));
 });
@@ -40,7 +57,9 @@ afterEach(async () => {
 });
 
 describe("atdd scaffold story-tree targets", () => {
-  it("writes one integration skeleton per declared AC with a single AC annotation", async () => {
+  // QFAI:AC-0001-0073-01
+  // QFAI:EX-0001-0073-01
+  it("writes one empty, passing integration test per declared AC with its annotation", async () => {
     await seedStory();
     expect(await runAtddScaffold({ root, storyId, write: () => {}, writeErr: () => {} })).toBe(0);
     const dir = path.join(root, "tests", "integration", storyId);
@@ -48,25 +67,23 @@ describe("atdd scaffold story-tree targets", () => {
     for (const id of acIds) {
       const body = await readFile(path.join(dir, `${id}.test.ts`), "utf8");
       expect(body).toContain(`QFAI:${id}`);
-      expect(body).toContain(`TODO: implement assertion for ${id}`);
-      expect(body).toContain("QFAI-SCAFFOLD-PLACEHOLDER");
-      expect(body).not.toContain("QFAI:SPEC-");
+      expect(body).not.toMatch(/\.(skip|todo)\b|TODO/);
+      expect(runVitestSkeleton(body)).toEqual([id]);
     }
   });
 
-  it("writes one flow skeleton into the E2E home", async () => {
+  // QFAI:AC-0001-0073-03
+  // QFAI:EX-0001-0073-04
+  it("writes one empty, passing flow test into the E2E home, once", async () => {
     await seedStory();
     expect(await runAtddScaffold({ root, flowId, write: () => {}, writeErr: () => {} })).toBe(0);
     const file = path.join(root, "tests", "e2e", `${flowId}.test.ts`);
     const body = await readFile(file, "utf8");
     expect(body).toContain(`QFAI:${flowId}`);
-    expect(body).toContain(`TODO: implement assertion for ${flowId}`);
+    expect(runVitestSkeleton(body)).toEqual([flowId]);
     expect(await runAtddScaffold({ root, flowId, write: () => {}, writeErr: () => {} })).toBe(0);
     expect(await readFile(file, "utf8")).toBe(body);
-    const findings = await validateScaffoldPlaceholder(root, defaultConfig);
-    expect(findings).toHaveLength(1);
-    expect(findings[0]?.code).toBe("D-SCAFFOLD-PLACEHOLDER");
-    expect(findings[0]?.refs).toEqual([flowId]);
+    expect(await readdir(path.dirname(file))).toEqual([`${flowId}.test.ts`]);
   });
 
   // QFAI:AC-0001-0073-02
@@ -140,5 +157,38 @@ describe("atdd scaffold story-tree targets", () => {
       `test_${acIds[0]?.toLowerCase().replace(/-/g, "_")}.py`,
     );
     expect(await readFile(file, "utf8")).toContain(`QFAI:${acIds[0]}`);
+  });
+});
+
+describe("atdd scaffold dialects", () => {
+  // QFAI:EX-0001-0073-01
+  it("writes a vitest test that carries its annotation, is not skipped and passes empty", () => {
+    const resolution = resolveScaffoldDialect(["tests/**/*.test.ts"]);
+    if (resolution.outcome !== "resolved") throw new Error(resolution.outcome);
+    const body = buildSkeleton({ id: flowId, kind: "BF" }, resolution.dialect);
+
+    expect(body.split("\n")[0]).toBe(`// QFAI:${flowId}`);
+    expect(body).not.toMatch(/\.(skip|todo)\b/);
+    expect(runVitestSkeleton(body)).toEqual([flowId]);
+  });
+
+  // QFAI:EX-0001-0073-01
+  it("writes a Python test that carries its annotation, is not skipped and passes empty", () => {
+    const resolution = resolveScaffoldDialect(["tests/**/test_*.py"]);
+    if (resolution.outcome !== "resolved") throw new Error(resolution.outcome);
+    const id = acIds[0] ?? "";
+    const body = buildSkeleton({ id, kind: "AC", storyId }, resolution.dialect);
+
+    const lines = body.split("\n");
+    expect(lines[0]).toBe(`# QFAI:${id}`);
+    expect(body).not.toMatch(/skip|raise|TODO/i);
+    // A unittest method whose only statement is `pass` passes under both
+    // pytest and unittest.
+    expect(lines.slice(-4)).toEqual([
+      "class Test_AC_0008_0007_01(unittest.TestCase):",
+      "    def test_ac_0008_0007_01(self) -> None:",
+      "        pass",
+      "",
+    ]);
   });
 });

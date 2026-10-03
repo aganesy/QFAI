@@ -19,11 +19,11 @@ Canonical path: `.qfai/report/verify.json` (NOT `.qfai/evidence/`, NOT `.qfai/ou
 
 `scope` is a closed enum. Write the one that matches the stage you were invoked for:
 
-| `scope`       | Written by                                                                          | validate profile                                | Accepted by                                                                                          |
-| ------------- | ----------------------------------------------------------------------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `prototyping` | Work Order H of `/qfai-prototyping`, before `certify`                               | `npx qfai validate --profile prototyping`       | `npx qfai prototyping certify` — this is the ONLY value it accepts                                   |
-| `atdd`        | after `/qfai-atdd`, checking ATDD obligations only                                  | `npx qfai validate --profile atdd`              | rejected by prototyping certify; `R-CERTIFY-VERIFY-CIRCULAR` when a prototyping loop is still active |
-| `full`        | any whole-repository run, including the one after `/qfai-atdd` or `/qfai-implement` | `npx qfai validate --profile verify` (= `full`) | same as `atdd`                                                                                       |
+| `scope`       | Written by                                                          | validate profile                                | Accepted by                                                                                          |
+| ------------- | ------------------------------------------------------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `prototyping` | Work Order H of `/qfai-prototyping`, before `certify`               | `npx qfai validate --profile prototyping`       | `npx qfai prototyping certify` — this is the ONLY value it accepts                                   |
+| `atdd`        | checking acceptance-test obligations only                           | `npx qfai validate --profile atdd`              | rejected by prototyping certify; `R-CERTIFY-VERIFY-CIRCULAR` when a prototyping loop is still active |
+| `full`        | any whole-repository run, including the one after `/qfai-implement` | `npx qfai validate --profile verify` (= `full`) | same as `atdd`                                                                                       |
 
 There is no `implement` value: the enum is closed at these three, and a run after
 `/qfai-implement` is recorded as `full`. (`reviewerGate.ts` still recognises a

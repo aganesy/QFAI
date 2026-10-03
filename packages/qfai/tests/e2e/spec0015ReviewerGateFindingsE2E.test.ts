@@ -1,7 +1,7 @@
 /**
  * E2E acceptance for spec-0015 CHG-005 user stories:
  *   - US-0015-0007: Reviewer-Gate emits R-CERTIFY-VERIFY-CIRCULAR on
- *     regressed certify path that reads /qfai-atdd or /qfai-implement
+ *     regressed certify path that reads /qfai-implement
  *     validator output at the prototyping phase.
  *   - US-0015-0008: Reviewer-Gate emits R-PROMPT-SCANNER-DRIFT on
  *     SSOT-sync-pair drift, carrying a 3-part justification; empty

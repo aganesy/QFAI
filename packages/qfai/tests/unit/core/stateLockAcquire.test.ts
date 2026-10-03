@@ -7,7 +7,7 @@
  * `CREATE_NEW` returns `ERROR_ACCESS_DENIED`, which libuv maps to `EPERM`. The
  * acquire loop rethrew everything that was not `EEXIST`, so on Windows every
  * `updateState` under contention failed outright. Measured at 2 failures in 8
- * runs of `atddScaffoldEscalation.test.ts`; the CI matrix is Linux-only, so no
+ * runs of a contended state-write test; the CI matrix is Linux-only, so no
  * lane can reproduce it and the fault has to be injected.
  *
  * Simply widening the check to accept `EPERM` is the trap: an unwritable

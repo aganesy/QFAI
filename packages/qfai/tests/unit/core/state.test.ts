@@ -31,7 +31,6 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { recordValidateCycle } from "../../../src/core/atdd/scaffoldEscalation.js";
 import {
   QFAI_GITIGNORE_BLOCK,
   QFAI_GITIGNORE_RECOMMENDED_ENTRIES,
@@ -97,12 +96,12 @@ describe("TC-0010-0012: state.json discussion.currentId reader/writer", () => {
     const abs = path.join(root, ".qfai", "state.json");
     await mkdir(path.dirname(abs), { recursive: true });
     // What an interrupted non-atomic writeFile leaves behind: valid
-    // prefix, missing tail. The `atdd` counters are owned by a
-    // different writer and must survive.
+    // prefix, missing tail. The `other` key is owned by a different
+    // writer and must survive.
     const truncated = JSON.stringify(
       {
         discussion: { currentId: "discussion-20260801120000000" },
-        atdd: { scaffoldValidateCycles: { "AC-0001-0001-02": 2 } },
+        other: { count: 2 },
       },
       null,
       2,
@@ -132,30 +131,6 @@ describe("TC-0010-0012: state.json discussion.currentId reader/writer", () => {
       StateUnreadableError,
     );
     expect(await readFile(abs, "utf-8")).toBe("[1, 2, 3]");
-  });
-
-  it("the atdd writer refuses too, so the discussion pointer survives", async () => {
-    const abs = path.join(root, ".qfai", "state.json");
-    await mkdir(path.dirname(abs), { recursive: true });
-    await writeFile(abs, '{ "discussion": { "currentId": "discussion-KEEP" } ', "utf-8");
-    await expect(recordValidateCycle(root, "AC-0001-0001-02")).rejects.toBeInstanceOf(
-      StateUnreadableError,
-    );
-    expect(await readFile(abs, "utf-8")).toBe(
-      '{ "discussion": { "currentId": "discussion-KEEP" } ',
-    );
-  });
-
-  it("both writers merge into one document when the file is readable", async () => {
-    await writeDiscussionCurrentId(root, "discussion-20260101000000000");
-    await recordValidateCycle(root, "AC-0001-0001-02");
-    await writeDiscussionCurrentId(root, "discussion-20260202000000000");
-    const raw = JSON.parse(await readFile(path.join(root, ".qfai", "state.json"), "utf-8")) as {
-      atdd?: { scaffoldValidateCycles?: Record<string, number> };
-      discussion?: { currentId?: string };
-    };
-    expect(raw.discussion?.currentId).toBe("discussion-20260202000000000");
-    expect(raw.atdd?.scaffoldValidateCycles?.["AC-0001-0001-02"]).toBe(1);
   });
 
   it("writes atomically and leaves no temp file behind", async () => {

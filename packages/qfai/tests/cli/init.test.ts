@@ -58,7 +58,6 @@ const REQUIRED_SKILLS = [
   "qfai-configure",
   "qfai-discussion",
   "qfai-sdd",
-  "qfai-atdd",
   "qfai-prototyping",
   "qfai-implement",
   "qfai-verify",
@@ -3126,7 +3125,7 @@ describe("qfai init", () => {
 
       expect(skippedBullets.filter((bullet) => bullet.includes("\\"))).toEqual([]);
       expect(removedBullets.filter((bullet) => bullet.includes("\\"))).toEqual([]);
-      expect(skippedBullets).toContain(".qfai/assistant/skill/qfai-atdd/SKILL.md");
+      expect(skippedBullets).toContain(".qfai/assistant/skill/qfai-implement/SKILL.md");
       expect(removedBullets).toContain(".qfai/assistant/skill/qfai-discussion/10_workflow.md");
     } finally {
       await removeTempTree(root);

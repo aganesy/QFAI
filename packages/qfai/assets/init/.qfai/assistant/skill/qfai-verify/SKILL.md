@@ -135,4 +135,4 @@ them in the report instead:
 project_memory:
 
 - Verify is the full-scan approval gate; the validate runs of the other stages are signals, and the verify gate is the binding pass.
-- Verify never rewrites the story tree or a contract; drift fixes belong to `/qfai-sdd`, `/qfai-atdd` and `/qfai-implement`.
+- Verify never rewrites the story tree or a contract; drift fixes belong to `/qfai-sdd` and `/qfai-implement`.

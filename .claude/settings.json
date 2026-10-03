@@ -1,7 +1,6 @@
 {
   "permissions": {
     "allow": [
-      "Skill(qfai-atdd)",
       "Skill(qfai-configure)",
       "Skill(qfai-discussion)",
       "Skill(qfai-grill)",

@@ -77,7 +77,7 @@ describe("US-0006-0007: doctor summary splits into 2 groups and downgrades skill
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
     const skillsDir = path.join(root, ".qfai", "assistant", "skill");
-    const targetSkill = path.join(skillsDir, "qfai-atdd", "SKILL.md");
+    const targetSkill = path.join(skillsDir, "qfai-implement", "SKILL.md");
     const skillOriginal = await readFile(targetSkill, "utf-8");
     await writeFile(targetSkill, `${skillOriginal}\n<!-- e2e drift -->\n`, "utf-8");
 

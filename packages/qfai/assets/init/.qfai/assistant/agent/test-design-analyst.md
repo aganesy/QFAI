@@ -59,10 +59,9 @@ coverage depth before a stage claims completion.
   for depth. Report every gap with its owner, including an EX gap that
   `/qfai-implement` will close.
 - During implementation, review the selected EX and its test against the
-  flow's acceptance tests. Report a new acceptance gap to ATDD.
+  flow's acceptance tests. Report a new acceptance gap to `implement-scaffold`.
 - Treat volume estimates as planning signals. A high count alone does not
-  make an obligation invalid. Use
-  `skill/qfai-atdd/references/volume-signals.md`.
+  make an obligation invalid.
 
 ## Layer and traceability check
 
@@ -71,8 +70,8 @@ annotations are:
 
 | Obligation | Layer                  | Annotation             | Author            |
 | ---------- | ---------------------- | ---------------------- | ----------------- |
-| BF         | E2E                    | `QFAI:BF-NNNN`         | `/qfai-atdd`      |
-| AC         | Integration or API     | `QFAI:AC-NNNN-NNNN-NN` | `/qfai-atdd`      |
+| BF         | E2E                    | `QFAI:BF-NNNN`         | `/qfai-implement` |
+| AC         | Integration or API     | `QFAI:AC-NNNN-NNNN-NN` | `/qfai-implement` |
 | EX         | Every other test layer | `QFAI:EX-NNNN-NNNN-NN` | `/qfai-implement` |
 
 A test must exercise behavior with a discriminating oracle. A file name,

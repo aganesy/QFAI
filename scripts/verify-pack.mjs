@@ -142,7 +142,6 @@ const requiredSkills = [
   "qfai-configure",
   "qfai-discussion",
   "qfai-sdd",
-  "qfai-atdd",
   "qfai-prototyping",
   "qfai-implement",
   "qfai-verify",
@@ -150,6 +149,7 @@ const requiredSkills = [
   "qfai-migration-v1-to-v2",
 ];
 const deprecatedSkillIds = [
+  "qfai-atdd",
   "qfai-spec",
   "qfai-tdd-red",
   "qfai-tdd-green",

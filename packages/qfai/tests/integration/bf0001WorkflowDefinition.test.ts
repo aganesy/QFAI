@@ -70,8 +70,8 @@ describe("BF-0001 workflow definition", () => {
     const ordered = [
       "Discussion (optional)",
       "Specification (SDD)",
-      "Acceptance tests (ATDD)",
-      "Implementation:",
+      "writes the BF E2E and AC integration or API tests",
+      "implements one EX at a time",
       "Verify:",
     ].map((phase) => workflow.indexOf(phase));
     expect(ordered.every((position) => position >= 0)).toBe(true);
@@ -125,20 +125,20 @@ describe("BF-0001 workflow definition", () => {
 
   // QFAI:EX-0001-0003-01
   // QFAI:EX-0001-0004-01
-  it("defines an ordered, acyclic eight-stage workflow with the optional stages", async () => {
+  it("defines an ordered, acyclic seven-stage workflow with the optional stages", async () => {
     const workflow = await readFile(rule("workflow.md"), "utf8");
     const canonicalStages = workflow.split("## Stages (canonical)")[1]?.split("\nStage 3")[0] ?? "";
     const stages = [...canonicalStages.matchAll(/^([0-7])\. (.+)$/gm)].map((match) => ({
       number: Number(match[1]),
       label: match[2] ?? "",
     }));
-    expect(stages.map(({ number }) => number)).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
+    expect(stages.map(({ number }) => number)).toEqual([0, 1, 2, 3, 4, 5, 6]);
     expect(stages[0]?.label).toContain("Steering refresh");
     expect(stages[1]?.label).toContain("Discussion (optional)");
     expect(stages[4]?.label).toContain("Prototyping (optional)");
-    expect(stages[5]?.label).toContain("Acceptance tests (ATDD)");
-    expect(stages[6]?.label).toContain("Implementation:");
-    expect(stages[7]?.label).toContain("Verify:");
+    expect(stages[5]?.label).toContain("Implementation:");
+    expect(stages[5]?.label).toContain("integration or API tests with empty bodies");
+    expect(stages[6]?.label).toContain("Verify:");
     expect(workflow).toContain("At the beginning of each stage");
     expect(workflow).toContain("implements one EX at a time through Red, Green, Refactor");
     const configure = await readFile(skill("qfai-configure"), "utf8");
@@ -199,15 +199,15 @@ describe("BF-0001 workflow definition", () => {
 
   // QFAI:EX-0001-0012-03
   // QFAI:EX-0001-0012-04
-  it("keeps shared drift rules under rule and ATDD-only guidance under its references", async () => {
+  it("keeps shared drift rules under rule and implement-only guidance under its references", async () => {
     const drift = await readFile(rule("drift-protocol.md"), "utf8");
-    const atdd = await readFile(skill("qfai-atdd"), "utf8");
-    const crossSpec = await readFile(
-      path.join(assistant, "skill", "qfai-atdd", "references", "cross-spec-obligations.md"),
+    const implement = await readFile(skill("qfai-implement"), "utf8");
+    const credentials = await readFile(
+      path.join(assistant, "skill", "qfai-implement", "references", "credential-reuse.md"),
       "utf8",
     );
     expect(drift).toContain("# Drift Protocol");
-    expect(atdd).toContain("rule/drift-protocol.md");
-    expect(crossSpec).toContain("# Findings outside the active flow");
+    expect(implement).toContain("[DRIFT-PROTOCOL:MANDATORY]");
+    expect(credentials.length).toBeGreaterThan(0);
   });
 });

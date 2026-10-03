@@ -22,7 +22,6 @@ The calling step passes the evidence path. The shape follows the stage.
 | ------------------ | ----------------------------------------- | ----------------------- | ----------------------------- |
 | `qfai-discussion`  | `.qfai/evidence/discussion-<stamp>.md`    | `## Grilling Session`   | [One session](#one-session)   |
 | `qfai-sdd`         | `.qfai/evidence/sdd-BF-NNNN.md`, per flow | `## Pre-draft Grilling` | [Checkpoints](#checkpoints)   |
-| `qfai-atdd`        | `.qfai/evidence/atdd-BF-NNNN.md`          | `## Grilling Session`   | [Run blocks](#run-blocks)     |
 | `qfai-implement`   | `.qfai/evidence/implement-BF-NNNN.md`     | `## Grilling Session`   | [Run blocks](#run-blocks)     |
 | `qfai-verify`      | `.qfai/evidence/verify-<run-id>.md`       | `## Grilling Session`   | [Run blocks](#run-blocks)     |
 | `qfai-prototyping` | `.qfai/evidence/prototyping/grilling.md`  | `## Session`            | the owner's own decision file |

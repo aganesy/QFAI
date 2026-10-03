@@ -68,7 +68,7 @@ afterEach(() => {
 });
 
 /** A skill the shipped roster carries, so its wrapper is in scope. */
-const SHIPPED_SKILL = "qfai-atdd";
+const SHIPPED_SKILL = "qfai-implement";
 
 async function withProject(task: (root: string) => Promise<void>): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-links-"));
@@ -142,7 +142,7 @@ describe("integration.links", () => {
 
       expect(check?.severity).toBe("error");
       expect(check?.message).toContain("need attention");
-      expect(check?.details?.["wrappers"]).toEqual([".claude/skills/qfai-atdd"]);
+      expect(check?.details?.["wrappers"]).toEqual([".claude/skills/qfai-implement"]);
     });
   });
 
@@ -155,7 +155,7 @@ describe("integration.links", () => {
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;
       await wireProject(root);
-      injectedFindings = [linkFinding("warning", ".claude/skills/qfai-atdd")];
+      injectedFindings = [linkFinding("warning", ".claude/skills/qfai-implement")];
 
       const check = linksCheck(await createDoctorData({ startDir: root, rootExplicit: true }));
 
@@ -168,8 +168,8 @@ describe("integration.links", () => {
       if (!(await canCreateSymlink(root))) return;
       await wireProject(root);
       injectedFindings = [
-        linkFinding("warning", ".claude/skills/qfai-atdd"),
-        linkFinding("error", ".codex/skills/qfai-atdd"),
+        linkFinding("warning", ".claude/skills/qfai-implement"),
+        linkFinding("error", ".codex/skills/qfai-implement"),
       ];
 
       const check = linksCheck(await createDoctorData({ startDir: root, rootExplicit: true }));
@@ -202,7 +202,7 @@ describe("integration.links", () => {
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;
       await wireProject(root);
-      const suppressed = linkFinding("warning", ".claude/skills/qfai-atdd");
+      const suppressed = linkFinding("warning", ".claude/skills/qfai-implement");
       injectedFindings = [{ ...suppressed, suppressed: true }];
 
       const check = linksCheck(await createDoctorData({ startDir: root, rootExplicit: true }));
@@ -220,12 +220,12 @@ describe("integration.links", () => {
       if (!(await canCreateSymlink(root))) return;
       await wireProject(root);
       await writeFile(path.join(root, ".qfai", "waivers.yml"), "waivers: [\n", "utf-8");
-      injectedFindings = [linkFinding("warning", ".claude/skills/qfai-atdd")];
+      injectedFindings = [linkFinding("warning", ".claude/skills/qfai-implement")];
 
       const check = linksCheck(await createDoctorData({ startDir: root, rootExplicit: true }));
 
       expect(check?.severity).toBe("error");
-      expect(check?.details?.["wrappers"]).toEqual([".claude/skills/qfai-atdd"]);
+      expect(check?.details?.["wrappers"]).toEqual([".claude/skills/qfai-implement"]);
     });
   });
 
@@ -253,7 +253,7 @@ describe("integration.links", () => {
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;
       await wireProject(root);
-      const finding = linkFinding("warning", ".claude/skills/qfai-atdd");
+      const finding = linkFinding("warning", ".claude/skills/qfai-implement");
       injectedFindings = [{ ...finding, suppressed: true }];
 
       const check = linksCheck(await createDoctorData({ startDir: root, rootExplicit: true }));
@@ -273,7 +273,7 @@ describe("integration.links", () => {
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;
       await wireProject(root);
-      injectedFindings = [linkFinding("info", ".claude/skills/qfai-atdd")];
+      injectedFindings = [linkFinding("info", ".claude/skills/qfai-implement")];
 
       const check = linksCheck(await createDoctorData({ startDir: root, rootExplicit: true }));
 
@@ -296,7 +296,7 @@ describe("integration.links", () => {
       await wireProject(root);
       injectedFindings = [
         {
-          ...linkFinding("warning", ".claude/skills/qfai-atdd"),
+          ...linkFinding("warning", ".claude/skills/qfai-implement"),
           suggested_action: REMEDY,
         },
       ];

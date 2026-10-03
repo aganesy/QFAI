@@ -59,9 +59,10 @@ is not a substitute for the required assertions.
 | Acceptance criterion | `QFAI:AC-NNNN-NNNN-NN` | Integration or API         |
 | Example              | `QFAI:EX-NNNN-NNNN-NN` | Selected non-E2E test file |
 
-These are the only coverage annotation kinds. `/qfai-atdd` authors the BF
-and AC acceptance tests. `/qfai-implement` selects an uncovered EX and
-writes the smallest behavioral test that proves it, usually in a unit or
+These are the only coverage annotation kinds. `/qfai-implement` writes the
+BF and AC acceptance tests with empty bodies through `implement-scaffold`,
+and their bodies through `implement-acceptance`. It selects an uncovered EX
+and writes the smallest behavioral test that proves it, usually in a unit or
 component layer. A test may carry more than one annotation only when its
 assertions independently prove every named obligation.
 

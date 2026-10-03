@@ -361,7 +361,7 @@ describe("BF-0003 skill manifest location", () => {
 });
 
 async function mutateSkill(root: string): Promise<void> {
-  const target = path.join(root, ".qfai", "assistant", "skill", "qfai-atdd", "SKILL.md");
+  const target = path.join(root, ".qfai", "assistant", "skill", "qfai-implement", "SKILL.md");
   const original = await readFile(target, "utf-8");
   await writeFile(target, `${original}\n<!-- drift sentinel -->\n`, "utf-8");
 }

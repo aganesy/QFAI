@@ -193,7 +193,6 @@ describe("issue code uniqueness", () => {
 // listed here either.
 const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "D-DEPRECATED-PATH",
-  "D-SCAFFOLD-PLACEHOLDER",
   "QFAI-AGENT-005",
   "QFAI-AGENT-007",
   "QFAI-AGENT-008",
@@ -610,7 +609,6 @@ describe("the form of a finding code", () => {
     "D-SAAS-PACKAGE-ATTESTATION-MISSING",
     "D-SAAS-PACKAGE-HANDOFF-SCHEMA",
     "D-SAAS-PACKAGE-VERIFY-SKIPPED",
-    "D-SCAFFOLD-PLACEHOLDER",
     "I-ASSISTANT-LAYER-UNSEEDED",
     "QFAI-AGENT-005",
     "QFAI-AGENT-007",

@@ -517,8 +517,8 @@ async function externalLinkProblem(
  * `null` when the identity is preserved.
  *
  * Vendoring points a path at the same document somewhere else in the project.
- * Pointing `skills/qfai-atdd` at `skills/qfai-verify` is a different thing: the
- * wrapper still says `qfai-atdd`, the agent reads the other skill, and no path
+ * Pointing `skills/qfai-sdd` at `skills/qfai-verify` is a different thing: the
+ * wrapper still says `qfai-sdd`, the agent reads the other skill, and no path
  * comparison catches it because both sides follow the link to the same place.
  * What tells the two apart is whether the last `segments` of the resolved path
  * still spell the same thing.

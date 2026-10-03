@@ -8,7 +8,6 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const trees = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const RECORD = "assistant/step/common-grilling-record/STEP.md";
 const stages = [
-  { skill: "qfai-atdd", evidence: "atdd-BF-NNNN.md" },
   { skill: "qfai-implement", evidence: "implement-BF-NNNN.md" },
   { skill: "qfai-verify", evidence: "verify-<run-id>.md" },
 ];

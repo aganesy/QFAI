@@ -15,7 +15,7 @@ Use source-backed discussion requirements to write one connected, testable story
 3. Write broad intent in `01_policy/` as criteria, then each observable process in `02_business-flow/business-flow-NNNN/business-flow.md`. Keep each flow's story index and three-file story directories beneath it. Every file takes its template's shape exactly, as `spec-traceability-rules.md#document-shapes` sets out.
 4. Write one observable outcome per AC, as one named Gherkin `Scenario:` under its ID comment. Give each AC at least one concrete EX, and give each EX exactly one AC reference. Include normal, failure, boundary, and authorization paths relevant to the requirement.
 5. Once the examples exist, write independently falsifiable BRs in the contracts that enforce them. Each BR cites at least one full EX ID; every EX has a BR. A shared BR is defined once, in the contract that enforces it, and no other contract cites it.
-6. Derive test obligations from the completed BF → US → AC → EX ← BR graph. The SDD skill records those obligations; `/qfai-atdd` authors the acceptance tests.
+6. Derive test obligations from the completed BF → US → AC → EX ← BR graph. The SDD skill records those obligations; `/qfai-implement` writes the acceptance tests.
 
 ## Item size
 

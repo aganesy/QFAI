@@ -46,7 +46,6 @@ Orders Summary instead.
 | `qfai-discussion` | `discussion` | `discussion`  | `.qfai/discussion/discussion-YYYYMMDDhhmmssSSS`        |
 | `qfai-sdd`        | `sdd`        | `flow`        | `<paths.specsDir>/02_business-flow/business-flow-NNNN` |
 | `qfai-implement`  | `implement`  | `flow`        | `<paths.specsDir>/02_business-flow/business-flow-NNNN` |
-| `qfai-atdd`       | `atdd`       | `flow`        | `<paths.specsDir>/02_business-flow/business-flow-NNNN` |
 | any other owner   | none         | none          | no pack                                                |
 
 `producer` decides which stage gate judges the pack, and a `target.kind` the
@@ -141,8 +140,7 @@ a new round for the affected test.
 - Never rewrite a sealed pack, and never relabel an old result as current.
 - After changing a test or its fixture, verify its oracle again before asking
   for review. Where the behaviour already passes, use the owner's controlled
-  falsifiability path; for an acceptance test that is
-  `.qfai/assistant/skill/qfai-atdd/references/red-provenance.md`.
+  falsifiability path.
 - Where a production change alone answered the finding, rerun the
   selected test and the relevant suite, keep the original RED subject and
   record the new result.

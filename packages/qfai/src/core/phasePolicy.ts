@@ -32,8 +32,8 @@ export function isCiEnvironment(env: NodeJS.ProcessEnv = process.env): boolean {
 // (`--root tmp/pack/sandbox/out`), broad coverage is preserved.
 //
 // A profile outside this set is REPORTED, not blocked. A hard `error` that
-// replaced the entire run would make `qfai-atdd`, `qfai-discussion` and
-// `qfai-prototyping` uncompletable the moment they ran anywhere that exports
+// replaced the entire run would make `qfai-discussion` and `qfai-prototyping`
+// uncompletable the moment they ran anywhere that exports
 // `CI=true` — GitHub Actions, most hosted agent runners, and many
 // devcontainers — since each names one of these profiles as its **only**
 // completion gate, with no CI-legal fallback. A guard

@@ -215,7 +215,7 @@ describe("TC-0006-0017: skills.integrity defaults to warning, --fail-on error st
     // Mutate a skill markdown to force diffProjectSkillsAgainstInitAssets to
     // emit a `drift` (changed entry) result.
     const skillsDir = path.join(root, ".qfai", "assistant", "skill");
-    const targetSkill = path.join(skillsDir, "qfai-atdd", "SKILL.md");
+    const targetSkill = path.join(skillsDir, "qfai-implement", "SKILL.md");
     const original = await readFile(targetSkill, "utf-8").catch(() => "");
     expect(original.length, "skills assets must exist after init").toBeGreaterThan(0);
     await writeFile(targetSkill, `${original}\n<!-- drift sentinel -->\n`, "utf-8");
@@ -241,7 +241,7 @@ describe("TC-0006-0018: doctor summary 2-group split routes skills.integrity to 
     // Seed both: (a) a missing-DESIGN.md error via prototyping profile, and
     // (b) skills.integrity drift via mutated skill markdown.
     const skillsDir = path.join(root, ".qfai", "assistant", "skill");
-    const targetSkill = path.join(skillsDir, "qfai-atdd", "SKILL.md");
+    const targetSkill = path.join(skillsDir, "qfai-implement", "SKILL.md");
     const skillOriginal = await readFile(targetSkill, "utf-8");
     await writeFile(targetSkill, `${skillOriginal}\n<!-- drift sentinel -->\n`, "utf-8");
 

@@ -49,10 +49,6 @@ import {
   type ReviewArtifactsScope,
 } from "./validators/reviewArtifacts.js";
 import {
-  scaffoldPlaceholderReportedFilter,
-  validateScaffoldPlaceholder,
-} from "./validators/scaffoldPlaceholder.js";
-import {
   detectPlatform,
   validateAgentDefinition,
   validateDesignToken,
@@ -541,11 +537,7 @@ async function runStoryProfileValidators(
   ];
   const atdd = async (): Promise<Issue[]> => [
     ...(await validateStoryTreeObligations(root, config, "atdd", model)),
-    ...(await validateScaffoldPlaceholder(root, config, flowScope ? { flowScope } : {})),
-    ...(await validateTestTodoStubs(root, config, {
-      ...acceptanceStubScan(root, config),
-      placeholderReported: scaffoldPlaceholderReportedFilter(root, config),
-    })),
+    ...(await validateTestTodoStubs(root, config, acceptanceStubScan(root, config))),
   ];
   const tdd = async (includeContracts = true, includeDrift = true): Promise<Issue[]> => [
     ...(await validateStoryTreeObligations(root, config, "tdd", model)),

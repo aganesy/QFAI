@@ -4170,6 +4170,7 @@ async function readWrapperEvidence(filePath: string): Promise<string | null> {
  * just because its link target is inside the canonical tree.
  */
 const RETIRED_SKILL_IDS: ReadonlySet<string> = new Set([
+  "qfai-atdd",
   "qfai-discuss",
   "qfai-migration-spec-to-story",
   "qfai-pr",
@@ -4238,7 +4239,7 @@ async function linksIntoCanonicalSkill(
  *    would leave the retired wrapper in place in such a checkout.
  *
  * The remaining regular files are repair sidecars
- * (`qfai-atdd.qfai-repair-1234`), whose names do not match a retired id, so
+ * (`qfai-sdd.qfai-repair-1234`), whose names do not match a retired id, so
  * they never reach here. The prune runs before the repair, so deleting one
  * would lose the only copy a previous failed repair left behind.
  */
