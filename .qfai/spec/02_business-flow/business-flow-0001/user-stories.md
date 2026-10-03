@@ -48,7 +48,6 @@
 | US-0001-0045 | Deprecated assistant paths and skill project memory                                    | `user-story-0001-0045/` |
 | US-0001-0046 | Skill-document references and migration notes                                          | `user-story-0001-0046/` |
 | US-0001-0047 | Profile-specific validation reports                                                    | `user-story-0001-0047/` |
-| US-0001-0048 | Prompt-scanner drift justification                                                     | `user-story-0001-0048/` |
 | US-0001-0049 | SaaS package validation profile                                                        | `user-story-0001-0049/` |
 | US-0001-0050 | Audit profile task forms                                                               | `user-story-0001-0050/` |
 | US-0001-0051 | Story-tree layout and ID validation                                                    | `user-story-0001-0051/` |
@@ -126,7 +125,6 @@
 | US-0001-0164 | Devils-Advocate Reviewer                                                               | `user-story-0001-0164/` |
 | US-0001-0165 | Pattern-Doubler Reviewer                                                               | `user-story-0001-0165/` |
 | US-0001-0166 | All-Reviewer FAIL Obligation                                                           | `user-story-0001-0166/` |
-| US-0001-0168 | Reviewer-Gate `R-PROMPT-SCANNER-DRIFT` emission with mandatory `justification:`        | `user-story-0001-0168/` |
 | US-0001-0169 | SKILL.md `## Default Autopilot Policy` section                                         | `user-story-0001-0169/` |
 | US-0001-0171 | Cross-skill `handoff.yaml` schema                                                      | `user-story-0001-0171/` |
 | US-0001-0174 | Cross-skill documentation realignment to implementation                                | `user-story-0001-0174/` |
@@ -168,7 +166,7 @@
 | US-0001-0221 | Judge the router against labelled requests before a release                            | `user-story-0001-0221/` |
 | US-0001-0222 | Plan a request's route with one command                                                | `user-story-0001-0222/` |
 | US-0001-0223 | Answer only the critical decisions, and approve each release                           | `user-story-0001-0223/` |
-| US-0001-0224 | Follow a route in the session and continue from the repository                         | `user-story-0001-0224/` |
+| US-0001-0224 | Follow a route in the session                                                          | `user-story-0001-0224/` |
 | US-0001-0225 | Review a change twice: the specification before the code, and the code at the end      | `user-story-0001-0225/` |
 | US-0001-0226 | Write the bodies of empty acceptance tests in a quality phase                          | `user-story-0001-0226/` |
 | US-0001-0227 | See the files an earlier release left behind                                           | `user-story-0001-0227/` |

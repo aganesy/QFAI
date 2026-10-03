@@ -28,9 +28,9 @@ Feature: Migrate a project with the skill
     And it states that each checkout and each git worktree needs its own install before `npx qfai` resolves 2.x
 
   # AC-0004-0012-04
-  Scenario: The person learns the migration records stay in the working copy only
+  Scenario: The person learns where the working state is and where retired files went
     Given the shipped SKILL.md of the migration skill
     When an AI follows it to the end of a migration
-    Then it tells the person that git does not track .qfai/evidence/, so the plan, the ID map and the archives under .qfai/evidence/migration-spec-to-story/ exist only in that working copy
-    And that a person who needs the archived copies of customised files beyond it keeps a copy elsewhere
+    Then it tells the person that the plan and the ID map are under tmp/qfai-migration/, which git ignores and which they may delete
+    And that every file the migration retired is kept only in git history
 ```

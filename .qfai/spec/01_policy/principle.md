@@ -26,7 +26,7 @@
 
 ## Compatibility vs Change Rubric
 
-- Compatibility: preserve behavior required by the current contract and user-approved decisions. Keep historical source in the migration archive without treating it as an active fallback.
+- Compatibility: preserve behavior required by the current contract and user-approved decisions. Retired 1.x content survives only in git history.
 - Change: a breaking correction is acceptable when the active story tree, shipped assets, CLI, and validators are updated together and the affected gates pass.
 - Version: only the user selects a package version; branch pins and release changes follow `.agents/rules/version-discipline.md`.
 - Sources: `.qfai/spec/decisions.md`, `.qfai/spec/03_contract/contracts.md`, and `.agents/rules/version-discipline.md`.

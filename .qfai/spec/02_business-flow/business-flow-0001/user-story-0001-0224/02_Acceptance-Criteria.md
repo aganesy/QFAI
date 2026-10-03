@@ -3,7 +3,7 @@
 ## Criteria
 
 ```gherkin
-Feature: Follow a route in the session and continue from the repository
+Feature: Follow a route in the session
   # AC-0001-0224-01
   Scenario: The session announces the plan and runs its steps in order
     Given a free-text change request in workflow mode `active`
@@ -18,13 +18,6 @@ Feature: Follow a route in the session and continue from the repository
     When the session does its work
     Then it writes the artifact itself, or gives independent parts to sub-agents to run in parallel
     And a review is done by an agent that did not author what it reviews
-
-  # AC-0001-0224-03
-  Scenario: A new session continues from the repository
-    Given a session that ended part-way through a route
-    When a new session is asked to continue
-    Then it plans the request again and reads the working tree and git history to find where the work stands
-    And it reads no run record
 
   # AC-0001-0224-04
   Scenario: A branch point moves the work to its destination route

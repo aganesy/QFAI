@@ -26,7 +26,7 @@
 | The shipped workflow is runnable in an adopter repository.                | `qfai init` seeds the supported assistant and CI surfaces, and `qfai init --force` brings the regenerated assets back to the shipped version. |
 | Completion claims cite current results.                                   | The final report names each gate's command and verdict and the outcome of the route's reviews.                                                |
 | QFAI keeps no local evidence or review record.                            | Shipped assets and source name `.qfai/evidence/` or `.qfai/review/` only to list leftovers or in migration notices.                           |
-| QFAI checks no hash for integrity beyond two data-protection comparisons. | Shipped source holds no hash or digest equality check other than the Claude hook-group identity and the staged `.gitignore` resume check.     |
+| QFAI checks no hash for integrity beyond two data-protection comparisons. | Shipped source holds no hash or digest equality check other than the Claude hook-group identity.                                              |
 | A change route reviews its deliverables only.                             | A change route has two required reviews when it changes the specification, and one otherwise.                                                 |
 | A release passes every repository gate.                                   | `pnpm ci:gate` exits 0 on the release branch.                                                                                                 |
 
