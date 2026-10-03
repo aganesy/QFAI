@@ -1,7 +1,7 @@
 ---
 name: web-research
 title: "Web Research Pipeline"
-description: "8-stage web research pipeline with MCP integration, caching, and citation generation."
+description: "8-stage web research pipeline with MCP integration, caching, and citation generation. Use when asked to research a topic on the web and report the findings with cited sources."
 argument-hint: "[query] [--max-depth N] [--yolo]"
 allowed-tools: [Read, Glob, Bash, Write, Task, Agent, WebSearch, WebFetch]
 roles: [Researcher, Analyst, FactChecker]

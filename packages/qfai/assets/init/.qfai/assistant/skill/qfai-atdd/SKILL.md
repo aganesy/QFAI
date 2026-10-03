@@ -1,7 +1,12 @@
 ---
 name: qfai-atdd
 title: QFAI ATDD (Executable acceptance tests)
-description: "Use when invoked by name or handed a QFAI work order to write or repair the acceptance tests of one business flow."
+description: "Use when invoked by name or handed a QFAI work order to write or repair the
+  acceptance tests of one business flow: end-to-end, integration or API tests for its
+  acceptance criteria, the credentials a tested actor needs, or a fix to a defective acceptance
+  test. qfai-sdd writes the examples and cases; this skill automates them as tests. Product
+  code that makes a test pass belongs to qfai-implement. A free-text request that names no
+  stage goes to qfai-run."
 argument-hint: "<BF-ID> [--auto]"
 allowed-tools: [Read, Glob, Write, Edit, TodoWrite, Task, Agent, Bash]
 roles:

@@ -25,6 +25,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Every skill the agent may select says when to select it** (#2247). A
+  skill's `description:` is what the agent matches a request against.
+
+  - Each stage skill names the requests and artifacts it handles, and says
+    that a free-text request naming no stage goes to `qfai-run`.
+  - Neighbouring skills name their boundary in one clause: `qfai-sdd` writes
+    the examples and cases and `qfai-atdd` automates them as tests;
+    `qfai-implement` is for code to write and `qfai-verify` is a gate with no
+    code to write; `qfai-maintain` is for a change meant to alter no
+    behaviour. `qfai-discussion` hands a settled scope to `qfai-sdd`, and
+    `qfai-prototyping` leaves discussion sidecars and UI contracts to those
+    two.
+  - `qfai-configure`, `qfai-grilling`, `qfai-migration-v1-to-v2` and
+    `web-research` gain a "Use when" sentence. `qfai-grilling` is selected when
+    a stage calls for a session, or when asked to grill or stress-test a
+    design.
+  - A new asset test holds every skill without
+    `disable-model-invocation: true` to a "Use when" sentence, the third
+    person, 1,024 characters, and a name without "anthropic" or "claude".
+
 - **A DONE change request authorises only the branch that applies it**
   (#2251). A WIP row authorises as before, and a DONE row authorises
   only where the base lacks it or holds it at WIP. A later edit to the same path

@@ -1,7 +1,12 @@
 ---
 name: qfai-prototyping
 title: QFAI Prototyping (DESIGN.md-driven UX Loop)
-description: "Use when invoked by name or handed a QFAI work order to settle a visual or interaction decision by prototyping UI contracts under the root DESIGN.md."
+description: "Use when invoked by name or handed a QFAI work order to settle a visual or
+  interaction decision by prototyping UI contracts under the root DESIGN.md: generating and
+  reviewing screen prototypes for web, mobile or desktop, putting them to the user for
+  acceptance, and handing the accepted prototype off. Screen sidecars for an idea still being
+  scoped belong to qfai-discussion, and the UI contracts themselves to qfai-sdd. A free-text
+  request that names no stage goes to qfai-run."
 argument-hint: ""
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Agent, Bash]
 roles:
