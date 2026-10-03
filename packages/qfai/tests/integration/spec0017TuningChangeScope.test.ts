@@ -141,8 +141,8 @@ async function countTests(includes: readonly string[]): Promise<number> {
  * each in backticks. An earlier change to the same project is a different change, and its greens say
  * nothing about this one.
  *
- * Whether the runs were consecutive is not something a record can show, so this counts distinct
- * identifiers.
+ * This case counts distinct identifiers; consecutive successful runs require
+ * separate CI evidence.
  */
 function unjustifiedMoves(
   moved: readonly Pick<Project, "name" | "departures">[],
