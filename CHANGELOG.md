@@ -119,8 +119,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Required artifact reads keep their original error instead of replacing it
   with an empty result; rebuilt-snapshot checks still clean up after failure.
 
-### Fixed
-
 - Host-capability refusals at workflow start state the reason and the next
   action in one sentence while preserving the refusal fields (#2839).
 
