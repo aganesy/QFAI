@@ -21,4 +21,7 @@ The checkpoint occurs before this invocation's first design mutation in that sta
 - Settle a critical question before the affected author writes.
 - Record each checkpoint in the affected `.qfai/evidence/sdd-BF-NNNN.md`, and each decision it settled, as `.qfai/assistant/step/common-grilling-record/STEP.md#checkpoints` and `.qfai/assistant/step/common-grilling-record/STEP.md#decision-rows` state. A skipped checkpoint fails the gate; it is not an implicit approval.
 
+Each decision record carries the four labelled Approach items stated at the top of
+`.qfai/assistant/skill/qfai-sdd/templates/spec/decisions.md`.
+
 Pre-draft grilling settles a premise before drafting. The independent reviewer gate then checks the written artifact, its traceability, and its validation evidence. Both are required.
