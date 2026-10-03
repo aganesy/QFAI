@@ -150,7 +150,7 @@ const routesOf = (documents: unknown[]): string[] =>
   documents.map((each) => read(each, "route")).filter((route) => typeof route === "string");
 
 // SIMPLIFIED: observes the route the last plan names and the stage kinds of that plan; whether
-// the session asked the user anything is not observed.
+// the session asked the user anything is not observed, so that axis is not scored.
 // Lift when: a host transcript format is settled, so a question put to the user can be read.
 async function observe(root: string, seedId: string) {
   const documents = await planDocuments(root);
@@ -160,13 +160,14 @@ async function observe(root: string, seedId: string) {
     seedId,
     route: routesOf(documents).at(-1) ?? null,
     observed: (Array.isArray(stages) ? stages : []).map((stage) => String(read(stage, "kind"))),
-    askedQuestion: false,
+    askedQuestion: null,
   };
   return { run, measurements: [] };
 }
 
 // What a route evaluation seed is scored on: every route the session planned, in order, and
-// `low` where `plan` returned candidates. Plans carry no modifiers.
+// `low` where `plan` returned candidates. Plans carry no modifiers, so a safety class is judged
+// by the route and the candidates alone.
 async function observeRoutes(root: string, seedId: string): Promise<RouteRun> {
   const documents = await planDocuments(root);
   const asked = documents.some((each) => Array.isArray(read(each, "candidates")));

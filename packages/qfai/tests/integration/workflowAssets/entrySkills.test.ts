@@ -400,7 +400,7 @@ describe("qfai-run", () => {
       /before a step `releasePoint` names runs, ask the user to approve the release; where it is `end`, ask after the last stage/i,
     );
     expect(work).toMatch(
-      /nothing after it runs without the approval, and the approval authorizes no push, merge, tag or publication/i,
+      /nothing after it runs without the approval, which authorizes no push, merge, tag or publication/i,
     );
   });
 

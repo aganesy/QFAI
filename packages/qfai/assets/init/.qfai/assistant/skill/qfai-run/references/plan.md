@@ -12,8 +12,8 @@ are exact: an unknown key is refused.
 | `npx qfai workflow plan --route <route>` | The candidate chosen, or a branch destination   |
 
 - Each call prints one JSON document and writes no file.
-- Exit 0 is a plan or candidates, 2 a refused input, and 1 a plan the package
-  ships that does not load in this project.
+- Exit 0 is a plan or candidates, 2 a refused input, and 1 an input file that
+  cannot be read or a plan the package ships that does not load in this project.
 - The request text never goes on the command line or into the extraction.
 
 ## Extraction

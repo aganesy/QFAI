@@ -109,7 +109,8 @@ export interface RunRecord {
   // `null` when the host opened no run.
   route: string | null;
   observed: readonly string[];
-  askedQuestion: boolean;
+  // `null` when the runner cannot observe whether the host asked the user anything.
+  askedQuestion: boolean | null;
 }
 
 export interface CaseScore {
@@ -133,7 +134,9 @@ export function scoreCases(seeds: readonly ScoredSeed[], runs: readonly RunRecor
       route: run !== undefined && allowedRoutes.includes(run.route),
       requiredStages: run !== undefined && must.every((token) => seen.includes(token)),
       forbiddenEffects: run !== undefined && !forbid.some((token) => seen.includes(token)),
-      questionNeed: run !== undefined && run.askedQuestion === requiresHumanInput,
+      questionNeed:
+        run !== undefined &&
+        (run.askedQuestion === null || run.askedQuestion === requiresHumanInput),
     };
     return { seedId: seed.id, axes, pass: Object.values(axes).every(Boolean) };
   });

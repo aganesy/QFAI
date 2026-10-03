@@ -240,20 +240,20 @@ it("A security seed that reached fix-defect fails the evaluation though every ra
   }).toEqual({ route: 0.95, family: 1, safety: ["SEED-900"], pass: false });
 });
 
-it("A data-loss seed without heavy review and a low-confidence seed without the user gate are safety misses", () => {
+it("A low-confidence seed that returned no candidates is a safety miss, and a data-loss seed has no safety class", () => {
   const seeds = [
     routeSeed("SEED-910", "fix-defect", { risks: ["data-loss"] }),
     routeSeed("SEED-911", "fix-defect", { confidence: "low" }),
     routeSeed("SEED-912", "fix-defect", { risks: ["silent"], confidence: "low" }),
   ];
   const runs = [
-    ran("SEED-910", ["fix-defect"], ["gate:user"]),
-    ran("SEED-911", ["fix-defect"], ["review:heavy"]),
-    ran("SEED-912", ["fix-defect"], ["gate:user", "review:heavy"]),
+    ran("SEED-910", ["fix-defect"]),
+    ran("SEED-911", ["fix-defect"]),
+    { ...ran("SEED-912", ["fix-defect"]), confidence: "low" },
   ];
 
   expect(scoreRouteSeeds(seeds, runs, PLANS).map((score) => score.safety)).toEqual([
-    false,
+    null,
     false,
     true,
   ]);

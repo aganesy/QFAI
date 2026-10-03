@@ -170,7 +170,7 @@ export async function planOf(root: string, input: PlanInput): Promise<PlanDocume
   if ("extraction" in input) return planOfExtraction(root, input.extraction);
   if (!isWorkflowRoute(input.route)) {
     const message = "No route has that name. Name a route of the catalog.";
-    return refusal(message, [{ reason: "unknown-route", subject: input.route }]);
+    return refusal(message, [{ reason: "unknown-route", subject: input.route || "--route" }]);
   }
   const load = await loaded(root, input.route);
   return load.ok ? planned(load.plan) : load.document;

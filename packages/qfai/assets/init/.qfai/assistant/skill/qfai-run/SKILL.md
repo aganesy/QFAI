@@ -63,9 +63,9 @@ value but the three below plans nothing.
    independent parts in parallel, or for a review. At each step, handle the
    points the plan names for it:
    - **Release point.** Before a step `releasePoint` names runs, ask the user
-     to approve the release; where it is `end`, ask after the last stage.
-     Nothing after it runs without the approval, and the approval authorizes
-     no push, merge, tag or publication.
+     to approve the release; where it is `end`, ask after the last stage, then
+     rerun its gates over the approval's `decisions.md` row. Nothing after it
+     runs without the approval, which authorizes no push, merge, tag or publication.
    - **Decision point.** At a step `decisionPoints` names, put each critical
      decision to the user through the structured question tool before
      changing anything that depends on it. A decision is critical when it
