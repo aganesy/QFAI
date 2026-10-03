@@ -96,7 +96,7 @@ describe("reviewer response provenance", () => {
   it("requires the provenance lines at every skill-level reviewer gate", async () => {
     for (const content of await readShipped("step/implement-tdd/STEP.md")) {
       expect(content).toContain("rule/shared-skill-delegation-baseline.md");
-      expect(content).toContain("references/review-artifact-layout.md");
+      expect(content).toContain("references/finding-classification.md");
     }
 
     for (const content of await readShipped("skill/web-research/SKILL.md")) {

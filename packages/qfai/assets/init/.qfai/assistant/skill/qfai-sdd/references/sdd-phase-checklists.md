@@ -1,10 +1,10 @@
 # SDD Phase Checklists
 
-Use these checkpoints with the ordered stages in sdd-execution-playbook.md. A checked item requires evidence in the story tree or the flow evidence file.
+Use these checkpoints with the ordered stages in sdd-execution-playbook.md. A checked item requires evidence in the story tree or the SDD report.
 
 ## Source and triage
 
-- The selected source is the preflight result's selectedInputPath, or an explicit user requirement recorded in evidence.
+- The selected source is the preflight result's selectedInputPath, or an explicit user requirement named in the SDD report.
 - The selected discussion pack and applicable completed reviews were read and dispositioned. A disagreement was resolved in an SDD-owned artifact.
 - Every requirement has an affected policy, BF, US, EX, or contract path, or an open question that prevents a dependent write.
 - Triage, change requests, retired stories, and rejected options are decision rows. Open questions are open-questions.md rows.
@@ -37,7 +37,7 @@ The one example a diagnosed missing test needs is appended as `.qfai/assistant/s
 - No contract names an implementation file.
 - Every written contract file has a contracts.md index row in the same change, with the columns `ID`, `Title`, `File`, `Depends On`, `Reconciled With` and `Purpose`.
 - Contract state, errors, and persisted attributes can realize the AC and EX outcomes, including required joins.
-- Changed DB contracts were applied to a scratch database and their declared write paths exercised as contract-artifact-rules.md requires. Record the command and result under Contract executability in the flow evidence.
+- Changed DB contracts were applied to a scratch database and their declared write paths exercised as contract-artifact-rules.md requires. Record the command and result under Contract executability in the SDD repdence.
 - UI contracts follow the product's own root `DESIGN.md`; the sample design was not adopted.
 
 ## Concrete-abstract cycle
@@ -55,8 +55,8 @@ Follow concrete-abstract-cycle.md.
 
 - Every affected BF passed npx qfai validate --profile sdd --fail-on error --flow BF-NNNN with error=0.
 - Every document written passes its document schema. A failure was fixed by reshaping the document, not by adding to it.
-- The log path and result for each BF are in .qfai/evidence/sdd-BF-NNNN.md.
+- The log path and result for each BF are in the SDD report.
 - Each entered design-writing stage has a pre-draft grilling checkpoint before its first mutation. A skipped checkpoint fails the gate; unanswered critical decisions remain open and block completion.
 - Reviewers are independent of the authors and all routed blocking verdicts are PASS.
 - Rejected options remain excluded, or a documented reopening decision exists.
-- Remaining risks and next actions are explicit in evidence and the completion message.
+- Remaining risks and next actions are explicit in the SDD report.

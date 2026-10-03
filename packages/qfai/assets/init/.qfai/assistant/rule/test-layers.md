@@ -121,7 +121,7 @@ fast test job, Integration and API tests to jobs with their required services,
 and E2E tests to a journey job. The full verification gate runs every
 applicable lane and `npx qfai validate --profile verify --fail-on error`.
 A missing lane or an unrun command is UNRUN, not PASS. Record exact commands,
-results, and revisions in the stage evidence.
+results, and revisions in the stage report.
 
 ## Anti-patterns
 

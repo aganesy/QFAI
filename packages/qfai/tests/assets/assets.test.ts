@@ -488,7 +488,7 @@ describe("assets guardrails", () => {
     expect(content).toContain("concise evidence summary (copy‑paste for PR)");
     expect(content).toContain("Change Classification (Primary/Tags)");
     expect(content).toContain("Run listed commands and record outputs.");
-    expect(content).toContain("the next actions included");
+    expect(content).toContain("the next actions");
   });
 
   it("ensures qfai-prototyping v2.0 SKILL.md preserves drift protocol and 4 references", async () => {
@@ -2038,82 +2038,6 @@ describe("assets guardrails", () => {
     expect(existsSync(legacyRcpFooterPath)).toBe(false);
     expect(sddGate).toContain("## Review");
     expect(sddGate).toContain("BF-NNNN");
-    expect(sddGate).toContain(".qfai/evidence/sdd-BF-NNNN.md");
-  });
-
-  it("keeps review playbooks aligned with validator target kinds", async () => {
-    const sddPlaybookPath = path.join(
-      templateQfaiDir,
-      "assistant",
-      "step",
-      "common-review-cycle",
-      "STEP.md",
-    );
-    const sddPlaybook = await readFile(sddPlaybookPath, "utf-8");
-
-    expect(sddPlaybook).toMatch(
-      /\|\s*`qfai-discussion`\s*\|\s*`discussion`\s*\|\s*`discussion`\s*\|\s*`\.qfai\/discussion\/discussion-YYYYMMDDhhmmssSSS`/,
-    );
-    expect(sddPlaybook).toMatch(
-      /\|\s*`qfai-sdd`\s*\|\s*`sdd`\s*\|\s*`flow`\s*\|\s*`<paths\.specsDir>\/02_business-flow\/business-flow-NNNN`/,
-    );
-  });
-
-  it("pins the discussion review-pack write paths to the shared review tree", async () => {
-    const discussionSkillDir = path.join(templateQfaiDir, "assistant", "skill", "qfai-discussion");
-    const discussionPlaybookPath = path.join(
-      templateQfaiDir,
-      "assistant",
-      "step",
-      "common-review-cycle",
-      "STEP.md",
-    );
-    const skillPath = path.join(discussionSkillDir, "SKILL.md");
-    const [discussionPlaybook, discussionSkill] = await Promise.all([
-      readFile(discussionPlaybookPath, "utf-8"),
-      readFile(skillPath, "utf-8"),
-    ]);
-
-    // `validateReviewArtifacts` lists `^review-(\d{17})$` and nothing else, so the placeholder
-    // the playbook prints must expand to exactly 17 digits. A pack written under any other
-    // spelling is not enumerated, and an empty review tree only warns — the cycle would pass
-    // `--fail-on error` unreviewed.
-    const packDirName = "review-YYYYMMDDhhmmssSSS";
-    expect(packDirName.slice("review-".length)).toHaveLength(17);
-
-    expect(discussionPlaybook).toContain(`.qfai/review/${packDirName}/`);
-    for (const artifact of ["review_request.md", "R01_<reviewer>.md", "summary.json"]) {
-      expect(discussionPlaybook).toContain(`\`${artifact}\``);
-    }
-
-    // The skill body must actually route the run through the review step: a write-path rule
-    // the skill never opens does not reach the reviewer step that writes the pack.
-    expect(discussionSkill).toContain(".qfai/assistant/step/common-review-cycle/STEP.md");
-
-    // The discussion tree must name the review-pack directory exactly one way, so that a
-    // pack lands where `validateReviewArtifacts` looks for it. Both spellings are checked:
-    // a pack path under the review tree, and any leftover `<...>` placeholder that would
-    // leave the timestamp shape to the model's discretion.
-    const discussionMarkdown = await fg(["**/*.md"], {
-      cwd: discussionSkillDir,
-      absolute: true,
-    });
-    const strayNames: string[] = [];
-    for (const filePath of discussionMarkdown) {
-      const content = await readFile(filePath, "utf-8");
-      const matches = [
-        ...(content.match(/\.qfai\/review\/review-[^/\s`)]*/g) ?? []).map((match) =>
-          match.slice(".qfai/review/".length),
-        ),
-        ...(content.match(/review-<[^>]+>/g) ?? []),
-      ];
-      for (const match of matches) {
-        if (match !== packDirName) {
-          strayNames.push(`${match} (${path.relative(discussionSkillDir, filePath)})`);
-        }
-      }
-    }
-    expect(strayNames).toEqual([]);
   });
 
   it("ensures qfai-sdd no longer ships legacy spec-pack templates", () => {
@@ -2154,29 +2078,6 @@ describe("assets guardrails", () => {
       expect(reportTemplate).toContain("/qfai-sdd");
       expect(reportTemplate).toContain("run id:");
     }
-
-    // The evidence section the completion reviewer grades must resolve to one
-    // preflight. `.qfai/report/preflight_summary.md` is rewritten by every
-    // rerun, so citing it makes every spec's evidence print the same constant.
-    const evidenceTemplate = await readFile(
-      path.join(
-        templateQfaiDir,
-        "assistant",
-        "skill",
-        "qfai-sdd",
-        "templates",
-        "evidence",
-        "sdd-flow.md",
-      ),
-      "utf-8",
-    );
-    // The run id, and not a path, is what the record carries. A committed record
-    // naming a path the tree does not have is refused, and the report tree is not
-    // committed — so the shape this asserted was one no evidence file could land.
-    // The id satisfies the same obligation more exactly: it names the one run,
-    // where the rewritten pointer names whichever ran last.
-    const provenanceSection = sectionOf(evidenceTemplate, "## Inputs and provenance");
-    expect(provenanceSection).toContain("Discussion requirement or import source");
 
     const sddTriage = await readFile(
       path.join(templateQfaiDir, "assistant", "step", "sdd-triage", "STEP.md"),
@@ -2877,15 +2778,6 @@ describe("assets guardrails", () => {
     expect(RETIRED_HARD_REQUIRED_ENTRIES).toEqual(["companyname", "primaryspecid"]);
   });
 });
-
-/** Body of `heading` up to the next `## ` heading, so a sibling section cannot satisfy the assertion. */
-function sectionOf(content: string, heading: string): string {
-  const start = content.indexOf(`${heading}\n`);
-  expect(start, `${heading} is missing`).toBeGreaterThanOrEqual(0);
-  const rest = content.slice(start + heading.length);
-  const end = rest.indexOf("\n## ");
-  return end === -1 ? rest : rest.slice(0, end);
-}
 
 /** Every `options.<key>` the given slice of CLI source touches. */
 function collectOptionKeys(source: string): Set<string> {

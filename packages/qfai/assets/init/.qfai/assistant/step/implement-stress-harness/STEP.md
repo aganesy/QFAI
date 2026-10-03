@@ -2,7 +2,7 @@
 name: implement-stress-harness
 owner: qfai-implement
 purpose: "Build a harness that makes an intermittent failure appear on demand, under load or under a controlled schedule, and record how often it appears."
-requires: [common-steering-refresh, common-gate-run, common-evidence-record]
+requires: [common-steering-refresh, common-gate-run]
 roles:
   - devops-ci-engineer
   - frontend-engineer
@@ -48,7 +48,7 @@ be checked against something more than one lucky run.
 - The harness files, listed in `changedFiles`. The step changes no production
   code.
 - A record of the pressure, the seed or load, the number of runs and the
-  number of failures, written with `common-evidence-record`.
+  number of failures, in the stage report.
 
 ## Gate
 

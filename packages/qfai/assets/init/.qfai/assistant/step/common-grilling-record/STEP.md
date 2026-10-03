@@ -1,7 +1,7 @@
 ---
 name: common-grilling-record
 owner: common
-purpose: "Write the record of a grilling session where the stage's reviewer reads it, so a session that ran, one that was skipped and one from an earlier run can be told apart."
+purpose: "Write the record of a grilling session in the stage report, so a session that ran, one that was skipped and one from an earlier run can be told apart."
 requires: []
 roles: []
 ---
@@ -16,20 +16,19 @@ the same tree.
 
 ## Where the record goes
 
-The calling step passes the evidence path. The shape follows the stage.
+The record goes in the stage report, under `## Grilling Session`, in the shape
+the stage takes.
 
-| Owner              | Evidence file                             | Section                 | Shape                         |
-| ------------------ | ----------------------------------------- | ----------------------- | ----------------------------- |
-| `qfai-discussion`  | `.qfai/evidence/discussion-<stamp>.md`    | `## Grilling Session`   | [One session](#one-session)   |
-| `qfai-sdd`         | `.qfai/evidence/sdd-BF-NNNN.md`, per flow | `## Pre-draft Grilling` | [Checkpoints](#checkpoints)   |
-| `qfai-atdd`        | `.qfai/evidence/atdd-BF-NNNN.md`          | `## Grilling Session`   | [Run blocks](#run-blocks)     |
-| `qfai-implement`   | `.qfai/evidence/implement-BF-NNNN.md`     | `## Grilling Session`   | [Run blocks](#run-blocks)     |
-| `qfai-verify`      | `.qfai/evidence/verify-<run-id>.md`       | `## Grilling Session`   | [Run blocks](#run-blocks)     |
-| `qfai-prototyping` | `.qfai/evidence/prototyping/grilling.md`  | `## Session`            | the owner's own decision file |
+| Owner              | Shape                         |
+| ------------------ | ----------------------------- |
+| `qfai-discussion`  | [One session](#one-session)   |
+| `qfai-sdd`         | [Checkpoints](#checkpoints)   |
+| `qfai-implement`   | [Run blocks](#run-blocks)     |
+| `qfai-verify`      | [Run blocks](#run-blocks)     |
+| `qfai-prototyping` | the owner's own decision file |
 
 Every shape also writes the decision rows below into the stage's Work Orders
-Summary. Evidence stays local and is never committed
-(`.qfai/assistant/rule/drift-protocol.md#evidence-stays-local`).
+Summary.
 
 ## Rules every shape keeps
 
@@ -46,8 +45,8 @@ Summary. Evidence stays local and is never committed
   `Work resumed` empty.
 - **A free-form cell is one line, with `|` written `\|`.** A pipe or a line
   break adds cells and moves counts under the wrong headings.
-- **`Revision`** is a git revision or `working-tree+<hash>`, as
-  `.qfai/assistant/skill/qfai-implement/references/evidence-revision.md` defines.
+- **`Revision`** is the git revision the session saw, or `working-tree` when
+  the tree had uncommitted changes.
 
 ## Decision rows
 
@@ -92,7 +91,7 @@ checkpoint, before that part's first mutation:
 | Phase | Session | Participants | Frontier | Recommendation | Disposition | Decision/OQ IDs | Ended at | Wrote at | Evidence |
 ```
 
-A missing or skipped checkpoint leaves the evidence at `REVISE`. A Work Orders
+A missing or skipped checkpoint leaves the stage at `REVISE`. A Work Orders
 Summary row does not replace it. A change that exposes another flow records that
 flow's checkpoint before the next mutation.
 
@@ -116,9 +115,8 @@ Open S2: <the node> — assumed: <the value the stage used>
 Escalated S1: <the critical decision> — answered: <the answer> | not yet answered
 ```
 
-- **One block per invocation and per stage.** An evidence file is updated in
-  place, and two stages may share one, so an older block cannot pass as the
-  current run. The orchestrator gives each reviewer the run start in its work
+- **One block per invocation and per stage**, so an older block cannot pass as
+  the current run. The orchestrator gives each reviewer the run start in its work
   order; the heading must carry exactly that value.
 - **`Preflight`** is `session opened` or `confidence high`. When it says
   `session opened`, exactly one row's `Subject` is `preflight`.
@@ -155,4 +153,4 @@ order and returns `REVISE` on any of these:
 - both the `none` marker and a decision row for one run.
 
 A `no-question` ending cannot hide an open node: the question goes in the stage
-evidence and completion stays pending.
+report and completion stays pending.

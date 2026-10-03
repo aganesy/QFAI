@@ -262,10 +262,9 @@ describe("QFAI-PROFILE-001's skip-set accounts for every code that can be emitte
  * group is listed by every profile that can reach one of them. Under any
  * narrower group the notice denies a gate the run just evaluated.
  *
- * Three of the four below are cross-dispatch and resolve the same way: the
- * group is one that both dispatching profiles list. The fourth has an emitter
- * that runs in every profile, which puts it outside that rule by construction
- * — its entry says how.
+ * A cross-dispatch code resolves by sitting in a group that both dispatching
+ * profiles list. The one below has an emitter that runs in every profile,
+ * which puts it outside that rule by construction — its entry says how.
  */
 interface DualEmitter {
   /** Every module with an emit site, package-relative and sorted. */
@@ -279,32 +278,6 @@ interface DualEmitter {
 }
 
 const DUAL_EMITTED_CODES: ReadonlyMap<string, DualEmitter> = new Map([
-  [
-    "R-AUTOPILOT-POLICY-MISSING",
-    {
-      modules: [
-        "src/core/validators/autopilotPolicy.ts",
-        "src/core/validators/justificationCatalog.ts",
-      ],
-      treatment:
-        "The easy case: both emitters are dispatched from `runSddValidators`, so one group " +
-        "listed by `sdd` covers both. `reviewer-gate-sdd`.",
-    },
-  ],
-  [
-    "R-MOCK-HREF-DRIFT",
-    {
-      modules: [
-        "src/core/validators/justificationCatalog.ts",
-        "src/core/validators/reviewerGate.ts",
-      ],
-      treatment:
-        "Genuinely cross-dispatch: `detectMockHrefDrift` from " +
-        "`runPrototypingValidators`, the catalog re-emit from `runSddValidators`. " +
-        "`reviewer-gate-shared`, which BOTH profiles list, so neither is told it skipped a " +
-        "code it can emit.",
-    },
-  ],
   [
     "D-DEPRECATED-PATH",
     {

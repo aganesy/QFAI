@@ -2,7 +2,7 @@
 name: atdd-author
 owner: qfai-atdd
 purpose: "Write the business flow's E2E and acceptance-criterion tests, observe each fail at its assertion, and hand them to implementation."
-requires: [common-grilling-record, common-evidence-record, common-gate-run]
+requires: [common-grilling-record, common-gate-run]
 roles:
   - delivery-planner
   - acceptance-test-engineer
