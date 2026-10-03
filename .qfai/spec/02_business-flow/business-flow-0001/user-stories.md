@@ -145,15 +145,15 @@
 | US-0001-0194 | Claim a host as supported only with evidence                                           | `user-story-0001-0194/` |
 | US-0001-0195 | A stage skill picked up by free text hands over                                        | `user-story-0001-0195/` |
 | US-0001-0196 | Install or upgrade and get the free-text entry                                         | `user-story-0001-0196/` |
-| US-0001-0199 | Resolve only the unsettled scope as a stage of a run                                   | `user-story-0001-0199/` |
+| US-0001-0199 | Discussion steps as a stage of a route                                                 | `user-story-0001-0199/` |
 | US-0001-0200 | Implement as a stage of a run                                                          | `user-story-0001-0200/` |
 | US-0001-0201 | Diagnose a reported defect without changing product code                               | `user-story-0001-0201/` |
 | US-0001-0202 | Fix a regression an existing correct test catches, leaving the covered example covered | `user-story-0001-0202/` |
 | US-0001-0203 | Fix a defective example test with example coverage untouched                           | `user-story-0001-0203/` |
 | US-0001-0204 | Settle one visual decision as a stage of a route                                       | `user-story-0001-0204/` |
 | US-0001-0206 | Seed a diagnosed missing example under an existing criterion                           | `user-story-0001-0206/` |
-| US-0001-0207 | Run `/qfai-sdd` as a stage of a run                                                    | `user-story-0001-0207/` |
-| US-0001-0208 | Verify as the final stage of a run                                                     | `user-story-0001-0208/` |
+| US-0001-0207 | Run `/qfai-sdd` as a scoped stage                                                      | `user-story-0001-0207/` |
+| US-0001-0208 | Verify as the final stage of a route                                                   | `user-story-0001-0208/` |
 | US-0001-0209 | Run every step of the route                                                            | `user-story-0001-0209/` |
 | US-0001-0210 | Refuse a step tree that a route or a stage skill cannot use                            | `user-story-0001-0210/` |
 | US-0001-0211 | Route a request through a fixed decision table                                         | `user-story-0001-0211/` |

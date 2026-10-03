@@ -3,7 +3,7 @@
 ## Criteria
 
 ```gherkin
-Feature: Verify as the final stage of a run
+Feature: Verify as the final stage of a route
   # AC-0001-0208-06
   Scenario: The verify stage follows the stage-skill handover
     Given workflow mode active
