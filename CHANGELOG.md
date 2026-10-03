@@ -97,6 +97,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Every decision a stage records carries one fixed form** (#2236).
+  The thinking rule now names where each decision is recorded.
+  `qfai-sdd`, which owns `decisions.md`, records it as a row
+  there. Every other stage records it in its own evidence file. The seeded
+  `decisions.md` states the form both records use, in this order:
+
+  - `Evidence:` one or more `file:` or `command:` entries;
+  - `Grounds:` which evidence supports the decision, and how;
+  - `Residual risk:` the risk that remains, or `none — <reason>`;
+  - `Rollback:` the steps that undo it, or `none — <reason>`.
+
+  The shared decision-record step and the SDD guidance point to that form.
+  The table's columns are unchanged,
+  and existing rows and records are not rewritten. `qfai validate` does not
+  check the form yet.
+
 - **Code written only to pass a test does not meet its example** (#2235). The
   shipped test-layer rule now states what the code under test may not do to
   reach green: hard-code a value to match a test case, branch on a test's
