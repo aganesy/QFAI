@@ -108,6 +108,33 @@ describe("story-tree drift", () => {
     ).toBe(false);
   });
 
+  // QFAI:EX-0001-0002-14
+  it("authorises only a DONE row this branch applied, and never an ID", async () => {
+    const flows = `${specs}/02_business-flow/business-flows.md`;
+    const story = `${specs}/02_business-flow/business-flow-0001/user-story-0001-0001/01_User-story.md`;
+    const baseRows = [
+      `| DEC-0001 | Change request: ${glossary} | Applied | DONE |`,
+      `| DEC-0002 | Change request: ${flows} | Approved | WIP |`,
+      "| DEC-0003 | Change request: US-0001-0001 | Approved | WIP |",
+    ];
+    await put(decisions, `${table}${baseRows.join("\n")}\n`);
+    for (const file of [glossary, flows, story]) await put(file, "# Original\n");
+    git("add", ".");
+    git("commit", "-m", "base");
+    git("checkout", "-b", "topic");
+    for (const file of [glossary, flows, story]) await put(file, "# Changed\n");
+    await put(
+      decisions,
+      `${table}${baseRows.join("\n").replace("| Approved | WIP |", "| Approved | DONE |")}\n`,
+    );
+    git("add", ".");
+    git("commit", "-m", "edit without a new change request");
+    const reported = (await validateStoryTreeDrift(root, config(), "tdd")).map((item) => item.file);
+    expect(reported).toContain(glossary);
+    expect(reported).toContain(story);
+    expect(reported).not.toContain(flows);
+  });
+
   // QFAI:EX-0001-0054-06
   // QFAI:EX-0001-0002-06
   // QFAI:EX-0001-0054-07

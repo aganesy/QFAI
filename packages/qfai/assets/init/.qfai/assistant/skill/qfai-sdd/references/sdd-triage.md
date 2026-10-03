@@ -33,7 +33,7 @@ rationale, including the change classification Primary and Tags. Status begins T
 when approved, and becomes REJECTED if declined. Complete applied decisions move to DONE. Do not treat a TODO row as
 authorization.
 
-A change request is a decision row whose Content begins Change request: and names the paths or IDs it may change. A rejected option is a decision row with Status REJECTED. Record a retired story in a decision row, not a separate retired-story file. Open questions use OQ-NNNN rows; DEFERRED needs a specific future decision point.
+A change request is a decision row whose Content begins Change request: and names the repository-relative paths it may change; an ID there authorizes nothing. A rejected option is a decision row with Status REJECTED. Record a retired story in a decision row, not a separate retired-story file. Open questions use OQ-NNNN rows; DEFERRED needs a specific future decision point.
 
 An unanswered critical product decision opens its Content with Unadjudicated: and stays TODO or WIP until decided. A justified test exception opens a decision Content with Test exception:, names the exact BF, AC, or EX it exempts, and puts the reason in Approach. It takes effect only at DONE; it never exempts descendant items.
 

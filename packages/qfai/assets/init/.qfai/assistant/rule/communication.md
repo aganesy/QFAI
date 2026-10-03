@@ -63,34 +63,34 @@ Full rule: `.agents/rules/documentation-clarity.md`.
 
 When an agent needs to ask the user a question, the following rules apply (see also Constitution Article X):
 
-1. **MUST use AskUserQuestion** when the tool is available in the current environment.
+1. **Use AskUserQuestion** when the tool is available in the current environment.
    **No question is exempt**, and availability is judged for **this question in this
    invocation**: a tool the mode withholds, and one that cannot carry the answer's
    shape, are both unavailable for that question and take rule 3. A mode that
    permits no question at all is rule 4's and is read before this one — there is
    no question there whose availability to judge.
    `.agents/rules/user-questions.md` owns the form and states the whole of it.
-2. **MUST prefer structured choices** (radio/multi-select) over free-text input where the question
+2. **Prefer structured choices** (radio/multi-select) over free-text input where the question
    has choices and the tool supports them.
    Where the answer is genuinely open — no listable set of candidates — the tool's
    free-text path carries it; that is an answer shape, not an exception. A name, a
    number or a sentence is usually open and is not open by type.
-3. **Fallback**: If AskUserQuestion is unavailable for this question, the agent MUST present the same
+3. **Fallback**: If AskUserQuestion is unavailable for this question, present the same
    question as a normal message, in the shape its answer has: explicit numbered choices where there
    are choices, and a plain request for the value where the answer has no listable set of candidates.
    Inventing options to fit an open answer into a list is not the fallback.
    Where there are choices the agent SHOULD preserve structured choice semantics (enumerated
-   options, selection constraints). The reason for unavailability MUST be stated.
+   options, selection constraints). State the reason it is unavailable.
 4. **`--auto` consistency**: When `--auto` flag is active, no questions are asked.
-   The agent MUST NOT use AskUserQuestion or ask via plain text.
-   The agent MUST proceed with explicit assumptions and MUST record them in outputs.
+   Do not use AskUserQuestion or ask via plain text.
+   Proceed with explicit assumptions and record them in outputs.
 5. **Exhaustion is not `--auto`**: spending the Article VI clarification budget enters clarification-exhausted mode,
    where rule 4 does not apply — mandatory approvals and the `hard-required` inputs that invocation actually
-   consumes MUST still be asked. A user's `proceed` / `done` answer enters that same mode and is likewise
+   consumes must still be asked. A user's `proceed` / `done` answer enters that same mode and is likewise
    not `--auto`; rule 4 is activated by the `--auto` flag alone.
 6. **A grilling session under `--auto` opens what it could not settle**: rule 4 silences its questions like any
    others. A delegated session still adopts the griller's recommendation for every decision that is not
-   critical, and each node left over MUST be opened as a question in the register the stage reads, so the stage
+   critical, and each node left over must be opened as a question in the register the stage reads, so the stage
    cannot complete over it. In a delegated session those are each critical decision and each fact only the
    user holds. Each node, not each decision: a fact only the user holds cannot be settled from evidence either. Where a document requires the field to hold something, write the defaulted value and
    label it an assumption beside that open question. Rule 4's assumptions are the defaultable ones; an assumption

@@ -96,6 +96,58 @@ describe("the implementation reviewer flags dropped promises, not uncaught propa
   );
 });
 
+describe("the implementation reviewer reads silent failure and type design", () => {
+  it.each(["packages/qfai/assets/init/.qfai", ".qfai"])(
+    "%s names both review items on the card and in the remit",
+    async (tree) => {
+      const card = await readFile(
+        path.join(ROOT, tree, "assistant/agent/implementation-reviewer.md"),
+        "utf-8",
+      );
+      const flat = card.replace(/\s+/g, " ");
+      expect(flat).toContain(
+        "Read the whole of every file the change touches for silent failure and type design",
+      );
+      expect(flat).toContain("not only the lines the change adds or alters");
+      expect(flat).toContain("A finding on what the change added or altered can block.");
+      expect(flat).toContain(
+        "A finding on code that was already there is recorded and deferred, never blocking",
+      );
+      expect(flat).toContain("give no rating per check");
+      expect(flat).toContain("`.agents/rules/minimal-implementation.md` § 2 and § 3");
+      for (const check of [
+        "an empty catch or a silent return",
+        "a catch that also catches errors it did not expect",
+        "a fallback that masks the problem instead of handling it",
+        "which should propagate instead",
+        "a log entry without enough context to debug from",
+        "user feedback that does not say what to do next",
+        "one without them is an unmarked simplification",
+        "mutable internals exposed to outside code",
+        "an invariant held only by documentation",
+        "validation missing at construction",
+        "enforcement that differs from one mutation to another",
+        "outside code left to maintain an invariant the type should own",
+      ]) {
+        expect(flat).toContain(check);
+      }
+      const baseline = await readFile(
+        path.join(ROOT, tree, "assistant/rule/shared-skill-delegation-baseline.md"),
+        "utf-8",
+      );
+      const rows = baseline.split(/\r?\n/).filter((line) => line.startsWith("| `/qfai-implement`"));
+      expect(rows).toHaveLength(1);
+      const row = rows[0]?.replace(/\s+/g, " ");
+      expect(row).toContain(
+        "silent failure and type design across the whole of every file the change touches",
+      );
+      expect(row).toContain(
+        "a finding on code in a touched file that the change did not add or alter",
+      );
+    },
+  );
+});
+
 describe("reviewer stop conditions distinguish named-rule defects from new product obligations", () => {
   it.each(
     ["packages/qfai/assets/init/.qfai", ".qfai"].flatMap((tree) =>
@@ -452,7 +504,12 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toMatch(/documentation-clarity|Documentation Clarity/i);
       // One token per clause that no other clause in the file carries, so a
       // clause cannot be dropped and still leave the master looking complete.
-      for (const clause of [/#123|GH-123/, /git (history|log)/, /PostToolUse/]) {
+      for (const clause of [
+        /#123|GH-123/,
+        /git (history|log)/,
+        /PostToolUse/,
+        /State\s+the\s+point\s+directly,\s+not\s+through\s+a\s+metaphor\s+or\s+a\s+flourish/,
+      ]) {
         expect(text).toMatch(clause);
       }
     });

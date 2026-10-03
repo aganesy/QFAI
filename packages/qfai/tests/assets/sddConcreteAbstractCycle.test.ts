@@ -251,7 +251,7 @@ describe("how an adopted finding changes the tree", () => {
   it("applies a change the in-force change request describes, with no new row", async () => {
     const text = await applying();
     const covered = rowOf(text, "existed when the invocation started");
-    expect(covered).toMatch(/in-force `Change request:` row \(WIP or DONE\)/i);
+    expect(covered).toMatch(/in-force `Change request:` row \(WIP, or DONE on this branch\)/i);
     expect(covered).toMatch(/whose approved change covers this change/i);
     // The TODO row is appended only where no row covers the change.
     expect(rowOf(text, "Append a `Change request:` row at TODO")).toMatch(
