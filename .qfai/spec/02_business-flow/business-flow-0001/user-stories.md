@@ -144,23 +144,23 @@
 | US-0001-0194 | Claim a host as supported only with evidence                                           | `user-story-0001-0194/` |
 | US-0001-0195 | A stage skill picked up by free text hands over                                        | `user-story-0001-0195/` |
 | US-0001-0196 | Install or upgrade and get the free-text entry                                         | `user-story-0001-0196/` |
-| US-0001-0199 | Resolve only the unsettled scope as a stage of a run                                   | `user-story-0001-0199/` |
-| US-0001-0200 | Implement as a stage of a run                                                          | `user-story-0001-0200/` |
+| US-0001-0199 | Discussion steps as a stage of a route                                                 | `user-story-0001-0199/` |
+| US-0001-0200 | Implement as a stage of a route                                                        | `user-story-0001-0200/` |
 | US-0001-0201 | Diagnose a reported defect without changing product code                               | `user-story-0001-0201/` |
 | US-0001-0202 | Fix a regression an existing correct test catches, leaving the covered example covered | `user-story-0001-0202/` |
-| US-0001-0203 | Fix a defective example test with example coverage untouched                           | `user-story-0001-0203/` |
+| US-0001-0203 | Fix a defective test with its coverage untouched                                       | `user-story-0001-0203/` |
 | US-0001-0204 | Settle one visual decision as a stage of a route                                       | `user-story-0001-0204/` |
 | US-0001-0206 | Seed a diagnosed missing example under an existing criterion                           | `user-story-0001-0206/` |
-| US-0001-0207 | Run `/qfai-sdd` as a stage of a run                                                    | `user-story-0001-0207/` |
-| US-0001-0208 | Verify as the final stage of a run                                                     | `user-story-0001-0208/` |
+| US-0001-0207 | Run `/qfai-sdd` as a scoped stage                                                      | `user-story-0001-0207/` |
+| US-0001-0208 | Verify as the final stage of a route                                                   | `user-story-0001-0208/` |
 | US-0001-0209 | Run every step of the route                                                            | `user-story-0001-0209/` |
 | US-0001-0210 | Refuse a step tree that a route or a stage skill cannot use                            | `user-story-0001-0210/` |
 | US-0001-0211 | Route a request through a fixed decision table                                         | `user-story-0001-0211/` |
 | US-0001-0214 | Close, answer or hand back a request without a change                                  | `user-story-0001-0214/` |
-| US-0001-0215 | Re-route a run when diagnosis shows it is on the wrong route                           | `user-story-0001-0215/` |
+| US-0001-0215 | Re-route when diagnosis shows the work is on the wrong route                           | `user-story-0001-0215/` |
 | US-0001-0216 | Pass a step that has nothing to write                                                  | `user-story-0001-0216/` |
 | US-0001-0217 | Change the route catalog only with a recorded approval                                 | `user-story-0001-0217/` |
-| US-0001-0218 | Refuse a route catalog a run cannot use                                                | `user-story-0001-0218/` |
+| US-0001-0218 | Refuse a route catalog a session cannot use                                            | `user-story-0001-0218/` |
 | US-0001-0220 | Get one fixed plan for every kind of request                                           | `user-story-0001-0220/` |
 | US-0001-0221 | Judge the router against labelled requests before a release                            | `user-story-0001-0221/` |
 | US-0001-0222 | Plan a request's route with one command                                                | `user-story-0001-0222/` |

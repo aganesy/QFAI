@@ -3,7 +3,7 @@
 ## Criteria
 
 ```gherkin
-Feature: Resolve only the unsettled scope as a stage of a run
+Feature: Discussion steps as a stage of a route
   # AC-0001-0199-03
   Scenario: The discussion skill lists the steps the plans run for discussion
     Given the qfai-discussion SKILL.md and the built-in plans
