@@ -4,6 +4,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+## [2.0.2] - 2026-10-03
+
 ### Added
 
 - **A rule that classifies an action by how hard it is to undo** (#2232).
@@ -340,6 +342,79 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   checkout included. The setting itself stays `--local`: scoping it to the
   worktree needs `extensions.worktreeConfig`, which changes the same shared
   file.
+- **`qfai workflow accept` checks the digest of the artifacts a result names
+  (#2327, #2328).** It checked only the changed files. It now also reads each
+  `artifactRefs` entry that is a readable file inside the project's real root,
+  and refuses a digest that differs from that file as `digest-mismatch`. An
+  entry that is missing, unreadable or outside the root gets no digest, so its
+  submitted digest is not compared. A reissued work order names each input
+  that is a readable file inside the root at the file's current digest. An
+  input that has since gone missing, become unreadable or left the root keeps
+  the digest recorded earlier. The `sdd_append` work order after a
+  missing-test diagnosis names the reproduction record as its input when that
+  record is a readable file inside the root.
+- **A fact question may offer its candidates as a choice (#2346).** The route
+  proposal schema allowed options on a fact question, but the parser refused
+  them. A fact is now either a choice, with options and a selection and no
+  recommendation, or a value request with one effect and no selection.
+  `decide` answers the choice by option IDs.
+- **A stage receipt depends on the obligation it covers and on what it ran
+  under (#2342, #2343).** A receipt for a result that observed a test held one
+  dependency per file declaring the bound flow, its criteria and its examples,
+  each digested whole. It now holds one obligation digest for the flow: the
+  flow and story files, each criterion's scenario block, each example's table
+  row, and each business rule citing one of the flow's examples. An edit
+  elsewhere in a criteria or example file leaves the digest as it was. Every
+  receipt also holds `qfai.config.yaml`, the root `pnpm-lock.yaml`,
+  `package-lock.json`, `npm-shrinkwrap.json`, `yarn.lock` and `bun.lock`, the
+  assistant rule tree, the skill that owns the work order's steps, each step's
+  directory, the tool, and the selected discussion pack with its files. In a receipt for a
+  result that observed a test, a changed file the stage deleted is held as
+  absent, so the receipt goes stale when the file comes back.
+- **`qfai workflow` judges a run's changes against where the run started**
+  (#2340, #2344). `start` now records `HEAD` and the state of every path that
+  was dirty or untracked then, apart from the run's own records under
+  `.qfai/run/` and `.qfai/evidence/workflow/`. Every write operation and
+  `finish` compare the tree against that record, so a change the run commits
+  outside its write scope blocks the run with `invariant-violation` and is reported as
+  `diff-out-of-scope`. A path that was dirty at `start` counts only once its
+  content or kind changes: a regular file, a symbolic link and its target, a
+  directory, or another kind. A change to its mode alone is not seen.
+  `uncommitted` names only the run's own changes. Under
+  `validation.failOn: never`, `finish` still reads the validate findings to
+  decide whether a debt is settled, so a debt whose
+  finding remains stays `debt-open` while the validate gate passes. Before,
+  every finding was dropped, so every debt closed.
+- **A route proposal cannot reach a protected path by spelling it differently
+  (#2458).** A write area such as `./src/notify/**`, `.qfai\run\**`, or one
+  with a doubled or trailing `/`, was compared as written and not refused. Both
+  the fixed protected paths and the protected targets are now compared after
+  the area is normalized. The refusal still names the area as written.
+- **`qfai workflow accept` names the check behind four more refusals of a
+  stage result (#2338).** A result for a work order the plan does not issue
+  next, a missing bug diagnosis, an outcome the stage cannot take and an
+  invalid route proposal were refused as `invalid-input` with no `reasons[]`.
+  These four are now named:
+  `work-order`, or `schema` on `diagnosis`, `outcome` or `proposal`, beside the
+  reasons of the other checks.
+- **`qfai validate` no longer reports `QFAI-TOOL-002` in a worktree whose
+  `node_modules` links to another checkout's (#2262),** when the `qfai` behind
+  that link is an installed copy inside the linked `node_modules`. It is still
+  reported when that `qfai` is itself a workspace link to the other checkout's
+  source, and in a worktree with no `node_modules`, where `npx` finds another
+  checkout's copy.
+- **The question-form reminder stays silent on a turn the host starts
+  (#2282).** The Claude Code `UserPromptSubmit` hook prints nothing when a line
+  of the prompt opens with `<task-notification>` or `<wake>`, whoever wrote
+  it. A prompt with no such line, and input it cannot read, still get the
+  reminder. `qfai init` replaces an
+  unedited copy of the earlier hook group.
+- **`qfai init` rewrites an earlier wording of the `REVIEW.md` directive
+  instead of adding a second line (#2266).** The two lines disagreed on which
+  branch to read `REVIEW.md` from. The earlier line is replaced where it
+  stands, keeping its list marker and line ending. A line carrying emphasis,
+  inline HTML, a link, or a code span other than the `REVIEW.md` one the
+  directive itself holds is left alone.
 
 ## [2.0.1] - 2026-09-30
 
