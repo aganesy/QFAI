@@ -156,6 +156,8 @@ export type ParsedArgs = {
     sddFormat?: "text" | "json";
     /** Repeatable `--assume <text>` for `qfai sdd preflight` (carry-over open questions). */
     sddAssumptions: string[];
+    /** `--import <path>` for `qfai sdd preflight`: an imported specification to use as the source. */
+    sddImport?: string;
     /** Subcommand for `qfai atdd <scaffold>`. */
     atddAction?: "scaffold";
     /** Retired `--spec <id>` value, retained for `qfai atdd scaffold` migration errors. */
@@ -968,6 +970,16 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         if (command === "atdd") options.atddStoryId = next;
         else markInvalid(notValidHere("--story"));
+        break;
+      }
+      case "--import": {
+        const next = consumeOptionValue();
+        if (next === null) {
+          markInvalid(missingValue("--import"));
+          break;
+        }
+        if (command === "sdd") options.sddImport = next;
+        else markInvalid(notValidHere("--import"));
         break;
       }
       case "--assume": {

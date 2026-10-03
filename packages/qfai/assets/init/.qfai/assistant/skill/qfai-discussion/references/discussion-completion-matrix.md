@@ -32,7 +32,7 @@ Blocking for every pack, UI-bearing or not:
    Not at a count, and not on the questions running out.
 
    This is blocking rather than advisory because the failure it catches leaves no other trace. A
-   pack authored mid-session looks exactly like one authored after: fifteen files, every topic
+   pack authored mid-session looks exactly like one authored after: nine files, every topic
    covered, every open question registered. What is missing is that someone agreed to what is in
    them, and nothing downstream can tell.
 

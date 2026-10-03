@@ -30,9 +30,9 @@
  *     code these validators emit.
  *   - an object literal carrying `code: "…"` **and** an `Issue`-only field
  *     (`category:` or `rule:`). The extra field is what keeps diagnostics of
- *     other shapes out: `HandoffValidationIssue`, the
- *     render-evidence error record and the justification catalog all carry a
- *     `code` but none of them is a validate `Issue`, and a waiver naming one
+ *     other shapes out: `HandoffValidationIssue` and the render-evidence
+ *     error record both carry a `code` but neither is a validate `Issue`, and a
+ *     waiver naming one
  *     could never match a finding.
  *
  * Severity is captured only where every emission of a code spells it as the

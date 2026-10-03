@@ -76,20 +76,6 @@ describe("reviewer verdict vocabulary", () => {
     }
   });
 
-  // The review REQUEST is what tells a reviewer which verdicts are legal. Leaving
-  // `FAIL` there let a reviewer return a verdict the response template and both
-  // playbooks no longer accept, so the fix cycle never started.
-  it("offers only the in-flight verdicts in the review-request template", async () => {
-    for (const relative of ["skill/qfai-discussion/templates/14_Review-Request.md"]) {
-      for (const content of await readShipped(relative)) {
-        expect(content).toContain("Allowed in-flight verdicts: `PASS`, `REVISE`");
-        expect(content).not.toContain("Allowed verdicts: `PASS`, `FAIL`");
-        // The serialized status stays documented, not deleted.
-        expect(content).toContain('status: "FAIL"');
-      }
-    }
-  });
-
   // qfai-implement consumes independent reviewer verdicts and records the
   // completed round. Its gate must require PASS on the current revision.
   it("matches qfai-implement's evidence fields and blocking branch to the verdict", async () => {

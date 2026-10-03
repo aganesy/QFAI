@@ -2,7 +2,7 @@
  * `/qfai-discussion` runs its interview as a grilling session.
  *
  * The pack a run produces looks the same whether or not anyone was asked:
- * fifteen files, every topic covered, every open question registered. Nothing
+ * nine files, every topic covered, every open question registered. Nothing
  * downstream can recover the difference, so the obligations that make it are
  * pinned here — the method the interview follows, the bucket its decisions fall
  * in, the point authoring may begin, and the record a reviewer reads.

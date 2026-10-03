@@ -7,7 +7,7 @@ Use this sequence for /qfai-sdd. The shipped templates under ../templates/spec/ 
 1. Run npx qfai sdd preflight and read its selectedInputPath and source. Respect an explicitly selected discussion pack, including one older than the newest pack.
 2. Read the selected pack, completed reviews that target it, explicit user requirements, and the existing story tree. A pack is reference and provenance material. Disposition its applicable review advice in the SDD report, a decision row, or an open question. A pack discrepancy does not itself block SDD.
 3. Stop if there is no usable input source. Stop on an unresolved product decision that cannot safely be inferred; record the question in open-questions.md.
-4. If no discussion pack exists and an imported specification or an explicit source does, use it as the input source and name it in the SDD report before editing the tree. Do not manufacture a discussion pack.
+4. If no discussion pack exists and an imported specification does, run npx qfai sdd preflight --import <path> with that file, which selects it as the source. An explicit user requirement is used as it is and named in the SDD report. Do not manufacture a discussion pack.
 
 ## Stage 1: triage and decisions
 

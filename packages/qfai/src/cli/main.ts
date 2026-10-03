@@ -238,6 +238,7 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
           ...(options.sddFormat ? { format: options.sddFormat } : {}),
           ...(options.failOn !== undefined ? { failOn: options.failOn } : {}),
           ...(options.sddAssumptions.length > 0 ? { assumptions: options.sddAssumptions } : {}),
+          ...(options.sddImport !== undefined ? { importPath: options.sddImport } : {}),
         });
       }
       return;
@@ -414,6 +415,7 @@ Commands:
   discussion list --active     Show the active discussion session pointer (state.json#discussion.currentId)
   discussion use <id>          Set the active discussion session pointer
   sdd preflight                Run the /qfai-sdd Stage 0 gate (active discussion-pack selection / REQ count / blocker verdict) and write .qfai/report/preflight_summary.md
+  sdd preflight --import <path> Use an imported specification as the source when no discussion pack exists
   atdd scaffold --story <US-ID> Generate one test skeleton per AC in a story
   atdd scaffold --flow <BF-ID>  Generate an E2E test skeleton for a flow
   workflow <operation>         Drive a free-text change through its stages (start|next|accept|decision|status|resume|finish)

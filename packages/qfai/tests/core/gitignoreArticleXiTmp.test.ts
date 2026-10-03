@@ -6,7 +6,8 @@
  * not carry the entry — so the first agent that obeyed Article XI left an
  * untracked directory for the next `git add .` to stage.
  *
- * These tests pin the entry and the anchoring the block writes.
+ * These tests pin the entry, the anchoring the block writes, and the
+ * `QFAI-HYG-003` notice that nudges an older project.
  */
 
 import { execFile as execFileCb } from "node:child_process";
@@ -18,7 +19,15 @@ import { promisify } from "node:util";
 
 import { describe, expect, it } from "vitest";
 
-import { QFAI_GITIGNORE_BLOCK } from "../../src/core/gitignore.js";
+import { defaultConfig } from "../../src/core/config.js";
+import {
+  ARTICLE_XI_TMP_ENTRY,
+  QFAI_GITIGNORE_BLOCK,
+  QFAI_GITIGNORE_MARKER,
+  QFAI_GITIGNORE_RECOMMENDED_ENTRIES,
+} from "../../src/core/gitignore.js";
+import { validateRepositoryHygiene } from "../../src/core/validators/repositoryHygiene.js";
+import type { Issue } from "../../src/core/types.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const execFile = promisify(execFileCb);
@@ -78,5 +87,63 @@ describe("git honours the entry the block writes", () => {
     } finally {
       await removeTempTree(root);
     }
+  });
+});
+
+/** The hygiene findings for a project whose root `.gitignore` is `content`. */
+async function hygieneFor(content: string): Promise<Issue[]> {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-gitignore-tmp-"));
+  try {
+    await writeFile(path.join(root, ".gitignore"), content, "utf-8");
+    return await validateRepositoryHygiene(root, defaultConfig);
+  } finally {
+    await removeTempTree(root);
+  }
+}
+
+describe("QFAI-HYG-003 nudges a project whose block predates the entry", () => {
+  /**
+   * A managed block from before `/tmp/` shipped: every other recommended entry,
+   * no `tmp/`. Derived from the constant so `tmp/` stays the only variable.
+   */
+  const preTmpBlock = [
+    QFAI_GITIGNORE_MARKER,
+    ...QFAI_GITIGNORE_RECOMMENDED_ENTRIES.filter((entry) => entry !== ARTICLE_XI_TMP_ENTRY),
+    "",
+  ].join("\n");
+
+  it("stays silent on the block `qfai init` writes", async () => {
+    const issues = await hygieneFor(QFAI_GITIGNORE_BLOCK);
+    expect(issues.some((entry) => entry.code === "QFAI-HYG-003")).toBe(false);
+  });
+
+  it("names `tmp/` at info when nothing in the file ignores it", async () => {
+    const notice = (await hygieneFor(preTmpBlock)).find((entry) => entry.code === "QFAI-HYG-003");
+    expect(notice?.severity).toBe("info");
+    expect(notice?.refs).toContain(ARTICLE_XI_TMP_ENTRY);
+  });
+
+  it("stays silent when the project ignores `tmp/` from its own section", async () => {
+    const issues = await hygieneFor(`/tmp/\n\n${preTmpBlock}`);
+    expect(issues.some((entry) => entry.code === "QFAI-HYG-003")).toBe(false);
+  });
+
+  const stillTracked: ReadonlyArray<readonly [string, string]> = [
+    ["a nested `src/tmp/`", "src/tmp/"],
+    ["a comment that only mentions the directory", "# scratch work belongs in tmp/"],
+    ["a later `!/tmp/` that cancels the block's ignore", "/tmp/\n!/tmp/"],
+  ];
+  for (const [what, lines] of stillTracked) {
+    it(`still names \`tmp/\` beside ${what}`, async () => {
+      const notice = (await hygieneFor(`${preTmpBlock}\n${lines}\n`)).find(
+        (entry) => entry.code === "QFAI-HYG-003",
+      );
+      expect(notice?.refs).toContain(ARTICLE_XI_TMP_ENTRY);
+    });
+  }
+
+  it("says nothing about a `.gitignore` that carries no QFAI marker", async () => {
+    const issues = await hygieneFor("node_modules/\n");
+    expect(issues.some((entry) => entry.code === "QFAI-HYG-003")).toBe(false);
   });
 });

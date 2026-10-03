@@ -1809,12 +1809,12 @@ describe("assets guardrails", () => {
     expect(content).toMatch(/concept, scope, stakeholders, and constraints/i);
     expect(content).toMatch(/REQ, NFR, glossary, constraints, and policies/i);
     expect(content).toMatch(/exploration-first sidecar family/i);
-    expect(content).toContain("02_Inception-Deck.md");
+    expect(content).toContain("01_Context.md#Inception Deck");
     expect(content).toMatch(/HTML\+CSS/i);
     expect(content).toContain(".qfai/discussion/discussion-");
 
     // W-5: canonical discussion pack wording guardrail
-    expect(content).toContain("15-file discussion pack");
+    expect(content).toContain("nine-file discussion pack");
     expect(content).toContain("prototyping.yaml");
   });
 
@@ -1884,7 +1884,6 @@ describe("assets guardrails", () => {
     expect(discussionTemplates.sort()).toEqual(
       [
         "01_Context.md",
-        "02_Inception-Deck.md",
         "03_Story-Workshop.md",
         "04_Sources.md",
         "05_Scope.md",
@@ -1892,12 +1891,7 @@ describe("assets guardrails", () => {
         "07_NFR.md",
         "08_Glossary.md",
         "09_Constraints.md",
-        "10_Policy.md",
         "11_OQ-Register.md",
-        "12_OQ-Resolution-Log.md",
-        "13_Deferred.md",
-        "14_Review-Request.md",
-        "99_delta.md",
       ].sort(),
     );
   });
@@ -1965,7 +1959,7 @@ describe("assets guardrails", () => {
       "skill",
       "qfai-discussion",
       "templates",
-      "02_Inception-Deck.md",
+      "01_Context.md",
     );
     const storyTemplatePath = path.join(
       templateQfaiDir,

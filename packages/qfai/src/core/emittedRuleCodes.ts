@@ -106,6 +106,7 @@ export const EMITTED_RULE_CODES: readonly string[] = [
   "QFAI-FLOW-005",
   "QFAI-HYG-001",
   "QFAI-HYG-002",
+  "QFAI-HYG-003",
   "QFAI-LAYOUT-001",
   "QFAI-LINK-001",
   "QFAI-LINK-002",

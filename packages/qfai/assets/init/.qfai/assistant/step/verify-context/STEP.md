@@ -46,7 +46,7 @@ contracts and evidence only.
 1. Refresh the steering as `common-steering-refresh` says.
 2. Write the plan, or delegate it (below), and read the inputs.
 3. Analyse the project (below).
-4. Fix the scope (below) and write it into the evidence Objective.
+4. Fix the scope (below) and state it in the stage report.
 5. Hold the preflight session (below).
 6. Give each gate in scope a command (below).
 
@@ -157,8 +157,8 @@ and still missing.
 The step is done when:
 
 - the inputs are read and the discussion pack is not among them;
-- the scope is fixed, matches its profile and is written in the evidence
-  Objective;
+- the scope is fixed, matches its profile and is stated in the stage
+  report;
 - every input the scope needs is resolved;
 - the preflight is recorded as a session or as `confidence high`;
 - every gate in scope has a command in `tech.md`, or is named as UNRUN with

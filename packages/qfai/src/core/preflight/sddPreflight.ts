@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
@@ -21,12 +21,12 @@ const PREFLIGHT_SUMMARY_FILE = "preflight_summary.md";
 const PREFLIGHT_RUN_ROOT = "preflight";
 
 /**
- * The input source preflight can see. An imported specification or an
- * explicit user requirement is handed to SDD directly, not found on disk, so a
- * project without a discussion pack reports `blocked` here and SDD decides
- * whether another usable source exists.
+ * The input source preflight selected: the discussion pack, or an imported
+ * specification the caller names with `importPath`. An explicit user
+ * requirement is not a file, so a project with neither reports `blocked` and
+ * SDD decides whether the user gave one.
  */
-export type SddPreflightSource = "discussion-pack";
+export type SddPreflightSource = "discussion-pack" | "import-lite";
 export type SddPreflightStatus = "ready" | "blocked";
 
 export type RunSddPreflightOptions = {
@@ -37,6 +37,8 @@ export type RunSddPreflightOptions = {
    * pointed-at pack so an explicitly pinned (older) pack is the one gated.
    */
   packDir?: string;
+  /** An imported specification to use when no discussion pack is usable. */
+  importPath?: string;
   startedAt?: Date;
 };
 
@@ -92,6 +94,22 @@ export async function runSddPreflight(
   ];
 
   if (blockers.length > 0) {
+    if (options.importPath !== undefined && (await isReadableFile(options.importPath))) {
+      return await completeReadyPreflight({
+        source: "import-lite",
+        selectedInputPath: options.importPath,
+        // An imported specification carries no `REQ-*` index, so the count is
+        // unknown rather than a confident zero.
+        importedReqCount: null,
+        run,
+        openQuestions: carryOverOpenQuestions,
+        packGaps: [],
+        nextCommands: ["/qfai-sdd"],
+      });
+    }
+    if (options.importPath !== undefined) {
+      blockers.push(`The imported specification ${options.importPath} is not a readable file.`);
+    }
     await publishPreflightSummary(
       run,
       buildBlockedPreflightSummary({
@@ -244,7 +262,7 @@ type PackReadiness = {
   missingSideArtifacts: string[];
   incompleteFiles: string[];
   blockingOqIds: string[];
-  deferredWithoutDetails: string[];
+  incompleteDeferredOqIds: string[];
   prototypingRequired: boolean;
 };
 
@@ -308,11 +326,11 @@ function resolvePackGaps(readiness: PackReadiness): string[] {
   }
 
   // The preflight side of `QFAI-DPACK-007`. `validate --profile sdd` does not
-  // run the discussion validator, so a deferral without its details would reach
-  // Stage 1 unnamed unless it is listed here.
-  if (readiness.deferredWithoutDetails.length > 0) {
+  // run the discussion validator, so an incomplete deferral would
+  // reach Stage 1 unnamed unless it is listed here.
+  if (readiness.incompleteDeferredOqIds.length > 0) {
     gaps.push(
-      `Deferred entries in 11_OQ-Register.md are missing from 13_Deferred.md: ${readiness.deferredWithoutDetails.join(", ")}`,
+      `Deferred entries in 11_OQ-Register.md lack a Resolution or a Next-Decision-Point: ${readiness.incompleteDeferredOqIds.join(", ")}`,
     );
   }
 
@@ -392,7 +410,7 @@ function buildReadyPreflightSummary(input: {
   packGaps: string[];
 }): string {
   const openQuestions = renderCarryOver(input.openQuestions);
-  const inputLabel = "selected discussion-pack";
+  const inputLabel = `selected ${input.source}`;
 
   return [
     "# Preflight Summary",
@@ -500,5 +518,14 @@ async function readSafe(filePath: string): Promise<string> {
     return await readFile(filePath, "utf-8");
   } catch {
     return "";
+  }
+}
+
+/** Whether `filePath` names a regular file this process can read. */
+async function isReadableFile(filePath: string): Promise<boolean> {
+  try {
+    return (await stat(filePath)).isFile();
+  } catch {
+    return false;
   }
 }
