@@ -3,6 +3,8 @@
 
 import { afterEach, expect, it } from "vitest";
 
+import { requiredReviews } from "../../helpers/requiredReviews.js";
+
 import {
   featureRunAt,
   field,
@@ -39,7 +41,14 @@ it("Built CLI results reviewed by their own actor, one with no actor, and one re
       root,
       runId,
       "accept",
-      resultFor(issued.json, id, { reviewResults: [review(String(reviewer))] }),
+      resultFor(issued.json, id, {
+        reviewResults: [
+          ...requiredReviews(field(issued.json, "workOrder.requiredReviewerRoles"), id).filter(
+            (entry) => entry.role !== "qa-gatekeeper",
+          ),
+          review(String(reviewer)),
+        ],
+      }),
     );
   const own = await reviewedBy("agent-implement-1", "implement-1");
   const { actor: _dropped, ...noActor } = resultFor(issued.json, "implement-2");

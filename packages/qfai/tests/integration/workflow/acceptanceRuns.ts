@@ -4,6 +4,7 @@
  * one story, one criterion and two examples, a test annotating each obligation, and the rule
  * that cites the examples.
  */
+import { requiredReviews } from "../../helpers/requiredReviews.js";
 import { EXAMPLE_IDS, FLOW_ID, seedFlow } from "../../e2e/workflowFeatureRun.js";
 import {
   acceptThenNext,
@@ -166,6 +167,9 @@ export async function verifyResult(root: string, issued: unknown, resultId = "ve
     testObservation: "pass",
     artifactRefs: [await fileRef(root, ".qfai/report/verify.json")],
     reviewResults: [
+      ...requiredReviews(field(issued, "workOrder.requiredReviewerRoles"), resultId).filter(
+        (review) => review.role !== "qa-gatekeeper",
+      ),
       { role: "qa-gatekeeper", agentInstance: "qa-1", verdict: "PASS", reportRef: REPORT },
     ],
   });

@@ -64,7 +64,7 @@ function acceptWith(
             }
           : {}),
         actor: { agentInstance: "implement-1" },
-        reviewResults,
+        ...(reviewResults === undefined ? {} : { reviewResults }),
       },
     },
     {},

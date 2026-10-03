@@ -45,13 +45,15 @@ export function areaCovers(area: string, filePath: string): boolean {
   );
 }
 
-export function isAuthorOrRecommender(
+export function authoredStage(
   actorHistory: readonly WorkflowActor[],
   agentInstance: string,
+  stageInstanceId: string,
 ) {
   return actorHistory.some(
     (actor) =>
       actor.agentInstance === agentInstance &&
+      actor.stageInstanceId === stageInstanceId &&
       (actor.role === "author" || actor.role === "recommender"),
   );
 }

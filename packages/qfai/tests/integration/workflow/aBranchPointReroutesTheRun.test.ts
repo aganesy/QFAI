@@ -111,14 +111,23 @@ const refusalsOf = (decision: { verdict: { error?: object } }) => {
 
 // QFAI:EX-0001-0215-03
 it("exempts a diagnosis-only declared reroute but requires reviews for its continuation", async () => {
+  const reviewerFacts: Facts = { reviewerRoles: { "implement-diagnose": ["completion-reviewer"] } };
   const handoff = await routed({ intent: "defect" });
-  const rerouted = await settle(handoff, { ...diagnosed("defective-test"), reviewResults: [] });
+  const rerouted = await settle(
+    handoff,
+    { ...diagnosed("defective-test"), reviewResults: [] },
+    reviewerFacts,
+  );
   expect(rerouted.workOrder.requiredReviewerRoles?.length).toBeGreaterThan(0);
   expect(rerouted.decision.verdict.ok).toBe(true);
   expect(handoff.snapshot.pendingReroute?.route).toBe("repair-test");
 
   const continuing = await routed({ intent: "defect" });
-  const refused = await settle(continuing, { ...diagnosed("missing-test"), reviewResults: [] });
+  const refused = await settle(
+    continuing,
+    { ...diagnosed("missing-test"), reviewResults: [] },
+    reviewerFacts,
+  );
   const roles = refused.workOrder.requiredReviewerRoles;
   if (!roles?.length) throw new Error("the diagnosis stage must issue required reviewer roles");
   expect(refused.decision.verdict.ok).toBe(false);

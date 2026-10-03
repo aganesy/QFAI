@@ -2,6 +2,7 @@
 // QFAI:EX-0001-0185-19
 // QFAI:EX-0001-0185-36
 
+import { requiredReviews } from "../../helpers/requiredReviews.js";
 import { spawnSync } from "node:child_process";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -43,6 +44,10 @@ it("Built CLI on a fixture whose validate is clean, asserted first", async () =>
         { path: ".qfai/run/shared/verify.json", digest: hashAssistantAssetText(text) },
       ],
       reviewResults: [
+        ...requiredReviews(
+          field(issued.json, "workOrder.requiredReviewerRoles"),
+          "verify-1",
+        ).filter((review) => review.role !== "qa-gatekeeper"),
         { role: "qa-gatekeeper", agentInstance: "qa-1", verdict: "PASS", reportRef: "qa.md" },
       ],
     }),

@@ -546,6 +546,7 @@
     "tests/unit/workflow/aRecordedIdReturnsItsVerdictFirst.test.ts",
     "tests/unit/workflow/aRegressionFixNeedsItsReRunAndReview.test.ts",
     "tests/unit/workflow/aRoutingResultForAnotherKindIsRefused.test.ts",
+    "tests/helpers/requiredReviews.ts",
     "tests/helpers/workflowExtraction.ts",
     "tests/integration/workflow/decisionRuns.ts",
     "tests/integration/workflow/theCoreDecidesTheRoute.test.ts",

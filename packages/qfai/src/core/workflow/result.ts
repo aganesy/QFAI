@@ -1,7 +1,7 @@
 import {
   areaCovers,
+  authoredStage,
   firstMatchedKind,
-  isAuthorOrRecommender,
   notReady,
   RESULT_ID,
   resultRefOf,
@@ -87,16 +87,29 @@ function notRunRefusalOf(
   return undefined;
 }
 
-// A review by the result's own actor reviews its own work.
-// SIMPLIFIED: a reviewer recorded as an author or recommender anywhere in the run is refused.
-// Lift when: a review result names the stage it reviewed.
+// Reviewers cannot be the result's actor or an author or recommender of this stage's output.
 function reviewerRefusals(result: WorkflowResult, actorHistory: readonly WorkflowActor[]) {
   return (result.reviewResults ?? []).flatMap((review, index): InputRefusal[] =>
     review.agentInstance === result.actor?.agentInstance ||
-    isAuthorOrRecommender(actorHistory, review.agentInstance)
+    authoredStage(actorHistory, review.agentInstance, result.stageInstanceId)
       ? [{ reason: "reviewer-not-independent", subject: `reviewResults[${index}]` }]
       : [],
   );
+}
+
+function missingReviewRefusals(
+  result: WorkflowResult,
+  workOrder: WorkflowWorkOrder,
+): InputRefusal[] {
+  if (!isAccepted(result)) return [];
+  const passed = new Set(
+    (result.reviewResults ?? [])
+      .filter((review) => review.verdict === "PASS")
+      .map((review) => review.role),
+  );
+  return (workOrder.requiredReviewerRoles ?? [])
+    .filter((role) => !passed.has(role))
+    .map((role) => ({ reason: "review-missing", subject: role }));
 }
 
 // Every submitted digest of a changed file or an artifact is checked against the core's own. A
@@ -300,10 +313,12 @@ export function resultRefusals(
   workOrder: WorkflowWorkOrder,
   facts: WorkflowFacts,
 ): InputRefusal[] {
+  const branch = resolveBranch(snapshot, workOrder, result, facts);
   const refusals: InputRefusal[] = [
     ...adoptedRefusals(snapshot, result, workOrder, facts),
     ...raiseRefusals(result),
     ...reviewerRefusals(result, snapshot.actorHistory ?? []),
+    ...(branch.reroute ? [] : missingReviewRefusals(result, workOrder)),
     ...digestRefusals(result, facts),
     ...measurementRefusals(result),
     ...blockedRefusals(snapshot, result, workOrder, facts),
@@ -311,8 +326,7 @@ export function resultRefusals(
     ...passRefusals(snapshot, result, workOrder, facts),
     ...closureRefusals(result, workOrder),
   ];
-  const branch = resolveBranch(snapshot, workOrder, result, facts).refusal;
-  if (branch) refusals.push(branch);
+  if (branch.refusal) refusals.push(branch.refusal);
   const notRun = notRunRefusalOf(result.notRun, facts);
   if (notRun) refusals.push({ reason: notRun, subject: "notRun" });
   refusals.push(...receiptRefusals(result, workOrder));

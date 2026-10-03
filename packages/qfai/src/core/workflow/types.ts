@@ -406,6 +406,7 @@ export type InputRefusalReason =
   | "test-fix-meaning"
   | "option"
   | "reviewer-not-independent"
+  | "review-missing"
   | "blocked-repairable"
   | "authorization-kind"
   | "example-uncovered"

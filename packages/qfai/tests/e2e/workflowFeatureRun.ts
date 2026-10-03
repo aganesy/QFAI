@@ -5,6 +5,7 @@
  * asks for the change first, and the attempt holding the answer writes the story tree and the
  * two `decisions.md` rows that cite it.
  */
+import { requiredReviews } from "../helpers/requiredReviews.js";
 import {
   acceptThenNext,
   answer,
@@ -374,6 +375,9 @@ export async function verifyPass(root: string, runId: string, verify: unknown) {
     testObservation: "pass",
     artifactRefs: [await fileRef(root, ".qfai/report/verify.json")],
     reviewResults: [
+      ...requiredReviews(field(verify, "workOrder.requiredReviewerRoles"), "verify-1").filter(
+        (review) => review.role !== "qa-gatekeeper",
+      ),
       { role: "qa-gatekeeper", agentInstance: "qa-1", verdict: "PASS", reportRef: "qa.md" },
     ],
   });

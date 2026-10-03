@@ -2,6 +2,7 @@
 // QFAI:EX-0001-0185-42
 // QFAI:EX-0001-0185-43
 
+import { requiredReviews } from "../../helpers/requiredReviews.js";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -41,6 +42,10 @@ async function verifiedRun(root: string, completionTarget: string) {
         { path: ".qfai/run/shared/verify.json", digest: hashAssistantAssetText(text) },
       ],
       reviewResults: [
+        ...requiredReviews(
+          field(issued.json, "workOrder.requiredReviewerRoles"),
+          "verify-1",
+        ).filter((review) => review.role !== "qa-gatekeeper"),
         { role: "qa-gatekeeper", agentInstance: "qa-1", verdict: "PASS", reportRef: "qa.md" },
       ],
     }),
