@@ -132,6 +132,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Required reviews for three workflow examples remain open** (#2300).
+  `decisions.md` records the specification review, code-quality review and
+  refactor verification still needed for each example. The TODO row closes
+  only when all three passing checks are recorded for every example against
+  the revision each check examined.
+
 - **`qfai workflow` keeps each stage result it records under the run's
   `results/`** (#2348). Complete JSON is stored before its journal event.
   New filenames use `~` followed by the result ID's UTF-8 hex encoding, so
