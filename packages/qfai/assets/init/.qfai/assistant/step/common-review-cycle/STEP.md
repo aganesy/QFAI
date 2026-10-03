@@ -29,7 +29,8 @@ them; it is the procedure that applies them.
 - **The stage's gate result**, fresh on the revision the reviewers will read.
 - **The stage evidence file** (`common-evidence-record`), including its
   `## Grilling Session` block and Work Orders Summary.
-- **The previous cycle's answered demands**, when this is not the first cycle.
+- **Answers an earlier stage recorded**, when an earlier stage's review already
+  answered findings on the same artifact.
 
 ## Where the pack goes
 
@@ -75,9 +76,9 @@ fields and the value its `version` takes are
    errors. `<paths.outDir>/validate.log` is written by the CLI on every run; its
    `run_log:` line must name the newest `run-*/` directory. No shell
    redirection is needed.
-2. **Build the request.** Carry prior answers and newly answered demands into
-   the next cycle's `review_request.md` before dispatching reviewers, under
-   `.qfai/assistant/rule/review-convergence.md#answered-demands-must`. Where
+2. **Build the request.** Put the answers an earlier stage recorded on the same
+   artifact into this review's `review_request.md` before dispatching reviewers,
+   under `.qfai/assistant/rule/review-convergence.md#answered-demands-must`. Where
    the stage evidence has a `## Grilling Session` block, copy it in: the
    reviewer rules on it and should not have to look for it.
 3. **Dispatch.** Send each reviewer a work order in the shared template, with

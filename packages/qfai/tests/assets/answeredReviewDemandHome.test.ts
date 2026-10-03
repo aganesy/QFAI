@@ -18,8 +18,8 @@ describe("answered review demands are carried into the next existing request", (
         "MUST NOT be re-raised under another wording",
         "Close a repeat by citing its recorded answer",
         "what a reviewer may require, not what a reviewer may report",
-        "Carry prior answers into the next review's",
-        "before dispatching reviewers",
+        "they never start a second review in the same stage",
+        "`review_request.md` carries those answers",
         "a new defect or evidence that an answer no longer applies",
       ]) {
         expect(text.includes(clause), clause).toBe(true);
@@ -30,8 +30,8 @@ describe("answered review demands are carried into the next existing request", (
     it(`${tree}: the review step carries answers before reviewer dispatch`, async () => {
       const text = await read(tree, "assistant/step/common-review-cycle/STEP.md");
       expect(text).toContain("review-convergence.md#answered-demands-must");
-      expect(text).toContain("Carry prior answers and newly answered demands");
-      expect(text).toContain("next cycle's `review_request.md` before dispatching reviewers");
+      expect(text).toContain("Put the answers an earlier stage recorded on the same artifact");
+      expect(text).toContain("`review_request.md` before dispatching reviewers");
     });
   }
 });

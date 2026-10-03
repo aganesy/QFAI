@@ -21,15 +21,20 @@ which owns the delegation rules these sit beside.
 
 ## Answered demands (MUST)
 
-A demand a later review of the same artifact sees again, already answered, MUST
-NOT be re-raised under another wording. Close a repeat by citing its recorded
-answer. This bounds what a reviewer may require, not what a reviewer may report.
+Within a stage there is one review, so no demand comes back in it. The rules
+below are for a later, separate stage whose own one review reads an artifact an
+earlier stage's review already answered on; they never start a second review in
+the same stage.
 
 Record each finding's fix or answer, and its evidence, in the Response and
-Evidence cells. Carry prior answers into the next review's `review_request.md`
-before dispatching reviewers: each entry names the original finding source,
-demand, response and evidence. When there are no answered demands, write
+Evidence cells. When a later stage reviews the same artifact, its
+`review_request.md` carries those answers: each entry names the original
+finding source, demand, response and evidence. When there are none, write
 `None`.
+
+In that later review an answered demand MUST NOT be re-raised under another wording.
+Close a repeat by citing its recorded answer. This bounds what a reviewer may
+require, not what a reviewer may report.
 
 A report of a new defect or evidence that an answer no longer applies must
 state what changed. A critical decision in it still goes to the user.
