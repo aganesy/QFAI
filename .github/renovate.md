@@ -4,6 +4,9 @@ Dependency updates arrive as pull requests, opened daily by this repository's ow
 merged by it. **Every update type is automerged, major included, and nothing waits for a review.**
 The only thing between a dependency bump and `main` is `ci-pass`.
 
+Two packages are held back, and they are the pair the bot cannot offer correctly: see
+[The test runner and its coverage provider](#the-test-runner-and-its-coverage-provider).
+
 - **What runs it:** `.github/workflows/renovate.yml`
 - **What it does:** `.github/renovate.json5`
 - **What other repositories can extend:** `.github/renovate-presets/` (see below)
@@ -126,6 +129,7 @@ running the bot the same way keeps it inside that.
 | Merge gate    | `ci-pass`, and nothing else. No review, no approval, no dashboard tick              |
 | Merged when   | As soon as the checks pass — not on the next scheduled run                          |
 | Not held back | Vulnerability alerts: no schedule, no age floor, opened immediately                 |
+| Held back     | `vitest` and `@vitest/coverage-v8`, which the bot cannot offer as the pair they are |
 
 Nothing is held back for approval any more. `engines.node` and `packageManager` used to sit on the
 dashboard until someone ticked a box; they still get their own pull request rather than riding
@@ -135,6 +139,33 @@ else runs.
 
 The **Dependency dashboard** issue lists what is open and what has been detected. With nothing
 waiting on a human, it is the place to look when a dependency you expected to move has not moved.
+
+### The test runner and its coverage provider
+
+`vitest` and `@vitest/coverage-v8` are the two packages the bot does not offer, and the pair they
+form is why.
+
+The provider's peer range names the runner version exactly, so either one moving without the other
+fails at import in the coverage lane. Holding them together is what `constraintsFiltering` would
+ordinarily do, and it cannot here: it reads a release's own `engines`, the provider declares none,
+and the runner declares a range that excludes at least one odd Node line in every release since its
+third major. So the runner is dropped against the Node range this repository declares while the
+provider passes, and the group arrives with one half of a pair.
+
+Both halves are held, not just the provider. Holding the provider alone would rest on the filter
+continuing to drop every runner release, and a runner that widened its engine range would then be
+offered on its own — the same mismatch from the other side.
+
+**Raising them is a manual step, and nobody is reminded to take it.** Raise `vitest` and
+`@vitest/coverage-v8` together in `packages/qfai/package.json`, to the same version, and let CI
+judge the result — the coverage lane is what fails when the two disagree. Check for a new pair
+whenever the runner's release notes are worth reading; there is no pull request that will do it.
+
+A security fix is the exception, and it still arrives on its own. The vulnerability policy is
+applied as a forced override, so it reaches these two like any other package.
+
+The rule that holds this states the condition that removes it: the two being offerable as one
+again. That is a question about the declared Node range, not about these packages.
 
 ### Why the config declares no schedule of its own
 
