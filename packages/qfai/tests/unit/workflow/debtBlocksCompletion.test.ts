@@ -4,6 +4,7 @@
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { foldRecord, recordsOf } from "../../../src/core/workflow/fold.js";
 import { planStage } from "./kindSteps.js";
 import { RUN_ID, finish, finishPlan, metFacts, readySnapshot } from "./finishFixture.js";
 
@@ -93,8 +94,9 @@ function acceptImplementWithDebt() {
   const workOrder = issued.verdict.workOrder;
   const run = issued.verdict.run;
   if (!workOrder || !run) throw new Error("next issues the implement work order");
-  return decide(
-    { ...base, run, outstandingWorkOrder: workOrder },
+  const running = { ...base, run, outstandingWorkOrder: workOrder };
+  const decision = decide(
+    running,
     {
       operation: "accept",
       result: {
@@ -108,6 +110,16 @@ function acceptImplementWithDebt() {
       },
     },
     {},
+  );
+  return { running, decision };
+}
+
+// The snapshot the journal holds once a decision's records are folded onto it.
+function foldedAfter(snapshot: Parameters<typeof decide>[0], decision: ReturnType<typeof decide>) {
+  const records = recordsOf(decision, { operation: "accept", before: snapshot.run });
+  return records.reduce(
+    (folded, record) => foldRecord(folded, { ...record, prevHash: null }),
+    snapshot,
   );
 }
 
@@ -127,10 +139,14 @@ function finishWhileReported(debts: AcceptResult["debts"], reported: boolean) {
 }
 
 it("Decide accept of an accepted_with_debt result whose debt names another spec as owningFlow and qfai-sdd as resolvingOwner, then finish while the finding still stands", () => {
-  const accepted = acceptImplementWithDebt();
+  const { running, decision: accepted } = acceptImplementWithDebt();
   expect(accepted.verdict.run?.state).toBe("ready");
   const debts = accepted.events[0]?.debts;
   expect(debts).toEqual([crossSpecDebt]);
+
+  const next = decide(foldedAfter(running, accepted), { operation: "next" }, {});
+  expect(next.verdict.error).toBeUndefined();
+  expect(next.verdict.workOrder?.stageInstanceId).toBe("bounded-verify");
 
   const standing = finishWhileReported(debts, true);
   expect(standing.verdict.run?.state).toBe("ready");
