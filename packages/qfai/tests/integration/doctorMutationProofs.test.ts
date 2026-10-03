@@ -81,7 +81,8 @@ describe("qfai doctor checks that each mutation proof still names existing code"
     const changed = await mutationProofs(root);
     expect(changed?.severity).toBe("warning");
     expect(changed?.message).toContain("tests/unit/total.test.ts:4");
-    expect(changed?.details.stale).toEqual([
+    if (!changed?.details) throw new Error("stale mutation proof must include diagnostic details");
+    expect(changed.details.stale).toEqual([
       { test: "tests/unit/total.test.ts", line: 4, target: "src/total.ts", original: "a + b" },
     ]);
 
