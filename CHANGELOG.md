@@ -111,9 +111,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
-- **Doctor integration tests omit unused helper code and inputs** (#2849).
-  Profile assertions and explicit archive timestamp setup are unchanged.
-
 - **Journal test reads preserve filesystem errors** (#2846).
   Required artifact reads keep their original error instead of replacing it
   with an empty result; rebuilt-snapshot checks still clean up after failure.
