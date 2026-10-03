@@ -684,6 +684,9 @@ function stubIssue(
   return found;
 }
 
+/** The marker line every placeholder the earlier scaffold wrote carries. */
+const LEGACY_SCAFFOLD_MARKER = "QFAI-SCAFFOLD-PLACEHOLDER";
+
 /**
  * Every stub occurrence in one already-read file, one issue per occurrence.
  *
@@ -755,6 +758,24 @@ function collectStubIssues(
         lineNumber,
         match.index - lineStart + 1,
         isSkip,
+        skippedTestSeverity,
+      ),
+    );
+  }
+  // A placeholder an earlier `qfai atdd scaffold` wrote keeps its marker line.
+  // Its JS form is an `it.skip` the scan above reports; its Python form raises
+  // `NotImplementedError`, which no dialect pattern reads as a stub.
+  const legacy = content.indexOf(LEGACY_SCAFFOLD_MARKER);
+  if (legacy !== -1 && issues.length === 0) {
+    const before = content.slice(0, legacy);
+    issues.push(
+      stubIssue(
+        relFile,
+        runner,
+        LEGACY_SCAFFOLD_MARKER,
+        before.split("\n").length,
+        legacy - before.lastIndexOf("\n"),
+        false,
         skippedTestSeverity,
       ),
     );

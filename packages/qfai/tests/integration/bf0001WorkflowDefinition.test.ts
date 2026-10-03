@@ -70,7 +70,7 @@ describe("BF-0001 workflow definition", () => {
     const ordered = [
       "Discussion (optional)",
       "Specification (SDD)",
-      "writes the BF E2E and AC integration or API tests",
+      "writes the BF E2E test and the AC integration tests",
       "implements one EX at a time",
       "Verify:",
     ].map((phase) => workflow.indexOf(phase));
@@ -137,7 +137,7 @@ describe("BF-0001 workflow definition", () => {
     expect(stages[1]?.label).toContain("Discussion (optional)");
     expect(stages[4]?.label).toContain("Prototyping (optional)");
     expect(stages[5]?.label).toContain("Implementation:");
-    expect(stages[5]?.label).toContain("integration or API tests with empty bodies");
+    expect(stages[5]?.label).toContain("AC integration tests with empty bodies");
     expect(stages[6]?.label).toContain("Verify:");
     expect(workflow).toContain("At the beginning of each stage");
     expect(workflow).toContain("implements one EX at a time through Red, Green, Refactor");

@@ -93,7 +93,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - **Acceptance tests come in two phases, and the `qfai-atdd` skill is gone.**
   `/qfai-implement` now writes the E2E test of each business flow and the
-  integration or API test of each acceptance criterion with
+  integration test of each acceptance criterion with
   `npx qfai atdd scaffold` first, through its `implement-scaffold` step, and
   writes their bodies later through `implement-acceptance`. Unit and component
   tests stay test first. `implement-credentials` sets up per-worker sign-in
@@ -103,8 +103,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   raises no finding; `QFAI-TEST-003` reports a skipped one and
   `QFAI-TEST-001` a `todo` one, whoever wrote it. `D-SCAFFOLD-PLACEHOLDER`,
   its escalation and the `atdd.scaffoldEscalateCycles` setting are removed; an
-  `atdd` block left in `qfai.config.yaml` is ignored. `qfai init --force`
-  removes the `qfai-atdd` skill links it installed.
+  `atdd` block left in `qfai.config.yaml` is ignored. A placeholder an earlier
+  release scaffolded still raises `QFAI-TEST-003` (JavaScript) or
+  `QFAI-TEST-001` (Python) until its body is written. `qfai init --force`
+  removes the `qfai-atdd` skill links it installed and moves the retired
+  `qfai-atdd` skill and `atdd-*` steps into the skill and step archives.
 
 - **Code written only to pass a test does not meet its example** (#2235). The
   shipped test-layer rule now states what the code under test may not do to

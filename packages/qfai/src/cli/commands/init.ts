@@ -481,7 +481,7 @@ export async function runInit(
     ? await pruneLegacySkillFiles(destRoot, options.dryRun)
     : [];
   const retiredSkillNotes = options.force
-    ? await archiveRetiredMigrationSkill(destRoot, options.dryRun)
+    ? await archiveRetiredAssistantDirs(destRoot, options.dryRun)
     : [];
 
   const removed = [...removedLegacySkills, ...wrappersResult.removed];
@@ -1709,42 +1709,61 @@ function report(
   }
 }
 
-/** The migration skill's name in earlier 2.0 releases. */
-const RETIRED_MIGRATION_SKILL = "qfai-migration-spec-to-story";
+/**
+ * Assistant directories a release withdrew: the migration skill of earlier 2.0
+ * releases, and the ATDD skill with the steps it owned.
+ */
+const RETIRED_ASSISTANT_DIRS: readonly { layer: "skill" | "step"; id: string }[] = [
+  { layer: "skill", id: "qfai-migration-spec-to-story" },
+  { layer: "skill", id: "qfai-atdd" },
+  { layer: "step", id: "atdd-scaffold" },
+  { layer: "step", id: "atdd-credentials" },
+  { layer: "step", id: "atdd-author" },
+  { layer: "step", id: "atdd-test-fix" },
+];
 
 /**
- * Moves the retired migration skill's directory into the skill archive.
+ * Moves each retired skill or step directory into its archive.
  *
  * Nothing records what the release that shipped it wrote, so a copy the
  * project edited cannot be told from an untouched one. Moving it whole keeps
- * either, and leaves nothing under the skill tree that validate would report.
+ * either, and leaves nothing under the assistant tree that validate would
+ * report.
  */
-async function archiveRetiredMigrationSkill(destRoot: string, dryRun: boolean): Promise<string[]> {
-  const source = path.join(destRoot, ".qfai", "assistant", "skill", RETIRED_MIGRATION_SKILL);
-  const target = path.join(destRoot, SKILL_ARCHIVE_DIR, RETIRED_MIGRATION_SKILL);
-  const sourceStats = await lstat(source).catch(() => null);
-  if (sourceStats?.isDirectory() !== true) return [];
+async function archiveRetiredAssistantDirs(destRoot: string, dryRun: boolean): Promise<string[]> {
+  const notes: string[] = [];
   const shown = (entry: string) => formatReportPath(toRelativePath(destRoot, entry));
-  if (
-    (await firstLinkedComponent(source, destRoot)) !== null ||
-    (await firstLinkedComponent(path.dirname(target), destRoot)) !== null
-  ) {
-    return [
-      `NOTE: ${shown(source)}, a retired skill, was left in place because its path or the archive's passes through a symbolic link. Move it out of the skill tree by hand.`,
-    ];
+  for (const { layer, id } of RETIRED_ASSISTANT_DIRS) {
+    const source = path.join(destRoot, ".qfai", "assistant", layer, id);
+    const archive =
+      layer === "skill" ? SKILL_ARCHIVE_DIR : path.join(path.dirname(SKILL_ARCHIVE_DIR), "step");
+    const target = path.join(destRoot, archive, id);
+    const sourceStats = await lstat(source).catch(() => null);
+    if (sourceStats?.isDirectory() !== true) continue;
+    if (
+      (await firstLinkedComponent(source, destRoot)) !== null ||
+      (await firstLinkedComponent(path.dirname(target), destRoot)) !== null
+    ) {
+      notes.push(
+        `NOTE: ${shown(source)}, a retired ${layer}, was left in place because its path or the archive's passes through a symbolic link. Move it out of the assistant tree by hand.`,
+      );
+      continue;
+    }
+    if (await pathExists(target)) {
+      notes.push(
+        `NOTE: ${shown(source)}, a retired ${layer}, was left in place because ${shown(target)} already exists. Keep the copy you need and delete the other.`,
+      );
+      continue;
+    }
+    if (!dryRun) {
+      await mkdir(path.dirname(target), { recursive: true });
+      await rename(source, target);
+    }
+    notes.push(
+      `  ${dryRun ? "would move" : "moved"} retired ${layer}: ${shown(source)} → ${shown(target)}`,
+    );
   }
-  if (await pathExists(target)) {
-    return [
-      `NOTE: ${shown(source)}, a retired skill, was left in place because ${shown(target)} already exists. Keep the copy you need and delete the other.`,
-    ];
-  }
-  if (!dryRun) {
-    await mkdir(path.dirname(target), { recursive: true });
-    await rename(source, target);
-  }
-  return [
-    `  ${dryRun ? "would move" : "moved"} retired skill: ${shown(source)} → ${shown(target)}`,
-  ];
+  return notes;
 }
 
 async function pruneLegacySkillFiles(destRoot: string, dryRun: boolean): Promise<string[]> {

@@ -12,7 +12,9 @@ const read = (tree: string, relative: string): Promise<string> =>
 describe.each(trees)("%s — implementation stage binding", (tree) => {
   it("places implementation, acceptance tests included, before verification", async () => {
     const workflow = await read(tree, "assistant/rule/workflow.md");
-    expect(workflow).toContain("5. Implementation: `/qfai-implement` writes the BF E2E and AC");
+    expect(workflow).toContain(
+      "5. Implementation: `/qfai-implement` writes the BF E2E test and the AC",
+    );
     expect(workflow).toContain("6. Verify: run quality gates");
     expect(workflow).toContain("`qfai-prototyping`, `qfai-implement`, `qfai-verify`");
   });

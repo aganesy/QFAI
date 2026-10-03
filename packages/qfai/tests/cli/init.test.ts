@@ -22,6 +22,7 @@ import { describe, expect, it } from "vitest";
 
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { runInit } from "../../src/cli/commands/init.js";
+import { SKILL_ARCHIVE_DIR } from "../../src/core/init/integrationDirs.js";
 import { copyTemplateTree } from "../../src/core/fs/templateCopy.js";
 import { captureStdout } from "../helpers/stdout.js";
 import {
@@ -1012,6 +1013,39 @@ describe("qfai init", () => {
       await expect(lstat(installed)).rejects.toMatchObject({ code: "ENOENT" });
       await expectSymlink(projectLink);
       expect(await readFile(path.join(projectLink, "SKILL.md"), "utf-8")).toBe("project skill\n");
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("moves the retired qfai-atdd skill and its steps out of the assistant tree on --force", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      // What an earlier release left in the canonical tree, one file edited.
+      const assistant = path.join(root, ".qfai", "assistant");
+      await mkdir(path.join(assistant, "skill", "qfai-atdd"), { recursive: true });
+      await writeFile(path.join(assistant, "skill", "qfai-atdd", "SKILL.md"), "# atdd\n", "utf-8");
+      await mkdir(path.join(assistant, "step", "atdd-author"), { recursive: true });
+      const edited = "---\nname: atdd-author\nrouting-profile: runtime-heavy\n---\nedited\n";
+      await writeFile(path.join(assistant, "step", "atdd-author", "STEP.md"), edited, "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      await expect(lstat(path.join(assistant, "skill", "qfai-atdd"))).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+      await expect(lstat(path.join(assistant, "step", "atdd-author"))).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+      const stepArchive = path.join(root, path.dirname(SKILL_ARCHIVE_DIR), "step");
+      expect(await readFile(path.join(stepArchive, "atdd-author", "STEP.md"), "utf-8")).toBe(
+        edited,
+      );
+      expect(
+        await readFile(path.join(root, SKILL_ARCHIVE_DIR, "qfai-atdd", "SKILL.md"), "utf-8"),
+      ).toBe("# atdd\n");
     } finally {
       await removeTempTree(root);
     }

@@ -82,7 +82,7 @@ facts `qfai-run` reads out of the request, and the route fixes the plan.
 2. Requirements: discussion pack in `.qfai/discussion/`
 3. Specification (SDD): preflight, triage, policy, business flows, stories with AC and EX, and enforcing contracts
 4. Prototyping (optional): contract-aligned implementation skeleton
-5. Implementation: `/qfai-implement` writes the BF E2E and AC integration or API tests with empty bodies, then implements one EX at a time through Red, Green, Refactor; the acceptance test bodies are written once the system's shape has settled
+5. Implementation: `/qfai-implement` writes the BF E2E test and the AC integration tests with empty bodies, then implements one EX at a time through Red, Green, Refactor; the acceptance test bodies are written once the system's shape has settled
 6. Verify: run quality gates and provide evidence
 
 Stage 3 (`/qfai-sdd`) target policy:

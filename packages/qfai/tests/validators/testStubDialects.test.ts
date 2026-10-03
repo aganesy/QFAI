@@ -121,6 +121,31 @@ describe("every supported stack's stub construct is detected", () => {
     });
   });
 
+  it("reports a Python placeholder an earlier scaffold wrote", async () => {
+    // That release raised `NotImplementedError` instead of skipping, so no
+    // dialect pattern sees it; the marker line it left is what does.
+    const legacy = [
+      "# QFAI:AC-0001-0001-01",
+      "# QFAI-SCAFFOLD-PLACEHOLDER — replace this block with a real assertion.",
+      "",
+      "import unittest",
+      "",
+      "",
+      "class Test_AC_0001_0001_01(unittest.TestCase):",
+      "    def test_ac_0001_0001_01(self) -> None:",
+      "        # TODO: implement assertion for AC-0001-0001-01",
+      '        raise NotImplementedError("pending — scaffold placeholder")',
+      "",
+    ].join("\n");
+    await withTests({ "tests/test_ac_0001_0001_01.py": legacy }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+      const stubs = issues.filter((i) => i.code === "QFAI-TEST-001");
+      expect(stubs.map((i) => [i.refs?.[0], i.loc?.line])).toEqual([
+        ["QFAI-SCAFFOLD-PLACEHOLDER", 2],
+      ]);
+    });
+  });
+
   it("stays silent on a real test with no stub", async () => {
     await withTests(
       {
