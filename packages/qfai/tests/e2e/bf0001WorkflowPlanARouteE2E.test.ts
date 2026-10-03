@@ -43,7 +43,7 @@ interface PlannedDocument {
   branchPoints?: { step: string; outcomes: { outcome: string; routes: string[] | string }[] }[];
 }
 
-it("A defect is planned, its regression branch is planned by name, and nothing is written", async () => {
+it("An intermittent defect is planned, its regression branch is planned by name, and nothing is written", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-plan-e2e-"));
   roots.push(root);
   expect(qfai(root, ["init", "--yes"]).status).toBe(0);
@@ -52,7 +52,7 @@ it("A defect is planned, its regression branch is planned by name, and nothing i
   const planned = qfai(
     root,
     ["workflow", "plan", "--in", "-"],
-    JSON.stringify(extraction({ intent: "defect", entryFlags: ["repro", "expect"] })),
+    JSON.stringify(extraction({ intent: "defect", entryFlags: ["intermittent"] })),
   );
   const plan: PlannedDocument = JSON.parse(planned.stdout);
   const paths = (plan.stages ?? []).flatMap((stage) => stage.steps.map((step) => step.path));
@@ -79,7 +79,7 @@ it("A defect is planned, its regression branch is planned by name, and nothing i
     unchanged: (await tree(root)) === before,
   }).toEqual({
     status: [0, 0],
-    routes: ["fix-defect", "fix-red-main"],
+    routes: ["fix-intermittent", "fix-red-main"],
     steps: true,
     missing: [],
     unchanged: true,

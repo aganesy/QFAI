@@ -2,7 +2,7 @@
 
 QFAI standardizes work into a fixed pipeline:
 
-## SDD → ATDD → Implementation → Verification
+## SDD → Implementation → Verification
 
 This file defines the canonical stages and delegation expectations.
 
@@ -88,9 +88,8 @@ writes nothing; the session runs the plan.
 2. Requirements: discussion pack in `.qfai/discussion/`
 3. Specification (SDD): preflight, triage, policy, business flows, stories with AC and EX, and enforcing contracts
 4. Prototyping (optional): contract-aligned implementation skeleton
-5. Acceptance tests (ATDD): BF E2E and AC integration or API tests from the story tree and contracts
-6. Implementation: `/qfai-implement` implements one EX at a time through Red, Green, Refactor
-7. Verify: run quality gates and provide evidence
+5. Implementation: `/qfai-implement` writes the BF E2E test and the AC integration tests with empty bodies, then implements one EX at a time through Red, Green, Refactor; the acceptance test bodies are written once the system's shape has settled
+6. Verify: run quality gates and provide evidence
 
 Stage 3 (`/qfai-sdd`) target policy:
 
@@ -146,7 +145,7 @@ from the skills and baselines that cite it.
 
 ### Stage 0 — Steering refresh contract (mandatory)
 
-At the beginning of each stage (`qfai-discussion`, `qfai-sdd`, `qfai-prototyping`, `qfai-atdd`, `qfai-implement`, `qfai-verify`):
+At the beginning of each stage (`qfai-discussion`, `qfai-sdd`, `qfai-prototyping`, `qfai-implement`, `qfai-verify`):
 
 1. Check the current story-tree steering files under `<paths.specsDir>`:
    - `01_policy/objective.md` and `01_policy/initiative.md`

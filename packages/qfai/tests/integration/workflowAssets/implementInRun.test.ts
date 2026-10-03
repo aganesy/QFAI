@@ -14,6 +14,7 @@ const DIAGNOSE = "step/implement-diagnose/STEP.md";
 const SEAM = "step/implement-seam/STEP.md";
 const REGRESSION_FIX = "step/implement-regression-fix/STEP.md";
 const TEST_FIX = "step/implement-test-fix/STEP.md";
+const ACCEPTANCE = "step/implement-acceptance/STEP.md";
 
 async function step(file: string): Promise<string> {
   const text = flat(await readShipped(file));
@@ -157,21 +158,34 @@ describe("qfai-implement in a workflow run", () => {
 
   // QFAI:AC-0001-0203-02
   // QFAI:EX-0001-0203-02
-  it("returns a test fix that changes what is checked as needs_repair for qfai-sdd", async () => {
+  it("makes no test fix that changes what is checked, and names qfai-sdd", async () => {
     const text = await step(TEST_FIX);
-    expect(text).toMatch(/would check a different ID returns `needs_repair`/i);
-    expect(text).toMatch(/with `qfai-sdd` as its `resolvingOwner`/i);
+    expect(text).toMatch(/would check a different ID is not made/i);
+    expect(text).toMatch(/The session stops and names `\/qfai-sdd` as the owner of the change/);
   });
 
   // QFAI:AC-0001-0203-03
   // QFAI:EX-0001-0203-03
-  it("repairs a test whose first matched ID is an EX, and passes on a BF or an AC", async () => {
+  it("repairs a test whatever layer its first matched ID names", async () => {
     const text = await step(TEST_FIX);
-    expect(text).toContain("## Passes when");
-    expect(text).toMatch(/repairs the test when that ID is an EX/i);
     expect(text).toMatch(
-      /When it is\s+a BF or an AC, this layer holds no defect: the step passes/i,
+      /repairs it, whatever layer the\s+first ID of the diagnosis's `matchedIds` names/i,
     );
-    expect(text).toMatch(/A pass while the first matched ID is an EX is refused/i);
+    expect(text).toMatch(
+      /maps a BF to an E2E test, an AC to an\s+integration or API test, and an EX/i,
+    );
+    expect(text).toContain("## Passes when");
+    expect(text).toMatch(/A pass while the\s+diagnosis names a defective test is refused/i);
+  });
+});
+
+describe("implement-acceptance", () => {
+  // QFAI:AC-0001-0226-02
+  // QFAI:EX-0001-0226-02
+  it("writes the bodies of empty acceptance tests and keeps every annotation and file", async () => {
+    const text = await step(ACCEPTANCE);
+    expect(text).toMatch(/writes the assertions those bodies owe/i);
+    expect(text).toMatch(/Each test keeps its annotation and its file/);
+    expect(text).toMatch(/No annotation is added, moved or removed/);
   });
 });

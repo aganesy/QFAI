@@ -205,15 +205,6 @@ export type QfaiReportConfig = {
   keepLatestRuns?: number;
 };
 
-export type QfaiAtddConfig = {
-  /**
-   * Number of consecutive un-skip + re-skip cycles tolerated before the
-   * scaffold-cycle escalation fires. Default (when unset) is applied at
-   * the call-site.
-   */
-  scaffoldEscalateCycles?: number;
-};
-
 /**
  * Project routing overrides replace a complete entry, keyed by the step or the
  * skill it routes. An entry carries exactly one of `step:` and `skill:`.
@@ -237,7 +228,6 @@ export type QfaiConfig = {
   uiux?: QfaiUiuxConfig;
   prototyping?: QfaiPrototypingConfig;
   report?: QfaiReportConfig;
-  atdd?: QfaiAtddConfig;
   routing?: QfaiRoutingEntry[];
   reviewProfiles?: Record<string, QfaiReviewProfile>;
   baseBranch?: string;
@@ -414,7 +404,6 @@ function normalizeConfig(raw: unknown, configPath: string, issues: Issue[]): Qfa
   const uiux = normalizeUiux(raw.uiux, configPath, issues);
   const prototyping = normalizePrototyping(raw.prototyping, configPath, issues);
   const report = normalizeReport(raw.report, configPath, issues);
-  const atdd = normalizeAtdd(raw.atdd, configPath, issues);
   const routing = normalizeRouting(raw.routing, configPath, issues);
   const reviewProfiles = normalizeReviewProfiles(raw.reviewProfiles, configPath, issues);
   const base: QfaiConfig = {
@@ -430,9 +419,6 @@ function normalizeConfig(raw: unknown, configPath: string, issues: Issue[]): Qfa
   }
   if (report) {
     base.report = report;
-  }
-  if (atdd) {
-    base.atdd = atdd;
   }
   if (routing) {
     base.routing = routing;
@@ -896,39 +882,6 @@ function normalizeReport(
     );
     if (value !== undefined) {
       result.keepLatestRuns = value;
-    }
-  }
-  return Object.keys(result).length === 0 ? undefined : result;
-}
-
-function normalizeAtdd(
-  raw: unknown,
-  configPath: string,
-  issues: Issue[],
-): QfaiAtddConfig | undefined {
-  if (raw === undefined || raw === null) {
-    return undefined;
-  }
-  if (!isRecord(raw)) {
-    issues.push(configIssue(configPath, "atdd must be an object."));
-    return undefined;
-  }
-  const result: QfaiAtddConfig = {};
-  if (raw.scaffoldEscalateCycles !== undefined) {
-    if (
-      typeof raw.scaffoldEscalateCycles === "number" &&
-      Number.isFinite(raw.scaffoldEscalateCycles) &&
-      Number.isInteger(raw.scaffoldEscalateCycles) &&
-      raw.scaffoldEscalateCycles >= 0
-    ) {
-      result.scaffoldEscalateCycles = raw.scaffoldEscalateCycles;
-    } else {
-      issues.push(
-        configIssue(
-          configPath,
-          "atdd.scaffoldEscalateCycles must be an integer greater than or equal to 0.",
-        ),
-      );
     }
   }
   return Object.keys(result).length === 0 ? undefined : result;

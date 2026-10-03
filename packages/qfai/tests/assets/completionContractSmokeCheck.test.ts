@@ -30,11 +30,10 @@ describe("completion smoke checks", () => {
     expect(checkpoint).toContain("source revision");
   });
 
-  it("ATDD checks current BF tests and evidence before completion", async () => {
-    const atdd = await read("step/atdd-author/STEP.md");
-    expect(atdd).toContain("Every BF and AC obligation");
-    expect(atdd).toContain("The flow's ATDD evidence is current");
-    expect(atdd).toContain("qfai validate --profile atdd --flow BF-NNNN --fail-on error");
+  it("acceptance tests check every body before completion", async () => {
+    const acceptance = await read("step/implement-acceptance/STEP.md");
+    expect(acceptance).toContain("PASS when every test in scope has a body");
+    expect(acceptance).toContain("qfai validate --profile atdd --flow BF-NNNN --fail-on error");
   });
 
   it("configure refuses a missing or truncated test glob scan", async () => {
