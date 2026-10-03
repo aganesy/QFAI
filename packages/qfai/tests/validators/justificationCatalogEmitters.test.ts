@@ -8,10 +8,6 @@ import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
 import type { Issue } from "../../src/core/types.js";
-import {
-  EVIDENCE_MUTATION_PAIRS,
-  detectEvidenceMutationUnlogged,
-} from "../../src/core/validators/evidenceMutationUnlogged.js";
 import { detectHandoffSchemaDrift } from "../../src/core/validators/handoffSchemaDrift.js";
 import {
   HANDOFF_SCHEMA_REL,
@@ -122,15 +118,6 @@ function mockHrefDriftFixture(): Promise<DriftFixture> {
   );
 }
 
-function evidenceMutationDriftFixture(): Promise<DriftFixture> {
-  const files = new Map<string, string>();
-  for (const pair of EVIDENCE_MUTATION_PAIRS) {
-    const previous = files.get(pair.sourceRel) ?? NO_TOKEN;
-    files.set(pair.sourceRel, `${previous}${pair.mutationTokens.join("\n")}\n`);
-  }
-  return Promise.resolve(files);
-}
-
 /**
  * Catalog codes whose detection does NOT reach a consuming project.
  *
@@ -155,16 +142,6 @@ const LIMITED_SCOPE: ReadonlyMap<string, LimitedScopeDeclaration> = new Map<
       gate: path.join("src", "core", "validators", "handoffSchemaPairs.ts"),
       detect: detectHandoffSchemaDrift,
       driftFixture: handoffDriftFixture,
-      descriptionMarkers: REPO_SOURCE_MARKERS,
-    },
-  ],
-  [
-    "R-EVIDENCE-MUTATION-UNLOGGED",
-    {
-      scope: "repo-source",
-      gate: path.join("src", "core", "validators", "evidenceMutationUnlogged.ts"),
-      detect: detectEvidenceMutationUnlogged,
-      driftFixture: evidenceMutationDriftFixture,
       descriptionMarkers: REPO_SOURCE_MARKERS,
     },
   ],
@@ -256,7 +233,7 @@ function isIssueCallee(expression: ts.Expression): boolean {
  * re-implemented here — and comments and dead constants drop out for free.
  *
  * Returns the whole set rather than answering one code at a time so a file is
- * parsed once for all seven catalog codes, not once per code.
+ * parsed once for all five catalog codes, not once per code.
  */
 export function emittedIssueCodes(source: string): Set<string> {
   const parsed = ts.createSourceFile(
@@ -319,7 +296,7 @@ async function collectTsFiles(dir: string): Promise<string[]> {
  * code -> package-relative files under `src/` that construct an `Issue` for it.
  *
  * Built once and shared: parsing the whole of `src/` per catalog code would
- * repeat the same work seven times over, and every test below asks about a
+ * repeat the same work five times over, and every test below asks about a
  * different code from the same unchanged tree.
  */
 let srcEmitterIndex: Promise<ReadonlyMap<string, readonly string[]>> | undefined;

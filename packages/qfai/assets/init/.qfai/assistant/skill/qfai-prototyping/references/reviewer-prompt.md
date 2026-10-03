@@ -1,14 +1,15 @@
 # Reviewer Prompt
 
-Injected into the product-surface-reviewer sub-agent each cycle.
+Injected into the product-surface-reviewer sub-agent each iteration.
 Launch Playwright (or an equivalent browser harness) yourself for each
 `(UI contract, screen)` pair. Navigate the live prototype and use its controls
 through click, type, navigate, and scroll actions. Examine the latest iteration
 on four ordinal UX axes, report what must be
 fixed before it ships, detect layout anti-patterns, and emit a
 `pivotDirective`. Brand identity (color, type, radius, shadow) is
-locked by root `DESIGN.md` and enforced by the static compliance
-gate, not by you.
+locked by root `DESIGN.md`: check the prototype against every category
+`DESIGN.md` declares, and name each mismatch in a finding or in
+`designMdViolations[]`.
 
 Score each axis `weak`, `acceptable`, `strong`, or `exceptional` from the live
 review. Explain observable defects and corrective actions in prose. A favorable
@@ -21,15 +22,15 @@ transition-pass percentages as a substitute for the qualitative review.
   Open each route in your own Playwright session and exercise its declared
   primary tasks. Record `sessionStatus` and `retryCount` in the per-screen
   payload according to `references/review-payload-schema.md`.
-- When `iterate --capture` is selected, use the additional screenshot, HTML
-  snapshot, and counted signals under
-  `.qfai/evidence/prototyping/iter-NN/<screen>.*`. They are absent by default.
+- A screenshot or HTML snapshot, only when one was taken. Name any mandatory
+  input you did not receive in a finding.
+- The layout anti-pattern registry the package ships.
 - Prior reviews: `iter-(NN-1)/review.json`, `iter-(NN-2)/review.json`
   (when present)
-- Progress log: `.qfai/evidence/prototyping/progress.md`
+- Progress log: `.qfai/prototype/progress.md`
 - Root `DESIGN.md` (read-only context: `# Brand Philosophy`,
   `audience.emotion`, `audience.do_not_look_like`).
-- Session record: `.qfai/evidence/prototyping/grilling.md` — what this prototype
+- Session record: `.qfai/prototype/grilling.md` — what this prototype
   is for, what would count as better, and what is out of bounds. The four axes
   are fixed and say nothing about this prototype's purpose, so a reviewer without
   it grades every prototype against the same generic bar.
@@ -44,32 +45,29 @@ transition-pass percentages as a substitute for the qualitative review.
 
 You write two different files. They are not interchangeable. Both
 paths are given in full below and are relative to the project root —
-write them exactly there, or the CLI will not find them.
+write them exactly there.
 
 1. **Per-contract / per-screen payload** —
-   `.qfai/evidence/prototyping/iter-NN/<ui-contract-id>/<screen>.review.json`,
+   `.qfai/prototype/iter-NN/<ui-contract-id>/<screen>.review.json`,
    one per screen. `<ui-contract-id>` is the full `UI-NNNN` ID. The
    per-UI-contract subdirectory is mandatory for every run that declares UI
-   screens, including a run with one contract. This is the file the
-   prototyping CLI parses and certify requires. Its schema is closed
+   screens, including a run with one contract. Its schema is closed
    (11 required top-level fields, unknown keys rejected) and lives in
    `references/review-payload-schema.md`. Write it from that
    reference, not from the block below.
-2. **Per-cycle summary** —
-   `.qfai/evidence/prototyping/iter-NN/review.json`, one per cycle.
-   The orchestrator folds it into `prototyping.json#iterations[]`,
-   which is what `npx qfai validate` checks. Its shape is the block
-   below.
+2. **Per-iteration summary** —
+   `.qfai/prototype/iter-NN/review.json`, one per iteration. Its shape is
+   the block below.
 
 The two share `blockingFindings`, `layoutAntiPatternsDetected` and
-`designMdViolations`. `proseCritique` / `pivotDirective` /
-`evidenceRefs` exist on the summary only — putting them in a
+`designMdViolations`. `proseCritique` / `pivotDirective` exist on
+the summary only — putting them in a
 `<screen>.review.json` fails the closed schema.
 
 ### Aggregating the payloads into the summary
 
 The summary is derived from the payloads you just wrote, never from
-one screen alone. Fold every `(UI contract, screen)` pair of this cycle:
+one screen alone. Fold every `(UI contract, screen)` pair of this iteration:
 
 - `blockingFindings` — the **union** of the pairs' arrays, each entry
   prefixed with the screen it belongs to.
@@ -78,16 +76,14 @@ one screen alone. Fold every `(UI contract, screen)` pair of this cycle:
 - `designMdViolations` — the **union**, deduplicated on
   `(kind, found)`.
 - `proseCritique`, four ordinal `scores`, and `pivotDirective` describe the
-  cycle as a whole. The six bounded `impressions.*Feel` fields remain on each
+  iteration as a whole. The six bounded `impressions.*Feel` fields remain on each
   per-screen payload; do not add rating keys to that closed schema.
 
-This keeps the summary findings aligned with the per-screen payloads that
-`npx qfai prototyping certify` re-derives. The cycle stops only when all four
-summary scores are `exceptional` and every pair has all three finding arrays
-empty. A summary built from the best screen would hide another screen's
-blockers while certify still rejects its payload.
+This keeps the summary findings aligned with the per-screen payloads. The
+user reads the summary before confirming the prototype, so a summary built
+from the best screen would hide another screen's blockers from them.
 
-## Per-cycle summary (`iter-NN/review.json`)
+## Per-iteration summary (`iter-NN/review.json`)
 
 ```ts
 type Review = {
@@ -106,38 +102,28 @@ type Review = {
   };
   layoutAntiPatternsDetected: string[]; // lap-* IDs
   designMdViolations: {
-    // populated by static gate, not by you
+    // every value the prototype uses that DESIGN.md does not declare
     kind: "color" | "font" | "radius" | "shadow" | "contrast";
     found: string;
   }[];
   pivotDirective: "continue" | "refine" | "pivot";
-  // Paths relative to .qfai/evidence/prototyping/ for optional --capture files.
-  // Empty when capture was not requested. The orchestrator verifies
-  // complete screen coverage and copies these into prototyping.json.
-  evidenceRefs: { kind: "screenshot" | "html"; path: string }[];
 };
 ```
 
-`designMdViolations` is filled by the static gate. Leave the field as
-`[]` unless the runtime injects pre-computed violations. A live Playwright
-review remains required when capture is off. When capture is on, the accepted
-iteration's readable HTML is re-scanned on convergence and certification; the
-re-scan result wins over a manually emptied array. Do not invent an
-`evidenceRefs` entry for a file that was not captured. See
-`generator-prompt.md` for the static gate.
+Fill `designMdViolations` yourself: one entry per distinct value the
+prototype uses that root `DESIGN.md` does not declare, in the categories
+`generator-prompt.md` lists.
 
 ## The four ordinal UX axes
 
 Score `informationArchitecture`, `navigationFlow`, `usability`, and
 `functionality` on the `weak` → `acceptable` → `strong` → `exceptional` scale.
-The four scores belong to the per-cycle summary and cover the live review of
+The four scores belong to the per-iteration summary and cover the live review of
 all declared screens. They do not replace the six bounded qualitative
 `impressions.*Feel` fields or actionable `blockingFindings` on each closed
-per-screen payload. Convergence requires all four summary scores to be
-`exceptional` and `blockingFindings[]`, `layoutAntiPatternsDetected[]`, and
-`designMdViolations[]` to be empty on every declared `(UI contract, screen)`
-payload. Do not inflate a score to meet the gate; improve the prototype and
-review it again.
+per-screen payload. The user reads the scores and every finding before
+confirming the prototype, so do not inflate a score: a favorable score that
+hides a defect misleads the one judgement that ends the loop.
 
 Good: on `checkout`, the primary action remains below the fold at the declared
 mobile width. Record the screen and observable defect, propose moving the
@@ -146,14 +132,14 @@ another screen scores `strong`.
 
 Bad: record only "navigation looks good" or a favorable score for that same
 checkout flow while omitting the blocked action. Numeric AC-pass or
-transition-pass percentages likewise cannot establish qualitative convergence.
+transition-pass percentages likewise cannot replace the qualitative review.
 
 ## Diagnostic criteria
 
 Answer each one yes or no. A **no** is one line in `blockingFindings` naming
 the screen, what is wrong, and the criterion it came from. Anything worth
 saying that does not block goes in `proseCritique`, where it informs the next
-cycle without stopping this one.
+iteration.
 
 Use these questions to find defects and justify the four ordinal scores. A
 count can support a finding, but cannot replace the live assessment.
@@ -219,9 +205,7 @@ denominator is in the contract, so no global threshold has to be invented.
 
 ### Where the counts come from
 
-When selected, `iterate --capture` counts each screen and writes
-`iter-NN/<screen>.signals.json` beside the capture. The default review uses
-the live session and has no counted signal file.
+Count them in your live session when a finding needs a number.
 
 | Field                        | What it counts                                                      |
 | ---------------------------- | ------------------------------------------------------------------- |
@@ -233,8 +217,7 @@ the live session and has no counted signal file.
 | `maxDepth`                   | deepest nesting                                                     |
 | `distinctElementTypes`       | how many kinds of element the screen uses                           |
 
-Read the counts when the file exists; do not invent them in a default review.
-A denominator the contract does not supply reads `null`, which means unknown,
+Do not invent a count you did not take. A denominator the contract does not supply reads `null`, which means unknown,
 not zero.
 
 Nothing here passes or fails on its own. Cite a number in the finding it
@@ -271,15 +254,14 @@ the screen does not show, a control whose effect is unknowable until it
 is pressed.
 
 An observation that something could be better is not a finding. It goes
-in `proseCritique`, where it informs the next cycle. An iteration can have no
-blocking findings yet still need another cycle because one of the four
-ordinal axes remains below `exceptional`.
+in `proseCritique`, where it informs the next iteration. Whether the
+prototype is done is the user's decision, not a score's.
 
 ## Layout anti-pattern matching (`lap-*`)
 
-The static loader runs the `layout` regex against iter HTML and fills
-`layoutAntiPatternsDetected[]`. You **must** evaluate the `semantic`
-entries yourself and append their IDs when matched.
+Apply the registry the package ships to each screen and fill
+`layoutAntiPatternsDetected[]`: a `layout` entry by its regex over the
+iteration's HTML, a `semantic` entry by your own judgement.
 
 | ID                              | Scope    | Detection                            | What makes it a defect                        |
 | ------------------------------- | -------- | ------------------------------------ | --------------------------------------------- |
@@ -291,8 +273,9 @@ opinion: a published heuristic, an accessibility criterion, or the contract
 the screen is built to. An entry with no such authority is dropped when the
 registry loads.
 
-A conventional layout is not an entry here. A detection blocks convergence,
-so reporting a familiar shape stops an ordinary product finishing the loop.
+A conventional layout is not an entry here. A detection is put to the user
+as a defect, so reporting a familiar shape asks them to fix an ordinary
+product.
 Report what fails, not what is familiar.
 
 ### `lap-007-state-not-represented`
@@ -319,7 +302,7 @@ Let `open(r)` be the total length of `r.blockingFindings` plus
 `r.layoutAntiPatternsDetected`.
 
 - `open(latest) > 0` AND `open(latest) >= open(prior)` AND
-  `open(prior) >= open(prior2)` → `pivot`. Three cycles without
+  `open(prior) >= open(prior2)` → `pivot`. Three iterations without
   progress is a structural ceiling, not a detail.
 - Else if a prior review exists AND `open(latest) < open(prior)` →
   `continue`.
@@ -340,7 +323,7 @@ out of scope.
 
 **There is no minimum.** A critique that reports one finding and stops
 is complete. Do not write toward a length: prose added to fill a quota
-reads, on the next cycle, as work to do.
+reads, on the next iteration, as work to do.
 
 The character cap counts Hiragana, Katakana and Han only. A critique in
 any other script — Korean, Cyrillic, Thai — is measured in

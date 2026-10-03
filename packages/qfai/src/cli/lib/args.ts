@@ -61,11 +61,6 @@ export type ParsedArgs = {
     dbDriftFormat?: "text" | "json";
     dbDriftOut?: string;
     platform?: string;
-    prototypingAction?: "preflight" | "iterate" | "certify" | "show-ui-contract" | "rescope";
-    /** `rescope --remove <surface-id>`, repeatable. */
-    rescopeRemove: string[];
-    /** `rescope --reason <delta-id>`: the decision that retired the surface. */
-    rescopeReason?: string;
     prototypingTargetUrl?: string;
     /** Subcommand for `qfai discussion <list|use>`. */
     discussionAction?: "list" | "use";
@@ -75,81 +70,6 @@ export type ParsedArgs = {
     discussionFormat?: "text" | "json";
     /** Positional `<id>` for `qfai discussion use <id>`. */
     discussionId?: string;
-    /** --cycle <n> for `qfai prototyping iterate --cycle <n>`. */
-    prototypingCycle?: number;
-    /** --check flag for `qfai prototyping certify --check`. */
-    prototypingCheckOnly?: boolean;
-    /**
-     * --scope <saas-package|full> for `qfai prototyping certify`. When
-     * set to `saas-package`, the sealed certificate carries
-     * `scope: "saas-package"` + `notes[]` enumerating the gates the
-     * saas-package profile deliberately skips. Default (omitted) seals
-     * a full-scope certificate.
-     */
-    prototypingScope?: "saas-package" | "full";
-    /**
-     * --upgrade-scope full for `qfai prototyping certify`. Re-gates the
-     * gates skipped by the existing scope-limited certificate against
-     * the current project state; rewrites the certificate without the
-     * scope-limited markers on success.
-     */
-    prototypingUpgradeScopeFull?: boolean;
-    /** --license-patch <file> for `qfai prototyping iterate`. */
-    prototypingLicensePatch?: string;
-    /** --primary-ui-contract <UI-NNNN> for `qfai prototyping iterate`. */
-    prototypingPrimaryUiContract?: string;
-    /**
-     * --check-convergence for `qfai prototyping iterate`. Read-only peek
-     * of the canonical prototyping state file; reports stopReason +
-     * acceptedIterationIndex without re-running the iterate loop.
-     */
-    prototypingCheckConvergence?: boolean;
-    /**
-     * --capture for `qfai prototyping iterate`. Opt-in PNG/HTML capture
-     * (default OFF; preserves the no-capture default posture). When
-     * present, iterate threads `capture: true` into runPrototypingIterate
-     * and the default Playwright runner is loaded dynamically when no
-     * DI captureScreen is supplied.
-     */
-    prototypingCapture?: boolean;
-    /**
-     * --auto-serve for `qfai prototyping iterate`. Opt-in local HTTP
-     * server spawn (default OFF; preserves the no-server default
-     * posture). When present, iterate threads `autoServe: true` into
-     * runPrototypingIterate and the default in-process HTTP server
-     * runner is loaded dynamically when no DI serverRunner is supplied.
-     */
-    prototypingAutoServe?: boolean;
-    /**
-     * --emit-skeletons for `qfai prototyping iterate --cycle 0`. Opt-in
-     * cycle-0 token-driven placeholder HTML emission (default OFF;
-     * preserves prior-release bit-for-bit behavior). Only meaningful at cycle 0;
-     * silently ignored on other cycles today.
-     */
-    prototypingEmitSkeletons?: boolean;
-    /**
-     * --skeleton-mode for `qfai prototyping iterate --cycle 0
-     * --emit-skeletons`. Selects the renderer behavior:
-     *   - `placeholder` (default): DESIGN.md-token-styled static HTML,
-     *     no per-screen LLM call
-     *   - `full`: callers may replace the body via generation (the
-     *     renderer itself never calls a model)
-     *   - `stub`: minimal `<!doctype html>` marker
-     * Unknown values are rejected via markInvalid(reason).
-     */
-    prototypingSkeletonMode?: "placeholder" | "full" | "stub";
-    /**
-     * --mode for `qfai prototyping iterate`. Selects the prototyping
-     * loop posture:
-     *   - `convergence` (default): all gates apply at error severity.
-     *   - `exploration`: medium gate relaxation — soft-rubric gates
-     *     (QFAI-CRIT-008 loop completion, QFAI-DCON-030 root
-     *     DESIGN.md presence) downgrade error → warning. Schema / path /
-     *     license (exit 66) gates stay hard error.
-     * Overrides `qfai.config.yaml#prototyping.mode`. Unknown values
-     * are rejected via markInvalid(reason).
-     */
-    prototypingMode?: "convergence" | "exploration";
     /** Subcommand for `qfai audit <log>`. */
     auditAction?: "log";
     /** --scope filter for `qfai audit log`. */
@@ -230,12 +150,8 @@ const RESERVED_SHORT_FLAGS: ReadonlySet<string> = new Set(
   [...HELP_FLAGS, ...VERSION_FLAGS].filter((flag) => !flag.startsWith("--")),
 );
 
-/** Subcommand names of `qfai prototyping <action>`. */
-type PrototypingAction = NonNullable<ParsedArgs["options"]["prototypingAction"]>;
-
 export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   const options: ParsedArgs["options"] = {
-    rescopeRemove: [],
     root: cwd,
     rootExplicit: false,
     dir: cwd,
@@ -308,11 +224,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   }
 
   /**
-   * Flag-ownership guard (for flag-handling contract rule 2 below).
-   * The `qfai prototyping <action>` subcommand token is fixed before the
-   * flag loop, so this is safe to call from any arm of the loop.
-   */
-  /**
    * Whether a flag is on one of the commands that actually reads it.
    *
    * A flag accepted where nothing reads it reaches nothing, and the run
@@ -326,43 +237,14 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
    *
    * - `dir`, `upgradeAssistantTree` — `init`
    * - `yes` — `init`, `doctor`
-   * - `force` — `init`, `prototyping`
-   * - `dryRun` — `init`, `doctor`, `prototyping`
+   * - `force` — `init`
+   * - `dryRun` — `init`, `doctor`
    *
    * One predicate rather than one per flag: two that mean almost the same
-   * thing are two contracts to keep in step, and this is the shape
-   * `ownedByPrototyping` below already uses.
+   * thing are two contracts to keep in step.
    */
   const ownedBy = (...commands: string[]): boolean =>
     command !== null && commands.includes(command);
-
-  const ownedByPrototyping = (...actions: PrototypingAction[]): boolean => {
-    if (command !== "prototyping") {
-      return false;
-    }
-    const action = options.prototypingAction;
-    return action !== undefined && actions.includes(action);
-  };
-
-  // `qfai prototyping <subcommand>` pulls the subcommand token before the
-  // flag loop.
-  if (command === "prototyping") {
-    const candidate = args[0];
-    if (isSubcommandToken(candidate)) {
-      if (
-        candidate === "preflight" ||
-        candidate === "iterate" ||
-        candidate === "certify" ||
-        candidate === "show-ui-contract" ||
-        candidate === "rescope"
-      ) {
-        options.prototypingAction = candidate;
-      } else {
-        markInvalid(subcommandReason("prototyping", candidate));
-      }
-      args.shift();
-    }
-  }
 
   // `qfai audit <subcommand>` — currently only `log` is supported.
   if (command === "audit") {
@@ -494,8 +376,8 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         break;
       case "--force":
-        // Read by the `init` and `prototyping` arms and nowhere else.
-        if (ownedBy("init", "prototyping")) {
+        // Read by the `init` arm and nowhere else.
+        if (ownedBy("init")) {
           options.force = true;
         } else {
           markInvalid(notValidHere("--force"));
@@ -510,8 +392,8 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         break;
       case "--dry-run":
-        // Read by `init`, `doctor` and `prototyping`. Accepted elsewhere it let an operator believe a run was a rehearsal.
-        if (ownedBy("init", "doctor", "prototyping")) {
+        // Read by `init` and `doctor`. Accepted elsewhere it let an operator believe a run was a rehearsal.
+        if (ownedBy("init", "doctor")) {
           options.dryRun = true;
         } else {
           markInvalid(notValidHere("--dry-run"));
@@ -543,10 +425,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         if (next === null) {
           // `--format` requires a value. When it is missing, show the help (without consuming the next option).
           markInvalid(missingValue("--format"));
-          break;
-        }
-        if (command === "prototyping" && options.prototypingAction !== "preflight") {
-          markInvalid(`qfai prototyping: --format is only valid for "prototyping preflight".`);
           break;
         }
         if (command === "discussion") {
@@ -647,7 +525,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid(missingValue("--fail-on"));
           break;
         }
-        // usage(): validate / report / doctor / prototyping preflight / sdd
+        // usage(): validate / report / doctor / sdd
         // Only preflight reads failOn. report now gates on findings, so it
         // is on the owning side. On any other command it would not be read,
         // so it is rejected. `sdd` has only the preflight subcommand, and a
@@ -658,8 +536,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           command !== "validate" &&
           command !== "report" &&
           command !== "doctor" &&
-          command !== "sdd" &&
-          !ownedByPrototyping("preflight")
+          command !== "sdd"
         ) {
           markInvalid(notValidHere("--fail-on"));
           break;
@@ -685,10 +562,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid(missingValue("--out"));
           break;
         }
-        if (
-          command === "doctor" ||
-          (command === "prototyping" && options.prototypingAction === "preflight")
-        ) {
+        if (command === "doctor") {
           options.doctorOut = next;
         } else if (command === "report") {
           options.reportOut = next;
@@ -760,34 +634,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         break;
       }
-      case "--remove": {
-        const next = consumeOptionValue();
-        if (next === null) {
-          markInvalid(missingValue("--remove"));
-          break;
-        }
-        // Repeatable: one decision can retire more than one surface, and each
-        // retirement earns its own audit entry.
-        if (ownedByPrototyping("rescope")) {
-          options.rescopeRemove.push(next);
-        } else {
-          markInvalid(notValidHere("--remove"));
-        }
-        break;
-      }
-      case "--reason": {
-        const next = consumeOptionValue();
-        if (next === null) {
-          markInvalid(missingValue("--reason"));
-          break;
-        }
-        if (ownedByPrototyping("rescope")) {
-          options.rescopeReason = next;
-        } else {
-          markInvalid(notValidHere("--reason"));
-        }
-        break;
-      }
       case "--target-url": {
         const next = consumeOptionValue();
         if (next === null) {
@@ -799,136 +645,10 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         // profile !== "prototyping"). --profile may also follow other tokens,
         // so the profile check for doctor runs in the post-loop guard after
         // the flag loop.
-        if (command === "doctor" || ownedByPrototyping("preflight", "iterate")) {
+        if (command === "doctor") {
           options.prototypingTargetUrl = next;
         } else {
           markInvalid(notValidHere("--target-url"));
-        }
-        break;
-      }
-      case "--cycle": {
-        const next = consumeOptionValue();
-        if (next === null) {
-          markInvalid(missingValue("--cycle"));
-          break;
-        }
-        const parsed = parseNonNegativeInteger(next);
-        if (!ownedByPrototyping("iterate")) {
-          markInvalid(notValidHere("--cycle"));
-        } else if (parsed === null) {
-          markInvalid(badValue("--cycle", next, "a non-negative integer"));
-        } else {
-          options.prototypingCycle = parsed;
-        }
-        break;
-      }
-      case "--check": {
-        // only used by `qfai prototyping certify --check`.
-        // The flag takes no value; presence flips the boolean.
-        if (ownedByPrototyping("certify")) {
-          options.prototypingCheckOnly = true;
-        } else {
-          markInvalid(notValidHere("--check"));
-        }
-        break;
-      }
-      case "--license-patch": {
-        const next = consumeOptionValue();
-        if (next === null) {
-          markInvalid(missingValue("--license-patch"));
-          break;
-        }
-        if (ownedByPrototyping("iterate")) {
-          options.prototypingLicensePatch = next;
-        } else {
-          markInvalid(notValidHere("--license-patch"));
-        }
-        break;
-      }
-      case "--primary-ui-contract": {
-        const next = consumeOptionValue();
-        if (next === null) {
-          markInvalid(missingValue("--primary-ui-contract"));
-          break;
-        }
-        if (ownedByPrototyping("iterate")) {
-          options.prototypingPrimaryUiContract = next;
-        } else {
-          markInvalid(notValidHere("--primary-ui-contract"));
-        }
-        break;
-      }
-      case "--check-convergence": {
-        // Read-only peek of the canonical prototyping state file. No
-        // value; presence flips the boolean. Only meaningful for
-        // `qfai prototyping iterate`; main.ts wires it through only on
-        // the iterate path.
-        if (ownedByPrototyping("iterate")) {
-          options.prototypingCheckConvergence = true;
-        } else {
-          markInvalid(notValidHere("--check-convergence"));
-        }
-        break;
-      }
-      case "--capture": {
-        // Opt-in PNG/HTML capture. No value; presence flips the
-        // boolean. Only meaningful for `qfai prototyping iterate`.
-        if (ownedByPrototyping("iterate")) {
-          options.prototypingCapture = true;
-        } else {
-          markInvalid(notValidHere("--capture"));
-        }
-        break;
-      }
-      case "--auto-serve": {
-        // Opt-in local HTTP server spawn. No value; presence flips the
-        // boolean. Only meaningful for `qfai prototyping iterate`.
-        if (ownedByPrototyping("iterate")) {
-          options.prototypingAutoServe = true;
-        } else {
-          markInvalid(notValidHere("--auto-serve"));
-        }
-        break;
-      }
-      case "--emit-skeletons": {
-        // Opt-in cycle-0 placeholder HTML emission. No value; presence
-        // flips the boolean. Only meaningful for
-        // `qfai prototyping iterate --cycle 0`; iterate itself ignores
-        // it on cycle >= 1.
-        if (ownedByPrototyping("iterate")) {
-          options.prototypingEmitSkeletons = true;
-        } else {
-          markInvalid(notValidHere("--emit-skeletons"));
-        }
-        break;
-      }
-      case "--skeleton-mode": {
-        const next = consumeOptionValue();
-        if (next === null) {
-          markInvalid(missingValue("--skeleton-mode"));
-          break;
-        }
-        if (!ownedByPrototyping("iterate")) {
-          markInvalid(notValidHere("--skeleton-mode"));
-        } else if (next === "placeholder" || next === "full" || next === "stub") {
-          options.prototypingSkeletonMode = next;
-        } else {
-          markInvalid(badValue("--skeleton-mode", next, "placeholder|full|stub"));
-        }
-        break;
-      }
-      case "--mode": {
-        const next = consumeOptionValue();
-        if (next === null) {
-          markInvalid(missingValue("--mode"));
-          break;
-        }
-        if (!ownedByPrototyping("iterate")) {
-          markInvalid(notValidHere("--mode"));
-        } else if (next === "convergence" || next === "exploration") {
-          options.prototypingMode = next;
-        } else {
-          markInvalid(badValue("--mode", next, "convergence|exploration"));
         }
         break;
       }
@@ -937,7 +657,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       // `--root`, `--dir`, `--force`, `--yes`, `--dry-run`, `--help` —
       // are exempt because they have no owning command. `--strict` and
       // `--fail-on` are NOT global: `usage()` scopes them to validate
-      // and to validate / doctor / prototyping preflight respectively,
+      // and to validate / doctor respectively,
       // so they carry owner tests like every other arm.)
       //   1. A value-taking flag always reads its value token via
       //      `consumeOptionValue()`, which advances the cursor as part
@@ -953,8 +673,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       //   3. The accepting-subcommand branch performs any per-flag
       //      enum / domain validation and routes the value to the
       //      right option slot.
-      // Ownership is the one documented in `usage()` (main.ts); the
-      // `prototyping` subcommand arms use `ownedByPrototyping()`.
+      // Ownership is the one documented in `usage()` (main.ts).
       // Pre-fix `--scope` (consumed-on-misuse) and `--upgrade-scope`
       // (not-consumed-on-misuse) used opposite conventions for the
       // same goal; this contract block plus the unified shape below
@@ -1024,31 +743,8 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         if (command === "audit") {
           options.auditScope = next;
-        } else if (command === "prototyping" && options.prototypingAction === "certify") {
-          if (next === "saas-package" || next === "full") {
-            options.prototypingScope = next;
-          } else {
-            markInvalid(badValue("--scope", next, "saas-package|full"));
-          }
         } else {
           markInvalid(notValidHere("--scope"));
-        }
-        break;
-      }
-      case "--upgrade-scope": {
-        const next = consumeOptionValue();
-        if (next === null) {
-          markInvalid(missingValue("--upgrade-scope"));
-          break;
-        }
-        if (command === "prototyping" && options.prototypingAction === "certify") {
-          if (next === "full") {
-            options.prototypingUpgradeScopeFull = true;
-          } else {
-            markInvalid(badValue("--upgrade-scope", next, "full"));
-          }
-        } else {
-          markInvalid(notValidHere("--upgrade-scope"));
         }
         break;
       }
@@ -1102,9 +798,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   ) {
     markInvalid(`qfai doctor: --target-url requires --profile prototyping.`);
   }
-  if (command === "prototyping" && !options.help && !options.prototypingAction) {
-    markInvalid(subcommandReason("prototyping", null));
-  }
   if (command === "discussion" && !options.help && !options.discussionAction) {
     markInvalid(subcommandReason("discussion", null));
   }
@@ -1129,7 +822,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
 
 /** The set of subcommands accepted by `qfai <command> <subcommand>`. */
 const SUBCOMMAND_EXPECTATIONS = new Map<string, string>([
-  ["prototyping", "preflight|iterate|certify|show-ui-contract|rescope"],
   ["discussion", "list|use"],
   ["audit", "log"],
   ["atdd", "scaffold"],
@@ -1155,7 +847,7 @@ function formatChoicesFor(command: string | null): string {
   if (command === "validate") {
     return "text|github";
   }
-  if (command === "doctor" || command === "prototyping") {
+  if (command === "doctor") {
     return "text|json";
   }
   return "";
@@ -1165,7 +857,7 @@ function formatChoicesFor(command: string | null): string {
  * Whether a token can be the subcommand name in `qfai <command> <subcommand>`.
  *
  * The scan that pulls it runs *before* the flag loop, so testing only for a
- * `--` prefix let the short forms through as candidates: `qfai prototyping -V`
+ * `--` prefix let the short forms through as candidates: `qfai discussion -V`
  * had `-V` taken as an unknown action and shifted away, which both raised a
  * usage error and stopped the flag loop from ever setting `options.version`,
  * while the long `--version` was skipped here and worked. A subcommand name is
@@ -1195,14 +887,6 @@ function isPositionalToken(token: string | undefined): token is string {
   );
 }
 
-function parseNonNegativeInteger(value: string): number | null {
-  if (!/^\d+$/u.test(value)) {
-    return null;
-  }
-  const parsed = Number(value);
-  return Number.isSafeInteger(parsed) ? parsed : null;
-}
-
 function applyFormatOption(
   command: string | null,
   value: string | undefined,
@@ -1225,7 +909,7 @@ function applyFormatOption(
     }
     return false;
   }
-  if (command === "doctor" || command === "prototyping") {
+  if (command === "doctor") {
     if (value === "text" || value === "json") {
       options.doctorFormat = value;
       return true;

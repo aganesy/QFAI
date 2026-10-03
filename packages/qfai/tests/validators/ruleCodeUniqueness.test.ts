@@ -126,11 +126,10 @@ const DYNAMIC_SITE_CODES = new Map<string, readonly string[]>([
   ["validators/designAudit.ts", ["QFAI-AUD-001", "QFAI-AUD-004", "QFAI-AUD-020", "QFAI-AUD-021"]],
   [
     // Deliberately re-emits the finding's own code so the justification gap is
-    // reported under the code it applies to. `reviewerGate.ts` owns the first
-    // two as literals; `R-REJECTED-READOPT` reaches this gate only from a
-    // reviewer report.
+    // reported under the code it applies to. `R-REJECTED-READOPT` reaches
+    // this gate only from a reviewer report.
     "validators/reviewerJustification.ts",
-    ["R-CERTIFY-VERIFY-CIRCULAR", "R-PROMPT-SCANNER-DRIFT", "R-REJECTED-READOPT"],
+    ["R-REJECTED-READOPT"],
   ],
   [
     "validators/storyTreeStructure.ts",
@@ -480,20 +479,5 @@ describe("validate rule codes are owned by exactly one module", () => {
       reused,
       "these codes were published and then retired with their validator; taking a number back makes one public code mean two different checks across versions — pick an unused number instead",
     ).toEqual([]);
-  });
-
-  it("the screen-id casing check and specsCovered linkage no longer share a code", async () => {
-    const casing = await readFile(
-      path.join(coreRoot, "validators", "prototypingEvidence.ts"),
-      "utf-8",
-    );
-    const linkage = await readFile(
-      path.join(coreRoot, "validators", "prototyping", "specIdLinkage.ts"),
-      "utf-8",
-    );
-
-    expect(casing).toContain('"QFAI-PROT-010"');
-    expect(linkage).toContain('"QFAI-PROT-008"');
-    expect(linkage).not.toContain('"QFAI-PROT-010"');
   });
 });

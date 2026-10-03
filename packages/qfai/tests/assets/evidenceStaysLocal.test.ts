@@ -54,14 +54,6 @@ describe("shipped instructions keep evidence local", () => {
   });
 
   // QFAI:EX-0001-0002-08
-  it("keeps prototyping outputs and checks local", async () => {
-    const grill = await read("step/prototyping-grill/STEP.md");
-    expect(grill).toContain("it stays local and is never committed");
-    const handoff = await read("step/prototyping-handoff/STEP.md");
-    expect(handoff).toContain("CI does not run them");
-  });
-
-  // QFAI:EX-0001-0002-08
   it("records an approval in the decision row, not in a committed run record", async () => {
     const payloads = await read("skill/qfai-run/references/payloads.md");
     expect(payloads).toContain("is written into the `decisions.md` row the run appends");

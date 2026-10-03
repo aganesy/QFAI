@@ -1,7 +1,7 @@
 # UIX-REV: Scoring Review
 
 Review evaluator scoring quality against the four canonical UX axes
-fixed in `core/prototyping/evaluatorReview.ts#ORDINAL_AXES`.
+fixed in the prototyping reviewer prompt.
 
 ## Required Evaluation Axes
 
@@ -23,4 +23,4 @@ operator-authored rubric file is required or accepted):
 ## Aggregate Review Focus
 
 - Review axis pressure, floor conditions, and reviewer-prompt calibration quality as a single system
-- Remove old evaluation-axis vocabulary; only the four canonical UX axes (information architecture / navigation flow / usability / functionality) fixed in `core/prototyping/evaluatorReview.ts#ORDINAL_AXES` are valid
+- Remove old evaluation-axis vocabulary; only the four canonical UX axes (information architecture / navigation flow / usability / functionality) fixed in the prototyping reviewer prompt are valid

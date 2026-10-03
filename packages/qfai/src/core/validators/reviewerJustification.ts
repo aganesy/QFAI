@@ -14,19 +14,13 @@ import { exists, issue } from "./utils.js";
 // Reviewer-gate finding codes that MUST carry a non-empty justification.
 // Empty justification is treated as advisory-failing (error severity).
 //
-// The set is composed from three sources:
+// The set is composed from two sources:
 //   1. R-REJECTED-READOPT, raised when a rejected option is adopted again.
-//   2. Second-wave extensions (R-CERTIFY-VERIFY-CIRCULAR / R-PROMPT-SCANNER-DRIFT).
-//   3. The 7-code spec governance catalog sourced
+//   2. The 5-code spec governance catalog sourced
 //      from `justificationCatalog.ts`.
 const ADVISORY_FAILING_CODES = new Set<string>([
   "R-REJECTED-READOPT",
-  // Second-wave Reviewer-Gate findings that MUST carry a non-empty
-  // justification. Empty / whitespace-only justifications are treated
-  // as advisory-failing to enforce non-empty justifications across spec families.
-  "R-CERTIFY-VERIFY-CIRCULAR",
-  "R-PROMPT-SCANNER-DRIFT",
-  // The 7-code spec governance catalog is
+  // The 5-code spec governance catalog is
   // merged in via the catalog SSOT so this set stays in lockstep with
   // the catalog by construction. The catalog contributes membership
   // only — it declares no severity, and the ingestion issue below is

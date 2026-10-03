@@ -167,18 +167,26 @@ describe("BF-0003 configuration discovery and loading", () => {
   it("cuts a very long rejected value in the config.load message and keeps it whole in details", async () => {
     // QFAI:AC-0003-0001-03
     const root = await newTempDir("invalid-long-value");
-    await put(root, "qfai.config.yaml", `prototyping:\n  mode: ${"x".repeat(5000)}\n`);
+    await put(
+      root,
+      "qfai.config.yaml",
+      `prototyping:\n  execution:\n    browserTool: ${"x".repeat(5000)}\n`,
+    );
     const load = check(await doctorJson(root), "config.load");
     const issues = (load?.details as { issues?: Array<{ message: string }> } | undefined)?.issues;
-    const modeIssue = issues?.find((issue) => issue.message.startsWith("prototyping.mode"));
-    expect(modeIssue?.message.length).toBeGreaterThan(5000);
+    const toolIssue = issues?.find((issue) =>
+      issue.message.startsWith("prototyping.execution.browserTool"),
+    );
+    expect(toolIssue?.message.length).toBeGreaterThan(5000);
     const message = load?.message ?? "";
     const listed = message.slice(message.indexOf(": ", message.indexOf("issue(s)")) + 2);
-    const listedMode = listed.split("; ").find((part) => part.startsWith("prototyping.mode"));
-    expect(listedMode).toHaveLength(500);
-    expect(listedMode).toContain("prototyping.mode must be");
-    expect(listedMode).toContain(" ... ");
-    expect(listedMode?.endsWith('x"')).toBe(true);
+    const listedTool = listed
+      .split("; ")
+      .find((part) => part.startsWith("prototyping.execution.browserTool"));
+    expect(listedTool).toHaveLength(500);
+    expect(listedTool).toContain("prototyping.execution.browserTool must be");
+    expect(listedTool).toContain(" ... ");
+    expect(listedTool?.endsWith('x"')).toBe(true);
   });
 
   it("keeps a listed issue within 500 characters as displayed when its key is all escapes", async () => {

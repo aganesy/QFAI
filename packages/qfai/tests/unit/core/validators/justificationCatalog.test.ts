@@ -1,16 +1,14 @@
 /**
- * Unit: catalog of 7 Reviewer-Gate finding codes with mandatory
+ * Unit: catalog of 5 Reviewer-Gate finding codes with mandatory
  * non-empty justification (TC-0015-0026, AC-0015-0018).
  *
  * The catalog SSOT lives at
  * `packages/qfai/src/core/validators/justificationCatalog.ts`. The
- * seven registered codes are:
+ * five registered codes are:
  *   - R-AUTOPILOT-POLICY-MISSING
  *   - R-HANDOFF-SCHEMA-DRIFT
- *   - R-EVIDENCE-MUTATION-UNLOGGED
  *   - R-PACK-LOCATION-DRIFT
  *   - R-SKILL-MANIFEST-DRIFT
- *   - R-EXPLORATION-CERTIFY-ATTEMPT
  *   - R-MOCK-HREF-DRIFT
  *
  * Severity is deliberately NOT a catalog column: the catalog governs
@@ -31,13 +29,11 @@ import {
 } from "../../../../src/core/validators/justificationCatalog.js";
 
 describe("TC-0015-0026: justification catalog SSOT", () => {
-  it("registers exactly the 7 catalog codes", () => {
+  it("registers exactly the 5 catalog codes", () => {
     const codes = JUSTIFICATION_CATALOG.map((e) => e.code).sort();
     expect(codes).toEqual(
       [
         "R-AUTOPILOT-POLICY-MISSING",
-        "R-EVIDENCE-MUTATION-UNLOGGED",
-        "R-EXPLORATION-CERTIFY-ATTEMPT",
         "R-HANDOFF-SCHEMA-DRIFT",
         "R-MOCK-HREF-DRIFT",
         "R-PACK-LOCATION-DRIFT",
@@ -64,7 +60,7 @@ describe("TC-0015-0026: justification catalog SSOT", () => {
     }
   });
 
-  it("isAdvisoryFailingCatalogCode returns true for all 7 codes", () => {
+  it("isAdvisoryFailingCatalogCode returns true for all 5 codes", () => {
     for (const entry of JUSTIFICATION_CATALOG) {
       expect(isAdvisoryFailingCatalogCode(entry.code)).toBe(true);
     }
@@ -72,12 +68,12 @@ describe("TC-0015-0026: justification catalog SSOT", () => {
 
   it("isAdvisoryFailingCatalogCode returns false for unrelated codes", () => {
     expect(isAdvisoryFailingCatalogCode("R-WORKLOG-DRIFT")).toBe(false);
-    expect(isAdvisoryFailingCatalogCode("QFAI-CRIT-008")).toBe(false);
+    expect(isAdvisoryFailingCatalogCode("QFAI-DCON-030")).toBe(false);
     expect(isAdvisoryFailingCatalogCode("")).toBe(false);
   });
 
-  it("CATALOG_ADVISORY_FAILING_CODES exposes the same 7-code set as a Set", () => {
-    expect(CATALOG_ADVISORY_FAILING_CODES.size).toBe(7);
+  it("CATALOG_ADVISORY_FAILING_CODES exposes the same 5-code set as a Set", () => {
+    expect(CATALOG_ADVISORY_FAILING_CODES.size).toBe(5);
     for (const entry of JUSTIFICATION_CATALOG) {
       expect(CATALOG_ADVISORY_FAILING_CODES.has(entry.code)).toBe(true);
     }
@@ -117,7 +113,7 @@ describe("TC-0015-0026: justification catalog SSOT", () => {
   });
 
   // Regression for the WIDENED auxiliary code: it is NOT part of the
-  // closed 7-code catalog (warning-class auxiliary; outside the
+  // closed 5-code catalog (warning-class auxiliary; outside the
   // advisory-failing contract).
   it("R-AUTOPILOT-POLICY-WIDENED is NOT a catalog code (auxiliary warning-class)", () => {
     expect(isAdvisoryFailingCatalogCode("R-AUTOPILOT-POLICY-WIDENED")).toBe(false);

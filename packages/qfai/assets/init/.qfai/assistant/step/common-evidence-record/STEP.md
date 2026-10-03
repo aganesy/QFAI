@@ -18,16 +18,15 @@ Evidence lives under `.qfai/evidence/`, stays local and is never committed
 (`.qfai/assistant/rule/drift-protocol.md#evidence-stays-local`). Reviewers read
 it in the working tree.
 
-| Owner              | File                                         | Keyed by                              | Template                                                                     |
-| ------------------ | -------------------------------------------- | ------------------------------------- | ---------------------------------------------------------------------------- |
-| `qfai-discussion`  | `discussion-<YYYYMMDDhhmmssSSS>.md`          | the run's stamp, shared with its pack | —                                                                            |
-| `qfai-sdd`         | `sdd-BF-NNNN.md`, one per affected flow      | business flow                         | `.qfai/assistant/skill/qfai-sdd/templates/evidence/sdd-flow.md`              |
-| `qfai-sdd` import  | `import-lite-<YYYYMMDDhhmmssSSS>.md`         | a fresh stamp, never reused           | `.qfai/assistant/skill/qfai-sdd/templates/evidence/import-lite.md`           |
-| `qfai-atdd`        | `atdd-BF-NNNN.md`                            | business flow                         | —                                                                            |
-| `qfai-implement`   | `implement-BF-NNNN.md`                       | business flow, then example           | `.qfai/assistant/skill/qfai-implement/references/round-evidence.md`          |
-| `qfai-verify`      | `verify-<run-id>.md`                         | run                                   | `.qfai/assistant/skill/qfai-verify/templates/verify-evidence.md`             |
-| `qfai-prototyping` | `prototyping/**`                             | loop and iteration                    | `.qfai/assistant/skill/qfai-prototyping/references/evidence-requirements.md` |
-| `qfai-maintain`    | none — the stage result carries its receipts | —                                     | —                                                                            |
+| Owner             | File                                         | Keyed by                              | Template                                                            |
+| ----------------- | -------------------------------------------- | ------------------------------------- | ------------------------------------------------------------------- |
+| `qfai-discussion` | `discussion-<YYYYMMDDhhmmssSSS>.md`          | the run's stamp, shared with its pack | —                                                                   |
+| `qfai-sdd`        | `sdd-BF-NNNN.md`, one per affected flow      | business flow                         | `.qfai/assistant/skill/qfai-sdd/templates/evidence/sdd-flow.md`     |
+| `qfai-sdd` import | `import-lite-<YYYYMMDDhhmmssSSS>.md`         | a fresh stamp, never reused           | `.qfai/assistant/skill/qfai-sdd/templates/evidence/import-lite.md`  |
+| `qfai-atdd`       | `atdd-BF-NNNN.md`                            | business flow                         | —                                                                   |
+| `qfai-implement`  | `implement-BF-NNNN.md`                       | business flow, then example           | `.qfai/assistant/skill/qfai-implement/references/round-evidence.md` |
+| `qfai-verify`     | `verify-<run-id>.md`                         | run                                   | `.qfai/assistant/skill/qfai-verify/templates/verify-evidence.md`    |
+| `qfai-maintain`   | none — the stage result carries its receipts | —                                     | —                                                                   |
 
 **Open the file before the stage writes anything else.** A record with nowhere
 to go until the artifact exists can only be written afterwards, and some

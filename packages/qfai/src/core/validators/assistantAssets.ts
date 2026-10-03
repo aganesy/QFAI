@@ -35,8 +35,10 @@ import { hasLegacySpecPackEntries } from "../storyTree/layout.js";
 import { isPristineStorySeed } from "../storyTree/pristineSeed.js";
 import type { Issue } from "../types.js";
 import { getInitAssetsDir } from "../../shared/assets.js";
-import { TODO_PLACEHOLDER_RE } from "./renderCritique.js";
 import { issue } from "./utils.js";
+
+/** `TODO`, `FIXME`, `XXX`, `TBD`, `<placeholder>`, or whitespace only. */
+const TODO_PLACEHOLDER_RE = /^(?:\s*(?:TODO|FIXME|XXX|TBD|<placeholder>)\s*|\s*)$/i;
 
 const DRIFT_PROTOCOL_MARKER = "[DRIFT-PROTOCOL:MANDATORY]";
 const REVIEWER_GATE_BASELINE_HEADING_PATTERN = /^##\s+Reviewer Gate Baseline\s*$/m;

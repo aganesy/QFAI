@@ -45,8 +45,7 @@ satisfy it, and no waiver or environment makes it satisfy it. That is not a
 ban on narrow profiles in CI: `qfai-discussion` and `qfai-atdd` each use one as
 their own stage gate, those runs are legitimate under `CI=true`, and
 `QFAI-VALIDATE-017` (`warning`) marks them as not full-scan rather than
-blocking them. The prototyping profile runs only locally, before `certify`: it
-reads loop outputs that are never committed.
+blocking them. The prototyping profile runs only locally.
 
 ## Findings
 
@@ -74,20 +73,6 @@ scan cannot prove coverage; a missing layer is never a passing scan.
 - Every `.qfai/assistant/skill/*/SKILL.md` includes `[DRIFT-PROTOCOL:MANDATORY]`.
 - The reviewer agent cards include the drift-protocol and test-layer review
   viewpoints.
-
-## Prototyping evidence
-
-For a prototyping-scoped run:
-
-- every declared screen has a screenshot, the HTML and a `review.json` under
-  `.qfai/evidence/prototyping/iter-NN/`;
-- the final iteration recorded in
-  `.qfai/evidence/prototyping/prototyping.json#iterations[]` has its
-  screenshot and HTML on disk.
-
-The completion certificate is not an input here. `npx qfai prototyping certify`
-runs after verify and reads its passing verdict. Checking the certificate's
-digests is `certify --check`'s job, during handoff or after a brand asset edit.
 
 ## Gate
 

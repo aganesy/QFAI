@@ -218,9 +218,9 @@ describe("spec-0015 handoff schema CHG-006", () => {
 });
 
 describe("spec-0015 finding-code catalog CHG-006", () => {
-  it("QFAI:EX-0001-0172-01 — normal: 7 catalog codes registered; the catalog declares membership only, no severity", () => {
+  it("QFAI:EX-0001-0172-01 — normal: 5 catalog codes registered; the catalog declares membership only, no severity", () => {
     const codes = JUSTIFICATION_CATALOG.map((e) => e.code);
-    expect(codes.length).toBe(7);
+    expect(codes.length).toBe(5);
     for (const entry of JUSTIFICATION_CATALOG) {
       expect(Object.keys(entry).sort()).toEqual(["code", "description"]);
     }

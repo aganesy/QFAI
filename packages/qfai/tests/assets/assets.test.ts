@@ -11,7 +11,6 @@ import { runInit, SHIPPED_WORKFLOW_NAMES } from "../../src/cli/commands/init.js"
 import { runReport } from "../../src/cli/commands/report.js";
 import { runValidate } from "../../src/cli/commands/validate.js";
 import { defaultConfig } from "../../src/core/config.js";
-import { MAX_ITERATION_INDEX, MAX_ITERATIONS } from "../../src/core/prototyping/iteration.js";
 import { PROTOTYPING_SUPPORTED_SURFACES } from "../../src/core/review/prototyping.js";
 import { parseAllMarkdownTables } from "../../src/core/specPackParsers.js";
 import { readImplementFlowSteps } from "../helpers/implementSteps.js";
@@ -65,12 +64,8 @@ async function readPrototypingProcedure(): Promise<string> {
 }
 
 // --- shipped iteration-budget vocabulary -----------------------------------
-// Two skills talk about the same budget under opposite obligations:
-// `qfai-prototyping` owns it and may print it, but every number it prints must
-// equal the constant; `qfai-discussion` owns nothing here and may not print a
-// number at all. Both guards read the patterns below so neither can grow an
-// arm the other lacks — the noun-first arm used to exist only on the
-// discussion side, which is how `Iteration count cap is 10` shipped unchecked.
+// `qfai-discussion` owns no iteration budget and may not print a number for
+// one at all.
 const BUDGET_NOUN = String.raw`(?:cycles?|iterations?)`;
 const BUDGET_CAP = String.raw`(?:cap(?:ped|s)?|budget|limit(?:ed|s)?|max(?:imum)?|total|at\s+most|up\s+to)`;
 // Gaps stay inside one clause (no `.`, `;` or newline) so
@@ -80,26 +75,21 @@ const BUDGET_GAP = String.raw`[^.;\n]{0,24}?`;
 type BudgetLiteralPattern = {
   readonly label: string;
   readonly re: RegExp;
-  /** `terminal` is compared to MAX_ITERATION_INDEX, `total` to MAX_ITERATIONS. */
-  readonly against: "terminal" | "total";
 };
 
 const BUDGET_LITERAL_PATTERNS: readonly BudgetLiteralPattern[] = [
   {
     label: "terminal index",
-    against: "terminal",
     re: /(?:cycles?\s+1\.\.|\bC1\.\.|index\s*===\s*)(\d+)/gi,
   },
   {
     label: "count before the noun",
-    against: "total",
     re: /\b(\d+)(?:\s+(?:cycles|iterations)|-(?:cycle|iteration))\b/gi,
   },
   {
     // `Iteration count cap is 10`, `cycle limit: 10`, `max-iterations: 10`.
     // A cap word is required: without it every `--cycle 0` would be flagged.
     label: "count after the noun",
-    against: "total",
     re: new RegExp(
       String.raw`\b(?:${BUDGET_NOUN}${BUDGET_GAP}${BUDGET_CAP}|${BUDGET_CAP}${BUDGET_GAP}${BUDGET_NOUN})${BUDGET_GAP}\b(\d+)\b`,
       "gi",
@@ -107,39 +97,7 @@ const BUDGET_LITERAL_PATTERNS: readonly BudgetLiteralPattern[] = [
   },
 ];
 
-type BudgetLiteral = {
-  readonly label: string;
-  readonly text: string;
-  readonly value: number;
-  readonly expected: number;
-};
-
-/** Every budget number a shipped surface states, with the constant it must equal. */
-function collectBudgetLiterals(content: string): BudgetLiteral[] {
-  const found: BudgetLiteral[] = [];
-  for (const { label, re, against } of BUDGET_LITERAL_PATTERNS) {
-    for (const match of content.matchAll(re)) {
-      found.push({
-        label,
-        text: match[0],
-        value: Number(match[1]),
-        expected: against === "terminal" ? MAX_ITERATION_INDEX : MAX_ITERATIONS,
-      });
-    }
-  }
-  return found;
-}
-
-/** Budget literals whose value has drifted away from the source constant. */
-function findStaleBudgetLiterals(content: string): string[] {
-  return collectBudgetLiterals(content)
-    .filter(({ value, expected }) => value !== expected)
-    .map(({ label, text, expected }) => `${text} [${label}] (expected ${expected})`);
-}
-
-// Non-owning surfaces are held to a stricter rule: no number near the noun at
-// all, cap word or not. That arm cannot be shared with the prototyping guard,
-// where `--cycle 0` and `reaching cycle 9` are legitimate.
+// No number near the noun at all, cap word or not.
 const BUDGET_RESTATEMENT_PATTERNS: readonly { readonly label: string; readonly re: RegExp }[] = [
   ...BUDGET_LITERAL_PATTERNS.map(({ label, re }) => ({ label, re })),
   {
@@ -522,18 +480,14 @@ describe("assets guardrails", () => {
     expect(content).toContain("references/handoff.md");
   });
 
-  it("ensures qfai-prototyping v2.0 SKILL.md references the iterate command and 15-iter budget", async () => {
+  it("keeps every file the prototyping loop writes under .qfai/prototype", async () => {
     const content = await readPrototypingProcedure();
 
-    expect(content).toMatch(/qfai prototyping iterate/);
-    expect(content).toMatch(/10 iterations|10 cycles|up to 10/);
     expect(content).toContain("<contractsDir>/ui/*.yaml");
-    // The brand SSOT is root DESIGN.md, whose hash cycle 0 records in
-    // prototyping.json.
     expect(content).toContain("DESIGN.md");
-    expect(content).toContain("prototyping.json#designMd");
-    expect(content).toContain(".qfai/prototype/iter-00/index.html");
-    expect(content).toContain("certify --check");
+    expect(content).toContain(".qfai/prototype/iter-NN/index.html");
+    expect(content).toContain(".qfai/prototype/final/handoff.json");
+    expect(content).not.toContain(".qfai/evidence/");
   });
 
   it("ensures qfai-prototyping v2.0 references exist", async () => {
@@ -546,8 +500,8 @@ describe("assets guardrails", () => {
       readFile(path.join(skillDir, "references", "handoff.md"), "utf-8"),
     ]);
 
-    // iteration-loop.md describes the deterministic stop conditions.
-    expect(iterRef).toMatch(/exit code 0\/64\/65\/2|exit code|`64`|`65`/);
+    // iteration-loop.md says the user's confirmation ends the loop.
+    expect(iterRef).toMatch(/the loop ends when the user confirms the prototype/i);
 
     // generator-prompt.md grants pivot permission.
     expect(generatorRef).toMatch(/scrap and reimagine|pivot/);
@@ -557,195 +511,14 @@ describe("assets guardrails", () => {
     expect(reviewerRef).toMatch(/lap-\d{3}/);
     expect(reviewerRef).toMatch(/cap/i);
 
-    // handoff.md records the handoff in prototyping.json with its three keys.
-    expect(handoffRef).toContain("prototyping.json#handoff");
+    // handoff.md records the handoff in its own file with its three keys.
+    expect(handoffRef).toContain(".qfai/prototype/final/handoff.json");
     expect(handoffRef).toContain('"finalArtifact": ".qfai/prototype/final/index.html"');
     expect(handoffRef).toContain('"procurement": {');
     expect(handoffRef).toContain('"implementationNotes":');
   });
 
-  it("keeps the per-screen skeleton shape from breaking handoff", async () => {
-    // `--emit-skeletons` writes only `<screenId>.html`, never an
-    // `index.html`, while handoff.md copies `iter-NN/index.html` into
-    // `.qfai/prototypes/final/`. Presenting the per-screen shape as an
-    // exclusive alternative left an accepted iteration with nothing for
-    // `/qfai-implement` to read.
-    for (const tree of [templateQfaiDir, path.join(repoRoot, ".qfai")]) {
-      const generatorRef = await readFile(
-        path.join(
-          tree,
-          "assistant",
-          "skill",
-          "qfai-prototyping",
-          "references",
-          "generator-prompt.md",
-        ),
-        "utf-8",
-      );
-      expect(generatorRef).toContain("Opt-in **seed aid**, not an alternative output shape");
-      expect(generatorRef).toContain("Neither writes an `index.html`.");
-      expect(generatorRef).toContain("An accepted iteration must still carry `iter-NN/index.html`");
-      expect(generatorRef).toContain("before the loop converges");
-      // Whitespace-tolerant: the phrase spans a line break today, and a reflow
-      // of the surrounding paragraph would otherwise break this assertion
-      // without the meaning having changed.
-      expect(generatorRef).toMatch(/cycle 1 would otherwise\s+accept it as it stands/);
-      expect(generatorRef).not.toContain("mutually exclusive with the single-file envelope");
-    }
-  });
-
-  it("documents the DESIGN.md compliance gate as non-waivable in both prompts", async () => {
-    // The prompts once advertised the findings as "advisory-failing" with
-    // "a Reviewer can override when a finding is a known false positive".
-    // No override input exists: `prototypingCertify` exits 2 on any
-    // violation, `isConverged` requires `designMdViolations.length === 0`,
-    // and `recomputeFinalIterDesignMdViolations` re-scans the accepted
-    // iteration's HTML, discarding whatever the Reviewer recorded. An
-    // operator who believed the promise had no legal way forward.
-    for (const tree of [templateQfaiDir, path.join(repoRoot, ".qfai")]) {
-      const referencesDir = path.join(tree, "assistant", "skill", "qfai-prototyping", "references");
-      const [generatorRef, reviewerRef] = await Promise.all([
-        readFile(path.join(referencesDir, "generator-prompt.md"), "utf-8"),
-        readFile(path.join(referencesDir, "reviewer-prompt.md"), "utf-8"),
-      ]);
-
-      // The retracted promise must not come back on either side.
-      expect(generatorRef).not.toContain("advisory-failing");
-      expect(generatorRef).not.toMatch(/Reviewer can override/i);
-      expect(reviewerRef).not.toMatch(/Reviewer can override/i);
-
-      // Whitespace-tolerant: the statements wrap mid-phrase today and a
-      // reflow must not fail this test without the meaning changing.
-      expect(generatorRef).toMatch(/hard and\s+non-waivable/);
-      expect(generatorRef).toMatch(/there is no\s+Reviewer override/);
-      // The reader must also learn why a hand-written `[]` does not work.
-      // The re-scan guarantee is scoped to the CONVERGENCE stop:
-      // `prototypingIterate` only calls
-      // `recomputeFinalIterDesignMdViolations` when `shouldStop()`
-      // returned "converged", so a max-iterations stop must not be
-      // advertised as re-scanned. `certify` is what closes that path.
-      expect(generatorRef).toMatch(/\*\*convergence\*\* stop/);
-      expect(generatorRef).toMatch(/re-scanned before the stop\s+is honoured/);
-      expect(generatorRef).toMatch(/\*\*max-iterations\*\* stop skips that re-scan/);
-      // The stop requires four exceptional scores and three empty arrays. A prompt
-      // that named only a subset of the findings would leave the generator unable to
-      // explain why a well-reviewed run did not stop, or what to fix next.
-      expect(generatorRef).toMatch(/\*\*all three finding arrays empty\*\*/);
-      expect(generatorRef).toMatch(
-        /`designMdViolations`, `layoutAntiPatternsDetected` and\s+`blockingFindings`/,
-      );
-      expect(generatorRef).toMatch(/one\s+surviving `lap-\*` keeps the loop\s+running/);
-      // And the re-scan is not a proof of inspection.
-      // `recomputeFinalIterDesignMdViolations` returns `[]` for an ENOENT
-      // directory and `continue`s past a file it cannot stat or read, so an
-      // absent or unreadable evidence tree honours the exit-64 stop with
-      // nothing examined. Certify is the half that fails closed: it exits 2
-      // when the accepted iteration has no readable HTML at all.
-      expect(generatorRef).toMatch(/\*\*present and readable\*\*/);
-      expect(generatorRef).toMatch(/yields no findings and therefore does not\s+block the stop/);
-      expect(generatorRef).toMatch(/refuses to seal\s+at all/);
-      expect(generatorRef).toMatch(
-        /certify` re-scans every captured HTML file of\s+the accepted iteration unconditionally/,
-      );
-      // `findIterationHtmlFiles(evidenceRoot, …)` is certify's only scan
-      // input, so the guarantee covers the CAPTURE tree and not the
-      // authoring `prototypes/` tree the operator actually ships. An
-      // unqualified "no certificate is issued over a violation" would
-      // over-promise for a literal CAPTURE never rendered.
-      expect(generatorRef).toMatch(/the capture evidence\s+shows\*\*/);
-      expect(generatorRef).toMatch(/never opens the\s+authoring tree/);
-      // No scanner injects `designMdViolations` into an ordinary cycle's
-      // review — `recomputeFinalIterDesignMdViolations` runs only on the
-      // convergence stop and its result is never written back. The prompt
-      // must not tell the generator to expect prior-review findings.
-      expect(generatorRef).toMatch(/Ordinary cycles carry no scanner output/);
-      expect(generatorRef).toMatch(/stays `\[\]` in every Reviewer report/);
-      expect(generatorRef).toMatch(/not\s+written back into the review/);
-      // `runPrototypingCertify` branches to `runUpgradeScopeFull` BEFORE
-      // the HTML scan, so `--upgrade-scope full` rewrites a sealed
-      // certificate without re-scanning. The "unconditional" claim above
-      // must therefore be scoped to the issuing path and the carve-out
-      // named, with `--check` as the recovery.
-      expect(generatorRef).toMatch(/certify --upgrade-scope full` is not an issuing/);
-      expect(generatorRef).toMatch(/without\s+re-scanning HTML/);
-      expect(generatorRef).toMatch(/certify --check`/);
-      expect(reviewerRef).toContain("re-scan result wins over a manually emptied array");
-      expect(reviewerRef).toContain("readable HTML is re-scanned on convergence and certification");
-
-      // DESIGN.md is frozen for the run: `evaluateCycleGteOneGate`
-      // compares the live DESIGN.md with the cycle-0 recorded sha256 and
-      // exits 2 on a mismatch, so "widen DESIGN.md" is not a mid-loop escape
-      // hatch. The prompt must route a brand change through an edit +
-      // cycle-0 restart instead.
-      expect(generatorRef).toMatch(
-        /Do\s+\*\*not\*\* edit `DESIGN\.md` to widen the allowlist mid-loop/,
-      );
-      expect(generatorRef).toMatch(/exits 2 with a\s+hash mismatch/);
-      expect(generatorRef).toMatch(/operation: edit `DESIGN\.md`, then restart the loop/);
-      // The restart must be a runnable command: the prior loop always left
-      // an `iter-00` behind, and the cycle-0 destructive-rerun gate in
-      // `prototypingIterate` exits 2 without `--force`. A bare `--cycle 0`
-      // hint cannot recover the run.
-      expect(generatorRef).toMatch(
-        /restart the loop with\s+`npx qfai prototyping iterate --cycle 0 --target-url <url> --force`/,
-      );
-      expect(generatorRef).toMatch(/`--force` is not optional here/);
-      // The cycle-0 `--force` backup in `prototypingIterate` renames
-      // `PROTOTYPING_EVIDENCE_REL/iter-00` only; `.qfai/prototypes/iter-00`
-      // is left in place and the next cycle-0 write clobbers it. The
-      // prompt must name the tree that is backed up and the one that is
-      // not, or "iter-00 is renamed" promises recoverability it lacks.
-      expect(generatorRef).toMatch(
-        /`\.qfai\/evidence\/prototyping\/iter-00` is renamed to\s+`iter-00\.backup-<ISO>`/,
-      );
-      expect(generatorRef).toMatch(/Only the \*\*evidence\*\* tree is\s+backed up/);
-      expect(generatorRef).toMatch(/copy that\s+directory aside yourself/);
-    }
-  });
-
-  it("keeps the DESIGN.md scanner doc in sync with the non-waivable prompt wording", async () => {
-    // `designMdViolations.ts` and `generator-prompt.md` are an SSOT-sync
-    // pair (scripts/check-prompt-scanner-pair.mjs). The gate's posture is
-    // stated on both halves so a future edit to one is visibly unpaired.
-    const scanner = await readFile(
-      path.join(
-        repoRoot,
-        "packages",
-        "qfai",
-        "src",
-        "core",
-        "prototyping",
-        "designMdViolations.ts",
-      ),
-      "utf-8",
-    );
-    // Match against the prose with the JSDoc `*` gutter and line wrapping
-    // removed, so a re-wrap of the block comment cannot fail this test
-    // without the statement itself changing.
-    const scannerProse = scanner.replace(/^\s*\*\s?/gm, "").replace(/\s+/g, " ");
-    expect(scannerProse).toContain("hard and non-waivable");
-    expect(scannerProse).toContain("there is no Reviewer override");
-    // Same scoping as the prompt half: the iterate-side re-scan covers the
-    // convergence stop only; certify is the unconditional backstop.
-    expect(scannerProse).toContain("CONVERGENCE stop");
-    expect(scannerProse).toContain("`max-iterations` stop skips that re-scan");
-    expect(scannerProse).toContain("unconditionally");
-    // And the same capture-tree scoping both prompts now carry.
-    expect(scannerProse).toContain("accepted iteration's captured HTML");
-    expect(scannerProse).toContain("the capture evidence shows");
-    // And the same two carve-outs the prompt now carries: no per-cycle
-    // injection, and `--upgrade-scope full` does not re-scan.
-    expect(scannerProse).toContain("stays `[]`");
-    expect(scannerProse).toContain("not written back into `prototyping.json`");
-    expect(scannerProse).toContain("`certify --upgrade-scope full`");
-    // And the readability scoping the two prompts now carry: the iterate-side
-    // re-scan returns `[]` for an ENOENT directory and skips a file it cannot
-    // stat or read, so an empty result is not evidence of inspection.
-    expect(scannerProse).toContain("PRESENT AND READABLE");
-    expect(scannerProse).toContain("skips a file it cannot stat or read");
-  });
-
-  it("states the procurement posture on both halves of the same pair", async () => {
+  it("states the procurement posture in the generator prompt", async () => {
     // What the single-file envelope cannot carry is a runtime dependency. Put
     // as a ban on component libraries, the constraint also refused a
     // transposed catalogue block, which installs nothing and is an ordinary
@@ -765,106 +538,10 @@ describe("assets guardrails", () => {
       expect(generatorRef).not.toContain("No component library");
       expect(generatorRef).toContain("No runtime dependency beyond");
       expect(generatorRef).toContain("Markup is not a dependency");
-      // The load-bearing half stays: CSS behind a `<link>` is outside the
-      // scan, so the authoring side is the only place it can be refused.
+      // CSS behind a `<link>` is outside the reviewed file, so the authoring
+      // side is the only place it can be refused.
       expect(generatorRef).toContain('`<link rel="stylesheet">`');
     }
-
-    // The scanner half says why the permission is safe — it judges the values
-    // a document states, and has no way to read where the markup came from.
-    const scanner = await readFile(
-      path.join(
-        repoRoot,
-        "packages",
-        "qfai",
-        "src",
-        "core",
-        "prototyping",
-        "designMdViolations.ts",
-      ),
-      "utf-8",
-    );
-    const scannerProse = scanner.replace(/^\s*\*\s?/gm, "").replace(/\s+/g, " ");
-    expect(scannerProse).toContain("never their provenance");
-    expect(scannerProse).toContain("transposed from a component catalogue");
-    expect(scannerProse).toContain("a stylesheet behind a `<link>`");
-  });
-
-  it("keeps the generator's --auto-serve routing guidance in step with the server", async () => {
-    // `--auto-serve` gained an SPA route fallback: a document request that
-    // matches no file on disk is served `index.html`. generator-prompt.md is
-    // injected into the generator sub-agent every cycle, so a stale "no SPA
-    // fallback" claim there makes the generator declare hash routes and avoid
-    // the parameterized contract routes the fallback exists to make capturable.
-    for (const tree of [templateQfaiDir, path.join(repoRoot, ".qfai")]) {
-      const generatorRef = await readFile(
-        path.join(
-          tree,
-          "assistant",
-          "skill",
-          "qfai-prototyping",
-          "references",
-          "generator-prompt.md",
-        ),
-        "utf-8",
-      );
-
-      // The stale claims must be gone.
-      expect(generatorRef).not.toContain("it has no SPA fallback");
-      expect(generatorRef).not.toContain("they will 404 under `--auto-serve`");
-      expect(generatorRef).not.toContain("so a `/settings` route 404s while");
-
-      // The behaviour the server actually implements must be stated.
-      expect(generatorRef).toContain("`index.html` instead of 404");
-      expect(generatorRef).toContain("`text/html`");
-      expect(generatorRef).toContain("/pairs/:instrument");
-
-      // The two genuine non-fallback cases stay documented.
-      expect(generatorRef).toContain("Sub-resource requests");
-      expect(generatorRef).toContain("path-traversal 403 guard");
-
-      // The third one: the fallback needs an index.html to fall back TO.
-      // `resolveServablePath` returns null when the served directory has
-      // none, so a skeleton-only cycle-0 tree still 404s path routes and
-      // loses that screen's evidence. Saying the fallback is unconditional
-      // would send the generator into exactly that hole.
-      expect(generatorRef).toContain("The fallback needs an `index.html` to fall back _to_");
-      expect(generatorRef).toMatch(/skeleton-only cycle-0 tree[\s\S]{0,120}still \*\*404s\*\*/);
-    }
-
-    // generator-prompt.md is one half of an SSOT-sync pair; the scanner it is
-    // paired with documents which screens ever reach it, which is exactly what
-    // the routing shape decides. Assert the scanner half states the same
-    // fallback contract so the pair cannot drift back apart.
-    const scannerSource = await readFile(
-      path.join(
-        repoRoot,
-        "packages",
-        "qfai",
-        "src",
-        "core",
-        "prototyping",
-        "designMdViolations.ts",
-      ),
-      "utf-8",
-    );
-    expect(scannerSource).toContain("`index.html` to a document request");
-    expect(scannerSource).toContain("parameterized contract routes");
-    expect(scannerSource).toContain("path-traversal 403 guard");
-
-    // The operator-facing half of the same contract. certify's missing-HTML
-    // recovery text is what an operator reads after a capture gap, and it is
-    // inside the same CLI as the prompt above: if it keeps advising "the
-    // server 404s path routes, use hash routes", the operator rewrites the
-    // contract routes the generator was told to keep.
-    const certifySource = await readFile(
-      path.join(repoRoot, "packages", "qfai", "src", "cli", "commands", "prototypingCertify.ts"),
-      "utf-8",
-    );
-    expect(certifySource).not.toContain("use hash routes or point --target-url");
-    expect(certifySource).toContain("serves index.html to any document ");
-    expect(certifySource).toContain("Do not reshape contract routes into hash ");
-    expect(certifySource).toContain("has nothing to fall back to and still 404s");
   });
 
   it("keeps qfai-prototyping SKILL.md concise enough for agent execution", async () => {
@@ -929,76 +606,10 @@ describe("assets guardrails", () => {
     );
     const content = await readFile(iterationLoopPath, "utf-8");
 
-    // v2.0: per-iter evidence is screenshot + html + review.json (no
-    // command-log / a11y snapshot mandate). Stop conditions are
-    // deterministic exit codes (0/64/65/2).
     expect(content).toMatch(/iter-NN/);
-    expect(content).toMatch(/screenshot|\.png/);
     expect(content).toMatch(/review\.json/);
-    expect(content).toMatch(/exit code|`64`|`65`/);
+    expect(content).toMatch(/the loop ends when the user confirms the prototype/i);
     expect(content).toMatch(/best-of-history is gone/i);
-  });
-
-  it("keeps shipped prototyping cycle literals aligned with the iteration budget", async () => {
-    const skillDir = path.join(templateQfaiDir, "assistant", "skill", "qfai-prototyping");
-    const files = [
-      ...(await fg(["references/*.md"], { cwd: skillDir, absolute: true })),
-      ...(await prototypingProcedureFiles()),
-    ];
-
-    expect(files.length).toBeGreaterThan(0);
-
-    // Two families of free-text restatement drift independently, so
-    // BUDGET_LITERAL_PATTERNS scans both. Three divergent values once
-    // circulated here.
-    //   - terminal: the last legal cycle index ("cycles 1..9", "C1..9") — must
-    //     equal MAX_ITERATION_INDEX.
-    //   - total: the size of the budget, written either number-first ("up to
-    //     10 cycles", "fixed 10-cycle budget") or noun-first ("Iteration count
-    //     cap is 10") — must equal MAX_ITERATIONS. These are the user-facing
-    //     headline numbers; a missing arm leaves them stale and green.
-    const mismatches: string[] = [];
-    for (const filePath of files) {
-      const content = await readFile(filePath, "utf-8");
-      const relPath = path.relative(repoRoot, filePath);
-      for (const stale of findStaleBudgetLiterals(content)) {
-        mismatches.push(`${relPath}: ${stale}`);
-      }
-    }
-
-    expect(
-      mismatches,
-      `cycle literals must equal MAX_ITERATION_INDEX (${MAX_ITERATION_INDEX}) ` +
-        `or MAX_ITERATIONS (${MAX_ITERATIONS})`,
-    ).toEqual([]);
-
-    // The scan is the deliverable, so pin its reach in both directions: a
-    // guard that only ever reads correct files proves nothing. The noun-first
-    // phrasing is the one SKILL.md actually ships, and the number-first-only
-    // arm read straight past it.
-    const staleValue = MAX_ITERATIONS + 5;
-    for (const phrasing of [
-      `Iteration count cap is ${staleValue}`,
-      `iteration count is capped globally to ${staleValue}`,
-      `cycle limit: ${staleValue}`,
-      `max-iterations: ${staleValue}`,
-      `up to ${staleValue} cycles`,
-      `a fixed ${staleValue}-cycle budget`,
-      `Cycles 1..${staleValue}`,
-    ]) {
-      expect(findStaleBudgetLiterals(phrasing), `must flag: ${phrasing}`).not.toEqual([]);
-    }
-
-    // …and what it must not flag: this skill is full of legitimate per-cycle
-    // indices, so requiring a cap word is what keeps the guard usable.
-    for (const legitimate of [
-      "npx qfai prototyping iterate --cycle 0 --target-url <url>",
-      "reaching cycle 9 on a non-converged iteration set exits 65 directly",
-      "commit `prototyping: iter-09`",
-      "200..500 word critique",
-    ]) {
-      expect(findStaleBudgetLiterals(legitimate), `must not flag: ${legitimate}`).toEqual([]);
-    }
   });
 
   it("keeps the prototyping iteration budget out of qfai-discussion surfaces", async () => {
@@ -1689,9 +1300,8 @@ describe("assets guardrails", () => {
     const npmReadme = await readFile(npmReadmePath, "utf-8");
 
     const normalizedNpm = normalizeReadme(stripUrls(npmReadme));
-    // v2.0 (spec-0012 v2.0 absorbed): replaced v1.x phrasing with single-thread loop language.
-    expect(normalizedNpm).toMatch(/single-thread evolution loop|qfai prototyping iterate/);
-    expect(normalizedNpm).toMatch(/per-iteration evidence[\s\S]*?review\.json/i);
+    expect(normalizedNpm).toMatch(/until the user confirms thes+prototype/);
+    expect(normalizedNpm).toContain(".qfai/prototype/");
   });
 
   it("keeps root copilot-instructions aligned with skill symlink guidance", async () => {

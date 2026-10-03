@@ -46,7 +46,7 @@
     "generate:governed-manifest": "node scripts/generate-governed-assistant-manifest.mjs",
     "check-types": "tsc --noEmit",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage tests/unit/core/prototyping tests/core/prototyping",
+    "test:coverage": "vitest run --coverage",
     "test:core": "vitest run --project core",
     "test:validators": "vitest run --project validators",
     "test:integration": "vitest run --project integration",

@@ -180,11 +180,11 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skill/
   policy, business flows, stories with AC and EX, then enforcing contracts with
   BR. Record triage, change requests and unresolved questions in the two root
   tables. The discussion pack is input; the story tree is the execution SSOT.
-- **qfai-prototyping**: Iterate every UI-bearing contract and its screens
-  through up to ten generate, capture and review cycles. Convergence requires
-  exceptional scores on all four UX axes with no layout or design-token
-  violations. The primary UI contract is a selection pin, not a limit on
-  coverage.
+- **qfai-prototyping**: Build and review every UI-bearing contract and its
+  screens with the user, one iteration at a time, until the user confirms the
+  prototype. No command certifies it. The loop's files stay under
+  `.qfai/prototype/`, and the primary UI contract is a selection pin, not a
+  limit on coverage.
 - **qfai-atdd**: Write E2E tests for each BF and integration or API tests for
   each AC of the selected flow.
 - **qfai-implement**: Implement a BF through EX tests and a Red, Green,
@@ -363,27 +363,6 @@ flowchart LR
     `--profile prototyping` adds preflight checks for the primary UI contract, design contract readiness,
     active agent-wrapper integrations, shipped role-input readiness, Playwright CLI launcher resolution and probing,
     and target URL reachability.
-- `npx qfai prototyping`
-  - Prototyping is UI-only. The AI workflow (`/qfai-prototyping`) drives it and produces its evidence,
-    `.qfai/evidence/prototyping/prototyping.json`; it is not a general-purpose end-user flow.
-    Runtime observation is observed-only: no synthetic 200, API or DB coverage is recorded.
-  - `npx qfai prototyping preflight --target-url <url>` is a focused check before the skill starts. It surfaces blocking
-    `QFAI-DCON-*` design-contract issues alongside runtime assumptions and resolves a runnable Playwright CLI launcher.
-  - `npx qfai prototyping iterate --cycle <n> --target-url <url>` runs one cycle, 0 to 9, of the UI contract evolution loop over every
-    UI-bearing contract and each screen it declares. Exit codes: 0 (continue), 64 (converged), 65 (cycle limit),
-    66 (license-verify failure), 2 (input or lock drift).
-  - `prototyping.primaryUiContract` in `qfai.config.yaml` pins the primary contract, and
-    `--primary-ui-contract UI-0001` overrides it. The pin selects; it does not limit coverage.
-    Cycle 0 records the full set as `uiContractsCovered` and `frozenSurfaceUnion` in `prototyping.json`.
-  - Per-iteration evidence goes into `iter-NN/`: the reviewer's `UI-NNNN/<screen>.review.json` per contract and screen, and the CLI's
-    own `iterate-plan.json`. From cycle 1 an advisory `iterate-context.json` adds the prior scores and open blockers.
-    `--capture` and `--cycle 0 --emit-skeletons` also write `<screen>.png` and `<screen>.html`.
-    Archive the whole `iter-NN/` directory; no `interaction.json` is written on any path.
-  - Certification records `uiContractsCovered`, `convergedUiContracts` and `laggingUiContracts`. Evidence refs must
-    resolve to repository-relative artifacts, and absolute paths are invalid. Coverage and reviews use full `UI-NNNN` IDs.
-  - `fullHarness` follows a terminal-first state machine: `status="in-progress"` requires `finalDecision="pending"`,
-    `reviewerSignoff.status="pending"`, and no `terminationReason`; `status="completed"` requires `terminationReason`,
-    a non-pending `finalDecision`, and a terminal `reviewerSignoff`.
 - `npx qfai workflow`
   - The run control behind the free-text entry. The `qfai-run` skill calls its seven operations
     (`start`, `next`, `accept`, `decision`, `status`, `resume` and `finish`), and each prints one
@@ -462,9 +441,6 @@ Notes.
   `.qfai/assistant/rule/change-classification.md`. The `message` text and
   issue order are not stable; match on `issues[].code`.
 - `report.json`, `doctor.json`, and `run-*` JSON logs are internal exports and are not a stable external contract; prefer `report.md` for integrations that must survive tool upgrades.
-- `prototyping.calibration.packPath` points to the calibration pack SSOT; runtime and validator both resolve thresholds and iteration parameters from that pack.
-- `prototyping.calibration.thresholds`, `maxIterations`, `plateauDelta`, and `plateauLookback` are unsupported public config fields.
-  Put calibration values in the referenced pack instead of `qfai.config.yaml`.
 
 ## Minimal tutorial
 

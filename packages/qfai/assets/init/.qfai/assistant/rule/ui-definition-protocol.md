@@ -32,11 +32,11 @@ A downstream skill reads the UI definition in this order.
    - root `DESIGN.md` (front-matter + `# Brand Philosophy` body), the only
      source of brand tokens
 
-4. **Evidence** (`.qfai/evidence/**`, local to the checkout)
-   - `prototyping/prototyping.json#handoff`: the final prototype, procurement
-     and implementation notes
-   - prototyping screenshots / HTML / snapshots / command logs
-   - evaluator reviews
+4. **Prototype handoff** (`.qfai/prototype/final/handoff.json`, when a
+   prototyping loop ran): the final prototype, procurement and implementation
+   notes
+
+5. **Evidence** (`.qfai/evidence/**`, local to the checkout)
    - implementation and verification evidence
 
 The paths that render a user-visible surface are declared by `uiux.surfacePaths`

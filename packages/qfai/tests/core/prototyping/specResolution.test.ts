@@ -10,10 +10,6 @@ import {
   resolveAllUiBearingSpecs,
   resolvePrimaryPrototypingSpec,
 } from "../../../src/core/prototyping/specResolution.js";
-import {
-  checkUiContractsCoveredDrift,
-  readUiContractsCovered,
-} from "../../../src/core/prototyping/specsCovered.js";
 
 const roots: string[] = [];
 
@@ -108,27 +104,5 @@ describe("UI contract prototyping scope", () => {
     await writeFile(spec, "---\nsurface_type: ui-bearing\n---\n# Prototyping\n", "utf-8");
     await uiContract(root, "spec-0001.yaml", "UI-0001", "[]");
     expect(await resolveAllUiBearingSpecs(root, config())).toEqual([]);
-  });
-});
-
-describe("frozen UI contract scope", () => {
-  it("rejects old fields, absent arrays, and unsafe IDs", () => {
-    expect(readUiContractsCovered({ specsCovered: ["0001"] })).toEqual({ kind: "legacy" });
-    expect(
-      readUiContractsCovered({ frozenSpecsCovered: ["0001"], uiContractsCovered: ["UI-0001"] }),
-    ).toEqual({ kind: "legacy" });
-    expect(readUiContractsCovered({ uiContractsCovered: [] }).kind).toBe("malformed");
-    expect(readUiContractsCovered({ uiContractsCovered: ["../UI-0001"] }).kind).toBe("malformed");
-  });
-
-  it("compares one frozen full-ID set with a live snapshot", () => {
-    const frozen = readUiContractsCovered({ uiContractsCovered: ["UI-0001", "UI-0007"] });
-    expect(frozen.kind).toBe("ok");
-    if (frozen.kind !== "ok") return;
-    expect(checkUiContractsCoveredDrift(frozen.value, ["UI-0007", "UI-0042"])).toEqual({
-      drifted: true,
-      added: ["UI-0042"],
-      removed: ["UI-0001"],
-    });
   });
 });

@@ -21,6 +21,7 @@ const TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const SKILL = "assistant/skill/qfai-prototyping/SKILL.md";
 const GRILL = "assistant/step/prototyping-grill/STEP.md";
 const LOOP = "assistant/step/prototyping-loop/STEP.md";
+const RECOVER = "assistant/step/prototyping-recover/STEP.md";
 const RULE = ".agents/rules/grilling.md";
 const GENERATOR_PROMPT = "assistant/skill/qfai-prototyping/references/generator-prompt.md";
 const REVIEWER_PROMPT = "assistant/skill/qfai-prototyping/references/reviewer-prompt.md";
@@ -75,7 +76,7 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
 
     const rows = boundaryTable(skill);
     // The right heading says the loop makes these answerable, not that it
-    // settles them: the checkpoint after convergence returns exactly these
+    // settles them: the checkpoint after each review returns exactly these
     // decisions to the user, so a heading claiming the loop settled them
     // licenses the agent-owned decision the workflow then forbids.
     expect(rows[0], "the heading row is gone or reworded").toEqual([
@@ -100,70 +101,41 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
   });
 
   it("blocks handoff on the session, not on one answer", async () => {
-    // Convergence is the reviewer's verdict on four fixed axes, and it can
-    // make several decisions answerable at once. The method ends a delegated
-    // session when no node is open and every critical decision has the user's
-    // answer, so reducing the checkpoint to one question would route to
-    // handoff with the rest open.
+    // A reviewed prototype can make several decisions answerable at once. The
+    // method ends a delegated session when no node is open and every critical
+    // decision has the user's answer, so reducing the checkpoint to one
+    // question would route to handoff with the rest open.
     const skill = await read(LOOP);
-    expectPhrase(skill, "**Resume the session against the converged prototype**");
+    expectPhrase(skill, "**Resume the session against the reviewed prototype**");
     expectPhrase(
       skill,
       "the reaction and everything it raises are a new frontier, not one question",
     );
-    expectPhrase(
-      skill,
-      "Blocking: `H` does not start until the session ends — no node open and every critical decision answered",
-    );
-    expectPhrase(skill, "convergence is the reviewer's verdict on four axes, not the user's");
-    // And the no-question route stops rather than certifying an unpicked design.
-    expectPhrase(skill, "the run stops there rather than certifying a design nobody picked");
+    expectPhrase(skill, "The step passes when the user confirmed the prototype.");
+    // And the no-question route stops rather than handing off an unpicked design.
+    expectPhrase(skill, "A reviewer's scores are not the user's confirmation.");
   });
 
-  it("sends a rejected choice back through a cycle", async () => {
+  it("sends a rejected choice back through another iteration", async () => {
     // Recording the answer does not change the HTML. Treating any answer as
-    // sufficient would copy the unchanged iteration to `final` and certify the
+    // sufficient would copy the unchanged iteration to `final` and hand off the
     // design the user just turned down.
     const skill = await read(LOOP);
-    expectPhrase(skill, "**Accepted** — the prototype is what they picked — goes to `H`");
+    expectPhrase(skill, "**Confirmed** — the user says the prototype is done — goes to");
     expectPhrase(
       skill,
-      "takes the cycle-0 reset (`.qfai/assistant/skill/qfai-prototyping/references/iteration-loop.md#sealed-loop`), carrying their answer as the pivot",
+      "**A change** — the user asks for something this lineage can take — runs the next iteration, carrying their answer as the pivot.",
     );
-    // Not the next cycle: convergence seals the loop, and `iterate --cycle N`
-    // past the accepted index exits 2 without writing — so a next-cycle route
-    // would refuse the one command that can build what the user asked for.
     expectPhrase(
       skill,
-      "a next-cycle route would refuse the one command that can build what they asked for",
+      "**A different design** — a direction this lineage does not implement — runs `prototyping-recover`.",
     );
-    expectPhrase(skill, "Cycle 0 is the documented escape hatch out of a sealed loop");
-    // The reset keeps `iter-00` and deletes the rest, so it is a destructive
-    // operation — and answering a design question is not consent to one.
-    expectPhrase(skill, "**Ask for the reset before running it**, naming what it destroys");
-    expectPhrase(skill, "answering a design question is not consent to one");
-    expectPhrase(
-      skill,
-      "certifying the unchanged iteration would ship the design they turned down",
-    );
-    // The loop's own bound still applies, so the branch cannot run forever.
-    expectPhrase(skill, "the ten-cycle budget is counted across resets here, not per reset");
-    // The CLI restarts the count at cycle 0, so an unbounded chain of ten-cycle
-    // loops is the budget removed by the one route that looks like keeping it.
-    expectPhrase(skill, "stop and escalate rather than resetting again");
-    // And a `stop` is not a rejection: it ends the run rather than resetting.
+    // A `stop` is not a rejection: it ends the run.
     expectPhrase(skill, "**Stopped** — the user said `stop` — ends the run there");
-    expectPhrase(skill, "a stop ends the session immediately and a reset is further work");
-    // And `proceed` / `done` are closures rather than rejections: the user
-    // ended the asking, not the work, so a reset is work they did not ask for.
-    expectPhrase(skill, "**Closed** — `proceed` or `done` — finishes the running lookups");
-    expectPhrase(skill, "the user ended the asking, not the work");
-    // The converged-prototype choice is not assumable by a closure: it is what
-    // the loop was run to answer and this skill's own `ask-user` operation, so
-    // a closure that handed off with it assumed would certify an unpicked
-    // design by the one route the no-question branch already refuses.
-    expectPhrase(skill, "**This question is not among them.**");
-    expectPhrase(skill, "a closure cannot assume the one choice the whole run exists to obtain");
+    // `proceed` / `done` close the asking but cannot assume the one answer the
+    // loop exists to obtain.
+    expectPhrase(skill, "**Closed** — `proceed` or `done` without an answer to this question");
+    expectPhrase(skill, "It is what the loop exists to answer, so a closure cannot assume it.");
   });
 
   it("carries the session's answers into the loop", async () => {
@@ -172,7 +144,7 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     // answers with no destination are answers the loop cannot read — and it
     // will contradict them on the next cycle.
     const skill = await read(GRILL);
-    expectPhrase(skill, "`.qfai/evidence/prototyping/grilling.md`");
+    expectPhrase(skill, "`.qfai/prototype/grilling.md`");
     expectPhrase(skill, "under `## Session` for the decisions");
     // Only a critical decision waits on the user; the rest are adopted and
     // recorded under `## Session` with the agent that recommended them.
@@ -188,16 +160,10 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     );
     expectPhrase(loop, "removing its row from `## Escalated`**");
     expectPhrase(loop, "the current state of the tree, not its history");
-    // Two answers to one decision steer the next cycle in two directions: the
-    // delegated prompts consume every row matching their lineage, so a
-    // superseded pivot is still read.
-    expectPhrase(loop, "a superseded pivot still steers the next cycle");
     // Both consumers, named where each lists its inputs.
     const evaluator = /## Evaluator Inputs \(Mandatory\)([\s\S]*?)^## /m.exec(loop)?.[1] ?? "";
-    expect(unwrap(evaluator)).toContain(".qfai/evidence/prototyping/grilling.md");
-    expect(unwrap(loop)).toContain(
-      "Generator reads contracts + `.qfai/evidence/prototyping/grilling.md`",
-    );
+    expect(unwrap(evaluator)).toContain(".qfai/prototype/grilling.md");
+    expect(unwrap(loop)).toContain("Reads the contracts, `.qfai/prototype/grilling.md`");
   });
 
   it("says what each mistake costs", async () => {
@@ -205,7 +171,7 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     // reader the cost of each error rather than a list to match against.
     const skill = await read(GRILL);
     expectPhrase(skill, "building is the expensive way to learn something a sentence would have");
-    expectPhrase(skill, "it costs a session rather than a cycle");
+    expectPhrase(skill, "it costs a session rather than an iteration");
   });
 
   it("keeps the decision with the user after the prototype exists", async () => {
@@ -232,7 +198,7 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     // treat an open-ended session as part of this section's 0-1 prompt policy
     // instead of running it to its own end condition.
     const askUser = askUserBucket(await read(SKILL));
-    expect(askUser).toContain("asked again against it");
+    expect(askUser).toContain("whether a reviewed prototype is done");
     expect(askUser).not.toContain("what the prototype is for");
     expectPhrase(
       await read(GRILL),
@@ -270,19 +236,22 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     // of its own, so a required input the delegated role cannot find is an error
     // it has to guess past — which is what the record exists to stop.
     const skill = await read(GRILL);
-    expectPhrase(skill, "**The file is written before C0, empty session or not.**");
+    expectPhrase(
+      skill,
+      "**The file is written before the first iteration, empty session or not.**",
+    );
     expectPhrase(skill, "a different statement from a file that is not there");
   });
 
   it("keeps the record for the loop, locally", async () => {
     // A run log is regenerable. These answers are not: nothing reproduces them,
-    // and every later generator and reviewer must read them. Like all evidence
-    // the record is local, so it stays in place until the loop is certified.
+    // and every later generator and reviewer must read them, so the record
+    // stays in place until the handoff.
     const skill = await read(GRILL);
     expectPhrase(skill, "**It is a decision record, not a regenerable log.**");
     expectPhrase(skill, "A run log is reproducible by rerunning its stage");
-    expectPhrase(skill, "Keep the file in place until the loop is certified.");
-    expectPhrase(skill, "it stays local and is never committed");
+    expectPhrase(skill, "Keep the file in place until the handoff.");
+    expectPhrase(skill, "no `qfai` command reads it");
   });
 
   it("hands the record to the delegated roles, not only to this skill", async () => {
@@ -290,11 +259,11 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     // named only in the parent skill is one the roles that build and grade the
     // prototype never read.
     const generator = await read(GENERATOR_PROMPT);
-    expectPhrase(generator, "`.qfai/evidence/prototyping/grilling.md`");
-    expectPhrase(generator, "Every cycle, not only the first");
+    expectPhrase(generator, "`.qfai/prototype/grilling.md`");
+    expectPhrase(generator, "Every iteration, not only the first");
 
     const reviewer = await read(REVIEWER_PROMPT);
-    expectPhrase(reviewer, "Session record: `.qfai/evidence/prototyping/grilling.md`");
+    expectPhrase(reviewer, "Session record: `.qfai/prototype/grilling.md`");
     expectPhrase(reviewer, "grades every prototype against the same generic bar");
 
     // Both carry the lineage filter, or another screen's answer constrains this
@@ -328,7 +297,7 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     const skill = await read(GRILL);
     expectPhrase(
       skill,
-      "**A left-column decision still under `## Escalated` stops the run before C0.**",
+      "**A left-column decision still under `## Escalated` stops the run before the first iteration.**",
     );
     expectPhrase(skill, "Report the open rows and stop");
     // Scoped to the left column, or the gate blocks on the questions the loop
@@ -336,21 +305,19 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     expectPhrase(skill, "The right column is not this gate's subject");
   });
 
-  it("names both trees in the reset it asks for", async () => {
-    // The evidence `iter-00` is renamed and kept; the authoring one is
-    // overwritten with no backup. A confirmation naming the first understates
-    // the loss, and a destructive operation is approved on what it says.
-    const skill = await read(LOOP);
-    expectPhrase(skill, "naming what it destroys in both trees");
-    expectPhrase(skill, "`.qfai/prototype/iter-00/index.html` is overwritten");
-    expectPhrase(skill, "with no backup taken");
-
-    // And a refusal has an outcome of its own. Without one the table maps a
-    // rejection to the reset and stops there, so a declined reset leaves the
-    // orchestrator with no next step but the operation the user just refused.
-    expectPhrase(skill, "**A declined reset ends the run and deletes nothing.**");
-    expectPhrase(skill, "leave both trees as they stand, and stop");
-    expectPhrase(skill, "or end with nothing deleted where the reset is declined");
+  it("asks before a new lineage replaces the earlier iterations", async () => {
+    // A new lineage overwrites `iter-00/` and replaces every later iteration,
+    // and a destructive operation is approved on what its confirmation says.
+    const skill = await read(RECOVER);
+    expectPhrase(skill, "**Ask before starting over.**");
+    expectPhrase(
+      skill,
+      "A new lineage overwrites `iter-00/` and replaces every later iteration and its reviews.",
+    );
+    // And a refusal has an outcome of its own, so the orchestrator is not left
+    // with no next step but the operation the user just refused.
+    expectPhrase(skill, "**A declined restart ends the run and deletes nothing.**");
+    expectPhrase(skill, "leave `.qfai/prototype/` as it stands, and stop");
   });
 
   it("tells the delegated roles an escalated row is not a constraint", async () => {

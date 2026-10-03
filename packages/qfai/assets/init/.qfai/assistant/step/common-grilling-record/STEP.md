@@ -25,7 +25,7 @@ The calling step passes the evidence path. The shape follows the stage.
 | `qfai-atdd`        | `.qfai/evidence/atdd-BF-NNNN.md`          | `## Grilling Session`   | [Run blocks](#run-blocks)     |
 | `qfai-implement`   | `.qfai/evidence/implement-BF-NNNN.md`     | `## Grilling Session`   | [Run blocks](#run-blocks)     |
 | `qfai-verify`      | `.qfai/evidence/verify-<run-id>.md`       | `## Grilling Session`   | [Run blocks](#run-blocks)     |
-| `qfai-prototyping` | `.qfai/evidence/prototyping/grilling.md`  | `## Session`            | the owner's own decision file |
+| `qfai-prototyping` | `.qfai/prototype/grilling.md`             | `## Session`            | the owner's own decision file |
 
 Every shape also writes the decision rows below into the stage's Work Orders
 Summary. Evidence stays local and is never committed

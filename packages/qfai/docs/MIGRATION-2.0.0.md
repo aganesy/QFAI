@@ -55,9 +55,8 @@ does not write them into the new tree:
 
 Each is listed for a person and kept under
 `.qfai/evidence/migration-spec-to-story/retired/contract/`, so a plan cannot
-place a rule in one. The old `design/prototype-handoff.yaml` is now the
-`handoff` object of `.qfai/evidence/prototyping/prototyping.json`, which
-`/qfai-prototyping` writes. The migration does not convert the old file into
+place a rule in one. The old `design/prototype-handoff.yaml` is now
+`.qfai/prototype/final/handoff.json`, which `/qfai-prototyping` writes. The migration does not convert the old file into
 it.
 
 The result separates project policy, concrete behavior, and enforcing

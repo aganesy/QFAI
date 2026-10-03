@@ -3481,9 +3481,9 @@ PLANTS.push({
   plant: (dir) => {
     const declared = firstContext(dir);
     editWorkflow(dir, declared.workflow, (text) => {
-      const ceiling = /(\n {2}scanner-coverage:\n(?:[^\n]*\n)*? {4}timeout-minutes: )(\d+)/;
+      const ceiling = /(\n {2}windows-parity:\n(?:[^\n]*\n)*? {4}timeout-minutes: )(\d+)/;
       if (!ceiling.test(text)) {
-        throw new Error("scanner-coverage declares no timeout-minutes — the needle is stale");
+        throw new Error("windows-parity declares no timeout-minutes — the needle is stale");
       }
       return text.replace(
         ceiling,

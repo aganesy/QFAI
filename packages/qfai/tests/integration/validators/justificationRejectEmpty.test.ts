@@ -81,14 +81,14 @@ describe("TC-0015-0027: validateReviewerJustification rejects empty justificatio
 
   it("ignores codes outside the advisory-failing set", async () => {
     await writeReport("report.json", {
-      findings: [{ code: "QFAI-CRIT-008", justification: "" }],
+      findings: [{ code: "QFAI-DCON-030", justification: "" }],
     });
     const { config } = await loadConfig(root);
     const issues = await validateReviewerJustification(root, config);
-    expect(issues.find((i) => i.code === "QFAI-CRIT-008")).toBeUndefined();
+    expect(issues.find((i) => i.code === "QFAI-DCON-030")).toBeUndefined();
   });
 
-  it("exposes exactly 7 catalog codes in the SSOT set", () => {
-    expect(CATALOG_ADVISORY_FAILING_CODES.size).toBe(7);
+  it("exposes exactly 5 catalog codes in the SSOT set", () => {
+    expect(CATALOG_ADVISORY_FAILING_CODES.size).toBe(5);
   });
 });

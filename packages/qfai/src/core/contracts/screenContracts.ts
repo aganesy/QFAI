@@ -107,8 +107,7 @@ export async function readUiContractScreenContracts(
   // that author UI contracts with the `.yml` extension auto-derived
   // an empty screen list and the CLI capture path silently exited 0
   // with a "no screens" warning. Other contract-discovery surfaces in
-  // the repo accept both extensions (e.g. fast-glob brace expansion in
-  // validators/uiEvidenceArtifacts.ts), so harmonising here closes a
+  // the repo accept both extensions, so harmonising here closes a
   // least-astonishment gap rather than expanding surface.
   const screens: CanonicalScreenContract[] = [];
   for (const { relativePath, parsed } of await readUiContractDocuments(uiDir, root)) {
@@ -448,8 +447,7 @@ function slugifyScreenId(value: string): string {
  * callers are responsible for attaching a real `sourceRef` (typically
  * `<rel-path>#<screenId>`).
  *
- * Exported so per-spec readers in CLI command layers (e.g. the per-(spec
- * x screen) certify gate in `prototypingCertify.ts`) reuse the same
+ * Exported so per-contract readers reuse the same
  * shape parser as the project-wide `readUiContractScreenContracts`
  * function. Pre-export the same id/route/title/primary_tasks extraction
  * logic was duplicated at two call sites; any future schema additions

@@ -96,8 +96,7 @@ Stage 3 (`/qfai-sdd`) target policy:
 Prototyping stage policy:
 
 - `/qfai-prototyping` scope is governed by Article VII § Prototyping exception (scope floor) in `.qfai/assistant/rule/constitution.md` — the single home for both the scope floor and the Change Request exception to it. Do not restate the floor here; on any overlap between this file and the constitution, the constitution wins.
-- Completion requires prototyping evidence (markdown + json in `.qfai/evidence/`) and `npx qfai validate --profile prototyping --fail-on error` pass. The profile is explicit on purpose: an omitted `--profile` defaults to `full`, which runs the ATDD traceability rules (`QFAI-ATDD-111/112/113`) at severity `error` — obligations of stage 5, which has not run yet at stage 4.
-- The `/qfai-verify` run that feeds `npx qfai prototyping certify` writes `.qfai/report/verify.json` with `scope: "prototyping"`; certify accepts no other scope. See `.qfai/assistant/skill/qfai-verify/references/verify-output-contract.md`.
+- Prototyping completes when the user confirms the prototype. No command or check certifies it, and no `qfai` command reads `.qfai/prototype/`.
 - Coverage gaps (missing BF or AC obligations, unresolved declared checks, API 404) are blocking.
 
 Implementation stage:

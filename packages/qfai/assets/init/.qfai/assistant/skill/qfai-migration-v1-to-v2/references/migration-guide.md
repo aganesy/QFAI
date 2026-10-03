@@ -179,9 +179,9 @@ Step 3 moves each one to
 `design/` as one directory, and lists each file under `## For a person` with
 its archived copy. Rewrite what the file states in the form its row names.
 
-The old `design/prototype-handoff.yaml` is now the `handoff` object of
-`.qfai/evidence/prototyping/prototyping.json`, which `/qfai-prototyping` writes
-when a loop ends with the prototype accepted. The migration does not convert
+The old `design/prototype-handoff.yaml` is now
+`.qfai/prototype/final/handoff.json`, which `/qfai-prototyping` writes when
+the user confirms the prototype. The migration does not convert
 the old file into it.
 
 Step 3 also replaces every old `CON-*` ID that the contract map translates inside

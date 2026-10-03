@@ -9,8 +9,8 @@ routing-profile: default
 
 # prototyping-preflight
 
-Checks every precondition of the loop before cycle 0 spends anything. It
-changes no file.
+Checks every precondition of the loop before the first iteration. It changes
+no file.
 
 ## Reads
 
@@ -28,21 +28,20 @@ Nothing. The CLI checks are read-only.
 
 - The loop resolves **every UI-bearing UI contract in one invocation**, as
   `prototyping-grill` § Scope defines it. Run
-  `npx qfai doctor --profile prototyping` to surface the resolved set. Zero
-  UI-bearing contracts at cycle 0 is a deterministic no-op exit `0`, which ends
-  the run.
+  `npx qfai doctor --profile prototyping` to surface the resolved set. With
+  zero UI-bearing contracts the run ends here, writes nothing, and says that no
+  UI-bearing UI contract was resolved.
 - Confirm `<contractsDir>/ui/*.yaml` exists.
 - Run `common-design-md` § Check before building
   (`.qfai/assistant/step/common-design-md/STEP.md#check-before-building`). It
-  runs `npx qfai prototyping preflight --target-url <url>` and stops on a
-  missing, unparseable or sample `DESIGN.md`. Run only that section: this step
-  does not author `DESIGN.md`.
+  stops on a missing, unparseable or sample `DESIGN.md`. Run only that section:
+  this step does not author `DESIGN.md`.
 
 ### Step 2-B — Verify environment preconditions
 
-- Confirm a capture route exists for each declared screen, at the URL passed as
-  `--target-url`, or plan `--auto-serve` where no dev server runs
-  (`.qfai/assistant/skill/qfai-prototyping/references/iterate-flags.md`).
+- Confirm the reviewer can open each declared screen: a dev server or a static
+  file server at the URL passed to
+  `npx qfai doctor --profile prototyping --target-url <url>`.
 - Canonical launcher: `npx --no-install playwright`, or
   `node_modules/.bin/playwright` when PATH reachability is uncertain. A bare
   `npx playwright` can install a package mid-run.
@@ -52,11 +51,11 @@ Nothing. The CLI checks are read-only.
 
 Follow
 `.qfai/assistant/rule/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol`
-for a failing doctor or preflight check.
+for a failing doctor check.
 
 ## Gate
 
-The step passes when `npx qfai prototyping preflight --target-url <url>` exits
-`0` with at least one UI-bearing contract resolved and a launcher that does not
-install anything. With zero UI-bearing contracts the run ends here with exit
-`0`, and the later steps do not run.
+The step passes when `npx qfai doctor --profile prototyping --target-url <url>`
+reports no error, with at least one UI-bearing contract resolved and a launcher
+that does not install anything. With zero UI-bearing contracts the run ends
+here, and the later steps do not run.
