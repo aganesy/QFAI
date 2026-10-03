@@ -2444,8 +2444,7 @@ async function resolveUiBearingScope(
  *
  * `validation.traceability.testFileGlobs` describes executable test *code*, but
  * annotations also legitimately live in Gherkin features and in markdown
- * traceability files (this repository carries its own `US-*` annotations in
- * `tests/e2e/qfai-traceability.md`). These are annotation carriers, not code,
+ * traceability files. These are annotation carriers, not code,
  * so they are unioned in rather than replaced.
  */
 const STRUCTURAL_ANNOTATION_EXTENSIONS = ["feature", "md", "markdown"] as const;

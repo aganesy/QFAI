@@ -51,6 +51,7 @@ import {
   type WideLineAssistantAsset,
 } from "./doctor/assetLineBudget.js";
 import { checkDocsLane } from "./doctor/docsLane.js";
+import { checkMutationProofs } from "./doctor/mutationProofs.js";
 import { checkMdschemaBinary } from "./doctor/mdschemaBinary.js";
 import { checkWorkflowPreconditions } from "./doctor/workflowPreconditions.js";
 import { findLeftovers, leftoverLines } from "./leftovers.js";
@@ -308,6 +309,9 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
   addCheck(checks, await buildAssetLineBudgetCheck(root));
 
   addCheck(checks, await checkDocsLane(root));
+  const mutationProofs = await checkMutationProofs(root, config);
+  if (mutationProofs)
+    addCheck(checks, { ...mutationProofs, message: escapeForMessage(mutationProofs.message) });
   addCheck(checks, await checkMdschemaBinary());
   for (const check of await checkWorkflowPreconditions(root)) addCheck(checks, check);
 

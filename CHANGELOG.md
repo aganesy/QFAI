@@ -209,6 +209,10 @@ its code. Several commands, findings and files go with that.
 
 ### Added
 
+- **Mutation recipes remain in example tests.** `qfai doctor` reports a
+  warning when a recipe names a missing source file or original text (#2419).
+  The check reads recipes and source text; it runs no mutations or tests.
+
 - **A shared rule records what a stage costs and which lever changes it**
   (#2238). `rule/stage-cost.md` names reasoning depth by the `effort` setting
   and its levels, and runs every agent at the host's default until a
@@ -356,6 +360,11 @@ its code. Several commands, findings and files go with that.
   default, including an unmodified entry an earlier 1.x release shipped, and
   lists each under `## For a person` with a warning to that effect, so a person
   removes the ones nobody customised.
+
+- **BF and AC coverage requires the configured test-file selection** (#2160).
+  An annotation must match its E2E, integration or API layer and
+  `validation.traceability.testFileGlobs`, as EX coverage already requires.
+  The obsolete Markdown annotation lists are removed.
 
 ## [2.0.2] - 2026-10-03
 
