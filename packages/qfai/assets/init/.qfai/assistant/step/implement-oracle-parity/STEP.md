@@ -2,7 +2,7 @@
 name: implement-oracle-parity
 owner: qfai-implement
 purpose: "Build a check that runs the same inputs through the project and through the outside reference it should match, and lists every difference."
-requires: [common-steering-refresh, common-gate-run, common-evidence-record]
+requires: [common-steering-refresh, common-gate-run]
 roles:
   - test-design-analyst
   - frontend-engineer
@@ -43,8 +43,7 @@ observed differences rather than from reading.
 
 - The check and its inputs, listed in `changedFiles`. The step changes no
   production code.
-- A record of the reference and its version, and of each difference, written
-  with `common-evidence-record`.
+- A record of the reference and its version, and of each difference, in the stage report.
 
 ## Gate
 

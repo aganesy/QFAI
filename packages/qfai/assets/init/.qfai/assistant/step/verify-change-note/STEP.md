@@ -2,7 +2,7 @@
 name: verify-change-note
 owner: qfai-verify
 purpose: "Write the changelog entry, the migration steps and the breaking changes a user needs for this change, or show that none is needed."
-requires: [common-evidence-record]
+requires: []
 roles: [orchestrator, doc-steward]
 routing-profile: default
 ---
@@ -28,16 +28,14 @@ people who use the project, before the gates run over it.
   order.
 - Each breaking change, marked the way the changelog marks one, naming what
   breaks and the migration step that answers it.
-- In `.qfai/evidence/verify-<run-id>.md`, under Work performed: what was read,
-  and the entries written or the pass.
+- In the stage report: what was read, and the entries written or the pass.
 
 It never names a version, adds a release heading or renames the unreleased
 section. Which version ships is the user's decision.
 
 ## Procedure
 
-1. Open `.qfai/evidence/verify-<run-id>.md` as `common-evidence-record` says;
-   this step runs before `verify-context`.
+1. This step runs before `verify-context`.
 2. List what a user of the project sees change: a command, an option, an
    output, a file format, an API, a default, a message, documented behaviour.
    A refactor, a test, a CI change or a story-tree edit is on the list only

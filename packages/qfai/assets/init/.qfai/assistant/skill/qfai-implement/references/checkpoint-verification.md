@@ -13,7 +13,7 @@ Run the relevant tests for modules and contracts the example changes. For a shar
 
 ## Flow checkpoint
 
-Run qfai validate --profile tdd --fail-on error --flow BF-NNNN for the invocation's flow. A result from another flow or another profile does not close this checkpoint. Run every applicable project gate command named by tech.md in its declared environment. Record each command, exit code, and output in .qfai/evidence/implement-BF-NNNN.md.
+Run qfai validate --profile tdd --fail-on error --flow BF-NNNN for the invocation's flow. A result from another flow or another profile does not close this checkpoint. Run every applicable project gate command named by tech.md in its declared environment. Report each command, exit code, and output in the stage report.
 
 The validate run may exit nonzero while other unimplemented examples remain; record the findings and continue the next lowest EX. Completion requires a fresh scoped result with no open EX obligation, plus the project gates and required reviewer verdicts on the final revision.
 

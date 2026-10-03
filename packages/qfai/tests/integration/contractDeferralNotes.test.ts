@@ -306,9 +306,8 @@ function emitsDirectly(
 /**
  * Shape 2 — the code is a member of a gate the module tests findings against.
  *
- * `reviewerJustification.ts` reads codes off a review report and raises the
- * ones on `ADVISORY_FAILING_CODES`, so the literal is the gate rather than the
- * source. It counts only when that same binding is actually asked
+ * A module that reads codes off a report and raises the ones on a set holds the
+ * literal as the gate rather than the source. It counts only when that same binding is actually asked
  * (`NAME.has(x)` / `NAME.includes(x)`) **and** the module hands a non-literal
  * to a factory — an array nobody consults proves nothing, which is exactly how
  * a dead constant used to pass.

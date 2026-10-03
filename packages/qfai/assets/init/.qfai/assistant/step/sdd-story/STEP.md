@@ -2,7 +2,7 @@
 name: sdd-story
 owner: qfai-sdd
 purpose: "Write the stories, acceptance criteria and examples of each affected flow, or append the one example a diagnosed defect needs."
-requires: [common-evidence-record]
+requires: [common-grilling-record]
 roles: [requirements-analyst, test-design-analyst, qa-strategist, product-experience-architect]
 routing-profile: default
 ---

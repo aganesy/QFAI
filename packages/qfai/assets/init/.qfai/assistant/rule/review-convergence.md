@@ -71,17 +71,17 @@ the trace class bounds which findings may block, and the declared severity settl
 whether one does, so an item carried under this section is not also a defect
 forcing `REVISE` elsewhere.
 
-**A cycle that reruns one reviewer keeps the others' findings.** The pack is the
-cycle's record, not the rerun's: a reviewer that passed is not re-run, its
-verdict stands, and its advice stands in the same pack the next stage reads.
+**A cycle that reruns one reviewer keeps the others' findings.** The cycle's
+report is its record, not the rerun's: a reviewer that passed is not re-run, its
+verdict stands, and its advice stands in the same report the next stage reads.
 A rerun that dropped it would lose the advice of every reviewer who found
 nothing blocking.
 
-**Where it goes.** The advice stays in the review pack's findings, under the
-discussion pack the next stage inventories at its Stage 0 as non-normative
-reference material, like every other part of that pack. That stage gives each
+**Where it goes.** The advice stays in the cycle's findings, which the next
+stage reads at its Stage 0 as non-normative reference material, like the
+discussion pack. That stage gives each
 item a disposition in its own artifacts — a plan step, a spec row, an open
-question, or a line in its evidence saying it was read and not adopted — and
+question, or a line in its report saying it was read and not adopted — and
 nothing is back-propagated into the pack. What it may not do is leave an item
 unmentioned: a decision nobody wrote down cannot be told from an item nobody
 read.

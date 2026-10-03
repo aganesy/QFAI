@@ -26,13 +26,11 @@ the user. An interview with no method is the agent deciding and reporting.
 - `.qfai/assistant/skill/qfai-discussion/references/discussion-coverage-checklist.md`.
 - `.qfai/assistant/skill/qfai-discussion/references/design-dna-intake.md`, where
   any classified surface is `web`, `mobile`, `desktop` or `mixed`.
-- The research summary `discussion-research` recorded in this run's stage
-  evidence.
+- The research summary `discussion-research` reported.
 
 ## Writes
 
-- The `## Grilling Session` row in
-  `.qfai/evidence/discussion-<YYYYMMDDhhmmssSSS>.md`.
+- The `## Grilling Session` row, in the stage report.
 
 The records the session's ending produces — register rows and labelled
 assumptions — are written by `discussion-oq` and `discussion-pack` once the row
@@ -78,7 +76,7 @@ them:
 
 | Write                                                                       | When                | Why it is not authoring                                                                                                                                                                                     |
 | --------------------------------------------------------------------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The research summary in this run's stage evidence                           | Before the session  | The session reads it. Held back, the decisions are settled against evidence nobody had. It is not in the pack: no pack directory exists yet, and one opened here is what a cancelled run would leave behind |
+| The research summary in this run's stage report                             | Before the session  | The session reads it. Held back, the decisions are settled against evidence nobody had. It is not in the pack: no pack directory exists yet, and one opened here is what a cancelled run would leave behind |
 | A register entry or a labelled assumption the session's own ending produces | As the session ends | It records what the session did. Withheld, a no-question run cannot write the open questions that block its completion                                                                                      |
 | A throwaway artifact built to make a question answerable                    | Mid-session         | The method calls for it where talking cannot settle the question. It is not the pack, and it is not kept                                                                                                    |
 
@@ -130,7 +128,7 @@ after `stop` is the run doing exactly what the user told it not to.
 
 ## The record
 
-Write the stage evidence's `## Grilling Session` row in the shape
+Write the stage report's `## Grilling Session` row in the shape
 `.qfai/assistant/step/common-grilling-record/STEP.md#one-session` sets out, and
 write `Ended at` before the first pack file. The reviewer reads the session condition
 off that row. Without it a skipped session and a completed one present the same
@@ -144,7 +142,7 @@ runs.
 
 The reviewer confirms:
 
-- the stage evidence's `## Grilling Session` row shows the session ended before
+- the stage report's `## Grilling Session` row shows the session ended before
   authoring began, with `Ended` one of `confirmed`, `user-closed` or
   `no-question`;
 - every decision the session settled is recorded where

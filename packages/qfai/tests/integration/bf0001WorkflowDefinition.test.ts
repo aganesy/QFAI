@@ -99,9 +99,9 @@ describe("BF-0001 workflow definition", () => {
       "utf8",
     );
     expect(sdd).toContain("Read the pack, its completed reviews");
-    expect(sdd).toContain("Record a discrepancy in an SDD-owned row or evidence");
+    expect(sdd).toContain("Record a discrepancy in an SDD-owned row or the SDD report");
     expect(sdd).toContain("do not edit the");
-    expect(playbook).toContain("Disposition its applicable review advice in SDD evidence");
+    expect(playbook).toContain("Disposition its applicable review advice in the SDD report");
     expect(checklist).toContain("A disagreement was resolved in an SDD-owned artifact");
   });
 
@@ -169,9 +169,6 @@ describe("BF-0001 workflow definition", () => {
     expect(drift).toContain("4. Rerun the owner skill");
     expect(drift).toContain("5. Recheck every dependent BF, AC, and EX test obligation");
     expect(drift).toContain("6. Complete the decision row");
-    expect(drift).toContain(
-      "A stage may write evidence and reports in the locations its completion contract names",
-    );
     expect(drift).toContain("A project may add a local overlay beside a shipped rule");
     expect(drift).toContain(
       "An owner skill may change its own upstream artifact after the required approval",

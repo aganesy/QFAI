@@ -2,7 +2,7 @@
 name: implement-seam
 owner: qfai-implement
 purpose: "Land the minimal connection an acceptance test needs to reach its assertion, and leave that test failing at the assertion."
-requires: [common-steering-refresh, common-gate-run, common-evidence-record]
+requires: [common-steering-refresh, common-gate-run]
 roles:
   - frontend-engineer
   - backend-engineer
@@ -32,8 +32,8 @@ waits until the acceptance stage has taken RED.
 2. Run the target test. The test is left failing at its assertion; record
    that failure.
 3. Record the seam with its ceiling and the condition that lifts it, under
-   `.agents/rules/minimal-implementation.md`, and the run with
-   `common-evidence-record`.
+   `.agents/rules/minimal-implementation.md`, and report the run in the stage
+   report.
 
 Inside a workflow run, the result names the target test in
 `seam.targetTestId`.

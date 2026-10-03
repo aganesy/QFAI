@@ -2,7 +2,7 @@
 name: implement-backport
 owner: qfai-implement
 purpose: "Check that a merged change meets the project's backport criteria and carry it onto the release branch it names, passing that branch's gates."
-requires: [common-steering-refresh, common-gate-run, common-evidence-record]
+requires: [common-steering-refresh, common-gate-run]
 roles:
   - devops-ci-engineer
   - frontend-engineer
@@ -43,8 +43,7 @@ route asks for.
 
 - The backport branch and the files it changes, listed in `changedFiles`.
 - A record of the criteria checked, each commit picked, each conflict and how
-  it was resolved, and each gate result, written with
-  `common-evidence-record`.
+  it was resolved, and each gate result, in the stage report.
 
 ## Gate
 

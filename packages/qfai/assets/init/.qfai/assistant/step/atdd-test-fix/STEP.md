@@ -2,7 +2,7 @@
 name: atdd-test-fix
 owner: qfai-atdd
 purpose: "Repair a defective E2E, integration or API test so it checks the same obligation correctly."
-requires: [common-grilling-record, common-evidence-record, common-gate-run]
+requires: [common-grilling-record, common-gate-run]
 roles:
   - acceptance-test-engineer
   - devops-ci-engineer

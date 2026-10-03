@@ -78,8 +78,7 @@ make a slow path faster:
 
 - The step changes no file git tracks, in either mode: no product code, test,
   story or contract file changes, and the result names no changed file.
-- A file it writes that git ignores, such as its reproduction record under
-  `.qfai/evidence/`, is named in `artifactRefs`, not in `changedFiles`.
+- Its reproduction record goes in the stage report, not in a file.
 
 Inside a workflow run, the result carries:
 

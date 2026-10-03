@@ -31,7 +31,7 @@ describe("answered review demands are carried into the next existing request", (
       const text = await read(tree, "assistant/step/common-review-cycle/STEP.md");
       expect(text).toContain("review-convergence.md#answered-demands-must");
       expect(text).toContain("Put the answers an earlier stage recorded on the same artifact");
-      expect(text).toContain("`review_request.md` before dispatching reviewers");
+      expect(text).toContain("request before dispatching reviewers");
     });
   }
 });

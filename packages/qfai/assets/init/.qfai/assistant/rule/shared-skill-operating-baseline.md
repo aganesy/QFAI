@@ -46,8 +46,7 @@ one roster file.
 The ceiling applies to **every** shipped assistant prose asset, including
 rules and cards. A rule at the ceiling moves topic detail to
 `rule/references/<topic>.md`; a skill uses its own `references/` directory.
-The tree that owns the file owns its detail. A shared example is
-`rule/audited-evidence-hash.md`.
+The tree that owns the file owns its detail.
 
 For a prose asset, raising the ceiling or claiming an exemption is not the remedy. An exemption claims no split is possible, and a Markdown file whose tree has a `references/` home available cannot make that claim.
 
@@ -74,7 +73,7 @@ A pointer only resolves if the reader knows what base to resolve it against. The
 
 This section binds every skill and every step as written. A skill or step does
 not restate it: it names only the questions of its own, and with `--auto` it
-asks nothing and records explicit assumptions in its stage evidence.
+asks nothing and records explicit assumptions in its stage report.
 
 - When a question to the user is needed, use AskUserQuestion if the tool is available. **No question is exempt** — a confirmation and a yes-or-no take the same path as anything else, because an exception is what an agent reaches for when it would rather not ask. The form a question takes is owned by `.agents/rules/user-questions.md`; this section is where it binds a skill.
 - Availability is judged for **this question in this invocation**. A tool the mode withholds, or one that cannot carry the answer's shape, is unavailable for that question and takes the fallback below. A mode that permits no question at all — `--auto` — is read before this: nothing is asked, so there is no question whose availability to judge, and the fallback is not its route.
@@ -389,7 +388,7 @@ can resolve stops at preflight.
 
 ## Gate Failure Autorepair Protocol
 
-When validate, doctor, test, lint, typecheck, build, capture, or report gates fail — **or when a blocking reviewer returns `REVISE`** (the in-flight verdict; `status: "FAIL"` is only what a review pack's `summary.json` serializes — see `.qfai/assistant/rule/shared-skill-delegation-baseline.md#verdict-vocabulary`):
+When validate, doctor, test, lint, typecheck, build, capture, or report gates fail — **or when a blocking reviewer returns `REVISE`** (see `.qfai/assistant/rule/shared-skill-delegation-baseline.md#verdict-vocabulary`):
 
 - inspect exit code, logs, `validate.json`, and cited files before reporting — in `validate.json`, read `counts` for the verdict and `issues[].code` for each finding; the array is `issues`, not `findings` (keys: `.qfai/assistant/skill/qfai-verify/references/validate-json-schema.md`);
 - classify each finding as skill-owned artifact, upstream spec/contract, code/test defect, environment/tooling, or user decision;

@@ -5,7 +5,6 @@ purpose: "Run a widened check over the whole tree and either fix each new findin
 requires:
   - common-steering-refresh
   - common-gate-run
-  - common-evidence-record
 roles:
   - devops-ci-engineer
   - frontend-engineer
@@ -64,8 +63,7 @@ The choice between fix and baseline is this step's decision point.
 ## What it writes
 
 - The fixes and the baseline entries, listed in `changedFiles`.
-- A record of each finding and what was done with it, written with
-  `common-evidence-record`.
+- A record of each finding and what was done with it, in the stage report.
 
 ## Gate
 

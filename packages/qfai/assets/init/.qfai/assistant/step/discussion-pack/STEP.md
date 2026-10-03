@@ -22,7 +22,7 @@ conversational summaries, are the handoff.
 ## Precondition
 
 **Authoring the pack** does not start until the session has ended. This run's
-stage evidence holds the `## Grilling Session` row, its `Ended at` is written,
+stage report holds the `## Grilling Session` row, its `Ended at` is written,
 and `Ended` is `confirmed`, `user-closed` or `no-question`. Without that row,
 or with `Ended: stopped`, write no pack file and stop. A pack drafted
 mid-session records a design that was still being decided, and the draft is
@@ -36,8 +36,7 @@ nothing to write. The pass names the pack path.
 
 ## Reads
 
-- The research summary and the `## Grilling Session` row in
-  `.qfai/evidence/discussion-<YYYYMMDDhhmmssSSS>.md`.
+- The research summary and the `## Grilling Session` row from the stage report.
 - `.qfai/assistant/skill/qfai-discussion/references/discussion-artifact-rules.md`
   for the pack's fixed file set and naming.
 - The templates under `.qfai/assistant/skill/qfai-discussion/templates/`.
@@ -45,14 +44,12 @@ nothing to write. The pass names the pack path.
 ## Writes
 
 Under `.qfai/discussion/discussion-<YYYYMMDDhhmmssSSS>/`, opened under the
-stage evidence's stamp:
+run's stamp:
 
 - `01_Context.md` to `09_Constraints.md`;
 - `prototyping.yaml`, only where step 8 below calls for it.
 
-Discussion authors no design artifact outside its own pack. Its run also writes
-this stage's evidence and the cycle's review pack, which record what the run
-did rather than specify anything. The brand SSOT — root `DESIGN.md` — is
+Discussion authors no design artifact outside its own pack. The brand SSOT — root `DESIGN.md` — is
 authored by `/qfai-sdd`'s `common-design-md` step from what this pack records: the
 classification in `01_Context.md`, the reference registries in `04_Sources.md`,
 and the `uiux/` sidecars. Root DESIGN.md is not a discussion output.
