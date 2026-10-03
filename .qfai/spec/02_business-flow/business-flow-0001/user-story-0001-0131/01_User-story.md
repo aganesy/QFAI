@@ -1,5 +1,5 @@
-# US-0001-0131: Shadow-property color scan exclusion
+# US-0001-0131: Optional local prototype server
 
 ## User Story
 
-As a designer, I want `--*-shadow*:` custom-property declarations carrying `rgba()` literals stripped before color scanning, so that shadow-token CSS does not produce false `designMdViolations[]`.
+As a `/qfai-prototyping` operator, I want an opt-in `qfai prototyping iterate --auto-serve` flag that is off by default, so that iterate can start and tear down a local HTTP server through a runner that refuses a port another process holds.

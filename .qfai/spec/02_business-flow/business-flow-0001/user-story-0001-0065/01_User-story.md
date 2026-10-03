@@ -1,9 +1,5 @@
-# US-0001-0065: Output path control
+# US-0001-0065: Prototyping Observability Section
 
 ## User Story
 
-As an operator, I want `qfai report --out <path>` to set where the report is written, with `report.md` or `report.json` under the configured `outDir` when it is not given, so that I can put the report where I need it.
-
-## Non-goals
-
-- Choosing an output directory rather than a file path
+As a project lead, I want `qfai report` to include a `## Prototyping` section showing mode resolution, obligation profile, evidence coverage, and runtime details, so that I can understand the prototyping state at a glance.

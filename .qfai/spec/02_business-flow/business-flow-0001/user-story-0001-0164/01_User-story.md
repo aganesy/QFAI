@@ -1,5 +1,5 @@
-# US-0001-0164: Contract-first verification gates
+# US-0001-0164: Devils-Advocate Reviewer
 
 ## User Story
 
-As a maintainer, I want verify to depend on contract-first validate gates rather than implicit discussion-pack runners, so that downstream completion reflects the current execution architecture.
+As a QFAI user, I want a devils-advocate reviewer that challenges assumptions and offers a concrete alternative on FAIL as an advisory mode, so that weak assumptions are questioned without blocking completion by default.

@@ -21,6 +21,8 @@ each task, not merely short files.
 - Every Markdown file an agent reads stays at or under **500 lines**.
 - A `SKILL.md` body stays at or under **20,000 characters**.
 
+The body excludes YAML frontmatter; a character is one Unicode code point.
+
 A file near a limit is a signal to move a section out, not to pack more onto
 each line.
 

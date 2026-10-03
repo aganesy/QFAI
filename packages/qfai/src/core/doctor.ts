@@ -1,8 +1,9 @@
-import type { Dirent } from "node:fs";
-import { access, readdir, readFile } from "node:fs/promises";
+import { constants, type Dirent } from "node:fs";
+import { access, lstat, readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { parseAgentFrontmatter } from "./agentFrontmatter.js";
+import { isEnoent } from "./fs/errno.js";
 import {
   defaultConfig,
   findConfigRoot,
@@ -35,6 +36,7 @@ import { readStoryTreeModel } from "./storyTree/tree.js";
 import { diffProjectSkillsAgainstInitAssets, type SkillsIntegrityDiff } from "./skillsIntegrity.js";
 import type { Issue } from "./types.js";
 import { validateSddDesignContractReadiness } from "./validators/designContractReadiness.js";
+import { BIDIRECTIONAL_CONTROLS, LINE_SEPARATORS } from "./validators/assistantAssets.js";
 import { validateIntegrationSurface } from "./validators/integrationSurface.js";
 import { applyWaivers } from "./waivers.js";
 import { resolveToolVersion } from "./version.js";
@@ -52,6 +54,8 @@ import {
 } from "./doctor/assetLineBudget.js";
 import { diffInstalledShippedWorkflows } from "./doctor/workflowsIntegrity.js";
 import { checkDocsLane } from "./doctor/docsLane.js";
+import { checkMdschemaBinary } from "./doctor/mdschemaBinary.js";
+import { checkWorkflowPreconditions } from "./doctor/workflowPreconditions.js";
 
 export type DoctorSeverity = "ok" | "info" | "warning" | "error";
 export type DoctorProfile = "prototyping";
@@ -94,12 +98,36 @@ type CreateDoctorDataOptions = {
   targetUrl?: string;
 };
 
+/** Follows links on every platform, so a broken link does not exist; `access` succeeds on one on Windows. */
 async function exists(target: string): Promise<boolean> {
   try {
-    await access(target);
+    await stat(target);
     return true;
   } catch {
     return false;
+  }
+}
+
+/** True when the path is a regular file the process may read, which is what `qfai report` needs of validate.json. */
+async function isReadableFile(target: string): Promise<boolean> {
+  try {
+    if (!(await stat(target)).isFile()) {
+      return false;
+    }
+    await access(target, constants.R_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** True only when nothing is at the path; a file, a broken link or an unreadable path is not absent. */
+async function isAbsent(target: string): Promise<boolean> {
+  try {
+    await lstat(target);
+    return false;
+  } catch (error: unknown) {
+    return isEnoent(error);
   }
 }
 
@@ -163,6 +191,19 @@ function isDefaultSkillCreatedPath(key: ConfigPathKey, relPath: string): boolean
   return DEFAULT_SKILL_CREATED_PATH_KEYS.has(key) && relPath === defaultConfig.paths[key];
 }
 
+const DEFAULT_ABSENT_NOTES: Partial<Record<ConfigPathKey, string>> = {
+  srcDir: "the project has no source yet",
+  testsDir: "the project has no tests yet",
+  outDir: "the first `qfai validate` creates it",
+};
+
+/** What an absent directory at its shipped default means, or undefined where it is a fault. */
+function defaultAbsentNote(key: ConfigPathKey, relPath: string): string | undefined {
+  return path.normalize(relPath) === path.normalize(defaultConfig.paths[key])
+    ? DEFAULT_ABSENT_NOTES[key]
+    : undefined;
+}
+
 /**
  * `title` of every `workflows.integrity` emission.
  *
@@ -222,13 +263,16 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     // the `qfai doctor` contract says it is. The check now carries the worst severity
     // the loader actually reported.
     const configHasError = issues.some((issue) => issue.severity === "error");
+    // The text formatter prints only `message`, so the issues the loader
+    // returned are listed there, one line, `; `-joined.
+    const listed = issues.map((issue) => renderIssueForMessage(issue.message)).join("; ");
     addCheck(checks, {
       id: "config.load",
       severity: configHasError ? "error" : "warning",
       title: "Config load",
       message: configHasError
-        ? `Loaded with ${issues.length} issue(s), including ${issues.filter((i) => i.severity === "error").length} that must be fixed`
-        : `Loaded with ${issues.length} issue(s) (normalized with defaults when needed)`,
+        ? `Loaded with ${issues.length} issue(s), including ${issues.filter((i) => i.severity === "error").length} that must be fixed: ${listed}`
+        : `Loaded with ${issues.length} issue(s) (normalized with defaults when needed): ${listed}`,
       details: {
         configPath: toRelativePath(root, resolvedConfigPath),
         issues,
@@ -250,15 +294,25 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     const resolved = resolvePath(root, config, key);
     const ok = await exists(resolved);
     const missingDefaultSkillCreatedPath = !ok && isDefaultSkillCreatedPath(key, config.paths[key]);
+    const absentNote =
+      ok || missingDefaultSkillCreatedPath || !(await isAbsent(resolved))
+        ? undefined
+        : defaultAbsentNote(key, config.paths[key]);
     addCheck(checks, {
       id: `paths.${key}`,
-      severity: ok ? "ok" : missingDefaultSkillCreatedPath ? "info" : "warning",
+      severity: ok
+        ? "ok"
+        : missingDefaultSkillCreatedPath || absentNote !== undefined
+          ? "info"
+          : "warning",
       title: `Path exists: ${key}`,
       message: ok
         ? `${key} exists`
         : missingDefaultSkillCreatedPath
           ? `${key} is not created by init; QFAI skills create it when real artifacts exist`
-          : `${key} is missing (configure this path or create the directory)`,
+          : absentNote !== undefined
+            ? `${key} is the shipped default and does not exist yet: ${absentNote}`
+            : `${key} is missing (configure this path or create the directory)`,
       details: { path: toRelativePath(root, resolved) },
     });
 
@@ -657,6 +711,8 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
   }
 
   addCheck(checks, await checkDocsLane(root));
+  addCheck(checks, await checkMdschemaBinary());
+  for (const check of await checkWorkflowPreconditions(root)) addCheck(checks, check);
 
   const deprecatedPromptsDir = resolvePath(root, config, "promptsDir");
   const deprecatedPromptsExists = await exists(deprecatedPromptsDir);
@@ -701,14 +757,17 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
   const validateJsonAbs = path.isAbsolute(config.output.validateJsonPath)
     ? config.output.validateJsonPath
     : path.resolve(root, config.output.validateJsonPath);
-  const validateJsonExists = await exists(validateJsonAbs);
+  const validateJsonExists = await isReadableFile(validateJsonAbs);
+  const validateJsonAbsent = !validateJsonExists && (await isAbsent(validateJsonAbs));
   addCheck(checks, {
     id: "output.validateJson",
-    severity: validateJsonExists ? "ok" : "warning",
+    severity: validateJsonExists ? "ok" : validateJsonAbsent ? "info" : "warning",
     title: "validate.json",
     message: validateJsonExists
       ? "validate.json exists (report can run)"
-      : "validate.json is missing (run 'qfai validate' before 'qfai report')",
+      : validateJsonAbsent
+        ? "validate.json is missing (run 'qfai validate' before 'qfai report')"
+        : "validate.json is not a readable file (a directory, a broken link or an unreadable path); fix or remove it, then run 'qfai validate'",
     details: { path: toRelativePath(root, validateJsonAbs) },
   });
 
@@ -929,38 +988,90 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
 }
 
 /**
- * Whether one code point is a C0, DEL or C1 control character.
+ * Whether one code point must not reach a single-line message: a C0, DEL or C1
+ * control character, a Unicode line or paragraph separator, or a bidirectional
+ * control.
  *
  * Read as code points rather than matched with the equivalent character-class
  * regular expression: that pattern needs an `eslint-disable no-control-regex`,
  * and the universal quality rule forbids adding a suppression without the
- * user’s explicit permission. `reviewerJustification.ts` refuses control
- * characters the same way, for the same reason.
+ * user’s explicit permission.
  */
 function isControlCodePoint(code: number): boolean {
-  return code <= 0x1f || (code >= 0x7f && code <= 0x9f);
+  return (
+    code <= 0x1f ||
+    (code >= 0x7f && code <= 0x9f) ||
+    LINE_SEPARATORS.has(code) ||
+    BIDIRECTIONAL_CONTROLS.has(code)
+  );
+}
+
+/** The longest one loader issue may run in the `config.load` message; `details.issues` keeps it whole. */
+const MAX_LISTED_ISSUE_LENGTH = 500;
+
+const CUT_MARKER = " ... ";
+
+/** Takes whole tokens from the front of `tokens` while they fit in `budget` characters. */
+function takeWithin(tokens: ReadonlyArray<string>, budget: number): string[] {
+  const taken: string[] = [];
+  let used = 0;
+  for (const token of tokens) {
+    if (used + token.length > budget) {
+      break;
+    }
+    taken.push(token);
+    used += token.length;
+  }
+  return taken;
 }
 
 /**
- * Makes one path safe to splice into a single-line finding message.
+ * Renders one loader issue for the `config.load` message: without a YAML parse
+ * error's source excerpt, escaped, and at most `MAX_LISTED_ISSUE_LENGTH`
+ * characters as displayed. Several loader messages quote the rejected value, so a
+ * very large value is cut. The middle goes, so the start of the message and the
+ * diagnosis at its end both stay, and no escape sequence is split.
+ */
+function renderIssueForMessage(message: string): string {
+  const tokens = Array.from(withoutYamlExcerpt(message), escapeCharacter);
+  if (tokens.reduce((total, token) => total + token.length, 0) <= MAX_LISTED_ISSUE_LENGTH) {
+    return tokens.join("");
+  }
+  const kept = MAX_LISTED_ISSUE_LENGTH - CUT_MARKER.length;
+  const head = takeWithin(tokens, Math.ceil(kept / 2));
+  const tail = takeWithin(tokens.slice().reverse(), Math.floor(kept / 2)).reverse();
+  return `${head.join("")}${CUT_MARKER}${tail.join("")}`;
+}
+
+/**
+ * A YAML parse error ends with an excerpt of the offending source after a blank
+ * line, and that excerpt can hold any value the file holds. This keeps the cause
+ * and its position and drops the excerpt; any other issue is returned whole.
+ */
+function withoutYamlExcerpt(message: string): string {
+  return message.replace(/^([^\r\n]* at line \d+, column \d+:)\r?\n\r?\n[\s\S]*$/, "$1");
+}
+
+/**
+ * Makes any display string — a path, a filename or a loader message — safe to
+ * splice into a single-line finding message.
  *
  * A filename may legally contain a newline or an ANSI escape on POSIX, and
- * `formatDoctorText` prints `check.message` verbatim. Left raw, one oversized
- * asset could inject extra lines — including counterfeit `[ok]` / `[error]`
- * lines — into the very output whose one-finding-per-line shape downstream
- * severity greps rely on. `details` keeps the raw path; only what is rendered
- * is escaped.
+ * `formatDoctorText` prints `check.message` verbatim. Left raw, such a string
+ * could inject extra lines — including counterfeit `[ok]` / `[error]` lines —
+ * into the very output whose one-finding-per-line shape downstream severity
+ * greps rely on. `details` keeps the raw value; only what is rendered is
+ * escaped.
  */
+function escapeCharacter(character: string): string {
+  const code = character.codePointAt(0);
+  return code !== undefined && isControlCodePoint(code)
+    ? `\\${code > 0xff ? "u" : "x"}${code.toString(16).padStart(code > 0xff ? 4 : 2, "0")}`
+    : character;
+}
+
 function escapeForMessage(value: string): string {
-  let escaped = "";
-  for (const character of value) {
-    const code = character.codePointAt(0);
-    escaped +=
-      code !== undefined && isControlCodePoint(code)
-        ? `\\x${code.toString(16).padStart(2, "0")}`
-        : character;
-  }
-  return escaped;
+  return Array.from(value, escapeCharacter).join("");
 }
 
 function formatMessagePaths(paths: ReadonlyArray<string>): string {
@@ -1592,15 +1703,32 @@ async function buildPrototypingUiContractsCheck(
   // A prototype is built around each screen's primary tasks, so the stage does
   // not start while a screen has none. The audit lane refuses the same contract
   // under `QFAI-AUD-001`; without this, the stage's own preflight passed it.
+  // A screen whose every entry is malformed has no task either, but telling
+  // its author to add one hides the cause: the entries are there, in the
+  // wrong shape.
   const withoutTasks = screens.filter((screen) => screen.primaryTasks.length === 0);
   if (withoutTasks.length > 0) {
+    const refs = (list: typeof screens): string =>
+      list.map((screen) => screen.sourceRef || screen.screenId).join(", ");
+    const malformed = withoutTasks.filter((screen) => screen.primaryTaskShapeFindings.length > 0);
+    const empty = withoutTasks.filter((screen) => screen.primaryTaskShapeFindings.length === 0);
+    const problems = [
+      ...(empty.length > 0
+        ? [
+            `UI contract screen(s) with no primary_tasks: ${refs(empty)}; add at least one primary_task to each screen`,
+          ]
+        : []),
+      ...(malformed.length > 0
+        ? [
+            `UI contract screen(s) whose primary_tasks entries are not {id, label, acceptance} mappings: ${refs(malformed)}; write each entry as a mapping with exactly id, label and acceptance`,
+          ]
+        : []),
+    ];
     return {
       id: "prototyping.uiContracts",
       severity: "error",
       title: "UI contracts",
-      message: `UI contract screen(s) with no primary_tasks: ${withoutTasks
-        .map((screen) => screen.sourceRef || screen.screenId)
-        .join(", ")}; add at least one primary_task to each screen before prototyping`,
+      message: `${problems.join("; ")} before prototyping`,
       details: {
         contractsDir: config.paths.contractsDir,
         screenIds: withoutTasks.map((screen) => screen.screenId),

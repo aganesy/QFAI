@@ -105,7 +105,7 @@ const EMAIL_AUTOLINK_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 /**
  * What may follow a pointy-bracket link destination: an optional title, `)`.
  *
- * `[設計書](<docs/System Design.md>)` is a *written* link whose destination is
+ * `[Design doc](<docs/System Design.md>)` is a *written* link whose destination is
  * bracketed because it carries a space — the one CommonMark shape that needs
  * the brackets. Its inner text is neither an autolink nor a mail address, so
  * it was counted as an unfilled slot and failed a finished catalog under
@@ -134,7 +134,7 @@ const LIST_MARKER_PATTERN = /^\s*(?:[-*+]|\d{1,9}[.)])\s+/;
  * `- [ ] TBD` is an unanswered open question, but stripping only the list
  * marker left `[ ] TBD` as the candidate value, which no keyword test can
  * match. Exactly one space, `x` or `X` between the brackets, as GFM defines
- * it — so a link label (`- [設計書](...)`) is not mistaken for a checkbox.
+ * it — so a link label (`- [Design doc](...)`) is not mistaken for a checkbox.
  */
 const TASK_LIST_MARKER_PATTERN = /^\[[ xX]\]\s+/;
 
@@ -310,7 +310,7 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
       issues.push(
         issue(
           "QFAI-SKILLS-010",
-          "SKILL.md に必須 marker [DRIFT-PROTOCOL:MANDATORY] がありません。",
+          "SKILL.md is missing the required marker [DRIFT-PROTOCOL:MANDATORY].",
           "error",
           skillFile,
           "skills.driftProtocolMarker",
@@ -801,13 +801,13 @@ async function collectSteeringPlaceholderIssues(
     issues.push(
       issue(
         "QFAI-ASSETS-003",
-        `Stage 0 steering ファイル ${toRepoRelative(root, filePath)} に未置換のテンプレート値が ${total} 件残っています（該当セクション: ${detail}）。`,
+        `Stage 0 steering file ${toRepoRelative(root, filePath)} still has ${total} unreplaced template value(s) (sections: ${detail}).`,
         severity,
         filePath,
         "assistantAssets.steeringPlaceholder",
         sections.map((entry) => entry.section),
         "canonical",
-        "`/qfai-configure` を実行し、`<...>` / `TBD` を実測値に置き換えてください。特に tech.md の Standard commands は qfai-implement Stage 0 が gate コマンドの唯一の取得元とするため、未記入のままだと gate が実行不能になります。",
+        "Run `/qfai-configure` and replace `<...>` / `TBD` with measured values. In particular, the Standard commands in tech.md are the only source qfai-implement Stage 0 takes the gate commands from, so leaving them blank makes the gate unrunnable.",
         { loc: { line: sections[0]?.firstLine ?? 1 } },
       ),
     );
@@ -1168,7 +1168,7 @@ function countUnfilledMarkers(line: string, isTableRow: boolean): number {
  * closes it.
  *
  * A destination that spells a placeholder keyword is not written, though:
- * `[設計書](<TBD>)` is a broken link and the very work the rule reports, so
+ * `[Design doc](<TBD>)` is a broken link and the very work the rule reports, so
  * the link context alone stopped being enough to excuse a token.
  */
 function isFilledLinkDestination(
@@ -1203,7 +1203,7 @@ function isPlaceholderToken(inner: string): boolean {
   // `<3`-style typography out of the count. Any Unicode letter counts, not
   // only `[A-Za-z]`: a steering file localised into Japanese names its slots
   // in Japanese, and demanding an ASCII letter let every one of them
-  // (`<テストコマンド>`) pass as filled.
+  // (a slot named in Japanese) pass as filled.
   return /\p{L}/u.test(trimmed);
 }
 
@@ -1537,12 +1537,12 @@ function collectSkillNameIssue(
 }
 
 /** The bidirectional controls that reorder the text after them on a terminal. */
-const BIDIRECTIONAL_CONTROLS: ReadonlySet<number> = new Set([
+export const BIDIRECTIONAL_CONTROLS: ReadonlySet<number> = new Set([
   0x061c, 0x200e, 0x200f, 0x202a, 0x202b, 0x202c, 0x202d, 0x202e, 0x2066, 0x2067, 0x2068, 0x2069,
 ]);
 
 /** The separators a Unicode-aware renderer starts a new line at. */
-const LINE_SEPARATORS: ReadonlySet<number> = new Set([0x2028, 0x2029]);
+export const LINE_SEPARATORS: ReadonlySet<number> = new Set([0x2028, 0x2029]);
 
 /**
  * A value out of a `SKILL.md`, safe to print.
@@ -1934,13 +1934,13 @@ async function collectReferenceGraphIssues(
     .map((file) =>
       issue(
         "QFAI-SKILLS-013",
-        `references/ 配下のファイルが SKILL.md から到達可能な文書のどこからも参照されていないため、読み込まれることがありません。必要な文書なら参照するステップから引用し、不要なら削除してください。`,
+        `A file under references/ is not cited by any document reachable from SKILL.md, so it is never loaded. If the document is needed, cite it from the step that uses it; if it is not, delete it.`,
         severity,
         file,
         "skills.referenceReachability",
         undefined,
         "canonical",
-        "このファイルを読ませたいステップの本文からファイルへの相対パスを引用してください（SKILL.md から到達可能な文書のいずれかに書く必要があります）。読ませる必要がなくなった文書であれば削除してください。",
+        "Cite the file's relative path in the body of the step that should read it (it must be written in a document reachable from SKILL.md). If the document no longer needs to be read, delete it.",
       ),
     );
   return [...reported, ...unreachable];
@@ -2188,13 +2188,13 @@ async function readSkillDocuments(skillsDir: string): Promise<SkillDocuments> {
       unreadable.push(
         issue(
           "QFAI-SKILLS-014",
-          `skills 配下の文書を読み込めませんでした（${describeReadError(error)}）。参照到達性を判定できないため、権限と I/O を確認してください。`,
+          `A document under skills could not be read (${describeReadError(error)}). Reference reachability cannot be judged, so check permissions and I/O.`,
           severity,
           file,
           "skills.documentReadable",
           undefined,
           "canonical",
-          "メッセージが示す I/O エラーを解消してください（読み取り権限の付与、切れた symlink の張り直し、materialise されていないファイルの取得など）。skills 配下から外すべき文書であれば削除してください。",
+          "Resolve the I/O error the message names (grant read permission, relink a broken symlink, materialise a file that was not fetched, and so on). If the document should not be under skills, delete it.",
         ),
       );
     }
@@ -2338,12 +2338,12 @@ async function readStepEntryPoints(root: string): Promise<Map<string, string>> {
  * The name classes are Unicode and the extension is matched case-insensitively
  * because that is how the files themselves are collected: `collectFiles`
  * lower-cases the extension before comparing and puts no constraint on the
- * stem, so `references/設計.md` and `references/Guide.MD` are documents the
+ * stem, so `references/design.md` and `references/Guide.MD` are documents the
  * reachability check has to be able to see cited.
  *
  * A segment also admits `%XX`, because that is how a Markdown link spells a
- * character it cannot carry literally — `[設計](references/%E8%A8%AD%E8%A8%88.md)`
- * names `references/設計.md`. Either separator is accepted, and a leading
+ * character it cannot carry literally — `[café](references/caf%C3%A9.md)`
+ * names `references/café.md`. Either separator is accepted, and a leading
  * separator or drive letter is kept rather than dropped, so a path typed in
  * Windows form and a path that is absolute both still name their file.
  *

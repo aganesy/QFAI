@@ -14,6 +14,10 @@ mode: execution-focused
 
 [DRIFT-PROTOCOL:MANDATORY]
 
+Run the entry check of
+`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`
+first.
+
 ## Inputs
 
 - The text or comment to change, and the write scope the request or the work
@@ -65,5 +69,5 @@ Under a no-question mode, list them in the report instead.
 project_memory:
 
 - A maintenance edit changes what a reader reads, never what a program or an agent does.
-- A semantic effect found before an edit stops the edit; in a run it goes back for reclassification.
+- A semantic effect found before an edit stops the edit; in a run it blocks the run, naming the owner skill.
 - The reviewer of the diff is never the agent that made it.

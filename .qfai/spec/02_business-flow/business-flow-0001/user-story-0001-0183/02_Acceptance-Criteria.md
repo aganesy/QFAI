@@ -3,26 +3,24 @@
 ## Criteria
 
 ```gherkin
-Feature: Standard Research Pipeline Execution
+Feature: Human-in-the-Loop Review Gates
   # AC-0001-0183-01
-  Scenario: Standard research pipeline execution
-    Given a CLI agent with configured MCP servers
-    When the agent receives a task requiring web research
-    Then the agent executes pipeline stages in order: search, rank, fetch, extract, sanitize, cache, verify, cite
-    And each stage produces defined outputs
-    And a research session log is generated with all mandatory fields
+  Scenario: High-risk research triggers human review
+    Given a research conclusion flagged as high-risk
+    When the HITL gate evaluates the risk level
+    Then the gate blocks application until human review
+    And the developer sees diff + citations for review
 
   # AC-0001-0183-02
-  Scenario: Search returns zero results
-    Given a CLI agent with configured MCP servers
-    When a search query returns zero results
-    Then the agent reports "no web sources found" with searched queries
-    And the agent does not hallucinate citations
+  Scenario: Low-risk research is auto-approved
+    Given a research conclusion flagged as low-risk
+    When the HITL gate evaluates the risk level
+    Then the gate auto-approves the conclusion without blocking
 
   # AC-0001-0183-03
-  Scenario: All fetches fail after search succeeds
-    Given a search that returns valid results
-    When all fetch attempts fail (timeout/403/500)
-    Then the agent reports partial results with failure reasons per URL
-    And the agent does not proceed with unverified content
+  Scenario: --yolo does not bypass a security-critical gate
+    Given a security-critical HITL gate
+    When the developer runs with the --yolo flag
+    Then the gate still triggers
+    And --yolo is ignored for that gate
 ```

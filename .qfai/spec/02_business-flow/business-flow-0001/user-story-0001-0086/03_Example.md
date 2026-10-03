@@ -2,6 +2,6 @@
 
 ## Examples
 
-| EX-ID           | AC-Ref          | Input                                                                                                                                                 | Expected                                                                                                                                                                                                  |
-| --------------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| EX-0001-0086-01 | AC-0001-0086-01 | A review finds a primary navigation control that does not open its declared destination, when the reviewer compares the prompt's calibration examples | The actionable example names that screen, failure, and correction in `blockingFindings[]`; the lenient example is identified as invalid because it praises navigation while omitting the observed failure |
+| EX-ID           | AC-Ref          | Input                                                                                  | Expected                |
+| --------------- | --------------- | -------------------------------------------------------------------------------------- | ----------------------- |
+| EX-0001-0086-01 | AC-0001-0086-01 | A UI-bearing pack emits `uiux/50_review_input_bundle.md` with best-of-history handling | The bundle check passes |

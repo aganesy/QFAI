@@ -1,5 +1,5 @@
-# US-0001-0056: Append-only drift and change-request authorization
+# US-0001-0056: Layer-specific test obligations
 
 ## User Story
 
-As a reviewer of a change on the story tree, I want the `drift` gate to report a table row that was removed or rewritten, and a protected file changed with no change-request row in force, so that recorded decisions and upstream specifications change only through a recorded change request.
+As a QA engineer on the story tree, I want `qfai validate` to report each business flow, acceptance criterion and example that has no test at its layer, with a recorded exception as the only way out, so that test coverage follows the layer each obligation belongs to.

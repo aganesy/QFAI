@@ -1,5 +1,5 @@
-# US-0001-0083: Reference Pool Authoring
+# US-0001-0083: Exploration Rubric
 
 ## User Story
 
-As a designer, I want adopted and rejected reference signals separated in `04_Sources.md`, framed as inputs to deviate from, so that downstream remixing does not blindly follow a single template.
+As an evaluator, I want the tool's per-cycle summary to use the fixed ordinal UX axes information architecture, navigation flow, usability, and functionality, while the per-screen review records bounded impressions and blocking findings, so that critique follows the accepted review schema without a rubric authored by each discussion pack.

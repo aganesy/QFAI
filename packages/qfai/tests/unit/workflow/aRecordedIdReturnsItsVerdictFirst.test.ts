@@ -1,4 +1,4 @@
-// QFAI:EX-0001-0192-31
+// QFAI:EX-0001-0185-31
 // Fault seeds: FAULT-003
 
 import { expect, it } from "vitest";
@@ -10,7 +10,7 @@ type Decision = ReturnType<typeof decide>;
 type AcceptResult = NonNullable<Parameters<typeof decide>[1]["result"]>;
 
 const featurePlan = {
-  route: "feature",
+  route: "add-feature",
   stages: [
     planStage("feature-sdd", "sdd"),
     planStage("feature-implement", "implement"),
@@ -109,7 +109,7 @@ it("The recorded resultId with a different payload digest", () => {
 });
 
 const directPlan = {
-  route: "direct",
+  route: "edit-text",
   stages: [planStage("direct-edit", "maintenance"), planStage("direct-verify", "verify")],
 };
 const flowBinding = { flowId: "BF-0007" };

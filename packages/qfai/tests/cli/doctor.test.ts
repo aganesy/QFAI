@@ -895,7 +895,7 @@ async function seedPrototypingFixture(root: string, targetUrl: string): Promise<
       "    title: Home",
       "    route: /",
       "    primary_tasks:",
-      "      - Browse the surface",
+      "      - { id: browse, label: Browse the surface, acceptance: done }",
       "",
     ].join("\n"),
     "utf-8",

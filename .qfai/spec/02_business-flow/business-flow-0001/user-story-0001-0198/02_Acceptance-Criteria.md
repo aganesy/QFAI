@@ -3,18 +3,28 @@
 ## Criteria
 
 ```gherkin
-Feature: Fix a typo directly
+Feature: Fix a defective acceptance test with example coverage untouched
   # AC-0001-0198-01
-  Scenario: A typo is fixed through the direct route
-    Given a change confirmed to alter no behaviour, story, setting or contract
-    When the run routes it
-    Then `qfai-maintain` makes the edit inside the scope and returns the diff, the no-behaviour-change judgement, an independent review and the lint and link checks
-    And a full verify follows
+  Scenario: A test fix leaves example coverage untouched
+    Given diagnosis found a defective existing test that checks a BF or an AC
+    When /qfai-atdd fixes the test in a test_fix stage
+    Then the result names the ID the expectation checks before and after the fix
+    And it carries an independent review and a re-run of the test
+    And the fixed test annotates the same IDs it annotated before the fix
+    And no story, contract or decisions.md file changes
+    And the re-run is recorded in the flow's ATDD evidence file
 
   # AC-0001-0198-02
-  Scenario: Excluded changes never take the direct route
-    Given a change to a dependency, a workflow file, an authorization condition, an environment setting, SQL, a generated file, a normative README command, or QFAI's own skills or rules
-    When the run routes it
-    Then the route is not `direct`
-    And a semantic effect found during a direct change reclassifies the run before the edit
+  Scenario: A fix that changes the expectation's meaning goes back to SDD
+    Given a test fix after which the expectation would check a different ID
+    When the acceptance stage returns
+    Then the result is needs_repair listing that finding with qfai-sdd as its resolving owner
+    And no accepted test fix is returned
+
+  # AC-0001-0198-03
+  Scenario: ATDD takes a test fix only for a test that checks a BF or an AC
+    Given a diagnosis with the verdict defective-test
+    When the first ID it matches is a BF or an AC
+    Then `atdd-test-fix` repairs the test in the test-fix stage
+    And it passes when the first ID matched is an EX
 ```

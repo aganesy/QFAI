@@ -3,11 +3,11 @@
 ## Criteria
 
 ```gherkin
-Feature: Actionable blocked-cycle summary
+Feature: Structured prior-cycle context
   # AC-0001-0141-01
-  Scenario: Exit-64 blocking-cause summary
-    Given a non-converged cycle,
-    When `iterate` emits its cycle-end summary,
-    Then stdout MUST contain a one-screen `[BLOCKED]` line naming the top-3 categories (`designMdViolations` / `layoutAntiPatternsDetected` / `blockingFindings`) with concrete counts AND first-offender details (e.g. `color=#fff at iter-NN/scr_001.html:97`, `lap-008-no-back-affordance`, the first line the reviewer wrote).
-    And category names MUST be stable identifiers — additive only across versions.
+  Scenario: Subagent iter-context hint (SHOULD)
+    Given a cycle ≥ 1 invocation,
+    When `iterate` finalises the cycle,
+    Then `iter-NN/iterate-context.json` SHOULD be written with shape `{ priorCycle: N, priorScores: {...}, openBlockers: [...], priorTailwindContract: "..." }`.
+    And the file is advisory and orthogonal to `prototyping.json` (REQ-0012-0063); absence MUST NOT fail certify.
 ```

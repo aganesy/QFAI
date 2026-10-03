@@ -1,5 +1,5 @@
 /**
- * `BR-0018-0030` and `BR-0018-0031`: a cost, wall-clock or parallelism claim is backed by captured
+ * `BR-0016-0030` and `BR-0016-0031`: a cost, wall-clock or parallelism claim is backed by captured
  * before-and-after numbers, or it does not land — and a measured regression is an accepting outcome
  * rather than a failed attempt.
  *

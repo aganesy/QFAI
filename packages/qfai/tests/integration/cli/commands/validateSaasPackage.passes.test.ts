@@ -14,7 +14,7 @@
  * Drives `runValidate` directly (no subprocess shell-out) so the
  * harness can read the in-memory validation result deterministically.
  */
-// QFAI:EX-0001-0051-01
+// QFAI:EX-0001-0049-01
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

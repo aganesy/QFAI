@@ -66,7 +66,7 @@ Outputs MUST align with:
 
 - repository structure and conventions
 - chosen tools / runtimes (`<paths.contractsDir>/tech.md`)
-- architecture boundaries (the Technical Constraints of `<paths.specsDir>/01_policy/constraint.md`)
+- architecture boundaries (the `## Architecture` layers of `<paths.contractsDir>/tech.md`: a new module belongs to one layer and imports only from the layers its row lists)
 
 ---
 

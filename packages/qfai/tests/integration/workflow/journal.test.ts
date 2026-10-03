@@ -1,19 +1,21 @@
-// QFAI:AC-0001-0195-05
-// QFAI:AC-0001-0196-01
-// QFAI:AC-0001-0196-04
-// QFAI:AC-0001-0196-05
-// QFAI:AC-0001-0196-09
-// QFAI:AC-0001-0199-01
-// QFAI:AC-0001-0201-05
-// QFAI:EX-0001-0195-11
-// QFAI:EX-0001-0196-03
-// QFAI:EX-0001-0196-09
-// QFAI:EX-0001-0196-11
-// QFAI:EX-0001-0196-12
-// QFAI:EX-0001-0196-13
-// QFAI:EX-0001-0199-03
-// QFAI:EX-0001-0201-18
-// QFAI:EX-0001-0201-20
+// QFAI:AC-0001-0188-05
+// QFAI:AC-0001-0189-01
+// QFAI:AC-0001-0189-04
+// QFAI:AC-0001-0189-05
+// QFAI:AC-0001-0189-07
+// QFAI:AC-0001-0189-09
+// QFAI:AC-0001-0192-01
+// QFAI:AC-0001-0194-05
+// QFAI:EX-0001-0188-11
+// QFAI:EX-0001-0189-03
+// QFAI:EX-0001-0189-08
+// QFAI:EX-0001-0189-10
+// QFAI:EX-0001-0189-11
+// QFAI:EX-0001-0189-12
+// QFAI:EX-0001-0189-19
+// QFAI:EX-0001-0192-03
+// QFAI:EX-0001-0194-18
+// QFAI:EX-0001-0194-20
 // Fault seeds: FAULT-001, FAULT-002, FAULT-005, FAULT-006, FAULT-022
 
 import { spawnSync } from "node:child_process";
@@ -94,7 +96,7 @@ async function trackedSummary(root: string, runId: string): Promise<unknown> {
   return JSON.parse(await readFile(file, "utf8").catch(() => "null"));
 }
 
-// QFAI:EX-0001-0201-39
+// QFAI:EX-0001-0194-39
 it("Built CLI run with a distinctive request sentence under a temp root", async () => {
   const root = await minimalProject();
   const sentence = "Paint the zebra crossing ultraviolet at dawn.";
@@ -201,7 +203,7 @@ function runDirOf(root: string, runId: string): string {
   return path.join(root, RUNS, runId);
 }
 
-// A discovery run routed and ready, whose journal holds four events.
+// A decide-design run routed and ready, whose journal holds four events.
 async function readyRun() {
   const root = await minimalProject();
   const { runId, routed } = await routedRun(root);
@@ -412,6 +414,32 @@ it("A changed file named by a case variant of a write-area path", async () => {
   );
 });
 
+it("accept refuses an artifact whose submitted digest is not the file's own", async () => {
+  const root = await minimalProject();
+  const record = ".qfai/report/stage-record.md";
+  const text = "Reviewed.\r\n";
+  await mkdir(path.join(root, ".qfai", "report"), { recursive: true });
+  await writeFile(path.join(root, record), text);
+  const { runId, issued } = await featureRunAt(root, "implement");
+  const result = (resultId: string, digest: string) =>
+    resultFor(issued.json, resultId, { artifactRefs: [{ path: record, digest }] });
+  const refused = await submit(root, runId, "accept", result("implement-1", "0".repeat(64)));
+  const accepted = await submit(
+    root,
+    runId,
+    "accept",
+    result("implement-2", hashAssistantAssetText(text)),
+  );
+
+  expect({
+    reasons: field(refused.json, "error.reasons"),
+    ok: field(accepted.json, "ok"),
+  }).toEqual({
+    reasons: [{ reason: "digest-mismatch", subject: record }],
+    ok: true,
+  });
+});
+
 async function integrityRefusal(root: string, runId: string) {
   const before = await treeDigest(root);
   const refused = workflow(root, ["next", "--run", runId]);
@@ -578,7 +606,7 @@ it("Built CLI status while", async () => {
   }).toEqual({ ok: true, sequence: field(routed.json, "run.sequence"), unchanged: true });
 });
 
-// QFAI:EX-0001-0201-40
+// QFAI:EX-0001-0194-40
 it("Run records of a feature run approved at routing", async () => {
   const root = await minimalProject();
   const { runId } = await featureRunAt(root, "implement");
@@ -607,11 +635,14 @@ it("Run records of a feature run approved at routing", async () => {
   }).toEqual({
     summary: [
       "authorizationIds",
+      "closure",
       "completionTarget",
       "createdAt",
       "debts",
+      "modifiers",
       "qfaiVersion",
       "requestDigest",
+      "reroutes",
       "route",
       "runId",
       "stages",

@@ -81,7 +81,7 @@ describe("story-tree scaffold placeholders", () => {
     expect(await readValidateCycles(root, ac.id)).toBe(3);
   });
 
-  // QFAI:EX-0001-0075-02
+  // QFAI:EX-0001-0073-02
   it("escalates on the configured cycle when scaffoldEscalateCycles is 2", async () => {
     await seed(ac);
     const config = structuredClone(defaultConfig);

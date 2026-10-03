@@ -5,6 +5,11 @@ import { parse as parseYaml } from "yaml";
 
 import { parseAgentFrontmatter } from "../agentFrontmatter.js";
 import { routingEntryName, type QfaiConfig } from "../config.js";
+import {
+  ROUTING_DEFAULTS_REL,
+  readRoutingDefaultsFiles,
+  type RoutingDefaultsFile,
+} from "../routingDefaults.js";
 import { getInitAssetsDir } from "../../shared/assets.js";
 import type { Issue } from "../types.js";
 import {
@@ -123,9 +128,8 @@ export async function validateAgentDefinition(root: string, config: QfaiConfig):
   }
 
   const defaultsDir = path.resolve(getInitAssetsDir(), "..", "defaults");
-  const routingPath = path.join(defaultsDir, "agent-routing.yml");
   const profilesPath = path.join(defaultsDir, "review-profiles.yml");
-  const routing = await validateRouting(routingPath, config.routing ?? [], agentIds, issues);
+  const routing = await validateRouting(config.routing ?? [], agentIds, issues);
   const profiles = await validateProfiles(
     profilesPath,
     config.reviewProfiles ?? {},
@@ -167,12 +171,11 @@ export async function readEffectiveRouting(
   profiles: Map<string, ProfileSelection> | undefined;
 }> {
   const defaultsDir = path.resolve(getInitAssetsDir(), "..", "defaults");
-  const routingPath = path.join(defaultsDir, "agent-routing.yml");
   const catalog = await packageAgentCatalog();
   const ignored: Issue[] = [];
   const [routing, defaultRouting, profiles] = await Promise.all([
-    validateRouting(routingPath, config.routing ?? [], catalog.agents, ignored),
-    validateRouting(routingPath, [], catalog.agents, ignored),
+    validateRouting(config.routing ?? [], catalog.agents, ignored),
+    validateRouting([], catalog.agents, ignored),
     validateProfiles(
       path.join(defaultsDir, "review-profiles.yml"),
       config.reviewProfiles ?? {},
@@ -220,68 +223,85 @@ export function stepReview(
   };
 }
 
+type DefaultRoute = { route: unknown; source: string };
+
+/**
+ * The `routing:` list of one routing defaults file, or undefined after a
+ * finding when the file is not one.
+ */
+function routingListOf(file: RoutingDefaultsFile, issues: Issue[]): unknown[] | undefined {
+  const shapeError = (message: string, rule: string): void => {
+    issues.push(issue("QFAI-AGENT-007", `${file.rel} ${message}`, "error", file.rel, rule));
+  };
+  let parsed: unknown;
+  try {
+    parsed = parseYaml(file.text);
+  } catch {
+    shapeError("could not be parsed", "agentDefinition.routingParse");
+    return undefined;
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    shapeError("must parse to an object", "agentDefinition.invalidRoutingShape");
+    return undefined;
+  }
+  const list: unknown = Reflect.get(parsed, "routing");
+  if (!Array.isArray(list)) {
+    shapeError("must contain routing array", "agentDefinition.invalidRoutingShape");
+    return undefined;
+  }
+  const routing: unknown[] = list;
+  return routing;
+}
+
+/**
+ * Every routing defaults file joined into one list, each entry with the file it
+ * came from. Undefined when any file is not a `routing:` list: a partial set
+ * would report every step of the missing file as unrouted.
+ */
+async function readDefaultRoutes(issues: Issue[]): Promise<DefaultRoute[] | undefined> {
+  const routes: DefaultRoute[] = [];
+  let complete = true;
+  for (const file of await readRoutingDefaultsFiles()) {
+    const list = routingListOf(file, issues);
+    if (list === undefined) complete = false;
+    else routes.push(...list.map((route) => ({ route, source: file.rel })));
+  }
+  return complete ? routes : undefined;
+}
+
 async function validateRouting(
-  routingPath: string,
   overrides: NonNullable<QfaiConfig["routing"]>,
   agentIds: Set<string>,
   issues: Issue[],
 ): Promise<Map<string, SkillRouting> | undefined> {
-  const rel = "packages/qfai/assets/defaults/agent-routing.yml";
   // Collected during this walk rather than re-parsed by `validateSkillRoles`:
   // the per-skill routed set is exactly what the walk already resolves, and a
   // second parse could disagree with the one these findings came from.
   const routed = new Map<string, SkillRouting>();
-  const parsed: unknown = parseYaml(await readFile(routingPath, "utf-8"));
+  const defaults = await readDefaultRoutes(issues);
+  if (defaults === undefined) return undefined;
   try {
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      issues.push(
-        issue(
-          "QFAI-AGENT-007",
-          "agent-routing.yml must parse to an object",
-          "error",
-          rel,
-          "agentDefinition.invalidRoutingShape",
-        ),
-      );
-      return undefined;
-    }
-    const routingRoot = parsed as Record<string, unknown>;
-    if (!Array.isArray(routingRoot.routing)) {
-      issues.push(
-        issue(
-          "QFAI-AGENT-007",
-          "agent-routing.yml must contain routing array",
-          "error",
-          rel,
-          "agentDefinition.invalidRoutingShape",
-        ),
-      );
-      return undefined;
-    }
-
-    const effective = new Map<string, unknown>();
-    for (const route of routingRoot.routing) {
+    const effective = new Map<string, DefaultRoute>();
+    for (const entry of defaults) {
+      const { route } = entry;
       if (route && typeof route === "object" && !Array.isArray(route)) {
         const name = routingEntryName({
           step: Reflect.get(route, "step"),
           skill: Reflect.get(route, "skill"),
         });
-        if (name !== undefined) effective.set(name, route);
+        if (name !== undefined) effective.set(name, entry);
       }
     }
     for (const route of overrides) {
       const name = routingEntryName(route);
-      if (name !== undefined) effective.set(name, route);
+      if (name !== undefined) effective.set(name, { route, source: "qfai.config.yaml" });
     }
-    for (const [routeIndex, route] of [...effective.values()].entries()) {
+    for (const [routeIndex, { route, source }] of [...effective.values()].entries()) {
       if (!route || typeof route !== "object" || Array.isArray(route)) {
         continue;
       }
       const routeObj = route as Record<string, unknown>;
       const routeName = routingEntryName(routeObj);
-      const source = overrides.some((entry) => routingEntryName(entry) === routeName)
-        ? "qfai.config.yaml"
-        : rel;
       const routedEntry = collectRouteHeader(
         routeObj,
         routed,
@@ -388,9 +408,9 @@ async function validateRouting(
     issues.push(
       issue(
         "QFAI-AGENT-007",
-        "agent-routing.yml could not be parsed",
+        "the routing defaults could not be read",
         "error",
-        rel,
+        ROUTING_DEFAULTS_REL,
         "agentDefinition.routingParse",
       ),
     );
@@ -557,7 +577,7 @@ function validateAgentRefs(
       issues.push(
         issue(
           "QFAI-AGENT-008",
-          `agent-routing.yml references unknown agent "${entry}" in ${skill} phase ${phaseIndex} field ${field}`,
+          `routing references unknown agent "${entry}" in ${skill} phase ${phaseIndex} field ${field}`,
           "error",
           // Sourced from the caller's resolved routing path (manifestPathRel)
           // so the file: argument always points at the actual location read

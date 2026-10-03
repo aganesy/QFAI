@@ -98,6 +98,15 @@ A failure of any kind but `assertion` is never `expected_red`.
 
 No second run starts: the round trip stays inside the run.
 
+## Passes when
+
+Read first: the BF and AC obligations in scope, and the tests that annotate
+them. The step passes when every BF of the bound flow already has an
+annotating E2E test and every AC one at the integration or API layer, each with
+an observable assertion, or a DONE exception row exempts the item. The pass
+names the test that discharges each obligation. A pass while an obligation has
+no annotating test at its layer is refused.
+
 ## Grilling on detection
 
 A contradiction, missing acceptance case, or technical obstacle met while

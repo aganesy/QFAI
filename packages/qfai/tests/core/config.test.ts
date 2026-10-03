@@ -36,7 +36,7 @@ describe("uiux.surfacePaths", () => {
     }
   }
 
-  // QFAI:EX-0001-0078-05
+  // QFAI:EX-0001-0076-05
   it("reads a list of globs, an empty list, and an absent key apart", async () => {
     const listed = await surfacePathsOf(
       "uiux:\n  surfacePaths:\n    - src/ui/**\n    - tests/e2e/**\n",
@@ -52,7 +52,7 @@ describe("uiux.surfacePaths", () => {
     });
   });
 
-  // QFAI:EX-0001-0078-06
+  // QFAI:EX-0001-0076-06
   it("reports a value that is not a list of globs and declares nothing", async () => {
     const { surfacePaths, issues } = await surfacePathsOf("uiux:\n  surfacePaths: src/ui/**\n");
     expect(issues.map((entry) => entry.message)).toContain(
@@ -510,7 +510,9 @@ describe("uiux.competitive_refs_min", () => {
     // effectively demanded three while the finding still said "at least 2.5".
     const { config, issues } = await loadWith("2.5");
     expect(issues.map((issue) => issue.message)).toEqual([
-      expect.stringContaining("uiux.competitive_refs_min は0以上の整数である必要があります。"),
+      expect.stringContaining(
+        "uiux.competitive_refs_min must be an integer greater than or equal to 0.",
+      ),
     ]);
     expect(config.uiux?.competitive_refs_min).toBeUndefined();
   });

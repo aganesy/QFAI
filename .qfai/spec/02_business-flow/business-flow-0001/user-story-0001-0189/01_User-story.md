@@ -1,10 +1,11 @@
-# US-0001-0189: Evaluation Harness for Research Quality
+# US-0001-0189: Continue, or stop, an interrupted run
 
 ## User Story
 
-As a QA engineer, I want an evaluation framework with golden tasks that measure citation precision, coverage, freshness and security hygiene, so that research quality can be scored against expected results.
+As an operator, I want to say "continue" in a new session and have the run pick up at the pending work without redoing story authoring or acceptance, and a run I stop to end at once and leave my own uncommitted work alone, so that an interrupted run neither repeats finished work nor touches mine.
 
 ## Non-goals
 
-- Mandating a specific evaluation tool.
-- Automated model evaluation.
+- A lock taken over because it looks old.
+- A damaged journal repaired to look like success.
+- Recovery through a reset, a stash or a branch switch.

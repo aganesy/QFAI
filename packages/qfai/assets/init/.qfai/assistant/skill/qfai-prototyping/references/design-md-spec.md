@@ -87,8 +87,7 @@ accessibility:
 The 8-archetype catalog is the SSOT in
 the SDD brand catalog that `common-design-md` reads:
 `minimal | bold | corporate | playful | organic | tech | elegant |
-casual`. Read that reference for archetype semantics, do not duplicate
-here.
+casual`. Do not duplicate the catalog here.
 
 ## `brand.theme`
 

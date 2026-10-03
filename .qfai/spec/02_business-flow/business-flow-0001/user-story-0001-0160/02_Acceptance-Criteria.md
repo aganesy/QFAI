@@ -3,16 +3,10 @@
 ## Criteria
 
 ```gherkin
-Feature: Resolve active discussion pack via single helper
+Feature: Scoped SaaS package certificate
   # AC-0001-0160-01
-  Scenario: Active discussion pack resolved via single helper over `state.json`
-    Given downstream `/qfai-sdd` skills need the active discussion pack,
-    When the pack is resolved,
-    Then it is read through one helper from `.qfai/state.json#discussion.currentId` (the SSOT written by `/qfai-discussion`, spec-0010) and is NOT inferred from filesystem mtime.
-
-  # AC-0001-0160-02
-  Scenario: Ambiguous active pointer surfaces recovery guidance
-    Given `.qfai/state.json#discussion.currentId` is absent OR resolves to a missing/duplicate pack,
-    When the helper resolves the active pack,
-    Then it raises an error naming the candidate `discussion-*` dirs and the recovery command (`qfai discussion use <id>`).
+  Scenario: SaaS-Package Certify Scope Seal
+    Given a UI-bearing SaaS-tenant project whose prototyping evidence is complete but whose ATDD / implement-class gates were intentionally skipped,
+    When `qfai prototyping certify --scope saas-package` is run,
+    Then the sealed `completion-certificate.json` MUST carry `scope: "saas-package"` and a non-empty `notes:` field that names each skipped gate, MUST NOT claim full DONE, and `--upgrade-scope full` MUST be rejected until the missing gates land — at which point it may upgrade the existing certificate to full scope.
 ```

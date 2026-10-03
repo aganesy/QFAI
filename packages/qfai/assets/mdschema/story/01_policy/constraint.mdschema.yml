@@ -1,4 +1,11 @@
 # Document schema: <specsDir>/01_policy/constraint.md
+#
+# A constraint is policy: it says what the design must accept and why, in plain
+# words. A file name, a command or a configuration key is concrete, so a
+# backtick is refused, and so is a business rule, example, acceptance criterion
+# or contract ID: policy is read by the documents below it and cites none of
+# them. Each section's IDs run from 01 in table order; `qfai validate` checks
+# that, since this schema cannot count rows.
 heading_rules:
   no_skip_levels: true
   max_depth: 2
@@ -6,7 +13,7 @@ structure:
   - heading:
       pattern: "^# Constraints$"
       regex: true
-    description: Limits the design must accept, each with its reason and effect.
+    description: Limits the design must accept, each with its reason, in plain words.
     allow_additional: false
     forbidden_text:
       - pattern: '\A\s*[^#\s]'
@@ -15,54 +22,68 @@ structure:
       - heading:
           pattern: "^## Technical Constraints$"
           regex: true
-        description: Runtime and technology limits. One row per constraint, ID TC-NN; the table may have no rows.
+        description: Runtime and technology limits. One row per constraint, ID TC-NN from TC-01 in table order; the table may have no rows.
         allow_additional: false
         tables:
           - min: 1
             max: 1
-            required_headers: [ID, Constraint, Rationale, Impact]
+            required_headers: [ID, Constraint, Rationale]
         forbidden_text:
           - pattern: '(?m)^[ \t]*[^|\s#]'
             regex: true
           - pattern: '\S[^\n]*\n[ \t]*\n[ \t]*\|'
             regex: true
-          - pattern: '(?m)^[ \t]*\|(?:[ \t]*:?-+:?[ \t]*\|){4}[ \t]*:?-'
+          - pattern: '(?m)^[ \t]*\|(?:[ \t]*:?-+:?[ \t]*\|){3}[ \t]*:?-'
             regex: true
           - pattern: '\A\s*\|[^\n]*\n[ \t]*\|[^\n]*[^|:\s-]'
+            regex: true
+          # A file name, a command or a configuration key.
+          - pattern: "`"
+            regex: true
+          # A business rule, example, acceptance criterion or contract ID.
+          - pattern: "(?:^|[^A-Za-z0-9_-])(?:BR-[0-9]{4}|EX-[0-9]{4}-|AC-[0-9]{4}-|(?:CLI|API|DB|UI)-[0-9]{4})"
             regex: true
       - heading:
           pattern: "^## Operational Constraints$"
           regex: true
-        description: Operational limits. One row per constraint, ID OC-NN; the table may have no rows.
+        description: Operational limits. One row per constraint, ID OC-NN from OC-01 in table order; the table may have no rows.
         allow_additional: false
         tables:
           - min: 1
             max: 1
-            required_headers: [ID, Constraint, Rationale, Impact]
+            required_headers: [ID, Constraint, Rationale]
         forbidden_text:
           - pattern: '(?m)^[ \t]*[^|\s#]'
             regex: true
           - pattern: '\S[^\n]*\n[ \t]*\n[ \t]*\|'
             regex: true
-          - pattern: '(?m)^[ \t]*\|(?:[ \t]*:?-+:?[ \t]*\|){4}[ \t]*:?-'
+          - pattern: '(?m)^[ \t]*\|(?:[ \t]*:?-+:?[ \t]*\|){3}[ \t]*:?-'
             regex: true
           - pattern: '\A\s*\|[^\n]*\n[ \t]*\|[^\n]*[^|:\s-]'
+            regex: true
+          - pattern: "`"
+            regex: true
+          - pattern: "(?:^|[^A-Za-z0-9_-])(?:BR-[0-9]{4}|EX-[0-9]{4}-|AC-[0-9]{4}-|(?:CLI|API|DB|UI)-[0-9]{4})"
             regex: true
       - heading:
           pattern: "^## Business Constraints$"
           regex: true
-        description: Business and contractual limits. One row per constraint, ID BC-NN; the table may have no rows.
+        description: Business and contractual limits. One row per constraint, ID BC-NN from BC-01 in table order; the table may have no rows.
         allow_additional: false
         tables:
           - min: 1
             max: 1
-            required_headers: [ID, Constraint, Rationale, Impact]
+            required_headers: [ID, Constraint, Rationale]
         forbidden_text:
           - pattern: '(?m)^[ \t]*[^|\s#]'
             regex: true
           - pattern: '\S[^\n]*\n[ \t]*\n[ \t]*\|'
             regex: true
-          - pattern: '(?m)^[ \t]*\|(?:[ \t]*:?-+:?[ \t]*\|){4}[ \t]*:?-'
+          - pattern: '(?m)^[ \t]*\|(?:[ \t]*:?-+:?[ \t]*\|){3}[ \t]*:?-'
             regex: true
           - pattern: '\A\s*\|[^\n]*\n[ \t]*\|[^\n]*[^|:\s-]'
+            regex: true
+          - pattern: "`"
+            regex: true
+          - pattern: "(?:^|[^A-Za-z0-9_-])(?:BR-[0-9]{4}|EX-[0-9]{4}-|AC-[0-9]{4}-|(?:CLI|API|DB|UI)-[0-9]{4})"
             regex: true

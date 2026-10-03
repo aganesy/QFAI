@@ -1,7 +1,7 @@
-// QFAI:AC-0001-0201-05
-// QFAI:EX-0001-0201-14
-// QFAI:EX-0001-0201-15
-// QFAI:EX-0001-0201-16
+// QFAI:AC-0001-0194-05
+// QFAI:EX-0001-0194-14
+// QFAI:EX-0001-0194-15
+// QFAI:EX-0001-0194-16
 
 import { spawnSync } from "node:child_process";
 import { cp, mkdir, mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
@@ -76,7 +76,7 @@ it("Run the asset line budget over qfai-run, qfai-maintain, the plans and the sc
     schemas: files.filter((file) => file.endsWith(".schema.json")).length,
     plans: files.filter((file) => file.endsWith(".yml")).length,
     over,
-  }).toEqual({ budget: [500, 800, 400], schemas: 5, plans: 5, over: [] });
+  }).toEqual({ budget: [500, 800, 400], schemas: 5, plans: 39, over: [] });
 });
 
 // The post-build guard over a package that publishes only the plans and the schemas.
@@ -98,7 +98,7 @@ async function postBuildGuard(): Promise<{ status: number | null; output: string
   return { status: run.status, output: `${run.stdout}${run.stderr}` };
 }
 
-it("Read the five shipped schemas and the plans", async () => {
+it("Read the five shipped schemas and the 39 plans", async () => {
   const schemas = (await filesUnder(SCHEMAS)).sort();
   const ids: string[] = [];
   const versioned: string[] = [];

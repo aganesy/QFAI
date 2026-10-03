@@ -1,5 +1,5 @@
-# US-0001-0110: User-experience review axes
+# US-0001-0110: Low-cost per-iteration evidence
 
 ## User Story
 
-As a product-surface reviewer, I want to score each iteration on the user-experience axes `informationArchitecture`, `navigationFlow`, `usability` and `functionality`, so that iterations are not judged on subjective visual-aesthetic axes.
+As a maintainer, I want each cycle to require only a per-screen review payload by default, with PNG and HTML capture available by opt-in, so that routine iterations remain inexpensive.

@@ -3,10 +3,11 @@
 ## Criteria
 
 ```gherkin
-Feature: CSS token reference resolution
+Feature: Browser tool migration window
   # AC-0001-0129-01
-  Scenario: `var()` unwrap across scanFonts / scanRadius / scanShadow
-    Given a fixture with `:root { --font-sans: system-ui; }` and a declaration `font-family: var(--font-sans)` (analogous fixtures for `--radius-*` / `--shadow-*`),
-    When `scanFonts` / `scanRadius` / `scanShadow` evaluate the declaration,
-    Then the scanner MUST resolve via `unwrapVarReference(declarationValue, rootDeclarations)` before safety judgment and MUST emit zero `designMdViolations[]` entries for the unwrapped safe value.
+  Scenario: `browserTool` accepts `"playwright"` and `"playwright-cli"`
+    Given `prototyping.execution.browserTool` set to `"playwright"` OR `"playwright-cli"` during the deprecation window,
+    When `qfai prototyping iterate` reads the config,
+    Then both values MUST be accepted; `"playwright-cli"` MUST emit `D-DEPRECATED-PROBE` (severity: warning during window, error at sunset).
+    And the documented default in `assets/init/qfai.config.example.yaml` MUST be `"playwright"`.
 ```

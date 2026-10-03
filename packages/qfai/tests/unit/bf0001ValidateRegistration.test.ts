@@ -103,7 +103,7 @@ function profileBody(pipeline: ts.SourceFile, profile: string): ts.Node {
 
 describe("BF-0001 story-tree validator registration", () => {
   it("exports, directly imports and invokes every current validator in its owning profile", async () => {
-    // QFAI:EX-0001-0155-01
+    // QFAI:EX-0001-0150-01
     const barrel = await source("validators/index.ts");
     const pipeline = await source("validate.ts");
     expect(

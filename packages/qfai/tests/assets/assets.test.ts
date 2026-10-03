@@ -40,6 +40,7 @@ import {
   widestMeasurableLine,
 } from "../helpers/skillBudget.js";
 import { readDiscussionSkill } from "../helpers/discussionSteps.js";
+import { readDefaultRoutingText } from "../helpers/shippedAssistant.js";
 import { shapeValueLiterals } from "../integration/shippedWorkflowShape.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -439,7 +440,6 @@ describe("assets guardrails", () => {
   });
 
   it("ensures configure and verify delegation order follows routing SSOT", async () => {
-    const routingPath = path.join(defaultsDir, "agent-routing.yml");
     const configurePath = path.join(
       templateQfaiDir,
       "assistant",
@@ -450,7 +450,7 @@ describe("assets guardrails", () => {
     const verifyPath = path.join(assistantDir, "step", "verify-context", "STEP.md");
 
     const [routing, configure, verify] = await Promise.all([
-      readFile(routingPath, "utf-8"),
+      readDefaultRoutingText(),
       readFile(configurePath, "utf-8"),
       readFile(verifyPath, "utf-8"),
     ]);
@@ -2035,7 +2035,7 @@ describe("assets guardrails", () => {
       }
     }
 
-    const routing = await readFile(path.join(defaultsDir, "agent-routing.yml"), "utf-8");
+    const routing = await readDefaultRoutingText();
     const profiles = await readFile(path.join(defaultsDir, "review-profiles.yml"), "utf-8");
     expect(routing).toContain("routing:");
     expect(profiles).toContain("profiles:");
@@ -3141,11 +3141,10 @@ function shouldSkipReference(ref: string): boolean {
   if (ref === ".qfai/install-provenance.json") {
     return true;
   }
-  // A path inside the installed package. This repository ships that package
-  // and never installs it — `scripts/check-not-a-dependency.mjs` refuses an
-  // install that would create one — so no checkout of this tree holds the
-  // directory. Naming a file under it is how the README tells an adopter where
-  // the packaged copy of a shipped file sits in THEIR tree.
+  // A path inside the installed package. Naming a file under it is how the
+  // README tells an adopter where the packaged copy of a shipped file sits in
+  // THEIR tree. Whether it exists here depends only on whether this checkout
+  // has been installed, so the walk does not judge it.
   if (ref.startsWith("node_modules/")) {
     return true;
   }

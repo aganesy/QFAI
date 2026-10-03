@@ -1,5 +1,5 @@
 /**
- * A feature run on a `qfai init` project, driven the way `qfai-run` drives one: the routing
+ * An add-feature run on a `qfai init` project, driven the way `qfai-run` drives one: the routing
  * result names one new story in a new business flow, the operator approves it, and each stage
  * writes what its skill would write before its result is submitted. The story-authoring stage
  * asks for the change first, and the attempt holding the answer writes the story tree and the
@@ -20,6 +20,7 @@ import {
   workflow,
   write,
 } from "./workflowJourney.js";
+import { extractionFor } from "../helpers/workflowExtraction.js";
 
 export const FLOW_ID = "BF-0001";
 export const STORY_ID = "US-0001-0001";
@@ -43,8 +44,8 @@ const ATDD_EVIDENCE = ".qfai/evidence/atdd-BF-0001.md";
 
 /** The routing proposal: one new story that creates its business flow. */
 export const FEATURE_PROPOSAL = {
-  requestKind: "change",
-  candidateRoute: "feature",
+  requestKind: "routed",
+  extraction: extractionFor("add-feature"),
   goal: "Let each customer register up to five notification addresses.",
   expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
   observedRefs: [],
@@ -67,7 +68,6 @@ export const FEATURE_PROPOSAL = {
     "tests/**",
   ],
   protectedTargets: [],
-  requiredStages: ["sdd", "acceptance", "implement", "verify"],
   rationale: "A new capability that no story represents.",
 };
 
@@ -291,18 +291,8 @@ const ATDD_TEXT = [
   "",
 ].join("\n");
 
-/**
- * Acceptance with its seam round trip, up to the implement work order. A prototype stage the
- * plan issues is recorded as not applicable: no UI contract serves the flow.
- */
-export async function throughAcceptance(root: string, runId: string, afterSdd: unknown) {
-  let acceptance: unknown = afterSdd;
-  let prototype: unknown;
-  if (field(afterSdd, "workOrder.stageKind") === "prototype") {
-    prototype = afterSdd;
-    const notRun = { kind: "not_applicable", reason: "No UI contract serves the flow." };
-    acceptance = (await acceptThenNext(root, runId, afterSdd, "prototype-1", { notRun })).next.json;
-  }
+/** Acceptance with its seam round trip, up to the implement work order. */
+export async function throughAcceptance(root: string, runId: string, acceptance: unknown) {
   await write(root, E2E_TEST, E2E_TEXT);
   await write(root, INTEGRATION_TEST, INTEGRATION_TEXT);
   await write(root, ATDD_EVIDENCE, ATDD_TEXT);
@@ -324,7 +314,7 @@ export async function throughAcceptance(root: string, runId: string, afterSdd: u
     testObservation: "expected_red",
     red: { testId: SEAM_TEST, failureKind: "assertion" },
   });
-  return { prototype, acceptance, seam: seam.json, again: again.json, implement: implement.json };
+  return { acceptance, seam: seam.json, again: again.json, implement: implement.json };
 }
 
 /** The implement stage: the production code and one test per example, GREEN. */
@@ -359,6 +349,22 @@ export async function seedFlow(root: string): Promise<void> {
     "export const add = (known: string[], address: string) =>\n  known.length < 5 && !known.includes(address);\n",
   );
   commitAll(root);
+}
+
+/**
+ * The docs stage: the change leaves every document as it is, so its one pass-through step passes
+ * with the reason.
+ */
+export async function docsPass(root: string, runId: string, docs: unknown) {
+  return acceptThenNext(root, runId, docs, "docs-1", {
+    passes: [
+      {
+        step: "maintain-edit",
+        reason: "No document describes the changed behaviour.",
+        evidenceRef: "docs.md",
+      },
+    ],
+  });
 }
 
 /** The verify stage: this run's full PASS report and an independent QA pass. */

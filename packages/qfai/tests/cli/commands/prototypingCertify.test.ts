@@ -218,7 +218,7 @@ async function reseal(root: string, evidenceRel: string, body: string): Promise<
 }
 
 describe("qfai prototyping certify UI contract screen review coverage", () => {
-  // QFAI:EX-0001-0124-04
+  // QFAI:EX-0001-0120-02
   it("exits 64 and names the missing UI contract and screen when a frozen screen lacks review.json", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
@@ -228,7 +228,7 @@ describe("qfai prototyping certify UI contract screen review coverage", () => {
     // missing pair we expect certify to name.
     await seedReviewJson(root, "UI-0012", "home");
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingCertify({ root, check: false });
@@ -281,7 +281,7 @@ describe("qfai prototyping certify UI contract screen review coverage", () => {
     // field is missing.
     await seedReviewJson(root, "UI-0012", "settings", 1, "{}\n");
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingCertify({ root, check: false });
@@ -302,7 +302,7 @@ describe("qfai prototyping certify UI contract screen review coverage", () => {
     await seedReviewJson(root, "UI-0012", "home");
     await seedReviewJson(root, "UI-0012", "settings", 1, "{ truncated");
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingCertify({ root, check: false });
@@ -329,7 +329,7 @@ describe("qfai prototyping certify UI contract screen review coverage", () => {
     await seedReviewJson(root, "UI-0012", "settings");
     // UI-0007 has no review payloads.
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingCertify({ root, check: false });
@@ -360,7 +360,7 @@ describe("qfai prototyping certify (per-screen payload identity + convergence)",
     // settings surface was never reviewed.
     await seedReviewJson(root, "UI-0012", "settings", 1, reviewPayload("UI-0012", "home"));
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingCertify({ root, check: false });
@@ -381,7 +381,7 @@ describe("qfai prototyping certify (per-screen payload identity + convergence)",
     await seedReviewJson(root, "UI-0012", "home", 1, reviewPayload("UI-0007", "home"));
     await seedReviewJson(root, "UI-0012", "settings");
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingCertify({ root, check: false });
@@ -409,7 +409,7 @@ describe("qfai prototyping certify (per-screen payload identity + convergence)",
       reviewPayload("UI-0012", "settings", { cycle: 0 }),
     );
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingCertify({ root, check: false });
@@ -439,7 +439,7 @@ describe("qfai prototyping certify (per-screen payload identity + convergence)",
       }),
     );
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingCertify({ root, check: false });
@@ -474,7 +474,7 @@ describe("qfai prototyping certify (per-screen payload identity + convergence)",
         reviewPayload("UI-0012", "settings", { sessionStatus: status }),
       );
 
-      const logger = await import("../../../src/cli/lib/logger.js");
+      const logger = await import("../../../src/core/logger.js");
       const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
       try {
         const exit = await runPrototypingCertify({ root, check: false });
@@ -503,7 +503,7 @@ describe("qfai prototyping certify (per-screen payload identity + convergence)",
     // `old` is not a declared screen any more; the file is corrupt.
     await seedReviewJson(root, "UI-0012", "old", 1, "{ truncated");
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingCertify({ root, check: false });
@@ -532,7 +532,7 @@ describe("qfai prototyping certify (per-screen payload identity + convergence)",
       }),
     );
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingCertify({ root, check: false });
@@ -556,7 +556,7 @@ describe("qfai prototyping certify (per-screen payload identity + convergence)",
     await seedReviewJson(root, "UI-0012", "settings");
     await seedReviewJson(root, "UI-9999", "old", 1, "{ truncated");
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingCertify({ root, check: false });
@@ -608,7 +608,7 @@ describe("qfai prototyping certify (per-screen payload identity + convergence)",
       }),
     );
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingCertify({ root, check: false });
@@ -635,7 +635,7 @@ describe("qfai prototyping certify (recursive payload sweep + --check re-audit)"
     await seedReviewJson(root, "UI-0012", "home");
     await seedPayloadAt(root, "UI-0012/archive/old.review.json", "{ truncated");
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingCertify({ root, check: false });
@@ -665,7 +665,7 @@ describe("qfai prototyping certify (recursive payload sweep + --check re-audit)"
       }),
     );
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingCertify({ root, check: false });
@@ -703,7 +703,7 @@ describe("qfai prototyping certify (recursive payload sweep + --check re-audit)"
     expect(await runPrototypingCertify({ root, check: false })).toBe(0);
     await reseal(root, "iter-01/UI-0012/home.review.json", "{}\n");
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       expect(await runPrototypingCertify({ root, check: true })).toBe(2);
@@ -804,7 +804,7 @@ describe("qfai prototyping certify UI contract coverage", () => {
     expect(await runPrototypingCertify({ root, check: false })).toBe(64);
   });
 
-  // QFAI:EX-0001-0122-03
+  // QFAI:EX-0001-0118-03
   it("rejects legacy scope fields and malformed full IDs with exit 2", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);

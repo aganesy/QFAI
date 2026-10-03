@@ -3,10 +3,18 @@
 ## Criteria
 
 ```gherkin
-Feature: Screen Contracts
+Feature: Design Direction Handoff
   # AC-0001-0087-01
-  Scenario: Screen contracts are recorded
-    Given a UI-bearing discussion pack
-    When sidecar generation completes
-    Then `uiux/40_screen_contracts.md` exists and records screen-level contracts.
+  Scenario: Design direction recorded for /qfai-sdd
+    Given a `/qfai-discussion` run whose classified surfaces, primary or secondary, include `web`, `mobile`, `desktop` or `mixed`
+    When the discussion pack is finalized
+    Then `01_Context.md#Design Direction` names the adopted theme and who chose it
+    And discussion writes no root `DESIGN.md`
+
+  # AC-0001-0087-02
+  Scenario: /qfai-sdd authors root DESIGN.md from the recorded direction
+    Given a UI-bearing flow on a visual prototyping surface whose discussion pack is its source
+    When `/qfai-sdd` writes the flow's design contracts
+    Then it authors root `DESIGN.md` from the brand direction `01_Context.md#Design Direction` records
+    And when the pack records no brand direction, it asks for one rather than choosing a brand itself
 ```

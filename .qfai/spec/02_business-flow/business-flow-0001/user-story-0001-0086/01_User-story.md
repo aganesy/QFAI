@@ -1,5 +1,5 @@
-# US-0001-0086: Evaluator Calibration
+# US-0001-0086: Review Input Bundle
 
 ## User Story
 
-As a maintainer, I want the shipped reviewer prompt to show a concrete actionable critique and an overly lenient critique beside the fixed review guidance, so that a reviewer can identify a blocking finding instead of hiding it behind a favorable score or vague praise.
+As a prototyping reviewer, I want `50_review_input_bundle.md` to mention best-of-history and exploration focus, so that later iterations are not assumed to be better by default.

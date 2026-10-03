@@ -1,10 +1,12 @@
-# US-0001-0195: Stop only for my decision or a fact only I hold
+# US-0001-0195: A stage skill picked up by free text hands over
 
 ## User Story
 
-As an operator, I want a request that could lose data, break a contract or reach outside the repository to stop and ask me before anything irreversible happens, and a change to the story tree applied only once I approve it, so that otherwise I am asked only for a value the run cannot find itself.
+As an operator, I want a stage skill that the host picks for a free-text request to pass the request to `qfai-run` instead of starting work, while a stage I invoke by name still runs on its own and ends at that stage, so that nothing is edited outside a run and the direct `/qfai-*` path keeps working.
 
 ## Non-goals
 
-- A question whose answer the request or the repository already gives.
-- An approval inferred from a mode, a confidence value or an agent's own words.
+- The entry skill `qfai-run` and the workflow control core.
+- What `qfai init` installs.
+- What each step does.
+- How a skill that owns steps runs them when invoked by name.

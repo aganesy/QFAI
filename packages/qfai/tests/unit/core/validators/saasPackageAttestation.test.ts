@@ -13,7 +13,7 @@
  * Exercises `runSaasPackageProfile` directly (unit-level) without
  * shelling out to the CLI.
  */
-// QFAI:EX-0001-0051-01
+// QFAI:EX-0001-0049-01
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -97,7 +97,7 @@ describe("TC-0004-0068: saas-package profile rejects a missing design-system att
       "QFAI-STORY-010",
     ]);
   });
-  // QFAI:EX-0001-0051-01
+  // QFAI:EX-0001-0049-01
   it("fails (error severity) when root DESIGN.md is absent — failure names the attestation", async () => {
     // No attestation seeded. Prototyping issues are passed as an empty
     // list (clean prototyping pipeline) so the only failure source is
@@ -113,7 +113,7 @@ describe("TC-0004-0068: saas-package profile rejects a missing design-system att
     ]);
   });
 
-  // QFAI:EX-0001-0051-01
+  // QFAI:EX-0001-0049-01
   it("fails when root DESIGN.md does not parse", async () => {
     await writeFile(path.join(root, "DESIGN.md"), "no front matter here\n", "utf-8");
     const issues = await runSaasPackageProfile(root, []);
@@ -157,7 +157,7 @@ describe("TC-0004-0068: saas-package profile rejects a missing design-system att
     expect(carried?.severity).toBe("warning");
   });
 
-  // QFAI:EX-0001-0051-01
+  // QFAI:EX-0001-0049-01
   it("does not pass when the prototyping-profile validate fails", async () => {
     await seedAttestation();
     const prototypingIssues = [
@@ -172,7 +172,7 @@ describe("TC-0004-0068: saas-package profile rejects a missing design-system att
     expect(issues.find((i) => i.code === "QFAI-FAKE-002")?.severity).toBe("error");
   });
 
-  // QFAI:EX-0001-0051-01
+  // QFAI:EX-0001-0049-01
   it("does not pass with a malformed CLI-HANDOFF handoff", async () => {
     await seedAttestation();
     await mkdir(path.join(root, ".qfai"), { recursive: true });

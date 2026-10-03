@@ -1,5 +1,5 @@
-// QFAI:EX-0001-0194-03
-// QFAI:EX-0001-0194-08
+// QFAI:EX-0001-0187-03
+// QFAI:EX-0001-0187-08
 
 import { expect, it } from "vitest";
 
@@ -8,12 +8,12 @@ import { kindSteps, planStage } from "./kindSteps.js";
 import { JournalRun, planOf, readyWith, stage } from "./journalRun.js";
 
 const plan = {
-  route: "bounded-change",
+  route: "add-feature",
   stages: [
-    planStage("bounded-sdd-delta", "sdd_delta", "always"),
-    planStage("bounded-acceptance", "acceptance", "always"),
-    planStage("bounded-implement", "implement", "always"),
-    planStage("bounded-verify", "verify", "always"),
+    planStage("bounded-sdd-delta", "sdd"),
+    planStage("bounded-acceptance", "acceptance"),
+    planStage("bounded-implement", "implement"),
+    planStage("bounded-verify", "verify"),
   ],
 };
 const flowBinding = { flowId: "BF-0007" };
@@ -23,7 +23,7 @@ const actorHistory = [
   { role: "reviewer", agentInstance: "agent-review-1", stageInstanceId: "bounded-sdd-delta" },
 ];
 const firstAccepted = [
-  { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd_delta", outcome: "accepted" },
+  { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd", outcome: "accepted" },
 ];
 
 it("Issue work orders across a run with an author, a recommender and a reviewer recorded", () => {
@@ -145,7 +145,7 @@ it("A review result whose reviewer instance the actor history shows as the autho
   });
 });
 
-// A bounded run driven through the journal, each result naming the agent that produced it, and
+// An add-feature run driven through the journal, each result naming the agent that produced it, and
 // its accepted routing result naming `recommender` when one is given.
 function actorsRun(recommender?: string) {
   const flow = "BF-0007";
@@ -159,8 +159,8 @@ function actorsRun(recommender?: string) {
       digest: "1".repeat(64),
     },
   };
-  const plan = planOf("bounded-change", [
-    stage("bounded-sdd-delta", "sdd_delta"),
+  const plan = planOf("add-feature", [
+    stage("bounded-sdd-delta", "sdd"),
     stage("bounded-implement", "implement"),
     stage("bounded-verify", "verify"),
   ]);

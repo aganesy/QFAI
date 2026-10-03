@@ -84,7 +84,7 @@ empty and green forever.
 ## Related
 
 - The shape the shipped set is held to:
-  `.qfai/spec/03_contract/cli/cli-0020-shipped-workflows.md`
+  `.qfai/spec/03_contract/cli/cli-0018-shipped-workflows.md`
 - What may not appear in a shipped file: `distributed-surface.md`
 - The same two-part marker for a deliberate shortcut: `minimal-implementation.md`
 

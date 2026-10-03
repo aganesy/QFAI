@@ -5,24 +5,24 @@ dependencies: [00_universal/quality.md, implementation.md]
 version: 1.0.0
 ---
 
-# 開発原則チェックリスト（詳細）
+# Development Principles Checklist (Detailed)
 
-SOLID / KISS / YAGNI / DRY を詳細に確認するための補足チェック。
+A supplementary checklist for examining SOLID / KISS / YAGNI / DRY in detail.
 
-## 基本ガイド
+## Basic Guides
 
-- 品質基準: [../00_universal/quality.md](../00_universal/quality.md)
-- 実装指針: [./implementation.md](./implementation.md)
-- プロジェクトパターン: [../02_project/patterns.md](../02_project/patterns.md)
+- Quality standards: [../00_universal/quality.md](../00_universal/quality.md)
+- Implementation guidelines: [./implementation.md](./implementation.md)
+- Project patterns: [../02_project/patterns.md](../02_project/patterns.md)
 
-## チェックポイント
+## Checkpoints
 
-- 責務が単一か、名前とテストで意図が読み取れるか。
-- 拡張しやすい構造か（設定や依存差し替えで対応できるか）。
-- インターフェースは小さく、不要なメソッドを強要していないか。
-- 重複ロジックを共通化できているか。ユーティリティ化の余地がないか。
-- 仕様が変わる箇所はテストで守られているか。
+- Is the responsibility single, and can the intent be read from the names and the tests?
+- Is the structure easy to extend (can it be adapted through configuration or swapping dependencies)?
+- Are interfaces small, without forcing implementers to provide methods they do not need?
+- Has duplicated logic been shared? Is there room to turn it into a utility?
+- Are the places where the specification may change protected by tests?
 
-## メトリクス
+## Metrics
 
-- 測定方法の詳細は [development-principles-metrics.md](./development-principles-metrics.md) を参照。
+- For measurement details, see [development-principles-metrics.md](./development-principles-metrics.md).

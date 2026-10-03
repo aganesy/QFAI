@@ -24,6 +24,10 @@ them; it is the procedure that applies them.
   states, resolved through `.qfai/assistant/rule/agent-selection.md`, plus each
   conditional reviewer whose condition holds. In a run: the work order's
   `requiredReviewerRoles`, as issued.
+- **Under `review:heavy`.** When the work order's `modifiers` hold it, its
+  `requiredReviewerRoles` also hold the reviewers of the `heavy` review
+  profile, and every one of them is blocking; drop none. The stage evidence
+  lists every decision the stage adopted, for the completion report.
 - **The review target.** Every path and ID the stage wrote or changed, and the
   source it was written from.
 - **The stage's gate result**, fresh on the revision the reviewers will read.

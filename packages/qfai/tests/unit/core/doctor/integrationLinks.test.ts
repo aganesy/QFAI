@@ -17,7 +17,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   AGENT_INTEGRATION_CONFIGS,
   SKILL_INTEGRATION_DIRS,
-} from "../../../../src/cli/commands/init.js";
+} from "../../../../src/core/init/integrationDirs.js";
 import { createDoctorData } from "../../../../src/core/doctor.js";
 import type { Issue } from "../../../../src/core/types.js";
 import type * as IntegrationSurface from "../../../../src/core/validators/integrationSurface.js";

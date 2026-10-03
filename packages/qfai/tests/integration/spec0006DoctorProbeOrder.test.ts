@@ -286,7 +286,7 @@ describe("root DESIGN.md readiness", () => {
     await mkdir(uiDir, { recursive: true });
     await writeFile(
       path.join(uiDir, "ui-0001-home.yaml"),
-      "# QFAI-CONTRACT-ID: UI-0001\nscreens:\n  - id: home\n    route: /\n    primary_tasks:\n      - Browse\n",
+      "# QFAI-CONTRACT-ID: UI-0001\nscreens:\n  - id: home\n    route: /\n    primary_tasks:\n      - { id: browse, label: Browse, acceptance: done }\n",
       "utf-8",
     );
     await rm(path.join(root, "DESIGN.md"), { force: true });

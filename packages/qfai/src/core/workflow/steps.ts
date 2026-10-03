@@ -1,10 +1,14 @@
 import { ASSISTANT_DIR } from "../paths/assistantPaths.js";
-import { firstMatchedKind, skillOwnerOf } from "./common.js";
-import type { PlanStages, PlanStep, WorkflowSnapshot, WorkflowWorkOrder } from "./types.js";
+import { skillOwnerOf } from "./common.js";
+import type {
+  PlanStages,
+  PlanStep,
+  WorkflowSnapshot,
+  WorkflowStepRef,
+  WorkflowWorkOrder,
+} from "./types.js";
 
 type PlanStage = PlanStages[number];
-
-type StepPlan = Pick<NonNullable<WorkflowSnapshot["plan"]>, "optionalSteps">;
 
 // The step the core issues from an acceptance result's seam request, and no plan stage names.
 export const SEAM_STEP = "implement-seam";
@@ -14,8 +18,24 @@ export function stepPath(name: string): string {
   return `${ASSISTANT_DIR}/step/${name}/STEP.md`;
 }
 
-export function stepRefs(names: readonly string[]): NonNullable<WorkflowWorkOrder["steps"]> {
-  return names.map((name) => ({ name, path: stepPath(name) }));
+// The work-order entry of each step, a bare name being a step the route marks nothing on.
+export function stepRefs(steps: readonly (string | PlanStep)[]): WorkflowStepRef[] {
+  return steps.map((step) => {
+    const entry: PlanStep = typeof step === "string" ? { name: step } : step;
+    return {
+      name: entry.name,
+      path: stepPath(entry.name),
+      mode: entry.mode ?? null,
+      passThrough: entry.passThrough ?? false,
+      decisionPoint: entry.decisionPoint ?? null,
+      branchPoint: entry.branchPoint ?? false,
+    };
+  });
+}
+
+// Whether a stage runs only read-only steps, so that it may write nothing.
+export function isReadOnlyStage(steps: readonly PlanStep[]): boolean {
+  return steps.length > 0 && steps.every((step) => step.mode === "read-only");
 }
 
 // A step is named `<owner>-<name>`: `common-*` belongs to no skill, and every other prefix is
@@ -27,37 +47,28 @@ export function ownerOfStep(name: string): string {
   return prefix === "common" ? "common" : `qfai-${prefix}`;
 }
 
-// Whether a step runs in this run: `proposed` when the checked proposal listed it, and the two
-// test-fix layers by the kind of the diagnosis's first matched ID.
-function stepHolds(
-  step: PlanStep,
-  plan: StepPlan,
-  diagnosis: WorkflowSnapshot["diagnosis"],
-): boolean {
-  const kind = firstMatchedKind(diagnosis);
-  switch (step.when) {
-    case undefined:
-      return true;
-    case "proposed":
-      return (plan.optionalSteps ?? []).includes(step.name);
-    case "test_defect_acceptance_layer":
-      return kind === "BF" || kind === "AC";
-    case "test_defect_example_layer":
-      return kind === "EX";
-    default:
-      return false;
-  }
+// A stage's steps, every one of which runs whenever the stage does, in plan order.
+export function stageSteps(stage: PlanStage): PlanStep[] {
+  return stage.steps ?? [];
 }
 
-// The names of a stage's steps that run, in plan order.
-export function activeSteps(
+// A stage's steps less the one a carried receipt already satisfied after a re-route.
+export function issuableSteps(
+  snapshot: Pick<WorkflowSnapshot, "reusedStep">,
   stage: PlanStage,
-  plan: StepPlan,
-  diagnosis: WorkflowSnapshot["diagnosis"],
-): string[] {
-  return (stage.steps ?? [])
-    .filter((step) => stepHolds(step, plan, diagnosis))
-    .map((step) => step.name);
+): PlanStep[] {
+  const reused = snapshot.reusedStep;
+  return stageSteps(stage).filter(
+    (step) => reused?.stageInstanceId !== stage.stageInstanceId || reused.step !== step.name,
+  );
+}
+
+// The stage skill an operator invokes by name for a finding's owner: the skill itself, or the
+// skill a step belongs to.
+export function skillToInvoke(owner: string): string {
+  if (owner.startsWith("qfai-")) return owner;
+  const skill = ownerOfStep(owner);
+  return skill === "common" ? owner : skill;
 }
 
 // Whether a step serves a finding's owner: the owner names the step, or the skill it belongs to.
@@ -65,25 +76,14 @@ export function stepServes(step: string, owner: string): boolean {
   return step === owner || ownerOfStep(step) === owner;
 }
 
-// The active steps of a stage that serve a finding's owner.
-export function servingSteps(
-  stage: PlanStage,
-  owner: string,
-  plan: StepPlan,
-  diagnosis: WorkflowSnapshot["diagnosis"],
-): string[] {
-  return activeSteps(stage, plan, diagnosis).filter((step) => stepServes(step, owner));
+// The steps of a stage that serve a finding's owner.
+export function servingSteps(stage: PlanStage, owner: string): PlanStep[] {
+  return stageSteps(stage).filter((step) => stepServes(step.name, owner));
 }
 
-// The first active stage holding a step that serves `owner`, which is where its finding is
-// repaired.
-export function servingStage(
-  selected: readonly PlanStage[],
-  owner: string,
-  plan: StepPlan,
-  diagnosis: WorkflowSnapshot["diagnosis"],
-): PlanStage | undefined {
-  return selected.find((stage) => servingSteps(stage, owner, plan, diagnosis).length > 0);
+// The first stage holding a step that serves `owner`, which is where its finding is repaired.
+export function servingStage(selected: readonly PlanStage[], owner: string): PlanStage | undefined {
+  return selected.find((stage) => servingSteps(stage, owner).length > 0);
 }
 
 // The owner of the open repair request's next finding, which `next` issues the repair to.

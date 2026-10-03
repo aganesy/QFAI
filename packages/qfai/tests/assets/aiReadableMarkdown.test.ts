@@ -32,6 +32,17 @@ const INSTALL_ROOT_PREFIX = ".qfai/assistant/";
 /** A path-shaped run of text ending in `.md`: how every mention is written. */
 const MD_MENTION = /[\w./-]*\.md\b/g;
 
+/** Body overruns, excluding closed YAML frontmatter and counting Unicode code points. */
+function skillBodyOverruns(skills: readonly (readonly [string, string])[]): string[] {
+  return skills
+    .map(([rel, text]) => {
+      const body = text.replace(/^---\r?\n(?:[\s\S]*?\r?\n)?---(?:\r?\n|$)/, "");
+      return [rel, Array.from(body).length] as const;
+    })
+    .filter(([, count]) => count > MAX_SKILL_CHARS)
+    .map(([rel, count]) => `${rel} (${count})`);
+}
+
 async function readTree(root: string): Promise<Map<string, string>> {
   const tree = new Map<string, string>();
   for (const rel of (await fg(["**/*.md"], { cwd: root })).sort()) {
@@ -141,12 +152,10 @@ describe("AI-readable Markdown in the shipped tree", () => {
     const skills = [...tree].filter(([rel]) => /^skill\/[^/]+\/SKILL\.md$/.test(rel));
     expect(skills.length, "no shipped SKILL.md was found").toBeGreaterThan(5);
 
-    const over = skills
-      .filter(([, text]) => text.length > MAX_SKILL_CHARS)
-      .map(([rel, text]) => `${rel} (${text.length})`);
-    expect(over, `over ${MAX_SKILL_CHARS} characters — move a section into a reference`).toEqual(
-      [],
-    );
+    expect(
+      skillBodyOverruns(skills),
+      `over ${MAX_SKILL_CHARS} characters — move a section into a reference`,
+    ).toEqual([]);
   });
 
   it(`opens every reference over ${CONTENTS_THRESHOLD} lines with its contents`, async () => {
@@ -178,6 +187,25 @@ describe("AI-readable Markdown in the shipped tree", () => {
 });
 
 describe("the guard's own readers", () => {
+  it("counts only the body, including non-BMP characters, at the exact limit", () => {
+    const body = "\u{1F680}".repeat(MAX_SKILL_CHARS);
+    const frontmatter = `---\nname: ${"x".repeat(MAX_SKILL_CHARS)}\n---\n`;
+    expect(
+      skillBodyOverruns([
+        ["LF", frontmatter + body],
+        ["CRLF", frontmatter.replace(/\n/g, "\r\n") + body],
+        ["no frontmatter", body],
+        ["empty frontmatter", "---\n---\n" + body],
+        ["over", frontmatter + body + "x"],
+      ]),
+    ).toEqual([`over (${MAX_SKILL_CHARS + 1})`]);
+
+    const unfinished = `---\nname: ${"x".repeat(MAX_SKILL_CHARS)}`;
+    expect(skillBodyOverruns([["unfinished", unfinished]])).toEqual([
+      `unfinished (${unfinished.length})`,
+    ]);
+  });
+
   it("skips headings inside a fence, including a longer fence around a shorter one", () => {
     const text = [
       "# T",

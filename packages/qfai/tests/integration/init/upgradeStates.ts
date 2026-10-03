@@ -17,9 +17,14 @@ import { captureStdout } from "../../helpers/stdout.js";
 
 /**
  * Runs `qfai init` on `root` with its report captured rather than printed. `yes` is `false` for a
- * run without `--yes`.
+ * run without `--yes`, and `dryRun` is `true` for one with `--dry-run`.
  */
-export async function initQuietly(root: string, force = false, yes = true): Promise<string> {
+export async function initQuietly(
+  root: string,
+  force = false,
+  yes = true,
+  dryRun = false,
+): Promise<string> {
   const lines: string[] = [];
   const capture = (...args: unknown[]): void => {
     lines.push(args.map(String).join(" "));
@@ -33,7 +38,7 @@ export async function initQuietly(root: string, force = false, yes = true): Prom
   });
   let stdout: string;
   try {
-    stdout = await captureStdout(() => runInit({ dir: root, force, dryRun: false, yes }));
+    stdout = await captureStdout(() => runInit({ dir: root, force, dryRun, yes }));
   } finally {
     log.mockRestore();
     warn.mockRestore();

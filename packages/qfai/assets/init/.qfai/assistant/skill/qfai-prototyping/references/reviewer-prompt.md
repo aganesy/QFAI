@@ -66,8 +66,8 @@ write them exactly there, or the CLI will not find them.
    screens, including a run with one contract. This is the file the
    prototyping CLI parses and certify requires. Its schema is closed
    (11 required top-level fields, unknown keys rejected) and lives in
-   the review payload schema. Write it from that
-   reference, not from the block below.
+   the review payload schema. Write the payload to that schema, not the summary
+   shape below.
 2. **Per-cycle summary** —
    `.qfai/evidence/prototyping/iter-NN/review.json`, one per cycle.
    The orchestrator folds it into `prototyping.json#iterations[]`,

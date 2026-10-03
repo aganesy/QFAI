@@ -58,17 +58,29 @@ A change to a file listed under [Never a maintenance edit](#never-a-maintenance-
 or a planned edit with a semantic effect, is not a maintenance edit. Nothing is
 edited: stop, and report that the change is not a maintenance edit.
 
-Inside a workflow run the stage returns it this way, and the run is reclassified
-from there:
+Inside a workflow run the stage returns it this way. No stage of the route
+serves the finding's owner, so the run is `blocked`, naming the finding and the
+owner skill to invoke by name:
 
 - The outcome is `needs_repair`, and `changedFiles` is empty.
 - `debts` holds one entry for the finding:
   - `findingCode` is `maintain-semantic-effect`;
-  - `owningFlow` is `null`, because a `direct` run binds no flow;
+  - `owningFlow` is `null`, because an `edit-text` run binds no flow;
   - `detectingCommand` names the review or the command that found it;
   - `resolvingOwner` is the skill that owns that kind of change, never one the
-    `direct` plan names: `qfai-implement` for a code or configuration change,
+    `edit-text` plan names: `qfai-implement` for a code or configuration change,
     `qfai-sdd` for a story or contract.
+
+## Passes when
+
+This applies in a stage that follows a behaviour change the run already made.
+Read first: that change, and the documents that describe the behaviour it
+changed. The step passes when no document the change makes wrong exists. The pass names the
+documents it read. Otherwise it brings each wrong document in line with the
+change, as [The edit](#the-edit) says. A document that states a command the
+change altered is brought in line too: the behaviour already changed, so the
+edit changes none. Any other entry under
+[Never a maintenance edit](#never-a-maintenance-edit) still stops the step.
 
 ## What the stage returns
 

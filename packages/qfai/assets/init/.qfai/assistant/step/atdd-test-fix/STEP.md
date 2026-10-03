@@ -17,11 +17,14 @@ routing-profile: runtime-heavy
 Repairs one acceptance-layer test that is itself wrong: its expectation, its
 fixture or its selector, not the product behaviour it checks.
 
-## When it runs
+## Passes when
 
-A diagnosis found a defective test and the first ID of its `matchedIds` is a
-BF or an AC, as `.qfai/assistant/rule/test-layers.md` maps BF to E2E and AC to
-integration or API. An EX-layer test is `/qfai-implement`'s.
+Read first: the diagnosis that found the test defective, and the first ID of
+its `matchedIds`. This step repairs the test when that ID is a BF or an AC, as
+`.qfai/assistant/rule/test-layers.md` maps BF to E2E and AC to integration or
+API. When it is an EX, this layer holds no defect: the step passes, naming
+that ID, and `implement-test-fix` repairs the test. A pass while the first
+matched ID is a BF or an AC is refused.
 
 ## Reads
 

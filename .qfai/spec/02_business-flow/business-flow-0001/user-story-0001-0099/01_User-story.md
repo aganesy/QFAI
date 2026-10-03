@@ -1,5 +1,5 @@
-# US-0001-0099: Design System As Input
+# US-0001-0099: Prototyping execution plan
 
 ## User Story
 
-As an implementation worker, I want the token tables read from root `DESIGN.md` itself (not a per-iteration HTML extraction, and not a copy), so that downstream UI work always reads a single, validated token surface.
+As a prototyping agent, I want Step 0 execution planning to be documented before iteration begins, so that the evaluation axes and delegation map are explicit.

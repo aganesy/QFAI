@@ -21,10 +21,10 @@
  * generated, and asserting there would pass on a tree whose source was never
  * edited.
  */
-// QFAI:EX-0001-0076-01
-// QFAI:EX-0001-0076-02
-// QFAI:EX-0001-0076-02
-// QFAI:EX-0001-0076-03
+// QFAI:EX-0001-0074-01
+// QFAI:EX-0001-0074-02
+// QFAI:EX-0001-0074-02
+// QFAI:EX-0001-0074-03
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";

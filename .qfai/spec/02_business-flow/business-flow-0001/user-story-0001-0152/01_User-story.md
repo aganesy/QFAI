@@ -1,5 +1,5 @@
-# US-0001-0152: Unified SDD Workflow
+# US-0001-0152: Active Design Contract Surface Reduction
 
 ## User Story
 
-As a QFAI user, I want a single `/qfai-sdd` command to write, from a discussion pack, the policy, business-flow, story and contract layers of the story tree, so that downstream execution skills have complete specifications.
+As a QFAI maintainer, I want `/qfai-sdd` to stop emitting the legacy design contract family (`exploration-brief.yaml`, `evaluation-rubric.yaml`, `evaluator-calibration.yaml`, `selected-direction.yaml`, `reference-pool.yaml`, `brand-design.yaml`), so that root `DESIGN.md` is the only design contract.

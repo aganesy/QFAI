@@ -1,5 +1,5 @@
-# US-0001-0051: SaaS package validation profile
+# US-0001-0051: Story-tree layout and ID validation
 
 ## User Story
 
-As a delivery lead shipping a SaaS-tenant project, I want `qfai validate --profile saas-package` to pass only when the prototyping-profile validate passes, the design-system attestation, root `DESIGN.md`, is present and parses, and the cross-skill handoff schema passes, and to name each skipped ATDD or implement-class gate in a `D-SAAS-PACKAGE-VERIFY-SKIPPED` info finding, so that a SaaS-tenant delivery gets a lightweight gate that never claims work it did not check.
+As a maintainer of a project on the story tree, I want `qfai validate` to report a story directory that does not hold exactly its three files, and any ID that is malformed, defined twice or out of place, so that every reader that walks the tree can trust its structure and its IDs.

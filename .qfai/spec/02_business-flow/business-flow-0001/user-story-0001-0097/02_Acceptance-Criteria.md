@@ -3,39 +3,19 @@
 ## Criteria
 
 ```gherkin
-Feature: Item Completion Gate
+Feature: Prototyping delegation scope
   # AC-0001-0097-01
-  Scenario: Completion Gate Enforcement
-    Given an implemented EX with test-first, RED, GREEN and refactor evidence
-    When checking completion
-    Then qa-gatekeeper has confirmed RED and GREEN
-    And completion-reviewer and implementation-reviewer have each returned PASS
-    And checkpoint verification has passed without writing a ledger status.
+  Scenario: Each prototyping role has a documented owner
+    Given a prototyping run delegates work
+    When the skill documents role ownership
+    Then evaluator and reviewer role ownership is documented.
+    And the skill spells out which roles own implementation, evaluation scoring, and build.
+    And capture responsibility is named only for an opt-in `--capture` run; the default reviewer-driven run has no fixed third capture identity.
 
   # AC-0001-0097-02
-  Scenario: Fresh Evidence Required
-    Given a TDD item
-    When evidence is checked
-    Then both RED and GREEN evidence include exact command + result; status-only evidence is rejected.
-
-  # AC-0001-0097-03
-  Scenario: Completed Items Skipped
-    Given every EX in scope is annotated by a test or exempted by a `Test exception:` row in force
-    And the scoped `tdd` validate result is current
-    When `/qfai-implement` runs
-    Then it reports "nothing to do" and exits
-
-  # AC-0001-0097-04
-  Scenario: Scoped Validate Gate Runs Per Business Flow
-    Given a project on the story tree
-    When `/qfai-implement` runs a checkpoint verification or its completion gate
-    Then the scoped validate run is `qfai validate --profile tdd --fail-on error --flow BF-NNNN` for the flow the invocation owns, and it runs no `--spec` validation.
-
-  # AC-0001-0097-05
-  Scenario: Stale or missing validation blocks completion
-    Given every EX in scope is annotated or exempted
-    And the scoped validate result is missing, stale, or from a profile other than `tdd`
-    When `/qfai-implement` checks completion
-    Then it stops and reports the validate command, exit code and output
-    And it does not report "nothing to do"
+  Scenario: Generator and reviewer identities remain distinct
+    Given the delegation map assigns generation and review in a prototyping cycle
+    When the cycle dispatches those roles
+    Then the generator and reviewer are distinct sub-agent identities
+    And assigning the same identity to both roles raises a delegation finding
 ```

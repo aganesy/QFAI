@@ -283,13 +283,13 @@ function resolvePreflightBlockers(readiness: PackReadiness): string[] {
 
   if (!readiness.latestPackDir) {
     blockers.push(
-      "latest discussion-pack が見つかりません（`.qfai/discussion/discussion-YYYYMMDDhhmmssSSS/` を作成してください）。",
+      "The latest discussion-pack was not found (create `.qfai/discussion/discussion-YYYYMMDDhhmmssSSS/`).",
     );
   }
 
   if (readiness.dangerousPackNames.length > 0) {
     blockers.push(
-      `discussion 配下に命名不正の discussion-* が存在します: ${readiness.dangerousPackNames.join(", ")}`,
+      `Directories named discussion-* with an invalid name exist under the discussion directory: ${readiness.dangerousPackNames.join(", ")}`,
     );
   }
 
@@ -313,22 +313,24 @@ function resolvePackGaps(readiness: PackReadiness): string[] {
     const sideArtifactMissing = [...readiness.missingSideArtifacts];
 
     if (fileMissing.length > 0) {
-      gaps.push(`必須ファイル不足: ${fileMissing.join(", ")}`);
+      gaps.push(`Missing required files: ${fileMissing.join(", ")}`);
     }
     if (sideArtifactMissing.length > 0) {
       const message = readiness.prototypingRequired
-        ? `UI-bearing discussion pack に必須 side artifact が不足しています: ${sideArtifactMissing.join(", ")}`
-        : `必須 side artifact 不足: ${sideArtifactMissing.join(", ")}`;
+        ? `The UI-bearing discussion pack is missing required side artifacts: ${sideArtifactMissing.join(", ")}`
+        : `Missing required side artifacts: ${sideArtifactMissing.join(", ")}`;
       gaps.push(message);
     }
   }
 
   if (readiness.incompleteFiles.length > 0) {
-    gaps.push(`最小内容を満たしていないファイル: ${readiness.incompleteFiles.join(", ")}`);
+    gaps.push(
+      `Files that do not meet the minimum content: ${readiness.incompleteFiles.join(", ")}`,
+    );
   }
 
   if (readiness.blockingOqIds.length > 0) {
-    gaps.push(`Blocking OQ（Disposition=open）: ${readiness.blockingOqIds.join(", ")}`);
+    gaps.push(`Blocking OQ (Disposition=open): ${readiness.blockingOqIds.join(", ")}`);
   }
 
   // The preflight side of `QFAI-DPACK-007`. `validate --profile sdd` does not
@@ -336,7 +338,7 @@ function resolvePackGaps(readiness: PackReadiness): string[] {
   // Stage 1 unnamed unless it is listed here.
   if (readiness.deferredWithoutDetails.length > 0) {
     gaps.push(
-      `11_OQ-Register.md の deferred が 13_Deferred.md に存在しません: ${readiness.deferredWithoutDetails.join(", ")}`,
+      `Deferred entries in 11_OQ-Register.md are missing from 13_Deferred.md: ${readiness.deferredWithoutDetails.join(", ")}`,
     );
   }
 
@@ -364,7 +366,7 @@ async function resolveStoryWorkshopGaps(packDir: string | null): Promise<string[
   if (text.length === 0 || containsMermaidBlock(text)) {
     return [];
   }
-  return ["03_Story-Workshop.md に Mermaid diagram が見つかりません。"];
+  return ["No Mermaid diagram was found in 03_Story-Workshop.md."];
 }
 
 /**

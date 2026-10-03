@@ -2,6 +2,6 @@
 
 ## Examples
 
-| EX-ID           | AC-Ref          | Input                                                                 | Expected                                                                      |
-| --------------- | --------------- | --------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| EX-0001-0070-01 | AC-0001-0070-01 | The ATDD E2E implementer runs for an in-scope business flow `BF-NNNN` | A test under `<testsDir>/e2e/` exercises that flow and carries `QFAI:BF-NNNN` |
+| EX-ID           | AC-Ref          | Input                                                                                                       | Expected                                                                                                                                                              |
+| --------------- | --------------- | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| EX-0001-0070-01 | AC-0001-0070-01 | A BF scope includes `AC-0001-0026-01` for legacy-file removal, but no integration or API test exercises it. | ATDD adds an integration test under `<testsDir>/integration/**` with `QFAI:AC-0001-0026-01`; the test runs `qfai init --force` and asserts the legacy file is absent. |

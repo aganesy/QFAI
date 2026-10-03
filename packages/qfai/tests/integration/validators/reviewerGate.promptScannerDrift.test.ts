@@ -11,7 +11,7 @@
  * fixture matrix. Any future widening of the SSOT-sync ruleset MUST
  * be exercised by both anchors so the cross-link remains tight.
  */
-// QFAI:EX-0001-0128-01
+// QFAI:EX-0001-0124-01
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

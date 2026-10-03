@@ -10,11 +10,23 @@ roles:
     delivery-planner,
     qa-strategist,
     devops-ci-engineer,
+    doc-steward,
     qa-gatekeeper,
     completion-reviewer,
     implementation-reviewer,
   ]
-steps: [verify-context, verify-qfai-gate, verify-repo-gate]
+steps:
+  [
+    verify-repeat-run,
+    verify-advisory,
+    verify-change-note,
+    verify-context,
+    verify-qfai-gate,
+    verify-repo-gate,
+    verify-external,
+    verify-manual,
+    verify-release-notes,
+  ]
 requires: [common-review-cycle]
 mode: evidence-focused
 ---
@@ -22,6 +34,10 @@ mode: evidence-focused
 ## /qfai-verify — Quality Gates and Evidence
 
 [DRIFT-PROTOCOL:MANDATORY]
+
+Run the entry check of
+`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`
+first.
 
 ## Inputs
 
@@ -35,13 +51,20 @@ The run's evidence is `.qfai/evidence/verify-<run-id>.md`, and its verdict is
 
 ## Steps
 
-Every step runs, in this order:
+The steps run in this order. Invoked by name, a step is skipped only when its
+condition holds:
 
-| Step               | Runs                                                                     |
-| ------------------ | ------------------------------------------------------------------------ |
-| `verify-context`   | First: reads the inputs, fixes the scope, finds a command for each gate  |
-| `verify-qfai-gate` | Second: the QFAI validation of the scope                                 |
-| `verify-repo-gate` | Last: the repository gates, the fix loop, the evidence and `verify.json` |
+| Step                   | What it does                                                     | Skipped when                                    |
+| ---------------------- | ---------------------------------------------------------------- | ----------------------------------------------- |
+| `verify-repeat-run`    | Runs the named tests a recorded number of times in a row         | No test is named to show stable                 |
+| `verify-advisory`      | Prepares the advisory and disclosure of a vulnerability fix      | The change fixes no vulnerability               |
+| `verify-change-note`   | The changelog entry, the migration steps, the breaking changes   | Never; it passes when there is nothing to write |
+| `verify-context`       | Reads the inputs, fixes the scope, finds a command for each gate | Never                                           |
+| `verify-qfai-gate`     | The QFAI validation of the scope                                 | Never                                           |
+| `verify-repo-gate`     | The repository gates, the fix loop, the evidence, `verify.json`  | Never                                           |
+| `verify-external`      | Asks the reporter or a real environment to confirm the fix       | The gates here can confirm the fix              |
+| `verify-manual`        | Follows a written test plan on each environment                  | No written test plan is handed in               |
+| `verify-release-notes` | Drafts the release notes                                         | Release notes were not asked for                |
 
 Read `.qfai/assistant/step/<step>/STEP.md` for the current step only, run it,
 then move to the next. Each step names the common steps it runs in
@@ -52,15 +75,14 @@ user follow
 `.qfai/assistant/rule/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
 
 Inside an `npx qfai workflow` run, the work order lists the steps to run and
-this file adds nothing to it. The entry check is
-`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`.
+this file adds nothing to it.
 
 ## Review
 
 After the last step, run one review through `common-review-cycle`, with the
-union of the reviewers of the steps that ran: `qa-gatekeeper` and
-`completion-reviewer`, and `implementation-reviewer` when the fix loop changed
-code. Each step's `## Gate` section says what its reviewers check.
+union of the reviewers of the steps that ran: `completion-reviewer`, with
+`qa-gatekeeper` when a gate step or `verify-repeat-run` ran, and
+`implementation-reviewer` when the fix loop changed code. Each step's `## Gate` section says what its reviewers check.
 
 - Gate execution (`devops-ci-engineer`) and completion approval
   (`completion-reviewer`) are separate agents. Completion is approved by a
@@ -70,8 +92,8 @@ code. Each step's `## Gate` section says what its reviewers check.
 
 ## Completion
 
-The invocation completes on the gate of `verify-repo-gate` and a PASS of the
-review above.
+The invocation completes on the gate of the last step that ran and a PASS of
+the review above.
 
 When declaring DONE, include:
 

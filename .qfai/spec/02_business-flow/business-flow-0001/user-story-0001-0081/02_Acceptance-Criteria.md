@@ -3,16 +3,11 @@
 ## Criteria
 
 ```gherkin
-Feature: Tool Selection Documentation
+Feature: Reference Pool Authoring
   # AC-0001-0081-01
-  Scenario: Tool Selection Rationale Recorded
-    Given the configure workflow
-    When tool selection is made per layer
-    Then rationale is recorded in the evidence file.
-
-  # AC-0001-0081-02
-  Scenario: Minimum Runnable Path Documented
-    Given the project
-    When configuration completes
-    Then a minimum runnable path (dev server, DB, env, commands) is documented.
+  Scenario: UI-bearing discussion translates references into local direction
+    Given a UI-bearing discussion uses component or competitive references
+    When the reference registries in `04_Sources.md` are finalized
+    Then each registered reference identifies adopted points, rejected points, and their local translation
+    And competitive references are framed as material to deviate from, not a template to copy without change
 ```

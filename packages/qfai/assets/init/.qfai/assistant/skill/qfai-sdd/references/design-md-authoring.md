@@ -73,8 +73,8 @@ three intent fields, so those come first.
   validation rules live in
   the `DESIGN.md` spec.
 
-For the schema (12 colors, 3 fonts, 4 radii, 3 shadows, 8 archetypes), read
-the `DESIGN.md` spec and start from the sample at
+The schema has 12 colors, 3 fonts, 4 radii, 3 shadows and 8 archetypes. Start
+from the sample at
 `qfai-prototyping/templates/DESIGN.md.sample`.
 
 ## Taking the values from the theme

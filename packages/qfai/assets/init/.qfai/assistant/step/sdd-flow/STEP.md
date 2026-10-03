@@ -43,11 +43,28 @@ states.
 2. Write each fact once across `01_policy/objective.md`, `initiative.md`,
    `principle.md` and `03_contract/tech.md`.
 3. Write `tech.md` from its template: the stack in `## Stack`, Runtime and
-   Platform rows included; each runtime dependency with its reason in
-   `## Dependencies`; and the quality-gate commands, one labelled item each,
-   only in the Standard commands section of `tech.md`. Other documents point
-   there. `tech.md` holds no rules and no constraints: a rule goes to the
-   contract that enforces it, a constraint to `01_policy/constraint.md`.
+   Platform rows included; the layers in `## Architecture`; each runtime
+   dependency with its reason in `## Dependencies`; and the quality-gate
+   commands, one labelled item each, only in the Standard commands section of
+   `tech.md`. Other documents point there. `tech.md` holds no rules and no
+   constraints: a rule goes to the contract that enforces it, a constraint to
+   `01_policy/constraint.md`.
+
+   Write `## Architecture` from the technical decisions the discussion pack
+   records and, in an existing codebase, from its module layout and import
+   directions. A layer is a group of modules with a dependency direction: an
+   upper layer may use the layers below it, and a lower layer never knows an
+   upper one. Draw the layers first, as one `mermaid` `flowchart TD` with a
+   node per layer and an `Upper --> Lower` edge per dependency. Then list them
+   in the table, one row per layer from the uppermost down: what it is
+   responsible for, and the layers below it that it uses, or `-`. Depends on
+   points only downward, and the diagram and the table name the same layers
+   and edges. Name layers, never paths. `/qfai-implement`
+   places new code by this table and the reviewers judge a change against it:
+   a new module belongs to one layer and imports only from the layers its row
+   lists. Add a layer when a contract needs one; a layer boundary never goes
+   to `constraint.md`.
+
 4. Write every file in its template's shape and nothing more, as
    `.qfai/assistant/skill/qfai-sdd/references/spec-traceability-rules.md#document-shapes`
    states: policy holds criteria rather than definitions, and no section
@@ -61,9 +78,11 @@ states.
    | `08_Glossary.md` terms and abbreviations               | `glossary.md` `## Terms` rows                  |
    | `09_Constraints.md` technical and operational          | `constraint.md` technical and operational rows |
    | `09_Constraints.md` legal, budget and timeline entries | `constraint.md` `## Business Constraints` rows |
+   | A technical constraint that is a layer boundary        | `tech.md` `## Architecture` rows               |
 
-   A row takes the story-tree ID of its section, not the pack's ID, and only
-   the columns its template has.
+   A row takes the next ID of its section, which is its place in the table,
+   not the pack's ID. It keeps only the columns its template has, in plain
+   words: a file name, a command or a rule ID stays out of policy.
 
 6. Create or update `02_business-flow/business-flows.md` and each affected
    `business-flow-NNNN/business-flow.md`. The index holds one row per flow —
@@ -77,7 +96,8 @@ states.
    `.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#id-allocation`
    states, and add the new rows to the flow index.
 
-## Skipped when
+## Passes when
 
-Inside a run, the plan may gate this step with `when: proposed`: a change that
-touches no policy fact and no flow document leaves it out of the proposal.
+Read first: the triage rows and the scope they approve. The step passes when
+that scope changes no policy fact, no `tech.md` entry and no flow document. The
+pass names the triage rows it read.

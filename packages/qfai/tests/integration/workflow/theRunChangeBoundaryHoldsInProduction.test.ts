@@ -1,7 +1,7 @@
-// QFAI:AC-0001-0196-08
-// QFAI:EX-0001-0196-22
-// QFAI:EX-0001-0196-23
-// QFAI:EX-0001-0196-24
+// QFAI:AC-0001-0189-08
+// QFAI:EX-0001-0189-21
+// QFAI:EX-0001-0189-22
+// QFAI:EX-0001-0189-23
 
 import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -57,7 +57,7 @@ it("An implement result changing its evidence and a source file inside the bound
     next: field(next.json, "run.state"),
     stage: field(next.json, "workOrder.stageKind"),
     summary: (await readFile(summary, "utf8")).length > 0,
-  }).toEqual({ accepted: "ready", next: "running", stage: "verify", summary: true });
+  }).toEqual({ accepted: "ready", next: "running", stage: "maintenance", summary: true });
 });
 
 it("A file changed outside the boundary while the implement work order is outstanding", async () => {
@@ -74,7 +74,7 @@ it("A file changed outside the boundary while the implement work order is outsta
   }).toEqual({ state: "blocked", cause: "invariant-violation", subjects: ["docs/stray.md"] });
 });
 
-// A feature run whose verify result is blocked on a finding in `docs/guide.md`, which lies
+// An add-feature run whose verify result is blocked on a finding in `docs/guide.md`, which lies
 // outside the run's scope, repaired outside the run under a change request at WIP.
 async function repairedOutsideTheRun(unapproved?: string) {
   const root = await initProject();

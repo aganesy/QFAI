@@ -1,5 +1,5 @@
-# US-0001-0101: Convergence and iteration budget
+# US-0001-0101: Documented iteration cycle
 
 ## User Story
 
-As a reviewer, I want the iteration gate to use explicit convergence and budget rules, so that shallow success narratives are not mistaken for completed prototyping.
+As an evaluator, I want the iteration cycle described in natural language, so that generation, live review, fixes, and re-evaluation happen in a repeatable order, with capture when requested.

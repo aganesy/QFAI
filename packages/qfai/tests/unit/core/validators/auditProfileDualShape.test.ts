@@ -1,18 +1,17 @@
 /**
- * Unit: `auditProfile.ts` dual-shape accept (TC-0004-0069 / TDD-0049).
+ * Unit: `auditProfile.ts` task shape (TC-0004-0069 / TDD-0049).
  *
  * - `auditProfile.ts` re-exports the audit lane entrypoints from
- *   `designAudit.ts`. Feeding a UI contract whose `primary_tasks`
- *   entries are string-only (legacy) AND a sibling contract whose
- *   entries are structured `{id, label, acceptance}` objects must
- *   BOTH pass: no `QFAI-AUD-021` shape findings, no `QFAI-AUD-020`
- *   band findings (counts within `3..7`), no `QFAI-AUD-001` empty
- *   findings.
+ *   `designAudit.ts`. A UI contract whose `primary_tasks` entries are
+ *   structured `{id, label, acceptance}` mappings passes: no
+ *   `QFAI-AUD-021` shape findings, no `QFAI-AUD-020` ceiling findings,
+ *   no `QFAI-AUD-001` empty findings. A sibling contract whose entries
+ *   are plain strings is rejected with one `QFAI-AUD-021` per entry.
  *
  * - Verifies the auditProfile surface delegates to the shared
  *   designAudit lane.
  */
-// QFAI:EX-0001-0052-01
+// QFAI:EX-0001-0050-01
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -33,8 +32,8 @@ async function seedConfig(): Promise<void> {
     path.join(root, "qfai.config.yaml"),
     [
       "paths:",
-      "  contractsDir: .qfai/contracts",
-      "  specsDir: .qfai/specs",
+      "  contractsDir: .qfai/spec/03_contract",
+      "  specsDir: .qfai/spec",
       "  discussionDir: .qfai/discussion",
       "  outDir: .qfai/report",
       "  skillsDir: .qfai/assistant/skills",
@@ -51,7 +50,7 @@ async function seedConfig(): Promise<void> {
 }
 
 async function writeUiContract(filename: string, body: string): Promise<void> {
-  const uiDir = path.join(root, ".qfai", "contracts", "ui");
+  const uiDir = path.join(root, ".qfai", "spec", "03_contract", "ui");
   await mkdir(uiDir, { recursive: true });
   await writeFile(path.join(uiDir, filename), body, "utf-8");
 }
@@ -65,8 +64,8 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
-describe("TC-0004-0069: auditProfile accepts string-only AND structured primary_tasks (normal)", () => {
-  it("string-only primary_tasks (legacy) pass during the deprecation window", async () => {
+describe("TC-0004-0069: auditProfile accepts only structured primary_tasks", () => {
+  it("rejects plain string primary_tasks, one QFAI-AUD-021 per entry", async () => {
     const ui = [
       "screens:",
       "  - id: dashboard",
@@ -81,9 +80,8 @@ describe("TC-0004-0069: auditProfile accepts string-only AND structured primary_
     await writeUiContract("legacy.yaml", ui);
 
     const issues = await runAuditProfile(root, defaultConfig);
-    expect(issues.find((i) => i.code === "QFAI-AUD-021")).toBeUndefined();
-    expect(issues.find((i) => i.code === "QFAI-AUD-020")).toBeUndefined();
-    expect(issues.find((i) => i.code === "QFAI-AUD-001")).toBeUndefined();
+    expect(issues.filter((i) => i.code === "QFAI-AUD-021")).toHaveLength(3);
+    expect(issues.find((i) => i.code === "QFAI-AUD-001")?.severity).toBe("error");
   });
 
   it("structured {id,label,acceptance} primary_tasks (closed schema) pass", async () => {
@@ -112,7 +110,7 @@ describe("TC-0004-0069: auditProfile accepts string-only AND structured primary_
     expect(issues.find((i) => i.code === "QFAI-AUD-001")).toBeUndefined();
   });
 
-  it("mixed sibling contracts (one string-only + one structured) both pass simultaneously", async () => {
+  it("rejects the string-only sibling and passes the structured one", async () => {
     await writeUiContract(
       "legacy.yaml",
       [
@@ -149,8 +147,10 @@ describe("TC-0004-0069: auditProfile accepts string-only AND structured primary_
     );
 
     const issues = await runAuditProfile(root, defaultConfig);
-    expect(issues.find((i) => i.code === "QFAI-AUD-021")).toBeUndefined();
-    expect(issues.find((i) => i.code === "QFAI-AUD-020")).toBeUndefined();
+    const shape = issues.filter((i) => i.code === "QFAI-AUD-021");
+    expect(shape).toHaveLength(3);
+    expect(shape.every((i) => i.file?.includes("legacy.yaml"))).toBe(true);
+    expect(issues.filter((i) => i.file?.includes("structured.yaml"))).toEqual([]);
   });
 
   it("auditProfile.runAuditProfile delegates to validateDesignAudit (same observable behavior)", async () => {

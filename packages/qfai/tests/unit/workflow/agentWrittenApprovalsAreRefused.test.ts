@@ -1,4 +1,4 @@
-// QFAI:EX-0001-0195-09
+// QFAI:EX-0001-0188-09
 
 import { expect, it } from "vitest";
 
@@ -10,7 +10,7 @@ type AcceptResult = NonNullable<Input["result"]>;
 type Question = NonNullable<Parameters<typeof decide>[0]["openQuestions"]>[number];
 
 const plan = {
-  route: "direct",
+  route: "edit-text",
   stages: [planStage("direct-edit", "maintenance"), planStage("direct-verify", "verify")],
 };
 const flowBinding = { flowId: "BF-0007" };
