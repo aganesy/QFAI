@@ -2,7 +2,7 @@
 name: implement-revert
 owner: qfai-implement
 purpose: "Undo the change a bisection named as the cause of a failure, and confirm the failure is gone and nothing else broke."
-requires: [common-steering-refresh, common-gate-run]
+requires: [common-gate-run]
 roles:
   - frontend-engineer
   - backend-engineer

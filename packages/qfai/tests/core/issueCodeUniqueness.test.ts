@@ -285,7 +285,6 @@ const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "UIX-VAL-TREND-ENTRY-MISSING",
   "UIX-VAL-TREND-FIELD-MISSING",
   "UIX-VAL-TREND-SCAN-MISSING",
-  "W-SKILL-DOC-BROKEN-REF",
 ]);
 
 const PENDING_FIX_CATALOG_CODES = new Set<string>([
@@ -348,7 +347,6 @@ const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "R-HANDOFF-SCHEMA-DRIFT",
   "R-MOCK-HREF-DRIFT",
   "R-SKILL-MANIFEST-DRIFT",
-  "W-SKILL-DOC-BROKEN-REF",
 ]);
 
 async function collectErrorCapableUsage(): Promise<Map<string, IssueCodeUsage>> {
@@ -665,7 +663,6 @@ describe("the form of a finding code", () => {
     "UIX-VAL-TREND-FIELD-MISSING",
     "UIX-VAL-TREND-SCAN-MISSING",
     "W-ASSISTANT-LAYOUT",
-    "W-SKILL-DOC-BROKEN-REF",
     "W-SKILL-PROJECT-MEMORY",
     "W-STALE-REFERENCE",
   ]);

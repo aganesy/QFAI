@@ -66,8 +66,7 @@ import {
   joinAssistantLayer,
   joinAssistantReadme,
   joinLegacyAssistantInstructions,
-  joinLegacyAssistantSteering,
-  legacyAssistantSteeringSunsetLabel,
+  legacyAssistantTreeSunsetLabel,
 } from "../../core/paths/assistantPaths.js";
 import {
   type PendingCitations,
@@ -563,7 +562,7 @@ export async function runInit(
     info(note);
   }
 
-  // A legacy steering/ or instructions/ tree is reported as a
+  // A legacy instructions/ tree is reported as a
   // D-DEPRECATED-PATH error on stderr. Emitted AFTER the report summary so
   // it stays at the bottom of the terminal output and is not buried by the
   // skipped-paths list.
@@ -571,7 +570,7 @@ export async function runInit(
   // --upgrade-assistant-tree (the helper will move the directory
   // itself); skip on dry-run; skip when no legacy dir exists.
   if (!options.upgradeAssistantTree && !options.dryRun) {
-    await emitLegacyAssistantSteeringSunset(destRoot);
+    await emitLegacyAssistantTreeSunset(destRoot);
   }
 }
 
@@ -928,53 +927,41 @@ async function runUpgradeAssistantTree(destRoot: string, dryRun: boolean): Promi
   const removed: string[] = [];
   const preservedNotes: string[] = [];
 
-  // Only known files in these legacy surfaces have relocation destinations.
-  // Unknown files and other legacy surfaces remain where the project put them.
-  const legacySurfaces: Array<{ name: "steering" | "instructions"; dir: string }> = [
-    { name: "steering", dir: joinLegacyAssistantSteering(destRoot) },
-    { name: "instructions", dir: joinLegacyAssistantInstructions(destRoot) },
-  ];
-  const surfaceExistence = await Promise.all(legacySurfaces.map((s) => pathExists(s.dir)));
-  const anyLegacyExists = surfaceExistence.some(Boolean);
-  if (!anyLegacyExists) {
+  // Only known files in the legacy surface have relocation destinations.
+  // Unknown files remain where the project put them.
+  const legacyDir = joinLegacyAssistantInstructions(destRoot);
+  if (!(await pathExists(legacyDir))) {
     // Already-upgraded project: emit info-only note so the operator
     // sees the migration helper ran, under the same `W-USER-EDIT-PRESERVED`
     // code the preserved-edit notes use.
     preservedNotes.push(
-      "  W-USER-EDIT-PRESERVED: no pre-recut surfaces (.qfai/assistant/{steering,instructions}/) found; no migration was needed.",
+      "  W-USER-EDIT-PRESERVED: no pre-recut surface (.qfai/assistant/instructions/) found; no migration was needed.",
     );
     return { copied, skipped, removed, preservedNotes };
   }
 
-  // Walk every legacy surface and re-locate each file into the new
-  // singular assistant tree based on the name-driven classifier. User edits are
-  // preserved by file copy (not overwrite); legacy files are left in
-  // place AND a W-USER-EDIT-PRESERVED informational note is emitted so
-  // the operator can decide when to delete the originals.
-  for (let i = 0; i < legacySurfaces.length; i++) {
-    if (!surfaceExistence[i]) continue;
-    const surface = legacySurfaces[i];
-    if (!surface) continue;
-    const legacyEntries = await collectFilesRecursive(surface.dir);
-    for (const legacyPath of legacyEntries) {
-      const rel = path.relative(surface.dir, legacyPath);
-      const target = classifyLegacySteeringEntry(rel);
-      if (target === null) continue;
-      const newPath = joinAssistantLayer(destRoot, target.layer, ...target.subpath.split("/"));
-      if (await pathExists(newPath)) {
-        // User has already authored / edited the new file — preserve it.
-        skipped.push(newPath);
-        preservedNotes.push(
-          `  W-USER-EDIT-PRESERVED: ${path.relative(destRoot, newPath).replace(/\\/g, "/")} kept (existing user edit detected).`,
-        );
-        continue;
-      }
-      copied.push(newPath);
-      if (!dryRun) {
-        const body = await readFile(legacyPath, "utf-8");
-        await mkdir(path.dirname(newPath), { recursive: true });
-        await writeFile(newPath, body, "utf-8");
-      }
+  // Re-locate each legacy file into the singular assistant tree based on the
+  // name-driven classifier. User edits are preserved by file copy (not
+  // overwrite); legacy files are left in place AND a W-USER-EDIT-PRESERVED
+  // informational note is emitted so the operator can decide when to delete
+  // the originals.
+  for (const legacyPath of await collectFilesRecursive(legacyDir)) {
+    const target = classifyLegacyAssistantEntry(path.relative(legacyDir, legacyPath));
+    if (target === null) continue;
+    const newPath = joinAssistantLayer(destRoot, target.layer, ...target.subpath.split("/"));
+    if (await pathExists(newPath)) {
+      // User has already authored / edited the new file — preserve it.
+      skipped.push(newPath);
+      preservedNotes.push(
+        `  W-USER-EDIT-PRESERVED: ${path.relative(destRoot, newPath).replace(/\\/g, "/")} kept (existing user edit detected).`,
+      );
+      continue;
+    }
+    copied.push(newPath);
+    if (!dryRun) {
+      const body = await readFile(legacyPath, "utf-8");
+      await mkdir(path.dirname(newPath), { recursive: true });
+      await writeFile(newPath, body, "utf-8");
     }
   }
 
@@ -999,7 +986,7 @@ const UPGRADE_RULE_FILES = new Set([
   "ui-procurement.md",
 ]);
 
-function classifyLegacySteeringEntry(
+function classifyLegacyAssistantEntry(
   relPath: string,
 ): { layer: "rule" | "skill"; subpath: string } | null {
   const normalized = relPath.replace(/\\/g, "/");
@@ -1034,21 +1021,16 @@ async function collectFilesRecursive(dir: string): Promise<string[]> {
  *
  * The exit code deliberately does not change: `init` is what a bootstrap script
  * runs, and `validate` is the surface the contract charges with failing the
- * build. Both surfaces of the tree (steering/ AND instructions/) are reported,
- * matching the validator's symmetry.
+ * build.
  */
-async function emitLegacyAssistantSteeringSunset(destRoot: string): Promise<void> {
-  const sunset = legacyAssistantSteeringSunsetLabel();
-  const detected: string[] = [];
-  if (await pathExists(joinLegacyAssistantSteering(destRoot))) detected.push("steering");
-  if (await pathExists(joinLegacyAssistantInstructions(destRoot))) detected.push("instructions");
-  if (detected.length === 0) return;
-  const surfaces = detected.map((s) => `.qfai/assistant/${s}/`).join(" + ");
+async function emitLegacyAssistantTreeSunset(destRoot: string): Promise<void> {
+  if (!(await pathExists(joinLegacyAssistantInstructions(destRoot)))) return;
+  const sunset = legacyAssistantTreeSunsetLabel();
   // The readers no longer accept the retired layout, so this is an error
   // outright. The version stays in the message as the operator's only pointer
   // to when it started applying.
   error(
-    `  D-DEPRECATED-PATH: ${surfaces} past the announced sunset (v${sunset}). Run \`qfai init --upgrade-assistant-tree\` to migrate.`,
+    `  D-DEPRECATED-PATH: .qfai/assistant/instructions/ past the announced sunset (v${sunset}). Run \`qfai init --upgrade-assistant-tree\` to migrate.`,
   );
 }
 
@@ -3776,7 +3758,7 @@ function buildCopilotInstructions(): string {
     "  - Skills: `.qfai/assistant/skill/`",
     "  - Agents: `.qfai/assistant/agent/`",
     "  - Prompts: `.qfai/assistant/prompt/`",
-    "- The legacy `.qfai/assistant/steering/` and `.qfai/assistant/instructions/` layout is past its compatibility window.",
+    "- The legacy `.qfai/assistant/instructions/` layout is past its compatibility window.",
     "  `qfai init` reports it on stderr as a `D-DEPRECATED-PATH` error.",
     "  Run `qfai init --upgrade-assistant-tree` to migrate it.",
     "- When asked to perform QFAI workflow tasks, prefer using the QFAI skill symlinks in `.github/skills/`.",

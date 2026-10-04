@@ -38,8 +38,7 @@ describe("generated Copilot instructions state the closed legacy window", () => 
     if (dir) await removeTempTree(dir);
   });
 
-  it("names both legacy surfaces and says their compatibility window has closed", () => {
-    expect(legacyItem).toContain("`.qfai/assistant/steering/`");
+  it("names the legacy surface and says its compatibility window has closed", () => {
     expect(legacyItem).toContain("`.qfai/assistant/instructions/`");
     expect(legacyItem).toContain("past its compatibility window");
   });

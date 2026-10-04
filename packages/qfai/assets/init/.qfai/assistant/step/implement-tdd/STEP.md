@@ -3,7 +3,6 @@ name: implement-tdd
 owner: qfai-implement
 purpose: "Select each owed example of one business flow from a fresh validator result, take it through an observed Red, Green and Refactor cycle, and align every surface that does not own the truth."
 requires:
-  - common-steering-refresh
   - common-gate-run
   - common-grilling-record
 roles:
@@ -57,7 +56,7 @@ states the case is worked as an EX no test annotates, and where none does,
 
 ## Preflight
 
-1. Run `common-steering-refresh`. Follow
+1. Follow
    `.qfai/assistant/rule/shared-skill-operating-baseline.md` for format, and
    `.qfai/assistant/rule/shared-skill-delegation-baseline.md` for the first
    delegation, capability check, and failure handling. Confirm the flow and
@@ -119,7 +118,7 @@ is no such finding, this step ends and `implement-checkpoint` runs. Report any
 other finding with its owner; a clean EX selection alone is not a PASS.
 
 Inside a workflow run, the stage runs that validation itself at every stage
-start and selects from its result, never from a shared Stage 0 snapshot. A
+start and selects from its result, never from an earlier stage's result. A
 stage that resumes starts at the example its work order's `checkpointRef`
 names, and the procedure order is unchanged on resume. The result names EX IDs and records no progress state of its own: a
 test annotating an example is what says the example is done.

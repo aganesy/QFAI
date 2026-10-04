@@ -2,7 +2,7 @@
 name: discussion-research
 owner: qfai-discussion
 purpose: "Record the research the interview reads."
-requires: [common-steering-refresh]
+requires: []
 roles: [delivery-planner, discovery-analyst]
 routing-profile: default
 ---
@@ -21,13 +21,11 @@ runs before any decision is taken.
 ## Writes
 
 The research summary, in the stage report. Nothing under `.qfai/discussion/`,
-and no steering file.
+and no policy file.
 
 ## Procedure
 
-1. Run `common-steering-refresh`. Discussion owns no steering file, so a gap it
-   finds is routed to its owner or recorded as an open question.
-2. Run `.qfai/assistant/rule/research-first-protocol.md` before any other
+1. Run `.qfai/assistant/rule/research-first-protocol.md` before any other
    artifact is authored, and report its `research_summary` output. Its `best_practices` and `anti_patterns` are inputs to every
    later step, not a late fill-in.
 
