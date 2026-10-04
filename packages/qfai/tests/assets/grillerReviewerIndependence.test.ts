@@ -21,6 +21,7 @@ describe("SDD griller and reviewer independence", () => {
       expect(loop).toContain(
         "Keep grilling and the final review apart: the reviewer reviews no decision it recommended",
       );
+      expect(loop).toContain("settles them in a delegated grilling session");
       expect(loop).toContain("A critical product decision goes to the user");
       expect(skill).toContain("run one review with `common-review-cycle`");
       // Independence is the shared reviewer gate's, which every skill inherits.
