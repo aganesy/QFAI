@@ -4,8 +4,8 @@ import path from "node:path";
 import { planOf, refusal, type PlanDocument } from "../../core/workflow/plan.js";
 import { EXIT_CODES } from "../lib/exitCodes.js";
 
-// The one operation, as `npx qfai workflow --help` prints it: the one output that is not a JSON
-// document.
+// The one operation, as `npx qfai workflow --help` prints it. This and `--version` are the two
+// outputs that are not a JSON document.
 export const WORKFLOW_HELP = [
   "plan --in <path|->   Print the route plan for the request extraction in the file, or on stdin",
   "plan --route <route> Print the plan of the named route",
@@ -17,7 +17,7 @@ export interface WorkflowOptions {
   route?: string;
 }
 
-// Every invocation but `--help` prints exactly one JSON document on stdout.
+// Every invocation but `--help` and `--version` prints exactly one JSON document on stdout.
 export function emitPlanDocument(document: PlanDocument): number {
   process.stdout.write(`${JSON.stringify(document, null, 2)}\n`);
   if (document.ok) return EXIT_CODES.ok;
@@ -43,13 +43,13 @@ async function readExtraction(root: string, inPath: string): Promise<Read> {
   try {
     text = inPath === "-" ? await readStdin() : await readFile(path.resolve(root, inPath), "utf8");
   } catch {
-    const message = "The input file cannot be read. Check the path and try again.";
+    const message = "The input file cannot be read, so check the path and try again.";
     return { ok: false, document: refusal(message, [{ reason: "io-error", subject: inPath }]) };
   }
   try {
     return { ok: true, value: JSON.parse(text) };
   } catch {
-    const message = "The input is not one JSON object. Fix it and try again.";
+    const message = "The input is not one JSON object, so fix it and try again.";
     return {
       ok: false,
       document: refusal(message, [{ reason: "invalid-input", subject: inPath }]),

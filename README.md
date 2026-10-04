@@ -349,7 +349,8 @@ flowchart LR
     reads a request's extraction; `--route <route>` names a route instead. It prints one JSON
     document: the route's stages and step files with its decision, release and branch points, the
     candidate routes of an unsure extraction, or a refusal. It starts nothing and writes no file.
-    Exit codes: 0 (a plan or candidates), 2 (input refused), 1 (a shipped plan does not load).
+    Exit codes: 0 (a plan or candidates), 2 (input refused), 1 (the `--in` file cannot be read, or a
+    shipped plan does not load).
 - `npx qfai sdd preflight`
   - Runs the Stage 0 gate of `/qfai-sdd`: selects the active discussion pack, counts the imported `REQ-*`,
     resolves the blockers, and writes the summary run-scoped at

@@ -33,9 +33,9 @@ afterEach(async () => {
   await Promise.all(roots.splice(0).map((root) => removeTempTree(root)));
 });
 
-// A minimal project: one `STEP.md` per step the package's plans run. The plans and the routing
-// stay in the package.
-async function project(): Promise<string> {
+// A minimal project: one `STEP.md` per step the package's plans run, and the `qfai.config.yaml`
+// given. The plans and the routing stay in the package.
+async function project(config?: string): Promise<string> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-plans-"));
   roots.push(root);
   const plans = await loadBuiltInPlans();
@@ -45,6 +45,7 @@ async function project(): Promise<string> {
     await mkdir(dir, { recursive: true });
     await writeFile(path.join(dir, "STEP.md"), `# ${name}\n`);
   }
+  if (config !== undefined) await writeFile(path.join(root, "qfai.config.yaml"), config);
   return root;
 }
 
@@ -162,19 +163,24 @@ async function refusalsOf(route: string, change: (text: string) => string) {
 
 const loadRefusals: [string, (text: string) => string][] = [
   ["not-mapping", () => "- route\n- stages\n"],
+  // QFAI:EX-0001-0218-06
   ["unknown-key", (text) => `${text}owner: platform-team\n`],
   ["route-name", (text) => text.replace("route: edit-text", "route: fix-defect")],
   ["family", (text) => text.replace("family: change", "family: chores")],
+  // QFAI:EX-0001-0218-01
   ["out-of-vocabulary", (text) => text.replace("kind: verify", "kind: verification")],
+  // QFAI:EX-0001-0218-01
   ["kind-mismatch", (text) => text.replace(EDIT_STEPS, "steps: [sdd-story]")],
   ["shape", (text) => text.replace("- id: edit", '- id: ""')],
   ["after-missing", (text) => text.replace("after: [edit]", "after: [review]")],
+  // QFAI:EX-0001-0218-09
   [
     "after-order",
     (text) => text.replace(EDIT_STAGE, "").replace("decisionPoints", `${EDIT_STAGE}decisionPoints`),
   ],
   ["cycle", (text) => text.replace(EDIT_STAGE, `${EDIT_STAGE}    after: [verify]\n`)],
   ["unreachable", (text) => text.replace(EDIT_STAGE, `${EDIT_STAGE}    after: [edit]\n`)],
+  // QFAI:EX-0001-0218-04
   [
     "no-verify-path",
     (text) =>
@@ -195,12 +201,17 @@ for (const [reason, change] of loadRefusals) {
 }
 
 const stepRefusals: [string, string, string][] = [
+  // QFAI:EX-0001-0218-01
   ["a step outside the vocabulary", "steps: [maintain-rewrite]", "out-of-vocabulary"],
+  // QFAI:EX-0001-0218-01
   ["a step another kind runs", "steps: [maintain-edit, sdd-gate]", "kind-mismatch"],
   ["the seam step in a plan", "steps: [implement-seam]", "seam"],
   ["a step listed twice", "steps: [maintain-edit, maintain-edit]", "shape"],
   ["no step", "steps: []", "shape"],
+  // QFAI:EX-0001-0218-06
   ["an operation beside the steps", `${EDIT_STEPS}\n    operation: edit`, "unknown-key"],
+  // QFAI:EX-0001-0218-06
+  ["an external effect beside the steps", `${EDIT_STEPS}\n    effects: [push]`, "unknown-key"],
 ];
 
 for (const [title, steps, reason] of stepRefusals) {
@@ -225,6 +236,7 @@ const retiredNames: [string, string][] = [
 
 for (const [title, to] of retiredNames) {
   // BR-0020-0016
+  // QFAI:EX-0001-0218-01
   it(title, async () => {
     const refusals = await refusalsOf("edit-text", (text) => text.replace("kind: maintenance", to));
 
@@ -430,6 +442,35 @@ it("Every shipped plan loads and every step it names is installed", async () => 
   const root = await project();
 
   expect(await refusalsFor(root)).toEqual([]);
+});
+
+// A `routing:` override for `maintain-edit` whose edit phase binds the agents given.
+function maintainEditOverride(mandatory: string, conditional: string): string {
+  return [
+    "routing:",
+    "  - step: maintain-edit",
+    "    phases:",
+    "      - id: edit",
+    `        mandatory_agents: [${mandatory}]`,
+    `        conditional_agents: [${conditional}]`,
+    "        parallel_groups: []",
+    "        rerun_policy: changed-scope-dependents",
+    "    review_profile: default",
+    "",
+  ].join("\n");
+}
+
+it("A routing override that keeps every required agent, and one that drops one", async () => {
+  const kept = await project(maintainEditOverride("doc-steward", "qa-strategist"));
+  const dropped = await project(maintainEditOverride("qa-strategist", ""));
+
+  expect({
+    kept: await refusalsFor(kept),
+    dropped: (await refusalsFor(dropped)).map(({ reason, subject }) => ({ reason, subject })),
+  }).toEqual({
+    kept: [],
+    dropped: [{ reason: "reviewer-missing", subject: "maintain-edit:doc-steward" }],
+  });
 });
 
 it("A project whose sdd-story step is not installed", async () => {
