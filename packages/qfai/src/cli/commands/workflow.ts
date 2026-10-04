@@ -43,13 +43,13 @@ async function readExtraction(root: string, inPath: string): Promise<Read> {
   try {
     text = inPath === "-" ? await readStdin() : await readFile(path.resolve(root, inPath), "utf8");
   } catch {
-    const message = "The input file cannot be read. Check the path and try again.";
+    const message = "The input file cannot be read, so check the path and try again.";
     return { ok: false, document: refusal(message, [{ reason: "io-error", subject: inPath }]) };
   }
   try {
     return { ok: true, value: JSON.parse(text) };
   } catch {
-    const message = "The input is not one JSON object. Fix it and try again.";
+    const message = "The input is not one JSON object, so fix it and try again.";
     return {
       ok: false,
       document: refusal(message, [{ reason: "invalid-input", subject: inPath }]),

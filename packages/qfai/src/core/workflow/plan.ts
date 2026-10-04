@@ -114,12 +114,13 @@ type Loaded = { ok: true; plan: WorkflowPlanFile } | { ok: false; document: Plan
 function planInvalid(refusals: readonly PlanRefusal[]): PlanDocument {
   const reasons = refusals.map((each) => ({
     reason: "plan-invalid" as const,
-    subject: each.subject,
+    // A refusal about an empty key or name has no subject of its own: name the plan file.
+    subject: each.subject || `${each.route}.yml`,
     file: `${each.route}.yml`,
     cause: each.reason,
   }));
   const message =
-    "A plan the package ships does not load in this project. Reinstall qfai, or rerun its init with --force to restore the missing steps.";
+    "A plan the package ships does not load in this project, so reinstall qfai or rerun its init with --force to restore the missing steps.";
   return refusal(message, reasons);
 }
 
@@ -156,7 +157,7 @@ async function planOfExtraction(root: string, extraction: unknown): Promise<Plan
   if (!isExtraction(extraction)) {
     const subjects = extractionFaults(extraction);
     const message =
-      "The extraction does not match its schema: a field is missing, unknown or holds a value it does not take. Fix the named fields and try again.";
+      "The extraction does not match its schema, so fix each named field that is missing, unknown or holds a value it does not take.";
     return refusal(
       message,
       subjects.map((subject) => ({ reason: "schema", subject })),
@@ -177,7 +178,7 @@ async function planOfExtraction(root: string, extraction: unknown): Promise<Plan
 export async function planOf(root: string, input: PlanInput): Promise<PlanDocument> {
   if ("extraction" in input) return planOfExtraction(root, input.extraction);
   if (!isWorkflowRoute(input.route)) {
-    const message = "No route has that name. Name a route of the catalog.";
+    const message = "No route has that name, so name a route of the catalog.";
     return refusal(message, [{ reason: "unknown-route", subject: input.route || "--route" }]);
   }
   const load = await loaded(root, input.route);

@@ -130,12 +130,12 @@ it("An extraction carrying a key it does not declare is refused, naming the key"
 // QFAI:EX-0001-0222-06
 it("A route the catalog does not name is refused as an unknown route", async () => {
   const root = await minimalProject();
-  const planned = workflow(root, ["plan", "--route", "no-such-route"]);
+  const planned = workflow(root, ["plan", "--route", "sweep-guard"]);
 
   expect([planned.status, field(planned.json, "ok"), reasonsOf(planned.json)]).toEqual([
     2,
     false,
-    [{ reason: "unknown-route", subject: "no-such-route" }],
+    [{ reason: "unknown-route", subject: "sweep-guard" }],
   ]);
 });
 

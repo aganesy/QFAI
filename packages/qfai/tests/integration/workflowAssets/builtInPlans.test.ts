@@ -100,7 +100,7 @@ const PASS_THROUGH = [
 
 const PLAN_KEYS = ["route", "family", "stages", "decisionPoints", "releasePoint", "branchPoints"];
 
-const STAGE_KEYS = ["id", "kind", "steps", "after", "effects", "review"];
+const STAGE_KEYS = ["id", "kind", "steps", "after", "review"];
 
 /**
  * The order the delivery contract fixes for the skills a plan's steps belong to. A triage stage

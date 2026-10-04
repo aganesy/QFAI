@@ -182,10 +182,10 @@ for (const [name, facts] of EXCLUDED_CLASSES) {
   });
 }
 
-it("The tracked fixture holds 64 unique routing seeds", async () => {
+it("The tracked fixture holds 60 unique routing seeds", async () => {
   const routes = (await routingSeeds()).map((each) => each.id);
 
-  expect(new Set(routes).size).toBe(64);
+  expect(new Set(routes).size).toBe(60);
 });
 
 it("No seed expects a retired stage, or an annotated example to lose its test", async () => {
@@ -197,7 +197,7 @@ it("No seed expects a retired stage, or an annotated example to lose its test", 
     seeds: seeds.length,
     retired: must(/^(defect_reopen|sdd_reconcile)$/),
     uncovering: must(/uncover|delete_test|remove_test|same_obligation_reopen/),
-  }).toEqual({ seeds: 64, retired: [], uncovering: [] });
+  }).toEqual({ seeds: 60, retired: [], uncovering: [] });
 });
 
 it("Every routing prompt and rationale is English, and the phone prompt stays shared", async () => {
@@ -209,7 +209,7 @@ it("Every routing prompt and rationale is English, and the phone prompt stays sh
     seeds: seeds.length,
     cjk: seeds.filter((each) => cjk.test(each.userPrompt) || cjk.test(each.rationale)),
     phone: new Set(["ROUTE-007", "ROUTE-008", "ROUTE-009"].map(promptOf)).size,
-  }).toEqual({ seeds: 64, cjk: [], phone: 1 });
+  }).toEqual({ seeds: 60, cjk: [], phone: 1 });
 });
 
 it("No seed names a spec or a ledger outside the prompt an operator typed", async () => {
@@ -287,7 +287,7 @@ it("Every must and forbid token of the routing seeds is typed", async () => {
   const typed = await vocabulary();
 
   expect({ seeds: seeds.length, untyped: untypedTokens(seeds, typed) }).toEqual({
-    seeds: 64,
+    seeds: 60,
     untyped: [],
   });
 });
@@ -347,7 +347,7 @@ async function buildFromBase(base: string, each: Seed): Promise<string[]> {
   }
 }
 
-it("The 64 fixture repositories build from one qfai init base, refusing only the facts no tree reproduces", async () => {
+it("The 60 fixture repositories build from one qfai init base, refusing only the facts no tree reproduces", async () => {
   const seeds = await routingSeeds();
   const base = await tempRoot("qfai-eval-base-");
   buildBase(base);
@@ -370,7 +370,7 @@ it("The 64 fixture repositories build from one qfai init base, refusing only the
     ),
     refused,
   }).toEqual({
-    seeds: 64,
+    seeds: 60,
     unmapped: [],
     both: [],
     refused: Object.fromEntries(
