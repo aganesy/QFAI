@@ -52,7 +52,6 @@ value but the three below plans nothing.
 
 ## The work
 
-0. **Policy check.** Run `common-policy-check` once, before the extraction.
 1. **Extract.** Read the request into an extraction as
    `references/extraction.md` sets out, and pass it to
    `npx qfai workflow plan --in <file>`, or `--in -` on standard input.
@@ -60,14 +59,17 @@ value but the three below plans nothing.
    question, each option saying in the user's words what that route will do,
    then run `npx qfai workflow plan --route <route>` for the chosen one.
 3. **Announce.** Before the first stage, give the goal, the stages in order in
-   plain words, and the files the work may change. Ask nothing.
+   plain words, and the files the work may change. Ask nothing. Then run
+   `common-policy-check` once. On a route that changes no file, one that
+   closes, answers or asks, it reads and reports and writes nothing.
 4. **Run the stages.** Run each stage in plan order, and each of its steps in
    order. Write any artifact yourself. Give a part to a sub-agent only to run
    independent parts in parallel, or for a review. At each step, handle the
    points the plan names for it:
    - **Release point.** Before a step `releasePoint` names runs, ask the user
-     to approve the release; where it is `end`, ask after the last stage, then
-     rerun its gates over the approval's `decisions.md` row. Nothing after it
+     to approve the release; where it is `end`, ask once the last stage's
+     gates have passed, then rerun them over the approval's `decisions.md`
+     row. `verify-commit` runs after that, so the commit holds the approval. Nothing after it
      runs without the approval, which authorizes no push, merge, tag or publication.
    - **Decision point.** At a step `decisionPoints` names, put each critical
      decision to the user through the structured question tool before
@@ -95,7 +97,7 @@ value but the three below plans nothing.
    when, and the chosen option's label. A decision you took appends no row.
 7. **A finding no stage serves.** Stop, and name the finding, its owner and
    the stage skill to invoke by name.
-8. **Commit.** A change route ends with `verify-commit`, which never pushes.
+8. **Commit.** `verify-commit` runs last, after any release point; never pushes.
 
 ## Under a no-question mode
 

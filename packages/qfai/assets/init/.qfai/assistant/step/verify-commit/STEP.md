@@ -28,16 +28,18 @@ the user's own instruction.
 ## Procedure
 
 1. Stop when a verify gate failed or did not run, and say which.
-2. Stage exactly the paths the run wrote, with `git add <those paths>`.
-   Never `git add -A` or `git add .`. A file that was already modified
-   before the run and then written by it is committed whole; the final report
-   names it.
+2. Stage exactly the tracked deliverables the run wrote, with
+   `git add <those paths>`. Never `git add -A`, `git add .` or `git add -f`,
+   and never a file git ignores, such as `.qfai/report/*`. A file that was
+   already modified before the run and then written by it is committed whole;
+   the final report names it.
 3. Commit with a message in the project's convention that says what changed
    and why.
 4. Where a commit hook refuses the commit, fix the cause and commit again.
-   Never skip the hook.
+   Never skip the hook. When the fix changes code or tests, rerun the verify
+   gates first, and the code review too when behaviour changed.
 
 ## Gate
 
-- The commit exists and holds exactly the paths the run wrote.
+- The commit exists and holds exactly the tracked deliverables the run wrote.
 - Nothing was pushed, and no pull request or merge was made.

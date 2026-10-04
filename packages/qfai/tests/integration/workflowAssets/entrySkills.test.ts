@@ -390,7 +390,7 @@ describe("qfai-run", () => {
   it("asks for release approval at the release point, and the approval authorizes no push or publication", async () => {
     const work = flat(sectionOf(await readShipped(RUN), "## The work"));
     expect(work).toMatch(
-      /before a step `releasePoint` names runs, ask the user to approve the release; where it is `end`, ask after the last stage/i,
+      /before a step `releasePoint` names runs, ask the user to approve the release; where it is `end`, ask once the last stage's gates have passed/i,
     );
     expect(work).toMatch(
       /nothing after it runs without the approval, which authorizes no push, merge, tag or publication/i,

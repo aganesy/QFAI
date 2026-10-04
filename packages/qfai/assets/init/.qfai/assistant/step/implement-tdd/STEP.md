@@ -95,8 +95,10 @@ requires, so the step asks the user nothing:
 - Append exactly one EX to the `03_Example.md` of the story that owns the AC
   the diagnosis matched. Its ID is the next free EX ID of that story, its
   `AC-Ref` is that AC, and the diagnosis is its reason.
-- Add the new EX ID to the Examples cell of the contract rule that already
-  cites an example of that AC. The rule's Statement is unchanged.
+- Add the new EX ID to the Examples cell of the contract rule the diagnosis
+  names as owning that AC. The rule's Statement is unchanged. Where the
+  diagnosis names no single rule, because several rules cite examples of that
+  AC, stop and ask the user which one; never pick one.
 - Change no story, AC, rule statement or existing EX.
 - Append no `decisions.md` row: the drift gate needs no `Change request:` row
   for appended example rows and the new EX ID in the citing rule's Examples
@@ -110,9 +112,17 @@ states the case, append nothing and annotate the failing test with that EX.
 
 ## Select the examples
 
-Work the EX IDs the caller names, each after confirming it is in the current
-flow. Otherwise take the flow's EX IDs that no test annotates, in EX ID order:
-a test annotating an example is what says the example is done.
+Work the examples in this order:
+
+1. On a fix route, the EX the diagnosis matched or this step appended, first.
+   The diagnosis's failing test may already annotate it; it is still owed.
+2. The EX IDs the caller names, each after confirming it is in the current
+   flow.
+3. Otherwise the flow's EX IDs that no test annotates, in EX ID order. A test
+   annotating an example is what says the example is done.
+
+An EX that a `decisions.md` row opening `Test exception:` names, with Status
+DONE, is exempt and is not selected.
 
 See `.qfai/assistant/skill/qfai-implement/references/cross-spec-ownership.md`
 for changes that touch another flow and

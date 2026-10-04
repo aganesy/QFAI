@@ -30,7 +30,7 @@ describe("defect example seeding", () => {
     );
     expect(text).toMatch(/its ID is the next free EX ID of that story, its `AC-Ref` is that AC/i);
     expect(text).toMatch(
-      /add the new EX ID to the Examples cell of the contract rule that already cites an example of that AC/i,
+      /add the new EX ID to the Examples cell of the contract rule the diagnosis names as owning that AC/i,
     );
   });
 
