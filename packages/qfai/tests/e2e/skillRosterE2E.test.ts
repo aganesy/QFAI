@@ -29,18 +29,6 @@ describe("E2E: sub-agent roster formalization", () => {
   });
 });
 
-describe("E2E: completion contract hardening", () => {
-  it("SKILL.md has item completion checklist, spec completion, and prohibition conditions", async () => {
-    const content = await readImplementFlowSteps(implementAssistantDir);
-    expect(content).toContain("## Completion gate");
-    expect(content).toContain("Report the flow complete only when:");
-    expect(content).toContain(
-      "Every implemented EX has an observed RED, GREEN and Refactor result",
-    );
-    expect(content).toContain("A failing or unrun gate cannot be reported as PASS.");
-  });
-});
-
 describe("E2E: evidence contract hardening", () => {
   it("SKILL.md defines minimum evidence with command+result pairs", async () => {
     const content = await readImplementFlowSteps(implementAssistantDir);

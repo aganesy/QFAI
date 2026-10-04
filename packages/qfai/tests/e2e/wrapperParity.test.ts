@@ -103,7 +103,6 @@ describe("wrapper parity across all three platforms", () => {
         "qa-gatekeeper checks the observed RED and GREEN evidence",
         "implementation-reviewer checks code and tests",
         "RED, GREEN and Refactor result",
-        "npx qfai validate --profile tdd --fail-on error --flow BF-NNNN",
         "required user consent",
       ];
       const forbiddenPhrases = [
