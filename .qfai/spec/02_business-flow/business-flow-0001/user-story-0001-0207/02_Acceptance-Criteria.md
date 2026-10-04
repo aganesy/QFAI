@@ -16,11 +16,11 @@ Feature: Run `/qfai-sdd` as a scoped stage
     Given the /qfai-sdd SKILL.md and the built-in plans
     When its steps frontmatter is read
     Then it lists every step whose owner is qfai-sdd
-    And every step a plan gives an sdd or sdd_append stage is one of them
+    And every step a plan gives an sdd stage is one of them
 
   # AC-0001-0207-06
   Scenario: An SDD-kind stage changes the tree only on the user's approval
-    Given an sdd or append stage
+    Given an sdd stage
     When the stage has a proposal for the story-tree and contract files it would change
     Then it shows the user the files and the proposal, and changes nothing until the user answers
     And on approval it writes the change and one Change request row naming every protected file it changed, with who approved it, when and the option chosen
