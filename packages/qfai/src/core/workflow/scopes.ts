@@ -26,8 +26,14 @@ const WRITES: Record<string, readonly Artifact[]> = {
 // Kinds whose work is never handed over without the closing verification stages.
 const WRITES_CODE = new Set(["implement", "regression_fix", "test_fix"]);
 
-// The steps of the change note and the verify block: what `medium` adds to work that writes no code.
-const GATE_STEPS = new Set(["verify-change-note", "verify-qfai-gate", "verify-repo-gate"]);
+// The steps of the change note and the verify block, its local commit included: what `medium` adds
+// to work that writes no code.
+const GATE_STEPS = new Set([
+  "verify-change-note",
+  "verify-qfai-gate",
+  "verify-repo-gate",
+  "verify-commit",
+]);
 
 // A private security report must not reach a tracked file before its fix, so no scope stops early.
 const PRIVATE_INTAKE = "triage-security-intake";
