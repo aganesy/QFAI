@@ -26,10 +26,9 @@ const REVIEWER_GATE_BASELINE_HEADING_PATTERN = /^##\s+Reviewer Gate Baseline\s*$
 const ANY_MARKDOWN_HEADING_PATTERN = /^\s*#{1,6}\s+/m;
 
 /**
- * The Stage 0 steering files the shared skill operating baseline names as
- * MANDATORY refresh targets. They ship from `qfai init` as templates whose
- * values are literal `<...>` placeholders, and `qfai-implement` Stage 0 is
- * told to take every Test / Lint / Typecheck / Build command from
+ * The policy files the policy check reads at the start of a run. They ship
+ * from `qfai init` as templates whose values are literal `<...>` placeholders,
+ * and `qfai-implement` is told to take every Test / Lint / Typecheck / Build command from
  * `tech.md#standard-commands-copy-paste` rather than inventing one — so an
  * unreplaced `<test command>` is a gate that cannot run, which the
  * rule classes as UNRUN rather than passed.
@@ -48,7 +47,7 @@ const ANY_MARKDOWN_HEADING_PATTERN = /^\s*#{1,6}\s+/m;
  * addresses are filtered in {@link isPlaceholderToken}, and bracketed link
  * destinations in {@link isLinkDestination}, rather than in the pattern, so
  * the reason each exclusion exists stays readable. Known
- * limitation: a genuine inline HTML tag written into a steering file
+ * limitation: a genuine inline HTML tag written into a policy file
  * (`<br>`) still matches — these four files are prose templates, and the
  * alternative (a keyword allow-list) would miss the placeholders the
  * templates actually ship.
@@ -64,7 +63,7 @@ const HTML_COMMENT_PATTERN = /<!--[\s\S]*?-->/g;
  * `<https://...>` is covered by this too, but so are `<tel:+1-212-555-0100>`
  * and `<urn:isbn:978...>`, which carry neither `://` nor an `@` and were
  * counted as unfilled slots — a false `QFAI-ASSETS-003` for any project whose
- * steering values are non-HTTP URIs.
+ * policy values are non-HTTP URIs.
  */
 const URI_AUTOLINK_PATTERN = /^[A-Za-z][A-Za-z0-9+.-]{1,31}:[^\s<>]*$/;
 
@@ -211,7 +210,7 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
   }
   // A project still on the spec-pack layout has no contract-layer tech.md yet.
   if (!hasLegacySpecPackEntries(specsEntries)) {
-    issues.push(...(await validateStorySteeringPlaceholders(root, config)));
+    issues.push(...(await validateStoryPolicyPlaceholders(root, config)));
   }
 
   // The crawl reads the skill tree once, here, and every later check works from
@@ -404,26 +403,26 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
   return issues;
 }
 
-/** The story layout stores adopter-owned steering in the contract layer. */
-export async function validateStorySteeringPlaceholders(
+/** The story layout stores adopter-owned policy in the contract layer. */
+export async function validateStoryPolicyPlaceholders(
   root: string,
   config: QfaiConfig,
 ): Promise<Issue[]> {
   if (await isPristineStorySeed(root, config)) return [];
   const contractsDir = resolvePath(root, config, "contractsDir");
   const filePath = path.join(contractsDir, "tech.md");
-  const content = await readSteeringFile(filePath);
+  const content = await readPolicyFile(filePath);
   if (content === null) return [];
-  const sections = collectSteeringPlaceholders(content);
+  const sections = collectPolicyPlaceholders(content);
   if (sections.length === 0) return [];
   const detail = sections.map((entry) => `${entry.section} (${entry.count})`).join(", ");
   return [
     issue(
       "QFAI-ASSETS-003",
-      `Steering file ${toRepoRelative(root, filePath)} contains unfilled template values: ${detail}`,
+      `Policy file ${toRepoRelative(root, filePath)} contains unfilled template values: ${detail}`,
       "error",
       filePath,
-      "assistantAssets.steeringPlaceholder",
+      "assistantAssets.policyPlaceholder",
       sections.map((entry) => entry.section),
       "canonical",
       "Fill in the contract-layer tech settings, including Standard commands.",
@@ -464,7 +463,7 @@ function toRepoRelative(root: string, filePath: string): string {
  *   `QFAI-ASSETS-003` for that file. Only {@link SKIPPABLE_READ_CODES} skips
  *   now; anything else propagates.
  */
-async function readSteeringFile(filePath: string): Promise<string | null> {
+async function readPolicyFile(filePath: string): Promise<string | null> {
   let handle: FileHandle | undefined;
   try {
     handle = await open(filePath, OPEN_READ_FLAGS);
@@ -479,7 +478,7 @@ async function readSteeringFile(filePath: string): Promise<string | null> {
   }
 }
 
-type SteeringPlaceholderSection = { section: string; count: number; firstLine: number };
+type PolicyPlaceholderSection = { section: string; count: number; firstLine: number };
 
 /**
  * Comment spans replaced by spaces, keeping every line break in place.
@@ -535,7 +534,7 @@ function markTableRows(lines: string[]): boolean[] {
 }
 
 /** Placeholder counts per `## ` section, in document order. */
-function collectSteeringPlaceholders(content: string): SteeringPlaceholderSection[] {
+function collectPolicyPlaceholders(content: string): PolicyPlaceholderSection[] {
   const bySection = new Map<string, { count: number; firstLine: number }>();
   let section = PREAMBLE_SECTION;
   const stripped = stripHtmlComments(content);
@@ -637,14 +636,14 @@ function isPlaceholderToken(inner: string): boolean {
   // `<https://example.com>`, `<tel:+1-212-555-0100>`, `<urn:isbn:978...>` and
   // `<team@example.com>` are markdown autolinks — filled content, not a slot
   // still waiting for one. Matched on the autolink *syntax* (a scheme, then
-  // no whitespace) rather than on `://`, so a project whose steering values
+  // no whitespace) rather than on `://`, so a project whose policy values
   // use a non-HTTP scheme is not told its catalog is unfilled.
   if (URI_AUTOLINK_PATTERN.test(trimmed) || EMAIL_AUTOLINK_PATTERN.test(trimmed)) {
     return false;
   }
   // Every shipped slot is prose or a slot name, so it carries a letter. Keeps
   // `<3`-style typography out of the count. Any Unicode letter counts, not
-  // only `[A-Za-z]`: a steering file localised into Japanese names its slots
+  // only `[A-Za-z]`: a policy file localised into Japanese names its slots
   // in Japanese, and demanding an ASCII letter let every one of them
   // (a slot named in Japanese) pass as filled.
   return /\p{L}/u.test(trimmed);

@@ -8,16 +8,19 @@ routing:
         mandatory_agents: [requirements-analyst, solution-architect]
         conditional_agents: []
         parallel_groups: []
+        blocking_agents: [solution-architect]
         rerun_policy: failed-agents-only
       - id: execution
         mandatory_agents: [devops-ci-engineer]
         conditional_agents: []
         parallel_groups: []
+        blocking_agents: []
         rerun_policy: changed-scope-dependents
       - id: review
         mandatory_agents: [architecture-reviewer]
         conditional_agents: []
         parallel_groups: []
+        blocking_agents: [architecture-reviewer]
         rerun_policy: changed-scope-dependents
     review_profile: architecture-heavy
 
@@ -27,16 +30,19 @@ routing:
         mandatory_agents: [delivery-planner, qa-strategist]
         conditional_agents: []
         parallel_groups: []
+        blocking_agents: [delivery-planner]
         rerun_policy: failed-agents-only
       - id: config
         mandatory_agents: [devops-ci-engineer]
         conditional_agents: []
         parallel_groups: []
+        blocking_agents: []
         rerun_policy: changed-scope-dependents
       - id: review
         mandatory_agents: [qa-gatekeeper]
         conditional_agents: []
         parallel_groups: []
+        blocking_agents: [qa-gatekeeper]
         rerun_policy: changed-scope-dependents
     review_profile: runtime-heavy
 
@@ -49,4 +55,5 @@ routing:
         mandatory_agents: [orchestrator]
         conditional_agents: []
         parallel_groups: []
+        blocking_agents: []
         rerun_policy: changed-scope-dependents

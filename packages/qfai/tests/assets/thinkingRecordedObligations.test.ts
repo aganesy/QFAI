@@ -17,6 +17,7 @@ const SDD_GUIDANCE = [
   "assistant/step/common-grilling-record/STEP.md",
   "assistant/skill/qfai-sdd/references/sdd-triage.md",
   "assistant/skill/qfai-sdd/references/spec-traceability-rules.md",
+  "assistant/skill/qfai-sdd/references/sdd-pre-draft-grilling.md",
   "assistant/skill/qfai-sdd/templates/change-request.md",
 ];
 const EVIDENCE_GUIDANCE = [

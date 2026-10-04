@@ -1146,7 +1146,7 @@ describe("migration steps 1 to 12 on a project holding a retired configuration k
   }, 300_000);
 });
 
-/** The thirteen 1.x paths step 12 looks for: a line that names it, and the label the item prints. */
+/** The twelve 1.x paths step 12 looks for: a line that names it, and the label the item prints. */
 const OLD_PATH_LINES: ReadonlyArray<readonly [line: string, label: string]> = [
   [".qfai/specs/", ".qfai/specs"],
   [".qfai/contracts/", ".qfai/contracts"],
@@ -1158,7 +1158,6 @@ const OLD_PATH_LINES: ReadonlyArray<readonly [line: string, label: string]> = [
   [".qfai/report/specs-coverage/", ".qfai/report/specs-coverage"],
   ["_policies/", "_policies/"],
   ["spec-0001", "spec-NNNN"],
-  ["assistant/steering/", "assistant/steering"],
   ["assistant/instructions/", "assistant/instructions"],
   ["01_Spec.md", "01_Spec.md"],
 ];
@@ -1308,10 +1307,6 @@ const GUIDE_TABLE: ReadonlyArray<readonly [oldPath: string, now: readonly string
   ],
   ["01_Spec.md", ["Kept in git history only"]],
   [
-    "assistant/steering",
-    ["`.qfai/assistant/rule/`", "`.qfai/spec/01_policy/`", "`.qfai/spec/03_contract/tech.md`"],
-  ],
-  [
     "assistant/instructions",
     ["`.qfai/assistant/rule/`", "`.qfai/spec/01_policy/`", "`.qfai/spec/03_contract/tech.md`"],
   ],
@@ -1328,7 +1323,7 @@ describe("migration step 12: project files that still name a 1.x path", () => {
       }),
       ".github/agents/reviewer.md": linesWith(
         6,
-        { 4: "Follow .qfai/assistant/steering/test-layers.md" },
+        { 4: "Follow .qfai/assistant/instructions/test-layers.md" },
         "\r\n",
       ),
     });
@@ -1337,13 +1332,13 @@ describe("migration step 12: project files that still name a 1.x path", () => {
     expect(section(result.output, "For a person")).toEqual([
       oldPathItem(".agents/skills/intake/SKILL.md", 7, ".qfai/specs", "_policies/"),
       oldPathItem(".agents/skills/intake/SKILL.md", 12, ".qfai/specs", "spec-NNNN", "01_Spec.md"),
-      oldPathItem(".github/agents/reviewer.md", 4, "assistant/steering"),
+      oldPathItem(".github/agents/reviewer.md", 4, "assistant/instructions"),
     ]);
     expect(section(result.output, "Files scanned")).toEqual(scanned(2));
   });
 
   // QFAI:AC-0004-0042-01
-  it("names each of the thirteen 1.x paths, and only the one a line holds", async () => {
+  it("names each of the twelve 1.x paths, and only the one a line holds", async () => {
     // QFAI:EX-0004-0042-02
     const named = Object.fromEntries(OLD_PATH_LINES.map(([line], at) => [at + 1, line]));
     const root = await indexedProject(migrated11, {
@@ -1388,7 +1383,6 @@ describe("migration step 12: project files that still name a 1.x path", () => {
       path.join(initialised, ".github/copilot-instructions.md"),
       "utf8",
     );
-    expect(copilot).toContain("assistant/steering");
     expect(copilot).toContain("assistant/instructions");
     const old = "| DEC-0001 | Read .qfai/specs/spec-0001/07_Decisions.md |\n";
     const root = await indexedProject(migrated11, {
@@ -1563,7 +1557,7 @@ describe("migration step 12: project files that still name a 1.x path", () => {
     const table = tableBlocks(guide).find((rows) =>
       GUIDE_TABLE.every(([oldPath]) => rows.some((cells) => firstCell(cells, oldPath))),
     );
-    expect(table, "one table that gives each of the thirteen 1.x paths").toBeDefined();
+    expect(table, "one table that gives each of the twelve 1.x paths").toBeDefined();
     for (const [oldPath, now] of GUIDE_TABLE) {
       const row = (table ?? []).find((cells) => firstCell(cells, oldPath)) ?? [];
       const where = row.slice(1).join(" | ");

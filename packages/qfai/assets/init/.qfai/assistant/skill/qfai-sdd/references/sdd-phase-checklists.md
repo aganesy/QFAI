@@ -56,6 +56,7 @@ Follow concrete-abstract-cycle.md.
 - Every affected BF passed npx qfai validate --profile sdd --fail-on error --flow BF-NNNN with error=0.
 - Every document written passes its document schema. A failure was fixed by reshaping the document, not by adding to it.
 - The log path and result for each BF are in the SDD report.
+- Each entered design-writing stage has a pre-draft grilling checkpoint before its first mutation. A skipped checkpoint fails the gate; unanswered critical decisions remain open and block completion.
 - Reviewers are independent of the authors, and every finding of the one review is fixed or answered.
 - Rejected options remain excluded, or a documented reopening decision exists.
 - Remaining risks and next actions are explicit in the SDD report.

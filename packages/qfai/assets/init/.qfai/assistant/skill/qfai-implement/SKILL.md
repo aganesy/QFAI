@@ -130,7 +130,9 @@ The invocation completes on the gate of its last step once
 every finding of its one review is fixed or answered. When the fresh validate
 result has no test-obligation EX finding for this BF at entry, the invocation
 reports "nothing to do" after that scoped gate, and reads or writes no ledger
-status.
+status. Invoked by name, it runs
+`npx qfai validate --profile tdd --fail-on error --flow BF-NNNN` once, at
+completion; inside a route, the verify stage runs the validation instead.
 The report ends with a question listing the next actions, `/qfai-verify`
 recommended, as `.agents/rules/user-questions.md` § 6 sets out.
 Under a no-question mode, list them in the report instead.

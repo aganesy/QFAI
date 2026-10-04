@@ -568,7 +568,7 @@ describe("migration catalog move", () => {
       context.root,
       ".qfai/assistant/catalog/tech.md",
       [
-        "# Tech Steering",
+        "# Tech Policy",
         "",
         "## Runtime / platform",
         "",
@@ -636,7 +636,7 @@ describe("migration catalog move", () => {
       context.root,
       ".qfai/assistant/catalog/tech.md",
       [
-        "# Tech Steering",
+        "# Tech Policy",
         "",
         "> Replace placeholder text.",
         "",

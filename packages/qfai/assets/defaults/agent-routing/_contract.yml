@@ -11,19 +11,20 @@ schema_version: "1.0"
 # One entry per executor unit. A `- step: <name>` entry routes a step under
 # `.qfai/assistant/step/<name>/STEP.md`; a `- skill: <name>` entry routes a
 # skill that is not split into steps. A parent skill that runs steps has no
-# entry of its own. A step's entry names the agents it may dispatch and the
-# `default` review profile: inside a route, the plan's `review` is the only
-# review, and a parent skill invoked by name runs the one review it names after
-# its last step.
+# entry of its own. A step's entry names the agents it may dispatch, the
+# `default` review profile, and no review phase or blocking agent: inside a
+# route, the plan's `review` is the only review, and a parent skill invoked by
+# name runs the one review it names after its last step.
 #
 # Contract with each entry's `roles:` frontmatter — the step's `STEP.md` or
 # the skill's `SKILL.md` (validated by `QFAI-AGENT-015` .. `QFAI-AGENT-019`):
 #
 # `roles:` is the closed set of agents the step or skill may dispatch, so it
 # must be a SUPERSET of every agent the routing defaults bind to it —
-# `mandatory_agents`, `conditional_agents` and `parallel_groups` across all of
-# its phases — plus every reviewer its `review_profile` selects. A missing
-# `mandatory_agents` entry, or a missing `always_required` reviewer of that profile, is an error:
+# `mandatory_agents`, `conditional_agents`, `blocking_agents` and
+# `parallel_groups` across all of its phases — plus every reviewer its
+# `review_profile` selects. A missing `mandatory_agents` / `blocking_agents`
+# entry, or a missing `always_required` reviewer of that profile, is an error:
 # the run cannot finish without dispatching a role it never declared. A missing
 # `conditional_agents` / `parallel_groups` / `conditional_required` entry is a
 # warning.
@@ -52,7 +53,8 @@ schema_version: "1.0"
 # reviewer set it would compare against is known to be partial.
 #
 # Every entry with a `review_profile` has a `review` phase whose
-# `mandatory_agents` hold the profile's `always_required` reviewers (`scripts/check-review-profile-consistency.mjs`).
+# `mandatory_agents` and `blocking_agents` hold the profile's `always_required`
+# reviewers (`scripts/check-review-profile-consistency.mjs`).
 #
 # A project overrides an entry whole in `qfai.config.yaml#routing`, keyed by
 # the same `step:` or `skill:` name.

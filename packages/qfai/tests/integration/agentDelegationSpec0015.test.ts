@@ -149,7 +149,7 @@ describe("routing defaults are package data", () => {
     const routing = { routing: await defaultRoutingEntries() } as {
       routing: Array<{
         skill: string;
-        phases: Array<{ id: string; mandatory_agents: string[] }>;
+        phases: Array<{ id: string; mandatory_agents: string[]; blocking_agents: string[] }>;
         review_profile: string;
       }>;
     };
@@ -159,8 +159,9 @@ describe("routing defaults are package data", () => {
       "requirements-analyst",
       "solution-architect",
     ]);
+    expect(migration?.phases[0]?.blocking_agents).toEqual(["solution-architect"]);
     expect(migration?.phases[1]?.mandatory_agents).toEqual(["devops-ci-engineer"]);
-    expect(migration?.phases[2]?.mandatory_agents).toEqual(["architecture-reviewer"]);
+    expect(migration?.phases[2]?.blocking_agents).toEqual(["architecture-reviewer"]);
     expect(migration?.review_profile).toBe("architecture-heavy");
   });
 });

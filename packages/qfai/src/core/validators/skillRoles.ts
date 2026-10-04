@@ -10,7 +10,7 @@ import { issue } from "./utils.js";
 /**
  * How firmly a phase or a review profile binds an agent.
  *
- * `required` covers `mandatory_agents` and a profile's
+ * `required` covers `mandatory_agents`, `blocking_agents` and a profile's
  * `always_required`: a compliant run cannot finish without dispatching them,
  * so a skill that never declared them is in unresolvable conflict with the
  * manifest. `conditional` covers `conditional_agents`, `parallel_groups` and a
@@ -89,7 +89,7 @@ export function emptySkillRouting(kind: SkillRouting["kind"] = "skill"): SkillRo
 /**
  * Fold one routing field into a skill's collected agent set. `required` wins
  * over a `conditional` recorded earlier for the same id — an agent listed in
- * both `conditional_agents` and `mandatory_agents` is still a gate.
+ * both `conditional_agents` and `blocking_agents` is still a gate.
  *
  * `known`, when given, is the agent catalog. An id outside it is counted as a
  * dispatch attempt but never collected: `QFAI-AGENT-008` already reports the

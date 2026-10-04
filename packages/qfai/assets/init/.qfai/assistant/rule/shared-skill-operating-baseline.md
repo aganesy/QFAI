@@ -225,42 +225,19 @@ The `common-gate-run` step runs a gate from this section and records it.
 - Generated artifacts match their template's headings, ordering, content kinds and table columns, and add no section, including no history section. Under `<paths.specsDir>` a document schema rejects anything else; `.qfai/assistant/skill/qfai-sdd/references/spec-traceability-rules.md#document-shapes` states what a template cannot show.
 - Completion requires a format self-check in evidence.
 
-## Stage 0 - Steering completion refresh (mandatory)
+## Policy check (mandatory)
 
-Every stage starts with the steering refresh, and does not continue affected
-work on stale steering. The contract is
-`.qfai/assistant/rule/workflow.md#stage-0--steering-refresh-contract-mandatory`.
+A run starts with the policy check, once, and does not continue affected work
+on stale policy. The contract is
+`.qfai/assistant/rule/workflow.md#policy-check-mandatory`.
 The procedure — which files, what counts as incomplete, how a fact is filled
-and where an unverifiable one goes — is the `common-steering-refresh` step. A
+and where an unverifiable one goes — is the `common-policy-check` step. A
 skill or step cites the step and restates none of it.
-
-### Inside a workflow run
-
-Inside an active workflow run, a stage reuses the Stage 0 output an earlier
-stage wrote only when the key recorded with it, recomputed, is equal. On a
-different key, refresh only what changed.
-
-The key covers:
-
-- the tool digest;
-- the policy digests: `qfai.config.yaml` and `.qfai/assistant/rule/**`;
-- the skill digests;
-- the input file digests;
-- glob membership;
-- the host capability state.
-
-Compute it with the digest function `npx qfai workflow` uses.
-
-No stage-specific check is served from that output. ATDD still makes its own
-layer decision, and implement still selects its examples from a fresh
-flow-scoped validate.
-
-Outside a run, Stage 0 runs in full at every stage start.
 
 ## Workflow Run Entry Check (Mandatory)
 
 A skill that a built-in workflow plan names runs this check first, before
-Stage 0. The mode is `workflow.mode` in `qfai.config.yaml`. An absent key means
+the policy check. The mode is `workflow.mode` in `qfai.config.yaml`. An absent key means
 `active`.
 
 | State     | Mode              | When                                               | What the skill does                                                                                                                          |

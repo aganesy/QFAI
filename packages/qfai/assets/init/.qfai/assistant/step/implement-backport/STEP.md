@@ -2,7 +2,7 @@
 name: implement-backport
 owner: qfai-implement
 purpose: "Check that a merged change meets the project's backport criteria and carry it onto the release branch it names, passing that branch's gates."
-requires: [common-steering-refresh, common-gate-run]
+requires: [common-gate-run]
 roles:
   - devops-ci-engineer
   - frontend-engineer

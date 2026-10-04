@@ -2,7 +2,7 @@
 name: sdd-triage
 owner: qfai-sdd
 purpose: "Select the requirement source, classify each requirement against the story tree, and record the decisions, questions and approvals the later writes depend on."
-requires: [common-steering-refresh]
+requires: []
 roles: [delivery-planner, requirements-analyst]
 routing-profile: default
 ---
@@ -36,16 +36,13 @@ no-argument batch, and its gate runs with `--flow BF-NNNN` for that flow.
 
 ## Stage 0: source and preflight
 
-1. Run `common-steering-refresh`.
-2. Run `npx qfai sdd preflight` and use its `selectedInputPath`; a selected
-   discussion pack may be older than the newest pack. Inside a run, the
-   preflight readiness check runs in every attempt and is never served from the
-   Stage 0 snapshot.
-3. Read the pack, its completed reviews, explicit user requirements, and the
+1. Run `npx qfai sdd preflight` and use its `selectedInputPath`; a selected
+   discussion pack may be older than the newest pack.
+2. Read the pack, its completed reviews, explicit user requirements, and the
    existing story tree. A discussion pack is provenance and design input, not a
    normative SSOT. Record a discrepancy in an SDD-owned row or the SDD report; do not
    edit the pack to clear this stage.
-4. Stop if no usable source exists or a product decision cannot be inferred
+3. Stop if no usable source exists or a product decision cannot be inferred
    safely. An imported tree without a discussion pack takes its source as
    `.qfai/assistant/skill/qfai-sdd/references/sdd-execution-playbook.md#stage-0-source-inventory`
    says.
@@ -157,6 +154,14 @@ contract of every kind; BR scope is its contract, whose number the BR carries
 (`BR-0002-0001` belongs to `API-0002`); DEC and OQ scope is their own table.
 Empty scopes begin at `0001`, or `01` for AC and EX tails. This is a reading
 rule over the tree, not a new command.
+
+## Pre-draft grilling
+
+Before this step's first mutation, run the checkpoint for `Triage and records`
+in `.qfai/assistant/skill/qfai-sdd/references/sdd-pre-draft-grilling.md`. Put
+each critical decision it holds to the user, and list each decision it adopted
+in the final report. Each later design-writing step runs its own checkpoint the
+same way.
 
 ## A change to the story tree
 

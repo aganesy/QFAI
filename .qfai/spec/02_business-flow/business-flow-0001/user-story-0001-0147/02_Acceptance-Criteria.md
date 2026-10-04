@@ -51,7 +51,7 @@ Feature: Unified SDD Workflow
     Given a `/qfai-sdd` invocation whose 03-contract step wrote or changed the Statement or the Examples cell of at least one BR,
     When that step is complete and before the per-flow gate runs,
     Then a sub-agent that wrote none of those BRs reads each of them, the EXs each cites and the EXs this invocation wrote or changed, and raises findings of five kinds: a case the rule implies that no example states, a redundant example, an example no rule explains, a rule its examples do not support, and a flow, story or criterion split the rules show to be wrong.
-    And when the 03-contract step wrote or changed no BR, or the stage is an append stage, no cycle runs.
+    And when the 03-contract step wrote or changed no BR, or an implement stage appended the example, no cycle runs.
 
   # AC-0001-0147-09
   Scenario: Each Finding Is Decided Once, By The Right Party
@@ -81,4 +81,11 @@ Feature: Unified SDD Workflow
     Then the finder raises no finding that has the kind and target IDs of a finding the session already decided and a case equal to, including or included in that finding's case, and no finding that the proposed change of a change request the user declined already answers.
     And a decided or dropped finding appends no row; only a finding still undecided when the session ends becomes an `open-questions.md` row.
     And matching never goes by wording, and an appended reopening decision lifts a REJECTED row.
+
+  # AC-0001-0147-15
+  Scenario: A Pre-draft Grilling Checkpoint Precedes Each Design Write
+    Given an invocation of `/qfai-sdd` about to write in a design-writing stage,
+    When the stage makes its first story-tree write,
+    Then a delegated grilling checkpoint has settled that stage's open decisions, a critical one by the user's answer.
+    And the final report lists each decision the checkpoint adopted, with its reason.
 ```

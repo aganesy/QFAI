@@ -34,6 +34,7 @@ const REQUIRED_AGENT_SECTIONS = [
 type RoutingPhase = {
   mandatory_agents?: unknown;
   conditional_agents?: unknown;
+  blocking_agents?: unknown;
   parallel_groups?: unknown;
   iteration?: unknown;
   rerun_policy?: unknown;
@@ -192,7 +193,7 @@ export type StepReview = {
   profile: string | undefined;
   /** That profile's `always_required` reviewers. */
   alwaysRequired: string[];
-  /** Every agent the entry binds as mandatory, and the profile's always-required reviewers. */
+  /** Every agent the entry binds as mandatory or blocking, and the profile's always-required reviewers. */
   requiredAgents: string[];
 };
 
@@ -363,6 +364,16 @@ async function validateRouting(
           phaseIndex,
           "conditional_agents",
         );
+        validateAgentRefs(
+          source,
+          phaseObj.blocking_agents,
+          agentIds,
+          issues,
+          formatSkillLabel(routeName, routeIndex),
+          routeIndex,
+          phaseIndex,
+          "blocking_agents",
+        );
         if (Array.isArray(phaseObj.parallel_groups)) {
           for (const group of phaseObj.parallel_groups) {
             validateAgentRefs(
@@ -410,6 +421,7 @@ async function validateRouting(
 /** The phase fields that name agents directly, in binding order. */
 const PHASE_AGENT_FIELDS = [
   ["mandatory_agents", "required"],
+  ["blocking_agents", "required"],
   ["conditional_agents", "conditional"],
 ] as const;
 
@@ -469,7 +481,7 @@ function collectRouteHeader(
 }
 
 /**
- * Fold one phase's agent fields into the skill's collected routed set.
+ * Fold one phase's four agent fields into the skill's collected routed set.
  *
  * The phase counts toward `entry.phases` only when at least one usable agent
  * id came out of it. `QFAI-AGENT-017` asks whether the manifest can dispatch
@@ -568,7 +580,7 @@ function validateAgentRefs(
           "error",
           // Sourced from the caller's resolved routing path (manifestPathRel)
           // so the file: argument always points at the actual location read
-          // (manifest/ canonical or steering/ legacy fallback).
+          // (manifest/ canonical or a legacy fallback).
           routingPathRel,
           "agentDefinition.unknownRoutingAgent",
         ),

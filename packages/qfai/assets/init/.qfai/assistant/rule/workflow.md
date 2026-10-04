@@ -14,6 +14,19 @@ This file defines the canonical stages and delegation expectations.
 
 ---
 
+## Change Type
+
+The workflow routes are orthogonal to the Change Type that
+`.qfai/assistant/rule/change-classification.md` defines and the pull request
+body declares. A route of `npx qfai workflow plan`, such as `fix-defect`,
+`add-feature` or `edit-text`, says which stages run; the Change Type says what
+kind of change it is. Neither selects the other, and a change declares both: a
+`fix-defect` change may declare `Behavior`, and an `add-feature` change
+`Structural`. No route declares a Change Type, and no route maps to a Change
+Type.
+
+---
+
 ## Workflow routes
 
 A change request follows one route. `npx qfai workflow plan` chooses it from
@@ -58,7 +71,6 @@ writes nothing; the session runs the plan.
 
 ## Stages (canonical)
 
-0. Steering refresh (project memory bootstrap)
 1. Discussion (optional): clarify idea → requirement seed
 2. Requirements: discussion pack in `.qfai/discussion/`
 3. Specification (SDD): preflight, triage, policy, business flows, stories with AC and EX, and enforcing contracts
@@ -117,25 +129,26 @@ from the skills and baselines that cite it.
   the shared worktree. A diff whose paths it cannot enumerate is not
   committable — ask the agent for its path list first.
 
-### Stage 0 — Steering refresh contract (mandatory)
+### Policy check (mandatory)
 
-At the beginning of each stage (`qfai-discussion`, `qfai-sdd`, `qfai-prototyping`, `qfai-implement`, `qfai-verify`):
+Once per run, at the start, before the first stage. A stage invoked by name on
+its own is a run of its own.
 
-1. Check the current story-tree steering files under `<paths.specsDir>`:
+1. Check the current story-tree policy files under `<paths.specsDir>`:
    - `01_policy/objective.md` and `01_policy/initiative.md`
    - `01_policy/principle.md` and `01_policy/constraint.md`
    - `03_contract/tech.md`
 2. Detect incomplete content (empty sections, placeholder-only lines, `<...>`, `TBD`, outdated facts). A table with no rows or a `- None.` list is complete where the template allows it.
-3. If the current stage owns the file, fill verified facts into the sections its template has, adding none. Otherwise follow the drift protocol and rerun the owning stage.
+3. If a stage of the run owns the file, fill verified facts into the sections its template has, adding none. Otherwise follow the drift protocol and rerun the owning stage.
 4. If information cannot be verified, append an OQ row to `<paths.specsDir>/open-questions.md` and ask the user.
-5. Record new facts discovered during the stage and route an upstream change to its owner.
+5. Record new facts discovered during the run and route an upstream change to its owner.
 
-Do not continue affected downstream work on stale steering. The procedure that
-carries out these five points is the `common-steering-refresh` step.
+Do not continue affected downstream work on stale policy. The procedure that
+carries out these five points is the `common-policy-check` step.
 
 This contract narrows, and does not replace, the project-memory read of **Article III** in
-`.qfai/assistant/rule/constitution.md`: Article III says what to read at stage start, Stage 0 says which
-of those files must additionally be verified and repaired before the stage proceeds.
+`.qfai/assistant/rule/constitution.md`: Article III says what to read at stage start, the policy check says which
+of those files must additionally be verified and repaired before the run proceeds.
 
 ---
 

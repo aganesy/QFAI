@@ -56,9 +56,9 @@ Before producing deliverables, read **project memory**:
 4. the relevant business flows and stories under `.qfai/spec/02_business-flow/`
 5. repository config (package.json, CI, scripts)
 
-At the start of a stage this read composes with the **Stage 0 — Steering refresh contract**
+At the start of a stage this read composes with the **Policy check** contract
 in `.qfai/assistant/rule/workflow.md`: items 1-2 cover reading project context;
-Stage 0 adds the obligation to check and update applicable project-owned
+the policy check adds the obligation to check and update applicable project-owned
 policy and contract files. These are complementary obligations.
 
 Align outputs with:

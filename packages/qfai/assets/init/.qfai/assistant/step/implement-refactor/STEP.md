@@ -3,7 +3,6 @@ name: implement-refactor
 owner: qfai-implement
 purpose: "Move code into a better structure while every test stays green, adding no example and changing no behaviour."
 requires:
-  - common-steering-refresh
   - common-gate-run
 roles:
   - frontend-engineer

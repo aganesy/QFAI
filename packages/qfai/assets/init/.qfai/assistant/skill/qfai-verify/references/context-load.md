@@ -1,6 +1,6 @@
 # Step 0 — Load context
 
-1. Read relevant **project steering** (if present):
+1. Read relevant **project policy** (if present):
    - `.qfai/spec/01_policy/objective.md`
    - `.qfai/spec/01_policy/initiative.md`
    - `.qfai/spec/03_contract/tech.md`

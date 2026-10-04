@@ -16,7 +16,6 @@ describe.each(trees)("%s — implementation stage binding", (tree) => {
       "5. Implementation: `/qfai-implement` writes the BF E2E test and the AC",
     );
     expect(workflow).toContain("6. Verify: run quality gates");
-    expect(workflow).toContain("`qfai-prototyping`, `qfai-implement`, `qfai-verify`");
   });
 
   it("requires a fresh story obligation and the project command contract", async () => {
@@ -38,7 +37,7 @@ describe.each(trees)("%s — implementation stage binding", (tree) => {
     }
   });
 
-  it("binds stage steering to the shared rule and keeps upstream changes governed", async () => {
+  it("binds the policy check to the shared rule and keeps upstream changes governed", async () => {
     const [skill, workflow, baseline] = await Promise.all([
       read(tree, "assistant/step/implement-tdd/STEP.md"),
       read(tree, "assistant/rule/workflow.md"),
@@ -47,7 +46,7 @@ describe.each(trees)("%s — implementation stage binding", (tree) => {
     expect(skill).toContain("rule/shared-skill-operating-baseline.md");
     expect(skill).toContain("rule/shared-skill-delegation-baseline.md");
     expect(skill).toContain("rule/drift-protocol.md");
-    expect(workflow).toContain("### Stage 0 — Steering refresh contract (mandatory)");
-    expect(baseline).toContain("## Stage 0 - Steering completion refresh (mandatory)");
+    expect(workflow).toContain("### Policy check (mandatory)");
+    expect(baseline).toContain("## Policy check (mandatory)");
   });
 });

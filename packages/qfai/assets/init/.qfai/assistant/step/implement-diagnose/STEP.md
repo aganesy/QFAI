@@ -2,7 +2,7 @@
 name: implement-diagnose
 owner: qfai-implement
 purpose: "Reproduce a reported failure in one business flow, find its cause and give the one verdict that decides what the run does next, without changing any tracked file."
-requires: [common-steering-refresh, common-gate-run]
+requires: [common-gate-run]
 roles:
   - test-design-analyst
   - frontend-engineer

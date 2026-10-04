@@ -351,7 +351,7 @@ jobs:
           done
           sha256sum -c --quiet <<'PINNED_INPUTS'
           8831fd822ecc4fffebbc7b154cc4e203810c072b4d3b621e81532e9469549682  scripts/check-toolchain-action.sh
-          45191ee170e31ffd736d033779ee8dc502ebab3fc3e13b6ef6157b5e0176fcbb  .github/pinned-bytes.txt
+          da2d957819772bf4868cd24116aa88e1d988a46ddde5e996ece0f443daf1b148  .github/pinned-bytes.txt
           bb649cb2684f9db02bdbe3872f029571a8e52c4c6e2ab95e8c8fcf804370af41  .github/lifecycle-manifests.txt
           43d2586975550f5062b4af23112223068cc5676f0906c04fce2bc231df471a9e  .github/command-files.txt
           PINNED_INPUTS
@@ -703,7 +703,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # `sdd` checks story tree structure, contract references, steering,
+          # `sdd` checks story tree structure, contract references, policy placeholders,
           # and review artifacts against the repository root. It is paired
           # with `tdd` and the full sandbox validate below.
           #

@@ -2,7 +2,7 @@
  * Integration: the shared rules a workflow run relies on, as the shipped assistant tree states them.
  *
  * The stage-skill entry check, what authorizes a run's work, how each autopilot bucket is satisfied
- * inside a run, Stage 0 reuse, reviewer independence, routes against change types,
+ * inside a run, reviewer independence, routes against change types,
  * and the drift protocol's bugfix case. Each is stated once, in a rule file; the workflow core's
  * own checks are not this module's.
  */
@@ -56,6 +56,23 @@ describe("the stage-skill entry check", () => {
 });
 
 describe("governance inside a run", () => {
+  // QFAI:AC-0001-0004-04
+  // QFAI:EX-0001-0004-07
+  it("keeps the workflow routes apart from the Change Type", async () => {
+    const workflow = flat(await readShipped("rule/workflow.md"));
+    expect(workflow).toMatch(/the workflow routes are orthogonal to the Change Type/i);
+    expect(workflow).toMatch(
+      /such as `fix-defect`, `add-feature` or `edit-text`, says which stages run/,
+    );
+    expect(workflow).toMatch(/neither selects the other, and a change declares both/i);
+    expect(workflow).toMatch(
+      /a `fix-defect` change may declare `Behavior`, and an `add-feature` change `Structural`/,
+    );
+    expect(workflow).toMatch(/no route maps to a Change Type/i);
+    expect(workflow).toMatch(/no route declares a Change Type/i);
+    expect(workflow).not.toMatch(/Do not proceed without a declared Change Type/i);
+  });
+
   // QFAI:AC-0001-0163-04
   // QFAI:EX-0001-0163-04
   it("never counts an author as its own reviewer, and drops no required reviewer", async () => {

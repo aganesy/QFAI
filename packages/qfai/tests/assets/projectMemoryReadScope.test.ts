@@ -53,10 +53,10 @@ describe.each(trees)("%s project memory scope", (tree) => {
     expect(selection).toContain("does not own copies of these default files");
   });
 
-  it("composes project memory with the stage steering refresh", async () => {
+  it("composes project memory with the policy check", async () => {
     const constitution = await read(tree, "assistant/rule/constitution.md");
     const workflow = await read(tree, "assistant/rule/workflow.md");
-    expect(constitution).toContain("Stage 0 — Steering refresh contract");
+    expect(constitution).toContain("**Policy check** contract");
     expect(workflow).toContain("Article III");
   });
 });

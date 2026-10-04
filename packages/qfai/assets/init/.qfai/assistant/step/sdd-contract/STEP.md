@@ -44,17 +44,20 @@ states.
 
 ## Procedure
 
-1. Write a BR only after the EX it cites exists. Every BR cites at least one
+1. Run the pre-draft grilling checkpoint for `Contracts and rules` in
+   `.qfai/assistant/skill/qfai-sdd/references/sdd-pre-draft-grilling.md` before
+   the first write, and list each decision it adopted in the final report.
+2. Write a BR only after the EX it cites exists. Every BR cites at least one
    full EX ID, and nothing but EX IDs; every EX is cited by at least one BR.
    The relation may be many-to-many.
-2. Put each BR in the contract that enforces it, numbered
+3. Put each BR in the contract that enforces it, numbered
    `BR-<contract number>-NNNN`: `x-qfai-rules` in YAML or JSON, `-- Rule` and
    `-- Examples:` in SQL, and a `## Business rules` table in Markdown.
-3. Define a rule shared by contracts once, in its authoritative contract. No
+4. Define a rule shared by contracts once, in its authoritative contract. No
    other contract restates or cites it: only code and tests cite a BR.
-4. Name no implementation file in a contract. The implementation points at the
+5. Name no implementation file in a contract. The implementation points at the
    contract, never the other way round.
-5. Reconcile API and DB fields, state transitions, errors and persisted
+6. Reconcile API and DB fields, state transitions, errors and persisted
    attributes, and run the executable DB contract checks
    `contract-artifact-rules.md` requires. Record the command and result under
    Contract executability in the SDD report.

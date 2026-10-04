@@ -2,7 +2,7 @@
 name: implement-stress-harness
 owner: qfai-implement
 purpose: "Build a harness that makes an intermittent failure appear on demand, under load or under a controlled schedule, and record how often it appears."
-requires: [common-steering-refresh, common-gate-run]
+requires: [common-gate-run]
 roles:
   - devops-ci-engineer
   - frontend-engineer
