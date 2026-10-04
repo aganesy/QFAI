@@ -23,6 +23,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   - An extraction lists `code` and `tests` only when the request asks for the
     change to be implemented.
   - `plan.schema.json` gains the optional `scopes`, required on each candidate.
+- **A behaviour change that asks to change the prototype runs the prototype
+  stage.** The extraction qualifier `prototype-requested` marks a request that
+  explicitly asks to change the prototype, and the route then includes the
+  prototype stage. A request to implement the change in the product does not
+  set it, so no prototype step runs in front of the implementation.
 
 ## [2.1.0] - 2026-10-04
 

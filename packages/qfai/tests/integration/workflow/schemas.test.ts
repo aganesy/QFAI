@@ -153,3 +153,22 @@ it("A plan from an extraction and its candidates validate with their scopes", as
     [true, true],
   ]);
 });
+
+// QFAI:EX-0001-0229-01
+it("The plan schema refuses scopes whose recommendation is not the narrowest alone", async () => {
+  const validate = await loadValidator();
+  const root = await minimalProject();
+  const document = await planOf(root, {
+    extraction: extraction({ qualifiers: ["visual-open"], artifacts: ["spec", "ui"] }),
+  });
+  const scopes = Reflect.get(Object(document), "scopes");
+  const list = Array.isArray(scopes) ? scopes : [];
+  const flipped = list.map((each, index) => ({ ...each, recommended: index !== 0 }));
+  const twice = list.map((each) => ({ ...each, recommended: true }));
+
+  expect([
+    validate(PLAN, document),
+    validate(PLAN, { ...document, scopes: flipped }),
+    validate(PLAN, { ...document, scopes: twice }),
+  ]).toEqual([true, false, false]);
+});

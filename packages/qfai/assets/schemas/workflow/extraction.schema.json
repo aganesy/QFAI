@@ -79,7 +79,8 @@
           "check-misses",
           "mechanism-inert",
           "removal-requested",
-          "visual-open"
+          "visual-open",
+          "prototype-requested"
         ]
       }
     },
@@ -250,7 +251,8 @@
               "check-misses",
               "mechanism-inert",
               "removal-requested",
-              "visual-open"
+              "visual-open",
+              "prototype-requested"
             ]
           }
         },

@@ -187,32 +187,24 @@
       }
     },
     "scopes": {
+      "description": "Exactly one scope, the narrowest and first, is recommended.",
       "type": "array",
       "minItems": 1,
       "maxItems": 3,
       "items": {
+        "$ref": "#/$defs/scope"
+      },
+      "contains": {
         "type": "object",
-        "additionalProperties": false,
-        "required": ["scope", "stages", "recommended"],
         "properties": {
-          "scope": {
-            "enum": ["narrow", "medium", "broad"]
-          },
-          "stages": {
-            "description": "The ids of the stages the scope runs, in plan order.",
-            "type": "array",
-            "minItems": 1,
-            "items": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
           "recommended": {
-            "description": "True for the narrowest scope listed.",
-            "type": "boolean"
+            "const": true
           }
-        }
-      }
+        },
+        "required": ["recommended"]
+      },
+      "minContains": 1,
+      "maxContains": 1
     },
     "candidates": {
       "description": "The distinct routes of a low-confidence extraction's readings, one to three, in the order the decision rules reach them.",
@@ -308,6 +300,29 @@
               }
             }
           }
+        }
+      }
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scope", "stages", "recommended"],
+      "properties": {
+        "scope": {
+          "enum": ["narrow", "medium", "broad"]
+        },
+        "stages": {
+          "description": "The ids of the stages the scope runs, in plan order.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "recommended": {
+          "description": "True for the narrowest scope listed.",
+          "type": "boolean"
         }
       }
     }
