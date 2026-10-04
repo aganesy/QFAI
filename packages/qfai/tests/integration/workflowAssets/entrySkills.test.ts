@@ -288,7 +288,7 @@ describe("qfai-run", () => {
     );
     const quiet = flat(sectionOf(await readShipped(RUN), "## Under a no-question mode"));
     expect(quiet).toMatch(
-      /the first candidate and its narrowest scope are taken and reported as assumptions/i,
+      /the plan's narrowest scope, or the first candidate and its narrowest scope, is taken and reported as an assumption/i,
     );
   });
 
@@ -320,6 +320,7 @@ describe("qfai-run", () => {
   // QFAI:EX-0001-0229-16
   // QFAI:EX-0001-0229-17
   // QFAI:EX-0001-0229-18
+  // QFAI:EX-0001-0229-23
   it("asks which scope to run before the first stage, runs only its stages, and never calls a narrower run done", async () => {
     const run = await readShipped(RUN);
     expect(flat(sectionOf(run, "## The work"))).toMatch(
@@ -340,6 +341,7 @@ describe("qfai-run", () => {
       /one scope, a plan with no scopes, and a branch destination's plan, however it was taken, ask nothing and run every stage/i,
     );
     expect(scope).toMatch(/a release point is asked only when the chosen scope holds its step/i);
+    expect(scope).toMatch(/when the chosen scope leaves stages out, ask before every branch move/i);
     expect(flat(sectionOf(screens, "## The announcement"))).toMatch(/the chosen stages in order/i);
     expect(rowOf(sectionOf(screens, "## Final report"), "| At the chosen scope")).toMatch(
       /the stages not chosen.*never that a change is done/i,

@@ -25,6 +25,7 @@ Feature: Choose how far the work on a request goes before it starts
     Given a plan with one scope, a plan with no scopes, or a branch destination's plan
     When the session runs it
     Then it puts no scope question and runs every stage of the route
+    And a branch move from a scope that leaves stages out is asked first
 
   # AC-0001-0229-04
   Scenario: A no-question mode takes the narrowest scope

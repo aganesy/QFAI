@@ -29,6 +29,8 @@ Run only the chosen scope's stages, in plan order.
   first stage, naming that work.
 - One scope, a plan with no scopes, and a branch destination's plan, however
   it was taken, ask nothing and run every stage.
+- When the chosen scope leaves stages out, ask before every branch move, naming
+  the destination in plain words; `stop` ends the work.
 - A release point is asked only when the chosen scope holds its step, or for
   `end`, the route's last stage.
 

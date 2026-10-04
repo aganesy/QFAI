@@ -95,7 +95,7 @@ value but the three below plans nothing.
 
 ## Under a no-question mode
 
-Nothing is asked. The first candidate and its narrowest scope are taken and reported as assumptions.
+Nothing is asked. The plan's narrowest scope, or the first candidate and its narrowest scope, is taken and reported as an assumption.
 A critical decision or a release point becomes one `open-questions.md` row,
 the step stops before the change that depends on it, and the report lists the
 decision as open. A third branch move stops the work.

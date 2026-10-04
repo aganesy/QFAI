@@ -90,6 +90,10 @@
           "description": "How far the work may go, narrowest first; present when an extraction gave the plan.",
           "$ref": "#/$defs/scopes"
         }
+      },
+      "dependentRequired": {
+        "rule": ["scopes"],
+        "scopes": ["rule"]
       }
     },
     "stage": {

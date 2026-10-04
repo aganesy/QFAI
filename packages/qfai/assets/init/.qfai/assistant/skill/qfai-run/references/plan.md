@@ -146,10 +146,12 @@ Each scope is `{ scope, stages, recommended }`: `narrow`, `medium` or `broad`,
 the ids of the stages it runs in plan order, and `true` for the narrowest.
 
 - `narrow` runs the stages up to the last one that writes an artifact the
-  extraction names. When those stages include implementation or a test fix, the
+  extraction names, less any implementation that writes none of them. When those stages include implementation or a test fix, the
   change note and the gates that end the route follow; when they reach the route's last stage
   that writes code, every verify stage that ends the route follows.
-- `medium` adds the change note and the gates to those stages.
+- `medium` adds the change note and the gates to those stages; where `narrow`
+  already holds implementation, it equals `narrow`.
+- A security intake plan gets `broad` alone.
 - `broad` runs every stage.
 
 A scope holding every stage is `broad`, and `medium` is left out when it equals `narrow`. An extraction with

@@ -115,49 +115,12 @@ it("The last stage writing code decides the scope, not a harness stage that open
   expect(field(planned.json, "scopes")).toEqual(broadOnly(planned.json));
 });
 
-// QFAI:EX-0001-0229-15
-it("A spec-only security request offers a scope that stops before the release point", async () => {
-  const planned = await planFor(extraction({ intent: "security", artifacts: ["spec"] }));
-  const scopes = field(planned.json, "scopes");
-  const [narrow, medium] = Array.isArray(scopes) ? scopes : [];
-
-  expect([field(planned.json, "route"), field(planned.json, "releasePoint")]).toEqual([
-    "fix-vulnerability",
-    "end",
-  ]);
-  expect([narrow, medium]).toEqual([
-    { scope: "narrow", stages: ["intake", "diagnose", "spec"], recommended: true },
-    {
-      scope: "medium",
-      stages: ["intake", "diagnose", "spec", "note", "verify"],
-      recommended: false,
-    },
-  ]);
-});
-
 // QFAI:EX-0001-0229-14
 it("A plan named by route, as a branch destination is, carries no scopes", async () => {
   const root = await minimalProject();
   const planned = workflow(root, ["plan", "--route", "add-feature"]);
 
   expect(Object.hasOwn(Object(planned.json), "scopes")).toBe(false);
-});
-
-// QFAI:EX-0001-0229-19
-it("A harness stage takes the gates, but not the checks that need the fix", async () => {
-  const planned = await planFor(
-    extraction({ intent: "defect-crash", entryFlags: ["intermittent"], artifacts: ["spec"] }),
-  );
-
-  expect(field(planned.json, "route")).toBe("fix-intermittent");
-  expect(field(planned.json, "scopes")).toEqual([
-    {
-      scope: "narrow",
-      stages: ["harness", "diagnose", "spec", "note", "verify"],
-      recommended: true,
-    },
-    { scope: "broad", stages: stageIds(planned.json), recommended: false },
-  ]);
 });
 
 // QFAI:EX-0001-0229-20
@@ -169,4 +132,57 @@ it("A quarantine is not lifted before any fix runs", async () => {
     { scope: "narrow", stages: ["isolate", "note", "verify"], recommended: true },
     { scope: "broad", stages: stageIds(planned.json), recommended: false },
   ]);
+});
+
+// QFAI:EX-0001-0229-15
+it("A security intake plan offers no scope that stops before the fix", async () => {
+  const planned = await planFor(extraction({ intent: "security", artifacts: ["spec"] }));
+
+  expect(field(planned.json, "route")).toBe("fix-vulnerability");
+  expect(field(planned.json, "scopes")).toEqual(broadOnly(planned.json));
+});
+
+// QFAI:EX-0001-0229-19
+it("A harness stage that writes nothing requested stays out of the narrower scopes", async () => {
+  const planned = await planFor(
+    extraction({ intent: "defect-crash", entryFlags: ["intermittent"], artifacts: ["spec"] }),
+  );
+
+  expect(field(planned.json, "route")).toBe("fix-intermittent");
+  expect(field(planned.json, "scopes")).toEqual([
+    { scope: "narrow", stages: ["diagnose", "spec"], recommended: true },
+    { scope: "medium", stages: ["diagnose", "spec", "note", "verify"], recommended: false },
+    { scope: "broad", stages: stageIds(planned.json), recommended: false },
+  ]);
+});
+
+// QFAI:EX-0001-0229-21
+it("A later documentation stage does not pull unrequested implementation in", async () => {
+  const planned = await planFor(
+    extraction({
+      intent: "feature",
+      qualifiers: ["visual-open"],
+      artifacts: ["spec", "ui", "docs"],
+    }),
+  );
+
+  expect(field(planned.json, "scopes")).toEqual([
+    { scope: "narrow", stages: ["sdd", "prototype", "docs"], recommended: true },
+    { scope: "medium", stages: ["sdd", "prototype", "docs", "note", "verify"], recommended: false },
+    { scope: "broad", stages: stageIds(planned.json), recommended: false },
+  ]);
+});
+
+// QFAI:EX-0001-0229-22
+it("No scope runs the fix without the checks that verify it", async () => {
+  const planned = await planFor(
+    extraction({
+      intent: "defect-crash",
+      entryFlags: ["intermittent"],
+      artifacts: ["code", "tests"],
+    }),
+  );
+
+  expect(field(planned.json, "route")).toBe("fix-intermittent");
+  expect(field(planned.json, "scopes")).toEqual(broadOnly(planned.json));
 });
