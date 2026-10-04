@@ -14,28 +14,16 @@ This file defines the canonical stages and delegation expectations.
 
 ---
 
-## Change Type (Mandatory)
+## Change Type
 
-At the start of any work, classify the change and record it in:
-
-- `<paths.specsDir>/decisions.md` (`Content` and `Approach` of a `DEC-NNNN` row for a durable decision)
-- PR description (Change Type section)
-
-Allowed values:
-
-- Primary: `Initial | Behavior | Structural | Ops`
-- Tags (optional): `@api @db @nfr @docs @test`
-
-These values are restated from `.qfai/assistant/rule/change-classification.md` (SSOT). See `.qfai/assistant/rule/change-classification.md#2-tags-multi-select` for each tag's trigger condition and examples; a tag not listed there is dropped by every consumer.
-
-Do not proceed without a declared Change Type.
-
-The workflow routes are orthogonal to the Change Type. A route of
-`npx qfai workflow plan`, such as `fix-defect`, `add-feature` or `edit-text`,
-says which stages run; the Change Type says what kind of change it is. Neither
-selects the other, and a change declares both: a `fix-defect` change may
-declare `Behavior`, and an `add-feature` change `Structural`. No route maps to
-a Change Type.
+The workflow routes are orthogonal to the Change Type that
+`.qfai/assistant/rule/change-classification.md` defines and the pull request
+body declares. A route of `npx qfai workflow plan`, such as `fix-defect`,
+`add-feature` or `edit-text`, says which stages run; the Change Type says what
+kind of change it is. Neither selects the other, and a change declares both: a
+`fix-defect` change may declare `Behavior`, and an `add-feature` change
+`Structural`. No route declares a Change Type, and no route maps to a Change
+Type.
 
 ---
 
@@ -105,9 +93,9 @@ Prototyping stage policy:
 
 Implementation stage:
 
-- `/qfai-implement` selects a current EX obligation from `npx qfai validate --profile tdd --flow BF-NNNN`. It records an observable assertion failure, the passing result, and the refactor check for that EX.
+- Inside a route, `/qfai-implement` works the examples its work order names and runs no `npx qfai validate`. Invoked by name, it validates the flow once, at completion, with `npx qfai validate --profile tdd --fail-on error --flow BF-NNNN`. For each example it records an observable assertion failure, the passing result, and the refactor check for that EX.
 - A collection, import, syntax, or fixture failure is not an admissible RED. When existing behavior already satisfies the EX, record falsifiability evidence under the rule in `references/red-not-observable.md`. Never weaken a correct test to manufacture RED.
-- The BF completion checkpoint runs the Test, Lint, Typecheck, and Build commands in `<paths.contractsDir>/tech.md`, flow validation, and independent review. Parallel execution requires disjoint writes, a passing technical gate, and user consent.
+- While implementing, run only the test being written. Lint, typecheck, build, the full suite and `npx qfai validate` run once, in the verify stage. Parallel execution requires disjoint writes and user consent.
 
 ### Concurrency (stage-independent, mandatory)
 

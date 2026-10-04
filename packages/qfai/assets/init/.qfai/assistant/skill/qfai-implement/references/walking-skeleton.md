@@ -16,4 +16,4 @@ Run the declared command from a fresh project context and report its command, ex
 
 Create only the seam needed to make the entrypoint reachable. Keep domain predicates and later flow behavior for their own example cycles. Record a temporary seam with its ceiling and the condition that lifts it under the minimal-implementation rule.
 
-The skeleton is proven before the first example that depends on that entrypoint. Re-run its command at the flow checkpoint after implementation changes. When a project declares no runnable entrypoint, record the scope evidence and proceed with the example tests that exist.
+The skeleton is proven before the first example that depends on that entrypoint. Its command runs again with the other gates in the verify stage. When a project declares no runnable entrypoint, record the scope evidence and proceed with the example tests that exist.

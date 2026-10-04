@@ -148,12 +148,12 @@ describe("agent cards and package defaults", () => {
 });
 
 describe("stepReview", () => {
-  it("reads a step's profile and required reviewers from the package routing", async () => {
+  it("reads a step's profile and required agents from the package routing", async () => {
     const effective = await readEffectiveRouting(defaultConfig);
     expect(stepReview(effective, "sdd-contract")).toEqual({
-      profile: "architecture-heavy",
-      alwaysRequired: ["architecture-reviewer"],
-      requiredAgents: ["solution-architect", "architecture-reviewer"],
+      profile: "default",
+      alwaysRequired: [],
+      requiredAgents: ["solution-architect"],
     });
   });
 

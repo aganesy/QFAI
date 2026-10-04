@@ -14,6 +14,5 @@ describe("implementation evidence contract", () => {
     const skill = await readSkill();
     expect(skill).toMatch(/Evidence without a command and result pair does not prove a\s+gate/);
     expect(skill).toMatch(/A failing or unrun gate cannot be reported as PASS/);
-    expect(skill).toMatch(/Every implemented EX has an observed RED, GREEN and Refactor result/);
   });
 });

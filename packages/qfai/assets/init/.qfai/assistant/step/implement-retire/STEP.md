@@ -9,9 +9,7 @@ roles:
   - backend-engineer
   - devops-ci-engineer
   - doc-steward
-  - implementation-reviewer
-  - qa-gatekeeper
-routing-profile: implementation-heavy
+routing-profile: default
 ---
 
 # implement-retire
@@ -36,8 +34,7 @@ This step carries it out.
 4. Where a story or contract of the project still states the mechanism, the
    step does not edit it. Return `needs_repair` with a debt naming the file,
    owned by `qfai-sdd`.
-5. Run the relevant suite, then the Lint, Typecheck and Build commands. Each
-   passes.
+5. Run the relevant suite. It passes.
 
 ## What it writes
 
@@ -47,5 +44,4 @@ This step carries it out.
 ## Gate
 
 The step is done when no reference to the mechanism remains outside the
-story tree, no absence test was added, the project gates pass, and the
-qa-gatekeeper observed them.
+story tree, no absence test was added, and the relevant suite passes.

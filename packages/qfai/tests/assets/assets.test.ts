@@ -421,9 +421,7 @@ describe("assets guardrails", () => {
     );
 
     expect(verify).toContain("Use `.qfai/assistant/rule/agent-selection.md` as the routing SSOT.");
-    expect(verify).toContain(
-      "Routed phases, in order: `plan` (`delivery-planner`, `qa-strategist`) -> `execution` (`devops-ci-engineer`) -> `review` (`qa-gatekeeper`, optional `implementation-reviewer` when code fixes are in scope).",
-    );
+    expect(verify).toContain("Routed phase: `plan` (`delivery-planner`, `qa-strategist`).");
   });
 
   it("keeps qfai-verify fix-until-PASS contract", async () => {
@@ -438,8 +436,7 @@ describe("assets guardrails", () => {
     const stepPath = path.join(assistantDir, "step", "verify-repo-gate", "STEP.md");
     const content = (await readFile(stepPath, "utf-8")).replace(/\s+/g, " ");
 
-    expect(content).toContain("concise evidence summary (copy‑paste for PR)");
-    expect(content).toContain("Change Classification (Primary/Tags)");
+    expect(content).not.toContain("Verification Evidence");
     expect(content).toContain("Run listed commands and record outputs.");
     expect(content).toContain("the next actions");
   });

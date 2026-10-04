@@ -36,12 +36,4 @@ describe("flow-scoped acceptance and implementation gates", () => {
     expect(content).toMatch(/fails, stop and report the command/);
     expect(content).toContain("never infer that the flow has no remaining work");
   });
-
-  it("implement completes with a final flow gate", async () => {
-    const content = await readImplementFlowSteps(assistant);
-    expect(content).toContain("qfai validate --profile tdd --fail-on error --flow BF-NNNN");
-    expect(content).toContain(
-      "When no EX work remains at entry, still run the current flow checkpoint",
-    );
-  });
 });

@@ -46,19 +46,12 @@ least beyond the request.
 
 ## Preconditions
 
-| Condition                           | Effect                                                                    |
-| ----------------------------------- | ------------------------------------------------------------------------- |
-| A design that is not yet fixed      | Proceed                                                                   |
-| The work is already specified       | Do not invoke; the spec is the authority                                  |
-| A no-question mode is active        | Run without asking; open every node left over as a question               |
-| An ambiguity met while implementing | Not a session on its own — an ordinary clarification under its own budget |
-| An execution stage declaring one    | A session. Article IX names two, at the preflight and on detection        |
-
-The last two rows are the same rule from both sides: meeting an ambiguity does
-not start a session, and a stage that **declares** one has started it. What
-separates them is the declaration, which is what makes the class decidable when
-the question is asked rather than arguable afterwards
-(`.qfai/assistant/rule/constitution.md` Article IX).
+| Condition                           | Effect                                                      |
+| ----------------------------------- | ----------------------------------------------------------- |
+| A design that is not yet fixed      | Proceed                                                     |
+| The work is already specified       | Do not invoke; the spec is the authority                    |
+| A no-question mode is active        | Run without asking; open every node left over as a question |
+| An ambiguity met while implementing | Not a session — stop under Article IX of the constitution   |
 
 **A no-question mode silences the questions, not the session.** An invocation
 told not to ask — `--auto`, or whatever the host spells it as — settles what the

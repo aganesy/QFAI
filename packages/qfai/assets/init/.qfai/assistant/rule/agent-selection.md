@@ -39,9 +39,10 @@ Do not infer routing from a skill body or continue without the defaults.
 | Documentation              | `doc-steward`                  | `delivery-planner`         |
 | Completion audit           | `completion-reviewer`          | `qa-gatekeeper`            |
 
-The resolved routing entry, not this table, decides mandatory agents,
-blocking reviewers, phase order, and rerun policy. The table helps identify a
-domain when no skill phase is being routed.
+The resolved routing entry, not this table, decides mandatory agents, phase
+order, and rerun policy. It routes no reviewer to a step: inside a route, the
+plan's `review` is the only review. The table helps identify a domain when no
+skill phase is being routed.
 
 A routed role names the expertise a phase needs, not a required hand-off. The
 session agent may do an authoring role's work itself, reading that role's card

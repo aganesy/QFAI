@@ -40,8 +40,6 @@ describe("BF completion gate", () => {
     expect(c).toMatch(/qfai validate --profile tdd --flow BF-NNNN/);
     expect(c).toMatch(/generatedAt.*no earlier than this run start/);
     expect(c).toMatch(/lowest EX ID.*test-obligation EX findings/);
-    expect(c).toMatch(/fresh validate result has no test-obligation EX finding for this BF/);
-    expect(c).toMatch(/qfai validate --profile tdd --fail-on error --flow BF-NNNN/);
   });
 
   it("requires observed RED, GREEN, and Refactor results for every implemented EX", async () => {
@@ -52,54 +50,26 @@ describe("BF completion gate", () => {
     );
     expect(c).toMatch(/Run the same selector and record\s+command, outcome, and revision/);
     expect(c).toMatch(/A failing or unrun gate cannot be reported as PASS/);
-    expect(c).toMatch(/Every implemented EX has an observed RED, GREEN and Refactor result/);
   });
 
   it("reports nothing to do only after a current scoped TDD gate finds no owed EX", async () => {
     // QFAI:EX-0001-0094-02
     const c = await loadContent();
+    const skill = (await readFile(implementSkillPath, "utf8")).replace(/\s+/g, " ");
     expect(c).toContain("including decision exceptions");
-    expect(c).toContain("fresh validate result has no test-obligation EX finding for this BF");
-    expect(c).toMatch(/When no EX work remains at entry, still run the current flow checkpoint/);
-    expect(c).toMatch(/report "nothing to do" only after the scoped gate and applicable commands/);
+    expect(skill).toContain("fresh validate result has no test-obligation EX finding for this BF");
+    expect(skill).toContain('the invocation reports "nothing to do"');
+    expect(skill).toContain("reads or writes no ledger status");
     expect(c).not.toContain("test-list.md");
   });
 
-  it("runs the same BF-scoped TDD command at checkpoint and completion", async () => {
-    // QFAI:EX-0001-0094-05
-    const c = await loadContent();
-    const checkpoint = await readFile(
-      path.join(path.dirname(implementSkillPath), "references", "checkpoint-verification.md"),
-      "utf8",
-    );
-    const command = "qfai validate --profile tdd --fail-on error --flow BF-NNNN";
-    expect(c).toContain(command);
-    expect(checkpoint).toContain(command);
-    expect(checkpoint).toContain("for the invocation's flow");
-    expect(c).not.toMatch(/qfai validate[^\n]*--spec\b/);
-    expect(checkpoint).not.toMatch(/qfai validate[^\n]*--spec\b/);
-  });
-
   it("stops selection when the scoped result is missing, stale or from another profile", async () => {
-    // QFAI:AC-0001-0094-05
-    // QFAI:EX-0001-0094-06
     const c = await loadContent();
     expect(c).toContain("Read its `validate.flow-<ids>.json` result even when the command exits");
     expect(c).toContain("the file exists, `profile` is");
     expect(c).toContain("`tdd`, and `generatedAt` is no earlier than this run start");
     expect(c).toContain("stop and report the command, exit result, and missing or stale field");
     expect(c).toContain("never infer that the flow has no remaining work");
-  });
-
-  it("runs affected tests and applicable technology commands on the integrated tree", async () => {
-    const c = await loadContent();
-    expect(c).toMatch(/affected tests and the Test, Lint, Typecheck and Build commands from/);
-    expect(c).toMatch(/run on the integrated tree/);
-    expect(c).toMatch(/documented\s+applicability makes it unnecessary/);
-    expect(c).toMatch(/When no EX work remains at entry, still run the current flow checkpoint/);
-    expect(c).toMatch(
-      /Record unresolved risks and upstream findings without calling\s+them complete/,
-    );
   });
 });
 // ---------------------------------------------------------------------------

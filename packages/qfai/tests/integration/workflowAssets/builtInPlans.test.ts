@@ -50,7 +50,6 @@ const VOCABULARY: Record<string, string[]> = {
     "implement-credentials",
     "implement-acceptance",
     "implement-tdd",
-    "implement-checkpoint",
     "implement-refactor",
     "implement-retire",
     "implement-sweep",

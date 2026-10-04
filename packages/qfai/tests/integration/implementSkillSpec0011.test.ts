@@ -32,14 +32,10 @@ describe("implement skill flow and example contract", () => {
     expect(content).toContain("minimum production code");
   });
 
-  it("requires current evidence, independent reviewers and a final flow gate", async () => {
+  it("requires current evidence and independent reviewers", async () => {
     const content = await readImplementFlowSteps(assistantDir);
     expect(content).toContain("The stage report gives each example its own");
     expect(content).toContain("### EX-NNNN-NNNN-NN");
     expect(content).toContain("The author does not certify their own result");
-    expect(content).toContain("qfai validate --profile tdd --fail-on error --flow BF-NNNN");
-    expect(content).toMatch(
-      /When no EX work remains at entry, still run the current flow checkpoint/,
-    );
   });
 });

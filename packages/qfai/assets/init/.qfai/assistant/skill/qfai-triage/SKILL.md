@@ -14,7 +14,6 @@ roles:
     frontend-engineer,
     backend-engineer,
     devops-ci-engineer,
-    requirements-reviewer,
   ]
 steps:
   - triage-dedupe

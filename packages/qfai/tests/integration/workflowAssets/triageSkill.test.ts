@@ -71,13 +71,10 @@ describe("qfai-triage as a stage skill", () => {
     const effective = await readEffectiveRouting(defaultConfig);
     expect(effective.routing?.has("qfai-triage")).toBe(false);
     for (const name of TRIAGE_STEPS) {
-      const expected = name === "triage-decompose" ? "requirements-heavy" : "default";
-      expect(frontMatterOf(await step(name))["routing-profile"], name).toBe(expected);
-      expect(stepReview(effective, name).profile, name).toBe(expected);
+      expect(frontMatterOf(await step(name))["routing-profile"], name).toBe("default");
+      expect(stepReview(effective, name).profile, name).toBe("default");
+      expect(stepReview(effective, name).alwaysRequired, name).toEqual([]);
     }
-    expect(stepReview(effective, "triage-decompose").alwaysRequired.sort()).toEqual([
-      "requirements-reviewer",
-    ]);
   });
 });
 
