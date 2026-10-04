@@ -81,7 +81,7 @@ value but the three below plans nothing.
      `npx qfai workflow plan --route <route>` at once: no later step of this
      route runs. Any other outcome continues the route. Before the third move
      and every one after it, ask the user, naming the destination in plain
-     words; `stop` ends the work.
+     words; `stop` ends the work. From a scope that leaves stages out, ask before any move.
 6. **Review.** After a stage whose `review` is `spec`, `requirements-reviewer`
    reviews, with `architecture-reviewer` when a contract changed; after one
    whose `review` is `code`, `implementation-reviewer`.
@@ -98,7 +98,7 @@ value but the three below plans nothing.
 Nothing is asked. The plan's narrowest scope, or the first candidate and its narrowest scope, is taken and reported as an assumption.
 A critical decision or a release point becomes one `open-questions.md` row,
 the step stops before the change that depends on it, and the report lists the
-decision as open. A third branch move stops the work.
+decision as open. A third branch move, or one from a scope that leaves stages out, stops the work.
 
 ## User Questions (AskUserQuestion Protocol)
 

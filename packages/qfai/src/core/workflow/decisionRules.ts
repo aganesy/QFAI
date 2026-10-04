@@ -38,6 +38,10 @@ const qualified = (input: RuleInput, name: string) =>
 const signalled = (input: RuleInput, ...names: string[]) =>
   input.signals.some((each) => names.includes(each));
 
+// A behaviour change that asks to change the prototype goes through prototyping, settled or not.
+const prototypeChange = (input: RuleInput) =>
+  is("behaviour-change")(input) && qualified(input, "prototype-requested");
+
 const envWithoutRepro = (input: RuleInput) => flag(input, "env") && !flag(input, "repro");
 
 const rule = (number: number, ...clauses: Clause[]): DecisionRule => ({ rule: number, clauses });
@@ -47,7 +51,10 @@ export const DECISION_RULES: readonly DecisionRule[] = [
   rule(1, clause(is("security"), "fix-vulnerability")),
   rule(
     2,
-    clause((input) => signalled(input, "approved-record-task"), "apply-settled"),
+    clause(
+      (input) => signalled(input, "approved-record-task") && !prototypeChange(input),
+      "apply-settled",
+    ),
   ),
   rule(
     3,
@@ -110,7 +117,8 @@ export const DECISION_RULES: readonly DecisionRule[] = [
     15,
     clause(
       (input) =>
-        is("order")(input) || (flag(input, "upstream") && qualified(input, "settled-design")),
+        is("order")(input) ||
+        (flag(input, "upstream") && qualified(input, "settled-design") && !prototypeChange(input)),
       "apply-settled",
     ),
   ),
@@ -179,10 +187,7 @@ export const DECISION_RULES: readonly DecisionRule[] = [
       (input) => is("feature", "behaviour-change")(input) && flag(input, "decision"),
       "decide-design",
     ),
-    clause(
-      (input) => is("behaviour-change")(input) && qualified(input, "prototype-requested"),
-      "prototype-feature",
-    ),
+    clause(prototypeChange, "prototype-feature"),
     clause(is("deprecation", "behaviour-change"), "change-compatibility"),
     clause((input) => is("feature")(input) && qualified(input, "visual-open"), "prototype-feature"),
     clause(is("feature"), "add-feature"),

@@ -342,6 +342,12 @@ describe("qfai-run", () => {
     );
     expect(scope).toMatch(/a release point is asked only when the chosen scope holds its step/i);
     expect(scope).toMatch(/when the chosen scope leaves stages out, ask before every branch move/i);
+    expect(flat(sectionOf(run, "## Under a no-question mode"))).toMatch(
+      /a third branch move, or one from a scope that leaves stages out, stops the work/i,
+    );
+    expect(flat(sectionOf(run, "## The work"))).toMatch(
+      /from a scope that leaves stages out, ask before any move/i,
+    );
     expect(flat(sectionOf(screens, "## The announcement"))).toMatch(/the chosen stages in order/i);
     expect(rowOf(sectionOf(screens, "## Final report"), "| At the chosen scope")).toMatch(
       /the stages not chosen.*never that a change is done/i,
@@ -357,7 +363,7 @@ describe("qfai-run", () => {
       /\| `behaviour-change` +\| the request explicitly asks to change the prototype\. a request to implement the change in the product does not set it/i,
     );
     expect(rowOf(sectionOf(reference, "## Entry flags"), "| `decision`")).toMatch(
-      /on a `behaviour-change` with `prototype-requested`, only when a choice is left open/i,
+      /on a `behaviour-change` that explicitly asks to change the prototype, only when a choice is left open/i,
     );
   });
 
@@ -369,6 +375,9 @@ describe("qfai-run", () => {
       /list `code` and `tests` only when the request asks for the change to be implemented: a request that ends at the specification or a prototype lists neither/i,
     );
     expect(artifacts).not.toMatch(/whenever behaviour changes/i);
+    expect(flat(await readShipped(EXTRACTION))).toMatch(
+      /6. list the `artifacts` the request asks to change./i,
+    );
   });
 
   // QFAI:AC-0001-0224-02
