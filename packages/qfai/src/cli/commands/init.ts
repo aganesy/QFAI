@@ -421,7 +421,7 @@ export async function runInit(
     ],
   });
   const storyTreeResult = oldSpecLayout
-    ? { copied: [] as string[], skipped: [] as string[] }
+    ? { copied: [] as string[], skipped: [] as string[], refused: [] as string[] }
     : await seedStoryTree(destRoot, qfaiAssets, options.dryRun);
   const skillsResult = await copyTemplatePaths(qfaiAssets, destQfai, [...STANDARD_ASSET_PATHS], {
     force: options.force,
@@ -439,6 +439,7 @@ export async function runInit(
       ...rulesCreated.refused,
       ...rulesForced.refused,
       ...qfaiResult.refused,
+      ...storyTreeResult.refused,
       ...skillsResult.refused,
     ],
     destRoot,
@@ -2067,6 +2068,7 @@ async function syncIntegrationWrappers(
     if (!options.dryRun) {
       const content = await keepSummariesOfUninstalledMasters(
         buildCopilotInstructions(),
+        destRoot,
         copilotDest,
         installedMasters,
       );
@@ -3759,24 +3761,31 @@ async function restoreQuarantined(entry: QuarantinedEntry): Promise<boolean> {
  *
  * A master outside `installed` keeps the project's text, because its write was
  * refused or the project edited it, so the release's summary would describe a
- * rule that file does not hold.
+ * rule that file does not hold. Where the file has no bullet for it and the
+ * master is not in the project, the bullet is left out rather than citing a
+ * file that is not there.
  */
 async function keepSummariesOfUninstalledMasters(
   generated: string,
+  destRoot: string,
   target: string,
   installed: ReadonlySet<string>,
 ): Promise<string> {
   const existing = await readBoundedRegularFile(target, COPILOT_INSTRUCTIONS_MAX_BYTES);
   if (existing === undefined) return generated;
   const existingLines = existing.toString("utf-8").split(/\r?\n/);
-  return generated
-    .split("\n")
-    .map((line) => {
-      const master = line.startsWith("- ") ? citedRuleMasters(line)[0] : undefined;
-      if (master === undefined || installed.has(master)) return line;
-      return existingLines.find((old) => old.startsWith(`- \`${master}\``)) ?? line;
-    })
-    .join("\n");
+  const lines: string[] = [];
+  for (const line of generated.split("\n")) {
+    const master = line.startsWith("- ") ? citedRuleMasters(line)[0] : undefined;
+    if (master === undefined || installed.has(master)) {
+      lines.push(line);
+      continue;
+    }
+    const kept = existingLines.find((old) => old.startsWith(`- \`${master}\``));
+    if (kept !== undefined) lines.push(kept);
+    else if (await pathExists(path.join(destRoot, ...master.split("/")))) lines.push(line);
+  }
+  return lines.join("\n");
 }
 
 function buildCopilotInstructions(): string {

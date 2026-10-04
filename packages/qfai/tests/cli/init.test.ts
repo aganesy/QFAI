@@ -218,6 +218,24 @@ describe("qfai init", () => {
     }
   });
 
+  it("warns about a story-tree seed under an entry that is not a directory", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await mkdir(path.join(root, ".qfai", "spec"), { recursive: true });
+      await writeFile(path.join(root, ".qfai", "spec", "01_policy"), "a file\n", "utf-8");
+
+      const output = await captureStdout(() =>
+        runInit({ dir: root, force: false, dryRun: false, yes: true }),
+      );
+
+      expect(output).toContain(
+        `${path.join(".qfai", "spec", "01_policy", "objective.md")} was not written: an entry above it is a symbolic link or not a directory.`,
+      );
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
   it("appends QFAI entries to root .gitignore on init", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
