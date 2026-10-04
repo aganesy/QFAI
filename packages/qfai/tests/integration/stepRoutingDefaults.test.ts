@@ -63,17 +63,13 @@ describe("routing keyed by step", () => {
     const matching = entries.filter((candidate) => candidate.step === "sdd-contract");
     expect(matching).toHaveLength(1);
     const [entry = {}] = matching;
-    expect(entry.review_profile).toBe("architecture-heavy");
+    expect(entry.review_profile).toBe("default");
 
     const step = frontMatterOf(await readShipped("step/sdd-contract/STEP.md"));
-    expect(step["routing-profile"]).toBe("architecture-heavy");
+    expect(step["routing-profile"]).toBe("default");
     const roles = names(step.roles);
     const phases = Array.isArray(entry.phases) ? entry.phases.filter(isRecord) : [];
-    const bound = phases.flatMap((phase) => [
-      ...names(phase.mandatory_agents),
-      ...names(phase.blocking_agents),
-    ]);
-    for (const agent of new Set([...bound, "architecture-reviewer"])) {
+    for (const agent of new Set(phases.flatMap((phase) => names(phase.mandatory_agents)))) {
       expect(roles, agent).toContain(agent);
     }
 
@@ -108,19 +104,19 @@ describe("routing keyed by step", () => {
   // QFAI:EX-0001-0161-08
   it("reports a step whose roles or routing-profile drift from its entry", async () => {
     const missingRole = await agentFindings((text) =>
-      text.replace(", architecture-reviewer]", "]"),
+      text.replace("roles: [solution-architect, ", "roles: ["),
     );
     expect(
       missingRole.filter(
         (finding) =>
           finding.code === "QFAI-AGENT-019" &&
-          finding.message.includes("architecture-reviewer") &&
+          finding.message.includes("solution-architect") &&
           finding.file?.includes("sdd-contract") === true,
       ),
     ).not.toEqual([]);
 
     const wrongProfile = await agentFindings((text) =>
-      text.replace("routing-profile: architecture-heavy", "routing-profile: default"),
+      text.replace("routing-profile: default", "routing-profile: architecture-heavy"),
     );
     expect(
       wrongProfile.filter(

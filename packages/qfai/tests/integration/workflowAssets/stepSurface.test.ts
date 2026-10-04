@@ -100,9 +100,16 @@ describe("the skills a workflow run's steps belong to", () => {
         if (Array.isArray(roles)) stepRoles.push(...roles.map(String));
       }
       const declared = Array.isArray(front.roles) ? front.roles.map(String) : [];
-      expect([...new Set(declared)].sort(), skill).toEqual(
-        [...new Set(["orchestrator", ...stepRoles])].sort(),
-      );
+      const owed = new Set(["orchestrator", ...stepRoles]);
+      // The parent also names the reviewers of its one review, which no step routes.
+      expect(
+        [...owed].filter((role) => !declared.includes(role)),
+        skill,
+      ).toEqual([]);
+      expect(
+        declared.filter((role) => !owed.has(role) && !role.endsWith("-reviewer")),
+        skill,
+      ).toEqual([]);
     }
     const sdd = await readShipped("skill/qfai-sdd/SKILL.md");
     expect(sdd).toContain(".qfai/assistant/step/");
@@ -148,7 +155,6 @@ describe("the skills a workflow run's steps belong to", () => {
         "implement-regression-fix",
         "implement-test-fix",
         "implement-seam",
-        "implement-checkpoint",
         "implement-bisect",
         "implement-revert",
         "implement-minimize",
@@ -285,7 +291,7 @@ describe("a parent skill invoked by name", () => {
     expect(context["routing-profile"]).toBeUndefined();
     for (const step of ["verify-qfai-gate", "verify-repo-gate"]) {
       const front = frontMatterOf(await readShipped(`step/${step}/STEP.md`));
-      expect(front["routing-profile"], step).toBe("runtime-heavy");
+      expect(front["routing-profile"], step).toBe("default");
     }
     expect(flat(sectionOf(skill, "## Review"))).toMatch(
       /a run that wrote no tracked file holds no review/i,
@@ -307,7 +313,12 @@ describe("a parent skill invoked by name", () => {
     const skill = await readShipped("skill/qfai-sdd/SKILL.md");
     expect(rowOf(skill, "| `common-design-md`")).toMatch(/The flow is not UI-bearing/);
     const ran = steps.filter((step) => step !== "common-design-md");
-    expect(await unionOfReviewers(ran)).toEqual(["architecture-reviewer", "requirements-reviewer"]);
+    // No step routes a reviewer of its own: the parent's one review names them.
+    expect(await unionOfReviewers(ran)).toEqual([]);
+    const roles = frontMatterOf(skill).roles;
+    expect(Array.isArray(roles) ? roles : []).toEqual(
+      expect.arrayContaining(["architecture-reviewer", "requirements-reviewer"]),
+    );
   });
 });
 

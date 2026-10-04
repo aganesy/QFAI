@@ -7,9 +7,7 @@ roles:
   - devops-ci-engineer
   - frontend-engineer
   - backend-engineer
-  - implementation-reviewer
-  - qa-gatekeeper
-routing-profile: implementation-heavy
+routing-profile: default
 ---
 
 # implement-backport
@@ -48,5 +46,5 @@ route asks for.
 ## Gate
 
 The step is done when the criteria are recorded as met, every commit is
-picked with its origin, the release branch's gates pass, nothing was pushed
-or published, and the qa-gatekeeper observed the gates.
+picked with its origin, the release branch's gates pass, and nothing was
+pushed or published.

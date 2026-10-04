@@ -20,16 +20,6 @@ describe("completion smoke checks", () => {
     expect(baseline).toContain("cheapest command that executes what this stage just produced");
   });
 
-  it("implements a current-flow checkpoint even when no EX remains", async () => {
-    const implement = await read("step/implement-checkpoint/STEP.md");
-    const checkpoint = await read("skill/qfai-implement/references/checkpoint-verification.md");
-    expect(implement).toContain(
-      "When no EX work remains at entry, still run the current flow checkpoint",
-    );
-    expect(checkpoint).toContain("BF");
-    expect(checkpoint).toContain("source revision");
-  });
-
   it("acceptance tests check every body before completion", async () => {
     const acceptance = await read("step/implement-acceptance/STEP.md");
     expect(acceptance).toContain("PASS when every test in scope has a body");

@@ -6,9 +6,7 @@ requires: [common-gate-run]
 roles:
   - frontend-engineer
   - backend-engineer
-  - implementation-reviewer
-  - qa-gatekeeper
-routing-profile: implementation-heavy
+routing-profile: default
 ---
 
 # implement-seam

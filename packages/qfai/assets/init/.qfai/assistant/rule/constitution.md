@@ -46,10 +46,9 @@ Do **not** guess file paths, existing commands, or project policies.
 
 Before producing deliverables, read **project memory**:
 
-1. `.qfai/assistant/rule/*`
-2. `.qfai/assistant/rule/agent-selection.md`, the card for the acting
-   `orchestrator`, and every routed role's card under
-   `.qfai/assistant/agent/`. The card frontmatter is the sole source for
+1. the rules under `.qfai/assistant/rule/` that the current step or skill cites
+2. the card under `.qfai/assistant/agent/` of each role the step dispatches.
+   The card frontmatter is the sole source for
    `owned_artifacts`, `tool_profile`, `permission_profile`, and
    `specialization_tags`. Read applicable project policy and contracts under
    `.qfai/spec/` when they bear on the task.
@@ -307,7 +306,7 @@ Typical minimum (project-dependent):
 
 ---
 
-## Article IX — Preflight confidence gate (implementation/test stages)
+## Article IX — Preflight and stop on detection (implementation/test stages)
 
 Before modifying code/tests, perform a **quick preflight**:
 
@@ -319,44 +318,27 @@ Before modifying code/tests, perform a **quick preflight**:
 - confirm where to update tests/docs
 - confirm how to run gates locally
 
-If confidence is low, ask targeted questions or run additional repo inspection.
+If confidence is low, inspect the repository further.
 
-**"Targeted questions" means a grilling session** (`.agents/rules/grilling.md`),
-declared here the way that rule requires — a session is entered deliberately,
-and this is the deliberate entry. Not an ordinary clarification: those are
-capped by Article VI, and a cap on the one question that would have prevented
-the wrong build is the failure this gate exists to catch.
+**Stop on detection.** Where a contradiction in the spec, an unconsidered case,
+or a technical obstacle surfaces mid-run, stop rather than deciding alone.
+Settle it between the agents, and put a critical decision to the user
+(`.agents/rules/grilling.md#critical-decisions`). A contradiction with the spec
+is critical. Nothing is recorded beyond the stage's final report.
 
-It is a delegated session unless the stage says otherwise: a griller puts the
-questions to the agents authoring the work, and only a critical decision reaches
-the user. A contradiction with the spec is critical.
+**Only one outcome is the Drift Protocol's.**
 
-**Its subject is bounded, not its length.** The session interrogates what the
-preflight left uncertain, and nothing else. A spec and a test ledger are settled
-input here, and re-interrogating them each run would stop the micro-cycle and
-invite the drift these stages exist to avoid — but that bounds the subject. A
-session runs until its frontier is empty, however few rounds that takes.
-
-**A session also opens on detection.** Where a contradiction in the spec, an
-unconsidered case, or a technical obstacle surfaces mid-run, stop and grill
-rather than deciding alone. These stages read a spec closely enough for its gaps
-to show, and the agent that finds one is the agent least able to judge, on its
-own, what the spec ought to have said. Its subject is what was detected.
-
-**What follows depends on what the session concludes, and only one branch is the
-Drift Protocol's.**
-
-| The session concludes                                                                    | What follows                                                                                                   |
+| The stop concludes                                                                       | What follows                                                                                                   |
 | ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | Settled input must change                                                                | `.qfai/assistant/rule/drift-protocol.md`: stop the dependent work, raise the Change Request, wait for approval |
 | The obstacle is this run's to solve — an unavailable dependency, an approach that failed | The run solves it. Nothing upstream changes, so there is nothing to approve                                    |
 
-A session does not change settled input and is not a second way to. What it
+Stopping does not change settled input and is not a second way to. What it
 contributes to a Change Request is what that protocol asks of the class: for
 intent drift, the options and the recommendation its `Approved option` is chosen
 from; for defect drift, the single correct repair, which that protocol records
 with `Approved option: -` and which options would only dress as a choice.
-Grilling decides what the change should be; the protocol decides whether it
+The agents settle what the change should be; the protocol decides whether it
 happens.
 
 ---

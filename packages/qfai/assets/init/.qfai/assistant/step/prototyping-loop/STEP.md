@@ -2,9 +2,9 @@
 name: prototyping-loop
 owner: qfai-prototyping
 purpose: "Build and review one prototype lineage per UI contract and screen, and put each reviewed prototype to the user until they confirm it."
-requires: [common-grilling-record]
+requires: []
 roles: [orchestrator, product-experience-architect, product-surface-reviewer, devops-ci-engineer]
-routing-profile: ui-bearing
+routing-profile: default
 ---
 
 # prototyping-loop
@@ -105,8 +105,7 @@ review informs the answer; it does not replace it.
 Record the answer in `.qfai/prototype/grilling.md` under `## Session`,
 **replacing any row with the same `Scope` and decision rather than adding beside
 it, and removing its row from `## Escalated`** — the file is the current state
-of the tree, not its history. Run `common-grilling-record` with the same file,
-as `prototyping-grill` does.
+of the tree, not its history.
 
 How the session ends decides the route:
 

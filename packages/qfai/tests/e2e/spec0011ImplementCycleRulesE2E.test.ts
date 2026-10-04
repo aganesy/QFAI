@@ -46,14 +46,6 @@ describe("E2E: implementation follows flow-scoped example obligations", () => {
     expect(content).toContain("reviewer verdicts, and open findings");
   });
 
-  it("requires a final scoped gate even when no EX work remains", async () => {
-    const content = await skill();
-    expect(content).toContain("qfai validate --profile tdd --fail-on error --flow BF-NNNN");
-    expect(content).toContain(
-      "When no EX work remains at entry, still run the current flow checkpoint",
-    );
-  });
-
   it("bounds parallel work by ownership and integration", async () => {
     const content = await skill();
     const policy = await reference("parallelization-policy.md");

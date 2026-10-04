@@ -175,6 +175,27 @@ its code. Several commands, findings and files go with that.
   nothing to migrate in the directory the line names, and to ask the person to
   check that the specs live there.
 
+- **A route's plan names its only reviews, and the record rituals are gone.**
+  - The routing defaults route no reviewer to a step. Every step's review
+    profile is `default`, and `requirements-heavy`, `ui-bearing` and
+    `implementation-heavy` leave `review-profiles.yml`. No step entry carries
+    a review phase or `blocking_agents`; the skills that are not split into
+    steps keep theirs.
+  - The `qa-gatekeeper` no longer observes each RED and GREEN, the walking
+    skeleton or the verify gates. The `implement-checkpoint` step is removed;
+    the full suite, lint, typecheck, build and `qfai validate` run once, in the
+    verify stage. A review runs no gate first.
+  - Only the discussion stage writes a grilling record. Elsewhere a
+    contradiction stops the work under Article IX, and the final report lists
+    what the agents settled.
+  - Article III reads the rules the current step cites, not every rule and
+    every role card. The Work Orders Summary is kept only for parallel
+    fan-out. `workflow.md` no longer asks for a Change Type row in
+    `decisions.md`; the classification goes in the pull request body.
+  - A reviewer answers with a verdict and its findings. `verify-repo-gate`
+    writes no Verification Evidence block, and `verify-qfai-gate` runs no
+    static checks of the shipped rule files.
+
 - **The project-fact check is the `common-policy-check` step, and it runs once
   per run.** It used to run at the start of every stage, and a later stage
   reused its result when a recorded digest key matched. Now `qfai-run` runs it
