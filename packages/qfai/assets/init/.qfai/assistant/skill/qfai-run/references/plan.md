@@ -81,7 +81,7 @@ The route, its stages in order with each step's file, and its points.
       "outcomes": [{ "outcome": "regression", "routes": ["route-b"] }]
     }
   ],
-  "scopes": [{ "scope": "broad", "stages": ["diagnose", "spec"], "recommended": true }]
+  "scopes": [{ "scope": "broad", "stages": ["diagnose", "note"], "recommended": true }]
 }
 ```
 

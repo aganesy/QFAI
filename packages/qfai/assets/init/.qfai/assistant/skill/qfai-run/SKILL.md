@@ -59,9 +59,10 @@ value but the three below plans nothing.
    question, each option saying in the user's words what that route will do,
    then run `npx qfai workflow plan --route <route>` for the chosen one.
 3. **Scope.** Ask which scope to run, as `references/operator-screens.md` says; run only its stages.
-4. **Announce.** Give the goal, the chosen stages in plain words and the files
-   the work may change; ask nothing. Then run `common-policy-check` once; on a
-   route that changes no file, it reads and reports and writes nothing.
+4. **Announce.** Before the first stage, give the goal, the chosen stages in
+   order in plain words, and the files the work may change. Ask nothing. Then run
+   `common-policy-check` once. On a route that changes no file, one that
+   closes, answers or asks, it reads and reports and writes nothing.
 5. **Run the stages.** Run each stage in plan order, and each of its steps in
    order. Write any artifact yourself. Give a part to a sub-agent only to run
    independent parts in parallel, or for a review. At each step, handle the
@@ -95,8 +96,7 @@ value but the three below plans nothing.
 7. **Approvals.** Each approval of a specification change, a critical decision
    or a release is one `decisions.md` row: what was approved, who approved it,
    when, and the chosen option's label. A decision you took appends no row.
-8. **A finding no stage serves.** Stop, and name the finding, its owner and
-   the stage skill to invoke by name.
+8. **A finding no stage serves.** Stop, and name the finding, its owner and the stage skill to invoke by name.
 9. **Commit.** `verify-commit` runs last, after any release point; never pushes.
 
 ## Under a no-question mode
@@ -104,7 +104,7 @@ value but the three below plans nothing.
 Nothing is asked. The plan's narrowest scope, or the first candidate and its narrowest scope, is taken and reported as an assumption.
 A critical decision or a release point becomes one `open-questions.md` row,
 the step stops before the change that depends on it, and the report lists the
-decision as open. A third branch move stops the work.
+decision as open. A third branch move stops the work, and so does any branch move out of a scope that leaves stages out.
 
 ## User Questions (AskUserQuestion Protocol)
 
