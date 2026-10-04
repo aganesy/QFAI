@@ -81,17 +81,19 @@ as [A diagnosed missing example](#a-diagnosed-missing-example) states.
 
 ## A contradiction
 
-When a contradiction or a missing behaviour case appears during
-implementation, stop and ask the user. Route a needed story or contract change
+When the work would contradict an existing story, AC, EX, rule or contract,
+stop and ask the user. A missing example is not a contradiction:
+[A diagnosed missing example](#a-diagnosed-missing-example) appends it. Route a needed story or contract change
 through `.qfai/assistant/rule/drift-protocol.md`; the run solves local
 obstacles. Do not reopen settled requirements as implementation preferences.
 
 ## A diagnosed missing example
 
-On a route of the `fix` family and on `revert-culprit`, a case no EX states has
-this step append one EX before it makes the failing test pass: the case a
-`missing-test` diagnosis found, or the behaviour a reverted change broke. The EX states what an existing AC already requires, so the step asks the
-user nothing:
+On every route of the `fix` family, `improve-performance` included, and on
+`revert-culprit`, a case no EX states has this step append one EX before it
+makes the failing test pass: the case a `missing-test` diagnosis found, or the
+behaviour a reverted change broke. The EX states what an existing AC already
+requires, so the step asks the user nothing:
 
 - Append exactly one EX to the `03_Example.md` of the story that owns the AC
   the diagnosis matched. Its ID is the next free EX ID of that story, its
@@ -120,8 +122,7 @@ for changes that touch another flow and
 `.qfai/assistant/skill/qfai-implement/references/parallelization-policy.md`
 for independently owned
 slices. Work one EX at a time by default. Parallel work requires disjoint
-writes, a passing technical gate, and the required user consent. Review the
-integrated result after slices join.
+writes, a passing technical gate, and the required user consent.
 
 ## Red, Green, Refactor
 

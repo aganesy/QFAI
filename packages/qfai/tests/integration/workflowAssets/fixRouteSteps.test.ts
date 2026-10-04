@@ -40,7 +40,9 @@ describe("a fix route from the diagnosis to the commit", () => {
   // QFAI:EX-0001-0186-16
   it("appends the missing example without asking on revert-culprit too, and reports it", async () => {
     const text = await section("implement-tdd", "## A diagnosed missing example");
-    expect(text).toMatch(/on a route of the `fix` family and on `revert-culprit`/i);
+    expect(text).toMatch(
+      /on every route of the `fix` family, `improve-performance` included, and on `revert-culprit`/i,
+    );
     expect(text).toMatch(/the behaviour a reverted change broke/i);
     expect(text).toMatch(/the step asks the user nothing/i);
     expect(text).toMatch(/list the EX in the run's final report/i);
@@ -63,10 +65,13 @@ describe("a fix route from the diagnosis to the commit", () => {
   });
 
   // QFAI:EX-0001-0225-07
-  it("commits only the files the run changed, and pushes nothing", async () => {
+  it("commits exactly the paths the run wrote, and pushes nothing", async () => {
     const step = flat(await readShipped("step/verify-commit/STEP.md"));
-    expect(step).toMatch(/stage only the files the run changed/i);
-    expect(step).toMatch(/a file that was already modified before the run started stays out/i);
+    expect(step).toMatch(/stage exactly the paths the run wrote, with `git add <those paths>`/i);
+    expect(step).toMatch(/never `git add -A`/i);
+    expect(step).toMatch(
+      /already modified before the run and then written by it is committed whole; the final report names it/i,
+    );
     expect(step).toMatch(/in the final report: the commit, and the files it holds/i);
     expect(step).toMatch(/the step never pushes, opens a pull request or merges/i);
   });

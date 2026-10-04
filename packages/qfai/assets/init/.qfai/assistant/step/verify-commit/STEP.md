@@ -14,7 +14,7 @@ The last step of a change route. It records the run's work as a local commit.
 ## Reads
 
 - The verify results in the stage report.
-- The files the run changed, from `git status`.
+- The paths the run wrote, as its stage reports name them.
 - The project's commit message convention, where it states one.
 
 ## Writes
@@ -28,8 +28,10 @@ the user's own instruction.
 ## Procedure
 
 1. Stop when a verify gate failed or did not run, and say which.
-2. Stage only the files the run changed. A file that was already modified
-   before the run started stays out.
+2. Stage exactly the paths the run wrote, with `git add <those paths>`.
+   Never `git add -A` or `git add .`. A file that was already modified
+   before the run and then written by it is committed whole; the final report
+   names it.
 3. Commit with a message in the project's convention that says what changed
    and why.
 4. Where a commit hook refuses the commit, fix the cause and commit again.
@@ -37,5 +39,5 @@ the user's own instruction.
 
 ## Gate
 
-- The commit exists and holds every file the run changed, and no other.
+- The commit exists and holds exactly the paths the run wrote.
 - Nothing was pushed, and no pull request or merge was made.

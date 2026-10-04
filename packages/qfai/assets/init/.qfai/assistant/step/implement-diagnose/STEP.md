@@ -58,7 +58,8 @@ the verdict and does not choose the route.
 ## The failing test
 
 On a route of the `fix` family other than `improve-performance`, a command or
-manual steps alone reproduce nothing. A test that already exists and fails
+manual steps alone reproduce nothing. `improve-performance` profiles its
+baseline measurement instead, and writes no test here. A test that already exists and fails
 while the defect is present is the reproduction. For `missing-test`, write the
 test that should have caught it, before any production code changes:
 
