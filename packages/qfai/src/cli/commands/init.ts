@@ -393,18 +393,19 @@ export async function runInit(
   // The entry-point repair reads which masters this run created, which is
   // available only in the run that created them.
   const newlyWritten = newlyWrittenRuleMasters(rulesCreated.copied, destRoot);
+  // The masters whose file holds this release's text once the run is done; a
+  // summary moves to the release's wording only for these.
+  const installedMasters = new Set([
+    ...newlyWrittenRuleMasters([...rulesCreated.copied, ...rulesForced.copied], destRoot),
+    ...(await mastersHoldingShippedText(rootAssets, destRoot)),
+  ]);
   const entryPointRulesResult = await ensureAgentEntryPointRules(
     rootAssets,
     destRoot,
     options.dryRun,
     options.force,
     newlyWritten,
-    // The masters whose file holds this release's text once the run is done; a
-    // summary moves to the release's wording only for these.
-    new Set([
-      ...newlyWrittenRuleMasters([...rulesCreated.copied, ...rulesForced.copied], destRoot),
-      ...(await mastersHoldingShippedText(rootAssets, destRoot)),
-    ]),
+    installedMasters,
   );
   const qfaiResult = await copyTemplateTree(qfaiAssets, destQfai, {
     force: false,
@@ -420,7 +421,7 @@ export async function runInit(
     ],
   });
   const storyTreeResult = oldSpecLayout
-    ? { copied: [] as string[], skipped: [] as string[] }
+    ? { copied: [] as string[], skipped: [] as string[], refused: [] as string[] }
     : await seedStoryTree(destRoot, qfaiAssets, options.dryRun);
   const skillsResult = await copyTemplatePaths(qfaiAssets, destQfai, [...STANDARD_ASSET_PATHS], {
     force: options.force,
@@ -438,6 +439,7 @@ export async function runInit(
       ...rulesCreated.refused,
       ...rulesForced.refused,
       ...qfaiResult.refused,
+      ...storyTreeResult.refused,
       ...skillsResult.refused,
     ],
     destRoot,
@@ -455,11 +457,12 @@ export async function runInit(
 
   // Prune retired wrappers, write the Copilot instruction files, link skills
   // and agents into each tool's directory, and write the Codex agent profiles.
-  const wrappersResult = await syncIntegrationWrappers(assistantAssets, destRoot, {
-    force: options.force,
-    dryRun: options.dryRun,
-    ...symlinkRuntime,
-  });
+  const wrappersResult = await syncIntegrationWrappers(
+    assistantAssets,
+    destRoot,
+    { force: options.force, dryRun: options.dryRun, ...symlinkRuntime },
+    installedMasters,
+  );
   const gitignoreResult = await ensureRootGitignoreEntries(destRoot, options.dryRun);
   // Their templates sit outside `root/`, so no earlier copy has touched the files:
   // this owns both writing each and merging into one the project already had.
@@ -588,6 +591,9 @@ async function requireReadableShippedAssets(assistantAssets: string): Promise<vo
       files = await collectTemplateFiles(
         path.join(assistantAssets, path.relative("assistant", relative)),
       );
+      // Listing a directory does not read its files, so each one is read here
+      // rather than failing the copy partway through.
+      for (const file of files) await readFile(file);
     } catch (cause: unknown) {
       throw new Error(damaged.message, { cause });
     }
@@ -643,11 +649,11 @@ async function mastersHoldingShippedText(rootAssets: string, destRoot: string): 
   return held;
 }
 
-/** Names each destination a copy refused because a directory above it is a link. */
+/** Names each destination a copy refused because an entry above it is a link or not a directory. */
 function reportRefusedWrites(refused: readonly string[], destRoot: string): void {
   for (const dest of refused) {
     warn(
-      `WARN: ${formatReportPath(path.relative(destRoot, dest))} was not written: a directory above it is a symbolic link, and the write would land wherever it points.`,
+      `WARN: ${formatReportPath(path.relative(destRoot, dest))} was not written: an entry above it is a symbolic link or not a directory.`,
     );
   }
 }
@@ -2032,6 +2038,7 @@ async function syncIntegrationWrappers(
   assistantAssetsDir: string,
   destRoot: string,
   options: WrapperSyncOptions,
+  installedMasters: ReadonlySet<string>,
 ): Promise<SyncResult> {
   const skills = await collectCanonicalSkillIds(assistantAssetsDir);
   const agents = await collectCanonicalAgentNames(assistantAssetsDir);
@@ -2059,8 +2066,14 @@ async function syncIntegrationWrappers(
   } else {
     copied.push(copilotDest);
     if (!options.dryRun) {
+      const content = await keepSummariesOfUninstalledMasters(
+        buildCopilotInstructions(),
+        destRoot,
+        copilotDest,
+        installedMasters,
+      );
       await mkdir(path.dirname(copilotDest), { recursive: true });
-      await writeFile(copilotDest, buildCopilotInstructions(), "utf-8");
+      await writeFile(copilotDest, content, "utf-8");
     }
   }
 
@@ -3741,6 +3754,39 @@ async function restoreQuarantined(entry: QuarantinedEntry): Promise<boolean> {
 // ---------------------------------------------------------------------------
 // copilot-instructions builder (regular file)
 // ---------------------------------------------------------------------------
+
+/**
+ * `generated` with each rule bullet for a master outside `installed` taken from
+ * the Copilot file already at `target`, where that file has one.
+ *
+ * A master outside `installed` keeps the project's text, because its write was
+ * refused or the project edited it, so the release's summary would describe a
+ * rule that file does not hold. Where the file has no bullet for it and the
+ * master is not in the project, the bullet is left out rather than citing a
+ * file that is not there.
+ */
+async function keepSummariesOfUninstalledMasters(
+  generated: string,
+  destRoot: string,
+  target: string,
+  installed: ReadonlySet<string>,
+): Promise<string> {
+  const existing = await readBoundedRegularFile(target, COPILOT_INSTRUCTIONS_MAX_BYTES);
+  if (existing === undefined) return generated;
+  const existingLines = existing.toString("utf-8").split(/\r?\n/);
+  const lines: string[] = [];
+  for (const line of generated.split("\n")) {
+    const master = line.startsWith("- ") ? citedRuleMasters(line)[0] : undefined;
+    if (master === undefined || installed.has(master)) {
+      lines.push(line);
+      continue;
+    }
+    const kept = existingLines.find((old) => old.startsWith(`- \`${master}\``));
+    if (kept !== undefined) lines.push(kept);
+    else if (await pathExists(path.join(destRoot, ...master.split("/")))) lines.push(line);
+  }
+  return lines.join("\n");
+}
 
 function buildCopilotInstructions(): string {
   return [

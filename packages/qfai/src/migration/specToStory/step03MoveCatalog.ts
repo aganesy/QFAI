@@ -218,14 +218,17 @@ async function tiedUiContracts(
       if (id?.startsWith("UI-")) tied.add(id);
     }
   }
-  if (rows.length === 0) {
-    // Step 7 deleted the pack's rules; the ID map records the contract each was placed in.
-    const map = await readIdMap(context.root);
-    for (const [oldId, contract] of Object.entries(map?.placements[specId] ?? {})) {
-      if (!oldId.startsWith("BR-")) continue;
-      const id = contractMap[contract]?.id ?? map?.contracts?.[contract]?.id;
-      if (id?.startsWith("UI-")) tied.add(id);
-    }
+  // The rules step 7 already deleted are gone from the pack, while the ID map
+  // records the contract each was placed in. A rule still in the pack is read
+  // from its row: its placement is only where step 7 plans to move it.
+  const remaining = new Set(
+    rows.map((row) => Object.entries(row.cells).find(([name]) => /^br-id$/i.test(name))?.[1]),
+  );
+  const map = await readIdMap(context.root);
+  for (const [oldId, contract] of Object.entries(map?.placements[specId] ?? {})) {
+    if (!oldId.startsWith("BR-") || remaining.has(oldId)) continue;
+    const id = contractMap[contract]?.id ?? map?.contracts?.[contract]?.id;
+    if (id?.startsWith("UI-")) tied.add(id);
   }
   return [...tied].sort();
 }

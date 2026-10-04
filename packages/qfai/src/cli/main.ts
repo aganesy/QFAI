@@ -301,7 +301,7 @@ async function workflowEntry(
     return emitPlanDocument({
       ok: false,
       message:
-        "The command line is not `workflow plan` with exactly one of --in and --route. Run it with --help.",
+        "The command line is not `workflow plan` with exactly one of --in and --route, so run it with --help to see the form.",
       reasons: subjects.map((subject) => ({ reason: "invalid-input", subject })),
     });
   }

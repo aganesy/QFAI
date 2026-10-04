@@ -123,7 +123,7 @@ function expectListedFiles(message: string, files: readonly string[]): void {
   for (const file of files) expect(lines, file).toContain(file);
 }
 
-/** The last line names the two skills and the archive the migration keeps. */
+/** The last line names the two skills. */
 function expectFinishLine(message: string): void {
   const last = messageLines(message).at(-1) ?? "";
   for (const token of FINISH_TOKENS) expect(last, token).toContain(token);

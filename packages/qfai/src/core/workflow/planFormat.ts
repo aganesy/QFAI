@@ -16,7 +16,6 @@ export interface PlanStage {
   kind: string;
   steps: PlanStep[];
   after: string[];
-  effects: string[];
   // The review that follows the stage: the specification review or the code review.
   review?: "spec" | "code";
 }
@@ -45,7 +44,6 @@ export type PlanRefusalReason =
   | "route-name"
   | "family"
   | "shape"
-  | "effects"
   | "out-of-vocabulary"
   | "kind-mismatch"
   | "mode"
@@ -73,7 +71,7 @@ export type PlanLoad =
   { ok: true; plan: WorkflowPlanFile } | { ok: false; refusals: PlanRefusal[] };
 
 const PLAN_KEYS = ["route", "family", "stages", "decisionPoints", "releasePoint", "branchPoints"];
-const STAGE_KEYS = ["id", "kind", "steps", "after", "effects", "review"];
+const STAGE_KEYS = ["id", "kind", "steps", "after", "review"];
 const STEP_KEYS = ["step", "mode", "passThrough"];
 const BRANCH_KEYS = ["step", "outcomes"];
 const OUTCOME_KEYS = ["outcome", "routes"];
@@ -173,15 +171,6 @@ export const PASS_THROUGH_STEPS = [
   "verify-change-note",
 ];
 
-const EFFECTS = [
-  "push",
-  "pull-request",
-  "merge",
-  "deploy",
-  "production-migration",
-  "extra-spending",
-];
-
 type Refuse = (reason: PlanRefusalReason, subject: string) => void;
 
 // Record a refusal where the value it is about cannot be used.
@@ -258,16 +247,11 @@ function stageOf(value: unknown, refuse: Refuse): PlanStage | null {
   const { id, kind } = value;
   const steps = stepsOf(value.steps, refuse);
   const after = value.after === undefined ? [] : stringList(value.after);
-  const effects = value.effects === undefined ? [] : stringList(value.effects);
-  if (!effects || effects.some((effect) => !EFFECTS.includes(effect))) {
-    refuse("effects", typeof id === "string" ? id : "stages");
-  }
   if (typeof id !== "string" || id === "" || typeof kind !== "string" || !steps || !after) {
     return refused(refuse, "shape", typeof id === "string" ? id : "stages");
   }
-  if (!effects) return refused(refuse, "shape", id);
   const review = reviewOf(value.review, kind, id, refuse);
-  const stage = { id, kind, steps, after, effects, ...(review ? { review } : {}) };
+  const stage = { id, kind, steps, after, ...(review ? { review } : {}) };
   vocabularyRefusals(stage, refuse);
   return stage;
 }

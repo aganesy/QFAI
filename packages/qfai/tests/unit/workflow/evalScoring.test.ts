@@ -171,9 +171,7 @@ function plan(route: string, family: string, steps: string[]): WorkflowPlanFile 
   return {
     route,
     family,
-    stages: [
-      { id: route, kind: route, steps: steps.map((name) => ({ name })), after: [], effects: [] },
-    ],
+    stages: [{ id: route, kind: route, steps: steps.map((name) => ({ name })), after: [] }],
     decisionPoints: [],
     branchPoints: [],
   };

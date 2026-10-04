@@ -110,7 +110,7 @@ recommended.
       "route": "route-c",
       "family": "decide",
       "rule": 13,
-      "summary": "Settle the decision before any change.",
+      "summary": "Settle the decision before any change. Stages: discussion, close.",
       "recommended": false,
       "scopes": [{ "scope": "broad", "stages": ["discussion", "close"], "recommended": true }]
     },
@@ -118,7 +118,7 @@ recommended.
       "route": "route-d",
       "family": "change",
       "rule": 28,
-      "summary": "Change the product's behaviour.",
+      "summary": "Change the product's behaviour. Stages: spec, prototype, implement, verify.",
       "recommended": true,
       "scopes": [
         { "scope": "narrow", "stages": ["spec", "prototype"], "recommended": true },
