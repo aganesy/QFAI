@@ -77,12 +77,7 @@ describe("story-tree acceptance and implementation assets", () => {
   it("keeps the assistant file budget and review boundaries explicit", async () => {
     const baseline = await read("rule/shared-skill-operating-baseline.md");
     const implement = await readImplementFlowSteps(assistant);
-    const gatekeeper = await read("agent/qa-gatekeeper.md");
     expect(baseline).toContain("800 lines per assistant asset file");
     expect(implement).toContain("The author does not certify their own result");
-    expect(implement).toContain("qfai validate --profile tdd --fail-on error --flow BF-NNNN");
-    expect(gatekeeper).toContain("An ordinary RED must show");
-    expect(gatekeeper).toContain("GREEN needs the same selected test");
-    expect(gatekeeper).toContain("A missing dependency");
   });
 });

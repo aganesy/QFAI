@@ -8,9 +8,7 @@ roles:
   - frontend-engineer
   - backend-engineer
   - devops-ci-engineer
-  - qa-gatekeeper
-  - implementation-reviewer
-routing-profile: runtime-heavy
+routing-profile: default
 ---
 
 # implement-oracle-parity
@@ -48,5 +46,4 @@ observed differences rather than from reading.
 ## Gate
 
 The step is done when the check runs, the reported difference is among the
-ones it lists, no production code changed, and the qa-gatekeeper observed the
-run.
+ones it lists, and no production code changed.

@@ -79,35 +79,6 @@ required gap or weak oracle; report a gap owned by another stage with that
 owner. During SDD, assess the requirement links without demanding tests that
 implementation has not written.
 
-## RED and GREEN observation gate
-
-For each acceptance test or implementation EX under review, inspect
-its evidence on the revision submitted for review.
-
-- An ordinary RED must show the selected test command, selector and observed
-  assertion failure before the production change. A missing dependency,
-  load error, fixture failure or unrelated assertion is not RED.
-- When behavior already exists, as it does for every acceptance test body
-  `implement-acceptance` writes, require a controlled falsifiability check:
-  identify the production predicate the test should detect, change it
-  temporarily, observe the selected assertion fail, restore it, and observe
-  GREEN again. A syntax error, deleted export or throw without the relevant
-  behavior is not a discriminating mutation.
-- If neither form is observable, require the owning skill's explicit
-  `red-not-observable` explanation and independent evidence. Do not turn
-  an unobserved assertion into a PASS by convention.
-- GREEN needs the same selected test with an observed passing result.
-  The test hash, source revision and command must agree with the RED/GREEN
-  evidence. A later source or shared-fixture change requires the affected
-  observation to be refreshed.
-- Reject a GREEN written for the test: no value hard-coded to the test's inputs and no branch written only for the test, and a wrong test or infeasible task raised as a Change Request, not worked around
-  (`.qfai/assistant/rule/test-layers.md#a-passing-test-is-not-the-solution`).
-
-Use `skill/qfai-implement/references/red-admissibility.md` and
-`skill/qfai-implement/references/red-not-observable.md` for the evidence
-forms. A verdict covers only the observed round. It does not approve
-scope or the whole flow.
-
 ## Completion and runtime gate
 
 - Read the current BF's test selectors, command results and reviewer

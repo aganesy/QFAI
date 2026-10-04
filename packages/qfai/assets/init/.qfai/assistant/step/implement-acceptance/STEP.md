@@ -6,9 +6,7 @@ requires: [common-gate-run]
 roles:
   - acceptance-test-engineer
   - devops-ci-engineer
-  - qa-gatekeeper
-  - implementation-reviewer
-routing-profile: runtime-heavy
+routing-profile: default
 ---
 
 # implement-acceptance
@@ -51,20 +49,13 @@ contract IDs are not coverage annotations.
 3. The behaviour already exists, so prove each assertion can fail: change the
    production predicate it checks, observe that assertion fail, restore the
    predicate, and observe the test pass again. Report the command, the
-   mutation and both results for the qa-gatekeeper's observation gate. A
+   mutation and both results. A
    syntax error, a deleted export or a bare throw is not a discriminating
    mutation.
 4. A test that fails because the product is wrong is not repaired here: report
    it as a defect for `implement-tdd` or a fix route. A test that cannot be
    written because the story or contract is wrong is a change request under
    `.qfai/assistant/rule/drift-protocol.md`.
-
-## Review
-
-The qa-gatekeeper checks each test's falsifiability check and its passing
-run. The completion
-reviewer checks that each body asserts what its BF or AC states, and that no
-annotation changed.
 
 ## Gate
 

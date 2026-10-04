@@ -8,6 +8,6 @@ A collection error, import error, syntax error, missing fixture, timeout before 
 
 ## Assertion control
 
-Temporarily neutralize only the example assertion while keeping the test compilable and runnable. The same command must pass. Capture the changed lines and result, then restore the assertion before asking the gatekeeper to judge RED. This control shows that the reported failure came from the assertion.
+Temporarily neutralize only the example assertion while keeping the test compilable and runnable. The same command must pass. Capture the changed lines and result, then restore the assertion before recording RED. This control shows that the reported failure came from the assertion.
 
 If a seam is needed to reach the assertion, add only that seam and record its limit. A seam cannot implement the behavior that the example is intended to test. Where production already satisfies the example, use red-not-observable.md and its falsifiability proof.

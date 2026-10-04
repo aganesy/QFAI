@@ -14,8 +14,8 @@ Feature: Item Completion Gate
   # AC-0001-0094-04
   Scenario: Scoped Validate Gate Runs Per Business Flow
     Given a project on the story tree
-    When `/qfai-implement` runs a checkpoint verification or its completion gate
-    Then the scoped validate run is `qfai validate --profile tdd --fail-on error --flow BF-NNNN` for the flow the invocation owns, and it runs no `--spec` validation.
+    When `/qfai-implement` selects its next example
+    Then the scoped validate run is `qfai validate --profile tdd --flow BF-NNNN` for the flow the invocation owns, and it runs no `--spec` validation.
 
   # AC-0001-0094-05
   Scenario: Stale or missing validation blocks completion

@@ -36,12 +36,9 @@ states.
 
 ## Procedure
 
-1. Run the pre-draft grilling checkpoint for `Policy and flows` in
-   `.qfai/assistant/skill/qfai-sdd/references/sdd-pre-draft-grilling.md` before
-   the first write, and list each decision it adopted in the final report.
-2. Write each fact once across `01_policy/objective.md`, `initiative.md`,
+1. Write each fact once across `01_policy/objective.md`, `initiative.md`,
    `principle.md` and `03_contract/tech.md`.
-3. Write `tech.md` from its template: the stack in `## Stack`, Runtime and
+2. Write `tech.md` from its template: the stack in `## Stack`, Runtime and
    Platform rows included; the layers in `## Architecture`; each runtime
    dependency with its reason in `## Dependencies`; and the quality-gate
    commands, one labelled item each, only in the Standard commands section of
@@ -64,11 +61,11 @@ states.
    lists. Add a layer when a contract needs one; a layer boundary never goes
    to `constraint.md`.
 
-4. Write every file in its template's shape and nothing more, as
+3. Write every file in its template's shape and nothing more, as
    `.qfai/assistant/skill/qfai-sdd/references/spec-traceability-rules.md#document-shapes`
    states: policy holds criteria rather than definitions, and no section
    records history.
-5. Carry the selected discussion pack into policy:
+4. Carry the selected discussion pack into policy:
 
    | Discussion pack                                        | Story tree                                     |
    | ------------------------------------------------------ | ---------------------------------------------- |
@@ -83,15 +80,15 @@ states.
    not the pack's ID. It keeps only the columns its template has, in plain
    words: a file name, a command or a rule ID stays out of policy.
 
-6. Create or update `02_business-flow/business-flows.md` and each affected
+5. Create or update `02_business-flow/business-flows.md` and each affected
    `business-flow-NNNN/business-flow.md`. The index holds one row per flow —
    its ID, the title in its H1 after the ID, and its directory — and nothing
    else. The flow document holds its purpose as prose, exactly one Mermaid
    `flowchart` or `sequenceDiagram` under `## Flow`, and a list of its alternate
    and exception paths.
-7. A flow and its user stories describe observable outcomes, not implementation
+6. A flow and its user stories describe observable outcomes, not implementation
    steps.
-8. Allocate BF IDs as
+7. Allocate BF IDs as
    `.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#id-allocation`
    states, and add the new rows to the flow index.
 

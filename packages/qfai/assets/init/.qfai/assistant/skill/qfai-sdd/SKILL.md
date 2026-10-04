@@ -18,7 +18,6 @@ roles:
     architecture-reviewer,
     requirements-reviewer,
     product-surface-reviewer,
-    qa-gatekeeper,
   ]
 mode: approval-gated
 ---

@@ -175,6 +175,28 @@ its code. Several commands, findings and files go with that.
   nothing to migrate in the directory the line names, and to ask the person to
   check that the specs live there.
 
+- **A route's plan names its only reviews, and the record rituals are gone.**
+  - The routing defaults route no reviewer to a step. Every step's review
+    profile is `default`, and `requirements-heavy`, `ui-bearing` and
+    `implementation-heavy` leave `review-profiles.yml`. `blocking_agents` is no
+    longer read: list a blocking agent under `mandatory_agents` in a
+    `qfai.config.yaml#routing` override.
+  - The `qa-gatekeeper` no longer observes each RED and GREEN, the walking
+    skeleton or the verify gates. The `implement-checkpoint` step is removed;
+    the full suite, lint, typecheck, build and `qfai validate` run once, in the
+    verify stage. A review runs no gate first.
+  - Only the discussion stage writes a grilling record. Elsewhere a
+    contradiction stops the work under Article IX, and the final report lists
+    what the agents settled. The `qfai-sdd` pre-draft grilling checkpoints are
+    removed.
+  - Article III reads the rules the current step cites, not every rule and
+    every role card. The Work Orders Summary is kept only for parallel
+    fan-out. `workflow.md` no longer asks for a Change Type row in
+    `decisions.md`; the classification goes in the pull request body.
+  - A reviewer answers with a verdict and its findings. `verify-repo-gate`
+    writes no Verification Evidence block, and `verify-qfai-gate` runs no
+    static checks of the shipped rule files.
+
 #### Upgrading from 2.0
 
 1. Install 2.1.0 and run `npx qfai doctor`. Note what `paths.leftovers` lists.

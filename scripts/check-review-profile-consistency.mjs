@@ -4,7 +4,7 @@
  * check-review-profile-consistency.mjs
  *
  * Verifies that each review phase in the package's routing defaults
- * that declares a `review_profile` has `mandatory_agents` and `blocking_agents`
+ * that declares a `review_profile` has `mandatory_agents`
  * that are a superset of the profile's `always_required` set declared in
  * the package's review-profile defaults. Prevents silent drift
  * between the two SSOT files.
@@ -51,13 +51,6 @@ const routing = readdirSync(ROUTING_DIR)
     return Array.isArray(doc?.routing) ? doc.routing : [];
   });
 
-/**
- * Agents whose output is a verdict. A `review` phase may legitimately route a
- * non-reviewer (an engineer re-running a build, say) as mandatory without it
- * blocking; a reviewer that cannot block is a contradiction.
- */
-const REVIEWER_NAME = /(?:-reviewer|-gatekeeper)$/;
-
 const drifts = [];
 for (const entry of routing) {
   const skill = entry.step ?? entry.skill ?? "<unknown-entry>";
@@ -72,34 +65,10 @@ for (const entry of routing) {
   for (const phase of entry.phases ?? []) {
     if (phase.id !== "review") continue;
     const mandatory = new Set(phase.mandatory_agents ?? []);
-    const blocking = new Set(phase.blocking_agents ?? []);
     for (const agent of required) {
       if (!mandatory.has(agent)) {
         drifts.push(
           `DRIFT: ${skill}:${phase.id} (${profileName}) missing "${agent}" from mandatory_agents`,
-        );
-      }
-      if (!blocking.has(agent)) {
-        drifts.push(
-          `DRIFT: ${skill}:${phase.id} (${profileName}) missing "${agent}" from blocking_agents`,
-        );
-      }
-    }
-
-    // The reverse direction. The loop above walks the *profile*, so a routing
-    // entry that is mandatory-but-not-blocking was never examined: an agent
-    // could be required to run and still have its REVISE ignored, which is
-    // exactly the state `qfai-implement/review` shipped in. Every DONE rule in
-    // the skills and in `shared-skill-delegation-baseline.md` is phrased over
-    // *blocking* reviewers, so a mandatory reviewer outside `blocking_agents`
-    // has no verdict anyone is obliged to honour.
-    for (const agent of mandatory) {
-      if (!REVIEWER_NAME.test(agent)) continue;
-      if (!blocking.has(agent)) {
-        drifts.push(
-          `DRIFT: ${skill}:${phase.id} lists "${agent}" in mandatory_agents but not in blocking_agents — ` +
-            `a mandatory reviewer whose verdict does not block is unenforceable. ` +
-            `Add it to blocking_agents, or drop it to conditional_agents if it is genuinely advisory.`,
         );
       }
     }

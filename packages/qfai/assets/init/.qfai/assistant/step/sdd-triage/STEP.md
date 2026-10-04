@@ -158,14 +158,6 @@ contract of every kind; BR scope is its contract, whose number the BR carries
 Empty scopes begin at `0001`, or `01` for AC and EX tails. This is a reading
 rule over the tree, not a new command.
 
-## Pre-draft grilling
-
-Before this step's first mutation, run the checkpoint for `Triage and records`
-in `.qfai/assistant/skill/qfai-sdd/references/sdd-pre-draft-grilling.md`. Put
-each critical decision it holds to the user, and list each decision it adopted
-in the final report. Each later design-writing step runs its own checkpoint the
-same way.
-
 ## A change to the story tree
 
 A story-tree or contract file changes only on the user's approval, as

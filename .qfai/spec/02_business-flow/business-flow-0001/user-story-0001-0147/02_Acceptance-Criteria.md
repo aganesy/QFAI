@@ -81,11 +81,4 @@ Feature: Unified SDD Workflow
     Then the finder raises no finding that has the kind and target IDs of a finding the session already decided and a case equal to, including or included in that finding's case, and no finding that the proposed change of a change request the user declined already answers.
     And a decided or dropped finding appends no row; only a finding still undecided when the session ends becomes an `open-questions.md` row.
     And matching never goes by wording, and an appended reopening decision lifts a REJECTED row.
-
-  # AC-0001-0147-15
-  Scenario: A Pre-draft Grilling Checkpoint Precedes Each Design Write
-    Given an invocation of `/qfai-sdd` about to write in a design-writing stage,
-    When the stage makes its first story-tree write,
-    Then a delegated grilling checkpoint has settled that stage's open decisions, a critical one by the user's answer.
-    And the final report lists each decision the checkpoint adopted, with its reason.
 ```

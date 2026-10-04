@@ -18,21 +18,21 @@ import {
   skillSteps,
 } from "../../helpers/shippedAssistant.js";
 
-/** Each step the routes add to `qfai-implement`, with the review profile it carries. */
+/** Each step the routes add to `qfai-implement`, with the review profile it carries: none of its own. */
 const ROUTE_STEPS: Record<string, string> = {
   "implement-bisect": "default",
-  "implement-revert": "implementation-heavy",
+  "implement-revert": "default",
   "implement-minimize": "default",
-  "implement-stress-harness": "runtime-heavy",
-  "implement-oracle-parity": "runtime-heavy",
-  "implement-benchmark": "runtime-heavy",
-  "implement-refactor": "implementation-heavy",
-  "implement-retire": "implementation-heavy",
-  "implement-sweep": "implementation-heavy",
-  "implement-quarantine": "runtime-heavy",
-  "implement-dep-bump": "implementation-heavy",
-  "implement-tooling": "implementation-heavy",
-  "implement-backport": "implementation-heavy",
+  "implement-stress-harness": "default",
+  "implement-oracle-parity": "default",
+  "implement-benchmark": "default",
+  "implement-refactor": "default",
+  "implement-retire": "default",
+  "implement-sweep": "default",
+  "implement-quarantine": "default",
+  "implement-dep-bump": "default",
+  "implement-tooling": "default",
+  "implement-backport": "default",
 };
 
 const VERDICTS = [

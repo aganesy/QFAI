@@ -6,9 +6,7 @@ requires: []
 roles:
   - acceptance-test-engineer
   - devops-ci-engineer
-  - implementation-reviewer
-  - qa-gatekeeper
-routing-profile: implementation-heavy
+routing-profile: default
 ---
 
 # implement-credentials
@@ -41,13 +39,8 @@ step passes when no test in scope needs an authenticated actor, or when every
 actor one needs is already served by per-worker setup that follows the
 reference. The pass names the tests and the setup it read.
 
-## Review
-
-The reviewers check the setup against each rule of that reference, one by
-one. Sign-in in a test body, one account shared across workers, and a cache
-that outlives its worker are each `REVISE`.
-
 ## Gate
 
 PASS when every actor a test in scope needs is served by the per-worker setup,
-the setup follows the reference, and the reviewers passed the current revision.
+and the setup follows each rule of the reference: no sign-in in a test body,
+no account shared across workers, and no cache that outlives its worker.
