@@ -316,4 +316,36 @@ describe("story-tree drift", () => {
     expect(findings.some((item) => item.file?.includes("example.test.ts"))).toBe(false);
     expect(findings.some((item) => item.file === decisions)).toBe(false);
   });
+
+  // QFAI:EX-0001-0054-13
+  it("exempts a 03_Example.md change that only appends EX rows", async () => {
+    const story = `${specs}/02_business-flow/business-flow-0001/user-story-0001-0001`;
+    const appended = `${story}/03_Example.md`;
+    const rewritten = `${specs}/02_business-flow/business-flow-0001/user-story-0001-0002/03_Example.md`;
+    const head = "| EX-ID | AC-Ref | Input | Expected |\n| --- | --- | --- | --- |\n";
+    const first = "| EX-0001-0001-01 | AC-0001-0001-01 | An empty name | 400 |\n";
+    await put(decisions, table);
+    await put(appended, `# Examples\n\n${head}${first}`);
+    await put(rewritten, `# Examples\n\n${head}${first.replaceAll("0001-01", "0002-01")}`);
+    git("add", ".");
+    git("commit", "-m", "base");
+    git("checkout", "-b", "topic");
+    // The appended row is wider, so the formatter re-pads every row of the table.
+    await put(
+      appended,
+      "# Examples\n\n" +
+        "| EX-ID           | AC-Ref          | Input                | Expected |\n" +
+        "| --------------- | --------------- | -------------------- | -------- |\n" +
+        "| EX-0001-0001-01 | AC-0001-0001-01 | An empty name        | 400      |\n" +
+        "| EX-0001-0001-02 | AC-0001-0001-01 | A name of 300 chars  | 400      |\n",
+    );
+    await put(
+      rewritten,
+      `# Examples\n\n${head}| EX-0001-0002-01 | AC-0001-0002-01 | An empty name | 422 |\n| EX-0001-0002-02 | AC-0001-0002-01 | A long name | 400 |\n`,
+    );
+    git("add", ".");
+    git("commit", "-m", "append examples");
+    const findings = await validateStoryTreeDrift(root, config(), "tdd");
+    expect(findings.map((item) => item.file)).toEqual([rewritten]);
+  });
 });

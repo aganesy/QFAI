@@ -90,6 +90,8 @@ export async function validateStoryTreeDrift(
       withoutChangeRequestRows(baseDecisions) === withoutChangeRequestRows(currentDecisions)
     )
       continue;
+    if (file.endsWith("/03_Example.md") && (await onlyAppendsExamples(root, baseBranch, file)))
+      continue;
     issues.push(
       issue(
         "QFAI-DRIFT-001",
@@ -115,6 +117,33 @@ function withoutChangeRequestRows(content: string): string {
     .split("\n")
     .filter((line) => !/^\|\s*DEC-\d{4}\s*\|\s*Change request:/i.test(line))
     .join("\n");
+}
+
+const EXAMPLE_ROW = /^\|\s*EX-\d{4}-\d{4}-\d{2}\s*\|/;
+
+/**
+ * Whether the file differs from its base only by appended example rows. Table padding is
+ * ignored, because a wider appended row makes the formatter re-pad every row.
+ */
+async function onlyAppendsExamples(
+  root: string,
+  baseBranch: string,
+  file: string,
+): Promise<boolean> {
+  const base = readFileAtBase(root, baseBranch, file);
+  if (base === null) return false;
+  const baseLines = unpadded(base);
+  const kept = new Set(baseLines);
+  const headLines = unpadded(await readSafePath(path.join(root, file)));
+  const remaining = headLines.filter((line) => kept.has(line) || !EXAMPLE_ROW.test(line));
+  return remaining.join("\n") === baseLines.join("\n");
+}
+
+function unpadded(content: string): string[] {
+  return content
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.replace(/ {2,}/g, " ").replace(/-{3,}/g, "---"));
 }
 
 async function readSafePath(file: string): Promise<string> {
