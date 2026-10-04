@@ -188,6 +188,36 @@ describe("qfai init", () => {
     }
   });
 
+  it("refuses, and never skips, a destination under an entry that is not a directory", async () => {
+    const sourceRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-src-"));
+    const destRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-dest-"));
+    try {
+      await mkdir(path.join(sourceRoot, "nested"), { recursive: true });
+      await writeFile(path.join(sourceRoot, "nested", "template.txt"), "sample");
+      await writeFile(path.join(destRoot, "nested"), "a file, not a directory\n");
+      const dest = path.join(destRoot, "nested", "template.txt");
+
+      for (const options of [
+        { force: false, dryRun: false },
+        { force: false, dryRun: false, conflictPolicy: "skip" as const },
+        { force: true, dryRun: false },
+      ]) {
+        const result = await copyTemplateTree(sourceRoot, destRoot, options);
+        expect(result, JSON.stringify(options)).toEqual({
+          copied: [],
+          skipped: [],
+          refused: [dest],
+        });
+      }
+      expect(await readFile(path.join(destRoot, "nested"), "utf-8")).toBe(
+        "a file, not a directory\n",
+      );
+    } finally {
+      await removeTempTree(sourceRoot);
+      await removeTempTree(destRoot);
+    }
+  });
+
   it("appends QFAI entries to root .gitignore on init", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {

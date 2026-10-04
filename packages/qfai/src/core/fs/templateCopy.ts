@@ -31,7 +31,7 @@ export type CopyOptions = {
 export type CopyResult = {
   copied: string[];
   skipped: string[];
-  /** Destinations not written because a directory above them is a link. */
+  /** Destinations not written because an entry above them is a link or not a directory. */
   refused: string[];
 };
 
@@ -95,6 +95,9 @@ async function copyFiles(
         continue;
       }
       const dest = path.join(destRoot, relative);
+      if ((await blockedAncestor(destRoot, dest)) !== undefined) {
+        continue;
+      }
       if (!(await shouldWrite(dest, options.force))) {
         conflicts.push(dest);
       }
@@ -112,15 +115,17 @@ async function copyFiles(
     }
     const dest = path.join(destRoot, relative);
 
-    if (!(await shouldWrite(dest, options.force))) {
-      skipped.push(dest);
+    // Asked before `shouldWrite`, which reads a destination it cannot reach as
+    // occupied and would count it as skipped. `copyFile` follows a linked
+    // directory above the destination, so the write would land wherever the
+    // link points; a file above it leaves nowhere to write.
+    if ((await blockedAncestor(destRoot, dest)) !== undefined) {
+      refused.push(dest);
       continue;
     }
 
-    // `copyFile` follows any linked directory above the destination, so the
-    // write would land wherever the link points: such a destination is refused.
-    if ((await linkedAncestor(destRoot, dest)) !== undefined) {
-      refused.push(dest);
+    if (!(await shouldWrite(dest, options.force))) {
+      skipped.push(dest);
       continue;
     }
     // An overwrite follows a link at the destination, and truncates an inode
@@ -174,13 +179,15 @@ async function lstatOrUndefined(target: string) {
   }
 }
 
-/** The first directory between `root` and `target` that is a symbolic link, if any. */
-async function linkedAncestor(root: string, target: string): Promise<string | undefined> {
+/** The first entry between `root` and `target` that is a symbolic link or not a directory, if any. */
+async function blockedAncestor(root: string, target: string): Promise<string | undefined> {
   let current = root;
   for (const segment of path.relative(root, path.dirname(target)).split(path.sep)) {
     if (segment === "") continue;
     current = path.join(current, segment);
-    if ((await lstatOrUndefined(current))?.isSymbolicLink() === true) return current;
+    const entry = await lstatOrUndefined(current);
+    if (entry === undefined) return undefined;
+    if (entry.isSymbolicLink() || !entry.isDirectory()) return current;
   }
   return undefined;
 }

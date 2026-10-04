@@ -56,6 +56,8 @@ export async function emitSkeleton(
     if (!(await lstat(destPath)).isFile()) {
       throw new Error(`${destPath} exists and is not a test file`, { cause: error });
     }
+    // A test file the run cannot read is not one it can report as kept.
+    await (await open(destPath, "r")).close();
     return { destPath, wrote: false };
   }
 }

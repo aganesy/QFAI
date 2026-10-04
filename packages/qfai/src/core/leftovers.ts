@@ -3,6 +3,7 @@ import { lstat, readdir } from "node:fs/promises";
 import path from "node:path";
 
 import { hasErrnoCode, isEnoent } from "./fs/errno.js";
+import { formatReportPath } from "./init/reportPath.js";
 
 /** Paths an earlier release wrote under the project root and this release no longer uses. */
 const LEFTOVER_PATHS = [
@@ -92,7 +93,7 @@ export function leftoverLines(leftovers: Leftovers): string[] {
     ...(listed.length > 0
       ? [
           "Left by an earlier release and no longer used; delete what you do not need:",
-          ...listed.map((entry) => `  ${entry}`),
+          ...listed.map((entry) => `  ${formatReportPath(entry)}`),
         ]
       : []),
     ...(leftovers.migrationArchive ? [MIGRATION_ARCHIVE_NOTE] : []),

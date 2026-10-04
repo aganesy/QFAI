@@ -165,7 +165,7 @@ describe("init --force never writes through a link", () => {
         expect(await readFile(path.join(outside, linked, name), "utf-8"), name).toBe("outside\n");
       }
     }
-    expect(output).toContain("was not written: a directory above it is a symbolic link");
+    expect(output).toContain("was not written: an entry above it is a symbolic link");
   });
 });
 
