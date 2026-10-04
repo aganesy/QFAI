@@ -102,6 +102,7 @@ export const PLAN_ROUTES = [
   "prototype-feature",
   "change-compatibility",
   "apply-settled",
+  "apply-settled-prototype",
   "refactor-code",
   "edit-text",
   "fix-defect",

@@ -36,6 +36,12 @@ const BY_ROUTE: Record<string, Partial<WorkflowExtraction>> = {
   "prototype-feature": { intent: "feature", qualifiers: ["visual-open"] },
   "change-compatibility": { intent: "deprecation" },
   "apply-settled": { intent: "order", artifacts: ["spec"] },
+  "apply-settled-prototype": {
+    intent: "behaviour-change",
+    qualifiers: ["prototype-requested"],
+    signals: ["approved-record-task"],
+    artifacts: ["spec", "ui"],
+  },
   "refactor-code": { intent: "refactor" },
   "edit-text": { intent: "docs", artifacts: ["docs"] },
   "fix-defect": { intent: "defect" },

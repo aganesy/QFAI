@@ -39,6 +39,7 @@ const signalled = (input: RuleInput, ...names: string[]) =>
   input.signals.some((each) => names.includes(each));
 
 // A behaviour change that asks to change the prototype goes through prototyping, settled or not.
+// A settled one keeps the settled triage that stays within its record.
 const prototypeChange = (input: RuleInput) =>
   is("behaviour-change")(input) && qualified(input, "prototype-requested");
 
@@ -52,9 +53,10 @@ export const DECISION_RULES: readonly DecisionRule[] = [
   rule(
     2,
     clause(
-      (input) => signalled(input, "approved-record-task") && !prototypeChange(input),
-      "apply-settled",
+      (input) => signalled(input, "approved-record-task") && prototypeChange(input),
+      "apply-settled-prototype",
     ),
+    clause((input) => signalled(input, "approved-record-task"), "apply-settled"),
   ),
   rule(
     3,
@@ -117,8 +119,12 @@ export const DECISION_RULES: readonly DecisionRule[] = [
     15,
     clause(
       (input) =>
-        is("order")(input) ||
-        (flag(input, "upstream") && qualified(input, "settled-design") && !prototypeChange(input)),
+        flag(input, "upstream") && qualified(input, "settled-design") && prototypeChange(input),
+      "apply-settled-prototype",
+    ),
+    clause(
+      (input) =>
+        is("order")(input) || (flag(input, "upstream") && qualified(input, "settled-design")),
       "apply-settled",
     ),
   ),

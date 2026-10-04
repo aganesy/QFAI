@@ -136,7 +136,7 @@ the request did not cover stops and says so.
   - equivalent-option pick
 - ask-user:
   - each critical decision at a decision point, and each release point
-  - the candidate question, the scope question, and a third branch move
+  - the candidate question, the scope question, a third branch move, and any branch move from a narrower scope
 - hard-required:
   - change request (the user's own words; an empty request is asked for, never guessed)
 
