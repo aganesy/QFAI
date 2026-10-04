@@ -4,62 +4,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
-### Changed
-
-- **`qfai-run` asks how far the work goes before it starts.** A plan from
-  `npx qfai workflow plan --in` now holds `scopes`: `narrow`, `medium` and
-  `broad`, narrowest first and recommended. Each candidate of an unsure
-  extraction holds its own. The session asks which scope to run before the
-  first stage and runs only that scope's stages, so a request to update the
-  specification and a prototype no longer runs acceptance tests or
-  implementation.
-  - `narrow` ends at the last stage that writes an artifact the request names.
-    A scope that writes code or tests always holds the closing verification
-    stages.
-  - `medium` adds those verification stages, and `broad` runs every stage.
-  - Under `--auto` the narrowest scope is taken and reported as an assumption.
-  - The final report of a narrower run says the chosen stages are complete,
-    never that the change is done.
-  - An extraction lists `code` and `tests` only when the request asks for the
-    change to be implemented.
-  - `plan.schema.json` gains the optional `scopes`, required on each candidate.
-- **A behaviour change that asks to change the prototype runs the prototype
-  stage.** The extraction qualifier `prototype-requested` marks a request that
-  explicitly asks to change the prototype. When no choice is left open, the
-  route then includes the prototype stage, and a request citing an approved
-  record applies that record before prototyping. A request to implement the change in the product does not
-  set it, so no prototype step runs in front of the implementation.
-
-### Fixed
-
-- **Review follow-ups from the 2.1.0 redesign** (#2875). Findings below P1
-  that were deferred while the redesign merged are fixed:
-  - `qfai init` and migration: copying refuses an ancestor that escapes the
-    target, and a rerun of migration step 3 consults a planned placement only
-    for a rule that actually moved.
-  - `qfai workflow plan`: a stage key `effects` is refused as an unknown key,
-    a refusal always names its subject, and each refusal is one sentence.
-    `--version` is allowed beside `--help` as plain-text output.
-  - The route contract states that a repair the verify block makes after the
-    code review is not reviewed again and is listed in the final report.
-  - Discussion pack and `qfai sdd preflight`: the import fallback applies
-    only when the pack is missing, an unreadable imported specification is not
-    reported ready, and `Next-Decision-Point` asks for the next point of decision.
-  - A change request the user declines is recorded as a `REJECTED` row.
-  - The prototype generator starts from the primary UI contract, while every
-    UI-bearing contract stays in review scope; a screen ID containing `..` is
-    refused, and the reviewer gets each iteration's URL.
-  - The unused coverage tool and its configuration are removed.
-
-- **More review follow-ups from the 2.1.0 redesign** (#2875). The handoff
-  schema check now fails when the prototyping handoff reference stops naming a
-  schema field. `qfai atdd scaffold` keeps an existing test only after reading
-  it through one descriptor that follows no link. `qfai init --force` keeps the
-  whole Copilot rule bullet from the rule list, never an example elsewhere in
-  the file. `implement-scaffold` writes no test for an item under a test
-  exception.
-
-## [2.1.0] - 2026-10-04
+## [2.1.0] - 2026-10-05
 
 ### Breaking changes
 
@@ -443,6 +388,30 @@ its code. Several commands, findings and files go with that.
   repository's `.instruction/00_universal/communication.md` drops its own
   progress-report and completion-report sections and points to that article.
 
+- **`qfai-run` asks how far the work goes before it starts.** A plan from
+  `npx qfai workflow plan --in` now holds `scopes`: `narrow`, `medium` and
+  `broad`, narrowest first and recommended. Each candidate of an unsure
+  extraction holds its own. The session asks which scope to run before the
+  first stage and runs only that scope's stages, so a request to update the
+  specification and a prototype no longer runs acceptance tests or
+  implementation.
+  - `narrow` ends at the last stage that writes an artifact the request names.
+    A scope that writes code or tests always holds the closing verification
+    stages.
+  - `medium` adds those verification stages, and `broad` runs every stage.
+  - Under `--auto` the narrowest scope is taken and reported as an assumption.
+  - The final report of a narrower run says the chosen stages are complete,
+    never that the change is done.
+  - An extraction lists `code` and `tests` only when the request asks for the
+    change to be implemented.
+  - `plan.schema.json` gains the optional `scopes`, required on each candidate.
+- **A behaviour change that asks to change the prototype runs the prototype
+  stage.** The extraction qualifier `prototype-requested` marks a request that
+  explicitly asks to change the prototype. When no choice is left open, the
+  route then includes the prototype stage, and a request citing an approved
+  record applies that record before prototyping. A request to implement the change in the product does not
+  set it, so no prototype step runs in front of the implementation.
+
 ### Fixed
 
 - **Step 3 lists every `routing:` override it writes (#2714).** An
@@ -456,6 +425,33 @@ its code. Several commands, findings and files go with that.
   An annotation must match its E2E, integration or API layer and
   `validation.traceability.testFileGlobs`, as EX coverage already requires.
   The obsolete Markdown annotation lists are removed.
+
+- **Review follow-ups from the 2.1.0 redesign** (#2875). Findings below P1
+  that were deferred while the redesign merged are fixed:
+  - `qfai init` and migration: copying refuses an ancestor that escapes the
+    target, and a rerun of migration step 3 consults a planned placement only
+    for a rule that actually moved.
+  - `qfai workflow plan`: a stage key `effects` is refused as an unknown key,
+    a refusal always names its subject, and each refusal is one sentence.
+    `--version` is allowed beside `--help` as plain-text output.
+  - The route contract states that a repair the verify block makes after the
+    code review is not reviewed again and is listed in the final report.
+  - Discussion pack and `qfai sdd preflight`: the import fallback applies
+    only when the pack is missing, an unreadable imported specification is not
+    reported ready, and `Next-Decision-Point` asks for the next point of decision.
+  - A change request the user declines is recorded as a `REJECTED` row.
+  - The prototype generator starts from the primary UI contract, while every
+    UI-bearing contract stays in review scope; a screen ID containing `..` is
+    refused, and the reviewer gets each iteration's URL.
+  - The unused coverage tool and its configuration are removed.
+
+- **More review follow-ups from the 2.1.0 redesign** (#2875). The handoff
+  schema check now fails when the prototyping handoff reference stops naming a
+  schema field. `qfai atdd scaffold` keeps an existing test only after reading
+  it through one descriptor that follows no link. `qfai init --force` keeps the
+  whole Copilot rule bullet from the rule list, never an example elsewhere in
+  the file. `implement-scaffold` writes no test for an item under a test
+  exception.
 
 ## [2.0.2] - 2026-10-03
 
