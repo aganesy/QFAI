@@ -188,6 +188,54 @@ describe("qfai init", () => {
     }
   });
 
+  it("refuses, and never skips, a destination under an entry that is not a directory", async () => {
+    const sourceRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-src-"));
+    const destRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-dest-"));
+    try {
+      await mkdir(path.join(sourceRoot, "nested"), { recursive: true });
+      await writeFile(path.join(sourceRoot, "nested", "template.txt"), "sample");
+      await writeFile(path.join(destRoot, "nested"), "a file, not a directory\n");
+      const dest = path.join(destRoot, "nested", "template.txt");
+
+      for (const options of [
+        { force: false, dryRun: false },
+        { force: false, dryRun: false, conflictPolicy: "skip" as const },
+        { force: true, dryRun: false },
+      ]) {
+        const result = await copyTemplateTree(sourceRoot, destRoot, options);
+        expect(result, JSON.stringify(options)).toEqual({
+          copied: [],
+          skipped: [],
+          refused: [dest],
+        });
+      }
+      expect(await readFile(path.join(destRoot, "nested"), "utf-8")).toBe(
+        "a file, not a directory\n",
+      );
+    } finally {
+      await removeTempTree(sourceRoot);
+      await removeTempTree(destRoot);
+    }
+  });
+
+  it("warns about a story-tree seed under an entry that is not a directory", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await mkdir(path.join(root, ".qfai", "spec"), { recursive: true });
+      await writeFile(path.join(root, ".qfai", "spec", "01_policy"), "a file\n", "utf-8");
+
+      const output = await captureStdout(() =>
+        runInit({ dir: root, force: false, dryRun: false, yes: true }),
+      );
+
+      expect(output).toContain(
+        `${path.join(".qfai", "spec", "01_policy", "objective.md")} was not written: an entry above it is a symbolic link or not a directory.`,
+      );
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
   it("appends QFAI entries to root .gitignore on init", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {

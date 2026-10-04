@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 
 import { runDoctor } from "../../src/cli/commands/doctor.js";
 import { createDoctorData } from "../../src/core/doctor.js";
+import { leftoverLines } from "../../src/core/leftovers.js";
 import { useTempDirPool } from "../helpers/shippedWorkflowFixtures.js";
 import { captureStdout } from "../helpers/stdout.js";
 
@@ -107,5 +108,17 @@ describe("doctor paths.leftovers", () => {
 
     expect(check?.severity).toBe("ok");
     expect(check?.details?.["paths"]).toEqual([]);
+  });
+
+  // A file name cannot carry a control character on every platform the suite
+  // runs on, so the lines are built from the listing directly.
+  // QFAI:EX-0003-0004-06
+  it("escapes a control character in a listed path", () => {
+    const raw = ".qfai/discussion/pack\u001b[2J/99_delta.md";
+
+    const lines = leftoverLines({ paths: [raw], migrationArchive: false });
+
+    expect(lines).toContain('  ".qfai/discussion/pack\\x1b[2J/99_delta.md"');
+    expect(lines.join("\n")).not.toContain("\u001b");
   });
 });

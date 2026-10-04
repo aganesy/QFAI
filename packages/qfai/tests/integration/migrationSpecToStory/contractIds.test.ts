@@ -780,6 +780,46 @@ describe("migration primary spec becomes the primary UI contract", () => {
     expect(section(result.output, "Operations")).toContain(NEW_NAME);
   });
 
+  // QFAI:AC-0004-0006-07
+  it("reads the tie from the ID map for the rules step 7 deleted while others remain", async () => {
+    const root = await primaryProject("-", "");
+    expect((await runCli(3, root)).code).toBe(3);
+    await put(
+      root,
+      `${STATE}/id-map.json`,
+      `${JSON.stringify({
+        version: 1,
+        ids: { "spec-0001": { "BR-0001-0002": "BR-0003-0002" } },
+        placements: { "spec-0001": { "BR-0001-0002": "ui/receipt.yaml" } },
+        retiredPacks: {},
+      })}\n`,
+    );
+    await put(root, "qfai.config.yaml", `${await text(root, "qfai.config.yaml")}${PRIMARY_SPEC}`);
+    const result = await runCli(3, root);
+    expect(result.errors).toBe("");
+    expect(await prototypingOf(root)).toEqual({ primaryUiContract: "UI-0004" });
+  });
+
+  // QFAI:AC-0004-0006-07
+  it("reads a rule still in the pack from its row, not from its planned placement", async () => {
+    const root = await primaryProject("-", "");
+    expect((await runCli(3, root)).code).toBe(3);
+    await put(
+      root,
+      `${STATE}/id-map.json`,
+      `${JSON.stringify({
+        version: 1,
+        ids: { "spec-0001": { "BR-0001-0001": "BR-0003-0001" } },
+        placements: { "spec-0001": { "BR-0001-0001": "ui/receipt.yaml" } },
+        retiredPacks: {},
+      })}\n`,
+    );
+    await put(root, "qfai.config.yaml", `${await text(root, "qfai.config.yaml")}${PRIMARY_SPEC}`);
+    const result = await runCli(3, root);
+    expect(result.errors).toBe("");
+    expect(await prototypingOf(root)).toEqual({ primarySpecId: "spec-0001" });
+  });
+
   it("leaves the key for a person where no single UI contract is tied, and stops the steps after", async () => {
     // QFAI:EX-0004-0006-31
     const markdown = async (root: string) => {

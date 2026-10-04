@@ -6,6 +6,7 @@
 
 import {
   chmod,
+  cp,
   link,
   mkdir,
   mkdtemp,
@@ -2479,6 +2480,50 @@ describe("a later init refreshes a rule summary the project never edited", () =>
       expect(after).toContain(current);
       expect(after).not.toContain(superseded);
       expect(after).toContain("- `.agents/rules/user-questions.md` — ");
+    });
+  });
+
+  it("keeps the Copilot summary under --force where the master was refused", async () => {
+    await withProject(async (root) => {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const copilot = path.join(root, ".github", "copilot-instructions.md");
+      const written = await readFile(copilot, "utf-8");
+      const current = written.split("\n").find((line) => line.startsWith(`- \`${master}\``)) ?? "";
+      expect(current, "the Copilot file has no bullet for the master").not.toBe("");
+      // A master this run ships for the first time, with no bullet yet.
+      const missing = "- `.agents/rules/api-budget.md` — ";
+      await writeFile(
+        copilot,
+        written
+          .replace(current, superseded)
+          .split("\n")
+          .filter((line) => !line.startsWith(missing))
+          .join("\n"),
+        "utf-8",
+      );
+      // The masters live outside the project behind a link, so `--force`
+      // refuses to write them and the project's own grilling master stays.
+      const rules = path.join(root, ".agents", "rules");
+      const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-linked-rules-"));
+      try {
+        await cp(rules, outside, { recursive: true });
+        await writeFile(path.join(outside, "grilling.md"), "# Our grilling rule\n", "utf-8");
+        await rm(path.join(outside, "api-budget.md"));
+        await rm(rules, { recursive: true });
+        await symlink(outside, rules, "junction");
+
+        await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+        const after = await readFile(copilot, "utf-8");
+        expect(after).toContain(superseded);
+        expect(after).not.toContain(current);
+        expect(after).toContain("- `.agents/rules/user-questions.md` — ");
+        // The refused master is not there, so nothing cites it.
+        expect(after).not.toContain(missing);
+      } finally {
+        await rm(rules, { force: true });
+        await rm(outside, { recursive: true, force: true });
+      }
     });
   });
 
