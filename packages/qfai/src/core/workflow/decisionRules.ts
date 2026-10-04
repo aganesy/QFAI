@@ -179,6 +179,10 @@ export const DECISION_RULES: readonly DecisionRule[] = [
       (input) => is("feature", "behaviour-change")(input) && flag(input, "decision"),
       "decide-design",
     ),
+    clause(
+      (input) => is("behaviour-change")(input) && qualified(input, "prototype-requested"),
+      "prototype-feature",
+    ),
     clause(is("deprecation", "behaviour-change"), "change-compatibility"),
     clause((input) => is("feature")(input) && qualified(input, "visual-open"), "prototype-feature"),
     clause(is("feature"), "add-feature"),

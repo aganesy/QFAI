@@ -144,6 +144,7 @@ const EXTRACTION_VOCABULARIES: Record<string, string[]> = {
     "mechanism-inert",
     "removal-requested",
     "visual-open",
+    "prototype-requested",
   ],
   signals: [
     "approved-record-task",
