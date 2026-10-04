@@ -30,6 +30,17 @@ function oqRegister(
   ].join("\n");
 }
 
+const CONTEXT = `# Context\n\n${filler}\n## Inception Deck\n\n${filler}`;
+
+const CONSTRAINTS = [
+  "# Constraints",
+  "",
+  filler,
+  ...["Security Policy", "Compliance Policy", "Development Policy", "Operational Policy"].map(
+    (section) => `## ${section}\n\n${filler}`,
+  ),
+].join("\n");
+
 /** Writes the nine required files of a readiness-clean pack, and returns the pack directory. */
 async function writeCompletePack(root: string): Promise<string> {
   const pack = path.join(root, ".qfai", "discussion", "discussion-20260923063306456");
@@ -40,7 +51,11 @@ async function writeCompletePack(root: string): Promise<string> {
         ? oqRegister("resolved", "-")
         : name === "03_Story-Workshop.md"
           ? `# Story Workshop\n\n${filler}\n\`\`\`mermaid\nflowchart TD\n  Start --> Finish\n\`\`\`\n`
-          : `# ${name}\n\n${filler}`;
+          : name === "01_Context.md"
+            ? CONTEXT
+            : name === "09_Constraints.md"
+              ? CONSTRAINTS
+              : `# ${name}\n\n${filler}`;
     await writeFile(path.join(pack, name), body, "utf8");
   }
   return pack;
@@ -66,7 +81,14 @@ it("accepts a complete nine-file pack", async () => {
       "09_Constraints.md",
       "11_OQ-Register.md",
     ]);
-    await writeCompletePack(root);
+    const pack = await writeCompletePack(root);
+    expect(await validateDiscussionPackReadiness(root, defaultConfig)).toEqual([]);
+    // A closing-hash ATX heading names the same section.
+    await writeFile(
+      path.join(pack, "01_Context.md"),
+      CONTEXT.replace("## Inception Deck", "## Inception Deck ##"),
+      "utf8",
+    );
     expect(await validateDiscussionPackReadiness(root, defaultConfig)).toEqual([]);
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -235,6 +257,27 @@ it.each([
       (item) => item.code === "QFAI-DPACK-003" && item.refs?.includes(legacy),
     );
     expect(finding?.refs).toEqual([legacy, target]);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+// QFAI:EX-0001-0013-03
+it.each([
+  ["01_Context.md", "## Inception Deck", "## Notes"],
+  ["09_Constraints.md", "## Operational Policy", "## Notes"],
+  ["01_Context.md", "## Inception Deck", "```md\n## Inception Deck\n```"],
+])("reports %s whose %s section becomes %j as incomplete", async (file, heading, replacement) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-bf1-discussion-"));
+  try {
+    const pack = await writeCompletePack(root);
+    const target = path.join(pack, file);
+    const content = await readFile(target, "utf8");
+    await writeFile(target, content.replace(heading, replacement), "utf8");
+    const findings = await validateDiscussionPackReadiness(root, defaultConfig);
+    expect(
+      findings.some((item) => item.code === "QFAI-DPACK-003" && item.refs?.includes(file)),
+    ).toBe(true);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

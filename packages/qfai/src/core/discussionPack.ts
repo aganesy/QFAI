@@ -5,6 +5,7 @@ import { loadConfig } from "./config.js";
 import type { UiBearingClassification } from "./detection/surfaceType.js";
 import { readValidatedClassification } from "./detection/surfaceType.js";
 import { findPacks, latestPack as selectLatestPack } from "./packLocator.js";
+import { headingText, parseHeadings } from "./parse/markdown.js";
 import { readDiscussionCurrentIdState } from "./state.js";
 
 /**
@@ -47,6 +48,23 @@ export const REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES = [
   "09_Constraints.md",
   "11_OQ-Register.md",
 ] as const;
+
+/**
+ * The sections a required file must hold because a former pack file was merged
+ * into it: the inception deck into the context, the policies into the
+ * constraints.
+ */
+export const REQUIRED_DISCUSSION_PACK_SECTIONS: Partial<
+  Record<RequiredDiscussionPackMarkdownFile, readonly string[]>
+> = {
+  "01_Context.md": ["Inception Deck"],
+  "09_Constraints.md": [
+    "Security Policy",
+    "Compliance Policy",
+    "Development Policy",
+    "Operational Policy",
+  ],
+};
 
 export const REQUIRED_DISCUSSION_PACK_SIDE_ARTIFACTS = [] as const;
 
@@ -164,7 +182,7 @@ export async function inspectLatestDiscussionPack(
       missingFiles.push(fileName);
       continue;
     }
-    if (isDiscussionPackFileIncomplete(content)) {
+    if (isDiscussionPackFileIncomplete(content) || lacksRequiredSection(fileName, content)) {
       incompleteFiles.push(fileName);
     }
     if (fileName === "11_OQ-Register.md") {
@@ -374,6 +392,17 @@ function isDiscussionPackFileIncomplete(text: string): boolean {
   return false;
 }
 
+function lacksRequiredSection(fileName: RequiredDiscussionPackMarkdownFile, text: string): boolean {
+  const headings = new Set(
+    parseHeadings(text)
+      .filter((heading) => heading.level === 2)
+      .map((heading) => headingText(heading.title)),
+  );
+  return (REQUIRED_DISCUSSION_PACK_SECTIONS[fileName] ?? []).some(
+    (section) => !headings.has(section),
+  );
+}
+
 function isPlaceholderLine(line: string): boolean {
   const plain = line
     .replace(/[`*_~]/g, "")
@@ -501,7 +530,7 @@ function extractOqTableRows(text: string): OqTableRow[] {
 
 /**
  * The deferred questions whose row lacks its `Resolution` or a
- * `Next-Decision-Point` saying when, and by what signal, it is reopened: the
+ * `Next-Decision-Point` naming the next point at which it is decided: the
  * column is absent, or the cell is empty, a dash or a placeholder.
  */
 function extractIncompleteDeferredOqIds(oqRegisterText: string): string[] {

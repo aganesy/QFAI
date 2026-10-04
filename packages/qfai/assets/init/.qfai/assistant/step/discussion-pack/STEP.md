@@ -39,7 +39,8 @@ nothing to write. The pass names the pack path.
 Under `.qfai/discussion/discussion-<YYYYMMDDhhmmssSSS>/`, opened under the
 run's stamp:
 
-- `01_Context.md` to `09_Constraints.md`;
+- `01_Context.md`, `03_Story-Workshop.md`, `04_Sources.md`, `05_Scope.md`,
+  `06_REQ.md`, `07_NFR.md`, `08_Glossary.md` and `09_Constraints.md`;
 - `prototyping.yaml`, only where step 8 below calls for it.
 
 Discussion authors no design artifact outside its own pack. The brand SSOT — root `DESIGN.md` — is

@@ -52,5 +52,5 @@ The reviewer confirms:
 - every required topic in the coverage checklist is covered, or captured as an
   open question or a deferred item;
 - every deferred row records its `Resolution`, and names in `Next-Decision-Point`
-  when and by what signal it is reopened;
+  the next point at which it is decided;
 - no recommendation is left implicit.

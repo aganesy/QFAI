@@ -3,7 +3,10 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
-import { inspectLatestDiscussionPack } from "../discussionPack.js";
+import {
+  inspectLatestDiscussionPack,
+  REQUIRED_DISCUSSION_PACK_SECTIONS,
+} from "../discussionPack.js";
 import { isStoryTreeProject } from "../storyTree/layout.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
@@ -116,6 +119,10 @@ export async function validateDiscussionPackReadiness(
           "- At least 100 characters",
           "- Body text, not just headings",
           "- Do not end with only `TBD` / `TODO` / `(placeholder)`",
+          ...Object.entries(REQUIRED_DISCUSSION_PACK_SECTIONS).map(
+            ([file, sections]) =>
+              `- \`${file}\` holds ${sections.map((section) => `\`## ${section}\``).join(", ")}`,
+          ),
         ].join("\n"),
       ),
     );
@@ -163,7 +170,7 @@ export async function validateDiscussionPackReadiness(
         "discussionPack.deferredDetails",
         readiness.incompleteDeferredOqIds,
         "change",
-        "For each deferred OQ, write in `Resolution` what is decided now, and in `Next-Decision-Point` when and by what signal it is reopened.",
+        "For each deferred OQ, write in `Resolution` what is decided now, and in `Next-Decision-Point` the next point at which it is decided.",
       ),
     );
   }
