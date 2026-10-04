@@ -64,6 +64,7 @@ export const QUALIFIERS = [
   "mechanism-inert",
   "removal-requested",
   "visual-open",
+  "prototype-requested",
 ] as const;
 
 export const SIGNALS = [

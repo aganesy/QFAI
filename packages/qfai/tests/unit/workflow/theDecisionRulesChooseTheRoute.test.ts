@@ -303,6 +303,36 @@ it("Features and behaviour changes decide, change compatibility, prototype or ad
   ]);
 });
 
+// QFAI:EX-0001-0211-39
+it("A behaviour change prototypes only when the request asks to change the prototype", async () => {
+  expect(
+    await routes(
+      { intent: "behaviour-change", qualifiers: ["prototype-requested"] },
+      { intent: "behaviour-change", entryFlags: ["decision"], qualifiers: ["prototype-requested"] },
+      { intent: "behaviour-change" },
+    ),
+  ).toEqual(["prototype-feature", "decide-design", "change-compatibility"]);
+});
+
+// QFAI:EX-0001-0211-42
+it("A settled behaviour change that asks to change the prototype still prototypes", async () => {
+  expect(
+    await routes(
+      {
+        intent: "behaviour-change",
+        qualifiers: ["prototype-requested"],
+        signals: ["approved-record-task"],
+      },
+      {
+        intent: "behaviour-change",
+        entryFlags: ["upstream"],
+        qualifiers: ["settled-design", "prototype-requested"],
+      },
+      { intent: "behaviour-change", signals: ["approved-record-task"] },
+    ),
+  ).toEqual(["prototype-feature", "prototype-feature", "apply-settled"]);
+});
+
 // QFAI:EX-0001-0211-32
 it("A refactor and a documentation change", async () => {
   expect(await routes({ intent: "refactor" }, { intent: "docs" })).toEqual([
