@@ -279,17 +279,19 @@ runs only from its parent or from the plan `qfai-run` follows.
 ### A parent skill invoked by name
 
 1. Run the [entry check](#workflow-run-entry-check-mandatory).
-2. Take the steps from the parent's `steps:` list, in that order. Skip a step
+2. Run `common-policy-check` once, as the
+   [policy check](#policy-check-mandatory) says.
+3. Take the steps from the parent's `steps:` list, in that order. Skip a step
    only where the parent's body names the condition that skips it.
-3. For each step: read that step's `STEP.md` and no other, run it, and pass its
+4. For each step: read that step's `STEP.md` and no other, run it, and pass its
    gate. Run a `common-*` step it `requires` at the point the step calls it.
    Then move to the next step.
-4. After the last step, run the one review the parent names, through
+5. After the last step, run the one review the parent names, through
    `common-review-cycle`: the specification review for `qfai-sdd` and
    `qfai-discussion`, the code review for a parent that changed code, tests or
    a change note, and none for `qfai-triage` or for a `qfai-verify` run that
    wrote nothing.
-5. Complete as the parent's completion section says, reporting what each step
+6. Complete as the parent's completion section says, reporting what each step
    produced.
 
 A step skipped on a condition that later turns out to hold is run in its place

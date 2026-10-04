@@ -67,7 +67,9 @@ describe("a fix route from the diagnosis to the commit", () => {
   // QFAI:EX-0001-0225-07
   it("commits exactly the paths the run wrote, and pushes nothing", async () => {
     const step = flat(await readShipped("step/verify-commit/STEP.md"));
-    expect(step).toMatch(/stage exactly the paths the run wrote, with `git add <those paths>`/i);
+    expect(step).toMatch(
+      /stage exactly the tracked deliverables the run wrote, with `git add <those paths>`/i,
+    );
     expect(step).toMatch(/never `git add -A`/i);
     expect(step).toMatch(
       /already modified before the run and then written by it is committed whole; the final report names it/i,
@@ -80,5 +82,62 @@ describe("a fix route from the diagnosis to the commit", () => {
   it("makes no commit when a verify gate failed", async () => {
     const procedure = await section("verify-commit", "## Procedure");
     expect(procedure).toMatch(/stop when a verify gate failed or did not run, and say which/i);
+  });
+
+  // QFAI:EX-0001-0225-07
+  it("never stages an ignored file, and reruns the gates after a hook-driven code fix", async () => {
+    const procedure = await section("verify-commit", "## Procedure");
+    expect(procedure).toMatch(/never `git add -A`, `git add \.` or `git add -f`/i);
+    expect(procedure).toMatch(/never a file git ignores, such as `\.qfai\/report\/\*`/i);
+    expect(procedure).toMatch(
+      /when the fix changes code or tests, rerun the verify gates first, and the code review too when behaviour changed/i,
+    );
+  });
+
+  it("leaves the backport's commit to verify-commit", async () => {
+    const procedure = await section("implement-backport", "## Procedure");
+    expect(procedure).toMatch(/`git cherry-pick -n -x`/);
+    expect(procedure).toMatch(/`verify-commit` makes the commit/);
+  });
+
+  it("works the diagnosis's matched example first, and skips an example under a test exception", async () => {
+    const text = await section("implement-tdd", "## Select the examples");
+    expect(text).toMatch(
+      /on a fix route, the EX the diagnosis matched or this step appended, first/i,
+    );
+    expect(text).toMatch(/it is still owed/i);
+    expect(text).toMatch(/opening `Test exception:` names, with Status DONE, is exempt/i);
+  });
+
+  it("asks which rule owns the AC when several cite its examples", async () => {
+    const text = await section("implement-tdd", "## A diagnosed missing example");
+    expect(text).toMatch(/the contract rule the diagnosis names as owning that AC/i);
+    expect(text).toMatch(/stop and ask the user which one; never pick one/i);
+  });
+});
+
+describe("where qfai-run runs the policy check and the commit", () => {
+  it("checks policy after planning, writing nothing on a route that changes nothing", async () => {
+    const work = flat(sectionOf(await readShipped("skill/qfai-run/SKILL.md"), "## The work"));
+    expect(work).toMatch(/then run `common-policy-check` once/i);
+    expect(work).toMatch(
+      /on a route that changes no file, one that closes, answers or asks, it reads and reports and writes nothing/i,
+    );
+    expect(work.indexOf("**Extract.**")).toBeLessThan(work.indexOf("common-policy-check"));
+  });
+
+  it("commits after an end release point, so the commit holds the approval", async () => {
+    const work = flat(sectionOf(await readShipped("skill/qfai-run/SKILL.md"), "## The work"));
+    expect(work).toMatch(/`verify-commit` runs after that, so the commit holds the approval/i);
+  });
+
+  it("starts a stage skill invoked by name with the policy check", async () => {
+    const baseline = flat(
+      sectionOf(
+        await readShipped("rule/shared-skill-operating-baseline.md"),
+        "### A parent skill invoked by name",
+      ),
+    );
+    expect(baseline).toMatch(/2\. Run `common-policy-check` once/);
   });
 });

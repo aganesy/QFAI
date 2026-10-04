@@ -28,7 +28,9 @@ to.
    supported, and the change meets what the policy asks, such as its severity.
    When one fails, stop and report which.
 2. Branch from the release branch and apply each commit with
-   `git cherry-pick -x`, so each records where it came from.
+   `git cherry-pick -n -x`. It changes the working tree and commits nothing:
+   `verify-commit` makes the commit and names each picked commit in its
+   message.
 3. Resolve a conflict to the release branch's code. Bring in no other change
    the conflict seems to need; list it instead, and stop when the change does
    not work without it.

@@ -112,7 +112,10 @@ Inside a workflow run, the result carries:
   `product-race`;
 - `matchedIds`, which names the BF, AC or EX IDs of the bound flow that the
   next work order acts on. For `missing-test` it names the EX that states the
-  case, or the AC the case falls under where no EX states it;
+  case, or the AC the case falls under where no EX states it. In the second
+  case it also names the contract rule that owns that AC: the one rule whose
+  Examples cell cites that AC's examples. Where several do, it says so and
+  names them all;
 - `reproductionRef`, which names the record that holds the reproduction, the
   cause candidates and the impact.
 

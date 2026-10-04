@@ -70,7 +70,8 @@ one code review reads the repair, as `qfai-verify`'s `## Review` section says.
 - Verify never rewrites the story tree or a contract. A spec or contract
   finding goes to its owner through `.qfai/assistant/rule/drift-protocol.md`:
   `/qfai-sdd` or `/qfai-implement`.
-- A fix that changes code brings `implementation-reviewer` into the review.
+- A fix made after the code review is listed in the final report with its
+  diff. No review runs again.
 
 ## Report
 

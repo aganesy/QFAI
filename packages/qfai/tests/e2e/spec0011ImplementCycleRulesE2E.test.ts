@@ -24,9 +24,7 @@ async function reference(name: string): Promise<string> {
 describe("E2E: implementation follows flow-scoped example obligations", () => {
   it("selects the examples no test annotates, in EX ID order", async () => {
     const content = await skill();
-    expect(content).toContain(
-      "Otherwise take the flow's EX IDs that no test annotates, in EX ID order",
-    );
+    expect(content).toContain("Otherwise the flow's EX IDs that no test annotates, in EX ID order");
   });
 
   it("runs one falsifiable RED, GREEN and Refactor cycle per EX", async () => {

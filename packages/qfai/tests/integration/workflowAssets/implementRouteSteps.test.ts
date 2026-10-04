@@ -119,7 +119,9 @@ describe("the steps the routes add to qfai-implement", () => {
     expect(tooling).toMatch(/record it as unverified until the next release/i);
 
     const backport = flat(await stepText("implement-backport"));
-    expect(backport).toMatch(/`git cherry-pick -x`/);
+    expect(backport).toMatch(
+      /`git cherry-pick -n -x`. It changes the working tree and commits nothing/,
+    );
     expect(backport).toMatch(/do not push, merge, tag or publish/i);
 
     const benchmark = flat(await stepText("implement-benchmark"));

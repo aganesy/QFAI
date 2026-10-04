@@ -37,7 +37,7 @@ describe("sub-agent roster completeness and handoff contracts", () => {
   it("defines the example handoff and review sequence", async () => {
     content ??= await readImplementFlowSteps(implementAssistantDir);
 
-    expect(content).toContain("Otherwise take the flow's EX IDs that no test annotates");
+    expect(content).toContain("Otherwise the flow's EX IDs that no test annotates");
     expect(content).toContain("Record command, selector and failure");
     expect(content).toContain("Run the same selector and record");
     expect(content).toContain("references/ui-affecting.md");
