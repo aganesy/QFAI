@@ -174,11 +174,18 @@ function onlyAddsExampleIds(baseRow: string, headRow: string): boolean {
   );
 }
 
+/** Each line with a table row's cell padding and separator dash widths removed, nothing else. */
 function unpadded(content: string): string[] {
   return content
     .replace(/\r\n/g, "\n")
     .split("\n")
-    .map((line) => line.replace(/ {2,}/g, " ").replace(/-{3,}/g, "---"));
+    .map((line) => {
+      if (!line.startsWith("|")) return line;
+      return line
+        .split(/(?<!\\)\|/)
+        .map((cell) => cell.trim().replace(/^(:?)-{3,}(:?)$/, "$1---$2"))
+        .join("|");
+    });
 }
 
 async function readSafePath(file: string): Promise<string> {

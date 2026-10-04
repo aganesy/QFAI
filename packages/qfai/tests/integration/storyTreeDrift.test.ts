@@ -400,4 +400,29 @@ describe("story-tree drift", () => {
     const findings = await validateStoryTreeDrift(root, config(), "tdd");
     expect(findings.map((item) => item.file)).toEqual([reworded]);
   });
+
+  // QFAI:EX-0001-0054-13
+  // QFAI:EX-0001-0054-14
+  it("still reports a whitespace edit inside a cell beside an appended example", async () => {
+    const examples = `${specs}/02_business-flow/business-flow-0001/user-story-0001-0001/03_Example.md`;
+    const contract = `${specs}/03_contract/cli/cli-0001-a.md`;
+    const head = "# Examples\n\n| EX-ID | AC-Ref | Input | Expected |\n| --- | --- | --- | --- |\n";
+    const rule = (statement: string, cited: string) =>
+      `# CLI-0001\n\n## Business rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0001-0001 | ${statement} | ${cited} |\n`;
+    await put(decisions, table);
+    await put(examples, `${head}| EX-0001-0001-01 | AC-0001-0001-01 | An  empty name | 400 |\n`);
+    await put(contract, rule("An  empty name is refused.", "EX-0001-0001-01"));
+    git("add", ".");
+    git("commit", "-m", "base");
+    git("checkout", "-b", "topic");
+    await put(
+      examples,
+      `${head}| EX-0001-0001-01 | AC-0001-0001-01 | An empty name | 400 |\n| EX-0001-0001-02 | AC-0001-0001-01 | A long name | 400 |\n`,
+    );
+    await put(contract, rule("An empty name is refused.", "EX-0001-0001-01, EX-0001-0001-02"));
+    git("add", ".");
+    git("commit", "-m", "edit inside cells");
+    const findings = await validateStoryTreeDrift(root, config(), "tdd");
+    expect(findings.map((item) => item.file).sort()).toEqual([contract, examples].sort());
+  });
 });
