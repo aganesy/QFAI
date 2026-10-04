@@ -261,7 +261,7 @@ describe("qfai-run", () => {
         }
       }
     }
-    expect(routes.length).toBe(34);
+    expect(routes.length).toBe(35);
     expect(naming).toEqual([]);
   });
 

@@ -100,7 +100,7 @@ it("Every change route reviews the specification once when it can change it, and
   });
 
   expect({ changeRoutes: changeRoutes.length, off: off.map((plan) => plan.route) }).toEqual({
-    changeRoutes: 23,
+    changeRoutes: 24,
     off: [],
   });
 });

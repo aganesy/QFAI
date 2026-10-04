@@ -117,7 +117,7 @@ it("The plan of every change route the package ships", async () => {
     count: changeRoutes.length,
     reach: [...new Set(changeRoutes.map((plan) => JSON.stringify(verifyReach(plan))))],
   }).toEqual({
-    count: 23,
+    count: 24,
     reach: [JSON.stringify({ reached: true, blocks: [["verify", VERIFY]] })],
   });
 });

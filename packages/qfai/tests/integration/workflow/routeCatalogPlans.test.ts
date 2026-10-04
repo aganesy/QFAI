@@ -183,6 +183,11 @@ const CATALOG: [string, string][] = [
     "apply-settled",
     "Stages in order — `spec` (sdd, then the specification review): `sdd-triage(settled)`, `sdd-story°`, `sdd-contract°`; `implement` (implement): `implement-scaffold°`, `implement-tdd°`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`; release point none; branch points `sdd-triage`, `outside-record` to `decide-design`",
   ],
+  // QFAI:EX-0001-0220-42
+  [
+    "apply-settled-prototype",
+    "Stages in order — `spec` (sdd, then the specification review): `sdd-triage(settled)`, `sdd-story°`, `sdd-contract°`, `common-design-md`, `sdd-gate`; `prototype` (prototype): `prototyping-grill`, `prototyping-preflight`, `prototyping-loop`, `prototyping-handoff`; `implement` (implement): `implement-scaffold°`, `implement-tdd°`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`; decision points `sdd-triage`, `prototyping-loop`; release point none; branch points `sdd-triage`, `outside-record` to `decide-design`",
+  ],
 ];
 
 const REVIEW = { spec: ", then the specification review", code: ", then the code review" };
@@ -237,7 +242,7 @@ for (const [route, expected] of CATALOG) {
   });
 }
 
-it("The 34 shipped plans end three ways", async () => {
+it("The 35 shipped plans end three ways", async () => {
   const plans = await loadBuiltInPlans();
   const names = (plan: WorkflowPlanFile) =>
     plan.stages.map((stage) => stage.steps.map((step) => step.name));
@@ -260,8 +265,8 @@ it("The 34 shipped plans end three ways", async () => {
     close: counts["triage-close"]?.length,
     releaseNotes: counts["verify-release-notes"],
   }).toEqual({
-    total: 34,
-    verify: 22,
+    total: 35,
+    verify: 23,
     external: ["fix-env-bound"],
     close: 10,
     releaseNotes: ["draft-release-notes"],
