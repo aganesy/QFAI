@@ -29,13 +29,14 @@ const VERIFY_STEPS = [
   "verify-context",
   "verify-qfai-gate",
   "verify-repo-gate",
+  "verify-commit",
   "verify-external",
   "verify-manual",
   "verify-release-notes",
 ];
 
 /** The verify block every change route runs. */
-const VERIFY_BLOCK = ["verify-qfai-gate", "verify-repo-gate"];
+const VERIFY_BLOCK = ["verify-qfai-gate", "verify-repo-gate", "verify-commit"];
 
 /** Every step each plan kind runs, across the built-in plans, in first-seen order. */
 async function kindSteps(kinds: string[]): Promise<{ names: string[]; passThrough: string[] }> {
@@ -184,19 +185,14 @@ describe("the skills a workflow run's steps belong to", () => {
   // QFAI:EX-0001-0207-04
   it("runs only qfai-sdd's own steps in the story-authoring stages", async () => {
     const owned = await skillSteps("qfai-sdd");
-    const authoring = await kindSteps(["sdd", "sdd_append"]);
+    const authoring = await kindSteps(["sdd"]);
     expect(authoring.names.filter((step) => !owned.includes(step))).toEqual([]);
-    for (const route of PLAN_ROUTES) {
-      for (const append of await stageNames(route, "sdd_append")) {
-        expect(append, route).toEqual(["sdd-story", "sdd-gate"]);
-      }
-    }
-    expect(await stageNames("fix-defect", "sdd_append")).toEqual([["sdd-story", "sdd-gate"]]);
+    expect(await stageNames("fix-defect", "sdd")).toEqual([]);
   });
 
   // QFAI:AC-0001-0208-07
   // QFAI:EX-0001-0208-08
-  it("lists qfai-verify's nine steps and runs the whole verify block in every change route", async () => {
+  it("lists qfai-verify's ten steps and runs the whole verify block in every change route", async () => {
     expect(await skillSteps("qfai-verify")).toEqual(VERIFY_STEPS);
     let changeRoutes = 0;
     for (const route of PLAN_ROUTES) {

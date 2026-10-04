@@ -109,7 +109,7 @@ it("draft-release-notes drafts, then releases at its end with no verify stage", 
 });
 
 // QFAI:EX-0001-0209-01
-it("add-feature returns the seven sdd steps in order, with the four pass-through steps marked", async () => {
+it("add-feature returns the six sdd steps in order, with the four pass-through steps marked", async () => {
   const [sdd] = (await planned("add-feature")).stages;
 
   expect(sdd?.steps.map((step) => [step.name, step.passThrough])).toEqual([
@@ -119,7 +119,6 @@ it("add-feature returns the seven sdd steps in order, with the four pass-through
     ["sdd-contract", true],
     ["common-design-md", true],
     ["sdd-cycle", true],
-    ["sdd-gate", false],
   ]);
 });
 
@@ -134,7 +133,7 @@ it("retriage-bundle runs implement-diagnose read-only in its recheck stage", asy
 
 // QFAI:EX-0001-0224-04
 // QFAI:EX-0001-0186-03
-it("A regression found by fix-defect's diagnosis moves the work to fix-red-main, which fixes and then verifies", async () => {
+it("A regression found by fix-defect's diagnosis moves the work to fix-red-main, which fixes, verifies and commits", async () => {
   const fixDefect = await planned("fix-defect");
   const fixRedMain = await planned("fix-red-main");
   const fix = fixRedMain.stages.find((stage) => stage.id === "fix");
@@ -146,13 +145,13 @@ it("A regression found by fix-defect's diagnosis moves the work to fix-red-main,
   }).toEqual({
     destination: ["fix-red-main"],
     fix: ["implement-regression-fix"],
-    last: "verify-repo-gate",
+    last: "verify-commit",
   });
 });
 
 // QFAI:EX-0001-0187-01
 // QFAI:EX-0001-0187-06
-it("A defective test found by fix-defect's diagnosis moves the work to repair-test, which fixes the test and then verifies", async () => {
+it("A defective test found by fix-defect's diagnosis moves the work to repair-test, which fixes the test, verifies and commits", async () => {
   const fixDefect = await planned("fix-defect");
   const repairTest = await planned("repair-test");
   const fix = repairTest.stages.find((stage) => stage.id === "fix");
@@ -161,7 +160,7 @@ it("A defective test found by fix-defect's diagnosis moves the work to repair-te
     destination: destinations(fixDefect, "implement-diagnose", "defective-test"),
     fixes: fix?.steps.some((step) => step.name === "implement-test-fix"),
     last: repairTest.stages.at(-1)?.steps.at(-1)?.name,
-  }).toEqual({ destination: ["repair-test"], fixes: true, last: "verify-repo-gate" });
+  }).toEqual({ destination: ["repair-test"], fixes: true, last: "verify-commit" });
 });
 
 // QFAI:EX-0001-0215-04
@@ -231,7 +230,7 @@ it("fix-defect continues on missing-test and moves on each other diagnosis verdi
 
   expect({
     moves: verdicts.map((verdict) => destinations(fixDefect, "implement-diagnose", verdict)),
-    diagnosedBeforeAnyEdit: order.indexOf("implement-diagnose") < order.indexOf("sdd-story"),
+    diagnosedBeforeAnyEdit: order.indexOf("implement-diagnose") < order.indexOf("implement-tdd"),
   }).toEqual({
     moves: [
       undefined,
@@ -249,20 +248,17 @@ it("fix-defect continues on missing-test and moves on each other diagnosis verdi
 });
 
 // QFAI:EX-0001-0215-05
-it("A revert reported by implement-bisect moves to revert-culprit, and no outcome continues to implement-diagnose", async () => {
-  const fixDefect = await planned("fix-defect");
+it("A revert reported by fix-red-main's implement-bisect moves to revert-culprit, and no outcome continues to implement-diagnose", async () => {
   const fixRedMain = await planned("fix-red-main");
   const order = stepOrder(fixRedMain);
 
   expect({
-    fixDefect: destinations(fixDefect, "implement-bisect", "revert"),
     fixRedMain: destinations(fixRedMain, "implement-bisect", "revert"),
     outcomes: fixRedMain.branchPoints
       .find((point) => point.step === "implement-bisect")
       ?.outcomes.map((each) => each.outcome),
     next: order[order.indexOf("implement-bisect") + 1],
   }).toEqual({
-    fixDefect: ["revert-culprit"],
     fixRedMain: ["revert-culprit"],
     outcomes: ["revert"],
     next: "implement-diagnose",

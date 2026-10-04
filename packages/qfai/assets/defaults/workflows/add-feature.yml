@@ -10,7 +10,6 @@ stages:
       - { step: sdd-contract, passThrough: true }
       - { step: common-design-md, passThrough: true }
       - { step: sdd-cycle, passThrough: true }
-      - sdd-gate
     review: spec
   - id: implement
     kind: implement
@@ -29,7 +28,7 @@ stages:
     review: code
   - id: verify
     kind: verify
-    steps: [verify-qfai-gate, verify-repo-gate]
+    steps: [verify-qfai-gate, verify-repo-gate, verify-commit]
     after: [note]
 decisionPoints: [sdd-triage]
 branchPoints: []

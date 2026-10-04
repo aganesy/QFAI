@@ -66,7 +66,7 @@ async function planOf(route: string): Promise<WorkflowPlanFile | undefined> {
   return (await loadBuiltInPlans()).find((plan) => plan.route === route);
 }
 
-const VERIFY = ["verify-qfai-gate", "verify-repo-gate"];
+const VERIFY = ["verify-qfai-gate", "verify-repo-gate", "verify-commit"];
 
 // QFAI:EX-0001-0220-15
 // QFAI:EX-0001-0220-16
@@ -91,7 +91,9 @@ function verifyReach(plan: WorkflowPlanFile) {
   const { stages } = plan;
   const followers = (id: string) => stages.filter((stage) => stage.after.includes(id));
   const isBlock = (id: string) =>
-    stages.some((stage) => stage.id === id && stage.steps.at(-1)?.name === "verify-repo-gate");
+    stages.some(
+      (stage) => stage.id === id && stage.steps.some((step) => step.name === "verify-repo-gate"),
+    );
   const reaches = (id: string): boolean =>
     isBlock(id) || followers(id).some((next) => reaches(next.id));
   const external = (id: string) =>
@@ -233,16 +235,16 @@ for (const [title, to] of retiredNames) {
 // QFAI:EX-0001-0218-01
 it("A plan naming implement-guess, a test fix under an implement kind, and a mixed stage", async () => {
   expect({
-    guess: await refusalsOf("fix-defect", (text) =>
+    guess: await refusalsOf("add-feature", (text) =>
       text.replace("steps: [implement-scaffold, implement-tdd]", "steps: [implement-guess]"),
     ),
     fixAsImplement: await refusalsOf("repair-test", (text) =>
       text.replace("kind: test_fix", "kind: implement"),
     ),
-    mixed: await refusalsOf("fix-defect", (text) =>
+    mixed: await refusalsOf("add-feature", (text) =>
       text.replace(
         "steps: [implement-scaffold, implement-tdd]",
-        "steps: [implement-tdd, sdd-story]",
+        "steps: [implement-tdd, sdd-flow]",
       ),
     ),
   }).toEqual({
@@ -272,15 +274,15 @@ it("a pass-through mark on a step off the pass-through list", async () => {
   expect(
     await refusalsOf("edit-text", (text) =>
       text.replace(
-        "steps: [verify-qfai-gate, verify-repo-gate]",
-        "steps: [{ step: verify-qfai-gate, passThrough: true }, verify-repo-gate]",
+        "steps: [verify-qfai-gate, verify-repo-gate, verify-commit]",
+        "steps: [{ step: verify-qfai-gate, passThrough: true }, verify-repo-gate, verify-commit]",
       ),
     ),
   ).toEqual([{ reason: "pass-through", subject: "verify-qfai-gate" }]);
 });
 
 const VERIFY_STAGE =
-  "  - id: verify\n    kind: verify\n    steps: [verify-qfai-gate, verify-repo-gate]\n    after: [note]\n";
+  "  - id: verify\n    kind: verify\n    steps: [verify-qfai-gate, verify-repo-gate, verify-commit]\n    after: [note]\n";
 
 const SPLIT_VERIFY = [
   "  - id: verify",
@@ -289,7 +291,7 @@ const SPLIT_VERIFY = [
   "    after: [note]",
   "  - id: gate",
   "    kind: verify",
-  "    steps: [verify-repo-gate]",
+  "    steps: [verify-repo-gate, verify-commit]",
   "    after: [verify]",
   "",
 ].join("\n");
@@ -306,6 +308,22 @@ it("A split verify block, and an answer-question whose last stage answers", asyn
   }).toEqual({
     split: [{ reason: "terminal", subject: "gate" }],
     answer: [{ reason: "terminal", subject: "answer" }],
+  });
+});
+
+// QFAI:EX-0001-0218-04
+it("A verify block without verify-commit, and one that commits before the gates", async () => {
+  const block = "steps: [verify-qfai-gate, verify-repo-gate, verify-commit]";
+  expect({
+    none: await refusalsOf("edit-text", (text) =>
+      text.replace(block, "steps: [verify-qfai-gate, verify-repo-gate]"),
+    ),
+    early: await refusalsOf("edit-text", (text) =>
+      text.replace(block, "steps: [verify-commit, verify-qfai-gate, verify-repo-gate]"),
+    ),
+  }).toEqual({
+    none: [{ reason: "terminal", subject: "verify" }],
+    early: [{ reason: "terminal", subject: "verify" }],
   });
 });
 
@@ -331,17 +349,16 @@ it("A code review after the edit stage, a review of another value, and two on a 
 
 // QFAI:AC-0001-0218-07
 // QFAI:EX-0001-0218-09
-it("A fix-defect whose implement stage is listed before the spec stage it follows", async () => {
-  const IMPLEMENT =
-    "  - id: implement\n    kind: implement\n    steps: [implement-scaffold, implement-tdd]\n    after: [spec]\n";
-  const SPEC = / {2}- id: spec\n[\s\S]*?review: spec\n/;
+it("A fix-defect whose implement stage is listed before the diagnose stage it follows", async () => {
+  const DIAGNOSE = "  - id: diagnose\n    kind: diagnose\n    steps: [implement-diagnose]\n";
+  const IMPLEMENT = / {2}- id: implement\n[\s\S]*?after: \[diagnose\]\n/;
   const swapped = (text: string) => {
-    const spec = SPEC.exec(text)?.[0] ?? "";
-    return text.replace(IMPLEMENT, "").replace(spec, `${IMPLEMENT}${spec}`);
+    const implement = IMPLEMENT.exec(text)?.[0] ?? "";
+    return text.replace(implement, "").replace(DIAGNOSE, `${implement}${DIAGNOSE}`);
   };
 
   expect(await refusalsOf("fix-defect", swapped)).toEqual([
-    { reason: "after-order", subject: "implement:spec" },
+    { reason: "after-order", subject: "implement:diagnose" },
   ]);
 });
 
@@ -415,9 +432,9 @@ it("Every shipped plan loads and every step it names is installed", async () => 
   expect(await refusalsFor(root)).toEqual([]);
 });
 
-it("A project whose sdd-gate step is not installed", async () => {
+it("A project whose sdd-story step is not installed", async () => {
   const root = await project();
-  await rm(path.join(root, ".qfai", "assistant", "step", "sdd-gate"), { recursive: true });
+  await rm(path.join(root, ".qfai", "assistant", "step", "sdd-story"), { recursive: true });
 
   expect(await planned(root, { route: "add-feature" })).toEqual({
     ok: false,
@@ -425,7 +442,7 @@ it("A project whose sdd-gate step is not installed", async () => {
     reasons: [
       {
         reason: "plan-invalid",
-        subject: "sdd-gate",
+        subject: "sdd-story",
         file: "add-feature.yml",
         cause: "step-missing",
       },

@@ -81,3 +81,12 @@ routing:
         parallel_groups: []
         rerun_policy: changed-scope-dependents
     review_profile: default
+
+  - step: verify-commit
+    phases:
+      - id: commit
+        mandatory_agents: [orchestrator]
+        conditional_agents: []
+        parallel_groups: []
+        rerun_policy: changed-scope-dependents
+    review_profile: default

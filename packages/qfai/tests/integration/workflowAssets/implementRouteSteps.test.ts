@@ -148,7 +148,7 @@ describe("implement-diagnose", () => {
     expect(readOnly).toMatch(/reproduces only by reading and by commands that change nothing/i);
     expect(readOnly).toMatch(/not the operation the request asks a person to run/i);
     expect(flat(sectionOf(text, "## What it writes"))).toMatch(
-      /the step changes no file git tracks, in either mode/i,
+      /elsewhere, and in read-only mode, the step changes no file git tracks/i,
     );
   });
 });

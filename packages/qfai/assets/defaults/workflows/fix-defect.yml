@@ -3,21 +3,11 @@ family: fix
 stages:
   - id: diagnose
     kind: diagnose
-    steps:
-      - { step: implement-bisect, passThrough: true }
-      - { step: implement-minimize, passThrough: true }
-      - implement-diagnose
-  - id: spec
-    kind: sdd_append
-    steps:
-      - { step: sdd-story, passThrough: true }
-      - sdd-gate
-    after: [diagnose]
-    review: spec
+    steps: [implement-diagnose]
   - id: implement
     kind: implement
-    steps: [implement-scaffold, implement-tdd]
-    after: [spec]
+    steps: [implement-tdd]
+    after: [diagnose]
   - id: note
     kind: verify
     steps:
@@ -26,13 +16,10 @@ stages:
     review: code
   - id: verify
     kind: verify
-    steps: [verify-qfai-gate, verify-repo-gate]
+    steps: [verify-qfai-gate, verify-repo-gate, verify-commit]
     after: [note]
 decisionPoints: []
 branchPoints:
-  - step: implement-bisect
-    outcomes:
-      - { outcome: revert, routes: [revert-culprit] }
   - step: implement-diagnose
     outcomes:
       - { outcome: as-specified, routes: [answer-question] }

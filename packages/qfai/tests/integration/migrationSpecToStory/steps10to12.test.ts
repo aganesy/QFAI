@@ -562,12 +562,12 @@ describe("migration steps 11 and 12: the free-text entry", () => {
     expect(await fingerprint(paused)).toBe(before);
 
     const missing = await clone(migrated11);
-    await rm(path.join(missing, ".qfai/assistant/step/sdd-gate"), { recursive: true });
+    await rm(path.join(missing, ".qfai/assistant/step/sdd-triage"), { recursive: true });
     const before12 = await fingerprint(missing);
     const contract = await stepIn(missing, 12);
     expect(contract.code).toBe(3);
     expect(section(contract.output, "For a person")).toEqual([
-      "plan-invalid: .qfai/assistant/step/sdd-gate/STEP.md: the repair-consistency plan runs this step and it is not installed",
+      "plan-invalid: .qfai/assistant/step/sdd-triage/STEP.md: the repair-consistency plan runs this step and it is not installed",
     ]);
     expect(await fingerprint(missing)).toBe(before12);
   });

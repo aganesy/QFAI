@@ -99,10 +99,9 @@ describe("wrapper parity across all three platforms", () => {
 
       const requiredPhrases = [
         "one EX at a time by default",
-        "Record command, selector, failure, test hash",
-        "qa-gatekeeper checks the observed RED and GREEN evidence",
-        "implementation-reviewer checks code and tests",
+        "Record command, selector and failure",
         "RED, GREEN and Refactor result",
+        "While implementing, run only the selected test",
         "required user consent",
       ];
       const forbiddenPhrases = [

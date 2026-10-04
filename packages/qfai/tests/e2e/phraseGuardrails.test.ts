@@ -13,10 +13,9 @@ const implementAssistantDir = path.join(templateQfaiDir, "assistant");
 
 const requiredPhrases = [
   "one EX at a time by default",
-  "Record command, selector, failure, test hash",
-  "qa-gatekeeper checks the observed RED and GREEN evidence",
-  "implementation-reviewer checks code and tests",
+  "Record command, selector and failure",
   "RED, GREEN and Refactor result",
+  "While implementing, run only the selected test",
   "required user consent",
 ];
 
@@ -51,7 +50,7 @@ function checkForbiddenPhrases(content: string): string[] {
 }
 
 describe("implementation contract phrase guardrails", () => {
-  it("SKILL.md contains all 7 required phrases", async () => {
+  it("SKILL.md contains every required phrase", async () => {
     const content = await readImplementFlowSteps(implementAssistantDir);
     const missing = checkRequiredPhrases(content);
     expect(missing, `Missing required phrases in SKILL.md: ${missing.join(", ")}`).toEqual([]);
@@ -139,9 +138,8 @@ describe("E2E: prototyping wording alignment", () => {
   it("SKILL.md contains actionable implementation verbs", async () => {
     const content = await readImplementFlowSteps(implementAssistantDir);
     const actionableVerbs = [
-      "Record command, selector, failure, test hash",
-      "Re-run validation before selecting the next unassigned EX",
-      "Record explicit PASS or REVISE",
+      "Record command, selector and failure",
+      "Run the same selector and record",
     ];
     for (const verb of actionableVerbs) {
       expect(

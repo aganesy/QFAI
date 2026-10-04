@@ -21,6 +21,7 @@ steps:
     verify-context,
     verify-qfai-gate,
     verify-repo-gate,
+    verify-commit,
     verify-external,
     verify-manual,
     verify-release-notes,
@@ -60,6 +61,7 @@ condition holds:
 | `verify-context`       | Reads the inputs, fixes the scope, finds a command for each gate | Never                                           |
 | `verify-qfai-gate`     | The QFAI validation of the scope                                 | Never                                           |
 | `verify-repo-gate`     | The repository gates, the fix loop, the report, `verify.json`    | Never                                           |
+| `verify-commit`        | Commits the change locally; never pushes                         | Invoked by name                                 |
 | `verify-external`      | Asks the reporter or a real environment to confirm the fix       | The gates here can confirm the fix              |
 | `verify-manual`        | Follows a written test plan on each environment                  | No written test plan is handed in               |
 | `verify-release-notes` | Drafts the release notes                                         | Release notes were not asked for                |

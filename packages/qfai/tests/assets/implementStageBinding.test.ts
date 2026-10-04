@@ -18,15 +18,11 @@ describe.each(trees)("%s — implementation stage binding", (tree) => {
     expect(workflow).toContain("6. Verify: run quality gates");
   });
 
-  it("requires a fresh story obligation and the project command contract", async () => {
-    const skill = await read(tree, "assistant/step/implement-tdd/STEP.md");
-    expect(skill).toContain("qfai validate --profile tdd --flow BF-NNNN");
-    expect(skill).toContain("generatedAt");
-    expect(skill).toContain("no earlier than this run start");
+  it("reads the Test command from the project command contract and runs only the selected test", async () => {
+    const skill = (await read(tree, "assistant/step/implement-tdd/STEP.md")).replace(/\s+/g, " ");
     expect(skill).toContain("<paths.contractsDir>/tech.md");
-    for (const command of ["Test", "Lint", "Typecheck", "Build"]) {
-      expect(skill).toContain(command);
-    }
+    expect(skill).toContain("Obtain the Test command only from that section");
+    expect(skill).toContain("While implementing, run only the selected test");
   });
 
   it("ships the Standard commands contract the stage reads", async () => {

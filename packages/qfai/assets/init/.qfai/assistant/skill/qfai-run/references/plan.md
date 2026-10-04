@@ -60,21 +60,15 @@ The route, its stages in order with each step's file, and its points.
       ]
     },
     {
-      "id": "spec",
-      "kind": "sdd_append",
-      "review": "spec",
+      "id": "note",
+      "kind": "verify",
+      "review": "code",
       "steps": [
         {
-          "name": "sdd-story",
-          "path": ".qfai/assistant/step/sdd-story/STEP.md",
+          "name": "verify-change-note",
+          "path": ".qfai/assistant/step/verify-change-note/STEP.md",
           "mode": null,
           "passThrough": true
-        },
-        {
-          "name": "sdd-gate",
-          "path": ".qfai/assistant/step/sdd-gate/STEP.md",
-          "mode": null,
-          "passThrough": false
         }
       ]
     }

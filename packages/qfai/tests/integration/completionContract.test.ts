@@ -16,14 +16,6 @@ const uiuxTemplateDir = path.join(
   "templates",
   "uiux",
 );
-const implementSkillPath = path.join(
-  templateRoot,
-  ".qfai",
-  "assistant",
-  "skill",
-  "qfai-implement",
-  "SKILL.md",
-);
 const implementAssistantDir = path.join(templateRoot, ".qfai", "assistant");
 
 let content: string | undefined;
@@ -34,42 +26,15 @@ async function loadContent(): Promise<string> {
 }
 
 describe("BF completion gate", () => {
-  it("requires a fresh BF-scoped validator result with no owed EX tests", async () => {
-    const c = await loadContent();
-    expect(c).toMatch(/## Select the next example/);
-    expect(c).toMatch(/qfai validate --profile tdd --flow BF-NNNN/);
-    expect(c).toMatch(/generatedAt.*no earlier than this run start/);
-    expect(c).toMatch(/lowest EX ID.*test-obligation EX findings/);
-  });
-
   it("requires observed RED, GREEN, and Refactor results for every implemented EX", async () => {
     const c = await loadContent();
     expect(c).toMatch(/Observe the assertion fail for the intended behavior before changing/);
     expect(c).toMatch(
       /load error, missing dependency, or broken fixture is\s+not an admissible RED/,
     );
-    expect(c).toMatch(/Run the same selector and record\s+command, outcome, and revision/);
+    expect(c).toMatch(/Run the same selector and record\s+command and outcome/);
     expect(c).toMatch(/A failing or unrun gate cannot be reported as PASS/);
-  });
-
-  it("reports nothing to do only after a current scoped TDD gate finds no owed EX", async () => {
-    // QFAI:EX-0001-0094-02
-    const c = await loadContent();
-    const skill = (await readFile(implementSkillPath, "utf8")).replace(/\s+/g, " ");
-    expect(c).toContain("including decision exceptions");
-    expect(skill).toContain("fresh validate result has no test-obligation EX finding for this BF");
-    expect(skill).toContain('the invocation reports "nothing to do"');
-    expect(skill).toContain("reads or writes no ledger status");
-    expect(c).not.toContain("test-list.md");
-  });
-
-  it("stops selection when the scoped result is missing, stale or from another profile", async () => {
-    const c = await loadContent();
-    expect(c).toContain("Read its `validate.flow-<ids>.json` result even when the command exits");
-    expect(c).toContain("the file exists, `profile` is");
-    expect(c).toContain("`tdd`, and `generatedAt` is no earlier than this run start");
-    expect(c).toContain("stop and report the command, exit result, and missing or stale field");
-    expect(c).toContain("never infer that the flow has no remaining work");
+    expect(c).toMatch(/It is done for the flow when every example the\s+selection listed is done/);
   });
 });
 // ---------------------------------------------------------------------------

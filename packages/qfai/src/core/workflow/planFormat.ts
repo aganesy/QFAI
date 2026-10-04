@@ -81,9 +81,7 @@ const OUTCOME_KEYS = ["outcome", "routes"];
 // Each step mode, with the one step it may sit on.
 const MODES: Record<string, string> = { settled: "sdd-triage", "read-only": "implement-diagnose" };
 
-const SDD_APPEND = ["sdd-story", "sdd-gate"];
-
-const VERIFY_BLOCK = ["verify-qfai-gate", "verify-repo-gate"];
+const VERIFY_BLOCK = ["verify-qfai-gate", "verify-repo-gate", "verify-commit"];
 
 // Each stage kind, with the steps a stage of that kind may run.
 const KINDS: Record<string, string[]> = {
@@ -115,7 +113,6 @@ const KINDS: Record<string, string[]> = {
     "sdd-cycle",
     "sdd-gate",
   ],
-  sdd_append: SDD_APPEND,
   prototype: [
     "prototyping-grill",
     "prototyping-preflight",
@@ -167,8 +164,6 @@ export const PASS_THROUGH_STEPS = [
   "discussion-pack",
   "discussion-uiux",
   "triage-investigate",
-  "implement-bisect",
-  "implement-minimize",
   "implement-scaffold",
   "implement-tdd",
   "implement-credentials",
@@ -208,13 +203,8 @@ function namesOf(stage: PlanStage): string[] {
   return stage.steps.map((step) => step.name);
 }
 
-// Whether the stage's steps are those of its kind: an `sdd_append` stage runs exactly its two
-// steps, and a stage of just those two steps is an `sdd_append` stage.
 function kindHolds(stage: PlanStage, kind: string[]): boolean {
-  const names = namesOf(stage);
-  const appendShape = names.join(",") === SDD_APPEND.join(",");
-  if (stage.kind === "sdd_append" || appendShape) return stage.kind === "sdd_append" && appendShape;
-  return names.every((name) => kind.includes(name));
+  return namesOf(stage).every((name) => kind.includes(name));
 }
 
 function vocabularyRefusals(stage: PlanStage, refuse: Refuse) {

@@ -8,17 +8,10 @@ stages:
     kind: diagnose
     steps: [implement-diagnose]
     after: [collect]
-  - id: spec
-    kind: sdd_append
-    steps:
-      - { step: sdd-story, passThrough: true }
-      - sdd-gate
-    after: [diagnose]
-    review: spec
   - id: implement
     kind: implement
-    steps: [implement-scaffold, implement-tdd]
-    after: [spec]
+    steps: [implement-tdd]
+    after: [diagnose]
   - id: note
     kind: verify
     steps:
@@ -27,7 +20,7 @@ stages:
     review: code
   - id: verify
     kind: verify
-    steps: [verify-qfai-gate, verify-repo-gate]
+    steps: [verify-qfai-gate, verify-repo-gate, verify-commit]
     after: [note]
   - id: confirm
     kind: verify

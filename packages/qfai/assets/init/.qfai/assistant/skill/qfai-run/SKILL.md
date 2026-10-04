@@ -5,6 +5,8 @@ description: "Use when the user asks for a change, a fix, an investigation of th
 argument-hint: "<the change, in your own words>"
 allowed-tools: [Read, Glob, Grep, Write, Edit, Bash, TodoWrite, Task, Agent]
 roles: [orchestrator]
+steps: []
+requires: [common-policy-check, common-review-cycle]
 mode: execution-focused
 ---
 
@@ -50,6 +52,7 @@ value but the three below plans nothing.
 
 ## The work
 
+0. **Policy check.** Run `common-policy-check` once, before the extraction.
 1. **Extract.** Read the request into an extraction as
    `references/extraction.md` sets out, and pass it to
    `npx qfai workflow plan --in <file>`, or `--in -` on standard input.
@@ -68,11 +71,10 @@ value but the three below plans nothing.
      runs without the approval, which authorizes no push, merge, tag or publication.
    - **Decision point.** At a step `decisionPoints` names, put each critical
      decision to the user through the structured question tool before
-     changing anything that depends on it. A decision is critical when it
-     contradicts a specification, a contract or a recorded decision, cannot be
-     taken back, or rests on product intent nothing written states. Take every
-     other decision yourself, ask nothing, and list it with its reason in the
-     final report.
+     changing anything that depends on it. A decision is critical when it contradicts a
+     specification, a contract or a recorded decision, cannot be taken back, or
+     rests on product intent nothing written states. Take every other decision
+     yourself, ask nothing, and list it with its reason in the final report.
    - **Branch point.** When a step `branchPoints` names reports an outcome
      paired with one route, move there; with several, to the one the step
      names; with `decision-table`, to the route `plan --in` gives the step's
@@ -85,12 +87,15 @@ value but the three below plans nothing.
    reviews, with `architecture-reviewer` when a contract changed; after one
    whose `review` is `code`, `implementation-reviewer`.
    `product-surface-reviewer` joins both where a UI contract with screens
-   serves the flow. No agent reviews its own work.
+   serves the flow. No agent reviews its own work, and no step adds a review.
+   Each review returns PASS or REVISE, and each finding is fixed or answered
+   once, with no re-review. A step that would go beyond the request stops.
 6. **Approvals.** Each approval of a specification change, a critical decision
    or a release is one `decisions.md` row: what was approved, who approved it,
    when, and the chosen option's label. A decision you took appends no row.
 7. **A finding no stage serves.** Stop, and name the finding, its owner and
    the stage skill to invoke by name.
+8. **Commit.** A change route ends with `verify-commit`, which never pushes.
 
 ## Under a no-question mode
 
@@ -116,17 +121,11 @@ Follow `.qfai/assistant/rule/shared-skill-delegation-baseline.md`.
 
 ## Work Orders Summary
 
-Report one row per part given to a sub-agent.
+Where parts ran in parallel, report one row per part given to a sub-agent.
 
 | Step | Role (sub-agent) | Agent instance  | Task title        | Input (refs)  | Output (refs) | Status (PASS/REVISE/PENDING) |
 | ---- | ---------------- | --------------- | ----------------- | ------------- | ------------- | ---------------------------- |
 | 1    | `<role>`         | `<instance id>` | `<part in words>` | The step file | The result    | PASS/REVISE                  |
-
-### Reviewer Gate
-
-Each review a plan names returns PASS or REVISE on that stage's work. Under
-the Drift Protocol, a step that would change a story, a contract or a decision
-the request did not cover stops and says so.
 
 ## Default Autopilot Policy
 
@@ -141,7 +140,7 @@ the request did not cover stops and says so.
 
 ## Completion Contract (Shared)
 
-Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#completion-contract-shared`. **Smallest applicable smoke check** (this skill's override): the gates of the plan's last verify stage. A gate that cannot run is UNRUN, not a pass.
+Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#completion-contract-shared`. **Smallest applicable smoke check** (this skill's override): the gates of the plan's `verify-qfai-gate` and `verify-repo-gate` steps. A gate that cannot run is UNRUN, not a pass.
 
 project_memory:
 
