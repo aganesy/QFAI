@@ -10,6 +10,7 @@ Feature: Review a change twice: the specification before the code, and the code 
     When the route runs
     Then after that stage `requirements-reviewer` reviews the specification change, joined by `architecture-reviewer` when a contract changed
     And after the stage running `verify-change-note`, the last before the gates, `implementation-reviewer` reviews the whole diff
+    And a fix the gates stage makes after that review is not reviewed again, and its diff is listed in the final report
 
   # AC-0001-0225-02
   Scenario: A change route with no specification stage gets one review
@@ -17,6 +18,7 @@ Feature: Review a change twice: the specification before the code, and the code 
     When the route runs
     Then `implementation-reviewer` reviews the whole diff once, after the stage running `verify-change-note`, the last before the gates
     And no other review, blocking reviewer or gate observation runs
+    And a fix the gates stage makes after that review is not reviewed again, and its diff is listed in the final report
 
   # AC-0001-0225-03
   Scenario: The gates alone verify, once, and the change is committed locally

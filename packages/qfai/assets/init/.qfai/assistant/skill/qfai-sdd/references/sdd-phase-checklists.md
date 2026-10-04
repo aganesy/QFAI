@@ -7,7 +7,7 @@ Use these checkpoints with the ordered stages in sdd-execution-playbook.md. A ch
 - The selected source is the preflight result's selectedInputPath, or an explicit user requirement named in the SDD report.
 - The selected discussion pack and applicable completed reviews were read and dispositioned. A disagreement was resolved in an SDD-owned artifact.
 - Every requirement has an affected policy, BF, US, EX, or contract path, or an open question that prevents a dependent write.
-- Only an approved change request, a declined change request, and a critical decision the user made are decision rows; a declined change request is a REJECTED `Change request:` row. Open questions are open-questions.md rows. An existing REJECTED row stays as it is.
+- Only an approved change request, a declined change request, a critical decision the user made, and a justified `Test exception:` row are decision rows; a declined change request is a REJECTED `Change request:` row. Open questions are open-questions.md rows. An existing REJECTED row stays as it is.
 - Both tables have exactly ID, Content, Approach, Status. Existing rows are unchanged except Status.
 - Approval-required rows have the user's decision before any dependent write. Under --auto, pending approvals stopped the run without an invented approval.
 - New IDs use highest-in-scope plus one, including retired IDs in decision rows.
