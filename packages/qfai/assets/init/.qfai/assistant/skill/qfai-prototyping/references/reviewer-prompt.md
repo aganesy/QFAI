@@ -267,7 +267,8 @@ prototype is done is the user's decision, not a score's.
 
 Apply the registry the package ships to each screen and fill
 `layoutAntiPatternsDetected[]`: a `layout` entry by its regex over the
-iteration's HTML, a `semantic` entry by your own judgement.
+iteration's HTML, a `semantic` entry by your own judgement. Any entry in
+`layoutAntiPatternsDetected[]` caps `informationArchitecture` at `acceptable`.
 
 | ID                              | Scope    | Detection                            | What makes it a defect                        |
 | ------------------------------- | -------- | ------------------------------------ | --------------------------------------------- |

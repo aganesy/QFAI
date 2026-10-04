@@ -69,9 +69,12 @@ under `.qfai/prototype/`, or `00` when there are none.
 1. **Generator** (product-experience-architect). Reads the contracts,
    `.qfai/prototype/grilling.md`, the generator prompt, the `DESIGN.md` tokens
    and, from the second iteration on, the latest reviews and the user's last
-   answer. Writes `.qfai/prototype/iter-NN/index.html`.
-2. **Build** (devops-ci-engineer). Serves `.qfai/prototype/iter-NN/` at the
-   URL preflight checked, and hands that URL to the reviewer.
+   answer. It starts from the primary UI contract preflight resolved: the one
+   the request names, else `prototyping.primaryUiContract`. Writes
+   `.qfai/prototype/iter-NN/index.html`.
+2. **Build** (devops-ci-engineer). Serves `.qfai/prototype/` at the URL
+   preflight checked, starting the server on the first iteration and keeping it
+   running for the loop, and hands `<url>/iter-NN/` to the reviewer.
 3. **Reviewer** (product-surface-reviewer). Opens that URL, operates
    Playwright live and returns the payload for each UI contract and screen
    pair, and the per-iteration summary aggregated from them, per the reviewer
@@ -81,10 +84,12 @@ under `.qfai/prototype/`, or `00` when there are none.
 4. **Orchestrator.** Writes each payload to
    `iter-NN/<ui-contract-id>/<screen>.review.json` and the summary to
    `iter-NN/review.json`. Each payload is checked against the closed schema
-   before it is written, and one that does not conform is asked for again. It
-   runs the reviewer's attempts and writes a failed pair's payload, as the
-   payload schema sets out. Then it appends one line for the iteration to
-   `progress.md`.
+   before it is written, and one that does not conform is asked for again. A
+   summary whose `layoutAntiPatternsDetected[]` is not empty scores
+   `informationArchitecture` at most `acceptable`; one scoring higher is asked
+   for again. It runs the reviewer's attempts and writes a failed pair's
+   payload, as the payload schema sets out. Then it appends one line for the
+   iteration to `progress.md`.
 5. **The user.** Put the prototype to the user, as below.
 
 ### Putting the prototype to the user
