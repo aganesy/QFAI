@@ -348,6 +348,19 @@ describe("qfai-run", () => {
     );
   });
 
+  // QFAI:AC-0001-0211-05
+  // QFAI:EX-0001-0211-40
+  // QFAI:EX-0001-0211-41
+  it("marks a behaviour change as a prototype request only when it asks to change the prototype", async () => {
+    const reference = await readShipped(EXTRACTION);
+    expect(rowOf(sectionOf(reference, "## Qualifiers"), "| `prototype-requested`")).toMatch(
+      /\| `behaviour-change` +\| the request explicitly asks to change the prototype\. a request to implement the change in the product does not set it/i,
+    );
+    expect(rowOf(sectionOf(reference, "## Entry flags"), "| `decision`")).toMatch(
+      /on a `behaviour-change` with `prototype-requested`, only when a choice is left open/i,
+    );
+  });
+
   // QFAI:AC-0001-0229-06
   // QFAI:EX-0001-0229-10
   it("lists code and tests only when the request asks for the change to be implemented", async () => {

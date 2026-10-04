@@ -304,7 +304,6 @@ it("Features and behaviour changes decide, change compatibility, prototype or ad
 });
 
 // QFAI:EX-0001-0211-39
-// QFAI:EX-0001-0211-40
 it("A behaviour change prototypes only when the request asks to change the prototype", async () => {
   expect(
     await routes(
