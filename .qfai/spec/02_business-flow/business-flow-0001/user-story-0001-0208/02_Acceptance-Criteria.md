@@ -16,5 +16,5 @@ Feature: Verify as the final stage of a route
     Given the qfai-verify SKILL.md and the built-in plans
     When its steps frontmatter is read
     Then it lists every step whose owner is qfai-verify
-    And the verify block of every change route names `verify-qfai-gate` and `verify-repo-gate`, in that order, after a stage running `verify-change-note`, and every other verify stage names steps from that list
+    And the verify block of every change route names `verify-qfai-gate`, `verify-repo-gate` and `verify-commit`, in that order, after a stage running `verify-change-note`, and every other verify stage names steps from that list
 ```

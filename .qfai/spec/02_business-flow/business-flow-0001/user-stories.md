@@ -7,7 +7,7 @@
 | US-0001-0001 | Traceability chain definition                                                          | `user-story-0001-0001/` |
 | US-0001-0002 | Drift protocol                                                                         | `user-story-0001-0002/` |
 | US-0001-0003 | Skill orchestration design contract                                                    | `user-story-0001-0003/` |
-| US-0001-0004 | Steering and governance framework                                                      | `user-story-0001-0004/` |
+| US-0001-0004 | Policy and governance framework                                                        | `user-story-0001-0004/` |
 | US-0001-0005 | Story tree layout                                                                      | `user-story-0001-0005/` |
 | US-0001-0006 | Policy and contract layers                                                             | `user-story-0001-0006/` |
 | US-0001-0007 | Decision and open-question tables                                                      | `user-story-0001-0007/` |
@@ -46,7 +46,7 @@
 | US-0001-0042 | Prototyping skill validation                                                           | `user-story-0001-0042/` |
 | US-0001-0043 | Canonical assistant-tree layers                                                        | `user-story-0001-0043/` |
 | US-0001-0045 | Deprecated assistant paths and skill project memory                                    | `user-story-0001-0045/` |
-| US-0001-0046 | Skill-document references and migration notes                                          | `user-story-0001-0046/` |
+| US-0001-0046 | Migration notes pass through as informational                                          | `user-story-0001-0046/` |
 | US-0001-0047 | Profile-specific validation reports                                                    | `user-story-0001-0047/` |
 | US-0001-0049 | SaaS package validation profile                                                        | `user-story-0001-0049/` |
 | US-0001-0050 | Audit profile task forms                                                               | `user-story-0001-0050/` |
@@ -75,7 +75,7 @@
 | US-0001-0074 | Worker-Scoped Credential-Reuse Guidance                                                | `user-story-0001-0074/` |
 | US-0001-0075 | Repository Analysis                                                                    | `user-story-0001-0075/` |
 | US-0001-0076 | Config Glob Tuning                                                                     | `user-story-0001-0076/` |
-| US-0001-0077 | Steering Population                                                                    | `user-story-0001-0077/` |
+| US-0001-0077 | Policy Population                                                                      | `user-story-0001-0077/` |
 | US-0001-0078 | Evidence Sampling Confirmation                                                         | `user-story-0001-0078/` |
 | US-0001-0079 | Tool Selection Documentation                                                           | `user-story-0001-0079/` |
 | US-0001-0080 | Exploration Brief Authoring                                                            | `user-story-0001-0080/` |
