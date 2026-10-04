@@ -69,6 +69,8 @@ describe("governance inside a run", () => {
       /a `fix-defect` change may declare `Behavior`, and an `add-feature` change `Structural`/,
     );
     expect(workflow).toMatch(/no route maps to a Change Type/i);
+    expect(workflow).toMatch(/no route declares a Change Type/i);
+    expect(workflow).not.toMatch(/Do not proceed without a declared Change Type/i);
   });
 
   // QFAI:AC-0001-0163-04

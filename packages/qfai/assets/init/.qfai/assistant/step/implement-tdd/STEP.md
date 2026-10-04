@@ -11,10 +11,7 @@ roles:
   - frontend-engineer
   - backend-engineer
   - devops-ci-engineer
-  - implementation-reviewer
-  - qa-gatekeeper
-  - product-surface-reviewer
-routing-profile: implementation-heavy
+routing-profile: default
 ---
 
 # implement-tdd

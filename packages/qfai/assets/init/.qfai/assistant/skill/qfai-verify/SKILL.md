@@ -11,7 +11,6 @@ roles:
     qa-strategist,
     devops-ci-engineer,
     doc-steward,
-    qa-gatekeeper,
     implementation-reviewer,
   ]
 steps:
@@ -106,15 +105,14 @@ the owner phase (`/qfai-sdd`) as an advisory / Change Request proposal per
 Questions about this skill's own inputs or settings stay in its own output for
 the user to answer. This skill does not write `open-questions.md`.
 
-The completion message lists each adopted decision — every
-`grilling(<Session>@<run key>/agents)` row — with its reason and any
-disagreeing position. None of them is put as a question. The message then
-ends with a question listing every next action, as
+The completion message lists each decision the agents adopted, with its
+reason and any disagreeing position. None of them is put as a question. The
+message then ends with a question listing every next action, as
 `.agents/rules/user-questions.md` § 6 sets out; under a no-question mode it lists
 them in the report instead:
 
 - Proceed (recommended): create a PR on your hosting platform, with the
-  verification evidence summary as its description.
+  verification report as its description.
 - A gate failed: return to the owning skill, fix the issue, then rerun
   `/qfai-verify`.
 - A report is needed: run `npx qfai report` once the validation outputs are

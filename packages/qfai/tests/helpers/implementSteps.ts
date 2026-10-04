@@ -1,5 +1,6 @@
 /**
- * The text `/qfai-implement` runs for a business flow: its default step, `implement-tdd`.
+ * The text `/qfai-implement` runs for a business flow: its default step,
+ * `implement-tdd`, which holds the flow procedure and its completion gate.
  */
 import { readFile } from "node:fs/promises";
 import path from "node:path";

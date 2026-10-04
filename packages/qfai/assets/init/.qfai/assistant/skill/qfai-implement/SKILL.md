@@ -15,7 +15,6 @@ roles:
     backend-engineer,
     devops-ci-engineer,
     implementation-reviewer,
-    qa-gatekeeper,
     product-surface-reviewer,
     doc-steward,
   ]
@@ -23,7 +22,6 @@ steps:
   - implement-scaffold
   - implement-credentials
   - implement-tdd
-  - implement-checkpoint
   - implement-diagnose
   - implement-regression-fix
   - implement-test-fix
@@ -77,7 +75,6 @@ Every step follows `.qfai/assistant/rule/shared-skill-operating-baseline.md`,
 | `implement-scaffold`    | `.qfai/assistant/step/implement-scaffold/STEP.md`    | First: the flow's missing acceptance tests, each with an empty body |
 | `implement-credentials` | `.qfai/assistant/step/implement-credentials/STEP.md` | Only when an acceptance test in scope needs an authenticated actor  |
 | `implement-tdd`         | `.qfai/assistant/step/implement-tdd/STEP.md`         | Every owed example, Red, Green, Refactor                            |
-| `implement-checkpoint`  | `.qfai/assistant/step/implement-checkpoint/STEP.md`  | Last: the flow checkpoint and completion gate                       |
 
 Acceptance tests come in two phases. `implement-scaffold` writes them with
 empty bodies before the examples are implemented; `implement-acceptance`
@@ -130,7 +127,11 @@ written only to pass a test: no value hard-coded to the test's inputs and no bra
 ## Completion
 
 The invocation completes on the gate of its last step once
-every finding of its one review is fixed or answered. For `<BF-ID>`, that is the completion gate of `implement-checkpoint`.
+every finding of its one review is fixed or answered. Invoked by name, it runs
+`npx qfai validate --profile tdd --fail-on error --flow BF-NNNN` once, at
+completion; when that fresh validate result has no test-obligation EX finding
+for this BF, the invocation reports "nothing to do", and reads or writes no
+ledger status. Inside a route it runs no validate: the verify stage does.
 The report ends with a question listing the next actions, `/qfai-verify`
 recommended, as `.agents/rules/user-questions.md` § 6 sets out.
 Under a no-question mode, list them in the report instead.

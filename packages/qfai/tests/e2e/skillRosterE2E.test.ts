@@ -24,8 +24,6 @@ describe("E2E: sub-agent roster formalization", () => {
     expect(content).toContain("delivery-planner");
     expect(content).toContain("frontend-engineer");
     expect(content).toContain("backend-engineer");
-    expect(content).toContain("qa-gatekeeper");
-    expect(content).toContain("implementation-reviewer");
   });
 });
 

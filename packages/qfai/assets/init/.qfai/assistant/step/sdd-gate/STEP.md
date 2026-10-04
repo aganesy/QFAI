@@ -3,8 +3,7 @@ name: sdd-gate
 owner: qfai-sdd
 purpose: "Validate each affected business flow on its own and report its result."
 requires: [common-gate-run]
-roles: [requirements-reviewer, qa-gatekeeper]
-routing-profile: requirements-heavy
+roles: []
 ---
 
 # sdd-gate
@@ -35,7 +34,7 @@ For each flow:
    `.qfai/assistant/rule/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol`;
    do not bypass a failed gate.
 3. Report, per flow, in the stage report: the source, changes, decisions,
-   gate result and validate log path, reviewer results, and remaining risks.
+   gate result and validate log path, and remaining risks.
 
 ## A flow that does not exist yet
 
@@ -60,8 +59,3 @@ time, on the snapshot that passed validation:
 - Reviewers check the BF → US → AC → EX ← BR edges, negative and boundary
   outcomes, contract realization, DB execution proof, decision and OQ state, and
   validation freshness.
-- `requirements-reviewer` reviews the specification change. Route
-  `architecture-reviewer` when a contract changed, `product-surface-reviewer`
-  for a UI-bearing flow, and `qa-gatekeeper` when the gate evidence is in doubt.
-- The stage report lists, per flow, the findings, repairs, rerun commands and
-  final blocking verdicts.

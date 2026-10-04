@@ -160,7 +160,7 @@ describe("the verify steps a route adds", () => {
   it("gives each its review profile and a routing entry that names it", async () => {
     const profiles: Record<string, string> = {
       "verify-change-note": "default",
-      "verify-repeat-run": "runtime-heavy",
+      "verify-repeat-run": "default",
       "verify-external": "default",
       "verify-manual": "default",
       "verify-advisory": "default",

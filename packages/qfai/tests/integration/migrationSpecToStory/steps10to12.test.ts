@@ -212,18 +212,13 @@ async function writeConfig(root: string, edit: (config: Record<string, unknown>)
 }
 
 /** The default `sdd-contract` routing entry with `architecture-reviewer` taken out of its review phase. */
-async function routingWithoutArchitectureReviewer(): Promise<Record<string, unknown>> {
+async function routingWithoutSolutionArchitect(): Promise<Record<string, unknown>> {
   const routing = await defaultRoutingEntries();
   const entry: unknown = routing.find((item) => isRecord(item) && item.step === "sdd-contract");
   if (!isRecord(entry) || !Array.isArray(entry.phases)) throw new Error("no sdd-contract routing");
   const phases = entry.phases.map((phase: unknown) =>
-    isRecord(phase) && phase.id === "review"
-      ? {
-          ...phase,
-          mandatory_agents: ["completion-reviewer"],
-          conditional_agents: [],
-          blocking_agents: ["completion-reviewer"],
-        }
+    isRecord(phase) && phase.id === "design"
+      ? { ...phase, mandatory_agents: ["requirements-analyst"] }
       : phase,
   );
   return { ...entry, phases };
@@ -537,7 +532,7 @@ describe("migration steps 11 and 12: the free-text entry", () => {
   it("names a routing override that drops a required reviewer", async () => {
     // QFAI:EX-0004-0013-06
     const root = await clone(migrated11);
-    const override = await routingWithoutArchitectureReviewer();
+    const override = await routingWithoutSolutionArchitect();
     await writeConfig(root, (config) => {
       config.routing = [override];
     });
@@ -545,7 +540,7 @@ describe("migration steps 11 and 12: the free-text entry", () => {
     const result = await stepIn(root, 12);
     expect(result.code).toBe(3);
     expect(section(result.output, "For a person")).toEqual([
-      "reviewer-missing: qfai.config.yaml: the `routing:` override for `sdd-contract` drops `architecture-reviewer`, which the package's default routing requires",
+      "reviewer-missing: qfai.config.yaml: the `routing:` override for `sdd-contract` drops `solution-architect`, which the package's default routing requires",
     ]);
     expect(await fingerprint(root)).toBe(before);
   });
@@ -567,12 +562,12 @@ describe("migration steps 11 and 12: the free-text entry", () => {
     expect(await fingerprint(paused)).toBe(before);
 
     const missing = await clone(migrated11);
-    await rm(path.join(missing, ".qfai/assistant/step/sdd-gate"), { recursive: true });
+    await rm(path.join(missing, ".qfai/assistant/step/sdd-triage"), { recursive: true });
     const before12 = await fingerprint(missing);
     const contract = await stepIn(missing, 12);
     expect(contract.code).toBe(3);
     expect(section(contract.output, "For a person")).toEqual([
-      "plan-invalid: .qfai/assistant/step/sdd-gate/STEP.md: the repair-consistency plan runs this step and it is not installed",
+      "plan-invalid: .qfai/assistant/step/sdd-triage/STEP.md: the repair-consistency plan runs this step and it is not installed",
     ]);
     expect(await fingerprint(missing)).toBe(before12);
   });

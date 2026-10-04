@@ -33,11 +33,6 @@ const DELEGATION_HEADING: KeptEmphasis = {
   readBy: "tests/assets/skillDelegationTool.test.ts",
 };
 
-const GRILLING_HEADING: KeptEmphasis = {
-  phrase: "## Grilling (MANDATORY)",
-  readBy: "tests/assets/executionStageGrilling.test.ts",
-};
-
 const ABSOLUTE_RULE: KeptEmphasis = {
   phrase: "**All outputs MUST be written in the user’s working language for this session.**",
   readBy: "tests/assets/outputLanguageSingleSource.test.ts",
@@ -80,10 +75,6 @@ export const KEPT_EMPHASIS: Readonly<Record<string, readonly KeptEmphasis[]>> = 
       phrase: "### What a reviewer may demand more of (MUST)",
       readBy: "tests/assets/reviewerDemandBound.test.ts",
     },
-    {
-      phrase: "MUST NOT satisfy a completion gate",
-      readBy: "tests/assets/reviewerResponseProvenance.test.ts",
-    },
   ],
   ".qfai/assistant/rule/workflow.md": [ABSOLUTE_RULE],
   ".qfai/assistant/skill/qfai-configure/SKILL.md": [DRIFT_MARKER, DELEGATION_HEADING],
@@ -114,6 +105,4 @@ export const KEPT_EMPHASIS: Readonly<Record<string, readonly KeptEmphasis[]>> = 
     },
   ],
   ".qfai/assistant/skill/web-research/SKILL.md": [DRIFT_MARKER, DELEGATION_HEADING],
-  ".qfai/assistant/step/verify-context/STEP.md": [GRILLING_HEADING],
-  ".qfai/assistant/step/verify-qfai-gate/STEP.md": [DRIFT_MARKER],
 };

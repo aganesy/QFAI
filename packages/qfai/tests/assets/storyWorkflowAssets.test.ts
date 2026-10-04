@@ -12,14 +12,6 @@ async function read(relative: string): Promise<string> {
 }
 
 describe("story-tree acceptance and implementation assets", () => {
-  it("selects affected suites through imports and reruns shared consumers", async () => {
-    const suite = await read("skill/qfai-implement/references/relevant-test-suite.md");
-    expect(suite).toContain("current QFAI:EX annotation");
-    expect(suite).toContain("Follow imports and test data consumers");
-    expect(suite).toContain("Re-run dependent flows after an integrated shared-module change");
-    expect(suite).toContain("Standard commands");
-  });
-
   it("permits parallel EX work only on declared independent seams", async () => {
     const policy = await read("skill/qfai-implement/references/parallelization-policy.md");
     expect(policy).toContain("explicit user approval and a delivery-planner PASS");
@@ -66,12 +58,8 @@ describe("story-tree acceptance and implementation assets", () => {
     expect(admissibility).toContain("restore the assertion");
   });
 
-  it("keeps the assistant file budget and review boundaries explicit", async () => {
+  it("keeps the assistant file budget explicit", async () => {
     const baseline = await read("rule/shared-skill-operating-baseline.md");
-    const gatekeeper = await read("agent/qa-gatekeeper.md");
     expect(baseline).toContain("800 lines per assistant asset file");
-    expect(gatekeeper).toContain("An ordinary RED must show");
-    expect(gatekeeper).toContain("GREEN needs the same selected test");
-    expect(gatekeeper).toContain("A missing dependency");
   });
 });

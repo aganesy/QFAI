@@ -4,14 +4,11 @@ owner: qfai-implement
 purpose: "Repair a defective test, at whatever layer, so that it checks what its business flow, criterion or example states and nothing else."
 requires:
   - common-gate-run
-  - common-grilling-record
 roles:
   - frontend-engineer
   - backend-engineer
   - acceptance-test-engineer
-  - implementation-reviewer
-  - qa-gatekeeper
-routing-profile: runtime-heavy
+routing-profile: default
 ---
 
 # implement-test-fix
@@ -43,13 +40,13 @@ pass while the diagnosis names a defective test is refused.
 3. Re-run the fixed test and record the result.
 4. The re-run is reported in the stage report.
 
-The stage review after the last step judges the fix.
+The route's code review judges the fix.
 
 A fix after which the expectation would check a different ID is not made.
 The session stops and names `/qfai-sdd` as the owner of the change.
 
-A contradiction found here opens an on-detection session under Article IX of
-`.qfai/assistant/rule/constitution.md`, recorded with `common-grilling-record`.
+A contradiction found here stops the work under Article IX of
+`.qfai/assistant/rule/constitution.md`.
 
 Inside a workflow run, the result's `testFix` names the IDs the test annotates
 before and after the fix (`citedBefore`, `citedAfter`), with an independent
@@ -58,4 +55,4 @@ review (`reviewRef`) and a re-run (`rerunRef`).
 ## Gate
 
 The step is done when the fixed test annotates the same IDs and its re-run is
-recorded. The fix is accepted when the stage review passes it.
+recorded.

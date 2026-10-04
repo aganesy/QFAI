@@ -19,14 +19,7 @@ describe("sub-agent roster completeness and handoff contracts", () => {
   it("defines the routed implementation specialists", async () => {
     content ??= await readImplementFlowSteps(implementAssistantDir);
 
-    const subAgents = [
-      "delivery-planner",
-      "frontend-engineer",
-      "backend-engineer",
-      "qa-gatekeeper",
-      "implementation-reviewer",
-      "product-surface-reviewer",
-    ];
+    const subAgents = ["delivery-planner", "frontend-engineer", "backend-engineer"];
 
     for (const agent of subAgents) {
       expect(content, `Sub-agent ${agent} must be defined in SKILL.md`).toContain(agent);
@@ -77,7 +70,7 @@ describe("watch-it-fail enforcement and resubmission", () => {
 describe("wording alignment implementation mode", () => {
   it("SKILL.md claims match implementation keywords", async () => {
     const content = await readImplementFlowSteps(implementAssistantDir);
-    const agents = ["delivery-planner", "qa-gatekeeper", "implementation-reviewer"];
+    const agents = ["delivery-planner", "frontend-engineer", "backend-engineer"];
     for (const agent of agents) {
       expect(content).toContain(agent);
     }

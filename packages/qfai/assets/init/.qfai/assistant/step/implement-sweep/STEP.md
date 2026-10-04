@@ -8,9 +8,7 @@ roles:
   - devops-ci-engineer
   - frontend-engineer
   - backend-engineer
-  - implementation-reviewer
-  - qa-gatekeeper
-routing-profile: implementation-heavy
+routing-profile: default
 ---
 
 # implement-sweep
@@ -47,7 +45,7 @@ result where there is one.
 
 3. Apply the fixes. Run the check again: it reports nothing outside the
    baseline.
-4. Run the relevant suite and the project gates.
+4. Run the relevant suite.
 
 ## At the decision point
 
@@ -67,5 +65,5 @@ The choice between fix and baseline is this step's decision point.
 ## Gate
 
 The step is done when the check passes over the whole tree with every
-remaining finding in its baseline with a reason, the project gates pass, and
-the qa-gatekeeper observed them.
+remaining finding in its baseline with a reason, and the relevant suite
+passes.

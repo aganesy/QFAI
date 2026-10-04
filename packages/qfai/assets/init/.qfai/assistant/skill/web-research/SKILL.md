@@ -69,11 +69,8 @@ steps:
   and must hand the same evidence set to a non-participating reviewer instead of
   returning `PASS`.
 - Reviewer responses use the response template in
-  `.qfai/assistant/rule/shared-skill-delegation-baseline.md#reviewer-response-template`, including the
-  REQUIRED `Reviewer role:`, `Reviewed artifact:`, `Review series:`,
-  `Authored/edited under review:` and `Recommended and unadjudicated:`
-  lines. A response omitting any of them is not a valid verdict; anything other than
-  `none` on the last cannot be a `PASS`.
+  `.qfai/assistant/rule/shared-skill-delegation-baseline.md#reviewer-response-template`:
+  a verdict and its findings.
 - Reviewer checks the Drift Protocol, verifies alignment with `test-layers.md`, and treats ratios as signals, not gates.
 - Reviewer returns only `PASS` or `REVISE` with a concrete fix proposal when returning `REVISE`.
 - A gate that could not be run at all is recorded as `PENDING` in the Work Orders Summary. `PENDING` never counts as `PASS`.

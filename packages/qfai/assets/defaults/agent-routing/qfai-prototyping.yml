@@ -8,7 +8,6 @@ routing:
         mandatory_agents: [product-experience-architect]
         conditional_agents: []
         parallel_groups: []
-        blocking_agents: [product-experience-architect]
         rerun_policy: failed-agents-only
     review_profile: default
 
@@ -18,7 +17,6 @@ routing:
         mandatory_agents: [devops-ci-engineer]
         conditional_agents: [product-experience-architect]
         parallel_groups: []
-        blocking_agents: []
         rerun_policy: failed-agents-only
     review_profile: default
 
@@ -31,22 +29,14 @@ routing:
         mandatory_agents: [product-experience-architect]
         conditional_agents: []
         parallel_groups: []
-        blocking_agents: [product-experience-architect]
         rerun_policy: failed-agents-only
       - id: loop
         mandatory_agents:
           [devops-ci-engineer, product-surface-reviewer, product-experience-architect]
         conditional_agents: []
         parallel_groups: []
-        blocking_agents: [product-surface-reviewer]
         rerun_policy: changed-scope-dependents
-      - id: review
-        mandatory_agents: [product-surface-reviewer]
-        conditional_agents: []
-        parallel_groups: []
-        blocking_agents: [product-surface-reviewer]
-        rerun_policy: changed-scope-dependents
-    review_profile: ui-bearing
+    review_profile: default
 
   - step: prototyping-handoff
     phases:
@@ -54,12 +44,5 @@ routing:
         mandatory_agents: [product-experience-architect]
         conditional_agents: [devops-ci-engineer]
         parallel_groups: []
-        blocking_agents: []
         rerun_policy: changed-scope-dependents
-      - id: review
-        mandatory_agents: [product-surface-reviewer, implementation-reviewer]
-        conditional_agents: []
-        parallel_groups: []
-        blocking_agents: [product-surface-reviewer, implementation-reviewer]
-        rerun_policy: changed-scope-dependents
-    review_profile: ui-bearing
+    review_profile: default
