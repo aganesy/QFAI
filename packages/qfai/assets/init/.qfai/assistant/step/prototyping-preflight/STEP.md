@@ -42,9 +42,9 @@ Nothing. The CLI checks are read-only.
 - Confirm a dev server or a static file server can serve
   `.qfai/prototype/` at the URL passed to
   `npx qfai doctor --profile prototyping --target-url <url>`.
-- Confirm every declared screen ID matches `[A-Za-z0-9._-]+`. The loop builds
-  file names from it, so an ID holding `/`, `\` or `..` stops the run, naming
-  the contract and the ID.
+- Confirm every declared screen ID matches `[A-Za-z0-9._-]+` and does not
+  contain `..`. The loop builds file names from it, so an ID that fails either
+  test stops the run, naming the contract and the ID.
 - Canonical launcher: `npx --no-install playwright`, or
   `node_modules/.bin/playwright` when PATH reachability is uncertain. A bare
   `npx playwright` can install a package mid-run.

@@ -85,6 +85,25 @@ describe("TC-0015-0024: detectHandoffSchemaDrift fires on asymmetric Pair IV edi
     expect(f?.message).toMatch(/justification/i);
   });
 
+  it("fires naming the prototyping handoff reference when only it omits its token", async () => {
+    const PROTOTYPING_HANDOFF_REL =
+      "packages/qfai/assets/init/.qfai/assistant/skill/qfai-prototyping/references/handoff.md";
+    const prototypingPair = HANDOFF_WRITER_PAIRS.find(
+      (p) => p.writerRel === PROTOTYPING_HANDOFF_REL,
+    );
+    expect(prototypingPair).toBeDefined();
+    await writeAt(HANDOFF_SCHEMA_REL, SCHEMA_WITH_FIELDS);
+    for (const pair of HANDOFF_WRITER_PAIRS) {
+      const body =
+        pair === prototypingPair ? "Write a JSON record.\n" : `references ${pair.writerToken}\n`;
+      await writeAt(pair.writerRel, body);
+    }
+    const findings = (await detectHandoffSchemaDrift(root)).filter(
+      (i) => i.code === "R-HANDOFF-SCHEMA-DRIFT",
+    );
+    expect(findings.map((f) => f.file)).toEqual([PROTOTYPING_HANDOFF_REL]);
+  });
+
   it("does NOT fire when schema does not yet export the canonical field set (symmetric absent)", async () => {
     await writeAt(HANDOFF_SCHEMA_REL, SCHEMA_WITHOUT_FIELDS);
     for (const pair of HANDOFF_WRITER_PAIRS) {

@@ -41,12 +41,12 @@ in `qfai.config.yaml`, and nowhere else.
 
 ## Failure Rules
 
-| Missing Definition               | Behavior                                                  |
-| -------------------------------- | --------------------------------------------------------- |
-| UI contract                      | Stop UI-bearing downstream execution                      |
-| Root `DESIGN.md`                 | Return to `/qfai-sdd`, whose `common-design-md` writes it |
-| Prototype handoff                | Return to `/qfai-prototyping` and record the handoff      |
-| Discussion sidecar in downstream | Do not read it; normalize through `/qfai-sdd`             |
+| Missing Definition                             | Behavior                                                  |
+| ---------------------------------------------- | --------------------------------------------------------- |
+| UI contract                                    | Stop UI-bearing downstream execution                      |
+| Root `DESIGN.md`                               | Return to `/qfai-sdd`, whose `common-design-md` writes it |
+| Prototype handoff, when a prototyping loop ran | Return to `/qfai-prototyping` and record the handoff      |
+| Discussion sidecar in downstream               | Do not read it; normalize through `/qfai-sdd`             |
 
 ## Forbidden Fallbacks
 

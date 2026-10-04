@@ -266,14 +266,17 @@ describe.each(TREES)("%s", (tree) => {
   it("stops on a screen ID that cannot be a file name", async () => {
     const preflight = flat(await read(tree, "step/prototyping-preflight/STEP.md"));
     expect(preflight).toContain(
-      "Confirm every declared screen ID matches `[A-Za-z0-9._-]+`. The loop builds file names from it, so an ID holding `/`, `\\` or `..` stops the run, naming the contract and the ID.",
+      "Confirm every declared screen ID matches `[A-Za-z0-9._-]+` and does not contain `..`. The loop builds file names from it, so an ID that fails either test stops the run, naming the contract and the ID.",
     );
   });
 
   it("serves the iteration it reviews and checks each payload before writing it", async () => {
     const loop = flat(await read(tree, "step/prototyping-loop/STEP.md"));
     expect(loop).toContain(
-      "**Build** (devops-ci-engineer). Serves `.qfai/prototype/iter-NN/` at the URL preflight checked, and hands that URL to the reviewer.",
+      "**Build** (devops-ci-engineer). Serves `.qfai/prototype/` at the URL preflight checked, starting the server on the first iteration and keeping it running for the loop, and hands `<url>/iter-NN/` to the reviewer.",
+    );
+    expect(loop).toContain(
+      "It starts from the primary UI contract preflight resolved: the one the request names, else `prototyping.primaryUiContract`.",
     );
     expect(loop).toContain(
       "Each payload is checked against the closed schema before it is written, and one that does not conform is asked for again.",
@@ -290,6 +293,19 @@ describe.each(TREES)("%s", (tree) => {
     );
   });
 
+  // QFAI:AC-0001-0108-01
+  // QFAI:EX-0001-0108-01
+  it("caps informationArchitecture at acceptable when a layout anti-pattern is detected", async () => {
+    const reviewer = flat(await read(tree, "skill/qfai-prototyping/references/reviewer-prompt.md"));
+    expect(reviewer).toContain(
+      "Any entry in `layoutAntiPatternsDetected[]` caps `informationArchitecture` at `acceptable`.",
+    );
+    const loop = flat(await read(tree, "step/prototyping-loop/STEP.md"));
+    expect(loop).toContain(
+      "A summary whose `layoutAntiPatternsDetected[]` is not empty scores `informationArchitecture` at most `acceptable`; a higher score is written as `acceptable`.",
+    );
+  });
+
   // QFAI:AC-0001-0095-01
   // QFAI:EX-0001-0095-01
   it("writes the handoff as a CLI-HANDOFF record with the prototyping extension fields", async () => {
@@ -303,6 +319,7 @@ describe.each(TREES)("%s", (tree) => {
     expect(handoff).not.toMatch(/mustPreserve|mayAdapt|mustNotCopy/);
     expect(rule).toContain("`.qfai/prototype/final/handoff.json`");
     expect(rule).toContain("root `DESIGN.md`");
+    expect(rule).toContain("| Prototype handoff, when a prototyping loop ran |");
   });
 
   // QFAI:AC-0001-0114-01
