@@ -88,9 +88,9 @@ obstacles. Do not reopen settled requirements as implementation preferences.
 
 ## A diagnosed missing example
 
-On a route of the `fix` family, a `missing-test` diagnosis whose case no EX
-states has this step append one EX before it makes the diagnosis's failing test
-pass. The EX states what an existing AC already requires, so the step asks the
+On a route of the `fix` family and on `revert-culprit`, a case no EX states has
+this step append one EX before it makes the failing test pass: the case a
+`missing-test` diagnosis found, or the behaviour a reverted change broke. The EX states what an existing AC already requires, so the step asks the
 user nothing:
 
 - Append exactly one EX to the `03_Example.md` of the story that owns the AC

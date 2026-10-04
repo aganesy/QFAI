@@ -5,6 +5,7 @@ description: "Use when the user asks for a change, a fix, an investigation of th
 argument-hint: "<the change, in your own words>"
 allowed-tools: [Read, Glob, Grep, Write, Edit, Bash, TodoWrite, Task, Agent]
 roles: [orchestrator]
+steps: []
 requires: [common-policy-check]
 mode: execution-focused
 ---
@@ -87,7 +88,8 @@ value but the three below plans nothing.
    whose `review` is `code`, `implementation-reviewer`.
    `product-surface-reviewer` joins both where a UI contract with screens
    serves the flow. No agent reviews its own work, and no step adds a review.
-   Each finding is fixed or answered once, with no re-review.
+   Each review returns PASS or REVISE, and each finding is fixed or answered
+   once, with no re-review. A step that would go beyond the request stops.
 6. **Approvals.** Each approval of a specification change, a critical decision
    or a release is one `decisions.md` row: what was approved, who approved it,
    when, and the chosen option's label. A decision you took appends no row.
@@ -124,10 +126,6 @@ Where parts ran in parallel, report one row per part given to a sub-agent.
 | Step | Role (sub-agent) | Agent instance  | Task title        | Input (refs)  | Output (refs) | Status (PASS/REVISE/PENDING) |
 | ---- | ---------------- | --------------- | ----------------- | ------------- | ------------- | ---------------------------- |
 | 1    | `<role>`         | `<instance id>` | `<part in words>` | The step file | The result    | PASS/REVISE                  |
-
-### Reviewer Gate
-
-Each review returns PASS or REVISE. A step that would go beyond the request stops.
 
 ## Default Autopilot Policy
 

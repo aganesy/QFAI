@@ -37,6 +37,15 @@ describe("a fix route from the diagnosis to the commit", () => {
     );
   });
 
+  // QFAI:EX-0001-0186-16
+  it("appends the missing example without asking on revert-culprit too, and reports it", async () => {
+    const text = await section("implement-tdd", "## A diagnosed missing example");
+    expect(text).toMatch(/on a route of the `fix` family and on `revert-culprit`/i);
+    expect(text).toMatch(/the behaviour a reverted change broke/i);
+    expect(text).toMatch(/the step asks the user nothing/i);
+    expect(text).toMatch(/list the EX in the run's final report/i);
+  });
+
   // QFAI:EX-0001-0094-02
   it("passes the implement step without a ledger when every example is annotated", async () => {
     const text = await section("implement-tdd", "## Passes when");
