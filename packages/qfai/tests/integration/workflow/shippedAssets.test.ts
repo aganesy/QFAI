@@ -67,7 +67,7 @@ it("Run the asset line budget over qfai-run, qfai-maintain, the plans and the sc
     schemas: files.filter((file) => file.endsWith(".schema.json")).length,
     plans: files.filter((file) => file.endsWith(".yml")).length,
     over,
-  }).toEqual({ budget: [800, 400], schemas: 2, plans: 34, over: [] });
+  }).toEqual({ budget: [800, 400], schemas: 2, plans: 35, over: [] });
 });
 
 // The post-build guard over a package that publishes only the plans and the schemas.
@@ -89,7 +89,7 @@ async function postBuildGuard(): Promise<{ status: number | null; output: string
   return { status: run.status, output: `${run.stdout}${run.stderr}` };
 }
 
-it("Read the two shipped schemas and the 34 plans", async () => {
+it("Read the two shipped schemas and the 35 plans", async () => {
   const schemas = (await filesUnder(SCHEMAS)).sort();
   const ids: string[] = [];
   const versioned: string[] = [];

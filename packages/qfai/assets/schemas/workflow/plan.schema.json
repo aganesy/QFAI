@@ -187,24 +187,85 @@
       }
     },
     "scopes": {
-      "description": "Exactly one scope, the narrowest and first, is recommended.",
+      "description": "The scopes, narrowest first; the first alone is recommended.",
       "type": "array",
-      "minItems": 1,
-      "maxItems": 3,
-      "items": {
-        "$ref": "#/$defs/scope"
-      },
-      "contains": {
-        "type": "object",
-        "properties": {
-          "recommended": {
-            "const": true
-          }
+      "oneOf": [
+        {
+          "prefixItems": [
+            {
+              "$ref": "#/$defs/scope",
+              "properties": {
+                "recommended": {
+                  "const": true
+                }
+              },
+              "type": "object"
+            }
+          ],
+          "minItems": 1,
+          "maxItems": 1,
+          "items": false
         },
-        "required": ["recommended"]
-      },
-      "minContains": 1,
-      "maxContains": 1
+        {
+          "prefixItems": [
+            {
+              "$ref": "#/$defs/scope",
+              "properties": {
+                "recommended": {
+                  "const": true
+                }
+              },
+              "type": "object"
+            },
+            {
+              "$ref": "#/$defs/scope",
+              "properties": {
+                "recommended": {
+                  "const": false
+                }
+              },
+              "type": "object"
+            }
+          ],
+          "minItems": 2,
+          "maxItems": 2,
+          "items": false
+        },
+        {
+          "prefixItems": [
+            {
+              "$ref": "#/$defs/scope",
+              "properties": {
+                "recommended": {
+                  "const": true
+                }
+              },
+              "type": "object"
+            },
+            {
+              "$ref": "#/$defs/scope",
+              "properties": {
+                "recommended": {
+                  "const": false
+                }
+              },
+              "type": "object"
+            },
+            {
+              "$ref": "#/$defs/scope",
+              "properties": {
+                "recommended": {
+                  "const": false
+                }
+              },
+              "type": "object"
+            }
+          ],
+          "minItems": 3,
+          "maxItems": 3,
+          "items": false
+        }
+      ]
     },
     "candidates": {
       "description": "The distinct routes of a low-confidence extraction's readings, one to three, in the order the decision rules reach them.",

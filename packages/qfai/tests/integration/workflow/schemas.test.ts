@@ -163,7 +163,7 @@ it("The plan schema refuses scopes whose recommendation is not the narrowest alo
   });
   const scopes = Reflect.get(Object(document), "scopes");
   const list = Array.isArray(scopes) ? scopes : [];
-  const flipped = list.map((each, index) => ({ ...each, recommended: index !== 0 }));
+  const flipped = list.map((each, index) => ({ ...each, recommended: index === 1 }));
   const twice = list.map((each) => ({ ...each, recommended: true }));
 
   expect([

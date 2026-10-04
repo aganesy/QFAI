@@ -276,7 +276,7 @@ describe("the built-in plans", () => {
           .sort(),
       );
     }
-    expect(changeRoutes).toBe(23);
+    expect(changeRoutes).toBe(24);
   });
 
   // QFAI:AC-0001-0003-02
