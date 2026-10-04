@@ -317,21 +317,23 @@ it("A behaviour change prototypes only when the request asks to change the proto
 // QFAI:EX-0001-0211-42
 // QFAI:EX-0001-0211-43
 it("A settled behaviour change that asks to change the prototype applies its record, then prototypes", async () => {
-  expect(
-    await routes(
-      {
-        intent: "behaviour-change",
-        qualifiers: ["prototype-requested"],
-        signals: ["approved-record-task"],
-      },
-      {
-        intent: "behaviour-change",
-        entryFlags: ["upstream"],
-        qualifiers: ["settled-design", "prototype-requested"],
-      },
-      { intent: "behaviour-change", signals: ["approved-record-task"] },
-    ),
-  ).toEqual(["apply-settled-prototype", "apply-settled-prototype", "apply-settled"]);
+  expect([
+    await decided({
+      intent: "behaviour-change",
+      qualifiers: ["prototype-requested"],
+      signals: ["approved-record-task"],
+    }),
+    await decided({
+      intent: "behaviour-change",
+      entryFlags: ["upstream"],
+      qualifiers: ["settled-design", "prototype-requested"],
+    }),
+    await decided({ intent: "behaviour-change", signals: ["approved-record-task"] }),
+  ]).toEqual([
+    ["apply-settled-prototype", 2],
+    ["apply-settled-prototype", 15],
+    ["apply-settled", 2],
+  ]);
 });
 
 // QFAI:EX-0001-0211-32
