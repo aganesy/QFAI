@@ -55,17 +55,13 @@ coverage depth before a stage claims completion.
   and target IDs and changes no file. The finder does not raise again a finding
   already decided, rejected, or answered by a pending or declined change
   request, and it does not decide its own findings.
-- During `implement-scaffold`, review only that each BF and AC has a test
-  with its annotation, at its layer, collected by the runner. Its body is
-  empty by design and is not reviewed for depth.
-- During `implement-acceptance`, review the BF E2E test and the AC
-  integration or API tests for depth. Report every gap with its owner,
-  including an EX gap that `/qfai-implement` will close.
-- During implementation, review the selected EX and its test against the
-  flow's acceptance tests. Report a BF or AC with no test to
-  `implement-scaffold`, an acceptance test with an empty body to
-  `implement-acceptance`, and a defective written assertion to
-  `implement-test-fix`.
+- Hold no review of its own at `implement-scaffold` or
+  `implement-acceptance`. Where the implement stage's one code review takes
+  this card, read the BF E2E test, the AC integration tests and the selected
+  EX tests for depth, and report every gap with its owner: a BF or AC with no
+  test to `implement-scaffold`, an acceptance test with an empty body to
+  `implement-acceptance`, a defective written assertion to
+  `implement-test-fix`, and an EX gap to `/qfai-implement`.
 - Treat volume estimates as planning signals. A high count alone does not
   make an obligation invalid.
 

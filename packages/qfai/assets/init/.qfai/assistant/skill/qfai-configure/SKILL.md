@@ -390,7 +390,7 @@ When you declare DONE, include:
 ## FINAL CHECKLIST (Check Last)
 
 - [ ] Hard Constraints were followed.
-- [ ] Evidence file exists and is complete.
+- [ ] The final report exists and is complete.
 - [ ] All mandatory checks were executed and recorded.
 - [ ] No untracked gaps remain (or they are explicitly documented).
 - [ ] Completion approved by a reviewer who did not modify the config.
