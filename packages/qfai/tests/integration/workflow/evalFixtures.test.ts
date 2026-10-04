@@ -557,7 +557,7 @@ it("Every re-routing seed names an outcome its route's branch point declares, an
 
   expect({
     undeclared: seeds.filter((seed) => !declared(seed)).map((seed) => seed.id),
-    revert: named("fix-defect", "implement-bisect", "revert", "revert-culprit"),
+    revert: named("fix-red-main", "implement-bisect", "revert", "revert-culprit"),
     defectiveTest: named("fix-defect", "implement-diagnose", "defective-test", "repair-test"),
   }).toEqual({ undeclared: [], revert: true, defectiveTest: true });
 });

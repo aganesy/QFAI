@@ -68,6 +68,8 @@ async function planOf(route: string): Promise<WorkflowPlanFile | undefined> {
 
 const VERIFY = ["verify-qfai-gate", "verify-repo-gate"];
 
+const COMMIT = ["verify", ["verify-commit"]];
+
 // QFAI:EX-0001-0220-15
 // QFAI:EX-0001-0220-16
 it("The shipped add-feature and prototype-feature plans", async () => {
@@ -77,16 +79,16 @@ it("The shipped add-feature and prototype-feature plans", async () => {
   expect({
     addFeature: await kinds("add-feature"),
     prototypeFeature: await kinds("prototype-feature"),
-    verify: shape(await planOf("add-feature")).at(-1),
+    ending: shape(await planOf("add-feature")).slice(-2),
   }).toEqual({
-    addFeature: ["sdd", "implement", "maintenance", "verify", "verify"],
-    prototypeFeature: ["sdd", "prototype", "implement", "maintenance", "verify", "verify"],
-    verify: ["verify", VERIFY],
+    addFeature: ["sdd", "implement", "maintenance", "verify", "verify", "verify"],
+    prototypeFeature: ["sdd", "prototype", "implement", "maintenance", "verify", "verify", "verify"],
+    ending: [["verify", VERIFY], COMMIT],
   });
 });
 
-// Whether every stage but a trailing `verify-external` one reaches the verify block, and the
-// stages nothing follows.
+// Whether every stage but the trailing `verify-external` and commit stages reaches the verify
+// block, and the stage that ends the plan.
 function verifyReach(plan: WorkflowPlanFile) {
   const { stages } = plan;
   const followers = (id: string) => stages.filter((stage) => stage.after.includes(id));
@@ -94,13 +96,18 @@ function verifyReach(plan: WorkflowPlanFile) {
     stages.some((stage) => stage.id === id && stage.steps.at(-1)?.name === "verify-repo-gate");
   const reaches = (id: string): boolean =>
     isBlock(id) || followers(id).some((next) => reaches(next.id));
-  const external = (id: string) =>
-    stages.some((stage) => stage.id === id && stage.steps[0]?.name === "verify-external");
+  const trailing = (id: string) =>
+    stages.some(
+      (stage) =>
+        stage.id === id && ["verify-external", "verify-commit"].includes(stage.steps[0]?.name ?? ""),
+    );
+  const ends = stages.filter((stage) => followers(stage.id).length === 0);
   return {
-    reached: stages.every((stage) => external(stage.id) || reaches(stage.id)),
+    reached: stages.every((stage) => trailing(stage.id) || reaches(stage.id)),
     blocks: stages
       .filter((stage) => isBlock(stage.id))
       .map((stage) => shape({ ...plan, stages: [stage] })[0]),
+    ends: ends.map((stage) => shape({ ...plan, stages: [stage] })[0]),
   };
 }
 
@@ -116,7 +123,7 @@ it("The plan of every change route the package ships", async () => {
     reach: [...new Set(changeRoutes.map((plan) => JSON.stringify(verifyReach(plan))))],
   }).toEqual({
     count: 23,
-    reach: [JSON.stringify({ reached: true, blocks: [["verify", VERIFY]] })],
+    reach: [JSON.stringify({ reached: true, blocks: [["verify", VERIFY]], ends: [COMMIT] })],
   });
 });
 
@@ -142,6 +149,7 @@ it("The shipped edit-text plan", async () => {
     ["maintenance", ["maintain-edit"]],
     ["verify", ["verify-change-note°"]],
     ["verify", VERIFY],
+    COMMIT,
   ]);
 });
 
@@ -233,17 +241,14 @@ for (const [title, to] of retiredNames) {
 // QFAI:EX-0001-0218-01
 it("A plan naming implement-guess, a test fix under an implement kind, and a mixed stage", async () => {
   expect({
-    guess: await refusalsOf("fix-defect", (text) =>
+    guess: await refusalsOf("add-feature", (text) =>
       text.replace("steps: [implement-scaffold, implement-tdd]", "steps: [implement-guess]"),
     ),
     fixAsImplement: await refusalsOf("repair-test", (text) =>
       text.replace("kind: test_fix", "kind: implement"),
     ),
-    mixed: await refusalsOf("fix-defect", (text) =>
-      text.replace(
-        "steps: [implement-scaffold, implement-tdd]",
-        "steps: [implement-tdd, sdd-story]",
-      ),
+    mixed: await refusalsOf("add-feature", (text) =>
+      text.replace("steps: [implement-scaffold, implement-tdd]", "steps: [implement-tdd, sdd-flow]"),
     ),
   }).toEqual({
     guess: [{ reason: "out-of-vocabulary", subject: "implement-guess" }],
@@ -309,6 +314,28 @@ it("A split verify block, and an answer-question whose last stage answers", asyn
   });
 });
 
+const COMMIT_STAGE =
+  "  - id: commit\n    kind: verify\n    steps: [verify-commit]\n    after: [verify]\n";
+
+// QFAI:EX-0001-0218-04
+it("A change route with no commit stage, one with a stage after it, and a close route that commits", async () => {
+  const tidy = "  - id: tidy\n    kind: maintenance\n    steps: [maintain-edit]\n    after: [commit]\n";
+  const commit = "  - id: commit\n    kind: verify\n    steps: [verify-commit]\n    after: [close]\n";
+  expect({
+    none: await refusalsOf("edit-text", (text) => text.replace(COMMIT_STAGE, "")),
+    later: await refusalsOf("edit-text", (text) =>
+      text.replace("decisionPoints", `${tidy}decisionPoints`),
+    ),
+    close: await refusalsOf("close-no-change", (text) =>
+      text.replace("decisionPoints", `${commit}decisionPoints`),
+    ),
+  }).toEqual({
+    none: [{ reason: "terminal", subject: "verify" }],
+    later: [{ reason: "terminal", subject: "verify" }],
+    close: [{ reason: "terminal", subject: "commit" }],
+  });
+});
+
 // QFAI:AC-0001-0218-06
 // QFAI:EX-0001-0218-08
 it("A code review after the edit stage, a review of another value, and two on a triage stage", async () => {
@@ -331,17 +358,16 @@ it("A code review after the edit stage, a review of another value, and two on a 
 
 // QFAI:AC-0001-0218-07
 // QFAI:EX-0001-0218-09
-it("A fix-defect whose implement stage is listed before the spec stage it follows", async () => {
-  const IMPLEMENT =
-    "  - id: implement\n    kind: implement\n    steps: [implement-scaffold, implement-tdd]\n    after: [spec]\n";
-  const SPEC = / {2}- id: spec\n[\s\S]*?review: spec\n/;
+it("A fix-defect whose implement stage is listed before the diagnose stage it follows", async () => {
+  const DIAGNOSE = "  - id: diagnose\n    kind: diagnose\n    steps: [implement-diagnose]\n";
+  const IMPLEMENT = / {2}- id: implement\n[\s\S]*?after: \[diagnose\]\n/;
   const swapped = (text: string) => {
-    const spec = SPEC.exec(text)?.[0] ?? "";
-    return text.replace(IMPLEMENT, "").replace(spec, `${IMPLEMENT}${spec}`);
+    const implement = IMPLEMENT.exec(text)?.[0] ?? "";
+    return text.replace(implement, "").replace(DIAGNOSE, `${implement}${DIAGNOSE}`);
   };
 
   expect(await refusalsOf("fix-defect", swapped)).toEqual([
-    { reason: "after-order", subject: "implement:spec" },
+    { reason: "after-order", subject: "implement:diagnose" },
   ]);
 });
 

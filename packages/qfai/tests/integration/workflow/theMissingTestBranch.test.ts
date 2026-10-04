@@ -12,11 +12,15 @@ it("Load the shipped fix-defect", async () => {
 
   expect({
     stages: fixDefect?.stages.map((stage) => stage.kind),
-    append: fixDefect?.stages[1]?.steps,
-    last: fixDefect?.stages.at(-1)?.steps.map((step) => step.name),
+    implement: fixDefect?.stages[1]?.steps,
+    verify: fixDefect?.stages.at(-2)?.steps.map((step) => step.name),
   }).toEqual({
-    stages: ["diagnose", "sdd_append", "implement", "verify", "verify"],
-    append: [{ name: "sdd-story", passThrough: true }, { name: "sdd-gate" }],
-    last: ["verify-qfai-gate", "verify-repo-gate"],
+    stages: ["diagnose", "implement", "verify", "verify", "verify"],
+    implement: [
+      { name: "sdd-story", passThrough: true },
+      { name: "sdd-gate" },
+      { name: "implement-tdd" },
+    ],
+    verify: ["verify-qfai-gate", "verify-repo-gate"],
   });
 });

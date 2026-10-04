@@ -27,7 +27,6 @@ const VOCABULARY: Record<string, string[]> = {
   ],
   maintenance: ["maintain-edit"],
   diagnose: ["implement-diagnose", "implement-bisect", "implement-minimize", "implement-benchmark"],
-  sdd_append: ["sdd-story", "sdd-gate"],
   test_fix: ["implement-test-fix"],
   regression_fix: ["implement-regression-fix"],
   sdd: [
@@ -46,11 +45,14 @@ const VOCABULARY: Record<string, string[]> = {
     "prototyping-handoff",
   ],
   implement: [
+    "sdd-triage",
+    "sdd-story",
+    "sdd-contract",
+    "sdd-gate",
     "implement-scaffold",
     "implement-credentials",
     "implement-acceptance",
     "implement-tdd",
-    "implement-checkpoint",
     "implement-refactor",
     "implement-retire",
     "implement-sweep",
@@ -71,6 +73,7 @@ const VOCABULARY: Record<string, string[]> = {
     "verify-external",
     "verify-manual",
     "verify-release-notes",
+    "verify-commit",
   ],
   discussion: [
     "discussion-research",
@@ -207,6 +210,7 @@ describe("the built-in plans", () => {
       ["maintenance", ["maintain-edit"]],
       ["verify", ["verify-change-note"]],
       ["verify", VERIFY],
+      ["verify", ["verify-commit"]],
     ]);
   });
 
@@ -221,6 +225,7 @@ describe("the built-in plans", () => {
       "maintenance",
       "verify",
       "verify",
+      "verify",
     ]);
     expect(await kinds("prototype-feature")).toEqual([
       "sdd",
@@ -229,33 +234,35 @@ describe("the built-in plans", () => {
       "maintenance",
       "verify",
       "verify",
+      "verify",
     ]);
-    expect(names((await plan("prototype-feature")).stages.at(-1))).toEqual(VERIFY);
+    expect(names((await plan("prototype-feature")).stages.at(-2))).toEqual(VERIFY);
   });
 
   // QFAI:AC-0001-0186-01
   // QFAI:AC-0001-0220-05
   // QFAI:EX-0001-0220-22
-  it("holds the fix-defect plan's append and implement stages after the diagnosis", async () => {
+  it("holds the fix-defect plan's implement stage, with its example append, after the diagnosis", async () => {
     const { raw, stages } = await plan("fix-defect");
     expect(stages.map((stage) => [stage.kind, stage.after])).toEqual([
       ["diagnose", []],
-      ["sdd_append", ["diagnose"]],
-      ["implement", ["spec"]],
+      ["implement", ["diagnose"]],
       ["verify", ["implement"]],
       ["verify", ["note"]],
+      ["verify", ["verify"]],
     ]);
     expect(stages[1]?.steps).toEqual([
       { name: "sdd-story", passThrough: true },
       { name: "sdd-gate" },
+      { name: "implement-tdd" },
     ]);
-    expect(names(stages.at(-1))).toEqual(VERIFY);
+    expect(names(stages.at(-2))).toEqual(VERIFY);
     expect(raw).not.toMatch(/\bwhen:/);
   });
 
   // QFAI:AC-0001-0218-03
   // QFAI:EX-0001-0218-03
-  it("ends every change route in the verify block that every stage reaches", async () => {
+  it("ends every change route in the verify block that every stage reaches, then the commit", async () => {
     let changeRoutes = 0;
     for (const route of PLAN_ROUTES) {
       const { stages } = await plan(route);
@@ -264,10 +271,13 @@ describe("the built-in plans", () => {
       changeRoutes += 1;
       expect(verify.map(names), route).toEqual([VERIFY]);
       const last = verify[0]?.id ?? "";
-      const following = stages.filter((stage) => stage.after.includes(last));
-      expect(following.map(names), `${route}: only verify-external follows verify`).toEqual(
-        route === "fix-env-bound" ? [["verify-external"]] : [],
+      const following = stages.filter((stage) => !reaching(stages, last).has(stage.id));
+      expect(following.map(names), `${route}: what follows verify`).toEqual(
+        route === "fix-env-bound"
+          ? [["verify-external"], ["verify-commit"]]
+          : [["verify-commit"]],
       );
+      expect(names(stages.at(-1)), route).toEqual(["verify-commit"]);
       const external = new Set(following.map((stage) => stage.id));
       expect([...reaching(stages, last)].sort(), `${route}: every stage reaches verify`).toEqual(
         stages
