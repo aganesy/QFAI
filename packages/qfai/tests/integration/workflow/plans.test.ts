@@ -163,19 +163,24 @@ async function refusalsOf(route: string, change: (text: string) => string) {
 
 const loadRefusals: [string, (text: string) => string][] = [
   ["not-mapping", () => "- route\n- stages\n"],
+  // QFAI:EX-0001-0218-06
   ["unknown-key", (text) => `${text}owner: platform-team\n`],
   ["route-name", (text) => text.replace("route: edit-text", "route: fix-defect")],
   ["family", (text) => text.replace("family: change", "family: chores")],
+  // QFAI:EX-0001-0218-01
   ["out-of-vocabulary", (text) => text.replace("kind: verify", "kind: verification")],
+  // QFAI:EX-0001-0218-01
   ["kind-mismatch", (text) => text.replace(EDIT_STEPS, "steps: [sdd-story]")],
   ["shape", (text) => text.replace("- id: edit", '- id: ""')],
   ["after-missing", (text) => text.replace("after: [edit]", "after: [review]")],
+  // QFAI:EX-0001-0218-09
   [
     "after-order",
     (text) => text.replace(EDIT_STAGE, "").replace("decisionPoints", `${EDIT_STAGE}decisionPoints`),
   ],
   ["cycle", (text) => text.replace(EDIT_STAGE, `${EDIT_STAGE}    after: [verify]\n`)],
   ["unreachable", (text) => text.replace(EDIT_STAGE, `${EDIT_STAGE}    after: [edit]\n`)],
+  // QFAI:EX-0001-0218-04
   [
     "no-verify-path",
     (text) =>
@@ -188,10 +193,6 @@ const loadRefusals: [string, (text: string) => string][] = [
 
 for (const [reason, change] of loadRefusals) {
   // BR-0020-0016
-  // QFAI:EX-0001-0218-01
-  // QFAI:EX-0001-0218-04
-  // QFAI:EX-0001-0218-06
-  // QFAI:EX-0001-0218-09
   it(reason, async () => {
     const reasons = (await refusalsOf("edit-text", change)).map((refusal) => refusal.reason);
 
@@ -200,19 +201,21 @@ for (const [reason, change] of loadRefusals) {
 }
 
 const stepRefusals: [string, string, string][] = [
+  // QFAI:EX-0001-0218-01
   ["a step outside the vocabulary", "steps: [maintain-rewrite]", "out-of-vocabulary"],
+  // QFAI:EX-0001-0218-01
   ["a step another kind runs", "steps: [maintain-edit, sdd-gate]", "kind-mismatch"],
   ["the seam step in a plan", "steps: [implement-seam]", "seam"],
   ["a step listed twice", "steps: [maintain-edit, maintain-edit]", "shape"],
   ["no step", "steps: []", "shape"],
+  // QFAI:EX-0001-0218-06
   ["an operation beside the steps", `${EDIT_STEPS}\n    operation: edit`, "unknown-key"],
+  // QFAI:EX-0001-0218-06
   ["an external effect beside the steps", `${EDIT_STEPS}\n    effects: [push]`, "unknown-key"],
 ];
 
 for (const [title, steps, reason] of stepRefusals) {
   // BR-0020-0016
-  // QFAI:EX-0001-0218-01
-  // QFAI:EX-0001-0218-06
   it(title, async () => {
     const reasons = (await refusalsOf("edit-text", (text) => text.replace(EDIT_STEPS, steps))).map(
       (refusal) => refusal.reason,
