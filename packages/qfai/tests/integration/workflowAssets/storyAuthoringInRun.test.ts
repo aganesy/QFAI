@@ -11,6 +11,7 @@ import { flat, readShipped, sectionOf } from "../../helpers/shippedAssistant.js"
 const SKILL = "skill/qfai-sdd/SKILL.md";
 const TRIAGE = "skill/qfai-sdd/references/sdd-triage.md";
 const TRIAGE_STEP = "step/sdd-triage/STEP.md";
+const CHECKLISTS = "skill/qfai-sdd/references/sdd-phase-checklists.md";
 const STORY_STEP = "step/implement-tdd/STEP.md";
 const SEEDING = "## A diagnosed missing example";
 
@@ -66,13 +67,17 @@ describe("defect example seeding", () => {
 describe("qfai-sdd changes the story tree", () => {
   // QFAI:AC-0001-0147-03
   // QFAI:EX-0001-0147-05
-  it("records in decisions.md only the change the user approved, with who, when and the option", async () => {
+  it("records in decisions.md only what the user decided, with who, when and the option", async () => {
     const text = await section(TRIAGE, "## Decision and question rows");
-    expect(text).toMatch(/decisions\.md records only what the user approved/i);
-    expect(text).toMatch(/a row is appended once the user has approved what it records/i);
+    expect(text).toMatch(/decisions\.md records only what the user decided/i);
+    expect(text).toMatch(/a row is appended once the user has decided what it records/i);
     expect(text).toMatch(/who approved it, when, and the option chosen/i);
-    expect(text).toMatch(/a declined change appends no row/i);
+    expect(text).toMatch(/a declined change request is appended at REJECTED/i);
+    expect(text).toMatch(/who declined it and when/i);
     expect(text).toMatch(/open questions use OQ-NNNN rows/i);
+    expect(flat(await readShipped(CHECKLISTS))).toMatch(
+      /a declined change request is a REJECTED `Change request:` row/i,
+    );
   });
 
   // QFAI:AC-0001-0207-02

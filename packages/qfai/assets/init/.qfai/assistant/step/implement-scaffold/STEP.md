@@ -51,12 +51,13 @@ first, one example at a time.
 
 ## Passes when
 
-Read first: the BF and AC items of the flow, and the tests that annotate
-them. The step passes when every one already has an annotating test at its
-layer. The pass names the test for each item.
+Read first: the BF and AC items of the flow that no `Test exception:` row
+at DONE names, and the tests that annotate them. The step passes when every one
+already has an annotating test at its layer. The pass names the test for each item.
 
 ## Gate
 
-PASS when every BF and AC of the flow has an annotating test at its layer, and
+PASS when every BF and AC of the flow that no `Test exception:` row at DONE
+names has an annotating test at its layer, and
 `npx qfai validate --profile atdd --flow BF-NNNN --fail-on error` reports no
 error owned by this flow.

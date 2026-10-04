@@ -300,10 +300,11 @@ describe("a decided finding is not raised again", () => {
     );
     expectSentence(text, "wording", /Matching never goes by wording/i);
     expectSentence(text, "reopening", /decision appended to reopen a REJECTED row lifts it/i);
+    expectSentence(text, "its row", /its REJECTED row in `decisions\.md` bars the finding/i);
     expectSentence(
       await section(TRIAGE, "## Decision and question rows"),
-      "a declined change appends no row",
-      /declined change appends no row/i,
+      "a declined change is a REJECTED row",
+      /declined change request is appended at REJECTED/i,
     );
   });
 });

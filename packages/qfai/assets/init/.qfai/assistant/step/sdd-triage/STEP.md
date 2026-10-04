@@ -55,15 +55,17 @@ descendants when it still represents the requirement. Create a flow or story
 only when the existing tree cannot represent it. Trace impact through BF → US →
 AC → EX and every enforcing contract.
 
-Record in `<paths.specsDir>/decisions.md` only what the user approved: each
-change request, and each critical decision the user made. Record unresolved
+Record in `<paths.specsDir>/decisions.md` only what the user decided: each
+change request the user approved or declined, and each critical decision the
+user made. Record unresolved
 questions in `<paths.specsDir>/open-questions.md`. Every row has exactly
 `ID | Content | Approach | Status`. Append rows only; afterwards change only
 Status. A change request Content begins `Change request:` and names the
 affected repository-relative paths; its Approach names the operation, the affected BF or US,
 its source as `discussion-<id>#REQ-NNNN` when that source exists, and who
-approved it, when, and the option chosen. A decision the agent took appends no
-row, and a declined change appends none. Do not write a second decision-record
+approved it, when, and the option chosen. A declined change request is appended at
+REJECTED, recording who declined it and when. A decision the agent took
+appends no row. Do not write a second decision-record
 directory or a retired story file.
 
 Put each approval-required operation to the user before anything depends on

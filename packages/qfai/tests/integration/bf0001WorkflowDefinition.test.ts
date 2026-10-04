@@ -184,7 +184,7 @@ describe("BF-0001 workflow definition", () => {
         "utf8",
       )
     ).replace(/\s+/g, " ");
-    expect(sdd).toContain("Record in `<paths.specsDir>/decisions.md` only what the user approved");
+    expect(sdd).toContain("Record in `<paths.specsDir>/decisions.md` only what the user decided");
     expect(sdd).toContain(
       "Do not write a second decision-record directory or a retired story file",
     );

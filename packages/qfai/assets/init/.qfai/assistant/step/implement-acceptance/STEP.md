@@ -12,15 +12,16 @@ routing-profile: default
 # implement-acceptance
 
 The quality phase of acceptance testing. `implement-scaffold` left an E2E test
-for each business flow and an integration or API test for each acceptance
-criterion, each with an empty body. Once the system's shape has settled, this
+for each business flow and an integration test for each acceptance criterion,
+each with an empty body. An API test an acceptance criterion already had is
+worked the same way. Once the system's shape has settled, this
 step writes the assertions those bodies owe.
 
 ## Reads
 
 - The flow's acceptance tests whose bodies are empty.
-- The BF or AC each test annotates, and its owning contracts, under
-  `paths.specsDir`.
+- The BF or AC each test annotates, under `paths.specsDir`, and its owning
+  contracts, under `paths.contractsDir`.
 - The worker session setup `implement-credentials` wrote, when a test needs an
   authenticated actor.
 
