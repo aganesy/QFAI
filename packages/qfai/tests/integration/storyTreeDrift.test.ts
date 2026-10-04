@@ -349,6 +349,35 @@ describe("story-tree drift", () => {
     expect(findings.map((item) => item.file)).toEqual([rewritten]);
   });
 
+  // QFAI:EX-0001-0054-13
+  it("still reports a non-EX row, a deleted EX row and a new 03_Example.md", async () => {
+    const flow = `${specs}/02_business-flow/business-flow-0001`;
+    const noted = `${flow}/user-story-0001-0001/03_Example.md`;
+    const pruned = `${flow}/user-story-0001-0002/03_Example.md`;
+    const created = `${flow}/user-story-0001-0003/03_Example.md`;
+    const head = "# Examples\n\n| EX-ID | AC-Ref | Input | Expected |\n| --- | --- | --- | --- |\n";
+    const row = (story: string, n: string) =>
+      `| EX-0001-${story}-${n} | AC-0001-${story}-01 | Case ${n} | 400 |\n`;
+    await put(decisions, table);
+    await put(noted, `${head}${row("0001", "01")}`);
+    await put(pruned, `${head}${row("0002", "01")}${row("0002", "02")}`);
+    git("add", ".");
+    git("commit", "-m", "base");
+    git("checkout", "-b", "topic");
+    await put(noted, `${head}${row("0001", "01")}| Note | - | - | - |\n`);
+    await put(pruned, `${head}${row("0002", "01")}`);
+    await put(created, `${head}${row("0003", "01")}`);
+    git("add", ".");
+    git("commit", "-m", "edit examples");
+    const findings = await validateStoryTreeDrift(root, config(), "tdd");
+    expect(
+      findings
+        .filter((item) => item.code === "QFAI-DRIFT-001")
+        .map((item) => item.file)
+        .sort(),
+    ).toEqual([noted, pruned, created].sort());
+  });
+
   // QFAI:EX-0001-0054-14
   it("exempts a contract change that only adds EX IDs to Examples cells", async () => {
     const cited = `${specs}/03_contract/cli/cli-0001-a.md`;
