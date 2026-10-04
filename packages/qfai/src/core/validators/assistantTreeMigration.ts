@@ -58,11 +58,12 @@ export async function validateAssistantTreeMigration(
   if (await exists(joinLegacyAssistantInstructions(root))) {
     const sunset = legacyAssistantTreeSunsetLabel();
     const label = `${LEGACY_ASSISTANT_INSTRUCTIONS_DIR}/`;
+    const severity = "error" as const;
     issues.push(
       issue(
         "D-DEPRECATED-PATH",
         `${label} is past the announced sunset (v${sunset}). sunset: v${sunset}. Run \`qfai init --upgrade-assistant-tree\` to migrate.`,
-        "error",
+        severity,
         label,
         "assistantTreeMigration.deprecatedPath",
       ),

@@ -16,8 +16,8 @@ export type AssistantLayer = (typeof ASSISTANT_LAYERS)[number];
 /**
  * The release that retired the legacy `.qfai/assistant/instructions/` layout.
  *
- * A literal, because nothing compares against it any more: the readers accept
- * the old paths unconditionally and the finding that reports one is an `error`
+ * A literal, because nothing compares against it any more: no reader accepts
+ * the old path, and the finding that reports one is an `error`
  * outright. It survives only as the version an operator's message names, so
  * they know which release moved the layout under them.
  */

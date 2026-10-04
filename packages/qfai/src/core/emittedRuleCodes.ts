@@ -223,7 +223,6 @@ export const EMITTED_RULE_CODES: readonly string[] = [
  * that produces the finding can judge those.
  */
 export const ERROR_ONLY_RULE_CODES: readonly string[] = [
-  "D-DEPRECATED-PATH",
   "D-SAAS-PACKAGE-ATTESTATION-MISSING",
   "D-SAAS-PACKAGE-HANDOFF-SCHEMA",
   "QFAI_CONFIG_INVALID",
