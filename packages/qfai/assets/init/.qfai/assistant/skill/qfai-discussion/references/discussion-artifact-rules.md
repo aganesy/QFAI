@@ -25,7 +25,7 @@ Discussion packs with a visual prototyping surface (`web`, `mobile`, `desktop`, 
 
 - Run interview and requirement capture until `Disposition: open` is zero in `11_OQ-Register.md`.
 - OQ `Gate` values are `discussion`, `sdd`, `atdd`, `tdd`, or `ops`.
-- `deferred` is allowed only when the row records its `Resolution` and a `Next-Decision-Point` naming when, and by what signal, the question is reopened.
+- `deferred` is allowed only when the row records its `Resolution` and a `Next-Decision-Point` naming the next point at which the question is decided.
 - Discussion outputs state what was decided and why; do not duplicate the story tree under `<paths.specsDir>`, and do not record how the session went.
 - `03_Story-Workshop.md` must include at least one Mermaid diagram.
 - Use Mermaid fences only for diagrams.

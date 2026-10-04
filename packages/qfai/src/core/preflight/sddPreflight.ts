@@ -1,4 +1,4 @@
-import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { mkdir, open, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
@@ -94,20 +94,22 @@ export async function runSddPreflight(
   ];
 
   if (blockers.length > 0) {
-    if (options.importPath !== undefined && (await isReadableFile(options.importPath))) {
-      return await completeReadyPreflight({
-        source: "import-lite",
-        selectedInputPath: options.importPath,
-        // An imported specification carries no `REQ-*` index, so the count is
-        // unknown rather than a confident zero.
-        importedReqCount: null,
-        run,
-        openQuestions: carryOverOpenQuestions,
-        packGaps: [],
-        nextCommands: ["/qfai-sdd"],
-      });
-    }
-    if (options.importPath !== undefined) {
+    // An imported specification stands in for a missing pack, never for a
+    // misnamed one.
+    if (options.importPath !== undefined && readiness.dangerousPackNames.length === 0) {
+      if (await isReadableFile(options.importPath)) {
+        return await completeReadyPreflight({
+          source: "import-lite",
+          selectedInputPath: options.importPath,
+          // An imported specification carries no `REQ-*` index, so the count is
+          // unknown rather than a confident zero.
+          importedReqCount: null,
+          run,
+          openQuestions: carryOverOpenQuestions,
+          packGaps: [],
+          nextCommands: ["/qfai-sdd"],
+        });
+      }
       blockers.push(`The imported specification ${options.importPath} is not a readable file.`);
     }
     await publishPreflightSummary(
@@ -263,6 +265,7 @@ type PackReadiness = {
   incompleteFiles: string[];
   blockingOqIds: string[];
   incompleteDeferredOqIds: string[];
+  unmigratedFiles: readonly { legacy: string; target: string }[];
   prototypingRequired: boolean;
 };
 
@@ -318,6 +321,16 @@ function resolvePackGaps(readiness: PackReadiness): string[] {
   if (readiness.incompleteFiles.length > 0) {
     gaps.push(
       `Files that do not meet the minimum content: ${readiness.incompleteFiles.join(", ")}`,
+    );
+  }
+
+  // The preflight side of the relocated-file `QFAI-DPACK-003`, which
+  // `validate --profile sdd` does not run either.
+  if (readiness.unmigratedFiles.length > 0) {
+    gaps.push(
+      `Files whose content has moved and that the pack still holds: ${readiness.unmigratedFiles
+        .map(({ legacy, target }) => `${legacy} → ${target}`)
+        .join(", ")}`,
     );
   }
 
@@ -524,7 +537,9 @@ async function readSafe(filePath: string): Promise<string> {
 /** Whether `filePath` names a regular file this process can read. */
 async function isReadableFile(filePath: string): Promise<boolean> {
   try {
-    return (await stat(filePath)).isFile();
+    if (!(await stat(filePath)).isFile()) return false;
+    await (await open(filePath, "r")).close();
+    return true;
   } catch {
     return false;
   }

@@ -104,7 +104,9 @@ function discussionFile(name: (typeof DISCUSSION_FILES)[number]): string {
   const heading = `# ${name.slice(3, -3).replace(/-/g, " ")}\n\n`;
   switch (name) {
     case "01_Context.md":
-      return `${heading}## UI-bearing Classification\n\n- ui_bearing: false\n- primary_surface: non-ui\n- secondary_surfaces: []\n- classification_rationale: The checkout total is computed by a module with no screen.\n\n## Goal and Completion Criteria\n\n- Goal: ${DISCUSSION_BODY}`;
+      return `${heading}## UI-bearing Classification\n\n- ui_bearing: false\n- primary_surface: non-ui\n- secondary_surfaces: []\n- classification_rationale: The checkout total is computed by a module with no screen.\n\n## Goal and Completion Criteria\n\n- Goal: ${DISCUSSION_BODY}\n## Inception Deck\n\n${DISCUSSION_BODY}`;
+    case "09_Constraints.md":
+      return `${heading}${DISCUSSION_BODY}${["Security Policy", "Compliance Policy", "Development Policy", "Operational Policy"].map((section) => `\n## ${section}\n\nNone.\n`).join("")}`;
     case "03_Story-Workshop.md":
       return `${heading}${DISCUSSION_BODY}\n\`\`\`mermaid\nflowchart TD\n  Select[Select items] --> Total[See the total]\n\`\`\`\n`;
     case "04_Sources.md":

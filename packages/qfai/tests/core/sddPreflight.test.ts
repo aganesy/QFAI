@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -103,6 +103,70 @@ describe("runSddPreflight", () => {
     }
   });
 
+  it("keeps a misnamed discussion pack blocking when an imported specification is given", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      await mkdir(path.join(root, ".qfai", "discussion", "discussion-latest"), {
+        recursive: true,
+      });
+      const imported = path.join(root, "docs", "imported-spec.md");
+      await mkdir(path.dirname(imported), { recursive: true });
+      await writeFile(imported, "# Imported specification\n", "utf-8");
+
+      const result = await runSddPreflight(root, defaultConfig, { importPath: imported });
+
+      expect(result.status).toBe("blocked");
+      expect(result.blockers.some((item) => item.includes("discussion-latest"))).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
+    "stays blocked on an imported specification this process cannot read",
+    async () => {
+      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+      const imported = path.join(root, "imported-spec.md");
+      try {
+        await writeFile(imported, "# Imported specification\n", "utf-8");
+        await chmod(imported, 0o000);
+
+        const result = await runSddPreflight(root, defaultConfig, { importPath: imported });
+
+        expect(result.status).toBe("blocked");
+        expect(result.blockers.some((item) => item.includes(imported))).toBe(true);
+      } finally {
+        await chmod(imported, 0o600);
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+  );
+
+  it.each([
+    ["02_Inception-Deck.md", "01_Context.md"],
+    ["10_Policy.md", "09_Constraints.md"],
+    ["13_Deferred.md", "11_OQ-Register.md"],
+  ])("lists %s left in the pack as a gap naming %s", async (legacy, target) => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      await seedDiscussionPack(root, "20260216010102004");
+      await writeFile(
+        path.join(root, ".qfai", "discussion", "discussion-20260216010102004", legacy),
+        `# ${legacy}\n`,
+        "utf-8",
+      );
+
+      const result = await runSddPreflight(root, defaultConfig);
+
+      expect(result.status).toBe("ready");
+      expect(result.packGaps).toContain(
+        `Files whose content has moved and that the pack still holds: ${legacy} → ${target}`,
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("keeps carry-over open questions in the summary a blocked run writes", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
     try {
@@ -192,7 +256,7 @@ describe("runSddPreflight", () => {
           "| ------- | -------------------------- | ----------- | ---------- | ---------------------------------- | ---------- | ------------------- |",
           "| OQ-0007 | How should contract versioning be decided | deferred | discussion | Does not affect starting implementation, so it is deferred | Ship unversioned contracts for now | TBD |",
           "",
-          "Note: an OQ marked deferred names when and by what signal it is reopened.",
+          "Note: an OQ marked deferred names the next point at which it is decided.",
         ].join("\n"),
       });
 
@@ -710,6 +774,19 @@ function defaultDiscussionPackContent(fileName: (typeof DISCUSSION_PACK_FILES)[n
         "This file is dummy body text for preflight tests.",
         "It describes the spec intent and constraints to meet the minimum 100-character requirement.",
         "It includes real sentences, not only template placeholders, to avoid the validator's incomplete verdict.",
+        ...requiredSections(fileName),
       ].join("\n");
   }
+}
+
+/** The sections readiness requires of a context or constraints file. */
+function requiredSections(fileName: (typeof DISCUSSION_PACK_FILES)[number]): string[] {
+  if (fileName === "01_Context.md") return ["", "## Inception Deck", "", "Why we are here."];
+  if (fileName !== "09_Constraints.md") return [];
+  return [
+    "Security Policy",
+    "Compliance Policy",
+    "Development Policy",
+    "Operational Policy",
+  ].flatMap((section) => ["", `## ${section}`, "", "None."]);
 }

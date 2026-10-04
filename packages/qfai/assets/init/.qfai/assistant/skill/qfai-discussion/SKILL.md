@@ -131,4 +131,4 @@ project_memory:
 
 - The nine-file mandatory output set is fixed; the UI-bearing sidecar family (00_index.md + 40_screen_contracts.md + 50_review_input_bundle.md) is required whenever the target is UI-bearing, cli included. Root DESIGN.md is not a discussion output: `/qfai-sdd`'s `common-design-md` step authors it from this pack.
 - Discussion is planner-first: never pick a single visual winner; carry exploration references as deviate-from inputs, not imitate-this.
-- Completion requires Disposition: open count = 0 in 11_OQ-Register.md; each deferred row there records its Resolution and names when and by what signal it is reopened.
+- Completion requires Disposition: open count = 0 in 11_OQ-Register.md; each deferred row there records its Resolution and names the next point at which it is decided.

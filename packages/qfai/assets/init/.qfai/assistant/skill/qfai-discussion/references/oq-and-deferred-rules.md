@@ -26,14 +26,14 @@ Use this file for canonical field definitions in `/qfai-discussion`.
 A deferred question stays in `11_OQ-Register.md` as a row with
 `Disposition: deferred`. Its fields carry the deferral:
 
-| Field                 | Holds                                              |
-| --------------------- | -------------------------------------------------- |
-| `Rationale`           | Why it is deferred                                 |
-| `Resolution`          | What is decided now, and why the rest waits        |
-| `Next-Decision-Point` | When, and by what signal, the question is reopened |
-| `Owner`               | Who reopens it                                     |
-| `Due`                 | The latest date it is looked at again              |
-| `Evidence`            | Where the deferral was agreed                      |
+| Field                 | Holds                                           |
+| --------------------- | ----------------------------------------------- |
+| `Rationale`           | Why it is deferred                              |
+| `Resolution`          | What is decided now, and why the rest waits     |
+| `Next-Decision-Point` | The next point at which the question is decided |
+| `Owner`               | Who reopens it                                  |
+| `Due`                 | The latest date it is looked at again           |
+| `Evidence`            | Where the deferral was agreed                   |
 
 ## Guardrails
 
