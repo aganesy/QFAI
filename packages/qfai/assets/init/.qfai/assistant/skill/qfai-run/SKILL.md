@@ -25,7 +25,7 @@ The user states a change once. This skill reads the request into facts, asks
 - Choose a route, which the CLI's decision rules take from the extraction, or
   name one, a stage kind or an internal identifier to the user.
 - Put request text on a command line. `plan` reads only the extraction.
-- Add, drop or reorder a step the plan names.
+- Add, drop or reorder a step the plan names, or run a stage outside the scope.
 - Push, open a pull request, merge, deploy, migrate production or spend
   money without the user's own instruction or a project policy naming it.
 
@@ -56,9 +56,10 @@ value but the three below plans nothing.
 2. **Candidates.** When `plan` returns `candidates`, put one single-select
    question, each option saying in the user's words what that route will do,
    then run `npx qfai workflow plan --route <route>` for the chosen one.
-3. **Announce.** Before the first stage, give the goal, the stages in order in
-   plain words, and the files the work may change. Ask nothing.
-4. **Run the stages.** Run each stage in plan order, and each of its steps in
+3. **Scope.** Ask which scope to run, as `references/operator-screens.md` says; run only its stages.
+4. **Announce.** Before the first stage, give the goal, the chosen stages in
+   order in plain words, and the files the work may change. Ask nothing.
+5. **Run the stages.** Run each stage in plan order, and each of its steps in
    order. Write any artifact yourself. Give a part to a sub-agent only to run
    independent parts in parallel, or for a review. At each step, handle the
    points the plan names for it:
@@ -81,20 +82,20 @@ value but the three below plans nothing.
      route runs. Any other outcome continues the route. Before the third move
      and every one after it, ask the user, naming the destination in plain
      words; `stop` ends the work.
-5. **Review.** After a stage whose `review` is `spec`, `requirements-reviewer`
+6. **Review.** After a stage whose `review` is `spec`, `requirements-reviewer`
    reviews, with `architecture-reviewer` when a contract changed; after one
    whose `review` is `code`, `implementation-reviewer`.
    `product-surface-reviewer` joins both where a UI contract with screens
    serves the flow. No agent reviews its own work.
-6. **Approvals.** Each approval of a specification change, a critical decision
+7. **Approvals.** Each approval of a specification change, a critical decision
    or a release is one `decisions.md` row: what was approved, who approved it,
    when, and the chosen option's label. A decision you took appends no row.
-7. **A finding no stage serves.** Stop, and name the finding, its owner and
+8. **A finding no stage serves.** Stop, and name the finding, its owner and
    the stage skill to invoke by name.
 
 ## Under a no-question mode
 
-Nothing is asked. The first candidate is taken and reported as an assumption.
+Nothing is asked. The first candidate and its narrowest scope are taken and reported as assumptions.
 A critical decision or a release point becomes one `open-questions.md` row,
 the step stops before the change that depends on it, and the report lists the
 decision as open. A third branch move stops the work.
@@ -135,15 +136,15 @@ the request did not cover stops and says so.
   - equivalent-option pick
 - ask-user:
   - each critical decision at a decision point, and each release point
-  - the candidate question, and a third branch move
+  - the candidate question, the scope question, and a third branch move
 - hard-required:
   - change request (the user's own words; an empty request is asked for, never guessed)
 
 ## Completion Contract (Shared)
 
-Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#completion-contract-shared`. **Smallest applicable smoke check** (this skill's override): the gates of the plan's last verify stage. A gate that cannot run is UNRUN, not a pass.
+Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#completion-contract-shared`. **Smallest applicable smoke check** (this skill's override): the gates of the last verify stage the chosen scope holds; a scope holding none runs no gate, and the report says so. A gate that cannot run is UNRUN, not a pass.
 
 project_memory:
 
 - The user names no stage after the first request.
-- The plan is fixed by its route; the session runs every step it names.
+- The plan is fixed by its route; the session runs every step of the chosen scope.

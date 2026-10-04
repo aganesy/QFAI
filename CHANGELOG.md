@@ -4,6 +4,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **`qfai-run` asks how far the work goes before it starts.** A plan from
+  `npx qfai workflow plan --in` now holds `scopes`: `narrow`, `medium` and
+  `broad`, narrowest first and recommended. Each candidate of an unsure
+  extraction holds its own. The session asks which scope to run before the
+  first stage and runs only that scope's stages, so a request to update the
+  specification and a prototype no longer runs acceptance tests or
+  implementation.
+  - `narrow` ends at the last stage that writes an artifact the request names.
+    A scope that writes code or tests always holds the closing verification
+    stages.
+  - `medium` adds those verification stages, and `broad` runs every stage.
+  - Under `--auto` the narrowest scope is taken and reported as an assumption.
+  - The final report of a narrower run says the chosen stages are complete,
+    never that the change is done.
+  - An extraction lists `code` and `tests` only when the request asks for the
+    change to be implemented.
+  - `plan.schema.json` gains the optional `scopes`, required on each candidate.
+
 ## [2.1.0] - 2026-10-04
 
 ### Breaking changes

@@ -11,12 +11,33 @@ What the user sees while a request is worked, and how a question reaches them.
 - Show nothing while a call is running beyond the host's own activity
   indicator.
 
+## The scope question
+
+The scopes are the plan's, or the chosen candidate's after the candidate
+question. With two or more, put one single-select question before the first
+stage:
+
+- one option per scope, narrowest first and recommended, each naming the stages
+  it runs in plain words;
+- the host's free-text answer for any other choice.
+
+Run only the chosen scope's stages, in plan order.
+
+- A free-text answer runs the stages up to the last one it names, followed by
+  the verify stages the narrowest scope would add to them.
+- An answer asking for work no stage of the plan does stops the work before the
+  first stage, naming that work.
+- One scope, a plan with no scopes, and a branch destination's plan, however
+  it was taken, ask nothing and run every stage.
+- A release point is asked only when the chosen scope holds its step, or for
+  `end`, the route's last stage.
+
 ## The announcement
 
-Once the plan is known, and before the first stage:
+Once the plan and its scope are known, and before the first stage:
 
 - the goal, in one sentence;
-- the stages in order;
+- the chosen stages in order;
 - the files the work may change.
 
 It asks nothing and lists no skipped stage. Text that is not a request gets no
@@ -58,11 +79,12 @@ reset, a stash, a branch switch or a worktree removal.
 
 ## Final report
 
-| The work ended      | The report                                                                                               |
-| ------------------- | -------------------------------------------------------------------------------------------------------- |
-| Every gate passed   | Done: the paths changed, each gate's verdict, and every decision taken without the user, with its reason |
-| At a closing step   | The closure outcome and each follow-up request, never that a change is done                              |
-| With a gate failing | Each failing gate marked pre-existing or new, with its owner. Nothing reads as complete                  |
+| The work ended                        | The report                                                                                                           |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Every stage ran and every gate passed | Done: the paths changed, each gate's verdict, and every decision taken without the user, with its reason             |
+| At the chosen scope                   | The chosen stages complete, the stages not chosen, and a verdict for each gate that ran, never that a change is done |
+| At a closing step                     | The closure outcome and each follow-up request, never that a change is done                                          |
+| With a gate failing                   | Each failing gate marked pre-existing or new, with its owner. Nothing reads as complete                              |
 
 - A gate shows its verdict only.
 - An external effect nobody requested is listed as not requested.

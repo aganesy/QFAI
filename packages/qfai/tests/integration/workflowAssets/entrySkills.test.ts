@@ -286,7 +286,9 @@ describe("qfai-run", () => {
       /the recommendation, the main reading, stands on a line of its own/i,
     );
     const quiet = flat(sectionOf(await readShipped(RUN), "## Under a no-question mode"));
-    expect(quiet).toMatch(/the first candidate is taken and reported as an assumption/i);
+    expect(quiet).toMatch(
+      /the first candidate and its narrowest scope are taken and reported as assumptions/i,
+    );
   });
 
   // QFAI:AC-0001-0224-01
@@ -294,12 +296,63 @@ describe("qfai-run", () => {
   it("announces the goal, the stages and the files before the first stage, then runs every step in order", async () => {
     const work = flat(sectionOf(await readShipped(RUN), "## The work"));
     expect(work).toMatch(
-      /before the first stage, give the goal, the stages in order in plain words, and the files the work may change\. ask nothing/i,
+      /before the first stage, give the goal, the chosen stages in order in plain words, and the files the work may change\. ask nothing/i,
     );
     expect(work).toMatch(/run each stage in plan order, and each of its steps in order/i);
     const announcement = flat(sectionOf(await readShipped(SCREENS), "## The announcement"));
     expect(announcement).toMatch(/it asks nothing and lists no skipped stage/i);
     expect(flat(await readShipped(RUN))).toMatch(/add, drop or reorder a step the plan names/i);
+  });
+
+  // QFAI:AC-0001-0229-02
+  // QFAI:AC-0001-0229-03
+  // QFAI:AC-0001-0229-04
+  // QFAI:AC-0001-0229-05
+  // QFAI:EX-0001-0229-05
+  // QFAI:EX-0001-0229-06
+  // QFAI:EX-0001-0229-07
+  // QFAI:EX-0001-0229-08
+  // QFAI:EX-0001-0229-11
+  // QFAI:EX-0001-0229-12
+  // QFAI:EX-0001-0229-14
+  // QFAI:EX-0001-0229-15
+  // QFAI:EX-0001-0229-16
+  // QFAI:EX-0001-0229-17
+  // QFAI:EX-0001-0229-18
+  it("asks which scope to run before the first stage, runs only its stages, and never calls a narrower run done", async () => {
+    const run = await readShipped(RUN);
+    expect(flat(sectionOf(run, "## The work"))).toMatch(
+      /\*\*scope\.\*\* ask which scope to run, as `references\/operator-screens\.md` says; run only its stages\./i,
+    );
+    expect(flat(run)).toMatch(/or run a stage outside the scope/i);
+    const screens = await readShipped(SCREENS);
+    const scope = flat(sectionOf(screens, "## The scope question"));
+    expect(scope).toMatch(/the plan's, or the chosen candidate's after the candidate question/i);
+    expect(scope).toMatch(
+      /one option per scope, narrowest first and recommended, each naming the stages it runs in plain words/i,
+    );
+    expect(scope).toMatch(
+      /a free-text answer runs the stages up to the last one it names, followed by the verify stages the narrowest scope would add to them/i,
+    );
+    expect(scope).toMatch(/stops the work before the first stage, naming that work/i);
+    expect(scope).toMatch(
+      /one scope, a plan with no scopes, and a branch destination's plan, however it was taken, ask nothing and run every stage/i,
+    );
+    expect(scope).toMatch(/a release point is asked only when the chosen scope holds its step/i);
+    expect(flat(sectionOf(screens, "## The announcement"))).toMatch(/the chosen stages in order/i);
+    expect(rowOf(sectionOf(screens, "## Final report"), "| At the chosen scope")).toMatch(
+      /the stages not chosen.*never that a change is done/i,
+    );
+  });
+
+  // QFAI:AC-0001-0229-06
+  // QFAI:EX-0001-0229-10
+  it("lists code and tests only when the request asks for the change to be implemented", async () => {
+    const artifacts = flat(sectionOf(await readShipped(EXTRACTION), "## Artifacts"));
+    expect(artifacts).toMatch(
+      /list `code` and `tests` only when the request asks for the change to be implemented: a request that ends at the specification or a prototype lists neither/i,
+    );
+    expect(artifacts).not.toMatch(/whenever behaviour changes/i);
   });
 
   // QFAI:AC-0001-0224-02
@@ -330,7 +383,7 @@ describe("qfai-run", () => {
   // QFAI:EX-0001-0223-05
   it("handles each release, decision and branch point at its step, inside the step loop", async () => {
     const work = sectionOf(await readShipped(RUN), "## The work");
-    const loop = flat(work.split("4. **Run the stages.**")[1]?.split("5. **Review.**")[0] ?? "");
+    const loop = flat(work.split("5. **Run the stages.**")[1]?.split("6. **Review.**")[0] ?? "");
     expect(loop).toMatch(/at each step, handle the points the plan names for it/i);
     for (const point of ["release point", "decision point", "branch point"]) {
       expect(loop.toLowerCase()).toContain(`**${point}.**`);
