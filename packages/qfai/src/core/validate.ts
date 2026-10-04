@@ -18,7 +18,7 @@ import { validateStoryTreeStructure } from "./validators/storyTreeStructure.js";
 import { validateDocumentSchema } from "./validators/documentSchema.js";
 import { validateStoryTreeObligations } from "./validators/storyTreeObligations.js";
 import { validateStoryTreeContractReferences } from "./validators/contractReferences.js";
-import { validateStorySteeringPlaceholders } from "./validators/assistantAssets.js";
+import { validateStoryPolicyPlaceholders } from "./validators/assistantAssets.js";
 import { validateStoryTreeDrift } from "./validators/upstreamSsotGuard.js";
 import { runSaasPackageProfile } from "./saasPackage/profile.js";
 import { issue } from "./validators/utils.js";
@@ -482,11 +482,11 @@ async function runStoryProfileValidators(
   timings: TimingsSink,
   platformOption?: string,
 ): Promise<Issue[]> {
-  const sdd = async (includeSteering = true): Promise<Issue[]> => [
+  const sdd = async (includePolicy = true): Promise<Issue[]> => [
     ...(await validateStoryTreeStructure(root, config, model)),
     ...(await validateDocumentSchema(root, config)),
     ...(await validateStoryTreeContractReferences(root, config, model)),
-    ...(includeSteering ? await validateStorySteeringPlaceholders(root, config) : []),
+    ...(includePolicy ? await validateStoryPolicyPlaceholders(root, config) : []),
     ...(await validateContracts(root, config)),
     ...(await validateDesignContractReadiness(root, config)),
     ...(await validateAssistantTreeMigration(root, config)),

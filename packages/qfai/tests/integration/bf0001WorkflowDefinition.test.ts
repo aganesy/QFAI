@@ -125,21 +125,20 @@ describe("BF-0001 workflow definition", () => {
 
   // QFAI:EX-0001-0003-01
   // QFAI:EX-0001-0004-01
-  it("defines an ordered, acyclic seven-stage workflow with the optional stages", async () => {
+  it("defines an ordered, acyclic six-stage workflow with the optional stages", async () => {
     const workflow = await readFile(rule("workflow.md"), "utf8");
     const canonicalStages = workflow.split("## Stages (canonical)")[1]?.split("\nStage 3")[0] ?? "";
     const stages = [...canonicalStages.matchAll(/^([0-7])\. (.+)$/gm)].map((match) => ({
       number: Number(match[1]),
       label: match[2] ?? "",
     }));
-    expect(stages.map(({ number }) => number)).toEqual([0, 1, 2, 3, 4, 5, 6]);
-    expect(stages[0]?.label).toContain("Steering refresh");
-    expect(stages[1]?.label).toContain("Discussion (optional)");
-    expect(stages[4]?.label).toContain("Prototyping (optional)");
-    expect(stages[5]?.label).toContain("Implementation:");
-    expect(stages[5]?.label).toContain("AC integration tests with empty bodies");
-    expect(stages[6]?.label).toContain("Verify:");
-    expect(workflow).toContain("At the beginning of each stage");
+    expect(stages.map(({ number }) => number)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(stages[0]?.label).toContain("Discussion (optional)");
+    expect(stages[3]?.label).toContain("Prototyping (optional)");
+    expect(stages[4]?.label).toContain("Implementation:");
+    expect(stages[4]?.label).toContain("AC integration tests with empty bodies");
+    expect(stages[5]?.label).toContain("Verify:");
+    expect(workflow).toContain("Once per run, at the start, before the first stage.");
     expect(workflow).toContain("implements one EX at a time through Red, Green, Refactor");
     const configure = await readFile(skill("qfai-configure"), "utf8");
     expect(configure).toContain("Configure QFAI for this repository");

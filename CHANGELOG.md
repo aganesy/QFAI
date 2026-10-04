@@ -175,6 +175,21 @@ its code. Several commands, findings and files go with that.
   nothing to migrate in the directory the line names, and to ask the person to
   check that the specs live there.
 
+- **The project-fact check is the `common-policy-check` step, and it runs once
+  per run.** It used to run at the start of every stage, and a later stage
+  reused its result when a recorded digest key matched. Now `qfai-run` runs it
+  once, before the first stage, and no step lists it in `requires:`. A stage
+  invoked by name on its own is a run of its own. The rules call it the policy
+  check, and `QFAI-ASSETS-003` names the unfilled file a policy file.
+
+- **QFAI no longer looks for the retired `.qfai/assistant/steering/` layout.**
+  `qfai validate` and `qfai init` no longer report it as `D-DEPRECATED-PATH`,
+  `qfai init --upgrade-assistant-tree` no longer copies from it, and step 12 of
+  `qfai-migration-v1-to-v2` no longer lists a line naming it. The
+  `W-SKILL-DOC-BROKEN-REF` finding is gone: every path it matched was in that
+  layout. A legacy `.qfai/assistant/instructions/` directory is still reported
+  and still copied.
+
 #### Upgrading from 2.0
 
 1. Install 2.1.0 and run `npx qfai doctor`. Note what `paths.leftovers` lists.

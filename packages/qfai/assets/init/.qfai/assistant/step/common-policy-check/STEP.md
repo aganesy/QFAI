@@ -1,21 +1,21 @@
 ---
-name: common-steering-refresh
+name: common-policy-check
 owner: common
-purpose: "At a stage's start, find the project facts in policy and technology that are missing or stale, fill the verified ones this stage owns, and record what cannot be verified."
+purpose: "Once, at the start of a run, find the project facts in policy and technology that are missing or stale, fill the verified ones the run owns, and record what cannot be verified."
 requires: []
 roles: []
 ---
 
-# common-steering-refresh
+# common-policy-check
 
 Design, tests and code fit a project only when its facts are current. The
 contract this step serves is
-`.qfai/assistant/rule/workflow.md#stage-0--steering-refresh-contract-mandatory`:
-it runs at every stage start, and no affected work continues on stale steering.
+`.qfai/assistant/rule/workflow.md#policy-check-mandatory`:
+it runs once per run, at the start, and no affected work continues on stale policy.
 
 ## Reads
 
-The steering files under `<paths.specsDir>`, resolved from `qfai.config.yaml`
+The policy files under `<paths.specsDir>`, resolved from `qfai.config.yaml`
 (default `.qfai/spec`):
 
 | File                                                | Holds                                                                                                   |
@@ -31,7 +31,7 @@ The steering files under `<paths.specsDir>`, resolved from `qfai.config.yaml`
    fact the repository contradicts. A table with no rows is complete where the
    template's table has none, and so is a `- None.` list: the project has
    nothing to record there.
-2. **Fill what this stage owns.** Derive each fact from the repository and name
+2. **Fill what the run owns.** Derive each fact from the repository and name
    where it was read:
    - the objective from the README, the docs and the project's own issues;
    - runtime, tooling and the Standard commands from the task-runner manifest
@@ -44,23 +44,14 @@ The steering files under `<paths.specsDir>`, resolved from `qfai.config.yaml`
 4. **Record what cannot be verified.** Write `TBD` with what evidence is
    missing, and raise the matching row in `<paths.specsDir>/open-questions.md`.
    Ask the user under the invocation's question policy. Never invent a fact.
-5. **Route new facts** found later in the stage to the file that owns them.
+5. **Route new facts** found later in the run to the file that owns them.
 
 The file shapes are the paired templates under
 `.qfai/assistant/skill/qfai-sdd/templates/spec/01_policy/` and
 `.qfai/assistant/skill/qfai-sdd/templates/spec/03_contract/`.
 
-## Inside a workflow run
-
-A stage reuses the refresh an earlier stage of the run recorded only when the
-key recorded with it, recomputed, is equal; on a different key it refreshes only
-what changed. The key and its inputs are
-`.qfai/assistant/rule/shared-skill-operating-baseline.md#inside-a-workflow-run`.
-No stage-specific check is served from that output. Outside a run, the refresh
-runs in full at every stage start.
-
 ## Gate
 
-Every steering file is complete or carries a documented `TBD` with its open
-question, each filled fact names its source, and nothing this stage does not own
+Every policy file is complete or carries a documented `TBD` with its open
+question, each filled fact names its source, and nothing the run does not own
 was edited.

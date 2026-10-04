@@ -128,7 +128,7 @@ const TRACKED = trackedUnderTarget();
  * Nothing under `.qfai/assistant/` may exist only in this repository.
  * Everything that exists here and nowhere in the assets is REPORTED, and
  * the reason is the incident the previous mechanism was built around: a
- * root-only `assistant/steering/test-layers.md` made `loadLayerPolicy` succeed
+ * root-only `test-layers.md` under the assistant tree made `loadLayerPolicy` succeed
  * in this tree and throw in every `qfai init` project, so a consumer-only
  * failure outlived a full minor release. A link cannot drift from its source,
  * but a file the assets never had is still invisible to every adopter — and

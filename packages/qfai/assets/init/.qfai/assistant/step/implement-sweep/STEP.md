@@ -3,7 +3,6 @@ name: implement-sweep
 owner: qfai-implement
 purpose: "Run a widened check over the whole tree and either fix each new finding or record it in the check's baseline with its reason."
 requires:
-  - common-steering-refresh
   - common-gate-run
 roles:
   - devops-ci-engineer

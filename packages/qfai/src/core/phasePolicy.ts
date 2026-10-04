@@ -23,7 +23,7 @@ export function isCiEnvironment(env: NodeJS.ProcessEnv = process.env): boolean {
 //   - `--profile tdd` covers story test obligations, drift, test stubs,
 //     and contracts.
 //   - `--profile sdd` covers story tree structure, contract references,
-//     steering, and review artifacts. Without an `sdd`-allowed CI profile,
+//     policy placeholders, and review artifacts. Without an `sdd`-allowed CI profile,
 //     these validators would not run in the paired narrow-profile lanes.
 //
 // The narrow-profile guard exists to stop CI from *accidentally* skipping

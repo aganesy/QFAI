@@ -18,7 +18,7 @@ const SHIPPED_ASSISTANT_ROOT = "packages/qfai/assets/init/.qfai/assistant";
 
 /**
  * Root mirror of the shipped surface. Only mirrored paths are scanned — the root
- * tree also carries legacy, non-distributed docs (`steering/**`, superseded
+ * tree also carries legacy, non-distributed docs (superseded
  * migration notes) that this repo keeps for its own history.
  */
 const ROOT_ASSISTANT_MIRROR = ".qfai/assistant";

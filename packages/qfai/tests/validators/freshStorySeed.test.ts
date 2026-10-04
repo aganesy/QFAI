@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 import { runInit } from "../../src/cli/commands/init.js";
 import { runValidate } from "../../src/cli/commands/validate.js";
 import { defaultConfig } from "../../src/core/config.js";
-import { validateStorySteeringPlaceholders } from "../../src/core/validators/assistantAssets.js";
+import { validateStoryPolicyPlaceholders } from "../../src/core/validators/assistantAssets.js";
 import { validateDiscussionPackReadiness } from "../../src/core/validators/discussionPack.js";
 import { captureStdout } from "../helpers/stdout.js";
 
@@ -27,9 +27,9 @@ async function editObjective(root: string): Promise<void> {
 }
 
 describe("fresh story seed validation", () => {
-  it("has no unfilled steering or missing discussion error before project content exists", async () => {
+  it("has no unfilled policy or missing discussion error before project content exists", async () => {
     await withInit(async (root) => {
-      expect(await validateStorySteeringPlaceholders(root, defaultConfig)).toEqual([]);
+      expect(await validateStoryPolicyPlaceholders(root, defaultConfig)).toEqual([]);
       expect(
         (await validateDiscussionPackReadiness(root, defaultConfig)).filter(
           (found) => found.severity === "error",
@@ -51,7 +51,7 @@ describe("fresh story seed validation", () => {
         await rm(path.join(root, ".qfai", "spec", "03_contract", kind), { recursive: true });
       }
 
-      expect(await validateStorySteeringPlaceholders(root, defaultConfig)).toEqual([]);
+      expect(await validateStoryPolicyPlaceholders(root, defaultConfig)).toEqual([]);
     });
   });
 
@@ -62,17 +62,17 @@ describe("fresh story seed validation", () => {
       await rm(path.join(root, ".qfai", "spec", "03_contract", "api"), { recursive: true });
 
       expect(
-        (await validateStorySteeringPlaceholders(root, defaultConfig)).map((x) => x.code),
+        (await validateStoryPolicyPlaceholders(root, defaultConfig)).map((x) => x.code),
       ).toEqual(["QFAI-ASSETS-003"]);
     });
   });
 
-  it("enforces the steering obligation after any seed content is edited", async () => {
+  it("enforces the policy obligation after any seed content is edited", async () => {
     await withInit(async (root) => {
       await editObjective(root);
 
       expect(
-        (await validateStorySteeringPlaceholders(root, defaultConfig)).map((x) => x.code),
+        (await validateStoryPolicyPlaceholders(root, defaultConfig)).map((x) => x.code),
       ).toEqual(["QFAI-ASSETS-003"]);
     });
   });

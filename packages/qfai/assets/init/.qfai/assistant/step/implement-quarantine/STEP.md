@@ -2,7 +2,7 @@
 name: implement-quarantine
 owner: qfai-implement
 purpose: "Take a test that passes and fails on the same code out of the gating suite, with a record of why and of what lets it back in."
-requires: [common-steering-refresh, common-gate-run]
+requires: [common-gate-run]
 roles:
   - devops-ci-engineer
   - qa-strategist

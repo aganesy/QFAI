@@ -13,17 +13,15 @@ export const ASSISTANT_LAYERS = ["rule", "skill", "step", "agent", "prompt"] as 
 
 export type AssistantLayer = (typeof ASSISTANT_LAYERS)[number];
 
-export const LEGACY_ASSISTANT_STEERING_DIR = ".qfai/assistant/steering" as const;
-
 /**
- * The release that retired the legacy `.qfai/assistant/steering/` layout.
+ * The release that retired the legacy `.qfai/assistant/instructions/` layout.
  *
  * A literal, because nothing compares against it any more: the readers accept
  * the old paths unconditionally and the finding that reports one is an `error`
  * outright. It survives only as the version an operator's message names, so
  * they know which release moved the layout under them.
  */
-export function legacyAssistantSteeringSunsetLabel(): string {
+export function legacyAssistantTreeSunsetLabel(): string {
   return "1.10.0";
 }
 
@@ -62,15 +60,10 @@ export function joinAssistantAssetLayer(
   return path.join(assistantAssetsRoot, layer, ...rest);
 }
 
-export function joinLegacyAssistantSteering(destRoot: string, ...rest: string[]): string {
-  return path.join(destRoot, LEGACY_ASSISTANT_STEERING_DIR, ...rest);
-}
-
 /**
  * Legacy pre-recut `.qfai/assistant/instructions/` surface — relocated
- * to constitution/ by `qfai init --upgrade-assistant-tree`. Helper kept
- * so call sites do not embed the literal segments and remain consistent
- * with the SSOT-style accessor used for the legacy steering surface.
+ * by `qfai init --upgrade-assistant-tree`. The helper keeps call sites from
+ * embedding the literal segments.
  */
 export const LEGACY_ASSISTANT_INSTRUCTIONS_DIR = ".qfai/assistant/instructions" as const;
 
