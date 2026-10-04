@@ -16,7 +16,8 @@ Feature: Diagnose a reported defect without changing product code
   Scenario: A diagnosed missing test raises no change request from implement
     Given diagnosis found a missing test on behaviour an existing AC states
     When /qfai-implement handles that scope gap
-    Then it appends no change request row to decisions.md and adds no EX
+    Then it appends no change request row to decisions.md
+    And where no EX states the case, implement-tdd appends one under that AC
     And the skill's statement of what goes to /qfai-sdd as a change request states that carve-out
     And any other scope gap still goes to /qfai-sdd as a change request
 ```
