@@ -1200,6 +1200,30 @@ export function refreshSupersededRuleBulletsInList(
 }
 
 /**
+ * The bullet citing `master` in the rule list under `CROSS_AI_RULES_HEADING`,
+ * with its continuation lines and without line terminators, or `undefined`
+ * where the list has none.
+ *
+ * A matching line anywhere else — an example in a fenced block, a note in
+ * another section — does not instruct an agent, so it is never returned.
+ */
+export function ruleListBullet(existing: string, master: string): string | undefined {
+  const lines = existing.split("\n");
+  const open = outsideFences(lines);
+  const range = ruleListRange(lines, open);
+  if (range === null) return undefined;
+  for (let index = range.from; index < range.to; index += 1) {
+    if (open[index] !== true || !(lines[index] ?? "").startsWith(`- \`${master}\``)) continue;
+    const end = Math.min(endOfListItem(lines, open, index), range.to);
+    return lines
+      .slice(index, end)
+      .map((line) => line.replace(/\r$/, ""))
+      .join("\n");
+  }
+  return undefined;
+}
+
+/**
  * Whether the line is `CROSS_AI_RULES_HEADING` itself: the exact heading, at the
  * top level, in no blockquote.
  *

@@ -51,6 +51,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     refused, and the reviewer gets each iteration's URL.
   - The unused coverage tool and its configuration are removed.
 
+- **More review follow-ups from the 2.1.0 redesign** (#2875). The handoff
+  schema check now fails when the prototyping handoff reference stops naming a
+  schema field. `qfai atdd scaffold` keeps an existing test only after reading
+  it through one descriptor that follows no link. `qfai init --force` keeps the
+  whole Copilot rule bullet from the rule list, never an example elsewhere in
+  the file. `implement-scaffold` writes no test for an item under a test
+  exception.
+
 ## [2.1.0] - 2026-10-04
 
 ### Breaking changes

@@ -2527,6 +2527,48 @@ describe("a later init refreshes a rule summary the project never edited", () =>
     });
   });
 
+  it("keeps only the operative Copilot bullet, whole, where the master was refused", async () => {
+    await withProject(async (root) => {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const copilot = path.join(root, ".github", "copilot-instructions.md");
+      const written = await readFile(copilot, "utf-8");
+      const current = written.split("\n").find((line) => line.startsWith(`- \`${master}\``)) ?? "";
+      expect(current, "the Copilot file has no bullet for the master").not.toBe("");
+      const example = `- \`${master}\` — an example in a fenced block, not the rule list.`;
+      const continuation = "  Our own second line of the summary.";
+      await writeFile(
+        copilot,
+        [
+          "## Examples",
+          "",
+          "```markdown",
+          example,
+          "```",
+          "",
+          written.replace(current, `${superseded}\n${continuation}`),
+        ].join("\n"),
+        "utf-8",
+      );
+      const rules = path.join(root, ".agents", "rules");
+      const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-linked-rules-"));
+      try {
+        await cp(rules, outside, { recursive: true });
+        await writeFile(path.join(outside, "grilling.md"), "# Our grilling rule\n", "utf-8");
+        await rm(rules, { recursive: true });
+        await symlink(outside, rules, "junction");
+
+        await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+        const after = await readFile(copilot, "utf-8");
+        expect(after).not.toContain(example);
+        expect(after).toContain(`${superseded}\n${continuation}`);
+      } finally {
+        await rm(rules, { force: true });
+        await rm(outside, { recursive: true, force: true });
+      }
+    });
+  });
+
   it("leaves the same line inside a fenced example as it is", async () => {
     await withProject(async (root) => {
       const seeded = await seedSuperseded(root);

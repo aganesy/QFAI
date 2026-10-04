@@ -56,6 +56,7 @@ import {
   newlyWrittenRuleMasters,
   refreshSupersededRuleBullets,
   refreshSupersededRuleBulletsInList,
+  ruleListBullet,
 } from "../../core/agentEntryPoints.js";
 import {
   CLAUDE_SETTINGS_RELATIVE_PATH,
@@ -3757,7 +3758,8 @@ async function restoreQuarantined(entry: QuarantinedEntry): Promise<boolean> {
 
 /**
  * `generated` with each rule bullet for a master outside `installed` taken from
- * the Copilot file already at `target`, where that file has one.
+ * the rule list of the Copilot file already at `target`, where that list has
+ * one.
  *
  * A master outside `installed` keeps the project's text, because its write was
  * refused or the project edited it, so the release's summary would describe a
@@ -3773,7 +3775,7 @@ async function keepSummariesOfUninstalledMasters(
 ): Promise<string> {
   const existing = await readBoundedRegularFile(target, COPILOT_INSTRUCTIONS_MAX_BYTES);
   if (existing === undefined) return generated;
-  const existingLines = existing.toString("utf-8").split(/\r?\n/);
+  const existingText = existing.toString("utf-8");
   const lines: string[] = [];
   for (const line of generated.split("\n")) {
     const master = line.startsWith("- ") ? citedRuleMasters(line)[0] : undefined;
@@ -3781,7 +3783,7 @@ async function keepSummariesOfUninstalledMasters(
       lines.push(line);
       continue;
     }
-    const kept = existingLines.find((old) => old.startsWith(`- \`${master}\``));
+    const kept = ruleListBullet(existingText, master);
     if (kept !== undefined) lines.push(kept);
     else if (await pathExists(path.join(destRoot, ...master.split("/")))) lines.push(line);
   }

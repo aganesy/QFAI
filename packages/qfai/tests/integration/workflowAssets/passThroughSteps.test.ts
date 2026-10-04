@@ -142,9 +142,24 @@ describe("a step that may pass with evidence", () => {
       sectionOf(await readShipped("step/implement-scaffold/STEP.md"), "## Procedure"),
     );
     expect(procedure).toMatch(
-      /for each story with an acceptance criterion no test annotates, run `npx qfai atdd scaffold --story US-NNNN-NNNN`/i,
+      /for each story with an acceptance criterion still on that list, run `npx qfai atdd scaffold --story US-NNNN-NNNN`/i,
     );
     expect(procedure).toMatch(/the command never overwrites an existing test/i);
+  });
+
+  it("scaffolds no test for a BF or AC that a test exception at DONE names", async () => {
+    const procedure = flat(
+      sectionOf(await readShipped("step/implement-scaffold/STEP.md"), "## Procedure"),
+    );
+    expect(procedure).toMatch(
+      /drop from that list each item a `Test exception:` row at DONE names/i,
+    );
+    expect(procedure).toMatch(
+      /when the flow is still on that list, run `npx qfai atdd scaffold --flow BF-NNNN`/i,
+    );
+    expect(procedure).toMatch(
+      /delete each test it reports as created for a criterion the list dropped/i,
+    );
   });
 
   it("leaves no step with a skip condition a plan predicate decided", async () => {

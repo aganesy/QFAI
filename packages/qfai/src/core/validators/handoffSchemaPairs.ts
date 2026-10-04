@@ -28,6 +28,12 @@ export type HandoffWriterPair = {
    * fields from `HANDOFF_MINIMUM_FIELDS`".
    */
   readonly writerToken: string;
+  /**
+   * When true, the writer must also name every field the schema lists in
+   * `HANDOFF_MINIMUM_FIELDS`, each as a code span. A prose writer has no
+   * type to import, so its field list is what has to move with the schema.
+   */
+  readonly namesSchemaFields: boolean;
 };
 
 /**
@@ -41,11 +47,13 @@ export const HANDOFF_WRITER_PAIRS: readonly HandoffWriterPair[] = [
     clause: "canonical-handoff-writer",
     writerRel: "packages/qfai/src/core/handoff/writer.ts",
     writerToken: "HandoffArtifact",
+    namesSchemaFields: false,
   },
   {
     clause: "prototyping-handoff-writer",
     writerRel:
       "packages/qfai/assets/init/.qfai/assistant/skill/qfai-prototyping/references/handoff.md",
     writerToken: "CLI-HANDOFF",
+    namesSchemaFields: true,
   },
 ];
