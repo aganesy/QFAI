@@ -17,6 +17,7 @@ Feature: Answer only the critical decisions, and approve each release
     When the step decides it
     Then nothing is asked
     And the final report lists the decision and its reason
+    And outside the discussion stage no grilling record is written
 
   # AC-0001-0223-03
   Scenario: A release point always asks
