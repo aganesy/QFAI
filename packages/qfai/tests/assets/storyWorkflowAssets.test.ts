@@ -18,7 +18,7 @@ describe("story-tree acceptance and implementation assets", () => {
     const suite = await read("skill/qfai-implement/references/relevant-test-suite.md");
     expect(suite).toContain("current QFAI:EX annotation");
     expect(suite).toContain("Follow imports and test data consumers");
-    expect(suite).toContain("Re-run dependent flows after an integrated shared-module change");
+    expect(suite).toContain("run only the selected example test");
     expect(suite).toContain("Standard commands");
   });
 

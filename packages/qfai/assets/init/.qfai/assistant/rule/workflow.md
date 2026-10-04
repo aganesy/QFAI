@@ -93,7 +93,7 @@ Prototyping stage policy:
 
 Implementation stage:
 
-- `/qfai-implement` selects a current EX obligation from `npx qfai validate --profile tdd --flow BF-NNNN`. It records an observable assertion failure, the passing result, and the refactor check for that EX.
+- Inside a route, `/qfai-implement` works the examples its work order names and runs no `npx qfai validate`. Invoked by name, it validates the flow once, at completion, with `npx qfai validate --profile tdd --fail-on error --flow BF-NNNN`. For each example it records an observable assertion failure, the passing result, and the refactor check for that EX.
 - A collection, import, syntax, or fixture failure is not an admissible RED. When existing behavior already satisfies the EX, record falsifiability evidence under the rule in `references/red-not-observable.md`. Never weaken a correct test to manufacture RED.
 - While implementing, run only the test being written. Lint, typecheck, build, the full suite and `npx qfai validate` run once, in the verify stage. Parallel execution requires disjoint writes and user consent.
 

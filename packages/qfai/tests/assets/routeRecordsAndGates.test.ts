@@ -106,7 +106,7 @@ describe("implement invoked by name validates its flow once", () => {
     expect(skill).toContain(
       "Invoked by name, it runs `npx qfai validate --profile tdd --fail-on error --flow BF-NNNN` once, at completion",
     );
-    expect(skill).toContain("inside a route, the verify stage runs the validation instead");
+    expect(skill).toContain("Inside a route it runs no validate: the verify stage does.");
     expect(skill).not.toMatch(/qfai validate[^.]*--spec\b/);
   });
 });

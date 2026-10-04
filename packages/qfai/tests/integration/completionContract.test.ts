@@ -58,7 +58,7 @@ describe("BF completion gate", () => {
     const skill = (await readFile(implementSkillPath, "utf8")).replace(/\s+/g, " ");
     expect(c).toContain("including decision exceptions");
     expect(skill).toContain("fresh validate result has no test-obligation EX finding for this BF");
-    expect(skill).toContain('reports "nothing to do" after that scoped gate');
+    expect(skill).toContain('the invocation reports "nothing to do"');
     expect(skill).toContain("reads or writes no ledger status");
     expect(c).not.toContain("test-list.md");
   });

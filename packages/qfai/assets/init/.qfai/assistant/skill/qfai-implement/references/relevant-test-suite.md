@@ -8,6 +8,6 @@ Test commands follow the Standard commands rule, `.qfai/assistant/rule/shared-sk
 
 ## Cadence
 
-Run the example selector at RED, GREEN, and after refactor. At a flow checkpoint, run the relevant suite and the scoped validation command. Re-run dependent flows after an integrated shared-module change. The final gate uses the integrated source revision that reviewers receive.
+While implementing, run only the selected example test: at RED, at GREEN, and after refactor. The relevant suite, the other gates and `npx qfai validate` run once, in the verify stage, over the integrated source revision the reviewers receive.
 
 Record command, exit code, summary, and source revision for every run. A prior run remains history; it does not prove a later tree.

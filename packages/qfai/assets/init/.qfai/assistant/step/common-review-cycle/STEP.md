@@ -34,7 +34,6 @@ them; it is the procedure that applies them.
   from, so the code and tests earlier stages wrote are read with the change note.
 - **The latest results the run recorded**, such as the test runs and gate
   results. The review runs no gate of its own.
-- **The stage's grilling record**, where the stage held a session.
 - **Answers an earlier stage recorded**, when an earlier stage's review already
   answered findings on the same artifact.
 
@@ -43,9 +42,7 @@ them; it is the procedure that applies them.
 1. **Build the request.** Name the scope, the target files and the review
    focus. Put the answers an earlier stage recorded on the same artifact into
    this review's request before dispatching reviewers, under
-   `.qfai/assistant/rule/review-convergence.md#answered-demands-must`. Where
-   the stage holds a grilling record, include it: the reviewer rules on it and
-   should not have to look for it.
+   `.qfai/assistant/rule/review-convergence.md#answered-demands-must`.
 2. **Dispatch.** Send each reviewer a work order in the shared template. An
    agent that authored, edited or recommended a decision in the reviewed
    artifact is not its independent reviewer; inside a run, `actorHistory` says
