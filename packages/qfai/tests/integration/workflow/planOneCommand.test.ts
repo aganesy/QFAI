@@ -10,6 +10,7 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
+import { resolveToolVersion } from "../../../src/core/version.js";
 import { extraction } from "../../helpers/workflowExtraction.js";
 import {
   field,
@@ -248,11 +249,25 @@ it("A stray token after plan is refused, naming it", async () => {
   ]);
 });
 
-it("Help prints the operation as text", async () => {
+it("Help, long or short, prints the operation as text", async () => {
   const root = await minimalProject();
-  const help = workflow(root, ["--help"]);
+  const runs = ["--help", "-h"].map((flag) => workflow(root, [flag]));
 
-  expect([help.status, help.json, help.stdout.includes("plan")]).toEqual([0, undefined, true]);
+  expect(runs.map((help) => [help.status, help.json, help.stdout.includes("plan")])).toEqual([
+    [0, undefined, true],
+    [0, undefined, true],
+  ]);
+});
+
+it("The version, long or short, prints the installed version as text", async () => {
+  const root = await minimalProject();
+  const packageVersion = await resolveToolVersion();
+  const runs = ["--version", "-V"].map((flag) => workflow(root, [flag]));
+
+  expect(runs.map((version) => [version.status, version.stdout.trim()])).toEqual([
+    [0, packageVersion],
+    [0, packageVersion],
+  ]);
 });
 
 // QFAI:EX-0001-0222-07

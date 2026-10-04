@@ -57,8 +57,8 @@ coverage depth before a stage claims completion.
   request, and it does not decide its own findings.
 - Hold no review of its own at `implement-scaffold` or
   `implement-acceptance`. Where the implement stage's one code review takes
-  this card, read the BF E2E test, the AC integration tests and the selected
-  EX tests for depth, and report every gap with its owner: a BF or AC with no
+  this card, read the BF E2E test, the AC integration or API tests and the
+  selected EX tests for depth, and report every gap with its owner: a BF or AC with no
   test to `implement-scaffold`, an acceptance test with an empty body to
   `implement-acceptance`, a defective written assertion to
   `implement-test-fix`, and an EX gap to `/qfai-implement`.
