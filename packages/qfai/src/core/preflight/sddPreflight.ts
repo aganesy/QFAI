@@ -96,8 +96,9 @@ export async function runSddPreflight(
   if (blockers.length > 0) {
     // An imported specification stands in for a missing pack, never for a
     // misnamed one.
-    if (options.importPath !== undefined && readiness.dangerousPackNames.length === 0) {
-      if (await isReadableFile(options.importPath)) {
+    if (options.importPath !== undefined) {
+      const readable = await isReadableFile(options.importPath);
+      if (readable && readiness.dangerousPackNames.length === 0) {
         return await completeReadyPreflight({
           source: "import-lite",
           selectedInputPath: options.importPath,
@@ -110,7 +111,9 @@ export async function runSddPreflight(
           nextCommands: ["/qfai-sdd"],
         });
       }
-      blockers.push(`The imported specification ${options.importPath} is not a readable file.`);
+      if (!readable) {
+        blockers.push(`The imported specification ${options.importPath} is not a readable file.`);
+      }
     }
     await publishPreflightSummary(
       run,

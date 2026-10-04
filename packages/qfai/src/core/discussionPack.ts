@@ -5,6 +5,7 @@ import { loadConfig } from "./config.js";
 import type { UiBearingClassification } from "./detection/surfaceType.js";
 import { readValidatedClassification } from "./detection/surfaceType.js";
 import { findPacks, latestPack as selectLatestPack } from "./packLocator.js";
+import { headingText, parseHeadings } from "./parse/markdown.js";
 import { readDiscussionCurrentIdState } from "./state.js";
 
 /**
@@ -393,11 +394,9 @@ function isDiscussionPackFileIncomplete(text: string): boolean {
 
 function lacksRequiredSection(fileName: RequiredDiscussionPackMarkdownFile, text: string): boolean {
   const headings = new Set(
-    text
-      .replace(/\r\n/g, "\n")
-      .split("\n")
-      .map((line) => /^##\s+(.+?)\s*$/.exec(line)?.[1])
-      .filter((heading) => heading !== undefined),
+    parseHeadings(text)
+      .filter((heading) => heading.level === 2)
+      .map((heading) => headingText(heading.title)),
   );
   return (REQUIRED_DISCUSSION_PACK_SECTIONS[fileName] ?? []).some(
     (section) => !headings.has(section),

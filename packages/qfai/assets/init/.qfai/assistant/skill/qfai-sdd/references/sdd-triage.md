@@ -25,9 +25,9 @@ Inspect the impact cascade: policy → BF → US → AC → EX → enforcing con
 
 Use <paths.specsDir>/decisions.md and <paths.specsDir>/open-questions.md, each with exactly ID, Content, Approach, Status. Append a row; later only Status may change. Do not edit the first three cells or remove the row. Use the next highest ID in the table plus one. A retired item still reserves its BF or US ID.
 
-decisions.md records only what the user approved: each change request, and each critical decision
-the user made. A row is appended once the user has approved what it records. A decision the agent
-took, an approval-free change and a finding it dropped append no row; the final report lists the
+decisions.md records only what the user decided: each change request the user approved or declined,
+and each critical decision the user made. A row is appended once the user has decided what it records.
+A decision the agent took, an approval-free change and a finding it dropped append no row; the final report lists the
 decisions the agent took.
 
 A decision row's Approach takes the form stated at the top of `templates/spec/decisions.md`. What this file asks an Approach to state goes inside that form.
@@ -37,7 +37,8 @@ repository-relative paths it changes; an ID there authorizes nothing. Its Approa
 discussion-<id>#REQ-NNNN when there is one or the actual source path or user requirement otherwise,
 the intended files and rationale with the change classification Primary and Tags, and who approved
 it, when, and the option chosen. The row starts at WIP and moves to DONE once every change it names
-is written. A declined change appends no row. Retiring a story removes its directory under the
+is written. A declined change request is appended at REJECTED, recording in Approach who declined
+it and when; it authorizes no edit. Retiring a story removes its directory under the
 change request that names it, with no separate retired-story file.
 
 An existing row at REJECTED is a rejected option. Open questions use OQ-NNNN rows; DEFERRED needs a
@@ -49,7 +50,7 @@ in Approach. It takes effect only at DONE; it never exempts descendant items.
 ## Approval and no-question mode
 
 Use the shared user-question protocol for CREATE, DELETE, SPLIT, MERGE, SUPERSEDE, and UPDATE:REMOVE. Present the target and rationale. Do not self-approve.
-In --auto, ask no question: append one `open-questions.md` row per pending operation naming it and its target, stop before the dependent writes, and report every pending operation with its target as open.
+In --auto, ask no question: append one `open-questions.md` row per pending operation naming it and its target, at TODO with its Content opening Unadjudicated:; stop before the dependent writes, and report every pending operation with its target as open.
 Approval-free changes may proceed only if they do not depend on a pending operation.
 
 Clarifications follow the constitution's question budget. Approval questions are decisions, so they do not consume that clarification budget. A pre-triage answer to continue is not approval for an operation not yet classified.

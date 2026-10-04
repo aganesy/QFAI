@@ -122,7 +122,25 @@ describe("runSddPreflight", () => {
     }
   });
 
-  it.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
+  it("names an unreadable imported specification beside a misnamed discussion pack", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      await mkdir(path.join(root, ".qfai", "discussion", "discussion-latest"), {
+        recursive: true,
+      });
+      const missing = path.join(root, "docs", "missing.md");
+
+      const result = await runSddPreflight(root, defaultConfig, { importPath: missing });
+
+      expect(result.status).toBe("blocked");
+      expect(result.blockers.some((item) => item.includes("discussion-latest"))).toBe(true);
+      expect(result.blockers.some((item) => item.includes(missing))).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it.skipIf(process.platform === "win32" || process.geteuid?.() === 0)(
     "stays blocked on an imported specification this process cannot read",
     async () => {
       const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));

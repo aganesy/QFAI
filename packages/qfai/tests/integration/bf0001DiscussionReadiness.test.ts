@@ -81,7 +81,14 @@ it("accepts a complete nine-file pack", async () => {
       "09_Constraints.md",
       "11_OQ-Register.md",
     ]);
-    await writeCompletePack(root);
+    const pack = await writeCompletePack(root);
+    expect(await validateDiscussionPackReadiness(root, defaultConfig)).toEqual([]);
+    // A closing-hash ATX heading names the same section.
+    await writeFile(
+      path.join(pack, "01_Context.md"),
+      CONTEXT.replace("## Inception Deck", "## Inception Deck ##"),
+      "utf8",
+    );
     expect(await validateDiscussionPackReadiness(root, defaultConfig)).toEqual([]);
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -257,15 +264,16 @@ it.each([
 
 // QFAI:EX-0001-0013-03
 it.each([
-  ["01_Context.md", "## Inception Deck"],
-  ["09_Constraints.md", "## Operational Policy"],
-])("reports %s without its %s section as incomplete", async (file, heading) => {
+  ["01_Context.md", "## Inception Deck", "## Notes"],
+  ["09_Constraints.md", "## Operational Policy", "## Notes"],
+  ["01_Context.md", "## Inception Deck", "```md\n## Inception Deck\n```"],
+])("reports %s whose %s section becomes %j as incomplete", async (file, heading, replacement) => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-bf1-discussion-"));
   try {
     const pack = await writeCompletePack(root);
     const target = path.join(pack, file);
     const content = await readFile(target, "utf8");
-    await writeFile(target, content.replace(heading, "## Notes"), "utf8");
+    await writeFile(target, content.replace(heading, replacement), "utf8");
     const findings = await validateDiscussionPackReadiness(root, defaultConfig);
     expect(
       findings.some((item) => item.code === "QFAI-DPACK-003" && item.refs?.includes(file)),
