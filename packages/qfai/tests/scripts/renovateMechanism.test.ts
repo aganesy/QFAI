@@ -434,7 +434,7 @@ describe("automerge is declared together with the check that decides whether any
     // The list is the claim. A rule that later widened to another package, or narrowed an
     // exception to one update type, changes what this reads and fails here rather than passing
     // green over an invariant it no longer holds.
-    const EXEMPT: readonly string[] = [];
+    const EXEMPT = ["vitest"];
 
     // The config without its comments. A commented-out property is not a property Renovate
     // reads, so every assertion below reads this text and not the file's.
@@ -553,6 +553,21 @@ describe("automerge is declared together with the check that decides whether any
           "as a package that does",
       ).toContain(name);
     }
+
+    // The names alone can survive the section that says what to do about them, so the section
+    // is read too: its own heading, and the manual step it exists to describe.
+    const section = /^### The test runner\s*$([\s\S]*?)(?=^#{1,3} )/m.exec(guide)?.[1] ?? "";
+    for (const name of EXEMPT) {
+      expect(
+        section,
+        `the guide's section on the held-back runner has to name ${name} and say how it is raised`,
+      ).toContain(name);
+    }
+    expect(
+      section,
+      "the guide's section on the held-back runner has to say that raising it is a manual step, " +
+        "because Renovate sends no pull request that would remind anyone",
+    ).toMatch(/manual step/);
   });
 });
 

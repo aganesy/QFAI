@@ -164,6 +164,22 @@
       matchDepTypes: ["engines", "packageManager"],
       groupName: null,
     },
+    {
+      // The test runner is not offered, and moves by hand. Every runner release since its third
+      // major declares an engine range that excludes at least one odd Node line, so
+      // `constraintsFiltering` drops all of them against the range above. Left enabled, the
+      // runner would freeze with nothing saying so; disabled, the manual step is written down in
+      // `.github/renovate.md`.
+      //
+      // It is also the program CI runs to judge its own update. A release that reported success
+      // would be merged by the automerge above without anyone reading it, and then run on every
+      // developer machine. A hand edit puts a reviewer in front of that.
+      //
+      // A security fix still reaches it: `vulnerabilityAlerts` below is applied as a forced
+      // override, so the `enabled: true` there outranks this refusal for that one path.
+      matchPackageNames: ["vitest"],
+      enabled: false,
+    },
   ],
 
   customManagers: [
@@ -195,8 +211,8 @@
     //
     // `enabled` is STATED here, and it is the one key in this block that is not about timing.
     // This whole block is applied as a forced override, so it is the only thing that reaches a
-    // package a rule above switches off. Without it such an exception would also be an exception
-    // to this policy, on the path where waiting costs most.
+    // package a rule above switches off — and one does. Without it the manual-update exception
+    // would also be an exception to this policy, on the path where waiting costs most.
     enabled: true,
     labels: ["dependencies", "security"],
     schedule: null,

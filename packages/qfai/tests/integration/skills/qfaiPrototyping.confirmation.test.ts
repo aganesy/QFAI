@@ -279,13 +279,6 @@ describe.each(TREES)("%s", (tree) => {
       "It starts from the primary UI contract preflight resolved: the one the request names, else `prototyping.primaryUiContract`.",
     );
     expect(loop).toContain(
-      "A summary whose `layoutAntiPatternsDetected[]` is not empty scores `informationArchitecture` at most `acceptable`; one scoring higher is asked for again.",
-    );
-    const reviewer = flat(await read(tree, "skill/qfai-prototyping/references/reviewer-prompt.md"));
-    expect(reviewer).toContain(
-      "Any entry in `layoutAntiPatternsDetected[]` caps `informationArchitecture` at `acceptable`.",
-    );
-    expect(loop).toContain(
       "Each payload is checked against the closed schema before it is written, and one that does not conform is asked for again.",
     );
     // The reviewer runs read-only, so the orchestrator writes what it returns.
@@ -297,6 +290,19 @@ describe.each(TREES)("%s", (tree) => {
     );
     expect(schema).toContain(
       "The orchestrator writes the pair's payload itself, with `sessionStatus` `launchFailed` or `retryExhausted`,",
+    );
+  });
+
+  // QFAI:AC-0001-0108-01
+  // QFAI:EX-0001-0108-01
+  it("caps informationArchitecture at acceptable when a layout anti-pattern is detected", async () => {
+    const reviewer = flat(await read(tree, "skill/qfai-prototyping/references/reviewer-prompt.md"));
+    expect(reviewer).toContain(
+      "Any entry in `layoutAntiPatternsDetected[]` caps `informationArchitecture` at `acceptable`.",
+    );
+    const loop = flat(await read(tree, "step/prototyping-loop/STEP.md"));
+    expect(loop).toContain(
+      "A summary whose `layoutAntiPatternsDetected[]` is not empty scores `informationArchitecture` at most `acceptable`; a higher score is written as `acceptable`.",
     );
   });
 

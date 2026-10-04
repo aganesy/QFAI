@@ -86,8 +86,8 @@ under `.qfai/prototype/`, or `00` when there are none.
    `iter-NN/review.json`. Each payload is checked against the closed schema
    before it is written, and one that does not conform is asked for again. A
    summary whose `layoutAntiPatternsDetected[]` is not empty scores
-   `informationArchitecture` at most `acceptable`; one scoring higher is asked
-   for again. It runs the reviewer's attempts and writes a failed pair's
+   `informationArchitecture` at most `acceptable`; a higher score is written as
+   `acceptable`. It runs the reviewer's attempts and writes a failed pair's
    payload, as the payload schema sets out. Then it appends one line for the
    iteration to `progress.md`.
 5. **The user.** Put the prototype to the user, as below.
