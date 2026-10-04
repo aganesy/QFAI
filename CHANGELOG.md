@@ -30,6 +30,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   record applies that record before prototyping. A request to implement the change in the product does not
   set it, so no prototype step runs in front of the implementation.
 
+### Fixed
+
+- **Review follow-ups from the 2.1.0 redesign** (#2875). Findings below P1
+  that were deferred while the redesign merged are fixed:
+  - `qfai init` and migration: copying refuses an ancestor that escapes the
+    target, and a rerun of migration step 3 consults a planned placement only
+    for a rule that actually moved.
+  - `qfai workflow plan`: a stage key `effects` is refused as an unknown key,
+    a refusal always names its subject, and each refusal is one sentence.
+    `--version` is allowed beside `--help` as plain-text output.
+  - The route contract states that a repair the verify block makes after the
+    code review is not reviewed again and is listed in the final report.
+  - Discussion pack and `qfai sdd preflight`: the import fallback applies
+    only when the pack is missing, an unreadable file is not reported ready,
+    and `Next-Decision-Point` asks for the next point of decision.
+  - A change request the user declines is recorded as a `REJECTED` row.
+  - The prototyping steps start from the primary UI contract, refuse a screen
+    ID containing `..`, and hand the reviewer each iteration's URL.
+  - The unused coverage tool and its configuration are removed.
+
 ## [2.1.0] - 2026-10-04
 
 ### Breaking changes
