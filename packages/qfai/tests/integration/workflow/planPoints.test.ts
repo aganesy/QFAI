@@ -109,7 +109,7 @@ it("draft-release-notes drafts, then releases at its end with no verify stage", 
 });
 
 // QFAI:EX-0001-0209-01
-it("add-feature returns the seven sdd steps in order, with the four pass-through steps marked", async () => {
+it("add-feature returns the six sdd steps in order, with the four pass-through steps marked", async () => {
   const [sdd] = (await planned("add-feature")).stages;
 
   expect(sdd?.steps.map((step) => [step.name, step.passThrough])).toEqual([
@@ -119,7 +119,6 @@ it("add-feature returns the seven sdd steps in order, with the four pass-through
     ["sdd-contract", true],
     ["common-design-md", true],
     ["sdd-cycle", true],
-    ["sdd-gate", false],
   ]);
 });
 
@@ -231,7 +230,7 @@ it("fix-defect continues on missing-test and moves on each other diagnosis verdi
 
   expect({
     moves: verdicts.map((verdict) => destinations(fixDefect, "implement-diagnose", verdict)),
-    diagnosedBeforeAnyEdit: order.indexOf("implement-diagnose") < order.indexOf("sdd-story"),
+    diagnosedBeforeAnyEdit: order.indexOf("implement-diagnose") < order.indexOf("implement-tdd"),
   }).toEqual({
     moves: [
       undefined,

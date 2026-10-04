@@ -91,7 +91,7 @@ it("Every change route reviews the specification once when it can change it, and
   );
   const writesSpec = (plan: WorkflowPlanFile) =>
     plan.stages.some(
-      (stage) => stage.kind === "sdd" && stage.steps.some((step) => step.name === "sdd-gate"),
+      (stage) => stage.kind === "sdd" && stage.steps.some((step) => step.name === "sdd-story"),
     );
   const off = changeRoutes.filter((plan) => {
     const kinds = reviews(plan).map((each) => each.split(":")[1]);
@@ -117,8 +117,7 @@ it("write-acceptance-tests writes the test bodies, runs the gates and reviews th
     stages: [
       ["implement", ["implement-credentials°", "implement-acceptance"]],
       ["note", ["verify-change-note°"]],
-      ["verify", ["verify-qfai-gate", "verify-repo-gate"]],
-      ["commit", ["verify-commit"]],
+      ["verify", ["verify-qfai-gate", "verify-repo-gate", "verify-commit"]],
     ],
     reviews: ["note:code"],
   });

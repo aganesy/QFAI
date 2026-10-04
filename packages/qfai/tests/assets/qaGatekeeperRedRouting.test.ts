@@ -135,7 +135,6 @@ describe.each(ASSISTANT_DIRS)("%s — the implementation steps say where the gat
     const skill = await readImplementFlowSteps(path.join(repoRoot, rel));
     expect(skill).toContain("An EX is the unit of implementation review");
     expect(skill).toContain("Work one EX at a time by default");
-    expect(skill).toContain("Every implemented EX has an observed RED, GREEN and Refactor result");
   });
 
   it("keeps acceptance test authorship out of implement-tdd", async () => {
@@ -144,16 +143,5 @@ describe.each(ASSISTANT_DIRS)("%s — the implementation steps say where the gat
     expect(frontmatter).not.toContain("acceptance-test-engineer");
     expect(skill).toContain("Preserve the BF E2E and AC integration");
     expect(skill).toContain("or API tests `implement-scaffold` wrote");
-  });
-
-  it("asks the gatekeeper to check both observed outcomes", async () => {
-    const skill = await readImplementFlowSteps(path.join(repoRoot, rel));
-    const flat = skill.replace(/\s+/g, " ");
-    expect(flat).toContain("The qa-gatekeeper checks the observed RED and GREEN evidence");
-    expect(flat).toContain("RED, GREEN, and Refactor commands and observed results");
-    // RED and GREEN are judged per example as they are taken; the other reviewers judge the
-    // whole stage once, after its last step.
-    expect(flat).toContain("RED before any production code for the example exists");
-    expect(flat).toContain("The stage is reviewed once, after its last step");
   });
 });

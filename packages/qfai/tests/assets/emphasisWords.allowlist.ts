@@ -114,7 +114,6 @@ export const KEPT_EMPHASIS: Readonly<Record<string, readonly KeptEmphasis[]>> = 
     },
   ],
   ".qfai/assistant/skill/web-research/SKILL.md": [DRIFT_MARKER, DELEGATION_HEADING],
-  ".qfai/assistant/step/implement-tdd/STEP.md": [GRILLING_HEADING],
   ".qfai/assistant/step/verify-context/STEP.md": [GRILLING_HEADING],
   ".qfai/assistant/step/verify-qfai-gate/STEP.md": [DRIFT_MARKER],
 };

@@ -20,7 +20,7 @@ import { expectSentence } from "../helpers/shippedSentences.js";
 const SKILL = "skill/qfai-sdd/SKILL.md";
 const CYCLE = "skill/qfai-sdd/references/concrete-abstract-cycle.md";
 const CYCLE_STEP = "step/sdd-cycle/STEP.md";
-const STORY_STEP = "step/sdd-story/STEP.md";
+const SEEDING_STEP = "step/implement-tdd/STEP.md";
 const CONTRACT_STEP = "step/sdd-contract/STEP.md";
 const CYCLE_CITATION = ".qfai/assistant/skill/qfai-sdd/references/concrete-abstract-cycle.md";
 const TRIAGE = "skill/qfai-sdd/references/sdd-triage.md";
@@ -138,7 +138,7 @@ describe("the concrete-abstract cycle across the shipped qfai-sdd", () => {
     const reference = await section(CYCLE, "## When a cycle runs");
     expectSentence(reference, "the trigger", /Statement or the Examples cell of at least one BR/i);
     expectSentence(reference, "no cycle under seeding", /stage is an append stage/i);
-    const seeding = await section(STORY_STEP, "## A diagnosed missing test");
+    const seeding = await section(SEEDING_STEP, "## A diagnosed missing example");
     expectSentence(seeding, "no cycle under seeding", /No concrete-abstract cycle runs/i);
   });
 

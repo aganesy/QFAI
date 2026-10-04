@@ -1,7 +1,7 @@
 ---
 name: implement-tdd
 owner: qfai-implement
-purpose: "Select each owed example of one business flow from a fresh validator result, take it through an observed Red, Green and Refactor cycle, and align every surface that does not own the truth."
+purpose: "Take each example of one business flow that no test annotates through an observed Red, Green and Refactor cycle, appending the one example a diagnosed missing test needs, and align every surface that does not own the truth."
 requires:
   - common-steering-refresh
   - common-gate-run
@@ -27,9 +27,9 @@ Otherwise the invocation's BF argument names it.
 
 ## Passes when
 
-Read first: a fresh validate result for the flow. The step passes when it
-reports no owed example, so no example needs a Red, Green and Refactor cycle.
-The pass names the validate run.
+Read first: the flow's examples and the tests that annotate them. The step
+passes when every example has an annotating test, so no example needs a Red,
+Green and Refactor cycle. The pass names the examples and their tests.
 
 ## Reads
 
@@ -50,9 +50,9 @@ The pass names the validate run.
 Send a decision, a question for the user or an out-of-scope discovery to
 `/qfai-sdd` as a change request. An out-of-scope discovery does not stop the
 current flow. A diagnosed missing test on behaviour an existing AC states is
-the one scope gap that raises no change request and adds no EX here: an EX that
-states the case is worked as an EX no test annotates, and where none does,
-`sdd-story` adds it earlier in the same stage.
+the one scope gap that raises no change request: an EX that states the case is
+worked as an EX no test annotates, and where none does, this step appends it,
+as [A diagnosed missing example](#a-diagnosed-missing-example) states.
 
 ## Preflight
 
@@ -87,22 +87,34 @@ implementation, stop and ask the user. Route a needed story or contract change
 through `.qfai/assistant/rule/drift-protocol.md`; the run solves local
 obstacles. Do not reopen settled requirements as implementation preferences.
 
+## A diagnosed missing example
+
+On a route of the `fix` family, a `missing-test` diagnosis whose case no EX
+states has this step append one EX before it makes the diagnosis's failing test
+pass. The EX states what an existing AC already requires, so the step asks the
+user nothing:
+
+- Append exactly one EX to the `03_Example.md` of the story that owns the AC
+  the diagnosis matched. Its ID is the next free EX ID of that story, its
+  `AC-Ref` is that AC, and the diagnosis is its reason.
+- Add the new EX ID to the Examples cell of the contract rule that already
+  cites an example of that AC. The rule's Statement is unchanged.
+- Change no story, AC, rule statement or existing EX.
+- Append the one `Change request:` row the drift gate needs: it names the
+  files changed and records that the session appended the EX under an existing
+  AC and that nobody was asked.
+- List the EX in the run's final report.
+- No concrete-abstract cycle runs.
+
+An EX that would contradict a story, an AC, another EX or a rule is put to the
+user before anything is written. Where the diagnosis matched an EX that already
+states the case, append nothing and annotate the failing test with that EX.
+
 ## Select the examples
 
-Run `npx qfai validate --profile tdd --flow BF-NNNN` once, at the start of the
-step. Record the run start time. Read its `validate.flow-<ids>.json` result
-even when the command exits nonzero. The result is usable only when the file
-exists, `profile` is `tdd`, and `generatedAt` is no earlier than this run
-start. If any check fails, stop and report the command, exit result, and
-missing or stale field; never infer that the flow has no remaining work.
-`common-gate-run` states how the JSON result is read.
-
-Work that result's **test-obligation EX findings** in EX ID order. The
-validator owns the obligation predicate, including decision exceptions; do not
-reconstruct it in this step. A caller that names EX IDs works each named ID
-serially after confirming each is in the current flow and is owed. Report any
-other finding with its owner. A test annotating an example is what says the
-example is done.
+Work the EX IDs the caller names, each after confirming it is in the current
+flow. Otherwise take the flow's EX IDs that no test annotates, in EX ID order:
+a test annotating an example is what says the example is done.
 
 See `.qfai/assistant/skill/qfai-implement/references/cross-spec-ownership.md`
 for changes that touch another flow and
@@ -127,7 +139,7 @@ not write another: annotate that test with the EX ID and run it to confirm it
 still fails.
 
 While implementing, run only the selected test. The full suite, Lint,
-Typecheck, Build and `qfai validate` run once, in the verify stage.
+Typecheck, Build and `npx qfai validate` run once, in the verify stage.
 
 1. **Red:** Run the Test command from `tech.md` for the selected test alone.
    Observe the assertion fail for the intended behavior before changing
@@ -149,7 +161,9 @@ Typecheck, Build and `qfai validate` run once, in the verify stage.
 For UI-affecting work, follow
 `.qfai/assistant/skill/qfai-implement/references/ui-affecting.md`; source code
 alone does not prove the user-visible result. The route's code review reads
-the recorded Red and Green results.
+the recorded Red and Green results. Classify its findings as
+`.qfai/assistant/skill/qfai-implement/references/finding-classification.md`
+says. A record correction follows `.qfai/assistant/rule/drift-protocol.md`.
 
 ## Align the other surfaces
 
@@ -171,9 +185,10 @@ Change nothing on the surface that owns the truth.
 ## Report
 
 The stage report gives each example its own `### EX-NNNN-NNNN-NN` section with
-the obligation, test path and selector, the RED, GREEN and Refactor commands
-and observed results, and open findings.
+the obligation, test path and selector,
+RED, GREEN, and Refactor commands and observed results, and open findings.
 Evidence without a command and result pair does not prove a gate.
+A failing or unrun gate cannot be reported as PASS.
 
 ## Gate
 

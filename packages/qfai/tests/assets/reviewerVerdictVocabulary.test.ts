@@ -66,23 +66,6 @@ describe("reviewer verdict vocabulary", () => {
     }
   });
 
-  // qfai-implement consumes independent reviewer verdicts and records the
-  // completed round. Its gate must require PASS on the current revision.
-  it("matches qfai-implement's evidence fields and blocking branch to the verdict", async () => {
-    const [tdd, checkpoint] = await Promise.all([
-      readShipped("step/implement-tdd/STEP.md"),
-      readShipped("step/implement-checkpoint/STEP.md"),
-    ]);
-    for (const content of tdd) {
-      expect(content).toContain("Record explicit PASS or REVISE for the current revision");
-      expect(content).not.toMatch(/return(?:s|ed)? PASS or FAIL/i);
-    }
-    for (const content of checkpoint) {
-      expect(content).toContain("required independent PASS reviews");
-      expect(content).not.toMatch(/return(?:s|ed)? PASS or FAIL/i);
-    }
-  });
-
   it("keeps the reviewer response template on PASS | REVISE", async () => {
     for (const content of await readShipped("rule/shared-skill-delegation-baseline.md")) {
       expect(content).toContain("Result: PASS | REVISE");

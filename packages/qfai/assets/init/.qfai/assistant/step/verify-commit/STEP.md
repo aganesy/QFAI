@@ -20,7 +20,7 @@ The last step of a change route. It records the run's work as a local commit.
 ## Writes
 
 - One commit on the current branch holding the run's changes.
-- In the stage report: the commit, and the files it holds.
+- In the final report: the commit, and the files it holds.
 
 The step never pushes, opens a pull request or merges. Each of those waits for
 the user's own instruction.

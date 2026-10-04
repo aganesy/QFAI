@@ -1,7 +1,7 @@
 ---
 name: sdd-story
 owner: qfai-sdd
-purpose: "Write the stories, acceptance criteria and examples of each affected flow, or append the one example a diagnosed defect needs."
+purpose: "Write the stories, acceptance criteria and examples of each affected flow."
 requires: [common-grilling-record]
 roles: [requirements-analyst, test-design-analyst, qa-strategist, product-experience-architect]
 routing-profile: default
@@ -60,43 +60,9 @@ states.
 
 ## Passes when
 
-Read first: the diagnosis or the triage decisions, and the `03_Example.md` of each
-story they touch. The step passes in two cases, and the pass names both facts
-it rests on:
+Read first: the triage decisions, and the `03_Example.md` of each story they
+touch. The step passes when the change stays inside the documents that own the
+truth, as `sdd-triage` recorded the owner, and adds and changes no example. The
+pass names the owning document and says that no example is added or changed.
 
-- **In an append stage**, when an existing example already states the case the
-  diagnosis matched. The pass cites that example, and no row is appended to
-  `decisions.md`.
-- **In an `sdd` stage**, when the change stays inside the documents that own
-  the truth, as `sdd-triage` recorded the owner, and adds and changes no
-  example. The pass names the owning document and says that no example is added
-  or changed.
-
-A pass is refused while no example states the append stage's case, and in an
-`sdd` stage whose result adds, changes or removes an example.
-
-## A diagnosed missing test
-
-In a stage of kind `sdd_append`, which a diagnosis that found a missing example
-opens, this step adds the one example the missing test needs, for behaviour an
-existing AC already states:
-
-- Append exactly one EX to the `03_Example.md` of the story that owns the AC the
-  diagnosis matched. Its ID is the next free EX ID of that story, and its
-  `AC-Ref` is that AC.
-- Add the new EX ID to the Examples cell of the contract rule that already cites
-  an example of that AC. The rule's Statement is unchanged.
-- When the work order's `recordAreas` name no contract, because rules in several
-  contracts cite that AC's examples, change no file. Return `blocked` with one
-  `debts` entry owned by `operator` that names those contracts: which of them
-  takes the new example is the operator's to settle.
-- Add or change no US or AC, and no existing EX. Write or annotate no test: the
-  new EX stays an example no test annotates.
-- Carry the diagnosis as the reason for the new EX: the stage report and the
-  `Change request:` row name it.
-- Append no triage or seeding row of its own: the operation needs no triage
-  approval. The two file changes still go to the user, and on approval the
-  stage's one `Change request:` row names them, as
-  `.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#a-change-to-the-story-tree`
-  sets out.
-- No concrete-abstract cycle runs.
+A pass is refused when the result adds, changes or removes an example.

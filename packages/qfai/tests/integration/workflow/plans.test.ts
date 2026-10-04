@@ -66,9 +66,7 @@ async function planOf(route: string): Promise<WorkflowPlanFile | undefined> {
   return (await loadBuiltInPlans()).find((plan) => plan.route === route);
 }
 
-const VERIFY = ["verify-qfai-gate", "verify-repo-gate"];
-
-const COMMIT = ["verify", ["verify-commit"]];
+const VERIFY = ["verify-qfai-gate", "verify-repo-gate", "verify-commit"];
 
 // QFAI:EX-0001-0220-15
 // QFAI:EX-0001-0220-16
@@ -79,35 +77,32 @@ it("The shipped add-feature and prototype-feature plans", async () => {
   expect({
     addFeature: await kinds("add-feature"),
     prototypeFeature: await kinds("prototype-feature"),
-    ending: shape(await planOf("add-feature")).slice(-2),
+    verify: shape(await planOf("add-feature")).at(-1),
   }).toEqual({
-    addFeature: ["sdd", "implement", "maintenance", "verify", "verify", "verify"],
-    prototypeFeature: ["sdd", "prototype", "implement", "maintenance", "verify", "verify", "verify"],
-    ending: [["verify", VERIFY], COMMIT],
+    addFeature: ["sdd", "implement", "maintenance", "verify", "verify"],
+    prototypeFeature: ["sdd", "prototype", "implement", "maintenance", "verify", "verify"],
+    verify: ["verify", VERIFY],
   });
 });
 
-// Whether every stage but the trailing `verify-external` and commit stages reaches the verify
-// block, and the stage that ends the plan.
+// Whether every stage but a trailing `verify-external` one reaches the verify block, and the
+// stages nothing follows.
 function verifyReach(plan: WorkflowPlanFile) {
   const { stages } = plan;
   const followers = (id: string) => stages.filter((stage) => stage.after.includes(id));
   const isBlock = (id: string) =>
-    stages.some((stage) => stage.id === id && stage.steps.at(-1)?.name === "verify-repo-gate");
+    stages.some(
+      (stage) => stage.id === id && stage.steps.some((step) => step.name === "verify-repo-gate"),
+    );
   const reaches = (id: string): boolean =>
     isBlock(id) || followers(id).some((next) => reaches(next.id));
-  const trailing = (id: string) =>
-    stages.some(
-      (stage) =>
-        stage.id === id && ["verify-external", "verify-commit"].includes(stage.steps[0]?.name ?? ""),
-    );
-  const ends = stages.filter((stage) => followers(stage.id).length === 0);
+  const external = (id: string) =>
+    stages.some((stage) => stage.id === id && stage.steps[0]?.name === "verify-external");
   return {
-    reached: stages.every((stage) => trailing(stage.id) || reaches(stage.id)),
+    reached: stages.every((stage) => external(stage.id) || reaches(stage.id)),
     blocks: stages
       .filter((stage) => isBlock(stage.id))
       .map((stage) => shape({ ...plan, stages: [stage] })[0]),
-    ends: ends.map((stage) => shape({ ...plan, stages: [stage] })[0]),
   };
 }
 
@@ -123,7 +118,7 @@ it("The plan of every change route the package ships", async () => {
     reach: [...new Set(changeRoutes.map((plan) => JSON.stringify(verifyReach(plan))))],
   }).toEqual({
     count: 23,
-    reach: [JSON.stringify({ reached: true, blocks: [["verify", VERIFY]], ends: [COMMIT] })],
+    reach: [JSON.stringify({ reached: true, blocks: [["verify", VERIFY]] })],
   });
 });
 
@@ -149,7 +144,6 @@ it("The shipped edit-text plan", async () => {
     ["maintenance", ["maintain-edit"]],
     ["verify", ["verify-change-note°"]],
     ["verify", VERIFY],
-    COMMIT,
   ]);
 });
 
@@ -248,7 +242,10 @@ it("A plan naming implement-guess, a test fix under an implement kind, and a mix
       text.replace("kind: test_fix", "kind: implement"),
     ),
     mixed: await refusalsOf("add-feature", (text) =>
-      text.replace("steps: [implement-scaffold, implement-tdd]", "steps: [implement-tdd, sdd-flow]"),
+      text.replace(
+        "steps: [implement-scaffold, implement-tdd]",
+        "steps: [implement-tdd, sdd-flow]",
+      ),
     ),
   }).toEqual({
     guess: [{ reason: "out-of-vocabulary", subject: "implement-guess" }],
@@ -277,15 +274,15 @@ it("a pass-through mark on a step off the pass-through list", async () => {
   expect(
     await refusalsOf("edit-text", (text) =>
       text.replace(
-        "steps: [verify-qfai-gate, verify-repo-gate]",
-        "steps: [{ step: verify-qfai-gate, passThrough: true }, verify-repo-gate]",
+        "steps: [verify-qfai-gate, verify-repo-gate, verify-commit]",
+        "steps: [{ step: verify-qfai-gate, passThrough: true }, verify-repo-gate, verify-commit]",
       ),
     ),
   ).toEqual([{ reason: "pass-through", subject: "verify-qfai-gate" }]);
 });
 
 const VERIFY_STAGE =
-  "  - id: verify\n    kind: verify\n    steps: [verify-qfai-gate, verify-repo-gate]\n    after: [note]\n";
+  "  - id: verify\n    kind: verify\n    steps: [verify-qfai-gate, verify-repo-gate, verify-commit]\n    after: [note]\n";
 
 const SPLIT_VERIFY = [
   "  - id: verify",
@@ -294,7 +291,7 @@ const SPLIT_VERIFY = [
   "    after: [note]",
   "  - id: gate",
   "    kind: verify",
-  "    steps: [verify-repo-gate]",
+  "    steps: [verify-repo-gate, verify-commit]",
   "    after: [verify]",
   "",
 ].join("\n");
@@ -314,25 +311,19 @@ it("A split verify block, and an answer-question whose last stage answers", asyn
   });
 });
 
-const COMMIT_STAGE =
-  "  - id: commit\n    kind: verify\n    steps: [verify-commit]\n    after: [verify]\n";
-
 // QFAI:EX-0001-0218-04
-it("A change route with no commit stage, one with a stage after it, and a close route that commits", async () => {
-  const tidy = "  - id: tidy\n    kind: maintenance\n    steps: [maintain-edit]\n    after: [commit]\n";
-  const commit = "  - id: commit\n    kind: verify\n    steps: [verify-commit]\n    after: [close]\n";
+it("A verify block without verify-commit, and one that commits before the gates", async () => {
+  const block = "steps: [verify-qfai-gate, verify-repo-gate, verify-commit]";
   expect({
-    none: await refusalsOf("edit-text", (text) => text.replace(COMMIT_STAGE, "")),
-    later: await refusalsOf("edit-text", (text) =>
-      text.replace("decisionPoints", `${tidy}decisionPoints`),
+    none: await refusalsOf("edit-text", (text) =>
+      text.replace(block, "steps: [verify-qfai-gate, verify-repo-gate]"),
     ),
-    close: await refusalsOf("close-no-change", (text) =>
-      text.replace("decisionPoints", `${commit}decisionPoints`),
+    early: await refusalsOf("edit-text", (text) =>
+      text.replace(block, "steps: [verify-commit, verify-qfai-gate, verify-repo-gate]"),
     ),
   }).toEqual({
     none: [{ reason: "terminal", subject: "verify" }],
-    later: [{ reason: "terminal", subject: "verify" }],
-    close: [{ reason: "terminal", subject: "commit" }],
+    early: [{ reason: "terminal", subject: "verify" }],
   });
 });
 
@@ -441,9 +432,9 @@ it("Every shipped plan loads and every step it names is installed", async () => 
   expect(await refusalsFor(root)).toEqual([]);
 });
 
-it("A project whose sdd-gate step is not installed", async () => {
+it("A project whose sdd-story step is not installed", async () => {
   const root = await project();
-  await rm(path.join(root, ".qfai", "assistant", "step", "sdd-gate"), { recursive: true });
+  await rm(path.join(root, ".qfai", "assistant", "step", "sdd-story"), { recursive: true });
 
   expect(await planned(root, { route: "add-feature" })).toEqual({
     ok: false,
@@ -451,7 +442,7 @@ it("A project whose sdd-gate step is not installed", async () => {
     reasons: [
       {
         reason: "plan-invalid",
-        subject: "sdd-gate",
+        subject: "sdd-story",
         file: "add-feature.yml",
         cause: "step-missing",
       },

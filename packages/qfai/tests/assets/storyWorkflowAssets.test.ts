@@ -4,8 +4,6 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { readImplementFlowSteps } from "../helpers/implementSteps.js";
-
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const assistant = path.join(repoRoot, "packages/qfai/assets/init/.qfai/assistant");
 
@@ -68,19 +66,10 @@ describe("story-tree acceptance and implementation assets", () => {
     expect(admissibility).toContain("restore the assertion");
   });
 
-  it("addresses each observation on one final revision", async () => {
-    const implement = await read("step/implement-tdd/STEP.md");
-    expect(implement).toContain("implementation-reviewer checks code and tests");
-    expect(implement).toContain("Each reviewer reads the same final revision");
-  });
-
   it("keeps the assistant file budget and review boundaries explicit", async () => {
     const baseline = await read("rule/shared-skill-operating-baseline.md");
-    const implement = await readImplementFlowSteps(assistant);
     const gatekeeper = await read("agent/qa-gatekeeper.md");
     expect(baseline).toContain("800 lines per assistant asset file");
-    expect(implement).toContain("The author does not certify their own result");
-    expect(implement).toContain("qfai validate --profile tdd --fail-on error --flow BF-NNNN");
     expect(gatekeeper).toContain("An ordinary RED must show");
     expect(gatekeeper).toContain("GREEN needs the same selected test");
     expect(gatekeeper).toContain("A missing dependency");

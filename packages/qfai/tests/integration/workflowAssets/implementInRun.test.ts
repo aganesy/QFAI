@@ -57,10 +57,10 @@ describe("qfai-implement in a workflow run", () => {
       /send a decision, a question for the user or an out-of-scope discovery to `\/qfai-sdd` as a change request/i,
     );
     expect(text).toMatch(
-      /a diagnosed missing test on behaviour an existing AC states is the one scope gap that raises no change request and adds no EX here/i,
+      /a diagnosed missing test on behaviour an existing AC states is the one scope gap that raises no change request/i,
     );
     expect(text).toMatch(/an EX that states the case is worked as an EX no test annotates/i);
-    expect(text).toMatch(/where none does, `\/qfai-sdd` adds it/i);
+    expect(text).toMatch(/where none does, this step appends it/i);
   });
 
   // QFAI:AC-0001-0202-01

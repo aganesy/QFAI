@@ -27,7 +27,7 @@ Use these checkpoints with the ordered stages in sdd-execution-playbook.md. A ch
 - Examples cover meaningful success, boundary, and kept-failure outcomes without inventing product rules.
 - The story and example IDs follow their BF and US scopes and are never reused.
 
-The one example a diagnosed missing test needs is appended as `.qfai/assistant/step/sdd-story/STEP.md#a-diagnosed-missing-test` states.
+The one example a diagnosed missing test needs is appended by the implement stage, as `.qfai/assistant/step/implement-tdd/STEP.md#a-diagnosed-missing-example` states.
 
 ## Contracts and business rules
 

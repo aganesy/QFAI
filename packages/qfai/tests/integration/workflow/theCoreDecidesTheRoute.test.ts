@@ -169,6 +169,6 @@ it("Two fix-defect requests plan the same stages and steps, whatever their risks
 
   expect({
     same: JSON.stringify(risky) === JSON.stringify(plain),
-    inOrder: ["diagnose", "implement", "note", "verify", "commit"].map((id) => ids.indexOf(id)),
-  }).toEqual({ same: true, inOrder: [0, 1, 2, 3, 4] });
+    inOrder: ["diagnose", "implement", "note", "verify"].map((id) => ids.indexOf(id)),
+  }).toEqual({ same: true, inOrder: [0, 1, 2, 3] });
 });

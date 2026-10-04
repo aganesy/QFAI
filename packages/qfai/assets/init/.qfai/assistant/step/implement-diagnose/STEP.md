@@ -31,8 +31,8 @@ argument otherwise.
 
 1. Reproduce the failure with the smallest command that shows it. After a
    baseline measurement, profile the measured path instead. On a route of the
-   `fix` family, the reproduction is a test, as
-   [The failing test](#the-failing-test) states.
+   `fix` family other than `improve-performance`, the reproduction is a test,
+   as [The failing test](#the-failing-test) states.
 2. List the cause candidates and rule each one in or out by an observation.
 3. Name the impact: the BF, AC and EX IDs the failure reaches.
 4. Pick exactly one verdict:
@@ -57,22 +57,22 @@ the verdict and does not choose the route.
 
 ## The failing test
 
-On a route of the `fix` family, a command or manual steps alone do not
-reproduce the failure, except where a baseline measurement is profiled. Write
-the test that should have caught it:
+On a route of the `fix` family other than `improve-performance`, a command or
+manual steps alone reproduce nothing. A test that already exists and fails
+while the defect is present is the reproduction. For `missing-test`, write the
+test that should have caught it, before any production code changes:
 
 1. Put it where the failing behaviour belongs, as
    `.qfai/assistant/rule/test-layers.md` states. Annotate it with the EX that
    states the case. Where no EX states it yet, leave the annotation to
-   `implement-tdd`, which adds it once `sdd-story` has appended the EX.
+   `implement-tdd`, which appends the EX and annotates the test.
 2. Run that test alone and observe its assertion fail for the reported
    behaviour (Red). A load error, a missing dependency or a broken fixture is
    not a Red.
 3. Record the test path, the command and the failure in the stage report.
 
-The test is kept only for `missing-test`. For `regression`, the correct
-existing test that fails is the reproduction. For any other verdict, remove
-the test written here: the route the verdict leads to owns what follows.
+A verdict that moves the work to another route leaves no new test behind:
+remove the test written here.
 
 ## Read-only mode
 

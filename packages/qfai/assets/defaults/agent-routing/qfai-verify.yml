@@ -113,7 +113,7 @@ routing:
   - step: verify-commit
     phases:
       - id: commit
-        mandatory_agents: []
+        mandatory_agents: [orchestrator]
         conditional_agents: []
         parallel_groups: []
         blocking_agents: []

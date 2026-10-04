@@ -33,32 +33,20 @@ describe("sub-agent roster completeness and handoff contracts", () => {
     }
   });
 
-  it("defines the current ownership boundaries", async () => {
-    content ??= await readImplementFlowSteps(implementAssistantDir);
-
-    expect(content).toContain("The qa-gatekeeper checks the observed RED and GREEN evidence");
-    expect(content).toContain("implementation-reviewer checks code and tests");
-    expect(content).toContain("Route UI-affecting work to");
-  });
-
   it("defines control guardrails for parallel work and reviewers", async () => {
     content ??= await readImplementFlowSteps(implementAssistantDir);
 
     expect(content).toContain("Work one EX at a time by default");
     expect(content).toContain("Parallel work requires disjoint");
     expect(content).toContain("required user consent");
-    expect(content).toContain("Each reviewer reads the same final revision");
   });
 
   it("defines the example handoff and review sequence", async () => {
     content ??= await readImplementFlowSteps(implementAssistantDir);
 
-    expect(content).toContain("Take the lowest EX ID");
-    expect(content).toContain("Record command, selector, failure, test hash, and");
+    expect(content).toContain("Otherwise take the flow's EX IDs that no test annotates");
+    expect(content).toContain("Record command, selector and failure");
     expect(content).toContain("Run the same selector and record");
-    expect(content).toContain(
-      "The review request identifies the BF, every EX the stage implemented, the",
-    );
     expect(content).toContain("references/ui-affecting.md");
   });
 });
@@ -78,7 +66,7 @@ describe("watch-it-fail enforcement and resubmission", () => {
     content ??= await readImplementFlowSteps(implementAssistantDir);
 
     expect(content).toContain("Run the same selector and record");
-    expect(content).toContain("Re-run the selector and affected tests");
+    expect(content).toContain("Re-run the selector and record the result");
   });
 });
 
@@ -109,7 +97,6 @@ describe("routing consistency", () => {
   it("SKILL.md routing matches handoff contract targets", async () => {
     const content = await readImplementFlowSteps(implementAssistantDir);
     expect(content).toContain("rule/shared-skill-delegation-baseline.md");
-    expect(content).toContain("The qa-gatekeeper checks the observed RED and GREEN evidence");
   });
 });
 

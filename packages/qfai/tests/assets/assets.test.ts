@@ -1375,7 +1375,6 @@ describe("assets guardrails", () => {
     expect(content).toContain("Observe the assertion fail for the intended behavior");
     expect(content).toContain("Write the minimum production code that makes this test pass");
     expect(content).toContain("QFAI:EX-NNNN-NNNN-NN");
-    expect(content).toContain("--flow BF-NNNN");
     expect(content).not.toContain("test-list.md");
     expect(content).not.toContain("qfai-tdd-red");
     expect(content).not.toContain("qfai-tdd-green");

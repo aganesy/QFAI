@@ -5,6 +5,7 @@ description: "Use when the user asks for a change, a fix, an investigation of th
 argument-hint: "<the change, in your own words>"
 allowed-tools: [Read, Glob, Grep, Write, Edit, Bash, TodoWrite, Task, Agent]
 roles: [orchestrator]
+requires: [common-policy-check]
 mode: execution-focused
 ---
 
@@ -126,8 +127,7 @@ Where parts ran in parallel, report one row per part given to a sub-agent.
 
 ### Reviewer Gate
 
-Each review a plan names returns PASS or REVISE. A step that would change a
-story, contract or decision the request did not cover stops and says so.
+Each review returns PASS or REVISE. A step that would go beyond the request stops.
 
 ## Default Autopilot Policy
 

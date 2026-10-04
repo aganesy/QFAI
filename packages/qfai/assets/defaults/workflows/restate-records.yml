@@ -10,7 +10,6 @@ stages:
       - sdd-triage
       - sdd-story
       - { step: sdd-contract, passThrough: true }
-      - sdd-gate
     after: [diagnose]
     review: spec
   - id: tests
@@ -26,7 +25,7 @@ stages:
     review: code
   - id: verify
     kind: verify
-    steps: [verify-qfai-gate, verify-repo-gate]
+    steps: [verify-qfai-gate, verify-repo-gate, verify-commit]
     after: [note]
 decisionPoints: [sdd-triage]
 branchPoints: []

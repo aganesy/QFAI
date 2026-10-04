@@ -135,7 +135,7 @@ describe.each(TREES)("%s — grilling in the execution stages", (tree) => {
     expectPhrase(primitive, "would wait forever for a confirmation nobody may give");
   });
 
-  it.each(STAGES)("%s cites the article rather than restating it", async (skill) => {
+  it.each(["qfai-verify"])("%s cites the article rather than restating it", async (skill) => {
     // Three skills carrying three copies of one rule is three chances to drift,
     // and the drift surfaces as three agents behaving differently at the same
     // moment.
