@@ -6,7 +6,7 @@ argument-hint: "<the change, in your own words>"
 allowed-tools: [Read, Glob, Grep, Write, Edit, Bash, TodoWrite, Task, Agent]
 roles: [orchestrator]
 steps: []
-requires: [common-policy-check]
+requires: [common-policy-check, common-review-cycle]
 mode: execution-focused
 ---
 
