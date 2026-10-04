@@ -51,7 +51,7 @@ Feature: Unified SDD Workflow
     Given a `/qfai-sdd` invocation whose 03-contract step wrote or changed the Statement or the Examples cell of at least one BR,
     When that step is complete and before the per-flow gate runs,
     Then a sub-agent that wrote none of those BRs reads each of them, the EXs each cites and the EXs this invocation wrote or changed, and raises findings of five kinds: a case the rule implies that no example states, a redundant example, an example no rule explains, a rule its examples do not support, and a flow, story or criterion split the rules show to be wrong.
-    And when the 03-contract step wrote or changed no BR, or the stage is an append stage, no cycle runs.
+    And when the 03-contract step wrote or changed no BR, or an implement stage appended the example, no cycle runs.
 
   # AC-0001-0147-09
   Scenario: Each Finding Is Decided Once, By The Right Party
