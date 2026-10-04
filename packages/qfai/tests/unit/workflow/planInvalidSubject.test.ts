@@ -8,10 +8,11 @@ import type { PlanLoad } from "../../../src/core/workflow/plans.js";
 // A shipped plan whose refusal names an empty key: an unknown key `""` in the YAML.
 vi.mock("../../../src/core/workflow/plans.js", async (importOriginal) => ({
   ...(await importOriginal<typeof Plans>()),
-  loadInstalledPlan: async (): Promise<PlanLoad> => ({
-    ok: false,
-    refusals: [{ route: "edit-text", reason: "unknown-key", subject: "" }],
-  }),
+  loadInstalledPlan: (): Promise<PlanLoad> =>
+    Promise.resolve({
+      ok: false,
+      refusals: [{ route: "edit-text", reason: "unknown-key", subject: "" }],
+    }),
 }));
 
 const { planOf } = await import("../../../src/core/workflow/plan.js");
