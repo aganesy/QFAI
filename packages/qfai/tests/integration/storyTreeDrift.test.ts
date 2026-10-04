@@ -348,4 +348,27 @@ describe("story-tree drift", () => {
     const findings = await validateStoryTreeDrift(root, config(), "tdd");
     expect(findings.map((item) => item.file)).toEqual([rewritten]);
   });
+
+  // QFAI:EX-0001-0054-14
+  it("exempts a contract change that only adds EX IDs to Examples cells", async () => {
+    const cited = `${specs}/03_contract/cli/cli-0001-a.md`;
+    const reworded = `${specs}/03_contract/cli/cli-0002-b.md`;
+    const rules = (id: string, examples: string, statement = "An empty name is refused.") =>
+      `# CLI-${id}\n\n## Business rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-${id}-0001 | ${statement} | ${examples} |\n`;
+    await put(decisions, table);
+    await put(cited, rules("0001", "EX-0001-0001-01"));
+    await put(reworded, rules("0002", "EX-0001-0002-01"));
+    git("add", ".");
+    git("commit", "-m", "base");
+    git("checkout", "-b", "topic");
+    await put(cited, rules("0001", "EX-0001-0001-01, EX-0001-0001-02"));
+    await put(
+      reworded,
+      rules("0002", "EX-0001-0002-01, EX-0001-0002-02", "An empty or blank name is refused."),
+    );
+    git("add", ".");
+    git("commit", "-m", "cite appended examples");
+    const findings = await validateStoryTreeDrift(root, config(), "tdd");
+    expect(findings.map((item) => item.file)).toEqual([reworded]);
+  });
 });

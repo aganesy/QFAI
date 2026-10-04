@@ -23,7 +23,7 @@ Feature: Append-only drift and change-request authorization
     When `qfai validate --profile tdd` or `qfai validate --profile drift` runs
     Then an error names the path unless a `decisions.md` row opening `Change request:` names that path with Status WIP or DONE
     And a `Change request:` row at TODO authorises nothing
-    And a `03_Example.md` whose only change is appended example rows needs no such row
+    And a `03_Example.md` whose only change is appended example rows, and a contract whose only change is EX IDs added to the Examples cell of its rules, need no such row
 
   # AC-0001-0054-04
   Scenario: Appending or moving a change-request row is not an upstream edit

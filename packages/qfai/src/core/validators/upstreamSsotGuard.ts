@@ -92,6 +92,8 @@ export async function validateStoryTreeDrift(
       continue;
     if (file.endsWith("/03_Example.md") && (await onlyAppendsExamples(root, baseBranch, file)))
       continue;
+    if (file.startsWith(`${contracts}/`) && (await onlyCitesExamples(root, baseBranch, file)))
+      continue;
     issues.push(
       issue(
         "QFAI-DRIFT-001",
@@ -137,6 +139,39 @@ async function onlyAppendsExamples(
   const headLines = unpadded(await readSafePath(path.join(root, file)));
   const remaining = headLines.filter((line) => kept.has(line) || !EXAMPLE_ROW.test(line));
   return remaining.join("\n") === baseLines.join("\n");
+}
+
+const EXAMPLE_ID = /^EX-\d{4}-\d{4}-\d{2}$/;
+
+/**
+ * Whether the contract differs from its base only by EX IDs added to the Examples cell, the
+ * last cell, of business-rule rows it already holds. Table padding is ignored.
+ */
+async function onlyCitesExamples(root: string, baseBranch: string, file: string): Promise<boolean> {
+  const base = readFileAtBase(root, baseBranch, file);
+  if (base === null) return false;
+  const baseLines = unpadded(base);
+  const headLines = unpadded(await readSafePath(path.join(root, file)));
+  if (baseLines.length !== headLines.length) return false;
+  return baseLines.every(
+    (line, index) => line === headLines[index] || onlyAddsExampleIds(line, headLines[index] ?? ""),
+  );
+}
+
+function onlyAddsExampleIds(baseRow: string, headRow: string): boolean {
+  const before = baseRow.split(/(?<!\\)\|/).map((cell) => cell.trim());
+  const after = headRow.split(/(?<!\\)\|/).map((cell) => cell.trim());
+  const last = before.length - 2;
+  if (!/^BR-\d{4}-\d{4}$/.test(before[1] ?? "") || last < 2 || after.length !== before.length)
+    return false;
+  if (before.some((cell, index) => index !== last && cell !== after[index])) return false;
+  const cited = (cell: string | undefined) => (cell ?? "").split(/,\s*/).filter(Boolean);
+  const kept = cited(before[last]);
+  const now = cited(after[last]);
+  return (
+    kept.every((id) => now.includes(id)) &&
+    now.every((id) => kept.includes(id) || EXAMPLE_ID.test(id))
+  );
 }
 
 function unpadded(content: string): string[] {
