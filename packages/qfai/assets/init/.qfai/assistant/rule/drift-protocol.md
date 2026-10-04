@@ -43,7 +43,8 @@ Both classes use the same approval and owner-rerun path.
    paths.specsDir. Its four columns are ID, Content, Approach, and Status. Content starts with Change request: followed
    by the affected repository-relative paths, separated by commas. Only a path authorizes an edit; an ID written there
    authorizes nothing. Approach records the proposed change and who approved it, when,
-   and the option chosen. The row starts at WIP. A declined request appends no row and the artifact stays as it is.
+   and the option chosen. The row starts at WIP. A declined request is appended at REJECTED, recording who declined it and when;
+   it authorizes no edit, and the artifact stays as it is.
    When the user cannot be asked, write no row to either table: report the proposed change as the decision still
    needed and keep the affected items stopped. A WIP Change request: row is the in-force authorization that the drift gate reads.
    TODO is not authorization. A DONE row authorizes only on the branch that appended it or moved it from WIP. A DONE

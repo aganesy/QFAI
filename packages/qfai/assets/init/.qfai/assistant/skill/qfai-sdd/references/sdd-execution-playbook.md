@@ -14,7 +14,7 @@ Use this sequence for /qfai-sdd. The shipped templates under ../templates/spec/ 
 Follow sdd-triage.md. Classify each requirement against existing policy, flow, story, example, and contract content.
 Identify every affected flow. Put each approval-required operation to the user through the shared user-question
 protocol before a dependent write, and append its change request row to decisions.md once approved; record unresolved
-questions in open-questions.md. In --auto, ask nothing and stop dependent work. A declined change appends no row.
+questions in open-questions.md. In --auto, ask nothing and stop dependent work. A declined change request is appended at REJECTED.
 
 ## Stage 2: policy and flow
 
