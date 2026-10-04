@@ -86,7 +86,8 @@ The route, its stages in order with each step's file, and its points.
       "step": "implement-diagnose",
       "outcomes": [{ "outcome": "regression", "routes": ["route-b"] }]
     }
-  ]
+  ],
+  "scopes": [{ "scope": "broad", "stages": ["diagnose", "spec"], "recommended": true }]
 }
 ```
 
@@ -99,6 +100,7 @@ The route, its stages in order with each step's file, and its points.
 | `decisionPoints` | The steps that put each critical decision to the user before acting on it                 |
 | `releasePoint`   | The step the user approves the release before, `end` for after the last stage, or `null`  |
 | `branchPoints`   | Each outcome with its destinations; `decision-table` means plan the step's new extraction |
+| `scopes`         | How far the work may go, narrowest first; absent for `--route`                            |
 
 ## Candidates
 
@@ -115,18 +117,46 @@ recommended.
       "family": "decide",
       "rule": 13,
       "summary": "Settle the decision before any change.",
-      "recommended": false
+      "recommended": false,
+      "scopes": [{ "scope": "broad", "stages": ["discussion", "close"], "recommended": true }]
     },
     {
       "route": "route-d",
       "family": "change",
       "rule": 28,
       "summary": "Change the product's behaviour.",
-      "recommended": true
+      "recommended": true,
+      "scopes": [
+        { "scope": "narrow", "stages": ["spec", "prototype"], "recommended": true },
+        { "scope": "medium", "stages": ["spec", "prototype", "verify"], "recommended": false },
+        {
+          "scope": "broad",
+          "stages": ["spec", "prototype", "implement", "verify"],
+          "recommended": false
+        }
+      ]
     }
   ]
 }
 ```
+
+## Scopes
+
+Each scope is `{ scope, stages, recommended }`: `narrow`, `medium` or `broad`,
+the ids of the stages it runs in plan order, and `true` for the narrowest.
+
+- `narrow` runs the stages up to the last one that writes an artifact the
+  extraction names, less any implementation that writes none of them. When those stages include implementation or a test fix, the
+  change note and the gates that end the route follow; when they reach the route's last stage
+  that writes code, every verify stage that ends the route follows.
+- `medium` adds the change note and the gates to those stages; where `narrow`
+  already holds implementation, it equals `narrow`.
+- A security intake plan gets `broad` alone.
+- `broad` runs every stage.
+
+A scope holding every stage is `broad`, and `medium` is left out when it equals `narrow`. An extraction with
+no artifacts, or with none a stage writes, gets `broad` alone. A candidate
+keeps its scopes: `--route` returns none.
 
 ## Refusal
 

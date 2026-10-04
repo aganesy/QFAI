@@ -85,7 +85,15 @@
           "items": {
             "$ref": "#/$defs/branchPoint"
           }
+        },
+        "scopes": {
+          "description": "How far the work may go, narrowest first; present when an extraction gave the plan.",
+          "$ref": "#/$defs/scopes"
         }
+      },
+      "dependentRequired": {
+        "rule": ["scopes"],
+        "scopes": ["rule"]
       }
     },
     "stage": {
@@ -178,6 +186,34 @@
         }
       }
     },
+    "scopes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["scope", "stages", "recommended"],
+        "properties": {
+          "scope": {
+            "enum": ["narrow", "medium", "broad"]
+          },
+          "stages": {
+            "description": "The ids of the stages the scope runs, in plan order.",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "recommended": {
+            "description": "True for the narrowest scope listed.",
+            "type": "boolean"
+          }
+        }
+      }
+    },
     "candidates": {
       "description": "The distinct routes of a low-confidence extraction's readings, one to three, in the order the decision rules reach them.",
       "type": "object",
@@ -194,7 +230,7 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["route", "family", "rule", "summary", "recommended"],
+            "required": ["route", "family", "rule", "summary", "recommended", "scopes"],
             "properties": {
               "route": {
                 "type": "string",
@@ -222,6 +258,9 @@
               "recommended": {
                 "description": "True for the main reading's route.",
                 "type": "boolean"
+              },
+              "scopes": {
+                "$ref": "#/$defs/scopes"
               }
             }
           }

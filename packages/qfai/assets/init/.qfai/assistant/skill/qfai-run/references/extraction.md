@@ -193,8 +193,10 @@ request that merely resembles it does not count.
 
 ## Artifacts
 
-What the change would touch. Zero or more, and none for a request that ends
-without a change. Add `tests` whenever behaviour changes.
+What the request asks to change. Zero or more, and none for a request that
+ends without a change. List `code` and `tests` only when the request asks for
+the change to be implemented: a request that ends at the specification or a
+prototype lists neither. The artifacts decide how far the work goes.
 
 | Artifact    | Covers                                                                                                                         |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------ |
