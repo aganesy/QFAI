@@ -43,11 +43,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   - The route contract states that a repair the verify block makes after the
     code review is not reviewed again and is listed in the final report.
   - Discussion pack and `qfai sdd preflight`: the import fallback applies
-    only when the pack is missing, an unreadable file is not reported ready,
-    and `Next-Decision-Point` asks for the next point of decision.
+    only when the pack is missing, an unreadable imported specification is not
+    reported ready, and `Next-Decision-Point` asks for the next point of decision.
   - A change request the user declines is recorded as a `REJECTED` row.
-  - The prototyping steps start from the primary UI contract, refuse a screen
-    ID containing `..`, and hand the reviewer each iteration's URL.
+  - The prototype generator starts from the primary UI contract, while every
+    UI-bearing contract stays in review scope; a screen ID containing `..` is
+    refused, and the reviewer gets each iteration's URL.
   - The unused coverage tool and its configuration are removed.
 
 ## [2.1.0] - 2026-10-04
