@@ -32,13 +32,16 @@ the system's shape has settled.
 ## Procedure
 
 1. Run `npx qfai validate --profile atdd --flow BF-NNNN --fail-on never` as
-   `common-gate-run` says, and read the BF and AC items no test annotates.
-2. For the flow, when it has no E2E test, run
+   `common-gate-run` says, and list the BF and AC items no test annotates.
+   Drop from that list each item a `Test exception:` row at DONE names: it is
+   owed no test.
+2. When the flow is still on that list, run
    `npx qfai atdd scaffold --flow BF-NNNN`. It writes
    `<testsDir>/e2e/<BF-ID>.test.<ext>`.
-3. For each story with an acceptance criterion no test annotates, run
+3. For each story with an acceptance criterion still on that list, run
    `npx qfai atdd scaffold --story US-NNNN-NNNN`. It writes one test per
-   criterion under `<testsDir>/integration/<US-ID>/`.
+   criterion under `<testsDir>/integration/<US-ID>/`, so delete each test it
+   reports as created for a criterion the list dropped.
 4. Record which tests need an authenticated actor. Any such test makes
    `implement-credentials` run before `implement-acceptance`.
 

@@ -118,7 +118,7 @@ describe("spec-0015 US-0015-0011 handoff schema (E2E, deterministic temp-fixture
       await mkdir(path.dirname(abs), { recursive: true });
       await writeFile(
         abs,
-        `// writer uses ${pair.writerToken}\nexport function w(a: ${pair.writerToken}) { return a; }\n`,
+        `// writer uses ${pair.writerToken} with \`companyName\`\nexport function w(a: ${pair.writerToken}) { return a; }\n`,
         "utf-8",
       );
     }
