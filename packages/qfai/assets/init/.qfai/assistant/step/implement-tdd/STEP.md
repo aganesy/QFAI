@@ -3,7 +3,6 @@ name: implement-tdd
 owner: qfai-implement
 purpose: "Take each example of one business flow that no test annotates through an observed Red, Green and Refactor cycle, appending the one example a diagnosed missing test needs, and align every surface that does not own the truth."
 requires:
-  - common-steering-refresh
   - common-gate-run
 roles:
   - delivery-planner
@@ -56,7 +55,7 @@ as [A diagnosed missing example](#a-diagnosed-missing-example) states.
 
 ## Preflight
 
-1. Run `common-steering-refresh`. Follow
+1. Follow
    `.qfai/assistant/rule/shared-skill-operating-baseline.md` for format, and
    `.qfai/assistant/rule/shared-skill-delegation-baseline.md` for the first
    delegation, capability check, and failure handling. Confirm the flow and

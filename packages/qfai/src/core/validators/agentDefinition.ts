@@ -584,7 +584,7 @@ function validateAgentRefs(
           "error",
           // Sourced from the caller's resolved routing path (manifestPathRel)
           // so the file: argument always points at the actual location read
-          // (manifest/ canonical or steering/ legacy fallback).
+          // (manifest/ canonical or a legacy fallback).
           routingPathRel,
           "agentDefinition.unknownRoutingAgent",
         ),

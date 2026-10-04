@@ -5,7 +5,7 @@
  * It replaces a byte-mirror whose drift check had to be bidirectional. The
  * forward direction is gone by construction — a link cannot differ from what it
  * points at — but the reverse one still matters, and for the reason the mirror
- * recorded: a root-only `.qfai/assistant/steering/test-layers.md` made
+ * recorded: a root-only `test-layers.md` under `.qfai/assistant/` made
  * `loadLayerPolicy` succeed in this tree and throw in every `qfai init`
  * project, so a consumer-only failure outlived a full minor release. This tree
  * is the only place the shipped assets are exercised end to end before release,
@@ -194,11 +194,5 @@ describe("link-assistant-tree --check", () => {
     expect(checked.status, checked.output).toBe(1);
     expect(checked.output).toContain(".qfai/assistant/notes");
     expect(checked.output).toContain("exists here and nowhere in the shipped assets");
-  });
-
-  it("no longer carries the legacy steering residue", () => {
-    // `.qfai/assistant/steering/` is gone, and `assistantTreeMigration` reports
-    // `D-DEPRECATED-PATH` at `error` for a tree that still holds it.
-    expect(existsSync(path.join(ASSISTANT, "steering"))).toBe(false);
   });
 });

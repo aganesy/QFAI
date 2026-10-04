@@ -2,7 +2,7 @@
 name: implement-benchmark
 owner: qfai-implement
 purpose: "Measure a slow path under fixed conditions, before a change as its baseline and after it for comparison, and record the numbers without changing any tracked file."
-requires: [common-steering-refresh, common-gate-run]
+requires: [common-gate-run]
 roles:
   - devops-ci-engineer
   - qa-strategist

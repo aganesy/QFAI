@@ -2,7 +2,7 @@
 name: verify-context
 owner: qfai-verify
 purpose: "Load what the change is verified against, fix the run's scope, and give every gate in that scope a command."
-requires: [common-steering-refresh, common-grilling-record]
+requires: [common-grilling-record]
 roles: [orchestrator, delivery-planner, qa-strategist]
 ---
 
@@ -43,12 +43,11 @@ contracts and evidence only.
 
 ## Procedure
 
-1. Refresh the steering as `common-steering-refresh` says.
-2. Write the plan, or delegate it (below), and read the inputs.
-3. Analyse the project (below).
-4. Fix the scope (below) and state it in the stage report.
-5. Hold the preflight session (below).
-6. Give each gate in scope a command (below).
+1. Write the plan, or delegate it (below), and read the inputs.
+2. Analyse the project (below).
+3. Fix the scope (below) and state it in the stage report.
+4. Hold the preflight session (below).
+5. Give each gate in scope a command (below).
 
 ## Delegation
 

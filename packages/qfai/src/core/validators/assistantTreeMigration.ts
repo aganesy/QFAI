@@ -6,18 +6,16 @@ import type { QfaiConfig } from "../config.js";
 import {
   ASSISTANT_LAYERS,
   LEGACY_ASSISTANT_INSTRUCTIONS_DIR,
-  LEGACY_ASSISTANT_STEERING_DIR,
   joinAssistantLayer,
   joinLegacyAssistantInstructions,
-  joinLegacyAssistantSteering,
   isAssistantLayer,
-  legacyAssistantSteeringSunsetLabel,
+  legacyAssistantTreeSunsetLabel,
 } from "../paths/assistantPaths.js";
 import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
 
 /**
- * The pre-recut `.qfai/assistant/{steering,instructions}/` layout was retired
+ * The pre-recut `.qfai/assistant/instructions/` layout was retired
  * at the release the message names, so a tree still holding it is an error.
  */
 
@@ -37,9 +35,8 @@ export async function validateAssistantTreeMigration(
       dirEntries = [];
     }
     const EXTRA_DIRS = new Set(["skill.local"]);
-    // instructions/ and steering/ are pre-recut layers that get their
-    // own D-DEPRECATED-PATH below, symmetric with the other retired layers.
-    const PRE_RECUT_DEPRECATED_DIRS = new Set(["instructions", "steering"]);
+    // instructions/ is a pre-recut layer that gets its own D-DEPRECATED-PATH below.
+    const PRE_RECUT_DEPRECATED_DIRS = new Set(["instructions"]);
     for (const entry of dirEntries) {
       if (!entry.isDirectory()) continue;
       if (isAssistantLayer(entry.name)) continue;
@@ -57,29 +54,17 @@ export async function validateAssistantTreeMigration(
     }
   }
 
-  // 2. D-DEPRECATED-PATH — the pre-recut legacy layers (.qfai/assistant/
-  // steering/ AND .qfai/assistant/instructions/) are retired, so both surfaces
-  // fire symmetric errors.
-  const sunset = legacyAssistantSteeringSunsetLabel();
-  const severity = "error" as const;
-  for (const legacySurface of [
-    {
-      dir: joinLegacyAssistantSteering(root),
-      label: `${LEGACY_ASSISTANT_STEERING_DIR}/`,
-    },
-    {
-      dir: joinLegacyAssistantInstructions(root),
-      label: `${LEGACY_ASSISTANT_INSTRUCTIONS_DIR}/`,
-    },
-  ]) {
-    if (!(await exists(legacySurface.dir))) continue;
-    const headline = `${legacySurface.label} is past the announced sunset (v${sunset}).`;
+  // 2. D-DEPRECATED-PATH — the pre-recut .qfai/assistant/instructions/ layer is retired.
+  if (await exists(joinLegacyAssistantInstructions(root))) {
+    const sunset = legacyAssistantTreeSunsetLabel();
+    const label = `${LEGACY_ASSISTANT_INSTRUCTIONS_DIR}/`;
+    const severity = "error" as const;
     issues.push(
       issue(
         "D-DEPRECATED-PATH",
-        `${headline} sunset: v${sunset}. Run \`qfai init --upgrade-assistant-tree\` to migrate.`,
+        `${label} is past the announced sunset (v${sunset}). sunset: v${sunset}. Run \`qfai init --upgrade-assistant-tree\` to migrate.`,
         severity,
-        legacySurface.label,
+        label,
         "assistantTreeMigration.deprecatedPath",
       ),
     );

@@ -2,7 +2,7 @@
 name: sdd-triage
 owner: qfai-sdd
 purpose: "Select the requirement source, classify each requirement against the story tree, and record the decisions, questions and approvals the later writes depend on."
-requires: [common-steering-refresh]
+requires: []
 roles: [delivery-planner, requirements-analyst]
 routing-profile: default
 ---
@@ -36,16 +36,13 @@ no-argument batch, and its gate runs with `--flow BF-NNNN` for that flow.
 
 ## Stage 0: source and preflight
 
-1. Run `common-steering-refresh`.
-2. Run `npx qfai sdd preflight` and use its `selectedInputPath`; a selected
-   discussion pack may be older than the newest pack. Inside a run, the
-   preflight readiness check runs in every attempt and is never served from the
-   Stage 0 snapshot.
-3. Read the pack, its completed reviews, explicit user requirements, and the
+1. Run `npx qfai sdd preflight` and use its `selectedInputPath`; a selected
+   discussion pack may be older than the newest pack.
+2. Read the pack, its completed reviews, explicit user requirements, and the
    existing story tree. A discussion pack is provenance and design input, not a
    normative SSOT. Record a discrepancy in an SDD-owned row or the SDD report; do not
    edit the pack to clear this stage.
-4. Stop if no usable source exists or a product decision cannot be inferred
+3. Stop if no usable source exists or a product decision cannot be inferred
    safely. An imported tree without a discussion pack takes its source as
    `.qfai/assistant/skill/qfai-sdd/references/sdd-execution-playbook.md#stage-0-source-inventory`
    says.
