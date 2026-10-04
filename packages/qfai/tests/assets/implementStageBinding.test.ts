@@ -16,18 +16,13 @@ describe.each(trees)("%s — implementation stage binding", (tree) => {
       "5. Implementation: `/qfai-implement` writes the BF E2E test and the AC",
     );
     expect(workflow).toContain("6. Verify: run quality gates");
-    expect(workflow).toContain("`qfai-prototyping`, `qfai-implement`, `qfai-verify`");
   });
 
-  it("requires a fresh story obligation and the project command contract", async () => {
-    const skill = await read(tree, "assistant/step/implement-tdd/STEP.md");
-    expect(skill).toContain("qfai validate --profile tdd --flow BF-NNNN");
-    expect(skill).toContain("generatedAt");
-    expect(skill).toContain("no earlier than this run start");
+  it("reads the Test command from the project command contract and runs only the selected test", async () => {
+    const skill = (await read(tree, "assistant/step/implement-tdd/STEP.md")).replace(/\s+/g, " ");
     expect(skill).toContain("<paths.contractsDir>/tech.md");
-    for (const command of ["Test", "Lint", "Typecheck", "Build"]) {
-      expect(skill).toContain(command);
-    }
+    expect(skill).toContain("Obtain the Test command only from that section");
+    expect(skill).toContain("While implementing, run only the selected test");
   });
 
   it("ships the Standard commands contract the stage reads", async () => {
@@ -38,7 +33,7 @@ describe.each(trees)("%s — implementation stage binding", (tree) => {
     }
   });
 
-  it("binds stage steering to the shared rule and keeps upstream changes governed", async () => {
+  it("binds the policy check to the shared rule and keeps upstream changes governed", async () => {
     const [skill, workflow, baseline] = await Promise.all([
       read(tree, "assistant/step/implement-tdd/STEP.md"),
       read(tree, "assistant/rule/workflow.md"),
@@ -47,7 +42,7 @@ describe.each(trees)("%s — implementation stage binding", (tree) => {
     expect(skill).toContain("rule/shared-skill-operating-baseline.md");
     expect(skill).toContain("rule/shared-skill-delegation-baseline.md");
     expect(skill).toContain("rule/drift-protocol.md");
-    expect(workflow).toContain("### Stage 0 — Steering refresh contract (mandatory)");
-    expect(baseline).toContain("## Stage 0 - Steering completion refresh (mandatory)");
+    expect(workflow).toContain("### Policy check (mandatory)");
+    expect(baseline).toContain("## Policy check (mandatory)");
   });
 });

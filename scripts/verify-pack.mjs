@@ -670,20 +670,20 @@ if (hasEntry(skillsLocalDir)) {
 }
 
 // Stand in for the `/qfai-configure` run a project makes before it gates.
-// The contract steering file ships as placeholders, and gating without filling
+// The contract policy file ships as placeholders, and gating without filling
 // it measures the fixture rather than the package.
-const steeringFiles = [path.join(outputDir, ".qfai", "spec", "03_contract", "tech.md")];
-for (const steeringFile of steeringFiles) {
-  if (!existsSync(steeringFile)) {
+const policyFiles = [path.join(outputDir, ".qfai", "spec", "03_contract", "tech.md")];
+for (const policyFile of policyFiles) {
+  if (!existsSync(policyFile)) {
     // An `ENOENT` here names the path and nothing else, and the reader's next
     // question is whether the file was renamed or whether init stopped writing
     // it — which is what decides whether the fill or the package is wrong.
     throw new Error(
-      `init --force wrote no ${steeringFile}. Stage 0 steering files are what a project fills ` +
+      `init --force wrote no ${policyFile}. Policy files are what a project fills ` +
         `before it gates, so this fill has nothing to stand in for.`,
     );
   }
-  const before = readFileSync(steeringFile, "utf-8");
+  const before = readFileSync(policyFile, "utf-8");
   // One value for each placeholder text, so two slots that name different
   // things, such as two architecture layers, stay different once filled. Every
   // TODO and TBD shares one value.
@@ -699,11 +699,11 @@ for (const steeringFile of steeringFiles) {
     .replace(/\b(?:TODO|TBD)\b/g, () => fixtureValue("TODO"));
   if (after === before) {
     throw new Error(
-      `${steeringFile} carries no placeholder to fill. The shipped steering files are what this stands ` +
+      `${policyFile} carries no placeholder to fill. The shipped policy files are what this stands ` +
         `in for, so a copy with none means the fixture is measuring nothing.`,
     );
   }
-  writeFileSync(steeringFile, after);
+  writeFileSync(policyFile, after);
 }
 
 execFileSync(

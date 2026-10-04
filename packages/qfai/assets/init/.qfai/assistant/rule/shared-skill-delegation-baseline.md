@@ -160,7 +160,7 @@ was confirmed for any of the three in the Copilot cloud agent.
 
 ## Work Orders Summary
 
-Every major artifact in the stage should include this table schema:
+A stage that fans work out to agents in parallel records the fan-out in this table:
 
 | Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
 | ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
@@ -169,13 +169,6 @@ Every major artifact in the stage should include this table schema:
 - `Output (refs)` should point to in-file anchors or relative evidence paths.
 - `Agent instance` is a run-stable identifier for the sub-agent that actually performed the step (platform-supplied id where available, otherwise `<role>#<n>` assigned in order of first use). It exists so an author→reviewer collision is detectable after the fact from the evidence alone; the same instance appearing in an authoring step and in a review step over the same artifact is a
   reviewer-independence violation.
-- **A grilling session adds a row for every decision it settled**, with `Task title` = `grilling(<where>/<adjudication>): <the decision>` and `Agent instance` = the agent that **made the recommendation**, whether or not it was taken. That row is what a later reviewer reads its `Recommended and unadjudicated` answer off: a reset instance holds no memory of the session, so without the row
-  the field cannot be answered honestly and the review has nothing to check against. The field asks what this reviewer recommended, so the recommender is what the row has to name — "the agent whose recommendation was adopted" is undefined for the ordinary case where the user chose something else.
-- **`<where>` is the stage's own name for where the session ran** — a phase for a spec stage, `-` for a stage that has one session — and **`<adjudication>` is one of `user`, `agents` and `withdrawn`** — the user settled it, the agents settled it between themselves, or the user's answer dropped the item, which settles the decision by removing what it was about. (`none` is not one of
-  these: it is the marker a run with no settled decision writes, `grilling(<where>/none): none`, and it carries no decision to adjudicate.) Both are in the title because the schema has no column for either, and a row that cannot be assigned to a place is one an omission elsewhere can be counted against. The outcomes point different ways — a
-  user-settled decision leaves the griller free to review the artifact, an agent-settled one keeps the griller that recommended it out of that review, and an agent-settled critical one makes the artifact wrong until the user decides — so a row recording only that a session happened tells the reviewer nothing it can act on.
-  One format, always parenthesized, so a gate selecting `grilling(` finds every row.
-- **An `agents` row also carries why the recommendation was taken**, in `Output (refs)`: the reason, and each position that disagreed with whose it is. The stage's final report lists every `agents` row, which is how the user sees what a delegated session adopted without being asked about it.
 - `PENDING` records a gate that could not be run — the only honest status for the exhausted-budget branch below, which mandates it. It is never a substitute for `PASS`: DONE stays blocked while any row is `PENDING`. A skill that allows only `PASS`/`REVISE` would force an agent on that path to either break the schema or mislabel an unrun gate.
 
 ## Reviewer Gate Baseline
@@ -218,7 +211,7 @@ A grilling session puts a recommended answer beside each question (`.agents/rule
 | Agent to agent, not critical                          | The decision stands. The griller that recommended it does not review the artifact |
 | Agent to agent, critical, with no user adjudication   | The artifact is wrong, and no reviewer can clear it                               |
 
-**The second row is how a delegated session is meant to end** (`.agents/rules/grilling.md`), not a finding. The reviewer checks that the decision has its `agents` row and is not critical. A reviewer that doubts its merit raises that as an ordinary finding against the artifact, under its own remit, as it would for any other content.
+**The second row is how a delegated session is meant to end** (`.agents/rules/grilling.md`), not a finding. The reviewer checks that the decision is in the final report and is not critical. A reviewer that doubts its merit raises that as an ordinary finding against the artifact, under its own remit, as it would for any other content.
 
 **The third row is not a routing problem.** A critical decision is the user's in every session, and a run that could not ask records it as an open question rather than adopting it. An agent-adopted critical decision is therefore an artifact carrying something nobody with the standing decided, and handing it to a different reviewer would launder it.
 The reviewer must return `REVISE` and name the decision: it is reopened and put to the user, or recorded open where no question can be asked.
@@ -226,28 +219,7 @@ The reviewer must return `REVISE` and name the decision: it is reopened and put 
 The first row needs a reason, because the intuitive one is wrong. A sub-agent starting with a reset context cannot defer to something it does not remember, so deference is not the risk. **Correlation** is: a fresh instance of the same agent, on the same model, over the same evidence, re-derives the preference that produced the recommendation and finds it good on the merits. Resetting the
 context removes the memory, not the disposition — which is why role name alone never establishes independence either. Where the user chose, that disposition is one input among several and the decision is not the griller's to re-derive.
 
-**A reviewer cannot attest to what it cannot see.** A reset instance does not know what an earlier one recommended, so the record supplies it: a session that settled a decision agent-to-agent records, in the stage's Work Orders Summary, the decision and the `Agent instance` that recommended it. `Recommended and unadjudicated` is read off that record, not off recollection.
-
-**The record answers either way, and silence answers nothing.** The question the field asks is whether any decision was settled agent-to-agent, so the record answers that and not whether a session ran. A stage that settled none writes one row reading `grilling(-/none): none` — whether it ran no session at all, or ran one that escalated every decision and settled nothing. A stage report
-holding several invocations keys it to the run it answers for, `grilling(-@<run key>/none): none`, as it keys that run's decision rows. A stage that
-settled some writes a row per decision. A summary carrying neither is incomplete, and that is the `REVISE` — not an inference in either direction. Absence of rows cannot be read as evidence for `none`, because a table that omitted a required row looks exactly like a table that had none to write, and the reviewer would attest `none` over the very decision the record exists to expose.
-
-**The field asks about the artifact, not about the reviewer.** It reports any critical decision the artifact still carries that an agent recommended and agents adopted with nobody adjudicating — whichever agent recommended it. Scoped to the reviewer's own recommendations it would answer `none` truthfully whenever a different agent made them, which is the common case and the one the record was
-built to catch: what is wrong is that the artifact carries a decision nobody took, and that is true however the review was routed. The reviewer's own recommendations are covered because they are a subset, and the dual-role table above is what decides whether that reviewer may rule at all.
-
-The `grilling(-/none): none` row records a fact rather than a step, so it names no agent: `Agent instance` is `n/a`, `Role`, `Input (refs)` and `Output (refs)` are `-`, and `Status` is `PASS`. Writing a role or an instance there would invent provenance for work nobody did, which is the failure the `Agent instance` column exists to make detectable.
-
-**A row gains a disposition when its decision stops being open.** The field reads the artifact as it now stands, and the row is the only record of what was settled, so the two part company the moment a decision is adjudicated or withdrawn. Whoever closes it amends the row in place, and usually no grilling session is running when that happens: the reviewer that reopened the decision, the
-user answering it directly, or the agent that removed it as the requested fix. The obligation follows the act, not the session — `Task title` becomes `grilling(<where>/user): <the decision> (settled by the user)` or `grilling(<where>/withdrawn): <the decision> (withdrawn from the artifact)` — the parenthesized fields survive the rewrite, because a gate that selects on them skips any row
-that drops them, and these are the rows a dispute produced — so the next reviewer reads the disposition rather than inferring it. Without that, a live row and a closed one look identical, and a reviewer deriving `none` from the artifact has to contradict the record to do it, or keep a stale non-`none` value that blocks a `PASS` nothing is wrong with. Amending is not deleting: the
-decision, the agent instance and the fact that it was once open all stay.
-
-**A disposition carries its evidence.** The suffix is an assertion, and the next reviewer is told to trust it, so the amended row points at what closed the decision as well as saying that something did. `Output (refs)` gains the record carrying the user's answer for `(settled by the user)`, and the revision that removed the recommendation for `(withdrawn from the artifact)`. Either is a
-reference a reader can open and check.
-
-A disposition with nothing behind it cannot be told from a fabricated one, so it is read as no disposition: the row is still open, and the reviewer returns `REVISE` and names it. Trusting an unverifiable suffix would launder the unadjudicated decision the row exists to expose — the table's second row again, arriving one step later and wearing a closure.
-
-The field asks about the artifact **as it now stands**. A recommendation the artifact no longer carries, and one the user has since settled, are both outside it: the first is not under review, and the second is the user's decision by the first row above. Read as a history of everything ever recommended, the field would disqualify a reviewer over something nobody is being asked to judge.
+**The stage's final report is the record.** It lists every decision the agents adopted and the agent that recommended it, so a reviewer with a reset context reads the third row off the report rather than off recollection.
 
 - Reviewers must verify Drift Protocol enforcement
   (`.qfai/assistant/rule/drift-protocol.md`).
@@ -306,7 +278,7 @@ the row of the skill whose stage ran it.
 - `record:*` and `none` MUST be recorded as `advisory`; neither can be `blocking` or gate `DONE`. A `record:*` finding never re-runs the row: the orchestrator files it in the record-defect queue the reviewing stage's own completion contract names, and that contract is what drains it (`.qfai/assistant/rule/drift-protocol.md#the-record-defect-queue`). **The class needs a drain:
   only a stage whose completion conditions require that queue drained may use it — today `/qfai-implement` alone, so `/qfai-sdd`, `/qfai-configure`, `/qfai-verify`, `/qfai-discussion` and `/web-research` reviewers must not, and there the finding keeps the class it would otherwise have had.** An entry closes only on a repaired record;
   `record:unchecked` is a bug report against `validateTddList` and never a substitute for the repair — a record rule worth a round is worth a validator code.
-- **Integrity is not record class.** Evidence copied from another round or a sibling row, an anchor resolving to a run other than the one it names, and a false `Authored/edited under review` or `Recommended and unadjudicated` attestation claim work that was not done or independence the reviewer lacked. `agents/qa-gatekeeper.md` and the response rules below refuse a `PASS` built on them,
+- **Integrity is not record class.** Evidence copied from another round or a sibling row, an anchor resolving to a run other than the one it names, and a reviewer that authored what it reviews all claim work that was not done or independence that is missing. A `PASS` built on them is refused,
   so they stay `blocking` as `defect:code-quality` and are never filed as `record:*` — which covers an honestly produced record that is merely wrong.
 - A `none` advisory takes the Change Request / Open Question path (`.qfai/assistant/rule/drift-protocol.md#reviewer-originated-obligations`); a `record:*` advisory takes the queue above. Neither goes to the implementer.
 - Only `blocking` findings force `REVISE`, and only a finding citing a behaviour-governing obligation or a defect class may be one. **The trace class bounds which findings may block; the severity is declared, and it settles whether one does.** Read as "an obligation trace is blocking", the same item was a discussion-blocking defect to one reviewer and carried advice to the next.
@@ -339,7 +311,7 @@ A blocking review that cannot be delegated because the agent budget is spent is 
 
 - First apply the `saturated` bounded retry. A freed slot is the preferred outcome.
 - If retries are exhausted, a reviewer role MAY be reused sequentially with a cleared context, provided the reviewer did not author or edit any artifact under review in this run. The protected invariant is independence from authorship, not reviewer instance identity.
-- Record the reuse in the Work Orders Summary (`Task title` prefixed `review (sequential reuse)`).
+- Record the reuse in the stage report.
 - If even sequential reuse is impossible, hard stop with the review gate recorded as `PENDING` rather than `PASS`. `PENDING` is not `PASS`, and DONE stays blocked.
 - Never record a waived or self-performed review as `PASS`.
 
@@ -376,28 +348,12 @@ Acceptance bar: <accept when ...> | <rework when ...>   # never `PASS`/`REVISE`:
 ## Reviewer response template
 
 ```text
-Reviewer role: <sub-agent role that produced this response>   # REQUIRED — a `Result:` line with no speaker is a report, not a verdict
-Reviewed artifact: <path/anchor this verdict rules on>        # REQUIRED — bounds the ruling; a PASS here clears nothing else
-Review series: <reviewed artifact> + <reviewer role> + <replacement ordinal>
 Result: PASS | REVISE
-Reviewed revision: <git rev> | working-tree
-Authored/edited under review: none | <artifact refs this reviewer authored or edited in this run>
-Recommended and unadjudicated: none | <critical decisions in THIS artifact as it now stands that any agent recommended and adopted with no user adjudication>
 Findings:
-- <issue> | Severity: blocking|advisory | Traces to: <BF-*/AC-*/EX-*/BR-*/<contract-ID>/rule-name|defect:correctness|defect:security|defect:code-quality|record:<CODE>|none>
-Required fixes:
-- <action>   # blocking findings only
-Advisory / Change Request proposals:
-- <proposal>  # findings with `Traces to: none`; not a DONE gate
-Evidence checked:
-- <refs>
+- <issue> | Severity: blocking|advisory | Traces to: <BF-*/AC-*/EX-*/BR-*/<contract-ID>/rule-name|defect:correctness|defect:security|defect:code-quality|record:<CODE>|none> | Fix: <action, for a blocking finding>
 ```
 
-- `Reviewed revision` is required: the commit the reviewer read, or `working-tree` when the tree it read has uncommitted changes. The reviewer names the integrated tree actually inspected. If it changes during review, report the stale verdict and review the new revision.
-- `Reviewer role`, `Reviewed artifact`, `Review series`, `Authored/edited under review` and `Recommended and unadjudicated` are REQUIRED. A response omitting any of them is not a valid review verdict and MUST NOT satisfy a completion gate — re-request it rather than reading a bare `Result:` line out of it, which is how a doer's self-assessment gets counted as a reviewer's ruling.
-- A non-`none` `Authored/edited under review` is a declared independence conflict: the verdict cannot be `PASS`, and the review is handed to a non-participating reviewer (see `Definition: independent reviewer`).
-- A non-`none` `Recommended and unadjudicated` is not a routing problem, and a handoff does not answer it. The verdict is `REVISE` naming the decision, and the decision is reopened and put to the user — or recorded open where no question can be asked. A replacement reviewer would attest `none` truthfully and clear nothing, because what is unsettled is the decision the artifact carries,
-  not who is reading it.
+- A reviewer that authored or edited what it reviews says so instead of returning a verdict, and the review goes to a non-participating reviewer (see `Definition: independent reviewer`).
 - `Result: REVISE` is legal only when at least one finding is `Severity: blocking`. A response whose findings are all advisory returns `Result: PASS` with the proposals attached.
 
 ### Verdict vocabulary

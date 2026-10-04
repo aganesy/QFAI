@@ -101,10 +101,10 @@ describe("check-readme-alignment.mjs", () => {
 
   it("exit 1 when one file carries an extra unmarked section", async () => {
     const r = runGuard(
-      await writePair("# Title\n\nShared.\n", "# Title\n\nShared.\n\n### Steering surface\n"),
+      await writePair("# Title\n\nShared.\n", "# Title\n\nShared.\n\n### Policy surface\n"),
     );
     expect(r.status).toBe(1);
-    expect(r.stderr).toMatch(/Steering surface/);
+    expect(r.stderr).toMatch(/Policy surface/);
     expect(r.stderr).toMatch(/end of file/);
   });
 

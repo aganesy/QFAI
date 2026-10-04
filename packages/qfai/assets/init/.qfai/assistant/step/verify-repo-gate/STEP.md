@@ -2,9 +2,9 @@
 name: verify-repo-gate
 owner: qfai-verify
 purpose: "Run the repository's quality gates, repair failures until every gate in scope passes, and report the result and write the verdict."
-requires: [common-gate-run, common-grilling-record]
-roles: [orchestrator, devops-ci-engineer, qa-gatekeeper, implementation-reviewer]
-routing-profile: runtime-heavy
+requires: [common-gate-run]
+roles: [orchestrator, devops-ci-engineer]
+routing-profile: default
 ---
 
 # verify-repo-gate
@@ -18,7 +18,6 @@ outputs: the evidence a person reads and the verdict downstream gates read.
 - The gate commands, through `common-gate-run`.
 - `.qfai/assistant/skill/qfai-verify/references/verify-output-contract.md`,
   before writing the verdict.
-- `.qfai/assistant/rule/change-classification.md`.
 
 ## Writes
 
@@ -28,7 +27,7 @@ Create and update `.qfai/report/verify.json`.
 
 1. Run the repository gates (below).
 2. Run the fix loop until every gate in scope passes, or stop as it says.
-3. Complete the evidence and the summary.
+3. Report the result.
 4. Write the verdict.
 
 ## Repository gates
@@ -71,32 +70,13 @@ one code review reads the repair, as `qfai-verify`'s `## Review` section says.
 - Verify never rewrites the story tree or a contract. A spec or contract
   finding goes to its owner through `.qfai/assistant/rule/drift-protocol.md`:
   `/qfai-sdd` or `/qfai-implement`.
-- A fix that changes code brings `implementation-reviewer` into the review.
+- A fix made after the code review is listed in the final report with its
+  diff. No review runs again.
 
 ## Report
 
 Report the scope, every gate command with its result, the open risks and the
-next actions. End with a concise evidence summary (copy‑paste for PR), including the Change
-Classification (Primary/Tags) that
-`.qfai/assistant/rule/change-classification.md` defines:
-
-```md
-### Verification Evidence
-
-- Change classification:
-  - Primary:
-  - Tags:
-  - rationale (1-3 lines):
-- QFAI:
-  - command:
-  - result:
-- Repo gates:
-  - command:
-  - result:
-- Notes:
-  - assumptions:
-  - risks:
-```
+next actions.
 
 ## Verdict
 
@@ -117,8 +97,6 @@ run's change and reports each result.
   `artifactRefs`.
 - A `verify.json` written by another run, scoped to another flow or kept in a
   shared location is never named as this stage's report.
-- The qa-gatekeeper verdict is a `reviewResults` entry, from a reviewer
-  independent of the authors of what it reviews.
 - The stage's own `gateResults` are information only: the run decides no gate
   from them.
 - `outcome` and `testObservation` are reported apart.
@@ -155,14 +133,13 @@ The step is done when:
 - every gate in scope ran and is recorded, or is recorded UNRUN with the
   reason;
 - every gate passes, or each failure has an actionable fix list and an owner;
-- the evidence has every template section and the summary;
 - `verify.json` exists, its `status` matches the gate results and its `scope`
   matches the validate profile that ran.
 
 For this skill, the smallest applicable smoke check of
 `.qfai/assistant/rule/shared-skill-operating-baseline.md#completion-contract-shared`
 is the whole gate set of the scope, run to completion, with every outcome in
-`verify.json` and the evidence.
+`verify.json` and the report.
 
 A PASS needs zero errors in the declared profile, and, where the project has
 them, a clean distributed-surface guard and a clean branch version pin.

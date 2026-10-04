@@ -1,7 +1,8 @@
 /**
- * Integration: how `/qfai-sdd` seeds a diagnosed example and changes the story tree.
+ * Integration: how a fix route's implement stage seeds a diagnosed example, and how `/qfai-sdd`
+ * changes the story tree.
  *
- * Reads the shipped `qfai-sdd` skill, its steps and the triage reference.
+ * Reads the shipped `implement-tdd` step, the `qfai-sdd` skill, its steps and the triage reference.
  */
 import { describe, expect, it } from "vitest";
 
@@ -10,8 +11,8 @@ import { flat, readShipped, sectionOf } from "../../helpers/shippedAssistant.js"
 const SKILL = "skill/qfai-sdd/SKILL.md";
 const TRIAGE = "skill/qfai-sdd/references/sdd-triage.md";
 const TRIAGE_STEP = "step/sdd-triage/STEP.md";
-const STORY_STEP = "step/sdd-story/STEP.md";
-const SEEDING = "## A diagnosed missing test";
+const STORY_STEP = "step/implement-tdd/STEP.md";
+const SEEDING = "## A diagnosed missing example";
 
 async function section(file: string, heading: string): Promise<string> {
   const text = flat(sectionOf(await readShipped(file), heading));
@@ -27,11 +28,9 @@ describe("defect example seeding", () => {
     expect(text).toMatch(
       /append exactly one EX to the `03_Example\.md` of the story that owns the AC the diagnosis matched/i,
     );
+    expect(text).toMatch(/its ID is the next free EX ID of that story, its `AC-Ref` is that AC/i);
     expect(text).toMatch(
-      /its ID is the next free EX ID of that story, and its `AC-Ref` is that AC/i,
-    );
-    expect(text).toMatch(
-      /add the new EX ID to the Examples cell of the contract rule that already cites an example of that AC/i,
+      /add the new EX ID to the Examples cell of the contract rule the diagnosis names as owning that AC/i,
     );
   });
 
@@ -40,31 +39,27 @@ describe("defect example seeding", () => {
   it("changes no story, criterion, rule statement, existing example or test", async () => {
     const text = await section(STORY_STEP, SEEDING);
     expect(text).toMatch(/the rule's Statement is unchanged/i);
-    expect(text).toMatch(/add or change no US or AC, and no existing EX/i);
-    expect(text).toMatch(
-      /write or annotate no test: the new EX stays an example no test annotates/i,
-    );
+    expect(text).toMatch(/change no story, AC, rule statement or existing EX/i);
   });
 
   // QFAI:AC-0001-0186-01
   // QFAI:EX-0001-0186-02
   it("carries the diagnosis as the reason for the appended example, and changes no statement", async () => {
     const text = await section(STORY_STEP, SEEDING);
-    expect(text).toMatch(
-      /carry the diagnosis as the reason for the new EX: the stage report and the `Change request:` row name it/i,
-    );
-    expect(text).toMatch(/add or change no US or AC/i);
+    expect(text).toMatch(/the diagnosis is its reason/i);
+    expect(text).toMatch(/change no story, AC/i);
     expect(text).toMatch(/the rule's Statement is unchanged/i);
   });
 
   // QFAI:AC-0001-0206-03
   // QFAI:EX-0001-0206-03
-  it("appends no decision row for the approval-free seeding", async () => {
+  it("asks nothing and appends no decisions row", async () => {
     const text = await section(STORY_STEP, SEEDING);
+    expect(text).toMatch(/the step asks the user nothing/i);
     expect(text).toMatch(
-      /append no triage or seeding row of its own: the operation needs no triage approval/i,
+      /append no `decisions\.md` row: the drift gate needs no `Change request:` row for appended example rows/i,
     );
-    expect(text).toMatch(/on approval the stage's one `Change request:` row names them/i);
+    expect(text).toMatch(/list the EX in the run's final report/i);
   });
 });
 

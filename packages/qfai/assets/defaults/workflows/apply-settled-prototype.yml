@@ -8,7 +8,6 @@ stages:
       - { step: sdd-story, passThrough: true }
       - { step: sdd-contract, passThrough: true }
       - common-design-md
-      - sdd-gate
     review: spec
   - id: prototype
     kind: prototype
@@ -28,7 +27,7 @@ stages:
     review: code
   - id: verify
     kind: verify
-    steps: [verify-qfai-gate, verify-repo-gate]
+    steps: [verify-qfai-gate, verify-repo-gate, verify-commit]
     after: [note]
 decisionPoints: [sdd-triage, prototyping-loop]
 branchPoints:

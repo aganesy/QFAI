@@ -212,9 +212,9 @@ it("An extraction with no intent plans the route that answers and changes nothin
 });
 
 // QFAI:EX-0001-0210-08
-it("A project whose sdd-gate step is not installed is refused with the step named", async () => {
+it("A project whose sdd-story step is not installed is refused with the step named", async () => {
   const root = await minimalProject();
-  await rm(path.join(root, ".qfai", "assistant", "step", "sdd-gate"), { recursive: true });
+  await rm(path.join(root, ".qfai", "assistant", "step", "sdd-story"), { recursive: true });
   const before = await listTree(root);
   const planned = workflow(root, ["plan", "--route", "add-feature"]);
 
@@ -223,7 +223,7 @@ it("A project whose sdd-gate step is not installed is refused with the step name
     ok: field(planned.json, "ok"),
     reason: [field(planned.json, "reasons.0.reason"), field(planned.json, "reasons.0.subject")],
     unchanged: JSON.stringify(await listTree(root)) === JSON.stringify(before),
-  }).toEqual({ status: 1, ok: false, reason: ["plan-invalid", "sdd-gate"], unchanged: true });
+  }).toEqual({ status: 1, ok: false, reason: ["plan-invalid", "sdd-story"], unchanged: true });
 });
 
 // QFAI:EX-0001-0222-08

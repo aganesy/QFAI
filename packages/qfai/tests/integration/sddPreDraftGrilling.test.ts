@@ -33,7 +33,6 @@ describe("qfai-sdd pre-draft grilling", () => {
         const text = await read(tree, `assistant/step/${step}/STEP.md`);
         expect(text, step).toContain("references/sdd-pre-draft-grilling.md");
       }
-      expect(gate).toContain("A skipped checkpoint fails the gate");
       expect(loop).toContain("It asks the user each critical decision the frontier holds.");
       expect(loop).toContain(
         "final report lists each decision a checkpoint adopted, with its reason",

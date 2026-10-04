@@ -54,8 +54,8 @@ export async function defaultRoutingEntries(): Promise<Record<string, unknown>[]
 
 /**
  * The section a heading opens, subsections included, up to the next heading of the same or a
- * higher level. `heading` matches the start of the heading line, so `## Stage 0` finds
- * `## Stage 0 - Steering completion refresh`. Headings inside a fence are not headings.
+ * higher level. `heading` matches the start of the heading line, so `## Policy` finds
+ * `## Policy check (mandatory)`. Headings inside a fence are not headings.
  */
 export function sectionOf(text: string, heading: string): string {
   const level = headingLevel(heading);

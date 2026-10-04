@@ -3,14 +3,11 @@ name: implement-refactor
 owner: qfai-implement
 purpose: "Move code into a better structure while every test stays green, adding no example and changing no behaviour."
 requires:
-  - common-steering-refresh
   - common-gate-run
 roles:
   - frontend-engineer
   - backend-engineer
-  - implementation-reviewer
-  - qa-gatekeeper
-routing-profile: implementation-heavy
+routing-profile: default
 ---
 
 # implement-refactor
@@ -34,7 +31,6 @@ the story tree changes, so the step adds no example and runs no RED.
 3. A test may change only where it names something that moved, such as an
    import path. What a test asserts does not change.
 4. Delete code nothing calls and nothing declares.
-5. Run the Lint, Typecheck and Build commands at the end.
 
 ## When behaviour has to change
 
@@ -55,5 +51,4 @@ changing it and report a branch:
 ## Gate
 
 The step is done when the suite passed before and after every move, no
-assertion changed, the project gates pass, and the qa-gatekeeper observed the
-last run.
+assertion changed.

@@ -1357,10 +1357,10 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // the forge may be asked of. Derived by running `qfai init` into a temp root and hashing what
     // it wrote; dropping that one bullet reproduces `7f4f473a…` byte for byte.
     //
-    // Re-pinned for the legacy-layout item, which now says the `steering/` and `instructions/`
-    // layout is past its compatibility window and that `qfai init` reports it on stderr as a
-    // `D-DEPRECATED-PATH` error naming `--upgrade-assistant-tree`. Derived by running `qfai init`
-    // into a temp root; restoring the old item reproduces `12e26902…` byte for byte.
+    // Re-pinned for the legacy-layout item, which says the `instructions/` layout is past its
+    // compatibility window and that `qfai init` reports it on stderr as a `D-DEPRECATED-PATH`
+    // error naming `--upgrade-assistant-tree`. Derived by running `qfai init` into a temp root;
+    // naming the second retired layout in that item again reproduces `5ebaa61d…` byte for byte.
     //
     // Re-pinned for the work-log surface item, which the run no longer writes into the list of
     // canonical `.qfai/` locations. Derived by running `qfai init` into a temp root; restoring
@@ -1377,7 +1377,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // The generated rule list cites action-reversibility and untrusted-content.
     // This digest covers the bytes produced by the builder strings.
     ".github/copilot-instructions.md",
-    "5ebaa61d69fb28c4df4583f522d53af514465cabdc82d7621f6ae92595621de5",
+    "f6037364baf93bf10179dc6d500da410401094f9e6590395dba383cd9069483e",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it

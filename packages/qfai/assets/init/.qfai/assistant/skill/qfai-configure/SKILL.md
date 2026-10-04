@@ -115,11 +115,11 @@ Use the shared template.
 
 - Required field: `Status (PASS/REVISE/PENDING)`. `PENDING` marks a gate that could not be run (see the baseline's reviewer-budget branch); it never counts as `PASS`.
 
-## Stage 0 — Steering completion refresh (mandatory)
+## Policy check (mandatory)
 
-Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#stage-0---steering-completion-refresh-mandatory`.
+Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#policy-check-mandatory`.
 
-- Fill steering from verifiable repository evidence first; when evidence is missing, mark the field `TBD` and name the gap in the final report.
+- Fill policy from verifiable repository evidence first; when evidence is missing, mark the field `TBD` and name the gap in the final report.
 
 ## Rejected Option Guard (Mandatory)
 
@@ -141,7 +141,7 @@ Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#gate-failure-aut
 
 Analyze the repository and update `qfai.config.yaml` so traceability checks are actionable, with a documented minimum runnable path.
 
-Note: /qfai-sdd includes a preflight step that bootstraps missing config/steering when run directly after init.
+Note: /qfai-sdd includes a preflight step that bootstraps missing config/policy when run directly after init.
 /qfai-configure remains the recommended way to tune `qfai.config.yaml` early with a clean, minimal diff.
 
 ## Success Criteria (Definition of Done)
@@ -236,7 +236,7 @@ Role: delivery-planner
 Task title: Analyze repo and propose testFileGlobs
 Goal: Tune qfai.config.yaml with a minimal diff
 Inputs:
-- relevant steering and repo layout
+- relevant policy and repo layout
 Constraints:
 - minimal diff
 - evidence-first
@@ -260,7 +260,7 @@ Every 5 major actions, pause and restate:
 
 - DoD and prohibited "done" criteria
 - Evidence samples collected vs missing
-- Config changes and steering updates completed
+- Config changes and policy updates completed
 
 ## Constraints
 
@@ -272,7 +272,7 @@ Every 5 major actions, pause and restate:
 
 ## Step 0 - Load Context (always)
 
-1. Read relevant **project steering** (if present):
+1. Read relevant **project policy** (if present):
    - `.qfai/spec/01_policy/objective.md`
    - `.qfai/spec/01_policy/initiative.md`
    - `.qfai/spec/03_contract/tech.md`
@@ -322,7 +322,7 @@ Provide **exclude globs** only when necessary (beyond the default exclusions).
 
 ## Step 3 - Update project context (evidence-first)
 
-Fill steering templates with repo evidence.
+Fill policy templates with repo evidence.
 
 - Keep existing content when already accurate.
 - When evidence is missing, write `TBD` and record what is missing.

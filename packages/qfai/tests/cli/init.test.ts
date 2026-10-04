@@ -3229,7 +3229,7 @@ describe("qfai init", () => {
           (await readdir(path.join(root, ".qfai", "assistant", layer))).length,
         ).toBeGreaterThan(0);
       }
-      for (const retired of ["constitution", "manifest", "catalog", "process", "steering"]) {
+      for (const retired of ["constitution", "manifest", "catalog", "process"]) {
         await expect(readdir(path.join(root, ".qfai", "assistant", retired))).rejects.toMatchObject(
           { code: "ENOENT" },
         );

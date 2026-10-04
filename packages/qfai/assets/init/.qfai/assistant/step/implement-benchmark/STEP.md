@@ -2,13 +2,11 @@
 name: implement-benchmark
 owner: qfai-implement
 purpose: "Measure a slow path under fixed conditions, before a change as its baseline and after it for comparison, and record the numbers without changing any tracked file."
-requires: [common-steering-refresh, common-gate-run]
+requires: [common-gate-run]
 roles:
   - devops-ci-engineer
   - qa-strategist
-  - qa-gatekeeper
-  - implementation-reviewer
-routing-profile: runtime-heavy
+routing-profile: default
 ---
 
 # implement-benchmark
@@ -49,5 +47,5 @@ is follows from whether the run already carries a baseline record.
 ## Gate
 
 The step is done when the numbers are recorded with the conditions that
-produced them, a second run compares under the same conditions, no tracked
-file changed, and the qa-gatekeeper observed the runs.
+produced them, a second run compares under the same conditions, and no tracked
+file changed.

@@ -225,42 +225,19 @@ The `common-gate-run` step runs a gate from this section and records it.
 - Generated artifacts match their template's headings, ordering, content kinds and table columns, and add no section, including no history section. Under `<paths.specsDir>` a document schema rejects anything else; `.qfai/assistant/skill/qfai-sdd/references/spec-traceability-rules.md#document-shapes` states what a template cannot show.
 - Completion requires a format self-check in evidence.
 
-## Stage 0 - Steering completion refresh (mandatory)
+## Policy check (mandatory)
 
-Every stage starts with the steering refresh, and does not continue affected
-work on stale steering. The contract is
-`.qfai/assistant/rule/workflow.md#stage-0--steering-refresh-contract-mandatory`.
+A run starts with the policy check, once, and does not continue affected work
+on stale policy. The contract is
+`.qfai/assistant/rule/workflow.md#policy-check-mandatory`.
 The procedure — which files, what counts as incomplete, how a fact is filled
-and where an unverifiable one goes — is the `common-steering-refresh` step. A
+and where an unverifiable one goes — is the `common-policy-check` step. A
 skill or step cites the step and restates none of it.
-
-### Inside a workflow run
-
-Inside an active workflow run, a stage reuses the Stage 0 output an earlier
-stage wrote only when the key recorded with it, recomputed, is equal. On a
-different key, refresh only what changed.
-
-The key covers:
-
-- the tool digest;
-- the policy digests: `qfai.config.yaml` and `.qfai/assistant/rule/**`;
-- the skill digests;
-- the input file digests;
-- glob membership;
-- the host capability state.
-
-Compute it with the digest function `npx qfai workflow` uses.
-
-No stage-specific check is served from that output. ATDD still makes its own
-layer decision, and implement still selects its examples from a fresh
-flow-scoped validate.
-
-Outside a run, Stage 0 runs in full at every stage start.
 
 ## Workflow Run Entry Check (Mandatory)
 
 A skill that a built-in workflow plan names runs this check first, before
-Stage 0. The mode is `workflow.mode` in `qfai.config.yaml`. An absent key means
+the policy check. The mode is `workflow.mode` in `qfai.config.yaml`. An absent key means
 `active`.
 
 | State     | Mode              | When                                               | What the skill does                                                                                                                          |
@@ -294,25 +271,27 @@ runs only from its parent or from the plan `qfai-run` follows.
 - **A parent's `requires` names the `common-*` steps its own body runs**, such
   as `common-review-cycle` after the last step. Like a step's, it names no
   other kind of step.
-- **A step's review profile is its `routing-profile`.** A step without one has
-  no review of its own. A parent has no profile of its own.
+- **A step has no review of its own.** Its `routing-profile`, where it has one,
+  is `default`. The review is the one its parent or its plan names.
 - **Routing and review-profile overrides in `qfai.config.yaml` are keyed by
   step name.**
 
 ### A parent skill invoked by name
 
 1. Run the [entry check](#workflow-run-entry-check-mandatory).
-2. Take the steps from the parent's `steps:` list, in that order. Skip a step
+2. Run `common-policy-check` once, as the
+   [policy check](#policy-check-mandatory) says.
+3. Take the steps from the parent's `steps:` list, in that order. Skip a step
    only where the parent's body names the condition that skips it.
-3. For each step: read that step's `STEP.md` and no other, run it, and pass its
+4. For each step: read that step's `STEP.md` and no other, run it, and pass its
    gate. Run a `common-*` step it `requires` at the point the step calls it.
    Then move to the next step.
-4. After the last step, run the one review the parent names, through
+5. After the last step, run the one review the parent names, through
    `common-review-cycle`: the specification review for `qfai-sdd` and
    `qfai-discussion`, the code review for a parent that changed code, tests or
    a change note, and none for `qfai-triage` or for a `qfai-verify` run that
    wrote nothing.
-5. Complete as the parent's completion section says, reporting what each step
+6. Complete as the parent's completion section says, reporting what each step
    produced.
 
 A step skipped on a condition that later turns out to hold is run in its place

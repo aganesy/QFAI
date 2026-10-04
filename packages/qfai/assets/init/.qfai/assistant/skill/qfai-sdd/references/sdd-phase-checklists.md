@@ -27,7 +27,7 @@ Use these checkpoints with the ordered stages in sdd-execution-playbook.md. A ch
 - Examples cover meaningful success, boundary, and kept-failure outcomes without inventing product rules.
 - The story and example IDs follow their BF and US scopes and are never reused.
 
-The one example a diagnosed missing test needs is appended as `.qfai/assistant/step/sdd-story/STEP.md#a-diagnosed-missing-test` states.
+The one example a diagnosed missing test needs is appended by the implement stage, as `.qfai/assistant/step/implement-tdd/STEP.md#a-diagnosed-missing-example` states.
 
 ## Contracts and business rules
 
@@ -56,7 +56,7 @@ Follow concrete-abstract-cycle.md.
 - Every affected BF passed npx qfai validate --profile sdd --fail-on error --flow BF-NNNN with error=0.
 - Every document written passes its document schema. A failure was fixed by reshaping the document, not by adding to it.
 - The log path and result for each BF are in the SDD report.
-- Each entered design-writing stage has a pre-draft grilling checkpoint before its first mutation. A skipped checkpoint fails the gate; unanswered critical decisions remain open and block completion.
-- Reviewers are independent of the authors and all routed blocking verdicts are PASS.
+- Each entered design-writing stage has a pre-draft grilling checkpoint before its first mutation. The final report lists each decision a checkpoint adopted; unanswered critical decisions remain open and block completion.
+- Reviewers are independent of the authors, and every finding of the one review is fixed or answered.
 - Rejected options remain excluded, or a documented reopening decision exists.
 - Remaining risks and next actions are explicit in the SDD report.

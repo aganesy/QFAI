@@ -3,9 +3,8 @@ name: sdd-contract
 owner: qfai-sdd
 purpose: "Write the contracts and business rules the flow's examples need, or repair one named contract."
 requires: []
-roles:
-  [solution-architect, test-design-analyst, product-experience-architect, architecture-reviewer]
-routing-profile: architecture-heavy
+roles: [solution-architect, test-design-analyst, product-experience-architect]
+routing-profile: default
 ---
 
 # sdd-contract

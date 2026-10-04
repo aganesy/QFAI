@@ -46,7 +46,7 @@ specialization_tags:
 - Type design, against § 2 of the same rule: a value crossing a trust boundary is parsed there into a form that cannot hold an invalid value.
   Flag mutable internals exposed to outside code, an invariant held only by documentation, validation missing at construction,
   enforcement that differs from one mutation to another, and outside code left to maintain an invariant the type should own.
-- Check the EX test's oracle, selector and RED/GREEN/Refactor evidence. The qa-gatekeeper owns observation verdicts; this role independently checks code and test quality.
+- Check the EX test's oracle, selector and RED/GREEN/Refactor evidence.
 - Check for code written only to pass a test: no value hard-coded to the test's
   inputs and no branch written only for the test, and a wrong test or infeasible
   task raised as a Change Request, not worked around

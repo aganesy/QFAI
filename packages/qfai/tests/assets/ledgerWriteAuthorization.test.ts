@@ -24,11 +24,10 @@ describe("Implementation evidence ownership", () => {
     expect(skill).toContain("rule/drift-protocol.md");
   });
 
-  it("puts observed EX results and review decisions in the stage report", async () => {
+  it("puts observed EX results in the stage report", async () => {
     const skill = await asset("step/implement-tdd/STEP.md");
     expect(skill).toContain("The stage report gives each example its own");
     expect(skill).toContain("RED, GREEN, and Refactor commands and observed results");
-    expect(skill).toContain("Each reviewer reads the same final revision");
   });
 
   it("requires an owner rerun and dependent checks after an approved change", async () => {

@@ -2,12 +2,10 @@
 name: implement-tooling
 owner: qfai-implement
 purpose: "Change a workflow, a script or a development tool, record whether the change reaches the CI the project ships to others, and record any release-path check that has to wait for the next release."
-requires: [common-steering-refresh, common-gate-run]
+requires: [common-gate-run]
 roles:
   - devops-ci-engineer
-  - implementation-reviewer
-  - qa-gatekeeper
-routing-profile: implementation-heavy
+routing-profile: default
 ---
 
 # implement-tooling
@@ -47,5 +45,4 @@ development tool.
 
 The step is done when every part that can run here ran and passed, the
 disposition is recorded where the project ships CI, every part that cannot
-run is named with the check that waits for it, and the qa-gatekeeper observed
-the runs.
+run is named with the check that waits for it.

@@ -36,16 +36,9 @@ const EXTRACTION = "skill/qfai-run/references/extraction.md";
 const MAINTAIN = "skill/qfai-maintain/SKILL.md";
 const MAINTAIN_EDIT = "step/maintain-edit/STEP.md";
 
-const PROFILES = [
-  "architecture-heavy",
-  "default",
-  "implementation-heavy",
-  "requirements-heavy",
-  "runtime-heavy",
-  "ui-bearing",
-];
+const PROFILES = ["architecture-heavy", "default", "runtime-heavy"];
 
-const AGENT_FIELDS = ["mandatory_agents", "conditional_agents", "blocking_agents"] as const;
+const AGENT_FIELDS = ["mandatory_agents", "conditional_agents"] as const;
 
 type Phase = Record<string, unknown>;
 
@@ -475,7 +468,7 @@ describe("qfai-run", () => {
   it("asks for release approval at the release point, and the approval authorizes no push or publication", async () => {
     const work = flat(sectionOf(await readShipped(RUN), "## The work"));
     expect(work).toMatch(
-      /before a step `releasePoint` names runs, ask the user to approve the release; where it is `end`, ask after the last stage/i,
+      /before a step `releasePoint` names runs, ask the user to approve the release; where it is `end`, ask once the last stage's gates have passed/i,
     );
     expect(work).toMatch(
       /nothing after it runs without the approval, which authorizes no push, merge, tag or publication/i,
@@ -566,7 +559,7 @@ describe("qfai-maintain", () => {
 describe("the entry skills' routing entries", () => {
   // QFAI:AC-0001-0161-05
   // QFAI:EX-0001-0161-06
-  it("routes qfai-run to the orchestrator only, and qfai-maintain to an author the route's code review reads", async () => {
+  it("routes qfai-run to the orchestrator only, and qfai-maintain to an author and no reviewer", async () => {
     const run = await routingEntry("qfai-run");
     expect(run, "the routing defaults have a qfai-run entry").toBeDefined();
     const runPhases = phasesOf(run);
@@ -577,11 +570,12 @@ describe("the entry skills' routing entries", () => {
     const maintain = await routingEntry("maintain-edit", "step");
     expect(maintain?.review_profile).toBe("default");
     const maintainPhases = phasesOf(maintain);
-    const authors = maintainPhases.filter((phase) => phase.id !== "review").flatMap(phaseAgents);
+    const authors = maintainPhases.flatMap(phaseAgents);
     expect(authors.length, "qfai-maintain has an authoring phase").toBeGreaterThan(0);
-    expect(authors, "the code review is not an author's").not.toContain("implementation-reviewer");
-    const reviewing = maintainPhases.filter((phase) => phase.id === "review").flatMap(phaseAgents);
-    expect([...new Set(reviewing)], "the code review").toEqual(["implementation-reviewer"]);
+    expect(authors, "the route's code review is not routed here").not.toContain(
+      "implementation-reviewer",
+    );
+    expect(maintainPhases.some((phase) => phase.id === "review")).toBe(false);
 
     expect(Object.keys(await profiles()).sort()).toEqual(PROFILES);
 

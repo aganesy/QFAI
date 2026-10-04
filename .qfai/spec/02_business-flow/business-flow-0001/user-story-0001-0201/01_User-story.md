@@ -7,5 +7,5 @@ As an operator reporting a defect against behaviour the tree already states, I w
 ## Non-goals
 
 - Repairing anything
-- Adding the missing example, which `/qfai-sdd` does
+- Adding the missing example, which `implement-tdd` does in the implement stage
 - Choosing the plan branch a verdict leads to

@@ -143,15 +143,13 @@ it("A security intake plan offers no scope that stops before the fix", async () 
 });
 
 // QFAI:EX-0001-0229-19
-it("A harness stage that writes nothing requested stays out of the narrower scopes", async () => {
-  const planned = await planFor(
-    extraction({ intent: "defect-crash", entryFlags: ["intermittent"], artifacts: ["spec"] }),
-  );
+it("An implement stage that writes nothing requested stays out of the narrower scopes", async () => {
+  const planned = await planFor(extraction({ intent: "feature", artifacts: ["docs"] }));
 
-  expect(field(planned.json, "route")).toBe("fix-intermittent");
+  expect(field(planned.json, "route")).toBe("add-feature");
   expect(field(planned.json, "scopes")).toEqual([
-    { scope: "narrow", stages: ["diagnose", "spec"], recommended: true },
-    { scope: "medium", stages: ["diagnose", "spec", "note", "verify"], recommended: false },
+    { scope: "narrow", stages: ["sdd", "docs"], recommended: true },
+    { scope: "medium", stages: ["sdd", "docs", "note", "verify"], recommended: false },
     { scope: "broad", stages: stageIds(planned.json), recommended: false },
   ]);
 });

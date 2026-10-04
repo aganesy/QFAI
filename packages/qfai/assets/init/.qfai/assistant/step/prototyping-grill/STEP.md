@@ -2,7 +2,7 @@
 name: prototyping-grill
 owner: qfai-prototyping
 purpose: "Settle by a delegated grilling session what the prototype is for, before the loop builds anything."
-requires: [common-grilling-record]
+requires: []
 roles: [orchestrator, product-experience-architect]
 routing-profile: default
 ---
@@ -124,10 +124,6 @@ generator and the reviewer both take that file as an input — named in
 contract set — because a decision the loop cannot read is one it will
 contradict on the next iteration, and the user will be asked to re-settle what they
 already settled.
-
-Run `common-grilling-record` with this file as the evidence path. It sets the
-rules every record keeps and the decision rows the stage's Work Orders Summary
-carries; the sections below are this file's own shape.
 
 **Every row names what it applies to**, because one invocation runs a lineage
 per `UI contract × screen` and a reader that cannot tell whose answer a row is

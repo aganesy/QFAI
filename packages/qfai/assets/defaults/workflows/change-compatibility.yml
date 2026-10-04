@@ -3,7 +3,7 @@ family: change
 stages:
   - id: sdd
     kind: sdd
-    steps: [sdd-triage, sdd-contract, sdd-story, sdd-gate]
+    steps: [sdd-triage, sdd-contract, sdd-story]
     review: spec
   - id: implement
     kind: implement
@@ -17,7 +17,7 @@ stages:
     review: code
   - id: verify
     kind: verify
-    steps: [verify-qfai-gate, verify-repo-gate]
+    steps: [verify-qfai-gate, verify-repo-gate, verify-commit]
     after: [note]
 decisionPoints: [sdd-triage]
 branchPoints: []

@@ -2,9 +2,9 @@
 name: verify-qfai-gate
 owner: qfai-verify
 purpose: "Run the QFAI validation of the run's scope and record what it finds."
-requires: [common-gate-run, common-grilling-record]
-roles: [orchestrator, devops-ci-engineer, qa-gatekeeper, implementation-reviewer]
-routing-profile: runtime-heavy
+requires: [common-gate-run]
+roles: [orchestrator, devops-ci-engineer]
+routing-profile: default
 ---
 
 # verify-qfai-gate
@@ -35,8 +35,7 @@ signals; this one decides. It records failures and repairs none of them:
      default `npx qfai validate --fail-on error`;
    - `prototyping`: `npx qfai validate --profile prototyping --fail-on error`.
 2. Run `npx qfai report` when the repository uses it.
-3. Run the static policy checks (below).
-4. Report each result in the stage report.
+3. Report each result in the stage report.
 
 ## What this gate is
 
@@ -68,18 +67,9 @@ scan cannot prove coverage; a missing layer is never a passing scan.
   `.qfai/report/validate.json`, copied verbatim. The array is `issues`, not
   `findings`.
 
-## Static policy checks
-
-- `.qfai/assistant/rule/drift-protocol.md` exists.
-- `.qfai/assistant/rule/test-layers.md` exists.
-- Every `.qfai/assistant/skill/*/SKILL.md` includes `[DRIFT-PROTOCOL:MANDATORY]`.
-- The reviewer agent cards include the drift-protocol and test-layer review
-  viewpoints.
-
 ## Gate
 
 The step is done when:
 
 - validation ran in the profile the scope names, and its result is recorded;
-- `error=0` for a pass, or the failing findings are recorded for the fix loop;
-- the static policy checks are recorded.
+- `error=0` for a pass, or the failing findings are recorded for the fix loop.

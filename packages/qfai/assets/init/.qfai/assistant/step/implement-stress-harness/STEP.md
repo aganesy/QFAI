@@ -2,14 +2,12 @@
 name: implement-stress-harness
 owner: qfai-implement
 purpose: "Build a harness that makes an intermittent failure appear on demand, under load or under a controlled schedule, and record how often it appears."
-requires: [common-steering-refresh, common-gate-run]
+requires: [common-gate-run]
 roles:
   - devops-ci-engineer
   - frontend-engineer
   - backend-engineer
-  - qa-gatekeeper
-  - implementation-reviewer
-routing-profile: runtime-heavy
+routing-profile: default
 ---
 
 # implement-stress-harness
@@ -52,5 +50,4 @@ be checked against something more than one lucky run.
 ## Gate
 
 The step is done when the harness reproduces the reported failure at a
-recorded rate, no production code changed, and the qa-gatekeeper observed the
-runs.
+recorded rate, and no production code changed.

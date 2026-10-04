@@ -6,7 +6,7 @@
 Feature: Seed a diagnosed missing example under an existing criterion
   # AC-0001-0206-01
   Scenario: A missing-example diagnosis becomes one example cited by one rule
-    Given an append stage whose diagnosis names a case that no example of the flow states, and the AC it matched
+    Given the implement stage of a fix route whose diagnosis names a case that no example of the flow states, and the AC it matched
     When defect example seeding runs
     Then exactly one EX is appended to the 03_Example.md of the story that owns that AC, citing that AC
     And the contract rule that already cites an example of that AC gains the new EX ID in its Examples cell
@@ -19,8 +19,9 @@ Feature: Seed a diagnosed missing example under an existing criterion
     And seeding writes and annotates no test, so the new EX is an item of the obligation set that no test annotates
 
   # AC-0001-0206-03
-  Scenario: The appended example records no decision row
-    Given defect example seeding appended an EX
+  Scenario: The appended example asks nobody and records no decision row
+    Given defect example seeding appended an EX that contradicts nothing in the specification
     When the stage finishes
-    Then decisions.md gains no row, since the operation needs no approval
+    Then the user was asked nothing
+    And decisions.md gains no row, and the final report lists the example
 ```

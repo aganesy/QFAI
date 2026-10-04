@@ -10,7 +10,7 @@ import { parse } from "yaml";
 
 import { PLAN_ROUTES, planStageSteps, readDefault } from "../../helpers/shippedAssistant.js";
 
-const VERIFY = ["verify-qfai-gate", "verify-repo-gate"];
+const VERIFY = ["verify-qfai-gate", "verify-repo-gate", "verify-commit"];
 
 /** The stage kinds, and the steps a stage of each kind may run. */
 const VOCABULARY: Record<string, string[]> = {
@@ -27,7 +27,6 @@ const VOCABULARY: Record<string, string[]> = {
   ],
   maintenance: ["maintain-edit"],
   diagnose: ["implement-diagnose", "implement-bisect", "implement-minimize", "implement-benchmark"],
-  sdd_append: ["sdd-story", "sdd-gate"],
   test_fix: ["implement-test-fix"],
   regression_fix: ["implement-regression-fix"],
   sdd: [
@@ -50,7 +49,6 @@ const VOCABULARY: Record<string, string[]> = {
     "implement-credentials",
     "implement-acceptance",
     "implement-tdd",
-    "implement-checkpoint",
     "implement-refactor",
     "implement-retire",
     "implement-sweep",
@@ -91,8 +89,6 @@ const PASS_THROUGH = [
   "discussion-pack",
   "discussion-uiux",
   "triage-investigate",
-  "implement-bisect",
-  "implement-minimize",
   "implement-scaffold",
   "implement-tdd",
   "implement-credentials",
@@ -236,19 +232,15 @@ describe("the built-in plans", () => {
   // QFAI:AC-0001-0186-01
   // QFAI:AC-0001-0220-05
   // QFAI:EX-0001-0220-22
-  it("holds the fix-defect plan's append and implement stages after the diagnosis", async () => {
+  it("holds the fix-defect plan's implement stage after the diagnosis, with no specification stage", async () => {
     const { raw, stages } = await plan("fix-defect");
     expect(stages.map((stage) => [stage.kind, stage.after])).toEqual([
       ["diagnose", []],
-      ["sdd_append", ["diagnose"]],
-      ["implement", ["spec"]],
+      ["implement", ["diagnose"]],
       ["verify", ["implement"]],
       ["verify", ["note"]],
     ]);
-    expect(stages[1]?.steps).toEqual([
-      { name: "sdd-story", passThrough: true },
-      { name: "sdd-gate" },
-    ]);
+    expect(stages[1]?.steps).toEqual([{ name: "implement-tdd" }]);
     expect(names(stages.at(-1))).toEqual(VERIFY);
     expect(raw).not.toMatch(/\bwhen:/);
   });

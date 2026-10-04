@@ -79,12 +79,8 @@ describe("a step that may pass with evidence", () => {
   // QFAI:EX-0001-0216-07
   it("lets sdd-story pass in an sdd stage when the change stays in the documents that own the truth", async () => {
     const text = await passesWhen("sdd-story");
-    expect(text).toMatch(/passes in two cases, and the pass names both facts it rests on/i);
     expect(text).toMatch(
-      /in an append stage\*\*, when an existing example already states the case the diagnosis matched/i,
-    );
-    expect(text).toMatch(
-      /in an `sdd` stage\*\*, when the change stays inside the documents that own the truth, as `sdd-triage` recorded the owner, and adds and changes no example/i,
+      /the step passes when the change stays inside the documents that own the truth, as `sdd-triage` recorded the owner, and adds and changes no example/i,
     );
     expect(text).toMatch(
       /the pass names the owning document and says that no example is added or changed/i,
@@ -97,12 +93,11 @@ describe("a step that may pass with evidence", () => {
 
   // QFAI:AC-0001-0186-01
   // QFAI:EX-0001-0186-11
-  it("lets sdd-story pass in an append stage citing the example that states the case, and has implement-tdd test it", async () => {
-    expect(await passesWhen("sdd-story")).toMatch(
-      /the pass cites that example, and no row is appended to `decisions\.md`/i,
-    );
-    expect(flat(await readShipped("step/implement-tdd/STEP.md"))).toMatch(
-      /an EX that states the case is worked as an EX no test annotates/i,
+  it("has implement-tdd append nothing where an example states the case, and annotate the failing test with it", async () => {
+    const text = flat(await readShipped("step/implement-tdd/STEP.md"));
+    expect(text).toMatch(/an EX that states the case is worked as an EX no test annotates/i);
+    expect(text).toMatch(
+      /where the diagnosis matched an EX that already states the case, append nothing and annotate the failing test with that EX/i,
     );
   });
 
@@ -165,7 +160,7 @@ describe("the verify steps a route adds", () => {
   it("gives each its review profile and a routing entry that names it", async () => {
     const profiles: Record<string, string> = {
       "verify-change-note": "default",
-      "verify-repeat-run": "runtime-heavy",
+      "verify-repeat-run": "default",
       "verify-external": "default",
       "verify-manual": "default",
       "verify-advisory": "default",

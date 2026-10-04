@@ -7,7 +7,6 @@ stages:
       - { step: sdd-triage, mode: settled }
       - { step: sdd-story, passThrough: true }
       - { step: sdd-contract, passThrough: true }
-      - sdd-gate
     review: spec
   - id: implement
     kind: implement
@@ -23,7 +22,7 @@ stages:
     review: code
   - id: verify
     kind: verify
-    steps: [verify-qfai-gate, verify-repo-gate]
+    steps: [verify-qfai-gate, verify-repo-gate, verify-commit]
     after: [note]
 decisionPoints: [sdd-triage]
 branchPoints:

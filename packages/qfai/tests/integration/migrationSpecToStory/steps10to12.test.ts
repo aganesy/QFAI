@@ -212,18 +212,13 @@ async function writeConfig(root: string, edit: (config: Record<string, unknown>)
 }
 
 /** The default `sdd-contract` routing entry with `architecture-reviewer` taken out of its review phase. */
-async function routingWithoutArchitectureReviewer(): Promise<Record<string, unknown>> {
+async function routingWithoutSolutionArchitect(): Promise<Record<string, unknown>> {
   const routing = await defaultRoutingEntries();
   const entry: unknown = routing.find((item) => isRecord(item) && item.step === "sdd-contract");
   if (!isRecord(entry) || !Array.isArray(entry.phases)) throw new Error("no sdd-contract routing");
   const phases = entry.phases.map((phase: unknown) =>
-    isRecord(phase) && phase.id === "review"
-      ? {
-          ...phase,
-          mandatory_agents: ["completion-reviewer"],
-          conditional_agents: [],
-          blocking_agents: ["completion-reviewer"],
-        }
+    isRecord(phase) && phase.id === "design"
+      ? { ...phase, mandatory_agents: ["requirements-analyst"] }
       : phase,
   );
   return { ...entry, phases };
@@ -537,7 +532,7 @@ describe("migration steps 11 and 12: the free-text entry", () => {
   it("names a routing override that drops a required reviewer", async () => {
     // QFAI:EX-0004-0013-06
     const root = await clone(migrated11);
-    const override = await routingWithoutArchitectureReviewer();
+    const override = await routingWithoutSolutionArchitect();
     await writeConfig(root, (config) => {
       config.routing = [override];
     });
@@ -545,7 +540,7 @@ describe("migration steps 11 and 12: the free-text entry", () => {
     const result = await stepIn(root, 12);
     expect(result.code).toBe(3);
     expect(section(result.output, "For a person")).toEqual([
-      "reviewer-missing: qfai.config.yaml: the `routing:` override for `sdd-contract` drops `architecture-reviewer`, which the package's default routing requires",
+      "reviewer-missing: qfai.config.yaml: the `routing:` override for `sdd-contract` drops `solution-architect`, which the package's default routing requires",
     ]);
     expect(await fingerprint(root)).toBe(before);
   });
@@ -567,12 +562,12 @@ describe("migration steps 11 and 12: the free-text entry", () => {
     expect(await fingerprint(paused)).toBe(before);
 
     const missing = await clone(migrated11);
-    await rm(path.join(missing, ".qfai/assistant/step/sdd-gate"), { recursive: true });
+    await rm(path.join(missing, ".qfai/assistant/step/sdd-triage"), { recursive: true });
     const before12 = await fingerprint(missing);
     const contract = await stepIn(missing, 12);
     expect(contract.code).toBe(3);
     expect(section(contract.output, "For a person")).toEqual([
-      "plan-invalid: .qfai/assistant/step/sdd-gate/STEP.md: the repair-consistency plan runs this step and it is not installed",
+      "plan-invalid: .qfai/assistant/step/sdd-triage/STEP.md: the repair-consistency plan runs this step and it is not installed",
     ]);
     expect(await fingerprint(missing)).toBe(before12);
   });
@@ -1151,7 +1146,7 @@ describe("migration steps 1 to 12 on a project holding a retired configuration k
   }, 300_000);
 });
 
-/** The thirteen 1.x paths step 12 looks for: a line that names it, and the label the item prints. */
+/** The twelve 1.x paths step 12 looks for: a line that names it, and the label the item prints. */
 const OLD_PATH_LINES: ReadonlyArray<readonly [line: string, label: string]> = [
   [".qfai/specs/", ".qfai/specs"],
   [".qfai/contracts/", ".qfai/contracts"],
@@ -1163,7 +1158,6 @@ const OLD_PATH_LINES: ReadonlyArray<readonly [line: string, label: string]> = [
   [".qfai/report/specs-coverage/", ".qfai/report/specs-coverage"],
   ["_policies/", "_policies/"],
   ["spec-0001", "spec-NNNN"],
-  ["assistant/steering/", "assistant/steering"],
   ["assistant/instructions/", "assistant/instructions"],
   ["01_Spec.md", "01_Spec.md"],
 ];
@@ -1313,10 +1307,6 @@ const GUIDE_TABLE: ReadonlyArray<readonly [oldPath: string, now: readonly string
   ],
   ["01_Spec.md", ["Kept in git history only"]],
   [
-    "assistant/steering",
-    ["`.qfai/assistant/rule/`", "`.qfai/spec/01_policy/`", "`.qfai/spec/03_contract/tech.md`"],
-  ],
-  [
     "assistant/instructions",
     ["`.qfai/assistant/rule/`", "`.qfai/spec/01_policy/`", "`.qfai/spec/03_contract/tech.md`"],
   ],
@@ -1333,7 +1323,7 @@ describe("migration step 12: project files that still name a 1.x path", () => {
       }),
       ".github/agents/reviewer.md": linesWith(
         6,
-        { 4: "Follow .qfai/assistant/steering/test-layers.md" },
+        { 4: "Follow .qfai/assistant/instructions/test-layers.md" },
         "\r\n",
       ),
     });
@@ -1342,13 +1332,13 @@ describe("migration step 12: project files that still name a 1.x path", () => {
     expect(section(result.output, "For a person")).toEqual([
       oldPathItem(".agents/skills/intake/SKILL.md", 7, ".qfai/specs", "_policies/"),
       oldPathItem(".agents/skills/intake/SKILL.md", 12, ".qfai/specs", "spec-NNNN", "01_Spec.md"),
-      oldPathItem(".github/agents/reviewer.md", 4, "assistant/steering"),
+      oldPathItem(".github/agents/reviewer.md", 4, "assistant/instructions"),
     ]);
     expect(section(result.output, "Files scanned")).toEqual(scanned(2));
   });
 
   // QFAI:AC-0004-0042-01
-  it("names each of the thirteen 1.x paths, and only the one a line holds", async () => {
+  it("names each of the twelve 1.x paths, and only the one a line holds", async () => {
     // QFAI:EX-0004-0042-02
     const named = Object.fromEntries(OLD_PATH_LINES.map(([line], at) => [at + 1, line]));
     const root = await indexedProject(migrated11, {
@@ -1393,7 +1383,6 @@ describe("migration step 12: project files that still name a 1.x path", () => {
       path.join(initialised, ".github/copilot-instructions.md"),
       "utf8",
     );
-    expect(copilot).toContain("assistant/steering");
     expect(copilot).toContain("assistant/instructions");
     const old = "| DEC-0001 | Read .qfai/specs/spec-0001/07_Decisions.md |\n";
     const root = await indexedProject(migrated11, {
@@ -1568,7 +1557,7 @@ describe("migration step 12: project files that still name a 1.x path", () => {
     const table = tableBlocks(guide).find((rows) =>
       GUIDE_TABLE.every(([oldPath]) => rows.some((cells) => firstCell(cells, oldPath))),
     );
-    expect(table, "one table that gives each of the thirteen 1.x paths").toBeDefined();
+    expect(table, "one table that gives each of the twelve 1.x paths").toBeDefined();
     for (const [oldPath, now] of GUIDE_TABLE) {
       const row = (table ?? []).find((cells) => firstCell(cells, oldPath)) ?? [];
       const where = row.slice(1).join(" | ");
