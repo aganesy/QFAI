@@ -98,9 +98,9 @@ requires, so the step asks the user nothing:
 - Add the new EX ID to the Examples cell of the contract rule that already
   cites an example of that AC. The rule's Statement is unchanged.
 - Change no story, AC, rule statement or existing EX.
-- Append the one `Change request:` row the drift gate needs: it names the
-  files changed and records that the session appended the EX under an existing
-  AC and that nobody was asked.
+- Append no `decisions.md` row: the drift gate needs no `Change request:` row
+  for appended example rows and the new EX ID in the citing rule's Examples
+  cell.
 - List the EX in the run's final report.
 - No concrete-abstract cycle runs.
 

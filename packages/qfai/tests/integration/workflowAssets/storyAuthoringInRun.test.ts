@@ -53,11 +53,11 @@ describe("defect example seeding", () => {
 
   // QFAI:AC-0001-0206-03
   // QFAI:EX-0001-0206-03
-  it("asks nothing and appends the one change request row the drift gate needs", async () => {
+  it("asks nothing and appends no decisions row", async () => {
     const text = await section(STORY_STEP, SEEDING);
     expect(text).toMatch(/the step asks the user nothing/i);
     expect(text).toMatch(
-      /append the one `Change request:` row the drift gate needs: it names the files changed and records that the session appended the EX under an existing AC and that nobody was asked/i,
+      /append no `decisions\.md` row: the drift gate needs no `Change request:` row for appended example rows/i,
     );
     expect(text).toMatch(/list the EX in the run's final report/i);
   });
