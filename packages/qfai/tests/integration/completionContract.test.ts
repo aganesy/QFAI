@@ -64,8 +64,6 @@ describe("BF completion gate", () => {
   });
 
   it("stops selection when the scoped result is missing, stale or from another profile", async () => {
-    // QFAI:AC-0001-0094-05
-    // QFAI:EX-0001-0094-06
     const c = await loadContent();
     expect(c).toContain("Read its `validate.flow-<ids>.json` result even when the command exits");
     expect(c).toContain("the file exists, `profile` is");
