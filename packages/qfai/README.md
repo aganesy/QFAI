@@ -92,7 +92,7 @@ See [Invoking a stage directly](#invoking-a-stage-directly-expert-path).
 
 You state the change once, in your own words.
 The `qfai-run` skill reads it into facts: what it asks for, its risks, and how sure that reading is.
-`npx qfai workflow plan` then picks one of 34 fixed routes from those facts by ordered decision rules
+`npx qfai workflow plan` then picks one of 35 fixed routes from those facts by ordered decision rules
 and returns the route's plan, writing nothing. The session runs each step of the plan in order and
 asks you only the decisions that are yours and each release. You type no stage name.
 
