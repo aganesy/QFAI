@@ -2,6 +2,7 @@
 // and decision, release and branch points. It starts nothing and writes nothing.
 
 import type { RouteChoice } from "./decisionRules.js";
+import type { Artifact } from "./extraction.js";
 import { extractionFaults, isExtraction } from "./extractionShape.js";
 import {
   loadInstalledPlan,
@@ -11,6 +12,7 @@ import {
 } from "./plans.js";
 import { routingOutcome } from "./routeDecision.js";
 import { isWorkflowRoute, type WorkflowRoute } from "./routes.js";
+import { scopesOf, type PlanScope } from "./scopes.js";
 import { stepPath } from "./steps.js";
 
 export type PlanReason = "invalid-input" | "schema" | "unknown-route" | "plan-invalid" | "io-error";
@@ -43,6 +45,7 @@ export interface PlanCandidate {
   rule: number | null;
   summary: string;
   recommended: boolean;
+  scopes: PlanScope[];
 }
 
 export type PlanDocument =
@@ -55,6 +58,8 @@ export type PlanDocument =
       decisionPoints: string[];
       releasePoint: string | null;
       branchPoints: PlanBranchPoint[];
+      // Present when an extraction gave the plan.
+      scopes?: PlanScope[];
     }
   | { ok: true; candidates: PlanCandidate[] }
   | { ok: false; message: string; reasons: PlanReasonEntry[] };
@@ -75,7 +80,11 @@ export function refusal(message: string, reasons: PlanReasonEntry[]): PlanDocume
   return { ok: false, message, reasons };
 }
 
-export function planned(plan: WorkflowPlanFile, rule?: number | null): PlanDocument {
+export function planned(
+  plan: WorkflowPlanFile,
+  rule?: number | null,
+  scopes?: PlanScope[],
+): PlanDocument {
   return {
     ok: true,
     route: plan.route,
@@ -96,6 +105,7 @@ export function planned(plan: WorkflowPlanFile, rule?: number | null): PlanDocum
     // Where nothing after it may run without the user's approval: a step, `end`, or none.
     releasePoint: plan.releasePoint ?? null,
     branchPoints: plan.branchPoints,
+    ...(scopes === undefined ? {} : { scopes }),
   };
 }
 
@@ -122,6 +132,7 @@ async function candidatesOf(
   root: string,
   choices: readonly RouteChoice[],
   recommended: WorkflowRoute,
+  artifacts: readonly Artifact[],
 ): Promise<PlanDocument> {
   const candidates: PlanCandidate[] = [];
   for (const choice of choices) {
@@ -135,6 +146,7 @@ async function candidatesOf(
       rule: choice.rule,
       summary,
       recommended: choice.route === recommended,
+      scopes: scopesOf(stages, artifacts),
     });
   }
   return { ok: true, candidates };
@@ -151,9 +163,13 @@ async function planOfExtraction(root: string, extraction: unknown): Promise<Plan
     );
   }
   const outcome = routingOutcome(extraction);
-  if ("candidates" in outcome) return candidatesOf(root, outcome.candidates, outcome.recommended);
+  const { artifacts } = extraction;
+  if ("candidates" in outcome) {
+    return candidatesOf(root, outcome.candidates, outcome.recommended, artifacts);
+  }
   const load = await loaded(root, outcome.taken.route);
-  return load.ok ? planned(load.plan, outcome.taken.rule) : load.document;
+  if (!load.ok) return load.document;
+  return planned(load.plan, outcome.taken.rule, scopesOf(load.plan.stages, artifacts));
 }
 
 // The plan of an extraction or of a named route, the candidates of a low-confidence extraction,

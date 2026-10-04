@@ -124,3 +124,32 @@ it("The plan of every route validates against the plan schema", async () => {
 
   expect(failing).toEqual([]);
 });
+
+// QFAI:EX-0001-0229-01
+// QFAI:EX-0001-0229-09
+it("A plan from an extraction and its candidates validate with their scopes", async () => {
+  const validate = await loadValidator();
+  const root = await minimalProject();
+  const reading = { entryFlags: [], qualifiers: [], signals: [] };
+  const documents = await Promise.all([
+    planOf(root, {
+      extraction: extraction({ qualifiers: ["visual-open"], artifacts: ["spec", "ui"] }),
+    }),
+    planOf(root, {
+      extraction: extraction({
+        confidence: "low",
+        alternatives: [{ ...reading, intent: "design" }],
+      }),
+    }),
+  ]);
+
+  expect(
+    documents.map((document) => [
+      Object.hasOwn(document, "scopes") || Object.hasOwn(document, "candidates"),
+      validate(PLAN, document),
+    ]),
+  ).toEqual([
+    [true, true],
+    [true, true],
+  ]);
+});
