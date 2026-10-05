@@ -14,6 +14,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { runInit } from "../../src/cli/commands/init.js";
+import { loadConfig, readSkippedWorkflows } from "../../src/core/config.js";
 import { QFAI_GITIGNORE_BLOCK } from "../../src/core/gitignore.js";
 import {
   RETIRED_WORKFLOW_NAMES,
@@ -153,6 +154,57 @@ describe("a shipped workflow is written only where none is on disk", () => {
 
     expect(await readFile(workflowAt(dir, NAME), "utf-8")).toBe(
       await readFile(shippedWorkflowPath(NAME), "utf-8"),
+    );
+  });
+});
+
+describe("a shipped workflow the project lists under workflow.skipShipped is not written", () => {
+  const SKIPPED = "qfai-tests.yml";
+
+  const listedIn = (dir: string, value: string): Promise<void> =>
+    writeFile(path.join(dir, "qfai.config.yaml"), `workflow:\n  skipShipped: ${value}\n`, "utf-8");
+
+  // QFAI:AC-0002-0007-04
+  // QFAI:EX-0002-0007-07
+  it("leaves the listed file out on every run and writes the others", async () => {
+    const dir = await newTempDir();
+    await listedIn(dir, `[${SKIPPED}]`);
+
+    await runInitQuiet(dir);
+    const first = (await readdir(path.join(dir, ".github", "workflows"))).sort();
+    await runInitQuiet(dir);
+    const second = (await readdir(path.join(dir, ".github", "workflows"))).sort();
+
+    const expected = [...SHIPPED_WORKFLOW_NAMES].filter((name) => name !== SKIPPED).sort();
+    expect(first).toEqual(expected);
+    expect(second).toEqual(expected);
+  });
+
+  // QFAI:AC-0002-0007-04
+  // QFAI:EX-0002-0007-08
+  it("reports a value that is not a list of shipped names and still writes every workflow", async () => {
+    for (const value of ["[qfai-orphan.yml]", "qfai-tests.yml", "[1]"]) {
+      const dir = await newTempDir();
+      await listedIn(dir, value);
+
+      await runInitQuiet(dir);
+
+      expect((await readdir(path.join(dir, ".github", "workflows"))).sort(), value).toEqual(
+        [...SHIPPED_WORKFLOW_NAMES].sort(),
+      );
+      const { issues } = await loadConfig(dir);
+      const named = issues.filter((issue) => issue.message.includes("workflow.skipShipped"));
+      expect(named, value).toHaveLength(1);
+      expect(named[0]?.code, value).toBe("QFAI_CONFIG_INVALID");
+    }
+  });
+
+  it("reads an absent key and an empty list as no skipped workflow", () => {
+    expect(readSkippedWorkflows({})).toEqual(new Set());
+    expect(readSkippedWorkflows({ workflow: { mode: "off" } })).toEqual(new Set());
+    expect(readSkippedWorkflows({ workflow: { skipShipped: [] } })).toEqual(new Set());
+    expect(readSkippedWorkflows({ workflow: { skipShipped: [SKIPPED] } })).toEqual(
+      new Set([SKIPPED]),
     );
   });
 });
