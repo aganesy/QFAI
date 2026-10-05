@@ -6,7 +6,10 @@ import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
 import { buildStoryTreeModel } from "../../src/core/storyTree/tree.js";
-import { readStoryTests, validateStoryTreeObligations } from "../../src/core/validators/storyTreeObligations.js";
+import {
+  readStoryTests,
+  validateStoryTreeObligations,
+} from "../../src/core/validators/storyTreeObligations.js";
 
 describe("story-tree test scan", () => {
   it("fails closed when a configured test glob cannot be scanned", async () => {
