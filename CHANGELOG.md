@@ -40,6 +40,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   (#2425). Step 2 of `qfai-migration-v1-to-v2` gave every `approved` change
   request the Status DONE, recording a change as made when only its approval
   was. A request whose `Applied at` is empty or `-` now becomes WIP.
+- **A validator no longer reads an unreadable file as a missing one.** The
+  shared `exists` and `readSafe` helpers turned every failure, including
+  `EACCES` and `EIO`, into "absent" or an empty string, so a file the validator
+  could not read passed as one that was not there. Only `ENOENT` and `ENOTDIR`
+  now mean absent; any other error propagates unchanged. Fixes #2906.
 - **The contract guide states one scope for contract kinds.** It named only
   `api/`, `db/` and `ui/` as contract directories in one place and `cli/` in
   another. It now says a project's contracts are the three directories and that
