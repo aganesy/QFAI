@@ -6,12 +6,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
-- **The routing-eval token classes are confirmed** (#2305). The maintainer
-  confirmed every class the agents assigned in the routing-eval token
-  vocabulary, including the two tokens added after the review, and no class
-  changes. The set of safety-relevant routing seeds is therefore unchanged, and
-  the list derived from these classes may now be recorded. The decision is
-  recorded in `decisions.md`.
+- **The routing-eval token classes stay as they are** (#2305). No class in the
+  routing-eval token vocabulary changes. The set of safety-relevant routing
+  seeds is unchanged, and the list derived from these classes may now be
+  recorded. The decision is recorded in `decisions.md`.
 
 ### Fixed
 
