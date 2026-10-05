@@ -10,18 +10,18 @@ while the author of the rule is still in the invocation.
 A cycle runs when Stage 4 of this invocation wrote or changed the Statement or
 the Examples cell of at least one BR.
 
-No cycle runs, and the evidence gets no cycle row, when:
+No cycle runs when:
 
 - the invocation wrote or changed no BR Statement and no Examples cell, even if
   it changed an AC or an EX;
-- the stage is of kind `sdd_append`, which appends one example for a diagnosed
+- the stage is an append stage, which appends one example for a diagnosed
   defect. That stage may not change a US, an AC, a BR Statement or an existing
   EX, which is what most findings would change.
 
 ## The finder
 
-The finder is a `test-design-analyst` that wrote none of the BRs it reads. It
-reads:
+The finder is a sub-agent, such as a `test-design-analyst`, that wrote none of
+the BRs it reads. It reads:
 
 - each BR whose Statement or Examples cell this invocation wrote or changed;
 - the EXs each of those BRs cites;
@@ -41,42 +41,37 @@ A finding names its kind and the IDs it targets. Raising one changes no file. A
 cited EX that the Statement does not explain is a finding of the third kind, not
 a missing citation.
 
-## Adjudication
+## Deciding a finding
 
-Each cycle has one griller. It is neither the finder nor an author of an item
-any finding targets. A reviewing role, or a separate instance of a drafting
-role, can take it, as in pre-draft grilling (`sdd-pre-draft-grilling.md`).
+The session agent holds the cycle and decides each finding.
 
-The griller runs a delegated session under
-`.qfai/assistant/rule/review-convergence.md#agent-to-agent-grilling-must`:
-
-1. It puts the findings to the authors of the targeted items, for at most two
-   rounds.
-2. It then adopts its own recommendation on each finding that is not critical.
-   An author's dissent is recorded beside the decision.
-3. A finding that rests on product intent that no BR, no AC, the request nor
+1. It decides each finding that is not critical itself.
+2. A finding that rests on product intent that no BR, no AC, the request nor
    the discussion states is critical. It goes to the user, and no agent
    decides it.
 
 The request bounds what a cycle may add. A proposed EX must be implied by an
-existing BR, an existing AC or the request. The griller rejects one that is not,
-and no EX is appended for it.
+existing BR, an existing AC or the request. The session drops one that is not:
+no EX is appended for it, and no row is written.
 
 ## Applying an adopted finding
 
 The age of the target decides the route.
 
-| Target                                              | Route                                                                                                                                         |
-| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| An AC, EX or BR this invocation wrote               | Changed directly, with no approval. An AC it wrote is split the same way, with no triage row, and each EX re-cites the criterion it exercises |
-| An item that existed when the invocation started    | Changed only under an in-force `Change request:` row (WIP or DONE) whose approved change covers this change                                   |
-| The same item, with no row that covers the change   | Append a `Change request:` row at TODO and leave the item unchanged until the user approves it                                                |
-| Removing an item that existed at the start          | Also a triage row naming UPDATE:REMOVE at TODO                                                                                                |
-| Creating, splitting, merging or retiring a BF or US | Keeps its triage approval, even when this invocation wrote the item                                                                           |
+| Target                                              | Route                                                                                                                                       |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| An AC, EX or BR this invocation wrote               | Changed directly, with no approval. An AC it wrote is split the same way, with no approval, and each EX re-cites the criterion it exercises |
+| An item that existed when the invocation started    | Changed directly only under an in-force `Change request:` row (WIP, or DONE on this branch) whose approved change covers this change        |
+| The same item, with no row that covers the change   | The change is put to the user, and the item stays unchanged until the user approves it                                                      |
+| Creating, splitting, merging or retiring a BF or US | Put to the user, even when this invocation wrote the item                                                                                   |
 
 A row naming the file does not cover a change it did not describe. The drift
 protocol approves a proposed change and its affected set as written
-(`.qfai/assistant/rule/drift-protocol.md#when-drift-is-detected`).
+(`.qfai/assistant/rule/drift-protocol.md#when-drift-is-detected`). An approved
+change is written with one `Change request:` row naming the files it changes,
+as
+`.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#a-change-to-the-story-tree`
+sets out.
 
 Under `--contract`, a finding that only a story change answers asks the user for
 a wider change request naming the story file. The story file stays byte for byte
@@ -91,58 +86,35 @@ updated EXs.
 - A second cycle runs only after a first cycle that adopted a finding.
 - No third cycle runs, even when the second adopted one.
 
-A finding with no decision when the loop ends becomes an `open-questions.md` row
-at TODO whose Content opens `Unadjudicated:`, followed by the finding and its
-target IDs. The per-flow gate reports that row as `QFAI-SPACK-102` until it is
-decided.
+A finding still undecided when the session ends becomes one `open-questions.md`
+row at TODO whose Content opens `Unadjudicated:`, followed by the finding and
+its target IDs. The per-flow gate reports that row as `QFAI-SPACK-102` until it
+is decided.
 
-Under `--auto`, outside a run, nothing is asked. A finding that would go to the
-user becomes that row in the cycle that raised it, and the evidence records it
-with no decision.
+Under `--auto` nothing is asked. A finding that would go to the user becomes
+that row in the cycle that raised it.
 
-## Rejected findings
+The row changes `open-questions.md`, which the drift gate protects. The change
+request the user approves when the finding is decided names
+`open-questions.md`, and that row is what authorizes the change. Until then the
+per-flow gate holds the flow, so no later stage builds on it.
 
-Each rejected finding is one `decisions.md` row at REJECTED. Its Content names
-the kind, the target IDs, and the case by the input that distinguishes it. The
-reason goes in Approach.
+No other record is written. A finding the session decided, and one it dropped,
+append no row.
 
-The finder does not raise a finding again when either holds:
+## A decided finding is not raised again
 
-- It has the kind and target IDs of a finding already decided in this
-  invocation, or of a REJECTED row, and its case is equal to that case,
-  includes it, or is included in it.
-- The proposed change of a `Change request:` row at TODO or REJECTED already
-  answers it. A declined change request is the user deciding that finding.
+Within a session, the finder does not raise a finding again when either holds:
 
-Matching never goes by wording. A row at REJECTED for `BR-0003-0001` and
+- It has the kind and target IDs of a finding the session already decided, and
+  its case is equal to that case, includes it, or is included in it.
+- The proposed change of a change request the user declined already answers
+  it. A declined change request is the user deciding that finding, and its
+  REJECTED row in `decisions.md` bars the finding it answers.
+
+Matching never goes by wording. A declined change for `BR-0003-0001` and
 `EX-0002-0003-02` whose case is "an order of 20 000 in euros" also bars "an order
 of 20 000 in any currency other than the default", however either is worded. It
 does not bar a finding on the same IDs for an order of exactly 10 000.
 
 A decision appended to reopen a REJECTED row lifts it.
-
-## Inside a workflow run
-
-The cycle runs in the first attempt, on the proposal, before the change
-question. A finding for the user becomes a further `decision` question in the
-same result, and the attempt holding the answers applies them and writes the
-records. That attempt runs no further cycle, because a later cycle would change
-the proposal the answer approved. `.qfai/assistant/step/sdd-cycle/STEP.md#inside-a-workflow-run`
-states what each attempt writes.
-
-## The record
-
-The flow's `.qfai/evidence/sdd-BF-NNNN.md` records every cycle under
-`## Concrete-Abstract Cycle` (`../templates/evidence/sdd-flow.md`):
-
-- one row per finding: cycle, finding, kind, target IDs, decision, adjudicator
-  and reason;
-- one row for each cycle that raised nothing;
-- the finder, named in the Work Orders Summary.
-
-A finding's adjudicator is the griller, or `user` for a finding put to the
-user. A finding left with no decision records `none` as its decision.
-
-The completion reviewer checks the record, and no validator reads it. The
-grounds on which it returns REVISE are in
-`sdd-quality-gate.md#concrete-abstract-cycle-record`.

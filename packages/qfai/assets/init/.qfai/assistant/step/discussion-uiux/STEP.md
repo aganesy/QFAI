@@ -3,8 +3,8 @@ name: discussion-uiux
 owner: qfai-discussion
 purpose: "Write the screen-level sidecars of a UI-bearing discussion pack."
 requires: []
-roles: [product-experience-architect, completion-reviewer, product-surface-reviewer]
-routing-profile: ui-bearing
+roles: [product-experience-architect]
+routing-profile: default
 ---
 
 # discussion-uiux
@@ -14,7 +14,7 @@ read, without forcing an early visual direction.
 
 ## Precondition
 
-The same as `discussion-pack`: this run's stage evidence holds the
+The same as `discussion-pack`: this run's stage report holds the
 `## Grilling Session` row, its `Ended at` is written, and `Ended` is
 `confirmed`, `user-closed` or `no-question`. Without that row, or with
 `Ended: stopped`, write nothing and stop.

@@ -13,7 +13,7 @@ Blocking for every pack, UI-bearing or not:
    `sources` / `best_practices` / `anti_patterns` / `reflection` are non-empty, every `source_id`
    resolves to a `sources[].id`, and at least one `reflection[]` entry records an apply decision.
    `npx qfai validate --profile discussion --fail-on error` reports `QFAI-RESEARCH-*` until it is.
-2. The stage evidence's `## Grilling Session` row shows the session ended before authoring began,
+2. The stage report's `## Grilling Session` row shows the session ended before authoring began,
    with `Ended` reading one of the three endings that authorize it:
 
    | Ended         | Also required                                                                                                  |
@@ -32,7 +32,7 @@ Blocking for every pack, UI-bearing or not:
    Not at a count, and not on the questions running out.
 
    This is blocking rather than advisory because the failure it catches leaves no other trace. A
-   pack authored mid-session looks exactly like one authored after: fifteen files, every topic
+   pack authored mid-session looks exactly like one authored after: nine files, every topic
    covered, every open question registered. What is missing is that someone agreed to what is in
    them, and nothing downstream can tell.
 

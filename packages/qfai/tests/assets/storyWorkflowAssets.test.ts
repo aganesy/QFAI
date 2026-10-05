@@ -4,8 +4,6 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { readImplementFlowSteps } from "../helpers/implementSteps.js";
-
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const assistant = path.join(repoRoot, "packages/qfai/assets/init/.qfai/assistant");
 
@@ -14,25 +12,6 @@ async function read(relative: string): Promise<string> {
 }
 
 describe("story-tree acceptance and implementation assets", () => {
-  it("uses the BF, AC and EX layer split and records non-gating volume signals", async () => {
-    const atdd = await read("step/atdd-author/STEP.md");
-    const volume = await read("skill/qfai-atdd/references/volume-signals.md");
-    expect(atdd).toContain("QFAI:BF-NNNN");
-    expect(atdd).toContain("QFAI:AC-NNNN-NNNN-NN");
-    expect(atdd).toContain("QFAI:EX-NNNN-NNNN-NN");
-    expect(volume).toContain("Do not count a shared AC in both layers");
-    expect(volume).toContain("EX tests belong");
-    expect(volume).toContain("Signals are planning observations, not quality gates");
-  });
-
-  it("selects affected suites through imports and reruns shared consumers", async () => {
-    const suite = await read("skill/qfai-implement/references/relevant-test-suite.md");
-    expect(suite).toContain("current QFAI:EX annotation");
-    expect(suite).toContain("Follow imports and test data consumers");
-    expect(suite).toContain("Re-run dependent flows after an integrated shared-module change");
-    expect(suite).toContain("Standard commands");
-  });
-
   it("permits parallel EX work only on declared independent seams", async () => {
     const policy = await read("skill/qfai-implement/references/parallelization-policy.md");
     expect(policy).toContain("explicit user approval and a delivery-planner PASS");
@@ -71,30 +50,6 @@ describe("story-tree acceptance and implementation assets", () => {
     expect(gatekeeper).toContain("For UI work, inspect the rendered surface");
   });
 
-  it("requires observed acceptance RED or controlled falsifiability", async () => {
-    const red = await read("skill/qfai-atdd/references/red-provenance.md");
-    const gatekeeper = await read("agent/qa-gatekeeper.md");
-    expect(red).toContain("selected-test output");
-    expect(red).toContain("test plus fixtures or snapshots");
-    expect(red).toContain("A module-load error, missing dependency, broken fixture");
-    expect(red).toContain("restore the mutation");
-    expect(gatekeeper).toContain("A syntax error, deleted export");
-  });
-
-  it("reads the RED test hash's execute bit where git reads it", async () => {
-    // Windows has no execute bit on disk, so a bit read off the disk hashes a
-    // file git marks executable differently on Windows and POSIX checkouts.
-    const red = (await read("skill/qfai-atdd/references/red-provenance.md")).replace(/\s+/g, " ");
-    expect(red).toContain("`100755` for a file `git add` would record as executable");
-    expect(red).toContain(
-      "Where `core.fileMode` is `false`, as in a repository git created on Windows, take it from the index",
-    );
-    expect(red).toContain("take the owner's execute bit off the disk: a `0654` file is `100644`");
-    expect(red).toContain("Resolve and stage a merge conflict in a manifest file");
-    expect(red).not.toContain("any execute bit set");
-    expect(red).not.toContain("record its hash on the platform that will verify it");
-  });
-
   it("rejects a load error and proves RED came from the selected assertion", async () => {
     const admissibility = await read("skill/qfai-implement/references/red-admissibility.md");
     expect(admissibility).toContain("one example and one test selector");
@@ -103,35 +58,8 @@ describe("story-tree acceptance and implementation assets", () => {
     expect(admissibility).toContain("restore the assertion");
   });
 
-  it("addresses each observation and seals review packs without rewriting history", async () => {
-    const evidence = await read("skill/qfai-implement/references/evidence-revision.md");
-    expect(evidence).toContain("working-tree+<content hash>");
-    expect(evidence).toContain("RED, the temporary falsifiability mutation, GREEN");
-    expect(evidence).toContain("Review pack seal");
-    expect(evidence).toContain("A later result does not retitle an earlier observation");
-    const implement = await read("step/implement-tdd/STEP.md");
-    expect(implement).toContain("implementation-reviewer checks code and tests");
-    expect(implement).toContain("Each required reviewer must pass the same final revision");
-  });
-
-  it("nests every EX round under its own section and refreshes changed proof", async () => {
-    const rounds = await read("skill/qfai-implement/references/round-evidence.md");
-    expect(rounds).toContain("### EX-NNNN-NNNN-NN");
-    expect(rounds).toContain("#### Round N");
-    expect(rounds).toContain("A blocking REVISE opens the next round");
-    expect(rounds).toContain("Every reviewer verdict names its reviewed revision");
-    expect(rounds).toContain("repeat observations whose inputs moved");
-  });
-
-  it("keeps the assistant file budget and review boundaries explicit", async () => {
+  it("keeps the assistant file budget explicit", async () => {
     const baseline = await read("rule/shared-skill-operating-baseline.md");
-    const implement = await readImplementFlowSteps(assistant);
-    const gatekeeper = await read("agent/qa-gatekeeper.md");
     expect(baseline).toContain("800 lines per assistant asset file");
-    expect(implement).toContain("The author does not certify their own result");
-    expect(implement).toContain("qfai validate --profile tdd --fail-on error --flow BF-NNNN");
-    expect(gatekeeper).toContain("An ordinary RED must show");
-    expect(gatekeeper).toContain("GREEN needs the same selected test");
-    expect(gatekeeper).toContain("A missing dependency");
   });
 });

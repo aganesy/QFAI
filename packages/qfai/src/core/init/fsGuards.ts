@@ -1,10 +1,10 @@
 import { constants } from "node:fs";
 import type { Stats } from "node:fs";
-import { access, chown, lstat, open, readFile } from "node:fs/promises";
+import { access, lstat, open, readFile } from "node:fs/promises";
 import type { FileHandle } from "node:fs/promises";
 import path from "node:path";
 
-import { hasErrnoCode, isEnoent } from "../fs/errno.js";
+import { isEnoent } from "../fs/errno.js";
 
 /**
  * The first component of `target` at or below `destRoot` that is a symbolic
@@ -22,33 +22,6 @@ export async function firstLinkedComponent(
     if (entry?.isSymbolicLink() === true) return walked;
   }
   return null;
-}
-
-/**
- * Gives the staged file the original's owner, or says why it could not.
- *
- * A rename makes the staged inode the file, so where ownership is not restored
- * the adopter's own file comes back owned by whoever ran init. At mode `0644`
- * its former owner can then read it and not edit it — a worse outcome than the
- * citation going unwritten, so this refuses rather than proceeding.
- *
- * Nothing is attempted where the process already owns the file, which is the
- * ordinary case, or on a platform with no ownership to restore.
- */
-export async function keepOwner(staging: string, original: Stats): Promise<string | null> {
-  if (typeof process.getuid !== "function" || typeof process.getgid !== "function") return null;
-  if (original.uid === process.getuid() && original.gid === process.getgid()) return null;
-  try {
-    await chown(staging, original.uid, original.gid);
-    return null;
-  } catch (cause: unknown) {
-    // The code alone. Node puts the full path in the message, and a checkout
-    // whose path carries a newline or an escape sequence would then forge
-    // report lines through a warning — the separately printed target goes
-    // through `formatReportPath` for exactly that reason.
-    const code = hasErrnoCode(cause) ? cause.code : "unknown";
-    return `Its owner could not be kept (${code}). Renaming over it would leave the file owned by this run, and its owner unable to edit it.`;
-  }
 }
 
 /** File contents, or `null` when nothing is there. Other read faults throw. */

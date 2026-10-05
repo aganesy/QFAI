@@ -3,14 +3,7 @@
 ## Criteria
 
 ```gherkin
-Feature: Settle one visual decision as a stage of a run
-  # AC-0001-0204-01
-  Scenario: The prototyping skill follows the stage-skill handover
-    Given workflow mode active
-    When qfai-prototyping starts with no name invocation and no work order
-    Then it edits nothing and passes the request to qfai-run
-    And with a valid work order it does only that work
-
+Feature: Settle one visual decision as a stage of a route
   # AC-0001-0204-02
   Scenario: The prototyping skill lists the steps the plans run for prototyping
     Given the qfai-prototyping SKILL.md and the built-in plans
@@ -19,17 +12,17 @@ Feature: Settle one visual decision as a stage of a run
     And every step a plan gives a prototype stage is one of them
 
   # AC-0001-0204-03
-  Scenario: A prototype stage stays inside the flow its work order binds
-    Given a prototype work order whose target binds one business flow with a UI-bearing contract
-    When qfai-prototyping runs under it
+  Scenario: A prototype stage stays inside the flow its route is for
+    Given a prototype stage of a route for one business flow with a UI-bearing contract
+    When qfai-prototyping runs in it
     Then it settles the one visual decision the plan needs for that flow within the existing root DESIGN.md and UI contracts
     And it changes no UI contract of another flow and creates no contract
     And a standalone invocation still resolves every UI-bearing contract
 
   # AC-0001-0204-04
-  Scenario: A prototype stage on a flow with no UI-bearing contract is blocked
-    Given a prototype work order whose target binds a business flow no UI-bearing contract serves
-    When qfai-prototyping runs under it
+  Scenario: A prototype stage on a flow with no UI-bearing contract stops
+    Given a prototype stage of a route for a business flow no UI-bearing contract serves
+    When qfai-prototyping runs in it
     Then it writes nothing
-    And it returns outcome blocked with the missing UI surface as a debt the operator resolves
+    And the session stops, naming the missing UI surface
 ```

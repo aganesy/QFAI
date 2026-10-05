@@ -30,23 +30,15 @@ import {
 } from "../../helpers/shippedAssistant.js";
 
 const RUN = "skill/qfai-run/SKILL.md";
-const PAYLOADS = "skill/qfai-run/references/payloads.md";
+const PLAN = "skill/qfai-run/references/plan.md";
 const SCREENS = "skill/qfai-run/references/operator-screens.md";
 const EXTRACTION = "skill/qfai-run/references/extraction.md";
 const MAINTAIN = "skill/qfai-maintain/SKILL.md";
 const MAINTAIN_EDIT = "step/maintain-edit/STEP.md";
 
-const PROFILES = [
-  "architecture-heavy",
-  "default",
-  "heavy",
-  "implementation-heavy",
-  "requirements-heavy",
-  "runtime-heavy",
-  "ui-bearing",
-];
+const PROFILES = ["architecture-heavy", "default", "runtime-heavy"];
 
-const AGENT_FIELDS = ["mandatory_agents", "conditional_agents", "blocking_agents"] as const;
+const AGENT_FIELDS = ["mandatory_agents", "conditional_agents"] as const;
 
 type Phase = Record<string, unknown>;
 
@@ -145,7 +137,7 @@ const EXTRACTION_VOCABULARIES: Record<string, string[]> = {
     "mechanism-inert",
     "removal-requested",
     "visual-open",
-    "contradicts-record",
+    "prototype-requested",
   ],
   signals: [
     "approved-record-task",
@@ -156,9 +148,9 @@ const EXTRACTION_VOCABULARIES: Record<string, string[]> = {
     "backport",
     "release-notes",
     "test-plan",
+    "acceptance-bodies",
   ],
   risks: ["security", "data-loss", "silent", "breaking", "upgrade", "performance"],
-  gate: ["none", "decide", "approve", "external"],
   artifacts: [
     "code",
     "tests",
@@ -183,7 +175,6 @@ const EXTRACTION_SECTIONS: Record<string, string> = {
   qualifiers: "## Qualifiers",
   signals: "## Signals",
   risks: "## Risks",
-  gate: "## Gate",
   artifacts: "## Artifacts",
   confidence: "## Confidence and alternatives",
 };
@@ -197,11 +188,11 @@ function firstCells(section: string): string[] {
     .sort();
 }
 
-// The proposal of the routing result example the payload reference shows.
-function routingProposal(payloads: string): Record<string, unknown> {
-  const block = payloads.split("## Routing result")[1]?.split("```json\n")[1]?.split("```")[0];
-  const result: unknown = JSON.parse(block ?? "null");
-  return isRecord(result) && isRecord(result.proposal) ? result.proposal : {};
+// The extraction example the plan reference shows.
+function extractionExample(reference: string): Record<string, unknown> {
+  const block = reference.split("## Extraction")[1]?.split("```json\n")[1]?.split("```")[0];
+  const example: unknown = JSON.parse(block ?? "null");
+  return isRecord(example) ? example : {};
 }
 
 // Each `field: value` of an extraction that its field's vocabulary does not hold.
@@ -230,27 +221,9 @@ describe("qfai-run", () => {
     expect(lines.length).toBeLessThanOrEqual(150);
   });
 
-  // QFAI:AC-0001-0190-01
-  // QFAI:EX-0001-0190-01
-  it("starts a run only for a routed request, a question included, and serves every other kind another way", async () => {
-    const text = flat(sectionOf(await readShipped(RUN), "## Request kinds"));
-    expect(text).toMatch(/only `routed` calls `start`/i);
-    expect(text).toMatch(/`routed`: a change, a question, a proposal to decide or a report/i);
-    expect(text).toMatch(/a question runs a route that answers it and changes nothing/i);
-    expect(text).toMatch(/`resume`, or `continue` on a run in progress: call `resume`/i);
-    expect(text).toMatch(/`cancel`: call `decision` with `stop`/i);
-    expect(text).toMatch(/`explicit_stage`, `verify_only`: invoke the stage skill by name/i);
-    const everyFile = await Promise.all(
-      (await filesUnder(path.join(SHIPPED_ASSISTANT, "skill", "qfai-run"))).map((file) =>
-        readFile(file, "utf-8"),
-      ),
-    );
-    expect(everyFile.join("\n")).not.toMatch(/read_only|plan_only/);
-  });
-
   // QFAI:AC-0001-0211-05
   // QFAI:EX-0001-0211-35
-  it("defines every extraction value, shows a routing result with an extraction and no route, and names no route", async () => {
+  it("defines every extraction value, shows an extraction with no route, and names no route", async () => {
     const reference = await readShipped(EXTRACTION);
     const defined = Object.fromEntries(
       Object.entries(EXTRACTION_SECTIONS).map(([field, heading]) => [
@@ -267,18 +240,14 @@ describe("qfai-run", () => {
       ),
     );
 
-    const proposal = routingProposal(await readShipped(PAYLOADS));
-    const extraction = isRecord(proposal.extraction) ? proposal.extraction : {};
-    expect(Object.keys(proposal)).not.toContain("candidateRoute");
-    expect(Object.keys(proposal)).not.toContain("route");
+    const extraction = extractionExample(await readShipped(PLAN));
     expect(Object.keys(extraction).sort()).toEqual(Object.keys(EXTRACTION_VOCABULARIES).sort());
     expect(outsideVocabulary(extraction)).toEqual([]);
 
     const skill = flat(await readShipped(RUN));
     expect(skill).toMatch(
-      /choose a route\. the cli's decision rules choose it from the extraction/i,
+      /choose a route, which the cli's decision rules take from the extraction/i,
     );
-    expect(skill).toMatch(/write the routing result around it, naming no route/i);
     const routes = (await readdir(path.join(PACKAGE_DEFAULTS, "workflows")))
       .filter((file) => file.endsWith(".yml"))
       .map((file) => file.replace(/\.yml$/, ""));
@@ -292,163 +261,259 @@ describe("qfai-run", () => {
         }
       }
     }
-    expect(routes.length).toBe(39);
+    expect(routes.length).toBe(35);
     expect(naming).toEqual([]);
   });
 
-  // QFAI:AC-0001-0213-06
-  // QFAI:EX-0001-0213-06
-  it("relays the route question with plain options, the recommendation apart, and answers it with the first option under a no-question mode", async () => {
-    const questions = sectionOf(await readShipped(SCREENS), "## Questions");
-    const row = rowOf(questions, "The route question");
-    expect(row).toMatch(/one option per reading of the request, two or three/i);
-    expect(row).toMatch(
-      /a short label and one sentence on what that route will change and check, with no route identifier/i,
+  // QFAI:AC-0001-0222-06
+  // QFAI:EX-0001-0222-11
+  // QFAI:EX-0001-0222-12
+  it("puts the candidates as one single-select question, plans the choice by name, and takes the first under a no-question mode", async () => {
+    const work = flat(sectionOf(await readShipped(RUN), "## The work"));
+    expect(work).toMatch(/when `plan` returns `candidates`, put one single-select question/i);
+    expect(work).toMatch(/each option saying in the user's words what that route will do/i);
+    expect(work).toMatch(/`npx qfai workflow plan --route <route>` for the chosen one/);
+    const screens = await readShipped(SCREENS);
+    const row = rowOf(sectionOf(screens, "## Questions"), "| The candidate question");
+    expect(row).toMatch(/with no route identifier/i);
+    expect(flat(sectionOf(screens, "## Questions"))).toMatch(
+      /the recommendation, the main reading, stands on a line of its own/i,
     );
-    expect(row).toMatch(/the recommendation stands on a line of its own/i);
-    expect(row).toMatch(/the question says one may be chosen/i);
-    const text = flat(questions);
-    expect(text).toMatch(
-      /its options come in the order the decision rules reach them, and it recommends the main reading/i,
-    );
-    expect(text).toMatch(
-      /`qfai-run` chooses nothing between the readings while a question can be put/i,
-    );
-    expect(text).toMatch(
-      /under a no-question mode `qfai-run` answers it itself with `decision` and the first option/i,
-    );
-    expect(text).toMatch(/the completion report lists that choice as an assumption/i);
-    expect(flat(sectionOf(await readShipped(RUN), "## The run"))).toMatch(
-      /under `--auto` the route question is not put: answer it with `decision` and its first option/i,
-    );
-    expect(
-      flat(sectionOf(await readShipped(EXTRACTION), "## Confidence and alternatives")),
-    ).toMatch(
-      /never raise it to avoid a question or lower it to cause one, under `--auto` included/i,
+    const quiet = flat(sectionOf(await readShipped(RUN), "## Under a no-question mode"));
+    expect(quiet).toMatch(
+      /the plan's narrowest scope, or the first candidate and its narrowest scope, is taken and reported as an assumption/i,
     );
   });
 
-  // QFAI:AC-0001-0192-01
-  // QFAI:EX-0001-0192-02
-  it("writes nothing under shadow and starts no run under off", async () => {
+  // QFAI:AC-0001-0224-01
+  // QFAI:EX-0001-0224-01
+  it("announces the goal, the stages and the files before the first stage, then runs every step in order", async () => {
+    const work = flat(sectionOf(await readShipped(RUN), "## The work"));
+    expect(work).toMatch(
+      /before the first stage, give the goal, the chosen stages in order in plain words, and the files the work may change\. ask nothing/i,
+    );
+    expect(work).toMatch(/run each stage in plan order, and each of its steps in order/i);
+    const announcement = flat(sectionOf(await readShipped(SCREENS), "## The announcement"));
+    expect(announcement).toMatch(/it asks nothing and lists no skipped stage/i);
+    expect(flat(await readShipped(RUN))).toMatch(/add, drop or reorder a step the plan names/i);
+  });
+
+  // QFAI:AC-0001-0229-02
+  // QFAI:AC-0001-0229-03
+  // QFAI:AC-0001-0229-04
+  // QFAI:AC-0001-0229-05
+  // QFAI:EX-0001-0229-05
+  // QFAI:EX-0001-0229-06
+  // QFAI:EX-0001-0229-07
+  // QFAI:EX-0001-0229-08
+  // QFAI:EX-0001-0229-11
+  // QFAI:EX-0001-0229-12
+  // QFAI:EX-0001-0229-14
+  // QFAI:EX-0001-0229-15
+  // QFAI:EX-0001-0229-16
+  // QFAI:EX-0001-0229-17
+  // QFAI:EX-0001-0229-18
+  // QFAI:EX-0001-0229-23
+  it("asks which scope to run before the first stage, runs only its stages, and never calls a narrower run done", async () => {
+    const run = await readShipped(RUN);
+    expect(flat(sectionOf(run, "## The work"))).toMatch(
+      /\*\*scope\.\*\* ask which scope to run, as `references\/operator-screens\.md` says; run only its stages\./i,
+    );
+    expect(flat(run)).toMatch(/or run a stage outside the scope/i);
+    const screens = await readShipped(SCREENS);
+    const scope = flat(sectionOf(screens, "## The scope question"));
+    expect(scope).toMatch(/the plan's, or the chosen candidate's after the candidate question/i);
+    expect(scope).toMatch(
+      /one option per scope, narrowest first and recommended, each naming the stages it runs in plain words/i,
+    );
+    expect(scope).toMatch(
+      /a free-text answer runs the stages up to the last one it names, followed by the verify stages the narrowest scope would add to them/i,
+    );
+    expect(scope).toMatch(/stops the work before the first stage, naming that work/i);
+    expect(scope).toMatch(
+      /one scope, a plan with no scopes, and a branch destination's plan, however it was taken, ask nothing and run every stage/i,
+    );
+    expect(scope).toMatch(/a release point is asked only when the chosen scope holds its step/i);
+    expect(scope).toMatch(/when the chosen scope leaves stages out, ask before every branch move/i);
+    expect(flat(sectionOf(run, "## Under a no-question mode"))).toMatch(
+      /a third branch move, or one from a scope that leaves stages out, stops the work/i,
+    );
+    expect(flat(sectionOf(run, "## The work"))).toMatch(
+      /from a scope that leaves stages out, ask before any move/i,
+    );
+    expect(flat(sectionOf(screens, "## The announcement"))).toMatch(/the chosen stages in order/i);
+    expect(rowOf(sectionOf(screens, "## Final report"), "| At the chosen scope")).toMatch(
+      /the stages not chosen.*never that a change is done/i,
+    );
+  });
+
+  // QFAI:AC-0001-0211-05
+  // QFAI:EX-0001-0211-40
+  // QFAI:EX-0001-0211-41
+  it("marks a behaviour change as a prototype request only when it asks to change the prototype", async () => {
+    const reference = await readShipped(EXTRACTION);
+    expect(rowOf(sectionOf(reference, "## Qualifiers"), "| `prototype-requested`")).toMatch(
+      /\| `behaviour-change` +\| the request explicitly asks to change the prototype\. a request to implement the change in the product does not set it/i,
+    );
+    expect(rowOf(sectionOf(reference, "## Entry flags"), "| `decision`")).toMatch(
+      /on a `behaviour-change` that explicitly asks to change the prototype, only when a choice is left open/i,
+    );
+  });
+
+  // QFAI:AC-0001-0229-06
+  // QFAI:EX-0001-0229-10
+  it("lists code and tests only when the request asks for the change to be implemented", async () => {
+    const artifacts = flat(sectionOf(await readShipped(EXTRACTION), "## Artifacts"));
+    expect(artifacts).toMatch(
+      /list `code` and `tests` only when the request asks for the change to be implemented: a request that ends at the specification or a prototype lists neither/i,
+    );
+    expect(artifacts).not.toMatch(/whenever behaviour changes/i);
+    expect(flat(await readShipped(EXTRACTION))).toMatch(
+      /6. list the `artifacts` the request asks to change./i,
+    );
+  });
+
+  // QFAI:AC-0001-0224-02
+  // QFAI:EX-0001-0224-02
+  it("writes artifacts itself, delegates only parallel parts and reviews, and never reviews its own work", async () => {
+    const work = flat(sectionOf(await readShipped(RUN), "## The work"));
+    expect(work).toMatch(/write any artifact yourself/i);
+    expect(work).toMatch(
+      /give a part to a sub-agent only to run independent parts in parallel, or for a review/i,
+    );
+    expect(work).toMatch(/whose `review` is `spec`, `requirements-reviewer` reviews/);
+    expect(work).toMatch(/no agent reviews its own work/i);
+  });
+
+  // QFAI:AC-0001-0224-04
+  // QFAI:EX-0001-0224-05
+  it("moves at a branch point by planning the destination, and asks before the third move", async () => {
+    const work = flat(sectionOf(await readShipped(RUN), "## The work"));
+    expect(work).toMatch(
+      /take the destination's plan with `npx qfai workflow plan --route <route>`/i,
+    );
+    expect(work).toMatch(
+      /before the third move and every one after it, ask the user, naming the destination in plain words; `stop` ends the work/i,
+    );
+  });
+
+  // QFAI:AC-0001-0223-03
+  // QFAI:EX-0001-0223-05
+  it("handles each release, decision and branch point at its step, inside the step loop", async () => {
+    const work = sectionOf(await readShipped(RUN), "## The work");
+    const loop = flat(work.split("5. **Run the stages.**")[1]?.split("6. **Review.**")[0] ?? "");
+    expect(loop).toMatch(/at each step, handle the points the plan names for it/i);
+    for (const point of ["release point", "decision point", "branch point"]) {
+      expect(loop.toLowerCase()).toContain(`**${point}.**`);
+    }
+    expect(loop).toMatch(/at once: no later step of this route runs/i);
+  });
+
+  // QFAI:AC-0001-0224-05
+  // QFAI:EX-0001-0224-06
+  it("stops on a finding no stage serves, naming the skill to invoke", async () => {
+    const work = flat(sectionOf(await readShipped(RUN), "## The work"));
+    expect(work).toMatch(
+      /a finding no stage serves\.\*\* stop, and name the finding, its owner and the stage skill to invoke by name/i,
+    );
+  });
+
+  // QFAI:AC-0001-0224-06
+  // QFAI:EX-0001-0224-07
+  // QFAI:EX-0001-0224-08
+  it("plans under active, writes nothing under shadow, plans nothing under off, and reads no key as active", async () => {
     const mode = sectionOf(await readShipped(RUN), "## Mode");
-    expect(flat(mode)).toMatch(/read the mode from `npx qfai workflow status` first/i);
-    expect(rowOf(mode, "`shadow`")).toMatch(
-      /call no write operation, and say that nothing was written/i,
+    expect(flat(mode)).toMatch(
+      /read `workflow\.mode` in `qfai\.config\.yaml` first\. no key means `active`/i,
     );
-    expect(rowOf(mode, "`off`")).toMatch(
-      /start no run\. the operator invokes the stage skills by name/i,
+    expect(rowOf(mode, "| `shadow`")).toMatch(/write nothing, and say that nothing was written/i);
+    expect(rowOf(mode, "| `off`")).toMatch(
+      /plan nothing\. the user invokes the stage skills by name/i,
     );
   });
 
-  // QFAI:AC-0001-0185-13
-  // QFAI:EX-0001-0185-40
-  it("names the narrowest write areas per stage kind, and never a stage's own records", async () => {
-    const text = sectionOf(await readShipped(PAYLOADS), "## Routing result");
-    expect(rowOf(text, "`sdd`")).toMatch(
-      /the story and contract files of the bound flow it changes/i,
+  // QFAI:AC-0001-0223-01
+  // QFAI:EX-0001-0223-01
+  // QFAI:EX-0001-0223-02
+  it("asks each critical decision at a decision point before anything that depends on it changes", async () => {
+    const work = flat(sectionOf(await readShipped(RUN), "## The work"));
+    expect(work).toMatch(
+      /at a step `decisionPoints` names, put each critical decision to the user through the structured question tool before changing anything that depends on it/i,
     );
-    expect(rowOf(text, "| `sdd` ")).toMatch(/the new story's directory or the new flow's/i);
-    expect(rowOf(text, "| `sdd` ")).toMatch(/and `DESIGN\.md` for a UI-bearing flow/i);
-    expect(rowOf(text, "`discussion`")).toMatch(/\| Its tracked records +\|/);
-    expect(rowOf(text, "`triage` and `diagnose`")).toMatch(/\| Nothing +\|/);
-    const flatText = flat(text);
-    expect(flatText).toMatch(
-      /never names `\.git\/`, `\.qfai\/run\/`, `\.qfai\/evidence\/workflow\/`, `\.qfai\/evidence\/decision\/`/,
+    expect(work).toMatch(
+      /critical when it contradicts a specification, a contract or a recorded decision, cannot be taken back, or rests on product intent nothing written states/i,
     );
-    expect(flatText).toMatch(/`decisions\.md` or `open-questions\.md` under `paths\.specsDir`/);
+    const row = rowOf(
+      sectionOf(await readShipped(SCREENS), "## Questions"),
+      "| A critical decision",
+    );
+    expect(row).toMatch(/naming the specification, contract or recorded decision it touches/i);
   });
 
-  it("proposes flows and new stories, never spec packs", async () => {
-    const text = flat(await readShipped(PAYLOADS));
-    expect(text).toMatch(/"affectedFlowIds": \["BF-0002"\]/);
-    expect(text).toMatch(/"newStories": \[\]/);
-    expect(text).toMatch(/`newStories` holds `\{ goal, covers, excludes, evidence, flowId \}`/);
-    expect(text).not.toMatch(/affectedSpecIds|newCapabilities|spec-id|\.qfai\/runs\//);
+  // QFAI:AC-0001-0223-02
+  // QFAI:EX-0001-0223-03
+  it("takes every other decision itself and lists it with its reason in the final report", async () => {
+    const work = flat(sectionOf(await readShipped(RUN), "## The work"));
+    expect(work).toMatch(
+      /take every other decision yourself, ask nothing, and list it with its reason in the final report/i,
+    );
+    const report = flat(sectionOf(await readShipped(SCREENS), "## Final report"));
+    expect(report).toMatch(/every decision taken without the user, with its reason/i);
+    expect(report).toMatch(/the report ends with a question listing the next actions/i);
   });
 
-  // QFAI:AC-0001-0189-06
-  // QFAI:EX-0001-0189-14
-  it("offers recovery as a reverse diff of the run's own paths only", async () => {
-    const text = flat(sectionOf(await readShipped(SCREENS), "## Halt notice"));
-    expect(text).toMatch(/recovery is a reverse diff limited to the paths the run wrote/i);
-    expect(text).toMatch(/never offer a reset, a stash, a branch switch or a worktree removal/i);
+  // QFAI:AC-0001-0223-03
+  // QFAI:EX-0001-0223-04
+  // QFAI:EX-0001-0223-05
+  it("asks for release approval at the release point, and the approval authorizes no push or publication", async () => {
+    const work = flat(sectionOf(await readShipped(RUN), "## The work"));
+    expect(work).toMatch(
+      /before a step `releasePoint` names runs, ask the user to approve the release; where it is `end`, ask once the last stage's gates have passed/i,
+    );
+    expect(work).toMatch(
+      /nothing after it runs without the approval, which authorizes no push, merge, tag or publication/i,
+    );
+  });
+
+  // QFAI:AC-0001-0223-04
+  // QFAI:EX-0001-0223-06
+  // QFAI:EX-0001-0223-08
+  it("records each approval as one decisions row, and no row for a decision taken without the user", async () => {
+    const work = flat(sectionOf(await readShipped(RUN), "## The work"));
+    expect(work).toMatch(
+      /each approval of a specification change, a critical decision or a release is one `decisions\.md` row: what was approved, who approved it, when, and the chosen option's label/i,
+    );
+    expect(work).toMatch(/a decision you took appends no row/i);
+    expect(work).toMatch(/which authorizes no push, merge, tag or publication/i);
+  });
+
+  // QFAI:AC-0001-0223-05
+  // QFAI:EX-0001-0223-07
+  it("under a no-question mode records a critical decision as an open question and stops before it", async () => {
+    const quiet = flat(sectionOf(await readShipped(RUN), "## Under a no-question mode"));
+    expect(quiet).toMatch(/nothing is asked/i);
+    expect(quiet).toMatch(
+      /a critical decision or a release point becomes one `open-questions\.md` row, the step stops before the change that depends on it, and the report lists the decision as open/i,
+    );
+  });
+
+  // QFAI:AC-0001-0188-05
+  // QFAI:EX-0001-0188-07
+  it("asks once for the one missing value that blocks the plan, as a value with no recommendation", async () => {
+    const questions = sectionOf(await readShipped(SCREENS), "## Questions");
+    expect(rowOf(questions, "| A missing fact")).toMatch(/no recommendation/i);
+    expect(flat(questions)).toMatch(
+      /when one missing value is all that blocks the plan, ask for it once, then plan/i,
+    );
   });
 
   // QFAI:AC-0001-0194-05
   // QFAI:EX-0001-0194-17
-  it("The operator-screens reference relays CLI strings in the operator's working language", async () => {
+  it("The operator-screens reference relays CLI strings in the user's working language", async () => {
     const text = flat(sectionOf(await readShipped(SCREENS), "## Every screen"));
     expect(text).toMatch(
-      /relay it in the operator's working language\. the cli's strings are english/i,
+      /relay it in the user's working language\. the cli's strings are english/i,
     );
-  });
-
-  // QFAI:EX-0001-0185-07
-  it("announces the checked plan in plain words, naming no route or stage identifier and asking nothing", async () => {
-    const screens = await readShipped(SCREENS);
-    expect(flat(sectionOf(screens, "## Every screen"))).toMatch(
-      /no route identifier, stage kind or internal id/i,
-    );
-    expect(flat(sectionOf(screens, "## The announcement"))).toMatch(/it asks nothing/i);
-  });
-
-  // QFAI:AC-0001-0185-05
-  // QFAI:EX-0001-0185-55
-  it("ends a run at finish or at a stop, and never on an answer already given", async () => {
-    const text = flat(sectionOf(await readShipped(RUN), "## The run"));
-    expect(text).toMatch(/a run ends at `finish`, or at `decision` with `stop`/i);
-    expect(text).toMatch(/an answer already given does not end it/i);
-    expect(text).toMatch(/when the session must end first, stop the run and say so/i);
-  });
-
-  // QFAI:AC-0001-0214-07
-  // QFAI:EX-0001-0214-10
-  it("runs a review only when the work order names reviewers, and a question as one work order", async () => {
-    const text = flat(sectionOf(await readShipped(RUN), "## The run"));
-    expect(text).toMatch(
-      /one review, by `requiredreviewerroles`, and none when the work order names none/i,
-    );
-    expect(text).toMatch(
-      /a question is one work order, run by one sub-agent with no separate reviewer/i,
-    );
-  });
-
-  // QFAI:AC-0001-0214-07
-  // QFAI:EX-0001-0214-10
-  it("lets the stage worker confirm each triage gate where the work order names no reviewer", async () => {
-    const gate = flat(sectionOf(await readShipped(RUN), "### Reviewer Gate (MUST)"));
-    expect(gate).toMatch(/a work order's reviewers, where it names any, return pass or revise/i);
-    for (const step of ["triage-answer", "triage-investigate", "triage-close"]) {
-      const text = flat(sectionOf(await readShipped(`step/${step}/STEP.md`), "## Gate"));
-      expect(text).toMatch(
-        /the reviewer, or the stage worker where the work order names none, confirms/i,
-      );
-    }
-  });
-
-  // QFAI:AC-0001-0215-02
-  // QFAI:EX-0001-0215-10
-  it("ends a combined stage at a reported branch, with no later step and no closure", async () => {
-    const baseline = flat(await readShipped("rule/shared-skill-operating-baseline.md"));
-    const investigate = flat(await readShipped("step/triage-investigate/STEP.md"));
-    expect(baseline).toMatch(
-      /a step that reports a `branch` ends the work order there: the steps after it do not run, and the result carries the `branch` and no `closure`/i,
-    );
-    expect(investigate).toMatch(
-      /`triage-answer` and `triage-close` do not run, and the result carries no `closure`/i,
-    );
-  });
-
-  // QFAI:AC-0001-0185-17
-  // QFAI:EX-0001-0185-54
-  it("ends the completion report with the next actions, and asks nothing under a no-question mode", async () => {
-    const text = flat(sectionOf(await readShipped(SCREENS), "## Completion report"));
-    expect(text).toMatch(
-      /the report ends with a question listing the next actions, the recommended one first/i,
-    );
-    expect(text).toContain("`.agents/rules/user-questions.md` § 6");
-    expect(text).toMatch(/under a no-question mode it lists them instead/i);
   });
 });
 
@@ -474,7 +539,6 @@ describe("qfai-maintain", () => {
   });
 
   // QFAI:AC-0001-0191-02
-  // QFAI:EX-0001-0191-04
   it("stops before an edit with a semantic effect and leaves the run blocked on the owner", async () => {
     const skill = await readShipped(MAINTAIN_EDIT);
     const edit = flat(sectionOf(skill, "## The edit"));
@@ -489,23 +553,13 @@ describe("qfai-maintain", () => {
       /no stage of the route serves the finding's owner, so the run is `blocked`, naming the finding and the owner skill to invoke by name/i,
     );
     expect(effect).not.toMatch(/reclassified/i);
-    expect(effect).toMatch(/the outcome is `needs_repair`, and `changedFiles` is empty/i);
-    expect(effect).toMatch(/`debts` holds one entry for the finding/i);
-    expect(effect).toMatch(/`findingCode` is `maintain-semantic-effect`/);
-    expect(effect).toMatch(/`owningFlow` is `null`, because an `edit-text` run binds no flow/i);
-    expect(effect).toMatch(/`detectingCommand` names the review or the command that found it/i);
-    expect(effect).toMatch(
-      /`resolvingOwner` is the skill that owns that kind of change, never one the `edit-text` plan names/i,
-    );
   });
 });
 
 describe("the entry skills' routing entries", () => {
   // QFAI:AC-0001-0161-05
   // QFAI:EX-0001-0161-06
-  // QFAI:AC-0001-0185-05
-  // QFAI:EX-0001-0185-16
-  it("routes qfai-run to the orchestrator only, and qfai-maintain to an author and an independent reviewer", async () => {
+  it("routes qfai-run to the orchestrator only, and qfai-maintain to an author and no reviewer", async () => {
     const run = await routingEntry("qfai-run");
     expect(run, "the routing defaults have a qfai-run entry").toBeDefined();
     const runPhases = phasesOf(run);
@@ -516,18 +570,13 @@ describe("the entry skills' routing entries", () => {
     const maintain = await routingEntry("maintain-edit", "step");
     expect(maintain?.review_profile).toBe("default");
     const maintainPhases = phasesOf(maintain);
-    const authors = maintainPhases
-      .filter((phase) => strings(phase.blocking_agents).length === 0)
-      .flatMap(phaseAgents);
+    const authors = maintainPhases.flatMap(phaseAgents);
     expect(authors.length, "qfai-maintain has an authoring phase").toBeGreaterThan(0);
-    const reviewing = maintainPhases.filter((phase) =>
-      strings(phase.blocking_agents).includes("completion-reviewer"),
-    );
-    expect(reviewing.length, "qfai-maintain has a blocking reviewer phase").toBeGreaterThan(0);
     expect(
       authors.filter((agent) => agent.endsWith("-reviewer") || agent === "qa-gatekeeper"),
-      "no reviewer is an author",
+      "no reviewer is routed here",
     ).toEqual([]);
+    expect(maintainPhases.some((phase) => phase.id === "review")).toBe(false);
 
     expect(Object.keys(await profiles()).sort()).toEqual(PROFILES);
 

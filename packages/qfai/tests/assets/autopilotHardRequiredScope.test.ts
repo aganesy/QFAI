@@ -28,7 +28,7 @@ describe("autopilot inputs follow story-tree and UI-contract scope", () => {
 
     it(tree + ": prototyping selects a full UI contract identity", async () => {
       const skill = await read(tree, "assistant/skill/qfai-prototyping/SKILL.md");
-      expect(skill).toContain("--primary-ui-contract <UI-NNNN>");
+      expect(skill).toContain("prototyping.primaryUiContract");
       expect(skill).toContain("UI-NNNN");
       expect(skill).not.toContain("primarySpecId");
     });
@@ -42,12 +42,13 @@ describe("autopilot inputs follow story-tree and UI-contract scope", () => {
     });
   }
 
-  it("the CLI contract rejects a bare primary UI contract ID", async () => {
+  it("the prototyping contract accepts only a full primary UI contract ID", async () => {
     const file = path.join(root, ".qfai/spec/03_contract/cli/cli-0011-qfai-prototyping.md");
     const { rules } = parseContractRules(file, await readFile(file, "utf-8"));
-    const pin = rules.find(({ statement }) => statement.includes("`--primary-ui-contract` flag"));
+    const pin = rules.find(({ statement }) =>
+      statement.includes("The primary UI contract is pinned by `prototyping.primaryUiContract`"),
+    );
     expect(pin?.statement).toContain("Both accept only the full `UI-NNNN` form");
-    expect(pin?.statement).toContain("a bare `NNNN` included");
-    expect(pin?.statement).toContain("no input is normalised");
+    expect(pin?.statement).toContain("no value is normalised");
   });
 });
