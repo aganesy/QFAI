@@ -97,6 +97,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **A mutation proof belongs to one example** (#2409). The `qfai-implement`
+  oracle-strength reference now says what to do when one mutation fails tests
+  annotated with different examples: record each failing assertion and the
+  boundary it proves, narrow an assertion that proves another example's
+  boundary, or have `/qfai-sdd` settle an unclear boundary in the examples. A
+  shared predicate may fail several tests whose assertions each prove their own
+  example.
 - **The orchestrator keeps working while a delegation runs** (#2244). The
   shared delegation baseline now says the orchestrator is not required to wait
   for a sub-agent. Where the host starts a delegation and returns at once,
