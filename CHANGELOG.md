@@ -87,11 +87,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   table, which rendered outside the table, now sits beside the other rows.
   Fixes #2860.
 
-- **Migration keeps an approved but unapplied change request in progress**
-  (#2425). Step 2 of `qfai-migration-v1-to-v2` gave every `approved` change
-  request the Status DONE, recording a change as made when only its approval
-  was. A request whose `Applied at` is empty or `-` now becomes WIP.
-
 - **`qfai init --force` reports only the paths it changed.** The `written` count
   and list included every distributed file, including those already identical to
   the shipped copy. Rule files, the Copilot and Codex files and the agent and
@@ -103,6 +98,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `timestamp` and `iteration`, and checks each field and nested list against
   the type it returns. A file that fails is refused with `null` and a logged
   error, as a missing key already was. Fixes #2862.
+
+- **Migration keeps an approved but unapplied change request in progress**
+  (#2425). Step 2 of `qfai-migration-v1-to-v2` gave every `approved` change
+  request the Status DONE, recording a change as made when only its approval
+  was. A request whose `Applied at` is empty or `-` now becomes WIP.
 
 - **The `qfai-run` entry reminder stays silent on a turn the host starts
   (#2989).** The Claude Code `UserPromptSubmit` hook that sends a request to
