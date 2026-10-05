@@ -29,6 +29,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   delegation-baseline and test-layers pointers started at `rule/`, so they did
   not resolve from the project root. Both now begin at `.qfai/assistant/rule/`.
   (#2858)
+- **The free-text entry reminder points a worktree session at its own copy of
+  `qfai-run`.** The host can load the skill from the main checkout, which may
+  lag the worktree, so the reminder now tells the agent to read
+  `.claude/skills/qfai-run/SKILL.md` under the current directory. The reminder
+  is read from the session's own checkout. Fixes #2972.
 - **The planner-first and design anti-goal examples are tested for what they
   say.** The planner-first example was annotated on a test that only checked
   three file names. Its test now reads the completion matrix and the
@@ -52,6 +57,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reuse of the ID. It names the `qfai validate` findings that catch a leftover.
 
 ### Changed
+
+- **Five doctor criteria now name the tests that prove them.** Existing
+  integration tests carry standalone `QFAI:AC-...` comments, and
+  `AC-0003-0004-01` gains a deprecated `paths.promptsDir` warning case.
+  The BF-0003 full pin keeps only `AC-0003-0006-01` and `AC-0003-0006-03`.
+  Refs #2367.
 
 - **A DONE change request claims every action it lists** (#2312). A
   `decisions.md` row has one Status, so a request with one action deferred could
