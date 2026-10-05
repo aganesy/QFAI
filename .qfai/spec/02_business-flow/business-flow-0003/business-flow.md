@@ -3,7 +3,8 @@
 ## Purpose
 
 Give a project operator a repeatable way to identify configuration, layout,
-contract and shipped-workflow drift, then verify a targeted repair.
+contract and shipped-workflow problems and the paths an earlier release left
+behind, then verify a targeted repair.
 
 ## Flow
 
@@ -19,7 +20,7 @@ flowchart TD
   Upgrade --> Recheck
   Recheck --> Result{All required checks pass?}
   Result -->|No| Diagnose
-  Result -->|Yes| Record[Record repair evidence]
+  Result -->|Yes| Done[Workspace healthy]
 ```
 
 ## Alternate and exception paths

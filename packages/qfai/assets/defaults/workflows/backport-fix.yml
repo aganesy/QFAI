@@ -4,14 +4,16 @@ stages:
   - id: pick
     kind: implement
     steps: [implement-backport]
-  - id: verify
+  - id: note
     kind: verify
     steps:
       - { step: verify-change-note, passThrough: true }
-      - verify-context
-      - verify-qfai-gate
-      - verify-repo-gate
     after: [pick]
-defaultModifiers: [gate:release]
+    review: code
+  - id: verify
+    kind: verify
+    steps: [verify-qfai-gate, verify-repo-gate, verify-commit]
+    after: [note]
 decisionPoints: []
+releasePoint: end
 branchPoints: []

@@ -58,13 +58,12 @@ describe.each(TREES)("%s", (tree) => {
       "| Are the recurring gaps covered: kept failures and boundary cases? | The coverage gate above |",
     );
     expect(check).toContain(
-      "| Would it fail on a concrete regression? | `skill/qfai-implement/references/oracle-strength.md` and the RED and GREEN observation gate |",
+      "| Would it fail on a concrete regression? | `skill/qfai-implement/references/oracle-strength.md`, proof per example |",
     );
     // Each pointer resolves to a section or file that exists.
     expect(card).toContain("## Coverage gate");
-    expect(card).toContain("## RED and GREEN observation gate");
     expect(card.indexOf("## Coverage gate")).toBeLessThan(card.indexOf(CHECK));
-    expect(await read(tree, ORACLE_STRENGTH)).toContain("## Weak oracles");
+    expect(await read(tree, ORACLE_STRENGTH)).toContain("## Proof per example");
   });
 
   it("is advisory, scores nothing, and admits a finding only with a named change", async () => {

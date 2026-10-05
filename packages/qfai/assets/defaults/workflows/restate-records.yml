@@ -10,21 +10,22 @@ stages:
       - sdd-triage
       - sdd-story
       - { step: sdd-contract, passThrough: true }
-      - sdd-gate
     after: [diagnose]
+    review: spec
   - id: tests
     kind: test_fix
     steps:
       - { step: implement-test-fix, passThrough: true }
     after: [spec]
-  - id: verify
+  - id: note
     kind: verify
     steps:
       - { step: verify-change-note, passThrough: true }
-      - verify-context
-      - verify-qfai-gate
-      - verify-repo-gate
     after: [tests]
-defaultModifiers: []
+    review: code
+  - id: verify
+    kind: verify
+    steps: [verify-qfai-gate, verify-repo-gate, verify-commit]
+    after: [note]
 decisionPoints: [sdd-triage]
 branchPoints: []

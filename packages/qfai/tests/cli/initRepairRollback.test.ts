@@ -63,8 +63,8 @@ vi.mock("node:fs/promises", async () => {
 const { runInit } = await import("../../src/cli/commands/init.js");
 const { captureStdout } = await import("../helpers/stdout.js");
 
-const LINK = path.join(".claude", "skills", "qfai-atdd");
-const FLATTENED = "../../.qfai/assistant/skills/qfai-atdd";
+const LINK = path.join(".claude", "skills", "qfai-implement");
+const FLATTENED = "../../.qfai/assistant/skills/qfai-implement";
 
 function eperm(): NodeJS.ErrnoException {
   const error = new Error("simulated EPERM") as NodeJS.ErrnoException;

@@ -1,5 +1,3 @@
-import { createHash } from "node:crypto";
-
 import { parse as parseYaml } from "yaml";
 
 export const ARCHETYPES = [
@@ -1237,14 +1235,6 @@ function validateShadow(d: DesignMd, issues: ValidationIssue[]): void {
       });
     }
   }
-}
-
-// ---------------------------------------------------------------------------
-// hashDesignMd
-// ---------------------------------------------------------------------------
-
-export function hashDesignMd(text: string): string {
-  return createHash("sha256").update(text, "utf8").digest("hex");
 }
 
 // ---------------------------------------------------------------------------

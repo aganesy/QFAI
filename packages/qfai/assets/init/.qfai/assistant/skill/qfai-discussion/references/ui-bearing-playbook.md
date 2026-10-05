@@ -73,7 +73,7 @@ shadows:
 ### Trend Scan SSOT
 
 Trend Scan is **not** a sidecar file. Trend Scan lives at
-`04_Sources.md#Trend Scan` (part of the core 15-file discussion pack).
+`04_Sources.md#Trend Scan` (part of the core nine-file discussion pack).
 The legacy `uiux/20_trend_scan.md` template and the whole `uiux/20-24`
 design-evaluation family were removed; evaluation axes are now global
 constants and are not authored as discussion sidecars. UI-bearing

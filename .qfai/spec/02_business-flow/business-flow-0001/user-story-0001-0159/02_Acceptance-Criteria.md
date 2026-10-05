@@ -4,12 +4,6 @@
 
 ```gherkin
 Feature: Removed compatibility namespaces
-  # AC-0001-0159-01
-  Scenario: Full-Harness Block Drop on Cycle 0
-    Given a `prototyping.json` that carries a legacy `fullHarness` block from a prior pre-1.8.9 run,
-    When `prototyping iterate` runs cycle 0,
-    Then the cycle-0 hard reset removes the `fullHarness` block from the live `prototyping.json` so the post-1.8.9 evolution loop never re-reads stale `full-harness` / `perfect-100` / `weighted-total` runtime state.
-
   # AC-0001-0159-02
   Scenario: Verify Articles Restate Article V Without TC
     Given a project on the story tree,

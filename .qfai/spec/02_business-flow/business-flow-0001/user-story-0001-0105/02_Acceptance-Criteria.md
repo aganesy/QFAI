@@ -4,13 +4,6 @@
 
 ```gherkin
 Feature: Explicit reviewer pivot directive
-  # AC-0001-0105-01
-  Scenario: pivotDirective Enum
-    Given any `iter-NN/review.json`
-    When it is validated
-    Then `pivotDirective` is exactly one of `"continue" | "refine" | "pivot"`
-    And any other value raises `QFAI-PROT-002`
-
   # AC-0001-0105-02
   Scenario: pivotDirective Rule — pivot
     Given `open(r)` is the number of `blockingFindings` plus `layoutAntiPatternsDetected` in review `r`, and `open(latest) > 0`, `open(latest) >= open(prior)` and `open(prior) >= open(prior2)`

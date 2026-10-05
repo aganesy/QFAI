@@ -142,7 +142,6 @@ const requiredSkills = [
   "qfai-configure",
   "qfai-discussion",
   "qfai-sdd",
-  "qfai-atdd",
   "qfai-prototyping",
   "qfai-implement",
   "qfai-verify",
@@ -150,6 +149,7 @@ const requiredSkills = [
   "qfai-migration-v1-to-v2",
 ];
 const deprecatedSkillIds = [
+  "qfai-atdd",
   "qfai-spec",
   "qfai-tdd-red",
   "qfai-tdd-green",
@@ -443,9 +443,7 @@ const seededDiscussionPackFiles = {
     "- secondary_surfaces: []",
     "- classification_rationale: Packaging validation fixture — no user-facing UI.",
     "",
-  ],
-  "02_Inception-Deck.md": [
-    "# 02 Inception Deck",
+    "## Inception Deck",
     "",
     "This seeded discussion-pack is for packaging validation only and ensures",
     "the readiness gate has concrete non-placeholder content.",
@@ -560,58 +558,33 @@ const seededDiscussionPackFiles = {
     "- Use markdown-only fixtures to avoid runtime dependencies.",
     "- Keep each required file longer than minimal validation thresholds.",
     "- Avoid placeholder-only statements to satisfy content checks.",
-    "- Keep naming aligned with the 15-file discussion pack structure.",
+    "- Keep naming aligned with the nine-file discussion pack structure.",
     "",
-  ],
-  "10_Policy.md": [
-    "# 10 Policy",
+    "## Security Policy",
+    "",
+    "- The seeded pack holds no secret or credential.",
+    "",
+    "## Compliance Policy",
+    "",
+    "- No regulated data enters the smoke fixture.",
+    "",
+    "## Development Policy",
     "",
     "- Policy-0001: verify-pack must fail when required artifacts are absent.",
     "- Policy-0002: seeded files are test inputs and not product commitments.",
     "- Policy-0003: content should remain stable unless gate rules change.",
     "",
+    "## Operational Policy",
+    "",
+    "- The seeded pack is written fresh for each verify-pack run.",
+    "",
   ],
   "11_OQ-Register.md": [
     "# 11 OQ Register",
     "",
-    "| OQ-ID   | Title                                      | Gate    | Disposition | Owner  | Rationale                                         | Options                                           | Recommendation | Next-Decision-Point      | Due        | Evidence         |",
-    "| ------- | ------------------------------------------ | ------- | ----------- | ------ | ------------------------------------------------- | ------------------------------------------------- | -------------- | ------------------------ | ---------- | ---------------- |",
-    "| OQ-0001 | Should smoke data mirror full production templates? | discuss | deferred    | CI     | minimal deterministic content is currently sufficient | Option A: keep minimal / Option B: mirror full     | Option A       | before release candidate | 2026-06-01 | Conversation log |",
-    "",
-  ],
-  "12_OQ-Resolution-Log.md": [
-    "# 12 OQ Resolution Log",
-    "",
-    "## OQ-0001",
-    "- Question: Should smoke data mirror full production templates?",
-    "- Disposition: deferred",
-    "- Gate: discuss",
-    "- Note: minimal deterministic content is currently sufficient for gate coverage.",
-    "",
-  ],
-  "13_Deferred.md": [
-    "# 13 Deferred",
-    "",
-    "| OQ-ID   | Title                                      | Gate    | Deferred-Reason                                     | Deferred-Until           | Owner  | Due        | Severity | Impact                                  | Mitigation                  | Evidence         |",
-    "| ------- | ------------------------------------------ | ------- | --------------------------------------------------- | ------------------------ | ------ | ---------- | -------- | --------------------------------------- | --------------------------- | ---------------- |",
-    "| OQ-0001 | Should smoke data mirror full production templates? | discuss | minimal deterministic content is currently sufficient | before release candidate | CI     | 2026-06-01 | low      | smoke test coverage only                | keep current minimal seed   | Conversation log |",
-    "",
-  ],
-  "14_Review-Request.md": [
-    "# 14 Review Request",
-    "",
-    "- Review type: automated packaging smoke validation.",
-    "- Reviewer: CI pipeline.",
-    "- Status: pending automated gate execution.",
-    "",
-  ],
-  "99_delta.md": [
-    "# 99 delta",
-    "",
-    "## Change Summary",
-    "- Added deterministic discussion-pack seed used by verify-pack smoke validation.",
-    "- Aligned filenames with readiness validator expectations.",
-    "- Ensured OQ state is non-blocking for fail-on error execution.",
+    "| OQ-ID   | Title                                      | Gate    | Disposition | Owner  | Rationale                                         | Options                                           | Recommendation | Resolution | Next-Decision-Point      | Due        | Evidence         |",
+    "| ------- | ------------------------------------------ | ------- | ----------- | ------ | ------------------------------------------------- | ------------------------------------------------- | -------------- | ---------- | ------------------------ | ---------- | ---------------- |",
+    "| OQ-0001 | Should smoke data mirror full production templates? | discuss | deferred    | CI     | minimal deterministic content is currently sufficient | Option A: keep minimal / Option B: mirror full     | Option A       | keep the minimal seed for now | before release candidate | 2026-06-01 | Conversation log |",
     "",
   ],
 };
@@ -709,20 +682,20 @@ if (hasEntry(skillsLocalDir)) {
 }
 
 // Stand in for the `/qfai-configure` run a project makes before it gates.
-// The contract steering file ships as placeholders, and gating without filling
+// The contract policy file ships as placeholders, and gating without filling
 // it measures the fixture rather than the package.
-const steeringFiles = [path.join(outputDir, ".qfai", "spec", "03_contract", "tech.md")];
-for (const steeringFile of steeringFiles) {
-  if (!existsSync(steeringFile)) {
+const policyFiles = [path.join(outputDir, ".qfai", "spec", "03_contract", "tech.md")];
+for (const policyFile of policyFiles) {
+  if (!existsSync(policyFile)) {
     // An `ENOENT` here names the path and nothing else, and the reader's next
     // question is whether the file was renamed or whether init stopped writing
     // it — which is what decides whether the fill or the package is wrong.
     throw new Error(
-      `init --force wrote no ${steeringFile}. Stage 0 steering files are what a project fills ` +
+      `init --force wrote no ${policyFile}. Policy files are what a project fills ` +
         `before it gates, so this fill has nothing to stand in for.`,
     );
   }
-  const before = readFileSync(steeringFile, "utf-8");
+  const before = readFileSync(policyFile, "utf-8");
   // One value for each placeholder text, so two slots that name different
   // things, such as two architecture layers, stay different once filled. Every
   // TODO and TBD shares one value.
@@ -738,11 +711,11 @@ for (const steeringFile of steeringFiles) {
     .replace(/\b(?:TODO|TBD)\b/g, () => fixtureValue("TODO"));
   if (after === before) {
     throw new Error(
-      `${steeringFile} carries no placeholder to fill. The shipped steering files are what this stands ` +
+      `${policyFile} carries no placeholder to fill. The shipped policy files are what this stands ` +
         `in for, so a copy with none means the fixture is measuring nothing.`,
     );
   }
-  writeFileSync(steeringFile, after);
+  writeFileSync(policyFile, after);
 }
 
 execFileSync(
