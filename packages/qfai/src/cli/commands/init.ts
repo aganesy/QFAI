@@ -28,6 +28,11 @@ import {
 } from "../../core/fs/templateCopy.js";
 import { findLeftovers, leftoverLines } from "../../core/leftovers.js";
 import { getInitAssetsDir } from "../lib/assets.js";
+import {
+  SHIPPED_RETIRED_SKILLS,
+  isShippedSkillCopy,
+  type ShippedSkillFiles,
+} from "../../core/init/shippedRetiredSkills.js";
 import { error, info, warn } from "../../core/logger.js";
 import { hasErrnoCode, isEnoent } from "../../core/fs/errno.js";
 import { toRelativePath } from "../../core/paths.js";
@@ -1696,7 +1701,7 @@ function report(
   }
 }
 
-/** Skills a release withdrew, kept in `skill.local/` rather than deleted. */
+/** Skills a release withdrew. */
 const RETIRED_SKILLS = ["qfai-migration-spec-to-story", "qfai-atdd"] as const;
 
 /**
@@ -1711,14 +1716,19 @@ const RETIRED_STEPS = [
 ] as const;
 
 /**
- * Moves each retired skill's directory to `skill.local/`, where a project
- * keeps its own skills, and lists each retired step still in the step tree.
+ * Removes each retired skill's directory that still holds exactly what a
+ * release shipped, moves any other to `skill.local/`, where a project keeps
+ * its own skills, and lists each retired step still in the step tree.
  *
- * Nothing records what the release that shipped one wrote, so a copy the
- * project edited cannot be told from an untouched one. Moving a skill whole
- * keeps either; a step is left for the person to move or delete.
+ * `shipped` names the content of every release that shipped a skill; a copy
+ * the project edited, extended or trimmed matches none and is moved whole.
+ * A step is left for the person to move or delete.
  */
-async function keepRetiredAssistantDirs(destRoot: string, dryRun: boolean): Promise<string[]> {
+export async function keepRetiredAssistantDirs(
+  destRoot: string,
+  dryRun: boolean,
+  shipped: Readonly<Record<string, ShippedSkillFiles>> = SHIPPED_RETIRED_SKILLS,
+): Promise<string[]> {
   const notes: string[] = [];
   const assistant = path.join(destRoot, ".qfai", "assistant");
   const shown = (entry: string) => formatReportPath(toRelativePath(destRoot, entry));
@@ -1734,6 +1744,12 @@ async function keepRetiredAssistantDirs(destRoot: string, dryRun: boolean): Prom
       notes.push(
         `NOTE: ${shown(source)}, a retired skill, was left in place because its path or the destination's passes through a symbolic link. Move it out of the skill tree by hand.`,
       );
+      continue;
+    }
+    const shippedFiles = shipped[id];
+    if (shippedFiles !== undefined && (await isShippedSkillCopy(source, shippedFiles))) {
+      if (!dryRun) await rm(source, { recursive: true });
+      notes.push(`  ${dryRun ? "would remove" : "removed"} retired skill: ${shown(source)}`);
       continue;
     }
     if (await pathExists(target)) {

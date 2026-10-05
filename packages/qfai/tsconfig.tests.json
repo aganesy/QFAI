@@ -133,6 +133,7 @@
     "tests/cli/initRepairsUnfollowableLinks.test.ts",
     "tests/cli/initSelfAssetWrite.test.ts",
     "tests/cli/initRunReport.test.ts",
+    "tests/cli/initRetiredSkills.test.ts",
     "tests/cli/initTestGlobDerivation.test.ts",
     "tests/cli/initUnreadableShippedAsset.test.ts",
     "tests/cli/usageExitCodes.test.ts",

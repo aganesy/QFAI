@@ -36,6 +36,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai init --force` removes an unchanged retired skill instead of copying
+  it to `skill.local/`.** A `qfai-atdd` directory that holds exactly the files
+  a 2.0 release shipped is deleted, so the directory meant for your own skills
+  does not receive a skill QFAI no longer ships. A copy you edited, extended or
+  trimmed is still moved there whole (#2978).
+
 - **`qfai init --force` reports only the paths it changed.** The `written` count
   and list included every distributed file, including those already identical to
   the shipped copy. Rule files, the Copilot and Codex files and the agent and
