@@ -194,6 +194,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   seeds is unchanged, and the list derived from these classes may now be
   recorded. The decision is recorded in `decisions.md`.
 
+- **A test file missing from `packages/qfai/tsconfig.tests.json` now fails
+  `pnpm ci:lint`.** The check that every test file is either listed there or
+  recorded as uncovered ran only in the `scripts` test lane, so an author saw
+  it first in CI. `pnpm -C packages/qfai lint:shipping` now runs it too, so the
+  lint lane reports the omission before the test lanes start. Closes #2953 and
+  #2967.
+
 - **The shipped guidance now bounds test-suite size and unrequested fixes**
   (#2242). The test-layer rule gains a sizing section: a new test file is sized
   like its neighbours, a process-per-case suite is a choice rather than an
