@@ -6,6 +6,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **The seeded `.gitattributes` uses Git union merging for the two registers**
+  (#2265). A new file sets `merge=union` on `decisions.md` and
+  `open-questions.md` to keep both branches' appended lines. Validation still
+  reports duplicate IDs. Existing `.gitattributes` files remain unchanged.
+
 - **A shipped rule sets how Markdown an agent reads is sized and split**
   (#2246). Markdown stays within 500 lines and a `SKILL.md` body within 20,000
   characters. Pointers say when to read the file they name, references stay one
@@ -36,11 +41,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai validate` and `qfai report --run-validate` no longer read an
+  unreadable legacy validate path as absent.** The check for a stale
+  `.qfai/output/validate.json` treated every `stat` failure as "not on disk".
+  Now only a missing path counts as absent, and any other failure, such as
+  `EACCES` or `EIO`, reaches the caller with its code, path and message
+  (#2915).
+
 - **A validator no longer reads an unreadable file as a missing one.** The
   shared `exists` and `readSafe` helpers turned every failure, including
   `EACCES` and `EIO`, into "absent" or an empty string, so a file the validator
   could not read passed as one that was not there. Only `ENOENT` and `ENOTDIR`
   now mean absent; any other error propagates unchanged. Fixes #2906.
+- **The dogfooding backlog guard names every command a re-pin takes** (#2415).
+  `scripts/dogfood-backlog.json` is a pinned guard input, so re-pinning it
+  moves its digest. When a pin is behind the tree or a file is over its pin,
+  the guard now lists `node scripts/pin-guard-bytes.mjs` and then
+  `node scripts/pin-verification-bodies.mjs` after the `--pin` command.
+  Following the old message alone failed the lint lane on the stale digest.
 
 - **The contract guide states one scope for contract kinds.** It named only
   `api/`, `db/` and `ui/` as contract directories in one place and `cli/` in
@@ -48,6 +66,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `cli/` is the QFAI repository's own. The `QFAI-DB-001` row of the SQL findings
   table, which rendered outside the table, now sits beside the other rows.
   Fixes #2860.
+
 - **`qfai init --force` reports only the paths it changed.** The `written` count
   and list included every distributed file, including those already identical to
   the shipped copy. Rule files, the Copilot and Codex files and the agent and
@@ -86,6 +105,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   delegation-baseline and test-layers pointers started at `rule/`, so they did
   not resolve from the project root. Both now begin at `.qfai/assistant/rule/`.
   (#2858)
+- **A project can stop `qfai init` writing a shipped workflow.** Deleting
+  `qfai-tests.yml` was not enough: the next `qfai init` wrote it again, though
+  its header said it would not. `workflow.skipShipped` in `qfai.config.yaml`
+  now lists the shipped workflow files init leaves out, and `qfai validate`
+  reports a value that is not a list of shipped names. The headers of
+  `qfai-tests.yml` and `qfai-validate.yml` describe this. Fixes #2979.
 - **The planner-first and design anti-goal examples are tested for what they
   say.** The planner-first example was annotated on a test that only checked
   three file names. Its test now reads the completion matrix and the
@@ -117,6 +142,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   option chosen. The same request shows acceptance, so `qfai-run` does not set
   the `decision` flag for it.
 
+- **The `qfai-run` entry skill has room for another step** (#2966). The text
+  for a release, decision or branch point moves into a new reference,
+  `references/stage-points.md`, which the skill points to at each step. The
+  skill keeps its 150-line limit, at 135 lines instead of 150, and its
+  behaviour is unchanged.
+
 - **A mutation proof belongs to one example** (#2409). The `qfai-implement`
   oracle-strength reference now says what to do when one mutation fails tests
   annotated with different examples: record each failing assertion and the
@@ -132,7 +163,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   host without all three keeps it waiting. Starting another delegation still
   needs the independence conditions of the parallelization policy, and an
   ordering the ledger or a seam makes mandatory still holds.
-
+- **Review is the detector for a security defect** (#2252). No repository gate
+  scans for a security or data-integrity defect, and the Drift Protocol now
+  says so. It names the implementation reviewer as that class's detector: a
+  finding the reviewer demonstrates traces to `defect:security` and blocks.
+  The reviewer card names concrete checks in place of the single word
+  "security": the three shapes the protocol names, and injection, cross-site
+  scripting, server-side request forgery, hardcoded secrets, insecure direct
+  object reference, auth bypass, unsafe deserialization and path traversal.
+  The check reads the whole of every touched file and follows each input the
+  change adds or alters to where it is used, across files the change did not
+  touch. Only a finding on what the change added or altered blocks.
 - **`qa-gatekeeper` asks whether a reviewed test would survive a refactor**
   (#2253). A test that asserts on what the contract does not name, such as a
   private function, an internal call order or a mock of the code's own
@@ -144,7 +185,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   test that existed before the change. The three other questions a regression
   review asks point at the checks that already own them: the coverage gate, and
   the proof per example in the oracle strength reference.
-
 - **Five doctor criteria now name the tests that prove them.** Existing
   integration tests carry standalone `QFAI:AC-...` comments, and
   `AC-0003-0004-01` gains a deprecated `paths.promptsDir` warning case.
