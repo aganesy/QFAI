@@ -33,6 +33,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   counted for all three. The test covering the four mode values names the value
   in each failing assertion. (#2287)
 
+### Changed
+
+- **The shipped cross-flow guidance says how to find the flows a shared change
+  reaches, and what to do when that search cannot finish.**
+  `qfai-implement/references/cross-spec-ownership.md` now searches outward from
+  the changed files: follow the importers and literal reads until a test file is
+  reached, then read its `QFAI:` annotations to name the dependent flows. An edge
+  that cannot be followed by reading (a computed import path, a glob-loaded
+  fixture, a path built at run time) leaves the dependent set unknown: record it
+  as an unresolved obligation and run the full test suite once on the
+  integrated tree as an extra check. The suite does not replace revalidating
+  each flow, and the search is not reported complete. Refs #2424.
+
 ## [2.1.0] - 2026-10-05
 
 ### Breaking changes
