@@ -58,8 +58,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **A DONE change request claims every action it lists** (#2312). A
   `decisions.md` row has one Status, so a request with one action deferred could
   be marked DONE and the deferred action dropped from view. The drift protocol
-  now keeps such a row at WIP, or splits the deferred action into a new
-  `Change request:` row before the original is marked DONE.
+  now keeps such a row at WIP while any action it lists is deferred.
 
 ## [2.1.0] - 2026-10-05
 

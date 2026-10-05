@@ -39,9 +39,6 @@ describe("Implementation evidence ownership", () => {
     );
     const rule = drift.replaceAll("`", "").replace(/\s+/g, " ");
     expect(rule).toMatch(/DONE claims every action[^.!?]*Approach/);
-    expect(rule).toMatch(/when one is deferred[^.!?]*keep the row at WIP/i);
-    expect(rule).toMatch(
-      /append a new row[^.!?]*Content starts with Change request:[^.!?]*deferred action[^.!?]*before marking the original DONE/,
-    );
+    expect(rule).toMatch(/deferred[^.!?]*keep the row at WIP/i);
   });
 });
