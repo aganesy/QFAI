@@ -47,9 +47,9 @@ let root: string;
 beforeEach(async () => {
   accessSpy.mockReset();
   readFileSpy.mockReset();
-  accessSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.access(...args));
-  readFileSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
-    actual.readFile(...args),
+  accessSpy.mockImplementation((actual: FsPromises, target: string) => actual.access(target));
+  readFileSpy.mockImplementation((actual: FsPromises, target: string, encoding: BufferEncoding) =>
+    actual.readFile(target, encoding),
   );
   root = await mkdtemp(path.join(os.tmpdir(), "qfai-utils-read-errors-"));
 });
@@ -128,10 +128,10 @@ describe("a live consumer of both helpers", () => {
   it("propagates EACCES on the template instead of reading it as absent", async () => {
     await seedPair();
     const failure = errno("EACCES");
-    accessSpy.mockImplementation((actual: FsPromises, target: string, ...rest: never[]) =>
-      String(target).endsWith(path.basename(MOCK_HREF_TEMPLATE_REL))
+    accessSpy.mockImplementation((actual: FsPromises, target: string) =>
+      target.endsWith(path.basename(MOCK_HREF_TEMPLATE_REL))
         ? Promise.reject(failure)
-        : actual.access(target, ...rest),
+        : actual.access(target),
     );
 
     await expect(detectMockHrefDrift(root)).rejects.toBe(failure);
