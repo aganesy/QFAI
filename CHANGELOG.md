@@ -25,6 +25,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A rewritten decision row no longer authorizes a protected file.** A
+  `Change request:` row the base already holds could have its Content changed
+  to name another protected file, and the drift guard then accepted an edit to
+  that file. A base row whose Content or Approach changed now authorizes
+  nothing, in the `tdd` and `drift` profiles alike (#2891).
 - **The planner-first and design anti-goal examples are tested for what they
   say.** The planner-first example was annotated on a test that only checked
   three file names. Its test now reads the completion matrix and the
