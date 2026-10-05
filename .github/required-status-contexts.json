@@ -405,7 +405,7 @@
         "QFAI self-validate this repo (dogfooding — SDD gates)": "a6335bcba3f91550",
         "QFAI self-validate this repo (dogfooding — full profile)": "de910018ea8f24e4",
         "Run qfai validate gate (fail on error)": "64fb079758255e4c",
-        "Run lint gate": "fccfe30a986d218c",
+        "Run lint gate": "3bba7d48277b2cfb",
         "Run type check": "51c5eeee942920dc",
         "Run future TypeScript compatibility check": "55db3b7f97fd7fad",
         "Run the package test suite on the floor (${{ matrix.slice }})": "cdce2fa04dd9f130",
