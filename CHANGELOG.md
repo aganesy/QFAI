@@ -7,12 +7,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 ### Changed
 
 - **The SDD triage reference says how a shared ID is renumbered** (#2505). Two
-  branches can take the same next ID. The renumbered item is the one the later
-  branch added, every citation changes in the same commit, and the commit
-  message states the old and new ID so an older citation stays readable. A
-  merged row keeps its ID; a later row says which record a shared ID meant, as
-  this repository's decision table now does for two archived change request
-  IDs.
+  branches can take the same next ID. The merge target keeps its item and the
+  incoming item is renumbered, with its children and directory when it is a BF
+  or a US. Every citation changes in the same commit, and the commit message
+  states the old ID, the new ID and the renamed record. A merged row keeps its
+  ID, and an ID two merged records already share is put to the user for a
+  change request row that says which record each citation meant.
 
 ### Fixed
 
