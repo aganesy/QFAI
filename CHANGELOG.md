@@ -46,6 +46,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `.claude/skills/qfai-run/SKILL.md` under the current directory. The reminder
   is read from the session's own checkout. Fixes #2972.
 
+- **The changelog guard no longer fails the commit a release is tagged at.**
+  The guard refuses an entry added to a section whose tag exists. The merge
+  that folds `## [Unreleased]` into the release is the commit the tag is pushed
+  to, so the push run read the release's own entries as late additions and
+  turned `main` red. A tag on the commit being checked is now the release being
+  cut and does not make its section released (#2945).
 - **The planner-first and design anti-goal examples are tested for what they
   say.** The planner-first example was annotated on a test that only checked
   three file names. Its test now reads the completion matrix and the
