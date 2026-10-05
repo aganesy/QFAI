@@ -229,7 +229,7 @@ describe("story-tree drift", () => {
       return findings.some((item) => item.code === "QFAI-DRIFT-001" && item.file === glossary);
     }
 
-    // QFAI:EX-0001-0054-05
+    // QFAI:EX-0001-0054-15
     it.each(["tdd", "drift"] as const)(
       "grants nothing for a path its rewritten Content names, in %s",
       async (profile) => {
@@ -241,7 +241,7 @@ describe("story-tree drift", () => {
       },
     );
 
-    // QFAI:EX-0001-0054-05
+    // QFAI:EX-0001-0054-15
     it.each(["tdd", "drift"] as const)(
       "grants nothing when an ordinary decision is rewritten into a change request, in %s",
       async (profile) => {
@@ -253,7 +253,7 @@ describe("story-tree drift", () => {
       },
     );
 
-    // QFAI:EX-0001-0054-05
+    // QFAI:EX-0001-0054-15
     it.each(["tdd", "drift"] as const)(
       "grants nothing for a path its rewritten Approach names, in %s",
       async (profile) => {
@@ -265,7 +265,7 @@ describe("story-tree drift", () => {
       },
     );
 
-    // QFAI:EX-0001-0054-05
+    // QFAI:EX-0001-0054-15
     it.each(["tdd", "drift"] as const)(
       "keeps authorising the path of an unchanged row, in %s",
       async (profile) => {
@@ -275,7 +275,7 @@ describe("story-tree drift", () => {
       },
     );
 
-    // QFAI:EX-0001-0054-08
+    // QFAI:EX-0001-0054-15
     it.each(["tdd", "drift"] as const)(
       "keeps authorising the path of a row that only advances its Status, in %s",
       async (profile) => {
