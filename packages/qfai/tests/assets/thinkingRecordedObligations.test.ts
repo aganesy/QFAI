@@ -42,10 +42,10 @@ describe("every decision a stage records carries one form", () => {
       for (const label of LABELS) expect(article).not.toContain(label);
     });
 
-    it(`${tree}: the template applies the form to evidence records too`, async () => {
+    it(`${tree}: the template applies the form to final-report records too`, async () => {
       const template = await read(tree, TEMPLATE);
       expect(template).toContain(
-        "A stage that does not own this file records its decisions in its own evidence",
+        "A stage that does not own this file records its decisions in its own final",
       );
     });
 

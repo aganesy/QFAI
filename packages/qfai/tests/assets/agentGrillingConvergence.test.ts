@@ -36,12 +36,11 @@ describe("a grilling session between agents has an end", () => {
     });
 
     it(`${tree}: bounds the rounds and settles every non-critical decision on the recommendation`, async () => {
-      // Same budget a reviewer has, so the two compose rather than competing.
       // Every non-critical decision, not only the open ones: partial agreement
       // is the ordinary outcome, and a decision left to "whatever the agents
       // agreed" would have no record of why it was taken.
       const content = await read(path.join(tree, CONVERGENCE));
-      expectPhrase(content, "**Two rounds**, the same budget a reviewer has.");
+      expectPhrase(content, "**Two rounds.**");
       expectPhrase(
         content,
         "**every\ndecision that is not critical takes the griller's recommendation**",

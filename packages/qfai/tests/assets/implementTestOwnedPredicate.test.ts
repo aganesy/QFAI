@@ -19,7 +19,7 @@ describe.each(trees)("%s — implementation RED evidence", (tree) => {
     expect(skill).toContain("not an admissible RED.");
     expect(admissibility).toContain("fail on the behavior that the example states");
     expect(admissibility).toContain("Temporarily neutralize only the example assertion");
-    expect(admissibility).toContain("restore the assertion before asking the gatekeeper");
+    expect(admissibility).toContain("restore the assertion before recording RED");
   });
 
   it("records a passing existing behavior as a falsifiability probe and restores it", async () => {

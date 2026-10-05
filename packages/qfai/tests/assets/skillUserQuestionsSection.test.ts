@@ -79,7 +79,6 @@ describe("every shipped skill and step runs under the AskUserQuestion protocol",
   it("covers the skills that once shipped without the protocol", async () => {
     const files = await collectSkillBodies();
     for (const required of [
-      "packages/qfai/assets/init/.qfai/assistant/skill/qfai-atdd/SKILL.md",
       "packages/qfai/assets/init/.qfai/assistant/skill/qfai-implement/SKILL.md",
       "packages/qfai/assets/init/.qfai/assistant/skill/qfai-discussion/SKILL.md",
       "packages/qfai/assets/init/.qfai/assistant/skill/qfai-prototyping/SKILL.md",
@@ -96,7 +95,6 @@ describe("a stage skill's final report ends with the next-action question", () =
     ["qfai-discussion", "## Completion Message & Next Actions (MUST)"],
     ["qfai-sdd", "## Completion"],
     ["qfai-prototyping", "## Completion"],
-    ["qfai-atdd", "## Completion"],
     ["qfai-implement", "## Completion"],
     ["qfai-verify", "## Completion"],
     ["qfai-maintain", "## Completion"],

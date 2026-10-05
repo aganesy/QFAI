@@ -6,7 +6,6 @@
     "info QFAI-CONTRACT-000 .qfai/spec/03_contract/ui",
     "info QFAI-PROFILE-001 -",
     "info QFAI-TEST-002 qfai.config.yaml",
-    "info QFAI-TOOL-001 -",
-    "warning QFAI-REVIEW-002 .qfai/review"
+    "info QFAI-TOOL-001 -"
   ]
 }

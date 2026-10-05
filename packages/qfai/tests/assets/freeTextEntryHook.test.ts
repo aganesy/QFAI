@@ -1,9 +1,3 @@
-// QFAI:EX-0001-0196-26
-// QFAI:EX-0001-0196-27
-// QFAI:EX-0001-0196-41
-// QFAI:EX-0001-0196-43
-// QFAI:EX-0001-0196-44
-// QFAI:EX-0001-0196-49
 /**
  * The prompt-time reminder that sends a request naming no skill to `qfai-run`,
  * for Claude Code and for Codex.
@@ -126,6 +120,12 @@ async function runThroughShell(entry: Entry, cwd: string): Promise<string> {
   return outputs[0] ?? "";
 }
 
+// QFAI:EX-0001-0196-26
+// QFAI:EX-0001-0196-27
+// QFAI:EX-0001-0196-41
+// QFAI:EX-0001-0196-43
+// QFAI:EX-0001-0196-44
+// QFAI:EX-0001-0196-49
 describe("the free-text entry reminder", () => {
   it.each([OWN_SETTINGS, SHIPPED_SETTINGS])(
     "%s fires on every prompt and names qfai-run",

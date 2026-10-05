@@ -35,19 +35,16 @@ baseline overlap, the baseline governs.
 
 ### Orchestrator Protocol
 
-- Orchestrator may only create work orders, delegate tasks, integrate outputs, and present results.
-- Orchestrator must not draft the primary research artifact first or self-approve completion.
+- The orchestrator may write the research artifact itself, or give independent searches to sub-agents that run in parallel.
+- It never approves its own work.
 
 ### Capability Probe
 
-1. Attempt the first required delegation at stage start.
-2. Treat that real delegation attempt as the capability check.
-3. If the delegation fails, stop the stage immediately and report remediation.
+- No additional overrides.
 
 ### Delegation Failure (Hard Stop)
 
 - No additional overrides.
-- Do not simulate roles. If the first required delegation fails, stop the stage and report remediation.
 
 ## Work Orders Summary
 
@@ -72,11 +69,8 @@ steps:
   and must hand the same evidence set to a non-participating reviewer instead of
   returning `PASS`.
 - Reviewer responses use the response template in
-  `.qfai/assistant/rule/shared-skill-delegation-baseline.md#reviewer-response-template`, including the
-  REQUIRED `Reviewer role:`, `Reviewed artifact:`, `Review series:`,
-  `Authored/edited under review:` and `Recommended and unadjudicated:`
-  lines. A response omitting any of them is not a valid verdict; anything other than
-  `none` on the last cannot be a `PASS`.
+  `.qfai/assistant/rule/shared-skill-delegation-baseline.md#reviewer-response-template`:
+  a verdict and its findings.
 - Reviewer checks the Drift Protocol, verifies alignment with `test-layers.md`, and treats ratios as signals, not gates.
 - Reviewer returns only `PASS` or `REVISE` with a concrete fix proposal when returning `REVISE`.
 - A gate that could not be run at all is recorded as `PENDING` in the Work Orders Summary. `PENDING` never counts as `PASS`.
@@ -99,6 +93,8 @@ The web research pipeline consists of **8 stages** executed in strict order:
 6. **cache** — Store extracted content with deduplication and staleness tracking.
 7. **verify** — Cross-reference extracted claims; flag contradictions and low-confidence assertions.
 8. **cite** — Generate structured citation output with source attribution.
+
+Names are verified per `.qfai/assistant/rule/research-first-protocol.md#name-verification-rule`; findings are worded per `.qfai/assistant/rule/research-first-protocol.md#quotation-rule`.
 
 Each stage writes its output to the **session log** (see Section 4.1).
 The final citation block is appended to the research artifact.
@@ -180,7 +176,7 @@ Every pipeline execution produces a session log with **6 mandatory fields**:
 | `sources`    | List of fetched URLs with status codes  |
 | `citations`  | Final citation entries                  |
 
-Session logs are stored under `.qfai/evidence/web-research/`.
+The session log is part of the research report, not a file of its own.
 
 ## 5. Evaluation Metrics
 
@@ -308,7 +304,7 @@ evaluation. Each golden task is scored against 4 metrics:
 - **Freshness** — recency of cited sources.
 - **Security hygiene** — sanitization pass rate.
 
-Golden task results are stored under `.qfai/evidence/web-research/golden/`.
+Golden task results are reported with the evaluation run.
 
 ## Completion Contract (Shared)
 
@@ -331,7 +327,7 @@ Create lightweight evidence that records:
 
 - [ ] Hard Constraints were followed.
 - [ ] Session-log requirements were satisfied.
-- [ ] Reviewer Gate returned PASS.
+- [ ] Every Reviewer Gate finding is fixed or answered.
 - [ ] Evidence was recorded.
 
 ## Completion Checklist
@@ -348,4 +344,4 @@ Create lightweight evidence that records:
 - Need more evidence:
   Action: rerun the pipeline with refined query, allowlist, or `--max-depth` settings.
 - Reviewer returned REVISE:
-  Action: address the cited gaps, then rerun the reviewer gate before reuse.
+  Action: fix or answer each cited gap and record it before reuse; no second review runs.

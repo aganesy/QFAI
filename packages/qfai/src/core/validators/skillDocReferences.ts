@@ -4,42 +4,8 @@ import path from "node:path";
 
 import { resolvePath, type QfaiConfig } from "../config.js";
 import { isEnoent } from "../fs/errno.js";
-import { legacyAssistantSteeringSunsetLabel } from "../paths/assistantPaths.js";
 import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
-
-/**
- * The pre-recut paths are retired, so a reference to one is an error.
- *
- * Kept as a named export because the contract test drives it directly, and
- * shared with the assistantTreeMigration validator so both surfaces agree.
- */
-export function brokenRefSeverity(): "error" {
-  return "error";
-}
-
-// Paths that are legacy / non-canonical after the assistant-layer recut.
-// Any SKILL.md text that references these is flagged as broken.
-const NON_CANONICAL_REFS: Array<{ pattern: RegExp; reason: string }> = [
-  {
-    pattern: /\.qfai\/assistant\/steering\/agent-routing\.yml/,
-    reason:
-      "Agent routing defaults are shipped with qfai; project overrides live in qfai.config.yaml.",
-  },
-  {
-    pattern: /\.qfai\/assistant\/steering\/agent-catalog\.yml/,
-    reason: "Agent definitions live in .qfai/assistant/agent/ card frontmatter.",
-  },
-  {
-    pattern: /\.qfai\/assistant\/steering\/review-profiles\.yml/,
-    reason:
-      "Review profile defaults are shipped with qfai; project overrides live in qfai.config.yaml.",
-  },
-  {
-    pattern: /\.qfai\/assistant\/steering\/test-layers\.md/,
-    reason: "test-layers.md has moved to .qfai/assistant/rule/test-layers.md.",
-  },
-];
 
 // A `qfai-*` skill MAY end with a `project_memory:` block: the
 // remembered-context invariants that skill expects downstream agents to
@@ -58,13 +24,11 @@ export async function validateSkillDocReferences(
   // OR absolute) is still scanned. Pre-fix the validator hardcoded
   // `.qfai/assistant/skill` and silently SKIPped every qfai-* SKILL
   // file under the actual configured location — letting
-  // W-SKILL-DOC-BROKEN-REF / W-SKILL-PROJECT-MEMORY drift go
+  // W-SKILL-PROJECT-MEMORY drift go
   // unreported. The fix mirrors the sister validators
   // `staleReferences.ts` and `autopilotPolicy.ts`.
   const skillsDir = resolvePath(root, config, "skillsDir");
   if (!(await exists(skillsDir))) return issues;
-
-  const refSeverity = brokenRefSeverity();
 
   let entries: Dirent[];
   try {
@@ -89,28 +53,6 @@ export async function validateSkillDocReferences(
     } catch (err: unknown) {
       if (isEnoent(err)) continue;
       throw err;
-    }
-
-    // W-SKILL-DOC-BROKEN-REF — scoped to qfai-* skills per contract.
-    // User-defined non-qfai-* skills under the configured skill directory are
-    // intentionally NOT flagged so consumers can author their own
-    // SKILL.md without colliding with QFAI's path-migration finding.
-    // The severity is the one the `qfai validate` contract assigns this finding.
-    if (QFAI_SKILL_ID_RE.test(skillId)) {
-      for (const ref of NON_CANONICAL_REFS) {
-        if (ref.pattern.test(body)) {
-          const headline = `${skillId}/SKILL.md references a non-canonical path (post-recut) past the announced sunset (v${legacyAssistantSteeringSunsetLabel()}). Migrate the reference to fix.`;
-          issues.push(
-            issue(
-              "W-SKILL-DOC-BROKEN-REF",
-              `${headline} ${ref.reason}`,
-              refSeverity,
-              skillDocRelPath,
-              "skillDocReferences.brokenRef",
-            ),
-          );
-        }
-      }
     }
 
     // project_memory shape (warning-only — opt-in convention).

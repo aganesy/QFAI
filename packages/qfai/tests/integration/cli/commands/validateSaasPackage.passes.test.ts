@@ -4,8 +4,8 @@
  *
  * - Given a temp-dir repo where the prototyping pipeline produces
  *   no error findings, the design-system attestation — root `DESIGN.md` —
- *   is present and parses, and a conformant
- *   handoff exists at `.qfai/handoff.yaml`, the saas-package profile
+ *   is present and parses, and a conformant prototyping handoff record
+ *   exists at `.qfai/prototype/final/handoff.json`, the saas-package profile
  *   PASSes (no error severities, exit 0).
  * - The validation result emits ONE `D-SAAS-PACKAGE-VERIFY-SKIPPED`
  *   (severity info) finding per skipped ATDD / implement-class gate
@@ -14,7 +14,6 @@
  * Drives `runValidate` directly (no subprocess shell-out) so the
  * harness can read the in-memory validation result deterministically.
  */
-// QFAI:EX-0001-0049-01
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -72,16 +71,19 @@ async function seedDesignSystemAttestation(): Promise<void> {
 }
 
 async function seedHandoff(): Promise<void> {
-  await mkdir(path.join(root, ".qfai"), { recursive: true });
+  await mkdir(path.join(root, ".qfai", "prototype", "final"), { recursive: true });
   await writeFile(
-    path.join(root, ".qfai", "handoff.yaml"),
+    path.join(root, ".qfai", "prototype", "final", "handoff.json"),
     JSON.stringify(
       {
         companyName: "Acme",
-        primarySpecId: "spec-0001",
+        primaryUiContract: "UI-0001",
         startDate: "2026-05-27",
         entryPattern: "saas-package",
         productScope: "tenant-portal",
+        finalArtifact: ".qfai/prototype/final/index.html",
+        procurement: { procured: [], authored: [], "drawn-from-project": [] },
+        implementationNotes: "The confirmed prototype.",
       },
       null,
       2,
@@ -107,6 +109,7 @@ afterEach(async () => {
   if (savedGhaEnv !== undefined) process.env.GITHUB_ACTIONS = savedGhaEnv;
 });
 
+// QFAI:EX-0001-0049-01
 describe("TC-0004-0067: validate --profile saas-package PASSes + emits skip-set (normal)", () => {
   it("PASSes (exit 0) and writes a profile-suffixed report containing D-SAAS-PACKAGE-VERIFY-SKIPPED info findings", async () => {
     await seedDesignSystemAttestation();

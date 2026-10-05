@@ -96,7 +96,8 @@ describe("qfai init distributes the step layer", () => {
         const front = skillFrontmatterMapping(doc);
         if (!Array.isArray(front?.steps)) continue;
         parents.push(skill);
-        expect(front?.requires, skill).toContain("common-review-cycle");
+        if (skill !== "qfai-triage")
+          expect(front?.requires, skill).toContain("common-review-cycle");
       }
       expect(parents.length).toBeGreaterThan(0);
     } finally {

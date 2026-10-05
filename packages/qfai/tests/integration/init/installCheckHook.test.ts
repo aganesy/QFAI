@@ -6,8 +6,6 @@
  * own launcher, up to the git root and no further, and prints the remedy when there is none.
  */
 // QFAI:AC-0001-0196-14
-// QFAI:EX-0001-0196-50
-// QFAI:EX-0001-0196-51
 import { copyFile, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -91,6 +89,8 @@ function expectRemedy(stdout: string): void {
   expect(context).toEqual(expect.stringContaining("`npm i -D qfai`"));
 }
 
+// QFAI:EX-0001-0196-50
+// QFAI:EX-0001-0196-51
 describe("the install check of the Claude Code settings", () => {
   it("prints the remedy only where this checkout has no launcher, and looks no further up than its git root", async () => {
     const base = await mkdtemp(path.join(os.tmpdir(), "qfai install check "));

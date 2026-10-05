@@ -57,7 +57,6 @@ specialization_tags:
 - Discovery summary with open risks and unknowns
 - Proposed question set and rationale
 - Facilitation notes with decision points
-- Evidence summary for `.qfai/evidence/`
 
 ## Stop conditions
 
