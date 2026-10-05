@@ -22,6 +22,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   A mark inside a string literal is left alone. The marks this repository
   still carried are rewritten as plain comments, and its migration fixtures
   are excluded from the test globs (#2308).
+- **A decision row can be marked as partly superseded.** `decisions.md` accepts
+  the Status `PARTLY SUPERSEDED (by DEC-NNNN)`, naming the later row that
+  narrows the decision without replacing it. A test exception or change request
+  at that Status stays in force. The story-tree authoring rules also say that a
+  project counting the IDs of its open pull requests may take a next ID above
+  the tree's own highest plus one (#2969).
 
 ### Fixed
 
