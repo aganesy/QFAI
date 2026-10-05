@@ -377,7 +377,7 @@ export async function runInit(
   rootResult.skipped = [
     ...workflowResult.skipped,
     ...rootResult.skipped,
-    ...(options.force ? [] : rulesCreated.skipped),
+    ...(options.force ? rulesForced.skipped : rulesCreated.skipped),
   ];
 
   // The config template ships `testFileGlobs: []`, which leaves the SC traceability lane and
@@ -2065,16 +2065,20 @@ async function syncIntegrationWrappers(
     info(describeSkippedPath(COPILOT_INSTRUCTIONS_ENTRY, copilotUnsafe));
     skipped.push(copilotDest);
   } else {
-    copied.push(copilotDest);
-    if (!options.dryRun) {
-      const content = await keepSummariesOfUninstalledMasters(
-        buildCopilotInstructions(),
-        destRoot,
-        copilotDest,
-        installedMasters,
-      );
-      await mkdir(path.dirname(copilotDest), { recursive: true });
-      await writeFile(copilotDest, content, "utf-8");
+    const content = await keepSummariesOfUninstalledMasters(
+      buildCopilotInstructions(),
+      destRoot,
+      copilotDest,
+      installedMasters,
+    );
+    if (copilotExists && (await holdsText(copilotDest, content))) {
+      skipped.push(copilotDest);
+    } else {
+      copied.push(copilotDest);
+      if (!options.dryRun) {
+        await mkdir(path.dirname(copilotDest), { recursive: true });
+        await writeFile(copilotDest, content, "utf-8");
+      }
     }
   }
 
@@ -2149,31 +2153,37 @@ async function syncIntegrationWrappers(
       }
       skipped.push(dest);
     } else {
-      copied.push(dest);
-      if (!options.dryRun) {
-        await mkdir(path.dirname(dest), { recursive: true });
-        const templateSrc = path.join(getInitAssetsDir(), ".github", "instructions", fileName);
-        let content: string;
-        try {
-          // The shipped template carries `<!-- qfai:language-rules -->`; what lands in the
-          // project must not. Filled with the rules for this project's language, or with the
-          // slot removed when there are none.
-          content = fillLanguageRules(
-            await readFile(templateSrc, "utf-8"),
-            fileName,
-            projectLanguages,
-          );
-        } catch (err: unknown) {
-          const code =
-            typeof err === "object" && err !== null ? (err as { code?: string }).code : undefined;
-          const detail = err instanceof Error ? err.message : String(err);
-          throw new Error(
-            `Failed to read the instructions template: ${templateSrc}` +
-              ` (${code ?? detail}). Check that the package is installed correctly.`,
-            { cause: err },
-          );
+      // Read before the write is reported, so a file that already holds this text
+      // is counted as skipped rather than written.
+      const templateSrc = path.join(getInitAssetsDir(), ".github", "instructions", fileName);
+      let content: string;
+      try {
+        // The shipped template carries `<!-- qfai:language-rules -->`; what lands in the
+        // project must not. Filled with the rules for this project's language, or with the
+        // slot removed when there are none.
+        content = fillLanguageRules(
+          await readFile(templateSrc, "utf-8"),
+          fileName,
+          projectLanguages,
+        );
+      } catch (err: unknown) {
+        const code =
+          typeof err === "object" && err !== null ? (err as { code?: string }).code : undefined;
+        const detail = err instanceof Error ? err.message : String(err);
+        throw new Error(
+          `Failed to read the instructions template: ${templateSrc}` +
+            ` (${code ?? detail}). Check that the package is installed correctly.`,
+          { cause: err },
+        );
+      }
+      if (alreadyExists && (await holdsText(dest, content))) {
+        skipped.push(dest);
+      } else {
+        copied.push(dest);
+        if (!options.dryRun) {
+          await mkdir(path.dirname(dest), { recursive: true });
+          await replaceWithRegularFile(dest, content);
         }
-        await replaceWithRegularFile(dest, content);
       }
     }
   }
@@ -2354,6 +2364,16 @@ async function createCodexAgentTomls(
           await rm(destination, { recursive: true, force: true });
         }
       }
+      continue;
+    }
+
+    // A profile that already holds the generated text is not rewritten.
+    if (
+      destinationStats?.isFile() === true &&
+      destinationStats.nlink === 1 &&
+      (await readTextFileIfPresent(destination)) === plan.toml
+    ) {
+      skipped.push(destination);
       continue;
     }
 
@@ -3788,6 +3808,17 @@ async function keepSummariesOfUninstalledMasters(
     else if (await pathExists(path.join(destRoot, ...master.split("/")))) lines.push(line);
   }
   return lines.join("\n");
+}
+
+/**
+ * Whether `target` is a regular file, not a link and not shared by a hard link,
+ * that already holds `text`. A link or a shared inode is replaced as an entry,
+ * so it counts as a change.
+ */
+async function holdsText(target: string, text: string): Promise<boolean> {
+  const stats = await safeLstat(target);
+  if (stats === undefined || !stats.isFile() || stats.nlink > 1) return false;
+  return (await readTextFileIfPresent(target)) === text;
 }
 
 function buildCopilotInstructions(): string {
