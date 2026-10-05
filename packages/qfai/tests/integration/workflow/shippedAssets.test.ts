@@ -70,8 +70,28 @@ it("Run the asset line budget over qfai-run, qfai-maintain, the plans and the sc
   }).toEqual({ budget: [800, 400], schemas: 2, plans: 35, over: [] });
 });
 
+// A bash that runs the guard. A process started from PowerShell has no `bash` on its PATH, so a
+// bare `bash` fails to spawn and reads as a guard failure. On Windows the Git for Windows copy is
+// looked up by its install location first, since a `bash` on PATH may be the WSL launcher.
+function findBash(): string | undefined {
+  const gitRoots = [
+    process.env["ProgramFiles"],
+    process.env["ProgramW6432"],
+    process.env["ProgramFiles(x86)"],
+  ].flatMap((base) => (base === undefined ? [] : [path.join(base, "Git")]));
+  const localAppData = process.env["LOCALAPPDATA"];
+  if (localAppData !== undefined) gitRoots.push(path.join(localAppData, "Programs", "Git"));
+  const gitBashes =
+    process.platform === "win32" ? gitRoots.map((root) => path.join(root, "bin", "bash.exe")) : [];
+  return [...gitBashes, "bash"].find(
+    (candidate) => spawnSync(candidate, ["--version"], { stdio: "ignore" }).status === 0,
+  );
+}
+
+const bash = findBash();
+
 // The post-build guard over a package that publishes only the plans and the schemas.
-async function postBuildGuard(): Promise<{ status: number | null; output: string }> {
+async function postBuildGuard(shell: string): Promise<{ status: number | null; output: string }> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-workflow-leakage-"));
   roots.push(root);
   const manifest = { name: "workflow-assets", version: "0.0.0", files: ["assets"] };
@@ -81,7 +101,7 @@ async function postBuildGuard(): Promise<{ status: number | null; output: string
     await cp(path.join(packageRoot, relative), path.join(root, relative), { recursive: true });
   }
   const script = path.join(packageRoot, "scripts", "check-no-internal-version-leakage.sh");
-  const run = spawnSync("bash", [script], {
+  const run = spawnSync(shell, [script], {
     cwd: root,
     encoding: "utf8",
     env: { ...process.env, QFAI_LEAKAGE_SCAN_ROOT: root },
@@ -105,18 +125,26 @@ it("Read the two shipped schemas and the 35 plans", async () => {
   const planLeaks = lint.violations.filter((violation) =>
     violation.file.split(path.sep).join("/").includes("defaults/workflows/"),
   );
-  const guard = await postBuildGuard();
 
-  expect({ ids, versioned, planLeaks, guard: guard.status }, guard.output).toEqual({
+  expect({ ids, versioned, planLeaks }).toEqual({
     ids: [
       "extraction.schema.json urn:qfai:workflow:extraction",
       "plan.schema.json urn:qfai:workflow:plan",
     ],
     versioned: [],
     planLeaks: [],
-    guard: 0,
   });
 });
+
+// Skipped, not passed, where no bash can be found.
+it.skipIf(bash === undefined)(
+  "Run the post-build guard over a package that publishes the plans and the schemas",
+  async () => {
+    if (bash === undefined) return;
+    const guard = await postBuildGuard(bash);
+    expect(guard.status, guard.output).toBe(0);
+  },
+);
 
 it("Run the canonical launcher check over the shipped tree", async () => {
   const files = (await filesUnder(path.join("assets", "init"))).filter((file) =>
