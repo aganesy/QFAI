@@ -19,8 +19,7 @@
  * earlier release. The settings file does not change with the message.
  */
 
-import { createHash, randomUUID } from "node:crypto";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -239,41 +238,6 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
     }
   });
 
-  // QFAI:EX-0001-0196-54
-  it("prints the grilling reminder before a write once per session", async () => {
-    const group = (hooks.get("PreToolUse") ?? []).find(
-      (candidate) => candidate.matcher === "Write|Edit",
-    );
-    const entry = group?.hooks[0];
-    if (entry === undefined) throw new Error("no grilling entry before a write");
-    const project = projectDirOf(repoRoot, rel);
-    const input = (sessionId: string | null): string =>
-      JSON.stringify({
-        hook_event_name: "PreToolUse",
-        tool_name: "Edit",
-        tool_input: { file_path: "src/a.ts" },
-        ...(sessionId === null ? {} : { session_id: sessionId }),
-      });
-    const first = randomUUID();
-    const other = randomUUID();
-    const markers = [first, other].map((id) =>
-      path.join(
-        os.tmpdir(),
-        `qfai-grilling-${createHash("sha256").update(id).digest("hex").slice(0, 32)}`,
-      ),
-    );
-    try {
-      expect(await runReminderHook(entry, project, input(first))).toContain("grilling.md");
-      await expect(runReminderHook(entry, project, input(first))).resolves.toBe("");
-      expect(await runReminderHook(entry, project, input(other))).toContain("grilling.md");
-      for (let run = 0; run < 2; run += 1) {
-        expect(await runReminderHook(entry, project, input(null))).toContain("grilling.md");
-      }
-    } finally {
-      await Promise.all(markers.map((marker) => rm(marker, { force: true })));
-    }
-  });
-
   it("points at the floor and the interface rule instead of restating them", async () => {
     const entry = (hooks.get("PostToolUse") ?? [])[1]?.hooks[0];
     const text =
@@ -304,15 +268,17 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
         }
       }
     }
-    // Six readers. One prints the named message. One looks for this checkout's
-    // launcher first and prints only where there is none. One reads the hook's own
-    // input first and prints only for a command that names the forge, which is
-    // what lets a `Bash` matcher exist at all. One reads the prompt and stays
-    // silent on a turn the host started rather than the user typed. One reads the
-    // file a write names and stays silent for what is plainly not source. One
-    // remembers the session and prints the first time only. A seventh would
-    // mean a reminder had grown logic of its own, which is the thing kept out of
-    // this file.
+    // Six readers. One prints the named message. One does the same but prints
+    // only on the first call of a session and on every twentieth after it, which
+    // is how a reminder on every write stays out of the way. One looks for this
+    // checkout's launcher first and prints only where there is none. One reads
+    // the hook's own input first and prints only for a command that names the
+    // forge, and then counts like the second, which is what lets a `Bash` matcher
+    // exist at all. One reads the prompt and stays silent on a turn the host
+    // started rather than the user typed. One reads the file a write names,
+    // stays silent for what is plainly not source, and then counts like the
+    // second. A seventh would mean a reminder had grown logic of its own, which
+    // is the thing kept out of this file.
     expect(readers.size, "a reminder runs one of the six pinned readers").toBe(6);
     for (const reader of readers) {
       expect(reader).toContain("process.argv[1]");

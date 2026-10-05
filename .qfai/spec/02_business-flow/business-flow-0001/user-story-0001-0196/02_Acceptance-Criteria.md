@@ -86,7 +86,6 @@ Feature: Install or upgrade and get the free-text entry
     Then Codex runs each tool-time reminder Claude Code runs at the Codex tool call for the same moment, with the same marker and message
     And the documentation-clarity reminder after a write fires only for a patch that adds or changes a Markdown file
     And the minimal-implementation reminder after a write fires only for a file that is product source: not a test, a file under `tmp/`, a document, a configuration file or a file outside the project
-    And the grilling reminder before a write fires on the first write or edit of a session and not again in that session
     And the API-budget reminder fires only for a shell command that names the forge's CLI or its API host
     And the reminder before leaving plan mode has no Codex group, because Codex has no tool call that leaves plan mode
     And each runs under every shell as the prompt-time reminders do

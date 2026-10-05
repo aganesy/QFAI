@@ -357,7 +357,7 @@ describe("an earlier release's hook groups", () => {
   );
 
   it("covers every group the fixture holds", () => {
-    expect(cases).toHaveLength(18);
+    expect(cases).toHaveLength(22);
   });
 
   it.each(cases)("replaces $event group $index where it stands", ({ event, group }) => {
@@ -409,7 +409,7 @@ describe("an earlier release's hook groups", () => {
   });
 });
 
-describe("the Codex tool-time groups an earlier release wrote", () => {
+describe("the Codex tool-time group an earlier release wrote", () => {
   const CODEX_TEMPLATE = readFileSync(
     path.join(packageRoot, "assets/init/.codex/hooks.json"),
     "utf-8",
@@ -419,19 +419,21 @@ describe("the Codex tool-time groups an earlier release wrote", () => {
     "utf-8",
   );
 
-  it("are replaced where they stand, once", () => {
+  it("is replaced where it stands, and a second run changes nothing", () => {
     const result = mergeDocumentationClarityHooks(CODEX_EARLIER, CODEX_TEMPLATE);
     expect(result.outcome).toBe("merged");
     if (result.outcome !== "merged") return;
     expect(result.edited).toEqual([]);
     const shipped: Record<string, unknown> = JSON.parse(CODEX_TEMPLATE);
-    for (const event of ["PreToolUse", "PostToolUse"]) {
-      const earlier = groupsFor(JSON.parse(CODEX_EARLIER), event)[0];
-      const replaced = groupsFor(result.settings, event)[0];
-      expect(replaced).toEqual(
-        groupsFor(shipped, event).find((group) => markersOf(group) === markersOf(earlier)),
-      );
-    }
+    const earlier = groupsFor(JSON.parse(CODEX_EARLIER), "PostToolUse")[0];
+    expect(groupsFor(result.settings, "PostToolUse")[0]).toEqual(
+      groupsFor(shipped, "PostToolUse").find((group) => markersOf(group) === markersOf(earlier)),
+    );
+    const again = mergeDocumentationClarityHooks(
+      serializeClaudeSettings(result.settings),
+      CODEX_TEMPLATE,
+    );
+    expect(again).toEqual({ outcome: "already-present", edited: [] });
   });
 });
 

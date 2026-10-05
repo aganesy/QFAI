@@ -96,7 +96,7 @@
             "command": "node",
             "args": [
               "-e",
-              "try{const f=require('fs'),p=require('path');let go=true;try{const s=JSON.parse(f.readFileSync(0,'utf8')).session_id;if(typeof s==='string'&&s.length>0){const k=p.join(require('os').tmpdir(),'qfai-grilling-'+require('crypto').createHash('sha256').update(s).digest('hex').slice(0,32));try{f.writeFileSync(k,'',{flag:'wx'})}catch(e){if(e.code==='EEXIST')go=false}}}catch{}if(go){const m=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}catch{}",
+              "try{const f=require('fs');let i={};try{i=JSON.parse(f.readFileSync(0,'utf8'))}catch{}let n=1;if(typeof i.session_id==='string'){try{const t=require('path').join(require('os').tmpdir(),['qfai-reminder',i.session_id,i.agent_id||'main',process.argv[2]].join('-').replace(/[^\\w.-]/g,'_'));f.appendFileSync(t,'.');n=f.statSync(t).size}catch{}}if((n-1)%20===0){const m=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}catch{}",
               "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
               "grilling-design-artifact"
             ]
@@ -112,7 +112,7 @@
             "command": "node",
             "args": [
               "-e",
-              "try{const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}catch{}",
+              "try{const f=require('fs');let i={};try{i=JSON.parse(f.readFileSync(0,'utf8'))}catch{}let n=1;if(typeof i.session_id==='string'){try{const t=require('path').join(require('os').tmpdir(),['qfai-reminder',i.session_id,i.agent_id||'main',process.argv[2]].join('-').replace(/[^\\w.-]/g,'_'));f.appendFileSync(t,'.');n=f.statSync(t).size}catch{}}if((n-1)%20===0){const m=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}catch{}",
               "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
               "grilling-delegation"
             ]
@@ -144,7 +144,7 @@
             "command": "node",
             "args": [
               "-e",
-              "try{const c=JSON.parse(require('fs').readFileSync(0,'utf8')).tool_input.command;if(typeof c==='string'&&/(^|[^\\w.-])gh([^\\w.-]|$)|api\\.github\\.com/.test(c)){const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}catch{}",
+              "try{const f=require('fs');let i={};try{i=JSON.parse(f.readFileSync(0,'utf8'))}catch{}const c=i.tool_input&&i.tool_input.command;if(typeof c==='string'&&/(^|[^\\w.-])gh([^\\w.-]|$)|api\\.github\\.com/.test(c)){let n=1;if(typeof i.session_id==='string'){try{const t=require('path').join(require('os').tmpdir(),['qfai-reminder',i.session_id,i.agent_id||'main',process.argv[2]].join('-').replace(/[^\\w.-]/g,'_'));f.appendFileSync(t,'.');n=f.statSync(t).size}catch{}}if((n-1)%20===0){const m=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}}catch{}",
               "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
               "api-budget"
             ]
@@ -163,7 +163,7 @@
             "command": "node",
             "args": [
               "-e",
-              "try{const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}catch{}",
+              "try{const f=require('fs');let i={};try{i=JSON.parse(f.readFileSync(0,'utf8'))}catch{}let n=1;if(typeof i.session_id==='string'){try{const t=require('path').join(require('os').tmpdir(),['qfai-reminder',i.session_id,i.agent_id||'main',process.argv[2]].join('-').replace(/[^\\w.-]/g,'_'));f.appendFileSync(t,'.');n=f.statSync(t).size}catch{}}if((n-1)%20===0){const m=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}catch{}",
               "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
               "documentation-clarity-after-write"
             ]
@@ -175,7 +175,7 @@
             "command": "node",
             "args": [
               "-e",
-              "try{const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}catch{}",
+              "try{const f=require('fs');let i={};try{i=JSON.parse(f.readFileSync(0,'utf8'))}catch{}let n=1;if(typeof i.session_id==='string'){try{const t=require('path').join(require('os').tmpdir(),['qfai-reminder',i.session_id,i.agent_id||'main',process.argv[2]].join('-').replace(/[^\\w.-]/g,'_'));f.appendFileSync(t,'.');n=f.statSync(t).size}catch{}}if((n-1)%20===0){const m=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}catch{}",
               "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
               "documentation-clarity-after-edit"
             ]
@@ -191,7 +191,7 @@
             "command": "node",
             "args": [
               "-e",
-              "try{const f=require('fs'),p=require('path'),R=p.dirname(p.dirname(p.dirname(process.argv[1])));let go=true;try{const u=JSON.parse(f.readFileSync(0,'utf8')).tool_input.file_path;if(typeof u==='string'&&(x=>{const s=x.split(p.sep),b=s.pop();return p.isAbsolute(x)||s[0]==='..'||s.some(y=>['tmp','test','tests','__tests__','node_modules','.qfai','.agents'].includes(y))||b[0]==='.'||/\\.(test|spec)\\./.test(b)||['.md','.mdx','.markdown','.txt','.rst','.yml','.yaml','.json','.jsonc','.json5','.toml','.ini','.csv','.tsv','.lock','.svg','.png','.jpg','.jpeg','.gif'].includes(p.extname(b).toLowerCase())})(p.relative(R,p.resolve(R,u))))go=false}catch{}if(go){const m=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}catch{}",
+              "try{const f=require('fs'),p=require('path'),R=p.dirname(p.dirname(p.dirname(process.argv[1])));let i={};try{i=JSON.parse(f.readFileSync(0,'utf8'))}catch{}const u=i.tool_input&&i.tool_input.file_path;let src=true;if(typeof u==='string'&&(x=>{const s=x.split(p.sep),b=s.pop();return p.isAbsolute(x)||s[0]==='..'||s.some(y=>['tmp','test','tests','__tests__','node_modules','.qfai','.agents'].includes(y))||b[0]==='.'||/\\.(test|spec)\\./.test(b)||['.md','.mdx','.markdown','.txt','.rst','.yml','.yaml','.json','.jsonc','.json5','.toml','.ini','.csv','.tsv','.lock','.svg','.png','.jpg','.jpeg','.gif'].includes(p.extname(b).toLowerCase())})(p.relative(R,p.resolve(R,u))))src=false;if(src){let n=1;if(typeof i.session_id==='string'){try{const t=require('path').join(require('os').tmpdir(),['qfai-reminder',i.session_id,i.agent_id||'main',process.argv[2]].join('-').replace(/[^\\w.-]/g,'_'));f.appendFileSync(t,'.');n=f.statSync(t).size}catch{}}if((n-1)%20===0){const m=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}}catch{}",
               "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
               "minimal-implementation"
             ]
