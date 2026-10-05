@@ -1,41 +1,24 @@
-import { createHash, randomUUID } from "node:crypto";
-import { constants } from "node:fs";
-import type { Stats } from "node:fs";
-import {
-  lstat,
-  mkdir,
-  open,
-  readFile,
-  readdir,
-  rename,
-  rm,
-  rmdir,
-  writeFile,
-} from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { readBoundedRegularFile } from "../../shared/boundedRead.js";
-import { hasErrnoCode, isEnoent } from "../fs/errno.js";
+import { isEnoent } from "../fs/errno.js";
 import {
+  ARTICLE_XI_TMP_SAMPLE_PATH,
   QFAI_GITIGNORE_BLOCK,
   QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
   QFAI_GITIGNORE_LEGACY_LINES,
   QFAI_GITIGNORE_MARKER,
   QFAI_RUN_STATE_IGNORE,
   RETIRED_LINE_SUCCESSORS,
+  effectivelyIgnores,
   negationsOutrankLaterIgnores,
 } from "../gitignore.js";
 import { info } from "../logger.js";
-import { keepOwner, safeLstat } from "./fsGuards.js";
-import { formatReportPath } from "./reportPath.js";
+import { safeLstat } from "./fsGuards.js";
 
 /**
  * Rewrite the managed `.gitignore` block, adding any governance negation it is
  * missing.
- *
- * Exported because the legacy-review-pack migration needs it: it writes a
- * governance record under `.qfai/review/`, and an existing repository still
- * carries the older block whose `.qfai/review/*` would ignore it.
  */
 export async function ensureRootGitignoreEntries(
   destRoot: string,
@@ -47,17 +30,12 @@ export async function ensureRootGitignoreEntries(
 ): Promise<{
   copied: string[];
   skipped: string[];
-  staging: string[];
-  stagingConflicts: string[];
 }> {
   const gitignorePath = path.join(destRoot, ".gitignore");
-  const staging = await reclaimRootGitignoreStaging(destRoot, dryRun, report);
 
   let existing = "";
-  let existed = false;
   try {
     existing = await readFile(gitignorePath, "utf-8");
-    existed = true;
   } catch (err: unknown) {
     if (!isEnoent(err)) {
       throw err;
@@ -96,7 +74,7 @@ export async function ensureRootGitignoreEntries(
     negationsOutrankLaterIgnores(existingLines, QFAI_GITIGNORE_GOVERNANCE_NEGATIONS) &&
     QFAI_GITIGNORE_LEGACY_LINES.every((entry) => !existing.includes(entry))
   ) {
-    return { copied: [], skipped: [gitignorePath], ...staging };
+    return { copied: [], skipped: [gitignorePath] };
   }
 
   // Strip existing managed QFAI block (known block lines only; stop at unknown lines; loop for duplicates)
@@ -104,7 +82,17 @@ export async function ensureRootGitignoreEntries(
     ? removeManagedBlock(existing)
     : { stripped: existing, blockAt: -1 };
 
-  const placement = placeManagedBlock(stripped, rebuildManagedBlock(managedBlock), blockAt);
+  const omitted =
+    managedBlock.length === 0 ? linesTheProjectAlreadyHas(gitignoreLines(stripped)) : [];
+  const placement = placeManagedBlock(
+    stripped,
+    rebuildManagedBlock(managedBlock, omitted),
+    blockAt,
+  );
+  const omittedNote =
+    omitted.length > 0
+      ? `  left out of the QFAI entries: ${omitted.join(", ")} (already ignored by the project's own lines)`
+      : undefined;
 
   if (dryRun) {
     report(
@@ -112,15 +100,17 @@ export async function ensureRootGitignoreEntries(
         ? `  would update: .gitignore (rebuild QFAI entries in place)`
         : `  would update: .gitignore (append QFAI entries)`,
     );
-    return { copied: [gitignorePath], skipped: [], ...staging };
+    if (omittedNote !== undefined) report(omittedNote);
+    return { copied: [gitignorePath], skipped: [] };
   }
 
-  await replaceRootGitignore(destRoot, gitignorePath, placement.content, existing, existed);
+  await replaceRootGitignore(gitignorePath, placement.content);
   report(
     placement.inPlace
       ? "  updated: .gitignore (rebuilt QFAI entries in place)"
       : "  updated: .gitignore (appended QFAI entries)",
   );
+  if (omittedNote !== undefined) report(omittedNote);
   // Only the fallback can demote a project negation, and only against a project
   // ignore line that re-ignores a governance record. Naming the loser is the
   // least that move owes an operator: the file the negation re-included
@@ -131,216 +121,16 @@ export async function ensureRootGitignoreEntries(
       `  WARNING: .gitignore — \`${negation}\` no longer wins; the QFAI managed block now sits below it.`,
     );
   }
-  return { copied: [gitignorePath], skipped: [], ...staging };
+  return { copied: [gitignorePath], skipped: [] };
 }
 
-const ROOT_GITIGNORE_STAGING =
-  /^\.gitignore-([1-9]\d*)-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.tmp$/;
-
-const ROOT_GITIGNORE_STAGE_OWNER = "qfai-init-gitignore-stage-v1";
-
-const ROOT_GITIGNORE_STAGE_MAX_BYTES = 8 * 1024 * 1024;
-
-type RootGitignoreStageOwner = { owner: string; size: number; sha256: string };
-
-function rootGitignoreStageOwner(content: string): string {
-  return JSON.stringify({
-    owner: ROOT_GITIGNORE_STAGE_OWNER,
-    size: Buffer.byteLength(content),
-    sha256: createHash("sha256").update(content, "utf-8").digest("hex"),
-  });
-}
-
-function parseRootGitignoreStageOwner(bytes: Buffer | undefined): RootGitignoreStageOwner | null {
-  if (bytes === undefined) return null;
-  let value: unknown;
-  try {
-    value = JSON.parse(bytes.toString("utf-8"));
-  } catch {
-    return null;
+/** Writes `.gitignore` in place, refusing a path that is not a regular file. */
+export async function replaceRootGitignore(target: string, content: string): Promise<void> {
+  const current = await safeLstat(target);
+  if (current !== undefined && !current.isFile()) {
+    throw new Error("Cannot update .gitignore: its path is not a regular file.");
   }
-  if (
-    typeof value !== "object" ||
-    value === null ||
-    !("owner" in value) ||
-    value.owner !== ROOT_GITIGNORE_STAGE_OWNER ||
-    !("size" in value) ||
-    typeof value.size !== "number" ||
-    !Number.isSafeInteger(value.size) ||
-    value.size < 0 ||
-    value.size > ROOT_GITIGNORE_STAGE_MAX_BYTES ||
-    !("sha256" in value) ||
-    typeof value.sha256 !== "string" ||
-    !/^[0-9a-f]{64}$/.test(value.sha256)
-  ) {
-    return null;
-  }
-  return { owner: value.owner, size: value.size, sha256: value.sha256 };
-}
-
-/** Reclaim only marked stages whose naming process has exited. */
-async function reclaimRootGitignoreStaging(
-  destRoot: string,
-  dryRun: boolean,
-  report: (line: string) => void,
-): Promise<{ staging: string[]; stagingConflicts: string[] }> {
-  const staging: string[] = [];
-  const stagingConflicts: string[] = [];
-  const qfaiDir = path.join(destRoot, ".qfai");
-  const stageDir = path.join(qfaiDir, "report");
-  for (const dir of [qfaiDir, stageDir]) {
-    let stats: Stats;
-    try {
-      stats = await lstat(dir);
-    } catch (err: unknown) {
-      if (isEnoent(err)) return { staging, stagingConflicts };
-      throw err;
-    }
-    if (!stats.isDirectory()) return { staging, stagingConflicts };
-  }
-  const entries = await readdir(stageDir);
-  const stages = new Set(entries.map((name) => name.replace(/\.owner$/, "")));
-  for (const name of stages) {
-    const match = ROOT_GITIGNORE_STAGING.exec(name);
-    if (!match) continue;
-    const pid = Number(match[1]);
-    if (!Number.isSafeInteger(pid) || pid === process.pid) continue;
-    try {
-      process.kill(pid, 0);
-      continue;
-    } catch (err: unknown) {
-      if (!hasErrnoCode(err) || err.code !== "ESRCH") continue;
-    }
-    const full = path.join(stageDir, name);
-    const ownerPath = `${full}.owner`;
-    if (!entries.includes(`${name}.owner`)) continue;
-    const relative = path.relative(destRoot, full).replace(/\\/g, "/");
-    const owner = parseRootGitignoreStageOwner(await readBoundedRegularFile(ownerPath, 256));
-    if (owner === null) {
-      stagingConflicts.push(`${relative}: invalid staging owner marker; left for inspection`);
-      report(`  WARNING: ${relative} has an invalid staging owner marker; left for inspection.`);
-      continue;
-    }
-    const current = await lstat(full).catch((err: unknown) => {
-      if (isEnoent(err)) return undefined;
-      throw err;
-    });
-    if (current !== undefined) {
-      if (!current.isFile() || current.size !== owner.size) {
-        stagingConflicts.push(
-          `${relative}: staging payload changed or incomplete; left for inspection`,
-        );
-        report(`  WARNING: ${relative} changed or is incomplete; left for inspection.`);
-        continue;
-      }
-      const bytes = await readBoundedRegularFile(full, owner.size);
-      if (
-        bytes === undefined ||
-        createHash("sha256").update(bytes).digest("hex") !== owner.sha256
-      ) {
-        stagingConflicts.push(
-          `${relative}: staging payload changed or incomplete; left for inspection`,
-        );
-        report(`  WARNING: ${relative} changed or is incomplete; left for inspection.`);
-        continue;
-      }
-    }
-    staging.push(relative);
-    if (dryRun) {
-      report(`  would remove: ${relative} (abandoned .gitignore stage and owner marker)`);
-      continue;
-    }
-    if (current !== undefined) await rm(full, { force: true });
-    await rm(ownerPath, { force: true });
-    report(`  removed: ${relative} (abandoned .gitignore stage and owner marker)`);
-  }
-  return { staging, stagingConflicts };
-}
-
-/** Stage inside QFAI's generated report area, then publish the complete file by rename. */
-export async function replaceRootGitignore(
-  destRoot: string,
-  target: string,
-  content: string,
-  previous: string,
-  previousExisted: boolean,
-): Promise<void> {
-  const qfaiDir = path.join(destRoot, ".qfai");
-  const stageDir = path.join(qfaiDir, "report");
-  let createdStageDir = false;
-  let cleanupError: Error | undefined;
-  try {
-    for (const dir of [qfaiDir, stageDir]) {
-      try {
-        await mkdir(dir);
-        if (dir === stageDir) createdStageDir = true;
-      } catch (err: unknown) {
-        if (!hasErrnoCode(err) || err.code !== "EEXIST") throw err;
-      }
-      if (!(await lstat(dir)).isDirectory()) {
-        throw new Error(`Cannot stage .gitignore: ${formatReportPath(dir)} is not a directory.`);
-      }
-    }
-
-    const original = await safeLstat(target);
-    if (original !== undefined && !original.isFile()) {
-      throw new Error("Cannot update .gitignore: its path is not a regular file.");
-    }
-    const staging = path.join(stageDir, `.gitignore-${process.pid}-${randomUUID()}.tmp`);
-    const ownerPath = `${staging}.owner`;
-    try {
-      await writeFile(ownerPath, rootGitignoreStageOwner(content), {
-        encoding: "utf-8",
-        flag: "wx",
-        mode: 0o600,
-      });
-      const handle = await open(
-        staging,
-        constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL,
-        0o600,
-      );
-      try {
-        await handle.writeFile(content, "utf-8");
-        if (original !== undefined) await handle.chmod(original.mode & 0o7777);
-      } finally {
-        await handle.close();
-      }
-      if (original !== undefined) {
-        const refusal = await keepOwner(staging, original);
-        if (refusal !== null) throw new Error(`Cannot update .gitignore: ${refusal}`);
-      }
-
-      const currentStat = await safeLstat(target);
-      if (currentStat !== undefined && !currentStat.isFile()) {
-        throw new Error("Cannot update .gitignore: its path changed to a non-regular file.");
-      }
-      const current = currentStat === undefined ? "" : await readFile(target, "utf-8");
-      if ((currentStat !== undefined) !== previousExisted || current !== previous) {
-        throw new Error("Cannot update .gitignore: it changed while this run was working.");
-      }
-      if (!(await lstat(stageDir)).isDirectory()) {
-        throw new Error("Cannot update .gitignore: the staging directory changed.");
-      }
-      await rename(staging, target);
-    } finally {
-      await rm(staging, { force: true }).catch(() => undefined);
-      await rm(ownerPath, { force: true }).catch(() => undefined);
-    }
-  } finally {
-    if (createdStageDir) {
-      try {
-        await rmdir(stageDir);
-      } catch (err: unknown) {
-        if (
-          !hasErrnoCode(err) ||
-          (err.code !== "ENOENT" && err.code !== "ENOTEMPTY" && err.code !== "EEXIST")
-        ) {
-          cleanupError = err instanceof Error ? err : new Error(String(err));
-        }
-      }
-    }
-  }
-  if (cleanupError !== undefined) throw cleanupError;
+  await writeFile(target, content, "utf-8");
 }
 
 /**
@@ -431,6 +221,21 @@ function demotedProjectNegations(before: string, after: string): string[] {
 }
 
 /**
+ * The Article XI `/tmp/` line, when the project's own lines outside the block
+ * already ignore the repository-root staging area.
+ *
+ * Two owners of one line leave the next edit ambiguous: which one is removed?
+ * The question is what git does with the staging area, so a project's
+ * unanchored `tmp/` counts and a later `!/tmp/` does not. A line with leading
+ * whitespace is a different pattern in git, so it never counts. Every other
+ * line of the block stays, because the contract names them as the block's.
+ */
+function linesTheProjectAlreadyHas(projectLines: readonly string[]): string[] {
+  const significant = projectLines.filter((line) => !/^\s/.test(line));
+  return effectivelyIgnores(significant, ARTICLE_XI_TMP_SAMPLE_PATH) ? ["/tmp/"] : [];
+}
+
+/**
  * The managed block to write, preserving whatever ignore lines the project's
  * existing block already had.
  *
@@ -444,11 +249,14 @@ function demotedProjectNegations(before: string, after: string): string[] {
  *
  * So an existing block keeps its own ignore lines and only gains the governance
  * negations it is missing (appended last, because git applies the last matching
- * pattern). A project with no managed block still gets the full canonical one.
+ * pattern). A project with no managed block gets the canonical one, less the
+ * lines named in `omit`.
  */
-function rebuildManagedBlock(existingBlock: string): string {
+function rebuildManagedBlock(existingBlock: string, omit: readonly string[]): string {
   if (existingBlock.length === 0) {
-    return QFAI_GITIGNORE_BLOCK;
+    return QFAI_GITIGNORE_BLOCK.split("\n")
+      .filter((line) => !omit.includes(line))
+      .join("\n");
   }
   const legacy = new Set<string>(QFAI_GITIGNORE_LEGACY_LINES);
   const negations = new Set<string>(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS);
@@ -467,8 +275,7 @@ function rebuildManagedBlock(existingBlock: string): string {
   // never re-add an ignore line the block does not have.
   //
   // The cost is that a project on an old block does not pick up a newly shipped
-  // *recommended* ignore. `QFAI-REVIEW-008` reports that at `info`, and the
-  // consequence is generated files showing in `git status` — noisy. Silently
+  // *recommended* ignore. The consequence is generated files showing in `git status` — noisy. Silently
   // re-hiding records the project chose to track is not noisy, which is
   // why it is the side to err on.
   const kept = lines.filter(

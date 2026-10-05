@@ -2,10 +2,9 @@
 name: verify-qfai-gate
 owner: qfai-verify
 purpose: "Run the QFAI validation of the run's scope and record what it finds."
-requires: [common-gate-run, common-evidence-record, common-grilling-record]
-roles:
-  [orchestrator, devops-ci-engineer, qa-gatekeeper, completion-reviewer, implementation-reviewer]
-routing-profile: runtime-heavy
+requires: [common-gate-run]
+roles: [orchestrator, devops-ci-engineer]
+routing-profile: default
 ---
 
 # verify-qfai-gate
@@ -16,7 +15,9 @@ signals; this one decides. It records failures and repairs none of them:
 
 ## Reads
 
-- The scope in the Objective of `.qfai/evidence/verify-<run-id>.md`.
+- The scope: `full` in a route, whose verify stage runs only the gates, and
+  the scope `verify-context` declared when `qfai-verify` is invoked by name. The
+  scopes and their profiles are the `## Scope` table of `verify-context`.
 - `.qfai/report/validate.json`. Its keys are in
   `.qfai/assistant/skill/qfai-verify/references/validate-json-schema.md`.
 - `.qfai/waivers.yml`, where the project has one.
@@ -34,19 +35,18 @@ signals; this one decides. It records failures and repairs none of them:
      default `npx qfai validate --fail-on error`;
    - `prototyping`: `npx qfai validate --profile prototyping --fail-on error`.
 2. Run `npx qfai report` when the repository uses it.
-3. Run the static policy checks (below).
-4. For a prototyping-scoped run, check the loop evidence (below).
-5. Record each result as `common-evidence-record` says.
+3. Report each result in the stage report.
 
 ## What this gate is
 
 This gate is full-scan, in CI and everywhere else. A partial profile does not
 satisfy it, and no waiver or environment makes it satisfy it. That is not a
-ban on narrow profiles in CI: `qfai-discussion` and `qfai-atdd` each use one as
-their own stage gate, those runs are legitimate under `CI=true`, and
+ban on narrow profiles in CI: `qfai-discussion` and `implement-scaffold` each
+use one as their own gate, those runs are legitimate under `CI=true`, and
 `QFAI-VALIDATE-017` (`warning`) marks them as not full-scan rather than
-blocking them. The prototyping profile runs only locally, before `certify`: it
-reads loop outputs that are never committed.
+blocking them. The prototyping profile is the prototyping stage's own gate:
+CI runs its checks inside the full scan, and no CI lane runs the profile on
+its own.
 
 ## Findings
 
@@ -67,33 +67,9 @@ scan cannot prove coverage; a missing layer is never a passing scan.
   `.qfai/report/validate.json`, copied verbatim. The array is `issues`, not
   `findings`.
 
-## Static policy checks
-
-- `.qfai/assistant/rule/drift-protocol.md` exists.
-- `.qfai/assistant/rule/test-layers.md` exists.
-- Every `.qfai/assistant/skill/*/SKILL.md` includes `[DRIFT-PROTOCOL:MANDATORY]`.
-- The reviewer agent cards include the drift-protocol and test-layer review
-  viewpoints.
-
-## Prototyping evidence
-
-For a prototyping-scoped run:
-
-- every declared screen has a screenshot, the HTML and a `review.json` under
-  `.qfai/evidence/prototyping/iter-NN/`;
-- the final iteration recorded in
-  `.qfai/evidence/prototyping/prototyping.json#iterations[]` has its
-  screenshot and HTML on disk.
-
-The completion certificate is not an input here. `npx qfai prototyping certify`
-runs after verify and reads its passing verdict. Checking the certificate's
-digests is `certify --check`'s job, during handoff or after a brand asset edit.
-
 ## Gate
 
 The step is done when:
 
 - validation ran in the profile the scope names, and its result is recorded;
-- `error=0` for a pass, or the failing findings are recorded for the fix loop;
-- the static policy checks and, for a prototyping scope, the loop evidence
-  are recorded.
+- `error=0` for a pass, or the failing findings are recorded for the fix loop.

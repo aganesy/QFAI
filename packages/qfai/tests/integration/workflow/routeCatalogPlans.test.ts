@@ -10,249 +10,239 @@
 
 import { expect, it } from "vitest";
 
-import { planFacts } from "../../../src/core/workflow/observe.js";
-import { loadBuiltInPlans, type WorkflowPlanFile } from "../../../src/core/workflow/plans.js";
-import { flowBindingOf } from "../../../src/core/workflow/stages.js";
-import type { PlanStages, PlanStep } from "../../../src/core/workflow/types.js";
+import {
+  loadBuiltInPlans,
+  type PlanStep,
+  type WorkflowPlanFile,
+} from "../../../src/core/workflow/plans.js";
 
-// Each shipped plan, as its catalog example states it once loaded and planned with no modifier.
+// Each shipped plan, as its catalog example states it.
 const CATALOG: [string, string][] = [
   // QFAI:EX-0001-0220-01
   [
     "close-no-change",
-    "close (triage): triage-close; default modifiers none; decision points none; branch points none; binds no flow",
+    "Stages in order — `close` (triage): `triage-close`; decision points none; release point none; branch points none",
   ],
   // QFAI:EX-0001-0220-02
   [
     "answer-question",
-    "answer (triage): triage-answer; close (triage): triage-close; default modifiers none; decision points none; branch points none; binds no flow",
-  ],
-  // QFAI:EX-0001-0220-03
-  [
-    "investigate-question",
-    "investigate (triage): triage-investigate; answer (triage): triage-answer; close (triage): triage-close; default modifiers none; decision points none; branch points triage-investigate; binds no flow",
+    "Stages in order — `answer` (triage): `triage-investigate°`, `triage-answer`, `triage-close`; decision points none; release point none; branch points `triage-investigate`, `defect-found` to the route the decision rules give",
   ],
   // QFAI:EX-0001-0220-04
   [
     "request-info",
-    "ask (triage): triage-request-info; close (triage): triage-close; default modifiers none; decision points none; branch points triage-close; binds no flow",
+    "Stages in order — `ask` (triage): `triage-request-info`; `close` (triage): `triage-close`; decision points none; release point none; branch points `triage-close`, `info-received` to the route the decision rules give",
   ],
   // QFAI:EX-0001-0220-05
   [
     "close-duplicate",
-    "dedupe (triage): triage-dedupe; close (triage): triage-close; default modifiers none; decision points none; branch points none; binds no flow",
+    "Stages in order — `dedupe` (triage): `triage-dedupe`; `close` (triage): `triage-close`; decision points none; release point none; branch points none",
   ],
   // QFAI:EX-0001-0220-06
   [
     "cluster-reports",
-    "cluster (triage): triage-cluster; close (triage): triage-close; default modifiers none; decision points none; branch points none; binds no flow",
-  ],
-  // QFAI:EX-0001-0220-07
-  [
-    "decide-acceptance",
-    "clarify (discussion): discussion-research, discussion-interview; record (discussion): discussion-oq; close (triage): triage-close; default modifiers gate:user; decision points discussion-interview; branch points triage-close; binds no flow",
+    "Stages in order — `cluster` (triage): `triage-cluster`; `close` (triage): `triage-close`; decision points none; release point none; branch points none",
   ],
   // QFAI:EX-0001-0220-08
   [
     "decide-design",
-    "discussion (discussion): discussion-research, discussion-interview, discussion-pack, discussion-uiux°, discussion-oq; close (triage): triage-close; default modifiers gate:user, review:heavy; decision points discussion-interview; branch points none; binds no flow",
+    "Stages in order — `discussion` (discussion): `discussion-research`, `discussion-interview`, `discussion-pack°`, `discussion-uiux°`, `discussion-oq`; `close` (triage): `triage-close`; decision points `discussion-interview`; release point none; branch points `triage-close`, `adopted` to `add-feature`, `prototype-feature` or `change-compatibility`",
   ],
   // QFAI:EX-0001-0220-09
   [
     "decompose-epic",
-    "discussion (discussion): discussion-research, discussion-interview, discussion-pack, discussion-oq; split (triage): triage-decompose; close (triage): triage-close; default modifiers gate:user, review:heavy; decision points discussion-interview, triage-decompose; branch points none; binds no flow",
+    "Stages in order — `discussion` (discussion): `discussion-research`, `discussion-interview`, `discussion-pack`, `discussion-oq`; `split` (triage): `triage-decompose`; `close` (triage): `triage-close`; decision points `discussion-interview`, `triage-decompose`; release point none; branch points none",
   ],
   // QFAI:EX-0001-0220-10
   [
     "retriage-bundle",
-    "recheck (diagnose): implement-diagnose(read-only); split (triage): triage-decompose; close (triage): triage-close; default modifiers none; decision points none; branch points none; binds no flow",
+    "Stages in order — `recheck` (diagnose): `implement-diagnose(read-only)`; `split` (triage): `triage-decompose`; `close` (triage): `triage-close`; decision points none; release point none; branch points none",
   ],
   // QFAI:EX-0001-0220-11
   [
     "repair-consistency",
-    "diagnose (diagnose): implement-diagnose; sdd (sdd): sdd-triage, sdd-flow°, sdd-story°, sdd-contract°, sdd-cycle°, sdd-gate; acceptance (acceptance): atdd-scaffold, atdd-credentials°, atdd-author°; implement (implement): implement-tdd, implement-checkpoint; verify (verify): verify-change-note°, verify-context, verify-qfai-gate, verify-repo-gate; default modifiers none; decision points sdd-triage; branch points implement-diagnose, sdd-triage; binds one flow",
-  ],
-  // QFAI:EX-0001-0220-12
-  [
-    "sweep-guard",
-    "diagnose (diagnose): implement-diagnose; sdd (sdd): sdd-triage, sdd-flow°, sdd-story°, sdd-contract°, sdd-cycle°, sdd-gate; acceptance (acceptance): atdd-scaffold, atdd-credentials°, atdd-author°; implement (implement): implement-tdd, implement-sweep, implement-checkpoint; verify (verify): verify-change-note°, verify-context, verify-qfai-gate, verify-repo-gate; default modifiers none; decision points implement-sweep; branch points none; binds one flow",
+    "Stages in order — `diagnose` (diagnose): `implement-diagnose`; `sdd` (sdd, then the specification review): `sdd-triage`, `sdd-flow°`, `sdd-story°`, `sdd-contract°`, `sdd-cycle°`; `implement` (implement): `implement-scaffold`, `implement-tdd`, `implement-sweep°`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`, `implement-sweep`; release point none; branch points `sdd-triage`, `retire` to `retire-mechanism`",
   ],
   // QFAI:EX-0001-0220-13
   [
     "retire-mechanism",
-    "diagnose (diagnose): implement-diagnose; decide (sdd): sdd-triage; remove (implement): implement-retire; verify (verify): verify-change-note°, verify-context, verify-qfai-gate, verify-repo-gate; default modifiers none; decision points sdd-triage; branch points none; binds one flow",
+    "Stages in order — `diagnose` (diagnose): `implement-diagnose`; `decide` (sdd): `sdd-triage`; `remove` (implement): `implement-retire`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`; release point none; branch points none",
   ],
   // QFAI:EX-0001-0220-14
   [
     "restate-records",
-    "diagnose (diagnose): implement-diagnose; spec (sdd): sdd-triage, sdd-story, sdd-contract°, sdd-gate; tests (test_fix): implement-test-fix°; verify (verify): verify-change-note°, verify-context, verify-qfai-gate, verify-repo-gate; default modifiers none; decision points sdd-triage; branch points none; binds one flow",
+    "Stages in order — `diagnose` (diagnose): `implement-diagnose`; `spec` (sdd, then the specification review): `sdd-triage`, `sdd-story`, `sdd-contract°`; `tests` (test_fix): `implement-test-fix°`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`; release point none; branch points none",
   ],
   // QFAI:EX-0001-0220-15
   [
     "add-feature",
-    "sdd (sdd): sdd-triage, sdd-flow°, sdd-story, sdd-contract°, common-design-md°, sdd-cycle°, sdd-gate; acceptance (acceptance): atdd-scaffold, atdd-credentials°, atdd-author°; implement (implement): implement-tdd, implement-checkpoint; docs (maintenance): maintain-edit°; verify (verify): verify-change-note°, verify-context, verify-qfai-gate, verify-repo-gate; default modifiers none; decision points sdd-triage; branch points none; binds one flow",
+    "Stages in order — `sdd` (sdd, then the specification review): `sdd-triage`, `sdd-flow°`, `sdd-story`, `sdd-contract°`, `common-design-md°`, `sdd-cycle°`; `implement` (implement): `implement-scaffold`, `implement-tdd`; `docs` (maintenance): `maintain-edit°`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`; release point none; branch points none",
   ],
   // QFAI:EX-0001-0220-16
   [
     "prototype-feature",
-    "sdd (sdd): sdd-triage, sdd-flow°, sdd-story, sdd-contract°, common-design-md, sdd-cycle°, sdd-gate; prototype (prototype): prototyping-grill, prototyping-preflight, prototyping-loop, prototyping-handoff; acceptance (acceptance): atdd-scaffold, atdd-credentials°, atdd-author°; implement (implement): implement-tdd, implement-checkpoint; docs (maintenance): maintain-edit°; verify (verify): verify-change-note°, verify-context, verify-qfai-gate, verify-repo-gate; default modifiers gate:user; decision points sdd-triage, prototyping-loop; branch points none; binds one flow",
+    "Stages in order — `sdd` (sdd, then the specification review): `sdd-triage`, `sdd-flow°`, `sdd-story`, `sdd-contract°`, `common-design-md`, `sdd-cycle°`; `prototype` (prototype): `prototyping-grill`, `prototyping-preflight`, `prototyping-loop`, `prototyping-handoff`; `implement` (implement): `implement-scaffold`, `implement-tdd`; `docs` (maintenance): `maintain-edit°`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`, `prototyping-loop`; release point none; branch points none",
   ],
   // QFAI:EX-0001-0220-17
   [
     "change-compatibility",
-    "sdd (sdd): sdd-triage, sdd-contract, sdd-story, sdd-gate; acceptance (acceptance): atdd-scaffold, atdd-credentials°, atdd-author°; implement (implement): implement-tdd, implement-checkpoint; verify (verify): verify-change-note°, verify-context, verify-qfai-gate, verify-repo-gate; default modifiers gate:user, review:heavy; decision points sdd-triage; branch points none; binds one flow",
-  ],
-  // QFAI:EX-0001-0220-18
-  [
-    "apply-settled-spec",
-    "spec (sdd): sdd-triage(settled), sdd-story, sdd-contract°, sdd-gate; verify (verify): verify-change-note°, verify-context, verify-qfai-gate, verify-repo-gate; default modifiers none; decision points sdd-triage; branch points sdd-triage; binds one flow",
-  ],
-  // QFAI:EX-0001-0220-19
-  [
-    "apply-settled-build",
-    "spec (sdd): sdd-triage(settled), sdd-story°, sdd-gate; acceptance (acceptance): atdd-scaffold, atdd-credentials°, atdd-author°; implement (implement): implement-tdd, implement-checkpoint; verify (verify): verify-change-note°, verify-context, verify-qfai-gate, verify-repo-gate; default modifiers none; decision points sdd-triage; branch points sdd-triage; binds one flow",
+    "Stages in order — `sdd` (sdd, then the specification review): `sdd-triage`, `sdd-contract`, `sdd-story`; `implement` (implement): `implement-scaffold`, `implement-tdd`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`; release point none; branch points none",
   ],
   // QFAI:EX-0001-0220-20
   [
     "refactor-code",
-    "move (implement): implement-refactor; tests (test_fix): implement-test-fix°; checkpoint (implement): implement-checkpoint; verify (verify): verify-change-note°, verify-context, verify-qfai-gate, verify-repo-gate; default modifiers none; decision points none; branch points implement-refactor; binds the one flow the proposal names, or none",
+    "Stages in order — `move` (implement): `implement-refactor`; `tests` (test_fix): `implement-test-fix°`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points none; release point none; branch points `implement-refactor`, `behaviour-change` to `add-feature` or `change-compatibility`",
   ],
   // QFAI:EX-0001-0220-21
   [
     "edit-text",
-    "edit (maintenance): maintain-edit; verify (verify): verify-change-note°, verify-context, verify-qfai-gate, verify-repo-gate; default modifiers none; decision points none; branch points none; binds no flow",
+    "Stages in order — `edit` (maintenance): `maintain-edit`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points none; release point none; branch points none",
   ],
   // QFAI:EX-0001-0220-22
   [
     "fix-defect",
-    "diagnose (diagnose): implement-diagnose; spec (sdd_append): sdd-story°, sdd-gate; acceptance (acceptance): atdd-scaffold, atdd-credentials°, atdd-author°; implement (implement): implement-tdd, implement-checkpoint; verify (verify): verify-change-note°, verify-context, verify-qfai-gate, verify-repo-gate; default modifiers none; decision points none; branch points implement-diagnose; binds one flow",
-  ],
-  // QFAI:EX-0001-0220-23
-  [
-    "fix-regression",
-    "bisect (diagnose): implement-bisect; diagnose (diagnose): implement-diagnose; spec (sdd_append): sdd-story°, sdd-gate; implement (implement): implement-tdd, implement-checkpoint; verify (verify): verify-change-note°, verify-context, verify-qfai-gate, verify-repo-gate; default modifiers none; decision points none; branch points implement-bisect, implement-diagnose; binds one flow",
+    "Stages in order — `diagnose` (diagnose): `implement-diagnose`; `implement` (implement): `implement-tdd`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points none; release point none; branch points `implement-diagnose`",
   ],
   // QFAI:EX-0001-0220-24
   [
     "improve-performance",
-    "baseline (diagnose): implement-benchmark; profile (diagnose): implement-diagnose; spec (sdd_append): sdd-story°, sdd-gate; implement (implement): implement-tdd, implement-checkpoint; compare (diagnose): implement-benchmark; verify (verify): verify-change-note°, verify-context, verify-qfai-gate, verify-repo-gate; default modifiers none; decision points implement-diagnose; branch points implement-diagnose; binds one flow",
+    "Stages in order — `baseline` (diagnose): `implement-benchmark`; `profile` (diagnose): `implement-diagnose`; `implement` (implement): `implement-tdd`; `compare` (diagnose): `implement-benchmark`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `implement-diagnose`; release point none; branch points `implement-diagnose`",
   ],
   // QFAI:EX-0001-0220-25
   [
     "fix-vulnerability",
-    "intake (triage): triage-security-intake; diagnose (diagnose): implement-diagnose; spec (sdd_append): sdd-story°, sdd-gate; implement (implement): implement-tdd, implement-checkpoint; disclose (verify): verify-advisory; verify (verify): verify-change-note°, verify-context, verify-qfai-gate, verify-repo-gate; default modifiers gate:user, gate:release, review:heavy; decision points triage-security-intake; branch points implement-diagnose; binds one flow",
-  ],
-  // QFAI:EX-0001-0220-26
-  [
-    "fix-crash",
-    "minimize (diagnose): implement-minimize; diagnose (diagnose): implement-diagnose; spec (sdd_append): sdd-story°, sdd-gate; implement (implement): implement-tdd, implement-checkpoint; verify (verify): verify-change-note°, verify-context, verify-qfai-gate, verify-repo-gate; default modifiers none; decision points none; branch points implement-diagnose; binds one flow",
+    "Stages in order — `intake` (triage): `triage-security-intake`; `diagnose` (diagnose): `implement-diagnose`; `implement` (implement): `implement-tdd`; `disclose` (verify): `verify-advisory`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `triage-security-intake`; release point the end; branch points `implement-diagnose`",
   ],
   // QFAI:EX-0001-0220-27
   [
     "fix-intermittent",
-    "harness (implement): implement-stress-harness; diagnose (diagnose): implement-diagnose; spec (sdd_append): sdd-story°, sdd-gate; implement (implement): implement-tdd, implement-checkpoint; soak (verify): verify-repeat-run; verify (verify): verify-change-note°, verify-context, verify-qfai-gate, verify-repo-gate; default modifiers none; decision points none; branch points implement-diagnose; binds one flow",
+    "Stages in order — `harness` (implement): `implement-stress-harness`; `diagnose` (diagnose): `implement-diagnose`; `implement` (implement): `implement-tdd`; `soak` (verify): `verify-repeat-run`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points none; release point none; branch points `implement-diagnose`",
   ],
   // QFAI:EX-0001-0220-28
   [
     "fix-env-bound",
-    "collect (triage): triage-request-info; diagnose (diagnose): implement-diagnose; spec (sdd_append): sdd-story°, sdd-gate; implement (implement): implement-tdd, implement-checkpoint; verify (verify): verify-change-note°, verify-context, verify-qfai-gate, verify-repo-gate; confirm (verify): verify-external; default modifiers none; decision points none; branch points implement-diagnose; binds one flow",
+    "Stages in order — `collect` (triage): `triage-request-info`; `diagnose` (diagnose): `implement-diagnose`; `implement` (implement): `implement-tdd`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; `confirm` (verify): `verify-external`; decision points none; release point none; branch points `implement-diagnose`",
   ],
   // QFAI:EX-0001-0220-29
   [
     "fix-conformance",
-    "parity (implement): implement-oracle-parity; diagnose (diagnose): implement-diagnose; spec (sdd): sdd-triage, sdd-story, sdd-contract°, sdd-gate; implement (implement): implement-tdd, implement-checkpoint; verify (verify): verify-change-note°, verify-context, verify-qfai-gate, verify-repo-gate; default modifiers none; decision points sdd-triage; branch points implement-diagnose; binds one flow",
+    "Stages in order — `parity` (implement): `implement-oracle-parity`; `diagnose` (diagnose): `implement-diagnose`; `implement` (implement): `implement-tdd`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points none; release point none; branch points `implement-diagnose`",
   ],
   // QFAI:EX-0001-0220-30
   [
     "quarantine-flaky",
-    "isolate (implement): implement-quarantine; diagnose (diagnose): implement-diagnose; fix (test_fix): atdd-test-fix°, implement-test-fix°; reenable (verify): verify-repeat-run; verify (verify): verify-change-note°, verify-context, verify-qfai-gate, verify-repo-gate; default modifiers none; decision points none; branch points implement-diagnose; binds the one flow the proposal names, or none",
+    "Stages in order — `isolate` (implement): `implement-quarantine`; `diagnose` (diagnose): `implement-diagnose`; `fix` (test_fix): `implement-test-fix°`; `reenable` (verify): `verify-repeat-run`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points none; release point none; branch points `implement-diagnose`, `product-race` to `fix-intermittent`",
   ],
   // QFAI:EX-0001-0220-31
   [
     "repair-test",
-    "diagnose (diagnose): implement-diagnose; fix (test_fix): atdd-test-fix°, implement-test-fix°; verify (verify): verify-change-note°, verify-context, verify-qfai-gate, verify-repo-gate; default modifiers none; decision points none; branch points none; binds the one flow the proposal names, or none",
+    "Stages in order — `diagnose` (diagnose): `implement-diagnose`; `fix` (test_fix): `implement-test-fix`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points none; release point none; branch points none",
   ],
   // QFAI:EX-0001-0220-32
   [
     "fix-red-main",
-    "bisect (diagnose): implement-bisect; diagnose (diagnose): implement-diagnose; fix (regression_fix): implement-regression-fix; verify (verify): verify-change-note°, verify-context, verify-qfai-gate, verify-repo-gate; default modifiers none; decision points none; branch points implement-bisect; binds one flow",
+    "Stages in order — `bisect` (diagnose): `implement-bisect`; `diagnose` (diagnose): `implement-diagnose`; `fix` (regression_fix): `implement-regression-fix`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points none; release point none; branch points `implement-bisect`, `revert` to `revert-culprit`",
   ],
   // QFAI:EX-0001-0220-33
   [
     "change-tooling",
-    "diagnose (diagnose): implement-diagnose; edit (implement): implement-tooling; verify (verify): verify-change-note°, verify-context, verify-qfai-gate, verify-repo-gate; default modifiers none; decision points none; branch points none; binds no flow",
+    "Stages in order — `diagnose` (diagnose): `implement-diagnose`; `edit` (implement): `implement-tooling`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points none; release point none; branch points none",
   ],
   // QFAI:EX-0001-0220-34
   [
     "bump-dependency",
-    "bump (implement): implement-dep-bump; verify (verify): verify-change-note°, verify-context, verify-qfai-gate, verify-repo-gate; default modifiers none; decision points none; branch points none; binds no flow",
+    "Stages in order — `bump` (implement): `implement-dep-bump`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points none; release point none; branch points none",
   ],
   // QFAI:EX-0001-0220-35
   [
     "revert-culprit",
-    "revert (implement): implement-revert; spec (sdd_append): sdd-story°, sdd-gate; implement (implement): implement-tdd, implement-checkpoint; verify (verify): verify-change-note°, verify-context, verify-qfai-gate, verify-repo-gate; default modifiers none; decision points none; branch points none; binds one flow",
+    "Stages in order — `revert` (implement): `implement-revert`; `implement` (implement): `implement-tdd`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points none; release point none; branch points none",
   ],
   // QFAI:EX-0001-0220-36
   [
     "hand-off-operation",
-    "inspect (diagnose): implement-diagnose(read-only); handoff (triage): triage-handoff; close (triage): triage-close; default modifiers gate:release; decision points none; release point triage-handoff; branch points none; binds no flow",
+    "Stages in order — `inspect` (diagnose): `implement-diagnose(read-only)`; `handoff` (triage): `triage-handoff`; `close` (triage): `triage-close`; decision points none; release point `triage-handoff`; branch points none",
   ],
   // QFAI:EX-0001-0220-37
   [
     "backport-fix",
-    "pick (implement): implement-backport; verify (verify): verify-change-note°, verify-context, verify-qfai-gate, verify-repo-gate; default modifiers gate:release; decision points none; branch points none; binds no flow",
+    "Stages in order — `pick` (implement): `implement-backport`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points none; release point the end; branch points none",
   ],
   // QFAI:EX-0001-0220-38
   [
     "draft-release-notes",
-    "draft (verify): verify-release-notes; default modifiers gate:release; decision points none; branch points none; binds no flow",
+    "Stages in order — `draft` (verify): `verify-release-notes`; decision points none; release point the end; branch points none",
   ],
   // QFAI:EX-0001-0220-39
   [
     "verify-manually",
-    "check (verify): verify-manual; close (triage): triage-close; default modifiers none; decision points none; branch points none; binds no flow",
+    "Stages in order — `check` (verify): `verify-manual`; `close` (triage): `triage-close`; decision points none; release point none; branch points none",
+  ],
+  // QFAI:EX-0001-0220-41
+  [
+    "apply-settled",
+    "Stages in order — `spec` (sdd, then the specification review): `sdd-triage(settled)`, `sdd-story°`, `sdd-contract°`; `implement` (implement): `implement-scaffold°`, `implement-tdd°`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`; release point none; branch points `sdd-triage`, `outside-record` to `decide-design`",
+  ],
+  // QFAI:EX-0001-0220-42
+  [
+    "apply-settled-prototype",
+    "Stages in order — `spec` (sdd, then the specification review): `sdd-triage(settled)`, `sdd-story°`, `sdd-contract°`, `common-design-md`; `prototype` (prototype): `prototyping-grill`, `prototyping-preflight`, `prototyping-loop`, `prototyping-handoff`; `implement` (implement): `implement-scaffold°`, `implement-tdd°`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`, `prototyping-loop`; release point none; branch points `sdd-triage`, `outside-record` to `decide-design`",
   ],
 ];
 
+const REVIEW = { spec: ", then the specification review", code: ", then the code review" };
+
 function stepText(step: PlanStep): string {
-  return `${step.name}${step.mode ? `(${step.mode})` : ""}${step.passThrough ? "°" : ""}`;
+  return `\`${step.name}${step.mode ? `(${step.mode})` : ""}${step.passThrough ? "°" : ""}\``;
 }
 
-function listed(names: readonly string[]): string {
-  return names.length > 0 ? names.join(", ") : "none";
+function ticked(names: readonly string[]): string {
+  return names.length > 0 ? names.map((name) => `\`${name}\``).join(", ") : "none";
 }
 
-const BINDING = {
-  required: "binds one flow",
-  optional: "binds the one flow the proposal names, or none",
-  none: "binds no flow",
-};
+// `a`, `a` or `b`, and `a`, `b` or `c`.
+function either(routes: readonly string[]): string {
+  const named = routes.map((route) => `\`${route}\``);
+  const last = named.pop() ?? "";
+  return named.length > 0 ? `${named.join(", ")} or ${last}` : last;
+}
 
-// A plan in the words of its catalog example: its stages, its points and the flow it binds.
-function described(plan: WorkflowPlanFile, planned: PlanStages): string {
-  const stages = plan.stages.map(
-    (stage) => `${stage.id} (${stage.kind}): ${stage.steps.map(stepText).join(", ")}`,
+// A branch point as an example states it. The outcomes of `implement-diagnose` in a route of
+// the `fix` family are the family's, and the example names only the step.
+function branchText(plan: WorkflowPlanFile, point: WorkflowPlanFile["branchPoints"][number]) {
+  if (plan.family === "fix" && point.step === "implement-diagnose") return `\`${point.step}\``;
+  const outcomes = point.outcomes.map(
+    ({ outcome, routes }) =>
+      `\`${outcome}\` to ${routes === "decision-table" ? "the route the decision rules give" : either(routes)}`,
   );
+  return [`\`${point.step}\``, ...outcomes].join(", ");
+}
+
+// A plan in the words of its catalog example.
+function described(plan: WorkflowPlanFile): string {
+  const stages = plan.stages.map(
+    (stage) =>
+      `\`${stage.id}\` (${stage.kind}${stage.review ? REVIEW[stage.review] : ""}): ${stage.steps.map(stepText).join(", ")}`,
+  );
+  const release = plan.releasePoint;
+  const branches = plan.branchPoints.map((point) => branchText(plan, point));
   return [
-    ...stages,
-    `default modifiers ${listed(plan.defaultModifiers)}`,
-    `decision points ${listed(plan.decisionPoints)}`,
-    ...(plan.releasePoint ? [`release point ${plan.releasePoint}`] : []),
-    `branch points ${listed(plan.branchPoints.map((point) => point.step))}`,
-    BINDING[flowBindingOf(planned)],
+    `Stages in order — ${stages.join("; ")}`,
+    `decision points ${ticked(plan.decisionPoints)}`,
+    `release point ${release === undefined ? "none" : release === "end" ? "the end" : `\`${release}\``}`,
+    `branch points ${branches.length > 0 ? branches.join("; ") : "none"}`,
   ].join("; ");
 }
 
 for (const [route, expected] of CATALOG) {
   it(route, async () => {
     const plan = (await loadBuiltInPlans()).find((each) => each.route === route);
-    const planned = (await planFacts())[route]?.stages ?? [];
 
-    expect(plan ? described(plan, planned) : undefined).toBe(expected);
+    expect(plan ? described(plan) : undefined).toBe(expected);
   });
 }
 
-it("The 39 shipped plans end three ways", async () => {
+it("The 35 shipped plans end three ways", async () => {
   const plans = await loadBuiltInPlans();
   const names = (plan: WorkflowPlanFile) =>
     plan.stages.map((stage) => stage.steps.map((step) => step.name));
@@ -275,10 +265,10 @@ it("The 39 shipped plans end three ways", async () => {
     close: counts["triage-close"]?.length,
     releaseNotes: counts["verify-release-notes"],
   }).toEqual({
-    total: 39,
-    verify: 25,
+    total: 35,
+    verify: 23,
     external: ["fix-env-bound"],
-    close: 12,
+    close: 10,
     releaseNotes: ["draft-release-notes"],
   });
 });

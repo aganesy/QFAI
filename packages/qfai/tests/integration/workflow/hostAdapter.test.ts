@@ -97,11 +97,11 @@ async function modelInvocationDisabled(skillDir: string, skills: string[]) {
   return disabled;
 }
 
-// The lines above the entry point's first heading that send a request to `qfai-run`.
+// The lines of the entry point that send a request to `qfai-run`; the hook is the one place that
+// rule is stated.
 async function entryDirectives(file: string): Promise<string[]> {
   const lines = (await readFile(path.join(initRoot, file), "utf8")).split(/\r?\n/);
-  const heading = lines.findIndex((line) => line.startsWith("# "));
-  return lines.slice(0, heading < 0 ? 0 : heading).filter((line) => line.includes("qfai-run"));
+  return lines.filter((line) => line.includes("qfai-run"));
 }
 
 const HOSTS: [string, string, string][] = [
@@ -118,6 +118,6 @@ for (const [host, skillDir, entryFile] of HOSTS) {
       directives: (await entryDirectives(entryFile)).length,
       notOneSource: await notOneSource(skillDir, [...skills, "qfai-maintain"]),
       disabled: await modelInvocationDisabled(skillDir, skills),
-    }).toEqual({ undiscovered: [], directives: 1, notOneSource: [], disabled: [] });
+    }).toEqual({ undiscovered: [], directives: 0, notOneSource: [], disabled: [] });
   });
 }

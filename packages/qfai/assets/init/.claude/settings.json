@@ -1,4 +1,24 @@
 {
+  "permissions": {
+    "allow": [
+      "Skill(qfai-configure)",
+      "Skill(qfai-discussion)",
+      "Skill(qfai-grill)",
+      "Skill(qfai-grilling)",
+      "Skill(qfai-implement)",
+      "Skill(qfai-maintain)",
+      "Skill(qfai-migration-v1-to-v2)",
+      "Skill(qfai-prototyping)",
+      "Skill(qfai-run)",
+      "Skill(qfai-sdd)",
+      "Skill(qfai-triage)",
+      "Skill(qfai-verify)",
+      "Skill(web-research)",
+      "Bash(npx qfai:*)",
+      "Bash(yarn exec qfai:*)",
+      "Bash(yarn qfai:*)"
+    ]
+  },
   "hooks": {
     "UserPromptSubmit": [
       {
@@ -10,7 +30,7 @@
             "command": "node",
             "args": [
               "-e",
-              "try{const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}catch{}",
+              "try{let p;try{p=JSON.parse(require('fs').readFileSync(0,'utf8')).prompt}catch{}if(!(typeof p==='string'&&/^[ \\t]*<(task-notification|wake)[\\s>]/m.test(p))){const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}catch{}",
               "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
               "structured-question"
             ]
@@ -29,6 +49,22 @@
               "try{const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}catch{}",
               "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
               "free-text-entry"
+            ]
+          }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "QFAI install check reminder",
+            "command": "node",
+            "args": [
+              "-e",
+              "try{const f=require('fs'),p=require('path');let e=p.dirname(p.dirname(p.dirname(process.argv[1]))),ok=0;for(;;){if(f.existsSync(p.join(e,'node_modules','.bin','qfai'))){ok=1;break}if(f.existsSync(p.join(e,'.pnp.cjs'))){try{const j=JSON.parse(f.readFileSync(p.join(e,'package.json'),'utf8'));if((j.dependencies||{}).qfai||(j.devDependencies||{}).qfai){ok=1;break}}catch{}}if(f.existsSync(p.join(e,'.git')))break;const u=p.dirname(e);if(u===e)break;e=u}if(ok===0){const m=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}catch{}",
+              "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
+              "qfai-not-installed"
             ]
           }
         ]

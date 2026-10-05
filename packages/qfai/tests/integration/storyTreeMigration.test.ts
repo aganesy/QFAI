@@ -70,7 +70,7 @@ describe("BF-0004 migration acceptance boundaries", () => {
   // QFAI:AC-0004-0003-01
   // QFAI:AC-0004-0003-07
   // QFAI:AC-0004-0004-02
-  it("rejects an invalid invocation, previews without writes, archives a collision and reruns unchanged", async () => {
+  it("rejects an invalid invocation, previews without writes, deletes a collision and reruns unchanged", async () => {
     const root = await sandbox();
     await put(
       root,
@@ -91,7 +91,9 @@ describe("BF-0004 migration acceptance boundaries", () => {
     const preview = await step(root, 1, ["--dry-run"]);
     expect(preview.code).toBe(0);
     expect(preview.stdout).toContain("## Operations");
-    expect(preview.stdout).toContain("legacy/skills/qfai-sdd");
+    expect(preview.stdout).toContain(
+      ".qfai/assistant/skills/qfai-sdd: delete: the destination exists",
+    );
     expect(await snapshot(root)).toBe(original);
 
     const applied = await step(root, 1);
@@ -103,12 +105,6 @@ describe("BF-0004 migration acceptance boundaries", () => {
     expect(await readFile(path.join(root, ".qfai/assistant/skill/qfai-sdd/SKILL.md"), "utf8")).toBe(
       "current skill\n",
     );
-    expect(
-      await readFile(
-        path.join(root, ".qfai/evidence/migration-spec-to-story/legacy/skills/qfai-sdd/SKILL.md"),
-        "utf8",
-      ),
-    ).toBe("old skill\n");
     expect(
       await readFile(path.join(root, ".qfai/assistant/skill.local/house-style/SKILL.md"), "utf8"),
     ).toBe("house style\n");
@@ -150,7 +146,7 @@ describe("BF-0004 migration acceptance boundaries", () => {
 
   it("keeps the first ID map and migrated story fixed when a later plan moves the story", async () => {
     const root = await sandbox();
-    const evidence = ".qfai/evidence/migration-spec-to-story";
+    const state = "tmp/qfai-migration";
     await put(
       root,
       "qfai.config.yaml",
@@ -189,13 +185,13 @@ describe("BF-0004 migration acceptance boundaries", () => {
     );
     await put(
       root,
-      `${evidence}/plan.yaml`,
+      `${state}/plan.yaml`,
       "flows:\n  - title: Order flow\n    from: _policies/04_Business-Flow.md\n    stories:\n      - id: US-0001-0001\nrules: []\n",
     );
 
     const migrated = await step(root, 4);
     expect(migrated.code).toBe(3);
-    const mapFile = path.join(root, evidence, "id-map.json");
+    const mapFile = path.join(root, state, "id-map.json");
     const idMap = await readFile(mapFile, "utf8");
     const parsed = JSON.parse(idMap) as { ids: Record<string, Record<string, string>> };
     expect(parsed.ids["spec-0001"]).toMatchObject({
@@ -219,7 +215,7 @@ describe("BF-0004 migration acceptance boundaries", () => {
 
     await put(
       root,
-      `${evidence}/plan.yaml`,
+      `${state}/plan.yaml`,
       "flows:\n  - title: Different flow\n    from: _policies/04_Business-Flow.md\n    stories:\n      - id: US-0001-0001\nrules: []\n",
     );
     const beforeRefusal = await snapshot(root);

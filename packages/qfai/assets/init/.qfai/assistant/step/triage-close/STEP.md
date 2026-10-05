@@ -3,7 +3,7 @@ name: triage-close
 owner: qfai-triage
 purpose: "Record how a request ended and every follow-up request it found, and close it without changing any tracked file."
 requires: []
-roles: [requirements-analyst, completion-reviewer]
+roles: [requirements-analyst]
 routing-profile: default
 ---
 
@@ -67,7 +67,7 @@ Any other route closes here.
 
 ## Gate
 
-The reviewer confirms one outcome is recorded with the evidence behind it,
+The reviewer, or the stage worker where the work order names none, confirms one outcome is recorded with the evidence behind it,
 every follow-up the earlier steps found is listed with its goal and reason,
 no follow-up was routed or started, and no tracked file changed. The report
 never says a change is done.

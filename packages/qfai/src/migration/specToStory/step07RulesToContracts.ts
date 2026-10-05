@@ -12,9 +12,23 @@ import {
   withoutLegacyRecords,
   type LegacyRecord,
 } from "./legacyRecords.js";
-import { MigrationInputError, type MigrationOperation, type MigrationStep } from "./harness.js";
-import { assertUnchangedPlacements, readMigrationPlan } from "./step04RenumberIds.js";
 import {
+  MigrationInputError,
+  type MigrationContext,
+  type MigrationOperation,
+  type MigrationStep,
+} from "./harness.js";
+import {
+  assertUnchangedPlacements,
+  goneAfterStep7,
+  PACK_FILES,
+  readMigrationPlan,
+  readOldPack,
+  type OldPack,
+  type PlannedMark,
+} from "./step04RenumberIds.js";
+import {
+  isDashReference,
   legacyPackFiles,
   readLegacyRows,
   readMigrationInput,
@@ -22,7 +36,11 @@ import {
 } from "./step05CasesToExamples.js";
 
 type Rule = { id: string; statement: string; examples: string[] };
-const RETIRED = ".qfai/evidence/migration-spec-to-story/retired";
+
+/** A statement on one line: each line break, with the indentation around it, is one space. */
+function oneLine(value: string): string {
+  return value.replace(/[^\S\r\n]*\r?\n\s*/g, " ").trim();
+}
 
 function ruleIds(value: string): string[] {
   return [...new Set(value.match(/BR-\d{4}-\d{4}/g) ?? [])];
@@ -104,15 +122,12 @@ function sqlRules(original: string): Map<string, Rule | null> {
     const continuations = block
       .slice(1, examplesIndex)
       .map((line) => (line.startsWith("-- ") ? line.slice(3) : null));
-    if (
-      header[2] === undefined ||
-      examplesIndex < 1 ||
-      continuations.some((line) => line === null)
-    ) {
+    const lines = continuations.filter((line): line is string => line !== null);
+    if (header[2] === undefined || examplesIndex < 1 || lines.length !== continuations.length) {
       rememberRule(current, id, null);
       continue;
     }
-    const statement = [header[2].replace(/^ /, ""), ...(continuations as string[])].join("\n");
+    const statement = oneLine([header[2], ...lines].join("\n"));
     const examples = (block[examplesIndex] ?? "")
       .slice("-- Examples:".length)
       .split(",")
@@ -121,6 +136,33 @@ function sqlRules(original: string): Map<string, Rule | null> {
     rememberRule(current, id, { id, statement, examples });
   }
   return current;
+}
+
+/**
+ * An SQL rule an earlier step 7 wrote over several comment lines, for each of `ids`, written
+ * as the one-line block `qfai validate` reads: `-- Rule` and, on the next line, `-- Examples:`.
+ */
+function repairMultiLineSqlRules(original: string, ids: ReadonlySet<string>): string {
+  const newline = original.includes("\r\n") ? "\r\n" : "\n";
+  const headers = [...original.matchAll(/^-- Rule (BR-\d{4}-\d{4}):([^\r\n]*)/gm)];
+  let repaired = original;
+  for (const [index, header] of [...headers.entries()].reverse()) {
+    const id = header[1] ?? "";
+    if (!ids.has(id)) continue;
+    const end = headers[index + 1]?.index ?? original.length;
+    const block = original.slice(header.index, end).split(/\r?\n/);
+    const examplesIndex = block.findIndex((line) => line.startsWith("-- Examples:"));
+    const continuations = block.slice(1, examplesIndex);
+    if (examplesIndex < 2 || !continuations.every((line) => line.startsWith("-- "))) continue;
+    const statement = oneLine(
+      [header[2] ?? "", ...continuations.map((line) => line.slice(3))].join("\n"),
+    );
+    const lines = [`-- Rule ${id}: ${statement}`, ...block.slice(examplesIndex)];
+    repaired = `${repaired.slice(0, header.index)}${lines.join(newline)}${repaired.slice(
+      header.index + original.slice(header.index, end).length,
+    )}`;
+  }
+  return repaired;
 }
 
 function markdownRules(original: string): Map<string, Rule | null> {
@@ -165,9 +207,19 @@ function writeRuleBlock(original: string, file: string, rules: readonly Rule[]):
     }
     const current: unknown[] = raw === undefined ? [] : (raw as unknown[]);
     const additional = pendingRules(structuredRules(current), rules, file);
-    if (additional.length === 0) return original;
+    if (additional.length === 0) {
+      // An earlier step 7 folded a long dependency list over several lines, which
+      // `QFAI-CONTRACT-015` does not read: written again, it stays on one line.
+      const folded = /^x-qfai-depends-on:\s*\[[^\]]*\n[^\]]*\]/m.test(original);
+      const dependsOn = (parsed as Record<string, unknown>)["x-qfai-depends-on"];
+      if (!folded || !Array.isArray(dependsOn)) return original;
+      const flat = document.createNode(dependsOn);
+      flat.flow = true;
+      document.set("x-qfai-depends-on", flat);
+      return document.toString({ lineWidth: 0 });
+    }
     document.set("x-qfai-rules", [...current, ...additional]);
-    return String(document);
+    return document.toString({ lineWidth: 0 });
   }
   if (extension === ".json") {
     // The contract declares its ID on a comment line above the JSON document.
@@ -192,10 +244,15 @@ function writeRuleBlock(original: string, file: string, rules: readonly Rule[]):
     return `${declaration}${JSON.stringify(object, null, 2)}\n`;
   }
   if (extension === ".sql") {
-    const additional = pendingRules(sqlRules(original), rules, file);
+    const repaired = repairMultiLineSqlRules(original, new Set(rules.map((rule) => rule.id)));
+    const additional = pendingRules(
+      sqlRules(repaired),
+      rules.map((rule) => ({ ...rule, statement: oneLine(rule.statement) })),
+      file,
+    );
     return additional.length === 0
-      ? original
-      : `${original.trimEnd()}\n\n${additional.map((rule) => `-- Rule ${rule.id}: ${rule.statement.split(/\r?\n/).join("\n-- ")}\n-- Examples: ${rule.examples.join(", ")}`).join("\n\n")}\n`;
+      ? repaired
+      : `${repaired.trimEnd()}\n\n${additional.map((rule) => `-- Rule ${rule.id}: ${rule.statement}\n-- Examples: ${rule.examples.join(", ")}`).join("\n\n")}\n`;
   }
   if (extension === ".md") {
     const additional = pendingRules(
@@ -237,30 +294,57 @@ function applicableNfr(markdown: string): string | null {
 }
 
 /**
- * Refuses a rule source that is neither its archived original nor that
- * original minus rules this step moves. An earlier partial run leaves the
- * second shape; anything else is an edit made since, which a rewrite or
- * removal of the source would lose.
+ * Refuses `binds: none` on a rule that carries a retired status, and on one that binds a contract.
+ * A `retire` mark is how a rule with a retired status is disposed of.
  */
-function assertArchiveRemainder(
-  root: string,
-  source: string,
-  current: string,
-  original: string,
-  rows: readonly LegacyRecord[],
-  present: ReadonlySet<string>,
-  moved: ReadonlySet<string>,
-): void {
-  if (current === original) return;
-  const removed = new Set(rows.map((row) => row.id).filter((id) => !present.has(id)));
-  if (
-    [...removed].every((id) => moved.has(id)) &&
-    current === withoutLegacyRecords(original, rows, removed)
-  ) {
-    return;
+function assertMarkable(source: string, record: LegacyRecord, mark: PlannedMark): void {
+  if (mark.retire === null && retiredLegacyStatus(record.cells.Status ?? "")) {
+    throw new MigrationInputError(`${source}: ${record.id} is retired and cannot be marked`);
   }
-  throw new MigrationInputError(
-    `${repositoryRelative(root, source)} differs from its archived original minus the rules already moved`,
+  if (mark.retire === null && !isDashReference(record.cells["Contract-Refs"] ?? "")) {
+    throw new MigrationInputError(
+      `${source}: ${record.id} binds none, but its Contract-Refs is not "-"`,
+    );
+  }
+}
+
+/** The report line for a rule the plan removes from its source without placing it in a contract. */
+function markNote(oldId: string, mark: PlannedMark): string {
+  return mark.retire === null
+    ? `${oldId}: removed from its rule source; it binds no contract`
+    : `${oldId}: removed from its rule source; retired: ${mark.retire}`;
+}
+
+type SourceFile = {
+  sourcePath: string;
+  current: string;
+  rows: readonly LegacyRecord[];
+  moved: ReadonlySet<string>;
+  /** One line for each marked rule this run removes from the file. */
+  notes: readonly string[];
+};
+
+/** What happens to a pack's rule file: the removal of the rules moved out of it, or of the file. */
+function sourceFileChanges(file: SourceFile): MigrationOperation[] {
+  const { sourcePath, current, rows, moved, notes } = file;
+  if (rows.length === moved.size) {
+    const description = rows.length === 0 ? "delete: it holds no rule" : "delete: every rule moved";
+    return [
+      { kind: "remove", target: sourcePath, description: [description, ...notes].join("; ") },
+    ];
+  }
+  const remaining = moved.size === 0 ? current : withoutLegacyRecords(current, rows, moved);
+  return current === remaining
+    ? []
+    : [{ kind: "write", target: sourcePath, content: remaining, notes }];
+}
+
+/** Whether every story, criterion, example and test case of a pack has a new ID. */
+function packPlaced(pack: OldPack, map: MigrationIdMap): boolean {
+  if (pack.retired) return true;
+  const ids = map.ids[pack.id] ?? {};
+  return [...pack.stories, ...pack.criteria, ...pack.examples, ...pack.cases].every(
+    (item) => ids[item.id] !== undefined,
   );
 }
 
@@ -271,9 +355,13 @@ export const step07: MigrationStep = {
   async plan(context) {
     const map = await readIdMap(context.root);
     if (!map) return { operations: [] };
+    const sourceFiles = await legacyPackFiles(context, "04_Business-Rules.md");
+    // With no spec pack left there is nothing to move, so no plan is read.
+    if (sourceFiles.length === 0) return { operations: [] };
     const plan = await readMigrationPlan(context);
-    if (!plan) throw new MigrationInputError("Migration plan is missing before step 7");
+    if (!plan) throw new MigrationInputError("plan.yaml is missing before step 7");
     assertUnchangedPlacements(plan, map);
+    const marks = new Map(plan.marks.map((mark) => [mark.id, mark]));
     // The plan names a contract by its path before step 3 renamed it.
     const placements = new Map(
       plan.rules.map((entry) => [
@@ -292,23 +380,32 @@ export const step07: MigrationStep = {
         citing.set(key, [...new Set([...(citing.get(key) ?? []), newExample])]);
       }
     }
-    const sourceFiles = await legacyPackFiles(context, "04_Business-Rules.md", false);
     const forAPerson: string[] = [];
     const groups = new Map<string, Rule[]>();
     const sourceChanges: MigrationOperation[] = [];
     const routedByPack = new Map<string, Set<string>>();
+    const removedRuleFiles = new Set<string>();
+    const seenRules = new Set<string>();
     for (const source of sourceFiles) {
       const current = await readMigrationInput(source);
-      if (current === null) continue;
+      if (current === null) {
+        removedRuleFiles.add(source);
+        continue;
+      }
       const specId = path.basename(path.dirname(source));
-      const retired = path.join(context.root, RETIRED, specId, "04_Business-Rules.md");
-      const archived = await readMigrationInput(retired);
-      const original = archived ?? current;
-      const rows = parseLegacyRecords(original, "BR", source);
-      const present = new Set(parseLegacyRecords(current, "BR", source).map((row) => row.id));
+      const rows = parseLegacyRecords(current, "BR", source);
+      for (const row of rows) seenRules.add(row.id);
       const moved = new Set<string>();
+      const notes: string[] = [];
       for (const record of rows) {
         const oldId = record.id;
+        const mark = marks.get(oldId);
+        if (mark) {
+          assertMarkable(repositoryRelative(context.root, source), record, mark);
+          notes.push(markNote(oldId, mark));
+          moved.add(oldId);
+          continue;
+        }
         const contract = placements.get(oldId);
         if (contract && retiredLegacyStatus(record.cells.Status ?? "")) {
           throw new MigrationInputError(
@@ -341,36 +438,17 @@ export const step07: MigrationStep = {
               `${repositoryRelative(context.root, target)}: ${mapped}: its statement names ${token}; a statement in a CLI contract names no rule, so rewrite it by hand`,
             );
         const rule = { id: mapped ?? "", statement: statement.text, examples };
-        if (present.has(oldId)) groups.set(target, [...(groups.get(target) ?? []), rule]);
+        groups.set(target, [...(groups.get(target) ?? []), rule]);
         moved.add(oldId);
         routedByPack.set(specId, (routedByPack.get(specId) ?? new Set()).add(contract ?? ""));
       }
-      assertArchiveRemainder(context.root, source, current, original, rows, present, moved);
       const sourcePath = repositoryRelative(context.root, source);
-      const retiredPath = repositoryRelative(context.root, retired);
-      if (rows.length === moved.size) {
-        sourceChanges.push(
-          archived === null
-            ? { kind: "move", source: sourcePath, target: retiredPath }
-            : {
-                kind: "remove",
-                target: sourcePath,
-                description:
-                  rows.length === 0
-                    ? "archive complete; remove empty rule source"
-                    : "archive complete; remove migrated rule source",
-              },
-        );
-        continue;
-      }
-      if (archived === null) {
-        sourceChanges.push({ kind: "write", target: retiredPath, content: original });
-      }
-      const remaining = moved.size === 0 ? original : withoutLegacyRecords(original, rows, moved);
-      if (current !== remaining) {
-        sourceChanges.push({ kind: "write", target: sourcePath, content: remaining });
-      }
+      const changes = sourceFileChanges({ sourcePath, current, rows, moved, notes });
+      if (changes.some((change) => change.kind === "remove")) removedRuleFiles.add(source);
+      sourceChanges.push(...changes);
     }
+    const unmatched = plan.marks.find((mark) => !seenRules.has(mark.id));
+    if (unmatched) throw goneAfterStep7(unmatched.id, "rule");
     const operations: MigrationOperation[] = [];
     for (const [target, rules] of groups) {
       const original = await readMigrationInput(target);
@@ -384,7 +462,9 @@ export const step07: MigrationStep = {
         });
     }
     operations.push(...sourceChanges);
-    for (const file of await legacyPackFiles(context, "01_Spec.md", false)) {
+    // Step 4 reads the old flow while a pack it places from is left; a retired pack places none.
+    let activePacksLeft = 0;
+    for (const file of await legacyPackFiles(context, "01_Spec.md")) {
       const content = await readMigrationInput(file);
       if (content === null) continue;
       const specId = path.basename(path.dirname(file));
@@ -393,44 +473,71 @@ export const step07: MigrationStep = {
         forAPerson.push(
           `${repositoryRelative(context.root, file)}: Applicable NFR: ${nfr}; contracts: ${[...(routedByPack.get(specId) ?? [])].join(", ") || "none"}`,
         );
-      const retired = path.join(context.root, RETIRED, specId, "01_Spec.md");
-      if ((await readMigrationInput(retired)) === null)
-        operations.push({
-          kind: "move",
-          source: repositoryRelative(context.root, file),
-          target: repositoryRelative(context.root, retired),
-        });
-    }
-    const removedSources = new Set(
-      operations.flatMap((operation) =>
-        operation.kind === "move"
-          ? [operation.source]
-          : operation.kind === "remove"
-            ? [operation.target]
-            : [],
-      ),
-    );
-    for (const file of await legacyPackFiles(context, "01_Spec.md", false)) {
       const packDir = path.dirname(file);
-      let entries;
-      try {
-        entries = await readdir(packDir);
-      } catch (error: unknown) {
-        if (isEnoent(error)) continue;
-        throw new MigrationInputError(`Cannot list migration input ${packDir}: ${String(error)}`);
+      const rulesGone = removedRuleFiles.has(path.join(packDir, "04_Business-Rules.md"));
+      const pack = await readOldPack(context, specId, true);
+      if (!rulesGone || !packPlaced(pack, map)) {
+        if (!pack.retired) activePacksLeft += 1;
+        continue;
       }
-      if (
-        entries.length > 0 &&
-        entries.every((entry) =>
-          removedSources.has(repositoryRelative(context.root, path.join(packDir, entry))),
-        )
-      ) {
+      // Every part of the pack has a destination, so the pack goes whole. A file no
+      // step reads keeps all of it, so the pack is never left half deleted.
+      const others = (await listEntries(packDir)).filter(
+        (entry) => !(PACK_FILES as readonly string[]).includes(entry),
+      );
+      if (others.length > 0) {
+        forAPerson.push(
+          `${repositoryRelative(context.root, packDir)}: every part of the pack is placed, but it also holds ${others.join(", ")}, which no step reads; move or delete that, then run step 7 again to delete the pack`,
+        );
+        if (!pack.retired) activePacksLeft += 1;
+        continue;
+      }
+      for (const name of PACK_FILES.filter((name) => name !== "04_Business-Rules.md")) {
         operations.push({
-          kind: "remove-empty-directory",
-          target: repositoryRelative(context.root, packDir),
+          kind: "remove",
+          target: repositoryRelative(context.root, path.join(packDir, name)),
+          description: "delete: every part has moved",
         });
       }
+      operations.push({
+        kind: "remove-empty-directory",
+        target: repositoryRelative(context.root, packDir),
+      });
     }
+    if (activePacksLeft === 0) operations.push(...(await policyRemainder(context)));
     return { operations, forAPerson };
   },
 };
+
+async function listEntries(dir: string): Promise<string[]> {
+  try {
+    return await readdir(dir);
+  } catch (error: unknown) {
+    if (isEnoent(error)) return [];
+    throw new MigrationInputError(`Cannot list migration input ${dir}: ${String(error)}`);
+  }
+}
+
+/**
+ * The old business flow step 4 reads while a pack it places from is left, and
+ * `_policies/` once nothing else is in it.
+ */
+async function policyRemainder(context: MigrationContext): Promise<MigrationOperation[]> {
+  const policies = path.join(context.specsDir, "_policies");
+  const entries = await listEntries(policies);
+  if (!entries.includes("04_Business-Flow.md")) return [];
+  const operations: MigrationOperation[] = [
+    {
+      kind: "remove",
+      target: repositoryRelative(context.root, path.join(policies, "04_Business-Flow.md")),
+      description: "delete: every flow has moved",
+    },
+  ];
+  if (entries.length === 1) {
+    operations.push({
+      kind: "remove-empty-directory",
+      target: repositoryRelative(context.root, policies),
+    });
+  }
+  return operations;
+}

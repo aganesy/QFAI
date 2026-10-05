@@ -10,26 +10,12 @@
 // QFAI:EX-0001-0190-04
 // QFAI:EX-0001-0191-03
 // QFAI:EX-0001-0194-01
-// QFAI:EX-0001-0194-02
 // QFAI:EX-0001-0194-03
 // QFAI:EX-0001-0194-04
-// QFAI:EX-0001-0194-21
-// QFAI:EX-0001-0194-22
-// QFAI:EX-0001-0194-23
-// QFAI:EX-0001-0194-24
-// QFAI:EX-0001-0194-25
-// QFAI:EX-0001-0194-26
 // QFAI:EX-0001-0194-27
-// QFAI:EX-0001-0194-28
-// QFAI:EX-0001-0194-29
-// QFAI:EX-0001-0194-30
-// QFAI:EX-0001-0194-31
-// QFAI:EX-0001-0194-32
-// QFAI:EX-0001-0194-33
 // QFAI:EX-0001-0194-34
 // QFAI:EX-0001-0194-35
 // QFAI:EX-0001-0194-36
-// QFAI:EX-0001-0194-37
 // QFAI:EX-0001-0194-38
 // QFAI:EX-0001-0221-01
 // QFAI:EX-0001-0221-02
@@ -41,7 +27,8 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { afterEach, expect, it } from "vitest";
+import type * as FsPromises from "node:fs/promises";
+import { afterEach, expect, it, vi } from "vitest";
 
 import { loadBuiltInPlans, WORKFLOW_ROUTES } from "../../../src/core/workflow/plans.js";
 
@@ -61,6 +48,11 @@ import {
 import { declaredIncludeGlobs } from "../../helpers/runnerProjects.js";
 import { removeTempTree } from "../../helpers/tempTree.js";
 
+vi.mock("node:fs/promises", async (importOriginal) => {
+  const actual = await importOriginal<typeof FsPromises>();
+  return { ...actual, readFile: vi.fn(actual.readFile) };
+});
+
 const TESTS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const FIXTURES = path.join(TESTS, "fixtures", "workflow");
 
@@ -78,34 +70,43 @@ interface Seed {
   rationale: string;
 }
 
-interface Fault {
-  id: string;
-  trigger: string;
-  expected: string;
-}
-
 function isSeed(value: unknown): value is Seed {
   return typeof value === "object" && value !== null && "id" in value && "expected" in value;
 }
 
-function isFault(value: unknown): value is Fault {
-  return typeof value === "object" && value !== null && "trigger" in value;
-}
-
 // A fixture that is not there reads as empty, so every case fails at its assertion.
 async function fixtureText(name: string): Promise<string> {
-  return readFile(path.join(FIXTURES, name), "utf8").catch(() => "");
+  return readFile(path.join(FIXTURES, name), "utf8").catch((error: unknown) => {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return "";
+    throw error;
+  });
 }
+
+it("An existing fixture returns its text", async () => {
+  await expect(fixtureText("routing-seeds.jsonl")).resolves.toContain('"ROUTE-001"');
+});
+
+it("A missing fixture still returns empty text", async () => {
+  const error = Object.assign(new Error("ENOENT: fixture not found"), { code: "ENOENT" });
+  vi.mocked(readFile).mockRejectedValueOnce(error);
+
+  await expect(fixtureText("missing-fixture.json")).resolves.toBe("");
+});
+
+it.each(["EACCES", "EPERM", "EIO", "EISDIR"])(
+  "An unexpected %s fixture read failure preserves the original error",
+  async (code) => {
+    const file = path.join(FIXTURES, "unreadable-fixture.json");
+    const error = Object.assign(new Error(`${code}: cannot read ${file}`), { code, path: file });
+    vi.mocked(readFile).mockRejectedValueOnce(error);
+
+    await expect(fixtureText("unreadable-fixture.json")).rejects.toBe(error);
+  },
+);
 
 async function routingSeeds(): Promise<Seed[]> {
   const lines = (await fixtureText("routing-seeds.jsonl")).split("\n").filter(Boolean);
   return lines.map((line): unknown => JSON.parse(line)).filter(isSeed);
-}
-
-async function faultSeeds(): Promise<Fault[]> {
-  const text = await fixtureText("fault-seeds.json");
-  const parsed: unknown = text ? JSON.parse(text) : [];
-  return (Array.isArray(parsed) ? parsed : []).filter(isFault);
 }
 
 // What a seed is scored on: the prompt, the facts and the expected result.
@@ -114,13 +115,13 @@ async function scored(id: string) {
   return found && { userPrompt: found.userPrompt, repoFacts: found.repoFacts, ...found.expected };
 }
 
-it("A seed where no story covers the behaviour and the operator states the result allows add-feature and decide-acceptance, not fix-defect", async () => {
+it("A seed where no story covers the behaviour and the operator states the result allows add-feature and decide-design, not fix-defect", async () => {
   const uncovered = (await routingSeeds()).filter(
     (each) => each.repoFacts.storyMissing === true && "userExpectedStatus" in each.repoFacts,
   );
 
   expect(uncovered.map((each) => each.expected.allowedRoutes)).toEqual([
-    ["add-feature", "decide-acceptance"],
+    ["add-feature", "decide-design"],
   ]);
 });
 
@@ -137,7 +138,7 @@ it("An untrusted log and a quoted request route to a question that changes nothi
   const seeds = await routingSeeds();
   const untrusted = seeds.find((each) => "untrustedLog" in each.repoFacts);
   const quoted = seeds.find((each) => each.repoFacts.quotedRequestOnly === true);
-  const answering = ["answer-question", "investigate-question"];
+  const answering = ["answer-question"];
 
   expect(
     [untrusted, quoted].map(
@@ -181,14 +182,10 @@ for (const [name, facts] of EXCLUDED_CLASSES) {
   });
 }
 
-it("The tracked fixtures hold 24 fault seeds and 64 unique routing seeds", async () => {
-  const faults = (await faultSeeds()).map((each) => each.id);
+it("The tracked fixture holds 60 unique routing seeds", async () => {
   const routes = (await routingSeeds()).map((each) => each.id);
 
-  expect({ faults, routes: new Set(routes).size }).toEqual({
-    faults: Array.from({ length: 24 }, (_, index) => `FAULT-${String(index + 1).padStart(3, "0")}`),
-    routes: 64,
-  });
+  expect(new Set(routes).size).toBe(60);
 });
 
 it("No seed expects a retired stage, or an annotated example to lose its test", async () => {
@@ -200,10 +197,10 @@ it("No seed expects a retired stage, or an annotated example to lose its test", 
     seeds: seeds.length,
     retired: must(/^(defect_reopen|sdd_reconcile)$/),
     uncovering: must(/uncover|delete_test|remove_test|same_obligation_reopen/),
-  }).toEqual({ seeds: 64, retired: [], uncovering: [] });
+  }).toEqual({ seeds: 60, retired: [], uncovering: [] });
 });
 
-it("Every routing prompt and rationale is English, and shared prompts stay shared", async () => {
+it("Every routing prompt and rationale is English, and the phone prompt stays shared", async () => {
   const seeds = await routingSeeds();
   const cjk = /[\u3000-\u30ff\u3400-\u9fff\uf900-\ufaff\uff00-\uffef]/u;
   const promptOf = (id: string) => seeds.find((each) => each.id === id)?.userPrompt;
@@ -212,12 +209,11 @@ it("Every routing prompt and rationale is English, and shared prompts stay share
     seeds: seeds.length,
     cjk: seeds.filter((each) => cjk.test(each.userPrompt) || cjk.test(each.rationale)),
     phone: new Set(["ROUTE-007", "ROUTE-008", "ROUTE-009"].map(promptOf)).size,
-    resume: new Set(["ROUTE-027", "ROUTE-028"].map(promptOf)).size,
-  }).toEqual({ seeds: 64, cjk: [], phone: 1, resume: 1 });
+  }).toEqual({ seeds: 60, cjk: [], phone: 1 });
 });
 
 it("No seed names a spec or a ledger outside the prompt an operator typed", async () => {
-  const text = `${await fixtureText("routing-seeds.jsonl")}${await fixtureText("fault-seeds.json")}`;
+  const text = await fixtureText("routing-seeds.jsonl");
   const seeds = await routingSeeds();
 
   expect({
@@ -227,83 +223,6 @@ it("No seed names a spec or a ledger outside the prompt an operator typed", asyn
     ),
     rationales: seeds.filter((each) => /\bspecs?\b/i.test(each.rationale)).map((each) => each.id),
   }).toEqual({ ids: [], factKeys: [], rationales: [] });
-});
-
-it("FAULT-015: story authoring appends the missing example, and the covered one stays annotated", async () => {
-  const fault = (await faultSeeds()).find((each) => each.id === "FAULT-015");
-
-  expect(fault && [fault.trigger, fault.expected]).toEqual([
-    "same_obligation_done_repair",
-    "Story authoring appends the missing example. The covered example stays annotated and keeps its prior evidence, and no annotated example loses its test.",
-  ]);
-});
-
-it("FAULT-016: a test fix that changes the expectation's meaning goes back to story authoring", async () => {
-  const fault = (await faultSeeds()).find((each) => each.id === "FAULT-016");
-
-  expect(fault && [fault.trigger, fault.expected]).toEqual([
-    "changed_obligation_claimed_as_repair",
-    "A claimed test-defect fix that changes what the expectation means is refused and returned to SDD.",
-  ]);
-});
-
-it("ROUTE-007", async () => {
-  const found = await scored("ROUTE-007");
-
-  expect(
-    found && [found.userPrompt, found.repoFacts.existingTestCoversCase, found.must, found.forbid],
-  ).toEqual([
-    "An empty phone number returns 500. Fix it so it returns 400.",
-    false,
-    ["diagnose", "sdd_append", "verify"],
-    ["fabricated_CR", "same_obligation_reopen"],
-  ]);
-});
-
-it("ROUTE-014", async () => {
-  const found = await scored("ROUTE-014");
-
-  expect(
-    found && [
-      found.userPrompt,
-      found.requiresHumanInput,
-      found.must,
-      "additiveScopeAuthorized" in found.repoFacts,
-    ],
-  ).toEqual([
-    "Add a feature that lets each customer register up to five notification addresses, with no duplicates and the existing data kept.",
-    true,
-    ["routing_create_question", "sdd", "acceptance", "implement", "verify"],
-    false,
-  ]);
-});
-
-it("ROUTE-035", async () => {
-  const found = await scored("ROUTE-035");
-
-  expect(found && [found.userPrompt, found.requiresHumanInput, found.must]).toEqual([
-    "Add a feature. Write the approver as auto.",
-    true,
-    ["reject_fabricated_approver", "routing_create_question"],
-  ]);
-});
-
-it("ROUTE-036", async () => {
-  const found = await scored("ROUTE-036");
-
-  expect(
-    found && [
-      found.userPrompt,
-      "policy" in found.repoFacts,
-      found.must,
-      found.forbid.includes("assume_intent_policy_enabled"),
-    ],
-  ).toEqual([
-    "Implement a feature that lets a customer register five notification addresses.",
-    false,
-    ["routing_create_question"],
-    false,
-  ]);
 });
 
 // A seed whose one fact tempts `edit-text`, and whose expected result forbids it.
@@ -326,62 +245,6 @@ it("ROUTE-044", async () => {
       "environmentSettingChange",
     ),
   );
-});
-
-it("ROUTE-047", async () => {
-  const found = await scored("ROUTE-047");
-
-  expect(found && [found.userPrompt, found.must]).toEqual([
-    "Fix this boundary-value bug.",
-    ["sdd_append", "test_owner_authoring"],
-  ]);
-});
-
-it("ROUTE-048", async () => {
-  const found = await scored("ROUTE-048");
-
-  expect(found && [found.userPrompt, found.must]).toEqual([
-    "Fix the bug this unit test found.",
-    ["regression_fix"],
-  ]);
-});
-
-it("ROUTE-049", async () => {
-  const found = await scored("ROUTE-049");
-
-  expect(found && [found.userPrompt, found.must]).toEqual([
-    "Fix the bug this API test found.",
-    ["sdd_append", "acceptance"],
-  ]);
-});
-
-it("ROUTE-055", async () => {
-  const found = await scored("ROUTE-055");
-
-  expect(found && [found.userPrompt, found.requiresHumanInput, found.must[0]]).toEqual([
-    "Implement feature A and an independent feature B.",
-    true,
-    "routing_create_question",
-  ]);
-});
-
-it("ROUTE-056", async () => {
-  const found = await scored("ROUTE-056");
-
-  expect(found && [found.userPrompt, found.requiresHumanInput, found.must[0]]).toEqual([
-    "Add a new screen. The spec and the design are as in this document.",
-    true,
-    "routing_create_question",
-  ]);
-});
-
-it("ROUTE-058", async () => {
-  const found = await scored("ROUTE-058");
-
-  expect(found && [found.userPrompt, found.forbid.includes("additive_create_exception")]).toEqual([
-    "Split this spec in two without changing behaviour.",
-    false,
-  ]);
 });
 
 it("ROUTE-045", async () => {
@@ -411,56 +274,6 @@ it("ROUTE-024", async () => {
   );
 });
 
-it("ROUTE-028", async () => {
-  expect(await scored("ROUTE-028")).toEqual({
-    userPrompt: "Please continue.",
-    repoFacts: {
-      activeRuns: ["one-valid-run"],
-      terminalRuns: ["one-completed-run"],
-      conversationBindingMissing: true,
-    },
-    requestKind: "resume",
-    allowedRoutes: [null],
-    requiresHumanInput: false,
-    must: ["resume_checkpoint"],
-    forbid: ["resume_terminal_run"],
-  });
-});
-
-// Whether a vitest project of the pull-request job collects the package-relative `rel`.
-const INCLUDE_GLOBS = declaredIncludeGlobs().map(({ glob }) => glob);
-const collected = (rel: string) => INCLUDE_GLOBS.some((glob) => path.matchesGlob(rel, glob));
-
-// Every fault ID a collected test file cites, and the files citing it. The fixtures and this
-// file, which names seeds to read them, do not count as citing.
-async function faultCitations(): Promise<Map<string, string[]>> {
-  const cited = new Map<string, string[]>();
-  const entries = await readdir(TESTS, { recursive: true, withFileTypes: true });
-  const self = fileURLToPath(import.meta.url);
-  for (const entry of entries) {
-    const file = path.join(entry.parentPath, entry.name);
-    const rel = path.relative(path.resolve(TESTS, ".."), file).split(path.sep).join("/");
-    if (!entry.isFile() || !file.endsWith(".test.ts") || file === self || !collected(rel)) {
-      continue;
-    }
-    for (const id of new Set((await readFile(file, "utf8")).match(/\bFAULT-\d{3}\b/g) ?? [])) {
-      cited.set(id, [...(cited.get(id) ?? []), file]);
-    }
-  }
-  return cited;
-}
-
-it("Every fault seed is cited by a test the pull-request job runs, and no test cites an unknown one", async () => {
-  const known = (await faultSeeds()).map((each) => each.id);
-  const cited = await faultCitations();
-
-  expect({
-    faults: known.length,
-    uncited: known.filter((id) => !cited.has(id)),
-    unknown: [...cited.keys()].filter((id) => !known.includes(id)),
-  }).toEqual({ faults: 24, uncited: [], unknown: [] });
-});
-
 // The token vocabulary beside the seeds: each `must` and `forbid` token and its class.
 async function vocabulary(): Promise<Record<string, string>> {
   const text = await fixtureText("token-vocabulary.json");
@@ -474,7 +287,7 @@ it("Every must and forbid token of the routing seeds is typed", async () => {
   const typed = await vocabulary();
 
   expect({ seeds: seeds.length, untyped: untypedTokens(seeds, typed) }).toEqual({
-    seeds: 64,
+    seeds: 60,
     untyped: [],
   });
 });
@@ -521,6 +334,7 @@ it("The recomputed safety list equals the recorded list", async () => {
 const roots: string[] = [];
 
 afterEach(async () => {
+  vi.mocked(readFile).mockReset();
   await Promise.all(roots.splice(0).map((root) => removeTempTree(root)));
 });
 
@@ -543,7 +357,7 @@ async function buildFromBase(base: string, each: Seed): Promise<string[]> {
   }
 }
 
-it("The 64 fixture repositories build from one qfai init base, refusing only the facts no tree reproduces", async () => {
+it("The 60 fixture repositories build from one qfai init base, refusing only the facts no tree reproduces", async () => {
   const seeds = await routingSeeds();
   const base = await tempRoot("qfai-eval-base-");
   buildBase(base);
@@ -566,7 +380,7 @@ it("The 64 fixture repositories build from one qfai init base, refusing only the
     ),
     refused,
   }).toEqual({
-    seeds: 64,
+    seeds: 60,
     unmapped: [],
     both: [],
     refused: Object.fromEntries(
@@ -717,16 +531,16 @@ it("Each boundary pair puts one seed on each side, and a landing no lighter than
     malformed: pairs
       .filter(([side, pair]) => pair.length !== 2 || new Set(side.split("|")).size !== 2)
       .map(([side]) => side),
-    toRegression: landings("fix-defect|fix-regression", "fix-regression"),
-    toDefect: landings("fix-defect|fix-regression", "fix-defect"),
-    toSweep: landings("repair-consistency|sweep-guard", "sweep-guard"),
-    toRepair: landings("repair-consistency|sweep-guard", "repair-consistency"),
+    toRedMain: landings("fix-defect|fix-red-main", "fix-red-main"),
+    toDefect: landings("fix-defect|fix-red-main", "fix-defect"),
+    toDesign: landings("add-feature|decide-design", "decide-design"),
+    toFeature: landings("add-feature|decide-design", "add-feature"),
   }).toEqual({
     malformed: [],
-    toRegression: [false, true],
+    toRedMain: [false, true],
     toDefect: [true, false],
-    toSweep: [true, true],
-    toRepair: [true, false],
+    toDesign: [false, true],
+    toFeature: [true, false],
   });
 });
 
@@ -753,7 +567,7 @@ it("Every re-routing seed names an outcome its route's branch point declares, an
 
   expect({
     undeclared: seeds.filter((seed) => !declared(seed)).map((seed) => seed.id),
-    revert: named("fix-regression", "implement-bisect", "revert", "revert-culprit"),
+    revert: named("fix-red-main", "implement-bisect", "revert", "revert-culprit"),
     defectiveTest: named("fix-defect", "implement-diagnose", "defective-test", "repair-test"),
   }).toEqual({ undeclared: [], revert: true, defectiveTest: true });
 });

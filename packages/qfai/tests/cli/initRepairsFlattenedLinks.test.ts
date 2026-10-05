@@ -30,7 +30,7 @@ async function withProject(task: (root: string) => Promise<void>): Promise<void>
   }
 }
 
-const LINK = path.join(".claude", "skills", "qfai-atdd");
+const LINK = path.join(".claude", "skills", "qfai-implement");
 
 describe("qfai init repairs a link a checkout flattened", () => {
   it("replaces the regular file without --force, and says so", async () => {
@@ -42,7 +42,7 @@ describe("qfai init repairs a link a checkout flattened", () => {
       const linkPath = path.join(root, LINK);
       await rm(linkPath, { recursive: true, force: true });
       await mkdir(path.dirname(linkPath), { recursive: true });
-      await writeFile(linkPath, "../../.qfai/assistant/skills/qfai-atdd", "utf-8");
+      await writeFile(linkPath, "../../.qfai/assistant/skills/qfai-implement", "utf-8");
       expect((await lstat(linkPath)).isSymbolicLink()).toBe(false);
 
       const stdout = await captureStdout(() =>
@@ -50,7 +50,7 @@ describe("qfai init repairs a link a checkout flattened", () => {
       );
 
       expect((await lstat(linkPath)).isSymbolicLink()).toBe(true);
-      expect(await readlink(linkPath)).toContain("qfai-atdd");
+      expect(await readlink(linkPath)).toContain("qfai-implement");
       // Silence is what hid the problem; the repair is announced.
       expect(stdout).toContain("was a flattened symlink");
     });
@@ -66,7 +66,7 @@ describe("qfai init repairs a link a checkout flattened", () => {
       const linkPath = path.join(root, LINK);
       await rm(linkPath, { recursive: true, force: true });
       await mkdir(path.dirname(linkPath), { recursive: true });
-      await writeFile(linkPath, "../../.qfai/assistant/skills/qfai-atdd", "utf-8");
+      await writeFile(linkPath, "../../.qfai/assistant/skills/qfai-implement", "utf-8");
 
       const stdout = await captureStdout(() =>
         runInit({ dir: root, force: false, dryRun: true, yes: true }),
@@ -121,7 +121,7 @@ describe("qfai init repairs a link a checkout flattened", () => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
       const linkPath = path.join(root, LINK);
-      const mine = "../../.qfai/assistant/skills/qfai-atdd\n";
+      const mine = "../../.qfai/assistant/skills/qfai-implement\n";
       await rm(linkPath, { recursive: true, force: true });
       await mkdir(path.dirname(linkPath), { recursive: true });
       await writeFile(linkPath, mine, "utf-8");
@@ -145,7 +145,7 @@ describe("qfai init repairs a link a checkout flattened", () => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
       const linkPath = path.join(root, LINK);
-      const mine = "../../.qfai/assistant/./skills/qfai-atdd";
+      const mine = "../../.qfai/assistant/./skills/qfai-implement";
       await rm(linkPath, { recursive: true, force: true });
       await mkdir(path.dirname(linkPath), { recursive: true });
       await writeFile(linkPath, mine, "utf-8");

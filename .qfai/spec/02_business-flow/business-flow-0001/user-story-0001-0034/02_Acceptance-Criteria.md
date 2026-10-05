@@ -9,5 +9,5 @@ Feature: 4-layer asset-tree seeding
     Given a clean new project directory
     When `qfai init` runs
     Then `.qfai/assistant/{rule,skill,agent,prompt}/` are created from the shipped assets
-    And none of `constitution/`, `manifest/`, `catalog/`, `process/` and `steering/` is created
+    And none of `constitution/`, `manifest/`, `catalog/` and `process/` is created
 ```

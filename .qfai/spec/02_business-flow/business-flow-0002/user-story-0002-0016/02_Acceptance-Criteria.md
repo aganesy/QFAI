@@ -11,14 +11,14 @@ Feature: Measurement-gated build reuse and artifact-upload hygiene
     When the build is produced once, uploaded, and downloaded by the two matrix legs that rebuild today
     Then the bundler invocation count in the run logs falls against the recorded baseline
     And the two pack-lifecycle builds are unchanged, because artifact reuse cannot reach them
-    And the numbers are quoted in the pull-request description as well as written to the evidence tree
+    And the numbers are quoted in the pull-request description
 
   # AC-0002-0016-02
   Scenario: A measured "no" is a legitimate outcome rather than a failed attempt
     Given artifact reuse adds a serializing dependency to jobs that run in parallel today
     When the captured before-and-after measurement shows a wall-clock regression
     Then the rebuilds are kept
-    And the measurement is recorded as the reason in the evidence tree and quoted in the pull-request description
+    And the measurement is quoted as the reason in the pull-request description
     And the requirement is satisfied by that record, so no retry-until-it-agrees loop is entered
 
   # AC-0002-0016-03
@@ -43,6 +43,6 @@ Feature: Measurement-gated build reuse and artifact-upload hygiene
   # AC-0002-0016-05
   Scenario: A proposed cost or parallelism change has no measurements
     Given the proposal claims a cost, wall-clock or parallelism improvement
-    When no before-and-after numbers are captured in the evidence tree and quoted in the pull request and decision record
+    When no before-and-after numbers are captured and quoted in the pull-request description
     Then the proposal is rejected regardless of whether its implementation works
 ```

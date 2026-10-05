@@ -3,24 +3,26 @@
 ## Criteria
 
 ```gherkin
-Feature: ATDD Scaffold Bulk Skeleton Generation
+Feature: Scaffold acceptance tests in bulk
   # AC-0001-0073-01
-  Scenario: A story gets one skeleton per criterion
+  Scenario: A story gets one empty passing test per criterion
     Given a story `US-NNNN-NNNN` with its ACs
-    When `qfai atdd scaffold --story US-NNNN-NNNN` runs with no pre-existing skeletons
-    Then for every AC of the story a file `<testsDir>/integration/<US-ID>/<AC-ID>.test.<ext>` is written carrying `QFAI:AC-NNNN-NNNN-NN`, and `qfai validate` emits `D-SCAFFOLD-PLACEHOLDER` (severity warning), keyed by the AC ID, for each file whose placeholder is still present.
+    When `qfai atdd scaffold --story US-NNNN-NNNN` runs with no pre-existing tests
+    Then for every AC of the story a file `<testsDir>/integration/<US-ID>/<AC-ID>.test.<ext>` is written carrying `QFAI:AC-NNNN-NNNN-NN`
+    And each test is not skipped, has an empty body and passes
 
   # AC-0001-0073-02
   Scenario: Re-running the scaffold overwrites nothing
-    Given a story or flow skeleton whose TODO marker has been replaced with a real assertion
+    Given a story or flow test whose body is empty or written
     When `qfai atdd scaffold --story US-NNNN-NNNN` or `--flow BF-NNNN` is re-run for that scope
     Then the existing file is not overwritten and no new file is written
 
   # AC-0001-0073-03
-  Scenario: ATDD Scaffold Emits a Business-Flow Skeleton
+  Scenario: The scaffold writes one empty passing test for a business flow
     Given a project on the story tree and a business flow `BF-NNNN` it defines
-    When `qfai atdd scaffold --flow BF-NNNN` runs with no pre-existing skeleton for that flow
-    Then one file `<testsDir>/e2e/<BF-ID>.test.<ext>` is written carrying `QFAI:BF-NNNN`; `qfai validate` emits `D-SCAFFOLD-PLACEHOLDER` (severity warning), keyed by the BF ID, while its placeholder is still present; and a second run writes nothing.
+    When `qfai atdd scaffold --flow BF-NNNN` runs with no pre-existing test for that flow
+    Then one file `<testsDir>/e2e/<BF-ID>.test.<ext>` is written carrying `QFAI:BF-NNNN`, not skipped, with an empty body that passes
+    And a second run writes nothing
 
   # AC-0001-0073-04
   Scenario: Invalid scaffold targets write nothing
@@ -29,8 +31,9 @@ Feature: ATDD Scaffold Bulk Skeleton Generation
     Then the command exits 2 and writes nothing, and `--spec` exits 2 with a message naming `--story` and `--flow`.
 
   # AC-0001-0073-05
-  Scenario: An unfilled placeholder escalates to an error
-    Given an AC or BF skeleton whose placeholder remains unremoved across 3 `qfai validate` cycles (the `atdd.scaffoldEscalateCycles` default)
-    When the 3rd validation cycle runs
-    Then `D-SCAFFOLD-PLACEHOLDER` escalates from warning to error for that AC or BF ID (configurable via `qfai.config.yaml#atdd.scaffoldEscalateCycles`).
+  Scenario: An empty test raises no finding, and a skipped one does
+    Given a test `qfai atdd scaffold` wrote
+    When `qfai validate` runs
+    Then an empty body raises no finding
+    And a skipped test raises `QFAI-TEST-003`
 ```
