@@ -86,6 +86,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The `qfai-run` entry skill has room for another step** (#2966). The text
+  for a release, decision or branch point moves into a new reference,
+  `references/stage-points.md`, which the skill points to at each step. The
+  skill keeps its 150-line limit, at 135 lines instead of 150, and its
+  behaviour is unchanged.
+
 - **The orchestrator keeps working while a delegation runs** (#2244). The
   shared delegation baseline now says the orchestrator is not required to wait
   for a sub-agent. Where the host starts a delegation and returns at once,
