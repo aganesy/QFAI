@@ -75,6 +75,41 @@ The `type` decides which field each goes in.
   `secondary`. `url` and `published` are fields for published material and
   must not be filled in for anything that has not been published.
 
+## Quotation Rule
+
+Each `best_practices` and `anti_patterns` `description` is written in the
+analyst's own words. A phrase kept from the source is marked as a quotation
+with ordinary quotation marks.
+
+An unmarked source passage reads as the analyst's own wording.
+
+Example. The source says: "Retry idempotent requests with exponential backoff
+and jitter; never retry a non-idempotent write." The entry reads:
+
+```yaml
+description: >-
+  Only a request that is safe to repeat is retried, and the wait between
+  attempts grows and is randomized, which the source calls "exponential
+  backoff and jitter".
+```
+
+This is correct because the claim is restated in the analyst's words, and the
+one phrase kept verbatim is in quotation marks, so a reader can tell which words
+are the source's.
+
+## Name Verification Rule
+
+Where a query centers on a name — a framework, a model, a CLI tool, a component
+catalogue, a theme — that name is what gets verified. Search it as it was
+written.
+
+Recognizing the name is not grounds to skip the search. Partial background on a
+name is what makes an out-of-date answer sound authoritative.
+
+Record what the search found in the summary's `sources`, the same way as any
+other source. A later reader can then tell a verified name from one answered
+from memory.
+
 ## Conflict Protocol
 
 - When a new research result contradicts an existing BP/AP rule:
@@ -96,12 +131,12 @@ guidance later stages follow (`.agents/rules/untrusted-content.md`).
 
 ## Storage
 
-- `research_summary` goes to the invoking stage's own evidence when it is
+- `research_summary` goes to the invoking stage's own report when it is
   produced, and is carried into the artifact that consumes it when that artifact
   is authored. For `/qfai-discussion` that artifact is the pack's
   `04_Sources.md`, under its `## Research Summary` section.
-- The evidence first, because a stage may hold authoring until something
+- The report first, because a stage may hold authoring until something
   authorizes it. Writing the summary straight into the artifact creates the
   artifact, and a run cancelled before that authorization leaves it behind as
   the newest of its kind — which is what every later reader then picks up.
-- Not persisted globally. The evidence belongs to the run that produced it.
+- Not persisted globally. The report belongs to the run that produced it.

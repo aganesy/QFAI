@@ -18,7 +18,6 @@
  * is hoisted to module scope and would otherwise apply to every case in
  * that file.
  */
-// QFAI:EX-0001-0090-01
 
 import { mkdir, mkdtemp, readdir, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -148,6 +147,7 @@ function reportExistingAs(overrides: {
   });
 }
 
+// QFAI:EX-0001-0090-01
 describe("TC-0010-0012: the atomic state.json write preserves what it replaces", () => {
   it("creates the scratch file at 0600, whatever the document's mode", async () => {
     await writeFile(abs, `${JSON.stringify({ atdd: { cycles: 1 } })}\n`, "utf-8");

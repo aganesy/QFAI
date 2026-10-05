@@ -1,7 +1,0 @@
-# Examples
-
-## Examples
-
-| EX-ID           | AC-Ref          | Input                                                                                                                                                                     | Expected                                                                                                                                                                                                                                                |
-| --------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| EX-0001-0137-01 | AC-0001-0137-01 | A non-converged cycle 3 with 1023 `designMdViolations` (first `color=#fff`), no layout anti-pattern and one blocking finding, when `iterate` emits its cycle-end summary. | Stdout carries `[BLOCKED] exit-64 prevented by:` followed by `1023 designMdViolations (top: color=#fff)`, `0 layoutAntiPatternsDetected` and `1 blockingFindings (top: <the finding>)`, in that order. The category names are stable and additive only. |

@@ -1,4 +1,3 @@
-// QFAI:EX-0001-0039-04
 /**
  * `validate` produces a verdict even when a validator throws.
  *
@@ -91,6 +90,7 @@ const libuvError = (code: string, syscall: string, at: string): Error => {
   return err;
 };
 
+// QFAI:EX-0001-0039-04
 describe("describeIncompleteRun", () => {
   it("attributes a filesystem fault to the command that hit it", () => {
     // The line `cli/index.ts` used to print named the errno and the path and
@@ -195,7 +195,7 @@ describe("the boundary is wired into every command", () => {
 describe("validate reports a run it could not finish", () => {
   it("emits QFAI-SCAN-002 instead of letting the error escape", async () => {
     const root = await project();
-    const wrapper = path.join(root, ".claude", "skills", "qfai-atdd");
+    const wrapper = path.join(root, ".claude", "skills", "qfai-implement");
     validateProjectSpy.mockImplementation(() => Promise.reject(errno("EPERM", wrapper)));
 
     const lines: string[] = [];
