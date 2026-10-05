@@ -31,6 +31,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A validator no longer reads an unreadable file as a missing one.** The
+  shared `exists` and `readSafe` helpers turned every failure, including
+  `EACCES` and `EIO`, into "absent" or an empty string, so a file the validator
+  could not read passed as one that was not there. Only `ENOENT` and `ENOTDIR`
+  now mean absent; any other error propagates unchanged. Fixes #2906.
+
 - **The `qfai-run` entry reminder stays silent on a turn the host starts
   (#2989).** The Claude Code `UserPromptSubmit` hook that sends a request to
   `qfai-run` printed on every notification, so an agent could start a run from
