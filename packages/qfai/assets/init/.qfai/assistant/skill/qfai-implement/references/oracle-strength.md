@@ -16,7 +16,10 @@ The path is relative to the project root, and the original text is copied exactl
 
 A missing import, syntax error, fixture failure, or deliberate unimplemented throw does not prove the oracle. The failure must name the example's observable behavior. A mutation in an unrelated helper only proves that helper is used.
 
-A proof belongs to one example. If the mutation also fails a test annotated with another EX, the failure cannot say which example it disproved. Record both failing tests in the evidence. Then narrow one test to its own boundary, or have `/qfai-sdd` state in the examples that the two share the boundary.
+A proof belongs to one example.
+When a mutation fails tests annotated with different examples, record each failing assertion and check which boundary it proves.
+Narrow an assertion that proves another example's boundary, or have `/qfai-sdd` settle an unclear boundary in the examples.
+A shared predicate may fail several tests whose assertions independently prove their own examples.
 
 The falsifiability run in red-not-observable.md already supplies this proof when it tests the same predicate and selector. Reuse that run instead of mutating twice.
 
