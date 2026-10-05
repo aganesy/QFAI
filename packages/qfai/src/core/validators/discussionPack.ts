@@ -3,7 +3,10 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
-import { inspectLatestDiscussionPack } from "../discussionPack.js";
+import {
+  inspectLatestDiscussionPack,
+  REQUIRED_DISCUSSION_PACK_SECTIONS,
+} from "../discussionPack.js";
 import { isStoryTreeProject } from "../storyTree/layout.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
@@ -116,7 +119,26 @@ export async function validateDiscussionPackReadiness(
           "- At least 100 characters",
           "- Body text, not just headings",
           "- Do not end with only `TBD` / `TODO` / `(placeholder)`",
+          ...Object.entries(REQUIRED_DISCUSSION_PACK_SECTIONS).map(
+            ([file, sections]) =>
+              `- \`${file}\` holds ${sections.map((section) => `\`## ${section}\``).join(", ")}`,
+          ),
         ].join("\n"),
+      ),
+    );
+  }
+
+  for (const { legacy, target } of readiness.unmigratedFiles) {
+    issues.push(
+      issue(
+        "QFAI-DPACK-003",
+        `${legacy} still holds content that ${target} now carries`,
+        "error",
+        path.join(readiness.latestPackDir, legacy),
+        "discussionPack.unmigratedFile",
+        [legacy, target],
+        "change",
+        `Move the content of ${legacy} into ${target}, then delete ${legacy}.`,
       ),
     );
   }
@@ -137,18 +159,18 @@ export async function validateDiscussionPackReadiness(
     );
   }
 
-  if (readiness.deferredWithoutDetails.length > 0) {
-    const deferredPath = path.join(readiness.latestPackDir, "13_Deferred.md");
+  if (readiness.incompleteDeferredOqIds.length > 0) {
+    const oqPath = path.join(readiness.latestPackDir, "11_OQ-Register.md");
     issues.push(
       issue(
         "QFAI-DPACK-007",
-        `Deferred OQs in 11_OQ-Register.md are missing from 13_Deferred.md: ${readiness.deferredWithoutDetails.join(", ")}`,
+        `Deferred OQs in 11_OQ-Register.md lack a Resolution or a Next-Decision-Point: ${readiness.incompleteDeferredOqIds.join(", ")}`,
         "error",
-        deferredPath,
-        "discussionPack.deferredCoverage",
-        readiness.deferredWithoutDetails,
+        oqPath,
+        "discussionPack.deferredDetails",
+        readiness.incompleteDeferredOqIds,
         "change",
-        "List each OQ that the OQ register defers in 13_Deferred.md under the same OQ ID.",
+        "For each deferred OQ, write in `Resolution` what is decided now, and in `Next-Decision-Point` the next point at which it is decided.",
       ),
     );
   }

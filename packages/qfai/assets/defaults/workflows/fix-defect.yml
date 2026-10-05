@@ -4,32 +4,20 @@ stages:
   - id: diagnose
     kind: diagnose
     steps: [implement-diagnose]
-  - id: spec
-    kind: sdd_append
-    steps:
-      - { step: sdd-story, passThrough: true }
-      - sdd-gate
-    after: [diagnose]
-  - id: acceptance
-    kind: acceptance
-    steps:
-      - atdd-scaffold
-      - { step: atdd-credentials, passThrough: true }
-      - { step: atdd-author, passThrough: true }
-    after: [spec]
   - id: implement
     kind: implement
-    steps: [implement-tdd, implement-checkpoint]
-    after: [acceptance]
-  - id: verify
+    steps: [implement-tdd]
+    after: [diagnose]
+  - id: note
     kind: verify
     steps:
       - { step: verify-change-note, passThrough: true }
-      - verify-context
-      - verify-qfai-gate
-      - verify-repo-gate
     after: [implement]
-defaultModifiers: []
+    review: code
+  - id: verify
+    kind: verify
+    steps: [verify-qfai-gate, verify-repo-gate, verify-commit]
+    after: [note]
 decisionPoints: []
 branchPoints:
   - step: implement-diagnose
@@ -38,7 +26,7 @@ branchPoints:
       - { outcome: not-ours, routes: [close-no-change] }
       - { outcome: duplicate, routes: [close-duplicate] }
       - { outcome: needs-info, routes: [request-info] }
-      - { outcome: expectation-differs, routes: [decide-acceptance] }
+      - { outcome: expectation-differs, routes: [decide-design] }
       - { outcome: defective-test, routes: [repair-test] }
       - { outcome: regression, routes: [fix-red-main] }
       - { outcome: surface-conflict, routes: [repair-consistency] }

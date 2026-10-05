@@ -29,8 +29,8 @@ async function put(root: string, relative: string, content: string): Promise<voi
 }
 
 describe("BF-0003 diagnostic examples", () => {
+  // QFAI:EX-0003-0001-04
   it("counts every doctor severity in the machine-readable summary", async () => {
-    // QFAI:EX-0003-0001-04
     await withWorkspace(async (root) => {
       await put(
         root,

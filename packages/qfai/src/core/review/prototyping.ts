@@ -1,9 +1,6 @@
 /**
  * Prototyping surface helpers.
  *
- * Iteration count is fixed globally via
- * `core/prototyping/iteration.ts#MAX_ITERATIONS`.
- *
  * Kept here: surface-type helpers and a `playwright-cli` constant used by
  * the capture wiring.
  */

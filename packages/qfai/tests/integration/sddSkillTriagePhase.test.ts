@@ -46,8 +46,8 @@ describe("qfai-sdd triage surface", () => {
     expect(content).toContain("<paths.specsDir>/decisions.md");
     expect(content).toContain("<paths.specsDir>/open-questions.md");
     expect(content).toContain("ID, Content, Approach, Status");
-    expect(content).toContain("retired story");
-    expect(content).toContain("Status REJECTED");
+    expect(content).toContain("retired-story file");
+    expect(content).toContain("row at REJECTED is a rejected option");
     expect(content).toContain("only Status may change");
   });
 
@@ -57,8 +57,8 @@ describe("qfai-sdd triage surface", () => {
       expect(content).toContain(operation);
     }
     expect(content).toContain("In --auto, ask no question");
-    expect(content).toContain("stop before their dependent writes");
-    expect(content).toContain("report every pending row with its operation and target");
+    expect(content).toContain("stop before the dependent writes");
+    expect(content).toContain("report every pending operation with its target");
   });
 
   it("traces companion changes through contracts", async () => {

@@ -20,7 +20,7 @@ this flow's provenance names:
 `01_Context.md#Design Direction` is the decision the user made: the adopted
 theme, what departs from it, and what stays ordinary. A UI-bearing pack that
 records none leaves the brand unchosen — stop and ask rather than pick one,
-which is the same rule a pack taken in through import-lite gets.
+which is the same rule an imported specification gets.
 
 Each registry entry carries what was adopted, what was rejected, and how it
 was translated. The competitor registry feeds brand and tokens; the component
@@ -73,9 +73,9 @@ For the schema (12 colors, 3 fonts, 4 radii, 3 shadows, 8 archetypes), read
 ## Taking the values from the theme
 
 Twelve colours, three families, four radii and three shadows. Do not compose
-them. Everything downstream treats them as exact — the prototyping loop hashes them,
-`certify` re-scans them, every literal in every capture is checked against
-them — so a number arrived at by taste puts that exactness on top of a guess.
+them. Everything downstream treats them as exact — every literal in every prototype
+is checked against them — so a number arrived at by taste puts that exactness
+on top of a guess.
 
 The theme's vocabulary will not line up one-to-one with these names, which is
 what makes this a translation rather than a copy. Below is the crosswalk for a

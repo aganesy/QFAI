@@ -1,6 +1,6 @@
-// QFAI:EX-0004-0001-02
 import { describe, expect, it } from "vitest";
 
+import { parseCountedExampleAnnotations } from "../../../../src/core/storyTree/ids.js";
 import { buildStoryTreeModel } from "../../../../src/core/storyTree/tree.js";
 import { validateStoryTreeObligationsModel } from "../../../../src/core/validators/storyTreeObligations.js";
 
@@ -23,6 +23,7 @@ function model(decisions?: string) {
   return buildStoryTreeModel(entries, { specsDir: specs, contractsDir: `${specs}/03_contract` });
 }
 
+// QFAI:EX-0004-0001-02
 describe("story-tree test obligations", () => {
   it("requires BF in E2E and AC in integration or API", () => {
     const findings = validateStoryTreeObligationsModel(
@@ -75,6 +76,59 @@ describe("story-tree test obligations", () => {
         (item) => item.code === "QFAI-STORY-008" && item.refs?.includes("EX-0001-0001-99"),
       ),
     ).toBe(true);
+  });
+
+  // QFAI:EX-0001-0056-14
+  it("counts an EX annotation only directly before a test declaration", () => {
+    const annotation = `// ${["QFAI", "EX-0001-0001-01"].join(":")}`;
+    const missing = (content: string) =>
+      validateStoryTreeObligationsModel(
+        model(),
+        [{ file: "tests/unit/checkout.test.ts", kind: null, selectedForExample: true, content }],
+        "tdd",
+      ).some((item) => item.code === "QFAI-STORY-006" && item.refs?.includes("EX-0001-0001-01"));
+
+    const header = `${annotation}\nimport { it } from "vitest";\n\nit("pays", () => {});\n`;
+    const inBody = `it("pays", () => {\n  ${annotation}\n  expect(1).toBe(1);\n});\n`;
+    const beforeIt = `import { it } from "vitest";\n\n${annotation}\nit("pays", () => {});\n`;
+    const beforeEach = `${annotation}\n// another comment\ndescribe.each([1])("%s", () => {});\n`;
+
+    expect(missing(header)).toBe(true);
+    expect(missing(inBody)).toBe(true);
+    expect(missing(beforeIt)).toBe(false);
+    expect(missing(beforeEach)).toBe(false);
+  });
+
+  // QFAI:EX-0001-0056-14
+  it.each([
+    ["a vitest call", "// {tag}\nit('pays', () => {});", true],
+    ["a modified vitest call", "// {tag}\ntest.each([1])('%s', () => {});", true],
+    ["a block comment line", "/* {tag} */\ndescribe.skip('pays', () => {});", true],
+    ["an RSpec block", "# {tag}\nit 'pays' do\nend", true],
+    ["a Python test function", "# {tag}\ndef test_pays():\n    pass", true],
+    ["a Go test function", "// {tag}\nfunc TestPays(t *testing.T) {}", true],
+    ["a Gherkin scenario", "# {tag}\nScenario: pays", true],
+    ["a Rust test attribute", "// {tag}\n#[test]\nfn pays() {}", true],
+    ["a C# test attribute", "// {tag}\n[Fact]\npublic void Pays() {}", true],
+    [
+      "a statement between the annotation and the test",
+      "// {tag}\nsetup();\nit('pays', () => {});",
+      false,
+    ],
+    [
+      "code after a block comment on the same line",
+      "/* {tag} */ setup();\nit('pays', () => {});",
+      false,
+    ],
+    ["a decrement that starts with two dashes", "--{tag};\nit('pays', () => {});", false],
+    ["a Go example, which no runner executes", "// {tag}\nfunc ExamplePays() {}", false],
+    ["no declaration after the annotation", "// {tag}\nconst value = 1;", false],
+  ] as const)("reads an annotation before %s", (_name, template, counted) => {
+    const id = "EX-0001-0001-01";
+    const tag = ["QFAI", id].join(":");
+    expect(parseCountedExampleAnnotations(template.replaceAll("{tag}", tag))).toEqual(
+      counted ? [id] : [],
+    );
   });
 
   it("rejects an EX annotation in E2E and keeps its test obligation open", () => {

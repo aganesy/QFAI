@@ -1,5 +1,3 @@
-// QFAI:EX-0004-0001-01
-// QFAI:EX-0001-0051-06
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -51,6 +49,8 @@ function model(overrides: Record<string, string> = {}) {
   return buildStoryTreeModel(files, { specsDir: specs, contractsDir: contracts });
 }
 
+// QFAI:EX-0001-0051-06
+// QFAI:EX-0004-0001-01
 describe("story-tree structure", () => {
   it("requires a Mermaid flowchart or sequence diagram in each flow file", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-flow-mermaid-"));
@@ -295,6 +295,42 @@ describe("story-tree structure", () => {
 
   it("accepts a linked story, example, rule and the four-column registers", () => {
     expect(validateStoryTreeStructureModel(model())).toEqual([]);
+  });
+
+  // QFAI:EX-0001-0053-07
+  it("reports a cited decision or successor that no row declares", () => {
+    const rule = (statement: string) =>
+      `# QFAI-CONTRACT-ID: API-0001\nx-qfai-rules:\n  - id: BR-0001-0001\n    statement: ${statement}\n    examples: [EX-0001-0001-01]`;
+    const register = (rows: string) =>
+      `| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n${rows}`;
+    const dangling = validateStoryTreeStructureModel(
+      model({
+        [`${contracts}/api/checkout.yaml`]: rule(
+          "Approved by DEC-0008, again DEC-0008, then OQ-0002, not DEC-0001-0002",
+        ),
+        [`${specs}/decisions.md`]: register(
+          "| DEC-0001 | Old | Kept | SUPERSEDED (by DEC-0009) |\n| DEC-0002 | Narrowed | Kept | PARTLY SUPERSEDED (by DEC-0010) |",
+        ),
+      }),
+    ).filter((item) => item.code === "QFAI-STORY-003");
+    expect(dangling.map((item) => item.refs)).toEqual([
+      ["BR-0001-0001", "DEC-0008"],
+      ["BR-0001-0001", "OQ-0002"],
+      ["DEC-0001", "DEC-0009"],
+      ["DEC-0002", "DEC-0010"],
+    ]);
+    expect(dangling.every((item) => item.severity === "error")).toBe(true);
+
+    const declared = validateStoryTreeStructureModel(
+      model({
+        [`${contracts}/api/checkout.yaml`]: rule("Approved by DEC-0008 and OQ-0001"),
+        [`${specs}/decisions.md`]: register(
+          "| DEC-0001 | Old | Kept | SUPERSEDED (by DEC-0009) |\n| DEC-0002 | Narrowed | Kept | PARTLY SUPERSEDED (by DEC-0009) |\n| DEC-0008 | A | B | DONE |\n| DEC-0009 | C | D | DONE |",
+        ),
+        [`${specs}/open-questions.md`]: register("| OQ-0001 | Q | A | DEFERRED |"),
+      }),
+    );
+    expect(declared).toEqual([]);
   });
 
   it("checks flow and story index membership against declarations", () => {

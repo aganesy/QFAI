@@ -44,12 +44,6 @@
  * because the two files had already diverged on the profile they ran, so no mirror existed to
  * lose. Recording the absent mirror would overstate what the deletion takes away.
  */
-// QFAI:EX-0002-0020-04
-// QFAI:EX-0002-0020-04
-// QFAI:EX-0002-0014-09
-// QFAI:EX-0002-0014-10
-// QFAI:EX-0002-0018-09
-// QFAI:EX-0002-0019-05
 
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -114,6 +108,11 @@ function decisionSection(id: string): string {
   );
 }
 
+// QFAI:EX-0002-0014-09
+// QFAI:EX-0002-0014-10
+// QFAI:EX-0002-0018-09
+// QFAI:EX-0002-0019-05
+// QFAI:EX-0002-0020-04
 describe("TC-0017-0074 (TDD-0074): deleting the copy with no shipped-set gate is rejected", () => {
   it("records the retirement with the gate named and the cost stated as the lost cross-check", () => {
     const section = decisionSection(RETIREMENT_DR);
