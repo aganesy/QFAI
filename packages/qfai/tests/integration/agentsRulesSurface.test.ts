@@ -532,6 +532,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /#123|GH-123/,
         /git (history|log)/,
         /PostToolUse/,
+        /Spec-tree IDs/,
         /State\s+the\s+point\s+directly,\s+not\s+through\s+a\s+metaphor\s+or\s+a\s+flourish/,
       ]) {
         expect(text).toMatch(clause);

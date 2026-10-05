@@ -130,6 +130,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The documentation-clarity rule says where spec-tree IDs may appear** (#3002).
+  IDs the project's own spec tree defines stay in spec-tree documents and in code
+  or test comments that point at a contract or example. Operator-facing guides
+  and shipped files describe the rule in words instead.
+
 - **The `qfai-run` entry skill has room for another step** (#2966). The text
   for a release, decision or branch point moves into a new reference,
   `references/stage-points.md`, which the skill points to at each step. The
