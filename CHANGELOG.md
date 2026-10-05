@@ -75,7 +75,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `AC-0003-0004-01` gains a deprecated `paths.promptsDir` warning case.
   The BF-0003 full pin keeps only `AC-0003-0006-01` and `AC-0003-0006-03`.
   Refs #2367.
-
+- **Configure and web research follow the shared delegation rules alone**
+  (#2857). Both skills carried empty override stanzas, and configure restated
+  the failure handling. A failed delegation is now classified and handled only
+  as the shared delegation baseline sets out.
 - **A DONE change request claims every action it lists** (#2312). A
   `decisions.md` row has one Status, so a request with one action deferred could
   be marked DONE and the deferred action dropped from view. The drift protocol
