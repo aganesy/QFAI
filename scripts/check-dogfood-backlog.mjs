@@ -200,6 +200,23 @@ function fail(message) {
   process.exit(1);
 }
 
+/**
+ * The commands a re-pin takes, one per line, in the order they run.
+ *
+ * The backlog file is a pinned guard input, so rewriting it moves its digest.
+ * The guard bytes are resealed next, and the verification bodies last, because
+ * resealing the guard bytes rewrites the workflow step those bodies digest.
+ */
+export function repinSteps(profile) {
+  return [
+    `node scripts/check-dogfood-backlog.mjs --profile ${profile} --pin`,
+    "node scripts/pin-guard-bytes.mjs",
+    "node scripts/pin-verification-bodies.mjs",
+  ]
+    .map((step) => `  ${step}`)
+    .join("\n");
+}
+
 function readProfile() {
   const at = process.argv.indexOf("--profile");
   const value = at === -1 ? "" : (process.argv[at + 1] ?? "");
@@ -282,7 +299,7 @@ function main() {
     console.error(
       `check-dogfood-backlog: the ${profile} pin holds ${String(counted.length)} invalid file entry/entries. ` +
         "Each file must hold finding counts as a positive safe integer. Re-pin the profile:\n\n" +
-        `  node scripts/check-dogfood-backlog.mjs --profile ${profile} --pin`,
+        repinSteps(profile),
     );
     process.exit(1);
   }
@@ -314,7 +331,7 @@ function main() {
     );
     if (unpinned.length > 0 || over.length > 0) {
       console.error(
-        `Fix the rows the findings name, then re-pin with \`node scripts/check-dogfood-backlog.mjs --profile ${profile} --pin\`.`,
+        "Fix the rows the findings name, then re-pin in the same change:\n\n" + repinSteps(profile),
       );
     }
     if (diffDependent.length > 0) {
@@ -332,7 +349,7 @@ function main() {
     for (const [file, key, allowed, n] of improved) {
       console.error(`  ${file}: ${key}: ${String(allowed)} -> ${String(n)}`);
     }
-    console.error(`\n  node scripts/check-dogfood-backlog.mjs --profile ${profile} --pin`);
+    console.error(`\n${repinSteps(profile)}`);
     process.exit(1);
   }
 

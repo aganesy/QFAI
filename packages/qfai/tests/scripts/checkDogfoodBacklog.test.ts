@@ -14,6 +14,7 @@
  * depending on this repository's current backlog.
  */
 import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -58,6 +59,7 @@ type Guard = {
   ) => Array<{ code?: string; message?: string }>;
   invalidPinnedFiles: (pinned: Record<string, unknown>) => string[];
   pinEntry: (found: Found) => Pinned;
+  repinSteps: (profile: string) => string;
 };
 
 /**
@@ -401,6 +403,32 @@ describe("errorsForFile", () => {
     );
 
     expect(findings).toEqual([{ code: "E-NEW", message: "new problem" }]);
+  });
+});
+
+describe("repinSteps", () => {
+  // The backlog file is a pinned guard input. A message naming only `--pin`
+  // leaves its digest stale, and the lint lane fails on it after the re-pin.
+  it.each(["tdd", "sdd", "full"])(
+    "names the backlog re-pin for %s, then the guard bytes, then the verification bodies",
+    async (profile) => {
+      const { repinSteps } = await load();
+
+      expect(repinSteps(profile).split("\n")).toEqual([
+        `  node scripts/check-dogfood-backlog.mjs --profile ${profile} --pin`,
+        "  node scripts/pin-guard-bytes.mjs",
+        "  node scripts/pin-verification-bodies.mjs",
+      ]);
+    },
+  );
+
+  it("names only scripts that exist", async () => {
+    const { repinSteps } = await load();
+
+    for (const step of repinSteps("tdd").split("\n")) {
+      const script = step.trim().split(" ")[1] ?? "";
+      expect(existsSync(path.join(repoRoot, script)), script).toBe(true);
+    }
   });
 });
 

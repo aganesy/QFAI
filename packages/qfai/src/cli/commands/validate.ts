@@ -3,6 +3,7 @@ import path from "node:path";
 
 import type { FailOn, OutputFormat } from "../../core/config.js";
 import { loadConfig } from "../../core/config.js";
+import { isEnoent } from "../../core/fs/errno.js";
 import { normalizeValidationResult } from "../../core/normalize.js";
 import { isStoryTreeId } from "../../core/storyTree/ids.js";
 import { buildCiProfileIssue } from "../../core/phasePolicy.js";
@@ -58,8 +59,11 @@ async function pathExists(p: string): Promise<boolean> {
   try {
     await stat(p);
     return true;
-  } catch {
-    return false;
+  } catch (error: unknown) {
+    // Only a missing path is absence. An unreadable one (EACCES, EIO, ...) is not
+    // evidence the file is missing, so it reaches the caller unchanged.
+    if (isEnoent(error)) return false;
+    throw error;
   }
 }
 
