@@ -25,7 +25,7 @@ describe("a gate the project runs in CI only is recorded as delegated", () => {
       expect(repoGate).toContain("`CI only: <check name>`");
       expect(repoGate).toContain("recorded DELEGATED with its CI check");
       expect(commit).toContain("recorded `DELEGATED` does not stop the commit");
-      expect(contract).toContain('{ name, status: "DELEGATED", check, ci }');
+      expect(contract).toContain('recorded `"DELEGATED"` with its `check` and `ci`');
       expect(contract).toContain('A `"red"` check makes the top-level `status` `"FAIL"`');
     });
   }

@@ -81,3 +81,20 @@ check, which runs on the pull request: it is not a pass, and it is not a
 failure until that check is red. `FAIL` and `UNRUN` go in the stop report with
 the reason and the retry condition. Do not weaken a profile, lower `--fail-on`,
 waive an error or invent a result to reach `PASS`.
+
+## A failure that predates the change
+
+Before a failing gate is attributed to the change, run it again on the base
+commit: the revision the change branched from, in a clean checkout that holds
+none of the change. Build it the same way, so a failure that needs a build is
+not read from a stale one.
+
+| Base result                            | Record                                       |
+| -------------------------------------- | -------------------------------------------- |
+| The same failures                      | `FAIL`, baseline `same`: it predates the run |
+| Fewer, other or no failures            | `FAIL`, baseline `different`: the run's own  |
+| The gate cannot run on the base either | `FAIL`, baseline `unrun`, with the reason    |
+
+The comparison is between the failing tests or findings, not the exit code.
+The result stays `FAIL`; a baseline of `same` explains it and never turns it
+into a pass. The run did not cause it, so it is reported and not repaired.

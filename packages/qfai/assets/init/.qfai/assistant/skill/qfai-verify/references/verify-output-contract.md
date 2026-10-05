@@ -13,16 +13,23 @@ Canonical path: `.qfai/report/verify.json` (NOT `.qfai/output/`). Create the `.q
 | `flowId`     | string           | no       | The business flow this run targeted, when scoped to one (e.g. `"BF-0001"`).                                                                             |
 | `recordedAt` | ISO-8601 string  | no       | When the run completed.                                                                                                                                 |
 | `summary`    | string           | no       | One or two sentences an operator can read without opening the stage report.                                                                             |
-| `gates`      | array of objects | no       | Per-gate results: `{ name, status, command }`. Advisory; no reader gates on it today.                                                                   |
+| `gates`      | array of objects | no       | Per-gate results: as set out below. Advisory; no reader gates on it today.                                                                              |
 
 `status` is a closed two-value enum: `"PASS"` / `"FAIL"`. There is no `"WARN"` — a run with only `warning` / `info` findings is `"PASS"` (waivers apply to those severities only). Any `error` finding makes it `"FAIL"`.
 
-A gate the project runs in CI only is recorded in `gates` as
-`{ name, status: "DELEGATED", check, ci }`. `check` names the CI check that runs it, and `ci` is
-`"green"`, `"red"` or `"pending"`, the state of that check when the file is written.
-A `"red"` check makes the top-level `status` `"FAIL"`. A `"pending"` one does not, and `summary`
-names it, so a reader sees what the run left to CI. A gate that can run here is never delegated to
-avoid running it.
+Each entry of `gates` is `{ name, status, command }`, plus these optional fields:
+
+| Field      | Type   | Meaning                                                                                                                           |
+| ---------- | ------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| `status`   | string | `"PASS"`, `"FAIL"`, `"UNRUN"` or `"DELEGATED"`. `"UNRUN"` is a gate with no command, launcher or environment; it is never a pass. |
+| `baseline` | string | On a `"FAIL"`: `"same"` when the base commit fails identically, `"different"` when it does not, `"unrun"` when it cannot run.     |
+| `reason`   | string | On an `"UNRUN"` gate, or a `baseline` of `"unrun"`: what is missing.                                                              |
+| `check`    | string | On a `"DELEGATED"` gate: the CI check that runs it.                                                                               |
+| `ci`       | string | On a `"DELEGATED"` gate: `"green"`, `"red"` or `"pending"`, the state of that check when the file is written.                     |
+
+A gate the project runs in CI only is recorded `"DELEGATED"` with its `check` and `ci`. A `"red"` check makes the top-level `status` `"FAIL"`. A `"pending"` one does not, and `summary` names it, so a reader sees what the run left to CI. A gate that can run here is never delegated to avoid running it.
+
+A gate that fails identically on the base, or did not run and is not delegated, still makes the top-level `status` `"FAIL"`. The fields let a reader tell it from a failure the run caused.
 
 `scope` is a closed enum. Write the one that matches the stage you were invoked for:
 

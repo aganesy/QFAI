@@ -67,6 +67,30 @@ Independent questions go in one round; a dependent one waits for its answer.
 - Under a no-question mode nothing is asked. `SKILL.md` says what is done
   instead.
 
+## A step only a person can take
+
+A change can depend on an action outside the repository that only the user can
+take: a setting in a hosted dashboard, or a credential issued in a service's
+web console. The plan stays the repository change. The work stops before the
+stage that needs the action and says three things:
+
+- what the user must do, in plain words, and where;
+- what shows it was done;
+- what the agent will read to check it, which changes nothing: a status page, a
+  listing, a repository check.
+
+Put it as one question that ends the turn, in the form
+`.agents/rules/user-questions.md` sets out. The options are that the user did
+it, and `stop`.
+
+- The agent never types a password, token or key, and never changes an account
+  or service setting. The user does both in the service's own page.
+- The agent reads only the evidence it named. It reports the action as
+  confirmed or not confirmed, and goes on after it only when confirmed or the
+  user says to go on.
+- Under a no-question mode nothing is asked. The work that does not depend on
+  the action goes on, and the final report lists the action as not done.
+
 ## Halt notice
 
 One notice when the work stops before its end:
