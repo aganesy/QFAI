@@ -46,10 +46,6 @@ async function makeUiContract(filename: string, content: string): Promise<void> 
   await writeFile(path.join(uiDir, filename), content, "utf-8");
 }
 
-// QFAI:EX-0001-0154-01
-// QFAI:EX-0001-0154-02
-// QFAI:EX-0001-0155-01
-// QFAI:EX-0001-0155-02
 describe("spec-0013 active-pack resolver CHG-006", () => {
   // QFAI:EX-0001-0154-01
   it("QFAI:EX-0001-0154-01 — normal: the single helper returns the pack named in state.json#discussion.currentId", async () => {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { parseCountedExampleAnnotations } from "../../../../src/core/storyTree/ids.js";
 import { buildStoryTreeModel } from "../../../../src/core/storyTree/tree.js";
 import { validateStoryTreeObligationsModel } from "../../../../src/core/validators/storyTreeObligations.js";
 
@@ -96,6 +97,38 @@ describe("story-tree test obligations", () => {
     expect(missing(inBody)).toBe(true);
     expect(missing(beforeIt)).toBe(false);
     expect(missing(beforeEach)).toBe(false);
+  });
+
+  // QFAI:EX-0001-0056-14
+  it.each([
+    ["a vitest call", "// {tag}\nit('pays', () => {});", true],
+    ["a modified vitest call", "// {tag}\ntest.each([1])('%s', () => {});", true],
+    ["a block comment line", "/* {tag} */\ndescribe.skip('pays', () => {});", true],
+    ["an RSpec block", "# {tag}\nit 'pays' do\nend", true],
+    ["a Python test function", "# {tag}\ndef test_pays():\n    pass", true],
+    ["a Go test function", "// {tag}\nfunc TestPays(t *testing.T) {}", true],
+    ["a Gherkin scenario", "# {tag}\nScenario: pays", true],
+    ["a Rust test attribute", "// {tag}\n#[test]\nfn pays() {}", true],
+    ["a C# test attribute", "// {tag}\n[Fact]\npublic void Pays() {}", true],
+    [
+      "a statement between the annotation and the test",
+      "// {tag}\nsetup();\nit('pays', () => {});",
+      false,
+    ],
+    [
+      "code after a block comment on the same line",
+      "/* {tag} */ setup();\nit('pays', () => {});",
+      false,
+    ],
+    ["a decrement that starts with two dashes", "--{tag};\nit('pays', () => {});", false],
+    ["a Go example, which no runner executes", "// {tag}\nfunc ExamplePays() {}", false],
+    ["no declaration after the annotation", "// {tag}\nconst value = 1;", false],
+  ] as const)("reads an annotation before %s", (_name, template, counted) => {
+    const id = "EX-0001-0001-01";
+    const tag = ["QFAI", id].join(":");
+    expect(parseCountedExampleAnnotations(template.replaceAll("{tag}", tag))).toEqual(
+      counted ? [id] : [],
+    );
   });
 
   it("rejects an EX annotation in E2E and keeps its test obligation open", () => {

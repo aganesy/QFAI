@@ -106,7 +106,9 @@ export function nextId(
   return `${prefix}${String(highest + 1).padStart(width, "0")}`;
 }
 
-const COMMENT_LINE = /^(?:\/\/|\/\*|\*|#(?!\[)|--|<!--)/;
+// A line that is only a comment: code after a closing `*/` or `-->` makes it a code line.
+const COMMENT_LINE =
+  /^(?:\/\/|\*|#(?!\[)|--(?:\s|$)|\/\*(?:(?!\*\/).)*(?:\*\/)?$|<!--(?:(?!-->).)*(?:-->)?$)/;
 const TEST_DECLARATION = [
   // vitest, jest, mocha, Playwright, node:test, with chained modifiers and type arguments.
   /^(?:it|test|describe|suite|context|specify|bench)(?:\.\w+)*\s*[(`<]/,
@@ -114,7 +116,7 @@ const TEST_DECLARATION = [
   /^(?:it|specify|describe|context|test)\s+["']/,
   /^(?:async\s+)?def\s+test/,
   /^class\s+Test/,
-  /^func\s+(?:Test|Fuzz|Benchmark|Example)/,
+  /^func\s+(?:Test|Fuzz|Benchmark)/,
   /^(?:Feature|Rule|Scenario(?: Outline)?|Example):/,
   // A test attribute or decorator opens the declaration it marks.
   /^(?:@\w*Test\b|@pytest\.mark\.|#\[(?:\w+::)*test\b|\[(?:Fact|Theory|Test|TestMethod|TestCase)\b)/,
@@ -128,15 +130,20 @@ const TEST_DECLARATION = [
  * it covers nothing.
  */
 export function parseCountedExampleAnnotations(text: string): string[] {
-  const lines = text.split(/\r?\n/);
+  const lines = text.split(/\r?\n/).map((line) => line.trim());
   const counted = new Set<string>();
+  // For each line, the first later line that is neither blank nor a comment.
+  const nextCode: Array<string | undefined> = [];
+  let upcoming: string | undefined;
+  for (let index = lines.length - 1; index >= 0; index -= 1) {
+    nextCode[index] = upcoming;
+    const line = lines[index] ?? "";
+    if (line !== "" && !COMMENT_LINE.test(line)) upcoming = line;
+  }
   for (const [index, line] of lines.entries()) {
     const ids = [...line.matchAll(STORY_TEST_ANNOTATIONS.EX)].map((match) => match[1] ?? "");
-    if (ids.length === 0 || !COMMENT_LINE.test(line.trim())) continue;
-    const next = lines
-      .slice(index + 1)
-      .map((candidate) => candidate.trim())
-      .find((candidate) => candidate !== "" && !COMMENT_LINE.test(candidate));
+    if (ids.length === 0 || !COMMENT_LINE.test(line)) continue;
+    const next = nextCode[index];
     if (next === undefined || !TEST_DECLARATION.some((pattern) => pattern.test(next))) continue;
     for (const id of ids) if (id) counted.add(id);
   }
