@@ -25,6 +25,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The `qfai-run` entry reminder stays silent on a turn the host starts
+  (#2989).** The Claude Code `UserPromptSubmit` hook that sends a request to
+  `qfai-run` printed on every notification, so an agent could start a run from
+  one. It now prints nothing when a line of the prompt opens with
+  `<task-notification>`, `<wake>` or `[SYSTEM NOTIFICATION`, and the
+  question-form reminder skips the same header. A prompt with no such line, and
+  input it cannot read, still get the reminder. `qfai init` replaces an unedited
+  copy of either earlier group.
+
 - **The free-text entry reminder points a worktree session at its own copy of
   `qfai-run`.** The host can load the skill from the main checkout, which may
   lag the worktree, so the reminder now tells the agent to read
