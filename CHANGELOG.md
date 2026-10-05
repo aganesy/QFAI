@@ -49,6 +49,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The init skill-link test compares where each link resolves.** It matched
+  the trailing text of the raw link target, so a dangling link, or one into a
+  copy outside the project, passed. It now compares the resolved path of each
+  link with that of the canonical skill directory. Fixes #2230.
+
 - **A verify run tells a failure that predates the change from one it caused.**
   A failing gate is now run again on the base commit, and the result is
   recorded in the `gates` of `verify.json` as a `baseline` of `same`,
