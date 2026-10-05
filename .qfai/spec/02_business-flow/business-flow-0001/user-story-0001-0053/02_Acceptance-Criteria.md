@@ -12,7 +12,7 @@ Feature: Decision and open-question table validation
 
   # AC-0001-0053-02
   Scenario: A Status outside the vocabulary is reported
-    Given the story tree, and a row whose Status is outside its table's vocabulary — TODO, WIP or DONE in both tables, plus `SUPERSEDED (by DEC-NNNN)` and REJECTED in `decisions.md`, and DEFERRED in `open-questions.md`
+    Given the story tree, and a row whose Status is outside its table's vocabulary — TODO, WIP or DONE in both tables, plus `SUPERSEDED (by DEC-NNNN)`, `PARTLY SUPERSEDED (by DEC-NNNN)` and REJECTED in `decisions.md`, and DEFERRED in `open-questions.md`
     When `qfai validate --profile sdd` runs
     Then an error names the file and the row ID
     And a SUPERSEDED Status not written as `SUPERSEDED (by DEC-NNNN)` is outside the vocabulary
