@@ -7,7 +7,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 ### Changed
 
 - **The repository's scans lane refuses a tracked file under `.qfai/report/`,
-  `.qfai/evidence/`, `.qfai/review/` or `.qfai/output/`.** The managed
+  `.qfai/evidence/`, `.qfai/review/`, `.qfai/output/`, `.qfai/discussion/` or
+  `.qfai/review_archive/`.** The managed
   `.gitignore` block ignores those directories whole, but an ignore entry does
   not untrack a file added before it or with `git add -f`, and every later
   `qfai validate` then dirtied the tree. The guard that already refused a

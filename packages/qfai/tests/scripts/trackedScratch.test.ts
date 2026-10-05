@@ -148,10 +148,11 @@ describe("nothing under the scratch directory is tracked", () => {
 
   it("guards exactly the directories the managed .gitignore block ignores whole", async () => {
     const gitignore = await readFile(path.join(repoRoot, ".gitignore"), "utf-8");
-    const lines = gitignore.split(/\r?\n/);
-    for (const dir of GENERATED_DIRS) {
-      expect(lines, dir).toContain(`${dir}/*`);
-    }
+    const ignoredWhole = gitignore
+      .split(/\r?\n/)
+      .filter((line) => /^\.qfai\/[^/]+\/\*$/.test(line))
+      .map((line) => line.slice(0, -"/*".length));
+    expect([...GENERATED_DIRS].sort()).toEqual(ignoredWhole.sort());
   });
 
   it("holds this repository", () => {

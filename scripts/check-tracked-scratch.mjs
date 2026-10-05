@@ -4,14 +4,13 @@
  * Two kinds of directory hold nothing the repository owns:
  *
  * - `tmp/`, the sole staging area for scratch output;
- * - the directories qfai writes generated output to — `.qfai/report/`,
- *   `.qfai/evidence/`, `.qfai/review/` and `.qfai/output/` — which the managed
- *   `.gitignore` block ignores whole.
+ * - the directories qfai and its stages write local records and generated
+ *   output to, which the managed `.gitignore` block ignores whole.
  *
  * `.gitignore` lists each of them, which is why the rule reads as held — but an
- * ignore rule does not stop tracking a file that is already tracked, so a file
- * added before the entry, or with `git add -f`, stays in the index and
- * `git status` never mentions it again.
+ * ignore rule does not untrack a file that is already tracked, so a file added
+ * before the entry, or with `git add -f`, stays in the index and the ignore
+ * entry no longer applies to it.
  *
  * What that costs differs by kind. A contributor who finds a file under `tmp/`
  * cannot tell whether it is someone's leftover or repository content. A tracked
@@ -43,12 +42,20 @@ export const SCRATCH_PREFIX = "tmp/";
 const SCRATCH_PATHSPEC = "tmp";
 
 /**
- * The directories qfai writes generated output to, as git pathspecs.
+ * The directories qfai writes local records and generated output to, as git
+ * pathspecs.
  *
- * Each one is ignored whole by a `<dir>/*` line of the managed `.gitignore`
- * block; `trackedScratch.test.ts` holds the two lists together.
+ * Each one is ignored whole by a `.qfai/<dir>/*` line of the managed
+ * `.gitignore` block; `trackedScratch.test.ts` holds the two lists together.
  */
-export const GENERATED_DIRS = [".qfai/report", ".qfai/evidence", ".qfai/review", ".qfai/output"];
+export const GENERATED_DIRS = [
+  ".qfai/report",
+  ".qfai/evidence",
+  ".qfai/review",
+  ".qfai/output",
+  ".qfai/discussion",
+  ".qfai/review_archive",
+];
 
 /**
  * Tracked paths under the given pathspecs, or `null` when git cannot answer.
