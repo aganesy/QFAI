@@ -1,7 +1,7 @@
 ---
 name: qfai-grilling
 title: QFAI Grilling (Design interrogation)
-description: "Interrogate an unfixed design in rounds: a tree of open decisions, a frontier of the ones answerable now, facts read rather than asked, and an end condition the user holds."
+description: "Interrogate an unfixed design in rounds: a tree of open decisions, a frontier of the ones answerable now, facts read rather than asked, and an end condition the user holds. Use when a stage calls for a grilling session, or when asked to grill or stress-test a design."
 allowed-tools: [Read, Glob, Grep, Bash, TodoWrite, Task, Agent]
 mode: interactive-by-default
 ---

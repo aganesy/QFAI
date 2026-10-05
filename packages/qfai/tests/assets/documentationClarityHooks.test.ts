@@ -225,14 +225,16 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
         }
       }
     }
-    // Four readers. One prints the named message. One looks for this checkout's
-    // launcher first and prints only where there is none. One reads the hook's own
-    // input first and prints only for a command that names the forge, which is
-    // what lets a `Bash` matcher exist at all. One reads the prompt and stays
-    // silent on a turn the host started rather than the user typed. A fifth would
-    // mean a reminder had grown logic of its own, which is the thing kept out of
-    // this file.
-    expect(readers.size, "a reminder runs one of the four pinned readers").toBe(4);
+    // Five readers. One prints the named message. One does the same but prints
+    // only on the first call of a session and on every twentieth after it, which
+    // is how a reminder on every write stays out of the way. One looks for this
+    // checkout's launcher first and prints only where there is none. One reads
+    // the hook's own input first and prints only for a command that names the
+    // forge, and then counts like the second, which is what lets a `Bash` matcher
+    // exist at all. One reads the prompt and stays silent on a turn the host
+    // started rather than the user typed. A seventh would mean a reminder had
+    // grown logic of its own, which is the thing kept out of this file.
+    expect(readers.size, "a reminder runs one of the five pinned readers").toBe(5);
     for (const reader of readers) {
       expect(reader).toContain("process.argv[1]");
       expect(reader).toContain("process.argv[2]");
