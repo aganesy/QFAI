@@ -69,7 +69,9 @@ appends no row. Do not write a second decision-record
 directory or a retired story file.
 
 Put each approval-required operation to the user before anything depends on
-it. `--auto` asks no questions and never supplies its own approval; stop
+it. A request from the user in the session that names the operation and its
+effect is that approval: list the files in the announcement and ask nothing
+more. `--auto` asks no questions and never supplies its own approval; stop
 before the dependent write and report pending approvals.
 
 ### UI-bearing flows

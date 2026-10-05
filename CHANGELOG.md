@@ -110,6 +110,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **A request that names the exact change is the approval** (#2991). When
+  the user asks in the session for a change to a story-tree or contract file and
+  names the change and its effect, `sdd-triage` lists the files in its
+  announcement and asks no second question, and records the request as the
+  option chosen. The same request shows acceptance, so `qfai-run` does not set
+  the `decision` flag for it.
+
 - **A mutation proof belongs to one example** (#2409). The `qfai-implement`
   oracle-strength reference now says what to do when one mutation fails tests
   annotated with different examples: record each failing assertion and the
