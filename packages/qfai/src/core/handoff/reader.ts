@@ -81,18 +81,15 @@ export class HandoffReader {
     }
 
     const missing = REQUIRED_KEYS.filter((key) => !(key in parsed));
-    if (missing.length > 0) {
-      // eslint-disable-next-line no-console -- intentional error logging for missing keys
-      console.error(`[HandoffReader] Missing required keys: ${missing.join(", ")}`);
-      return null;
+    if (missing.length === 0 && isHandoffArtifact(parsed)) {
+      return parsed;
     }
-
-    if (!isHandoffArtifact(parsed)) {
-      // eslint-disable-next-line no-console -- intentional error logging for malformed fields
-      console.error("[HandoffReader] Invalid artifact: a field has the wrong type");
-      return null;
-    }
-
-    return parsed;
+    // eslint-disable-next-line no-console -- intentional error logging for missing keys and malformed fields
+    console.error(
+      missing.length > 0
+        ? `[HandoffReader] Missing required keys: ${missing.join(", ")}`
+        : "[HandoffReader] Invalid artifact: a field has the wrong type",
+    );
+    return null;
   }
 }
