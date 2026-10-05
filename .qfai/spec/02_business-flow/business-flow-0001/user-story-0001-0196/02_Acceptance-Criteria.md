@@ -110,4 +110,11 @@ Feature: Install or upgrade and get the free-text entry
     And a project with a launcher in its own checkout, or below a git root that holds one, prints nothing
     And a launcher in a directory above the git root does not count
     And each Codex line prints the same through `sh`, `cmd.exe` and PowerShell
+
+  # AC-0001-0196-15
+  Scenario: Init seeds a union merge for the two registers
+    Given a fresh project with no `.gitattributes`
+    When `qfai init` runs
+    Then `.gitattributes` sets `merge=union` on `.qfai/spec/decisions.md` and `.qfai/spec/open-questions.md`, and on no other path
+    And an existing `.gitattributes` is left as it is
 ```
