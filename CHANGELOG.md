@@ -121,6 +121,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   turned `main` red. A tag on the commit being checked is now the release being
   cut and does not make its section released (#2945).
 
+- **A padded or blank test glob selects the same files in every scan.** The
+  story-tree test scan and the spec-to-story annotation rewrite read
+  `validation.traceability.testFileGlobs` and `testFileExcludeGlobs` as written,
+  while the other scans trimmed them. All of them now trim whitespace at either
+  end of an entry, including after the `!` of an exclusion, and skip a blank
+  entry. Whitespace inside a path component is kept; a path that begins or ends
+  with a space is matched with `?` or `[ ]`. A leading `!(` extglob is read as a
+  pattern, not an exclusion. Fixes #2902.
+
 - **The migration skill cites its shared rules by full path.** The
   delegation-baseline and test-layers pointers started at `rule/`, so they did
   not resolve from the project root. Both now begin at `.qfai/assistant/rule/`.
