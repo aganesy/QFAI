@@ -3,7 +3,7 @@ name: triage-answer
 owner: qfai-triage
 purpose: "Answer the request's question, citing the documents, code or diagnosis evidence that shows the answer, without changing any tracked file."
 requires: []
-roles: [discovery-analyst, completion-reviewer]
+roles: [discovery-analyst]
 routing-profile: default
 ---
 

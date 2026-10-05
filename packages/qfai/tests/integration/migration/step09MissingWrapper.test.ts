@@ -21,7 +21,7 @@ import {
 } from "../../../src/migration/specToStory/harness.js";
 import { step09 } from "../../../src/migration/specToStory/step09RepointLinks.js";
 
-const PLURAL_TARGET = path.join("..", "..", ".qfai", "assistant", "skills", "qfai-atdd");
+const PLURAL_TARGET = path.join("..", "..", ".qfai", "assistant", "skills", "qfai-implement");
 
 function contextFor(root: string): MigrationContext {
   return {
@@ -60,8 +60,8 @@ async function withInitializedProject(task: (root: string) => Promise<void>): Pr
 describe("migration link repair after interruption", () => {
   it("restores a wrapper its interrupted repoint emptied and leaves local skill content alone", async () => {
     await withInitializedProject(async (root) => {
-      const wrapper = path.join(root, ".claude", "skills", "qfai-atdd");
-      const skill = path.join(root, ".qfai", "assistant", "skill", "qfai-atdd", "SKILL.md");
+      const wrapper = path.join(root, ".claude", "skills", "qfai-implement");
+      const skill = path.join(root, ".qfai", "assistant", "skill", "qfai-implement", "SKILL.md");
       expect((await lstat(wrapper)).isSymbolicLink()).toBe(true);
       await writeFile(skill, "# local skill edit\n", "utf8");
       // The state a repoint leaves when it stops after moving the plural link
@@ -69,13 +69,15 @@ describe("migration link repair after interruption", () => {
       await rm(wrapper);
       const hold = `${wrapper}.qfai-repair-4242`;
       await mkdir(hold);
-      await symlink(PLURAL_TARGET, path.join(hold, "qfai-atdd"), "dir");
+      await symlink(PLURAL_TARGET, path.join(hold, "qfai-implement"), "dir");
 
       const first = reportingIo();
       expect(await executePlannedStep(step09, contextFor(root), false, first.io)).toBe(0);
-      expect(first.text()).toContain(".claude/skills/qfai-atdd: repoint host integration link");
+      expect(first.text()).toContain(
+        ".claude/skills/qfai-implement: repoint host integration link",
+      );
       expect(path.normalize(await readlink(wrapper))).toContain(
-        path.join(".qfai", "assistant", "skill", "qfai-atdd"),
+        path.join(".qfai", "assistant", "skill", "qfai-implement"),
       );
       await expect(lstat(hold)).rejects.toMatchObject({ code: "ENOENT" });
       expect(await readFile(skill, "utf8")).toBe("# local skill edit\n");
@@ -89,7 +91,7 @@ describe("migration link repair after interruption", () => {
 
   it("leaves a wrapper the project removed absent", async () => {
     await withInitializedProject(async (root) => {
-      const wrapper = path.join(root, ".claude", "skills", "qfai-atdd");
+      const wrapper = path.join(root, ".claude", "skills", "qfai-implement");
       await rm(wrapper);
 
       const run = reportingIo();
@@ -103,17 +105,17 @@ describe("migration link repair after interruption", () => {
   it("reports a plural link whose canonical skill is missing without repointing it", async () => {
     await withInitializedProject(async (root) => {
       const wrappers = SKILL_INTEGRATION_DIRS.map((directory) =>
-        path.join(root, directory, "qfai-atdd"),
+        path.join(root, directory, "qfai-implement"),
       );
       for (const wrapper of wrappers) {
         await rm(wrapper);
         const target = path.relative(
           path.dirname(wrapper),
-          path.join(root, ".qfai", "assistant", "skills", "qfai-atdd"),
+          path.join(root, ".qfai", "assistant", "skills", "qfai-implement"),
         );
         await symlink(target, wrapper, "dir");
       }
-      await rm(path.join(root, ".qfai", "assistant", "skill", "qfai-atdd"), {
+      await rm(path.join(root, ".qfai", "assistant", "skill", "qfai-implement"), {
         recursive: true,
       });
       const before = await Promise.all(wrappers.map((wrapper) => readlink(wrapper)));
@@ -122,7 +124,7 @@ describe("migration link repair after interruption", () => {
       expect(await executePlannedStep(step09, contextFor(root), true, preview.io)).toBe(3);
       expect(preview.text()).toContain("## For a person");
       expect(preview.text()).toContain("canonical source is missing");
-      expect(preview.text()).toContain(".claude/skills/qfai-atdd");
+      expect(preview.text()).toContain(".claude/skills/qfai-implement");
 
       const live = reportingIo();
       expect(await executePlannedStep(step09, contextFor(root), false, live.io)).toBe(3);

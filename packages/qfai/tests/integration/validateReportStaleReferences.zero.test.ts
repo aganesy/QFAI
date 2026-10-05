@@ -6,7 +6,6 @@
  * pre-implementation tokens, `validateStaleReferences` reports zero
  * issues.
  */
-// QFAI:EX-0001-0174-01
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -32,6 +31,7 @@ async function writeSkillRef(skillId: string, refName: string, body: string): Pr
   await writeFile(path.join(dir, refName), body, "utf-8");
 }
 
+// QFAI:EX-0001-0174-01
 describe("TC-0015-0032: validateStaleReferences emits zero issues when refs are rewritten", () => {
   it("returns an empty issue list when no stale token appears in any reference doc", async () => {
     await writeSkillRef("qfai-prototyping", "iteration-loop.md", "# Loop\nUses handoff.yaml.\n");

@@ -66,15 +66,14 @@ Validators that were already dead, or already missing their barrel re-export,
 when the guard was widened are grandfathered on the dated `PENDING_WIRING` /
 `BARREL_EXPORT_EXEMPT` lists in that file; both lists may only shrink.
 
-## P5. "Completion" is an artifact
+## P5. Prototyping completes on the user's confirmation
 
-The only way to claim that a prototyping run is complete is the existence
-of a valid `.qfai/evidence/prototyping/completion-certificate.json` (Phase 4).
-The certificate carries SHA-256 digests of every evidence file and is
-generated only when validate / verify / reviewer signoff all pass.
+Look and feel are the user's judgement. A prototyping run is complete when
+the user confirms the prototype, and no command, score or check certifies it.
 
 `qfai validate --profile prototyping --fail-on error` PASS does NOT mean
-"complete" — it means "validation gate cleared", which is one prerequisite.
+"complete" — it means the UI contracts and root `DESIGN.md` passed their
+checks.
 
 ## P6. Detect at six points of silence
 
@@ -82,14 +81,12 @@ The Phase 1.8.3 retrospective showed six layers all being silent at once
 (build-lint, unit, pipeline-integration, E2E, runtime, audit). The refactor
 ensures each layer has at least one preventive mechanism:
 
-| Layer      | Mechanism (Phase)                                                                |
-| ---------- | -------------------------------------------------------------------------------- |
-| build-lint | `lint:shipping` (P6)                                                             |
-| unit       | `validators-are-wired.test.ts` (P2)                                              |
-| pipeline   | wired validators in `runPrototypingValidators` (P2)                              |
-| E2E        | `prototypingE2E.test.ts`                                                         |
-| runtime    | `validateDelegationMapIssues` / drift validators / `validatePrototypingEvidence` |
-| audit      | `completion-certificate.json` digest verification (P4)                           |
+| Layer      | Mechanism (Phase)                                   |
+| ---------- | --------------------------------------------------- |
+| build-lint | `lint:shipping` (P6)                                |
+| unit       | `validators-are-wired.test.ts` (P2)                 |
+| pipeline   | wired validators in `runPrototypingValidators` (P2) |
+| runtime    | drift validators                                    |
 
 When adding new code, the contributor must ask: "if this code is silently
 broken, which layer detects it?" — and at least one layer MUST answer.
