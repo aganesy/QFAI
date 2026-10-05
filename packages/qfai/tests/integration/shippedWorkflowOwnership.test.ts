@@ -14,6 +14,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { runInit } from "../../src/cli/commands/init.js";
+import { isEnoent } from "../../src/core/fs/errno.js";
 import { QFAI_GITIGNORE_BLOCK } from "../../src/core/gitignore.js";
 import {
   RETIRED_WORKFLOW_NAMES,
@@ -44,6 +45,18 @@ function functionBody(source: string, marker: string): string {
   return source.slice(at, source.indexOf("\n}", at));
 }
 
+/** The entry names of a directory, or none where it does not exist. Any other read failure is rethrown unchanged. */
+async function namesOrNoneWhereMissing(
+  dir: string,
+  list: typeof readdir = readdir,
+): Promise<string[]> {
+  try {
+    return await list(dir);
+  } catch (error) {
+    if (isEnoent(error)) return [];
+    throw error;
+  }
+}
 describe("a workflows directory reached through a link is not this tree's to write", () => {
   /** The error codes a filesystem raises when it cannot create a link at all. */
   const UNSUPPORTED_LINK_CODES = new Set(["EPERM", "ENOTSUP", "EOPNOTSUPP"]);
@@ -111,7 +124,7 @@ describe("a workflows directory reached through a link is not this tree's to wri
 
       expect((await readdir(path.join(dir, ".qfai"))).length).toBeGreaterThan(0);
       const escaped = linked === ".github" ? path.join(outside, "workflows") : outside;
-      const escapedNames = await readdir(escaped).catch(() => [] as string[]);
+      const escapedNames = await namesOrNoneWhereMissing(escaped);
       for (const name of SHIPPED_WORKFLOW_NAMES) {
         expect(escapedNames, `${name} was written through the linked ${linked}`).not.toContain(
           name,
@@ -121,6 +134,25 @@ describe("a workflows directory reached through a link is not this tree's to wri
   }
 });
 
+describe("an absence check keeps a read failure apart from a missing directory", () => {
+  const failWith =
+    (code: string): typeof readdir =>
+    () =>
+      Promise.reject(Object.assign(new Error(`${code} on read`), { code, path: "dir" }));
+
+  it("reads a missing directory as holding no entries", async () => {
+    await expect(namesOrNoneWhereMissing("dir", failWith("ENOENT"))).resolves.toEqual([]);
+  });
+
+  for (const code of ["EACCES", "EIO"]) {
+    it(`rethrows ${code} with its code and path`, async () => {
+      await expect(namesOrNoneWhereMissing("dir", failWith(code))).rejects.toMatchObject({
+        code,
+        path: "dir",
+      });
+    });
+  }
+});
 describe("the write set is the shipped list and the listed set is the retired list", () => {
   // QFAI:AC-0002-0007-01
   // QFAI:EX-0002-0007-01
