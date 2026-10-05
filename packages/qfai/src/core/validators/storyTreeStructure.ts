@@ -277,7 +277,7 @@ function validateRuleContractNumbers(model: StoryTreeModel): Issue[] {
  * `DEC-NNNN-NNNN` from being read as its leading segment.
  */
 const CITED_RECORD_ID = /(?<![A-Za-z0-9_-])((?:DEC|OQ)-\d{4})(?![0-9-])/g;
-const SUPERSEDED_BY = /^SUPERSEDED \(by (DEC-\d{4})\)$/;
+const SUPERSEDED_BY = /^(?:PARTLY )?SUPERSEDED \(by (DEC-\d{4})\)$/;
 
 /**
  * Every decision or open question a contract rule cites, and every decision a

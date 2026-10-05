@@ -11,7 +11,7 @@
 // kill-switch to the convention (any truthy `CI`, plus `GITHUB_ACTIONS`)
 // rather than to one spelling.
 
-import { access, mkdir, mkdtemp, readFile, rm, utimes, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, utimes, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -19,6 +19,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { runAutoremediate } from "../../../../src/core/doctor/autoremediate.js";
 import { runDoctor } from "../../../../src/cli/commands/doctor.js";
+import { pathExists } from "../../../helpers/pathExists.js";
 
 const tempDirs: string[] = [];
 
@@ -50,15 +51,6 @@ async function seedStaleRunLogs(root: string): Promise<string> {
   return staleRun;
 }
 
-async function fileExists(target: string): Promise<boolean> {
-  try {
-    await access(target);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 // QFAI:EX-0003-0009-02
 describe("doctor --autoremediate CI-off / --dry-run side-effect gates", () => {
   it("CI=true short-circuits with 'autoremediate disabled in CI'", async () => {
@@ -76,7 +68,7 @@ describe("doctor --autoremediate CI-off / --dry-run side-effect gates", () => {
     expect(summary.disabledInCi).toBe(true);
     expect(summary.lines.join("\n")).toContain("autoremediate disabled in CI");
     // No prune despite the stale run log.
-    expect(await fileExists(staleRun)).toBe(true);
+    expect(await pathExists(staleRun)).toBe(true);
     expect(summary.installed).toEqual([]);
     expect(summary.prunedRunLogs).toEqual([]);
   });
@@ -114,7 +106,7 @@ describe("doctor --autoremediate CI-off / --dry-run side-effect gates", () => {
     expect(installCalls).toEqual([]);
     expect(summary.installed).toEqual([]);
     // No run-log removal: the stale run is still there.
-    expect(await fileExists(staleRun)).toBe(true);
+    expect(await pathExists(staleRun)).toBe(true);
     expect(await readFile(configPath, "utf-8")).toBe(originalConfig);
     // The plan is reported in the future tense.
     const dryRunLines = summary.lines.join("\n");
@@ -180,7 +172,7 @@ describe("doctor --autoremediate CI detection follows the convention", () => {
       yes: true,
     });
     expect(exit).toBe(0);
-    return fileExists(path.join(root, ".gitignore"));
+    return pathExists(path.join(root, ".gitignore"));
   }
 
   const ciCases: Case[] = [

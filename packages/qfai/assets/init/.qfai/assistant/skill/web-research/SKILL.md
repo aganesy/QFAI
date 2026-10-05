@@ -38,14 +38,6 @@ baseline overlap, the baseline governs.
 - The orchestrator may write the research artifact itself, or give independent searches to sub-agents that run in parallel.
 - It never approves its own work.
 
-### Capability Probe
-
-- No additional overrides.
-
-### Delegation Failure (Hard Stop)
-
-- No additional overrides.
-
 ## Work Orders Summary
 
 Every major research artifact must include a `## Work Orders Summary` table.
