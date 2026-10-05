@@ -6,6 +6,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **The seeded `.gitattributes` uses Git union merging for the two registers**
+  (#2265). A new file sets `merge=union` on `decisions.md` and
+  `open-questions.md` to keep both branches' appended lines. Validation still
+  reports duplicate IDs. Existing `.gitattributes` files remain unchanged.
+
 - **A shipped rule sets how Markdown an agent reads is sized and split**
   (#2246). Markdown stays within 500 lines and a `SKILL.md` body within 20,000
   characters. Pointers say when to read the file they name, references stay one
