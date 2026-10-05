@@ -39,7 +39,7 @@ type JsdomModule = typeof Jsdom;
  * may contain `from "jsdom"`.
  */
 let jsdomModule: JsdomModule | undefined;
-async function jsdom(): Promise<JsdomModule> {
+export async function loadJsdom(): Promise<JsdomModule> {
   jsdomModule ??= await import("jsdom");
   return jsdomModule;
 }
@@ -61,7 +61,7 @@ export async function parseHtmlMock(html: string): Promise<HtmlMockParseResult> 
     parseErrors: [],
   };
 
-  const { JSDOM } = await jsdom();
+  const { JSDOM } = await loadJsdom();
   let dom: JsdomInstance;
   try {
     dom = new JSDOM(html, { runScripts: "outside-only" });
@@ -251,7 +251,7 @@ export async function countScreenElements(html: string): Promise<ScreenElementCo
     distinctElementTypes: 0,
   };
 
-  const { JSDOM } = await jsdom();
+  const { JSDOM } = await loadJsdom();
   let dom: JsdomInstance;
   try {
     dom = new JSDOM(html);
