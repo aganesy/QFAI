@@ -182,6 +182,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   skill keeps its 150-line limit, at 135 lines instead of 150, and its
   behaviour is unchanged.
 
+- **The `change-tooling` route starts at `edit`** (#2995). A change to CI, a
+  workflow or a build script has no business flow, story or example, so the
+  `implement-diagnose` stage it began with had nothing to record and was passed
+  over. The plan is now `edit`, `note`, `verify`, and the contract rule and the
+  example that state it say the same.
+
 - **A mutation proof belongs to one example** (#2409). The `qfai-implement`
   oracle-strength reference now says what to do when one mutation fails tests
   annotated with different examples: record each failing assertion and the
