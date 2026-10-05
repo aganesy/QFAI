@@ -1244,8 +1244,8 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
   ["qfai-docs.yml", "749f4c8dde256a5627ee20906289172ab778cadb143ffcec8ac7961d8d8d3f83"],
-  ["qfai-tests.yml", "d83dfcb1d6d8408a69b73651a332cd69d3757553123d6701ef9c93464a4f9164"],
-  ["qfai-validate.yml", "c1660cacff5c30ecd91250d8bbe4f13fef1c6d2bff554fb59c03077c9db4bda0"],
+  ["qfai-tests.yml", "badee93be913cb473acf30a6f63d5fb780a1c9be70a0ee6bec8e2d9e262871e6"],
+  ["qfai-validate.yml", "9ed17cf765af243fffe54f4185904f2daa4d9a695eb05405aa9b908bd95604da"],
 ]);
 
 /** The bytes of a shipped file. Nothing is normalized, and the parameter is a Buffer for that reason. */
@@ -1392,10 +1392,9 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // asks for, and a project reads them in the language and the spelling its
   // neighbours in the same seeded tree use.
   //
-  // Derived by running the command into a temp root and hashing what it wrote.
-  // The comment block is the whole delta: the rule lines are byte-identical to
-  // the ones `c428b147…` covered.
-  [".gitattributes", "8787db9bb4011d5461314183735ba22d84390d6008d73322ddf18fbc00ff7ff1"],
+  // This digest covers the seed's raw UTF-8/LF bytes, including both union rules.
+  // `qfai init` copies those bytes only when the destination does not exist.
+  [".gitattributes", "495f9358f92c82ebebea3f5c9d6f391f6cea6b540749593fc47339c62340dbaf"],
   // The shipped `.gitignore` IS the generated managed block, so every line of it
   // moves this digest by construction. The block ignores `.qfai/evidence/` whole
   // and re-includes nothing under it; its only negations are `!.qfai/` and the

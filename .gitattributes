@@ -16,3 +16,7 @@
 *.woff2 binary
 *.ttf binary
 *.eot binary
+
+# Keep both branches' appended register lines; validation still detects duplicate IDs.
+/.qfai/spec/decisions.md merge=union
+/.qfai/spec/open-questions.md merge=union
