@@ -154,6 +154,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Every skill the agent may select says when to select it** (#2247).
+  `qfai-configure`, `qfai-grilling`, `qfai-migration-v1-to-v2` and
+  `web-research` gain a "Use when" sentence in their `description:`.
+  `qfai-grilling` is selected when a stage calls for a session, or when asked
+  to grill or stress-test a design. A new asset test holds every skill without
+  `disable-model-invocation: true` to a "Use when" sentence, the third person,
+  1,024 characters, and a name without "anthropic" or "claude".
+
 - **The `qfai-run` entry skill has room for another step** (#2966). The text
   for a release, decision or branch point moves into a new reference,
   `references/stage-points.md`, which the skill points to at each step. The
@@ -167,6 +175,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   boundary, or have `/qfai-sdd` settle an unclear boundary in the examples. A
   shared predicate may fail several tests whose assertions each prove their own
   example.
+
 - **The orchestrator keeps working while a delegation runs** (#2244). The
   shared delegation baseline now says the orchestrator is not required to wait
   for a sub-agent. Where the host starts a delegation and returns at once,
