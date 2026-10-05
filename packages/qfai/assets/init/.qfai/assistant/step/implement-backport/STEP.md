@@ -2,15 +2,12 @@
 name: implement-backport
 owner: qfai-implement
 purpose: "Check that a merged change meets the project's backport criteria and carry it onto the release branch it names, passing that branch's gates."
-requires: [common-steering-refresh, common-gate-run, common-evidence-record]
+requires: [common-gate-run]
 roles:
   - devops-ci-engineer
   - frontend-engineer
   - backend-engineer
-  - implementation-reviewer
-  - qa-gatekeeper
-  - completion-reviewer
-routing-profile: implementation-heavy
+routing-profile: default
 ---
 
 # implement-backport
@@ -31,7 +28,9 @@ to.
    supported, and the change meets what the policy asks, such as its severity.
    When one fails, stop and report which.
 2. Branch from the release branch and apply each commit with
-   `git cherry-pick -x`, so each records where it came from.
+   `git cherry-pick -n -x`. It changes the working tree and commits nothing:
+   `verify-commit` makes the commit and names each picked commit in its
+   message.
 3. Resolve a conflict to the release branch's code. Bring in no other change
    the conflict seems to need; list it instead, and stop when the change does
    not work without it.
@@ -44,11 +43,10 @@ route asks for.
 
 - The backport branch and the files it changes, listed in `changedFiles`.
 - A record of the criteria checked, each commit picked, each conflict and how
-  it was resolved, and each gate result, written with
-  `common-evidence-record`.
+  it was resolved, and each gate result, in the stage report.
 
 ## Gate
 
 The step is done when the criteria are recorded as met, every commit is
-picked with its origin, the release branch's gates pass, nothing was pushed
-or published, and the qa-gatekeeper observed the gates.
+picked with its origin, the release branch's gates pass, and nothing was
+pushed or published.

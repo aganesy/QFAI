@@ -10,19 +10,11 @@ routing:
         mandatory_agents: [delivery-planner]
         conditional_agents: []
         parallel_groups: []
-        blocking_agents: [delivery-planner]
         rerun_policy: failed-agents-only
       - id: framing
         mandatory_agents: [discovery-analyst]
         conditional_agents: []
         parallel_groups: []
-        blocking_agents: [discovery-analyst]
-        rerun_policy: changed-scope-dependents
-      - id: review
-        mandatory_agents: [completion-reviewer]
-        conditional_agents: []
-        parallel_groups: []
-        blocking_agents: [completion-reviewer]
         rerun_policy: changed-scope-dependents
     review_profile: default
 
@@ -34,15 +26,8 @@ routing:
         mandatory_agents: [discovery-analyst, requirements-analyst]
         conditional_agents: [solution-architect, product-experience-architect]
         parallel_groups: []
-        blocking_agents: [requirements-analyst]
         rerun_policy: changed-scope-dependents
-      - id: review
-        mandatory_agents: [completion-reviewer, requirements-reviewer]
-        conditional_agents: []
-        parallel_groups: []
-        blocking_agents: [completion-reviewer, requirements-reviewer]
-        rerun_policy: changed-scope-dependents
-    review_profile: requirements-heavy
+    review_profile: default
 
   - step: discussion-pack
     phases:
@@ -50,15 +35,8 @@ routing:
         mandatory_agents: [requirements-analyst]
         conditional_agents: [solution-architect, product-experience-architect]
         parallel_groups: []
-        blocking_agents: [requirements-analyst]
         rerun_policy: changed-scope-dependents
-      - id: review
-        mandatory_agents: [completion-reviewer, requirements-reviewer]
-        conditional_agents: [architecture-reviewer]
-        parallel_groups: []
-        blocking_agents: [completion-reviewer, requirements-reviewer]
-        rerun_policy: changed-scope-dependents
-    review_profile: requirements-heavy
+    review_profile: default
 
   - step: discussion-oq
     phases:
@@ -66,15 +44,8 @@ routing:
         mandatory_agents: [requirements-analyst]
         conditional_agents: []
         parallel_groups: []
-        blocking_agents: [requirements-analyst]
         rerun_policy: changed-scope-dependents
-      - id: review
-        mandatory_agents: [completion-reviewer, requirements-reviewer]
-        conditional_agents: []
-        parallel_groups: []
-        blocking_agents: [completion-reviewer, requirements-reviewer]
-        rerun_policy: changed-scope-dependents
-    review_profile: requirements-heavy
+    review_profile: default
 
   - step: discussion-uiux
     phases:
@@ -82,12 +53,5 @@ routing:
         mandatory_agents: [product-experience-architect]
         conditional_agents: []
         parallel_groups: []
-        blocking_agents: [product-experience-architect]
         rerun_policy: changed-scope-dependents
-      - id: review
-        mandatory_agents: [completion-reviewer, product-surface-reviewer]
-        conditional_agents: []
-        parallel_groups: []
-        blocking_agents: [completion-reviewer, product-surface-reviewer]
-        rerun_policy: changed-scope-dependents
-    review_profile: ui-bearing
+    review_profile: default

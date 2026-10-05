@@ -3,7 +3,7 @@ name: triage-handoff
 owner: qfai-triage
 purpose: "Give a person the steps and preconditions of an operation only they can run, and record its result."
 requires: []
-roles: [devops-ci-engineer, completion-reviewer]
+roles: [devops-ci-engineer]
 routing-profile: default
 ---
 

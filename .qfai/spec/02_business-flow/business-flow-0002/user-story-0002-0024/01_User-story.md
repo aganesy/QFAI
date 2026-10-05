@@ -2,7 +2,7 @@
 
 ## User Story
 
-As a QFAI maintainer, I want the init and migration suites, and the control-core suites once they exist, to run on a Windows runner on every code-path pull request, so that a Windows regression in init, upgrade, path handling or the lock is caught on the pull request that causes it.
+As a QFAI maintainer, I want the init and migration suites and the workflow command suites to run on a Windows runner on every code-path pull request, so that a Windows regression in init, upgrade or path handling is caught on the pull request that causes it.
 
 ## Non-goals
 

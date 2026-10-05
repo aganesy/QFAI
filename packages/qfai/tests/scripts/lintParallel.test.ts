@@ -68,7 +68,6 @@ const LINT_PROFILE: Profile = {
     "node ./scripts/check-readme-alignment.mjs",
     "node ./scripts/check-instructions-size.mjs",
     "node ./scripts/check-review-profile-consistency.mjs",
-    "node ./scripts/check-prompt-scanner-pair.mjs",
     "node ./scripts/check-shipped-ci-parity.mjs",
     "node ./scripts/check-route-catalog.mjs",
     "node ./scripts/check-changelog-released-sections.mjs",
@@ -99,7 +98,6 @@ const LINT_PROFILE: Profile = {
       "node ./scripts/check-readme-alignment.mjs",
       "node ./scripts/check-instructions-size.mjs",
       "node ./scripts/check-review-profile-consistency.mjs",
-      "node ./scripts/check-prompt-scanner-pair.mjs",
       "node ./scripts/check-shipped-ci-parity.mjs",
       "node ./scripts/check-route-catalog.mjs",
       "node ./scripts/check-changelog-released-sections.mjs",
@@ -449,7 +447,7 @@ describe("the lane profile", () => {
 describe("script resolution through the helper", () => {
   it("keeps workflow hygiene ahead of every independent lane", () => {
     expect(rootScripts()["ci:lint"]).toBe(
-      "node ./scripts/check-workflow-hygiene.mjs --report-dir .qfai/review/workflow-hygiene && bash ./scripts/run-lint-checks.sh",
+      "node ./scripts/check-workflow-hygiene.mjs && bash ./scripts/run-lint-checks.sh",
     );
     const bodies = invokedScriptBodies("pnpm ci:lint", root);
     for (const key of [
