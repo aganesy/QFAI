@@ -11,6 +11,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { runDoctor } from "../../../../src/cli/commands/doctor.js";
+import { isRecord } from "../../../../src/core/workflow/parse.js";
 
 const tempDirs: string[] = [];
 
@@ -32,15 +33,65 @@ afterEach(async () => {
   }
 });
 
+type DoctorCheck = {
+  id: string;
+  severity: "ok" | "info" | "warning" | "error";
+  message: string;
+  details?: Record<string, unknown>;
+};
+
 type DoctorJson = {
-  checks: Array<{
-    id: string;
-    severity: "ok" | "info" | "warning" | "error";
-    message: string;
-    details?: Record<string, unknown>;
-  }>;
+  checks: DoctorCheck[];
   summary: { ok: number; info: number; warning: number; error: number };
 };
+
+const SEVERITIES = ["ok", "info", "warning", "error"] as const;
+
+function readSeverity(value: unknown): DoctorCheck["severity"] {
+  for (const severity of SEVERITIES) {
+    if (value === severity) return severity;
+  }
+  throw new Error(`doctor report check has an unknown severity: ${String(value)}`);
+}
+
+function readCheck(value: unknown): DoctorCheck {
+  if (!isRecord(value)) throw new Error("doctor report check is not an object");
+  const { id, message, details } = value;
+  if (typeof id !== "string" || typeof message !== "string") {
+    throw new Error("doctor report check lacks a string id and message");
+  }
+  const severity = readSeverity(value["severity"]);
+  if (details === undefined) return { id, severity, message };
+  if (!isRecord(details)) throw new Error(`doctor report check ${id} has non-object details`);
+  return { id, severity, message, details };
+}
+
+function readCount(summary: Record<string, unknown>, key: DoctorCheck["severity"]): number {
+  const count = summary[key];
+  if (typeof count !== "number") throw new Error(`doctor report summary.${key} is not a number`);
+  return count;
+}
+
+function parseDoctorReport(text: string): DoctorJson {
+  const parsed: unknown = JSON.parse(text);
+  if (!isRecord(parsed) || !Array.isArray(parsed["checks"]) || !isRecord(parsed["summary"])) {
+    throw new Error("doctor report lacks a checks array and a summary object");
+  }
+  const summary = parsed["summary"];
+  return {
+    checks: parsed["checks"].map(readCheck),
+    summary: {
+      ok: readCount(summary, "ok"),
+      info: readCount(summary, "info"),
+      warning: readCount(summary, "warning"),
+      error: readCount(summary, "error"),
+    },
+  };
+}
+
+async function readDoctorReport(outPath: string): Promise<DoctorJson> {
+  return parseDoctorReport(await readFile(outPath, "utf-8"));
+}
 
 async function seedManifest(root: string, skill: string, deps: string[]): Promise<void> {
   const dir = path.join(root, ".qfai", "assistant", "skill", skill);
@@ -73,7 +124,7 @@ describe("doctor --profile <skill> probes manifest runtimeDependencies", () => {
     // run over this tree exits 1. Opting out takes `--fail-on never`.
     expect(exit).toBe(1);
 
-    const data = JSON.parse(await readFile(outPath, "utf-8")) as DoctorJson;
+    const data = await readDoctorReport(outPath);
     const finding = data.checks.find((check) => check.id === "skill.runtimeDependencies");
     expect(finding).toBeDefined();
     expect(finding?.severity).toBe("error");
@@ -96,7 +147,7 @@ describe("doctor --profile <skill> probes manifest runtimeDependencies", () => {
     });
     expect(exit).toBe(0);
 
-    const data = JSON.parse(await readFile(outPath, "utf-8")) as DoctorJson;
+    const data = await readDoctorReport(outPath);
     const finding = data.checks.find((check) => check.id === "skill.runtimeDependencies");
     expect(finding).toBeDefined();
     expect(finding?.severity).toBe("ok");
@@ -123,7 +174,7 @@ describe("doctor --profile <skill> probes manifest runtimeDependencies", () => {
       outPath,
       skillProfile: "qfai-prototyping",
     });
-    const data = JSON.parse(await readFile(outPath, "utf-8")) as DoctorJson;
+    const data = await readDoctorReport(outPath);
     const finding = data.checks.find((check) => check.id === "skill.runtimeDependencies");
     expect(finding?.severity).toBe("ok");
   });
@@ -137,7 +188,7 @@ describe("doctor --profile <skill> does not report [ok] when nothing was probed"
   async function runAndFind(root: string, skill: string): Promise<DoctorJson["checks"][number]> {
     const outPath = path.join(root, ".qfai", "report", "doctor.json");
     await runDoctor({ root, rootExplicit: true, format: "json", outPath, skillProfile: skill });
-    const data = JSON.parse(await readFile(outPath, "utf-8")) as DoctorJson;
+    const data = await readDoctorReport(outPath);
     const finding = data.checks.find((check) => check.id === "skill.runtimeDependencies");
     if (!finding) throw new Error("expected a skill.runtimeDependencies check");
     return finding;
