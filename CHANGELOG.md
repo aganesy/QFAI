@@ -4,6 +4,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **`qfai validate` warns about trace marks no check reads.** In the `tdd`
+  profile, a comment line in a selected test file that carries a `QFAI:US-`,
+  `QFAI:TC-`, `QFAI:SC-` or `QFAI:SPEC-` mark raises `QFAI-STORY-014` at
+  warning, naming the file, the line and the mark. Only `QFAI:BF-`, `QFAI:AC-`
+  and `QFAI:EX-` annotations record coverage, so such a mark records nothing.
+  A mark inside a string literal is left alone. The marks this repository
+  still carried are rewritten as plain comments, and its migration fixtures
+  are excluded from the test globs (#2308).
+
 ## [2.1.0] - 2026-10-05
 
 ### Breaking changes
@@ -245,14 +256,6 @@ its code. Several commands, findings and files go with that.
 
 ### Added
 
-- **`qfai validate` warns about trace marks no check reads.** In the `tdd`
-  profile, a comment line in a selected test file that carries a `QFAI:US-`,
-  `QFAI:TC-`, `QFAI:SC-` or `QFAI:SPEC-` mark raises `QFAI-STORY-014` at
-  warning, naming the file, the line and the mark. Only `QFAI:BF-`, `QFAI:AC-`
-  and `QFAI:EX-` annotations record coverage, so such a mark records nothing.
-  A mark inside a string literal is left alone. The marks this repository
-  still carried are rewritten as plain comments, and its migration fixtures
-  are excluded from the test globs (#2308).
 - **Mutation recipes remain in example tests.** `qfai doctor` reports a
   warning when a recipe names a missing source file or original text (#2419).
   The check reads recipes and source text; it runs no mutations or tests.
