@@ -106,6 +106,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   needs the independence conditions of the parallelization policy, and an
   ordering the ledger or a seam makes mandatory still holds.
 
+- **`qa-gatekeeper` asks whether a reviewed test would survive a refactor**
+  (#2253). A test that asserts on what the contract does not name, such as a
+  private function, an internal call order or a mock of the code's own
+  collaborators, fails on a change that keeps the behaviour. The new advisory
+  refactor survival check records such a test, and names the
+  behaviour-preserving change it would fail on; a finding without one is not
+  admitted. It never returns REVISE on its own and carries no score. It reads
+  the whole of every test file the change touches, and defers a finding on a
+  test that existed before the change. The three other questions a regression
+  review asks point at the checks that already own them: the coverage gate, and
+  the proof per example in the oracle strength reference.
+
 - **Five doctor criteria now name the tests that prove them.** Existing
   integration tests carry standalone `QFAI:AC-...` comments, and
   `AC-0003-0004-01` gains a deprecated `paths.promptsDir` warning case.
