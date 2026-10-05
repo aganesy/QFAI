@@ -60,6 +60,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `different` or `unrun`. A gate that could not run is recorded `UNRUN` with
   its `reason`. The run still stops before the commit, and the final report
   lists these gates apart from the failures the run caused. Fixes #2982.
+
 - **`qfai validate` and `qfai report --run-validate` no longer read an
   unreadable legacy validate path as absent.** The check for a stale
   `.qfai/output/validate.json` treated every `stat` failure as "not on disk".
@@ -130,6 +131,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   now lists the shipped workflow files init leaves out, and `qfai validate`
   reports a value that is not a list of shipped names. The headers of
   `qfai-tests.yml` and `qfai-validate.yml` describe this. Fixes #2979.
+
+- **`qfai validate` no longer reports the one-off load of its HTML parser as an
+  over-budget run.** The parser's DOM library loaded on the first parsed block,
+  inside the mock-parse clock, and the UI/UX group's clock counted it as well. On
+  a cold disk cache that load took about 25 seconds, so both checks printed
+  `timings: over budget` on a repository with a handful of mock blocks. The load
+  now happens before the parse clock starts and is left out of the group's
+  measurement. Fixes #2997.
 
 - **A rewritten decision row no longer authorizes a protected file.** A
   `Change request:` row the base already holds could have its Content changed
