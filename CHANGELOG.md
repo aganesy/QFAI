@@ -6,6 +6,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`qfai doctor` reports assistant files older than the CLI.** After a `qfai`
+  upgrade and before `npx qfai init --force`, an installed skill can call a
+  `qfai workflow` operation the CLI no longer has. Doctor now warns under
+  `assistant.staleFiles`, lists the files and names `npx qfai init --force`. It
+  compares no file with the shipped copy and changes none (#2981).
+
 - **A shipped rule sets how Markdown an agent reads is sized and split**
   (#2246). Markdown stays within 500 lines and a `SKILL.md` body within 20,000
   characters. Pointers say when to read the file they name, references stay one

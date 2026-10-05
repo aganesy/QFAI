@@ -221,6 +221,7 @@
     "tests/integration/routeRecordsAndGates.test.ts",
     "tests/integration/initForceNoLock.test.ts",
     "tests/integration/doctorLeftovers.test.ts",
+    "tests/integration/doctorStaleAssistant.test.ts",
     "tests/helpers/doctorFixtures.ts",
     "tests/integration/shippedWorkflowPins.test.ts",
     "tests/integration/shippedWorkflowPortability.test.ts",

@@ -28,4 +28,17 @@ Feature: Legacy layout and leftover paths
     Given a project holding none of those paths
     When `qfai doctor` runs
     Then the `paths.leftovers` check is `ok`
+
+  # AC-0003-0004-05
+  Scenario: Assistant files older than the CLI are warned about
+    Given an assistant file names a `qfai workflow` operation this release does not have
+    When `qfai doctor` runs
+    Then the `assistant.staleFiles` check is a `warning` that lists the file and names `npx qfai init --force`
+    And the file is unchanged
+
+  # AC-0003-0004-06
+  Scenario: Current assistant files are not reported
+    Given no assistant file names such an operation, or the project has no assistant files
+    When `qfai doctor` runs
+    Then no `assistant.staleFiles` check is reported
 ```

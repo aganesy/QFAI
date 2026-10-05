@@ -53,6 +53,7 @@ import {
 import { checkDocsLane } from "./doctor/docsLane.js";
 import { checkMutationProofs } from "./doctor/mutationProofs.js";
 import { checkMdschemaBinary } from "./doctor/mdschemaBinary.js";
+import { checkStaleAssistant } from "./doctor/staleAssistant.js";
 import { checkWorkflowPreconditions } from "./doctor/workflowPreconditions.js";
 import { findLeftovers, leftoverLines } from "./leftovers.js";
 
@@ -314,6 +315,8 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     addCheck(checks, { ...mutationProofs, message: escapeForMessage(mutationProofs.message) });
   addCheck(checks, await checkMdschemaBinary());
   for (const check of await checkWorkflowPreconditions(root)) addCheck(checks, check);
+  const staleAssistant = await checkStaleAssistant(root);
+  if (staleAssistant !== undefined) addCheck(checks, staleAssistant);
 
   const deprecatedPromptsDir = resolvePath(root, config, "promptsDir");
   const deprecatedPromptsExists = await exists(deprecatedPromptsDir);

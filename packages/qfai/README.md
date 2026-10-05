@@ -585,6 +585,8 @@ skills and agents under `.qfai/assistant/**`, and the integration wrappers under
 `.agents/`, `.claude/`, `.codex/` and `.github/` — and a new version of the
 package does not refresh what a previous one already wrote. Only
 `npx qfai init --force` does that.
+Until you run it, the older skills can call commands the new CLI no longer has;
+`npx qfai doctor` reports such files.
 
 Moving a project from the spec-pack layout to the story tree also requires
 `/qfai-migration-v1-to-v2`. `init --force` refreshes shipped assets; the
