@@ -1374,10 +1374,10 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // ends with a question listing the next actions. Derived by running `qfai init` into a temp
     // root; restoring the old wording reproduces `0a58ab20…` byte for byte.
     //
-    // The generated rule list cites action-reversibility and untrusted-content.
+    // The generated rule list cites action-reversibility, untrusted-content and ai-readable-markdown.
     // This digest covers the bytes produced by the builder strings.
     ".github/copilot-instructions.md",
-    "f6037364baf93bf10179dc6d500da410401094f9e6590395dba383cd9069483e",
+    "8c687f2f36e48e6ab56d0fb1fa48aefc676e177b37b5a972c7539f90701f9bd6",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1462,10 +1462,10 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // root; restoring the old wording in both written files reproduces `837a2663…` and
   // `85cd31b5…` byte for byte.
   //
-  // The entry files cite action-reversibility and untrusted-content, and open with their heading.
+  // The entry files cite action-reversibility, untrusted-content and ai-readable-markdown.
   // These digests cover the shipped root templates, which init copies into a fresh project.
-  ["AGENTS.md", "7b826192d40fdb1d54f578bd77a486f61537e003071557895ad253bc284b693c"],
-  ["CLAUDE.md", "f90dda5cf1c63bdf6b6c60b164ec3de0ee530ffc66f32541d1067fea5a69baf2"],
+  ["AGENTS.md", "27d645ff2cb93c3b5c3ee886de489952c726c3d120386a6bdfa0327f1c470a2a"],
+  ["CLAUDE.md", "39be7bca3d514d89e92879cd635a5edc75b9e407160decb4d68368fd8982e1d0"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
   // rule when a pull request, issue or review is posted through the GitHub tools
@@ -1533,7 +1533,13 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   //
   // Re-pinned for the removal of the `Skill(qfai-atdd)` permission, the skill no longer shipping.
   // The whole delta is that one line; restoring it reproduces `85902b08…` byte for byte.
-  [".claude/settings.json", "673f14b22b81192995608e7384e49791b254d0edc5b7a4dc2ccb49297f65d77e"],
+  //
+  // Re-pinned when the free-text entry group started reading its input, and both it and the
+  // structured-question group also skipped a prompt whose line opens with `[SYSTEM NOTIFICATION`.
+  // The two programs are now the same text. Events, matchers and markers are unchanged; the
+  // previous groups are listed as superseded so the merge refreshes them. Restoring the two
+  // programs reproduces `673f14b2…` byte for byte.
+  [".claude/settings.json", "0bf2f12f9f3bb18a767be123148e58db33fb635d2e5a945bbae32e383c64d681"],
   // Inside `.codex/`, and pinned for the reason `.claude/settings.json` is: its commands are a
   // program an adopter's agent runs. Two `UserPromptSubmit` groups, structured-question and
   // free-text entry. Codex takes one command string, so each runs the same `node -e` reader
@@ -1722,6 +1728,7 @@ export const INERT_DECORATIONS: ReadonlyArray<string> = [
  */
 export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
   "root/.agents/rules/action-reversibility.md",
+  "root/.agents/rules/ai-readable-markdown.md",
   "root/.agents/rules/api-budget.md",
   "root/.agents/rules/distributed-surface.md",
   "root/.agents/rules/document-schema.md",

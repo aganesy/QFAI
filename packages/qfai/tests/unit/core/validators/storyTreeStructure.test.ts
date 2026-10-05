@@ -308,13 +308,16 @@ describe("story-tree structure", () => {
         [`${contracts}/api/checkout.yaml`]: rule(
           "Approved by DEC-0008, again DEC-0008, then OQ-0002, not DEC-0001-0002",
         ),
-        [`${specs}/decisions.md`]: register("| DEC-0001 | Old | Kept | SUPERSEDED (by DEC-0009) |"),
+        [`${specs}/decisions.md`]: register(
+          "| DEC-0001 | Old | Kept | SUPERSEDED (by DEC-0009) |\n| DEC-0002 | Narrowed | Kept | PARTLY SUPERSEDED (by DEC-0010) |",
+        ),
       }),
     ).filter((item) => item.code === "QFAI-STORY-003");
     expect(dangling.map((item) => item.refs)).toEqual([
       ["BR-0001-0001", "DEC-0008"],
       ["BR-0001-0001", "OQ-0002"],
       ["DEC-0001", "DEC-0009"],
+      ["DEC-0002", "DEC-0010"],
     ]);
     expect(dangling.every((item) => item.severity === "error")).toBe(true);
 
@@ -322,7 +325,7 @@ describe("story-tree structure", () => {
       model({
         [`${contracts}/api/checkout.yaml`]: rule("Approved by DEC-0008 and OQ-0001"),
         [`${specs}/decisions.md`]: register(
-          "| DEC-0001 | Old | Kept | SUPERSEDED (by DEC-0009) |\n| DEC-0008 | A | B | DONE |\n| DEC-0009 | C | D | DONE |",
+          "| DEC-0001 | Old | Kept | SUPERSEDED (by DEC-0009) |\n| DEC-0002 | Narrowed | Kept | PARTLY SUPERSEDED (by DEC-0009) |\n| DEC-0008 | A | B | DONE |\n| DEC-0009 | C | D | DONE |",
         ),
         [`${specs}/open-questions.md`]: register("| OQ-0001 | Q | A | DEFERRED |"),
       }),
