@@ -14,7 +14,6 @@
  * alone is faked: the scan is real file I/O, and faking the timers with it
  * would put this suite's own scheduling into the fixture.
  */
-// QFAI:EX-0001-0174-01
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -62,6 +61,7 @@ async function severitiesOn(dayIso: string): Promise<string[]> {
   }
 }
 
+// QFAI:EX-0001-0174-01
 describe("TC-0015-0033: the severity a stale reference reports", () => {
   it("emits W-STALE-REFERENCE at warning", async () => {
     await seedStaleRef();

@@ -2,7 +2,7 @@
 
 ## User Story
 
-As an operator, I want a request that could lose data, break a contract or reach outside the repository to stop and ask me before anything irreversible happens, and a change to the story tree applied only once I approve it, so that otherwise I am asked only for a value the run cannot find itself.
+As an operator, I want a request that could lose data, break a contract or reach outside the repository to stop and ask me before anything irreversible happens, and a change to the story tree applied only once I approve it, so that otherwise I am asked only for a value the session cannot find itself.
 
 ## Non-goals
 

@@ -217,9 +217,8 @@ satisfied by a file that cannot run.
   what exercises head-advance and expected-version guards; a single pass proves
   the first insert and nothing after it. Defects that appear only on traversal
   two are a normal share of the total, not an exotic case.
-- **Record it** in `.qfai/evidence/sdd-BF-NNNN.md`, under the
-  `## Contract executability` heading of `templates/evidence/sdd-flow.md`, as a
-  line of the form:
+- **Report it** in the SDD report, under the `## Contract executability`
+  heading, as a line of the form:
 
   ```text
   - Executability: DB-NNNN — applied to scratch DB; every declared write path driven twice; <command> / <result>

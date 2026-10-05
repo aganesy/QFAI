@@ -16,7 +16,6 @@
  * (consumer repos installing the npm package lack the validator
  * source, so the contract cannot drift there).
  */
-// QFAI:EX-0001-0089-03
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -90,6 +89,7 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
+// QFAI:EX-0001-0089-03
 describe("TC-0010-0011: detectMockHrefDrift emits R-MOCK-HREF-DRIFT on template↔validator asymmetry", () => {
   // QFAI:EX-0001-0089-05
   it("does NOT fire when template is anchor-form and validator is strict (symmetric)", async () => {

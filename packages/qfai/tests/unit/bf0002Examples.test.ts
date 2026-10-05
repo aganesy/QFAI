@@ -116,8 +116,8 @@ describe("BF-0002 CI verdict examples", () => {
     }
   });
 
+  // QFAI:EX-0002-0013-01
   it("evaluates a newly wired need without an edit to the verdict body", () => {
-    // QFAI:EX-0002-0013-01
     const source = verdictProgram().replace(/^\s*\/\/.*$/gm, "");
     const future = "new-independent-check";
     expect(source).not.toContain(future);
@@ -127,8 +127,8 @@ describe("BF-0002 CI verdict examples", () => {
     expect(result.output).toContain(future);
   });
 
+  // QFAI:EX-0002-0013-02
   it("accepts all success and all skipped", () => {
-    // QFAI:EX-0002-0013-02
     expect(declaredNeeds().length).toBeGreaterThan(0);
     for (const state of ["success", "skipped"]) {
       expect(evaluateVerdict(needsWith(state)).exitCode).toBe(0);
@@ -144,18 +144,18 @@ describe("BF-0002 CI verdict examples", () => {
     expect(mixedRun.exitCode, mixedRun.output).toBe(0);
   });
 
+  // QFAI:EX-0002-0013-03
+  // QFAI:EX-0002-0013-04
   it("rejects failed, cancelled, and unrecognized results", () => {
     const [first] = declaredNeeds();
     if (first === undefined) throw new Error("ci-pass has no dependency");
     for (const state of ["failure", "cancelled"]) {
-      // QFAI:EX-0002-0013-03
       const result = evaluateVerdict({ ...needsWith("success"), [first]: { result: state } });
       expect(result.exitCode).toBe(1);
       expect(result.output).toContain(first);
       expect(result.output).toContain(state);
     }
     for (const value of ["neutral", "SUCCESS", "", undefined]) {
-      // QFAI:EX-0002-0013-04
       expect(
         evaluateVerdict({ ...needsWith("success"), [first]: { result: value } }).exitCode,
       ).toBe(1);
@@ -163,8 +163,8 @@ describe("BF-0002 CI verdict examples", () => {
     expect(evaluateVerdict({}).exitCode).toBe(1);
   });
 
+  // QFAI:EX-0002-0013-06
   it("keeps test matrices declared while their jobs use the detection result", () => {
-    // QFAI:EX-0002-0013-06
     for (const id of ["node-floor", "test"]) {
       const selected = job(id);
       expect(selected["needs"]).toContain("detect");
@@ -183,8 +183,8 @@ describe("BF-0002 CI verdict examples", () => {
     }
   });
 
+  // QFAI:EX-0002-0013-11
   it("keeps unconditional lint and build in the required verdict", () => {
-    // QFAI:EX-0002-0013-11
     const lint = job("lint");
     const build = job("build");
     const verdict = job("ci-pass");
@@ -222,9 +222,11 @@ describe("BF-0002 CI verdict examples", () => {
     expect(scripts["ci:lint:scans"]).toContain("check-tracked-symlinks.mjs");
   });
 
+  // QFAI:EX-0002-0016-04
+  // QFAI:EX-0002-0016-05
+  // QFAI:EX-0002-0020-02
+  // QFAI:EX-0002-0020-03
   it("keeps build verification in the non-skippable release path", () => {
-    // QFAI:EX-0002-0016-04
-    // QFAI:EX-0002-0020-02
     const build = job("build");
     expect(build).not.toHaveProperty("if");
     expect(build).not.toHaveProperty("needs");
@@ -251,7 +253,6 @@ describe("BF-0002 CI verdict examples", () => {
     );
     expect(sandboxValidate?.["run"]).toContain("packages/qfai/dist/cli/index.mjs validate");
     expect(sandboxValidate?.["run"]).toContain("--root tmp/pack/sandbox/out --fail-on error");
-    // QFAI:EX-0002-0016-05
     for (const name of [
       "Run build & pack verification",
       "QFAI self-validate this repo (dogfooding — TDD gates)",
@@ -263,7 +264,6 @@ describe("BF-0002 CI verdict examples", () => {
       expect(verification, `missing verification ${name}`).toBeDefined();
       expect(verification).not.toHaveProperty("continue-on-error");
     }
-    // QFAI:EX-0002-0020-03
     const declaration = record(JSON.parse(readFileSync(declarationPath, "utf8")), "declaration");
     const contexts = declaration["contexts"];
     if (!Array.isArray(contexts) || contexts.length !== 1) throw new Error("one context required");
@@ -274,10 +274,10 @@ describe("BF-0002 CI verdict examples", () => {
     );
   });
 
+  // QFAI:EX-0002-0018-01
+  // QFAI:EX-0002-0018-02
+  // QFAI:EX-0002-0018-08
   it("runs both workflow hygiene scopes and reports a shipped-only violation", () => {
-    // QFAI:EX-0002-0018-01
-    // QFAI:EX-0002-0018-02
-    // QFAI:EX-0002-0018-08
     const clean = plantedTree(() => {});
     const planted = plantedTree((directory) => {
       const target = path.join(

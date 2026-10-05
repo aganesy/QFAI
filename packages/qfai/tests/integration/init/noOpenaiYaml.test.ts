@@ -2,7 +2,6 @@
  * Integration: `qfai init` writes no `agents/openai.yaml` for any skill, plain or under `--force`.
  */
 // QFAI:AC-0001-0196-02
-// QFAI:EX-0001-0196-04
 import { existsSync } from "node:fs";
 import { readdir } from "node:fs/promises";
 import path from "node:path";
@@ -25,6 +24,7 @@ async function openaiYamls(root: string): Promise<string[]> {
   return found;
 }
 
+// QFAI:EX-0001-0196-04
 describe("no agents/openai.yaml", () => {
   it("No agents/openai.yaml after init and after --force", async () => {
     await withEmptyRepo(async (root) => {

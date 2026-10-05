@@ -2,15 +2,12 @@
 name: implement-dep-bump
 owner: qfai-implement
 purpose: "Raise a dependency to a new version and check that the runtime, the version floors the project declares, and every call into it still hold."
-requires: [common-steering-refresh, common-gate-run, common-evidence-record]
+requires: [common-gate-run]
 roles:
   - devops-ci-engineer
   - frontend-engineer
   - backend-engineer
-  - implementation-reviewer
-  - qa-gatekeeper
-  - completion-reviewer
-routing-profile: implementation-heavy
+routing-profile: default
 ---
 
 # implement-dep-bump
@@ -39,16 +36,14 @@ advisory to clear.
    Never edit a lockfile by hand.
 5. Change each call the release notes break. Keep a range the project
    publishes to its own users as wide as the new version allows.
-6. Run the relevant suite, then the Lint, Typecheck and Build commands.
+6. Run the relevant suite.
 
 ## What it writes
 
 - The manifest, the lockfile and any adapted call, listed in `changedFiles`.
-- A record of the versions, the breaking changes read and how each was met,
-  written with `common-evidence-record`.
+- A record of the versions, the breaking changes read and how each was met, in the stage report.
 
 ## Gate
 
 The step is done when the target version is installed, the runtime check and
-every breaking change are recorded as met, the project gates pass, and the
-qa-gatekeeper observed them.
+every breaking change are recorded as met, and the relevant suite passes.

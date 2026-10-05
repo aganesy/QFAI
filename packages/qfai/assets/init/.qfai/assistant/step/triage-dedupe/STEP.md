@@ -3,7 +3,7 @@ name: triage-dedupe
 owner: qfai-triage
 purpose: "Find the item a request repeats or the one that replaced it, check that the request's premise still holds, and link the two."
 requires: []
-roles: [discovery-analyst, completion-reviewer]
+roles: [discovery-analyst]
 routing-profile: default
 ---
 
