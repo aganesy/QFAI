@@ -86,6 +86,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   delegation-baseline and test-layers pointers started at `rule/`, so they did
   not resolve from the project root. Both now begin at `.qfai/assistant/rule/`.
   (#2858)
+- **A project can stop `qfai init` writing a shipped workflow.** Deleting
+  `qfai-tests.yml` was not enough: the next `qfai init` wrote it again, though
+  its header said it would not. `workflow.skipShipped` in `qfai.config.yaml`
+  now lists the shipped workflow files init leaves out, and `qfai validate`
+  reports a value that is not a list of shipped names. The headers of
+  `qfai-tests.yml` and `qfai-validate.yml` describe this. Fixes #2979.
 - **The planner-first and design anti-goal examples are tested for what they
   say.** The planner-first example was annotated on a test that only checked
   three file names. Its test now reads the completion matrix and the

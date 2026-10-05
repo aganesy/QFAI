@@ -23,7 +23,7 @@
 # | What reads the light one      | the jobs that install nothing and run no test - change detection and the aggregates                      |
 # | Wrong runner value            | GitHub does not fail fast: an unknown label leaves the job queued indefinitely, never red                |
 # | `packageManager` precondition | a `pnpm-lock.yaml` needs `"packageManager": "pnpm@<version>"` in package.json, or this lane stops CLOSED |
-# | Inert when                    | never inert; delete this file to opt out - `qfai init` will not recreate a file you removed              |
+# | Inert when                    | never inert; to opt out, list it under `workflow.skipShipped` in qfai.config.yaml and delete the file    |
 # | Fail-open behaviour           | no `.nvmrc` / `.node-version` in your tree: warning annotation, Node 20, and the lane continues          |
 # | Node support floor            | the package declares `engines: ">=20.19.0"`; the fall-open Node 20 satisfies it                          |
 # | Dependency install            | follows your lockfile: pnpm / yarn Berry / yarn Classic / npm, else `npm install`                        |

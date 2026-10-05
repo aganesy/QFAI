@@ -5,6 +5,7 @@ import { parse as parseYaml } from "yaml";
 
 import type { Issue } from "./types.js";
 import { isEnoent } from "./fs/errno.js";
+import { SHIPPED_WORKFLOW_NAMES } from "../shared/shippedWorkflowNames.js";
 import { normalizeRenderViewports, type RenderEvidenceConfig } from "./uiux/renderEvidenceTypes.js";
 
 export type FailOn = "never" | "warning" | "error";
@@ -345,6 +346,9 @@ export async function loadConfig(root: string): Promise<ConfigLoadResult> {
   if (readWorkflowMode(parsed) === null) {
     issues.push(configIssue(configPath, WORKFLOW_MODE_MESSAGE));
   }
+  if (readSkippedWorkflows(parsed) === null) {
+    issues.push(configIssue(configPath, SKIPPED_WORKFLOWS_MESSAGE));
+  }
   return { config: normalized, issues, configPath, document: parsed };
 }
 
@@ -367,6 +371,26 @@ export function readWorkflowMode(document: unknown): WorkflowMode | null {
   const mode = workflow.mode;
   if (mode === undefined) return "active";
   return WORKFLOW_MODES.find((known) => known === mode) ?? null;
+}
+
+/** The config issue an invalid `workflow.skipShipped` raises. */
+export const SKIPPED_WORKFLOWS_MESSAGE = `workflow.skipShipped must be a list of shipped workflow file names (${[...SHIPPED_WORKFLOW_NAMES].join(", ")}); an absent key means none are skipped.`;
+
+/**
+ * The shipped workflow names `workflow.skipShipped` lists, read from the parsed config document.
+ * `null` means the value is not a list of shipped names, and no entry is guessed in its place.
+ */
+export function readSkippedWorkflows(document: unknown): ReadonlySet<string> | null {
+  const workflow = isRecord(document) ? document.workflow : undefined;
+  if (!isRecord(workflow) || workflow.skipShipped === undefined) return new Set();
+  const listed = workflow.skipShipped;
+  if (!Array.isArray(listed)) return null;
+  const names = new Set<string>();
+  for (const name of listed) {
+    if (typeof name !== "string" || !SHIPPED_WORKFLOW_NAMES.has(name)) return null;
+    names.add(name);
+  }
+  return names;
 }
 
 export function resolvePath(root: string, config: QfaiConfig, key: ConfigPathKey): string {
