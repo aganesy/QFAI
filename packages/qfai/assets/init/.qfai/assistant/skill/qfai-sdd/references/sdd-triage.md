@@ -76,7 +76,11 @@ Read all IDs of the kind in the relevant scope, including IDs named by retiremen
 A contract number spans every contract kind, and a BR is numbered inside its contract. DEC and OQ each span their table.
 Empty numeric scopes begin at 0001, and AC/EX tails begin at 01. Do not reuse an ID because its file was removed or a row was rejected.
 
-Two branches can take the same next ID. When a merge leaves one ID on two items, renumber the one the later branch added, change every citation of it in the same commit, and state the old and new ID in the commit message: a pull request body or a local record that cites the old ID is then readable through that message. A row already merged keeps its ID; a later row says which record a shared ID meant.
+Two branches can take the same next ID. When a merge leaves one ID on two items,
+renumber the one the later branch added, change every citation of it in the same commit,
+and state the old and new ID in the commit message: a pull request body or a local record
+that cites the old ID is then readable through that message.
+A row already merged keeps its ID; a later row says which record a shared ID meant.
 
 A move to another BF changes the story's US ID and all child AC and EX IDs. Record the old IDs as retired, allocate new IDs in the destination scope, and update every citation before the move is complete.
 
