@@ -51,12 +51,15 @@ Read first: the change and the changelog. The step passes when one of these
 holds, and the pass names which one and what was read to show it:
 
 - nothing a user sees changed;
-- the project keeps no changelog.
+- the project keeps no changelog;
+- the route changes compatibility and no user has anything to migrate: nothing
+  a user must change to keep working, and nothing that breaks.
 
-On a route that changes compatibility the step does not pass: the migration
-steps and the breaking change are what that route owes. Where that project
-keeps no changelog, write them where its user documentation describes the
-changed behaviour.
+On a route that changes compatibility, the first two hold the pass only while no
+user has anything to migrate. Where one has, the step does not pass: the
+migration steps and the breaking change are what that route owes. Where that
+project keeps no changelog, write them where its user documentation describes
+the changed behaviour.
 
 ## Gate
 

@@ -36,6 +36,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A change that leaves nothing to migrate no longer owes a migration
+  note.** On the `change-compatibility` route the change note step could not
+  pass, so a one-line display-text change had to write migration steps and a
+  breaking change that did not exist. It now passes when no user has anything
+  to migrate, and still does not pass when one has. Fixes #2990.
+
 - **A validator no longer reads an unreadable file as a missing one.** The
   shared `exists` and `readSafe` helpers turned every failure, including
   `EACCES` and `EIO`, into "absent" or an empty string, so a file the validator
