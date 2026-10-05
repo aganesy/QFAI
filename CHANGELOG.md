@@ -81,6 +81,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The orchestrator keeps working while a delegation runs** (#2244). The
+  shared delegation baseline now says the orchestrator is not required to wait
+  for a sub-agent. Where the host starts a delegation and returns at once,
+  delivers the result later as a message and lets the orchestrator wait on
+  purpose, it carries on with its own work and waits only when it has none. A
+  host without all three keeps it waiting. Starting another delegation still
+  needs the independence conditions of the parallelization policy, and an
+  ordering the ledger or a seam makes mandatory still holds.
+
 - **Five doctor criteria now name the tests that prove them.** Existing
   integration tests carry standalone `QFAI:AC-...` comments, and
   `AC-0003-0004-01` gains a deprecated `paths.promptsDir` warning case.
