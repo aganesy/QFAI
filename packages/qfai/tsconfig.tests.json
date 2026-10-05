@@ -78,6 +78,7 @@
     "tests/assets/mdschemaSchemas.test.ts",
     "tests/assets/observedFailureHome.test.ts",
     "tests/assets/openQuestionRouting.test.ts",
+    "tests/assets/oracleStrength.test.ts",
     "tests/assets/outputLanguageSingleSource.test.ts",
     "tests/assets/packGateQualifier.test.ts",
     "tests/assets/projectMemoryReadScope.test.ts",
