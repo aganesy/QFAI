@@ -11,12 +11,14 @@
  * tracked path under `tmp/` fails, and an untracked one there does not.
  */
 import { execFileSync } from "node:child_process";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
+
+import { GENERATED_DIRS } from "../../../../scripts/check-tracked-scratch.mjs";
 
 // tests/scripts/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
@@ -125,6 +127,32 @@ describe("nothing under the scratch directory is tracked", () => {
     const { status, output } = check(root);
     expect(status).toBe(1);
     expect(output).toContain("tmp");
+  });
+
+  it("fails on a tracked generated report, and names it", async () => {
+    const root = await repoWith({ ".qfai/report/validate.json": "{}\n" }, { tracked: true });
+    const { status, output } = check(root);
+    expect(status).toBe(1);
+    expect(output).toContain(".qfai/report/validate.json: tracked generated output");
+    expect(output).toContain("git rm --cached");
+  });
+
+  it("fails on each generated-output directory, and passes when they are untracked", async () => {
+    for (const dir of GENERATED_DIRS) {
+      const tracked = await repoWith({ [`${dir}/x.json`]: "{}\n" }, { tracked: true });
+      expect(check(tracked).status, dir).toBe(1);
+      const untracked = await repoWith({ [`${dir}/x.json`]: "{}\n" }, { tracked: false });
+      expect(check(untracked).status, dir).toBe(0);
+    }
+  });
+
+  it("guards exactly the directories the managed .gitignore block ignores whole", async () => {
+    const gitignore = await readFile(path.join(repoRoot, ".gitignore"), "utf-8");
+    const ignoredWhole = gitignore
+      .split(/\r?\n/)
+      .filter((line) => /^\.qfai\/[^/]+\/\*$/.test(line))
+      .map((line) => line.slice(0, -"/*".length));
+    expect([...GENERATED_DIRS].sort()).toEqual(ignoredWhole.sort());
   });
 
   it("holds this repository", () => {

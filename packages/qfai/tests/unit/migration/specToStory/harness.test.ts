@@ -23,22 +23,12 @@ import { defaultConfig, loadConfig } from "../../../../src/core/config.js";
 import { isRecord } from "../../../../src/core/workflow/parse.js";
 import {
   executePlannedStep,
-  moveAcrossDevices,
-  moveStage,
   runStep,
-  staleStageOperations,
-  writeStage,
   type MigrationContext,
   type MigrationStep,
 } from "../../../../src/migration/specToStory/harness.js";
 import { ID_MAP_PATH } from "../../../../src/migration/specToStory/idMap.js";
 import { step08 } from "../../../../src/migration/specToStory/step08RewriteAnnotations.js";
-import {
-  MIGRATION_REPORT_DIR,
-  isMigrationReportPath,
-  migrationReportFiles,
-  readMigrationReport,
-} from "../../../helpers/migrationReport.js";
 
 const FIXTURE = path.resolve(__dirname, "../../../fixtures/migration-spec-to-story/old-layout");
 const CRITERIA = path.resolve(
@@ -220,13 +210,74 @@ describe("migration harness", () => {
       writeSet: ["qfai"],
       plan: () =>
         Promise.resolve({
-          operations: [{ kind: "write", target: ".qfai/evidence/note.md", content: "note\n" }],
+          operations: [{ kind: "write", target: ".qfai/note.md", content: "note\n" }],
         }),
     };
     const captured = capture();
     expect(await executePlannedStep(step, through, false, captured.io)).toBe(0);
     expect(captured.error).toEqual([]);
-    expect(await readFile(path.join(ctx.root, ".qfai/evidence/note.md"), "utf8")).toBe("note\n");
+    expect(await readFile(path.join(ctx.root, ".qfai/note.md"), "utf8")).toBe("note\n");
+  });
+
+  it("refuses a write under .qfai/evidence/ although the step may write under .qfai/", async () => {
+    // QFAI:EX-0004-0003-14
+    const ctx = await context();
+    const step: MigrationStep = {
+      number: 4,
+      writeSet: ["qfai"],
+      plan: () =>
+        Promise.resolve({
+          operations: [{ kind: "write", target: ".qfai/evidence/note.md", content: "note\n" }],
+        }),
+    };
+    const captured = capture();
+    expect(await executePlannedStep(step, ctx, false, captured.io)).toBe(2);
+    expect(captured.error.join("")).toContain("outside its write set");
+    await expect(lstat(path.join(ctx.root, ".qfai/evidence"))).rejects.toMatchObject({
+      code: "ENOENT",
+    });
+  });
+
+  it("refuses a write under .qfai/evidence/ reached through a configured directory", async () => {
+    // QFAI:EX-0004-0003-14
+    const ctx = await context();
+    ctx.specsDir = path.join(ctx.root, ".qfai", "evidence", "spec");
+    const step: MigrationStep = {
+      number: 3,
+      writeSet: ["specs"],
+      plan: () =>
+        Promise.resolve({
+          operations: [{ kind: "write", target: ".qfai/evidence/spec/note.md", content: "n\n" }],
+        }),
+    };
+    const captured = capture();
+    expect(await executePlannedStep(step, ctx, false, captured.io)).toBe(2);
+    expect(captured.error.join("")).toContain("outside its write set");
+    await expect(lstat(path.join(ctx.root, ".qfai/evidence"))).rejects.toMatchObject({
+      code: "ENOENT",
+    });
+  });
+
+  it("refuses a move whose destination an earlier move of the same run created", async () => {
+    const ctx = await context();
+    await put(ctx.root, ".qfai/old/sub/a.md", "moved");
+    await put(ctx.root, ".qfai/other.md", "other");
+    const step: MigrationStep = {
+      number: 1,
+      writeSet: ["qfai"],
+      plan: () =>
+        Promise.resolve({
+          operations: [
+            { kind: "move", source: ".qfai/old", target: ".qfai/new" },
+            { kind: "move", source: ".qfai/other.md", target: ".qfai/new/sub/a.md" },
+          ],
+        }),
+    };
+    const captured = capture();
+    expect(await executePlannedStep(step, ctx, false, captured.io)).toBe(2);
+    expect(captured.error.join("")).toContain("Migration destination exists: .qfai/new/sub/a.md");
+    expect(await readFile(path.join(ctx.root, ".qfai/new/sub/a.md"), "utf8")).toBe("moved");
+    expect(await readFile(path.join(ctx.root, ".qfai/other.md"), "utf8")).toBe("other");
   });
 
   it("refuses steps 3 to 8 until step 2 has merged its sources and retired packs", async () => {
@@ -385,26 +436,6 @@ describe("migration harness", () => {
     expect(await readFile(path.join(ctx.root, other), "utf8")).toContain("SPEC-0001");
   });
 
-  it("keeps annotation staging inside the configured test root and recovers an empty stage", async () => {
-    const ctx = await context();
-    ctx.config.paths.testsDir = "external-tests";
-    const target = path.join(ctx.root, "external-tests/example.test.ts");
-    const stage = writeStage(ctx, { kind: "write", step: 8, target });
-    expect(stage.directory).toContain(
-      path.join(ctx.root, "external-tests/.qfai-migration-staging"),
-    );
-    await mkdir(stage.directory, { recursive: true });
-    const recovery = await staleStageOperations(ctx, 8);
-    expect(recovery.map((operation) => operation.kind)).toEqual(["remove-empty-directory"]);
-    const step: MigrationStep = {
-      number: 8,
-      writeSet: ["test-annotations"],
-      plan: () => Promise.resolve({ operations: recovery }),
-    };
-    expect(await executePlannedStep(step, ctx, false, capture().io)).toBe(0);
-    await expect(lstat(stage.directory)).rejects.toMatchObject({ code: "ENOENT" });
-  });
-
   it("checks every delegated host-link target and applies the writer once", async () => {
     const ctx = await context();
     const targets = [".claude/skills/qfai-sdd", ".github/agents/backend-engineer.md"];
@@ -454,287 +485,6 @@ describe("migration harness", () => {
     expect(applications).toBe(1);
   });
 
-  it("allows only the exact managed .gitignore staging names in the report directory", async () => {
-    const ctx = await context();
-    const payload = ".qfai/report/.gitignore-123-550e8400-e29b-41d4-a716-446655440000.tmp";
-    let applications = 0;
-    const step: MigrationStep = {
-      number: 10,
-      writeSet: ["gitignore", "gitignore-staging"],
-      plan: () =>
-        Promise.resolve({
-          operations: [
-            {
-              kind: "delegate",
-              target: ".gitignore",
-              targets: [".gitignore", payload, `${payload}.owner`],
-              description: "update managed block and reclaim its stage",
-              apply: () => {
-                applications += 1;
-                return Promise.resolve();
-              },
-            },
-          ],
-        }),
-    };
-    const result = capture();
-    expect(await executePlannedStep(step, ctx, false, result.io)).toBe(0);
-    expect(applications).toBe(1);
-    expect(result.output.join("")).toContain(`${payload}.owner`);
-    for (const invalid of [
-      ".qfai/other/.gitignore-123-550e8400-e29b-41d4-a716-446655440000.tmp",
-      ".qfai/report/.gitignore-0-550e8400-e29b-41d4-a716-446655440000.tmp",
-      ".qfai/report/.gitignore-123-550e8400-e29b-11d4-a716-446655440000.tmp",
-      `${payload}.owner.extra`,
-    ]) {
-      const rejected: MigrationStep = {
-        ...step,
-        plan: () =>
-          Promise.resolve({
-            operations: [
-              {
-                kind: "delegate",
-                target: ".gitignore",
-                targets: [".gitignore", invalid],
-                description: "update managed block and reclaim its stage",
-                apply: () => {
-                  applications += 1;
-                  return Promise.resolve();
-                },
-              },
-            ],
-          }),
-      };
-      expect(await executePlannedStep(rejected, ctx, false, capture().io)).toBe(2);
-    }
-    expect(applications).toBe(1);
-  });
-
-  it("resumes a partial cross-volume copy and removes the source only after verification", async () => {
-    const ctx = await context();
-    const source = path.join(ctx.root, ".qfai/source.txt");
-    const target = path.join(ctx.root, ".qfai/target.txt");
-    await writeFile(source, "complete source");
-    const owner = { step: 1 as const, source, target };
-    const stage = moveStage(ctx, owner);
-    await mkdir(stage.directory, { recursive: true });
-    await writeFile(stage.marker, `${JSON.stringify(owner)}\n`);
-    await writeFile(stage.payload, "complete");
-
-    await moveAcrossDevices(ctx, 1, source, target);
-
-    expect(await readFile(target, "utf8")).toBe("complete source");
-    await expect(readFile(source)).rejects.toMatchObject({ code: "ENOENT" });
-    await expect(readFile(stage.marker)).rejects.toMatchObject({ code: "ENOENT" });
-  });
-
-  it("keeps the source and a divergent staged copy for inspection", async () => {
-    const ctx = await context();
-    const source = path.join(ctx.root, ".qfai/source.txt");
-    const target = path.join(ctx.root, ".qfai/target.txt");
-    await writeFile(source, "complete source");
-    const owner = { step: 1 as const, source, target };
-    const stage = moveStage(ctx, owner);
-    await mkdir(stage.directory, { recursive: true });
-    await writeFile(stage.marker, `${JSON.stringify(owner)}\n`);
-    await writeFile(stage.payload, "different data");
-
-    await expect(moveAcrossDevices(ctx, 1, source, target)).rejects.toThrow("differs from source");
-    expect(await readFile(source, "utf8")).toBe("complete source");
-    expect(await readFile(stage.payload, "utf8")).toBe("different data");
-    await expect(readFile(target)).rejects.toMatchObject({ code: "ENOENT" });
-  });
-
-  it("cleans a completed stage left by an interrupted move without touching the destination", async () => {
-    const ctx = await context();
-    const source = path.join(ctx.root, ".qfai/source.txt");
-    const target = path.join(ctx.root, ".qfai/target.txt");
-    await writeFile(source, "same content");
-    await writeFile(target, "same content");
-    const owner = { step: 1 as const, source, target };
-    const stage = moveStage(ctx, owner);
-    await mkdir(stage.directory, { recursive: true });
-    await writeFile(stage.marker, `${JSON.stringify(owner)}\n`);
-    const recovery = await staleStageOperations(ctx, 1);
-    expect(recovery.map((operation) => operation.kind)).toEqual(["move", "cleanup-stage"]);
-    const step: MigrationStep = {
-      number: 1,
-      writeSet: ["qfai"],
-      plan: () => Promise.resolve({ operations: recovery }),
-    };
-    expect(await executePlannedStep(step, ctx, false, capture().io)).toBe(0);
-    expect(await readFile(target, "utf8")).toBe("same content");
-    await expect(readFile(source)).rejects.toMatchObject({ code: "ENOENT" });
-    await expect(readFile(stage.marker)).rejects.toMatchObject({ code: "ENOENT" });
-  });
-
-  it("finishes a committed move and the remaining step work in one rerun", async () => {
-    const ctx = await context();
-    await writeFile(path.join(ctx.root, "qfai.config.yaml"), "paths:\n  specsDir: .qfai/specs\n");
-    const source = path.join(ctx.root, ".qfai/specs/01_Spec.md");
-    const target = path.join(ctx.root, ".qfai/spec/01_Spec.md");
-    await mkdir(path.dirname(source), { recursive: true });
-    await mkdir(path.dirname(target), { recursive: true });
-    await writeFile(source, "# Specification\n");
-    await writeFile(target, "# Specification\n");
-    const owner = { step: 1 as const, source, target };
-    const stage = moveStage(ctx, owner);
-    await mkdir(stage.directory, { recursive: true });
-    await writeFile(stage.marker, `${JSON.stringify(owner)}\n`);
-    const dry = capture();
-    expect(await runStep(1, ["--dry-run"], { cwd: ctx.root, ...dry.io })).toBe(0);
-    expect(await readFile(source, "utf8")).toBe("# Specification\n");
-    const captured = capture();
-    expect(await runStep(1, [], { cwd: ctx.root, ...captured.io })).toBe(0);
-    expect(captured.output.join("")).toBe(dry.output.join(""));
-    await expect(readFile(source)).rejects.toMatchObject({ code: "ENOENT" });
-    expect(await readFile(target, "utf8")).toBe("# Specification\n");
-    expect(await readFile(path.join(ctx.root, "qfai.config.yaml"), "utf8")).toContain(".qfai/spec");
-    expect(captured.output.join("")).toContain("remove after verified move");
-    expect(captured.output.join("")).toContain("qfai.config.yaml: write");
-  });
-
-  it("refuses recovery when a completed cross-volume destination differs from its source", async () => {
-    const ctx = await context();
-    const source = path.join(ctx.root, ".qfai/source.txt");
-    const target = path.join(ctx.root, ".qfai/target.txt");
-    await writeFile(source, "source data");
-    await writeFile(target, "other data");
-    const owner = { step: 1 as const, source, target };
-    const stage = moveStage(ctx, owner);
-    await mkdir(stage.directory, { recursive: true });
-    await writeFile(stage.marker, `${JSON.stringify(owner)}\n`);
-    const operations = await staleStageOperations(ctx, 1);
-    const step: MigrationStep = {
-      number: 1,
-      writeSet: ["qfai"],
-      plan: () => Promise.resolve({ operations }),
-    };
-    expect(await executePlannedStep(step, ctx, false, capture().io)).toBe(2);
-    expect(await readFile(source, "utf8")).toBe("source data");
-    expect(await readFile(target, "utf8")).toBe("other data");
-    expect(await readFile(stage.marker, "utf8")).toContain("source.txt");
-  });
-
-  it("recovers an interrupted ID map write without corrupting the prior JSON", async () => {
-    const ctx = await context();
-    const target = path.join(ctx.root, ID_MAP_PATH);
-    await mkdir(path.dirname(target), { recursive: true });
-    const before = '{"version":1,"ids":{}}\n';
-    const after = '{"version":1,"ids":{"spec-0001":{"US-1":"US-0001-0001"}}}\n';
-    await writeFile(target, before);
-    const owner = { kind: "write" as const, step: 4 as const, target };
-    const stage = writeStage(ctx, owner);
-    await mkdir(stage.directory, { recursive: true });
-    await writeFile(stage.marker, `${JSON.stringify(owner)}\n`);
-    await writeFile(stage.payload, '{"version":1,"ids":');
-    const recovery = await staleStageOperations(ctx, 4);
-    expect(recovery.map((operation) => operation.kind)).toEqual(["cleanup-write-stage"]);
-    const recoveringStep: MigrationStep = {
-      number: 4,
-      writeSet: ["qfai"],
-      plan: () =>
-        Promise.resolve({
-          operations: [...recovery, { kind: "write", target: ID_MAP_PATH, content: after }],
-        }),
-    };
-    expect(await executePlannedStep(recoveringStep, ctx, false, capture().io)).toBe(0);
-    expect(await readFile(target, "utf8")).toBe(after);
-    await expect(readFile(stage.marker)).rejects.toMatchObject({ code: "ENOENT" });
-  });
-
-  it("completes step 4 in one rerun after its ID map temp file was interrupted", async () => {
-    const ctx = await context();
-    await put(
-      ctx.root,
-      "qfai.config.yaml",
-      "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
-    );
-    await put(
-      ctx.root,
-      ".qfai/spec/spec-0001/01_Spec.md",
-      "# Spec\n\n- Status: active\n\n## Scope\n\nSubmitting an order from a cart.\n",
-    );
-    await put(
-      ctx.root,
-      ".qfai/spec/spec-0001/02_User-stories.md",
-      "# Stories\n\n## US-0001-0001: Order\n\nAs a buyer, I want to order, so that the cart is bought.\n",
-    );
-    await put(
-      ctx.root,
-      ".qfai/spec/spec-0001/03_Acceptance-Criteria.md",
-      "# Criteria\n\n```gherkin\n# AC-0001-0001\n# Parent: US-0001-0001\nScenario: Order\n  Given a cart\n  When an order is placed\n  Then the order is accepted\n```\n",
-    );
-    await put(
-      ctx.root,
-      ".qfai/spec/spec-0001/04_Business-Rules.md",
-      "# Rules\n\n| BR-ID | Rule |\n| --- | --- |\n| BR-0001-0001 | Orders have an item. |\n",
-    );
-    await put(
-      ctx.root,
-      ".qfai/spec/spec-0001/05_Examples.md",
-      "# Examples\n\n| EX-ID | BR-Ref | Input | Expected |\n| --- | --- | --- | --- |\n| EX-0001-0001 | BR-0001-0001 | one item | accepted |\n",
-    );
-    await put(
-      ctx.root,
-      ".qfai/spec/spec-0001/06_Test-Cases.md",
-      "# Cases\n\n| TC-ID | AC-Refs | EX-Ref | Steps | Expected |\n| --- | --- | --- | --- | --- |\n| TC-0001-0001 | AC-0001-0001 | EX-0001-0001 | submit | accepted |\n",
-    );
-    await put(
-      ctx.root,
-      ".qfai/spec/_policies/04_Business-Flow.md",
-      "# Business Flow\n\n```mermaid\nflowchart LR\n  A[Cart] --> B[Order]\n```\n",
-    );
-    await put(
-      ctx.root,
-      ".qfai/evidence/migration-spec-to-story/plan.yaml",
-      "flows:\n  - title: Order flow\n    from: _policies/04_Business-Flow.md\n    stories:\n      - id: US-0001-0001\nrules:\n  - id: BR-0001-0001\n    contract: api/api-0001-orders.yaml\n",
-    );
-    await put(
-      ctx.root,
-      ".qfai/spec/03_contract/api/api-0001-orders.yaml",
-      "# QFAI-CONTRACT-ID: API-0001\nopenapi: 3.0.0\n",
-    );
-    const owner = {
-      kind: "write" as const,
-      step: 4 as const,
-      target: path.join(ctx.root, ID_MAP_PATH),
-    };
-    const stage = writeStage(ctx, owner);
-    await mkdir(stage.directory, { recursive: true });
-    await writeFile(stage.marker, `${JSON.stringify(owner)}\n`);
-    await writeFile(stage.payload, '{"version":1,"ids":');
-    const captured = capture();
-    expect(await runStep(4, [], { cwd: ctx.root, ...captured.io })).toBe(3);
-    expect(JSON.parse(await readFile(path.join(ctx.root, ID_MAP_PATH), "utf8"))).toMatchObject({
-      version: 1,
-      ids: { "spec-0001": { "US-0001-0001": "US-0001-0001" } },
-    });
-    await expect(readFile(stage.marker)).rejects.toMatchObject({ code: "ENOENT" });
-    expect(captured.output.join("")).toContain("id-map.json: write");
-  });
-
-  it("cleans a committed contract write stage and leaves the completed contract unchanged", async () => {
-    const ctx = await context();
-    const target = path.join(ctx.contractsDir, "business-rules.yaml");
-    await mkdir(path.dirname(target), { recursive: true });
-    await writeFile(target, "rules:\n  - new\n");
-    const owner = { kind: "write" as const, step: 7 as const, target };
-    const stage = writeStage(ctx, owner);
-    await mkdir(stage.directory, { recursive: true });
-    await writeFile(stage.marker, `${JSON.stringify(owner)}\n`);
-    const recovery = await staleStageOperations(ctx, 7);
-    expect(recovery.map((operation) => operation.kind)).toEqual(["cleanup-write-stage"]);
-    const recoveringStep: MigrationStep = {
-      number: 7,
-      writeSet: ["contracts"],
-      plan: () => Promise.resolve({ operations: recovery }),
-    };
-    expect(await executePlannedStep(recoveringStep, ctx, false, capture().io)).toBe(0);
-    expect(await readFile(target, "utf8")).toBe("rules:\n  - new\n");
-    await expect(readFile(stage.marker)).rejects.toMatchObject({ code: "ENOENT" });
-  });
-
   it("returns 3 after applying a plan with unresolved items", async () => {
     const ctx = await context();
     const step: MigrationStep = {
@@ -770,14 +520,14 @@ function section(report: string, name: string): string[] {
     .map((line) => line.slice(2));
 }
 
-/** What every file and link under `root` holds, the report directory and `.git` left out. */
+/** What every file and link under `root` holds, `.git` left out. */
 async function tree(root: string): Promise<Map<string, string>> {
   const found = new Map<string, string>();
   for (const entry of await readdir(root, { recursive: true, withFileTypes: true })) {
     if (entry.isDirectory()) continue;
     const file = path.join(entry.parentPath, entry.name);
     const relative = path.relative(root, file).split(path.sep).join("/");
-    if (relative === ".git" || relative.startsWith(".git/") || isMigrationReportPath(relative)) {
+    if (relative === ".git" || relative.startsWith(".git/")) {
       continue;
     }
     found.set(
@@ -825,13 +575,9 @@ function retiredKeys(config: Record<string, unknown>): void {
   config.validation = validation;
 }
 
-function lastLine(report: string): string | undefined {
-  return report.trimEnd().split("\n").at(-1);
-}
-
 describe("migration step: an invalid qfai.config.yaml", () => {
+  // QFAI:EX-0004-0003-33
   it("prints the sentence naming the file and then each loader issue, and writes nothing", async () => {
-    // QFAI:EX-0004-0003-33
     const root = await oldLayout();
     expect((await loadConfig(root)).issues).toEqual([]);
     await editConfig(root, (config) => {
@@ -860,8 +606,8 @@ describe("migration step: an invalid qfai.config.yaml", () => {
 });
 
 describe("migration step 1: the retired traceability keys", () => {
+  // QFAI:EX-0004-0004-06
   it("removes both keys, lists each, and leaves the other keys and a rerun alone", async () => {
-    // QFAI:EX-0004-0004-06
     const root = await oldLayout();
     await editConfig(root, (config) => {
       retiredKeys(config);
@@ -896,8 +642,8 @@ describe("migration step 1: the retired traceability keys", () => {
     expect(again.output).toContain("## Operations\nnone\n");
   });
 
+  // QFAI:EX-0004-0004-06
   it("removes a validation mapping the removal leaves empty, so the file raises no issue for either key", async () => {
-    // QFAI:EX-0004-0004-06
     const { root } = await context();
     await put(
       root,
@@ -923,48 +669,9 @@ describe("migration step 1: the retired traceability keys", () => {
   });
 });
 
-describe("migration step report files", () => {
-  it("keeps each run's report in the dry-run or run directory, numbered and never reused", async () => {
-    // QFAI:EX-0004-0003-36
-    const root = await oldLayout();
-    for (const step of [1, 2]) expect((await stepIn(root, step)).code).not.toBe(2);
-    const dryFile = `${MIGRATION_REPORT_DIR}/dry-run/step-03-001.md`;
-    const runFile = `${MIGRATION_REPORT_DIR}/run/step-03-001.md`;
-    const secondFile = `${MIGRATION_REPORT_DIR}/run/step-03-002.md`;
-
-    const dry = await stepIn(root, 3, ["--dry-run"]);
-    expect(dry.code).not.toBe(2);
-    expect(await migrationReportFiles(root, "dry-run", 3)).toEqual([dryFile]);
-    expect(await migrationReportFiles(root, "run", 3)).toEqual([]);
-    const dryReport = await readMigrationReport(root, dryFile);
-    expect(dryReport).toContain(dry.output);
-    expect(lastLine(dryReport)).toBe(`Exit code: ${dry.code}`);
-
-    const real = await stepIn(root, 3);
-    expect(real.code).not.toBe(2);
-    expect(await migrationReportFiles(root, "run", 3)).toEqual([runFile]);
-    const runReport = await readMigrationReport(root, runFile);
-    expect(runReport).toContain(real.output);
-    expect(lastLine(runReport)).toBe(`Exit code: ${real.code}`);
-
-    const third = await stepIn(root, 3);
-    expect(await migrationReportFiles(root, "run", 3)).toEqual([runFile, secondFile]);
-    expect(await readMigrationReport(root, runFile)).toBe(runReport);
-    const secondReport = await readMigrationReport(root, secondFile);
-    expect(secondReport).toContain(third.output);
-    expect(lastLine(secondReport)).toBe(`Exit code: ${third.code}`);
-    expect(await migrationReportFiles(root, "dry-run", 3)).toEqual([dryFile]);
-
-    for (const run of [dry, real, third]) {
-      for (const line of section(run.output, "Operations")) {
-        expect(line).not.toContain("report/");
-        expect(line).not.toContain("step-03-");
-      }
-    }
-  });
-
+describe("migration step 3: a retired config key", () => {
+  // QFAI:EX-0004-0003-34
   it("runs step 3 on a story-tree project that still holds a retired config key", async () => {
-    // QFAI:EX-0004-0003-36
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-migration-retired-key-"));
     roots.push(root);
     await mkdir(path.join(root, ".qfai", "spec"), { recursive: true });
@@ -979,46 +686,5 @@ describe("migration step report files", () => {
     expect(await readFile(path.join(root, "qfai.config.yaml"), "utf8")).not.toContain(
       "primarySpecId",
     );
-  });
-
-  it("writes no report through a symbolic link below the project root", async () => {
-    // QFAI:EX-0004-0003-36
-    const root = await oldLayout();
-    const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-migration-report-outside-"));
-    roots.push(outside);
-    await mkdir(path.join(root, ...MIGRATION_REPORT_DIR.split("/")), { recursive: true });
-    await symlink(outside, path.join(root, ...MIGRATION_REPORT_DIR.split("/"), "run"), "junction");
-
-    const result = await stepIn(root, 1);
-
-    expect(result.errors).toContain("The report was not written");
-    expect(await readdir(outside)).toEqual([]);
-  });
-
-  it("keeps the report of a refusal once the arguments and the config are found, and of nothing before", async () => {
-    // QFAI:EX-0004-0003-37
-    const root = await oldLayout();
-    const refused = await stepIn(root, 2);
-    expect(refused.code).toBe(2);
-    expect(refused.errors).toContain("Run step 1 before step 2.");
-    const file = `${MIGRATION_REPORT_DIR}/run/step-02-001.md`;
-    expect(await migrationReportFiles(root, "run")).toEqual([file]);
-    const report = await readMigrationReport(root, file);
-    expect(report).toContain(refused.errors);
-    expect(lastLine(report)).toBe("Exit code: 2");
-    expect(await migrationReportFiles(root, "dry-run")).toEqual([]);
-
-    const forced = await stepIn(root, 1, ["--force"]);
-    expect(forced.code).toBe(2);
-    expect(forced.errors).toContain("--force");
-    expect(await migrationReportFiles(root, "run")).toEqual([file]);
-    expect(await migrationReportFiles(root, "dry-run")).toEqual([]);
-
-    const empty = await mkdtemp(path.join(os.tmpdir(), "qfai-migration-no-config-"));
-    roots.push(empty);
-    const missing = await stepIn(empty, 1);
-    expect(missing.code).toBe(2);
-    expect(missing.errors).toContain("qfai.config.yaml");
-    expect(await readdir(empty)).toEqual([]);
   });
 });

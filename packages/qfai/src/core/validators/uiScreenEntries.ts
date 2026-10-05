@@ -6,7 +6,7 @@
  * One reading is right, and what a dropped entry states is then checked by
  * nothing: an empty `primary_tasks` on it passes the audit lane and the
  * prototyping preflight, and a different route on it is prototyped and
- * certified as the entry it repeats. This names each such entry.
+ * reviewed as the entry it repeats. This names each such entry.
  */
 
 import type { QfaiConfig } from "../config.js";
@@ -40,7 +40,7 @@ function locate(file: string, index: number | undefined): string {
 function describe(entry: UnreadScreenEntry): string {
   const where = locate(entry.file, entry.index);
   const unchecked =
-    "No screen is read from it, so the audit lane, the prototyping preflight and certification check nothing it states.";
+    "No screen is read from it, so the audit lane, the prototyping preflight and the prototype review check nothing it states.";
   switch (entry.reason) {
     case "not-a-list":
       return `${where} is not a list. ${unchecked}`;

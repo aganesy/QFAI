@@ -146,10 +146,6 @@ export type QfaiUiuxConfig = {
   audit?: QfaiUiuxAuditConfig;
 };
 
-export type QfaiPrototypingCalibrationConfig = {
-  packPath?: string;
-};
-
 export type QfaiPrototypingExecutionConfig = {
   targetUrl?: string | null;
   /**
@@ -163,37 +159,12 @@ export type QfaiPrototypingExecutionConfig = {
 };
 
 export type QfaiPrototypingConfig = {
-  calibration?: QfaiPrototypingCalibrationConfig;
   execution?: QfaiPrototypingExecutionConfig;
   /**
    * Explicit primary UI contract for `/qfai-prototyping`.
    * Uses the full `UI-NNNN` identifier.
    */
   primaryUiContract?: string;
-  /**
-   * Second-wave loop posture discriminator.
-   *
-   *   - `convergence` (default): every prototyping gate applies at the
-   *     declared severity (today's behavior).
-   *   - `exploration`: medium gate relaxation — soft-rubric gates
-   *     (loop completion, design-compliance drift) downgrade error →
-   *     warning. Schema / path / license (exit 66) gates stay hard
-   *     error.
-   *
-   * Overridden per-run by `qfai prototyping iterate --mode <value>`.
-   * Optional; absence defaults to `convergence`.
-   */
-  mode?: "convergence" | "exploration";
-};
-
-export type QfaiReviewConfig = {
-  /**
-   * Stale review-pack TTL (calendar days) used by `qfai doctor --clean`
-   * to decide whether to move `.qfai/review/<ts>/` packs into
-   * `.qfai/review/_archive/<ts>/`. Default (when unset) is applied at
-   * the call-site by `REVIEW_STALE_TTL_DAYS_DEFAULT`.
-   */
-  staleTtlDays?: number;
 };
 
 export type QfaiReportConfig = {
@@ -213,15 +184,6 @@ export type QfaiReportConfig = {
    * strand that pointer. Use `staleTtlDays: 0` to keep every run.
    */
   keepLatestRuns?: number;
-};
-
-export type QfaiAtddConfig = {
-  /**
-   * Number of consecutive un-skip + re-skip cycles tolerated before the
-   * scaffold-cycle escalation fires. Default (when unset) is applied at
-   * the call-site.
-   */
-  scaffoldEscalateCycles?: number;
 };
 
 /**
@@ -246,9 +208,7 @@ export type QfaiConfig = {
   output: QfaiOutputConfig;
   uiux?: QfaiUiuxConfig;
   prototyping?: QfaiPrototypingConfig;
-  review?: QfaiReviewConfig;
   report?: QfaiReportConfig;
-  atdd?: QfaiAtddConfig;
   routing?: QfaiRoutingEntry[];
   reviewProfiles?: Record<string, QfaiReviewProfile>;
   baseBranch?: string;
@@ -331,9 +291,6 @@ export const defaultConfig: QfaiConfig = {
     validateJsonPath: ".qfai/report/validate.json",
   },
   prototyping: {
-    calibration: {
-      packPath: ".qfai/evidence/calibration.yaml",
-    },
     execution: {
       targetUrl: null,
       browserTool: "playwright",
@@ -424,9 +381,7 @@ function normalizeConfig(raw: unknown, configPath: string, issues: Issue[]): Qfa
 
   const uiux = normalizeUiux(raw.uiux, configPath, issues);
   const prototyping = normalizePrototyping(raw.prototyping, configPath, issues);
-  const review = normalizeReview(raw.review, configPath, issues);
   const report = normalizeReport(raw.report, configPath, issues);
-  const atdd = normalizeAtdd(raw.atdd, configPath, issues);
   const routing = normalizeRouting(raw.routing, configPath, issues);
   const reviewProfiles = normalizeReviewProfiles(raw.reviewProfiles, configPath, issues);
   const base: QfaiConfig = {
@@ -440,14 +395,8 @@ function normalizeConfig(raw: unknown, configPath: string, issues: Issue[]): Qfa
   if (prototyping) {
     base.prototyping = prototyping;
   }
-  if (review) {
-    base.review = review;
-  }
   if (report) {
     base.report = report;
-  }
-  if (atdd) {
-    base.atdd = atdd;
   }
   if (routing) {
     base.routing = routing;
@@ -696,7 +645,6 @@ function normalizePrototyping(
     return undefined;
   }
 
-  const calibration = normalizePrototypingCalibration(raw.calibration, configPath, issues);
   const execution = normalizePrototypingExecution(raw.execution, configPath, issues);
   if (Object.prototype.hasOwnProperty.call(raw, "primarySpecId")) {
     issues.push(
@@ -707,36 +655,13 @@ function normalizePrototyping(
     );
   }
   const primaryUiContract = normalizePrimaryUiContract(raw.primaryUiContract, configPath, issues);
-  const mode = normalizePrototypingMode(raw.mode, configPath, issues);
-  if (!calibration && !execution && primaryUiContract === undefined && mode === undefined) {
+  if (!execution && primaryUiContract === undefined) {
     return undefined;
   }
   return {
-    ...(calibration ? { calibration } : {}),
     ...(execution ? { execution } : {}),
     ...(primaryUiContract !== undefined ? { primaryUiContract } : {}),
-    ...(mode !== undefined ? { mode } : {}),
   };
-}
-
-function normalizePrototypingMode(
-  raw: unknown,
-  configPath: string,
-  issues: Issue[],
-): "convergence" | "exploration" | undefined {
-  if (raw === undefined || raw === null) {
-    return undefined;
-  }
-  if (raw === "convergence" || raw === "exploration") {
-    return raw;
-  }
-  issues.push(
-    configIssue(
-      configPath,
-      `prototyping.mode must be "convergence" or "exploration". Received: ${JSON.stringify(raw)}`,
-    ),
-  );
-  return undefined;
 }
 
 function normalizePrimaryUiContract(
@@ -769,32 +694,6 @@ export function readRejectedPrimaryUiContract(loaded: ConfigLoadResult): string 
   if (raw === undefined || raw === null) return undefined;
   if (loaded.config.prototyping?.primaryUiContract !== undefined) return undefined;
   return primaryUiContractMessage(raw);
-}
-
-function normalizePrototypingCalibration(
-  raw: unknown,
-  configPath: string,
-  issues: Issue[],
-): QfaiPrototypingCalibrationConfig | undefined {
-  const base = defaultConfig.prototyping?.calibration;
-  if (raw === undefined || raw === null) {
-    return base ? { ...base } : undefined;
-  }
-  if (!isRecord(raw)) {
-    issues.push(configIssue(configPath, "prototyping.calibration must be an object."));
-    return base ? { ...base } : undefined;
-  }
-
-  validateObsoleteCalibrationFields(raw, configPath, issues);
-  return {
-    packPath: readString(
-      raw.packPath,
-      base?.packPath ?? ".qfai/evidence/calibration.yaml",
-      "prototyping.calibration.packPath",
-      configPath,
-      issues,
-    ),
-  };
 }
 
 function normalizePrototypingExecution(
@@ -865,39 +764,6 @@ function normalizePrototypingExecution(
   };
 }
 
-function normalizeReview(
-  raw: unknown,
-  configPath: string,
-  issues: Issue[],
-): QfaiReviewConfig | undefined {
-  if (raw === undefined || raw === null) {
-    return undefined;
-  }
-  if (!isRecord(raw)) {
-    issues.push(configIssue(configPath, "review must be an object."));
-    return undefined;
-  }
-  const result: QfaiReviewConfig = {};
-  if (raw.staleTtlDays !== undefined) {
-    if (
-      typeof raw.staleTtlDays === "number" &&
-      Number.isFinite(raw.staleTtlDays) &&
-      Number.isInteger(raw.staleTtlDays) &&
-      raw.staleTtlDays >= 0
-    ) {
-      result.staleTtlDays = raw.staleTtlDays;
-    } else {
-      issues.push(
-        configIssue(
-          configPath,
-          "review.staleTtlDays must be an integer greater than or equal to 0.",
-        ),
-      );
-    }
-  }
-  return Object.keys(result).length === 0 ? undefined : result;
-}
-
 function readNonNegativeInteger(
   raw: unknown,
   field: string,
@@ -947,62 +813,6 @@ function normalizeReport(
     }
   }
   return Object.keys(result).length === 0 ? undefined : result;
-}
-
-function normalizeAtdd(
-  raw: unknown,
-  configPath: string,
-  issues: Issue[],
-): QfaiAtddConfig | undefined {
-  if (raw === undefined || raw === null) {
-    return undefined;
-  }
-  if (!isRecord(raw)) {
-    issues.push(configIssue(configPath, "atdd must be an object."));
-    return undefined;
-  }
-  const result: QfaiAtddConfig = {};
-  if (raw.scaffoldEscalateCycles !== undefined) {
-    if (
-      typeof raw.scaffoldEscalateCycles === "number" &&
-      Number.isFinite(raw.scaffoldEscalateCycles) &&
-      Number.isInteger(raw.scaffoldEscalateCycles) &&
-      raw.scaffoldEscalateCycles >= 0
-    ) {
-      result.scaffoldEscalateCycles = raw.scaffoldEscalateCycles;
-    } else {
-      issues.push(
-        configIssue(
-          configPath,
-          "atdd.scaffoldEscalateCycles must be an integer greater than or equal to 0.",
-        ),
-      );
-    }
-  }
-  return Object.keys(result).length === 0 ? undefined : result;
-}
-
-function validateObsoleteCalibrationFields(
-  raw: Record<string, unknown>,
-  configPath: string,
-  issues: Issue[],
-): void {
-  const obsoleteFields = [
-    "thresholds",
-    "maxIterations",
-    "plateauDelta",
-    "plateauLookback",
-  ] as const;
-  for (const field of obsoleteFields) {
-    if (raw[field] !== undefined) {
-      issues.push(
-        configIssue(
-          configPath,
-          `prototyping.calibration.${field} is retired. Use the calibration pack only, and set just prototyping.calibration.packPath.`,
-        ),
-      );
-    }
-  }
 }
 
 function readString(

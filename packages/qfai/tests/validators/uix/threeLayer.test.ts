@@ -3,8 +3,6 @@
  *
  * The file reads no shipped document, so the canonical-wording obligation it
  * used to claim is discharged elsewhere.
- *
- * QFAI:EX-0001-0018-01
  */
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -39,6 +37,7 @@ afterEach(async () => {
   }
 });
 
+// QFAI:EX-0001-0018-01
 describe("3-layer validator", () => {
   it("new format pass", async () => {
     const root = await newTempDir();

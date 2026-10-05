@@ -1,5 +1,4 @@
 /** Init integration traceability and assistant-tree wiring. */
-// QFAI:EX-0001-0020-01
 import { cp, lstat, mkdir, mkdtemp, readdir, readFile, realpath, symlink } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -21,7 +20,19 @@ const ROOT_GITIGNORE_WRITER = path.resolve(
   "rootGitignore.ts",
 );
 
+const SHIPPED_SKILL_DIR = path.resolve(
+  __dirname,
+  "..",
+  "..",
+  "assets",
+  "init",
+  ".qfai",
+  "assistant",
+  "skill",
+);
+
 // TC-0003-0001: Empty directory initialization
+// QFAI:EX-0001-0020-01
 describe("TC-0003-0001: Empty directory initialization", () => {
   const ARTIFACT_DIRS = ["specs", "contracts", "discussion", "evidence", "review", "report"];
   const SKILL_LINK_DIRS = [".claude/skills", ".agents/skills", ".codex/skills", ".github/skills"];
@@ -62,12 +73,18 @@ describe("TC-0003-0001: Empty directory initialization", () => {
 
       // Verify bullet 3. Init has no fallback for a link it cannot create — it stops with the
       // Developer Mode message — so a copied directory here is a failure on every platform.
-      const skills = (
-        await readdir(path.join(dir, ".qfai", "assistant", "skill"), { withFileTypes: true })
-      )
-        .filter((entry) => entry.isDirectory() && entry.name.startsWith("qfai-"))
-        .map((entry) => entry.name);
-      expect(skills.length, "init wrote no qfai-* skill").toBeGreaterThan(0);
+      // The expected set is read from the shipped asset tree by its own directory and SKILL.md
+      // inspection, not from the collector init uses, so a skill both would omit is still checked.
+      const skills: string[] = [];
+      for (const entry of await readdir(SHIPPED_SKILL_DIR, { withFileTypes: true })) {
+        if (!entry.isDirectory()) continue;
+        if ((await kindOf(path.join(SHIPPED_SKILL_DIR, entry.name, "SKILL.md"))) === "file") {
+          skills.push(entry.name);
+        }
+      }
+      expect(skills, "the shipped tree holds a skill without the qfai- prefix").toContain(
+        "web-research",
+      );
       // Compared by where the link resolves, not by the text of its target: a
       // dangling link, or one into a copy outside the project, can end in the
       // same characters.
@@ -310,11 +327,11 @@ describe("TC-0003-0025: assistantPaths.ts SSOT module", () => {
 });
 
 describe("TC-0003-0026: legacy backward-compat + sunset warning", () => {
-  it("init declares emitLegacyAssistantSteeringSunset emitting D-DEPRECATED-PATH (sunset sourced from SSOT)", async () => {
+  it("init declares emitLegacyAssistantTreeSunset emitting D-DEPRECATED-PATH (sunset sourced from SSOT)", async () => {
     const content = await readFile(INIT_CLI, "utf-8");
     expect(content).toContain("D-DEPRECATED-PATH");
-    expect(content).toContain("emitLegacyAssistantSteeringSunset");
-    // The version in the message comes from legacyAssistantSteeringSunsetLabel()
+    expect(content).toContain("emitLegacyAssistantTreeSunset");
+    // The version in the message comes from legacyAssistantTreeSunsetLabel()
     // rather than a literal here; the runtime assertion lives in
     // tests/cli/init.test.ts.
     expect(content).toMatch(/announced sunset \(v\$\{sunset\}\)/);

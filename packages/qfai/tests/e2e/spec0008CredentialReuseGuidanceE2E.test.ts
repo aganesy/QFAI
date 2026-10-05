@@ -9,7 +9,7 @@
  * has dropped whole subtrees before. A reference artifact that exists in the package and never
  * arrives is indistinguishable, from every integration row, from one that works. So this file
  * initialises an empty project and reads the delivered tree, and it follows the cross-link the way
- * a reader would — from the delivered `atdd-credentials` step, resolved against the project root.
+ * a reader would — from the delivered `implement-credentials` step, resolved against the project root.
  *
  * `runInit` once, shared: a full asset tree is the expensive part and both rows read the same one.
  */
@@ -39,11 +39,11 @@ afterAll(async () => {
 });
 
 const CREDENTIAL_LINK =
-  /`(\.qfai\/assistant\/skill\/qfai-atdd\/references\/[a-z0-9-]*credential[a-z0-9-]*\.md)`/;
+  /`(\.qfai\/assistant\/skill\/qfai-implement\/references\/[a-z0-9-]*credential[a-z0-9-]*\.md)`/;
 
 function readStep(dir: string): Promise<string> {
   return readFile(
-    path.join(dir, ".qfai", "assistant", "step", "atdd-credentials", "STEP.md"),
+    path.join(dir, ".qfai", "assistant", "step", "implement-credentials", "STEP.md"),
     "utf-8",
   );
 }

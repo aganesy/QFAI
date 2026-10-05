@@ -6,11 +6,11 @@
 Feature: Prototyping delegation scope
   # AC-0001-0097-01
   Scenario: Each prototyping role has a documented owner
-    Given a prototyping run delegates work
+    Given a prototyping cycle delegates work
     When the skill documents role ownership
     Then evaluator and reviewer role ownership is documented.
     And the skill spells out which roles own implementation, evaluation scoring, and build.
-    And capture responsibility is named only for an opt-in `--capture` run; the default reviewer-driven run has no fixed third capture identity.
+    And the delegation map has no fixed capture identity.
 
   # AC-0001-0097-02
   Scenario: Generator and reviewer identities remain distinct

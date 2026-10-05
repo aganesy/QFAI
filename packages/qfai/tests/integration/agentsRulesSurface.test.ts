@@ -1822,7 +1822,7 @@ describe("rule overlays", () => {
     },
     {
       file: "root-additions-policy.local.md",
-      clauses: ["report.<pid>", ".qfai/review/review-<timestamp>/"],
+      clauses: ["report.<pid>"],
     },
   ];
 

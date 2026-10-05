@@ -3,10 +3,11 @@
 ## Criteria
 
 ```gherkin
-Feature: 15-file discussion-pack structure
+Feature: Nine-file discussion-pack structure
   # AC-0001-0013-01
-  Scenario: The discussion pack holds the 15 required files
+  Scenario: The discussion pack holds the nine required files
     Given a discussion-pack directory
     When its required files are checked
-    Then the 15 files from `01_Context.md` to `99_delta.md` exist
+    Then `01_Context.md`, `03_Story-Workshop.md`, `04_Sources.md`, `05_Scope.md`, `06_REQ.md`, `07_NFR.md`, `08_Glossary.md`, `09_Constraints.md` and `11_OQ-Register.md` exist
+    And `01_Context.md` holds the `## Inception Deck` section, and `09_Constraints.md` the `## Security Policy`, `## Compliance Policy`, `## Development Policy` and `## Operational Policy` sections
 ```

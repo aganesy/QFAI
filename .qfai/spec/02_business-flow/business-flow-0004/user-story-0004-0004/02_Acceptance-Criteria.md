@@ -10,8 +10,7 @@ Feature: Move the QFAI directories to their singular names
     And an assistant directory whose singular destination already holds an entry of the same name
     When step 1 runs
     Then every directory in the rename map is at its new path and the config paths name the new paths
-    And the colliding entry is under the migration's legacy archive, listed under Operations
-    And nothing is deleted
+    And the colliding entry is deleted, listed under Operations
 
   # AC-0004-0004-02
   Scenario: The project's own skill overlay keeps its content under the singular name

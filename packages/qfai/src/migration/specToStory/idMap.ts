@@ -3,8 +3,11 @@ import path from "node:path";
 
 import { isEnoent } from "../../core/fs/errno.js";
 
-export const ID_MAP_PATH = ".qfai/evidence/migration-spec-to-story/id-map.json";
-export const CONTRACT_MAP_PATH = ".qfai/evidence/migration-spec-to-story/contract-map.json";
+/** The migration's working state: the plan, the ID map and the contract map. */
+export const MIGRATION_STATE_DIR = "tmp/qfai-migration";
+export const ID_MAP_PATH = `${MIGRATION_STATE_DIR}/id-map.json`;
+export const CONTRACT_MAP_PATH = `${MIGRATION_STATE_DIR}/contract-map.json`;
+export const PLAN_PATH = `${MIGRATION_STATE_DIR}/plan.yaml`;
 
 /**
  * A 1.x contract's new identity, keyed by its old path under `paths.contractsDir`:

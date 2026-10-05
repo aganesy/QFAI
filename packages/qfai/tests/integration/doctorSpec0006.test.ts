@@ -7,13 +7,6 @@
  * All 10 TDD items are Exception-pattern backfill (DR-0006-0002).
  * Existing coverage: tests/cli/doctor.test.ts.
  */
-// QFAI:EX-0003-0001-03
-// QFAI:EX-0003-0002-01
-// QFAI:EX-0003-0003-01
-// QFAI:EX-0003-0004-01
-// QFAI:EX-0003-0012-01
-// QFAI:EX-0003-0012-02
-// QFAI:EX-0003-0001-02
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -24,6 +17,13 @@ import { createDoctorData } from "../../src/core/doctor.js";
 const DOCTOR_CLI = path.resolve(__dirname, "..", "..", "src", "cli", "commands", "doctor.ts");
 
 // TC-0006-0001: config found - text output
+// QFAI:EX-0003-0001-02
+// QFAI:EX-0003-0001-03
+// QFAI:EX-0003-0002-01
+// QFAI:EX-0003-0003-01
+// QFAI:EX-0003-0004-01
+// QFAI:EX-0003-0012-01
+// QFAI:EX-0003-0012-02
 describe("TC-0006-0001: config found - text output", () => {
   it("doctor module exports runDoctor", async () => {
     const content = await readFile(DOCTOR_CLI, "utf-8");

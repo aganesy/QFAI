@@ -1,8 +1,0 @@
-# Examples
-
-## Examples
-
-| EX-ID           | AC-Ref          | Input                                                                                                                                                                              | Expected                                                                                                                                                                                   |
-| --------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| EX-0001-0146-01 | AC-0001-0146-01 | A 2048-byte `.qfai/evidence/prototyping/iter-00/UI-0001/home.review.json`, when `qfai prototyping iterate --cycle 0 --force` moves it into `iter-00.backup-<ISO>/` before clearing | The git-ignored `.qfai/evidence/prototyping/mutation-log.jsonl` gains a line with `ts`, `caller: iterate`, the source-relative `path`, `action: move`, `priorSize: 2048` and `newSize: 0`. |
-| EX-0001-0146-02 | AC-0001-0146-02 | A code path overwrites `.qfai/evidence/prototyping/iter-03/UI-0002/settings.review.json` without calling the mutation-log writer, when Reviewer Gate examines that path            | It emits error `R-EVIDENCE-MUTATION-UNLOGGED`.                                                                                                                                             |
