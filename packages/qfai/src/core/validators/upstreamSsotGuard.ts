@@ -3,7 +3,12 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { getChangedFilesAgainstBase, normalizeRepoPath, readFileAtBase } from "../gitChanges.js";
-import { classifyRecordRow, diffRecordTables, parseRecordTable } from "../storyTree/tables.js";
+import {
+  classifyRecordRow,
+  diffRecordTables,
+  parseRecordTable,
+  type RecordRow,
+} from "../storyTree/tables.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -29,14 +34,16 @@ export async function validateStoryTreeDrift(
 
   const currentDecisions = await readSafePath(path.join(root, decisions));
   const rows = parseRecordTable(currentDecisions, "decisions").rows;
-  const baseStatus = new Map(
-    parseRecordTable(baseDecisions, "decisions").rows.map((row) => [row.id, row.status]),
+  const baseRows = new Map(
+    parseRecordTable(baseDecisions, "decisions").rows.map((row) => [row.id, row]),
   );
   const authorised = new Map<string, string>();
   for (const row of rows) {
     const classified = classifyRecordRow(row);
     if (classified.kind !== "change-request" || !classified.inForce) continue;
-    if (!authorisesThisBranch(row.status, baseStatus.get(row.id))) continue;
+    const baseRow = baseRows.get(row.id);
+    if (!authorisesThisBranch(row.status, baseRow?.status)) continue;
+    if (baseRow && rewritesImmutableCell(baseRow, row)) continue;
     for (const file of classified.refs) authorised.set(normalizeRepoPath(file), row.id);
   }
   const issues: Issue[] = [];
@@ -111,6 +118,11 @@ export async function validateStoryTreeDrift(
 /** A DONE request applies only while newly appended or advanced from base WIP. */
 function authorisesThisBranch(status: string, statusAtBase: string | undefined): boolean {
   return status === "WIP" || statusAtBase === undefined || statusAtBase === "WIP";
+}
+
+/** A row the base holds keeps its Content and Approach, so a rewrite of either grants nothing. */
+function rewritesImmutableCell(base: RecordRow, head: RecordRow): boolean {
+  return base.content !== head.content || base.approach !== head.approach;
 }
 
 function withoutChangeRequestRows(content: string): string {
