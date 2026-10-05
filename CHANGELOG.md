@@ -47,6 +47,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the shipped copy. Rule files, the Copilot and Codex files and the agent and
   skill links that need no change are now counted as skipped (#2986).
 
+- **The handoff reader refuses an artifact whose fields have the wrong type.**
+  `HandoffReader.read` checked only that the five top-level keys were present
+  and then returned the file as a `HandoffArtifact`. It now also requires
+  `timestamp` and `iteration`, and checks each field and nested list against
+  the type it returns. A file that fails is refused with `null` and a logged
+  error, as a missing key already was. Fixes #2862.
+
 - **The `qfai-run` entry reminder stays silent on a turn the host starts
   (#2989).** The Claude Code `UserPromptSubmit` hook that sends a request to
   `qfai-run` printed on every notification, so an agent could start a run from
