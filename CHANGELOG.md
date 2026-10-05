@@ -15,13 +15,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   still carried are rewritten as plain comments, and its migration fixtures
   are excluded from the test globs (#2308).
 
-### Changed
-
-- **The routing-eval token classes stay as they are** (#2305). No class in the
-  routing-eval token vocabulary changes. The set of safety-relevant routing
-  seeds is unchanged, and the list derived from these classes may now be
-  recorded. The decision is recorded in `decisions.md`.
-
 ### Fixed
 
 - **The planner-first and design anti-goal examples are tested for what they
@@ -61,6 +54,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   as an unresolved obligation and run the full test suite once on the
   integrated tree as an extra check. The suite does not replace revalidating
   each flow, and the search is not reported complete. Refs #2424.
+
+- **The routing-eval token classes stay as they are** (#2305). No class in the
+  routing-eval token vocabulary changes. The set of safety-relevant routing
+  seeds is unchanged, and the list derived from these classes may now be
+  recorded. The decision is recorded in `decisions.md`.
 
 ## [2.1.0] - 2026-10-05
 
