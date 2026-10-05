@@ -151,7 +151,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   host without all three keeps it waiting. Starting another delegation still
   needs the independence conditions of the parallelization policy, and an
   ordering the ledger or a seam makes mandatory still holds.
-
+- **Review is the detector for a security defect** (#2252). No repository gate
+  scans for a security or data-integrity defect, and the Drift Protocol now
+  says so. It names the implementation reviewer as that class's detector: a
+  finding the reviewer demonstrates traces to `defect:security` and blocks.
+  The reviewer card names concrete checks in place of the single word
+  "security": the three shapes the protocol names, and injection, cross-site
+  scripting, server-side request forgery, hardcoded secrets, insecure direct
+  object reference, auth bypass, unsafe deserialization and path traversal.
+  The check reads the whole of every touched file and follows each input the
+  change adds or alters to where it is used, across files the change did not
+  touch. Only a finding on what the change added or altered blocks.
 - **`qa-gatekeeper` asks whether a reviewed test would survive a refactor**
   (#2253). A test that asserts on what the contract does not name, such as a
   private function, an internal call order or a mock of the code's own
@@ -163,7 +173,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   test that existed before the change. The three other questions a regression
   review asks point at the checks that already own them: the coverage gate, and
   the proof per example in the oracle strength reference.
-
 - **Five doctor criteria now name the tests that prove them.** Existing
   integration tests carry standalone `QFAI:AC-...` comments, and
   `AC-0003-0004-01` gains a deprecated `paths.promptsDir` warning case.
