@@ -127,7 +127,9 @@ describe("where qfai-run runs the policy check and the commit", () => {
   });
 
   it("commits after an end release point, so the commit holds the approval", async () => {
-    const work = flat(sectionOf(await readShipped("skill/qfai-run/SKILL.md"), "## The work"));
+    const work = flat(
+      sectionOf(await readShipped("skill/qfai-run/references/stage-points.md"), "## Release point"),
+    );
     expect(work).toMatch(/`verify-commit` runs after that, so the commit holds the approval/i);
   });
 
