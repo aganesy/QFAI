@@ -55,6 +55,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   integrated tree as an extra check. The suite does not replace revalidating
   each flow, and the search is not reported complete. Refs #2424.
 
+- **A DONE change request claims every action it lists** (#2312). A
+  `decisions.md` row has one Status, so a request with one action deferred could
+  be marked DONE and the deferred action dropped from view. The drift protocol
+  now keeps such a row at WIP, or splits the deferred action into a new
+  `Change request:` row before the original is marked DONE.
+
 ## [2.1.0] - 2026-10-05
 
 ### Breaking changes
@@ -314,12 +320,6 @@ its code. Several commands, findings and files go with that.
   verbatim.
 
 ### Changed
-
-- **A DONE change request claims every action it lists** (#2312). A
-  `decisions.md` row has one Status, so a request with one action deferred could
-  be marked DONE and the deferred action dropped from view. The drift protocol
-  now keeps such a row at WIP, or splits the deferred action into a new
-  `Change request:` row before the original is marked DONE.
 
 - **A question that one command answers needs no plan.** The free-text
   reminder and the `qfai-run` description say a question that one command or
