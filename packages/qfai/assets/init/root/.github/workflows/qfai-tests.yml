@@ -13,9 +13,10 @@
 # layer-named test scripts (test:unit, test:component, test:integration,
 # test:api, test:e2e) your package.json declares. A lane runs only when
 # BOTH hold: your package.json declares the matching layer-named test
-# script (your opt-in) and the diff selected the lane. Delete the file if
-# you do not want it; `qfai init` will not recreate a file you
-# deliberately removed.
+# script (your opt-in) and the diff selected the lane. To opt out of the
+# file, list `qfai-tests.yml` under `workflow.skipShipped` in
+# qfai.config.yaml and delete it. Deleting it alone does not stop
+# `qfai init` writing it again.
 #
 # What this file needs from your repository, and how it behaves when it does
 # not get it:
