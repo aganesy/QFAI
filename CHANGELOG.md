@@ -49,10 +49,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
-- **A completed change request can no longer be reopened (#2897).** A
-  `Change request:` row that the base branch holds at DONE authorised edits to
-  its paths again once a branch set it back to WIP. It now authorises nothing at
-  any status, so a later change needs a new approved request.
 - **A verify run tells a failure that predates the change from one it caused.**
   A failing gate is now run again on the base commit, and the result is
   recorded in the `gates` of `verify.json` as a `baseline` of `same`,
@@ -108,6 +104,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `.claude/skills/qfai-run/SKILL.md` under the current directory. The reminder
   is read from the session's own checkout. Fixes #2972.
 
+- **A completed change request can no longer be reopened (#2897).** A
+  `Change request:` row that the base branch holds at DONE authorised edits to
+  its paths again once a branch set it back to WIP. It now authorises nothing at
+  any status, so a later change needs a new approved request.
 - **The changelog guard no longer fails the commit a release is tagged at.**
   The guard refuses an entry added to a section whose tag exists. The merge
   that folds `## [Unreleased]` into the release is the commit the tag is pushed
