@@ -41,6 +41,7 @@ type Guard = {
     },
     file: string,
   ) => Array<{ code?: string; message?: string }>;
+  repinSteps: (profile: string) => string;
 };
 
 /**
@@ -245,24 +246,21 @@ describe("errorsForFile", () => {
 describe("repinSteps", () => {
   // The backlog file is a pinned guard input. A message naming only `--pin`
   // leaves its digest stale, and the lint lane fails on it after the re-pin.
-  async function loadRepinSteps(): Promise<(profile: string) => string> {
-    const url = pathToFileURL(path.join(repoRoot, "scripts", "check-dogfood-backlog.mjs")).href;
-    const guard = (await import(url)) as { repinSteps: (profile: string) => string };
-    return guard.repinSteps;
-  }
+  it.each(["tdd", "sdd", "full"])(
+    "names the backlog re-pin for %s, then the guard bytes, then the verification bodies",
+    async (profile) => {
+      const { repinSteps } = await load();
 
-  it("names the backlog re-pin, then the guard bytes, then the verification bodies", async () => {
-    const repinSteps = await loadRepinSteps();
-
-    expect(repinSteps("tdd").split("\n")).toEqual([
-      "  node scripts/check-dogfood-backlog.mjs --profile tdd --pin",
-      "  node scripts/pin-guard-bytes.mjs",
-      "  node scripts/pin-verification-bodies.mjs",
-    ]);
-  });
+      expect(repinSteps(profile).split("\n")).toEqual([
+        `  node scripts/check-dogfood-backlog.mjs --profile ${profile} --pin`,
+        "  node scripts/pin-guard-bytes.mjs",
+        "  node scripts/pin-verification-bodies.mjs",
+      ]);
+    },
+  );
 
   it("names only scripts that exist", async () => {
-    const repinSteps = await loadRepinSteps();
+    const { repinSteps } = await load();
 
     for (const step of repinSteps("tdd").split("\n")) {
       const script = step.trim().split(" ")[1] ?? "";
