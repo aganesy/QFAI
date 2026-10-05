@@ -174,9 +174,9 @@ async function runInOrder(
 }
 
 describe("migration steps 5 to 8", () => {
+  // QFAI:EX-0004-0003-17
+  // QFAI:EX-0004-0008-02
   it("uses heading-only legacy cases and keeps their detail in the new example", async () => {
-    // QFAI:EX-0004-0008-02
-    // QFAI:EX-0004-0003-17
     const context = await fixture();
     await put(
       context.root,
@@ -215,11 +215,11 @@ describe("migration steps 5 to 8", () => {
     );
   });
 
+  // QFAI:EX-0004-0003-16
+  // QFAI:EX-0004-0008-01
+  // QFAI:EX-0004-0008-03
+  // QFAI:EX-0004-0008-04
   it("converts every single-criterion case and accounts for each unconvertible case", async () => {
-    // QFAI:EX-0004-0008-01
-    // QFAI:EX-0004-0008-03
-    // QFAI:EX-0004-0008-04
-    // QFAI:EX-0004-0003-16
     const context = await fixture();
     await put(
       context.root,
@@ -256,9 +256,9 @@ describe("migration steps 5 to 8", () => {
     expect((repeated.casesToExamples?.length ?? 0) + (repeated.forAPerson?.length ?? 0)).toBe(4);
   });
 
+  // QFAI:EX-0004-0008-12
+  // QFAI:EX-0004-0008-13
   it("writes a case's steps as plain values and lists a cell holding several steps", async () => {
-    // QFAI:EX-0004-0008-12
-    // QFAI:EX-0004-0008-13
     const context = await fixture();
     await put(
       context.root,
@@ -282,8 +282,8 @@ describe("migration steps 5 to 8", () => {
     );
   });
 
+  // QFAI:EX-0004-0008-05
   it("accounts for five case-only rows as three conversions and two human decisions", async () => {
-    // QFAI:EX-0004-0008-05
     const context = await fixture();
     await put(
       context.root,
@@ -322,8 +322,8 @@ describe("migration steps 5 to 8", () => {
     expect(examples).not.toContain("Ambiguous");
   });
 
+  // QFAI:EX-0004-0008-06
   it("derives a mapped example's criterion from all citing cases", async () => {
-    // QFAI:EX-0004-0008-06
     const context = await fixture();
     await put(
       context.root,
@@ -336,8 +336,8 @@ describe("migration steps 5 to 8", () => {
     );
   });
 
+  // QFAI:EX-0004-0008-10
   it("places an example cited with and without a criterion under that criterion's story", async () => {
-    // QFAI:EX-0004-0008-10
     const context = await bareFixture();
     await put(
       context.root,
@@ -391,8 +391,8 @@ describe("migration steps 5 to 8", () => {
     ).not.toContain("A full cart");
   });
 
+  // QFAI:EX-0004-0008-11
   it("reports a case-only row whose one criterion has no new ID without writing an example", async () => {
-    // QFAI:EX-0004-0008-11
     const context = await fixture();
     const examplePath = path.join(context.specsDir, story);
     const examples = await readFile(examplePath, "utf8");
@@ -427,9 +427,9 @@ describe("migration steps 5 to 8", () => {
     expect(await readFile(examplePath, "utf8")).toBe(manual);
   });
 
+  // QFAI:EX-0004-0009-01
+  // QFAI:EX-0004-0009-05
   it("writes a mapped rule into its existing YAML contract and leaves unresolved rules in their pack", async () => {
-    // QFAI:EX-0004-0009-01
-    // QFAI:EX-0004-0009-05
     const context = await fixture();
     await put(
       context.root,
@@ -577,8 +577,8 @@ describe("migration steps 5 to 8", () => {
     }
   }
 
+  // QFAI:EX-0004-0009-03
   it("writes SQL and Markdown rule forms with mapped example IDs", async () => {
-    // QFAI:EX-0004-0009-03
     const context = await fixture();
     await put(
       context.root,
@@ -632,9 +632,9 @@ describe("migration steps 5 to 8", () => {
     ).rejects.toMatchObject({ code: "ENOENT" });
   });
 
+  // QFAI:EX-0004-0009-02
+  // QFAI:EX-0004-0009-04
   it("writes a mapped rule and both citing examples to a SQL contract", async () => {
-    // QFAI:EX-0004-0009-02
-    // QFAI:EX-0004-0009-04
     const context = await fixture();
     await put(
       context.root,
@@ -678,8 +678,8 @@ describe("migration steps 5 to 8", () => {
     );
   });
 
+  // QFAI:EX-0004-0009-06
   it("keeps a placed rule when its contract file is absent", async () => {
-    // QFAI:EX-0004-0009-06
     const context = await fixture();
     await put(
       context.root,
@@ -787,8 +787,8 @@ describe("migration steps 5 to 8", () => {
     });
   });
 
+  // QFAI:EX-0004-0009-09
   it("keeps a rule whose only citing example stayed unmapped", async () => {
-    // QFAI:EX-0004-0009-09
     const context = await fixture();
     await put(
       context.root,
@@ -826,8 +826,8 @@ describe("migration steps 5 to 8", () => {
     );
   });
 
+  // QFAI:EX-0004-0009-10
   it("adds a placed rule to a JSON contract as one top-level x-qfai-rules object", async () => {
-    // QFAI:EX-0004-0009-10
     const { context } = await existingRuleFixture("api/orders.json", '{"openapi":"3.0.0"}\n');
     expect(await executePlannedStep(step07, context, false, capture().io)).toBe(0);
     const parsed: unknown = JSON.parse(
@@ -845,8 +845,8 @@ describe("migration steps 5 to 8", () => {
     });
   });
 
+  // QFAI:EX-0004-0009-11
   it("adds a placed rule as one row of an existing Markdown Rules table", async () => {
-    // QFAI:EX-0004-0009-11
     const oldRow = "| BR-0002-0002 | A cart holds one currency. | EX-0001-0002-01 |";
     const { context } = await existingRuleFixture(
       "cli/orders.md",
@@ -861,8 +861,8 @@ describe("migration steps 5 to 8", () => {
     ]);
   });
 
+  // QFAI:EX-0004-0009-12
   it("lists only the placed citing example when another stayed in its pack", async () => {
-    // QFAI:EX-0004-0009-12
     const context = await fixture();
     await put(
       context.root,
@@ -905,8 +905,8 @@ describe("migration steps 5 to 8", () => {
     });
   });
 
+  // QFAI:EX-0004-0009-07
   it("keeps a rule no old example cites", async () => {
-    // QFAI:EX-0004-0009-07
     const context = await fixture();
     await put(
       context.root,
@@ -925,8 +925,8 @@ describe("migration steps 5 to 8", () => {
     );
   });
 
+  // QFAI:EX-0004-0009-08
   it("reports an applicable NFR beside both contracts that received the pack's rules", async () => {
-    // QFAI:EX-0004-0009-08
     const context = await fixture();
     await put(
       context.root,
@@ -986,8 +986,8 @@ describe("migration steps 5 to 8", () => {
     );
   });
 
+  // QFAI:EX-0004-0003-26
   it("refuses changed or unknown rule placements before writing a contract", async () => {
-    // QFAI:EX-0004-0003-26
     const context = await fixture();
     await put(
       context.root,
@@ -1049,8 +1049,8 @@ describe("migration steps 5 to 8", () => {
     expect(c.output.join("")).toContain("QFAI:SPEC-0001:TC-0001-9999");
   });
 
+  // QFAI:EX-0004-0010-05
   it("leaves a legacy criterion annotation in place and reports it for a person", async () => {
-    // QFAI:EX-0004-0010-05
     const context = await fixture();
     const annotation = ["QFAI", "SPEC-0001", "AC-0001-0001"].join(":");
     const content = `import { it } from "vitest";\n// ${annotation}\nit("orders", () => {});\n`;
@@ -1065,8 +1065,8 @@ describe("migration steps 5 to 8", () => {
     );
   });
 
+  // QFAI:EX-0004-0008-14
   it("sets an example's AC-Ref from the plan's examples entry", async () => {
-    // QFAI:EX-0004-0008-14
     const exampleFile = (context: MigrationContext): string =>
       path.join(context.specsDir, flowDir, "user-story-0001-0002/03_Example.md");
     const withoutEntry = await twoStoryPack(`${twoStoryFlows}rules: []\n`);
@@ -1087,8 +1087,8 @@ describe("migration steps 5 to 8", () => {
     expect(await readFile(exampleFile(context), "utf8")).toContain(placed);
   });
 
+  // QFAI:EX-0004-0009-16
   it("removes a rule marked binds none or retire without placing it in a contract", async () => {
-    // QFAI:EX-0004-0009-16
     const context = await twoStoryPack(
       `${twoStoryFlows}rules:\n  - id: BR-0001-0001\n    binds: none\n  - id: BR-0001-0002\n    retire: superseded by another rule\n`,
       "# Rules\n\n| BR-ID | Rule | Contract-Refs |\n| --- | --- | --- |\n| BR-0001-0001 | Orders may be free. | - |\n| BR-0001-0002 | Orders may be held. | - |\n",
@@ -1119,8 +1119,8 @@ describe("migration steps 5 to 8", () => {
     expect(await readFile(exampleFile, "utf8")).toBe(placed);
   });
 
+  // QFAI:EX-0004-0009-17
   it("removes only a rule's own table row and heading section from its source", async () => {
-    // QFAI:EX-0004-0009-17
     const context = await fixture();
     await put(
       context.root,
@@ -1169,8 +1169,8 @@ describe("migration steps 5 to 8", () => {
     );
   });
 
+  // QFAI:EX-0004-0010-07
   it("rewrites the annotation of a test case whose example the plan's entry placed", async () => {
-    // QFAI:EX-0004-0010-07
     const legacy = ["QFAI", "SPEC-0001", "TC-0001-0002"].join(":");
     const file = "tests/integration/order.test.ts";
     const withTestFile = async (plan: string): Promise<MigrationContext> => {
@@ -1390,8 +1390,8 @@ const dependencies = Array.from(
 const longDependsOn = `x-qfai-depends-on: [${dependencies.join(", ")}]`;
 
 describe("migration step 7 keeps the declarations of a YAML contract", () => {
+  // QFAI:EX-0004-0009-19
   it("keeps a list of dependencies longer than 80 columns on one line", async () => {
-    // QFAI:EX-0004-0009-19
     const context = await ruleProject(tableRules);
     const contract = `# QFAI-CONTRACT-ID: API-0001\nopenapi: 3.0.0\n${longDependsOn}\ninfo:\n  title: Orders API\n`;
     expect(longDependsOn.length).toBeGreaterThan(80);
@@ -1403,8 +1403,8 @@ describe("migration step 7 keeps the declarations of a YAML contract", () => {
     expect(dependsOnList(written)).toEqual(dependencies);
   });
 
+  // QFAI:EX-0004-0009-19
   it("puts a dependency list an earlier step 7 folded back on one line when it rewrites nothing else", async () => {
-    // QFAI:EX-0004-0009-19
     const context = await ruleProject(tableRules);
     // The second rule names a contract that does not exist, so the rule file stays and a rerun
     // meets the first rule again in the contract it was written to.
@@ -1481,8 +1481,8 @@ describe("migration step 8 leaves a test-case annotation in an E2E file", () => 
       .map((issue) => issue.message);
   }
 
+  // QFAI:EX-0004-0010-08
   it("rewrites the story annotation, lists the case annotation and lists it again on each run", async () => {
-    // QFAI:EX-0004-0010-08
     const { context, example } = await migrated();
     const first = capture();
     const firstCode = await executePlannedStep(step08, context, false, first.io);
@@ -1516,8 +1516,8 @@ describe("migration step 8 leaves a test-case annotation in an E2E file", () => 
     expect(reportSection(second.output.join(""), "For a person")).toBe(listed);
   });
 
+  // QFAI:EX-0004-0010-08
   it("lists nothing for the annotation once its line is deleted", async () => {
-    // QFAI:EX-0004-0010-08
     const { context } = await migrated();
     expect(await executePlannedStep(step08, context, false, capture().io)).toBe(3);
     const current = await readFile(path.join(context.root, e2eFile), "utf8");
@@ -1534,8 +1534,8 @@ describe("migration step 8 leaves a test-case annotation in an E2E file", () => 
     expect(reportSection(report.output.join(""), "For a person")).toBe("none");
   });
 
+  // QFAI:EX-0004-0010-08
   it("leaves no EX annotation in the E2E file for validation to report", async () => {
-    // QFAI:EX-0004-0010-08
     const { context } = await migrated();
     // Control: validation reads the tree, and the example still lacks a test.
     expect((await findings(context)).map((issue) => issue.code)).toContain("QFAI-STORY-006");

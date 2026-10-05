@@ -9,11 +9,6 @@
  * referenced from tests/integration/**); type-column values are planning
  * signals per .qfai/assistant/catalog/test-layers.md "Volume policy".
  */
-// QFAI:EX-0003-0006-01
-// QFAI:EX-0003-0006-01
-// QFAI:EX-0003-0006-02
-// QFAI:EX-0003-0006-03
-// QFAI:EX-0003-0006-04
 
 import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -109,6 +104,10 @@ function findFinding(
   return data.checks.find(matcher);
 }
 
+// QFAI:EX-0003-0006-01
+// QFAI:EX-0003-0006-02
+// QFAI:EX-0003-0006-03
+// QFAI:EX-0003-0006-04
 describe("TC-0006-0012: playwright primary probe detects node_modules/.bin/playwright", () => {
   it("resolves the project-local playwright shim and records it as primary (not deprecated)", async () => {
     const root = await newTempDir("tc12");
@@ -203,8 +202,8 @@ describe("TC-0006-0016: fresh init + playwright install yields zero error lines"
 
 describe("root DESIGN.md readiness", () => {
   // QFAI:AC-0003-0006-05
+  // QFAI:EX-0003-0006-06
   it("names root DESIGN.md in the readiness check and lists its findings", async () => {
-    // QFAI:EX-0003-0006-06
     const root = await newTempDir("design-md");
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
     const ready = findCheck(await readDoctorJson(root), "prototyping.designMdReadiness");

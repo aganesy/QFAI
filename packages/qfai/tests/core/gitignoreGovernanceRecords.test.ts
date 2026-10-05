@@ -1,4 +1,3 @@
-// QFAI:EX-0001-0033-03
 import { execFile as execFileCb } from "node:child_process";
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -40,6 +39,7 @@ const RETIRED_EVIDENCE_LINES = [
   "!.qfai/evidence/skeleton.md",
 ];
 
+// QFAI:EX-0001-0033-03
 describe("the managed block ignores the evidence directory whole", () => {
   it("writes the negations after the ignore lines", () => {
     const lines = QFAI_GITIGNORE_BLOCK.split("\n");

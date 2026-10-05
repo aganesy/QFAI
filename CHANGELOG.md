@@ -4,14 +4,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **`qfai validate` warns about trace marks no check reads.** In the `tdd`
+  profile, a comment line in a selected test file that carries a `QFAI:US-`,
+  `QFAI:TC-`, `QFAI:SC-` or `QFAI:SPEC-` mark raises `QFAI-STORY-014` at
+  warning, naming the file, the line and the mark. Only `QFAI:BF-`, `QFAI:AC-`
+  and `QFAI:EX-` annotations record coverage, so such a mark records nothing.
+  A mark inside a string literal is left alone. The marks this repository
+  still carried are rewritten as plain comments, and its migration fixtures
+  are excluded from the test globs (#2308).
+
 ### Fixed
 
-- **The `qfai-sdd` triage reference lists every place a retirement touches**
-  (#2263). It spells the update operations `UPDATE:APPEND`, `UPDATE:MODIFY`
-  and `UPDATE:REMOVE`, and gains a section on retiring an EX, AC or BR: the
-  approved change request, the item itself, the examples cells of the rules
-  that cite it, the test annotations, an AC left without an example, and no
-  reuse of the ID. It names the `qfai validate` findings that catch a leftover.
+- **The planner-first and design anti-goal examples are tested for what they
+  say.** The planner-first example was annotated on a test that only checked
+  three file names. Its test now reads the completion matrix and the
+  `01_Context.md` template for the recorded brand theme, the unranked
+  explorations and the unfinalized design system. The anti-goal example, which
+  had no test, is checked against the `04_Sources.md` template. (#2286)
 - **Two governance tests can now fail.** The missing-bucket test matched
   bucket names the message always prints; it now checks the
   `missingBuckets=[...]` list, with a second case where one bucket is missing.
@@ -21,6 +32,48 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   three annotations sat at the top of the file, so any passing test there
   counted for all three. The test covering the four mode values names the value
   in each failing assertion. (#2287)
+- **The `qfai-sdd` triage reference lists every place a retirement touches**
+  (#2263). It spells the update operations `UPDATE:APPEND`, `UPDATE:MODIFY`
+  and `UPDATE:REMOVE`, and gains a section on retiring an EX, AC or BR: the
+  approved change request, the item itself, the examples cells of the rules
+  that cite it, the test annotations, an AC left without an example, and no
+  reuse of the ID. It names the `qfai validate` findings that catch a leftover.
+
+### Changed
+
+- **An EX annotation counts only directly before a test declaration** (#2761).
+  A `QFAI:EX-` annotation used to cover its example from anywhere in a selected
+  test file, so a header comment above the imports, or one line in a file with
+  no test, discharged the obligation. It now counts only on a comment line
+  directly before `it(`, `test(`, `describe(` or another framework's test
+  declaration, with nothing but blank and comment lines between. Move a header
+  annotation down to the test it describes; `qfai validate --profile tdd`
+  otherwise reports the example as uncovered. BF and AC annotations are read as
+  before.
+- **The repository's scans lane refuses a tracked file under `.qfai/report/`,
+  `.qfai/evidence/`, `.qfai/review/`, `.qfai/output/`, `.qfai/discussion/` or
+  `.qfai/review_archive/`.** The managed
+  `.gitignore` block ignores those directories whole, but an ignore entry does
+  not untrack a file added before it or with `git add -f`, and every later
+  `qfai validate` then dirtied the tree. The guard that already refused a
+  tracked file under `tmp/` now checks these directories too, and a test holds
+  its list to the `.gitignore` entries. Fixes #2356.
+
+- **The shipped cross-flow guidance says how to find the flows a shared change
+  reaches, and what to do when that search cannot finish.**
+  `qfai-implement/references/cross-spec-ownership.md` now searches outward from
+  the changed files: follow the importers and literal reads until a test file is
+  reached, then read its `QFAI:` annotations to name the dependent flows. An edge
+  that cannot be followed by reading (a computed import path, a glob-loaded
+  fixture, a path built at run time) leaves the dependent set unknown: record it
+  as an unresolved obligation and run the full test suite once on the
+  integrated tree as an extra check. The suite does not replace revalidating
+  each flow, and the search is not reported complete. Refs #2424.
+
+- **The routing-eval token classes stay as they are** (#2305). No class in the
+  routing-eval token vocabulary changes. The set of safety-relevant routing
+  seeds is unchanged, and the list derived from these classes may now be
+  recorded. The decision is recorded in `decisions.md`.
 
 ## [2.1.0] - 2026-10-05
 
