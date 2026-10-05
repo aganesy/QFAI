@@ -45,6 +45,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   with a space is matched with `?` or `[ ]`. A leading `!(` extglob is read as a
   pattern, not an exclusion. Fixes #2902.
 
+- **A validator no longer reads an unreadable file as a missing one.** The
+  shared `exists` and `readSafe` helpers turned every failure, including
+  `EACCES` and `EIO`, into "absent" or an empty string, so a file the validator
+  could not read passed as one that was not there. Only `ENOENT` and `ENOTDIR`
+  now mean absent; any other error propagates unchanged. Fixes #2906.
+
 - **The contract guide states one scope for contract kinds.** It named only
   `api/`, `db/` and `ui/` as contract directories in one place and `cli/` in
   another. It now says a project's contracts are the three directories and that
