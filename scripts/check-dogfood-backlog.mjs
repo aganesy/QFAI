@@ -13,28 +13,36 @@
  * Fixing them means adding the required tests and recording what they prove.
  * Until that backfill lands, two contracts keep each lane meaningful:
  *
- * | Contract     | Holds                                                           |
- * | ------------ | --------------------------------------------------------------- |
- * | Held at zero | A file absent from the profile's pin may report no error at all |
- * | Ratchet      | A pinned file may report no more errors than its pinned count   |
+ * | Contract     | Holds                                                                  |
+ * | ------------ | ---------------------------------------------------------------------- |
+ * | Held at zero | A file absent from the profile's pin may report no error at all        |
+ * | Ratchet      | A pinned file may report each finding no more often than it is pinned  |
+ *
+ * The pin holds each file's findings by identity, not by count: a finding's key
+ * is its code and the IDs it names. A count alone let a change clear one
+ * finding and add a different one in the same file and still pass, so an
+ * untested example could hide behind a test written for another.
  *
  * A new gate failure in a clean file fails immediately, and one in a file
- * already carrying debt fails as soon as it raises that file's count. Neither
- * can be cleared by a waiver: `QFAI-WAIVER-002` refuses a waiver whose rule is
+ * already carrying debt fails as soon as it is a finding that file's pin does
+ * not hold. Neither can be cleared by a waiver: `QFAI-WAIVER-002` refuses a waiver whose rule is
  * an error, which is what makes the backfill the only route out.
  *
- * A file that improves is re-pinned in the same change, and one that reaches
- * zero is struck from the list rather than left at `0`, so the slot cannot be
- * taken by the next regression. `--pin` rewrites the profile's entry from a
- * live run.
+ * A file that improves is re-pinned in the same change, and a finding or a
+ * file that reaches zero is struck from the list rather than left at `0`, so
+ * the slot cannot be taken by the next regression. `--pin` rewrites the
+ * profile's entry from a live run.
  *
  * A pin describes the tree, so a finding that depends on the branch's diff
- * against the base is never counted in it. `QFAI-DRIFT-001` reports a protected
- * story-tree file changed since the base without a change request: a count
- * pinned by the pull request that made the change reads one less on every pull
+ * against the base is never held in it. `QFAI-DRIFT-001` reports a protected
+ * story-tree file changed since the base without a change request: a finding
+ * pinned by the pull request that made the change disappears from every pull
  * request after it merges, and the ratchet then fails work that never touched
  * the file. Those errors fail the lane outright instead, in the pull request
  * whose diff produces them, and `--pin` does not record them.
+ *
+ * A run that could not complete is refused before any comparison or pin: its
+ * report holds fewer findings than the tree has.
  *
  * Findings print as GitHub annotations, so each lane's output is unchanged
  * from the raw `validate` call this replaces.
@@ -55,19 +63,62 @@ const PIN_PATH = path.join(repoRoot, "scripts", "dogfood-backlog.json");
 const CLI = path.join(repoRoot, "packages/qfai/dist/cli/index.mjs");
 const REPORT = path.join(repoRoot, ".qfai", "report", "validate.json");
 
+/** Refuse incomplete validation artifacts before accepting a measurement. */
+export function assertCompleteValidationReport(report) {
+  if (report.profileValidatorsRan === false) {
+    throw new Error("Root report did not run profile validators.");
+  }
+  if (report.issues.some((issue) => issue.code === "QFAI-SCAN-002")) {
+    throw new Error("Root report contains an incomplete validation run (QFAI-SCAN-002).");
+  }
+}
+
+/**
+ * What makes one finding the same finding on the next run: its code and the
+ * IDs it names. The message stands in only for a finding that names none.
+ */
+export function findingKey(issue) {
+  const refs = Array.isArray(issue.refs) ? issue.refs.filter((ref) => ref !== "") : [];
+  const subject = refs.length > 0 ? refs.join(",") : String(issue.message ?? "");
+  return `${String(issue.code ?? "(no code)")} ${subject}`;
+}
+
 /**
  * The three ways a run can disagree with its pin.
  *
  * Separated from the run so the contract is testable without one: reaching it
  * through a real profile would test the repository's current backlog rather
- * than the rule. `counts` and `pinned` are both file to error count.
+ * than the rule. `found` maps each file to its findings' keys and counts, and
+ * `pinned` holds the same shape as an object.
+ *
+ * - `unpinned`: `[file, total]` for a file the pin does not name;
+ * - `over`: `[file, key, count, pinnedCount]` for a finding past its pin,
+ *   `pinnedCount` `0` for one the file's pin does not hold;
+ * - `improved`: `[file, key, pinnedCount, count]` for a pinned finding the run
+ *   reports less often, `count` `0` where it is gone.
  */
-export function compareAgainstPin(counts, pinned) {
-  return {
-    unpinned: [...counts].filter(([file]) => !(file in pinned)),
-    over: [...counts].filter(([file, n]) => file in pinned && n > pinned[file]),
-    improved: Object.entries(pinned).filter(([file, n]) => (counts.get(file) ?? 0) < n),
-  };
+export function compareAgainstPin(found, pinned) {
+  const unpinned = [];
+  const over = [];
+  for (const [file, keys] of found) {
+    if (!(file in pinned)) {
+      unpinned.push([file, [...keys.values()].reduce((sum, n) => sum + n, 0)]);
+      continue;
+    }
+    const held = pinned[file];
+    for (const [key, n] of keys) {
+      const allowed = held[key] ?? 0;
+      if (n > allowed) over.push([file, key, n, allowed]);
+    }
+  }
+  const improved = [];
+  for (const [file, held] of Object.entries(pinned)) {
+    for (const [key, allowed] of Object.entries(held)) {
+      const n = found.get(file)?.get(key) ?? 0;
+      if (n < allowed) improved.push([file, key, allowed, n]);
+    }
+  }
+  return { unpinned, over, improved };
 }
 
 /**
@@ -84,15 +135,46 @@ export function diffDependentErrors(report) {
     .map(({ code, file, message }) => ({ code, file: file ?? "(no file)", message }));
 }
 
-/** Every error in a validate report the pin may hold, counted by the file it names. */
+/** Every error the pin may hold, by the file it names and then by its key. */
 export function errorsByFile(report) {
-  const counts = new Map();
+  const found = new Map();
   for (const issue of report.issues ?? []) {
     if (issue.severity !== "error" || EXCLUDED_FROM_PIN_CODES.has(issue.code)) continue;
     const file = issue.file ?? "(no file)";
-    counts.set(file, (counts.get(file) ?? 0) + 1);
+    const keys = found.get(file) ?? new Map();
+    const key = findingKey(issue);
+    keys.set(key, (keys.get(key) ?? 0) + 1);
+    found.set(file, keys);
   }
-  return counts;
+  return found;
+}
+
+/**
+ * Files whose saved finding counts are not positive safe integers.
+ * Bare file counts cannot identify findings and are refused too.
+ */
+export function invalidPinnedFiles(pinned) {
+  return Object.entries(pinned)
+    .filter(
+      ([, held]) =>
+        typeof held !== "object" ||
+        held === null ||
+        Array.isArray(held) ||
+        Object.values(held).some((count) => !Number.isSafeInteger(count) || count <= 0),
+    )
+    .map(([file]) => file);
+}
+
+/** The pin entry `--pin` writes: files and keys in a stable order. */
+export function pinEntry(found) {
+  return Object.fromEntries(
+    [...found]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([file, keys]) => [
+        file,
+        Object.fromEntries([...keys].sort(([a], [b]) => a.localeCompare(b))),
+      ]),
+  );
 }
 
 /** Name the findings behind a changed file count when annotations are capped. */
@@ -153,8 +235,8 @@ function runValidate(profile) {
     stdio: ["ignore", "inherit", "inherit"],
   });
   if (result.error) fail(`could not run validate: ${result.error.message}`);
-  // `--fail-on never` still exits non-zero when the run could not complete,
-  // which is a different failure from a finding and is not ratcheted.
+  // A process-level failure exits nonzero. An incomplete validation can write
+  // QFAI-SCAN-002 and exit zero under `--fail-on never`.
   if (result.status !== 0) fail(`validate exited ${String(result.status)} before reporting.`);
 }
 
@@ -169,16 +251,25 @@ function main() {
     fail(`could not read ${REPORT}: ${String(err)}`);
     return;
   }
-  const counts = errorsByFile(report);
-  const total = [...counts.values()].reduce((sum, n) => sum + n, 0);
+  try {
+    assertCompleteValidationReport(report);
+  } catch (err) {
+    fail(err instanceof Error ? err.message : String(err));
+    return;
+  }
+  const found = errorsByFile(report);
+  const total = [...found.values()].reduce(
+    (sum, keys) => sum + [...keys.values()].reduce((inner, n) => inner + n, 0),
+    0,
+  );
   const pin = JSON.parse(readFileSync(PIN_PATH, "utf-8"));
   const diffDependent = diffDependentErrors(report);
 
   if (process.argv.includes("--pin")) {
-    pin.profiles[profile] = Object.fromEntries([...counts].sort(([a], [b]) => a.localeCompare(b)));
+    pin.profiles[profile] = pinEntry(found);
     writeFileSync(PIN_PATH, `${JSON.stringify(pin, null, 2)}\n`, "utf-8");
     console.log(
-      `check-dogfood-backlog: pinned ${profile} at ${String(total)} error(s) across ${String(counts.size)} file(s).`,
+      `check-dogfood-backlog: pinned ${profile} at ${String(total)} error(s) across ${String(found.size)} file(s).`,
     );
     if (diffDependent.length > 0) {
       console.error(
@@ -198,7 +289,22 @@ function main() {
     return;
   }
 
-  const { unpinned, over, improved } = compareAgainstPin(counts, pinned);
+  if (typeof pinned !== "object" || Array.isArray(pinned)) {
+    fail(`the ${profile} pin must be an object of files and finding counts.`);
+    return;
+  }
+
+  const counted = invalidPinnedFiles(pinned);
+  if (counted.length > 0) {
+    console.error(
+      `check-dogfood-backlog: the ${profile} pin holds ${String(counted.length)} invalid file entry/entries. ` +
+        "Each file must hold finding counts as a positive safe integer. Re-pin the profile:\n\n" +
+        repinSteps(profile),
+    );
+    process.exit(1);
+  }
+
+  const { unpinned, over, improved } = compareAgainstPin(found, pinned);
 
   for (const [file, n] of unpinned) {
     console.error(
@@ -208,13 +314,10 @@ function main() {
       console.error(`  ${String(code)}: ${String(message)}`);
     }
   }
-  for (const [file, n] of over) {
+  for (const [file, key, n, allowed] of over) {
     console.error(
-      `check-dogfood-backlog: ${file} reports ${String(n)} error(s) for ${profile}, past its pinned ${String(pinned[file])}.`,
+      `check-dogfood-backlog: ${file} reports ${key} ${String(n)} time(s) for ${profile}, past its pinned ${String(allowed)}.`,
     );
-    for (const { code, message } of errorsForFile(report, file)) {
-      console.error(`  ${String(code)}: ${String(message)}`);
-    }
   }
   if (diffDependent.length > 0) {
     console.error(
@@ -243,15 +346,15 @@ function main() {
     console.error(
       `check-dogfood-backlog: the ${profile} pin is behind the tree. Re-pin these in the same change:`,
     );
-    for (const [file, n] of improved) {
-      console.error(`  ${file}: ${String(n)} -> ${String(counts.get(file) ?? 0)}`);
+    for (const [file, key, allowed, n] of improved) {
+      console.error(`  ${file}: ${key}: ${String(allowed)} -> ${String(n)}`);
     }
     console.error(`\n${repinSteps(profile)}`);
     process.exit(1);
   }
 
   console.log(
-    `check-dogfood-backlog: ${profile} reports ${String(total)} error(s) across ${String(counts.size)} file(s), all within the pinned backlog.`,
+    `check-dogfood-backlog: ${profile} reports ${String(total)} error(s) across ${String(found.size)} file(s), all within the pinned backlog.`,
   );
 }
 

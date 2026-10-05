@@ -1,13 +1,9 @@
 route: change-tooling
 family: upkeep
 stages:
-  - id: diagnose
-    kind: diagnose
-    steps: [implement-diagnose]
   - id: edit
     kind: implement
     steps: [implement-tooling]
-    after: [diagnose]
   - id: note
     kind: verify
     steps:
