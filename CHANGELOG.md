@@ -13,6 +13,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   vocabulary and requires the result to equal the recorded list. A seed or
   vocabulary change that moves the list fails until the list is recorded again.
 
+### Fixed
+
+- **Each `qfai init` mode-line example is annotated on its own test.** The
+  three annotations sat at the top of the file, so any passing test there
+  counted for all three. The test covering the four mode values names the value
+  in each failing assertion. (#2287)
+
 ## [2.1.0] - 2026-10-05
 
 ### Breaking changes
