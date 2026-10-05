@@ -1122,7 +1122,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "The configured spec directory uses the story-tree layout without old spec-pack entries.",
   "QFAI-STORY-001": "Every required story-tree policy and contract file exists.",
   "QFAI-STORY-002": "Story-tree IDs are well formed, unique, and consistent with their paths.",
-  "QFAI-STORY-003": "The decisions and open-questions tables have valid records.",
+  "QFAI-STORY-003":
+    "The decisions and open-questions tables have valid records, and every decision or question a contract rule or a superseded row cites is declared by a row.",
   "QFAI-STORY-004": "Each story has acceptance criteria and examples with valid references.",
   "QFAI-STORY-005":
     "Every business rule and contract reference resolves, and a rule numbered BR-NNNN-NNNN carries the number of the contract that declares it.",
@@ -1312,7 +1313,8 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
     "Record the user's decision in the open-question row, or leave it open until the decision is made.",
   "QFAI-STORY-001": "Create the required policy or contract file named in the finding.",
   "QFAI-STORY-002": "Correct the named story-tree ID or directory so the ID and path agree.",
-  "QFAI-STORY-003": "Repair the named decisions or open-questions row and its required fields.",
+  "QFAI-STORY-003":
+    "Repair the named decisions or open-questions row and its required fields, or add the cited decision or question, or correct the citation.",
   "QFAI-STORY-004": "Add the missing AC or EX record and repair the cited story reference.",
   "QFAI-STORY-005":
     "Define the missing business rule or contract, correct the cited reference, or renumber the rule after the contract that declares it.",

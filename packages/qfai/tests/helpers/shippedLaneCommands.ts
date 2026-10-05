@@ -1533,7 +1533,13 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   //
   // Re-pinned for the removal of the `Skill(qfai-atdd)` permission, the skill no longer shipping.
   // The whole delta is that one line; restoring it reproduces `85902b08…` byte for byte.
-  [".claude/settings.json", "673f14b22b81192995608e7384e49791b254d0edc5b7a4dc2ccb49297f65d77e"],
+  //
+  // Re-pinned when the free-text entry group started reading its input, and both it and the
+  // structured-question group also skipped a prompt whose line opens with `[SYSTEM NOTIFICATION`.
+  // The two programs are now the same text. Events, matchers and markers are unchanged; the
+  // previous groups are listed as superseded so the merge refreshes them. Restoring the two
+  // programs reproduces `673f14b2…` byte for byte.
+  [".claude/settings.json", "0bf2f12f9f3bb18a767be123148e58db33fb635d2e5a945bbae32e383c64d681"],
   // Inside `.codex/`, and pinned for the reason `.claude/settings.json` is: its commands are a
   // program an adopter's agent runs. Two `UserPromptSubmit` groups, structured-question and
   // free-text entry. Codex takes one command string, so each runs the same `node -e` reader

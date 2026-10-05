@@ -14,7 +14,7 @@ Read the flow and story indexes plus concrete files. A subject match alone is in
 ## Operation choice
 
 Choose one primary operation for each affected BF or US. UPDATE is the default when the existing item keeps its identity
-and purpose. Its sub-operation is APPEND, MODIFY, or REMOVE. CREATE is used when no existing item represents the new
+and purpose. Its sub-operation is written UPDATE:APPEND, UPDATE:MODIFY, or UPDATE:REMOVE. CREATE is used when no existing item represents the new
 outcome. DELETE, SPLIT, MERGE, and SUPERSEDE change identity or scope and require explicit approval. UPDATE:REMOVE also
 requires approval. A supporting contract update is named in the same decision's Approach or in a linked row; it is not a
 second fictional flow.
@@ -23,7 +23,8 @@ Inspect the impact cascade: policy → BF → US → AC → EX → enforcing con
 
 ## Decision and question rows
 
-Use <paths.specsDir>/decisions.md and <paths.specsDir>/open-questions.md, each with exactly ID, Content, Approach, Status. Append a row; later only Status may change. Do not edit the first three cells or remove the row. Use the next highest ID in the table plus one. A retired item still reserves its BF or US ID.
+Use <paths.specsDir>/decisions.md and <paths.specsDir>/open-questions.md, each with exactly ID, Content, Approach, Status. Append a row; later only Status may change, including to `PARTLY SUPERSEDED (by DEC-NNNN)` when a later row narrows a decision without replacing it.
+Do not edit the first three cells or remove the row. Use the next highest ID in the table plus one. A retired item still reserves its BF or US ID.
 
 decisions.md records only what the user decided: each change request the user approved or declined,
 and each critical decision the user made. A row is appended once the user has decided what it records.
@@ -70,11 +71,39 @@ A story-tree or contract file changes only on the user's approval:
 A row present before the stage started keeps its ID, Content and Approach.
 Only a row this stage appended changes its Status.
 
+## Retiring an EX, AC or BR
+
+A retirement touches every place the ID is written. Do all of them in one change:
+
+1. Get the user's approval of the UPDATE:REMOVE and append its `Change request:` decision row, whose Content names every retired ID.
+2. Delete the EX row from 03_Example.md, the AC scenario from 02_Acceptance-Criteria.md, or the BR row from its contract.
+3. Remove a retired EX from the Examples cell of every BR that cites it. A BR left with no example gets another example or is retired in the same row.
+4. Remove each QFAI:EX annotation of a retired EX from the tests, or point it at the example the test now proves.
+5. An AC left with no example gets one or is retired in the same row.
+6. Retiring an AC also retires each EX whose AC-Ref names it, or moves that EX to another AC of the story by changing its AC-Ref, then applies steps 3 and 4 to each EX retired. Remove each QFAI:AC annotation of the retired AC from the tests, or point it at the AC the test now proves.
+7. Never reuse a retired ID. The decision row keeps it counted.
+
+`npx qfai validate` reports what steps 3 to 6 left behind: a BR citing an unknown example (`QFAI-STORY-005`), a test annotation naming an undeclared ID (`QFAI-STORY-008`), and an AC with no example or an EX with an invalid AC-Ref (`QFAI-STORY-004`).
+
 ## ID allocation
 
-Read all IDs of the kind in the relevant scope, including IDs named by retirement rows. The next ID is the highest plus one. BF spans the project. US is inside its BF. AC and EX are inside their US.
+Read all IDs of the kind in the relevant scope, including IDs named by retirement rows. The next ID is the highest plus one. A project that also counts the IDs its open pull requests add takes the highest across the tree and those pull requests, so a gap above the tree's own highest is allowed. BF spans the project. US is inside its BF. AC and EX are inside their US.
 A contract number spans every contract kind, and a BR is numbered inside its contract. DEC and OQ each span their table.
 Empty numeric scopes begin at 0001, and AC/EX tails begin at 01. Do not reuse an ID because its file was removed or a row was rejected.
+
+Two branches can take the same next ID. When a merge leaves one ID on two items:
+
+1. The merge target's item keeps the ID. Renumber the incoming item, the one the merge brings in.
+2. Give it the next ID of its scope.
+   A renumbered BF or US takes its child IDs and its directory names with it, as a move to another BF does below.
+3. Change every citation of the old ID in the same commit.
+4. State the old ID, the new ID and the renamed record's subject or path in the commit message.
+   A citation of the old ID elsewhere is then told apart from the item that kept it.
+
+A `decisions.md` or `open-questions.md` row already on the target keeps its ID, Content and Approach.
+A row the incoming branch added takes the next ID of its table.
+An ID that two merged records already share is not renumbered:
+ask the user for a change request row that states which record each citation meant.
 
 A move to another BF changes the story's US ID and all child AC and EX IDs. Record the old IDs as retired, allocate new IDs in the destination scope, and update every citation before the move is complete.
 
