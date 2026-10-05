@@ -12,6 +12,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `01_Context.md` template for the recorded brand theme, the unranked
   explorations and the unfinalized design system. The anti-goal example, which
   had no test, is checked against the `04_Sources.md` template. (#2286)
+- **Each `qfai init` mode-line example is annotated on its own test.** The
+  three annotations sat at the top of the file, so any passing test there
+  counted for all three. The test covering the four mode values names the value
+  in each failing assertion. (#2287)
 
 ## [2.1.0] - 2026-10-05
 
