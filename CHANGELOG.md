@@ -41,6 +41,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A verify run tells a failure that predates the change from one it caused.**
+  A failing gate is now run again on the base commit, and the result is
+  recorded in the `gates` of `verify.json` as a `baseline` of `same`,
+  `different` or `unrun`. A gate that could not run is recorded `UNRUN` with
+  its `reason`. The run still stops before the commit, and the final report
+  lists these gates apart from the failures the run caused. Fixes #2982.
 - **`qfai validate` and `qfai report --run-validate` no longer read an
   unreadable legacy validate path as absent.** The check for a stale
   `.qfai/output/validate.json` treated every `stat` failure as "not on disk".
