@@ -38,15 +38,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   at that Status stays in force. The story-tree authoring rules also say that a
   project counting the IDs of its open pull requests may take a next ID above
   the tree's own highest plus one (#2969).
+- **`qfai-run` has guidance for a change that needs a person's action outside
+  the repository.** When a change depends on something only the user can do,
+  such as a hosted dashboard setting or a token issued in a web console, the
+  work stops before that stage and says what the user must do, what shows it was
+  done and what the agent will read to check it. The agent never enters a
+  password, token or key and never changes an account setting. The extraction
+  reference says such a request keeps the repository change's intent with the
+  `env` flag (#2999).
 
 ### Fixed
 
-- **The verify gate can pass in a project that records a backlog.**
-  `verify-qfai-gate` now runs the project's `Validate` entry, and a project
-  whose entry runs a pinned ratchet passes while every error stays within its
-  pin. `verify-repo-gate` accepts that result. A project with no such entry
-  still fails on any `error`. This repository's `Validate` entry runs
-  `scripts/check-dogfood-backlog.mjs --profile full`. Fixes #2970.
+- **The init skill-link test compares where each link resolves.** It matched
+  the trailing text of the raw link target, so a dangling link, or one into a
+  copy outside the project, passed. It now compares the resolved path of each
+  link with that of the canonical skill directory. Fixes #2230.
 
 - **A verify run tells a failure that predates the change from one it caused.**
   A failing gate is now run again on the base commit, and the result is
@@ -115,6 +121,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   turned `main` red. A tag on the commit being checked is now the release being
   cut and does not make its section released (#2945).
 
+- **The verify gate can pass in a project that records a backlog.**
+  `verify-qfai-gate` now runs the project's `Validate` entry, and a project
+  whose entry runs a pinned ratchet passes while every error stays within its
+  pin. `verify-repo-gate` accepts that result. A project with no such entry
+  still fails on any `error`. This repository's `Validate` entry runs
+  `scripts/check-dogfood-backlog.mjs --profile full`. Fixes #2970.
+
 - **The migration skill cites its shared rules by full path.** The
   delegation-baseline and test-layers pointers started at `rule/`, so they did
   not resolve from the project root. Both now begin at `.qfai/assistant/rule/`.
@@ -168,6 +181,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The documentation-clarity rule says where spec-tree IDs may appear** (#3002).
+  IDs the project's own spec tree defines stay in spec-tree documents and in code
+  or test comments that point at a contract or example. Operator-facing guides
+  and shipped files describe the rule in words instead.
+
 - **Every skill the agent may select says when to select it** (#2247).
   `qfai-configure`, `qfai-grilling`, `qfai-migration-v1-to-v2` and
   `web-research` gain a "Use when" sentence in their `description:`.
@@ -181,6 +199,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `references/stage-points.md`, which the skill points to at each step. The
   skill keeps its 150-line limit, at 135 lines instead of 150, and its
   behaviour is unchanged.
+
+- **The `change-tooling` route starts at `edit`** (#2995). A change to CI, a
+  workflow or a build script has no business flow, story or example, so the
+  `implement-diagnose` stage it began with had nothing to record and was passed
+  over. The plan is now `edit`, `note`, `verify`, and the contract rule and the
+  example that state it say the same.
 
 - **A mutation proof belongs to one example** (#2409). The `qfai-implement`
   oracle-strength reference now says what to do when one mutation fails tests
@@ -220,6 +244,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   test that existed before the change. The three other questions a regression
   review asks point at the checks that already own them: the coverage gate, and
   the proof per example in the oracle strength reference.
+
+- **The repository's dogfooding ratchet pins each finding, not each file's
+  count.** `scripts/check-dogfood-backlog.mjs` keys an error by its code and the
+  IDs it names, so a change that clears one untested example and adds another
+  in the same file no longer passes at the same count. A pin still written as a
+  bare count is refused with the command that re-pins it. Fixes #2355.
+
 - **Five doctor criteria now name the tests that prove them.** Existing
   integration tests carry standalone `QFAI:AC-...` comments, and
   `AC-0003-0004-01` gains a deprecated `paths.promptsDir` warning case.
