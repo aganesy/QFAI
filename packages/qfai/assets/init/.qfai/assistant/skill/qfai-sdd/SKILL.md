@@ -11,14 +11,13 @@ roles:
     orchestrator,
     delivery-planner,
     requirements-analyst,
-    completion-reviewer,
     solution-architect,
     product-experience-architect,
     test-design-analyst,
     qa-strategist,
     architecture-reviewer,
+    requirements-reviewer,
     product-surface-reviewer,
-    qa-gatekeeper,
   ]
 mode: approval-gated
 ---
@@ -39,7 +38,7 @@ in the contract that enforces it.
 Invoked by name, `/qfai-sdd` runs standalone, ends at SDD and creates no run. A
 request to go to the end is handed to a whole run through `qfai-run`. A work
 order names its own steps, and runs them as
-`.qfai/assistant/rule/shared-skill-operating-baseline.md#a-work-orders-steps`
+`.qfai/assistant/rule/shared-skill-operating-baseline.md#a-plans-steps`
 states.
 
 ## Inputs
@@ -61,13 +60,13 @@ it, then move to the next.
 
 | Step               | What it does                                                   | Skipped when                                               |
 | ------------------ | -------------------------------------------------------------- | ---------------------------------------------------------- |
-| `sdd-triage`       | Source, preflight, triage rows, approvals and ID allocation    | Never                                                      |
+| `sdd-triage`       | Source, preflight, triage, approvals and ID allocation         | Never                                                      |
 | `sdd-flow`         | Policy, `tech.md` and business flows                           | Triage changed no policy fact and no flow                  |
 | `sdd-story`        | Stories, Gherkin AC and EX                                     | Never                                                      |
 | `sdd-contract`     | Contracts and the BRs they enforce, or the `--contract` repair | Triage changed no BR and no contract                       |
 | `common-design-md` | Root `DESIGN.md`                                               | The flow is not UI-bearing, or its surface is CLI-only     |
 | `sdd-cycle`        | The concrete-abstract cycle between BRs and EXs                | `sdd-contract` wrote or changed no BR Statement or Example |
-| `sdd-gate`         | Per-flow `validate --profile sdd` and the flow evidence        | Never                                                      |
+| `sdd-gate`         | Per-flow `validate --profile sdd` and the flow report          | Never                                                      |
 
 `sdd-triage` records whether each affected flow is UI-bearing. A step that
 changes an input an earlier step consumed reruns that step's authors and
@@ -76,26 +75,22 @@ reviewers.
 ## Review
 
 After the last step, run one review with `common-review-cycle`, one affected
-business flow at a time. The reviewers are the union of the reviewers of the
-steps that ran, including `product-surface-reviewer` for a UI-bearing flow.
+business flow at a time: the specification review, by `requirements-reviewer`,
+joined by `architecture-reviewer` when a contract changed and by
+`product-surface-reviewer` for a UI-bearing flow.
 What they check is the `## Review` section of `sdd-gate`. Roles are selected
 under `.qfai/assistant/rule/shared-skill-delegation-baseline.md`.
 
-### Reviewer Gate
-
-Where the concrete-abstract cycle ran, the completion reviewer also checks its
-record, as `sdd-cycle` states.
-
 ## Completion
 
-A flow is complete when its `sdd-gate` passed and every blocking reviewer
-returned PASS. When a step needs user input or cannot proceed, record the
+A flow is complete when its `sdd-gate` passed and every finding of the
+specification review is fixed or answered. When a step needs user input or cannot proceed, record the
 question as a row of `open-questions.md` and report what the stage waits on.
 
 Report the source selected, BF and US IDs touched, decision and OQ IDs, contract
 files and index rows, each per-flow validation result and log, independent
 reviewer verdicts, adopted grilling decisions, rejected options still excluded,
-and remaining questions. The next implementation route is `/qfai-atdd`; UI work
+and remaining questions. The next implementation route is `/qfai-implement`; UI work
 may pass through `/qfai-prototyping` first. The report ends with a question
 listing those next actions, as `.agents/rules/user-questions.md` § 6 sets out.
 Under a no-question mode, list them in the report instead.

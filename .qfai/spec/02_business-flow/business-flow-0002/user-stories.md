@@ -13,7 +13,6 @@
 | US-0002-0007 | Shipped workflow ownership contract                                         | `user-story-0002-0007/` |
 | US-0002-0008 | Structural contract gate for the shipped set                                | `user-story-0002-0008/` |
 | US-0002-0009 | Distributed-surface guards learn the story-tree ID shapes                   | `user-story-0002-0009/` |
-| US-0002-0010 | Scanner and prompt synchronization                                          | `user-story-0002-0010/` |
 | US-0002-0011 | Discussion-pack location gate                                               | `user-story-0002-0011/` |
 | US-0002-0012 | Shipped comment identifier guard                                            | `user-story-0002-0012/` |
 | US-0002-0013 | Change-derived lane selection behind a drift-proof aggregate verdict        | `user-story-0002-0013/` |

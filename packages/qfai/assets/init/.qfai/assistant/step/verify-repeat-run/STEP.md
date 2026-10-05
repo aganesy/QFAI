@@ -2,10 +2,9 @@
 name: verify-repeat-run
 owner: qfai-verify
 purpose: "Show that the named tests pass on a recorded number of consecutive runs, which is also what lifts a quarantine."
-requires: [common-gate-run, common-evidence-record]
-roles:
-  [orchestrator, devops-ci-engineer, qa-gatekeeper, completion-reviewer, implementation-reviewer]
-routing-profile: runtime-heavy
+requires: [common-gate-run]
+roles: [orchestrator, devops-ci-engineer]
+routing-profile: default
 ---
 
 # verify-repeat-run
@@ -26,7 +25,7 @@ run.
 
 ## Writes
 
-- In `.qfai/evidence/verify-<run-id>.md`: the number of runs and why, then
+- In the stage report: the number of runs and why, then
   every run in order, each with its command, result and revision.
 - Where the runs lift a quarantine: the removal of the quarantine marker and
   record the quarantine added, and nothing else.
@@ -52,4 +51,3 @@ run.
 - The number of runs was fixed and recorded before the first run.
 - Every run is recorded, and all of them passed on the same revision.
 - A lifted quarantine removed only its marker and its record.
-- The qa-gatekeeper checked the count and that no run is missing.

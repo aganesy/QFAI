@@ -105,11 +105,6 @@ describe("web-research inherits the shared delegation baseline", () => {
     expect(header).toContain("Agent instance");
   });
 
-  it("requires the reviewer authorship attestation", async () => {
-    const content = await readSkill();
-    expect(content).toContain("Authored/edited under review");
-  });
-
   it("links only to anchors that exist in the shipped baseline", async () => {
     const [content, baseline] = await Promise.all([readSkill(), readFile(baselinePath, "utf-8")]);
     const slugs = headingSlugs(baseline);
