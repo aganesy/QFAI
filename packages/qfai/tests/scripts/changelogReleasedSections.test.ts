@@ -18,6 +18,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   addedEntries,
+  releasedAdditions,
   sectionEntries,
 } from "../../../../scripts/check-changelog-released-sections.mjs";
 
@@ -78,6 +79,32 @@ describe("what a released section may gain", () => {
     const after = RELEASED.replace("- **The second thing the release carried.**\n", "");
 
     expect(addedEntries(RELEASED, after)).toEqual([]);
+  });
+
+  it("lets an untagged section gain entries, and refuses a tagged one", () => {
+    // Released means tagged: a section main carries whose tag does not exist yet
+    // has built no release page, so an entry added to it is still read.
+    const added = [
+      { version: "1.2.0", gained: ["- **Late.**"] },
+      { version: "1.3.0", gained: ["- **Early.**"] },
+    ];
+    const tagged = (version: string) => version === "1.2.0";
+
+    expect(releasedAdditions(added, tagged)).toEqual({
+      refused: [{ version: "1.2.0", gained: ["- **Late.**"] }],
+      notes: [],
+    });
+  });
+
+  it("refuses a section whose tag lookup failed, and says so", () => {
+    const added = [{ version: "1.3.0", gained: ["- **Unknown.**"] }];
+    const failing = (): boolean | null => null;
+
+    const result = releasedAdditions(added, failing);
+    expect(result.refused).toEqual(added);
+    expect(result.notes).toEqual([
+      "the tag v1.3.0 could not be looked up; the section is treated as released.",
+    ]);
   });
 
   it("reads the released sections and leaves the unreleased one out", () => {

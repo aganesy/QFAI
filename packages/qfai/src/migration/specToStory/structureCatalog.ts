@@ -16,7 +16,6 @@ export type StructureRouting = {
 
 export type StructureSource = {
   source: string;
-  archive: string;
   preamble: string;
   sections: { heading: string; body: string }[];
   /** The entrypoint-to-command pairs the old `tech.md` Smoke or Skeleton lines give. */
@@ -62,7 +61,7 @@ function routeEntrypoints(input: StructureSource, heading: string, body: string)
     } else {
       const what = entry === undefined ? `"${item}"` : `the entrypoint ${entry}`;
       routing.forAPerson.push(
-        `${input.techTarget}: write a "- Skeleton: \`<entry>\` -> \`<command>\`" line for ${what} of "## ${heading}" in ${input.source}, or drop it (kept at ${input.archive})`,
+        `${input.techTarget}: write a "- Skeleton: \`<entry>\` -> \`<command>\`" line for ${what} of "## ${heading}" in ${input.source}, or drop it`,
       );
     }
   }
@@ -89,7 +88,7 @@ export function routeStructureCatalog(input: StructureSource): StructureRouting 
   const routing: StructureRouting = { skeletonLines: [], surfacePaths: undefined, forAPerson: [] };
   const person = (what: string): void => {
     routing.forAPerson.push(
-      `${input.source}: ${what} has no place in the story tree; carry what it states by hand, or drop it (kept at ${input.archive})`,
+      `${input.source}: ${what} has no place in the story tree; carry what it states by hand, or drop it`,
     );
   };
   if (input.preamble) person("the text before the first section");
@@ -102,7 +101,6 @@ export function routeStructureCatalog(input: StructureSource): StructureRouting 
       routing.forAPerson.push(
         ...moveArchitectureSection(input.tech(), {
           source: input.source,
-          archive: input.archive,
           heading,
           body,
         }),
@@ -111,7 +109,7 @@ export function routeStructureCatalog(input: StructureSource): StructureRouting 
       const paths = surfacePathsOf(body);
       if (paths === null)
         routing.forAPerson.push(
-          `qfai.config.yaml: declare the paths "## ${heading}" of ${input.source} names as uiux.surfacePaths by hand (kept at ${input.archive})`,
+          `qfai.config.yaml: declare the paths "## ${heading}" of ${input.source} names as uiux.surfacePaths by hand`,
         );
       else routing.surfacePaths = paths;
     } else {

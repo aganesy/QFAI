@@ -4,8 +4,9 @@
 
 > Discussion-layer IDs use the `D` prefix (`DUS-`, `DAC-`) so they cannot be read as
 > story-tree IDs (`US-0001-0001`, `AC-0001-0001-01`). They are source references,
-> not assigned story IDs. `/qfai-sdd` records the discussion REQ and the BF or US
-> it affects in a `decisions.md` triage row before authoring the story-tree files.
+> not assigned story IDs. `/qfai-sdd` names the discussion REQ and the BF or US
+> it affects in the approved `Change request:` row of `decisions.md` before
+> authoring the story-tree files.
 
 ### DUS-001: <Story Title>
 
@@ -81,7 +82,7 @@ Screen-level contract details are finalized in `uiux/40_screen_contracts.md`. Pr
      Include only when it materially clarifies a behavior obligation that prose cannot.
      Behavior Obligations and sidecar artifacts (uiux/) are the primary UI definitions.
      The required state SSOT is uiux/40_screen_contracts.md (`default/loading/empty/error`).
-     Links MUST be anchor-form (`<a href="#name">`) — never same-origin absolute
+     Links must be anchor-form (`<a href="#name">`) — never same-origin absolute
      paths (`/orders/`), which a static mock cannot serve and which the validator rejects. -->
 
 ```html

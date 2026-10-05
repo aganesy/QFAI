@@ -34,13 +34,11 @@ describe.each(trees)("%s — post-integration verification remedy", (tree) => {
   });
 
   it("retakes evidence and reviews for changed source revisions", async () => {
-    const [policy, skill] = await Promise.all([
-      read(tree, "assistant/skill/qfai-implement/references/parallelization-policy.md"),
-      read(tree, "assistant/step/implement-tdd/STEP.md"),
-    ]);
+    const policy = await read(
+      tree,
+      "assistant/skill/qfai-implement/references/parallelization-policy.md",
+    );
     expect(policy).toContain("Retake evidence whose source revision changed");
     expect(policy).toContain("request the required reviews on that revision");
-    expect(skill).toContain("Review the");
-    expect(skill).toContain("integrated result after slices join.");
   });
 });

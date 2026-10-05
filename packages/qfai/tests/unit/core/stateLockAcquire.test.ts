@@ -7,7 +7,7 @@
  * `CREATE_NEW` returns `ERROR_ACCESS_DENIED`, which libuv maps to `EPERM`. The
  * acquire loop rethrew everything that was not `EEXIST`, so on Windows every
  * `updateState` under contention failed outright. Measured at 2 failures in 8
- * runs of `atddScaffoldEscalation.test.ts`; the CI matrix is Linux-only, so no
+ * runs of a contended state-write test; the CI matrix is Linux-only, so no
  * lane can reproduce it and the fault has to be injected.
  *
  * Simply widening the check to accept `EPERM` is the trap: an unwritable
@@ -19,7 +19,6 @@
  * `node:fs/promises` is mocked here rather than in `state.test.ts` because
  * `vi.mock` is file-scoped and the rest of that suite needs the real module.
  */
-// QFAI:EX-0001-0090-01
 
 import type * as FsPromises from "node:fs/promises";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
@@ -28,7 +27,7 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { readStateTolerant, updateState } from "../../../src/core/state.js";
+import { readStateStrict, updateState } from "../../../src/core/state.js";
 
 type FaultMode = "off" | "raceOnce" | "denyAll";
 
@@ -122,10 +121,11 @@ async function bumpCounter(target: string): Promise<number> {
   });
 }
 
+// QFAI:EX-0001-0090-01
 describe("TC-0010-0012: the state lock classifies a failed exclusive create", () => {
   it("takes the lock when the create raced an unlink (control: no fault)", async () => {
     await expect(bumpCounter(root)).resolves.toBe(1);
-    expect(await readStateTolerant(root)).toMatchObject({ counter: 1 });
+    expect(await readStateStrict(root)).toMatchObject({ counter: 1 });
   });
 
   it("retries an EPERM the directory contradicts, and the write lands", async () => {
@@ -137,7 +137,7 @@ describe("TC-0010-0012: the state lock classifies a failed exclusive create", ()
     // The fault fired, so the retry is what carried the write — not a path
     // that never met the error at all.
     expect(control.denials).toBe(1);
-    expect(await readStateTolerant(root)).toMatchObject({ counter: 1 });
+    expect(await readStateStrict(root)).toMatchObject({ counter: 1 });
   });
 
   it("rethrows an EPERM the directory confirms, with the original errno", async () => {
@@ -146,7 +146,7 @@ describe("TC-0010-0012: the state lock classifies a failed exclusive create", ()
 
     // Intact: the operator gets the real fault, not "still held after 5000ms".
     await expect(bumpCounter(root)).rejects.toThrow(/cannot create state lock .*EPERM/s);
-    expect(await readStateTolerant(root)).toBeNull();
+    expect(await readStateStrict(root)).toBeNull();
   });
 
   it("rethrows when the lock path itself cannot be stat'ed, and does not probe", async () => {
@@ -160,7 +160,7 @@ describe("TC-0010-0012: the state lock classifies a failed exclusive create", ()
 
     await expect(bumpCounter(root)).rejects.toThrow(/cannot create state lock .*EPERM/s);
     expect(control.probes).toBe(0);
-    expect(await readStateTolerant(root)).toBeNull();
+    expect(await readStateStrict(root)).toBeNull();
   });
 
   it("treats an absent lock path as absent, which ENOENT is an answer to", async () => {

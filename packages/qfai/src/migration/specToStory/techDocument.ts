@@ -62,7 +62,7 @@ const DEPENDENCY_ITEM = /^- `[^`\n]+`\n[ \t]+- \S/;
 
 function carry(draft: PolicyDraft, into: string, item: string, section: PolicySection): string {
   const first = item.split("\n")[0] ?? item;
-  return `${draft.target} ## ${into}: carry "${first}" of "## ${section.heading}" in ${section.source} by hand (kept at ${section.archive})`;
+  return `${draft.target} ## ${into}: carry "${first}" of "## ${section.heading}" in ${section.source} by hand`;
 }
 
 function moveStackList(draft: PolicyDraft, section: PolicySection, keyless: boolean): string[] {
@@ -114,7 +114,7 @@ function moveCommands(draft: PolicyDraft, section: PolicySection): string[] {
   }
   if (other) {
     person.unshift(
-      `${draft.target} ## ${COMMANDS}: rewrite the part of "## ${section.heading}" of ${section.source} that is not a list of labelled commands by hand (kept at ${section.archive})`,
+      `${draft.target} ## ${COMMANDS}: rewrite the part of "## ${section.heading}" of ${section.source} that is not a list of labelled commands by hand`,
     );
   }
   addUnique(draft.lists, COMMANDS, commands, sameText);
@@ -138,13 +138,13 @@ export function moveArchitectureSection(draft: PolicyDraft, section: PolicySecti
   if (table === null) return [rewrite(draft, section, ARCHITECTURE)];
   const person = table.dropped.map(
     (column) =>
-      `${draft.target} ## ${ARCHITECTURE}: carry the "${column}" column of "## ${section.heading}" in ${section.source} by hand (kept at ${section.archive})`,
+      `${draft.target} ## ${ARCHITECTURE}: carry the "${column}" column of "## ${section.heading}" in ${section.source} by hand`,
   );
   const rows: string[][] = [];
   for (const row of table.rows) {
     if (row.some((cell) => LOCATED.test(cell)))
       person.push(
-        `${draft.target} ## ${ARCHITECTURE}: rewrite the layer ${row[0] || "with no name"} of "## ${section.heading}" in ${section.source} without a path or file name by hand (kept at ${section.archive})`,
+        `${draft.target} ## ${ARCHITECTURE}: rewrite the layer ${row[0] || "with no name"} of "## ${section.heading}" in ${section.source} without a path or file name by hand`,
       );
     else rows.push(row);
   }
@@ -153,7 +153,7 @@ export function moveArchitectureSection(draft: PolicyDraft, section: PolicySecti
   const order = orderLayers(merged.map(layerOf));
   if (typeof order === "string") {
     person.push(
-      `${draft.target} ## ${ARCHITECTURE}: order the layers of "## ${section.heading}" in ${section.source} from the uppermost down by hand, since ${order} (kept at ${section.archive})`,
+      `${draft.target} ## ${ARCHITECTURE}: order the layers of "## ${section.heading}" in ${section.source} from the uppermost down by hand, since ${order}`,
     );
     return person;
   }
@@ -185,7 +185,7 @@ export function moveTechSection(draft: PolicyDraft, section: PolicySection): str
     addUnique(draft.rows, STACK, table.rows, sameRow);
     return table.dropped.map(
       (column) =>
-        `${draft.target} ## ${STACK}: carry the "${column}" column of "## ${section.heading}" in ${section.source} by hand (kept at ${section.archive})`,
+        `${draft.target} ## ${STACK}: carry the "${column}" column of "## ${section.heading}" in ${section.source} by hand`,
     );
   }
   if (STACK_LISTS.has(heading)) return moveStackList(draft, section, heading === "package manager");

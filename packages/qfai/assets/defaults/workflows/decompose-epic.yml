@@ -12,6 +12,5 @@ stages:
     kind: triage
     steps: [triage-close]
     after: [split]
-defaultModifiers: [gate:user, review:heavy]
 decisionPoints: [discussion-interview, triage-decompose]
 branchPoints: []
