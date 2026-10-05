@@ -130,6 +130,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The `qfai-run` entry skill has room for another step** (#2966). The text
+  for a release, decision or branch point moves into a new reference,
+  `references/stage-points.md`, which the skill points to at each step. The
+  skill keeps its 150-line limit, at 135 lines instead of 150, and its
+  behaviour is unchanged.
+
 - **A mutation proof belongs to one example** (#2409). The `qfai-implement`
   oracle-strength reference now says what to do when one mutation fails tests
   annotated with different examples: record each failing assertion and the
