@@ -25,4 +25,11 @@ Feature: Shipped workflow ownership contract
     When `qfai init` runs
     Then init lists it as formerly shipped
     And removes it in no case
+
+  # AC-0002-0007-04
+  Scenario: A shipped workflow the project lists is not written
+    Given `workflow.skipShipped` in `qfai.config.yaml` lists a shipped workflow name
+    When `qfai init` runs
+    Then that workflow is not written, however many times init runs
+    And every shipped workflow the key does not list is written as before
 ```
