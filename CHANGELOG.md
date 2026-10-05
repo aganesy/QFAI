@@ -36,6 +36,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai init` names the retired `.gitignore` lines it leaves outside the
+  managed block.** The rebuild keeps lines a project holds outside the block, so
+  a line an earlier release wrote there stayed with no word of it, and the file
+  was rewritten with identical bytes on every run. `init` now lists each such
+  line once in its summary for you to delete, and leaves a file whose block is
+  current untouched (#2984).
+
 - **The contract guide states one scope for contract kinds.** It named only
   `api/`, `db/` and `ui/` as contract directories in one place and `cli/` in
   another. It now says a project's contracts are the three directories and that

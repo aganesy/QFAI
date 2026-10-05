@@ -41,4 +41,12 @@ Feature: Managed `.gitignore` block
     And one output line names the lines left out of the block
     And the second run leaves `.gitignore` byte-identical
     And when the project's own lines do not ignore that directory, for instance because a later `!/tmp/` cancels them, the block carries `/tmp/`
+
+  # AC-0001-0033-05
+  Scenario: A retired line outside the managed block is named, not removed
+    Given a `.gitignore` whose current managed block is followed, after a blank line, by retired lines the project kept, such as `.qfai/discussion/discussion-*/` and `!.qfai/review/review-*/`
+    When `qfai init` runs, and then runs again
+    Then the retired lines are still in the file
+    And one output line heads a list that names each of them once
+    And the second run leaves `.gitignore` byte-identical
 ```

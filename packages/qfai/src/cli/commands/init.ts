@@ -117,7 +117,10 @@ import { checkWorkflowPreconditions } from "../../core/doctor/workflowPreconditi
 import { ensureSymlink, requireSymlinkCreation } from "../../core/init/managedLink.js";
 import type { WrapperSyncOptions } from "../../core/init/managedLink.js";
 import { formatReportPath } from "../../core/init/reportPath.js";
-import { ensureRootGitignoreEntries } from "../../core/init/rootGitignore.js";
+import {
+  ensureRootGitignoreEntries,
+  retiredGitignoreLineNotes,
+} from "../../core/init/rootGitignore.js";
 
 const execAsync = promisify(execCb);
 
@@ -562,6 +565,7 @@ export async function runInit(
         resolvePath(destRoot, (await loadConfig(destRoot)).config, "discussionDir"),
       ),
     ),
+    ...(await retiredGitignoreLineNotes(destRoot)),
   ]) {
     info(note);
   }

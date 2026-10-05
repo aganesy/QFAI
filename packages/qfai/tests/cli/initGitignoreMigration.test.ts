@@ -764,3 +764,69 @@ describe("the managed block does not repeat a line the project already has", () 
     });
   });
 });
+
+describe("a retired line the project kept outside the managed block", () => {
+  const OUTSIDE = [".qfai/discussion/discussion-*/", "!.qfai/review/review-*/"];
+  const HEADING = "Left in .gitignore, outside the QFAI block";
+
+  async function seedOutside(root: string): Promise<string> {
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+    const current = (await readGitignore(root)).replace(/\n+$/, "");
+    const seeded = `${current}${NL}${NL}${OUTSIDE.join(NL)}${NL}coverage-local/${NL}`;
+    await writeFile(path.join(root, ".gitignore"), seeded, "utf-8");
+    return seeded;
+  }
+
+  // QFAI:EX-0001-0033-11
+  it("is named once, kept in the file, and does not make init rewrite it", async () => {
+    await withProject(async (root) => {
+      const seeded = await seedOutside(root);
+
+      const first = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+      const second = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+
+      expect(await readGitignore(root), "no line is removed and the file is not rewritten").toBe(
+        seeded,
+      );
+      for (const output of [first, second]) {
+        expect(output).toContain(HEADING);
+        for (const line of OUTSIDE) {
+          expect(output.split(NL).filter((entry) => entry === `  ${line}`)).toHaveLength(1);
+        }
+        expect(output).not.toContain("  coverage-local/");
+        expect(output).not.toContain("updated: .gitignore");
+      }
+    });
+  });
+
+  it("is not named when none sits outside the block", async () => {
+    await withProject(async (root) => {
+      const output = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+      expect(output).not.toContain(HEADING);
+    });
+  });
+
+  it("is not named when it sits inside the block, where init removes it", async () => {
+    await withProject(async (root) => {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const inside = (await readGitignore(root))
+        .split(NL)
+        .flatMap((line) => (line === ".qfai/report/*" ? [line, OUTSIDE[0] ?? ""] : [line]))
+        .join(NL);
+      await writeFile(path.join(root, ".gitignore"), inside, "utf-8");
+
+      const output = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+
+      expect(output).not.toContain(HEADING);
+      expect(await readGitignore(root).then((text) => text.split(NL))).not.toContain(OUTSIDE[0]);
+    });
+  });
+});

@@ -67,12 +67,16 @@ export async function ensureRootGitignoreEntries(
   // must not have that choice silently undone by the next `qfai init`.
   const managedBlock = extractManagedBlock(existing);
   const existingLines = existing.split("\n").map((line) => line.trimEnd());
+  // A retired line is looked for among the block's own lines. Matching the whole file as text
+  // also found one the project kept outside the block, which the rebuild never removes, so the
+  // file was rewritten with identical bytes on every run.
+  const blockLines = gitignoreLines(managedBlock);
   if (
     existing.includes(QFAI_GITIGNORE_MARKER) &&
-    gitignoreLines(managedBlock).includes(QFAI_RUN_STATE_IGNORE) &&
+    blockLines.includes(QFAI_RUN_STATE_IGNORE) &&
     QFAI_GITIGNORE_GOVERNANCE_NEGATIONS.every((entry) => managedBlock.includes(entry)) &&
     negationsOutrankLaterIgnores(existingLines, QFAI_GITIGNORE_GOVERNANCE_NEGATIONS) &&
-    QFAI_GITIGNORE_LEGACY_LINES.every((entry) => !existing.includes(entry))
+    QFAI_GITIGNORE_LEGACY_LINES.every((entry) => !blockLines.includes(entry))
   ) {
     return { copied: [], skipped: [gitignorePath] };
   }
@@ -122,6 +126,34 @@ export async function ensureRootGitignoreEntries(
     );
   }
   return { copied: [gitignorePath], skipped: [] };
+}
+
+/**
+ * Summary lines naming the retired lines the project's `.gitignore` keeps outside the
+ * managed block. The rebuild leaves them alone, being the project's own lines, and
+ * nothing is removed: the project decides.
+ */
+export async function retiredGitignoreLineNotes(destRoot: string): Promise<string[]> {
+  let existing: string;
+  try {
+    existing = await readFile(path.join(destRoot, ".gitignore"), "utf-8");
+  } catch (err: unknown) {
+    if (!isEnoent(err)) {
+      throw err;
+    }
+    return [];
+  }
+  const outside = existing.includes(QFAI_GITIGNORE_MARKER)
+    ? removeManagedBlock(existing).stripped
+    : existing;
+  const retired = new Set<string>(QFAI_GITIGNORE_LEGACY_LINES);
+  const found = [...new Set(gitignoreLines(outside).filter((line) => retired.has(line)))];
+  return found.length === 0
+    ? []
+    : [
+        "Left in .gitignore, outside the QFAI block, by an earlier release and no longer used; delete what you do not need:",
+        ...found.map((line) => `  ${line}`),
+      ];
 }
 
 /** Writes `.gitignore` in place, refusing a path that is not a regular file. */
