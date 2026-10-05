@@ -15,6 +15,9 @@ function configPath(root: string): string {
   return path.join(root, "qfai.config.yaml");
 }
 
+// QFAI:EX-0001-0196-11
+// QFAI:EX-0001-0196-12
+// QFAI:EX-0001-0196-13
 describe("the mode line", () => {
   afterEach(() => {
     process.exitCode = undefined;

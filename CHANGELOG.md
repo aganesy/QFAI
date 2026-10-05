@@ -35,6 +35,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **An EX annotation counts only directly before a test declaration** (#2761).
+  A `QFAI:EX-` annotation used to cover its example from anywhere in a selected
+  test file, so a header comment above the imports, or one line in a file with
+  no test, discharged the obligation. It now counts only on a comment line
+  directly before `it(`, `test(`, `describe(` or another framework's test
+  declaration, with nothing but blank and comment lines between. Move a header
+  annotation down to the test it describes; `qfai validate --profile tdd`
+  otherwise reports the example as uncovered. BF and AC annotations are read as
+  before.
 - **The repository's scans lane refuses a tracked file under `.qfai/report/`,
   `.qfai/evidence/`, `.qfai/review/`, `.qfai/output/`, `.qfai/discussion/` or
   `.qfai/review_archive/`.** The managed

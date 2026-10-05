@@ -9,7 +9,6 @@
  *     entryPattern?, productScope?
  *   All are optional and additional properties are permitted.
  */
-// QFAI:EX-0001-0171-01
 
 import { describe, expect, it } from "vitest";
 
@@ -19,6 +18,7 @@ import {
   validateHandoff,
 } from "../../../../src/core/schemas/handoff.js";
 
+// QFAI:EX-0001-0171-01
 describe("TC-0015-0025: validateHandoff accepts canonical + extra keys", () => {
   it("accepts an empty object (all fields optional)", () => {
     const issues = validateHandoff({});

@@ -1,7 +1,3 @@
-// QFAI:EX-0001-0196-37
-// QFAI:EX-0001-0196-38
-// QFAI:EX-0001-0196-40
-// QFAI:EX-0001-0196-41
 /**
  * The tool-time reminders in the Codex hook file.
  *
@@ -167,6 +163,10 @@ function patch(header: string): string {
   return `*** Begin Patch\n${header}\n@@\n-old\n+new\n*** End Patch\n`;
 }
 
+// QFAI:EX-0001-0196-37
+// QFAI:EX-0001-0196-38
+// QFAI:EX-0001-0196-40
+// QFAI:EX-0001-0196-41
 describe("the Codex tool-time reminders", () => {
   it("mirror each Claude Code tool-time group that has a Codex moment", async () => {
     const expected: Record<string, [string, string][]> = {

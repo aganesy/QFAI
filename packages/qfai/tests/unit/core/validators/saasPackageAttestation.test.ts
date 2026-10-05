@@ -13,7 +13,6 @@
  * Exercises `runSaasPackageProfile` directly (unit-level) without
  * shelling out to the CLI.
  */
-// QFAI:EX-0001-0049-01
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

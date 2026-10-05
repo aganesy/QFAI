@@ -18,57 +18,46 @@ import {
 
 // Each shipped plan, as its catalog example states it.
 const CATALOG: [string, string][] = [
-  // QFAI:EX-0001-0220-01
   [
     "close-no-change",
     "Stages in order — `close` (triage): `triage-close`; decision points none; release point none; branch points none",
   ],
-  // QFAI:EX-0001-0220-02
   [
     "answer-question",
     "Stages in order — `answer` (triage): `triage-investigate°`, `triage-answer`, `triage-close`; decision points none; release point none; branch points `triage-investigate`, `defect-found` to the route the decision rules give",
   ],
-  // QFAI:EX-0001-0220-04
   [
     "request-info",
     "Stages in order — `ask` (triage): `triage-request-info`; `close` (triage): `triage-close`; decision points none; release point none; branch points `triage-close`, `info-received` to the route the decision rules give",
   ],
-  // QFAI:EX-0001-0220-05
   [
     "close-duplicate",
     "Stages in order — `dedupe` (triage): `triage-dedupe`; `close` (triage): `triage-close`; decision points none; release point none; branch points none",
   ],
-  // QFAI:EX-0001-0220-06
   [
     "cluster-reports",
     "Stages in order — `cluster` (triage): `triage-cluster`; `close` (triage): `triage-close`; decision points none; release point none; branch points none",
   ],
-  // QFAI:EX-0001-0220-08
   [
     "decide-design",
     "Stages in order — `discussion` (discussion): `discussion-research`, `discussion-interview`, `discussion-pack°`, `discussion-uiux°`, `discussion-oq`; `close` (triage): `triage-close`; decision points `discussion-interview`; release point none; branch points `triage-close`, `adopted` to `add-feature`, `prototype-feature` or `change-compatibility`",
   ],
-  // QFAI:EX-0001-0220-09
   [
     "decompose-epic",
     "Stages in order — `discussion` (discussion): `discussion-research`, `discussion-interview`, `discussion-pack`, `discussion-oq`; `split` (triage): `triage-decompose`; `close` (triage): `triage-close`; decision points `discussion-interview`, `triage-decompose`; release point none; branch points none",
   ],
-  // QFAI:EX-0001-0220-10
   [
     "retriage-bundle",
     "Stages in order — `recheck` (diagnose): `implement-diagnose(read-only)`; `split` (triage): `triage-decompose`; `close` (triage): `triage-close`; decision points none; release point none; branch points none",
   ],
-  // QFAI:EX-0001-0220-11
   [
     "repair-consistency",
     "Stages in order — `diagnose` (diagnose): `implement-diagnose`; `sdd` (sdd, then the specification review): `sdd-triage`, `sdd-flow°`, `sdd-story°`, `sdd-contract°`, `sdd-cycle°`; `implement` (implement): `implement-scaffold`, `implement-tdd`, `implement-sweep°`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`, `implement-sweep`; release point none; branch points `sdd-triage`, `retire` to `retire-mechanism`",
   ],
-  // QFAI:EX-0001-0220-13
   [
     "retire-mechanism",
     "Stages in order — `diagnose` (diagnose): `implement-diagnose`; `decide` (sdd): `sdd-triage`; `remove` (implement): `implement-retire`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`; release point none; branch points none",
   ],
-  // QFAI:EX-0001-0220-14
   [
     "restate-records",
     "Stages in order — `diagnose` (diagnose): `implement-diagnose`; `spec` (sdd, then the specification review): `sdd-triage`, `sdd-story`, `sdd-contract°`; `tests` (test_fix): `implement-test-fix°`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`; release point none; branch points none",
@@ -83,17 +72,14 @@ const CATALOG: [string, string][] = [
     "prototype-feature",
     "Stages in order — `sdd` (sdd, then the specification review): `sdd-triage`, `sdd-flow°`, `sdd-story`, `sdd-contract°`, `common-design-md`, `sdd-cycle°`; `prototype` (prototype): `prototyping-grill`, `prototyping-preflight`, `prototyping-loop`, `prototyping-handoff`; `implement` (implement): `implement-scaffold`, `implement-tdd`; `docs` (maintenance): `maintain-edit°`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`, `prototyping-loop`; release point none; branch points none",
   ],
-  // QFAI:EX-0001-0220-17
   [
     "change-compatibility",
     "Stages in order — `sdd` (sdd, then the specification review): `sdd-triage`, `sdd-contract`, `sdd-story`; `implement` (implement): `implement-scaffold`, `implement-tdd`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`; release point none; branch points none",
   ],
-  // QFAI:EX-0001-0220-20
   [
     "refactor-code",
     "Stages in order — `move` (implement): `implement-refactor`; `tests` (test_fix): `implement-test-fix°`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points none; release point none; branch points `implement-refactor`, `behaviour-change` to `add-feature` or `change-compatibility`",
   ],
-  // QFAI:EX-0001-0220-21
   [
     "edit-text",
     "Stages in order — `edit` (maintenance): `maintain-edit`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points none; release point none; branch points none",
@@ -103,87 +89,70 @@ const CATALOG: [string, string][] = [
     "fix-defect",
     "Stages in order — `diagnose` (diagnose): `implement-diagnose`; `implement` (implement): `implement-tdd`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points none; release point none; branch points `implement-diagnose`",
   ],
-  // QFAI:EX-0001-0220-24
   [
     "improve-performance",
     "Stages in order — `baseline` (diagnose): `implement-benchmark`; `profile` (diagnose): `implement-diagnose`; `implement` (implement): `implement-tdd`; `compare` (diagnose): `implement-benchmark`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `implement-diagnose`; release point none; branch points `implement-diagnose`",
   ],
-  // QFAI:EX-0001-0220-25
   [
     "fix-vulnerability",
     "Stages in order — `intake` (triage): `triage-security-intake`; `diagnose` (diagnose): `implement-diagnose`; `implement` (implement): `implement-tdd`; `disclose` (verify): `verify-advisory`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `triage-security-intake`; release point the end; branch points `implement-diagnose`",
   ],
-  // QFAI:EX-0001-0220-27
   [
     "fix-intermittent",
     "Stages in order — `harness` (implement): `implement-stress-harness`; `diagnose` (diagnose): `implement-diagnose`; `implement` (implement): `implement-tdd`; `soak` (verify): `verify-repeat-run`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points none; release point none; branch points `implement-diagnose`",
   ],
-  // QFAI:EX-0001-0220-28
   [
     "fix-env-bound",
     "Stages in order — `collect` (triage): `triage-request-info`; `diagnose` (diagnose): `implement-diagnose`; `implement` (implement): `implement-tdd`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; `confirm` (verify): `verify-external`; decision points none; release point none; branch points `implement-diagnose`",
   ],
-  // QFAI:EX-0001-0220-29
   [
     "fix-conformance",
     "Stages in order — `parity` (implement): `implement-oracle-parity`; `diagnose` (diagnose): `implement-diagnose`; `implement` (implement): `implement-tdd`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points none; release point none; branch points `implement-diagnose`",
   ],
-  // QFAI:EX-0001-0220-30
   [
     "quarantine-flaky",
     "Stages in order — `isolate` (implement): `implement-quarantine`; `diagnose` (diagnose): `implement-diagnose`; `fix` (test_fix): `implement-test-fix°`; `reenable` (verify): `verify-repeat-run`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points none; release point none; branch points `implement-diagnose`, `product-race` to `fix-intermittent`",
   ],
-  // QFAI:EX-0001-0220-31
   [
     "repair-test",
     "Stages in order — `diagnose` (diagnose): `implement-diagnose`; `fix` (test_fix): `implement-test-fix`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points none; release point none; branch points none",
   ],
-  // QFAI:EX-0001-0220-32
   [
     "fix-red-main",
     "Stages in order — `bisect` (diagnose): `implement-bisect`; `diagnose` (diagnose): `implement-diagnose`; `fix` (regression_fix): `implement-regression-fix`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points none; release point none; branch points `implement-bisect`, `revert` to `revert-culprit`",
   ],
-  // QFAI:EX-0001-0220-33
   [
     "change-tooling",
     "Stages in order — `diagnose` (diagnose): `implement-diagnose`; `edit` (implement): `implement-tooling`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points none; release point none; branch points none",
   ],
-  // QFAI:EX-0001-0220-34
   [
     "bump-dependency",
     "Stages in order — `bump` (implement): `implement-dep-bump`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points none; release point none; branch points none",
   ],
-  // QFAI:EX-0001-0220-35
   [
     "revert-culprit",
     "Stages in order — `revert` (implement): `implement-revert`; `implement` (implement): `implement-tdd`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points none; release point none; branch points none",
   ],
-  // QFAI:EX-0001-0220-36
   [
     "hand-off-operation",
     "Stages in order — `inspect` (diagnose): `implement-diagnose(read-only)`; `handoff` (triage): `triage-handoff`; `close` (triage): `triage-close`; decision points none; release point `triage-handoff`; branch points none",
   ],
-  // QFAI:EX-0001-0220-37
   [
     "backport-fix",
     "Stages in order — `pick` (implement): `implement-backport`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points none; release point the end; branch points none",
   ],
-  // QFAI:EX-0001-0220-38
   [
     "draft-release-notes",
     "Stages in order — `draft` (verify): `verify-release-notes`; decision points none; release point the end; branch points none",
   ],
-  // QFAI:EX-0001-0220-39
   [
     "verify-manually",
     "Stages in order — `check` (verify): `verify-manual`; `close` (triage): `triage-close`; decision points none; release point none; branch points none",
   ],
-  // QFAI:EX-0001-0220-41
   [
     "apply-settled",
     "Stages in order — `spec` (sdd, then the specification review): `sdd-triage(settled)`, `sdd-story°`, `sdd-contract°`; `implement` (implement): `implement-scaffold°`, `implement-tdd°`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`; release point none; branch points `sdd-triage`, `outside-record` to `decide-design`",
   ],
-  // QFAI:EX-0001-0220-42
   [
     "apply-settled-prototype",
     "Stages in order — `spec` (sdd, then the specification review): `sdd-triage(settled)`, `sdd-story°`, `sdd-contract°`, `common-design-md`; `prototype` (prototype): `prototyping-grill`, `prototyping-preflight`, `prototyping-loop`, `prototyping-handoff`; `implement` (implement): `implement-scaffold°`, `implement-tdd°`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`, `prototyping-loop`; release point none; branch points `sdd-triage`, `outside-record` to `decide-design`",
@@ -235,6 +204,37 @@ function described(plan: WorkflowPlanFile): string {
 }
 
 for (const [route, expected] of CATALOG) {
+  // QFAI:EX-0001-0220-01
+  // QFAI:EX-0001-0220-02
+  // QFAI:EX-0001-0220-04
+  // QFAI:EX-0001-0220-05
+  // QFAI:EX-0001-0220-06
+  // QFAI:EX-0001-0220-08
+  // QFAI:EX-0001-0220-09
+  // QFAI:EX-0001-0220-10
+  // QFAI:EX-0001-0220-11
+  // QFAI:EX-0001-0220-13
+  // QFAI:EX-0001-0220-14
+  // QFAI:EX-0001-0220-17
+  // QFAI:EX-0001-0220-20
+  // QFAI:EX-0001-0220-21
+  // QFAI:EX-0001-0220-24
+  // QFAI:EX-0001-0220-25
+  // QFAI:EX-0001-0220-27
+  // QFAI:EX-0001-0220-28
+  // QFAI:EX-0001-0220-29
+  // QFAI:EX-0001-0220-30
+  // QFAI:EX-0001-0220-31
+  // QFAI:EX-0001-0220-32
+  // QFAI:EX-0001-0220-33
+  // QFAI:EX-0001-0220-34
+  // QFAI:EX-0001-0220-35
+  // QFAI:EX-0001-0220-36
+  // QFAI:EX-0001-0220-37
+  // QFAI:EX-0001-0220-38
+  // QFAI:EX-0001-0220-39
+  // QFAI:EX-0001-0220-41
+  // QFAI:EX-0001-0220-42
   it(route, async () => {
     const plan = (await loadBuiltInPlans()).find((each) => each.route === route);
 

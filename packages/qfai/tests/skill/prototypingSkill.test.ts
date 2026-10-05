@@ -92,8 +92,8 @@ describe("prototyping skill validator", () => {
     expect(hasUiContractScope("ui_bearing: false specs are excluded.")).toBe(false);
   });
 
+  // QFAI:EX-0001-0042-15
   it("does not read the retired CON-UI-NNNN form as the UI contract scope", () => {
-    // QFAI:EX-0001-0042-15
     const retired = VALID_SKILL_CONTENT.replace("full UI-NNNN ID", "full CON-UI-NNNN ID");
 
     expect(hasUiContractScope(retired)).toBe(false);
