@@ -31,7 +31,12 @@ import { getInitAssetsDir } from "../lib/assets.js";
 import { error, info, warn } from "../../core/logger.js";
 import { hasErrnoCode, isEnoent } from "../../core/fs/errno.js";
 import { toRelativePath } from "../../core/paths.js";
-import { loadConfig, readWorkflowMode, resolvePath } from "../../core/config.js";
+import {
+  loadConfig,
+  readSkippedWorkflows,
+  readWorkflowMode,
+  resolvePath,
+} from "../../core/config.js";
 import { CONTRACT_KIND_DIRS, hasLegacySpecPackEntries } from "../../core/storyTree/layout.js";
 import { deriveTestFileGlobs, withDerivedTestFileGlobs } from "../../core/testGlobDerivation.js";
 import {
@@ -319,11 +324,16 @@ export async function runInit(
       "Skipped writing the shipped workflows: .github or .github/workflows is a symlink or not a directory. Replace it with a real directory and re-run.",
     );
   }
+  // `workflow.skipShipped` names the shipped files this project does not want. A value that is not
+  // a list of shipped names is reported by `qfai validate` and skips nothing here.
+  const skipped = readSkippedWorkflows((await loadConfig(destRoot)).document) ?? new Set<string>();
   const workflowResult = await copyTemplatePaths(
     rootAssets,
     destRoot,
     workflowsDirIsOwn
-      ? [...SHIPPED_WORKFLOW_NAMES].map((name) => path.join(".github", "workflows", name))
+      ? [...SHIPPED_WORKFLOW_NAMES]
+          .filter((name) => !skipped.has(name))
+          .map((name) => path.join(".github", "workflows", name))
       : [],
     { force: false, dryRun: options.dryRun, conflictPolicy: "skip" },
   );
