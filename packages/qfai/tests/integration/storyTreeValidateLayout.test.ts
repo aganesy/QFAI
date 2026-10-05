@@ -155,6 +155,37 @@ describe("story-tree layout dispatch", () => {
     expect(ordered.issues.some((item) => item.code === "QFAI-STORY-013")).toBe(false);
   });
 
+  // QFAI:AC-0001-0053-06
+  // QFAI:EX-0001-0053-07
+  it("reports a cited decision and a superseding decision that no row declares", async () => {
+    const register = (rows: string): string =>
+      `| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n${rows}`;
+    await put(
+      `${specs}/03_contract/cli/check.md`,
+      "# CLI-0001: Check\n\n## Business rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0001-0001 | Approved by DEC-0008 | EX-0001-0001-01 |\n",
+    );
+    await put(
+      `${specs}/decisions.md`,
+      register("| DEC-0001 | Old | Kept | SUPERSEDED (by DEC-0009) |\n"),
+    );
+
+    const open = await validateProject(root, configured(), { profile: "sdd" });
+    const reported = open.issues.filter((item) => item.code === "QFAI-STORY-003");
+    expect(reported.map((item) => [item.severity, item.refs])).toEqual([
+      ["error", ["BR-0001-0001", "DEC-0008"]],
+      ["error", ["DEC-0001", "DEC-0009"]],
+    ]);
+
+    await put(
+      `${specs}/decisions.md`,
+      register(
+        "| DEC-0001 | Old | Kept | SUPERSEDED (by DEC-0009) |\n| DEC-0008 | A | B | DONE |\n| DEC-0009 | C | D | DONE |\n",
+      ),
+    );
+    const closed = await validateProject(root, configured(), { profile: "sdd" });
+    expect(closed.issues.some((item) => item.code === "QFAI-STORY-003")).toBe(false);
+  });
+
   it("writes only the migration finding to validate.json for an old layout", async () => {
     await mkdir(path.join(root, specs, "spec-0001"), { recursive: true });
 

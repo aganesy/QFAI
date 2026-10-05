@@ -297,7 +297,6 @@ describe("story-tree structure", () => {
     expect(validateStoryTreeStructureModel(model())).toEqual([]);
   });
 
-  // QFAI:AC-0001-0053-06
   // QFAI:EX-0001-0053-07
   it("reports a cited decision or successor that no row declares", () => {
     const rule = (statement: string) =>
