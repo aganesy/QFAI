@@ -101,9 +101,16 @@ describe("spec-0015 autopilot policy CHG-006", () => {
     const issues = await validateAutopilotPolicy(root);
     const f = issues.find((i) => i.code === "R-AUTOPILOT-POLICY-MISSING");
     expect(f?.severity).toBe("error");
-    expect(f?.message).toMatch(/auto-decide/);
-    expect(f?.message).toMatch(/ask-user/);
-    expect(f?.message).toMatch(/hard-required/);
+    expect(f?.message).toContain("missingBuckets=[auto-decide, ask-user, hard-required]");
+  });
+
+  it("QFAI:EX-0001-0169-01 — error: a shared section missing one bucket names that bucket alone", async () => {
+    await writeBaseline(BASELINE_3_BUCKET.replace(/^\| `ask-user`.*\n/m, ""));
+    await writeSkillMd("qfai-x", "# qfai-x\nNo policy.\n");
+    const issues = await validateAutopilotPolicy(root);
+    const f = issues.find((i) => i.code === "R-AUTOPILOT-POLICY-MISSING");
+    expect(f?.severity).toBe("error");
+    expect(f?.message).toContain("missingBuckets=[ask-user]");
   });
 
   it("QFAI:EX-0001-0169-01 — error: a skill whose section drops a declared input emits R-AUTOPILOT-POLICY-MISSING naming it", async () => {
