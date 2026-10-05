@@ -3,9 +3,6 @@
  * force on one line, `active` when the key is absent.
  */
 // QFAI:AC-0001-0196-04
-// QFAI:EX-0001-0196-11
-// QFAI:EX-0001-0196-12
-// QFAI:EX-0001-0196-13
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -23,6 +20,7 @@ describe("the mode line", () => {
     process.exitCode = undefined;
   });
 
+  // QFAI:EX-0001-0196-11
   it("Fresh non-interactive init: no mode key, mode line active", async () => {
     await withEmptyRepo(async (root) => {
       const output = await initQuietly(root, false, false);
@@ -35,6 +33,7 @@ describe("the mode line", () => {
     });
   });
 
+  // QFAI:EX-0001-0196-12
   it("Upgrade with no mode key: config unchanged, mode active", async () => {
     await withInstall([], async (root) => {
       const before = await readFile(configPath(root));
@@ -47,6 +46,7 @@ describe("the mode line", () => {
     });
   });
 
+  // QFAI:EX-0001-0196-13
   it("Mode line for active, shadow, off and an invalid value", async () => {
     const expected: Record<string, string> = {
       active: "Workflow mode: active",
@@ -62,9 +62,9 @@ describe("the mode line", () => {
 
         const output = await initQuietly(root);
 
-        expect(await readFile(file)).toEqual(before);
-        expect(modeLines(output)).toEqual([line]);
-        expect(process.exitCode ?? 0).toBe(0);
+        expect(await readFile(file), mode).toEqual(before);
+        expect(modeLines(output), mode).toEqual([line]);
+        expect(process.exitCode ?? 0, mode).toBe(0);
       });
     }
   });
