@@ -126,25 +126,13 @@ describe("reviewer finding provenance", () => {
     );
   });
 
-  it("repairs a record against run proof and seals a new review pack", async () => {
-    const [drift, revision] = await Promise.all([
-      readFile(driftPath, "utf-8"),
-      readFile(
-        path.join(assistantDir, "skill", "qfai-implement", "references", "evidence-revision.md"),
-        "utf-8",
-      ),
-    ]);
+  it("repairs a record against run proof", async () => {
+    const drift = await readFile(driftPath, "utf-8");
     expect(drift).toMatch(
       /reviewer records the incorrect statement and the artifact that proves what happened/,
     );
     expect(drift).toMatch(/orchestrator\s+places it in the queue/);
-    expect(drift).toMatch(
-      /Repair the record to match the run; re-attest any reviewed bytes in a new sealed\s+review pack, leaving the earlier pack intact/,
-    );
-    expect(revision).toMatch(/A later attempt receives a new pack and a new seal/);
-    expect(revision).toMatch(
-      /changed response, summary, or request invalidates its original verdict/,
-    );
+    expect(drift).toMatch(/Repair the record to match the run\./);
   });
 
   it("treats false execution or independence claims as blocking evidence defects", async () => {

@@ -8,5 +8,5 @@ Feature: Design System As Input
   Scenario: Design System Read From DESIGN.md
     Given a UI implementation after the prototyping loop
     When `/qfai-implement` reads token tables
-    Then it reads them from root `DESIGN.md` (color / typography / radius / shadow), the file the loop hashed at cycle 0, and no copy of them exists to drift from it.
+    Then it reads them from root `DESIGN.md` (color / typography / radius / shadow), and no copy of them exists to drift from it.
 ```

@@ -25,7 +25,8 @@ export type RecordTableDiff = {
 };
 
 const HEADERS = ["ID", "Content", "Approach", "Status"];
-const DECISION_STATUS = /^(?:TODO|WIP|DONE|REJECTED|SUPERSEDED \(by DEC-\d{4}\))$/;
+const DECISION_STATUS = /^(?:TODO|WIP|DONE|REJECTED|(?:PARTLY )?SUPERSEDED \(by DEC-\d{4}\))$/;
+const PARTLY_SUPERSEDED = /^PARTLY SUPERSEDED \(by DEC-\d{4}\)$/;
 const QUESTION_STATUS = /^(?:TODO|WIP|DONE|DEFERRED)$/;
 const ROW_KEYS = ["id", "content", "approach", "status"] as const;
 
@@ -87,9 +88,9 @@ export function classifyRecordRow(row: RecordRow): ClassifiedRecordRow {
           .filter(Boolean);
   const inForce =
     kind === "test-exception"
-      ? row.status === "DONE"
+      ? row.status === "DONE" || PARTLY_SUPERSEDED.test(row.status)
       : kind === "change-request"
-        ? row.status === "WIP" || row.status === "DONE"
+        ? row.status === "WIP" || row.status === "DONE" || PARTLY_SUPERSEDED.test(row.status)
         : kind === "unadjudicated"
           ? row.status === "TODO" || row.status === "WIP"
           : false;

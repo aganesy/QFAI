@@ -1,6 +1,6 @@
 # Step 0 — Load context
 
-1. Read relevant **project steering** (if present):
+1. Read relevant **project policy** (if present):
    - `.qfai/spec/01_policy/objective.md`
    - `.qfai/spec/01_policy/initiative.md`
    - `.qfai/spec/03_contract/tech.md`
@@ -17,9 +17,8 @@
    - `.qfai/spec/02_business-flow/`
    - `.qfai/spec/03_contract/`
    - `.qfai/spec/decisions.md`
-   - `.qfai/evidence/`
 
-   Do not use discussion-pack artifacts as verification inputs. Verify reads normalized specs, contracts, and evidence only.
+   Do not use discussion-pack artifacts as verification inputs. Verify reads normalized specs, contracts, tests and code only.
 
 4. Inspect repo conventions:
    - package manager (pnpm/npm/yarn), test runner, lint/typecheck scripts, CI definitions

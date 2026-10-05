@@ -2,7 +2,7 @@
  * `/qfai-discussion` runs its interview as a grilling session.
  *
  * The pack a run produces looks the same whether or not anyone was asked:
- * fifteen files, every topic covered, every open question registered. Nothing
+ * nine files, every topic covered, every open question registered. Nothing
  * downstream can recover the difference, so the obligations that make it are
  * pinned here — the method the interview follows, the bucket its decisions fall
  * in, the point authoring may begin, and the record a reviewer reads.
@@ -22,7 +22,6 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 /** Source tree first, then the generated root mirror `sync:ssot` writes. */
 const TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const MATRIX = "assistant/skill/qfai-discussion/references/discussion-completion-matrix.md";
-const REVIEW_REQUEST = "assistant/skill/qfai-discussion/templates/review/review_request.md";
 
 /** Collapse markdown soft wraps so assertions pin wording, not the wrap column. */
 const unwrap = (markdown: string): string => markdown.replace(/\s*\n\s*/g, " ");
@@ -167,7 +166,7 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
     );
     // And the exemption names where it goes. Left as the pack file it used to
     // be, the row would license the write the cancellation guard forbids.
-    expectPhrase(skill, "The research summary in this run's stage evidence");
+    expectPhrase(skill, "The research summary in this run's stage report");
     expectPhrase(skill, "no pack directory exists yet");
     expectPhrase(
       skill,
@@ -257,32 +256,16 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
     expectPhrase(skill, "## Grilling Session");
     const record = await read("assistant/step/common-grilling-record/STEP.md");
     expectPhrase(record, "Only `confirmed`, `user-closed` and `no-question` authorize authoring.");
-    // The reviewer is handed the row rather than sent looking for it: a row it
-    // has to find is one it can return `PASS` without reading.
-    const request = await read(REVIEW_REQUEST);
-    expectPhrase(request, "## Grilling Session");
-    expectPhrase(request, "a row it has to\n> go looking for is one it can pass without reading");
     expectPhrase(skill, "accept a claim it cannot check");
     // And the gate reads the row rather than the event.
     expectPhrase(
       skill,
-      "the stage evidence's `## Grilling Session` row shows the session ended before authoring began",
+      "the stage report's `## Grilling Session` row shows the session ended before authoring began",
     );
 
     const matrix = await read(MATRIX);
-    expectPhrase(matrix, "The stage evidence's `## Grilling Session` row");
+    expectPhrase(matrix, "The stage report's `## Grilling Session` row");
     expectPhrase(matrix, "The no-question row is the one to read carefully");
-  });
-
-  it("gives the record a home before the pack has one", async () => {
-    // `Ended at` is required before the first pack file, and nothing named a
-    // file the run may write at that moment. A row with nowhere to go until the
-    // pack exists can only be written after drafting, which is the order the
-    // requirement was added to rule out.
-    const skill = await readSkill();
-    expectPhrase(skill, "`.qfai/evidence/discussion-<YYYYMMDDhhmmssSSS>.md`");
-    expectPhrase(skill, "before anything else is written");
-    expectPhrase(skill, "have no other home before the pack exists");
   });
 
   it("keeps a cancelled run from leaving a pack behind", async () => {
@@ -297,17 +280,8 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
     );
     expectPhrase(skill, "resolved by the greatest timestamp with no completeness check");
     // The summary still has somewhere to be, and reaches the pack when one opens.
-    expectPhrase(skill, "record its `research_summary` output in this run's stage evidence");
+    expectPhrase(skill, "report its `research_summary` output");
     expectPhrase(skill, "into the `## Research Summary` section of `04_Sources.md`");
-  });
-
-  it("hands the reviewer the two fields it rules on", async () => {
-    // The reviewer is told to rule on whether the session ended before
-    // authoring began, and the template carried neither time. A row holding the
-    // final state alone reads the same whichever order it happened in.
-    const request = await read(REVIEW_REQUEST);
-    expectPhrase(request, "| Ended | Ended at | Authoring began | Frontier |");
-    expectPhrase(request, "Both times, because they are what that ruling compares");
   });
 
   it("keeps an approval-required decision out of the closure's assumptions", async () => {
@@ -337,22 +311,13 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
     expectPhrase(skill, "What is forbidden is the assumption on its own");
   });
 
-  it("says which writes the pack-only rule was about", async () => {
-    // Read as every write, it forbids the stage evidence this run opens first —
-    // and it never covered the review pack either, which the cycle writes
-    // outside the pack by design.
-    const skill = await readSkill();
-    expectPhrase(skill, "Discussion authors no design artifact outside its own pack");
-    expectPhrase(skill, "record what the run did rather than specify anything");
-  });
-
   it("agrees with the protocol whose output it redirects", async () => {
     // The shared rule outranks the skill and sits at P1 in its own read order,
     // so a storage contract sending the summary straight into the pack is the
     // instruction an agent follows — and it rebuilds the partial pack this
     // change exists to prevent.
     const protocol = await read("assistant/rule/research-first-protocol.md");
-    expectPhrase(protocol, "goes to the invoking stage's own evidence when it is");
+    expectPhrase(protocol, "goes to the invoking stage's own report when it is");
     expectPhrase(protocol, "carried into the artifact that consumes it");
     expectPhrase(protocol, "a run cancelled before that authorization leaves it behind");
     expectPhrase(protocol, "Not persisted globally");

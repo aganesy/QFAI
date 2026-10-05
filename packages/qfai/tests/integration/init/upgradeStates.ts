@@ -70,21 +70,6 @@ export const HOST_SKILL_DIRS = [
 ];
 export const SKILLS = ".qfai/assistant/skill";
 export const ENTRY_SKILLS = ["qfai-run", "qfai-maintain"];
-const LOCK = path.join(".qfai", "assistant", ".assets.lock.json");
-
-type LockRecord = { lock: Record<string, unknown>; files: Record<string, unknown> };
-
-/** The provenance lock and its files map; a lock with no files map fails the test. */
-export async function readLock(root: string): Promise<LockRecord> {
-  const lock: unknown = JSON.parse(await readFile(path.join(root, LOCK), "utf-8"));
-  if (typeof lock !== "object" || lock === null || !("files" in lock)) {
-    throw new Error("the provenance lock has no files map");
-  }
-  const files = lock.files;
-  if (typeof files !== "object" || files === null) throw new Error("lock files is not a map");
-  return { lock: { ...lock }, files: { ...files } };
-}
-
 /** Every `Workflow mode:` line of an init summary. */
 export function modeLines(output: string): string[] {
   return output.match(/^Workflow mode: .*$/gm) ?? [];

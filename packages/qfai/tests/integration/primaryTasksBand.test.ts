@@ -11,8 +11,6 @@
  * There is no lower bound. A screen that does one thing is the shape the
  * ceiling protects, so it passes like any other count under it.
  */
-// QFAI:EX-0001-0155-01
-// QFAI:EX-0001-0155-01
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -99,6 +97,7 @@ function uiContractWithPrimaryTaskCount(count: number): string {
   ].join("\n");
 }
 
+// QFAI:EX-0001-0155-01
 describe("TC-0013-0032: the primary_tasks ceiling is documented and named in the warning", () => {
   it("the shipped UI contract template documents the ceiling in its comments", async () => {
     const template = await readFile(TEMPLATE_PATH, "utf-8");

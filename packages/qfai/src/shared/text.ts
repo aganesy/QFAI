@@ -1,9 +1,11 @@
+import { createHash } from "node:crypto";
+
 /**
  * Text helpers for callers that compare file CONTENT for equality.
  *
  * This module gives that comparison basis a single NAMED definition — it is
  * not the only newline fold in the tree, and extracting it did not make it
- * so. See the consolidation note below for what is still separate.
+ * so; see the note below.
  */
 
 /**
@@ -14,14 +16,6 @@
  * contains one, and rewriting it here would silently change what "identical
  * content" means for callers that never asked for it.
  *
- * Note for a future consolidation pass. `core/skillsIntegrity.ts` still
- * carries a private copy of `normalizeNewlines`, so `src/` holds TWO
- * content-equality normalizers, not one; the test tree holds further local
- * copies. The two production copies agree today, and they are not yet wired
- * together only because that module's ownership was out of scope when this
- * one was extracted — so a change to the fold here must be mirrored there
- * until they are.
- *
  * The roughly thirty OTHER `replace(/\r\n/g, "\n")` occurrences under `src/`
  * are mostly not candidates for this helper: nearly all are immediately
  * followed by `.split("\n")`, i.e. they fold newlines to tokenize lines, not
@@ -30,4 +24,9 @@
  */
 export function normalizeNewlines(text: string): string {
   return text.replace(/\r\n/g, "\n");
+}
+
+/** The sha256 of `text` with CRLF folded to LF, so a CRLF checkout hashes as an LF one. */
+export function hashAssistantAssetText(text: string): string {
+  return createHash("sha256").update(normalizeNewlines(text), "utf8").digest("hex");
 }

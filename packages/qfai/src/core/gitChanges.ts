@@ -167,8 +167,7 @@ export function getChangedFilesAgainstBase(root: string, baseBranch: string): Se
  * revision is its own answer and the caller must say something about it.
  *
  * `unresolvable` is not rare or necessarily wrong: a shallow clone or an
- * unfetched branch produces it for a perfectly good revision, which is why
- * `QFAI-REVIEW-009` treats the same condition as a warning.
+ * unfetched branch produces it for a perfectly good revision.
  *
  * `paths` is a pathspec. Passing the observation's own test file plus the
  * source directory is the computation `#what-makes-evidence-stale` specifies

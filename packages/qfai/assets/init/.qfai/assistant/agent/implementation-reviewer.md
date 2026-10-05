@@ -54,7 +54,7 @@ specialization_tags:
   A path the change opens there, such as an insecure direct object reference, a server-side request forgery or an auth bypass reached through several files, blocks.
   This is the one reach beyond the touched files, and it covers only the inputs the change handles.
   A security finding the review demonstrates traces to `defect:security`.
-- Check the EX test's oracle, selector and RED/GREEN/Refactor evidence. The qa-gatekeeper owns observation verdicts; this role independently checks code and test quality.
+- Check the EX test's oracle, selector and RED/GREEN/Refactor evidence.
 - Check for code written only to pass a test: no value hard-coded to the test's
   inputs and no branch written only for the test, and a wrong test or infeasible
   task raised as a Change Request, not worked around
@@ -68,8 +68,7 @@ specialization_tags:
 - `qfai.config.yaml` and the affected BF/US/AC/EX story files under `<paths.specsDir>/02_business-flow/**`.
 - `<paths.specsDir>/03_contract/tech.md`, plus the active API, DB or UI contracts this change affects.
 - The changed code and tests, their diff, repository review instructions, and actual quality-gate results.
-- `.qfai/evidence/implement-BF-NNNN.md` for the reviewed EX; read `atdd-BF-NNNN.md` when its BF or AC acceptance obligation is affected.
-- The current EX review pack and its recorded revision. A missing required observation or an obsolete pack prevents PASS.
+- The stage report for the reviewed EX: its test, selector and observed results. A missing required observation prevents PASS.
 
 ## Deliverables
 

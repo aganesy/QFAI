@@ -6,9 +6,6 @@
  * counts its lines.
  */
 // QFAI:AC-0001-0033-03
-// QFAI:EX-0001-0033-05
-// QFAI:EX-0001-0033-06
-// QFAI:EX-0001-0033-07
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -31,6 +28,9 @@ function expectRunStateAndEvidenceIgnored(root: string): void {
   expect(isIgnored(root, EVIDENCE_PATH), EVIDENCE_PATH).toBe(true);
 }
 
+// QFAI:EX-0001-0033-05
+// QFAI:EX-0001-0033-06
+// QFAI:EX-0001-0033-07
 describe("the managed gitignore block", () => {
   it("Fresh init ignores run state and the run's records", async () => {
     await withEmptyRepo(async (root) => {
