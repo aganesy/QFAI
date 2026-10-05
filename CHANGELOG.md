@@ -36,6 +36,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A verify run tells a failure that predates the change from one it caused.**
+  A failing gate is now run again on the base commit, and the result is
+  recorded in the `gates` of `verify.json` as a `baseline` of `same`,
+  `different` or `unrun`. A gate that could not run is recorded `UNRUN` with
+  its `reason`. The run still stops before the commit, and the final report
+  lists these gates apart from the failures the run caused. Fixes #2982.
 - **The contract guide states one scope for contract kinds.** It named only
   `api/`, `db/` and `ui/` as contract directories in one place and `cli/` in
   another. It now says a project's contracts are the three directories and that
