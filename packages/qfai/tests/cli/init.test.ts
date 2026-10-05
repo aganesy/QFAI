@@ -33,6 +33,7 @@ import {
   INTEGRATION_SURFACE_DIRS,
   validateIntegrationSurface,
 } from "../../src/core/validators/integrationSurface.js";
+import { createSymlinkFixture } from "../helpers/symlinkFixture.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 /** The README earlier releases wrote at the marker path, signature and all. */
@@ -2431,7 +2432,7 @@ describe("qfai init", () => {
   });
 
   // QFAI:EX-0001-0031-02
-  it("--force does not overwrite instructions reached through a symlinked ancestor", async () => {
+  it("--force does not overwrite instructions reached through a symlinked ancestor", async (ctx) => {
     // `lstat` only answers about the last path component, so with
     // `.github/instructions` pointing at a shared directory the destination
     // looks like an ordinary file — one that belongs to whatever the link
@@ -2442,11 +2443,14 @@ describe("qfai init", () => {
       await mkdir(path.join(root, ".github"), { recursive: true });
       await writeFile(path.join(outside, "code-review.instructions.md"), "shared-cr\n", "utf-8");
       await writeFile(path.join(outside, "principles.instructions.md"), "shared-pr\n", "utf-8");
-      try {
-        await symlink(outside, path.join(root, ".github", "instructions"), "dir");
-      } catch {
-        return; // No symlinks here (Windows without Developer Mode).
-      }
+      // Only the refusal of Windows without Developer Mode skips the case; any
+      // other setup failure propagates.
+      const linked = await createSymlinkFixture(
+        outside,
+        path.join(root, ".github", "instructions"),
+        "dir",
+      );
+      if (!linked) ctx.skip();
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
