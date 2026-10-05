@@ -60,7 +60,7 @@ names the directory and leaves the check to the person.
 
 Complete the launcher preflight in `.qfai/assistant/rule/shared-skill-operating-baseline.md`
 before running a CLI command.
-Use `rule/shared-skill-delegation-baseline.md` to route the declared roles and
+Use `.qfai/assistant/rule/shared-skill-delegation-baseline.md` to route the declared roles and
 keep authors separate from reviewers.
 
 ### Procedure
@@ -175,7 +175,7 @@ saying it is already done. The complete write boundary is in
 The architecture reviewer checks the old-to-new mapping and preservation of
 unplaced content. The reviewer checks the twelve reports, rerun
 behavior, and validation result. Enforce the Drift Protocol and
-`rule/test-layers.md` when reviewing test obligations. Counts and effort
+`.qfai/assistant/rule/test-layers.md` when reviewing test obligations. Counts and effort
 estimates are signals, not gates. Record PASS or REVISE on the final tree.
 
 ## Default Autopilot Policy
