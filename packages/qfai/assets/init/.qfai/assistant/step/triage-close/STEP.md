@@ -3,7 +3,7 @@ name: triage-close
 owner: qfai-triage
 purpose: "Record how a request ended and every follow-up request it found, and close it without changing any tracked file."
 requires: []
-roles: [requirements-analyst, completion-reviewer]
+roles: [requirements-analyst]
 routing-profile: default
 ---
 

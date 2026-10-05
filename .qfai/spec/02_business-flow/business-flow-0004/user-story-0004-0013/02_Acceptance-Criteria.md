@@ -16,18 +16,18 @@ Feature: A migrated project runs the free-text entry
     And `.agents/rules/reminders.json` holds the installed package's reminder text unless the project edited it
 
   # AC-0004-0013-02
-  Scenario: A customised shipped skill is archived, not lost
+  Scenario: A customised shipped skill is replaced
     Given a shipped skill directory whose content differs from the package's copy
     When step 11 runs
-    Then the previous copy is under the migration evidence's `legacy/skill/` directory, whole
-    And an archived copy is never overwritten
+    Then it is replaced with the package's copy, an uncommitted edit included
+    And the replacement is listed under Operations
 
   # AC-0004-0013-03
   Scenario: Step 12 passes on a migrated project
-    Given a project that steps 1 to 11 have migrated
+    Given a project that steps 1 to 11 have migrated, whose tracked project files name no 1.x path
     When step 12 runs
-    Then it changes no file, creates no run and exits 0
-    And `npx qfai workflow start` is refused by none of `contract-undeclared`, `reviewer-missing` and `invalid-mode`
+    Then it changes no file and exits 0
+    And `npx qfai workflow plan` returns every shipped plan
 
   # AC-0004-0013-04
   Scenario: Step 12 reports what it cannot fix for a person

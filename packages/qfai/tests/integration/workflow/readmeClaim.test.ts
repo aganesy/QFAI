@@ -61,15 +61,16 @@ async function claimingCopies(): Promise<Record<string, string>> {
 // QFAI:EX-0001-0194-09
 // QFAI:EX-0001-0194-11
 // QFAI:EX-0001-0194-12
-it("The READMEs claim exactly the hosts with a passing eval record for this version: none", async () => {
+it("The READMEs claim exactly the hosts with a passing eval record for this version", async () => {
   const current = await version();
   const all = await readmes();
+  const recorded = recordedHosts(await records(), current);
 
+  // `recorded` is the hosts with a passing record for this version; each README claims exactly those.
   expect({
-    claimed: Object.values(all).map((readme) => claimedHosts(readme)),
-    recorded: recordedHosts(await records(), current),
+    claimed: Object.values(all).map((readme) => claimedHosts(readme)?.sort()),
     problems: claimProblems(all, await records(), current),
-  }).toEqual({ claimed: [[], []], recorded: [], problems: [] });
+  }).toEqual({ claimed: [recorded, recorded], problems: [] });
 });
 
 it("A copy of the READMEs claiming a host that has no record fails the check", async () => {
@@ -104,7 +105,7 @@ it("Both READMEs put the free-text entry first and name the words the operator t
     cwd: REPOSITORY_ROOT,
     encoding: "utf8",
   });
-  const words = ["continue", "stop", "off", "shadow", "active"];
+  const words = ["stop", "off", "shadow", "active"];
 
   expect({
     alignment: alignment.status,

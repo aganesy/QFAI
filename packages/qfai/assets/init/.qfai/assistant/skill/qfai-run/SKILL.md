@@ -1,10 +1,12 @@
 ---
 name: qfai-run
 title: QFAI Run (Change request entry)
-description: "Use when the operator asks for a change, a fix, an investigation of the codebase or a question about the project in plain words and names no stage skill. A question that one command or one file read answers needs no run. Takes the request through `npx qfai workflow`, one stage after another, to its completion target."
+description: "Use when the user asks for a change, a fix, an investigation of the codebase or a question about the project in plain words and names no stage skill. A question that one command or one file read answers needs no plan. Plans the request with `npx qfai workflow plan` and runs the plan's steps in order to its end."
 argument-hint: "<the change, in your own words>"
-allowed-tools: [Read, Glob, Grep, Write, Bash, TodoWrite, Task, Agent]
+allowed-tools: [Read, Glob, Grep, Write, Edit, Bash, TodoWrite, Task, Agent]
 roles: [orchestrator]
+steps: []
+requires: [common-policy-check, common-review-cycle]
 mode: execution-focused
 ---
 
@@ -12,73 +14,97 @@ mode: execution-focused
 
 [DRIFT-PROTOCOL:MANDATORY]
 
-The operator states a change once. This skill reads the request into facts,
-from which `npx qfai workflow` chooses the route, and hands each work order to a
-sub-agent that runs its steps; the CLI decides what happens next.
+The user states a change once. This skill reads the request into facts, asks
+`npx qfai workflow plan` for the plan they give, and runs its steps in order.
 
 - The facts a request is read into: `references/extraction.md`.
-- Every call and payload shape: `references/payloads.md`.
-- What the operator sees, and how questions are put: `references/operator-screens.md`.
+- The command, its input and its output: `references/plan.md`.
+- What the user sees, and how questions are put: `references/operator-screens.md`.
 - Invoke the CLI through the launcher of `.qfai/assistant/rule/shared-skill-operating-baseline.md#canonical-qfai-launcher-mandatory`.
 
 ## What this skill never does
 
-- Draft or review a story, a contract, a test, code or any other primary artifact.
-- Decide completion, which only `finish` does.
-- Record an approval. Only `decision`, with the operator's answer, does.
-- Choose a route. The CLI's decision rules choose it from the extraction.
-- Name a route, a stage kind or an internal identifier to the operator.
+- Choose a route, which the CLI's decision rules take from the extraction, or
+  name one, a stage kind or an internal identifier to the user.
+- Put request text on a command line. `plan` reads only the extraction.
+- Add, drop or reorder a step the plan names, or run a stage outside the scope.
+- Push, open a pull request, merge, deploy, migrate production or spend
+  money without the user's own instruction or a project policy naming it.
 
 ## Mode
 
-Read the mode from `npx qfai workflow status` first.
+Read `workflow.mode` in `qfai.config.yaml` first. No key means `active`; any
+value but the three below plans nothing.
 
-| Mode     | What this skill does                                                                           |
-| -------- | ---------------------------------------------------------------------------------------------- |
-| `active` | The run below                                                                                  |
-| `shadow` | State what the request asks and why. Call no write operation, and say that nothing was written |
-| `off`    | Start no run. The operator invokes the stage skills by name                                    |
+| Mode     | What this skill does                                                                 |
+| -------- | ------------------------------------------------------------------------------------ |
+| `active` | The work below                                                                       |
+| `shadow` | State what the request asks and why. Write nothing, and say that nothing was written |
+| `off`    | Plan nothing. The user invokes the stage skills by name                              |
 
 ## Request kinds
 
-Classify the request before any write call. Only `routed` calls `start`.
+- A change, a question, a proposal to decide or a report to close is planned.
+  A question plans a route that answers it and changes nothing. Text that is
+  not a request is not planned.
+- `stop`: end the work at once and list every open decision as open.
+- A request naming a stage skill: invoke that skill by name.
 
-- `routed`: a change, a question, a proposal to decide or a report to close. A
-  question runs a route that answers it and changes nothing.
-- `resume`, or `continue` on a run in progress: call `resume`. Do not classify again.
-- `cancel`: call `decision` with `stop`.
-- `explicit_stage`, `verify_only`: invoke the stage skill by name.
+## The work
 
-## The run
+1. **Extract.** Read the request into an extraction as
+   `references/extraction.md` sets out, and pass it to
+   `npx qfai workflow plan --in <file>`, or `--in -` on standard input.
+2. **Candidates.** When `plan` returns `candidates`, put one single-select
+   question, each option saying in the user's words what that route will do,
+   then run `npx qfai workflow plan --route <route>` for the chosen one.
+3. **Scope.** Ask which scope to run, as `references/operator-screens.md` says; run only its stages.
+4. **Announce.** Before the first stage, give the goal, the chosen stages in
+   order in plain words, and the files the work may change. Ask nothing. Then run
+   `common-policy-check` once. On a route that changes no file, one that
+   closes, answers or asks, it reads and reports and writes nothing.
+5. **Run the stages.** Run each stage in plan order, and each of its steps in
+   order. Write any artifact yourself. Give a part to a sub-agent only to run
+   independent parts in parallel, or for a review. At each step, handle the
+   points the plan names for it:
+   - **Release point.** Before a step `releasePoint` names runs, ask the user
+     to approve the release; where it is `end`, ask once the last stage's
+     gates have passed, then rerun them over the approval's `decisions.md`
+     row. `verify-commit` runs after that, so the commit holds the approval. Nothing after it
+     runs without the approval, which authorizes no push, merge, tag or publication.
+   - **Decision point.** At a step `decisionPoints` names, put each critical
+     decision to the user through the structured question tool before
+     changing anything that depends on it. A decision is critical when it contradicts a
+     specification, a contract or a recorded decision, cannot be taken back, or
+     rests on product intent nothing written states. Take every other decision
+     yourself, ask nothing, and list it with its reason in the final report.
+   - **Branch point.** When a step `branchPoints` names reports an outcome
+     paired with one route, move there; with several, to the one the step
+     names; with `decision-table`, to the route `plan --in` gives the step's
+     new extraction. Take the destination's plan with
+     `npx qfai workflow plan --route <route>` at once: no later step of this
+     route runs. Any other outcome continues the route. Before the third move
+     and every one after it, ask the user, naming the destination in plain
+     words; `stop` ends the work. From a scope that leaves stages out, ask before any move.
+6. **Review.** After a stage whose `review` is `spec`, `requirements-reviewer`
+   reviews, with `architecture-reviewer` when a contract changed; after one
+   whose `review` is `code`, `implementation-reviewer`.
+   `product-surface-reviewer` joins both where a UI contract with screens
+   serves the flow. No agent reviews its own work, and no step adds a review.
+   Each review returns PASS or REVISE, and each finding is fixed or answered
+   once, with no re-review. A step that would go beyond the request stops.
+7. **Approvals.** Each approval of a specification change, a critical decision
+   or a release is one `decisions.md` row: what was approved, who approved it,
+   when, and the chosen option's label. A decision you took appends no row.
+8. **A finding no stage serves.** Stop, and name the finding, its owner and the stage skill to invoke by name.
+9. **Commit.** `verify-commit` runs last, after any release point; never pushes.
 
-1. **Start.** Write the start input under `.qfai/run/inbox/` and call `start`.
-   The target is `working_tree` only when the operator said not to commit.
-   Report the host and each capability truthfully.
-2. **Extract.** `next` returns the routing work order. Read the request into an
-   extraction as `references/extraction.md` sets out, and write the routing
-   result around it, naming no route: normative references in
-   `expectedBehaviorRefs`, observed paths and evidence in `observedRefs`, each
-   as `{ kind, ref }`; the one business flow in `affectedFlowIds`; a story no
-   existing story represents in `newStories`. A search that finds nothing is not evidence that no story
-   represents the goal. `proposedWriteScope` names every file a stage will
-   write that git does not ignore. Submit the result with `accept`.
-3. **Revise a refused proposal.** Fix every reason `proposal-refused` lists and
-   submit again. The operator sees nothing unless a question or a halt follows.
-4. **Announce.** Once the plan is checked, give the goal, the stages in order
-   and the write scope. Ask nothing.
-5. **Drive.** Call `next` and act on its work order, or on the run state it reports. Repeat. A routing work order goes back to step 2. One carrying `reroute` has its route fixed already: the result supplies only the scope, the flows and the new stories for it, and the decision rules do not choose again.
-   - Any other work order: hand it whole to one sub-agent. It reads the `path`
-     of each entry in `steps`, in order and only the current one, and runs that
-     step. After the last step it runs one review, by `requiredReviewerRoles`, and none when the work order names none: a question is one work order, run by one sub-agent with no separate reviewer.
-     Write its stage result under `.qfai/run/<runId>/inbox/` and call `accept`.
-     A `retry` names the delay before the same work order is handed over again.
-   - `awaiting_input`: put each open question as `references/operator-screens.md`
-     says, and relay each answer with `decision`.
-     Under `--auto` the route question is not put: answer it with `decision` and its first option, the reading the decision rules reach first, which need not be the recommended one. The completion report lists that choice as an assumption.
-   - `blocked`: give the halt notice and stop.
-   - `ready` with every stage accepted: go to step 6.
-6. **Finish.** For `qfai_done`, commit the run's changes first. Then call
-   `finish` and give the completion report. A run ends at `finish`, or at `decision` with `stop`: an answer already given does not end it, so keep calling `next` through the last stage, and when the session must end first, stop the run and say so.
+## Under a no-question mode
+
+Nothing is asked. The plan's narrowest scope, or the first candidate and its narrowest scope, is taken and reported as an assumption.
+A critical decision or a release point becomes one `open-questions.md` row,
+the step stops before the change that depends on it, and the report lists the
+decision as open. A third branch move, or one from a scope that leaves stages out, stops the work.
 
 ## User Questions (AskUserQuestion Protocol)
 
@@ -87,46 +113,21 @@ Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#user-questions-a
 ## Inputs Priority
 
 - P1: `.qfai/assistant/rule/*`
-- P2: what `npx qfai workflow` returns: the work order, the verdict, the open questions
-- P3: the story tree under `<paths.specsDir>` and the contracts under `<paths.contractsDir>`, read to extract
-- P4: the operator's request
+- P2: the plan `npx qfai workflow plan` returns
+- P3: the story tree under `<paths.specsDir>` and the contracts under `<paths.contractsDir>`
+- P4: the user's request
 
 ## Sub-agent Delegation (MANDATORY)
 
 Follow `.qfai/assistant/rule/shared-skill-delegation-baseline.md`.
 
-### Orchestrator Protocol (MUST)
-
-- This skill creates no work order of its own: it hands on the ones `next` returns, integrates the results and presents them.
-- Each stage runs in a sub-agent holding its work order and the steps it names.
-
-### Capability Probe (MUST)
-
-The first stage's delegation is the capability check. A result reporting it `unavailable` blocks the run.
-
-### Delegation Failure (Hard Stop)
-
-- `unavailable`: submit the result with `delegation` set, and stop on the halt the run returns.
-- `saturated`: wait out the `retry` the run returns.
-- Do not simulate roles. A stage is never done here in place of its steps.
-
 ## Work Orders Summary
 
-Report one row per work order handed on.
+Where parts ran in parallel, report one row per part given to a sub-agent.
 
-| Step | Role (sub-agent) | Agent instance  | Task title         | Input (refs)   | Output (refs)    | Status (PASS/REVISE/PENDING) |
-| ---- | ---------------- | --------------- | ------------------ | -------------- | ---------------- | ---------------------------- |
-| 1    | `<stage worker>` | `<instance id>` | `<stage in words>` | The work order | The stage result | PASS/REVISE                  |
-
-### Reviewer Gate (MUST)
-
-This skill writes no artifact, so it runs no Reviewer of its own. A work order's reviewers, where it names any, return PASS or
-REVISE on that stage's work, and `accept` refuses a result whose reviewer is not independent.
-
-- The Drift Protocol applies to the run: a stage that would change a story, a
-  contract or a decision outside its work order stops and says so.
-- Test placement is each stage's, read against `.qfai/assistant/rule/test-layers.md`.
-  A test-layer ratio is a signal, not a gate.
+| Step | Role (sub-agent) | Agent instance  | Task title        | Input (refs)  | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | --------------- | ----------------- | ------------- | ------------- | ---------------------------- |
+| 1    | `<role>`         | `<instance id>` | `<part in words>` | The step file | The result    | PASS/REVISE                  |
 
 ## Default Autopilot Policy
 
@@ -134,17 +135,16 @@ REVISE on that stage's work, and `accept` refuses a result whose reviewer is not
   - output formatting
   - equivalent-option pick
 - ask-user:
-  - each question the run opens: a new story, a story-tree change, a material risk or a missing fact
-  - scope expansions outside the active envelope
+  - each critical decision at a decision point, and each release point
+  - the candidate question, the scope question, a third branch move, and any branch move from a narrower scope
 - hard-required:
-  - change request (the operator's own words; an empty request is asked for, never guessed)
+  - change request (the user's own words; an empty request is asked for, never guessed)
 
 ## Completion Contract (Shared)
 
-Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#completion-contract-shared`. **Smallest applicable smoke check** (this skill's override): `npx qfai workflow finish` for the run, whose verdict the core computes — the change is complete only when it reports the completion target met. A `finish` that cannot run is UNRUN, not a pass.
+Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#completion-contract-shared`. **Smallest applicable smoke check** (this skill's override): the gates of the `verify-qfai-gate` and `verify-repo-gate` steps the chosen scope holds; a scope holding none runs no gate, and the report says so. A gate that cannot run is UNRUN, not a pass.
 
 project_memory:
 
-- The operator names no stage after the first request.
-- `finish` alone judges completion, and `decision` alone records an answer.
-- This skill writes no primary artifact.
+- The user names no stage after the first request.
+- The plan is fixed by its route; the session runs every step of the chosen scope.

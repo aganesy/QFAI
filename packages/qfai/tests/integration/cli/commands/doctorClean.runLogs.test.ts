@@ -1,7 +1,7 @@
 // QFAI:AC-0003-0008-04
 //
 // Integration: `qfai doctor --clean` prunes TTL-expired validate run
-// logs under `paths.outDir` in addition to archiving review packs, and
+// logs under `paths.outDir`, and
 // `qfai doctor` surfaces the run-log count so the accumulation is
 // visible before it is measured in tens of megabytes. Uses the
 // in-process `runDoctor` entry point with deterministic temp-dir

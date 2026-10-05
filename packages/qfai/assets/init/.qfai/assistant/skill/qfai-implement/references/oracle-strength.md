@@ -4,6 +4,16 @@
 
 A passing example test must depend on the behavior it claims to verify. After GREEN, make the smallest valid change to the owned predicate that should break the example. Run the same selector and record its failing assertion output. Restore the predicate immediately and rerun to confirm GREEN. Place command, result, mutation, and both revisions in the example evidence.
 
+Write the proof into the test, so it can be replayed after the change merges. Put one comment line directly under the test's EX annotation, naming the file and the text you changed, the substitute, and the assertion that failed:
+
+```ts
+// QFAI:EX-NNNN-NNNN-NN
+// Mutation: src/orders/total.ts `a + b` -> `a - b` fails "adds both prices"
+it("adds both prices", () => {
+```
+
+The path is relative to the project root, and the original text is copied exactly. `npx qfai doctor` warns when the file is gone or no longer holds that text; take the proof again against the current code and rewrite the line.
+
 A missing import, syntax error, fixture failure, or deliberate unimplemented throw does not prove the oracle. The failure must name the example's observable behavior. A mutation in an unrelated helper only proves that helper is used.
 
 The falsifiability run in red-not-observable.md already supplies this proof when it tests the same predicate and selector. Reuse that run instead of mutating twice.

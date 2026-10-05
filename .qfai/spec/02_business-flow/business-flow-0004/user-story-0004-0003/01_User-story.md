@@ -2,7 +2,7 @@
 
 ## User Story
 
-As an adopter on the spec-pack layout, I want every step script to refuse a bad start before it writes, show me what it will do, and finish when I run it again, so that I can preview, stop and resume a migration without damaging the project.
+As an adopter on the spec-pack layout, I want every step script to refuse a bad start before it writes, show me what it will do, and change nothing when I run it again after it finished, so that I can preview and repeat a migration without damaging the project.
 
 ## Non-goals
 

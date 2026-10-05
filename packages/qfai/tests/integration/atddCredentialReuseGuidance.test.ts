@@ -1,5 +1,5 @@
 /**
- * Integration: the shipped `/qfai-atdd` credential-reuse guidance artifact
+ * Integration: the shipped `/qfai-implement` credential-reuse guidance artifact
  * (TC-0008-0015 .. TC-0008-0018).
  *
  * The deliverable of this obligation is prose, so every oracle below reads a
@@ -21,6 +21,9 @@
  * generated, and asserting there would pass on a tree whose source was never
  * edited.
  */
+// QFAI:AC-0001-0074-01
+// QFAI:AC-0001-0074-02
+// QFAI:AC-0001-0074-03
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -36,7 +39,7 @@ const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "
 
 // The init asset root stands in for the project root `qfai init` writes into.
 const projectRoot = (): string => getInitAssetsDir();
-const GUIDANCE_REL = ".qfai/assistant/skill/qfai-atdd/references/credential-reuse.md";
+const GUIDANCE_REL = ".qfai/assistant/skill/qfai-implement/references/credential-reuse.md";
 
 let guidance = "";
 let stepEntry = "";
@@ -44,7 +47,7 @@ let stepEntry = "";
 beforeAll(async () => {
   guidance = await readFile(path.join(projectRoot(), GUIDANCE_REL), "utf-8");
   stepEntry = await readFile(
-    path.join(projectRoot(), ".qfai", "assistant", "step", "atdd-credentials", "STEP.md"),
+    path.join(projectRoot(), ".qfai", "assistant", "step", "implement-credentials", "STEP.md"),
     "utf-8",
   );
 });
@@ -107,7 +110,7 @@ describe("TC-0008-0015 (TDD-0015): the seven rules and the companion rule are st
   });
 
   it("is cross-linked from the credentials step by a path that resolves", async () => {
-    expect(stepEntry, "the atdd-credentials step does not link the guidance").toContain(
+    expect(stepEntry, "the implement-credentials step does not link the guidance").toContain(
       GUIDANCE_REL,
     );
     // The link is only a link while the target is there. Resolved from the

@@ -69,7 +69,7 @@ async function withWorkspace(
 type PreflightCheck = { id: string; severity: string; message: string };
 
 /**
- * What `qfai prototyping preflight` answers over a workspace where every other
+ * What `qfai doctor --profile prototyping` answers over a workspace where every other
  * check passes: its exit code, and the checks it reports as errors.
  */
 async function prototypingPreflight(
@@ -113,8 +113,9 @@ async function prototypingPreflight(
     process.exitCode = undefined;
     await run(
       [
+        "doctor",
+        "--profile",
         "prototyping",
-        "preflight",
         "--root",
         root,
         "--target-url",

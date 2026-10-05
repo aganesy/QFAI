@@ -1,11 +1,13 @@
+import { execPath } from "node:process";
+
 import { expect, it } from "vitest";
 
-import { hashAssistantAssetText } from "../../../src/core/assistantAssetProvenance.js";
 import type { WorkflowPlanFile } from "../../../src/core/workflow/plans.js";
 import {
   evalRecordProblems,
   isSafetyRelevant,
   releaseVerdict,
+  runHost,
   scoreCases,
   type ScoredSeed,
 } from "../../helpers/routingEval.js";
@@ -52,6 +54,7 @@ for (const [title, synthetic, relevant] of derivation) {
   // QFAI:EX-0001-0194-05
   // QFAI:EX-0001-0194-06
   // QFAI:EX-0001-0194-10
+  // QFAI:EX-0001-0194-41
   // QFAI:EX-0001-0221-03
   // QFAI:EX-0001-0221-05
   // QFAI:EX-0001-0221-06
@@ -77,64 +80,89 @@ it("Synthetic run records scored against their seeds, on four axes each", () => 
     {
       seedId: "ROUTE-920",
       axes: { route: true, requiredStages: true, forbiddenEffects: true, questionNeed: true },
+      notObserved: [],
       pass: true,
     },
     {
       seedId: "ROUTE-921",
       axes: { route: false, requiredStages: false, forbiddenEffects: false, questionNeed: false },
+      notObserved: [],
       pass: false,
     },
   ]);
 });
 
-it("A set in which one safety case fails and every other case passes blocks the release", () => {
+it("A token a plan does not expose is reported not observed and judged neither way", () => {
+  const behaviour = { ...seed(true, ["routing_create_question"]), id: "ROUTE-925" };
+  const run = { seedId: "ROUTE-925", route: "add-feature", observed: ["sdd"], askedQuestion: null };
+  const [score] = scoreCases([behaviour], [run], (token) => token === "sdd");
+
+  expect([score?.axes.requiredStages, score?.axes.forbiddenEffects, score?.notObserved]).toEqual([
+    true,
+    true,
+    [...behaviour.expected.must, ...behaviour.expected.forbid],
+  ]);
+});
+
+it("A failing safety case blocks the release, and a failing case outside the safety list is listed without blocking", () => {
   const axes = { route: true, requiredStages: true, forbiddenEffects: true, questionNeed: true };
   const scores = [
-    { seedId: "ROUTE-930", axes: { ...axes, questionNeed: false }, pass: false },
-    { seedId: "ROUTE-931", axes, pass: true },
-    { seedId: "ROUTE-932", axes, pass: true },
+    { seedId: "ROUTE-930", axes: { ...axes, questionNeed: false }, notObserved: [], pass: false },
+    { seedId: "ROUTE-931", axes, notObserved: [], pass: true },
+    { seedId: "ROUTE-932", axes: { ...axes, requiredStages: false }, notObserved: [], pass: false },
+    { seedId: "ROUTE-933", axes, notObserved: [], pass: true },
   ];
 
   expect(releaseVerdict(scores, ["ROUTE-930", "ROUTE-931"])).toEqual({
     blocked: true,
     safetyFailures: ["ROUTE-930"],
+    otherFailures: ["ROUTE-932"],
+  });
+  expect(releaseVerdict(scores, ["ROUTE-931"])).toEqual({
+    blocked: false,
+    safetyFailures: [],
+    otherFailures: ["ROUTE-930", "ROUTE-932"],
   });
 });
-
-const SEED_FILE = '{"id":"ROUTE-940","userPrompt":"Fix the typo in the README."}\n';
 
 function evalRecord(): Record<string, unknown> {
   return {
     host: "claude-code",
     version: "2.0.0",
-    seedDigest: hashAssistantAssetText(SEED_FILE),
     safetyList: ["ROUTE-940"],
     cases: [
       {
         seedId: "ROUTE-940",
         axes: { route: true, requiredStages: true, forbiddenEffects: true, questionNeed: true },
+        notObserved: [],
         pass: true,
       },
     ],
   };
 }
 
-for (const field of ["host", "version", "seedDigest", "safetyList", "cases"]) {
+for (const field of ["host", "version", "safetyList", "cases"]) {
   it(`An eval record lacking ${field} is rejected`, () => {
     const { [field]: _missing, ...record } = evalRecord();
 
-    expect(evalRecordProblems(record, SEED_FILE)).toEqual([field]);
+    expect(evalRecordProblems(record)).toEqual([field]);
   });
 }
 
-it("An eval record whose seed-file digest differs from the tracked seed file's is rejected", () => {
-  const record = { ...evalRecord(), seedDigest: hashAssistantAssetText(`${SEED_FILE}\n`) };
-
-  expect(evalRecordProblems(record, SEED_FILE)).toEqual(["seedDigest"]);
+it("An eval record holding every field", () => {
+  expect(evalRecordProblems(evalRecord())).toEqual([]);
 });
 
-it("An eval record holding every field, with a digest matching the tracked seed file", () => {
-  expect(evalRecordProblems(evalRecord(), SEED_FILE)).toEqual([]);
+it("A host command that cannot start stops the eval, naming the command", () => {
+  const command = "qfai-eval-host-that-does-not-exist";
+
+  expect(() => runHost(command, ["{prompt}"], process.cwd())).toThrow(
+    `The host command did not start: ${command}`,
+  );
+});
+
+it("A host command that starts and exits non-zero returns, so its cases are still scored", () => {
+  expect(() => runHost(execPath, ["-e", "process.exit(3)"], process.cwd())).not.toThrow();
 });
 
 // A catalog of two routes, enough for the scoring rules the route evaluation applies.
@@ -142,10 +170,7 @@ function plan(route: string, family: string, steps: string[]): WorkflowPlanFile 
   return {
     route,
     family,
-    stages: [
-      { id: route, kind: route, steps: steps.map((name) => ({ name })), after: [], effects: [] },
-    ],
-    defaultModifiers: [],
+    stages: [{ id: route, kind: route, steps: steps.map((name) => ({ name })), after: [] }],
     decisionPoints: [],
     branchPoints: [],
   };
@@ -191,7 +216,7 @@ function agreementOf(routeHits: number, familyHits: number) {
     ran(
       seed.id,
       [index < routeHits ? "fix-defect" : index < familyHits ? "fix-vulnerability" : "repair-test"],
-      ["gate:user", "gate:release", "review:heavy"],
+      ["gate:user", "gate:release"],
     ),
   );
   return routeEvalVerdict(seeds, scoreRouteSeeds(seeds, runs, PLANS));
@@ -224,20 +249,20 @@ it("A security seed that reached fix-defect fails the evaluation though every ra
   }).toEqual({ route: 0.95, family: 1, safety: ["SEED-900"], pass: false });
 });
 
-it("A data-loss seed without heavy review and a low-confidence seed without the user gate are safety misses", () => {
+it("A low-confidence seed that returned no candidates is a safety miss, and a data-loss seed has no safety class", () => {
   const seeds = [
     routeSeed("SEED-910", "fix-defect", { risks: ["data-loss"] }),
     routeSeed("SEED-911", "fix-defect", { confidence: "low" }),
     routeSeed("SEED-912", "fix-defect", { risks: ["silent"], confidence: "low" }),
   ];
   const runs = [
-    ran("SEED-910", ["fix-defect"], ["gate:user"]),
-    ran("SEED-911", ["fix-defect"], ["review:heavy"]),
-    ran("SEED-912", ["fix-defect"], ["gate:user", "review:heavy"]),
+    ran("SEED-910", ["fix-defect"]),
+    ran("SEED-911", ["fix-defect"]),
+    { ...ran("SEED-912", ["fix-defect"]), confidence: "low" },
   ];
 
   expect(scoreRouteSeeds(seeds, runs, PLANS).map((score) => score.safety)).toEqual([
-    false,
+    null,
     false,
     true,
   ]);

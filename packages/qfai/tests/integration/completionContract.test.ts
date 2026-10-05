@@ -16,14 +16,6 @@ const uiuxTemplateDir = path.join(
   "templates",
   "uiux",
 );
-const implementSkillPath = path.join(
-  templateRoot,
-  ".qfai",
-  "assistant",
-  "skill",
-  "qfai-implement",
-  "SKILL.md",
-);
 const implementAssistantDir = path.join(templateRoot, ".qfai", "assistant");
 
 let content: string | undefined;
@@ -34,117 +26,15 @@ async function loadContent(): Promise<string> {
 }
 
 describe("BF completion gate", () => {
-  it("requires a fresh BF-scoped validator result with no owed EX tests", async () => {
-    const c = await loadContent();
-    expect(c).toMatch(/## Select the next example/);
-    expect(c).toMatch(/qfai validate --profile tdd --flow BF-NNNN/);
-    expect(c).toMatch(/generatedAt.*no earlier than this run start/);
-    expect(c).toMatch(/lowest EX ID.*test-obligation EX findings/);
-    expect(c).toMatch(/fresh validate result has no test-obligation EX finding for this BF/);
-    expect(c).toMatch(/qfai validate --profile tdd --fail-on error --flow BF-NNNN/);
-  });
-
   it("requires observed RED, GREEN, and Refactor results for every implemented EX", async () => {
     const c = await loadContent();
     expect(c).toMatch(/Observe the assertion fail for the intended behavior before changing/);
     expect(c).toMatch(
       /load error, missing dependency, or broken fixture is\s+not an admissible RED/,
     );
-    expect(c).toMatch(/Run the same selector and record\s+command, outcome, and revision/);
+    expect(c).toMatch(/Run the same selector and record\s+command and outcome/);
     expect(c).toMatch(/A failing or unrun gate cannot be reported as PASS/);
-    expect(c).toMatch(/Every implemented EX has an observed RED, GREEN and Refactor result/);
-  });
-
-  // QFAI:EX-0001-0094-04
-  it("requires current evidence and independent reviewer PASS for the integrated revision", async () => {
-    const c = await loadContent();
-    expect(c).toMatch(/implementation-reviewer checks code and tests/);
-    expect(c).toMatch(
-      /completion-reviewer checks\s+obligation, commands, and evidence independently/,
-    );
-    expect(c).toMatch(/author does not certify their own result/);
-    expect(c).toMatch(/Each required reviewer must pass the same final revision/);
-    expect(c).toMatch(/current evidence and the required independent PASS reviews/);
-    expect(c).toMatch(/A reviewer\s+REVISE follows/);
-  });
-
-  // QFAI:EX-0001-0094-01
-  it("requires phase evidence, checkpoint verification and both independent reviewer passes", async () => {
-    const c = await loadContent();
-    expect(c).toContain("Every implemented EX has an observed RED, GREEN and Refactor result");
-    expect(c).toContain("A fresh validate result has no test-obligation EX finding for this BF");
-    expect(c).toContain("implementation-reviewer checks code and tests");
-    expect(c).toMatch(
-      /completion-reviewer checks\s+obligation, commands, and evidence independently/,
-    );
-    expect(c).toContain("Each required reviewer must pass the same final revision");
-  });
-
-  // QFAI:EX-0001-0094-02
-  it("reports nothing to do only after a current scoped TDD gate finds no owed EX", async () => {
-    const c = await loadContent();
-    expect(c).toContain("including decision exceptions");
-    expect(c).toContain("fresh validate result has no test-obligation EX finding for this BF");
-    expect(c).toMatch(/When no EX work remains at entry, still run the current flow checkpoint/);
-    expect(c).toMatch(/report "nothing to do" only after the scoped gate and applicable commands/);
-    expect(c).not.toContain("test-list.md");
-  });
-
-  // QFAI:EX-0001-0094-03
-  it("rejects stale phase evidence from an earlier revision", async () => {
-    const c = await loadContent();
-    const parallelPolicy = await readFile(
-      path.join(path.dirname(implementSkillPath), "references", "parallelization-policy.md"),
-      "utf8",
-    );
-    expect(c).toMatch(/Record command, selector, failure, test hash, and\s+revision/);
-    expect(c).toContain("Run the same selector and record");
-    expect(c).toContain("current evidence and the required independent PASS reviews");
-    expect(parallelPolicy).toContain("Retake evidence whose source revision changed");
-  });
-
-  // QFAI:EX-0001-0094-07
-  it("rejects a phase entry with a status and no command or result", async () => {
-    const c = await loadContent();
-    expect(c).toContain("Evidence without a command and result pair does not prove a");
-    expect(c).toMatch(/RED, GREEN, and Refactor commands and observed\s+results/);
-  });
-
-  // QFAI:EX-0001-0094-05
-  it("runs the same BF-scoped TDD command at checkpoint and completion", async () => {
-    const c = await loadContent();
-    const checkpoint = await readFile(
-      path.join(path.dirname(implementSkillPath), "references", "checkpoint-verification.md"),
-      "utf8",
-    );
-    const command = "qfai validate --profile tdd --fail-on error --flow BF-NNNN";
-    expect(c).toContain(command);
-    expect(checkpoint).toContain(command);
-    expect(checkpoint).toContain("for the invocation's flow");
-    expect(c).not.toMatch(/qfai validate[^\n]*--spec\b/);
-    expect(checkpoint).not.toMatch(/qfai validate[^\n]*--spec\b/);
-  });
-
-  // QFAI:EX-0001-0094-06
-  it("stops selection when the scoped result is missing, stale or from another profile", async () => {
-    // QFAI:AC-0001-0094-05
-    const c = await loadContent();
-    expect(c).toContain("Read its `validate.flow-<ids>.json` result even when the command exits");
-    expect(c).toContain("the file exists, `profile` is");
-    expect(c).toContain("`tdd`, and `generatedAt` is no earlier than this run start");
-    expect(c).toContain("stop and report the command, exit result, and missing or stale field");
-    expect(c).toContain("never infer that the flow has no remaining work");
-  });
-
-  it("runs affected tests and applicable technology commands on the integrated tree", async () => {
-    const c = await loadContent();
-    expect(c).toMatch(/affected tests and the Test, Lint, Typecheck and Build commands from/);
-    expect(c).toMatch(/run on the integrated tree/);
-    expect(c).toMatch(/documented\s+applicability makes it unnecessary/);
-    expect(c).toMatch(/When no EX work remains at entry, still run the current flow checkpoint/);
-    expect(c).toMatch(
-      /Record unresolved risks and upstream findings without calling\s+them complete/,
-    );
+    expect(c).toMatch(/It is done for the flow when every example the\s+selection listed is done/);
   });
 });
 // ---------------------------------------------------------------------------

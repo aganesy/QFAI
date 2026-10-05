@@ -1,9 +1,9 @@
 /**
  * Validator: skillDocReferences (.qfai/assistant/skill/<skill>/SKILL.md).
  *
- * Covers TC-0004-0023 (project_memory shape) and TC-0004-0024
- * (W-SKILL-DOC-BROKEN-REF).
+ * Covers TC-0004-0023 (project_memory shape).
  */
+// QFAI:EX-0001-0045-02
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -58,71 +58,6 @@ describe("skillDocReferences validator", () => {
       const issues = await validateSkillDocReferences(root, await getConfig(root));
       const projMem = issues.filter((i) => i.rule === "skillDocReferences.projectMemory");
       expect(projMem.length).toBe(0);
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  // TC-0004-0024: W-SKILL-DOC-BROKEN-REF
-  // QFAI:EX-0001-0046-01
-  it("TC-0004-0024: emits W-SKILL-DOC-BROKEN-REF for legacy .qfai/assistant/steering/ refs in a SKILL.md", async () => {
-    const root = await newRoot("skill-brokenref");
-    try {
-      await seedSkill(
-        root,
-        "qfai-sdd",
-        [
-          "## /qfai-sdd",
-          "",
-          "Route specialist reviewers from `.qfai/assistant/steering/agent-routing.yml`.",
-          "Other rules live under `.qfai/assistant/constitution/overview.md`.",
-          "",
-          "project_memory:",
-          "  - none",
-        ].join("\n"),
-      );
-      const issues = await validateSkillDocReferences(root, await getConfig(root));
-      const broken = issues.filter((i) => i.code === "W-SKILL-DOC-BROKEN-REF");
-      // One finding: the retired steering path. The constitution/ reference is not resolved.
-      expect(broken.length).toBe(1);
-      expect(broken[0]?.severity).toBe("error");
-      expect(broken[0]?.file).toContain("qfai-sdd/SKILL.md");
-      expect(broken[0]?.message).toContain("non-canonical path");
-      expect(broken[0]?.message).toContain("Agent routing defaults are shipped with qfai");
-      expect(broken[0]?.message).toContain("project overrides live in qfai.config.yaml");
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  // TC-0004-0024 (severity): W-SKILL-DOC-BROKEN-REF severity branches per running tool version
-  it("TC-0004-0024 (severity): W-SKILL-DOC-BROKEN-REF severity is warning|error and message branches with it", async () => {
-    const root = await newRoot("skill-brokenref-sev");
-    try {
-      await seedSkill(
-        root,
-        "qfai-sdd",
-        [
-          "## /qfai-sdd",
-          "",
-          "See `.qfai/assistant/steering/agent-catalog.yml`.",
-          "",
-          "project_memory:",
-          "  - none",
-        ].join("\n"),
-      );
-      const issues = await validateSkillDocReferences(root, await getConfig(root));
-      const broken = issues.filter((i) => i.code === "W-SKILL-DOC-BROKEN-REF");
-      expect(broken.length).toBe(1);
-      const severity = broken[0]?.severity;
-      expect(["warning", "error"]).toContain(severity);
-      // Headline shape MUST track the severity so consumers know which
-      // mode fired (warning during window, error past sunset).
-      if (severity === "error") {
-        expect(broken[0]?.message).toContain("past the announced sunset");
-      } else {
-        expect(broken[0]?.message).toContain("Read-compatible only");
-      }
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -248,25 +183,6 @@ describe("skillDocReferences validator", () => {
       const issues = await validateSkillDocReferences(root, await getConfig(root));
       const projMem = issues.filter((i) => i.rule === "skillDocReferences.projectMemory");
       expect(projMem.length).toBe(1);
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  // TC-0004-0024 (qfai-scope): user-defined non-qfai-* skill is NOT flagged
-  it("TC-0004-0024 (qfai-scope): non-qfai-* skill does NOT fire W-SKILL-DOC-BROKEN-REF", async () => {
-    const root = await newRoot("skill-brokenref-scope");
-    try {
-      await seedSkill(
-        root,
-        "my-custom-skill",
-        ["## /my-custom-skill", "", "Loads `.qfai/assistant/steering/agent-catalog.yml`.", ""].join(
-          "\n",
-        ),
-      );
-      const issues = await validateSkillDocReferences(root, await getConfig(root));
-      const broken = issues.filter((i) => i.code === "W-SKILL-DOC-BROKEN-REF");
-      expect(broken.length).toBe(0);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

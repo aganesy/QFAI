@@ -20,7 +20,7 @@ Feature: Build the flows and stories from the plan
     Given a plan that places no flow for one old user story, a flow with no `from`, an old criterion step 4 cannot convert or assign to one story, an old story block that is not one "As a …, I want …, so that …" sentence, or a placed story left with no criterion
     When step 4 runs
     Then a story or criterion stays in its source, a flow with no `from` receives the template `business-flow.md` with the plan title, and each is listed under For a person with its file and the reason
-    And a story block that is not one such sentence is written as it stands, and a story left with no criterion gets no `02_Acceptance-Criteria.md`
+    And a story block that is not one such sentence is written as it stands, and a story left with no criterion gets no `02_Acceptance-Criteria.md` and is listed with the old criteria that named it
     And step 4 exits 3
 
   # AC-0004-0007-03
@@ -29,7 +29,8 @@ Feature: Build the flows and stories from the plan
     When step 4 runs
     Then each criterion holds its first named Scenario, or a placeholder Scenario where it has none
     And an Input or Expected holding one step is written without its leading Given, When, Then or And, and one holding more steps is written as it stands
-    And each item not written, each placeholder and each cell written as it stands is listed under For a person, and step 4 exits 3
+    And each item not written is listed under For a person with its old file and line, an outline with the header row of its Examples table
+    And each placeholder and each cell written as it stands is listed under For a person, and step 4 exits 3
 
   # AC-0004-0007-04
   Scenario: A rule destination that is not a contract stops step 4
@@ -44,4 +45,11 @@ Feature: Build the flows and stories from the plan
     When step 4 runs
     Then the two are read as one record, whatever its kind
     And two values of one field that disagree stop the run with exit 2, naming both locations
+
+  # AC-0004-0007-06
+  Scenario: An old table headed with a space is read, and one with an unknown header stops the run
+    Given an old business-rules, examples or test-cases table whose ID column is headed `BR ID`, `EX ID` or `TC ID`, and one whose IDs stand under a header no step reads
+    When a step reads them
+    Then the first is read as if its header were written with a hyphen
+    And the second stops the run with exit 2, naming its file and line, before anything is written
 ```

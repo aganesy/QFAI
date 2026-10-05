@@ -280,11 +280,11 @@ describe("TC-0003-0025: assistantPaths.ts SSOT module", () => {
 });
 
 describe("TC-0003-0026: legacy backward-compat + sunset warning", () => {
-  it("init declares emitLegacyAssistantSteeringSunset emitting D-DEPRECATED-PATH (sunset sourced from SSOT)", async () => {
+  it("init declares emitLegacyAssistantTreeSunset emitting D-DEPRECATED-PATH (sunset sourced from SSOT)", async () => {
     const content = await readFile(INIT_CLI, "utf-8");
     expect(content).toContain("D-DEPRECATED-PATH");
-    expect(content).toContain("emitLegacyAssistantSteeringSunset");
-    // The version in the message comes from legacyAssistantSteeringSunsetLabel()
+    expect(content).toContain("emitLegacyAssistantTreeSunset");
+    // The version in the message comes from legacyAssistantTreeSunsetLabel()
     // rather than a literal here; the runtime assertion lives in
     // tests/cli/init.test.ts.
     expect(content).toMatch(/announced sunset \(v\$\{sunset\}\)/);

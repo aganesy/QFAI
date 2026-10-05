@@ -26,7 +26,7 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { readStateTolerant, updateState } from "../../../src/core/state.js";
+import { readStateStrict, updateState } from "../../../src/core/state.js";
 
 const control = vi.hoisted(() => ({ skew: false, calls: 0 }));
 
@@ -107,7 +107,7 @@ describe("TC-0010-0012: state lock reaper identity check", () => {
       control.skew = false;
       await expect(stat(lockPath)).resolves.toBeDefined();
       expect(await readFile(lockPath, "utf-8")).toContain("planted");
-      expect(await readStateTolerant(root)).toBeNull();
+      expect(await readStateStrict(root)).toBeNull();
     } finally {
       control.skew = false;
       await rm(lockPath, { force: true });
@@ -174,7 +174,7 @@ describe("TC-0010-0012: the reaper is serialized and the write is revalidated", 
     ).rejects.toThrow(/was taken over while this update ran/);
 
     // Nothing was written from the snapshot the mutation had.
-    expect(await readStateTolerant(root)).toBeNull();
+    expect(await readStateStrict(root)).toBeNull();
     await rm(lockPath, { force: true });
   });
 });

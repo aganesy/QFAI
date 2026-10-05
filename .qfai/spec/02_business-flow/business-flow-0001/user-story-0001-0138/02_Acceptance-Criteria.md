@@ -6,7 +6,7 @@
 Feature: Canonical primary UI-contract pin
   # AC-0001-0138-01
   Scenario: `primaryUiContract` pin: full ID only
-    Given a `--primary-ui-contract` or `prototyping.primaryUiContract` value,
-    When iterate validates the input,
-    Then on the story tree the input is `prototyping.primaryUiContract` or `--primary-ui-contract`, and the flag takes precedence. Only the full `UI-NNNN` form is accepted: any other input, a bare `NNNN` included, is exit `2` with an error naming the `UI-NNNN` shape and the input received, and no input is normalised.
+    Given a `primaryUiContract` named in the request or `prototyping.primaryUiContract` in config
+    When `/qfai-prototyping` reads the pin
+    Then the request takes precedence over the config. Only the full `UI-NNNN` form is accepted: any other value, a bare `NNNN` included, is refused with an error naming the `UI-NNNN` shape and the value received, and no value is normalised.
 ```

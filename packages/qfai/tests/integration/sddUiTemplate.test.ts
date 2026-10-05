@@ -124,6 +124,6 @@ describe("shipped qfai-sdd design contracts", () => {
     );
     expect(normalization).toContain("common-design-md/STEP.md#author-and-validate");
     expect(designMd).toContain("## Author and validate");
-    expect(normalization).toContain("prototyping.json#handoff");
+    expect(normalization).toContain(".qfai/prototype/final/handoff.json");
   });
 });

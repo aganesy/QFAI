@@ -87,7 +87,6 @@ async function reportAfterPassingTests(
 
 const DISCUSSION_FILES = [
   "01_Context.md",
-  "02_Inception-Deck.md",
   "03_Story-Workshop.md",
   "04_Sources.md",
   "05_Scope.md",
@@ -95,12 +94,7 @@ const DISCUSSION_FILES = [
   "07_NFR.md",
   "08_Glossary.md",
   "09_Constraints.md",
-  "10_Policy.md",
   "11_OQ-Register.md",
-  "12_OQ-Resolution-Log.md",
-  "13_Deferred.md",
-  "14_Review-Request.md",
-  "99_delta.md",
 ] as const;
 
 const DISCUSSION_BODY =
@@ -110,7 +104,9 @@ function discussionFile(name: (typeof DISCUSSION_FILES)[number]): string {
   const heading = `# ${name.slice(3, -3).replace(/-/g, " ")}\n\n`;
   switch (name) {
     case "01_Context.md":
-      return `${heading}## UI-bearing Classification\n\n- ui_bearing: false\n- primary_surface: non-ui\n- secondary_surfaces: []\n- classification_rationale: The checkout total is computed by a module with no screen.\n\n## Goal and Completion Criteria\n\n- Goal: ${DISCUSSION_BODY}`;
+      return `${heading}## UI-bearing Classification\n\n- ui_bearing: false\n- primary_surface: non-ui\n- secondary_surfaces: []\n- classification_rationale: The checkout total is computed by a module with no screen.\n\n## Goal and Completion Criteria\n\n- Goal: ${DISCUSSION_BODY}\n## Inception Deck\n\n${DISCUSSION_BODY}`;
+    case "09_Constraints.md":
+      return `${heading}${DISCUSSION_BODY}${["Security Policy", "Compliance Policy", "Development Policy", "Operational Policy"].map((section) => `\n## ${section}\n\nNone.\n`).join("")}`;
     case "03_Story-Workshop.md":
       return `${heading}${DISCUSSION_BODY}\n\`\`\`mermaid\nflowchart TD\n  Select[Select items] --> Total[See the total]\n\`\`\`\n`;
     case "04_Sources.md":
@@ -251,8 +247,9 @@ describe("BF-0001 develop and verify a QFAI project", () => {
     expect(await runAtddScaffold({ root, flowId, write: () => {}, writeErr: () => {} })).toBe(0);
     await runValidate({ root, strict: false, profile: "atdd", failOn: "never", flowIds: [flowId] });
     const scaffolded = await readFlowFindings(root);
-    expect(hasFinding(scaffolded, "D-SCAFFOLD-PLACEHOLDER", flowId)).toBe(true);
-    expect(hasFinding(scaffolded, "D-SCAFFOLD-PLACEHOLDER", criterionId)).toBe(true);
+    expect(hasFinding(scaffolded, "QFAI-STORY-006", flowId)).toBe(false);
+    expect(hasFinding(scaffolded, "QFAI-STORY-006", criterionId)).toBe(false);
+    expect(scaffolded.some((finding) => finding.code.startsWith("QFAI-TEST-"))).toBe(false);
 
     await put(
       root,
@@ -273,7 +270,6 @@ describe("BF-0001 develop and verify a QFAI project", () => {
     const accepted = await readFlowFindings(root);
     expect(hasFinding(accepted, "QFAI-STORY-006", flowId)).toBe(false);
     expect(hasFinding(accepted, "QFAI-STORY-006", criterionId)).toBe(false);
-    expect(accepted.some((finding) => finding.code === "D-SCAFFOLD-PLACEHOLDER")).toBe(false);
     const acceptanceFiles = [
       `tests/integration/${storyId}/${criterionId}.test.mjs`,
       `tests/e2e/${flowId}.test.mjs`,

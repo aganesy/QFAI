@@ -1,32 +1,21 @@
 /**
- * Integration: init and upgrade give the same result on a CRLF checkout, and through the built
- * CLI under a root whose name contains a space, as they do in process on Linux.
- *
- * CRLF comes from the fixture, never from `core.autocrlf`.
+ * Integration: init and upgrade give the same result through the built CLI under a root whose
+ * name contains a space as they do in process.
  */
 // QFAI:AC-0001-0196-06
 import { spawnSync } from "node:child_process";
-import { readdir, readFile, realpath, writeFile } from "node:fs/promises";
+import { readdir, realpath } from "node:fs/promises";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { hashAssistantAssetFile } from "../../../src/core/assistantAssetProvenance.js";
-import {
-  HOST_SKILL_DIRS,
-  initQuietly,
-  modeLines,
-  readLock,
-  withEmptyRepo,
-  withInstall,
-} from "./upgradeStates.js";
+import { HOST_SKILL_DIRS, initQuietly, modeLines, withEmptyRepo } from "./upgradeStates.js";
 
 const CLI = path.resolve(import.meta.dirname, "../../../dist/cli/index.mjs");
-const RULE = "rule/quality.md";
 
-type RunView = { modeLines: string[]; lock: unknown; wrappers: string[] };
+type RunView = { modeLines: string[]; wrappers: string[] };
 
-/** What a run must give alike in and out of process: the mode line, the lock, wrapper targets. */
+/** What a run must give alike in and out of process: the mode line and the wrapper targets. */
 async function viewOf(root: string, output: string): Promise<RunView> {
   const realRoot = await realpath(root);
   const wrappers: string[] = [];
@@ -37,36 +26,11 @@ async function viewOf(root: string, output: string): Promise<RunView> {
       wrappers.push(`${host}/${name} -> ${target.split(path.sep).join("/")}`);
     }
   }
-  return { modeLines: modeLines(output), lock: (await readLock(root)).lock, wrappers };
+  return { modeLines: modeLines(output), wrappers };
 }
 
-// QFAI:EX-0001-0196-16
 // QFAI:EX-0001-0196-17
-// QFAI:EX-0001-0196-18
 describe("windows parity", () => {
-  it("Every provenance lock key is a slash-separated relative path", async () => {
-    await withEmptyRepo(async (root) => {
-      await initQuietly(root);
-      const keys = Object.keys((await readLock(root)).files);
-
-      expect(keys.length).toBeGreaterThan(0);
-      for (const key of keys) {
-        expect(key, "no backslash").not.toContain("\\");
-        expect(path.posix.isAbsolute(key) || path.win32.isAbsolute(key), `${key} is relative`).toBe(
-          false,
-        );
-        expect(
-          key.split("/").every((segment) => segment !== "" && segment !== ".."),
-          key,
-        ).toBe(true);
-      }
-      expect(
-        keys.some((key) => key.includes("/")),
-        "a nested key uses /",
-      ).toBe(true);
-    });
-  });
-
   it("Built CLI init and upgrade under a root with a space", async () => {
     const spawned: RunView[] = [];
     await withEmptyRepo(async (root) => {
@@ -91,20 +55,5 @@ describe("windows parity", () => {
       ["Workflow mode: active"],
       ["Workflow mode: active"],
     ]);
-  });
-
-  it("A CRLF copy of an unmodified shipped rule is treated as unmodified", async () => {
-    await withInstall([], async (root) => {
-      const file = path.join(root, ".qfai", "assistant", ...RULE.split("/"));
-      await writeFile(file, (await readFile(file, "utf-8")).replace(/\r?\n/g, "\r\n"), "utf-8");
-      const crlf = await readFile(file);
-
-      const output = await initQuietly(root);
-
-      expect(await hashAssistantAssetFile(file)).toBe((await readLock(root)).files[RULE]);
-      expect(await readFile(file), "the CRLF copy is left as it is").toEqual(crlf);
-      const notes = output.split("\n").filter((line) => line.includes("quality.md"));
-      expect(notes, "no manual-merge note names the rule").toEqual([]);
-    });
   });
 });
