@@ -62,6 +62,35 @@ describe("doctor paths.leftovers", () => {
     }
   });
 
+  // QFAI:AC-0003-0004-02
+  // QFAI:EX-0003-0004-05
+  it("lists the retired review archive and assistant files and keeps them", async () => {
+    const dir = await newTempDir();
+    const left = [
+      ".qfai/review_archive/",
+      ".qfai/assistant/rule/audited-evidence-hash.md",
+      ".qfai/assistant/skill/qfai-atdd/",
+      ".qfai/assistant/skill/qfai-discussion/templates/99_delta.md",
+      ".qfai/assistant/skill/qfai-implement/references/review-artifact-layout.md",
+      ".qfai/assistant/skill/qfai-run/references/payloads.md",
+      ".qfai/assistant/skill/qfai-sdd/templates/evidence/",
+      ".qfai/assistant/step/atdd-author/",
+      ".qfai/assistant/step/prototyping-recover/",
+    ];
+    for (const relative of left) await seed(dir, relative);
+    // A file the current release ships is never listed.
+    await seed(dir, ".qfai/assistant/step/implement-tdd/STEP.md");
+    await seed(dir, ".qfai/assistant/skill/qfai-run/SKILL.md");
+
+    const check = await leftovers(dir);
+
+    expect(check?.severity).toBe("info");
+    expect(check?.details?.["paths"]).toEqual(left);
+    for (const relative of left) {
+      expect(await exists(path.join(dir, ...relative.split("/"))), relative).toBe(true);
+    }
+  });
+
   // QFAI:EX-0003-0004-06
   it("lists the retired discussion-pack files under --clean and keeps them", async () => {
     const dir = await newTempDir();

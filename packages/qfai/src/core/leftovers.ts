@@ -9,9 +9,46 @@ import { formatReportPath } from "./init/reportPath.js";
 const LEFTOVER_PATHS = [
   ".qfai/evidence/",
   ".qfai/review/",
+  ".qfai/review_archive/",
   ".qfai/run/",
   ".qfai/assistant/.assets.lock.json",
   ".qfai/install-provenance.json",
+] as const;
+
+/**
+ * Files and directories an earlier release shipped under `.qfai/assistant/` and
+ * this release does not. `init` skips a file that exists and `init --force`
+ * overwrites only what this release ships, so neither removes these.
+ * A directory entry ends with `/`.
+ */
+const RETIRED_ASSISTANT_PATHS = [
+  "rule/audited-evidence-hash.md",
+  "skill/qfai-atdd/",
+  "skill/qfai-discussion/templates/02_Inception-Deck.md",
+  "skill/qfai-discussion/templates/10_Policy.md",
+  "skill/qfai-discussion/templates/12_OQ-Resolution-Log.md",
+  "skill/qfai-discussion/templates/13_Deferred.md",
+  "skill/qfai-discussion/templates/14_Review-Request.md",
+  "skill/qfai-discussion/templates/99_delta.md",
+  "skill/qfai-discussion/templates/review/",
+  "skill/qfai-implement/references/checkpoint-verification.md",
+  "skill/qfai-implement/references/evidence-revision.md",
+  "skill/qfai-implement/references/relevant-test-suite.md",
+  "skill/qfai-implement/references/review-artifact-layout.md",
+  "skill/qfai-implement/references/round-evidence.md",
+  "skill/qfai-prototyping/references/evidence-requirements.md",
+  "skill/qfai-prototyping/references/iterate-flags.md",
+  "skill/qfai-run/references/payloads.md",
+  "skill/qfai-sdd/templates/evidence/",
+  "skill/qfai-verify/templates/verify-evidence.md",
+  "step/atdd-author/",
+  "step/atdd-credentials/",
+  "step/atdd-scaffold/",
+  "step/atdd-test-fix/",
+  "step/common-evidence-record/",
+  "step/common-steering-refresh/",
+  "step/implement-checkpoint/",
+  "step/prototyping-recover/",
 ] as const;
 
 /** Discussion-pack files an earlier release wrote into each pack. */
@@ -73,6 +110,10 @@ export async function findLeftovers(root: string, discussionDir: string): Promis
   const paths: string[] = [];
   for (const relative of LEFTOVER_PATHS) {
     if (await present(path.join(root, relative))) paths.push(relative);
+  }
+  for (const relative of RETIRED_ASSISTANT_PATHS) {
+    const listed = `.qfai/assistant/${relative}`;
+    if (await present(path.join(root, ...listed.split("/")))) paths.push(listed);
   }
   const migrationArchive = await present(path.join(root, MIGRATION_ARCHIVE_PATH));
   if (migrationArchive) paths.push(MIGRATION_ARCHIVE_PATH);

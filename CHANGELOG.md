@@ -25,6 +25,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The leftover listing names every retired assistant file.** After an upgrade
+  from 2.0.x, `qfai init` and `qfai doctor` listed only a few leftover paths,
+  while `qfai validate` still failed on steps, skill references, templates and
+  rules that 2.1.0 no longer ships and neither `init` nor `init --force`
+  removes. The listing now names each of those under `.qfai/assistant/`, and
+  `.qfai/review_archive/`. Nothing is deleted. (#2977)
 - **The planner-first and design anti-goal examples are tested for what they
   say.** The planner-first example was annotated on a test that only checked
   three file names. Its test now reads the completion matrix and the
