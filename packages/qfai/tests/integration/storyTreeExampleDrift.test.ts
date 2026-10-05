@@ -195,7 +195,7 @@ describe("an example rewritten on the branch", () => {
     },
   );
 
-  // QFAI:EX-0001-0054-15
+  // QFAI:EX-0001-0054-16
   // QFAI:AC-0001-0054-08
   it("warns until a test annotating the example changes too", async () => {
     await put(examples, `${header}| ${example} | AC-0001-0001-01 | an order | it is refunded |\n`);
@@ -207,7 +207,7 @@ describe("an example rewritten on the branch", () => {
     expect(await warned()).toBe(false);
   });
 
-  // QFAI:EX-0001-0054-15
+  // QFAI:EX-0001-0054-16
   it("does not warn when only the table padding changed", async () => {
     await put(
       examples,
