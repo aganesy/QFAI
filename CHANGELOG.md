@@ -22,18 +22,46 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   A mark inside a string literal is left alone. The marks this repository
   still carried are rewritten as plain comments, and its migration fixtures
   are excluded from the test globs (#2308).
+- **A decision row can be marked as partly superseded.** `decisions.md` accepts
+  the Status `PARTLY SUPERSEDED (by DEC-NNNN)`, naming the later row that
+  narrows the decision without replacing it. A test exception or change request
+  at that Status stays in force. The story-tree authoring rules also say that a
+  project counting the IDs of its open pull requests may take a next ID above
+  the tree's own highest plus one (#2969).
 
 ### Fixed
 
-- **The migration skill cites its shared rules by full path.** The
-  delegation-baseline and test-layers pointers started at `rule/`, so they did
-  not resolve from the project root. Both now begin at `.qfai/assistant/rule/`.
-  (#2858)
+- **`qfai init --force` reports only the paths it changed.** The `written` count
+  and list included every distributed file, including those already identical to
+  the shipped copy. Rule files, the Copilot and Codex files and the agent and
+  skill links that need no change are now counted as skipped (#2986).
+
+- **The `qfai-run` entry reminder stays silent on a turn the host starts
+  (#2989).** The Claude Code `UserPromptSubmit` hook that sends a request to
+  `qfai-run` printed on every notification, so an agent could start a run from
+  one. It now prints nothing when a line of the prompt opens with
+  `<task-notification>`, `<wake>` or `[SYSTEM NOTIFICATION`, and the
+  question-form reminder skips the same header. A prompt with no such line, and
+  input it cannot read, still get the reminder. `qfai init` replaces an unedited
+  copy of either earlier group.
+
 - **The free-text entry reminder points a worktree session at its own copy of
   `qfai-run`.** The host can load the skill from the main checkout, which may
   lag the worktree, so the reminder now tells the agent to read
   `.claude/skills/qfai-run/SKILL.md` under the current directory. The reminder
   is read from the session's own checkout. Fixes #2972.
+
+- **The changelog guard no longer fails the commit a release is tagged at.**
+  The guard refuses an entry added to a section whose tag exists. The merge
+  that folds `## [Unreleased]` into the release is the commit the tag is pushed
+  to, so the push run read the release's own entries as late additions and
+  turned `main` red. A tag on the commit being checked is now the release being
+  cut and does not make its section released (#2945).
+
+- **The migration skill cites its shared rules by full path.** The
+  delegation-baseline and test-layers pointers started at `rule/`, so they did
+  not resolve from the project root. Both now begin at `.qfai/assistant/rule/`.
+  (#2858)
 - **The planner-first and design anti-goal examples are tested for what they
   say.** The planner-first example was annotated on a test that only checked
   three file names. Its test now reads the completion matrix and the
@@ -63,7 +91,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `AC-0003-0004-01` gains a deprecated `paths.promptsDir` warning case.
   The BF-0003 full pin keeps only `AC-0003-0006-01` and `AC-0003-0006-03`.
   Refs #2367.
-
+- **Configure and web research follow the shared delegation rules alone**
+  (#2857). Both skills carried empty override stanzas, and configure restated
+  the failure handling. A failed delegation is now classified and handled only
+  as the shared delegation baseline sets out.
 - **A DONE change request claims every action it lists** (#2312). A
   `decisions.md` row has one Status, so a request with one action deferred could
   be marked DONE and the deferred action dropped from view. The drift protocol
@@ -123,6 +154,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   routing-eval token vocabulary changes. The set of safety-relevant routing
   seeds is unchanged, and the list derived from these classes may now be
   recorded. The decision is recorded in `decisions.md`.
+
+- **The shipped guidance now bounds test-suite size and unrequested fixes**
+  (#2242). The test-layer rule gains a sizing section: a new test file is sized
+  like its neighbours, a process-per-case suite is a choice rather than an
+  inherited shape, and a scratch check does not become a permanent test file.
+  The minimal-implementation rule's section on what a change leaves out gains
+  two lines. A fix nobody asked for is reported as a follow-up, unless the
+  requested behaviour cannot work without it; the change's report then names
+  it. Where work goes ahead on an assumption about an ambiguous request, it is
+  built for one reading and the assumption is stated. The implementation and QA
+  reviewer cards and the review the implement skill gives each gain one check
+  for these. Test coverage for every source change is still required.
 
 ## [2.1.0] - 2026-10-05
 

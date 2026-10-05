@@ -71,9 +71,10 @@ export const GRILLING_PLAN_HOOK_MARKER = "QFAI grilling reminder: plan";
  * long session starts skipping it.
  *
  * Its program reads the prompt out of the hook's input and stays silent when a
- * line of it opens with a task-notification or wake-up wrapper. Those turns are
- * automated rather than typed, and no question to the user forms on them. Any
- * other input, including none, prints the reminder.
+ * line of it opens with a task-notification or wake-up wrapper, or a system
+ * notification header. Those turns are automated rather than typed, and no
+ * question to the user forms on them. Any other input, including none, prints
+ * the reminder.
  */
 export const STRUCTURED_QUESTION_HOOK_MARKER = "QFAI structured-question reminder";
 
@@ -84,6 +85,9 @@ export const STRUCTURED_QUESTION_HOOK_MARKER = "QFAI structured-question reminde
  * The host picks a skill from the request's wording, and may pick another one
  * or none. The hook is the one place the rule is stated, and it states it with
  * each message so that it does not fade as a session grows.
+ *
+ * It skips the same automated turns as the question-form group: with no user
+ * message on them there is no request to route.
  */
 export const FREE_TEXT_ENTRY_HOOK_MARKER = "QFAI free-text entry reminder";
 
@@ -171,6 +175,10 @@ const SUPERSEDED_HOOK_GROUPS: ReadonlySet<string> = new Set([
   "b537eee9778a7273ddaffb33513e9202394894ef8e0eecdf7a961d85b8cb7a5c",
   // structured question: the program that read no input, before it skipped automated turns
   "ace5deb2efa50f5c8dcdfbb595c94073a50a064e7cae46e27a49a1217dbabd0c",
+  // structured question: the program that skipped only a task-notification or wake-up wrapper
+  "42e59754850b7e1e7e3b62e6ea596810552a0a05db64504ae17522748a7f1998",
+  // free-text entry: the program that read no input, before it skipped automated turns
+  "8ed926315594cbe69d000b754cbf4e67cedf3cdcaab82d60fdee20adcd6cc16e",
 ]);
 
 export type HookMergeResult =

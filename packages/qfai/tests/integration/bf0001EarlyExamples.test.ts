@@ -5,7 +5,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { runInit } from "../../src/cli/commands/init.js";
-import { parseRecordTable } from "../../src/core/storyTree/tables.js";
+import { classifyRecordRow, parseRecordTable } from "../../src/core/storyTree/tables.js";
 import { captureStdout } from "../helpers/stdout.js";
 
 const headings = "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
@@ -34,6 +34,23 @@ describe("BF-0001 project records", () => {
       .join("\n");
     expect(parseRecordTable(`${headings}${decisions}\n`, "decisions").errors).toEqual([]);
     expect(parseRecordTable(`${headings}${questions}\n`, "open-questions").errors).toEqual([]);
+  });
+
+  // QFAI:EX-0001-0007-12
+  it("accepts a parenthesised partial supersession and keeps the row in force", () => {
+    const accepted = parseRecordTable(
+      `${headings}| DEC-0001 | Change request: 01_policy/glossary.md | Reason | PARTLY SUPERSEDED (by DEC-0002) |\n`,
+      "decisions",
+    );
+    expect(accepted.errors).toEqual([]);
+    expect(accepted.rows.map((row) => classifyRecordRow(row).inForce)).toEqual([true]);
+    const rejected = parseRecordTable(
+      `${headings}| DEC-0001 | Choice | Reason | PARTLY SUPERSEDED by DEC-0002 |\n`,
+      "decisions",
+    );
+    expect(rejected.errors).toContain(
+      "decisions row DEC-0001 has an invalid Status: PARTLY SUPERSEDED by DEC-0002",
+    );
   });
 
   // QFAI:EX-0001-0007-04

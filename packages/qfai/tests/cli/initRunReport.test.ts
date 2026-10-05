@@ -361,4 +361,61 @@ describe("qfai init run report", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  // `--force` rewrote every distributed path and reported all of them as written,
+  // so the count said nothing about what the upgrade changed.
+  it("reports only the paths whose content changed under --force", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-report-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const edited = path.join(root, ".agents", "rules", "api-budget.md");
+      await writeFile(edited, "edited by the project\n", "utf-8");
+
+      const forced = await captureStdout(async () => {
+        await runInit({ dir: root, force: true, dryRun: false, yes: true, verbose: true });
+      });
+
+      const written = pathsUnder(forced, "  written paths:");
+      const skipped = pathsUnder(forced, "  skipped paths:");
+      expect(written).toContain(".agents/rules/api-budget.md");
+      expect(await readFile(edited, "utf-8")).not.toBe("edited by the project\n");
+      // Unchanged rule masters and the symlinked wrappers are not written again.
+      expect(written).not.toContain(".agents/rules/action-reversibility.md");
+      expect(skipped).toContain(".agents/rules/action-reversibility.md");
+      expect(written.filter((entry) => entry.startsWith(".claude/agents/"))).toEqual([]);
+      expect(written.filter((entry) => entry.startsWith(".codex/agents/"))).toEqual([]);
+      expect(reportedCount(forced, "written")).toBe(written.length);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports no distributed file as written on a --force rerun over an unchanged tree", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-report-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await captureStdout(async () => {
+        await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      });
+
+      const secondForced = await captureStdout(async () => {
+        await runInit({ dir: root, force: true, dryRun: false, yes: true, verbose: true });
+      });
+
+      const distributed = [
+        ".agents/",
+        ".claude/",
+        ".codex/agents/",
+        ".github/instructions/",
+        ".github/copilot-instructions.md",
+        ".qfai/assistant/",
+      ];
+      const written = pathsUnder(secondForced, "  written paths:");
+      expect(
+        written.filter((entry) => distributed.some((prefix) => entry.startsWith(prefix))),
+      ).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });
