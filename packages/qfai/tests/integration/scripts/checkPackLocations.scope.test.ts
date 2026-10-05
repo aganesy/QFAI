@@ -9,7 +9,6 @@
  * pass silently — the untouched legacy pack is not re-flagged because
  * scope is the staged/changed paths only, not a full-tree walk.
  */
-// QFAI:EX-0002-0011-02
 
 import { execFile } from "node:child_process";
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
@@ -65,6 +64,7 @@ afterEach(async () => {
   await removeTempTree(fixtureRoot);
 });
 
+// QFAI:EX-0002-0011-02
 describe("TC-0004-0073: untouched legacy review-old/ is NOT re-flagged (scope = staged/changed paths)", () => {
   it("a PR with only unrelated edits PASSes even though an untouched legacy review-old/ exists at root", async () => {
     // The PR only touches a non-pack file. The legacy `review-old/` is

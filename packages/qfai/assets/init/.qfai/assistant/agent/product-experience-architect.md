@@ -71,7 +71,6 @@ specialization_tags:
 - Product experience decisions and rationale
 - UX / visual / IA / transition guidance
 - Cross-artifact consistency findings
-- Evidence summary for `.qfai/evidence/`
 - Design rationale that explains why the chosen direction is simple enough, necessary now, and coherent end-to-end
 
 ## Stop conditions

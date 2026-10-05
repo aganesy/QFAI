@@ -63,8 +63,7 @@ specialization_tags:
 - Backend implementation summary
 - Changed files and affected contracts
 - Local verification notes
-- Updated EX section in `.qfai/evidence/implement-BF-NNNN.md` with test path, selector, observed RED/GREEN/Refactor results, and changed files
-- Evidence summary for `.qfai/evidence/`
+- Test path, selector, observed RED/GREEN/Refactor results and changed files, in the stage report
 - Notes on invariants, validation, and why added abstractions/configuration are necessary now
 
 ## Stop conditions

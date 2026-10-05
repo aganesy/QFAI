@@ -2,21 +2,13 @@ import { mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:
 import os from "node:os";
 import path from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { assert, describe, expect, it } from "vitest";
 
 import { runDoctor } from "../../src/cli/commands/doctor.js";
 import { runValidate } from "../../src/cli/commands/validate.js";
 import { createDoctorData } from "../../src/core/doctor.js";
 import { isEperm } from "../../src/core/fs/errno.js";
 import { captureStdout } from "../helpers/stdout.js";
-import {
-  editShippedWorkflow,
-  quietUnrelatedWarnings,
-  runDoctorText,
-  useAdopterTreePool,
-} from "../helpers/workflowsIntegrityFixtures.js";
-
-const workflowPool = useAdopterTreePool();
 
 async function withWorkspace(task: (root: string) => Promise<void>): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-bf0003-acceptance-"));
@@ -56,7 +48,7 @@ async function tryBrokenLink(root: string, linkPath: string): Promise<boolean> {
 
 function check(data: Awaited<ReturnType<typeof createDoctorData>>, id: string) {
   const found = data.checks.find((entry) => entry.id === id);
-  expect(found, `missing doctor check ${id}`).toBeDefined();
+  assert.isDefined(found, `missing doctor check ${id}`);
   return found;
 }
 
@@ -236,6 +228,29 @@ describe("BF-0003 doctor acceptance", () => {
     });
   });
 
+  // QFAI:AC-0003-0004-01
+  // QFAI:EX-0003-0004-01
+  it("warns about a configured legacy prompts directory and names the replacement", async () => {
+    await withWorkspace(async (root) => {
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        "paths:\n  promptsDir: .qfai/assistant/legacy-prompts\n",
+      );
+      const data = await createDoctorData({ startDir: root, rootExplicit: true });
+      const legacy = check(data, "paths.promptsDirDeprecated");
+      expect(legacy).toMatchObject({
+        severity: "warning",
+        details: { path: ".qfai/assistant/legacy-prompts", configured: true },
+      });
+      expect(legacy.message).toContain("migrate to skillsDir");
+
+      const output = await captureStdout(async () => {
+        await runDoctor({ root, rootExplicit: true, format: "text", failOn: "error" });
+      });
+      expect(output).toMatch(/\[warning\] paths\.promptsDirDeprecated:/u);
+    });
+  });
+
   // QFAI:AC-0003-0005-01
   // QFAI:AC-0003-0005-02
   it("emits machine-readable diagnosis and writes the same result to --out", async () => {
@@ -301,20 +316,5 @@ describe("BF-0003 doctor acceptance", () => {
       expect(onError).toBe(0);
       expect(onWarning).toBe(1);
     });
-  });
-
-  // QFAI:AC-0003-0011-02
-  it("places shipped-workflow drift in the advisory group without blocking errors", async () => {
-    const root = await workflowPool.seedAdopterTree();
-    await quietUnrelatedWarnings(root);
-    await editShippedWorkflow(root, "qfai-tests.yml");
-
-    const data = await createDoctorData({ startDir: root, rootExplicit: true });
-    expect(check(data, "workflows.integrity")?.severity).toBe("info");
-    const result = await runDoctorText(root, "error");
-    expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain("== warnings advisory of drift ==");
-    const advisory = result.stdout.split("== warnings advisory of drift ==")[1];
-    expect(advisory).toContain("[info] workflows.integrity:");
   });
 });

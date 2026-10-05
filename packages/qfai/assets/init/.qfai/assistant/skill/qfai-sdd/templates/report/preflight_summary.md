@@ -14,7 +14,7 @@ across re-runs, so findings the command does not compute can still live here.
 - status: <ready | blocked>
 - run id: run-<timestamp>
 - source: <discussion-pack | import-lite>
-- selected <discussion-pack | import-lite evidence>: <path | (not found)>
+- selected <discussion-pack | import-lite>: <path | (not found)>
 
 ## Blockers
 

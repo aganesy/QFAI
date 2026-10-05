@@ -13,6 +13,5 @@ stages:
     kind: triage
     steps: [triage-close]
     after: [split]
-defaultModifiers: []
 decisionPoints: []
 branchPoints: []

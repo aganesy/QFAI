@@ -9,7 +9,7 @@ Feature: Run the init suites on Windows
     Given the own-CI workflow and the package's `test:windows-parity` script
     When the workflow tree is read
     Then a job on `windows-latest` runs that script and no other test command
-    And the script's suite list is exactly the declared workflow control-core, init and migration suites
+    And the script's suite list is exactly the declared workflow command, init and migration suites
     And every entry of the list resolves to at least one collected test file
     And before the tests the job points `TEMP` and `TMP` at a directory whose name contains a space
 

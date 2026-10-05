@@ -9,8 +9,6 @@
  *   `id` / `label` / `acceptance`, or carrying extra keys, is
  *   rejected by the audit lane.
  */
-// QFAI:EX-0001-0155-02
-// QFAI:EX-0001-0155-02
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -52,6 +50,7 @@ async function withWorkspace(uiContract: string, task: (root: string) => Promise
   }
 }
 
+// QFAI:EX-0001-0155-02
 describe("TC-0013-0034: structured primary_tasks accepted", () => {
   it("rejects plain string items, which leave the screen with no task", async () => {
     const ui = [
