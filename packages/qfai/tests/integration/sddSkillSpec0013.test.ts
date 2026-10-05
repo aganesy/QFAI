@@ -93,16 +93,15 @@ describe("shipped qfai-sdd story-tree contract", () => {
     expect(content).toContain("A change request Content begins `Change request:`");
   });
 
-  it("gates each changed flow and keeps its own evidence", async () => {
+  it("gates each changed flow and reports it", async () => {
     const content = await skill();
     expect(content).toContain("npx qfai validate --profile sdd --fail-on error --flow BF-NNNN");
-    expect(content).toContain(".qfai/evidence/sdd-BF-NNNN.md");
-    expect(content).toContain("templates/evidence/sdd-flow.md");
-    expect(content).toContain("every blocking reviewer returned PASS");
+    expect(content).toContain("Report, per flow, in the stage report");
+    expect(content).toContain("every finding of the specification review is fixed or answered");
   });
 
+  // QFAI:EX-0001-0150-02
   it("gates each changed flow separately without inheriting a sibling worker's findings", async () => {
-    // QFAI:EX-0001-0150-02
     const content = await skill();
     expect(content).toContain("Each BF written or changed");
     expect(content).toContain(
@@ -112,8 +111,8 @@ describe("shipped qfai-sdd story-tree contract", () => {
     expect(content).not.toMatch(/--spec\b/);
   });
 
+  // QFAI:EX-0001-0150-03
   it("runs the current BF-0001 SDD validators without error findings", async () => {
-    // QFAI:EX-0001-0150-03
     const content = await skill();
     expect(content).toContain("npx qfai validate --profile sdd --fail-on error --flow BF-NNNN");
     const result = await validateProject(repoRoot, undefined, {

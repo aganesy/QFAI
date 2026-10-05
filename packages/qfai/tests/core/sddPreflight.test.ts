@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -9,7 +9,6 @@ import { runSddPreflight } from "../../src/core/preflight/sddPreflight.js";
 
 const DISCUSSION_PACK_FILES = [
   "01_Context.md",
-  "02_Inception-Deck.md",
   "03_Story-Workshop.md",
   "04_Sources.md",
   "05_Scope.md",
@@ -17,12 +16,7 @@ const DISCUSSION_PACK_FILES = [
   "07_NFR.md",
   "08_Glossary.md",
   "09_Constraints.md",
-  "10_Policy.md",
   "11_OQ-Register.md",
-  "12_OQ-Resolution-Log.md",
-  "13_Deferred.md",
-  "14_Review-Request.md",
-  "99_delta.md",
 ] as const;
 
 describe("runSddPreflight", () => {
@@ -68,6 +62,124 @@ describe("runSddPreflight", () => {
       const summary = await readFile(result.preflightSummaryPath, "utf-8");
       expect(summary).toContain("status: blocked");
       expect(summary).toContain("/qfai-discussion");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("selects an imported specification when no discussion pack exists", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      const imported = path.join(root, "docs", "imported-spec.md");
+      await mkdir(path.dirname(imported), { recursive: true });
+      await writeFile(imported, "# Imported specification\n", "utf-8");
+
+      const result = await runSddPreflight(root, defaultConfig, { importPath: imported });
+
+      expect(result.status).toBe("ready");
+      expect(result.source).toBe("import-lite");
+      expect(result.selectedInputPath).toBe(imported);
+      expect(result.importedReqCount).toBeNull();
+      expect(result.blockers).toEqual([]);
+      expect(result.nextCommands).toEqual(["/qfai-sdd"]);
+      const summary = await readFile(result.preflightSummaryPath, "utf-8");
+      expect(summary).toContain("source: import-lite");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("stays blocked and names an imported specification that is not a readable file", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      const missing = path.join(root, "docs", "missing.md");
+      const result = await runSddPreflight(root, defaultConfig, { importPath: missing });
+
+      expect(result.status).toBe("blocked");
+      expect(result.source).toBe("discussion-pack");
+      expect(result.blockers.some((item) => item.includes(missing))).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps a misnamed discussion pack blocking when an imported specification is given", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      await mkdir(path.join(root, ".qfai", "discussion", "discussion-latest"), {
+        recursive: true,
+      });
+      const imported = path.join(root, "docs", "imported-spec.md");
+      await mkdir(path.dirname(imported), { recursive: true });
+      await writeFile(imported, "# Imported specification\n", "utf-8");
+
+      const result = await runSddPreflight(root, defaultConfig, { importPath: imported });
+
+      expect(result.status).toBe("blocked");
+      expect(result.blockers.some((item) => item.includes("discussion-latest"))).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("names an unreadable imported specification beside a misnamed discussion pack", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      await mkdir(path.join(root, ".qfai", "discussion", "discussion-latest"), {
+        recursive: true,
+      });
+      const missing = path.join(root, "docs", "missing.md");
+
+      const result = await runSddPreflight(root, defaultConfig, { importPath: missing });
+
+      expect(result.status).toBe("blocked");
+      expect(result.blockers.some((item) => item.includes("discussion-latest"))).toBe(true);
+      expect(result.blockers.some((item) => item.includes(missing))).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it.skipIf(process.platform === "win32" || process.geteuid?.() === 0)(
+    "stays blocked on an imported specification this process cannot read",
+    async () => {
+      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+      const imported = path.join(root, "imported-spec.md");
+      try {
+        await writeFile(imported, "# Imported specification\n", "utf-8");
+        await chmod(imported, 0o000);
+
+        const result = await runSddPreflight(root, defaultConfig, { importPath: imported });
+
+        expect(result.status).toBe("blocked");
+        expect(result.blockers.some((item) => item.includes(imported))).toBe(true);
+      } finally {
+        await chmod(imported, 0o600);
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+  );
+
+  it.each([
+    ["02_Inception-Deck.md", "01_Context.md"],
+    ["10_Policy.md", "09_Constraints.md"],
+    ["13_Deferred.md", "11_OQ-Register.md"],
+  ])("lists %s left in the pack as a gap naming %s", async (legacy, target) => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      await seedDiscussionPack(root, "20260216010102004");
+      await writeFile(
+        path.join(root, ".qfai", "discussion", "discussion-20260216010102004", legacy),
+        `# ${legacy}\n`,
+        "utf-8",
+      );
+
+      const result = await runSddPreflight(root, defaultConfig);
+
+      expect(result.status).toBe("ready");
+      expect(result.packGaps).toContain(
+        `Files whose content has moved and that the pack still holds: ${legacy} → ${target}`,
+      );
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -151,25 +263,27 @@ describe("runSddPreflight", () => {
     }
   });
 
-  it("lists a deferred OQ with no entry in 13_Deferred.md as a gap", async () => {
+  it("lists a deferred OQ that names no reopening point as a gap", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
     try {
       await seedDiscussionPack(root, "20260216010203030", {
         "11_OQ-Register.md": [
           "# 11 OQ Register",
           "",
-          "| OQ-ID   | Question                   | Disposition | Gate       | Reason                             |",
-          "| ------- | -------------------------- | ----------- | ---------- | ---------------------------------- |",
-          "| OQ-0007 | How should contract versioning be decided | deferred | discussion | Does not affect starting implementation, so it is deferred |",
+          "| OQ-ID   | Question                   | Disposition | Gate       | Rationale                          | Resolution | Next-Decision-Point |",
+          "| ------- | -------------------------- | ----------- | ---------- | ---------------------------------- | ---------- | ------------------- |",
+          "| OQ-0007 | How should contract versioning be decided | deferred | discussion | Does not affect starting implementation, so it is deferred | Ship unversioned contracts for now | TBD |",
           "",
-          "Note: an OQ marked deferred needs its details under the same OQ-ID in 13_Deferred.md.",
+          "Note: an OQ marked deferred names the next point at which it is decided.",
         ].join("\n"),
       });
 
       const result = await runSddPreflight(root, defaultConfig);
 
       expect(result.status).toBe("ready");
-      expect(result.packGaps.some((item) => item.includes("13_Deferred.md"))).toBe(true);
+      expect(
+        result.packGaps.some((item) => item.includes("lack a Resolution or a Next-Decision-Point")),
+      ).toBe(true);
       expect(result.packGaps.some((item) => item.includes("OQ-0007"))).toBe(true);
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -245,6 +359,8 @@ describe("runSddPreflight", () => {
           "### OQ-0010: rollout memo refinement",
           "- Disposition: deferred",
           "- Gate: discussion",
+          "- Resolution: keep the current rollout memo.",
+          "- Next-Decision-Point: before the rollout starts.",
           "- Reason: supporting information before implementation starts, so it can be deferred in this phase.",
           "",
         ].join("\n"),
@@ -663,20 +779,11 @@ function defaultDiscussionPackContent(fileName: (typeof DISCUSSION_PACK_FILES)[n
         "### OQ-0001: contract versioning policy",
         "- Disposition: deferred",
         "- Gate: discussion",
+        "- Resolution: ship without contract versioning for now.",
+        "- Next-Decision-Point: the next cycle review, or the first breaking contract change.",
         "- Reason: it does not affect starting the v1.4.36 implementation at this stage, so it is deferred.",
         "",
         "Note: this does not meet the blocking condition (Disposition=open).",
-      ].join("\n");
-    case "13_Deferred.md":
-      return [
-        "# 13 Deferred",
-        "",
-        "### OQ-0001: contract versioning policy",
-        "",
-        "- Reason: it does not affect starting the v1.4.36 implementation at this stage, so it is deferred.",
-        "- Next decision point: v1.5.x cycle review",
-        "",
-        "Note: deferred OQs from 11_OQ-Register.md are recorded in this file.",
       ].join("\n");
     default:
       return [
@@ -685,6 +792,19 @@ function defaultDiscussionPackContent(fileName: (typeof DISCUSSION_PACK_FILES)[n
         "This file is dummy body text for preflight tests.",
         "It describes the spec intent and constraints to meet the minimum 100-character requirement.",
         "It includes real sentences, not only template placeholders, to avoid the validator's incomplete verdict.",
+        ...requiredSections(fileName),
       ].join("\n");
   }
+}
+
+/** The sections readiness requires of a context or constraints file. */
+function requiredSections(fileName: (typeof DISCUSSION_PACK_FILES)[number]): string[] {
+  if (fileName === "01_Context.md") return ["", "## Inception Deck", "", "Why we are here."];
+  if (fileName !== "09_Constraints.md") return [];
+  return [
+    "Security Policy",
+    "Compliance Policy",
+    "Development Policy",
+    "Operational Policy",
+  ].flatMap((section) => ["", `## ${section}`, "", "None."]);
 }

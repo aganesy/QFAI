@@ -7,8 +7,7 @@
  * TC-0004-0023..0026 are backfill trace anchors only (no body tests in this
  * file). The actual tests live in:
  *   - `packages/qfai/tests/validators/skillDocReferences.test.ts` —
- *     TC-0004-0023 (skill project_memory) /
- *     TC-0004-0024 (W-SKILL-DOC-BROKEN-REF + severity escalation)
+ *     TC-0004-0023 (skill project_memory)
  *   - `packages/qfai/tests/validators/assistantTreeMigration.test.ts` —
  *     TC-0004-0025 (W-USER-EDIT-PRESERVED pass-through)
  *   - `packages/qfai/tests/codex/agents.test.ts` —
@@ -19,7 +18,6 @@
 
 // QFAI:EX-0001-0018-01
 // QFAI:EX-0001-0045-02
-// QFAI:EX-0001-0046-01
 // QFAI:EX-0001-0046-02
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";

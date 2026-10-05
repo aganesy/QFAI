@@ -9,7 +9,6 @@ roles:
     orchestrator,
     delivery-planner,
     discovery-analyst,
-    completion-reviewer,
     requirements-analyst,
     solution-architect,
     product-experience-architect,
@@ -30,7 +29,7 @@ Run the entry check of
 `.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`
 first.
 
-Produces the unified 15-file discussion pack at
+Produces the nine-file discussion pack at
 `.qfai/discussion/discussion-YYYYMMDDhhmmssSSS/`, plus the exploration-first UI
 sidecars, so `/qfai-sdd` and `/qfai-prototyping` can work without an early
 visual direction decision.
@@ -56,7 +55,7 @@ Run the steps in this order, as
 `.qfai/assistant/rule/shared-skill-operating-baseline.md#a-parent-skill-invoked-by-name`
 states: read `.qfai/assistant/step/<id>/STEP.md` for the current step only, run
 it, then move to the next. A work order runs the steps it names, as
-`.qfai/assistant/rule/shared-skill-operating-baseline.md#a-work-orders-steps`
+`.qfai/assistant/rule/shared-skill-operating-baseline.md#a-plans-steps`
 states.
 
 | Step                   | File                                                | Runs                                                  |
@@ -90,10 +89,9 @@ the whole classified surface set — `primary_surface` **and** every
 ## Review
 
 After the last step, run one review of the pack under work with
-`.qfai/assistant/step/common-review-cycle/STEP.md`. The reviewers are the union
-of the reviewers of the steps that ran: `completion-reviewer` and
-`requirements-reviewer` always, `product-surface-reviewer` when
-`discussion-uiux` ran, and `architecture-reviewer` when the pack records an
+`.qfai/assistant/step/common-review-cycle/STEP.md`: the specification review,
+by `requirements-reviewer`, joined by `product-surface-reviewer` when
+`discussion-uiux` ran and by `architecture-reviewer` when the pack records an
 architecture-affecting decision. Roles are selected under
 `.qfai/assistant/rule/shared-skill-delegation-baseline.md`.
 
@@ -106,7 +104,7 @@ The reviewers check each `## Gate` section of the steps that ran.
 The full logic, including the UI-bearing conditions, is
 `references/discussion-completion-matrix.md`. Completion requires all of these:
 
-- All 15 mandatory pack files exist and are populated, and the UI sidecar family
+- All nine mandatory pack files exist and are populated, and the UI sidecar family
   is complete when the target is UI-bearing.
 - The open count is zero: no `Disposition: open` row is left in
   `11_OQ-Register.md`.
@@ -114,7 +112,7 @@ The full logic, including the UI-bearing conditions, is
   with `.qfai/assistant/step/common-gate-run/STEP.md`, passes with no
   discussion-owned finding. Repair a failure under
   `.qfai/assistant/rule/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol`.
-- Every blocking reviewer returned `PASS` on the final revision.
+- Every finding of the one review is fixed or answered.
 
 ## Completion Message & Next Actions (MUST)
 
@@ -131,6 +129,6 @@ End the turn with a question listing the next actions, `/qfai-sdd` recommended, 
 
 project_memory:
 
-- 15-file mandatory output set is fixed; the UI-bearing sidecar family (00_index.md + 40_screen_contracts.md + 50_review_input_bundle.md) is required whenever the target is UI-bearing, cli included. Root DESIGN.md is not a discussion output: `/qfai-sdd`'s `common-design-md` step authors it from this pack.
+- The nine-file mandatory output set is fixed; the UI-bearing sidecar family (00_index.md + 40_screen_contracts.md + 50_review_input_bundle.md) is required whenever the target is UI-bearing, cli included. Root DESIGN.md is not a discussion output: `/qfai-sdd`'s `common-design-md` step authors it from this pack.
 - Discussion is planner-first: never pick a single visual winner; carry exploration references as deviate-from inputs, not imitate-this.
-- Completion requires Disposition: open count = 0 in 11_OQ-Register.md; deferred items must move to 13_Deferred.md with full metadata.
+- Completion requires Disposition: open count = 0 in 11_OQ-Register.md; each deferred row there records its Resolution and names the next point at which it is decided.

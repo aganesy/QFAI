@@ -8,7 +8,7 @@ import {
   CANONICAL_REQUIRED_SIDECAR_FILES,
   FORBIDDEN_LEGACY_PATTERNS,
 } from "../../src/core/validators/uix/threeLayer.js";
-import { readDiscussionSkill } from "../helpers/discussionSteps.js";
+import { readDiscussionSkill, readDiscussionStep } from "../helpers/discussionSteps.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 const templateBase = path.join(
@@ -121,12 +121,50 @@ describe("discussion skill template integration", () => {
     expect(files).not.toContain("34_evaluator_calibration.md");
   });
 
-  // QFAI:EX-0001-0016-01
   it("SKILL.md requires the brand SSOT for UI-bearing completion", async () => {
     const content = await readFile(skillPath, "utf-8");
     expect(content).toMatch(/DESIGN\.md/);
     expect(content).toMatch(/40_screen_contracts\.md/);
     expect(content).toMatch(/50_review_input_bundle\.md/);
+  });
+
+  // QFAI:AC-0001-0016-01
+  // QFAI:EX-0001-0016-01
+  it("completes a UI-bearing pack with the brand theme recorded and the explorations unranked", async () => {
+    const matrix = (await readFile(completionMatrixPath, "utf-8")).replace(/\s+/g, " ");
+    const context = await readFile(path.join(templateBase, "templates", "01_Context.md"), "utf-8");
+    expect(matrix).toMatch(
+      /exploration directions are carried unranked — no single screen exploration is selected and the design system is not finalized here/i,
+    );
+    expect(matrix).toMatch(
+      /`01_Context\.md#Design Direction` names an adopted theme, what departs from it, and what stays ordinary/,
+    );
+    expect(context).toMatch(/^## Design Direction$/m);
+    expect(context).toMatch(/^- adopted_theme: /m);
+    expect(context).toMatch(/^- brand_accent: /m);
+    expect(context).toMatch(/^- conventions_kept: /m);
+    expect(context).toMatch(/^- chosen_by: \[user\|assumption\]$/m);
+  });
+
+  // QFAI:AC-0001-0082-01
+  // QFAI:EX-0001-0082-01
+  it("gives a rejected direction its reason and recurrence cue in 04_Sources.md", async () => {
+    const sources = await readFile(path.join(templateBase, "templates", "04_Sources.md"), "utf-8");
+    const section = sources.split(/^## /m).find((part) => part.startsWith("Design Anti-Goals"));
+    expect(section).toBeDefined();
+    expect(section?.replace(/\s+/g, " ")).toMatch(
+      /record each rejected direction with its reason and a concrete cue that would show it recurring in a prototype/i,
+    );
+    expect(section).toMatch(
+      /^\| Rejected direction \| Rejection reason \| Recurrence cue \| Source or decision \| Status\s*\|$/m,
+    );
+    const step = (await readDiscussionStep(assistantBase, "discussion-pack")).replace(/\s+/g, " ");
+    expect(step).toMatch(
+      /record each rejected direction, why it was rejected, a concrete cue for its recurrence, and its decision or source/i,
+    );
+    expect(step).toMatch(
+      /any rejected direction with a reason and recurrence cue\. No `missing` row passes/,
+    );
   });
 
   // SKILL.md is the only file the skill is guaranteed to load; references are
@@ -353,13 +391,8 @@ describe("discussion skill template integration", () => {
   // Root DESIGN.md is written by `/qfai-sdd` after discussion ends.
   // A discussion review line that asks for it can be satisfied by no pack at
   // all, so the gates check the direction record the pack does produce.
-  it("the Reviewer Gate and the review bundle look at the recorded design direction, not DESIGN.md", async () => {
-    const gatePaths = [
-      path.join(templateBase, "templates", "14_Review-Request.md"),
-      path.join(templateBase, "templates", "review", "review_request.md"),
-      path.join(templateBase, "templates", "review", "Rxx_reviewer.md"),
-      path.join(uiuxTemplateDir, "50_review_input_bundle.md"),
-    ];
+  it("the review bundle looks at the recorded design direction, not DESIGN.md", async () => {
+    const gatePaths = [path.join(uiuxTemplateDir, "50_review_input_bundle.md")];
     for (const gatePath of gatePaths) {
       const body = await readFile(gatePath, "utf-8");
       const name = path.basename(gatePath);
@@ -449,16 +482,9 @@ describe("discussion skill template integration", () => {
     expect(content).toMatch(/accessibility/);
   });
 
-  // The Reviewer Gate templates and the completion matrix are two halves of the
-  // same UI-bearing exit condition. When they disagree, a pack that satisfies
-  // the matrix is sent back by the reviewer, and a pack that satisfies the
-  // reviewer fails the forbidden-sidecar check — the UI-bearing pack cannot be
-  // completed at all.
-  it("the review template requires the same UI families as the completion matrix", async () => {
-    const reviewDir = path.join(templateBase, "templates", "review");
-
-    // Half one: the matrix itself must still carry the current UI family and
-    // must not have regrown any retired completion condition.
+  // The completion matrix carries the current UI family and has not regrown
+  // any retired completion condition.
+  it("the completion matrix requires the current UI family", async () => {
     const matrix = await readFile(completionMatrixPath, "utf-8");
     const uiBearingSection = matrix
       .split(/^## /m)
@@ -475,20 +501,6 @@ describe("discussion skill template integration", () => {
     expect(matrixConditions).toMatch(/unranked/i);
     expect(matrixConditions).toMatch(/forbidden legacy sidecar/i);
     expect(matrixConditions).toMatch(EXPLORATION_REFERENCE_PHRASE);
-
-    // Half two: the Reviewer Gate templates must demand the same family in the
-    // same words, so neither half can send back a pack the other accepts.
-    for (const fileName of ["review_request.md", "Rxx_reviewer.md"]) {
-      const content = await readFile(path.join(reviewDir, fileName), "utf-8");
-      for (const pattern of RETIRED_CONCEPT_PATTERNS) {
-        expect(content).not.toMatch(pattern);
-      }
-      expect(content).toMatch(/04_Sources\.md/);
-      expect(content).toMatch(/unranked/i);
-      expect(content).toMatch(/canonical `uiux\/` family/i);
-      expect(content).toMatch(/forbidden legacy sidecar/i);
-      expect(content).toMatch(EXPLORATION_REFERENCE_PHRASE);
-    }
   });
 });
 

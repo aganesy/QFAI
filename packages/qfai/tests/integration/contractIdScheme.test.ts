@@ -145,8 +145,8 @@ const DB_CONTRACT =
 
 describe("contract IDs and contract-scoped business rules", () => {
   // QFAI:AC-0001-0008-04
+  // QFAI:EX-0001-0008-07
   it("allocates the next BR of a contract under that contract's number", () => {
-    // QFAI:EX-0001-0008-07
     const files = tree(
       contract("CLI-0003: Check", [
         "| BR-0003-0001 | First | EX-0001-0001-01 |",
@@ -169,8 +169,8 @@ describe("contract IDs and contract-scoped business rules", () => {
   });
 
   // QFAI:AC-0001-0008-04
+  // QFAI:EX-0001-0008-08
   it("reports a contract-scoped BR that carries another contract's number", () => {
-    // QFAI:EX-0001-0008-08
     expect(
       ruleFindings(tree(contract("CLI-0003: Check", ["| BR-0003-0001 | Own | EX-0001-0001-01 |"]))),
     ).toEqual([]);
@@ -193,8 +193,8 @@ describe("contract IDs and contract-scoped business rules", () => {
   });
 
   // QFAI:AC-0001-0055-06
+  // QFAI:EX-0001-0055-09
   it("reads a Business rules table with its statement and examples", () => {
-    // QFAI:EX-0001-0055-09
     const text = contract("CLI-0003: Check", [
       "| BR-0003-0001 | Check the project | EX-0001-0001-01 |",
     ]);
@@ -213,16 +213,16 @@ describe("contract IDs and contract-scoped business rules", () => {
   });
 
   // QFAI:AC-0001-0055-06
+  // QFAI:EX-0001-0055-10
   it("rejects a Business rules table without the Examples column", () => {
-    // QFAI:EX-0001-0055-10
     const columns =
       "# CLI-0003: Check\n\n## Business rules\n\n| BR-ID | Statement |\n| --- | --- |\n| BR-0003-0001 | Two columns |\n";
     expect(ruleFindings(tree(columns))).toContain(`Invalid Business rules columns in ${check}`);
   });
 
   // QFAI:AC-0001-0055-06
+  // QFAI:EX-0001-0055-11
   it("reads a Business rules heading that closes with a run of hashes", () => {
-    // QFAI:EX-0001-0055-11
     const text =
       "# CLI-0003: Check\n\n## Business rules ##\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0003-0001 | Check the project | EX-0001-0001-01 |\n";
     expect(parseContractRules(check, text)).toMatchObject({
@@ -233,8 +233,8 @@ describe("contract IDs and contract-scoped business rules", () => {
   });
 
   // QFAI:AC-0001-0052-03
+  // QFAI:EX-0001-0052-06
   it("reads the index under a Contract Index heading that closes with hashes", async () => {
-    // QFAI:EX-0001-0052-06
     const root = await contractTree([], { "api/api-0002-orders.yaml": API_CONTRACT });
     await put(
       root,
@@ -258,8 +258,8 @@ describe("contract IDs and contract-scoped business rules", () => {
   });
 
   // QFAI:AC-0001-0052-04
+  // QFAI:EX-0001-0052-07
   it("reports a Markdown file under api/ once and counts it as no contract", async () => {
-    // QFAI:EX-0001-0052-07
     const refunds = "api/api-0003-refunds.md";
     const root = await contractTree([indexRow("API-0003", refunds)], {
       [refunds]: contract("API-0003: Refunds", ["| BR-0003-0001 | Refund | EX-0001-0001-01 |"]),
@@ -283,8 +283,8 @@ describe("contract IDs and contract-scoped business rules", () => {
   });
 
   // QFAI:AC-0001-0064-01
+  // QFAI:EX-0001-0064-02
   it("names each contract node of a flow graph by the contract ID its file declares", async () => {
-    // QFAI:EX-0001-0064-02
     const root = await contractTree([], {
       "cli/cli-0003-check.md": contract("CLI-0003: Check", [
         "| BR-0003-0001 | Check the project | EX-0001-0001-01 |",
@@ -319,8 +319,8 @@ describe("contract IDs and contract-scoped business rules", () => {
   });
 
   // QFAI:AC-0001-0052-03
+  // QFAI:EX-0001-0052-03
   it("accepts an index whose rows agree with each contract's file and declaration", async () => {
-    // QFAI:EX-0001-0052-03
     const files = {
       "cli/cli-0001-check.md": CLI_CONTRACT,
       "api/api-0002-orders.yaml": API_CONTRACT,
@@ -352,8 +352,8 @@ describe("contract IDs and contract-scoped business rules", () => {
   });
 
   // QFAI:AC-0001-0052-03
+  // QFAI:EX-0001-0052-04
   it("reports a misnamed or undeclared contract, a wrong kind and a shared number", async () => {
-    // QFAI:EX-0001-0052-04
     const root = await contractTree(
       [
         indexRow("CLI-0001", "cli/check.md"),
@@ -389,8 +389,8 @@ describe("contract IDs and contract-scoped business rules", () => {
   });
 
   // QFAI:AC-0001-0052-03
+  // QFAI:EX-0001-0052-11
   it("reads no contract ID of a kind other than CLI, API, DB and UI", async () => {
-    // QFAI:EX-0001-0052-11
     const yaml = "# QFAI-CONTRACT-ID: DESIGN-0006\nscreens: []\n";
     const markdown = "# DESIGN-0007: Theme\n";
     expect(isContractId("DESIGN-0006")).toBe(false);
@@ -489,8 +489,8 @@ describe("the new contract IDs in the checks that read the old ones", () => {
   });
 
   // QFAI:AC-0001-0052-03
+  // QFAI:EX-0001-0052-05
   it("reads an index whose delimiter row has fewer than three hyphens", async () => {
-    // QFAI:EX-0001-0052-05
     const root = await contractTree([], { "api/api-0002-orders.yaml": API_CONTRACT });
     await put(
       root,
@@ -521,8 +521,8 @@ describe("the new contract IDs in the checks that read the old ones", () => {
   });
 
   // QFAI:AC-0001-0052-05
+  // QFAI:EX-0001-0052-08
   it("leaves a db contract without one DB-NNNN declaration out of the apply order", async () => {
-    // QFAI:EX-0001-0052-08
     const lines = [
       "-- QFAI-CONTRACT-ID: DB-0004",
       "-- Depends on: -",
@@ -549,8 +549,8 @@ describe("the new contract IDs in the checks that read the old ones", () => {
   });
 
   // QFAI:AC-0001-0052-04
+  // QFAI:EX-0001-0052-09
   it("counts API-NNNN and DB-NNNN contracts, not Markdown files, in ATDD coverage", async () => {
-    // QFAI:EX-0001-0052-09
     const root = await contractTree([], {
       "api/api-0002-orders.yaml": API_CONTRACT,
       "db/db-0004-orders.sql": DB_CONTRACT,

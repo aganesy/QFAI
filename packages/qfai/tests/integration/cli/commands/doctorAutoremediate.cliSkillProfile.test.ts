@@ -1,4 +1,3 @@
-// QFAI:EX-0003-0009-01
 //
 // Integration: `qfai doctor --profile <skill> --autoremediate` MUST
 // thread the resolved `skillProfile` down into `runAutoremediate(...)`
@@ -6,8 +5,8 @@
 // is actually reachable through the CLI dispatch path. Pre-fix the
 // CLI command swallowed the skill option at the autoremediate boundary
 // and the install branch was unreachable from the CLI — operators
-// running with `--profile <skill> --autoremediate` saw clean +
-// config-fill run but no install, contrary to the documented surface.
+// running with `--profile <skill> --autoremediate` saw the clean run
+// but no install, contrary to the documented surface.
 //
 // This test seeds an unmet `runtimeDependencies: ["playwright"]` in a
 // fake manifest, runs `runDoctor({skillProfile, autoremediate: true})`,
@@ -80,6 +79,7 @@ afterEach(async () => {
   }
 });
 
+// QFAI:EX-0003-0009-01
 describe("doctor CLI threads skillProfile into autoremediate", () => {
   it("invokes the install runner for the skill's runtimeDependencies via the CLI dispatch path", async () => {
     const root = await newTempDir("dispatch");
@@ -132,10 +132,9 @@ describe("doctor CLI threads skillProfile into autoremediate", () => {
   // --autoremediate` is invoked without `--root` (rootExplicit=false),
   // `runDoctor` must walk up via `findConfigRoot` to find the project
   // root before invoking the side-effect handlers. Pre-fix
-  // `runAutoremediate` and `cleanStaleReviewPacks` received the raw
-  // `options.root` (= cwd when --root was omitted), so a subdirectory
-  // launch would archive `<subdir>/.qfai/review/...` and create
-  // `<subdir>/qfai.config.yaml`. This test pins the resolution: a
+  // `runAutoremediate` received the raw `options.root` (= cwd when --root
+  // was omitted), so a subdirectory launch would prune and install under
+  // `<subdir>`. This test pins the resolution: a
   // subdirectory cwd with a parent-rooted qfai.config.yaml must
   // surface as the parent root in the captured `runAutoremediate`
   // options.
@@ -179,8 +178,8 @@ describe("doctor CLI threads skillProfile into autoremediate", () => {
     expect(resolved).not.toBe(subdir);
   });
 
+  // QFAI:EX-0003-0009-06
   it("omits skill when no skillProfile is set (legacy doctor flow unchanged)", async () => {
-    // QFAI:EX-0003-0009-06
     const root = await newTempDir("legacy");
 
     const seenOptions: autoremediateModule.AutoremediateOptions[] = [];
@@ -212,9 +211,9 @@ describe("doctor CLI threads skillProfile into autoremediate", () => {
   // on stdout when skillProfile is absent; (2) the note does NOT appear when
   // a valid skillProfile is passed. The `info()` logger writes to
   // process.stdout.write, so the capture target is stdout (not console.log).
+  // QFAI:EX-0003-0009-06
   it("emits 'install phase skipped' on stdout when no skillProfile is set, and suppresses it when one is", async () => {
     // QFAI:AC-0003-0009-03
-    // QFAI:EX-0003-0009-06
     vi.spyOn(autoremediateModule, "runAutoremediate").mockImplementation(async () => ({
       lines: [],
       disabledInCi: false,
@@ -288,17 +287,18 @@ describe("doctor CLI threads skillProfile into autoremediate", () => {
   // The CI suppression is a safety guarantee of the doctor contract, and it
   // has to hold for the standard CI env vars, not for `CI` alone. A lane that
   // exports only `GITHUB_ACTIONS=true` used to remediate: the managed
-  // `.gitignore` block was rewritten, then install / archive / config-fill all
-  // ran. Both env vars must reach the same short-circuit.
+  // `.gitignore` block was rewritten, then install and the prune both ran.
+  // Both env vars must reach the same short-circuit.
   it.each(["CI", "GITHUB_ACTIONS"])(
     "suppresses autoremediation when %s=true is the only CI signal",
     async (envKey) => {
       const root = await newTempDir(`ci-${envKey.toLowerCase()}`);
-      // A stale pack a live run would have archived, so the assertion is
+      // A stale run log a live run would have pruned, so the assertion is
       // about a real suppressed side effect, not just the log line.
-      const oldTs = "20260401120000555";
-      const oldDir = path.join(root, ".qfai", "review", `review-${oldTs}`);
+      await writeFile(path.join(root, "qfai.config.yaml"), "report:\n  keepLatestRuns: 1\n");
+      const oldDir = path.join(root, ".qfai", "report", "run-20260401120000555");
       await mkdir(oldDir, { recursive: true });
+      await mkdir(path.join(root, ".qfai", "report", "run-20260811120000556"), { recursive: true });
       const mtime = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
       await utimes(oldDir, mtime, mtime);
 
@@ -322,7 +322,7 @@ describe("doctor CLI threads skillProfile into autoremediate", () => {
       expect(seenOptions[0]?.isCi).toBe(true);
       // No `.gitignore` written (that rewrite runs BEFORE the orchestrator).
       await expect(access(path.join(root, ".gitignore"))).rejects.toThrow();
-      // Pack untouched.
+      // Run log untouched.
       await expect(access(oldDir)).resolves.toBeUndefined();
     },
   );

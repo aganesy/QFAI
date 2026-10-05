@@ -12,8 +12,8 @@ the missing command in tech.md before claiming proof. Do not infer a command fro
 
 ## Proof
 
-Run the declared command from a fresh project context and record its command, exit code, output, entrypoint, and source revision in .qfai/evidence/implement-BF-NNNN.md. The smoke assertion must exercise the entrypoint and one observable response. A process that merely starts is not a passing skeleton.
+Run the declared command from a fresh project context and report its command, exit code, output, entrypoint, and source revision in the stage report. The smoke assertion must exercise the entrypoint and one observable response. A process that merely starts is not a passing skeleton.
 
 Create only the seam needed to make the entrypoint reachable. Keep domain predicates and later flow behavior for their own example cycles. Record a temporary seam with its ceiling and the condition that lifts it under the minimal-implementation rule.
 
-The skeleton is proven before the first example that depends on that entrypoint. Re-run its command at the flow checkpoint after implementation changes. When a project declares no runnable entrypoint, record the scope evidence and proceed with the example tests that exist.
+The skeleton is proven before the first example that depends on that entrypoint. Its command runs again with the other gates in the verify stage. When a project declares no runnable entrypoint, record the scope evidence and proceed with the example tests that exist.
