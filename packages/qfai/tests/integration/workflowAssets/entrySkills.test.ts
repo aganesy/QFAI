@@ -572,9 +572,10 @@ describe("the entry skills' routing entries", () => {
     const maintainPhases = phasesOf(maintain);
     const authors = maintainPhases.flatMap(phaseAgents);
     expect(authors.length, "qfai-maintain has an authoring phase").toBeGreaterThan(0);
-    expect(authors, "the route's code review is not routed here").not.toContain(
-      "implementation-reviewer",
-    );
+    expect(
+      authors.filter((agent) => agent.endsWith("-reviewer") || agent === "qa-gatekeeper"),
+      "no reviewer is routed here",
+    ).toEqual([]);
     expect(maintainPhases.some((phase) => phase.id === "review")).toBe(false);
 
     expect(Object.keys(await profiles()).sort()).toEqual(PROFILES);
