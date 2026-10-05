@@ -1,6 +1,7 @@
 import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { hasErrnoCode, isEnoent } from "../fs/errno.js";
 import type { Issue, IssueCategory, IssueLocation, IssueSeverity } from "../types.js";
 
 /**
@@ -80,20 +81,37 @@ export function issue(
   return issue;
 }
 
+/**
+ * True for the two errors that mean nothing is at the path: it does not exist,
+ * or a parent of it is a file. Any other error says the path could not be
+ * observed, which is not the same as absent.
+ */
+function isAbsent(error: unknown): boolean {
+  return isEnoent(error) || (hasErrnoCode(error) && error.code === "ENOTDIR");
+}
+
+/** Whether the path is there. An unreadable path throws rather than reading as absent. */
 export async function exists(filePath: string): Promise<boolean> {
   try {
     await access(filePath);
     return true;
-  } catch {
-    return false;
+  } catch (error: unknown) {
+    if (isAbsent(error)) {
+      return false;
+    }
+    throw error;
   }
 }
 
+/** The file's text, or `""` where nothing is there. Any other read failure throws. */
 export async function readSafe(filePath: string): Promise<string> {
   try {
     return await readFile(filePath, "utf-8");
-  } catch {
-    return "";
+  } catch (error: unknown) {
+    if (isAbsent(error)) {
+      return "";
+    }
+    throw error;
   }
 }
 
