@@ -36,6 +36,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai validate` and `qfai report --run-validate` no longer read an
+  unreadable legacy validate path as absent.** The check for a stale
+  `.qfai/output/validate.json` treated every `stat` failure as "not on disk".
+  Now only a missing path counts as absent, and any other failure, such as
+  `EACCES` or `EIO`, reaches the caller with its code, path and message
+  (#2915).
+
 - **A validator no longer reads an unreadable file as a missing one.** The
   shared `exists` and `readSafe` helpers turned every failure, including
   `EACCES` and `EIO`, into "absent" or an empty string, so a file the validator
@@ -48,6 +55,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `cli/` is the QFAI repository's own. The `QFAI-DB-001` row of the SQL findings
   table, which rendered outside the table, now sits beside the other rows.
   Fixes #2860.
+
 - **`qfai init --force` reports only the paths it changed.** The `written` count
   and list included every distributed file, including those already identical to
   the shipped copy. Rule files, the Copilot and Codex files and the agent and
