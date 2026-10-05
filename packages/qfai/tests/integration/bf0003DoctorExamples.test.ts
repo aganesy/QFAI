@@ -364,6 +364,7 @@ describe("BF-0003 skill manifest location", () => {
 });
 
 describe("BF-0003 advisory grouping", () => {
+  // QFAI:AC-0003-0007-02
   // QFAI:EX-0003-0007-02
   it("keeps the prototyping error blocking and routes drift warnings to the advisory group", async () => {
     const root = await newTempDir("groups");
