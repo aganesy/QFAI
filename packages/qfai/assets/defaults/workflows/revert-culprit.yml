@@ -4,24 +4,19 @@ stages:
   - id: revert
     kind: implement
     steps: [implement-revert]
-  - id: spec
-    kind: sdd_append
-    steps:
-      - { step: sdd-story, passThrough: true }
-      - sdd-gate
-    after: [revert]
   - id: implement
     kind: implement
-    steps: [implement-tdd, implement-checkpoint]
-    after: [spec]
-  - id: verify
+    steps: [implement-tdd]
+    after: [revert]
+  - id: note
     kind: verify
     steps:
       - { step: verify-change-note, passThrough: true }
-      - verify-context
-      - verify-qfai-gate
-      - verify-repo-gate
     after: [implement]
-defaultModifiers: []
+    review: code
+  - id: verify
+    kind: verify
+    steps: [verify-qfai-gate, verify-repo-gate, verify-commit]
+    after: [note]
 decisionPoints: []
 branchPoints: []

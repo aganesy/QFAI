@@ -10,6 +10,6 @@ Feature: Old spec-layout migration error
     When `qfai validate` runs under any profile
     Then one error names the path that holds the old layout
     And it lists, one per line, each file that remains under the `spec-*/` and `_policies/` directories of that path
-    And its last line names `/qfai-migration-v1-to-v2` and `/qfai-sdd`, and says to delete a file only once the migration has archived it under `.qfai/evidence/migration-spec-to-story/retired/`
+    And its last line names `/qfai-migration-v1-to-v2` and `/qfai-sdd`
     And no story-tree finding family reports anything in that run
 ```

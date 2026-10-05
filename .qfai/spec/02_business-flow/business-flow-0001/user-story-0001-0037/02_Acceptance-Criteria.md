@@ -6,7 +6,7 @@
 Feature: legacy layout past its sunset
   # AC-0001-0037-01
   Scenario: The legacy layout is kept and reported as an error
-    Given a project that still carries the legacy `.qfai/assistant/steering/` layout
+    Given a project that still carries the legacy `.qfai/assistant/instructions/` layout
     When `qfai init` runs without a flag at or past the sunset release (v1.10.0)
     Then the legacy files are neither deleted nor changed, and `D-DEPRECATED-PATH` is written to stderr as an error. The error does not stop `qfai init`
 

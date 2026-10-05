@@ -132,10 +132,9 @@ export type ValidationResult = {
    * not carry it, and a reader must be able to tell "older writer" from "the
    * run happened at the epoch".
    *
-   * It exists so a consumer can relate the result to the tree it describes.
-   * `qfai prototyping certify` seals evidence on the strength of a STORED
-   * `validate.json`, and with no timestamp on it a success from before the
-   * evidence changed was indistinguishable from one after.
+   * It exists so a consumer can relate the result to the tree it describes:
+   * with no timestamp, a success from before the tree changed is
+   * indistinguishable from one after.
    */
   generatedAt?: string;
   profile?: ValidationProfile;

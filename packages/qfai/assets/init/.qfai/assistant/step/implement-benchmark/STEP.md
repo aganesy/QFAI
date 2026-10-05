@@ -2,14 +2,11 @@
 name: implement-benchmark
 owner: qfai-implement
 purpose: "Measure a slow path under fixed conditions, before a change as its baseline and after it for comparison, and record the numbers without changing any tracked file."
-requires: [common-steering-refresh, common-gate-run]
+requires: [common-gate-run]
 roles:
   - devops-ci-engineer
   - qa-strategist
-  - completion-reviewer
-  - qa-gatekeeper
-  - implementation-reviewer
-routing-profile: runtime-heavy
+routing-profile: default
 ---
 
 # implement-benchmark
@@ -44,12 +41,11 @@ is follows from whether the run already carries a baseline record.
 ## What it writes
 
 - The step changes no file git tracks, and the result names no changed file.
-- The record under `.qfai/evidence/` holds the conditions, the numbers and, on
-  the second run, the comparison. It is git-ignored and is named in
-  `artifactRefs`.
+- The stage report holds the conditions, the numbers and, on
+  the second run, the comparison.
 
 ## Gate
 
 The step is done when the numbers are recorded with the conditions that
-produced them, a second run compares under the same conditions, no tracked
-file changed, and the qa-gatekeeper observed the runs.
+produced them, a second run compares under the same conditions, and no tracked
+file changed.

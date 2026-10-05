@@ -38,17 +38,16 @@ describe("skills read the governing inputs for their current stage", () => {
     it(
       tree + ": acceptance and implementation skills read flow obligations and layer rules",
       async () => {
-        const atdd = await readFile(
-          path.join(root, tree, "assistant/step/atdd-scaffold/STEP.md"),
+        const scaffold = await readFile(
+          path.join(root, tree, "assistant/step/implement-scaffold/STEP.md"),
           "utf-8",
         );
         const implement = await read(tree, "qfai-implement");
-        for (const skill of [atdd, implement]) {
+        for (const skill of [scaffold, implement]) {
           expect(skill).toContain("BF-NNNN");
           expect(skill).toContain("paths.specsDir");
           expect(skill).toContain("rule/test-layers.md");
         }
-        expect(atdd).toContain("owning contracts");
         expect(implement).toContain("paths.contractsDir");
       },
     );

@@ -46,6 +46,8 @@ export type SddPreflightCommandOptions = {
    * overwriting it with `- none`.
    */
   assumptions?: string[];
+  /** `--import <path>`: an imported specification, resolved against `root`. */
+  importPath?: string;
   /** Output sink. Defaults to the CLI logger (stdout). */
   write?: (message: string) => void;
   /** Error sink. Defaults to the CLI logger (stderr). */
@@ -62,7 +64,7 @@ function toRelative(root: string, target: string): string {
 function renderText(root: string, result: SddPreflightResult): string {
   const lines = [
     `qfai sdd preflight: status: ${result.status} (source: ${result.source})`,
-    `  selected discussion-pack: ${result.selectedInputPath === null ? "(not found)" : toRelative(root, result.selectedInputPath)}`,
+    `  selected ${result.source}: ${result.selectedInputPath === null ? "(not found)" : toRelative(root, result.selectedInputPath)}`,
     `  imported REQ count: ${result.importedReqCount === null ? "(n/a)" : String(result.importedReqCount)}`,
   ];
   if (result.blockers.length > 0) {
@@ -185,6 +187,9 @@ export async function runSddPreflightCommand(options: SddPreflightCommandOptions
     result = await runSddPreflight(options.root, config, {
       ...(packDir === undefined ? {} : { packDir }),
       ...(assumptions.length > 0 ? { assumptions } : {}),
+      ...(options.importPath === undefined
+        ? {}
+        : { importPath: path.resolve(options.root, options.importPath) }),
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);

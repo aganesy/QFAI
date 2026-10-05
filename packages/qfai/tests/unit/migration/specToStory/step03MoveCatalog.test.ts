@@ -156,9 +156,10 @@ async function run(context: MigrationContext): Promise<{ code: number; output: s
 }
 
 describe("migration catalog move", () => {
+  // QFAI:EX-0004-0006-02
+  // QFAI:EX-0004-0006-04
+  // QFAI:EX-0004-0006-29
   it("reports a policy section with no place in the template and keeps the standard commands section", async () => {
-    // QFAI:EX-0004-0006-02
-    // QFAI:EX-0004-0006-04
     const context = await fixture();
     await put(
       context.root,
@@ -190,15 +191,15 @@ describe("migration catalog move", () => {
     expect(objective.match(/Shared item\./g)).toHaveLength(1);
     expect(objective).not.toContain("Price marker");
     expect(result.output).toContain(
-      '.qfai/spec/01_policy/objective.md: rewrite "## Pricing notes" of .qfai/assistant/catalog/product.md by hand (kept at .qfai/evidence/migration-spec-to-story/retired/assistant/catalog/product.md)',
+      '.qfai/spec/01_policy/objective.md: rewrite "## Pricing notes" of .qfai/assistant/catalog/product.md by hand',
     );
     const tech = await readFile(path.join(context.contractsDir, "tech.md"), "utf8");
     expect(tech).toContain("## Standard commands (copy-paste)\n\n- Test: run test");
     expect(tech.match(/- Test: run test/g)).toHaveLength(1);
   });
 
+  // QFAI:EX-0004-0006-09
   it("writes every policy document in its template's shape from sections of the same kind", async () => {
-    // QFAI:EX-0004-0006-09
     const context = await fixture();
     await put(
       context.root,
@@ -256,8 +257,8 @@ describe("migration catalog move", () => {
     expect(await validateConstraintIds(context.specsDir)).toEqual([]);
   });
 
+  // QFAI:EX-0004-0006-28
   it("numbers each constraint section from 01 and names every ID it changed", async () => {
-    // QFAI:EX-0004-0006-28
     const context = await fixture();
     await put(
       context.root,
@@ -299,8 +300,8 @@ describe("migration catalog move", () => {
     expect(await validateConstraintIds(context.specsDir)).toEqual([]);
   });
 
+  // QFAI:EX-0004-0006-27
   it("drops the Impact column and sends a constraint that is not in plain words to a person", async () => {
-    // QFAI:EX-0004-0006-27
     const context = await fixture();
     await put(
       context.root,
@@ -321,17 +322,15 @@ describe("migration catalog move", () => {
     const result = await run(context);
     expect(result.code).toBe(3);
     const source = ".qfai/spec/_policies/07_Constraints.md";
-    const kept =
-      "kept at .qfai/evidence/migration-spec-to-story/retired/_policies/07_Constraints.md";
     const target = ".qfai/spec/01_policy/constraint.md";
     expect(result.output).toContain(
-      `${target}: move what the "Impact" column of "## Constraints" in ${source} states to the contract or tech.md that owns it, or drop it (${kept})`,
+      `${target}: move what the "Impact" column of "## Constraints" in ${source} states to the contract or tech.md that owns it, or drop it`,
     );
     expect(result.output).toContain(
-      `${target} ## Technical Constraints: rewrite TC-02 of "## Constraints" in ${source} in plain words, with no file name, command or rule ID, by hand (${kept})`,
+      `${target} ## Technical Constraints: rewrite TC-02 of "## Constraints" in ${source} in plain words, with no file name, command or rule ID, by hand`,
     );
     expect(result.output).toContain(
-      `${target} ## Operational Constraints: rewrite OC-01 of "## Constraints" in ${source} in plain words, with no file name, command or rule ID, by hand (${kept})`,
+      `${target} ## Operational Constraints: rewrite OC-01 of "## Constraints" in ${source} in plain words, with no file name, command or rule ID, by hand`,
     );
     const constraint = await readFile(
       path.join(context.specsDir, "01_policy", "constraint.md"),
@@ -344,9 +343,9 @@ describe("migration catalog move", () => {
     expect(await validateConstraintIds(context.specsDir)).toEqual([]);
   });
 
+  // QFAI:EX-0004-0006-11
+  // QFAI:EX-0004-0006-29
   it("routes the structure catalog to Skeleton lines, architecture layers and the UI paths key", async () => {
-    // QFAI:EX-0004-0006-11
-    // QFAI:EX-0004-0006-29
     const context = await fixture();
     await put(
       context.root,
@@ -415,22 +414,20 @@ describe("migration catalog move", () => {
     );
     expect(config).toMatchObject({ uiux: { surfacePaths: ["src/ui/**", "tests/e2e/**"] } });
     const source = ".qfai/assistant/catalog/structure.md";
-    const kept =
-      "kept at .qfai/evidence/migration-spec-to-story/retired/assistant/catalog/structure.md";
     expect(result.output).toContain(
-      `.qfai/spec/03_contract/tech.md: write a "- Skeleton: \`<entry>\` -> \`<command>\`" line for the entrypoint worker of "## Key packages / entrypoints" in ${source}, or drop it (${kept})`,
+      `.qfai/spec/03_contract/tech.md: write a "- Skeleton: \`<entry>\` -> \`<command>\`" line for the entrypoint worker of "## Key packages / entrypoints" in ${source}, or drop it`,
     );
     expect(result.output).toContain(
-      `.qfai/spec/03_contract/tech.md: write a "- Skeleton: \`<entry>\` -> \`<command>\`" line for "Core modules: \`src/core\`" of "## Key packages / entrypoints" in ${source}, or drop it (${kept})`,
+      `.qfai/spec/03_contract/tech.md: write a "- Skeleton: \`<entry>\` -> \`<command>\`" line for "Core modules: \`src/core\`" of "## Key packages / entrypoints" in ${source}, or drop it`,
     );
     expect(result.output).toContain(
-      `.qfai/spec/03_contract/tech.md ## Architecture: rewrite the layer Core of "## Architecture" in ${source} without a path or file name by hand (${kept})`,
+      `.qfai/spec/03_contract/tech.md ## Architecture: rewrite the layer Core of "## Architecture" in ${source} without a path or file name by hand`,
     );
     expect(result.output).toContain(
-      `.qfai/spec/03_contract/tech.md ## Architecture: rewrite "## Architecture constraints" of ${source} by hand (${kept})`,
+      `.qfai/spec/03_contract/tech.md ## Architecture: rewrite "## Architecture constraints" of ${source} by hand`,
     );
     expect(result.output).toContain(
-      `${source}: "## How to run locally" has no place in the story tree; carry what it states by hand, or drop it (${kept})`,
+      `${source}: "## How to run locally" has no place in the story tree; carry what it states by hand, or drop it`,
     );
   });
 
@@ -446,7 +443,6 @@ describe("migration catalog move", () => {
       "since the layer CLI depends on Core, which has no row",
     ],
   ])("leaves %s for a person to order", async (_label, rows, reason) => {
-    // QFAI:EX-0004-0006-29
     const context = await fixture();
     await put(
       context.root,
@@ -468,15 +464,13 @@ describe("migration catalog move", () => {
     expect(tech).toContain("| <upper layer> |");
     expect(tech).not.toContain("Parses arguments");
     const source = ".qfai/assistant/catalog/structure.md";
-    const kept =
-      "kept at .qfai/evidence/migration-spec-to-story/retired/assistant/catalog/structure.md";
     expect(result.output).toContain(
-      `.qfai/spec/03_contract/tech.md ## Architecture: order the layers of "## Architecture" in ${source} from the uppermost down by hand, ${reason} (${kept})`,
+      `.qfai/spec/03_contract/tech.md ## Architecture: order the layers of "## Architecture" in ${source} from the uppermost down by hand, ${reason}`,
     );
   });
 
+  // QFAI:EX-0004-0006-11
   it("declares no UI surface when the structure catalog names none", async () => {
-    // QFAI:EX-0004-0006-11
     const context = await fixture();
     await put(
       context.root,
@@ -491,8 +485,8 @@ describe("migration catalog move", () => {
     expect(config).toMatchObject({ uiux: { surfacePaths: [] } });
   });
 
+  // QFAI:EX-0004-0006-10
   it("keeps the template's text where a section's content is of another kind", async () => {
-    // QFAI:EX-0004-0006-10
     const context = await fixture();
     await put(
       context.root,
@@ -506,15 +500,14 @@ describe("migration catalog move", () => {
     );
     const result = await run(context);
     expect(result.code).toBe(3);
-    const retired = ".qfai/evidence/migration-spec-to-story/retired/_policies";
     expect(result.output).toContain(
-      `.qfai/spec/01_policy/objective.md ## Objective: rewrite "## Objective" of .qfai/spec/_policies/01_Objective.md by hand (kept at ${retired}/01_Objective.md)`,
+      `.qfai/spec/01_policy/objective.md ## Objective: rewrite "## Objective" of .qfai/spec/_policies/01_Objective.md by hand`,
     );
     expect(result.output).toContain(
-      `.qfai/spec/01_policy/objective.md: rewrite the text before the first section of .qfai/spec/_policies/01_Objective.md by hand (kept at ${retired}/01_Objective.md)`,
+      `.qfai/spec/01_policy/objective.md: rewrite the text before the first section of .qfai/spec/_policies/01_Objective.md by hand`,
     );
     expect(result.output).toContain(
-      `.qfai/spec/01_policy/constraint.md: rewrite "## Constraints" of .qfai/spec/_policies/07_Constraints.md by hand (kept at ${retired}/07_Constraints.md)`,
+      `.qfai/spec/01_policy/constraint.md: rewrite "## Constraints" of .qfai/spec/_policies/07_Constraints.md by hand`,
     );
     const objective = await readFile(
       path.join(context.specsDir, "01_policy", "objective.md"),
@@ -522,16 +515,17 @@ describe("migration catalog move", () => {
     );
     expect(objective).toContain("## Objective\n\n- Outcome: `<the change this project seeks>`");
     expect(objective).not.toContain("Buyers can order");
-    expect(await readFile(path.join(context.root, retired, "01_Objective.md"), "utf8")).toContain(
-      "- Buyers can order.",
-    );
+    expect(result.output).toContain(".qfai/spec/_policies/01_Objective.md: delete");
+    await expect(
+      readFile(path.join(context.specsDir, "_policies", "01_Objective.md")),
+    ).rejects.toMatchObject({ code: "ENOENT" });
     for (const name of ["objective", "constraint"]) {
       expect(conformance(context.specsDir, name), name).toContain("No violations");
     }
   });
 
+  // QFAI:EX-0004-0006-10
   it("moves an indented list and sends ragged, split and prefixed content to a person", async () => {
-    // QFAI:EX-0004-0006-10
     const context = await fixture();
     await put(
       context.root,
@@ -550,9 +544,8 @@ describe("migration catalog move", () => {
     );
     const result = await run(context);
     expect(result.code).toBe(3);
-    const retired = ".qfai/evidence/migration-spec-to-story/retired/_policies";
     expect(result.output).toContain(
-      `.qfai/spec/01_policy/objective.md: rewrite the text before the title of .qfai/spec/_policies/01_Objective.md by hand (kept at ${retired}/01_Objective.md)`,
+      `.qfai/spec/01_policy/objective.md: rewrite the text before the title of .qfai/spec/_policies/01_Objective.md by hand`,
     );
     expect(result.output).toContain(
       `.qfai/spec/01_policy/glossary.md ## Terms: rewrite "## Terms" of .qfai/spec/_policies/06_Glossary.md by hand`,
@@ -568,14 +561,14 @@ describe("migration catalog move", () => {
     }
   });
 
+  // QFAI:EX-0004-0006-17
   it("writes tech.md in its template's shape and its constraints to constraint.md", async () => {
-    // QFAI:EX-0004-0006-17
     const context = await fixture();
     await put(
       context.root,
       ".qfai/assistant/catalog/tech.md",
       [
-        "# Tech Steering",
+        "# Tech Policy",
         "",
         "## Runtime / platform",
         "",
@@ -636,14 +629,14 @@ describe("migration catalog move", () => {
     expect(await validateConstraintIds(context.specsDir)).toEqual([]);
   });
 
+  // QFAI:EX-0004-0006-18
   it("sends the technology content tech.md cannot take to a person", async () => {
-    // QFAI:EX-0004-0006-18
     const context = await fixture();
     await put(
       context.root,
       ".qfai/assistant/catalog/tech.md",
       [
-        "# Tech Steering",
+        "# Tech Policy",
         "",
         "> Replace placeholder text.",
         "",
@@ -674,15 +667,14 @@ describe("migration catalog move", () => {
     const result = await run(context);
     expect(result.code).toBe(3);
     const source = ".qfai/assistant/catalog/tech.md";
-    const archive = ".qfai/evidence/migration-spec-to-story/retired/assistant/catalog/tech.md";
     const tech = ".qfai/spec/03_contract/tech.md";
     for (const line of [
-      `${tech}: rewrite the text before the first section of ${source} by hand (kept at ${archive})`,
-      `${tech} ## Stack: rewrite "## Frontend" of ${source} by hand (kept at ${archive})`,
-      `${tech} ## Dependencies: rewrite "## Dependencies (runtime)" of ${source} by hand (kept at ${archive})`,
-      `.qfai/spec/01_policy/constraint.md: rewrite "## Constraints" of ${source} by hand (kept at ${archive})`,
-      `${tech} ## Standard commands (copy-paste): rewrite the part of "## Standard commands (copy-paste)" of ${source} that is not a list of labelled commands by hand (kept at ${archive})`,
-      `${tech} ## Standard commands (copy-paste): carry "- Smoke: one line per entrypoint" of "## Standard commands (copy-paste)" in ${source} by hand (kept at ${archive})`,
+      `${tech}: rewrite the text before the first section of ${source} by hand`,
+      `${tech} ## Stack: rewrite "## Frontend" of ${source} by hand`,
+      `${tech} ## Dependencies: rewrite "## Dependencies (runtime)" of ${source} by hand`,
+      `.qfai/spec/01_policy/constraint.md: rewrite "## Constraints" of ${source} by hand`,
+      `${tech} ## Standard commands (copy-paste): rewrite the part of "## Standard commands (copy-paste)" of ${source} that is not a list of labelled commands by hand`,
+      `${tech} ## Standard commands (copy-paste): carry "- Smoke: one line per entrypoint" of "## Standard commands (copy-paste)" in ${source} by hand`,
     ]) {
       expect(result.output).toContain(line);
     }
@@ -705,8 +697,8 @@ describe("migration catalog move", () => {
     );
   });
 
+  // QFAI:EX-0004-0006-10
   it("keeps a short continuation and reports an unused column or a short row", async () => {
-    // QFAI:EX-0004-0006-10
     const context = await fixture();
     await put(
       context.root,
@@ -748,8 +740,8 @@ describe("migration catalog move", () => {
     );
   });
 
+  // QFAI:EX-0004-0006-10
   it("sends thematic breaks and HTML blocks to a person and names a section for old headings", async () => {
-    // QFAI:EX-0004-0006-10
     const context = await fixture();
     await put(
       context.root,
@@ -778,8 +770,8 @@ describe("migration catalog move", () => {
     }
   });
 
+  // QFAI:EX-0004-0006-10
   it("sends tab-indented lists and tables with a short delimiter row to a person", async () => {
-    // QFAI:EX-0004-0006-10
     const context = await fixture();
     await put(
       context.root,
@@ -802,8 +794,8 @@ describe("migration catalog move", () => {
     );
   });
 
+  // QFAI:EX-0004-0006-19
   it("moves a table written without its outer pipes and writes it with them", async () => {
-    // QFAI:EX-0004-0006-19
     const context = await fixture();
     await put(
       context.root,
@@ -831,8 +823,8 @@ describe("migration catalog move", () => {
     expect(await validateConstraintIds(context.specsDir)).toEqual([]);
   });
 
+  // QFAI:EX-0004-0006-19
   it("sends a pipeless body that is not a table to a person", async () => {
-    // QFAI:EX-0004-0006-19
     const context = await fixture();
     await put(
       context.root,
@@ -846,30 +838,54 @@ describe("migration catalog move", () => {
     );
   });
 
-  it("archives the full legacy slice policy without restoring obsolete rules", async () => {
-    // QFAI:EX-0004-0006-03
-    // QFAI:EX-0004-0003-21
+  // QFAI:EX-0004-0006-03
+  // QFAI:EX-0004-0003-21
+  it("deletes the legacy slice policy without restoring obsolete rules", async () => {
     const context = await fixture();
     const original =
       "# Slice\n\n## Principle (read first)\n\nOld CAP/spec rule.\n\n## Triage operations (8 kinds)\n\nOld TC rule.\n\n## Project choice\n\nSpecific.\n";
     await put(context.root, ".qfai/spec/_policies/11_Slice-Policy.md", original);
     const first = await run(context);
     expect(first.code).toBe(0);
-    expect(
-      await readFile(
-        path.join(
-          context.root,
-          ".qfai/evidence/migration-spec-to-story/retired/_policies/11_Slice-Policy.md",
-        ),
-        "utf8",
-      ),
-    ).toBe(original);
+    expect(first.output).toContain(".qfai/spec/_policies/11_Slice-Policy.md: delete");
+    await expect(
+      readFile(path.join(context.specsDir, "_policies", "11_Slice-Policy.md")),
+    ).rejects.toMatchObject({ code: "ENOENT" });
     await expect(
       readFile(path.join(context.specsDir, "01_policy", "principle.md"), "utf8"),
     ).rejects.toMatchObject({ code: "ENOENT" });
     const second = await run(context);
     expect(second.code).toBe(0);
     expect(second.output).toContain("## Operations\nnone");
+  });
+
+  it("keeps a source whose destination exists and differs, and deletes the others", async () => {
+    const context = await fixture();
+    const existing = "# Objective\n\nWritten by the project.\n";
+    await put(context.root, ".qfai/spec/01_policy/objective.md", existing);
+    await put(
+      context.root,
+      ".qfai/spec/_policies/01_Objective.md",
+      "# 01 Objective\n\n## Objective\n\n- Buyers can order.\n",
+    );
+    await put(
+      context.root,
+      ".qfai/spec/_policies/06_Glossary.md",
+      "# 06 Glossary\n\n## Terms\n\n| Term | Definition |\n| --- | --- |\n| Order | A request |\n",
+    );
+    const result = await run(context);
+    expect(result.code).toBe(3);
+    const source = ".qfai/spec/_policies/01_Objective.md";
+    expect(forAPerson(result.output)).toContain(
+      `${source}: kept, since .qfai/spec/01_policy/objective.md was not written; delete it once what it states is carried by hand`,
+    );
+    expect(result.output).not.toContain(`- ${source}: delete`);
+    expect(await readFile(path.join(context.root, source), "utf8")).toContain("Buyers can order");
+    expect(await readFile(path.join(context.specsDir, "01_policy", "objective.md"), "utf8")).toBe(
+      existing,
+    );
+    expect(result.output).toContain("- .qfai/spec/_policies/06_Glossary.md: delete");
+    expect(result.output).not.toContain(".qfai/spec/_policies: remove empty directory");
   });
 
   it("leaves the policy directory for step 4 while capability and flow sources remain", async () => {
@@ -887,23 +903,17 @@ describe("migration catalog move", () => {
     expect(
       await readFile(path.join(context.specsDir, "_policies", "04_Business-Flow.md"), "utf8"),
     ).toBe("# Flow\n");
-    expect(
-      await readFile(
-        path.join(
-          context.root,
-          ".qfai/evidence/migration-spec-to-story/retired/_policies/01_Objective.md",
-        ),
-        "utf8",
-      ),
-    ).toBe("# Objective\n");
+    await expect(
+      readFile(path.join(context.specsDir, "_policies", "01_Objective.md")),
+    ).rejects.toMatchObject({ code: "ENOENT" });
 
     const second = await run(context);
     expect(second.code).toBe(0);
     expect(second.output).toContain("## Operations\nnone");
   });
 
-  it("archives abolished directories and moves only overlays with a rule master", async () => {
-    // QFAI:EX-0004-0006-06
+  // QFAI:EX-0004-0006-06
+  it("deletes abolished directories and moves only overlays with a rule master", async () => {
     const context = await fixture();
     await put(context.root, ".qfai/assistant/rule/drift-protocol.md", "# Rule\n");
     await put(context.root, ".qfai/assistant/constitution/drift-protocol.local.md", "local rule\n");
@@ -911,67 +921,53 @@ describe("migration catalog move", () => {
     await put(context.root, ".qfai/assistant/process/unused.md", "process\n");
     const first = await run(context);
     expect(first.code).toBe(3);
-    expect(first.output).toContain("house-notes.local.md");
-    expect(first.output).toContain("no rule master or the overlay destination exists");
+    expect(forAPerson(first.output)).toContain(
+      ".qfai/assistant/catalog/house-notes.local.md: no rule master house-notes.md exists",
+    );
     expect(
       await readFile(
         path.join(context.root, ".qfai/assistant/rule/drift-protocol.local.md"),
         "utf8",
       ),
     ).toBe("local rule\n");
-    expect(
-      await readFile(
-        path.join(
-          context.root,
-          ".qfai/evidence/migration-spec-to-story/retired/assistant/catalog/house-notes.local.md",
-        ),
-        "utf8",
-      ),
-    ).toBe("local notes\n");
-    expect(
-      await readFile(
-        path.join(
-          context.root,
-          ".qfai/evidence/migration-spec-to-story/retired/assistant/process/unused.md",
-        ),
-        "utf8",
-      ),
-    ).toBe("process\n");
+    for (const removed of [
+      ".qfai/assistant/catalog/house-notes.local.md",
+      ".qfai/assistant/process/unused.md",
+    ]) {
+      expect(first.output).toContain(`${removed}: delete`);
+      await expect(readFile(path.join(context.root, removed))).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+    }
     const second = await run(context);
     expect(second.code).toBe(0);
     expect(second.output).toContain("## Operations\nnone");
   });
 
-  it("archives an overlay whose rule overlay already exists and leaves that overlay alone", async () => {
-    // QFAI:EX-0004-0006-07
+  // QFAI:EX-0004-0006-07
+  it("leaves an overlay whose rule overlay already exists where it is", async () => {
     const context = await fixture();
     await put(context.root, ".qfai/assistant/rule/house.md", "# House\n");
     await put(context.root, ".qfai/assistant/rule/house.local.md", "current overlay\n");
     await put(context.root, ".qfai/assistant/constitution/house.local.md", "legacy overlay\r\n");
     const result = await run(context);
     expect(result.code).toBe(3);
-    expect(result.output).toContain(
-      ".qfai/assistant/constitution/house.local.md: no rule master or the overlay destination exists",
+    expect(forAPerson(result.output)).toContain(
+      ".qfai/assistant/constitution/house.local.md: .qfai/assistant/rule/house.local.md already exists",
     );
     expect(
       await readFile(path.join(context.root, ".qfai/assistant/rule/house.local.md"), "utf8"),
     ).toBe("current overlay\n");
     expect(
       await readFile(
-        path.join(
-          context.root,
-          ".qfai/evidence/migration-spec-to-story/retired/assistant/constitution/house.local.md",
-        ),
+        path.join(context.root, ".qfai/assistant/constitution/house.local.md"),
         "utf8",
       ),
     ).toBe("legacy overlay\r\n");
-    await expect(
-      readFile(path.join(context.root, ".qfai/assistant/constitution/house.local.md")),
-    ).rejects.toMatchObject({ code: "ENOENT" });
   });
 
+  // QFAI:EX-0004-0006-08
   it("writes nothing and lists both overlays when constitution and catalog share one name", async () => {
-    // QFAI:EX-0004-0006-08
     const context = await fixture();
     await put(context.root, ".qfai/assistant/rule/house.md", "# House\n");
     await put(context.root, ".qfai/assistant/constitution/house.local.md", "constitution\n");
@@ -995,8 +991,8 @@ describe("migration catalog move", () => {
     expect(await tree()).toEqual(before);
   });
 
-  it("archives unconsumed files from all four retired assistant directories", async () => {
-    // QFAI:EX-0004-0003-24
+  // QFAI:EX-0004-0003-24
+  it("deletes unconsumed files from all four retired assistant directories", async () => {
     const context = await fixture();
     for (const directory of ["constitution", "catalog", "manifest", "process"]) {
       await put(context.root, `.qfai/assistant/${directory}/unconsumed.md`, `${directory}\r\n`);
@@ -1004,15 +1000,7 @@ describe("migration catalog move", () => {
     const result = await run(context);
     expect(result.code).toBe(0);
     for (const directory of ["constitution", "catalog", "manifest", "process"]) {
-      expect(
-        await readFile(
-          path.join(
-            context.root,
-            `.qfai/evidence/migration-spec-to-story/retired/assistant/${directory}/unconsumed.md`,
-          ),
-          "utf8",
-        ),
-      ).toBe(`${directory}\r\n`);
+      expect(result.output).toContain(`.qfai/assistant/${directory}/unconsumed.md: delete`);
       await expect(
         readFile(path.join(context.root, `.qfai/assistant/${directory}/unconsumed.md`)),
       ).rejects.toMatchObject({ code: "ENOENT" });
@@ -1022,25 +1010,8 @@ describe("migration catalog move", () => {
     }
   });
 
-  it("keeps both files when an archive destination already exists", async () => {
-    const context = await fixture();
-    await put(context.root, ".qfai/assistant/process/unused.md", "new source\n");
-    await put(
-      context.root,
-      ".qfai/evidence/migration-spec-to-story/retired/assistant/process/unused.md",
-      "older archive\n",
-    );
-    await run(context);
-    const archive = path.join(
-      context.root,
-      ".qfai/evidence/migration-spec-to-story/retired/assistant/process",
-    );
-    expect(await readFile(path.join(archive, "unused.md"), "utf8")).toBe("older archive\n");
-    expect(await readFile(path.join(archive, "unused.md-1"), "utf8")).toBe("new source\n");
-  });
-
+  // QFAI:EX-0004-0006-05
   it("writes only manifest entries that differ from built-in defaults", async () => {
-    // QFAI:EX-0004-0006-05
     const context = await fixture();
     const defaults = { routing: await defaultRoutingEntries() };
     const unchanged = defaults.routing[0];
@@ -1072,38 +1043,32 @@ describe("migration catalog move", () => {
     expect(result.code).toBe(3);
   });
 
-  it("does not carry an entry equal to the 1.x entry of the same skill, and lists one changed from both", async () => {
-    // QFAI:EX-0004-0006-34
+  // QFAI:EX-0004-0006-34
+  it("carries an entry equal to the 1.x entry of the same skill, and one changed from both", async () => {
     const context = await fixture();
     const legacy = await legacyRoutingEntries();
     const defaults = await defaultRoutingEntries();
     const unmodified = entryNamed(legacy, "qfai-sdd");
-    const shipped = entryNamed(legacy, "qfai-verify");
-    const changed = { ...shipped, review_profile: "migration-test" };
-    // Premise: neither the unmodified 1.x entry nor the changed one equals an installed default,
-    // and the changed one differs from the 1.x entry of its skill. A change to the installed
-    // defaults or to the 1.x set that breaks this needs other entries chosen here.
+    const changed = { ...entryNamed(legacy, "qfai-verify"), review_profile: "migration-test" };
+    // Premise: neither entry equals an installed default.
     expect(defaults.some((entry) => isDeepStrictEqual(entry, unmodified))).toBe(false);
     expect(defaults.some((entry) => isDeepStrictEqual(entry, changed))).toBe(false);
-    expect(isDeepStrictEqual(shipped, changed)).toBe(false);
     await putManifests(context, [unmodified, changed]);
     const result = await run(context);
     const config = await readConfig(context.root);
-    const written: unknown[] = Array.isArray(config.routing) ? config.routing : [];
-    // The changed entry is written whatever is done with entries equal to a 1.x entry.
-    expect(written).toContainEqual(changed);
-    expect(written).toEqual([changed]);
+    expect(config.routing).toEqual([unmodified, changed]);
     const person = forAPerson(result.output);
-    const item = itemNaming(person, "qfai-verify");
-    expect(item).toMatch(/1\.x/);
-    expect(item).toMatch(/hides/i);
-    expect(item).toMatch(/roles/i);
-    expect(person).not.toContain("qfai-sdd");
+    for (const name of ["qfai-sdd", "qfai-verify"]) {
+      const item = itemNaming(person, name);
+      expect(item).toMatch(/1\.x/);
+      expect(item).toMatch(/hides/i);
+      expect(item).toMatch(/roles/i);
+    }
     expect(result.code).toBe(3);
   });
 
+  // QFAI:EX-0004-0006-34
   it("carries an entry whose content equals a 1.x entry but whose name differs", async () => {
-    // QFAI:EX-0004-0006-34
     const context = await fixture();
     const legacy = await legacyRoutingEntries();
     const defaults = await defaultRoutingEntries();
@@ -1126,30 +1091,33 @@ describe("migration catalog move", () => {
     expect(result.code).toBe(3);
   });
 
-  it("writes no routing override for a 1.x routing manifest nobody customised", async () => {
-    // QFAI:EX-0004-0006-34
+  // QFAI:EX-0004-0006-34
+  it("writes an override for each entry of an unedited 1.x manifest that differs from the default", async () => {
     const context = await fixture();
     const legacy = await legacyRoutingEntries();
     const defaults = await defaultRoutingEntries();
-    expect(legacy).toHaveLength(7);
-    // Premise: only the qfai-configure entry equals an installed default. A change to the
-    // installed defaults or to the 1.x set that breaks this needs the expectation revisited.
-    const equalToDefault = legacy.filter((entry) =>
-      defaults.some((candidate) => isDeepStrictEqual(candidate, entry)),
+    // The 1.x manifest as a project left it, with one entry already equal to an installed
+    // default: the default `qfai-configure` entry stands in for its 1.x copy.
+    const configure = defaults.find((entry) => entry.skill === "qfai-configure");
+    if (!configure) throw new Error("the installed defaults hold no qfai-configure entry");
+    const manifest = [...legacy.filter((entry) => entry.skill !== "qfai-configure"), configure];
+    const differing = manifest.filter(
+      (entry) => !defaults.some((candidate) => isDeepStrictEqual(candidate, entry)),
     );
-    expect(equalToDefault.map((entry) => entry.skill)).toEqual(["qfai-configure"]);
-    await putManifests(context, legacy);
+    // Premise: the manifest holds an entry equal to an installed default and one that differs.
+    expect(differing.length).toBeGreaterThan(0);
+    expect(differing.length).toBeLessThan(manifest.length);
+    await putManifests(context, manifest);
     const result = await run(context);
     const config = await readConfig(context.root);
-    expect(config.routing).toBeUndefined();
-    expect(config.reviewProfiles).toBeUndefined();
+    expect(config.routing).toEqual(differing);
     const person = forAPerson(result.output);
-    for (const entry of legacy) expect(person).not.toContain(String(entry.skill));
-    expect(result.code).toBe(0);
+    for (const entry of differing) expect(person).toContain(String(entry.skill));
+    expect(result.code).toBe(3);
   });
 
+  // QFAI:EX-0004-0006-05
   it("writes a changed review profile and leaves it out of the routing warning", async () => {
-    // QFAI:EX-0004-0006-05
     const context = await fixture();
     const defaultProfiles: unknown = parseYaml(await readFile(defaultReviewProfilesFile, "utf8"));
     const profiles =

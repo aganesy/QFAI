@@ -33,17 +33,11 @@ const DELEGATION_HEADING: KeptEmphasis = {
   readBy: "tests/assets/skillDelegationTool.test.ts",
 };
 
-const GRILLING_HEADING: KeptEmphasis = {
-  phrase: "## Grilling (MANDATORY)",
-  readBy: "tests/assets/executionStageGrilling.test.ts",
-};
-
 const ABSOLUTE_RULE: KeptEmphasis = {
   phrase: "**All outputs MUST be written in the user’s working language for this session.**",
   readBy: "tests/assets/outputLanguageSingleSource.test.ts",
 };
 
-const ROUND_BUDGET = "tests/assets/reviewerRoundBudget.test.ts";
 const ANSWERED_DEMANDS = "tests/assets/answeredReviewDemandHome.test.ts";
 const DELEGATION_SPEC = "tests/integration/agentDelegationSpec0015.test.ts";
 
@@ -62,19 +56,6 @@ export const KEPT_EMPHASIS: Readonly<Record<string, readonly KeptEmphasis[]>> = 
     },
   ],
   ".qfai/assistant/rule/review-convergence.md": [
-    { phrase: "## Round budget (MUST)", readBy: ROUND_BUDGET },
-    { phrase: "MUST stop and escalate to the user", readBy: ROUND_BUDGET },
-    {
-      phrase: "a defect the fix **introduced or exposed** is in remit and MUST be reported",
-      readBy: ROUND_BUDGET,
-    },
-    {
-      phrase: "MUST NOT be answered with another _apply a named fix_ + 2b cycle",
-      readBy: ROUND_BUDGET,
-    },
-    { phrase: "## Convergence (MUST)", readBy: ROUND_BUDGET },
-    { phrase: "MUST state why it was not raisable in round N-1", readBy: ROUND_BUDGET },
-    { phrase: "MUST NOT open a new blocking _class_", readBy: ROUND_BUDGET },
     { phrase: "## Answered demands (MUST)", readBy: ANSWERED_DEMANDS },
     { phrase: "MUST NOT be re-raised under another wording", readBy: ANSWERED_DEMANDS },
     {
@@ -87,10 +68,6 @@ export const KEPT_EMPHASIS: Readonly<Record<string, readonly KeptEmphasis[]>> = 
     { phrase: "### Capability Probe (MUST)", readBy: DELEGATION_SPEC },
     { phrase: "### Delegation Failure Taxonomy (MUST)", readBy: DELEGATION_SPEC },
     {
-      phrase: "A skill claiming it MUST cite this section",
-      readBy: "tests/assets/grillingSkill.test.ts",
-    },
-    {
       phrase: "`record:*` and `none` MUST be recorded as `advisory`",
       readBy: "tests/integration/reviewerFindingProvenance.test.ts",
     },
@@ -98,21 +75,9 @@ export const KEPT_EMPHASIS: Readonly<Record<string, readonly KeptEmphasis[]>> = 
       phrase: "### What a reviewer may demand more of (MUST)",
       readBy: "tests/assets/reviewerDemandBound.test.ts",
     },
-    {
-      phrase: "MUST NOT satisfy a completion gate",
-      readBy: "tests/assets/reviewerResponseProvenance.test.ts",
-    },
   ],
   ".qfai/assistant/rule/workflow.md": [ABSOLUTE_RULE],
-  ".qfai/assistant/skill/qfai-atdd/SKILL.md": [DRIFT_MARKER],
-  ".qfai/assistant/skill/qfai-configure/SKILL.md": [
-    DRIFT_MARKER,
-    DELEGATION_HEADING,
-    {
-      phrase: "## Evidence (MANDATORY)",
-      readBy: "tests/integration/configureSkillSpec0009.test.ts",
-    },
-  ],
+  ".qfai/assistant/skill/qfai-configure/SKILL.md": [DRIFT_MARKER, DELEGATION_HEADING],
   ".qfai/assistant/skill/qfai-discussion/SKILL.md": [
     DRIFT_MARKER,
     {
@@ -140,8 +105,4 @@ export const KEPT_EMPHASIS: Readonly<Record<string, readonly KeptEmphasis[]>> = 
     },
   ],
   ".qfai/assistant/skill/web-research/SKILL.md": [DRIFT_MARKER, DELEGATION_HEADING],
-  ".qfai/assistant/step/atdd-scaffold/STEP.md": [GRILLING_HEADING],
-  ".qfai/assistant/step/implement-tdd/STEP.md": [GRILLING_HEADING],
-  ".qfai/assistant/step/verify-context/STEP.md": [GRILLING_HEADING],
-  ".qfai/assistant/step/verify-qfai-gate/STEP.md": [DRIFT_MARKER],
 };

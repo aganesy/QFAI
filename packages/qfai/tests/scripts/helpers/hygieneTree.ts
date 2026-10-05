@@ -88,17 +88,6 @@ export function runLane(root: string): LaneRun {
   };
 }
 
-/** The same lane, asked for the reviewer artifact. */
-export function runLaneWithReport(root: string, reportRel: string): LaneRun {
-  const r = spawnSync(process.execPath, [LANE, "--root", root, "--report-dir", reportRel], {
-    encoding: "utf-8",
-  });
-  return {
-    exitCode: r.status ?? -1,
-    output: `${r.stdout ?? ""}${r.stderr ?? ""}`,
-  };
-}
-
 /** Rewrites one workflow file inside a planted tree. */
 export function editWorkflow(dir: string, file: string, edit: (text: string) => string): void {
   const p = path.join(dir, ".github", "workflows", file);

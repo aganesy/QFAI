@@ -1,4 +1,3 @@
-// QFAI:EX-0001-0039-09
 /**
  * `--platform` parses on every `validate` run, but only four of the eight
  * profiles forward it to `detectPlatform`. On `discussion`, `sdd`, `atdd` and
@@ -68,6 +67,7 @@ async function codesFor(root: string, profile: ValidationProfile, platform?: str
   return result.issues.map((found) => found.code);
 }
 
+// QFAI:EX-0001-0039-09
 describe("--platform on a profile that never reads it", () => {
   const discarding: ValidationProfile[] = ["discussion", "sdd", "atdd", "tdd"];
 
