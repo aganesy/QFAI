@@ -25,6 +25,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The free-text entry reminder points a worktree session at its own copy of
+  `qfai-run`.** The host can load the skill from the main checkout, which may
+  lag the worktree, so the reminder now tells the agent to read
+  `.claude/skills/qfai-run/SKILL.md` under the current directory. The reminder
+  is read from the session's own checkout. Fixes #2972.
+
 - **The planner-first and design anti-goal examples are tested for what they
   say.** The planner-first example was annotated on a test that only checked
   three file names. Its test now reads the completion matrix and the
@@ -49,6 +55,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Five doctor criteria now name the tests that prove them.** Existing
+  integration tests carry standalone `QFAI:AC-...` comments, and
+  `AC-0003-0004-01` gains a deprecated `paths.promptsDir` warning case.
+  The BF-0003 full pin keeps only `AC-0003-0006-01` and `AC-0003-0006-03`.
+  Refs #2367.
 - **Configure and web research follow the shared delegation rules alone**
   (#2857). Both skills carried empty override stanzas, and configure restated
   the failure handling. A failed delegation is now classified and handled only

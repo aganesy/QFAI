@@ -20,6 +20,17 @@ const ROOT_GITIGNORE_WRITER = path.resolve(
   "rootGitignore.ts",
 );
 
+const SHIPPED_SKILL_DIR = path.resolve(
+  __dirname,
+  "..",
+  "..",
+  "assets",
+  "init",
+  ".qfai",
+  "assistant",
+  "skill",
+);
+
 // TC-0003-0001: Empty directory initialization
 // QFAI:EX-0001-0020-01
 describe("TC-0003-0001: Empty directory initialization", () => {
@@ -58,12 +69,18 @@ describe("TC-0003-0001: Empty directory initialization", () => {
 
       // Verify bullet 3. Init has no fallback for a link it cannot create — it stops with the
       // Developer Mode message — so a copied directory here is a failure on every platform.
-      const skills = (
-        await readdir(path.join(dir, ".qfai", "assistant", "skill"), { withFileTypes: true })
-      )
-        .filter((entry) => entry.isDirectory() && entry.name.startsWith("qfai-"))
-        .map((entry) => entry.name);
-      expect(skills.length, "init wrote no qfai-* skill").toBeGreaterThan(0);
+      // The expected set is read from the shipped asset tree by its own directory and SKILL.md
+      // inspection, not from the collector init uses, so a skill both would omit is still checked.
+      const skills: string[] = [];
+      for (const entry of await readdir(SHIPPED_SKILL_DIR, { withFileTypes: true })) {
+        if (!entry.isDirectory()) continue;
+        if ((await kindOf(path.join(SHIPPED_SKILL_DIR, entry.name, "SKILL.md"))) === "file") {
+          skills.push(entry.name);
+        }
+      }
+      expect(skills, "the shipped tree holds a skill without the qfai- prefix").toContain(
+        "web-research",
+      );
       const unlinked: string[] = [];
       for (const linkDir of SKILL_LINK_DIRS) {
         for (const skill of skills) {

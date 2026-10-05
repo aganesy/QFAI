@@ -166,6 +166,7 @@ describe("TC-0006-0014: playwright-cli triggers D-DEPRECATED-PROBE with sunset 1
   });
 });
 
+// QFAI:AC-0003-0006-02
 describe("TC-0006-0015: full failure surfaces `npm i -D playwright` install hint", () => {
   it("emits an error finding whose message contains the install hint", async () => {
     const root = await newTempDir("tc15");
