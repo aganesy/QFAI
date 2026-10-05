@@ -88,13 +88,13 @@ Follow `.qfai/assistant/rule/shared-skill-delegation-baseline.md`. The
 primitive's delegation rules apply unchanged: one thing is delegated, reading a
 fact the environment holds, and the questions are never delegated.
 
-### Orchestrator Protocol (MUST)
+### Orchestrator Protocol
 
 - The orchestrator reads the primitive, puts each round and reads the answers.
-- It MUST NOT decide a frontier question on the user's behalf, and MUST NOT
+- It must not decide a frontier question on the user's behalf, and must not
   self-approve the session's end condition.
 
-### Capability Probe (MUST)
+### Capability Probe
 
 1. Read the primitive at session start. That read is the capability check.
 2. Attempt the first fact lookup a decision waits on.
@@ -104,16 +104,16 @@ fact the environment holds, and the questions are never delegated.
 ### Delegation Failure (Hard Stop)
 
 - The primitive unreadable: stop and report it, as above.
-- A lookup `unavailable`: read what can be read directly, under the baseline's
-  sanctioned exception for a read-only fact lookup. Report the class, report
-  every fact that stayed unread, and hold the decisions downstream of it open.
+- A lookup `unavailable`: read what can be read directly, as the baseline's
+  `unavailable` response sets out. Report the class, report every fact that
+  stayed unread, and hold the decisions downstream of it open.
 - A lookup `saturated`: use the baseline's bounded retry branch.
 - Do not simulate roles. Do not answer a dispatched lookup from recollection —
   the frontier would then treat a guess as settled.
 
 ## Work Orders Summary
 
-A session that dispatched any lookup MUST report a `## Work Orders Summary`
+A session that dispatched any lookup must report a `## Work Orders Summary`
 table to the user. Use the shared schema from
 `.qfai/assistant/rule/shared-skill-delegation-baseline.md`, including
 the `Agent instance` column. It is reported, not written: this skill produces no
@@ -123,7 +123,7 @@ file.
 | ---- | ---------------- | --------------- | ------------------------------- | ------------------------------- | ------------------------------- | ---------------------------- |
 | 1    | Reviewer         | `<instance id>` | Read the facts a round waits on | Decision and what it depends on | The fact, and where it was read | PASS/REVISE                  |
 
-### Reviewer Gate (MUST)
+### Reviewer Gate
 
 There is no invoking stage, so the gate is the user reading the record. That is
 why this skill writes no files: a record nobody reads is not a gate, and a file

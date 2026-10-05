@@ -3,7 +3,7 @@
 ## Criteria
 
 ```gherkin
-Feature: Refuse a step tree that a run or a stage skill cannot use
+Feature: Refuse a step tree that a route or a stage skill cannot use
   # AC-0001-0210-01
   Scenario: The shipped step tree passes
     Given the assistant tree `qfai init` writes
@@ -36,9 +36,9 @@ Feature: Refuse a step tree that a run or a stage skill cannot use
     And when a `common-*` step's `requires` is not empty
 
   # AC-0001-0210-05
-  Scenario: A run does not start on a plan whose step is missing
+  Scenario: `plan` refuses a plan whose step is missing
     Given a project missing a step a built-in plan names
-    When `npx qfai workflow start` runs
-    Then it refuses as fail-closed with cause `contract-undeclared`, naming the step
-    And it creates no run
+    When `npx qfai workflow plan` is asked for that plan
+    Then it refuses with the reason `plan-invalid`, naming the step
+    And it writes nothing
 ```

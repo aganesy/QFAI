@@ -145,7 +145,7 @@ beforeAll(async () => {
     requireStep(result, number);
     reports.push(result);
   }
-  map = JSON.parse(await text(root, ".qfai/evidence/migration-spec-to-story/id-map.json")) as IdMap;
+  map = JSON.parse(await text(root, "tmp/qfai-migration/id-map.json")) as IdMap;
 }, 300_000);
 
 afterAll(async () => {

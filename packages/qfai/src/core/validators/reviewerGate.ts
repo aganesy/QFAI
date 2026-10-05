@@ -1,204 +1,12 @@
-/**
- * Reviewer-Gate validators for the second-wave findings:
- *   - R-CERTIFY-VERIFY-CIRCULAR: emitted when a prototyping-phase
- *     certify path reads a verify.json whose scope requires
- *     `/qfai-atdd` or `/qfai-implement` artifacts (option-B violation).
- *   - R-PROMPT-SCANNER-DRIFT: emitted when the
- *     designMdViolations.ts ↔ generator-prompt.md SSOT-sync pair
- *     drifts (a contract clause is present in one side but absent
- *     from the other).
- *
- * Both findings carry a 3-part justification embedded directly in
- * the issue `message` so downstream `qfai validate` ingestion can
- * assert against the non-empty justification requirement.
- */
-import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import type { QfaiConfig } from "../config.js";
-import { PROTOTYPING_JSON_REL } from "../prototyping/paths.js";
-import { readVerifyJson } from "../prototyping/verifyJson.js";
 import type { Issue } from "../types.js";
 import { exists, issue, readSafe } from "./utils.js";
-import { PROMPT_SCANNER_PAIRS } from "./promptScannerPairs.js";
 import {
   MOCK_HREF_PAIRS,
   MOCK_HREF_TEMPLATE_REL,
   MOCK_HREF_VALIDATOR_REL,
 } from "./mockHrefPairs.js";
-
-const SCANNER_REL = "packages/qfai/src/core/prototyping/designMdViolations.ts";
-const PROMPT_REL =
-  "packages/qfai/assets/init/.qfai/assistant/skill/qfai-prototyping/references/generator-prompt.md";
-
-// Verify.json scopes that pull in /qfai-atdd or /qfai-implement
-// artifacts. Reading them at the prototyping phase forms the
-// circular-read pattern that option-B forbids.
-const NON_PROTOTYPING_SCOPES = new Set(["atdd", "full", "implement"]);
-
-/**
- * Load a JSON file as a parsed object (`Record<string, unknown>`) or
- * return `null` when the file is missing / unreadable / not an object.
- *
- * Callers re-narrow each field they read (e.g. `typeof scope === "string"`)
- * so the loader does not need a typed `T` parameter, which would require a
- * bare `as T` cast after the runtime object check — a cast the project rules
- * prohibit.
- */
-async function loadJsonObject(filePath: string): Promise<Record<string, unknown> | null> {
-  if (!(await exists(filePath))) return null;
-  try {
-    const raw = await readFile(filePath, "utf-8");
-    const parsed: unknown = JSON.parse(raw);
-    if (parsed === null || typeof parsed !== "object") return null;
-    // `Record<string, unknown>` is the structural supertype of any parsed
-    // JSON object; callers further narrow each field they read.
-    return parsed as Record<string, unknown>;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Active-loop signal for the canonical prototyping state file. Returns
- * `true` only when a prototyping loop is currently iterating (i.e. has
- * NOT reached a terminal state).
- *
- * Sole criterion: `stopReason === null`.
- *
- * A completed loop sets `stopReason` to one of "converged",
- * "max-iterations", "license-verify-fail", "input-error", etc. While
- * iterating (including cycle-0 seed where `writeSeedMetadata`
- * persists `acceptedIterationIndex = 0` even though no real
- * convergence has happened), `stopReason` stays `null`. Using
- * `acceptedIterationIndex === null` as a secondary gate was too
- * strict — it short-circuited real in-flight runs whose seed had
- * already populated that slot.
- *
- * Rationale: a presence-only check (`proto !== null`) treats any
- * parseable `prototyping.json` as an active loop, so once a file
- * exists from a previous run the gate emits
- * `R-CERTIFY-VERIFY-CIRCULAR` against every subsequent verify.json
- * with scope=atdd|full|implement — a persistent false-positive that
- * blocks the `validate` profile after the loop has already
- * completed. The pipeline deletes the legacy `phase` field on every
- * cycle-0 reset, so gating on `phase` is not viable; gating on the
- * per-loop terminal slot `stopReason` (which the pipeline writes
- * when, and only when, the loop actually finishes) is the
- * structurally correct active-loop signal.
- */
-function isPrototypingLoopActive(proto: Record<string, unknown> | null): boolean {
-  // The state file is a local record, never committed: a missing one is a loop
-  // that has not run in this working tree.
-  if (proto === null) return false;
-  return proto.stopReason === null;
-}
-
-async function detectCertifyVerifyCircular(root: string): Promise<Issue[]> {
-  // Canonical-first with a legacy fallback.
-  const verifyRead = await readVerifyJson(root);
-  const verify = verifyRead.json;
-  // `missing` and `unreadable` both leave no `scope` to reason about, so this
-  // circular-read detector has nothing to say. The broken file itself is not
-  // swallowed: `prototyping certify` hard-fails on `source: "unreadable"`
-  // rather than falling back to the other location.
-  if (!verify) return [];
-  const verifyRel = verifyRead.rel;
-
-  const scopeField = verify.scope;
-  const scopeRaw = typeof scopeField === "string" ? scopeField.trim().toLowerCase() : "";
-  if (!scopeRaw) return [];
-  if (!NON_PROTOTYPING_SCOPES.has(scopeRaw)) return [];
-
-  const protoAbs = path.join(root, PROTOTYPING_JSON_REL);
-  const proto = await loadJsonObject(protoAbs);
-  if (!isPrototypingLoopActive(proto)) return [];
-
-  // 3-part justification: (1) certify path / verify.json path,
-  // (2) offending validator-output profile (scope),
-  // (3) option-B contract clause violated.
-  const message =
-    `R-CERTIFY-VERIFY-CIRCULAR: ${verifyRel} records scope="${scopeRaw}" while a ` +
-    `prototyping loop is iterating (canonical ${PROTOTYPING_JSON_REL} has ` +
-    `stopReason=null), so \`qfai prototyping certify\` will refuse it: option-B ` +
-    `forbids the prototyping certify gate from depending on /qfai-atdd or ` +
-    `/qfai-implement validator outputs (justification: certify=${verifyRel}, ` +
-    `profile=${scopeRaw}, contract=option-B phase-isolation clause). ` +
-    `This is not a defect in the run that wrote it — a full-profile run records ` +
-    `scope="${scopeRaw}" truthfully. Before certifying, close the loop and re-run ` +
-    `/qfai-verify for Work Order H so the file records scope="prototyping".`;
-
-  return [
-    issue(
-      // `info`, not `error`. The rule exists to stop `prototyping certify`
-      // sealing a certificate from a wrong-phase verdict, and
-      // `prototypingCertify.ts` already refuses a non-prototyping scope with
-      // exit 2 — its own comment says this finding "keeps the certify command
-      // self-contained instead of relying on a downstream validate pass".
-      //
-      // At `error` in a repo-wide `validate` it made `/qfai-verify`'s
-      // Completion Contract unsatisfiable outside Work Order H: the skill MUSTs
-      // a `verify.json` whose `scope` "names the stage this run actually
-      // covered — never a stage you did not run", so an ordinary full-profile
-      // run has to write `scope: "full"`, and writing it turned `error=0` into
-      // `error=1`. A loop stays open for weeks while other stages run, and
-      // waivers are restricted to `warning` / `info`, so there was no exit.
-      //
-      // A `scope: "full"` verdict on disk is not damage. Consuming it in
-      // `certify` is, and `certify` refuses. The observation is still worth
-      // making — it tells the operator certification will be refused until the
-      // loop closes — which is what `info` is for.
-      "R-CERTIFY-VERIFY-CIRCULAR",
-      message,
-      "info",
-      verifyRel,
-      "reviewerGate.certifyVerifyCircular",
-    ),
-  ];
-}
-
-async function detectPromptScannerDrift(root: string): Promise<Issue[]> {
-  const scannerAbs = path.join(root, SCANNER_REL);
-  const promptAbs = path.join(root, PROMPT_REL);
-
-  // Pair-sync check applies only when both files exist (consumer repos
-  // installing the QFAI npm package will not have the source-side
-  // scanner; in that case the contract cannot drift here).
-  if (!(await exists(scannerAbs))) return [];
-  if (!(await exists(promptAbs))) return [];
-
-  const scannerText = await readSafe(scannerAbs);
-  const promptText = await readSafe(promptAbs);
-
-  const issues: Issue[] = [];
-  for (const pair of PROMPT_SCANNER_PAIRS) {
-    const inScanner = pair.scannerTokens.every((token) => scannerText.includes(token));
-    const inPrompt = pair.promptTokens.every((token) => promptText.includes(token));
-
-    if (inScanner === inPrompt) continue;
-
-    const modifiedFile = inScanner ? SCANNER_REL : PROMPT_REL;
-    const unpaired = inScanner ? PROMPT_REL : SCANNER_REL;
-    const missingTokens = inScanner ? pair.promptTokens : pair.scannerTokens;
-
-    const message =
-      `R-PROMPT-SCANNER-DRIFT: SSOT-sync pair for clause "${pair.clause}" is asymmetric ` +
-      `(justification: modified=${modifiedFile}, un-paired=${unpaired}, ` +
-      `clause=${pair.clause} — missing tokens [${missingTokens.join(", ")}]).`;
-
-    issues.push(
-      issue(
-        "R-PROMPT-SCANNER-DRIFT",
-        message,
-        "error",
-        modifiedFile,
-        "reviewerGate.promptScannerDrift",
-      ),
-    );
-  }
-
-  return issues;
-}
 
 /**
  * Detect drift across the discussion mock template ↔ QFAI-MOCK-010
@@ -206,7 +14,7 @@ async function detectPromptScannerDrift(root: string): Promise<Issue[]> {
  * when one side adopts the same-origin absolute `/path/` form without
  * the matching change on the other side.
  *
- * Like detectPromptScannerDrift, the check applies only when both
+ * The check applies only when both
  * source files exist (consumer repos installing the QFAI npm package
  * lack the validator source, so the contract cannot drift there).
  *
@@ -250,21 +58,4 @@ export async function detectMockHrefDrift(root: string): Promise<Issue[]> {
   }
 
   return issues;
-}
-
-/**
- * Composite Reviewer-Gate validator. Returns the union of the sdd-profile
- * Reviewer-Gate findings (R-CERTIFY-VERIFY-CIRCULAR +
- * R-PROMPT-SCANNER-DRIFT).
- *
- * R-MOCK-HREF-DRIFT is intentionally NOT part of this union: it guards a
- * prototyping-profile surface (the mock template + QFAI-MOCK-010) and is
- * invoked via detectMockHrefDrift from runPrototypingValidators instead.
- */
-export async function validateReviewerGate(root: string, _config: QfaiConfig): Promise<Issue[]> {
-  const [circular, drift] = await Promise.all([
-    detectCertifyVerifyCircular(root),
-    detectPromptScannerDrift(root),
-  ]);
-  return [...circular, ...drift];
 }

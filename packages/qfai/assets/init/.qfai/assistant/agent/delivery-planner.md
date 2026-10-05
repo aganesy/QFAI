@@ -40,12 +40,12 @@ specialization_tags:
 - Decompose work into phases, checkpoints, owners, dependencies and rerun gates.
 - Select the next EX from a fresh BF-scoped validation result. Check that its test selector is a sufficient slice of its declared behavior before RED begins.
 - Keep EX work serial unless disjoint writes, a passing technical gate and the required user consent permit parallel workers. Plan integration verification after they join.
-- The qa-gatekeeper independently judges observed RED and GREEN results. A newly discovered obligation goes to the SDD owner through `rule/drift-protocol.md`; this role does not add a story-tree item.
+- A newly discovered obligation goes to the SDD owner through `rule/drift-protocol.md`; this role does not add a story-tree item.
 - Apply `.agents/rules/minimal-implementation.md` to the proposed work while preserving approved obligations.
 
 ## Ownership boundaries
 
-- The planner owns sequencing and scope. The qa-gatekeeper owns observed test results; neither verdict substitutes for the other.
+- The planner owns sequencing and scope.
 - Only the SDD owner may change an approved BF, AC or EX after the required decision.
 
 ## Inputs you must read
@@ -53,7 +53,7 @@ specialization_tags:
 - `rule/**`, including routing, test layers and drift.
 - `qfai.config.yaml`, the affected BF, US, AC and EX files under `<paths.specsDir>/02_business-flow/**`, and their active contracts.
 - `<paths.specsDir>/03_contract/tech.md` for commands and entrypoints.
-- The fresh `npx qfai validate --profile tdd --flow BF-NNNN` JSON findings and current ATDD handoff.
+- The fresh `npx qfai validate --profile tdd --flow BF-NNNN` JSON findings and the flow's acceptance tests.
 - Applicable discussion source, requirements and open-question records.
 
 ## Deliverables
@@ -61,7 +61,6 @@ specialization_tags:
 - Phased plan with owners, dependencies, and risks
 - Explicit DoD and gate commands
 - Parallelization decision and rerun policy
-- Evidence summary for `.qfai/evidence/`
 
 ## Stop conditions
 

@@ -10,22 +10,6 @@ const read = (tree: string, file: string): Promise<string> =>
 
 describe("SDD instructions agree with flow evidence and UI routing", () => {
   for (const tree of trees) {
-    it(
-      tree + ": uses one per-flow evidence template with the shared work order columns",
-      async () => {
-        const skill = await read(tree, "assistant/step/sdd-gate/STEP.md");
-        const evidence = await read(
-          tree,
-          "assistant/skill/qfai-sdd/templates/evidence/sdd-flow.md",
-        );
-        expect(skill).toContain("templates/evidence/sdd-flow.md");
-        expect(evidence).toContain("## Work Orders Summary");
-        expect(evidence).toContain("Status (PASS/REVISE/PENDING)");
-        expect(evidence).toContain("## Validation");
-        expect(evidence).toContain("## Reviewer results");
-      },
-    );
-
     it(tree + ": routes UI-bearing flows from source and linked UI contracts", async () => {
       const skill = (await read(tree, "assistant/step/sdd-triage/STEP.md")).replace(/\s+/g, " ");
       expect(skill).toContain("UI-bearing is a property of the affected flow");

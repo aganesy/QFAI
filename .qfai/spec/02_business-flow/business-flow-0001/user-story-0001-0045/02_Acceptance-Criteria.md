@@ -5,8 +5,8 @@
 ```gherkin
 Feature: Deprecated assistant paths and skill project memory
   # AC-0001-0045-01
-  Scenario: The legacy steering layout raises D-DEPRECATED-PATH naming the sunset
-    Given a project still carrying `.qfai/assistant/steering/` after the v1.9.0 release
+  Scenario: The legacy instructions layout raises D-DEPRECATED-PATH naming the sunset
+    Given a project still carrying `.qfai/assistant/instructions/` after the v1.9.0 release
     When `qfai validate` runs in v1.9.x
     Then `D-DEPRECATED-PATH` warning is emitted with the body string literally containing `sunset: v1.10.0`; in v1.10.0+ the same condition escalates to error per REQ-0008 (handled by spec-0003 sunset semantics + spec-0004 validator severity table)
 
