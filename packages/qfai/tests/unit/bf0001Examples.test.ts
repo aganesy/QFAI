@@ -68,7 +68,12 @@ function table(rows: string[] = []): string {
 }
 
 function testFile(file: string, kind: StoryTestFile["kind"], annotation: string): StoryTestFile {
-  return { file, kind, content: `// ${annotation}\n`, selectedForExample: true };
+  return {
+    file,
+    kind,
+    content: `// ${annotation}\nit("sample", () => {});\n`,
+    selectedForExample: true,
+  };
 }
 
 function annotation(kind: "BF" | "AC" | "EX", id: string): string {
