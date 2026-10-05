@@ -57,12 +57,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The init skill-link test compares where each link resolves.** It matched
+  the trailing text of the raw link target, so a dangling link, or one into a
+  copy outside the project, passed. It now compares the resolved path of each
+  link with that of the canonical skill directory. Fixes #2230.
+
 - **A verify run tells a failure that predates the change from one it caused.**
   A failing gate is now run again on the base commit, and the result is
   recorded in the `gates` of `verify.json` as a `baseline` of `same`,
   `different` or `unrun`. A gate that could not run is recorded `UNRUN` with
   its `reason`. The run still stops before the commit, and the final report
   lists these gates apart from the failures the run caused. Fixes #2982.
+
 - **`qfai validate` and `qfai report --run-validate` no longer read an
   unreadable legacy validate path as absent.** The check for a stale
   `.qfai/output/validate.json` treated every `stat` failure as "not on disk".
@@ -123,6 +129,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   turned `main` red. A tag on the commit being checked is now the release being
   cut and does not make its section released (#2945).
 
+- **A padded or blank test glob selects the same files in every scan.** The
+  story-tree test scan and the spec-to-story annotation rewrite read
+  `validation.traceability.testFileGlobs` and `testFileExcludeGlobs` as written,
+  while the other scans trimmed them. All of them now trim whitespace at either
+  end of an entry, including after the `!` of an exclusion, and skip a blank
+  entry. Whitespace inside a path component is kept; a path that begins or ends
+  with a space is matched with `?` or `[ ]`. A leading `!(` extglob is read as a
+  pattern, not an exclusion. Fixes #2902.
+
 - **The migration skill cites its shared rules by full path.** The
   delegation-baseline and test-layers pointers started at `rule/`, so they did
   not resolve from the project root. Both now begin at `.qfai/assistant/rule/`.
@@ -133,6 +148,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   now lists the shipped workflow files init leaves out, and `qfai validate`
   reports a value that is not a list of shipped names. The headers of
   `qfai-tests.yml` and `qfai-validate.yml` describe this. Fixes #2979.
+
+- **`qfai validate` no longer reports the one-off load of its HTML parser as an
+  over-budget run.** The parser's DOM library loaded on the first parsed block,
+  inside the mock-parse clock, and the UI/UX group's clock counted it as well. On
+  a cold disk cache that load took about 25 seconds, so both checks printed
+  `timings: over budget` on a repository with a handful of mock blocks. The load
+  now happens before the parse clock starts and is left out of the group's
+  measurement. Fixes #2997.
 
 - **A rewritten decision row no longer authorizes a protected file.** A
   `Change request:` row the base already holds could have its Content changed
@@ -176,6 +199,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The documentation-clarity rule says where spec-tree IDs may appear** (#3002).
+  IDs the project's own spec tree defines stay in spec-tree documents and in code
+  or test comments that point at a contract or example. Operator-facing guides
+  and shipped files describe the rule in words instead.
+
 - **Every skill the agent may select says when to select it** (#2247).
   `qfai-configure`, `qfai-grilling`, `qfai-migration-v1-to-v2` and
   `web-research` gain a "Use when" sentence in their `description:`.
@@ -189,6 +217,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `references/stage-points.md`, which the skill points to at each step. The
   skill keeps its 150-line limit, at 135 lines instead of 150, and its
   behaviour is unchanged.
+
+- **The `change-tooling` route starts at `edit`** (#2995). A change to CI, a
+  workflow or a build script has no business flow, story or example, so the
+  `implement-diagnose` stage it began with had nothing to record and was passed
+  over. The plan is now `edit`, `note`, `verify`, and the contract rule and the
+  example that state it say the same.
 
 - **A mutation proof belongs to one example** (#2409). The `qfai-implement`
   oracle-strength reference now says what to do when one mutation fails tests
@@ -228,6 +262,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   test that existed before the change. The three other questions a regression
   review asks point at the checks that already own them: the coverage gate, and
   the proof per example in the oracle strength reference.
+
+- **The repository's dogfooding ratchet pins each finding, not each file's
+  count.** `scripts/check-dogfood-backlog.mjs` keys an error by its code and the
+  IDs it names, so a change that clears one untested example and adds another
+  in the same file no longer passes at the same count. A pin still written as a
+  bare count is refused with the command that re-pins it. Fixes #2355.
+
 - **Five doctor criteria now name the tests that prove them.** Existing
   integration tests carry standalone `QFAI:AC-...` comments, and
   `AC-0003-0004-01` gains a deprecated `paths.promptsDir` warning case.

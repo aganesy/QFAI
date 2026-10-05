@@ -15,6 +15,7 @@ import {
   widestMeasurableLine,
 } from "../../../src/core/doctor/assetLineBudget.js";
 import { runLintShipping } from "../../../scripts/lint-shipping.js";
+import { WORKFLOW_ROUTES } from "../../../src/core/workflow/routes.js";
 import { removeTempTree } from "../../helpers/tempTree.js";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
@@ -67,7 +68,7 @@ it("Run the asset line budget over qfai-run, qfai-maintain, the plans and the sc
     schemas: files.filter((file) => file.endsWith(".schema.json")).length,
     plans: files.filter((file) => file.endsWith(".yml")).length,
     over,
-  }).toEqual({ budget: [800, 400], schemas: 2, plans: 35, over: [] });
+  }).toEqual({ budget: [800, 400], schemas: 2, plans: WORKFLOW_ROUTES.length, over: [] });
 });
 
 // A bash that runs the guard. A process started from PowerShell has no `bash` on its PATH, so a
@@ -109,7 +110,7 @@ async function postBuildGuard(shell: string): Promise<{ status: number | null; o
   return { status: run.status, output: `${run.stdout}${run.stderr}` };
 }
 
-it("Read the two shipped schemas and the 35 plans", async () => {
+it("Read the two shipped schemas and the plans", async () => {
   const schemas = (await filesUnder(SCHEMAS)).sort();
   const ids: string[] = [];
   const versioned: string[] = [];

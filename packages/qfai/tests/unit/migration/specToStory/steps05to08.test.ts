@@ -1049,6 +1049,26 @@ describe("migration steps 5 to 8", () => {
     expect(c.output.join("")).toContain("QFAI:SPEC-0001:TC-0001-9999");
   });
 
+  it("selects test files with padded globs and exclusions like the unpadded ones", async () => {
+    const context = await fixture();
+    context.config.validation.traceability.testFileGlobs = [
+      " tests/**/*.test.ts ",
+      " !tests/integration/skipped.test.ts ",
+    ];
+    context.config.validation.traceability.testFileExcludeGlobs = [" tests/e2e/** ", "   "];
+    const legacy = "// QFAI:SPEC-0001:TC-0001-0001\n";
+    await put(context.root, "tests/integration/checkout.test.ts", legacy);
+    await put(context.root, "tests/integration/skipped.test.ts", legacy);
+    await put(context.root, "tests/e2e/checkout.test.ts", legacy);
+    await executePlannedStep(step08, context, false, capture().io);
+    expect(
+      await readFile(path.join(context.root, "tests/integration/checkout.test.ts"), "utf8"),
+    ).toContain(["QFAI", "EX-0001-0001-02"].join(":"));
+    for (const untouched of ["tests/integration/skipped.test.ts", "tests/e2e/checkout.test.ts"]) {
+      expect(await readFile(path.join(context.root, untouched), "utf8")).toBe(legacy);
+    }
+  });
+
   // QFAI:EX-0004-0010-05
   it("leaves a legacy criterion annotation in place and reports it for a person", async () => {
     const context = await fixture();
