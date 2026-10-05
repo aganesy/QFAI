@@ -142,7 +142,7 @@ describe("the implementation reviewer reads silent failure and type design", () 
         "silent failure and type design across the whole of every file the change touches",
       );
       expect(row).toContain(
-        "a finding on code in a touched file that the change did not add or alter",
+        "| Upstream spec content, contract design, and a finding on code in a touched file that the change did not add or alter |",
       );
     },
   );

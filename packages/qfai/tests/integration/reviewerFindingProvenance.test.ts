@@ -9,6 +9,7 @@ import { getInitAssetsDir } from "../../src/shared/assets.js";
 const assistantDir = path.join(getInitAssetsDir(), ".qfai", "assistant");
 const driftPath = path.join(assistantDir, "rule", "drift-protocol.md");
 const baselinePath = path.join(assistantDir, "rule", "shared-skill-delegation-baseline.md");
+const reviewerCardPath = path.join(assistantDir, "agent", "implementation-reviewer.md");
 const skillPath = path.join(assistantDir, "step", "implement-tdd", "STEP.md");
 const classificationPath = path.join(
   assistantDir,
@@ -32,6 +33,56 @@ describe("reviewer finding provenance", () => {
       expect(baseline).toContain(cls);
     }
     expect(baseline).toMatch(/does not need an .AC-\*. to say so/);
+  });
+
+  it("names review as the security defect detector, since no gate scans for one", async () => {
+    const flatten = (text: string) => text.replace(/\s+/g, " ");
+    const [drift, card, baseline] = await Promise.all([
+      readFile(driftPath, "utf-8").then(flatten),
+      readFile(reviewerCardPath, "utf-8").then(flatten),
+      readFile(baselinePath, "utf-8"),
+    ]);
+    expect(drift).toContain(
+      "No repository gate scans for a security or data-integrity defect. Review is that class's detector: `.qfai/assistant/agent/implementation-reviewer.md` checks each change",
+    );
+    expect(drift).toContain(
+      "A finding the reviewer demonstrates traces to `defect:security` and blocks like the other blocking classes.",
+    );
+    // The protocol names three shapes, and the reviewer it names must check each one.
+    for (const shape of [
+      "missing validation on an input the code already treats as trusted",
+      "credential or personal-data exposure",
+      "an injection or traversal path opened by the change",
+    ]) {
+      expect(drift).toContain(shape);
+      expect(card).toContain(shape);
+    }
+    expect(card).toContain(
+      "Cover injection, cross-site scripting, server-side request forgery, hardcoded secrets, insecure direct object reference, auth bypass, unsafe deserialization and path traversal.",
+    );
+    expect(card).toContain(
+      "Judge validation at a trust boundary against `.agents/rules/minimal-implementation.md` § 2.",
+    );
+    // Security falls under the one scope item the card already carries.
+    expect(card).toContain(
+      "Security, read on the same scope as silent failure and type design above.",
+    );
+    expect(card).toContain(
+      "Follow every input the change adds or alters to where it is used, across files the change did not touch.",
+    );
+    expect(card).toContain(
+      "A path the change opens there, such as an insecure direct object reference, " +
+        "a server-side request forgery or an auth bypass reached through several files, blocks.",
+    );
+    expect(card).toContain(
+      "This is the one reach beyond the touched files, and it covers only the inputs the change handles.",
+    );
+    expect(card).toContain("traces to `defect:security`");
+    const rows = baseline.split(/\r?\n/).filter((line) => line.startsWith("| `/qfai-implement`"));
+    expect(rows).toHaveLength(1);
+    expect(flatten(rows[0] ?? "")).toContain(
+      "and security across the same files and along every input the change adds or alters to where it is used",
+    );
   });
 
   it("routes new scope through the SDD owner before it becomes binding", async () => {
