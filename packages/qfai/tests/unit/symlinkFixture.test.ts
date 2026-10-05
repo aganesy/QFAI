@@ -14,9 +14,7 @@ describe("symlink fixture setup", () => {
     await expect(
       createSymlinkFixture("/fixture/target", "/fixture/link", "dir", {
         platform: "win32",
-        createSymlink: async () => {
-          throw refused;
-        },
+        createSymlink: () => Promise.reject(refused),
       }),
     ).resolves.toBe(false);
   });
@@ -24,7 +22,7 @@ describe("symlink fixture setup", () => {
   it("reports a created link as available", async () => {
     await expect(
       createSymlinkFixture("/fixture/target", "/fixture/link", "dir", {
-        createSymlink: async () => undefined,
+        createSymlink: () => Promise.resolve(),
       }),
     ).resolves.toBe(true);
   });
@@ -36,9 +34,7 @@ describe("symlink fixture setup", () => {
     await expect(
       createSymlinkFixture("/fixture/target", "/fixture/link", "dir", {
         platform: "linux",
-        createSymlink: async () => {
-          throw refused;
-        },
+        createSymlink: () => Promise.reject(refused),
       }),
     ).rejects.toBe(refused);
   });
@@ -50,9 +46,7 @@ describe("symlink fixture setup", () => {
     await expect(
       createSymlinkFixture("/fixture/target", "/fixture/link", "dir", {
         platform: "win32",
-        createSymlink: async () => {
-          throw unexpected;
-        },
+        createSymlink: () => Promise.reject(unexpected),
       }),
     ).rejects.toMatchObject({
       code: "ENOENT",
