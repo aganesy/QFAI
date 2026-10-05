@@ -155,10 +155,11 @@ const SUPERSEDED_HOOK_GROUPS: ReadonlySet<string> = new Set([
   "18aefbcf40d6b8f8ea4d9ec1653c071adb11b0ec63830c460204896c00297af3",
   // structured question
   "50b1cbf2727d6fd0ad6561847e11bcb70090aa4dca4f7571ca30add9139617b4",
-  // grilling design artifact, and documentation clarity after a write or edit,
-  // before both skipped the run's own records
-  "3d67d2654ce6fbe4cd060a55598ecd5b0198f06c7b13b8b75ea3462e0fc122ac",
-  "871cd5dc08d66d273b1ce1be9325da13b53999269b5cd72831d5cf8d501c2b72",
+  // grilling design artifact, documentation clarity after a write or edit, and
+  // minimal implementation, while they skipped the run's own records
+  "65ebbdd8b1f90c1d74903fea8825bc88d690ffecc9812ebc24dbce08b1183ce0",
+  "d9bcff10eec6b956afac8917ea2f015443a1c7a2033e589faad8847d1dcb2c43",
+  "d0ca4f31020f37882d1f93448a0f77dfcdd21a66d25f0562961576e60d351fea",
   // Codex: every group of the file whose Windows line ran only under `cmd.exe`
   "dba38a95f6008a2371c7a19f965d9e5c5cfedff81b956b9fdc9a5ae60378f0f6",
   "143a27e53eb0cace36d4079b931a48c5e057a44e8aa0c11064f018aa7bd74128",
@@ -168,8 +169,6 @@ const SUPERSEDED_HOOK_GROUPS: ReadonlySet<string> = new Set([
   "981058fa84e7c20eb9a72815aa6d132cbd8dbfbbe7e2a99db24a209e0b034723",
   "15d21b0c00535c6f8241a4fbefb670c9d01bbdf15e9b18337d5fc76ed09b8879",
   "b537eee9778a7273ddaffb33513e9202394894ef8e0eecdf7a961d85b8cb7a5c",
-  // minimal implementation after a write or edit, before it skipped the run's own records
-  "cd1490ce2ef9062619617277eb4d684d6b1d934f9b1ed2df2751660d6c72e650",
   // structured question: the program that read no input, before it skipped automated turns
   "ace5deb2efa50f5c8dcdfbb595c94073a50a064e7cae46e27a49a1217dbabd0c",
 ]);

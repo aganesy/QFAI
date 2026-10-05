@@ -1,4 +1,3 @@
-// QFAI:EX-0001-0039-08
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -18,7 +17,7 @@ const SHIPPED_ASSISTANT_ROOT = "packages/qfai/assets/init/.qfai/assistant";
 
 /**
  * Root mirror of the shipped surface. Only mirrored paths are scanned — the root
- * tree also carries legacy, non-distributed docs (`steering/**`, superseded
+ * tree also carries legacy, non-distributed docs (superseded
  * migration notes) that this repo keeps for its own history.
  */
 const ROOT_ASSISTANT_MIRROR = ".qfai/assistant";
@@ -32,13 +31,12 @@ const BASELINE_PATHS = [
  * First-token commands the CLI actually registers; a bare invocation of any of
  * them is not on PATH.
  *
- * These are the FIRST token only. `audit` and `atdd` take their action as a
- * second token (`qfai audit log`, `qfai atdd scaffold` — see `cli/main.ts`
- * usage). Spelling them here as `audit-log` / `atdd-scaffold` matched nothing
- * the CLI accepts, so a doc that reintroduced a bare `qfai audit log` passed
- * this guard untouched.
+ * These are the FIRST token only. `atdd` takes its action as a second token
+ * (`qfai atdd scaffold` — see `cli/main.ts` usage). Spelling it here as
+ * `atdd-scaffold` matched nothing the CLI accepts, so a doc that reintroduced a
+ * bare `qfai atdd scaffold` passed this guard untouched.
  */
-const SUBCOMMANDS = "(?:validate|init|report|doctor|prototyping|discussion|audit|atdd|workflow)";
+const SUBCOMMANDS = "(?:validate|init|report|doctor|prototyping|discussion|atdd|workflow)";
 
 const INLINE_BARE = new RegExp("`qfai " + SUBCOMMANDS + "\\b");
 const FENCED_BARE = new RegExp("^\\s*qfai " + SUBCOMMANDS + "\\b");
@@ -85,6 +83,7 @@ async function collectAssistantDocs(): Promise<string[]> {
   return files;
 }
 
+// QFAI:EX-0001-0039-08
 describe("shipped assistant docs invoke qfai through the canonical launcher", () => {
   it("no shipped doc prescribes a bare qfai invocation", async () => {
     const files = await collectAssistantDocs();

@@ -1,11 +1,10 @@
-import { mkdir, open, readFile } from "node:fs/promises";
+import { constants } from "node:fs";
+import { lstat, mkdir, open } from "node:fs/promises";
 import path from "node:path";
 
 import { atddTestKindDirs } from "../atddTraceability.js";
 import { isStoryTreeId } from "../storyTree/ids.js";
 import { DEFAULT_SCAFFOLD_DIALECT, type ScaffoldDialect } from "./scaffoldDialect.js";
-
-export const SCAFFOLD_PLACEHOLDER_MARKER = "QFAI-SCAFFOLD-PLACEHOLDER";
 
 export type ScaffoldTarget =
   { id: string; kind: "AC"; storyId: string } | { id: string; kind: "BF" };
@@ -23,28 +22,17 @@ export function buildSkeleton(
   dialect: ScaffoldDialect = DEFAULT_SCAFFOLD_DIALECT,
 ): string {
   if (!isScaffoldTarget(target)) throw new TypeError(`Invalid scaffold target: ${target.id}`);
-  const prefix = dialect.commentPrefix;
   return [
-    `${prefix} QFAI:${target.id}`,
-    `${prefix} ${SCAFFOLD_PLACEHOLDER_MARKER} — replace this block with a real assertion.`,
+    `${dialect.commentPrefix} QFAI:${target.id}`,
     "",
     ...dialect.buildBody(target.id),
     "",
   ].join("\n");
 }
 
-export function isStillPlaceholder(body: string, id: string): boolean {
-  return (
-    body.includes(SCAFFOLD_PLACEHOLDER_MARKER) &&
-    body.includes(`TODO: implement assertion for ${id}`)
-  );
-}
-
 export type EmitSkeletonResult = {
   destPath: string;
   wrote: boolean;
-  alreadyPlaceholder: boolean;
-  alreadyProgressed: boolean;
 };
 
 export async function emitSkeleton(
@@ -61,12 +49,49 @@ export async function emitSkeleton(
     } finally {
       await handle.close();
     }
-    return { destPath, wrote: true, alreadyPlaceholder: false, alreadyProgressed: false };
+    return { destPath, wrote: true };
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
-    const existing = await readFile(destPath, "utf8");
-    const alreadyPlaceholder = isStillPlaceholder(existing, target.id);
-    return { destPath, wrote: false, alreadyPlaceholder, alreadyProgressed: !alreadyPlaceholder };
+    await assertReadableTestFile(destPath);
+    return { destPath, wrote: false };
+  }
+}
+
+/** Open errors that say the destination is a link or a directory rather than a file. */
+const NOT_A_FILE_CODES = new Set(["ELOOP", "EISDIR", "ENOENT"]);
+
+/**
+ * Only an existing, readable test file is kept. A directory, a link or a FIFO
+ * at the destination is not a test, and a file the run cannot read is not one
+ * it can report as kept.
+ *
+ * Everything is judged through one descriptor, opened without following a
+ * link and without blocking where the platform offers both. Where it does not,
+ * the path's own `lstat` has to name the file the descriptor holds.
+ */
+async function assertReadableTestFile(destPath: string): Promise<void> {
+  const notATest = (cause: unknown) =>
+    new Error(`${destPath} exists and is not a test file`, { cause });
+  // Windows defines neither flag, whatever the type declarations say.
+  const optional: Partial<Record<"O_NOFOLLOW" | "O_NONBLOCK", number>> = constants;
+  const flags = constants.O_RDONLY | (optional.O_NOFOLLOW ?? 0) | (optional.O_NONBLOCK ?? 0);
+  let handle;
+  try {
+    handle = await open(destPath, flags);
+  } catch (error) {
+    const code = error instanceof Error && "code" in error ? error.code : undefined;
+    if (typeof code === "string" && NOT_A_FILE_CODES.has(code)) throw notATest(error);
+    throw error;
+  }
+  try {
+    const held = await handle.stat({ bigint: true });
+    const named = await lstat(destPath, { bigint: true });
+    if (!held.isFile() || !named.isFile() || held.ino !== named.ino || held.dev !== named.dev) {
+      throw notATest(undefined);
+    }
+    await handle.read(Buffer.alloc(1), 0, 1, 0);
+  } finally {
+    await handle.close();
   }
 }
 

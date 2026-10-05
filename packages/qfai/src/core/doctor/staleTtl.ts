@@ -13,11 +13,7 @@
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/**
- * Directory-agnostic age predicate. Both the review-pack archival path
- * and the run-log pruning path share these boundary semantics, so the
- * rule lives here once rather than being restated per cleanup target.
- */
+/** Age predicate for the run-log prune. */
 export function isStaleByTtl(mtimeMs: number, ttlDays: number, nowMs: number): boolean {
   if (!Number.isFinite(mtimeMs) || !Number.isFinite(ttlDays) || !Number.isFinite(nowMs)) {
     return false;
@@ -32,20 +28,7 @@ export function isStaleByTtl(mtimeMs: number, ttlDays: number, nowMs: number): b
   return ageMs > ttlDays * DAY_MS;
 }
 
-export function isReviewPackArchiveEligible(
-  mtimeMs: number,
-  ttlDays: number,
-  nowMs: number,
-): boolean {
-  return isStaleByTtl(mtimeMs, ttlDays, nowMs);
-}
-
-export const REVIEW_STALE_TTL_DAYS_DEFAULT = 14;
-
-/**
- * Calendar-day TTL applied to `<outDir>/run-*` validate run logs.
- * Matches the review-pack default so operators only learn one number.
- */
+/** Calendar-day TTL applied to `<outDir>/run-*` validate run logs. */
 export const RUN_LOG_STALE_TTL_DAYS_DEFAULT = 14;
 
 /**

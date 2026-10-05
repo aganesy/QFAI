@@ -20,14 +20,13 @@
  * `tests/eval/records/<host>-<version>.json`. A failing route evaluation blocks the verdict.
  */
 import { spawnSync } from "node:child_process";
-import { cp, mkdir, mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { it } from "vitest";
 
-import { hashAssistantAssetText } from "../../src/core/assistantAssetProvenance.js";
 import { loadBuiltInPlans } from "../../src/core/workflow/plans.js";
 import {
   buildSeedFixture,
@@ -79,12 +78,37 @@ function git(root: string, args: string[]): void {
   if (result.status !== 0) throw new Error(`git ${args.join(" ")}: ${result.stderr}`);
 }
 
-// The local launcher `npx qfai` resolves in the fixture, pointing at this package's build.
+// Where the launcher records each document `npx qfai workflow plan` printed in a seed's run.
+const PLAN_LOG = path.join("tmp", "qfai-plans.jsonl");
+
+// Runs this package's build and, for `workflow plan`, appends its one JSON document to the log.
+const RECORDER = `import { spawnSync } from "node:child_process";
+import { appendFileSync, mkdirSync } from "node:fs";
+import path from "node:path";
+const args = process.argv.slice(2);
+const run = spawnSync(process.execPath, [${JSON.stringify(CLI)}, ...args], {
+  stdio: ["inherit", "pipe", "inherit"],
+  encoding: "utf8",
+});
+process.stdout.write(run.stdout ?? "");
+if (args[0] === "workflow" && args[1] === "plan") {
+  const log = path.join(process.cwd(), ${JSON.stringify(PLAN_LOG)});
+  mkdirSync(path.dirname(log), { recursive: true });
+  appendFileSync(log, JSON.stringify(JSON.parse(run.stdout)) + "\\n");
+}
+process.exit(run.status ?? 1);
+`;
+
+// The local launcher `npx qfai` resolves in the fixture: this package's build, recording plans.
 async function installLauncher(root: string): Promise<void> {
   const bin = path.join(root, "node_modules", ".bin");
   await mkdir(bin, { recursive: true });
-  await writeFile(path.join(bin, "qfai"), `#!/bin/sh\nexec node "${CLI}" "$@"\n`, { mode: 0o755 });
-  await writeFile(path.join(bin, "qfai.cmd"), `@node "${CLI}" %*\r\n`);
+  const recorder = path.join(bin, "qfai-recorder.mjs");
+  await writeFile(recorder, RECORDER);
+  await writeFile(path.join(bin, "qfai"), `#!/bin/sh\nexec node "${recorder}" "$@"\n`, {
+    mode: 0o755,
+  });
+  await writeFile(path.join(bin, "qfai.cmd"), `@node "${recorder}" %*\r\n`);
 }
 
 async function base(): Promise<string> {
@@ -109,111 +133,44 @@ function commit(root: string): void {
   ]);
 }
 
-async function jsonFiles(dir: string): Promise<unknown[]> {
-  const names = (await readdir(dir).catch(() => [])).filter((name) => name.endsWith(".json"));
-  return Promise.all(
-    names
-      .sort()
-      .map(async (name): Promise<unknown> =>
-        JSON.parse(await readFile(path.join(dir, name), "utf8")),
-      ),
-  );
-}
-
 const read = (value: unknown, key: string): unknown =>
   typeof value === "object" && value !== null ? Reflect.get(value, key) : undefined;
 
-// The route the run's journal last decided: the decision rules' choice, or the answer to the
-// candidate question. The snapshot's route decision answers when the journal names none. A run
-// still waiting on the candidate question has no route yet.
-function routeOf(events: unknown[], snapshot: unknown): string | null {
-  const decided = events.map((event) =>
-    read(event, "event") === "route-decided" ? read(event, "route") : undefined,
-  );
-  const route =
-    decided.reverse().find((each) => typeof each === "string") ??
-    read(read(snapshot, "routeDecision"), "route");
-  return typeof route === "string" ? route : null;
+// Every document `workflow plan` printed in the seed's run, in order.
+async function planDocuments(root: string): Promise<unknown[]> {
+  const text = await readFile(path.join(root, PLAN_LOG), "utf8").catch(() => "");
+  return text
+    .split("\n")
+    .filter(Boolean)
+    .map((line): unknown => JSON.parse(line));
 }
 
-// Whether the run asked the operator anything a seed scores. A story-authoring stage asks for
-// every change it makes, so a question opened while an `sdd` work order is the last one issued
-// does not count.
-function askedQuestion(events: unknown[]): boolean {
-  let outstanding: unknown;
-  for (const event of events) {
-    const name = read(event, "event");
-    if (name === "work-order-issued") outstanding = read(read(event, "workOrder"), "stageKind");
-    if (name === "question-opened" && outstanding !== "sdd") {
-      return true;
-    }
-  }
-  return false;
-}
+const routesOf = (documents: unknown[]): string[] =>
+  documents.map((each) => read(each, "route")).filter((route) => typeof route === "string");
 
-// The directory of the run a seed opened, or `undefined` when it opened none.
-async function runDirOf(root: string): Promise<string | undefined> {
-  const runs = (await readdir(path.join(root, ".qfai", "run")).catch(() => [])).filter((name) =>
-    /^run-\d{17}$/.test(name),
-  );
-  const [runId] = runs;
-  return runId === undefined ? undefined : path.join(root, ".qfai", "run", runId);
-}
-
-async function snapshotOf(runDir: string): Promise<unknown> {
-  return JSON.parse(await readFile(path.join(runDir, "snapshot.json"), "utf8").catch(() => "null"));
-}
-
-// SIMPLIFIED: observes the route, the stage kinds the run issued work orders for, and whether
-// the run asked the operator anything a seed scores.
-// Lift when: a host transcript format is settled, so the other behaviour a token names can be read.
+// SIMPLIFIED: observes the route the last plan names and the stage kinds of that plan; whether
+// the session asked the user anything is not observed, so that axis is not scored.
+// Lift when: a host transcript format is settled, so a question put to the user can be read.
 async function observe(root: string, seedId: string) {
-  const runDir = await runDirOf(root);
-  if (runDir === undefined) {
-    return { run: { seedId, route: null, observed: [], askedQuestion: false }, measurements: [] };
-  }
-  const events = await jsonFiles(path.join(runDir, "journal"));
-  const orders = await jsonFiles(path.join(runDir, "work-orders"));
+  const documents = await planDocuments(root);
+  const last = documents.filter((each) => typeof read(each, "route") === "string").at(-1);
+  const stages = read(last, "stages");
   const run: RunRecord = {
     seedId,
-    route: routeOf(events, await snapshotOf(runDir)),
-    observed: orders.map((order) => String(read(order, "stageKind"))),
-    askedQuestion: askedQuestion(events),
+    route: routesOf(documents).at(-1) ?? null,
+    observed: (Array.isArray(stages) ? stages : []).map((stage) => String(read(stage, "kind"))),
+    askedQuestion: null,
   };
-  const results = await jsonFiles(path.join(runDir, "results"));
-  return { run, measurements: results.map((result) => read(result, "measurement") ?? null) };
+  return { run, measurements: [] };
 }
 
-// A modifier as the execution context records it: its name, alone or beside where it came from.
-const modifierName = (value: unknown): unknown =>
-  typeof value === "string" ? value : read(value, "modifier");
-
-// The confidence of the extraction a routing result carried, on the result or on its proposal.
-function confidenceOf(results: unknown[]): string | null {
-  for (const result of results) {
-    const extraction = read(result, "extraction") ?? read(read(result, "proposal"), "extraction");
-    const confidence = read(extraction, "confidence");
-    if (typeof confidence === "string") return confidence;
-  }
-  return null;
-}
-
-// What a route evaluation seed is scored on: every route the run accepted a plan for, in order,
-// the modifiers the run carries and the confidence it was routed at.
+// What a route evaluation seed is scored on: every route the session planned, in order, and
+// `low` where `plan` returned candidates. Plans carry no modifiers, so a safety class is judged
+// by the route and the candidates alone.
 async function observeRoutes(root: string, seedId: string): Promise<RouteRun> {
-  const runDir = await runDirOf(root);
-  if (runDir === undefined) return { seedId, routes: [], modifiers: [], confidence: null };
-  const events = await jsonFiles(path.join(runDir, "journal"));
-  const routes = events
-    .filter((event) => read(event, "event") === "plan-accepted")
-    .map((event) => read(read(event, "plan"), "route"))
-    .filter((route) => typeof route === "string");
-  const recorded = read(await snapshotOf(runDir), "modifiers");
-  const modifiers = (Array.isArray(recorded) ? recorded : [])
-    .map(modifierName)
-    .filter((name) => typeof name === "string");
-  const confidence = confidenceOf(await jsonFiles(path.join(runDir, "results")));
-  return { seedId, routes, modifiers, confidence };
+  const documents = await planDocuments(root);
+  const asked = documents.some((each) => Array.isArray(read(each, "candidates")));
+  return { seedId, routes: routesOf(documents), modifiers: [], confidence: asked ? "low" : null };
 }
 
 // Runs the host on `prompt` in `root`, which holds a committed fixture.
@@ -278,7 +235,6 @@ async function routeEval(baseRoot: string, argv: string[]) {
     run: runs.find((run) => run.seedId === score.seedId),
   }));
   return {
-    seedDigest: hashAssistantAssetText(seedText),
     verdict: routeEvalVerdict(seeds, cases),
     cases: withRuns,
   };
@@ -303,7 +259,16 @@ async function runEval(): Promise<void> {
     await removeTempTree(baseRoot);
   }
   const observed = Object.values(runs).flatMap((each) => ("run" in each ? [each.run] : []));
-  const cases = scoreCases(seeds, observed).map((score) => ({ ...score, run: runs[score.seedId] }));
+  // A plan exposes its route and its stage kinds; every other token is reported not observed.
+  const plans = await loadBuiltInPlans();
+  const exposed = new Set([
+    ...plans.map((plan) => plan.route),
+    ...plans.flatMap((plan) => plan.stages.map((stage) => stage.kind)),
+  ]);
+  const cases = scoreCases(seeds, observed, (token) => exposed.has(token)).map((score) => ({
+    ...score,
+    run: runs[score.seedId],
+  }));
   const verdict = releaseVerdict(cases, safetyList);
   const { version }: { version: string } = JSON.parse(
     await readFile(path.join(PACKAGE_ROOT, "package.json"), "utf8"),
@@ -311,15 +276,12 @@ async function runEval(): Promise<void> {
   const record = {
     host,
     version,
-    seedDigest: hashAssistantAssetText(seedText),
-    vocabularyDigest: hashAssistantAssetText(vocabularyText),
     safetyList,
-    safetyListDigest: hashAssistantAssetText(safetyList.join("\n")),
     verdict: { ...verdict, blocked: verdict.blocked || !routes.verdict.pass },
     cases,
     routes,
   };
-  const problems = evalRecordProblems(record, seedText);
+  const problems = evalRecordProblems(record);
   if (problems.length > 0) throw new Error(`The eval record is incomplete: ${problems.join(", ")}`);
   await mkdir(RECORDS, { recursive: true });
   await writeFile(

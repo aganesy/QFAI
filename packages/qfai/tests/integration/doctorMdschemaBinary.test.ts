@@ -69,9 +69,9 @@ async function packagedChecker(source: string, found?: string): Promise<void> {
 }
 
 describe("qfai doctor reports whether the mdschema binary runs", () => {
+  // QFAI:EX-0003-0011-22
   it("is ok when the binary answers --help, and starts it with that and nothing else", async () => {
     // QFAI:AC-0003-0011-10
-    // QFAI:EX-0003-0011-22
     const log = path.join(await tempDir(), "arguments.txt");
     await packagedChecker(
       `require("node:fs").writeFileSync(${JSON.stringify(log)}, process.argv.slice(2).join(" "));\n`,
@@ -83,9 +83,9 @@ describe("qfai doctor reports whether the mdschema binary runs", () => {
     expect(await readFile(log, "utf-8")).toBe("--help");
   });
 
+  // QFAI:EX-0003-0011-23
   it("is an error naming the reason and the fix when the binary cannot run", async () => {
     // QFAI:AC-0003-0011-10
-    // QFAI:EX-0003-0011-23
     await packagedChecker(
       `console.error("mdschema binary not found at /nowhere");\nprocess.exit(1);\n`,
     );
@@ -100,11 +100,11 @@ describe("qfai doctor reports whether the mdschema binary runs", () => {
     expect(check.details["reason"]).toBe("mdschema binary not found at /nowhere");
   });
 
+  // QFAI:EX-0003-0011-23
   it.skipIf(process.platform === "win32")(
     "names the signal when the binary is killed and prints nothing",
     async () => {
       // QFAI:AC-0003-0011-10
-      // QFAI:EX-0003-0011-23
       await packagedChecker(`process.kill(process.pid, "SIGKILL");\n`);
 
       const check = await checkMdschemaBinary();
@@ -114,9 +114,9 @@ describe("qfai doctor reports whether the mdschema binary runs", () => {
     },
   );
 
+  // QFAI:EX-0003-0011-23
   it("stops a binary that ignores SIGTERM at the deadline and reports it", async () => {
     // QFAI:AC-0003-0011-10
-    // QFAI:EX-0003-0011-23
     await packagedChecker(`process.on("SIGTERM", () => {});\nsetInterval(() => {}, 1000);\n`);
 
     const check = await checkMdschemaBinary(500);
@@ -125,9 +125,9 @@ describe("qfai doctor reports whether the mdschema binary runs", () => {
     expect(check.details["reason"]).toMatch(/ETIMEDOUT/);
   });
 
+  // QFAI:EX-0003-0011-23
   it("names the same fixes when no installation is found at all", async () => {
     // QFAI:AC-0003-0011-10
-    // QFAI:EX-0003-0011-23
     await packagedChecker(``, "null");
 
     const check = await checkMdschemaBinary();
@@ -138,9 +138,9 @@ describe("qfai doctor reports whether the mdschema binary runs", () => {
     expect(check.message).toContain("onlyBuiltDependencies");
   });
 
+  // QFAI:EX-0003-0011-23
   it("is an error rather than a crash when the packaged checker cannot be located", async () => {
     // QFAI:AC-0003-0011-10
-    // QFAI:EX-0003-0011-23
     packagedAssets.unresolvable = true;
 
     const check = await checkMdschemaBinary();
@@ -149,9 +149,9 @@ describe("qfai doctor reports whether the mdschema binary runs", () => {
     expect(check.message).toContain("the packaged init assets cannot be resolved");
   });
 
+  // QFAI:EX-0003-0011-22
   it("does not start a binary found from the inspected project's root", async () => {
     // QFAI:AC-0003-0011-10
-    // QFAI:EX-0003-0011-22
     const root = await tempDir();
     await writeFile(
       path.join(root, "qfai.config.yaml"),

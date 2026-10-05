@@ -115,7 +115,6 @@ export const WIDTH_BUDGET_BACKLOG: ReadonlyMap<string, number> = new Map([
   ["assistant/skill/qfai-configure/SKILL.md", 671],
   ["assistant/skill/qfai-discussion/templates/01_Context.md", 405],
   ["assistant/skill/qfai-sdd/references/design-md-brand-catalog.md", 533],
-  ["assistant/skill/qfai-verify/references/verify-output-contract.md", 837],
 ]);
 
 /**
@@ -132,7 +131,6 @@ export const WIDTH_BACKLOG_PATHS: readonly string[] = [
   "assistant/skill/qfai-configure/SKILL.md",
   "assistant/skill/qfai-discussion/templates/01_Context.md",
   "assistant/skill/qfai-sdd/references/design-md-brand-catalog.md",
-  "assistant/skill/qfai-verify/references/verify-output-contract.md",
 ];
 
 /**
