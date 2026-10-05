@@ -4,6 +4,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Two governance tests can now fail.** The missing-bucket test matched
+  bucket names the message always prints; it now checks the
+  `missingBuckets=[...]` list, with a second case where one bucket is missing.
+  The `qfai-maintain` routing test now finds no reviewer agent among the
+  agents of the route's phases. (#2295)
+
 ## [2.1.0] - 2026-10-05
 
 ### Breaking changes
@@ -721,11 +729,6 @@ its code. Several commands, findings and files go with that.
   characters. Under
   `--format json` the same longer text is the check's `message`; `details.issues`
   is unchanged.
-- **Two governance tests can now fail.** The missing-bucket test matched
-  bucket names the message always prints; it now checks the
-  `missingBuckets=[...]` list, with a second case where one bucket is missing.
-  The `qfai-maintain` routing test now finds no reviewer agent among the
-  agents of the route's phases. (#2295)
 - **A step names the key when `qfai.config.yaml` cannot be loaded.** It printed
   one fixed sentence; it now prints that sentence and then the message of every
   issue the loader returned.
