@@ -4,5 +4,5 @@
 // QFAI~SPEC-0001:TC-0001-0002
 // QFAI~SPEC-0001:TC-0001-0003
 // QFAI~CON-API-0001
-it("saves an order", () => {});
+export class TestOrder {}
 export const savedOrder = "accepted";
