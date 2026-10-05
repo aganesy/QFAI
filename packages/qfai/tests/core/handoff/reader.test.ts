@@ -103,6 +103,47 @@ describe("HandoffReader", () => {
     errorSpy.mockRestore();
   });
 
+  it.each([
+    ["timestamp is missing", (obj: Record<string, unknown>) => delete obj["timestamp"]],
+    ["iteration is missing", (obj: Record<string, unknown>) => delete obj["iteration"]],
+  ])("returns null and names the key when %s", async (_label, mutate) => {
+    const filePath = path.join(tmpDir, "missing-header.json");
+    const obj: Record<string, unknown> = JSON.parse(JSON.stringify(makeArtifact()));
+    mutate(obj);
+    await writeFile(filePath, JSON.stringify(obj), "utf-8");
+
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    expect(await reader.read(filePath)).toBeNull();
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("Missing required keys"));
+
+    errorSpy.mockRestore();
+  });
+
+  it.each([
+    ["version is a number", { version: 1 }],
+    ["iteration is a string", { iteration: "3" }],
+    ["planner is null", { planner: null }],
+    ["planner.strategies is not an array", { planner: { strategies: "tdd" } }],
+    [
+      "a strategy lacks constraints",
+      { planner: { strategies: [{ approach: "tdd-first", budgetGuidance: "low" }] } },
+    ],
+    ["generator.outputs holds a number", { generator: { outputs: [1] } }],
+    ["evaluator.scores holds a string", { evaluator: { scores: ["0.9"], decisions: [] } }],
+    ["evaluator.decisions is missing", { evaluator: { scores: [0.9] } }],
+  ])("returns null and logs error when %s", async (_label, override) => {
+    const filePath = path.join(tmpDir, "wrong-type.json");
+    await writeFile(filePath, JSON.stringify({ ...makeArtifact(), ...override }), "utf-8");
+
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    expect(await reader.read(filePath)).toBeNull();
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("a field has the wrong type"));
+
+    errorSpy.mockRestore();
+  });
+
   it("reads back artifact without user-specific data blocking resumption", async () => {
     // Write as "user A" concept — the artifact should have no user lock
     const artifact = makeArtifact({ sessionId: "user-a-session" });
