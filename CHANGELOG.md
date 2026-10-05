@@ -6,6 +6,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A shipped rule sets how Markdown an agent reads is sized and split**
+  (#2246). Markdown stays within 500 lines and a `SKILL.md` body within 20,000
+  characters. Pointers say when to read the file they name, references stay one
+  level deep, and long references open with their contents.
+
 - **`qfai validate` resolves the decisions and open questions a contract
   cites.** A `DEC-NNNN` or `OQ-NNNN` in a contract rule's statement, and the
   successor a `SUPERSEDED (by DEC-NNNN)` status names, must now be declared by a
