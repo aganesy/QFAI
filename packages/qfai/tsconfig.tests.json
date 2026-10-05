@@ -304,11 +304,8 @@
     "tests/unit/issueCatalogHasEmitters.test.ts",
     "tests/unit/shared/boundedRead.test.ts",
     "tests/unit/shared/text.test.ts",
-<<<<<<< HEAD
     "tests/unit/removeOwnedDirs.test.ts",
-=======
     "tests/unit/pathExists.test.ts",
->>>>>>> origin/main
     "tests/unit/shippedLaneCommands.test.ts",
     "tests/unit/spawnCaptured.test.ts",
     "tests/unit/sourceLayerDirections.test.ts",
