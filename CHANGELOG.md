@@ -25,6 +25,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The free-text entry reminder points a worktree session at its own copy of
+  `qfai-run`.** The host can load the skill from the main checkout, which may
+  lag the worktree, so the reminder now tells the agent to read
+  `.claude/skills/qfai-run/SKILL.md` under the current directory. The reminder
+  is read from the session's own checkout. Fixes #2972.
+
 - **The planner-first and design anti-goal examples are tested for what they
   say.** The planner-first example was annotated on a test that only checked
   three file names. Its test now reads the completion matrix and the
