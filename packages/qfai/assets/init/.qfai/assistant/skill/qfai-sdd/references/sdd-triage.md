@@ -79,9 +79,10 @@ A retirement touches every place the ID is written. Do all of them in one change
 3. Remove a retired EX from the Examples cell of every BR that cites it. A BR left with no example gets another example or is retired in the same row.
 4. Remove each QFAI:EX annotation of a retired EX from the tests, or point it at the example the test now proves.
 5. An AC left with no example gets one or is retired in the same row.
-6. Never reuse a retired ID. The decision row keeps it counted.
+6. Retiring an AC also retires each EX whose AC-Ref names it, or moves that EX to another AC of the story by changing its AC-Ref, then applies steps 3 and 4 to each EX retired. Remove each QFAI:AC annotation of the retired AC from the tests, or point it at the AC the test now proves.
+7. Never reuse a retired ID. The decision row keeps it counted.
 
-`npx qfai validate` reports what step 3, 4 or 5 left behind: a BR citing an unknown example (`QFAI-STORY-005`), a test annotation naming an undeclared ID (`QFAI-STORY-008`), and an AC with no example (`QFAI-STORY-004`).
+`npx qfai validate` reports what steps 3 to 6 left behind: a BR citing an unknown example (`QFAI-STORY-005`), a test annotation naming an undeclared ID (`QFAI-STORY-008`), and an AC with no example or an EX with an invalid AC-Ref (`QFAI-STORY-004`).
 
 ## ID allocation
 
