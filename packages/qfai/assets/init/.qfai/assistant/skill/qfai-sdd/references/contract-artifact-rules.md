@@ -11,8 +11,10 @@ Contracts are version-managed downstream execution truth and inputs:
 - `ui/`: UI contract YAML
 
 The brand SSOT is root `DESIGN.md` at the project root, and screens are `ui/`
-contracts. No other directory under `<paths.contractsDir>` holds a contract, and
-`QFAI-CONTRACT-034` reports a file in one. Evaluator axes are not a contract
+contracts. A project's contracts live in those three directories. `cli/` holds
+the command-surface contracts of the QFAI repository itself and is not a kind a
+project adds. No other directory under `<paths.contractsDir>` holds a contract,
+and `QFAI-CONTRACT-034` reports a file in one. Evaluator axes are not a contract
 either: the review validation the QFAI CLI applies fixes them (restated in
 `.qfai/assistant/skill/qfai-prototyping/references/reviewer-prompt.md`).
 
@@ -42,13 +44,14 @@ Discussion UI/UX files are **non-normative** discovery / reference artifacts —
   not only where the attribute is written out — a framework that builds the
   attribute from a variable still writes the marker somewhere.
 - **Every entry under `screens` is a screen, once.** Each UI-bearing contract declares one full `UI-NNNN` ID and a nonempty `screens[]` list. Each screen has an ID and route, unique within its contract. The prototyping cycle covers all declared UI-bearing contract IDs; filenames do not select a legacy spec tier. `QFAI-CONTRACT-042` names malformed screen entries.
-- **A contract's ID comes from its directory.** `cli/` holds `CLI`
-  contracts, `api/` `API`, `db/` `DB` and `ui/` `UI`. The ID is `<KIND>-NNNN`.
+- **A contract's ID comes from its directory.** `api/` holds `API` contracts,
+  `db/` `DB` and `ui/` `UI`; the QFAI repository's own `cli/` holds `CLI`
+  contracts. The ID is `<KIND>-NNNN`.
   Its number is one more than the highest contract number of any kind, so
   `API-0002` and `DB-0002` cannot both exist. A number is never reused, even
   after its contract is removed.
 - **The file is named after the ID**: `<kind>-NNNN-<slug>.<ext>`, such as
-  `api/api-0002-orders.yaml` or `cli/cli-0001-checkout.md`.
+  `api/api-0002-orders.yaml` or `db/db-0003-orders.sql`.
 - **The ID is declared once, in the file.** A Markdown contract declares it in
   its H1: `# CLI-0001: <title>`. A YAML or SQL contract declares it on a
   `QFAI-CONTRACT-ID: API-0002` comment line at the top. A Markdown file under
@@ -120,12 +123,12 @@ The structural lane:
 | ------------------- | ----------------------------------------------------------------------------- | -------- |
 | `QFAI-CONTRACT-021` | an unterminated string, comment or dollar-quoted body, or unbalanced `(`      | error    |
 | `QFAI-DB-002`       | one file creates the same object twice — only the last definition is in force | error    |
+| `QFAI-DB-001`       | a dangerous statement (`DROP TABLE`, `TRUNCATE`, …)                           | warning  |
 
 `QFAI-DB-002` covers tables, views, indexes, functions, procedures, types and
 domains. **Triggers are excluded**: a trigger name is unique per table, not per
 schema, so two same-named triggers on different tables are correct SQL and
 reporting them would be a false positive on valid input.
-| `QFAI-DB-001` | a dangerous statement (`DROP TABLE`, `TRUNCATE`, …) | warning |
 
 The statement splitter honours SQL quoting, so a `;` inside a literal, a
 comment, a `$$ … $$` body or parentheses does not end a statement.
