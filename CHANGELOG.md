@@ -6,6 +6,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A shipped rule sets how Markdown an agent reads is sized and split**
+  (#2246). Markdown stays within 500 lines and a `SKILL.md` body within 20,000
+  characters. Pointers say when to read the file they name, references stay one
+  level deep, and long references open with their contents.
+
 - **`qfai validate` resolves the decisions and open questions a contract
   cites.** A `DEC-NNNN` or `OQ-NNNN` in a contract rule's statement, and the
   successor a `SUPERSEDED (by DEC-NNNN)` status names, must now be declared by a
@@ -40,10 +45,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   with a space is matched with `?` or `[ ]`. A leading `!(` extglob is read as a
   pattern, not an exclusion. Fixes #2902.
 
+- **The contract guide states one scope for contract kinds.** It named only
+  `api/`, `db/` and `ui/` as contract directories in one place and `cli/` in
+  another. It now says a project's contracts are the three directories and that
+  `cli/` is the QFAI repository's own. The `QFAI-DB-001` row of the SQL findings
+  table, which rendered outside the table, now sits beside the other rows.
+  Fixes #2860.
+
 - **`qfai init --force` reports only the paths it changed.** The `written` count
   and list included every distributed file, including those already identical to
   the shipped copy. Rule files, the Copilot and Codex files and the agent and
   skill links that need no change are now counted as skipped (#2986).
+
+- **The handoff reader refuses an artifact whose fields have the wrong type.**
+  `HandoffReader.read` checked only that the five top-level keys were present
+  and then returned the file as a `HandoffArtifact`. It now also requires
+  `timestamp` and `iteration`, and checks each field and nested list against
+  the type it returns. A file that fails is refused with `null` and a logged
+  error, as a missing key already was. Fixes #2862.
 
 - **The `qfai-run` entry reminder stays silent on a turn the host starts
   (#2989).** The Claude Code `UserPromptSubmit` hook that sends a request to
@@ -66,6 +85,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   to, so the push run read the release's own entries as late additions and
   turned `main` red. A tag on the commit being checked is now the release being
   cut and does not make its section released (#2945).
+
+- **The migration skill cites its shared rules by full path.** The
+  delegation-baseline and test-layers pointers started at `rule/`, so they did
+  not resolve from the project root. Both now begin at `.qfai/assistant/rule/`.
+  (#2858)
 - **The planner-first and design anti-goal examples are tested for what they
   say.** The planner-first example was annotated on a test that only checked
   three file names. Its test now reads the completion matrix and the
@@ -89,6 +113,34 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reuse of the ID. It names the `qfai validate` findings that catch a leftover.
 
 ### Changed
+
+- **A mutation proof belongs to one example** (#2409). The `qfai-implement`
+  oracle-strength reference now says what to do when one mutation fails tests
+  annotated with different examples: record each failing assertion and the
+  boundary it proves, narrow an assertion that proves another example's
+  boundary, or have `/qfai-sdd` settle an unclear boundary in the examples. A
+  shared predicate may fail several tests whose assertions each prove their own
+  example.
+- **The orchestrator keeps working while a delegation runs** (#2244). The
+  shared delegation baseline now says the orchestrator is not required to wait
+  for a sub-agent. Where the host starts a delegation and returns at once,
+  delivers the result later as a message and lets the orchestrator wait on
+  purpose, it carries on with its own work and waits only when it has none. A
+  host without all three keeps it waiting. Starting another delegation still
+  needs the independence conditions of the parallelization policy, and an
+  ordering the ledger or a seam makes mandatory still holds.
+
+- **`qa-gatekeeper` asks whether a reviewed test would survive a refactor**
+  (#2253). A test that asserts on what the contract does not name, such as a
+  private function, an internal call order or a mock of the code's own
+  collaborators, fails on a change that keeps the behaviour. The new advisory
+  refactor survival check records such a test, and names the
+  behaviour-preserving change it would fail on; a finding without one is not
+  admitted. It never returns REVISE on its own and carries no score. It reads
+  the whole of every test file the change touches, and defers a finding on a
+  test that existed before the change. The three other questions a regression
+  review asks point at the checks that already own them: the coverage gate, and
+  the proof per example in the oracle strength reference.
 
 - **Five doctor criteria now name the tests that prove them.** Existing
   integration tests carry standalone `QFAI:AC-...` comments, and
@@ -158,6 +210,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   routing-eval token vocabulary changes. The set of safety-relevant routing
   seeds is unchanged, and the list derived from these classes may now be
   recorded. The decision is recorded in `decisions.md`.
+
+- **A test file missing from `packages/qfai/tsconfig.tests.json` now fails
+  `pnpm ci:lint`.** The check that every test file is either listed there or
+  recorded as uncovered ran only in the `scripts` test lane, so an author saw
+  it first in CI. `pnpm -C packages/qfai lint:shipping` now runs it too, so the
+  lint lane reports the omission before the test lanes start. Closes #2953 and
+  #2967.
 
 - **The shipped guidance now bounds test-suite size and unrequested fixes**
   (#2242). The test-layer rule gains a sizing section: a new test file is sized
@@ -3617,6 +3676,8 @@ unadjudicated` on a visible line, and says a response omitting any of them
 - **The spec-0013 ledger carries the columns its template declares, and a row
   for every story** (#1750). Thirteen of its fourteen stories had no row, and
   the ledger held nine columns where the template declares fifteen. The thirteen
+  rows are at `todo`, and every existing row keeps its identifier, status, test
+  file, selector, decision and evidence.
 
 - **The spec-0010 ledger carries the columns its template declares, and a row
   for every story** (#1750). None of its twelve stories had a row, and the
@@ -4424,8 +4485,6 @@ pack` name different paths or seals. The layout says a round after a REVISE
   `CR-20260913-0009` as the ledger repair, appends no row under option `1c`
   while that option holds its new requirement `planned`, and authorises the
   `spec-0013/07_Decisions.md` write option `2c` needs.
-
-  Three records hold them. `CR-20260913-0011` and `CR-20260913-0008` are
 
 - Generated TypeScript review guidance flags dropped promises and preserves
   propagation rather than requiring catches for unnamed failures. The repository
@@ -13154,7 +13213,8 @@ advanced` asked for RED/GREEN commands, output and the falsifiability result
   form `QFAI-TEST-001` matches. Both directories are scanned, and the
   remediation says to write the real test rather than move the skeleton.
 - **An L1/L2 annotation in `tests/integration/**`is not a violation.** The
-  Reviewer Gate and`project_memory`said`QFAI-ATDD-123`rejects it, but`resolveTcHomeKind`returns`null` for those levels and the scan continues
+  Reviewer Gate and `project_memory` said `QFAI-ATDD-123` rejects it, but
+  `resolveTcHomeKind` returns `null` for those levels and the scan continues
   before the forbidden-placement check — the validator neither counts it nor
   flags it. A reviewer working from that text would have had an existing,
   passing annotation deleted.
@@ -13209,12 +13269,15 @@ advanced` asked for RED/GREEN commands, output and the falsifiability result
   enumeration existed to stop an unapproved `review-fix -> todo`; the approval
   column already does that, and does it without contradicting the Protocol.
 - **`qfai-implement`'s primary spec-completion condition is a list item again.**
-  A missing newline joined `- Each item reached \`done\` or valid \`exception\`
-  (with DR-ID)`to the tail of the bullet above it, and because the joined line
-is a two-space continuation, markdown rendered the condition as trailing prose
-inside a bullet about the`QFAI-ATDD-111`/`QFAI-ATDD-113`hard gate. The
-words were all still there, so nothing flagged it — while the clause had no
-line of its own, and downstream Decision Records that cite it by`file:line`pointed at a line it does not occupy.`tests/assets/swallowedListItem.test.ts`now scans the shipped`assistant/\*\*` tree for a list marker stranded mid-line.
+  A missing newline joined
+  ``- Each item reached `done` or valid `exception` (with DR-ID)`` to the tail
+  of the bullet above it, and because the joined line is a two-space
+  continuation, markdown rendered the condition as trailing prose inside a
+  bullet about the `QFAI-ATDD-111`/`QFAI-ATDD-113` hard gate. The
+  words were all still there, so nothing flagged it — while the clause had no
+  line of its own, and downstream Decision Records that cite it by `file:line`
+  pointed at a line it does not occupy. `tests/assets/swallowedListItem.test.ts`
+  now scans the shipped `assistant/**` tree for a list marker stranded mid-line.
 
 ### Changed
 
@@ -16835,6 +16898,7 @@ for the recommended cleanup path.
 - init: distributes Copilot review instructions (code-review, principles) to `.github/instructions/` as create-only
 - specs: SDD artifacts (Copilot review instructions distribution)
 - discussion: discussion pack for
+  spec-0017
 
 ### Changed
 
@@ -17631,10 +17695,6 @@ error` and state the ban on narrowing the scope
 - docs/tests: Update the v1.4.16 notation and the import-lite/preflight
   template references
 - repo: Update the package version to 1.4.16
-
-### Changed
-
-- None
 
 ## [1.4.15] - 2026-02-16
 

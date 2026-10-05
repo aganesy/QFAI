@@ -23,6 +23,17 @@ classified by the taxonomy below before any response.
 - The orchestrator may author any artifact itself, or give independent parts of
   the work to sub-agents that run in parallel. It integrates and presents the
   results.
+- The orchestrator is not required to wait while a sub-agent runs. Where the
+  host starts a delegation and returns at once, delivers the finished result
+  later as a message, and lets the orchestrator wait for a result on purpose,
+  the orchestrator carries on with its own work meanwhile and waits only when
+  it has none. A host without all three keeps the orchestrator waiting.
+- That work is planning, preparing the next work order, integrating results
+  already returned, and its own part of the task. It never repeats the work it
+  handed out. Starting another delegation needs the independence conditions of
+  `.qfai/assistant/skill/qfai-implement/references/parallelization-policy.md`.
+  Where the stage's ledger or a seam makes an ordering mandatory, carrying on
+  does not override it.
 - A review is done by an agent that did not author what it reviews. The
   orchestrator never reviews its own work and never approves it for
   convenience.
