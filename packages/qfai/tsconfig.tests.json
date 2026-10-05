@@ -144,6 +144,7 @@
     "tests/core/designDirectionProposal.test.ts",
     "tests/core/discussionDesignMdParse.test.ts",
     "tests/core/findingCodeGrammar.test.ts",
+    "tests/core/validators/utilsReadErrors.test.ts",
     "tests/core/htmlMockBudgetClock.test.ts",
     "tests/core/htmlMockLazyLoad.test.ts",
     "tests/core/platformOptionProfileScope.test.ts",
