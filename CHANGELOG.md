@@ -78,6 +78,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   tracked file under `tmp/` now checks these directories too, and a test holds
   its list to the `.gitignore` entries. Fixes #2356.
 
+- **The repository's dogfooding ratchet keeps diff-dependent findings out of
+  its pins.** `QFAI-DRIFT-001` reports a protected story-tree file changed
+  since the base branch without a change request, so it exists only on the
+  branch that made the change. Pinned there, it read one less after the merge
+  and failed every later pull request. `scripts/check-dogfood-backlog.mjs` now
+  leaves it, and `QFAI-STORY-010`, out of the counts it compares and pins, and
+  fails the lane on them outright in the pull request that produces them.
+  Fixes #2352.
 - **The shipped cross-flow guidance says how to find the flows a shared change
   reaches, and what to do when that search cannot finish.**
   `qfai-implement/references/cross-spec-ownership.md` now searches outward from
