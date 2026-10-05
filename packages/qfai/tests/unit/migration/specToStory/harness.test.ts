@@ -576,8 +576,8 @@ function retiredKeys(config: Record<string, unknown>): void {
 }
 
 describe("migration step: an invalid qfai.config.yaml", () => {
+  // QFAI:EX-0004-0003-33
   it("prints the sentence naming the file and then each loader issue, and writes nothing", async () => {
-    // QFAI:EX-0004-0003-33
     const root = await oldLayout();
     expect((await loadConfig(root)).issues).toEqual([]);
     await editConfig(root, (config) => {
@@ -606,8 +606,8 @@ describe("migration step: an invalid qfai.config.yaml", () => {
 });
 
 describe("migration step 1: the retired traceability keys", () => {
+  // QFAI:EX-0004-0004-06
   it("removes both keys, lists each, and leaves the other keys and a rerun alone", async () => {
-    // QFAI:EX-0004-0004-06
     const root = await oldLayout();
     await editConfig(root, (config) => {
       retiredKeys(config);
@@ -642,8 +642,8 @@ describe("migration step 1: the retired traceability keys", () => {
     expect(again.output).toContain("## Operations\nnone\n");
   });
 
+  // QFAI:EX-0004-0004-06
   it("removes a validation mapping the removal leaves empty, so the file raises no issue for either key", async () => {
-    // QFAI:EX-0004-0004-06
     const { root } = await context();
     await put(
       root,
@@ -670,8 +670,8 @@ describe("migration step 1: the retired traceability keys", () => {
 });
 
 describe("migration step 3: a retired config key", () => {
+  // QFAI:EX-0004-0003-34
   it("runs step 3 on a story-tree project that still holds a retired config key", async () => {
-    // QFAI:EX-0004-0003-34
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-migration-retired-key-"));
     roots.push(root);
     await mkdir(path.join(root, ".qfai", "spec"), { recursive: true });

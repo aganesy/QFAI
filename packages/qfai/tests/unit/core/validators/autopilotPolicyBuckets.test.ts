@@ -9,7 +9,6 @@
  * The pure-function bucket parser is the unit-level surface; the
  * integration-level Reviewer-Gate emission is tested separately.
  */
-// QFAI:EX-0001-0169-01
 
 import { describe, expect, it } from "vitest";
 
@@ -81,6 +80,7 @@ const SKILL_WIDENED_AUTODECIDE = `# Skill
   - companyName
 `;
 
+// QFAI:EX-0001-0169-01
 describe("TC-0015-0021: parseAutopilotPolicy bucket detection", () => {
   it("returns hasSection=true and all three buckets present for the canonical 3-bucket policy", () => {
     const result: AutopilotPolicyParseResult = parseAutopilotPolicy(SKILL_FULL_POLICY);
@@ -147,8 +147,8 @@ describe("hard-required names with hyphens", () => {
     ).toEqual({ retired: [], unknown: [] });
   });
 
+  // QFAI:EX-0001-0169-05
   it("does not read a longer name that ends in a declared one as that name", () => {
-    // QFAI:EX-0001-0169-05
     for (const entry of ["a full `CON-UI-NNNN`", "a full CON_UI-NNNN", "a full `UI-NNNN-X`"]) {
       expect(classifyHardRequiredEntries([entry], "qfai-verify").unknown).toEqual([entry]);
     }

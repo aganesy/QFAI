@@ -35,6 +35,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **A DONE change request claims every action it lists** (#2312). A
+  `decisions.md` row has one Status, so a request with one action deferred could
+  be marked DONE and the deferred action dropped from view. The drift protocol
+  now keeps such a row at WIP while any action it lists is deferred.
+- **An EX annotation counts only directly before a test declaration** (#2761).
+  A `QFAI:EX-` annotation used to cover its example from anywhere in a selected
+  test file, so a header comment above the imports, or one line in a file with
+  no test, discharged the obligation. It now counts only on a comment line
+  directly before `it(`, `test(`, `describe(` or another framework's test
+  declaration, with nothing but blank and comment lines between. Move a header
+  annotation down to the test it describes; `qfai validate --profile tdd`
+  otherwise reports the example as uncovered. BF and AC annotations are read as
+  before.
 - **The repository's scans lane refuses a tracked file under `.qfai/report/`,
   `.qfai/evidence/`, `.qfai/review/`, `.qfai/output/`, `.qfai/discussion/` or
   `.qfai/review_archive/`.** The managed
@@ -55,10 +68,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   integrated tree as an extra check. The suite does not replace revalidating
   each flow, and the search is not reported complete. Refs #2424.
 
-- **A DONE change request claims every action it lists** (#2312). A
-  `decisions.md` row has one Status, so a request with one action deferred could
-  be marked DONE and the deferred action dropped from view. The drift protocol
-  now keeps such a row at WIP while any action it lists is deferred.
+- **The routing-eval token classes stay as they are** (#2305). No class in the
+  routing-eval token vocabulary changes. The set of safety-relevant routing
+  seeds is unchanged, and the list derived from these classes may now be
+  recorded. The decision is recorded in `decisions.md`.
 
 ## [2.1.0] - 2026-10-05
 

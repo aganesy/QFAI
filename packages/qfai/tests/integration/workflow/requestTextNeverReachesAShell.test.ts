@@ -1,5 +1,4 @@
 // QFAI:AC-0001-0190-02
-// QFAI:EX-0001-0190-05
 
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
@@ -23,6 +22,7 @@ const SOURCE_ROOT = path.resolve(
 const TEXT =
   "Export it $(touch pwned) `touch pwned`; touch pwned & echo | more > pwned %PATH% ^pwned";
 
+// QFAI:EX-0001-0190-05
 it("An extraction carrying the request text is refused, and nothing it holds runs", async () => {
   const root = await minimalProject();
   const planned = workflow(

@@ -69,9 +69,6 @@
  * configuration and textually over every file that configures the runner — the rule is
  * phrased as a search, and a commented-out retry is still a retry someone will uncomment.
  */
-// QFAI:EX-0002-0019-01
-// QFAI:EX-0002-0019-02
-// QFAI:EX-0002-0019-06
 
 import { readFileSync, readdirSync } from "node:fs";
 import { availableParallelism } from "node:os";
@@ -193,6 +190,8 @@ afterEach(() => {
   vi.resetModules();
 });
 
+// QFAI:EX-0002-0019-02
+// QFAI:EX-0002-0019-06
 describe("TC-0017-0060 (TDD-0060): every runner project declares the full knob set", () => {
   it("declares each knob at the site the runner reads it", async () => {
     const { projects, root } = await load();

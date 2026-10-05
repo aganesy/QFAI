@@ -298,7 +298,7 @@ describe("BF-0001 develop and verify a QFAI project", () => {
     await put(
       root,
       `tests/unit/${exampleId}.test.mjs`,
-      `// QFAI:${exampleId}\nimport assert from "node:assert/strict";\nimport { test } from "node:test";\nimport { checkoutTotal } from "../../src/checkout.mjs";\ntest("adds both prices", () => { assert.equal(checkoutTotal([20, 30]), 50); });\n`,
+      `import assert from "node:assert/strict";\nimport { test } from "node:test";\nimport { checkoutTotal } from "../../src/checkout.mjs";\n// QFAI:${exampleId}\ntest("adds both prices", () => { assert.equal(checkoutTotal([20, 30]), 50); });\n`,
     );
     await runValidate({ root, strict: false, profile: "tdd", failOn: "never", flowIds: [flowId] });
     expect(hasFinding(await readFlowFindings(root), "QFAI-STORY-006", exampleId)).toBe(false);

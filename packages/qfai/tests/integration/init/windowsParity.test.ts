@@ -3,7 +3,6 @@
  * name contains a space as they do in process.
  */
 // QFAI:AC-0001-0196-06
-// QFAI:EX-0001-0196-17
 import { spawnSync } from "node:child_process";
 import { readdir, realpath } from "node:fs/promises";
 import path from "node:path";
@@ -30,6 +29,7 @@ async function viewOf(root: string, output: string): Promise<RunView> {
   return { modeLines: modeLines(output), wrappers };
 }
 
+// QFAI:EX-0001-0196-17
 describe("windows parity", () => {
   it("Built CLI init and upgrade under a root with a space", async () => {
     const spawned: RunView[] = [];
