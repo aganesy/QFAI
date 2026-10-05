@@ -20,7 +20,7 @@ import { validateIntegrationSurface } from "../../src/core/validators/integratio
 import { captureStdout } from "../helpers/stdout.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
-const SKILL = "qfai-atdd";
+const SKILL = "qfai-implement";
 const PLURAL_TARGET = path.join("..", "..", ".qfai", "assistant", "skills", SKILL);
 const SINGULAR_TARGET = path.join("..", "..", ".qfai", "assistant", "skill", SKILL);
 

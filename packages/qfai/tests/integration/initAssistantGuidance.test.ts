@@ -53,7 +53,7 @@ describe("init assistant guidance: exploration-first alignment", () => {
 
   // QFAI:EX-0001-0095-01
   // QFAI:EX-0001-0096-01
-  it("sends UI implementation to root DESIGN.md for tokens and prototyping.json for the handoff", async () => {
+  it("sends UI implementation to root DESIGN.md for tokens and to the handoff file", async () => {
     const content = (
       await readFile(path.join(instructionsDir, "ui-definition-protocol.md"), "utf-8")
     ).replace(/\s+/g, " ");
@@ -61,7 +61,7 @@ describe("init assistant guidance: exploration-first alignment", () => {
       "root `DESIGN.md` (front-matter + `# Brand Philosophy` body), the only source of brand tokens",
     );
     expect(content).toContain(
-      "`prototyping/prototyping.json#handoff`: the final prototype, procurement and implementation notes",
+      "**Prototype handoff** (`.qfai/prototype/final/handoff.json`, when a prototyping loop ran): the final prototype, procurement and implementation notes",
     );
   });
 

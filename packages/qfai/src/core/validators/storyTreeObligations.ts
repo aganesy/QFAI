@@ -16,6 +16,7 @@ export type StoryTestFile = {
   file: string;
   content: string;
   kind: AtddTestKind | null;
+  /** Whether configured test-file globs select this file for BF, AC and EX coverage. */
   selectedForExample: boolean;
 };
 
@@ -69,7 +70,7 @@ export function validateStoryTreeObligationsModel(
           ),
         );
       }
-      if (file.kind === "e2e") covered.BF.add(id);
+      if (file.selectedForExample && file.kind === "e2e") covered.BF.add(id);
     }
     for (const id of annotations.AC) {
       if (!known.AC.has(id)) {
@@ -96,7 +97,8 @@ export function validateStoryTreeObligationsModel(
           ),
         );
       }
-      if (file.kind === "integration" || file.kind === "api") covered.AC.add(id);
+      if (file.selectedForExample && (file.kind === "integration" || file.kind === "api"))
+        covered.AC.add(id);
     }
     for (const id of annotations.EX) {
       if (!known.EX.has(id)) {
@@ -180,7 +182,7 @@ function toPosix(value: string): string {
   return value.replace(/\\/g, "/");
 }
 
-/** Reads acceptance layers and the configured EX test selectors once per run. */
+/** Reads acceptance layers and configured test-file selectors once per run. */
 export async function readStoryTests(
   root: string,
   config: QfaiConfig,

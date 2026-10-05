@@ -3,7 +3,7 @@
 ## Inputs
 
 Read the UI surface paths `uiux.surfacePaths` declares in qfai.config.yaml, and resolve paths.contractsDir from the same file. Read every UI contract under its ui/ directory, and the root DESIGN.md if present for the brand tokens.
-When a prototyping loop ran in this checkout, read its handoff at .qfai/evidence/prototyping/prototyping.json#handoff: the final prototype, its procurement and the implementation notes.
+When a prototyping loop ran in this checkout, read its handoff at .qfai/prototype/final/handoff.json: the final prototype, its procurement and the implementation notes.
 Read the flow, story, acceptance criterion, and example that the implementation changes.
 
 ## Routing
@@ -21,6 +21,6 @@ product-surface-reviewer. Do not infer that a change has no UI effect from its d
 
 ## Evidence
 
-For a UI affecting example, record the screen state, action, expected and observed result, and a capture or rendered artifact under .qfai/evidence/. The artifact must identify the source revision. In the stage review, product-surface-reviewer judges each UI affecting example, its UI contracts, and its captured state. The review verdict and audited evidence hash refer to that revision.
+For a UI affecting example, report the screen state, action, expected and observed result, and a capture or rendered artifact. The artifact must identify the source revision. In the stage review, product-surface-reviewer judges each UI affecting example, its UI contracts, and its captured state. The review verdict refers to that revision.
 
 If the implementation or capture changes after the verdict, refresh the capture and review. A passing code test cannot substitute for the visual and interaction evidence that the acceptance criterion requires.

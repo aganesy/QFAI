@@ -1,4 +1,4 @@
-# US-0001-0004: Steering and governance framework
+# US-0001-0004: Policy and governance framework
 
 ## User Story
 

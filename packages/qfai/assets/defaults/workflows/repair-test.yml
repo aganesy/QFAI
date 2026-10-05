@@ -6,18 +6,17 @@ stages:
     steps: [implement-diagnose]
   - id: fix
     kind: test_fix
-    steps:
-      - { step: atdd-test-fix, passThrough: true }
-      - { step: implement-test-fix, passThrough: true }
+    steps: [implement-test-fix]
     after: [diagnose]
-  - id: verify
+  - id: note
     kind: verify
     steps:
       - { step: verify-change-note, passThrough: true }
-      - verify-context
-      - verify-qfai-gate
-      - verify-repo-gate
     after: [fix]
-defaultModifiers: []
+    review: code
+  - id: verify
+    kind: verify
+    steps: [verify-qfai-gate, verify-repo-gate, verify-commit]
+    after: [note]
 decisionPoints: []
 branchPoints: []
