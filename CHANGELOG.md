@@ -4,16 +4,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
-### Changed
+### Added
 
-- **The repository's scans lane refuses a tracked file under `.qfai/report/`,
-  `.qfai/evidence/`, `.qfai/review/`, `.qfai/output/`, `.qfai/discussion/` or
-  `.qfai/review_archive/`.** The managed
-  `.gitignore` block ignores those directories whole, but an ignore entry does
-  not untrack a file added before it or with `git add -f`, and every later
-  `qfai validate` then dirtied the tree. The guard that already refused a
-  tracked file under `tmp/` now checks these directories too, and a test holds
-  its list to the `.gitignore` entries. Fixes #2356.
+- **`qfai validate` warns about trace marks no check reads.** In the `tdd`
+  profile, a comment line in a selected test file that carries a `QFAI:US-`,
+  `QFAI:TC-`, `QFAI:SC-` or `QFAI:SPEC-` mark raises `QFAI-STORY-014` at
+  warning, naming the file, the line and the mark. Only `QFAI:BF-`, `QFAI:AC-`
+  and `QFAI:EX-` annotations record coverage, so such a mark records nothing.
+  A mark inside a string literal is left alone. The marks this repository
+  still carried are rewritten as plain comments, and its migration fixtures
+  are excluded from the test globs (#2308).
 
 ### Fixed
 
@@ -32,6 +32,28 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   three annotations sat at the top of the file, so any passing test there
   counted for all three. The test covering the four mode values names the value
   in each failing assertion. (#2287)
+
+### Changed
+
+- **The repository's scans lane refuses a tracked file under `.qfai/report/`,
+  `.qfai/evidence/`, `.qfai/review/`, `.qfai/output/`, `.qfai/discussion/` or
+  `.qfai/review_archive/`.** The managed
+  `.gitignore` block ignores those directories whole, but an ignore entry does
+  not untrack a file added before it or with `git add -f`, and every later
+  `qfai validate` then dirtied the tree. The guard that already refused a
+  tracked file under `tmp/` now checks these directories too, and a test holds
+  its list to the `.gitignore` entries. Fixes #2356.
+
+- **The shipped cross-flow guidance says how to find the flows a shared change
+  reaches, and what to do when that search cannot finish.**
+  `qfai-implement/references/cross-spec-ownership.md` now searches outward from
+  the changed files: follow the importers and literal reads until a test file is
+  reached, then read its `QFAI:` annotations to name the dependent flows. An edge
+  that cannot be followed by reading (a computed import path, a glob-loaded
+  fixture, a path built at run time) leaves the dependent set unknown: record it
+  as an unresolved obligation and run the full test suite once on the
+  integrated tree as an extra check. The suite does not replace revalidating
+  each flow, and the search is not reported complete. Refs #2424.
 
 ## [2.1.0] - 2026-10-05
 
