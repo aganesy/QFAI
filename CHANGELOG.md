@@ -161,6 +161,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   that file. A base row whose Content or Approach changed now authorizes
   nothing, in the `tdd` and `drift` profiles alike (#2891).
 
+- **The shipped API budget rule names no script a project lacks.** It named
+  this repository's own helper script, so every project that carried the rule
+  held a path that did not resolve. It now describes what such a command
+  answers and says a project names its own (#3001).
+
 - **The planner-first and design anti-goal examples are tested for what they
   say.** The planner-first example was annotated on a test that only checked
   three file names. Its test now reads the completion matrix and the
