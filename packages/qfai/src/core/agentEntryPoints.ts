@@ -223,6 +223,57 @@ function terminatorOf(line: string | undefined): string {
 const REVIEW_DIRECTIVE_PREFIX = "Read `REVIEW.md` before reviewing a pull request";
 
 /**
+ * Wordings of the review directive that an earlier release wrote.
+ *
+ * Only these are removed when the current wording is already present: a line
+ * that merely starts like the directive may be the project's own text.
+ */
+const SHIPPED_EARLIER_DIRECTIVES: readonly string[] = [
+  "Read `REVIEW.md` before reviewing a pull request when that file exists in this repository. Read it before writing the PR description as well.",
+];
+
+/** An operative line in an earlier wording of the directive, by offset. */
+interface EarlierDirective {
+  /** The directive text, after any list marker. */
+  start: number;
+  end: number;
+  /** The whole line, including its terminator. */
+  lineStart: number;
+  lineEnd: number;
+  /** Whether the text is exactly a wording an earlier release wrote. */
+  shipped: boolean;
+}
+
+/**
+ * `existing` with its earlier directive lines brought up to date.
+ *
+ * Where the current wording is absent the first such line is rewritten in
+ * place. Every other line in a wording an earlier release wrote is removed,
+ * together with the blank line that would otherwise be left doubled.
+ */
+function rewriteEarlierDirectives(
+  existing: string,
+  earlier: readonly EarlierDirective[],
+  pointer: string,
+  current: boolean,
+): string {
+  let text = existing;
+  for (const [index, entry] of [...earlier.entries()].reverse()) {
+    if (!current && index === 0) {
+      text = `${text.slice(0, entry.start)}${pointer}${text.slice(entry.end)}`;
+      continue;
+    }
+    if (!entry.shipped) continue;
+    const before = text.slice(0, entry.lineStart);
+    const after = text.slice(entry.lineEnd);
+    const followsBlank = /^﻿?$|(?:^|\n)[ \t]*\r?\n$/.test(before);
+    const blank = /^[ \t]*\r?(?:\n|$)/.exec(after)?.[0] ?? "";
+    text = `${before}${followsBlank ? after.slice(blank.length) : after}`;
+  }
+  return text;
+}
+
+/**
  * Prepend the template's review directive only when no operative copy exists.
  *
  * An operative line in an earlier wording of the directive is rewritten in
@@ -240,8 +291,10 @@ export function addReviewPointer(existing: string, template: string | null): str
  * is replaced where it stands instead.
  */
 function prependDirective(existing: string, pointer: string): string {
-  // Where the text of the first operative line in an earlier wording sits.
-  let earlier: { start: number; end: number } | null = null;
+  // Where each operative line in an earlier wording sits, in document order.
+  const earlier: EarlierDirective[] = [];
+  // Whether the current wording is operative somewhere in the document.
+  let current = false;
   // A code span the directive itself contains is part of its visible text; any
   // other span is opaque, so a copy quoted inside one is not operative.
   const pointerSpans = new Set(pointer.match(/`[^`]+`/g) ?? []);
@@ -901,26 +954,34 @@ function prependDirective(existing: string, pointer: string): string {
         .trim()
         .replace(/^(?:(?:[-*+]|\d{1,9}[.)])[ \t]{1,4}(?![ \t]))+/, "");
       if (pass === 1 && container === "" && !lazyQuote) {
-        if (operative === pointer) return existing;
-        // Only a line that reads exactly as written, with no markup after the
-        // directive's own opening: rewriting one that carries markup would drop it.
-        const line = raw.replace(/\r$/, "");
-        const lead =
-          /^\uFEFF?[ \t]*(?:(?:[-*+]|\d{1,9}[.)])[ \t]{1,4}(?![ \t]))*/.exec(line)?.[0] ?? "";
-        if (
-          earlier === null &&
-          operative.startsWith(REVIEW_DIRECTIVE_PREFIX) &&
-          !/[*_~<>[\]`&\\!]/.test(operative.slice(REVIEW_DIRECTIVE_PREFIX.length)) &&
-          line.slice(lead.length).trimEnd() === operative
-        )
-          earlier = { start: offset + lead.length, end: offset + lead.length + operative.length };
+        if (operative === pointer) current = true;
+        else {
+          // Only a line that reads exactly as written, with no markup after the
+          // directive's own opening: rewriting one that carries markup would drop it.
+          const line = raw.replace(/\r$/, "");
+          const lead =
+            /^\uFEFF?[ \t]*(?:(?:[-*+]|\d{1,9}[.)])[ \t]{1,4}(?![ \t]))*/.exec(line)?.[0] ?? "";
+          if (
+            operative.startsWith(REVIEW_DIRECTIVE_PREFIX) &&
+            !/[*_~<>[\]`&\\!]/.test(operative.slice(REVIEW_DIRECTIVE_PREFIX.length)) &&
+            line.slice(lead.length).trimEnd() === operative
+          )
+            earlier.push({
+              start: offset + lead.length,
+              end: offset + lead.length + operative.length,
+              lineStart: offset + (line.startsWith("﻿") ? 1 : 0),
+              lineEnd: offset + raw.length + 1,
+              shipped: SHIPPED_EARLIER_DIRECTIVES.includes(operative),
+            });
+        }
       }
       offset += raw.length + 1;
     }
   }
 
-  if (earlier !== null)
-    return `${existing.slice(0, earlier.start)}${pointer}${existing.slice(earlier.end)}`;
+  if (current && !earlier.some((entry) => entry.shipped)) return existing;
+  if (current || earlier.length > 0)
+    return rewriteEarlierDirectives(existing, earlier, pointer, current);
   const end = /\r\n|\n/.exec(existing)?.[0] ?? "\n";
   const bom = existing.startsWith("\uFEFF") ? 1 : 0;
   return `${existing.slice(0, bom)}${pointer}${end}${end}${existing.slice(bom)}`;

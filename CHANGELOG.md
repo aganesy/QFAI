@@ -25,6 +25,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai init` removes the earlier review directive an upgrade left beside the
+  current one.** An `AGENTS.md` or `CLAUDE.md` that already held the current
+  `REVIEW.md` directive and the wording an earlier release wrote kept both,
+  because a file with the current wording was left untouched. The earlier
+  wording is now removed, with the blank line that would otherwise be doubled.
+  A line that only starts like the directive is left alone. Fixes #3000.
+
 - **The planner-first and design anti-goal examples are tested for what they
   say.** The planner-first example was annotated on a test that only checked
   three file names. Its test now reads the completion matrix and the

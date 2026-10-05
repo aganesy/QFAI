@@ -1919,9 +1919,45 @@ describe("optional review directive detection", () => {
       );
     });
 
-    it("is left alone when the current wording is already operative", () => {
-      const existing = `${REVIEW_POINTER}\n\n${EARLIER}\n`;
+    it.each(["\n", "\r\n"])(
+      "is removed when the current wording is already operative above it",
+      (end) => {
+        const existing = `${REVIEW_POINTER}${end}${end}${EARLIER}${end}${end}Keep this text.${end}`;
+        const updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+        expect(updated).toBe(`${REVIEW_POINTER}${end}${end}Keep this text.${end}`);
+        expect(addReviewPointer(updated, `${REVIEW_POINTER}\n`)).toBe(updated);
+      },
+    );
+
+    it("is removed when the current wording is already operative below it", () => {
+      const existing = `﻿${EARLIER}\n\n${REVIEW_POINTER}\n\nKeep this text.\n`;
+      expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(
+        `﻿${REVIEW_POINTER}\n\nKeep this text.\n`,
+      );
+    });
+
+    it("removes a list item without disturbing the items around it", () => {
+      const existing = `- ${REVIEW_POINTER}\n- ${EARLIER}\n- Keep this bullet.\n`;
+      expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(
+        `- ${REVIEW_POINTER}\n- Keep this bullet.\n`,
+      );
+    });
+
+    it("keeps a line that only starts like the directive when the current wording is operative", () => {
+      const existing = `${REVIEW_POINTER}\n\nRead \`REVIEW.md\` before reviewing a pull request in our own way.\n`;
       expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+    });
+
+    it("keeps a copy inside a fenced block when the current wording is operative", () => {
+      const existing = `${REVIEW_POINTER}\n\n~~~\n${EARLIER}\n~~~\n`;
+      expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+    });
+
+    it("leaves one directive when two earlier copies remain", () => {
+      const existing = `${EARLIER}\n\nKeep this text.\n\n${EARLIER}\n`;
+      expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(
+        `${REVIEW_POINTER}\n\nKeep this text.\n\n`,
+      );
     });
 
     it.each([
