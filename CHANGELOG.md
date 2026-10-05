@@ -38,6 +38,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   at that Status stays in force. The story-tree authoring rules also say that a
   project counting the IDs of its open pull requests may take a next ID above
   the tree's own highest plus one (#2969).
+- **`qfai-run` has guidance for a change that needs a person's action outside
+  the repository.** When a change depends on something only the user can do,
+  such as a hosted dashboard setting or a token issued in a web console, the
+  work stops before that stage and says what the user must do, what shows it was
+  done and what the agent will read to check it. The agent never enters a
+  password, token or key and never changes an account setting. The extraction
+  reference says such a request keeps the repository change's intent with the
+  `env` flag (#2999).
 
 ### Fixed
 
