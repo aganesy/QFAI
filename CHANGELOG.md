@@ -6,6 +6,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`qfai validate` resolves the decisions and open questions a contract
+  cites.** A `DEC-NNNN` or `OQ-NNNN` in a contract rule's statement, and the
+  successor a `SUPERSEDED (by DEC-NNNN)` status names, must now be declared by a
+  row of `decisions.md` or `open-questions.md`. An undeclared one is a
+  `QFAI-STORY-003` error naming the citing rule or row and the missing ID.
+  Example narratives are not read, since they quote hypothetical IDs on
+  purpose. Fixes #2410.
+
 - **`qfai validate` warns about trace marks no check reads.** In the `tdd`
   profile, a comment line in a selected test file that carries a `QFAI:US-`,
   `QFAI:TC-`, `QFAI:SC-` or `QFAI:SPEC-` mark raises `QFAI-STORY-014` at
