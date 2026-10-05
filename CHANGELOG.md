@@ -36,6 +36,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The contract guide states one scope for contract kinds.** It named only
+  `api/`, `db/` and `ui/` as contract directories in one place and `cli/` in
+  another. It now says a project's contracts are the three directories and that
+  `cli/` is the QFAI repository's own. The `QFAI-DB-001` row of the SQL findings
+  table, which rendered outside the table, now sits beside the other rows.
+  Fixes #2860.
 - **`qfai init --force` reports only the paths it changed.** The `written` count
   and list included every distributed file, including those already identical to
   the shipped copy. Rule files, the Copilot and Codex files and the agent and
@@ -62,6 +68,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   to, so the push run read the release's own entries as late additions and
   turned `main` red. A tag on the commit being checked is now the release being
   cut and does not make its section released (#2945).
+
+- **The migration skill cites its shared rules by full path.** The
+  delegation-baseline and test-layers pointers started at `rule/`, so they did
+  not resolve from the project root. Both now begin at `.qfai/assistant/rule/`.
+  (#2858)
 - **The planner-first and design anti-goal examples are tested for what they
   say.** The planner-first example was annotated on a test that only checked
   three file names. Its test now reads the completion matrix and the
@@ -100,6 +111,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   host without all three keeps it waiting. Starting another delegation still
   needs the independence conditions of the parallelization policy, and an
   ordering the ledger or a seam makes mandatory still holds.
+
+- **`qa-gatekeeper` asks whether a reviewed test would survive a refactor**
+  (#2253). A test that asserts on what the contract does not name, such as a
+  private function, an internal call order or a mock of the code's own
+  collaborators, fails on a change that keeps the behaviour. The new advisory
+  refactor survival check records such a test, and names the
+  behaviour-preserving change it would fail on; a finding without one is not
+  admitted. It never returns REVISE on its own and carries no score. It reads
+  the whole of every test file the change touches, and defers a finding on a
+  test that existed before the change. The three other questions a regression
+  review asks point at the checks that already own them: the coverage gate, and
+  the proof per example in the oracle strength reference.
 
 - **Five doctor criteria now name the tests that prove them.** Existing
   integration tests carry standalone `QFAI:AC-...` comments, and
