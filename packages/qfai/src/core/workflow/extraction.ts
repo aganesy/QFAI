@@ -64,7 +64,7 @@ export const QUALIFIERS = [
   "mechanism-inert",
   "removal-requested",
   "visual-open",
-  "contradicts-record",
+  "prototype-requested",
 ] as const;
 
 export const SIGNALS = [
@@ -76,6 +76,7 @@ export const SIGNALS = [
   "backport",
   "release-notes",
   "test-plan",
+  "acceptance-bodies",
 ] as const;
 
 export const RISKS = [
@@ -86,8 +87,6 @@ export const RISKS = [
   "upgrade",
   "performance",
 ] as const;
-
-export const GATES = ["none", "decide", "approve", "external"] as const;
 
 export const ARTIFACTS = [
   "code",
@@ -111,7 +110,6 @@ export type EntryFlag = (typeof ENTRY_FLAGS)[number];
 export type Qualifier = (typeof QUALIFIERS)[number];
 export type Signal = (typeof SIGNALS)[number];
 export type Risk = (typeof RISKS)[number];
-export type Gate = (typeof GATES)[number];
 export type Artifact = (typeof ARTIFACTS)[number];
 export type Confidence = (typeof CONFIDENCES)[number];
 
@@ -126,7 +124,6 @@ export interface RoutingReading {
 // The main reading, the facts every reading shares, and at lower confidence the other readings.
 export interface WorkflowExtraction extends RoutingReading {
   risks: Risk[];
-  gate: Gate;
   artifacts: Artifact[];
   confidence: Confidence;
   alternatives?: RoutingReading[];

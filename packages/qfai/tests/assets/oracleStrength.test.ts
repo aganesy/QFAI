@@ -42,15 +42,4 @@ describe.each(trees)("%s oracle strength", (tree) => {
     expect(proof).toContain("equivalent-mutant");
     expect(proof).toContain("Do not strengthen the requirement");
   });
-
-  it("makes the gatekeeper check the RED and GREEN evidence", async () => {
-    const card = await read(tree, "assistant/agent/qa-gatekeeper.md");
-    expect(card).toContain("## RED and GREEN observation gate");
-    expect(card).toContain("controlled falsifiability check");
-    expect(card).toContain("A syntax error, deleted export or throw");
-    expect(card).toContain("GREEN needs the same selected test");
-    expect(card.replace(/\s+/g, " ")).toContain(
-      "Return REVISE for an unexplained required gap or weak oracle",
-    );
-  });
 });

@@ -20,7 +20,9 @@ import {
   findDeclaringDir,
   findPackageJsonUpward,
   locateToolAgainstProject,
+  reachedThroughLinkedNodeModules,
   resolveToolPackageDir,
+  resolvesThroughOwnNodeModules,
 } from "../../src/core/version.js";
 
 async function withTempDir(run: (dir: string) => Promise<void>): Promise<void> {
@@ -184,8 +186,8 @@ describe("classifyToolLocation", () => {
     expect(classifyToolLocation(at("proj"), lookalike)).toBe(false);
   });
 
+  // QFAI:EX-0001-0039-14
   it("reports a workspace link reached through a node_modules outside the project", () => {
-    // QFAI:EX-0001-0039-14
     // A worktree with no `node_modules` of its own inherits the main checkout's,
     // whose `qfai` is a workspace link to that checkout's source. The worktree
     // declares qfai itself, so the main checkout's link is not its choice.
@@ -201,15 +203,15 @@ describe("classifyToolLocation", () => {
     expect(classifyToolLocation(root, source, undeclared)).toBe(true);
   });
 
+  // QFAI:EX-0001-0039-14
   it("stays quiet for a link in the project's own node_modules", () => {
-    // QFAI:EX-0001-0039-14
     // The project chose where its own `node_modules/qfai` points, as `npm link` does.
     const own = { nodeModules: at("proj", "node_modules"), declaringDir: at("proj") };
     expect(classifyToolLocation(at("proj"), at("src", "qfai"), own)).toBe(false);
   });
 
+  // QFAI:EX-0001-0039-14
   it("stays quiet for a link in the node_modules of the directory that declares qfai", () => {
-    // QFAI:EX-0001-0039-14
     // A monorepo top level that links qfai chose that copy for every package below it.
     const top = { nodeModules: at("top", "node_modules"), declaringDir: at("top") };
     expect(classifyToolLocation(at("top", "packages", "web"), at("src", "qfai"), top)).toBe(false);
@@ -336,6 +338,133 @@ describe("findDeclaringDir", () => {
   });
 });
 
+describe("resolvesThroughOwnNodeModules", () => {
+  it("counts a copy behind a worktree's linked node_modules as the project's own", async () => {
+    // A worktree that links its `node_modules` to the main checkout's. Node
+    // reports the package at its real path, under the main checkout, but the
+    // worktree's own entry is what resolved it.
+    await withTempDir(async (dir) => {
+      const mainModules = path.join(dir, "main", "node_modules");
+      const packageDir = path.join(mainModules, "qfai");
+      await mkdir(packageDir, { recursive: true });
+      const worktree = path.join(dir, "main", ".claude", "worktrees", "agent-1");
+      await mkdir(worktree, { recursive: true });
+      await symlink(mainModules, path.join(worktree, "node_modules"), "junction");
+
+      expect(await resolvesThroughOwnNodeModules(worktree, packageDir)).toBe(true);
+    });
+  });
+
+  it("counts pnpm's virtual store behind the link as the project's own", async () => {
+    await withTempDir(async (dir) => {
+      const mainModules = path.join(dir, "main", "node_modules");
+      const packageDir = path.join(mainModules, ".pnpm", "qfai@1.12.3", "node_modules", "qfai");
+      await mkdir(packageDir, { recursive: true });
+      const worktree = path.join(dir, "worktree");
+      await mkdir(worktree, { recursive: true });
+      await symlink(mainModules, path.join(worktree, "node_modules"), "junction");
+
+      expect(await resolvesThroughOwnNodeModules(worktree, packageDir)).toBe(true);
+    });
+  });
+
+  it("does not count the enclosing checkout's copy when the worktree has no node_modules", async () => {
+    // The hazard the check exists for: `npx` walked parents and found another
+    // checkout's install. Nothing in the worktree pointed there.
+    await withTempDir(async (dir) => {
+      const packageDir = path.join(dir, "main", "node_modules", "qfai");
+      await mkdir(packageDir, { recursive: true });
+      const worktree = path.join(dir, "main", ".claude", "worktrees", "agent-1");
+      await mkdir(worktree, { recursive: true });
+
+      expect(await resolvesThroughOwnNodeModules(worktree, packageDir)).toBe(false);
+    });
+  });
+
+  it("does not count a copy outside where the link points", async () => {
+    await withTempDir(async (dir) => {
+      const mainModules = path.join(dir, "main", "node_modules");
+      await mkdir(mainModules, { recursive: true });
+      const elsewhere = path.join(dir, "global", "lib", "node_modules", "qfai");
+      await mkdir(elsewhere, { recursive: true });
+      const worktree = path.join(dir, "worktree");
+      await mkdir(worktree, { recursive: true });
+      await symlink(mainModules, path.join(worktree, "node_modules"), "junction");
+
+      expect(await resolvesThroughOwnNodeModules(worktree, elsewhere)).toBe(false);
+    });
+  });
+
+  it("does not count a source checkout that the linked node_modules links to", async () => {
+    // A workspace dependency: `node_modules/qfai` is itself a link to another
+    // checkout's source, which is another branch's build, not an installed copy.
+    await withTempDir(async (dir) => {
+      const mainModules = path.join(dir, "main", "node_modules");
+      const sourceDir = path.join(dir, "main", "packages", "qfai");
+      await mkdir(mainModules, { recursive: true });
+      await mkdir(sourceDir, { recursive: true });
+      const worktree = path.join(dir, "worktree");
+      await mkdir(worktree, { recursive: true });
+      await symlink(mainModules, path.join(worktree, "node_modules"), "junction");
+
+      expect(await resolvesThroughOwnNodeModules(worktree, sourceDir)).toBe(false);
+    });
+  });
+});
+
+describe("reachedThroughLinkedNodeModules", () => {
+  it("counts the declaring directory's linked node_modules for a workspace package", async () => {
+    // The worktree's top level declares qfai and links its `node_modules` to
+    // the main checkout's; the project being validated is a package below it.
+    await withTempDir(async (dir) => {
+      const mainModules = path.join(dir, "main", "node_modules");
+      const packageDir = path.join(mainModules, "qfai");
+      await mkdir(packageDir, { recursive: true });
+      const worktree = path.join(dir, "worktree");
+      const webDir = path.join(worktree, "packages", "web");
+      await mkdir(webDir, { recursive: true });
+      await writeFile(
+        path.join(worktree, "package.json"),
+        JSON.stringify({ devDependencies: { qfai: "^1.0.0" } }),
+      );
+      await symlink(mainModules, path.join(worktree, "node_modules"), "junction");
+
+      expect(await reachedThroughLinkedNodeModules(webDir, packageDir)).toBe(true);
+    });
+  });
+
+  it("does not count a copy hoisted into the declaring directory's real node_modules", async () => {
+    await withTempDir(async (dir) => {
+      const worktree = path.join(dir, "worktree");
+      const packageDir = path.join(worktree, "node_modules", "qfai");
+      const outDir = path.join(worktree, "out");
+      await mkdir(packageDir, { recursive: true });
+      await mkdir(outDir, { recursive: true });
+      await writeFile(
+        path.join(worktree, "package.json"),
+        JSON.stringify({ devDependencies: { qfai: "^1.0.0" } }),
+      );
+
+      expect(await reachedThroughLinkedNodeModules(outDir, packageDir)).toBe(false);
+    });
+  });
+
+  it("does not count a copy when neither directory links to it", async () => {
+    await withTempDir(async (dir) => {
+      const packageDir = path.join(dir, "main", "node_modules", "qfai");
+      await mkdir(packageDir, { recursive: true });
+      const worktree = path.join(dir, "worktree");
+      await mkdir(worktree, { recursive: true });
+      await writeFile(
+        path.join(worktree, "package.json"),
+        JSON.stringify({ devDependencies: { qfai: "^1.0.0" } }),
+      );
+
+      expect(await reachedThroughLinkedNodeModules(worktree, packageDir)).toBe(false);
+    });
+  });
+});
+
 describe("locateToolAgainstProject", () => {
   it("reports a source checkout run directly as not outside", async () => {
     // The whole test harness lives here: a temp root is outside the source tree
@@ -374,8 +503,8 @@ describe("locateToolAgainstProject", () => {
     });
   });
 
+  // QFAI:EX-0001-0039-14
   it("reports a project whose node_modules links to another checkout's", async (ctx) => {
-    // QFAI:EX-0001-0039-14
     // The worktree case: `other/node_modules/qfai` is the workspace link to the
     // running package, and the project's `node_modules` is a link to it.
     await withTempDir(async (dir) => {
@@ -400,8 +529,8 @@ describe("locateToolAgainstProject", () => {
     });
   });
 
+  // QFAI:EX-0001-0039-14
   it("reports a project below a directory whose node_modules links to the package", async (ctx) => {
-    // QFAI:EX-0001-0039-14
     await withTempDir(async (dir) => {
       const packageDir = String(await resolveToolPackageDir());
       const root = path.join(dir, "project");
@@ -415,8 +544,8 @@ describe("locateToolAgainstProject", () => {
     });
   });
 
+  // QFAI:EX-0001-0039-14
   it("stays quiet when a nearer copy is what npx would run", async (ctx) => {
-    // QFAI:EX-0001-0039-14
     // The checkout was run by its path against a project with its own install;
     // the link farther up is not how it was reached.
     await withTempDir(async (dir) => {
@@ -431,8 +560,8 @@ describe("locateToolAgainstProject", () => {
     });
   });
 
+  // QFAI:EX-0001-0039-14
   it("stays quiet for a link in the project's own node_modules", async (ctx) => {
-    // QFAI:EX-0001-0039-14
     await withTempDir(async (root) => {
       const packageDir = String(await resolveToolPackageDir());
       await mkdir(path.join(root, "node_modules"), { recursive: true });
@@ -448,8 +577,8 @@ describe("locateToolAgainstProject", () => {
     });
   });
 
+  // QFAI:EX-0001-0039-14
   it("stays quiet for a sub-package of a monorepo whose top level links qfai", async (ctx) => {
-    // QFAI:EX-0001-0039-14
     // `npm link qfai`, or qfai as a workspace member, at the top level that
     // declares it: the choice holds for every package below it.
     await withTempDir(async (dir) => {
@@ -470,8 +599,8 @@ describe("locateToolAgainstProject", () => {
     });
   });
 
+  // QFAI:EX-0001-0039-14
   it("stays quiet when the nearest node_modules/qfai above is another copy", async () => {
-    // QFAI:EX-0001-0039-14
     // A real directory, not a link to the running package: the checkout was run
     // by its path, and nothing links to it.
     await withTempDir(async (dir) => {

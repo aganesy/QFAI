@@ -86,11 +86,11 @@ describe("four ordinal axes and eight diagnostic questions", () => {
     // Criteria 6 to 8 read counts. A reviewer told to consider the counts and
     // not told where they are counts by eye, which is the number nobody can
     // reproduce — so the prompt names the file and forbids recounting.
-    it(`${tree}: the counts are read from the capture's sidecar, not recounted`, async () => {
+    it(`${tree}: the counts come from the live session and are never invented`, async () => {
       const text = flat(await read(tree, REVIEWER_PROMPT));
 
-      expect(text).toContain("iter-NN/<screen>.signals.json");
-      expect(text).toContain("Read the counts when the file exists; do not invent them");
+      expect(text).toContain("Count them in your live session when a finding needs a number.");
+      expect(text).toContain("Do not invent a count you did not take.");
       // An absent denominator is unknown. Reading it as zero turns "no task
       // declared" into "no controls", which is the opposite of the capture.
       expect(text).toContain("`null`, which means unknown, not zero");

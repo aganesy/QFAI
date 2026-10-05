@@ -1,7 +1,0 @@
-# Examples
-
-## Examples
-
-| EX-ID           | AC-Ref          | Input                                                                                                                                                  | Expected                                                                                                                                                                                                                            |
-| --------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| EX-0001-0048-01 | AC-0001-0048-01 | A Reviewer-Gate report JSON containing `{"code": "R-PROMPT-SCANNER-DRIFT", "justification": "   "}` (whitespace-only), when `qfai validate` ingests it | Validate exits with severity error (advisory-failing); a corrected justification naming (a) `findDesignMdViolations.ts`, (b) `generator-prompt.md`, and (c) the Tailwind preflight clause whose match could not be confirmed passes |

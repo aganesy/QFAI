@@ -3,7 +3,7 @@ name: maintain-edit
 owner: qfai-maintain
 purpose: "Change wording, a typo, a code comment or document prose inside the write scope, with no behaviour change, and stop before any edit that has a semantic effect."
 requires: [common-gate-run]
-roles: [doc-steward, completion-reviewer]
+roles: [doc-steward]
 routing-profile: default
 ---
 
@@ -93,5 +93,5 @@ edit changes none. Any other entry under
 
 The diff stays inside the write scope, the no-behaviour-change judgement names
 its reason, and every check run over the changed files exited 0. The review that
-follows (`completion-reviewer`) confirms the diff changes no behaviour; the
+follows (`implementation-reviewer`) confirms the diff changes no behaviour; the
 reviewer is never the agent that made the edit.

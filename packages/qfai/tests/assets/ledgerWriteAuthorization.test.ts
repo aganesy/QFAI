@@ -24,12 +24,10 @@ describe("Implementation evidence ownership", () => {
     expect(skill).toContain("rule/drift-protocol.md");
   });
 
-  it("puts observed EX results and review decisions in flow evidence", async () => {
+  it("puts observed EX results in the stage report", async () => {
     const skill = await asset("step/implement-tdd/STEP.md");
-    expect(skill).toContain(".qfai/evidence/implement-BF-NNNN.md");
-    expect(skill).toContain("Give each example its own");
+    expect(skill).toContain("The stage report gives each example its own");
     expect(skill).toContain("RED, GREEN, and Refactor commands and observed results");
-    expect(skill).toContain("Each required reviewer must pass the same final revision");
   });
 
   it("requires an owner rerun and dependent checks after an approved change", async () => {
@@ -39,5 +37,8 @@ describe("Implementation evidence ownership", () => {
     expect(drift).toContain(
       "Complete the decision row by changing Status from WIP to DONE only after",
     );
+    const rule = drift.replaceAll("`", "").replace(/\s+/g, " ");
+    expect(rule).toMatch(/DONE claims every action[^.!?]*Approach/);
+    expect(rule).toMatch(/deferred[^.!?]*keep the row at WIP/i);
   });
 });

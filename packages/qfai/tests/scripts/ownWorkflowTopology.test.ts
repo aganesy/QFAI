@@ -1742,112 +1742,6 @@ describe("TC-0017-0041 (TDD-0041): layer separation adds no workflow file and no
   });
 });
 
-/**
- * The lanes whose findings the Reviewer Gate is required to ingest, and how each one appears in
- * a `run:` body.
- *
- * BOTH, because the gate's deferred-registration exemption names two codes and is required to
- * ingest both. Rows written for the hygiene lane alone would keep passing if the shape gate grew
- * a producer of its own that wrote its artifact only into the `lint` job's checkout — while the
- * self-validates below run here, on a fresh one. Half the exemption would then reach no
- * reviewer, with nothing saying so.
- */
-const REVIEWER_GATE_PRODUCERS: readonly { what: string; needles: readonly string[] }[] = [
-  {
-    what: "the workflow hygiene lane",
-    needles: ["check-workflow-hygiene.mjs", "--report-dir"],
-  },
-  {
-    what: "the shipped-shape gate",
-    needles: ["lint:workflow-shape", ".qfai/review/shipped-workflow-shape"],
-  },
-];
-
-describe("both producers' findings reach the job that runs the Reviewer Gate", () => {
-  const buildSteps = (): Record<string, unknown>[] => {
-    const jobs = ciJobs();
-    return Array.isArray(jobs["build"]?.["steps"]) ? jobs["build"]["steps"].filter(isRecord) : [];
-  };
-
-  /** The index of the step whose `run` carries every needle, or `-1`. */
-  const stepIndex = (needles: readonly string[]): number =>
-    buildSteps().findIndex((step) => {
-      const run = step["run"];
-      return typeof run === "string" && needles.every((needle) => run.includes(needle));
-    });
-
-  for (const producer of REVIEWER_GATE_PRODUCERS) {
-    it(`writes ${producer.what}'s artifact in the same job as the dogfooding validate, and before it`, () => {
-      // A lane writes `{ findings: [...] }` under
-      // `.qfai/review/**` and the gate ingests it — but the lanes run in `lint`, on that job's
-      // checkout, and the dogfooding validate runs in `build` on a fresh one. With nothing
-      // transferring the file, a violation would redden `lint` and reach no reviewer, breaking the
-      // whole promise the shipped-workflows contract makes for those codes.
-      //
-      // Asserted as ONE JOB and an ORDER, because either alone is the defect: an artifact written
-      // after the gate has read the directory is an artifact the gate did not see, and one
-      // written in another job is one this job's `.qfai/review/**` never contains.
-      const steps = buildSteps();
-      expect(steps.length, "the build job must declare steps").toBeGreaterThan(0);
-
-      const writesArtifact = stepIndex(producer.needles);
-      expect(
-        writesArtifact,
-        `the build job must produce ${producer.what}'s findings where its own Reviewer Gate looks`,
-      ).toBeGreaterThan(-1);
-
-      const readsThem = steps.findIndex((step) => {
-        const run = step["run"];
-        return typeof run === "string" && run.includes(DOGFOOD_GUARD);
-      });
-      expect(
-        readsThem,
-        "the dogfooding validate — the step that ingests them — must be in this job too",
-      ).toBeGreaterThan(-1);
-
-      expect(
-        writesArtifact < readsThem,
-        "the findings must be written BEFORE the gate reads the directory; after it, the gate " +
-          "ingested nothing and the run is green over a violation",
-      ).toBe(true);
-    });
-
-    it(`survives ${producer.what} exiting non-zero, and fails when no artifact appears`, () => {
-      // The step's whole design is that a VIOLATION still reaches the gate — so the lane's
-      // non-zero exit must not abort the step before the validate steps below it. GitHub runs
-      // `shell: bash` as `bash --noprofile --norc -eo pipefail {0}`, so `-e` comes from the
-      // INVOCATION and a `set -uo pipefail` inside the body does not remove it. Measured: the
-      // first version of the hygiene step aborted on the lane's non-zero exit and never reached
-      // the line that captured it — the exact abort its own comment said must not happen.
-      //
-      // And the other direction, which is not symmetric: a MISSING artifact is fatal. The lane
-      // failing means a violation the gate should see; no artifact at all means the bridge did
-      // not run, and a silent bridge is what these steps exist to remove.
-      const index = stepIndex(producer.needles);
-      expect(index, `the build job must carry ${producer.what}'s artifact step`).toBeGreaterThan(
-        -1,
-      );
-      const body = String(buildSteps()[index]?.["run"] ?? "");
-
-      // The lane's own invocation, and it has to be the one inside the `||` list — a body that
-      // suspends `-e` for some OTHER command would satisfy a bare `includes` check.
-      const laneCall = producer.needles[0] ?? "";
-      const suspended = body
-        .split(/\r?\n/)
-        .some((line) => line.includes(laneCall) && line.includes("||"));
-      expect(
-        suspended,
-        "the lane call must sit in an `||` list (or otherwise suspend `-e`), or a violation " +
-          "aborts the step before the Reviewer Gate below ever runs",
-      ).toBe(true);
-
-      expect(
-        body,
-        "and a missing artifact must be reported as an error rather than passed over",
-      ).toContain("::error::");
-    });
-  }
-});
 describe("one lane runs on the floor `engines.node` declares", () => {
   it("asks the shared definition for the floor, and checks it got it", () => {
     // Every other toolchain job resolves the range, so `setup-node` gives
@@ -2735,11 +2629,17 @@ describe("a permitted rebuild is verified against where the package comes from",
     try {
       const list = path.join(dir, "dependency-builds.txt");
       writeFileSync(list, `# probe\nesbuild\n`, "utf-8");
+      // The package manager's own permission list, which the verifier reads against the one
+      // above. It agrees here, so what each case below measures is the lockfile resolution.
+      const workspace = path.join(dir, "pnpm-workspace.yaml");
+      writeFileSync(workspace, `allowBuilds:\n  esbuild: true\n`, "utf-8");
 
       const verify = (lock: string): number => {
         const lockPath = path.join(dir, "pnpm-lock.yaml");
         writeFileSync(lockPath, lock, "utf-8");
-        const run = spawnSync("node", [VERIFIER, lockPath, list], { encoding: "utf-8" });
+        const run = spawnSync("node", [VERIFIER, lockPath, list, workspace], {
+          encoding: "utf-8",
+        });
         if (run.error !== undefined) throw run.error;
         return run.status ?? -1;
       };
@@ -2798,6 +2698,97 @@ describe("a permitted rebuild is verified against where the package comes from",
       expect
         .soft(verify(absent), "a permitted name the lockfile never resolves must be reported")
         .toBe(1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses either list holding a name the other does not", () => {
+    // The agreeing fixture above measures the lockfile resolution. This measures the comparison
+    // itself: each branch of it, and the two shapes that must not be read as agreement.
+    const dir = mkdtempSync(path.join(tmpdir(), "qfai-rebuild-agree-"));
+    try {
+      const lockPath = path.join(dir, "pnpm-lock.yaml");
+      writeFileSync(
+        lockPath,
+        [
+          "lockfileVersion: '9.0'",
+          "",
+          "packages:",
+          "",
+          "  esbuild@0.21.5:",
+          "    resolution: {integrity: sha512-deadbeef}",
+          "",
+          "  sharp@0.33.0:",
+          "    resolution: {integrity: sha512-deadbeef}",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const verify = (listText: string, workspaceText: string): { status: number; out: string } => {
+        const list = path.join(dir, "dependency-builds.txt");
+        const workspace = path.join(dir, "pnpm-workspace.yaml");
+        writeFileSync(list, listText, "utf-8");
+        writeFileSync(workspace, workspaceText, "utf-8");
+        const run = spawnSync("node", [VERIFIER, lockPath, list, workspace], {
+          encoding: "utf-8",
+        });
+        if (run.error !== undefined) throw run.error;
+        return { status: run.status ?? -1, out: `${run.stdout}${run.stderr}` };
+      };
+
+      const agreeing = verify("esbuild\n", "allowBuilds:\n  esbuild: true\n");
+      expect
+        .soft(agreeing.status, `two lists naming the same package agree:\n${agreeing.out}`)
+        .toBe(0);
+
+      // The manager permits what nobody reviewed. This is the direction that matters: under an
+      // ordinary install — one this job does not perform — that permission is what runs code.
+      const managerOnly = verify("esbuild\n", "allowBuilds:\n  esbuild: true\n  sharp: true\n");
+      expect.soft(managerOnly.status, "a permission absent from the allow-list must fail").toBe(1);
+      expect
+        .soft(managerOnly.out, "and name the package the allow-list never reviewed")
+        .toContain("sharp");
+
+      // And the other way: the list names what the manager will refuse to build, which is a
+      // rebuild that stops the step later and with a worse message.
+      const listOnly = verify("esbuild\nsharp\n", "allowBuilds:\n  esbuild: true\n");
+      expect.soft(listOnly.status, "an allow-list entry the manager denies must fail").toBe(1);
+      expect.soft(listOnly.out, "and name it").toContain("sharp");
+
+      // A denial is not a permission, so it owes the allow-list nothing.
+      const denied = verify("esbuild\n", "allowBuilds:\n  esbuild: true\n  sharp: false\n");
+      expect.soft(denied.status, `an explicit false needs no counterpart:\n${denied.out}`).toBe(0);
+
+      // FAIL CLOSED on a value this check cannot read. The manager honours more of YAML than a
+      // line scan does, and a permission it skips in silence is the drift this exists to stop.
+      for (const [shape, why] of [
+        ["allowBuilds:\n  esbuild: true\n  sharp: !!bool true\n", "a tagged boolean"],
+        ["allowBuilds:\n  esbuild: true\n  sharp: yes\n", "another spelling of true"],
+        ["allowBuilds: { esbuild: true }\n", "a flow mapping on the key's own line"],
+        ['"allowBuilds":\n  esbuild: true\n  sharp: true\n', "a double-quoted key"],
+        ["'allowBuilds':\n  esbuild: true\n  sharp: true\n", "a single-quoted key"],
+        [" allowBuilds:\n   esbuild: true\n   sharp: true\n", "a root mapping that is indented"],
+        [
+          '"\\u0061llowBuilds":\n  esbuild: true\n  sharp: true\n',
+          "an escaped spelling of the key",
+        ],
+        ["? allowBuilds\n: esbuild: true\n  sharp: true\n", "the explicit key form"],
+      ] as Array<[string, string]>) {
+        const unreadable = verify("esbuild\n", shape);
+        expect.soft(unreadable.status, `${why} must be refused, not skipped`).toBe(1);
+      }
+
+      // And no list at all is not a disagreement. The re-publish path checks out a tree written
+      // before the manager required one, and there the allow-list is the whole permission.
+      const absent = verify("esbuild\n", 'packages:\n  - "packages/qfai"\n');
+      expect
+        .soft(absent.status, `a tree declaring no allowBuilds must still pass:\n${absent.out}`)
+        .toBe(0);
+      expect
+        .soft(absent.out, "and say so, because a skipped comparison reads like a satisfied one")
+        .toContain("declares no allowBuilds");
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

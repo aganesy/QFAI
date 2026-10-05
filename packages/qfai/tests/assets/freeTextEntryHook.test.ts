@@ -1,9 +1,3 @@
-// QFAI:EX-0001-0196-26
-// QFAI:EX-0001-0196-27
-// QFAI:EX-0001-0196-41
-// QFAI:EX-0001-0196-43
-// QFAI:EX-0001-0196-44
-// QFAI:EX-0001-0196-49
 /**
  * The prompt-time reminder that sends a request naming no skill to `qfai-run`,
  * for Claude Code and for Codex.
@@ -126,6 +120,12 @@ async function runThroughShell(entry: Entry, cwd: string): Promise<string> {
   return outputs[0] ?? "";
 }
 
+// QFAI:EX-0001-0196-26
+// QFAI:EX-0001-0196-27
+// QFAI:EX-0001-0196-41
+// QFAI:EX-0001-0196-43
+// QFAI:EX-0001-0196-44
+// QFAI:EX-0001-0196-49
 describe("the free-text entry reminder", () => {
   it.each([OWN_SETTINGS, SHIPPED_SETTINGS])(
     "%s fires on every prompt and names qfai-run",
@@ -145,6 +145,7 @@ describe("the free-text entry reminder", () => {
       expect(context).toContain("names no skill, invoke the `qfai-run` skill");
       expect(context).toContain("A message that names a skill goes to that skill.");
       expect(context).toContain("Read the skill rather than working from this line.");
+      expect(context).toContain("In a git worktree, read `.claude/skills/qfai-run/SKILL.md`");
       expect(context.length).toBeLessThan(1000);
     },
   );
@@ -188,6 +189,46 @@ describe("the free-text entry reminder", () => {
       "If `qfai-run` cannot start, stop and say so; do not answer without the workflow.",
     );
   });
+
+  /** What the hook prints for a `UserPromptSubmit` carrying `prompt`, or for raw `input`. */
+  async function printedFor(rel: string, input: string): Promise<string> {
+    const entry = promptEntry(await readGroups(rel), FREE_TEXT_ENTRY_HOOK_MARKER);
+    return runReminderHook(entry, projectDirOf(repoRoot, rel), input);
+  }
+  const promptInput = (prompt: string): string =>
+    JSON.stringify({ hook_event_name: "UserPromptSubmit", prompt });
+
+  it.each([OWN_SETTINGS, SHIPPED_SETTINGS])(
+    "%s stays silent on an automated notification turn",
+    async (rel) => {
+      // No user message exists on these turns, so there is no request to route, and the
+      // reminder would start a run from a notification.
+      for (const prompt of [
+        "<task-notification>\n<task-id>b1</task-id>\n<status>completed</status>",
+        '<wake reason="external-event">CI finished</wake>',
+        "[SYSTEM NOTIFICATION - NOT USER INPUT]\n\nActivity on a subscribed pull request.",
+        "[SYSTEM NOTIFICATION]\n\n<task-notification>\n<task-id>b1</task-id>",
+      ]) {
+        await expect(printedFor(rel, promptInput(prompt)), prompt).resolves.toBe("");
+      }
+    },
+  );
+
+  it.each([OWN_SETTINGS, SHIPPED_SETTINGS])(
+    "%s still prints on a typed prompt, and on input it cannot read",
+    async (rel) => {
+      for (const input of [
+        promptInput("Fix the failing test"),
+        promptInput("What does [SYSTEM NOTIFICATION] mean here?"),
+        promptInput("What does <task-notification> mean here?"),
+        "",
+        "{ not json",
+        "{}",
+      ]) {
+        expect(contextOf(await printedFor(rel, input)), input).toContain("`qfai-run`");
+      }
+    },
+  );
 
   it("is the same group in both Claude Code settings files", async () => {
     const [mine, shipped] = await Promise.all([OWN_SETTINGS, SHIPPED_SETTINGS].map(readGroups));
