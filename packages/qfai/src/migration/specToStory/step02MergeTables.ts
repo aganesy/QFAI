@@ -36,7 +36,6 @@ export function mapDecisionStatus(status?: string, successorId?: string): string
     case "rejected":
       return "REJECTED";
     case "re-open":
-    case "in-progress":
       return "WIP";
     case "superseded":
       return successorId ? `SUPERSEDED (by ${successorId})` : "TODO";
@@ -183,7 +182,7 @@ function changeRequest(text: string, source: string): OldRecord | null {
   const impact = extractH2Sections(text).get("Impact scope")?.body ?? "";
   const paths = [...impact.matchAll(/`([^`]+)`/g)].map((match) => match[1] ?? "");
   const status = /^- Status:\s*`?([^\s`]+)`?/m.exec(text)?.[1];
-  const appliedAt = /^- Applied at:\s*`?([^\s`]*)`?/m.exec(text)?.[1] ?? "";
+  const appliedAt = /^- Applied at:[ \t]*`?([^\s`]*)`?/m.exec(text)?.[1] ?? "";
   const title = /^- Title:\s*(.+)$/m.exec(text)?.[1] ?? oldId;
   // An approved request that was never applied is still in progress: DONE
   // would record the change as made when only the approval was.
@@ -194,7 +193,7 @@ function changeRequest(text: string, source: string): OldRecord | null {
     oldId,
     summary: paths.length > 0 ? paths.join(", ") : title,
     approach: `${source}: ${title}`,
-    status: unapplied ? "in-progress" : status,
+    status: unapplied ? "re-open" : status,
     prefix: "Change request: ",
   };
 }

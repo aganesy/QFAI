@@ -101,6 +101,11 @@ describe("migration decision table merge", () => {
       request("CR-20260101-0002", "2026-01-02"),
     );
 
+    await writeFile(
+      path.join(requests, "CR-20260101-0003-blank.md"),
+      "# Change Request\n\n- ID: `CR-20260101-0003`\n- Title: `blank title`\n- Status: `approved`\n- Applied at:\n\n## Impact scope\n\n- `docs/a.md`\n",
+    );
+
     expect((await run(context)).code).toBe(0);
     const rows = parseRecordTable(
       await readFile(path.join(context.specsDir, "decisions.md"), "utf8"),
@@ -110,6 +115,7 @@ describe("migration decision table merge", () => {
       rows.find((row) => row.content.includes(`#${id}`))?.status;
     expect(statusOf("CR-20260101-0001")).toBe("WIP");
     expect(statusOf("CR-20260101-0002")).toBe("DONE");
+    expect(statusOf("CR-20260101-0003")).toBe("WIP");
   });
 
   it("names an invalid existing row before writing", async () => {

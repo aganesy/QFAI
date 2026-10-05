@@ -46,3 +46,15 @@ describe.each(trees)("%s — implementation stage binding", (tree) => {
     expect(baseline).toContain("## Policy check (mandatory)");
   });
 });
+
+describe.each(trees)("%s — migration skill shared-rule pointers", (tree) => {
+  it("cites each shared rule by its full project-root path", async () => {
+    const skill = (await read(tree, "assistant/skill/qfai-migration-v1-to-v2/SKILL.md")).replace(
+      /\s+/g,
+      " ",
+    );
+    expect(skill).toContain(".qfai/assistant/rule/shared-skill-delegation-baseline.md");
+    expect(skill).toContain(".qfai/assistant/rule/test-layers.md");
+    expect(skill).not.toMatch(/(?<![\w./-])rule\/[\w-]+\.md/);
+  });
+});
