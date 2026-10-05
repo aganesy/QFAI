@@ -1,0 +1,38 @@
+route: prototype-feature
+family: change
+stages:
+  - id: sdd
+    kind: sdd
+    steps:
+      - sdd-triage
+      - { step: sdd-flow, passThrough: true }
+      - sdd-story
+      - { step: sdd-contract, passThrough: true }
+      - common-design-md
+      - { step: sdd-cycle, passThrough: true }
+    review: spec
+  - id: prototype
+    kind: prototype
+    steps: [prototyping-grill, prototyping-preflight, prototyping-loop, prototyping-handoff]
+    after: [sdd]
+  - id: implement
+    kind: implement
+    steps: [implement-scaffold, implement-tdd]
+    after: [prototype]
+  - id: docs
+    kind: maintenance
+    steps:
+      - { step: maintain-edit, passThrough: true }
+    after: [implement]
+  - id: note
+    kind: verify
+    steps:
+      - { step: verify-change-note, passThrough: true }
+    after: [docs]
+    review: code
+  - id: verify
+    kind: verify
+    steps: [verify-qfai-gate, verify-repo-gate, verify-commit]
+    after: [note]
+decisionPoints: [sdd-triage, prototyping-loop]
+branchPoints: []

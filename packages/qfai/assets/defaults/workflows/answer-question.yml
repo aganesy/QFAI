@@ -1,0 +1,14 @@
+route: answer-question
+family: close
+stages:
+  - id: answer
+    kind: triage
+    steps:
+      - { step: triage-investigate, passThrough: true }
+      - triage-answer
+      - triage-close
+decisionPoints: []
+branchPoints:
+  - step: triage-investigate
+    outcomes:
+      - { outcome: defect-found, routes: decision-table }

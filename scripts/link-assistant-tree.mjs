@@ -9,19 +9,11 @@
  * agents working here with no copy step, and a copy nobody made stops being a
  * way for the two to disagree.
  *
- * WHAT STAYS A REAL FILE is not a list kept here. Two things earn it:
+ * A path that exists here and nowhere in the assets is reported as drift, so
+ * the repository cannot silently use an unshipped instruction.
  *
- *   1. The project owns the content. `ADOPTER_OWNED_CATALOG_FILES` in
- *      `packages/qfai/src/core/assistantAssetProvenance.ts` names those, and it
- *      is read from that file rather than restated — `qfai init --force` reads
- *      the same constant to decide what it must not overwrite, and two copies
- *      of that answer is how one of them silently stops matching the other.
- *   2. The path exists here and nowhere in the assets. A migration memo is the
- *      live case: `qfai init --upgrade-assistant-tree` writes one per upgrade,
- *      and they accumulate in the tree that ran it.
- *
- * A directory holding neither becomes ONE link. A directory holding either is
- * kept real and its shipped children are linked one at a time, which is the
+ * A directory holding no such path becomes ONE link. A directory holding one
+ * is kept real and its shipped children are linked one at a time, which is the
  * shape `.claude/agents/*.md` already uses.
  *
  * Usage:
@@ -31,7 +23,6 @@
 import { execFileSync } from "node:child_process";
 import {
   existsSync,
-  readFileSync,
   lstatSync,
   mkdirSync,
   readdirSync,
@@ -74,20 +65,24 @@ function lstatSafe(p) {
  * would link a directory and the second would find its own links and keep it
  * real.
  */
-function localOnlyUnder(rel, adopterOwned) {
+function localOnlyUnder(rel) {
   const found = [];
   const walk = (relDir) => {
     for (const entry of entries(path.join(TARGET, relDir))) {
       const childRel = relDir === "" ? entry.name : `${relDir}/${entry.name}`;
       const stat = lstatSafe(path.join(TARGET, childRel));
-      if (stat === undefined || stat.isSymbolicLink()) continue;
+      if (stat === undefined) continue;
       const inSource = existsSync(path.join(SOURCE, childRel));
+      if (stat.isSymbolicLink()) {
+        if (!inSource) found.push(childRel);
+        continue;
+      }
       if (stat.isDirectory()) {
         if (inSource) walk(childRel);
         else found.push(childRel);
         continue;
       }
-      if (inSource || adopterOwned.has(childRel)) continue;
+      if (inSource) continue;
       // Untracked: a scratch file a suite left behind, not something a commit
       // holds. `TRACKED` is null when git cannot answer, and then every path
       // is considered, which is the stricter of the two.
@@ -102,10 +97,10 @@ function localOnlyUnder(rel, adopterOwned) {
 /**
  * Paths under `.qfai/assistant/` that git tracks, or `null` when git cannot say.
  *
- * Only a tracked path is this repository's to answer for. A suite that writes
- * into the working tree leaves an untracked file behind, and reporting that as
- * an unaccounted path fails a lane for something no commit contains — which is
- * what it did the first time this ran in CI.
+ * Only a tracked regular file is this repository's to answer for. A suite that
+ * writes an untracked file should not fail the lane. Symlinks and directories
+ * with retired layer names are checked even when untracked: either one could
+ * expose instructions the package does not ship.
  */
 function trackedUnderTarget() {
   try {
@@ -130,51 +125,25 @@ function trackedUnderTarget() {
 const TRACKED = trackedUnderTarget();
 
 /**
- * Prefixes under `.qfai/assistant/` this tree may hold alone.
- *
- * Only one: `qfai init --upgrade-assistant-tree` writes a migration memo per
- * upgrade, into the tree that ran it, and other documents cite it by name.
- *
- * Everything else that exists here and nowhere in the assets is REPORTED, and
+ * Nothing under `.qfai/assistant/` may exist only in this repository.
+ * Everything that exists here and nowhere in the assets is REPORTED, and
  * the reason is the incident the previous mechanism was built around: a
- * root-only `assistant/steering/test-layers.md` made `loadLayerPolicy` succeed
+ * root-only `test-layers.md` under the assistant tree made `loadLayerPolicy` succeed
  * in this tree and throw in every `qfai init` project, so a consumer-only
  * failure outlived a full minor release. A link cannot drift from its source,
  * but a file the assets never had is still invisible to every adopter — and
  * this tree is the only place the shipped assets are exercised end to end.
  */
-const LOCAL_ONLY_ALLOWED = ["process/migrations/"];
+const RETIRED_LAYERS = ["skills", "agents", "prompts", "constitution", "manifest", "process"];
 
-const isAllowedLocalOnly = (rel, adopterOwned) =>
-  adopterOwned.has(rel) || LOCAL_ONLY_ALLOWED.some((prefix) => rel.startsWith(prefix));
-
-/** `true` when any adopter-owned path sits under `rel`. */
-function ownsSomethingUnder(rel, adopterOwned) {
-  const prefix = rel === "" ? "" : `${rel}/`;
-  for (const owned of adopterOwned) {
-    if (owned.startsWith(prefix)) return true;
-  }
-  return false;
-}
-
-/**
- * The plan: which paths are links, which directories stay real, and which paths
- * are left alone.
- *
- * `kept` is reported on every run for the reason the mdschema lane reports its
- * own exclusions — an exclusion nobody sees is one nobody reviews.
- */
-function plan(adopterOwned) {
+/** The plan: which paths are links, which directories stay real, and which paths are unexpected. */
+function plan() {
   const links = new Map();
   const realDirs = [];
-  const kept = [];
   const unexpected = [];
 
   const visit = (rel) => {
-    const mustStayReal =
-      rel === "" ||
-      ownsSomethingUnder(rel, adopterOwned) ||
-      localOnlyUnder(rel, adopterOwned).length > 0;
+    const mustStayReal = rel === "" || localOnlyUnder(rel).length > 0;
 
     if (!mustStayReal) {
       links.set(rel, path.join(SOURCE_REL, rel));
@@ -188,23 +157,18 @@ function plan(adopterOwned) {
         visit(childRel);
         continue;
       }
-      if (adopterOwned.has(childRel)) {
-        kept.push(childRel);
-        continue;
-      }
       links.set(childRel, path.join(SOURCE_REL, childRel));
     }
-    for (const localRel of localOnlyUnder(rel, adopterOwned)) {
-      if (isAllowedLocalOnly(localRel, adopterOwned)) kept.push(localRel);
-      else unexpected.push(localRel);
-    }
+    unexpected.push(...localOnlyUnder(rel));
   };
 
   visit("");
+  for (const layer of RETIRED_LAYERS) {
+    if (lstatSafe(path.join(TARGET, layer)) !== undefined) unexpected.push(layer);
+  }
   return {
     links,
     realDirs: [...new Set(realDirs)].sort(),
-    kept: [...new Set(kept)].sort(),
     unexpected: [...new Set(unexpected)].sort(),
   };
 }
@@ -275,43 +239,8 @@ function apply(links, realDirs) {
   return written;
 }
 
-/**
- * `ADOPTER_OWNED_CATALOG_FILES`, read out of the TypeScript source.
- *
- * Read as text rather than imported. Importing it would run a `.ts` module,
- * which needs the type stripping Node gained after the floor this package
- * supports — so the lane that runs on that floor could not execute this script
- * at all. The constant is a list of string literals, and parsing it keeps the
- * single source the alternative was for.
- *
- * A rename or a reshape stops the pattern matching, and that throws rather than
- * yielding an empty set: an empty one would link the four documents a project
- * owns over the placeholders it shipped with.
- */
-function adopterOwnedAssets() {
-  const source = readFileSync(
-    path.join(ROOT, "packages", "qfai", "src", "core", "assistantAssetProvenance.ts"),
-    "utf-8",
-  );
-  const block = /ADOPTER_OWNED_CATALOG_FILES\s*=\s*\[([^\]]*)\]/.exec(source);
-  if (block === null) {
-    throw new Error(
-      "link-assistant-tree: ADOPTER_OWNED_CATALOG_FILES is not where this script reads it, in " +
-        "packages/qfai/src/core/assistantAssetProvenance.ts. Update this reader in the change " +
-        "that moved it.",
-    );
-  }
-  const names = [...(block[1] ?? "").matchAll(/"([^"]+)"/g)].map((match) => match[1]);
-  if (names.length === 0) {
-    throw new Error("link-assistant-tree: ADOPTER_OWNED_CATALOG_FILES parsed to nothing.");
-  }
-  return new Set(names.map((name) => `catalog/${name}`));
-}
-
 async function main() {
-  const ADOPTER_OWNED_ASSETS = adopterOwnedAssets();
-
-  const { links, realDirs, kept, unexpected } = plan(ADOPTER_OWNED_ASSETS);
+  const { links, realDirs, unexpected } = plan();
 
   if (CHECK_ONLY) {
     const problems = verify(links, realDirs, unexpected);
@@ -320,14 +249,12 @@ async function main() {
       console.error(`\n${problems.length} problem(s). Run: node scripts/link-assistant-tree.mjs`);
       return 1;
     }
-    console.log(`${links.size} link(s) verified. Kept as real files:`);
-    for (const rel of kept) console.log(`  ${toPosix(TARGET_REL)}/${rel}`);
+    console.log(`${links.size} link(s) verified.`);
     return 0;
   }
 
   const written = apply(links, realDirs);
-  console.log(`${written} link(s) written, ${links.size} in the plan. Kept as real files:`);
-  for (const rel of kept) console.log(`  ${toPosix(TARGET_REL)}/${rel}`);
+  console.log(`${written} link(s) written, ${links.size} in the plan.`);
   // Reported, never deleted: an unexpected path may be work in progress, and
   // this script is run by hand as well as by the gate.
   for (const rel of unexpected) console.warn(`UNACCOUNTED: ${toPosix(TARGET_REL)}/${rel}`);

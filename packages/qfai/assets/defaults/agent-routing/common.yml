@@ -1,0 +1,14 @@
+# Routing defaults for the `common-*` steps.
+# `_contract.yml` states what every file in this directory holds.
+
+routing:
+  # The other `common-*` steps have no entry: they run inside the step that
+  # requires them, under that step's agents and review.
+  - step: common-design-md
+    phases:
+      - id: design
+        mandatory_agents: [product-experience-architect]
+        conditional_agents: []
+        parallel_groups: []
+        rerun_policy: changed-scope-dependents
+    review_profile: default

@@ -5,23 +5,19 @@
  * (per the spec governance handoff schema acceptance criteria). The
  * minimum field set is:
  *   - companyName?
- *   - primarySpecId?
+ *   - primaryUiContract?
  *   - startDate?
  *   - signature?
  *   - entryPattern?
  *   - productScope?
  * All fields are optional; `additionalProperties: true` so skills MAY
  * attach per-skill data under custom keys without violating the
- * contract. Legacy ad-hoc files (e.g. `session-handoff.yaml`) are
- * accepted during the deprecation window with a
- * `D-HANDOFF-LEGACY-FORMAT` warning emitted by the reader.
+ * contract.
  */
-
-import { parse as parseYaml } from "yaml";
 
 export const HANDOFF_MINIMUM_FIELDS = [
   "companyName",
-  "primarySpecId",
+  "primaryUiContract",
   "startDate",
   "signature",
   "entryPattern",
@@ -37,7 +33,7 @@ export type HandoffMinimumField = (typeof HANDOFF_MINIMUM_FIELDS)[number];
  */
 export type CanonicalHandoff = {
   companyName?: string;
-  primarySpecId?: string;
+  primaryUiContract?: string;
   startDate?: string;
   signature?: string;
   entryPattern?: string;
@@ -49,14 +45,6 @@ export type HandoffValidationIssue = {
   message: string;
   field?: string;
 };
-
-/**
- * Diagnostic code surfaced when a legacy ad-hoc file (e.g.
- * `session-handoff.yaml`) is read during the deprecation window. NOT
- * an error: the reader returns the parsed payload AND attaches this
- * warning so callers can route through `qfai handoff upgrade`.
- */
-export const HANDOFF_LEGACY_FORMAT_CODE = "D-HANDOFF-LEGACY-FORMAT" as const;
 
 /**
  * Schema-drift code emitted by the SSOT-sync Pair IV reviewer-gate
@@ -82,7 +70,7 @@ export function validateHandoff(input: unknown): HandoffValidationIssue[] {
     return issues;
   }
   // `Record<string, unknown>` is the structural supertype of any parsed
-  // JSON/YAML object; per-field reads narrow types explicitly.
+  // JSON object; per-field reads narrow types explicitly.
   const obj = input as Record<string, unknown>;
   for (const field of HANDOFF_MINIMUM_FIELDS) {
     if (!(field in obj)) continue;
@@ -99,43 +87,22 @@ export function validateHandoff(input: unknown): HandoffValidationIssue[] {
 }
 
 /**
- * Parse a YAML OR JSON handoff payload into a `Record<string, unknown>`
- * view. The canonical handoff format is YAML (per `references/handoff.md`
- * and the shape written by `qfai handoff upgrade`); JSON is accepted
- * because JSON is a strict subset of YAML and some legacy tooling
- * emitted JSON-formatted handoffs during the deprecation window.
+ * Parse a handoff record, which is a JSON file, into a plain-object view.
  *
- * The parser is intentionally permissive on input shape (both formats
- * reduce to a plain object). It does NOT enforce the schema — that is
- * `validateHandoff`'s job; this returns `null` only when:
- *   - YAML parsing throws (the YAML library accepts JSON, so this
- *     covers both formats),
- *   - the parsed value is `null` (empty document),
- *   - the parsed value is not a plain object (array, scalar).
- *
- * Function-narrow imports (`parse as parseYaml`) keep the tree-shake
- * surface tight; the `yaml` package is already a project dep.
+ * It does not enforce the schema; that is `validateHandoff`'s job. It
+ * returns `null` when the text is not JSON or its top-level value is not
+ * a plain object.
  */
 export function parseHandoff(text: string): Record<string, unknown> | null {
   let parsed: unknown;
   try {
-    parsed = parseYaml(text);
+    parsed = JSON.parse(text);
   } catch {
     return null;
   }
-  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) return null;
-  // Narrow via structural check above (non-null, object, non-array);
-  // the YAML library returns `unknown` so this cast is the standard
-  // safe-after-guard pattern, not a bare assertion on user data.
-  return parsed as Record<string, unknown>;
+  return isRecord(parsed) ? parsed : null;
 }
 
-/**
- * Back-compat alias for the pre-YAML-support function name. Existing
- * call sites (`core/saasPackage/profile.ts`) keep working without
- * surface-wide rename.
- *
- * @deprecated Prefer {@link parseHandoff}; this alias is kept for
- *   internal consumers and may be removed in a future minor.
- */
-export const parseHandoffJson = parseHandoff;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}

@@ -6,8 +6,8 @@ import {
   existsSync,
   lstatSync,
   mkdirSync,
-  readdirSync,
   readFileSync,
+  readdirSync,
   realpathSync,
   rmSync,
   writeFileSync,
@@ -26,6 +26,7 @@ import {
   readBaseline,
   writeBaseline,
 } from "./fresh-init-findings.mjs";
+import { assertPackagedGithubTopology } from "./lib/pack-github-topology.mjs";
 
 function toPosix(p) {
   return p.split(path.sep).join("/");
@@ -36,6 +37,21 @@ function normalizeForComparison(p) {
   return process.platform === "win32" ? n.toLowerCase() : n;
 }
 
+function runNpm(args, options) {
+  if (process.platform !== "win32") return execFileSync("npm", args, options);
+  const npmCli = path.join(
+    path.dirname(process.execPath),
+    "node_modules",
+    "npm",
+    "bin",
+    "npm-cli.js",
+  );
+  if (!existsSync(npmCli)) {
+    throw new Error(`npm CLI was not found beside Node at ${npmCli}.`);
+  }
+  return execFileSync(process.execPath, [npmCli, ...args], options);
+}
+
 const root = path.resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
 const pkgDir = path.join(root, "packages", "qfai");
 const tmpDir = path.join(root, "tmp", "pack");
@@ -43,20 +59,52 @@ const sandboxDir = path.join(tmpDir, "sandbox");
 const outputDir = path.join(sandboxDir, "out");
 const reportPath = path.join(outputDir, ".qfai", "report", "report.md");
 
-rmSync(tmpDir, { recursive: true, force: true });
+function removePackTree(target) {
+  const absolute = path.resolve(target);
+  const relative = path.relative(tmpDir, absolute);
+  if (relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+    throw new Error(`Refusing recursive removal outside ${tmpDir}: ${absolute}`);
+  }
+
+  let walked = root;
+  for (const segment of path.relative(root, absolute).split(path.sep)) {
+    walked = path.join(walked, segment);
+    try {
+      if (lstatSync(walked).isSymbolicLink()) {
+        throw new Error(`Refusing recursive removal through linked path: ${walked}`);
+      }
+    } catch (error) {
+      if (error?.code === "ENOENT") break;
+      throw error;
+    }
+  }
+  rmSync(absolute, { recursive: true, force: true });
+}
+
+function hasEntry(target) {
+  try {
+    lstatSync(target);
+    return true;
+  } catch (error) {
+    if (error?.code === "ENOENT") return false;
+    throw error;
+  }
+}
+
+removePackTree(tmpDir);
 mkdirSync(tmpDir, { recursive: true });
 
-const packOutput = execFileSync("npm", ["pack"], {
+const packOutput = runNpm(["pack", "--pack-destination", tmpDir], {
   cwd: pkgDir,
   encoding: "utf-8",
 }).trim();
 const packLines = packOutput.split(/\r?\n/).filter(Boolean);
 const tarballName = packLines[packLines.length - 1];
-if (!tarballName) {
+if (!tarballName || path.basename(tarballName) !== tarballName) {
   throw new Error("npm pack failed to produce a tarball name.");
 }
 
-const tarballPath = path.join(pkgDir, tarballName);
+const tarballPath = path.join(tmpDir, tarballName);
 execFileSync(
   "tar",
   ["-xzf", toPosix(path.relative(root, tarballPath)), "-C", toPosix(path.relative(root, tmpDir))],
@@ -94,12 +142,14 @@ const requiredSkills = [
   "qfai-configure",
   "qfai-discussion",
   "qfai-sdd",
-  "qfai-atdd",
   "qfai-prototyping",
   "qfai-implement",
   "qfai-verify",
+  "qfai-triage",
+  "qfai-migration-v1-to-v2",
 ];
 const deprecatedSkillIds = [
+  "qfai-atdd",
   "qfai-spec",
   "qfai-tdd-red",
   "qfai-tdd-green",
@@ -112,11 +162,23 @@ const deprecatedSkillIds = [
 ];
 
 for (const skillId of requiredSkills) {
-  const canonicalSkillPath = path.join(templateDir, "assistant", "skills", skillId, "SKILL.md");
+  const canonicalSkillPath = path.join(templateDir, "assistant", "skill", skillId, "SKILL.md");
   if (!existsSync(canonicalSkillPath)) {
     throw new Error(
-      `assets/init/.qfai/assistant/skills/${skillId}/SKILL.md is missing from the packed artifact.`,
+      `assets/init/.qfai/assistant/skill/${skillId}/SKILL.md is missing from the packed artifact.`,
     );
+  }
+}
+
+for (const layer of ["skill", "step", "agent", "rule", "prompt"]) {
+  const packed = path.join(templateDir, "assistant", layer);
+  if (!existsSync(packed) || !lstatSync(packed).isDirectory()) {
+    throw new Error(`assets/init/.qfai/assistant/${layer} must be a directory.`);
+  }
+}
+for (const legacy of ["skills", "agents", "rules", "prompts", "catalog"]) {
+  if (hasEntry(path.join(templateDir, "assistant", legacy))) {
+    throw new Error(`assets/init/.qfai/assistant/${legacy} must not ship.`);
   }
 }
 
@@ -126,70 +188,19 @@ for (const removedDir of [".claude", ".codex"]) {
   }
 }
 
-// `qfai init` ships
-// `.github/workflows/qfai-validate.yml` to downstream consumers, so the
-// `.github` subtree itself is required (not optional). The previous
-// `if (existsSync(rootGithubDir))` wrapper would have silently allowed
-// a packed artifact missing `assets/init/root/.github` entirely.
-// Allow-list the immediate children of `.github` (only `workflows/`) so
-// misplaced files such as `dependabot.yml`, `ISSUE_TEMPLATE/`, or any
-// other future GitHub config directory cannot accidentally be packed —
-// runInit synthesizes those wrappers via symlinks at init time, not
-// from the packed tarball.
 const rootGithubDir = path.join(rootAssetsDir, ".github");
-if (!existsSync(rootGithubDir)) {
-  throw new Error("assets/init/root/.github must exist.");
-}
-// Confirm `.github` itself is a directory before iterating; otherwise
-// readdirSync would surface as an ENOTDIR stack trace and obscure the
-// real packaging defect.
-if (!lstatSync(rootGithubDir).isDirectory()) {
-  throw new Error("assets/init/root/.github must be a directory (got non-directory entry).");
-}
-const allowedRootGithubEntries = new Set(["workflows"]);
-const githubEntries = readdirSync(rootGithubDir);
-// workflows/ is required, not just allowed. An empty .github/ would
-// silently strip the qfai-validate.yml shipping path
-// on downstream init consumers, so reject it here.
-if (!githubEntries.includes("workflows")) {
-  throw new Error("assets/init/root/.github must contain workflows/.");
-}
-for (const entry of githubEntries) {
-  if (!allowedRootGithubEntries.has(entry)) {
-    throw new Error(
-      `assets/init/root/.github/${entry} must not exist (only workflows/ is permitted).`,
-    );
-  }
-  // Allow-list passes only if the entry is a real directory. A regular file
-  // or broken symlink at .github/workflows would corrupt downstream `qfai
-  // init` consumers, so reject anything that is not a directory.
-  const entryPath = path.join(rootGithubDir, entry);
-  if (!lstatSync(entryPath).isDirectory()) {
-    throw new Error(
-      `assets/init/root/.github/${entry} must be a directory (got non-directory entry).`,
-    );
-  }
-}
-// Confirm the actual workflow file ships. workflows/ existing without
-// qfai-validate.yml inside it is the same downstream regression as a
-// missing workflows/ — the file is the contract, not just the folder.
-const workflowFile = path.join(rootGithubDir, "workflows", "qfai-validate.yml");
-if (!existsSync(workflowFile) || !lstatSync(workflowFile).isFile()) {
-  throw new Error(
-    "assets/init/root/.github/workflows/qfai-validate.yml must exist as a regular file.",
-  );
-}
+assertPackagedGithubTopology(rootGithubDir);
 
-rmSync(sandboxDir, { recursive: true, force: true });
+removePackTree(sandboxDir);
 mkdirSync(sandboxDir, { recursive: true });
-execFileSync("npm", ["init", "-y"], { cwd: sandboxDir, stdio: "inherit" });
-execFileSync("npm", ["install", tarballPath], {
+runNpm(["init", "-y"], { cwd: sandboxDir, stdio: "inherit" });
+runNpm(["install", tarballPath], {
   cwd: sandboxDir,
   stdio: "inherit",
 });
 
 rmSync(tarballPath, { force: true });
-rmSync(outputDir, { recursive: true, force: true });
+removePackTree(outputDir);
 mkdirSync(outputDir, { recursive: true });
 
 const cliPath = path.join(sandboxDir, "node_modules", "qfai", "dist", "cli", "index.mjs");
@@ -231,53 +242,67 @@ if (missingPatterns.length > 0) {
   );
 }
 
-const skillsDir = path.join(qfaiDir, "assistant", "skills");
+const assistantDir = path.join(qfaiDir, "assistant");
+for (const layer of ["skill", "step", "agent", "rule", "prompt"]) {
+  const generated = path.join(assistantDir, layer);
+  if (!existsSync(generated) || !lstatSync(generated).isDirectory()) {
+    throw new Error(`init did not generate .qfai/assistant/${layer} directory.`);
+  }
+}
+for (const legacy of ["skills", "agents", "rules", "prompts", "catalog"]) {
+  if (hasEntry(path.join(assistantDir, legacy))) {
+    throw new Error(`init generated deprecated .qfai/assistant/${legacy} directory.`);
+  }
+}
+
+const skillsDir = path.join(assistantDir, "skill");
 if (!existsSync(skillsDir)) {
-  throw new Error("init did not generate .qfai/assistant/skills directory.");
+  throw new Error("init did not generate .qfai/assistant/skill directory.");
 }
 for (const skillId of requiredSkills) {
   const generatedSkillPath = path.join(skillsDir, skillId, "SKILL.md");
   if (!existsSync(generatedSkillPath)) {
-    throw new Error(`init did not generate .qfai/assistant/skills/${skillId}/SKILL.md.`);
+    throw new Error(`init did not generate .qfai/assistant/skill/${skillId}/SKILL.md.`);
   }
 }
 
 const skillsLocalDir = path.join(qfaiDir, "assistant", "skills.local");
-if (existsSync(skillsLocalDir)) {
+if (hasEntry(skillsLocalDir)) {
   throw new Error("init generated deprecated .qfai/assistant/skills.local directory.");
 }
 
-const legacyPromptsDir = path.join(qfaiDir, "assistant", "prompts");
-if (existsSync(legacyPromptsDir)) {
-  throw new Error("init generated deprecated .qfai/assistant/prompts directory.");
+const specDir = path.join(qfaiDir, "spec");
+const specTemplateDir = path.join(
+  templateDir,
+  "assistant",
+  "skill",
+  "qfai-sdd",
+  "templates",
+  "spec",
+);
+for (const relative of [
+  "decisions.md",
+  "open-questions.md",
+  "01_policy/glossary.md",
+  "01_policy/constraint.md",
+  "02_business-flow/business-flows.md",
+  "03_contract/contracts.md",
+]) {
+  const seeded = path.join(specDir, relative);
+  const template = path.join(specTemplateDir, relative);
+  if (!existsSync(seeded) || readFileSync(seeded, "utf-8") !== readFileSync(template, "utf-8")) {
+    throw new Error(`init did not seed .qfai/spec/${relative} from its packed template.`);
+  }
 }
-
-const syntheticSpecDir = path.join(outputDir, ".qfai", "specs", "spec-0000");
-mkdirSync(syntheticSpecDir, { recursive: true });
-const syntheticDeltaPath = path.join(syntheticSpecDir, "18_delta.md");
-writeFileSync(
-  syntheticDeltaPath,
-  [
-    "# Delta",
-    "",
-    "## Decision Guardrails",
-    "",
-    "### DG-0001: Synthetic guardrail for verify-pack",
-    "- Type: trade-off",
-    "- Scope: specs/*",
-    "- Guardrail: Do not implement the rejected synthetic option.",
-    "- Reason: verify-pack smoke test entry",
-    "- Reconsider: never",
-    "- Keywords: synthetic, verify-pack",
-    "",
-  ].join("\n"),
-);
-execFileSync(
-  "node",
-  [cliPath, "guardrails", "extract", "--path", syntheticDeltaPath, "--max", "20"],
-  { stdio: "inherit" },
-);
-rmSync(syntheticSpecDir, { recursive: true, force: true });
+for (const kind of ["api", "db", "ui", "cli"]) {
+  const contractDir = path.join(specDir, "03_contract", kind);
+  if (!existsSync(contractDir) || !lstatSync(contractDir).isDirectory()) {
+    throw new Error(`init did not generate .qfai/spec/03_contract/${kind} directory.`);
+  }
+}
+if (hasEntry(path.join(qfaiDir, "specs")) || hasEntry(path.join(qfaiDir, "contracts"))) {
+  throw new Error("init generated an obsolete spec or contract directory.");
+}
 
 // Symlink-based integration directories (v1.5.4+)
 const skillIntegrationDirs = [
@@ -339,6 +364,19 @@ for (const skillId of requiredSkills) {
   }
 }
 
+// Steps are read by their parent skill, never offered to a host as skills.
+const stepsDir = path.join(assistantDir, "step");
+for (const stepId of readdirSync(stepsDir)) {
+  if (!existsSync(path.join(stepsDir, stepId, "STEP.md"))) {
+    throw new Error(`init did not generate .qfai/assistant/step/${stepId}/STEP.md.`);
+  }
+  for (const [label, dir] of skillIntegrationDirs) {
+    if (hasEntry(path.join(dir, stepId))) {
+      throw new Error(`init linked step ${stepId} into ${label}.`);
+    }
+  }
+}
+
 // Legacy commands/prompts wrappers must NOT exist for any qfai skill id.
 for (const skillId of [...requiredSkills, ...deprecatedSkillIds]) {
   const legacyWrapperPaths = [
@@ -384,10 +422,6 @@ if (!existsSync(path.join(githubAgentsDir, "delivery-planner.agent.md"))) {
 // Empty scaffold init omits generated discussion-pack files.
 // Seed a minimal discussion-pack so pack-time validate has realistic inputs.
 const discussionDir = path.join(outputDir, ".qfai", "discussion");
-// One stamp for the run this fixture stands for. The pack and the stage
-// evidence a real run writes carry the same one, and the grilling check pairs
-// them by it — spelled twice, a rename of either half silently stops the
-// fixture exercising the path it was seeded for.
 const seededDiscussionPack = "discussion-20260216000000000";
 const seededDiscussionPackDir = path.join(discussionDir, seededDiscussionPack);
 mkdirSync(seededDiscussionPackDir, { recursive: true });
@@ -409,9 +443,7 @@ const seededDiscussionPackFiles = {
     "- secondary_surfaces: []",
     "- classification_rationale: Packaging validation fixture — no user-facing UI.",
     "",
-  ],
-  "02_Inception-Deck.md": [
-    "# 02 Inception Deck",
+    "## Inception Deck",
     "",
     "This seeded discussion-pack is for packaging validation only and ensures",
     "the readiness gate has concrete non-placeholder content.",
@@ -526,58 +558,33 @@ const seededDiscussionPackFiles = {
     "- Use markdown-only fixtures to avoid runtime dependencies.",
     "- Keep each required file longer than minimal validation thresholds.",
     "- Avoid placeholder-only statements to satisfy content checks.",
-    "- Keep naming aligned with the 15-file discussion pack structure.",
+    "- Keep naming aligned with the nine-file discussion pack structure.",
     "",
-  ],
-  "10_Policy.md": [
-    "# 10 Policy",
+    "## Security Policy",
+    "",
+    "- The seeded pack holds no secret or credential.",
+    "",
+    "## Compliance Policy",
+    "",
+    "- No regulated data enters the smoke fixture.",
+    "",
+    "## Development Policy",
     "",
     "- Policy-0001: verify-pack must fail when required artifacts are absent.",
     "- Policy-0002: seeded files are test inputs and not product commitments.",
     "- Policy-0003: content should remain stable unless gate rules change.",
     "",
+    "## Operational Policy",
+    "",
+    "- The seeded pack is written fresh for each verify-pack run.",
+    "",
   ],
   "11_OQ-Register.md": [
     "# 11 OQ Register",
     "",
-    "| OQ-ID   | Title                                      | Gate    | Disposition | Owner  | Rationale                                         | Options                                           | Recommendation | Next-Decision-Point      | Due        | Evidence         |",
-    "| ------- | ------------------------------------------ | ------- | ----------- | ------ | ------------------------------------------------- | ------------------------------------------------- | -------------- | ------------------------ | ---------- | ---------------- |",
-    "| OQ-0001 | Should smoke data mirror full production templates? | discuss | deferred    | CI     | minimal deterministic content is currently sufficient | Option A: keep minimal / Option B: mirror full     | Option A       | before release candidate | 2026-06-01 | Conversation log |",
-    "",
-  ],
-  "12_OQ-Resolution-Log.md": [
-    "# 12 OQ Resolution Log",
-    "",
-    "## OQ-0001",
-    "- Question: Should smoke data mirror full production templates?",
-    "- Disposition: deferred",
-    "- Gate: discuss",
-    "- Note: minimal deterministic content is currently sufficient for gate coverage.",
-    "",
-  ],
-  "13_Deferred.md": [
-    "# 13 Deferred",
-    "",
-    "| OQ-ID   | Title                                      | Gate    | Deferred-Reason                                     | Deferred-Until           | Owner  | Due        | Severity | Impact                                  | Mitigation                  | Evidence         |",
-    "| ------- | ------------------------------------------ | ------- | --------------------------------------------------- | ------------------------ | ------ | ---------- | -------- | --------------------------------------- | --------------------------- | ---------------- |",
-    "| OQ-0001 | Should smoke data mirror full production templates? | discuss | minimal deterministic content is currently sufficient | before release candidate | CI     | 2026-06-01 | low      | smoke test coverage only                | keep current minimal seed   | Conversation log |",
-    "",
-  ],
-  "14_Review-Request.md": [
-    "# 14 Review Request",
-    "",
-    "- Review type: automated packaging smoke validation.",
-    "- Reviewer: CI pipeline.",
-    "- Status: pending automated gate execution.",
-    "",
-  ],
-  "99_delta.md": [
-    "# 99 delta",
-    "",
-    "## Change Summary",
-    "- Added deterministic discussion-pack seed used by verify-pack smoke validation.",
-    "- Aligned filenames with readiness validator expectations.",
-    "- Ensured OQ state is non-blocking for fail-on error execution.",
+    "| OQ-ID   | Title                                      | Gate    | Disposition | Owner  | Rationale                                         | Options                                           | Recommendation | Resolution | Next-Decision-Point      | Due        | Evidence         |",
+    "| ------- | ------------------------------------------ | ------- | ----------- | ------ | ------------------------------------------------- | ------------------------------------------------- | -------------- | ---------- | ------------------------ | ---------- | ---------------- |",
+    "| OQ-0001 | Should smoke data mirror full production templates? | discuss | deferred    | CI     | minimal deterministic content is currently sufficient | Option A: keep minimal / Option B: mirror full     | Option A       | keep the minimal seed for now | before release candidate | 2026-06-01 | Conversation log |",
     "",
   ],
 };
@@ -588,28 +595,6 @@ const seededDiscussionPackFiles = {
 for (const [fileName, lines] of Object.entries(seededDiscussionPackFiles)) {
   writeFileSync(path.join(seededDiscussionPackDir, fileName), lines.join("\n"));
 }
-
-// The stage evidence the run that wrote this pack would have written. A real
-// run opens it under its own stamp before anything else and records there when
-// its grilling session ended and when authoring began, so a pack standing on
-// its own is a run that wrote no record — which `QFAI-GRILL-001` reports, and
-// correctly. Seeding the pack without it made the fixture less realistic than
-// the comment above says it is.
-const seededDiscussionEvidenceDir = path.join(outputDir, ".qfai", "evidence");
-mkdirSync(seededDiscussionEvidenceDir, { recursive: true });
-writeFileSync(
-  path.join(seededDiscussionEvidenceDir, `${seededDiscussionPack}.md`),
-  [
-    `# Evidence: /qfai-discussion (${seededDiscussionPack})`,
-    "",
-    "## Grilling Session",
-    "",
-    "| Ended | Ended at | Authoring began | Frontier | Lookups | Decisions | Escalated |",
-    "| ----- | -------- | --------------- | -------- | ------- | --------- | --------- |",
-    "| confirmed | 2026-02-16T00:00:00Z | 2026-02-16T00:01:00Z | empty | none in flight | 3 | 0 |",
-    "",
-  ].join("\n"),
-);
 
 const seededReviewPackName = "review-20260216000000000";
 const seededReviewPackDir = path.join(outputDir, ".qfai", "review", seededReviewPackName);
@@ -692,41 +677,45 @@ execFileSync("node", [cliPath, "init", "--dir", outputDir, "--force"], {
   stdio: "inherit",
 });
 
-if (existsSync(skillsLocalDir)) {
+if (hasEntry(skillsLocalDir)) {
   throw new Error("init --force generated deprecated .qfai/assistant/skills.local directory.");
 }
 
-// Stand in for the `/qfai-configure` run a project makes before it gates. The
-// four Stage 0 catalogs ship as placeholders, and `qfai init` copies them
-// verbatim: a sandbox that never fills them is a project that never ran Stage
-// 0, and gating one of those at `--fail-on error` measures the fixture rather
-// than the package. Every angle-bracket slot becomes a value, and every bare
-// TODO / TBD goes, which is what the rule reads.
-for (const catalogFile of ["manifest.md", "product.md", "structure.md", "tech.md"]) {
-  const catalogPath = path.join(outputDir, ".qfai", "assistant", "catalog", catalogFile);
-  if (!existsSync(catalogPath)) {
+// Stand in for the `/qfai-configure` run a project makes before it gates.
+// The contract policy file ships as placeholders, and gating without filling
+// it measures the fixture rather than the package.
+const policyFiles = [path.join(outputDir, ".qfai", "spec", "03_contract", "tech.md")];
+for (const policyFile of policyFiles) {
+  if (!existsSync(policyFile)) {
     // An `ENOENT` here names the path and nothing else, and the reader's next
     // question is whether the file was renamed or whether init stopped writing
     // it — which is what decides whether the fill or the package is wrong.
     throw new Error(
-      `init --force wrote no ${catalogPath}. The four Stage 0 catalogs are what a project fills ` +
+      `init --force wrote no ${policyFile}. Policy files are what a project fills ` +
         `before it gates, so this fill has nothing to stand in for.`,
     );
   }
-  const before = readFileSync(catalogPath, "utf-8");
-  // One value for both placeholder forms: they stand for the same thing, and a
-  // reader should not have to compare two strings to see that.
-  const fixtureValue = "verify-pack fixture value";
+  const before = readFileSync(policyFile, "utf-8");
+  // One value for each placeholder text, so two slots that name different
+  // things, such as two architecture layers, stay different once filled. Every
+  // TODO and TBD shares one value.
+  const fixtureValues = new Map();
+  const fixtureValue = (placeholder) => {
+    if (!fixtureValues.has(placeholder)) {
+      fixtureValues.set(placeholder, `verify-pack fixture value ${fixtureValues.size + 1}`);
+    }
+    return fixtureValues.get(placeholder);
+  };
   const after = before
     .replace(/<(?!\/|!)[^<>\n]+>/g, fixtureValue)
-    .replace(/\b(?:TODO|TBD)\b/g, fixtureValue);
+    .replace(/\b(?:TODO|TBD)\b/g, () => fixtureValue("TODO"));
   if (after === before) {
     throw new Error(
-      `${catalogFile} carries no placeholder to fill. The shipped catalogs are what this stands ` +
+      `${policyFile} carries no placeholder to fill. The shipped policy files are what this stands ` +
         `in for, so a copy with none means the fixture is measuring nothing.`,
     );
   }
-  writeFileSync(catalogPath, after);
+  writeFileSync(policyFile, after);
 }
 
 execFileSync(

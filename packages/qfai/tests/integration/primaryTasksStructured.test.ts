@@ -3,15 +3,12 @@
  * `{id, label, acceptance}` all-required, closed schema (DR-0013-0004,
  * cites _policies DR-0268).
  *
- * - TC-0013-0034 (normal): string-only items continue to pass
- *   (legacy); a complete structured `{id, label, acceptance}` item
- *   also passes.
+ * - TC-0013-0034 (normal): a complete structured `{id, label,
+ *   acceptance}` item passes; a plain string item is rejected.
  * - TC-0013-0035 (error): a structured item missing any of
  *   `id` / `label` / `acceptance`, or carrying extra keys, is
  *   rejected by the audit lane.
  */
-// QFAI:SPEC-0013:TC-0013-0034
-// QFAI:SPEC-0013:TC-0013-0035
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -29,12 +26,12 @@ async function withWorkspace(uiContract: string, task: (root: string) => Promise
       path.join(root, "qfai.config.yaml"),
       [
         "paths:",
-        "  contractsDir: .qfai/contracts",
-        "  specsDir: .qfai/specs",
+        "  contractsDir: .qfai/spec/03_contract",
+        "  specsDir: .qfai/spec",
         "  discussionDir: .qfai/discussion",
         "  outDir: .qfai/report",
-        "  skillsDir: .qfai/assistant/skills",
-        "  promptsDir: .qfai/assistant/skills",
+        "  skillsDir: .qfai/assistant/skill",
+        "  promptsDir: .qfai/assistant/skill",
         "  srcDir: src",
         "  testsDir: tests",
         "uiux:",
@@ -44,7 +41,7 @@ async function withWorkspace(uiContract: string, task: (root: string) => Promise
       ].join("\n"),
       "utf-8",
     );
-    const uiDir = path.join(root, ".qfai", "contracts", "ui");
+    const uiDir = path.join(root, ".qfai", "spec", "03_contract", "ui");
     await mkdir(uiDir, { recursive: true });
     await writeFile(path.join(uiDir, "sample.yaml"), uiContract, "utf-8");
     await task(root);
@@ -53,8 +50,9 @@ async function withWorkspace(uiContract: string, task: (root: string) => Promise
   }
 }
 
+// QFAI:EX-0001-0155-02
 describe("TC-0013-0034: structured primary_tasks accepted", () => {
-  it("string-only items pass during the deprecation window", async () => {
+  it("rejects plain string items, which leave the screen with no task", async () => {
     const ui = [
       "screens:",
       "  - id: dashboard",
@@ -68,8 +66,13 @@ describe("TC-0013-0034: structured primary_tasks accepted", () => {
     ].join("\n");
     await withWorkspace(ui, async (root) => {
       const issues = await validateDesignAudit(root, defaultConfig);
-      const shape = issues.find((issue) => issue.code === "QFAI-AUD-021");
-      expect(shape).toBeUndefined();
+      const shape = issues.filter((issue) => issue.code === "QFAI-AUD-021");
+      expect(shape.map((issue) => issue.severity)).toEqual(["error", "error", "error"]);
+      expect(shape[0]?.message).toMatch(
+        /#1 must be a mapping with exactly id, label and acceptance/,
+      );
+      const empty = issues.find((issue) => issue.code === "QFAI-AUD-001");
+      expect(empty?.severity).toBe("error");
     });
   });
 
@@ -94,7 +97,11 @@ describe("TC-0013-0034: structured primary_tasks accepted", () => {
     await withWorkspace(ui, async (root) => {
       const issues = await validateDesignAudit(root, defaultConfig);
       const shape = issues.find((issue) => issue.code === "QFAI-AUD-021");
+      const band = issues.find((issue) => issue.code === "QFAI-AUD-020");
+      const empty = issues.find((issue) => issue.code === "QFAI-AUD-001");
       expect(shape).toBeUndefined();
+      expect(band).toBeUndefined();
+      expect(empty).toBeUndefined();
     });
   });
 });
@@ -188,7 +195,7 @@ describe("TC-0013-0035: incomplete / open structured primary_tasks rejected", ()
   // returning before the shape-findings loop would hide the AUD-021
   // detail and leave the user with only a generic "empty
   // primary_tasks" error.
-  it("reports missing id when every structured entry is malformed", async () => {
+  it("surfaces QFAI-AUD-021 shape findings even when every entry is malformed (parsed list empty)", async () => {
     const ui = [
       "screens:",
       "  - id: dashboard",
@@ -212,9 +219,13 @@ describe("TC-0013-0035: incomplete / open structured primary_tasks rejected", ()
         "expected QFAI-AUD-021 (missing id) to surface on all-malformed list",
       ).toBeDefined();
       expect(shape?.message ?? "").toMatch(/\bid\b/);
+      // QFAI-AUD-001 empty-list signal is also emitted (post-shape).
+      const empty = issues.find((issue) => issue.code === "QFAI-AUD-001");
+      expect(empty).toBeDefined();
     });
   });
 
+  // QFAI:EX-0001-0155-03
   it("rejects a structured item carrying an extra key (closed schema)", async () => {
     const ui = [
       "screens:",

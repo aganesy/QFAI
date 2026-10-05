@@ -56,20 +56,14 @@ The frozen families, none of which may take a new member:
 | ---------- | ---------------------------- | ------------------------------ |
 | `QFAI-`    | non-conforming `QFAI-` codes | `QFAI-CFG-LINK-001`            |
 | `QFAI_`    | underscore-separated         | `QFAI_CONFIG_INVALID`          |
-| `TDDLIST_` | screaming snake              | `TDDLIST_INVALID_STATUS`       |
-| `TDDLIST-` | numbered rule ids            | `TDDLIST-001`                  |
 | `R-`       | rule/report drift            | `R-SKILL-MANIFEST-DRIFT`       |
 | `E_`       | spec-layer errors            | `E_TC_ORPHAN`                  |
-| `D-`       | deprecation / degradation    | `D-SCAFFOLD-PLACEHOLDER`       |
+| `D-`       | deprecation / degradation    | `D-DEPRECATED-PATH`            |
 | `W-`       | warnings                     | `W-ASSISTANT-LAYOUT`           |
 | `UIX-`     | prototyping UI checks        | `UIX-VAL-OQ-OPEN-CRITICAL`     |
 | `HANDOFF-` | handoff schema               | `HANDOFF-SCHEMA-NOT-OBJECT`    |
 | `TRACE_`   | traceability scope           | `TRACE_SHARED_SCOPE_VIOLATION` |
 | `I-`       | informational                | `I-ASSISTANT-LAYER-UNSEEDED`   |
-
-Some rules carry two spellings of themselves — `TDDLIST-001` is the `rule` a
-finding is waived by and `TDDLIST_EXCEPTION_PARKED` the `code` it prints (see
-`src/core/ruleIds.ts`). Both are registered; neither is canonical.
 
 ## Adding a code
 
@@ -99,19 +93,14 @@ the branch renames.
    `TDDLIST-011` rather than `TDDLIST-007`, which is the spelling the entry
    names.
 3. **Check the stripped spelling for a collision, not only the full code.**
-   `TDDLIST-001` and `TDDLIST-002` are live rule ids with no
-   `QFAI-TDDLIST-00N` counterpart, so taking one of those numbers for an
-   unrelated condition would let an existing waiver suppress the new finding.
-   Search `src/core/ruleIds.ts` and every `Issue.rule` for the spelling
+   A rule id that already carries the stripped spelling would let an existing
+   waiver suppress the new finding. Search every `Issue.rule` for the spelling
    `resolveRuleKeys` would derive, as well as for the code itself.
 4. **The strip is narrow.** It reads `code`, and matches `QFAI-<AREA>-<NNN>`
    with a single all-letter area — so `QFAI-CFG-LINK-001` strips to nothing,
-   and a screaming-snake code (`TDDLIST_EXCEPTION_PARKED`) does not match at
-   all, so no alias is derived from it. Such a finding may still carry a
-   numbered id: `TDDLIST_EXCEPTION_PARKED` is published under
-   `rule` `TDDLIST-001`. That is a separately declared back-compat alias in
-   `ruleIds.ts`, not something the strip produces, so renaming one of these
-   needs an explicit alias — the work `## Not covered here` defers.
+   and an underscore-separated code (`QFAI_CONFIG_INVALID`) does not match at
+   all, so no alias is derived from it. Renaming one of these needs an explicit
+   alias — the work `## Not covered here` defers.
 5. **Check whether the code already exists.** A family several branches reached
    for at once tends to have been settled by whichever landed first:
    `QFAI-TDDLIST-007` through `-010` are on the default branch already. Adopt
@@ -133,7 +122,6 @@ old one stops appearing in.
 
 Renaming a legacy code whose shape is **not** `<AREA>-<NNN>` needs an alias
 table with a deprecation window, because the prefix strip above gives it
-nothing: a `.qfai/waivers.yml` entry written against `TDDLIST_EXCEPTION_PARKED`
-or `R-SKILL-MANIFEST-DRIFT` resolves through neither spelling once the code
-moves. That migration, and publishing the inventory as a build artifact, are
-separate work.
+nothing: a `.qfai/waivers.yml` entry written against `R-SKILL-MANIFEST-DRIFT`
+resolves through neither spelling once the code moves. That migration, and
+publishing the inventory as a build artifact, are separate work.

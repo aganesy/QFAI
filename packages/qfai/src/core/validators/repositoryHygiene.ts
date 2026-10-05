@@ -1,8 +1,10 @@
-import { readdir, stat } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import type { Dirent } from "node:fs";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
+import { isEnoent } from "../fs/errno.js";
+import { QFAI_GITIGNORE_MARKER, missingRecommendedGitignoreEntries } from "../gitignore.js";
 import { resolvePath } from "../config.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
@@ -17,8 +19,8 @@ const LEGACY_DIR_RULES: LegacyDirRule[] = [
   { legacy: "discuss", canonical: "discussion" },
   { legacy: "requirements", canonical: "discussion" },
   { legacy: "require", canonical: "discussion" },
-  { legacy: "spec", canonical: "specs" },
-  { legacy: "specification", canonical: "specs" },
+  { legacy: "specs", canonical: "spec" },
+  { legacy: "specification", canonical: "spec" },
 ];
 
 const SUSPICIOUS_TEMPLATE_NAME_RE = /^(?:_?templates?|_?sample(?:s)?|sample-template)$/i;
@@ -33,35 +35,38 @@ export async function validateRepositoryHygiene(
 
   for (const rule of LEGACY_DIR_RULES) {
     const legacyPath = path.join(qfaiRoot, rule.legacy);
+    if (legacyPath === specsRoot) continue;
     if (!(await isDirectory(legacyPath))) {
       continue;
     }
     issues.push(
       issue(
         "QFAI-HYG-001",
-        `legacy ディレクトリを検出しました: .qfai/${rule.legacy}/`,
+        `Legacy directory detected: .qfai/${rule.legacy}/`,
         "error",
         legacyPath,
         "hygiene.legacyDirectory",
         [rule.legacy, rule.canonical],
         "change",
-        `ディレクトリ名を .qfai/${rule.canonical}/ へ統一し、生成/検査の参照先を canonical に揃えてください。`,
+        `Rename the directory to .qfai/${rule.canonical}/ and point generation and validation at the canonical name.`,
       ),
     );
   }
+
+  issues.push(...(await recommendedGitignoreIssues(root)));
 
   const suspiciousPaths = await collectSuspiciousTemplatePaths(specsRoot);
   if (suspiciousPaths.length > 0) {
     issues.push(
       issue(
         "QFAI-HYG-002",
-        `specs 配下にテンプレ混入疑いを検出しました（warning）: ${suspiciousPaths.join(", ")}`,
+        `Suspected template content under specs (warning): ${suspiciousPaths.join(", ")}`,
         "warning",
         specsRoot,
         "hygiene.templateContamination",
         suspiciousPaths,
         "change",
-        "テンプレやサンプルは `.qfai/assistant/templates/` へ移設し、specs 配下には実成果物のみを配置してください。",
+        "Move templates and samples to `.qfai/assistant/templates/`, and keep only real deliverables under specs.",
       ),
     );
   }
@@ -123,4 +128,38 @@ async function isDirectory(target: string): Promise<boolean> {
 
 function toPosix(value: string): string {
   return value.replace(/\\/g, "/");
+}
+
+/**
+ * The recommended ignore entries a root `.gitignore` carrying the QFAI marker
+ * lacks, read across the whole file.
+ *
+ * `qfai init` never re-adds a recommended entry to an existing block, so a
+ * project whose block predates one — the root `tmp/` that Article XI requires
+ * is the case that matters — learns of it only here.
+ */
+async function recommendedGitignoreIssues(root: string): Promise<Issue[]> {
+  const gitignorePath = path.join(root, ".gitignore");
+  let content: string;
+  try {
+    content = await readFile(gitignorePath, "utf-8");
+  } catch (err: unknown) {
+    if (isEnoent(err)) return [];
+    throw err;
+  }
+  if (!content.includes(QFAI_GITIGNORE_MARKER)) return [];
+  const missing = missingRecommendedGitignoreEntries(content);
+  if (missing.length === 0) return [];
+  return [
+    issue(
+      "QFAI-HYG-003",
+      `The root .gitignore is missing recommended entries: ${missing.join(", ")}`,
+      "info",
+      gitignorePath,
+      "hygiene.gitignoreRecommended",
+      [...missing],
+      "change",
+      "No action is needed if you track them on purpose. Rerunning `qfai init` does not restore an entry you removed; add it by hand to return to the default.",
+    ),
+  ];
 }

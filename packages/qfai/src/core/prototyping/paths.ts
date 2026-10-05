@@ -1,21 +1,10 @@
 /**
- * Single source of truth for prototyping evidence paths.
- *
- * Every duplicate of these literals is an opportunity for path drift.
- * New code MUST import these constants instead of hard-coding the strings.
+ * The paths of the prototyping state file, which an artifact reference must
+ * never point at.
  */
 
-/** Project-root relative directory holding all prototyping evidence. */
-export const PROTOTYPING_EVIDENCE_REL = ".qfai/evidence/prototyping" as const;
-
-/** Project-root relative path to the canonical prototyping state file. */
+/** Project-root relative path to the prototyping state file. */
 export const PROTOTYPING_JSON_REL = ".qfai/evidence/prototyping/prototyping.json" as const;
 
-/**
- * Legacy project-root relative path to prototyping.json (pre-UX-loop
- * schema rewrite). Retained ONLY for the artifact self-ref guard, so
- * historical refs that escaped pre-PR can still be detected. Do NOT
- * use this for any read or write — `iterate` / `certify` /
- * validators all use `PROTOTYPING_JSON_REL` (above).
- */
+/** The location the state file had before it moved under `prototyping/`. */
 export const PROTOTYPING_JSON_LEGACY_REL = ".qfai/evidence/prototyping.json" as const;

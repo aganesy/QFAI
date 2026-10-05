@@ -1,13 +1,12 @@
 /**
- * A workspace on which `qfai prototyping preflight` passes every check, so a
+ * A workspace on which `qfai doctor --profile prototyping` passes every check, so a
  * test can change one input and attribute the command's exit code to it.
  *
  * The preflight runs its whole profile. In a workspace missing the primary
- * spec, the design lock, the browser launcher or a reachable target, those
+ * spec, root DESIGN.md, the browser launcher or a reachable target, those
  * checks already fail it, and a change to the one check under test would move
  * nothing a test could observe.
  */
-import { createHash } from "node:crypto";
 import { createServer, type Server } from "node:http";
 import { chmod, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -21,7 +20,7 @@ export const PASSING_UI_CONTRACT = [
   "    title: Home",
   "    route: /",
   "    primary_tasks:",
-  "      - Browse the surface",
+  "      - { id: browse, label: Browse the surface, acceptance: done }",
   "",
 ].join("\n");
 
@@ -94,9 +93,8 @@ export async function seedPrototypingPreflightFixture(
   );
   const specDir = path.join(root, ".qfai", "specs", "spec-0001");
   const uiDir = path.join(root, ".qfai", "contracts", "ui");
-  const designDir = path.join(root, ".qfai", "contracts", "design");
   const binDir = path.join(root, "node_modules", ".bin");
-  for (const dir of [specDir, uiDir, designDir, binDir]) await mkdir(dir, { recursive: true });
+  for (const dir of [specDir, uiDir, binDir]) await mkdir(dir, { recursive: true });
   await writeFile(
     path.join(specDir, "01_Spec.md"),
     "---\nsurface_type: ui-bearing\n---\n\n# spec-0001\n",
@@ -105,16 +103,6 @@ export async function seedPrototypingPreflightFixture(
   await writeFile(path.join(specDir, "02_User-stories.md"), "# stories\n", "utf-8");
   await writeFile(path.join(uiDir, "ui-0001.yaml"), uiContract, "utf-8");
   await writeFile(path.join(root, "DESIGN.md"), DESIGN_MD, "utf-8");
-  await writeFile(
-    path.join(designDir, "DESIGN.md.lock.yaml"),
-    [
-      'designMdPath: "DESIGN.md"',
-      `designMdSha256: "${createHash("sha256").update(DESIGN_MD, "utf8").digest("hex")}"`,
-      'frozenAt: "2026-05-05T00:00:00Z"',
-      "",
-    ].join("\n"),
-    "utf-8",
-  );
   await writePlaywrightLauncher(binDir);
 }
 

@@ -20,13 +20,11 @@ export function isCiEnvironment(env: NodeJS.ProcessEnv = process.env): boolean {
 // downstream gate; `tdd` and `sdd` are allowed because QFAI's own ci.yml
 // dogfoods them as paired steps:
 //
-//   - `--profile tdd` covers test-side gates (validateTddList,
-//     validateTestTodoStubs, validateTraceability, validateTraceabilityIntegrity).
-//   - `--profile sdd` covers the structural / append-first gates
-//     (validateSpecPacks → QFAI-STATUS-001..006, QFAI-TRIAGE-001..006,
-//     plus validateStatusInSpecs). Without an `sdd`-allowed CI profile,
-//     a future regression in sddTriage / specPack validators could ship
-//     green because `tdd` does not exercise those code paths.
+//   - `--profile tdd` covers story test obligations, drift, test stubs,
+//     and contracts.
+//   - `--profile sdd` covers story tree structure, contract references,
+//     policy placeholders, and review artifacts. Without an `sdd`-allowed CI profile,
+//     these validators would not run in the paired narrow-profile lanes.
 //
 // The narrow-profile guard exists to stop CI from *accidentally* skipping
 // unrelated gates. When two narrow profiles are deliberately paired
@@ -34,8 +32,8 @@ export function isCiEnvironment(env: NodeJS.ProcessEnv = process.env): boolean {
 // (`--root tmp/pack/sandbox/out`), broad coverage is preserved.
 //
 // A profile outside this set is REPORTED, not blocked. A hard `error` that
-// replaced the entire run would make `qfai-atdd`, `qfai-discussion` and
-// `qfai-prototyping` uncompletable the moment they ran anywhere that exports
+// replaced the entire run would make `qfai-discussion` and `qfai-prototyping`
+// uncompletable the moment they ran anywhere that exports
 // `CI=true` — GitHub Actions, most hosted agent runners, and many
 // devcontainers — since each names one of these profiles as its **only**
 // completion gate, with no CI-legal fallback. A guard
@@ -58,12 +56,12 @@ export function buildCiProfileIssue(
     severity: "warning",
     category: "change",
     message:
-      `CI で full-scan ではない profile "${profile}" を実行しています。stage gate としては有効ですが、` +
-      `完了宣言の根拠にはなりません（full-scan は ${allowed}）。`,
+      `CI is running profile "${profile}", which is not a full-scan. It is valid as a stage gate, ` +
+      `but it is not grounds for declaring completion (full-scan profiles: ${allowed}).`,
     rule: "VALIDATE-017",
     suggested_action:
-      `stage gate としての実行であればそのままで構いません。完了を宣言する前に ` +
-      `--profile full（または --profile 指定なし）で full-scan を実行してください。CI で full-scan と` +
-      `みなされる profile: ${allowed}。`,
+      `If this run is a stage gate, no action is needed. Before declaring completion, ` +
+      `run a full-scan with --profile full (or with no --profile). Profiles CI treats ` +
+      `as a full-scan: ${allowed}.`,
   };
 }

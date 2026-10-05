@@ -2,6 +2,7 @@
 
 import {
   chmod,
+  cp,
   link,
   mkdir,
   mkdtemp,
@@ -10,7 +11,6 @@ import {
   rm,
   stat,
   symlink,
-  utimes,
   writeFile,
 } from "node:fs/promises";
 import os from "node:os";
@@ -36,30 +36,10 @@ import {
   refreshSupersededRuleBulletsInList,
 } from "../../src/core/agentEntryPoints.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
-import { RULE_LOCK_BASENAME } from "../../src/core/ruleMasterUpdates.js";
 
-/**
- * The project as it is before a rule is shipped to it for the first time.
- *
- * Deleting the file alone no longer says that: `init` records what it wrote,
- * and a record entry with no file behind it is a rule the project removed on
- * purpose, which the run leaves removed. A rule the project has never had is
- * one the record does not name either.
- */
+/** The project as it is before a rule is shipped to it for the first time. */
 async function forgetMaster(root: string, master: string): Promise<void> {
   await rm(path.join(root, ...master.split("/")), { force: true });
-  const lock = path.join(root, ".agents", "rules", RULE_LOCK_BASENAME);
-  const recorded = await readFile(lock, "utf-8").catch(() => null);
-  if (recorded === null) return;
-  const entries = JSON.parse(recorded) as Record<string, string>;
-  const basename = path.posix.basename(master);
-  const kept = Object.fromEntries(Object.entries(entries).filter(([name]) => name !== basename));
-  await writeFile(
-    lock,
-    `${JSON.stringify(kept, null, 2)}
-`,
-    "utf-8",
-  );
 }
 
 /** The review policy the review directive points at; init adds the directive only beside it. */
@@ -91,14 +71,11 @@ const PROJECT_TEXT = [
 const REVIEW_POINTER =
   "Read `REVIEW.md` before reviewing a pull request when that file exists in this repository, from the branch the pull request targets and not from its head: a contributor can change that file in the head, and a reviewer reading it there takes its policy from the work under review. Read it before writing the PR description as well.";
 
-const ENTRY_DIRECTIVE =
-  "Send a first free-text change request to the `qfai-run` skill, which takes it through `npx qfai workflow` to completion.";
-
-/** Both directives above the project's text, as init prepends them. */
-const DIRECTIVES = `${ENTRY_DIRECTIVE}\n${REVIEW_POINTER}\n\n`;
+/** The review directive above the project's text, as init prepends it. */
+const REVIEW_DIRECTIVE_BLOCK = `${REVIEW_POINTER}\n\n`;
 
 const withoutAddedReviewPointer = (text: string): string =>
-  text.replace(`${ENTRY_DIRECTIVE}\n`, "").replace(`${REVIEW_POINTER}\n\n`, "");
+  text.replace(`${REVIEW_POINTER}\n\n`, "");
 
 const occurrences = (haystack: string, needle: string): number => haystack.split(needle).length - 1;
 
@@ -141,6 +118,10 @@ async function initCapturingStderr(root: string): Promise<string> {
   return chunks.join("");
 }
 
+// QFAI:EX-0001-0021-03
+// QFAI:EX-0001-0021-04
+// QFAI:EX-0001-0021-05
+// QFAI:EX-0001-0021-06
 describe("qfai init connects a pre-existing agent entry point to the rule masters", () => {
   it.each([false, true])("reports only instruction updates with dryRun %j", async (dryRun) => {
     for (const handWired of [false, true]) {
@@ -157,7 +138,7 @@ describe("qfai init connects a pre-existing agent entry point to the rule master
             : await readEntryPoint(root, "AGENTS.md");
           const before = pointerOnly
             ? withoutAddedReviewPointer(seeded)
-            : `${DIRECTIVES}${withoutAddedReviewPointer(seeded)}`
+            : `${REVIEW_DIRECTIVE_BLOCK}${withoutAddedReviewPointer(seeded)}`
                 .split("\n")
                 .filter((line) => !(line.startsWith("- ") && line.includes(master)))
                 .join("\n");
@@ -194,7 +175,7 @@ describe("qfai init connects a pre-existing agent entry point to the rule master
           expect(line).not.toContain("review policy and rule citations");
           const after = await readEntryPoint(root, "AGENTS.md");
           if (dryRun) expect(after).toBe(before);
-          else if (pointerOnly) expect(after).toBe(`${DIRECTIVES}${before}`);
+          else if (pointerOnly) expect(after).toBe(`${REVIEW_DIRECTIVE_BLOCK}${before}`);
           else {
             expect(after).toContain(master);
             expect(occurrences(after, REVIEW_POINTER)).toBe(1);
@@ -231,6 +212,22 @@ describe("qfai init connects a pre-existing agent entry point to the rule master
         expect(await readFile(path.join(root, "REVIEW.md"), "utf-8")).toBe(REVIEW_POLICY);
       });
     }
+  });
+
+  it("rewrites an earlier wording of the review directive on upgrade", async () => {
+    const earlier =
+      "Read `REVIEW.md` before reviewing a pull request when that file exists in this repository. Read it before writing the PR description as well.";
+    await withProject(async (root) => {
+      for (const name of AGENT_ENTRY_POINT_FILES) {
+        await writeFile(path.join(root, name), `${earlier}\n\n${PROJECT_TEXT}`, "utf-8");
+      }
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      for (const name of AGENT_ENTRY_POINT_FILES) {
+        const text = await readEntryPoint(root, name);
+        expect(text.startsWith(`${REVIEW_POINTER}\n\n${PROJECT_TEXT}`)).toBe(true);
+        expect(occurrences(text, "Read `REVIEW.md` before reviewing a pull request")).toBe(1);
+      }
+    });
   });
 
   it("keeps optional repository review policy in fresh and forced reviewer output", async () => {
@@ -349,7 +346,7 @@ describe("qfai init connects a pre-existing agent entry point to the rule master
 
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      expect(await readEntryPoint(root, "CLAUDE.md")).toBe(`${DIRECTIVES}${handWired}`);
+      expect(await readEntryPoint(root, "CLAUDE.md")).toBe(`${REVIEW_DIRECTIVE_BLOCK}${handWired}`);
     });
   });
 
@@ -784,27 +781,6 @@ describe("the append path refuses what the update path refuses", () => {
   });
 });
 
-describe("staging an interrupted run left behind is reclaimed", () => {
-  it("removes the writer's own name shape and nothing else", async () => {
-    await withProject(async (root) => {
-      // What a kill between the write and the rename leaves: a full copy of the
-      // project's instructions, untracked, in the repository root.
-      const abandoned = path.join(root, ".qfai-entry-6f1d4b4e-0c2a-4f1e-9b0d-2a7c5e8f1a33.tmp");
-      const unrelated = path.join(root, "notes.tmp");
-      await writeFile(abandoned, PROJECT_TEXT, "utf-8");
-      await writeFile(unrelated, PROJECT_TEXT, "utf-8");
-      // Sat still long enough that no run is using it.
-      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
-      await utimes(abandoned, yesterday, yesterday);
-
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-      expect(await readdir(root)).not.toContain(path.basename(abandoned));
-      expect(await readFile(unrelated, "utf-8")).toBe(PROJECT_TEXT);
-    });
-  });
-});
-
 describe("a hand-wired file this run cannot extend is named", () => {
   it("says which masters to add when the citations are not a bullet list", async () => {
     await withProject(async (root) => {
@@ -823,7 +799,7 @@ describe("a hand-wired file this run cannot extend is named", () => {
 
       const stderr = await initCapturingStderr(root);
 
-      expect(await readEntryPoint(root, "AGENTS.md")).toBe(`${DIRECTIVES}${prose}`);
+      expect(await readEntryPoint(root, "AGENTS.md")).toBe(`${REVIEW_DIRECTIVE_BLOCK}${prose}`);
       expect(stderr).toContain("not as a bullet list this run can add a line to");
       expect(stderr).toContain(master);
     });
@@ -1426,7 +1402,8 @@ describe("optional review directive detection", () => {
   });
 
   it.each([333, 334])("preserves GitHub's CJK reference boundary at %i characters", (length) => {
-    const label = "漢".repeat(length);
+    // U+6F22, a CJK ideograph: GitHub's reference-label boundary counts these characters.
+    const label = "\u6f22".repeat(length);
     const existing = `![\n${REVIEW_POINTER}\n][${label}]\n\n[${label}]: /image.png\n`;
     const expected = length === 333 ? `${REVIEW_POINTER}\n\n${existing}` : existing;
     const updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
@@ -1900,13 +1877,71 @@ describe("optional review directive detection", () => {
     expect(addReviewPointer(merged, `${REVIEW_POINTER}\n`)).toBe(merged);
   });
 
+  describe("an earlier wording of the directive", () => {
+    const EARLIER =
+      "Read `REVIEW.md` before reviewing a pull request when that file exists in this repository. Read it before writing the PR description as well.";
+
+    it.each(["\n", "\r\n"])("is rewritten in place rather than kept beside the new one", (end) => {
+      const existing = `\uFEFF# Project rules${end}${end}${EARLIER}${end}${end}Keep this text.${end}`;
+      const updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+      expect(updated).toBe(
+        `\uFEFF# Project rules${end}${end}${REVIEW_POINTER}${end}${end}Keep this text.${end}`,
+      );
+      expect(occurrences(updated, "Read `REVIEW.md`")).toBe(1);
+      expect(addReviewPointer(updated, `${REVIEW_POINTER}\n`)).toBe(updated);
+    });
+
+    it("keeps the list marker it was written under", () => {
+      const existing = `# Rules\n\n- ${EARLIER}\n- Keep this bullet.\n`;
+      expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(
+        `# Rules\n\n- ${REVIEW_POINTER}\n- Keep this bullet.\n`,
+      );
+    });
+
+    it.each(["\n", "\r\n"])(
+      "keeps the indentation and trailing whitespace of the line it rewrites",
+      (end) => {
+        const existing = `# Rules${end}${end}  - ${EARLIER}  ${end}- Keep this bullet.${end}`;
+        expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(
+          `# Rules${end}${end}  - ${REVIEW_POINTER}  ${end}- Keep this bullet.${end}`,
+        );
+      },
+    );
+
+    it.each([
+      ["emphasis", "**Read it before writing the PR description as well.**"],
+      ["inline HTML", "Read it <b>before</b> writing the PR description as well."],
+      ["a link", "See [the guide](https://example.com/guide) as well."],
+    ])("is not rewritten when its text carries %s", (_name, tail) => {
+      const existing = `Read \`REVIEW.md\` before reviewing a pull request. ${tail}\n`;
+      expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(
+        `${REVIEW_POINTER}\n\n${existing}`,
+      );
+    });
+
+    it("is left alone when the current wording is already operative", () => {
+      const existing = `${REVIEW_POINTER}\n\n${EARLIER}\n`;
+      expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+    });
+
+    it.each([
+      ["fenced block", `~~~\n${EARLIER}\n~~~\n`],
+      ["HTML comment", `<!--\n${EARLIER}\n-->\n`],
+      ["block quote", `> ${EARLIER}\n`],
+    ])("is not rewritten inside a %s", (_name, existing) => {
+      expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(
+        `${REVIEW_POINTER}\n\n${existing}`,
+      );
+    });
+  });
+
   it("does not invent guidance when the template has none", () => {
     expect(addReviewPointer(PROJECT_TEXT, null)).toBe(PROJECT_TEXT);
     expect(addReviewPointer(PROJECT_TEXT, "# Project instructions\n")).toBe(PROJECT_TEXT);
   });
 });
 
-describe("the staged write keeps the file's own permissions", () => {
+describe("the write keeps the file's own permissions", () => {
   it("restores the target's mode rather than the process default", async () => {
     await withProject(async (root) => {
       const master = ".agents/rules/grilling.md";
@@ -1928,36 +1963,6 @@ describe("the staged write keeps the file's own permissions", () => {
       expect(await readEntryPoint(root, "AGENTS.md")).toContain(master);
       // A file the project had kept to itself is not published by the rewrite.
       expect((await stat(target)).mode & 0o7777).toBe(before);
-    });
-  });
-});
-
-describe("what the reclaim refuses to remove", () => {
-  it("leaves a name the writer could not have produced, and a fresh one", async () => {
-    await withProject(async (root) => {
-      const hour = 60 * 60 * 1000;
-      // Right shape, sat still for a day: abandoned.
-      const stale = path.join(root, ".qfai-entry-6f1d4b4e-0c2a-4f1e-9b0d-2a7c5e8f1a33.tmp");
-      // Right shape, written a moment ago: another init is using it.
-      const fresh = path.join(root, ".qfai-entry-0b2c9d1e-7a3f-4c5b-8e6d-1f2a3b4c5d6e.tmp");
-      // Wrong shape. The dots are literal and the layout is the one
-      // `randomUUID` writes, so neither of these is the writer's.
-      const notOurs = [
-        path.join(root, "xqfai-entry-6f1d4b4e-0c2a-4f1e-9b0d-2a7c5e8f1a33Ytmp"),
-        path.join(root, ".qfai-entry-6f1d4b4e0c2a4f1e9b0d2a7c5e8f1a33----.tmp"),
-      ];
-      for (const file of [stale, fresh, ...notOurs]) {
-        await writeFile(file, PROJECT_TEXT, "utf-8");
-      }
-      const old = new Date(Date.now() - 24 * hour);
-      await utimes(stale, old, old);
-
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-      const left = await readdir(root);
-      expect(left).not.toContain(path.basename(stale));
-      expect(left).toContain(path.basename(fresh));
-      for (const file of notOurs) expect(left).toContain(path.basename(file));
     });
   });
 });
@@ -2460,37 +2465,109 @@ describe("a later init refreshes a rule summary the project never edited", () =>
     });
   });
 
-  it.each([
-    { edited: true, kept: "the file's own bullet" },
-    { edited: false, kept: "the release's bullet" },
-  ])(
-    "rebuilds the Copilot file under --force with $kept for a master edited: $edited",
-    async ({ edited }) => {
-      await withProject(async (root) => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
-        const copilot = path.join(root, ".github", "copilot-instructions.md");
-        const written = await readFile(copilot, "utf-8");
-        const current =
-          written.split("\n").find((line) => line.startsWith(`- \`${master}\``)) ?? "";
-        expect(current, "the Copilot file has no bullet for the master").not.toBe("");
-        await writeFile(copilot, written.replace(current, superseded), "utf-8");
-        if (edited) {
-          // The adopter's own master: the update pass keeps it, so the release's
-          // summary would describe a rule this tree does not have.
-          const file = path.join(root, ".agents", "rules", "grilling.md");
-          await writeFile(file, `${await readFile(file, "utf-8")}\n\nOur own addition.\n`, "utf-8");
-        }
+  it("rebuilds the Copilot file under --force with the release's bullet", async () => {
+    await withProject(async (root) => {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const copilot = path.join(root, ".github", "copilot-instructions.md");
+      const written = await readFile(copilot, "utf-8");
+      const current = written.split("\n").find((line) => line.startsWith(`- \`${master}\``)) ?? "";
+      expect(current, "the Copilot file has no bullet for the master").not.toBe("");
+      await writeFile(copilot, written.replace(current, superseded), "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      const after = await readFile(copilot, "utf-8");
+      expect(after).toContain(current);
+      expect(after).not.toContain(superseded);
+      expect(after).toContain("- `.agents/rules/user-questions.md` — ");
+    });
+  });
+
+  it("keeps the Copilot summary under --force where the master was refused", async () => {
+    await withProject(async (root) => {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const copilot = path.join(root, ".github", "copilot-instructions.md");
+      const written = await readFile(copilot, "utf-8");
+      const current = written.split("\n").find((line) => line.startsWith(`- \`${master}\``)) ?? "";
+      expect(current, "the Copilot file has no bullet for the master").not.toBe("");
+      // A master this run ships for the first time, with no bullet yet.
+      const missing = "- `.agents/rules/api-budget.md` — ";
+      await writeFile(
+        copilot,
+        written
+          .replace(current, superseded)
+          .split("\n")
+          .filter((line) => !line.startsWith(missing))
+          .join("\n"),
+        "utf-8",
+      );
+      // The masters live outside the project behind a link, so `--force`
+      // refuses to write them and the project's own grilling master stays.
+      const rules = path.join(root, ".agents", "rules");
+      const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-linked-rules-"));
+      try {
+        await cp(rules, outside, { recursive: true });
+        await writeFile(path.join(outside, "grilling.md"), "# Our grilling rule\n", "utf-8");
+        await rm(path.join(outside, "api-budget.md"));
+        await rm(rules, { recursive: true });
+        await symlink(outside, rules, "junction");
 
         await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
         const after = await readFile(copilot, "utf-8");
-        expect(after).toContain(edited ? superseded : current);
-        expect(after).not.toContain(edited ? current : superseded);
-        // Every other rule keeps the release's wording.
+        expect(after).toContain(superseded);
+        expect(after).not.toContain(current);
         expect(after).toContain("- `.agents/rules/user-questions.md` — ");
-      });
-    },
-  );
+        // The refused master is not there, so nothing cites it.
+        expect(after).not.toContain(missing);
+      } finally {
+        await rm(rules, { force: true });
+        await rm(outside, { recursive: true, force: true });
+      }
+    });
+  });
+
+  it("keeps only the operative Copilot bullet, whole, where the master was refused", async () => {
+    await withProject(async (root) => {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const copilot = path.join(root, ".github", "copilot-instructions.md");
+      const written = await readFile(copilot, "utf-8");
+      const current = written.split("\n").find((line) => line.startsWith(`- \`${master}\``)) ?? "";
+      expect(current, "the Copilot file has no bullet for the master").not.toBe("");
+      const example = `- \`${master}\` — an example in a fenced block, not the rule list.`;
+      const continuation = "  Our own second line of the summary.";
+      await writeFile(
+        copilot,
+        [
+          "## Examples",
+          "",
+          "```markdown",
+          example,
+          "```",
+          "",
+          written.replace(current, `${superseded}\n${continuation}`),
+        ].join("\n"),
+        "utf-8",
+      );
+      const rules = path.join(root, ".agents", "rules");
+      const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-linked-rules-"));
+      try {
+        await cp(rules, outside, { recursive: true });
+        await writeFile(path.join(outside, "grilling.md"), "# Our grilling rule\n", "utf-8");
+        await rm(rules, { recursive: true });
+        await symlink(outside, rules, "junction");
+
+        await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+        const after = await readFile(copilot, "utf-8");
+        expect(after).not.toContain(example);
+        expect(after).toContain(`${superseded}\n${continuation}`);
+      } finally {
+        await rm(rules, { force: true });
+        await rm(outside, { recursive: true, force: true });
+      }
+    });
+  });
 
   it("leaves the same line inside a fenced example as it is", async () => {
     await withProject(async (root) => {
@@ -2816,6 +2893,75 @@ describe("a later init refreshes a rule summary the project never edited", () =>
         expect(result.refreshed, heading).toEqual([master]);
         expect(result.text, heading).toBe(expected.join("\n"));
       }
+    });
+  });
+});
+
+/**
+ * The question-form summary an earlier release wrote, before the rule said how a
+ * turn that waits on the user ends. An unedited copy takes the new wording in
+ * every entry point, the Copilot file included.
+ */
+describe("a later init refreshes the question-form summary an earlier release wrote", () => {
+  const master = ".agents/rules/user-questions.md";
+  const superseded =
+    "- `.agents/rules/user-questions.md` — every question arrives in the shape its answer has: a choice where the candidates can be listed, a plain request where they cannot; the fallback keeps the same parts.";
+
+  const bulletIn = (text: string): string | undefined =>
+    text.split("\n").find((line) => line.startsWith("- ") && line.includes(master));
+
+  /**
+   * Every entry point and the Copilot file as that release left them. Returns
+   * what this release writes and what the earlier one did, per file.
+   */
+  async function seedSuperseded(
+    root: string,
+  ): Promise<Map<string, { current: string; earlier: string }>> {
+    for (const name of AGENT_ENTRY_POINT_FILES) {
+      await writeFile(path.join(root, name), PROJECT_TEXT, "utf-8");
+    }
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+    const copilot = path.join(".github", "copilot-instructions.md");
+    const seeded = new Map<string, { current: string; earlier: string }>();
+    for (const name of [...AGENT_ENTRY_POINT_FILES, copilot]) {
+      const written = await readEntryPoint(root, name);
+      const bullet = bulletIn(written);
+      expect(bullet, `${name} has no bullet for ${master}`).toBeDefined();
+      expect(bullet).toContain("a turn that waits on the user ends with a question");
+      const earlier = written.replace(bullet ?? "", superseded);
+      seeded.set(name, { current: written, earlier });
+      await writeFile(path.join(root, name), earlier, "utf-8");
+    }
+    return seeded;
+  }
+
+  it("replaces the unedited bullet in every entry point and changes nothing else", async () => {
+    await withProject(async (root) => {
+      const seeded = await seedSuperseded(root);
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      for (const [name, { current }] of seeded) {
+        expect(await readEntryPoint(root, name), name).toBe(current);
+      }
+    });
+  });
+
+  it("keeps the earlier bullet where the project edited its own question rule", async () => {
+    await withProject(async (root) => {
+      const seeded = await seedSuperseded(root);
+      // The update pass keeps an edited master, so the new summary would
+      // describe a clause this project's rule does not have.
+      const rule = path.join(root, ".agents", "rules", "user-questions.md");
+      const theirs = `${await readFile(rule, "utf-8")}\n\nOur own addition.\n`;
+      await writeFile(rule, theirs, "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      for (const [name, { earlier }] of seeded) {
+        expect(await readEntryPoint(root, name), name).toBe(earlier);
+      }
+      expect(await readFile(rule, "utf-8")).toBe(theirs);
     });
   });
 });

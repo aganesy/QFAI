@@ -1,0 +1,25 @@
+schema_version: "1.0"
+
+# Every step's profile is `default`: inside a route, the plan's `review` is the
+# only review. The other profiles serve the skills that are not split into steps.
+profiles:
+  default:
+    always_required: []
+    conditional_required: []
+  architecture-heavy:
+    always_required: [architecture-reviewer]
+    conditional_required: []
+  runtime-heavy:
+    always_required: [qa-gatekeeper]
+    conditional_required: [implementation-reviewer]
+
+optional_modes:
+  devils-advocate:
+    kind: advisory
+    description: Challenge assumptions aggressively, but do not block completion by default.
+    alternative_required: true
+    bare_negation_invalid: true
+  pattern-doubler:
+    kind: advisory
+    description: Propose missing concrete business-flow, story, acceptance-criterion, or example coverage with rationale; do not demand more abstract rules or numeric targets.
+    rationale_required: true

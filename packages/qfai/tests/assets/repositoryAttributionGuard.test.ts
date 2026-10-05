@@ -44,17 +44,14 @@ describe("repository attribution matcher", () => {
     });
 
     it("when the artifact is a contract id", () => {
-      // The old branch spelled contracts `CON-NNNN-NNNN`, a form that exists
-      // nowhere. `contract-artifact-rules.md` defines `CON-API-*` / `CON-DB-*`
-      // / `CON-UI-*`, so every real contract misattribution walked past.
-      expect(matchRepositoryAttribution("this repository's CON-DB-0007 owns the write path")).toBe(
-        "this repository's CON-DB-0007",
+      expect(matchRepositoryAttribution("this repository's DB-0007 owns the write path")).toBe(
+        "this repository's DB-0007",
       );
-      expect(matchRepositoryAttribution("`CON-API-0001` belongs to this repository")).toBe(
-        "`CON-API-0001` belongs to this repository",
+      expect(matchRepositoryAttribution("`API-0001` belongs to this repository")).toBe(
+        "`API-0001` belongs to this repository",
       );
-      expect(matchRepositoryAttribution("this repository's `CON-UI-0003` is frozen")).toBe(
-        "this repository's `CON-UI-0003`",
+      expect(matchRepositoryAttribution("this repository's `UI-0003` is frozen")).toBe(
+        "this repository's `UI-0003`",
       );
     });
 
@@ -118,7 +115,7 @@ describe("repository attribution matcher", () => {
 
   describe("leaves legitimate prose alone", () => {
     it("for the bare phrase", () => {
-      // qfai-atdd / qfai-configure / qfai-verify all say this correctly.
+      // qfai-configure and qfai-verify both say this correctly.
       expect(matchRepositoryAttribution("run the relevant test suite for this repository")).toBe(
         null,
       );
@@ -180,11 +177,10 @@ describe("repository attribution matcher", () => {
       path.relative(assistantDir, filePath).split(path.sep).join("/"),
     );
 
-    expect(files).toContain("skills/qfai-prototyping/templates/DESIGN.md.sample");
-    expect(files).toContain("skills/qfai-sdd/templates/contracts/db-contract.sample.sql");
-    expect(files).toContain("catalog/spec_required_files.json");
-    expect(files).toContain("skills/qfai-discussion/templates/review/summary.json");
+    expect(files).toContain("skill/qfai-prototyping/templates/DESIGN.md.sample");
+    expect(files).toContain("skill/qfai-sdd/templates/contracts/db-contract.sample.sql");
+    expect(files).toContain("skill/web-research/mcp-templates/brave-search/mcp-config.json");
     // And the markdown the narrower glob already covered.
-    expect(files).toContain("skills/qfai-sdd/references/contract-artifact-rules.md");
+    expect(files).toContain("skill/qfai-sdd/references/contract-artifact-rules.md");
   });
 });

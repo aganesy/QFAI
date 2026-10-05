@@ -22,7 +22,6 @@ const EXPLORATION_SECTIONS = [
   "functionality",
   "good critique examples",
   "good critique",
-  "best-of-history summary",
 ] as const;
 
 const LEGACY_FOUR_AXIS_SECTIONS = [
@@ -39,7 +38,7 @@ const LEGACY_FOUR_AXIS_SECTIONS = [
 // designContractReadiness. The legacy `33_exploration_rubric.md` and
 // `34_evaluator_calibration.md` sidecars were removed when DESIGN.md
 // became the brand SSOT and the review contract moved to
-// `core/prototyping/evaluatorReview.ts`; they are no
+// the prototyping reviewer prompt; they are no
 // longer shipped by `qfai init`. Only screen-level UX sidecars remain
 // in the required family.
 //
@@ -66,7 +65,7 @@ export const FORBIDDEN_LEGACY_PATTERNS = [
   /^31_.*anchor.*\.md$/i,
   // 33_exploration_rubric.md / 34_evaluator_calibration.md were retired
   // when DESIGN.md became the brand SSOT and the review contract
-  // moved to `core/prototyping/evaluatorReview.ts`. They
+  // moved to the prototyping reviewer prompt. They
   // are no longer in the canonical family AND must not be created by
   // operators following stale docs.
   /^3[34]_.*\.md$/i,

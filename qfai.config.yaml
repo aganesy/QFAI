@@ -1,18 +1,14 @@
 paths:
-  specsDir: .qfai/specs
-  contractsDir: .qfai/contracts
+  specsDir: .qfai/spec
+  contractsDir: .qfai/spec/03_contract
   discussionDir: .qfai/discussion
   outDir: .qfai/report
-  skillsDir: .qfai/assistant/skills
+  skillsDir: .qfai/assistant/skill
   srcDir: src
   testsDir: tests
 validation:
   failOn: error
-  require:
-    specSections: []
   testStrategy:
-    maxE2eScenarioRatio: null
-    maxE2eScenarioCount: null
     # `qfai validate` rejects `it.todo` / `test.todo` / `describe.todo` stubs in
     # files matched by traceability.testFileGlobs (QFAI-TEST-001). Setting this
     # to false is the documented opt-out, and it is not machine-checked: the
@@ -21,7 +17,6 @@ validation:
     # review ourselves; `qfai validate` will not ask for one.
     forbidTestTodoStubs: true
   traceability:
-    scMustHaveTest: true
     testFileGlobs:
       - tests/**/*.test.ts
       - tests/**/*.spec.ts
@@ -33,13 +28,17 @@ validation:
       - packages/*/src/**/*.spec.ts
       - features/**/*.feature
       - packages/*/features/**/*.feature
-    testFileExcludeGlobs: []
-    unknownContractIdSeverity: error
+    # Fixtures hold inputs for the migration tests, written in the retired
+    # annotation shapes on purpose. They are data, not tests.
+    testFileExcludeGlobs:
+      - packages/*/tests/fixtures/**
 output:
   validateJsonPath: .qfai/report/validate.json
+uiux:
+  # QFAI ships a command-line tool and renders no surface. What may appear in
+  # terminal output is settled by `.agents/rules/interface-clarity.md`.
+  surfacePaths: []
 prototyping:
-  calibration:
-    packPath: .qfai/evidence/calibration.yaml
   execution:
     targetUrl: null
     browserTool: playwright

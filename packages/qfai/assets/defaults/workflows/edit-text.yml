@@ -1,0 +1,18 @@
+route: edit-text
+family: change
+stages:
+  - id: edit
+    kind: maintenance
+    steps: [maintain-edit]
+  - id: note
+    kind: verify
+    steps:
+      - { step: verify-change-note, passThrough: true }
+    after: [edit]
+    review: code
+  - id: verify
+    kind: verify
+    steps: [verify-qfai-gate, verify-repo-gate, verify-commit]
+    after: [note]
+decisionPoints: []
+branchPoints: []

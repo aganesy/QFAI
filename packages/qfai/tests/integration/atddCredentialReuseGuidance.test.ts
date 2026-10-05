@@ -1,5 +1,5 @@
 /**
- * Integration: the shipped `/qfai-atdd` credential-reuse guidance artifact
+ * Integration: the shipped `/qfai-implement` credential-reuse guidance artifact
  * (TC-0008-0015 .. TC-0008-0018).
  *
  * The deliverable of this obligation is prose, so every oracle below reads a
@@ -21,10 +21,9 @@
  * generated, and asserting there would pass on a tree whose source was never
  * edited.
  */
-// QFAI:SPEC-0008:TC-0008-0015
-// QFAI:SPEC-0008:TC-0008-0016
-// QFAI:SPEC-0008:TC-0008-0017
-// QFAI:SPEC-0008:TC-0008-0018
+// QFAI:AC-0001-0074-01
+// QFAI:AC-0001-0074-02
+// QFAI:AC-0001-0074-03
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -38,16 +37,19 @@ import { getInitAssetsDir } from "../../src/shared/assets.js";
 // tests/integration/<this file> -> tests -> packages/qfai
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
-const skillDir = (): string =>
-  path.join(getInitAssetsDir(), ".qfai", "assistant", "skills", "qfai-atdd");
-const GUIDANCE_REL = "references/credential-reuse.md";
+// The init asset root stands in for the project root `qfai init` writes into.
+const projectRoot = (): string => getInitAssetsDir();
+const GUIDANCE_REL = ".qfai/assistant/skill/qfai-implement/references/credential-reuse.md";
 
 let guidance = "";
-let skillEntry = "";
+let stepEntry = "";
 
 beforeAll(async () => {
-  guidance = await readFile(path.join(skillDir(), "references", "credential-reuse.md"), "utf-8");
-  skillEntry = await readFile(path.join(skillDir(), "SKILL.md"), "utf-8");
+  guidance = await readFile(path.join(projectRoot(), GUIDANCE_REL), "utf-8");
+  stepEntry = await readFile(
+    path.join(projectRoot(), ".qfai", "assistant", "step", "implement-credentials", "STEP.md"),
+    "utf-8",
+  );
 });
 
 /** The `##`/`###` section bodies, so "distinct statement" can mean "its own section". */
@@ -59,6 +61,9 @@ function sections(markdown: string): string[] {
     .filter((section) => section.length > 0);
 }
 
+// QFAI:EX-0001-0074-01
+// QFAI:EX-0001-0074-02
+// QFAI:EX-0001-0074-03
 describe("TC-0008-0015 (TDD-0015): the seven rules and the companion rule are stated and linked", () => {
   /**
    * One predicate per obligation, each keyed on the rule's own subject rather
@@ -104,11 +109,13 @@ describe("TC-0008-0015 (TDD-0015): the seven rules and the companion rule are st
     );
   });
 
-  it("is cross-linked from the skill entry point by a path that resolves", async () => {
-    expect(skillEntry, "SKILL.md does not link the guidance").toContain(GUIDANCE_REL);
+  it("is cross-linked from the credentials step by a path that resolves", async () => {
+    expect(stepEntry, "the implement-credentials step does not link the guidance").toContain(
+      GUIDANCE_REL,
+    );
     // The link is only a link while the target is there. Resolved from the
-    // skill directory, exactly as a reader would follow it.
-    const target = path.resolve(skillDir(), GUIDANCE_REL);
+    // project root, exactly as a reader would follow it.
+    const target = path.resolve(projectRoot(), GUIDANCE_REL);
     await expect(readFile(target, "utf-8")).resolves.toContain("Credential reuse");
   });
 });
@@ -185,95 +192,29 @@ describe("TC-0008-0017 (TDD-0017): the guidance grows no vocabulary", () => {
     // keeps its size. This is the row that reddens if the prose deliverable
     // quietly became a validator.
     //
-    // `QFAI-ATDD-001` is absent by retirement, not by accident. It was the
-    // ATDD coverage-ledger validator, which fired on the *absence* of
-    // `<spec-dir>/atdd/coverage-ledger.md` — a file nothing produced — and was
-    // removed with `src/core/validators/atddLedger.ts`. This baseline is what
-    // the retirement has to move: it reads the codes out of `src/**`, so
-    // leaving the code listed here would assert a declaration the tree no
-    // longer holds. `validators-are-wired.test.ts` holds the row that keeps it
-    // retired.
-    //
-    // `QFAI-ATDD-118` is in the baseline because a separate change added it
-    // deliberately, with its own tests: it is the `info` finding that reports a
-    // `US-*` deferred out of the current slice by `- x-qfai-status: planned`
-    // (`tests/core/atddUsPlannedDeferral.test.ts`). Moving the baseline is the
-    // correct response to a code someone meant to add; the row still reddens
-    // for one nobody declared.
-    //
-    // `QFAI-ATDD-131`/`-132`/`-133` are present for the mirror-image reason:
-    // the Coverage Depth Matrix gate (`src/core/validators/atddCoverageDepth.ts`)
-    // is a validator, so its codes are declarations the tree now holds and the
-    // baseline has to say so. What this row still guards is unchanged — the
-    // set is enumerated, so the prose deliverable growing a code of its own
-    // reddens it.
-    //
-    // `QFAI-ATDD-128` is present on the same terms: `catalog/test-layers.md`
-    // has always said a `TC-*` row's `Level` stays within L1-L3, and the
-    // routing table already named "the rule that names the real cause" for a
-    // row that does not. That rule is a validator now, so its code is a
-    // declaration the tree holds.
-    //
-    // A re-pin script per pinned guard would need to ship with the workflow-hygiene
-    // lane. This row gets the re-derivation COMMAND instead, and deliberately not
-    // an auto-writer:
-    //
-    //     node -e "const fg=require('fast-glob');const fs=require('fs');\
-    //       const c=new Set();for(const f of fg.sync('packages/qfai/src/**/*.ts'))\
-    //       for(const m of fs.readFileSync(f,'utf8').matchAll(/QFAI-ATDD-\\d{3}/g))\
-    //       c.add(m[0]);console.log([...c].sort().join('\\n'))"
-    //
-    // A tool that rewrote this list would defeat it. The list is ENUMERATED
-    // rather than counted precisely so that a set which lost one code and
-    // gained another — same size, different declarations — reddens; an
-    // auto-writer would absorb that swap silently and the reviewer would never
-    // see it. Compare `pin-stage-evidence-counts.mjs`, which is right for a
-    // DERIVED NUMBER whose only correct value is a fresh measurement. Here the
-    // freeze is the review artifact, so the command prints and a human edits.
+    // Keep an explicit set so a removed code cannot silently make room for a
+    // new code from this guidance.
     expect(await atddFindingCodes()).toEqual([
       "QFAI-ATDD-101",
-      "QFAI-ATDD-102",
       "QFAI-ATDD-103",
-      "QFAI-ATDD-104",
       "QFAI-ATDD-105",
       "QFAI-ATDD-111",
       "QFAI-ATDD-112",
       "QFAI-ATDD-113",
       "QFAI-ATDD-114",
       "QFAI-ATDD-115",
-      "QFAI-ATDD-116",
       "QFAI-ATDD-117",
       "QFAI-ATDD-118",
-      // Obligations referenced only from carriers that declare no test. 118 is
-      // taken by the US planned-deferral finding on its own branch, so this one
-      // holds the next free number rather than colliding with it.
       "QFAI-ATDD-119",
-      "QFAI-ATDD-121",
-      "QFAI-ATDD-122",
-      "QFAI-ATDD-123",
-      // Carriers whose suite is bound through a variable, so the scan cannot
-      // say whether their tests run.
-      "QFAI-ATDD-124",
-      // A spec that declares test cases and owes none of them an annotation.
-      "QFAI-ATDD-125",
-
-      // A test case that declares where it is verified, and one that claims
-      // `external` while naming no verifier.
-      "QFAI-ATDD-126",
-      "QFAI-ATDD-127",
       "QFAI-ATDD-128",
-      "QFAI-ATDD-131",
-      "QFAI-ATDD-132",
-      "QFAI-ATDD-133",
       "QFAI-ATDD-134",
       "QFAI-ATDD-135",
-      "QFAI-ATDD-901",
     ]);
   });
 
   it("leaves the layer token set at its five members", async () => {
     const crosswalk = await readFile(
-      path.join(getInitAssetsDir(), ".qfai", "assistant", "catalog", "test-layers.md"),
+      path.join(getInitAssetsDir(), ".qfai", "assistant", "rule", "test-layers.md"),
       "utf-8",
     );
     const tokens = [...crosswalk.matchAll(/`layer-([a-z0-9]+)`/g)].map((match) => match[1] ?? "");

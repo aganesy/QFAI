@@ -1,0 +1,10 @@
+// QFAI~AC-0001-0001-01
+// QFAI~AC-0001-0001-02
+// QFAI~SPEC-0001:TC-0001-0001
+// QFAI~SPEC-0001:TC-0001-0002
+// QFAI~SPEC-0001:TC-0001-0003
+// QFAI~CON-API-0001
+class TestOrder {
+  readonly saved = "accepted";
+}
+export const savedOrder = new TestOrder().saved;

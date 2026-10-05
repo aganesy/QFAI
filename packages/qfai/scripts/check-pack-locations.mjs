@@ -330,6 +330,10 @@ function findViolationInPath(rawPath) {
     const seg = segments[i];
     const m = PACK_SEGMENT_RE.exec(seg);
     if (!m) continue;
+    // A step directory is named `<owner>-<name>`, so the discussion skill's
+    // steps (`assistant/step/discussion-pack/`) share the pack prefix
+    // without being packs.
+    if (segments[i - 1] === "step" && segments[i - 2] === "assistant") continue;
     const kind = m[1];
     const parentPrefix = segments.slice(0, i).join("/");
     const allowedRoots = ALLOWED_ROOTS[kind];
@@ -374,7 +378,7 @@ function main() {
     const computed = readChangedFromGit(args.baseRef);
     if (computed === null) {
       // Soft-pass when git is unavailable / errored — see comment in
-      // readChangedFromGit. Mirrors the prompt-scanner pair lane.
+      // readChangedFromGit.
       return 0;
     }
     changed = computed;

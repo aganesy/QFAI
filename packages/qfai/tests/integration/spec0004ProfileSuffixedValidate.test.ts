@@ -1,38 +1,22 @@
 /**
  * Integration: spec-0004 CHG-005 — Profile-suffixed validate output +
- * SSOT-sync pair-changed CI lane + Reviewer-Gate justification
- * ingestion gate.
+ * SSOT-sync pair-changed CI lane.
  *
  * Covers TC-0004-0055..0066.
  */
-// QFAI:SPEC-0004:TC-0004-0055
-// QFAI:SPEC-0004:TC-0004-0056
-// QFAI:SPEC-0004:TC-0004-0057
-// QFAI:SPEC-0004:TC-0004-0058
-// QFAI:SPEC-0004:TC-0004-0059
-// QFAI:SPEC-0004:TC-0004-0060
-// QFAI:SPEC-0004:TC-0004-0061
-// QFAI:SPEC-0004:TC-0004-0062
-// QFAI:SPEC-0004:TC-0004-0063
-// QFAI:SPEC-0004:TC-0004-0064
-// QFAI:SPEC-0004:TC-0004-0065
-// QFAI:SPEC-0004:TC-0004-0066
+// QFAI:EX-0001-0047-01
+// QFAI:EX-0001-0047-01
+// QFAI:EX-0001-0047-02
+// QFAI:EX-0001-0047-02
 
-import { execFile } from "node:child_process";
 import { mkdir, mkdtemp, readFile, writeFile, access } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { promisify } from "node:util";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { runValidate } from "../../src/cli/commands/validate.js";
-import { runPrototypingCertify } from "../../src/cli/commands/prototypingCertify.js";
-import { loadConfig } from "../../src/core/config.js";
-import { validateReviewerJustification } from "../../src/core/validators/reviewerJustification.js";
 import { removeTempTree } from "../helpers/tempTree.js";
-
-const execFileP = promisify(execFile);
 
 async function pathExists(p: string): Promise<boolean> {
   try {
@@ -46,35 +30,6 @@ async function pathExists(p: string): Promise<boolean> {
 async function newRoot(prefix: string): Promise<string> {
   return mkdtemp(path.join(os.tmpdir(), `qfai-spec0004-chg005-${prefix}-`));
 }
-
-async function getConfig(root: string) {
-  const r = await loadConfig(root);
-  return r.config;
-}
-
-async function seedReviewerReport(root: string, body: unknown): Promise<void> {
-  const dir = path.join(root, ".qfai", "review", "review-2026-05-25");
-  await mkdir(dir, { recursive: true });
-  await writeFile(
-    path.join(dir, "reviewer-completion.json"),
-    JSON.stringify(body, null, 2),
-    "utf-8",
-  );
-}
-
-const SCANNER_REL = "packages/qfai/src/core/prototyping/designMdViolations.ts";
-const PROMPT_REL =
-  "packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/generator-prompt.md";
-
-const CHECK_SCRIPT = path.resolve(
-  __dirname,
-  "..",
-  "..",
-  "..",
-  "..",
-  "scripts",
-  "check-prompt-scanner-pair.mjs",
-);
 
 let root: string;
 
@@ -121,6 +76,20 @@ describe("TC-0004-0056: always-latest validate.json#profile reflects most-recent
     await runValidate({ root, strict: false, profile: "tdd" });
     body = JSON.parse(await readFile(alwaysLatest, "utf-8")) as { profile?: string };
     expect(body.profile).toBe("tdd");
+  });
+
+  // QFAI:AC-0001-0047-01
+  // QFAI:EX-0001-0047-01
+  it("records a run with no profile as the full profile", async () => {
+    await runValidate({ root, strict: false });
+    const full = JSON.parse(
+      await readFile(path.join(root, ".qfai/report/validate-full.json"), "utf-8"),
+    ) as { profile?: string };
+    const latest = JSON.parse(
+      await readFile(path.join(root, ".qfai/report/validate.json"), "utf-8"),
+    ) as { profile?: string };
+    expect(full.profile).toBe("full");
+    expect(latest.profile).toBe("full");
   });
 });
 
@@ -184,162 +153,9 @@ describe("TC-0004-0058: legacy path escalates to error at tool version 1.10.0 wh
   });
 });
 
-// ────────────────────────────────────────────────────────────────────────────
-// REQ-0102 — Pair-changed CI lane (script: scripts/check-prompt-scanner-pair.mjs)
-// ────────────────────────────────────────────────────────────────────────────
-
-async function runCheckScript(
-  args: string[],
-): Promise<{ code: number; stdout: string; stderr: string }> {
-  try {
-    const result = await execFileP("node", [CHECK_SCRIPT, ...args], {
-      cwd: process.cwd(),
-    });
-    return { code: 0, stdout: result.stdout, stderr: result.stderr };
-  } catch (err: unknown) {
-    const e = err as { code?: number; stdout?: string; stderr?: string };
-    return {
-      code: typeof e.code === "number" ? e.code : 1,
-      stdout: e.stdout ?? "",
-      stderr: e.stderr ?? "",
-    };
-  }
-}
-
-describe("TC-0004-0059: pair-changed lane fails when only scanner changes", () => {
-  it("scanner-only PR emits R-PROMPT-SCANNER-DRIFT naming the scanner and un-paired prompt", async () => {
-    const result = await runCheckScript(["--changed", SCANNER_REL]);
-    expect(result.code).not.toBe(0);
-    const out = result.stdout + result.stderr;
-    expect(out).toMatch(/R-PROMPT-SCANNER-DRIFT/);
-    expect(out).toMatch(/designMdViolations\.ts/);
-    expect(out).toMatch(/generator-prompt\.md/);
-    expect(out).toMatch(/clause=/);
-  });
-});
-
-describe("TC-0004-0060: pair-changed lane fails when only prompt changes", () => {
-  it("prompt-only PR emits R-PROMPT-SCANNER-DRIFT naming the prompt and un-paired scanner", async () => {
-    const result = await runCheckScript(["--changed", PROMPT_REL]);
-    expect(result.code).not.toBe(0);
-    const out = result.stdout + result.stderr;
-    expect(out).toMatch(/R-PROMPT-SCANNER-DRIFT/);
-    expect(out).toMatch(/generator-prompt\.md/);
-    expect(out).toMatch(/designMdViolations\.ts/);
-  });
-});
-
-describe("TC-0004-0061: pair-changed lane passes when both halves change", () => {
-  it("both-changed PR passes the lane silently with no drift finding", async () => {
-    const result = await runCheckScript(["--changed", `${SCANNER_REL},${PROMPT_REL}`]);
-    expect(result.code).toBe(0);
-    expect(result.stdout).not.toMatch(/R-PROMPT-SCANNER-DRIFT/);
-  });
-});
-
-describe("TC-0004-0062: pair-changed lane passes when neither half changes", () => {
-  it("neither-changed PR (README typo etc.) passes the lane silently", async () => {
-    const result = await runCheckScript(["--changed", "README.md"]);
-    expect(result.code).toBe(0);
-    expect(result.stdout).not.toMatch(/R-PROMPT-SCANNER-DRIFT/);
-  });
-});
-
-// ────────────────────────────────────────────────────────────────────────────
-// REQ-0125 — Justification ingestion gate
-// ────────────────────────────────────────────────────────────────────────────
-
-describe("TC-0004-0063: validate rejects empty-justification R-PROMPT-SCANNER-DRIFT", () => {
-  it("whitespace-only justification exits validate error severity", async () => {
-    await seedReviewerReport(root, {
-      findings: [{ code: "R-PROMPT-SCANNER-DRIFT", justification: "   " }],
-    });
-    const issues = await validateReviewerJustification(root, await getConfig(root));
-    const drift = issues.filter((i) => i.code === "R-PROMPT-SCANNER-DRIFT");
-    expect(drift.length).toBe(1);
-    expect(drift[0]?.severity).toBe("error");
-  });
-});
-
-describe("TC-0004-0064: validate accepts 3-part justification R-PROMPT-SCANNER-DRIFT", () => {
-  it("modified file + counterpart + clause justification is accepted", async () => {
-    await seedReviewerReport(root, {
-      findings: [
-        {
-          code: "R-PROMPT-SCANNER-DRIFT",
-          justification:
-            "modified=packages/qfai/src/core/prototyping/designMdViolations.ts, " +
-            "un-paired=packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/generator-prompt.md, " +
-            "clause=color-literal-ban",
-        },
-      ],
-    });
-    const issues = await validateReviewerJustification(root, await getConfig(root));
-    const drift = issues.filter((i) => i.code === "R-PROMPT-SCANNER-DRIFT");
-    expect(drift).toEqual([]);
-  });
-});
-
-// ────────────────────────────────────────────────────────────────────────────
-// Certify + post-sunset consumer
-// ────────────────────────────────────────────────────────────────────────────
-
-describe("TC-0004-0065: certify profile-mismatch surfaces recovery command", () => {
-  it("certify aborts naming observed/expected profiles and prints recovery command", async () => {
-    // Seed minimal prototyping.json + verify.json + DESIGN.md + a
-    // validate.json with the WRONG profile.
-    const protoDir = path.join(root, ".qfai/evidence/prototyping");
-    await mkdir(protoDir, { recursive: true });
-    await writeFile(
-      path.join(protoDir, "prototyping.json"),
-      JSON.stringify({
-        runId: "run-x",
-        phase: "prototyping",
-        designMd: { sha256: "0".repeat(64) },
-        reviewerGate: { result: "PASS" },
-        iterations: [{}],
-        specsCovered: ["0004"],
-      }),
-      "utf-8",
-    );
-    await mkdir(path.join(root, ".qfai/output"), { recursive: true });
-    await writeFile(
-      path.join(root, ".qfai/output/verify.json"),
-      JSON.stringify({ status: "PASS" }),
-      "utf-8",
-    );
-    await mkdir(path.join(root, ".qfai/report"), { recursive: true });
-    await writeFile(
-      path.join(root, ".qfai/report/validate.json"),
-      JSON.stringify({ counts: { error: 0 }, profile: "tdd" }),
-      "utf-8",
-    );
-
-    // Capture stderr from runPrototypingCertify.
-    const errs: string[] = [];
-    const origErr = process.stderr.write.bind(process.stderr);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (process.stderr as any).write = (chunk: string | Uint8Array) => {
-      errs.push(typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf-8"));
-      return true;
-    };
-    let exitCode: number;
-    try {
-      exitCode = await runPrototypingCertify({ root, check: false });
-    } finally {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (process.stderr as any).write = origErr;
-    }
-
-    expect(exitCode).not.toBe(0);
-    const combined = errs.join("");
-    expect(combined).toMatch(/tdd/);
-    expect(combined).toMatch(/prototyping/);
-    expect(combined).toMatch(/qfai validate --profile prototyping --fail-on error/);
-  });
-});
-
-describe("TC-0004-0066: legacy validate.json path escalates to error post sunset", () => {
+// QFAI:AC-0001-0047-02
+// QFAI:EX-0001-0047-02
+describe("legacy validate path becomes an error after the sunset", () => {
   it("consumer pointed at legacy path under tool 1.10.0+ surfaces D-DEPRECATED-PATH at error severity", async () => {
     // "Consumer pointed at legacy path" = the legacy file exists on disk
     // (from a prior pre-sunset run OR a manually-managed consumer write).

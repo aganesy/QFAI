@@ -2,7 +2,7 @@
  * The marker retirement unlinks a pathname, and two things can move under it.
  *
  * Earlier releases wrote `.qfai/assistant/README.md` and `QFAI-LINK-001` read
- * it to decide whether `qfai init` had run. It reads two records now, so the
+ * it to decide whether `qfai init` had run. It reads another file now, so the
  * README is removed — but only the copy init itself wrote, and only while it is
  * still that copy. Two windows: the file can be saved over between the read
  * that decides and the unlink that acts, and the `lstat` that decides whether
@@ -88,6 +88,7 @@ beforeEach(() => {
   openSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.open(...args));
 });
 
+// QFAI:EX-0001-0021-10
 describe("the assistant marker retirement under concurrent writes", () => {
   it("removes the copy it wrote when nothing moves under it", async () => {
     // The control for the two races below: without it, a retirement that never

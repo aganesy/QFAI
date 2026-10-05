@@ -8,7 +8,6 @@
  * (under an allowed root) plus an unrelated README edit. The lane MUST
  * pass with exit code 0 and emit no `R-PACK-LOCATION-DRIFT` finding.
  */
-// QFAI:SPEC-0004:TC-0004-0072
 
 import { execFile } from "node:child_process";
 import path from "node:path";
@@ -43,6 +42,7 @@ async function runCheckScript(
   }
 }
 
+// QFAI:EX-0002-0011-02
 describe("TC-0004-0072: allowed-root discussion pack passes the lane silently", () => {
   it("PR diff adding .qfai/discussion/discussion-20260527075558258/ plus an unrelated README edit PASSes", async () => {
     const changed = [
@@ -64,5 +64,26 @@ describe("TC-0004-0072: allowed-root discussion pack passes the lane silently", 
 
     expect(result.code).toBe(0);
     expect(result.stdout + result.stderr).not.toMatch(/R-PACK-LOCATION-DRIFT/);
+  });
+
+  it("reads a discussion-* directory in the assistant step layer as a step, not a pack", async () => {
+    const changed = [
+      "packages/qfai/assets/init/.qfai/assistant/step/discussion-pack/STEP.md",
+      ".qfai/assistant/step/discussion-oq/STEP.md",
+    ].join(",");
+    const result = await runCheckScript(["--changed", changed]);
+
+    expect(result.code).toBe(0);
+    expect(result.stdout + result.stderr).not.toMatch(/R-PACK-LOCATION-DRIFT/);
+  });
+
+  it("still flags a discussion-* pack nested one level below the step layer", async () => {
+    const changed = [".qfai/assistant/step/discussion-pack/discussion-20260527075558258/a.md"].join(
+      ",",
+    );
+    const result = await runCheckScript(["--changed", changed]);
+
+    expect(result.code).toBe(1);
+    expect(result.stderr).toMatch(/R-PACK-LOCATION-DRIFT/);
   });
 });

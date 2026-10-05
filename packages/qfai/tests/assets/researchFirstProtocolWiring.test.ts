@@ -1,5 +1,5 @@
 /**
- * `constitution/research-first-protocol.md` declares two integration points into
+ * `rule/research-first-protocol.md` declares two integration points into
  * `/qfai-discussion`: it auto-triggers on the command, and it stores its
  * `research_summary` output under a `## Research Summary` heading inside the
  * current discussion pack. Both sides used to be missing — the skill tree never
@@ -7,9 +7,9 @@
  * storage contract was satisfied vacuously and `validateResearchSummary`
  * (which skips any file without the heading) never ran on a generated pack.
  *
- * These cases pin the wiring: the skill's Required Process runs the protocol,
- * `templates/04_Sources.md` ships the storage slot, and that slot is shaped so
- * the validator's parser can actually read it.
+ * These cases pin the wiring: the skill's first step runs the protocol, the
+ * pack step carries its output into `templates/04_Sources.md`'s storage slot,
+ * and that slot is shaped so the validator's parser can actually read it.
  */
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -18,6 +18,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
 import { validateResearchSummary } from "../../src/core/validators/researchSummary.js";
+import { readDiscussionStep } from "../helpers/discussionSteps.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 const discussionRoots = [
@@ -29,10 +30,10 @@ const discussionRoots = [
     "init",
     ".qfai",
     "assistant",
-    "skills",
+    "skill",
     "qfai-discussion",
   ),
-  path.join(repoRoot, ".qfai", "assistant", "skills", "qfai-discussion"),
+  path.join(repoRoot, ".qfai", "assistant", "skill", "qfai-discussion"),
 ];
 const protocolPaths = [
   path.join(
@@ -43,10 +44,25 @@ const protocolPaths = [
     "init",
     ".qfai",
     "assistant",
-    "constitution",
+    "rule",
     "research-first-protocol.md",
   ),
-  path.join(repoRoot, ".qfai", "assistant", "constitution", "research-first-protocol.md"),
+  path.join(repoRoot, ".qfai", "assistant", "rule", "research-first-protocol.md"),
+];
+const webResearchSkillPaths = [
+  path.join(
+    repoRoot,
+    "packages",
+    "qfai",
+    "assets",
+    "init",
+    ".qfai",
+    "assistant",
+    "skill",
+    "web-research",
+    "SKILL.md",
+  ),
+  path.join(repoRoot, ".qfai", "assistant", "skill", "web-research", "SKILL.md"),
 ];
 
 /** The heading spelling `validateResearchSummary` keys off. */
@@ -155,29 +171,31 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
   for (const discussionRoot of discussionRoots) {
     const label = path.relative(repoRoot, discussionRoot);
 
-    it(`${label}: Required Process runs the protocol and names its storage slot`, async () => {
-      const skill = await readFile(path.join(discussionRoot, "SKILL.md"), "utf-8");
-      const required = section(skill, "## Required Process");
+    it(`${label}: the first step runs the protocol and the pack step names its storage slot`, async () => {
+      const assistantDir = path.dirname(path.dirname(discussionRoot));
+      const research = await readDiscussionStep(assistantDir, "discussion-research");
+      const pack = section(
+        await readDiscussionStep(assistantDir, "discussion-pack"),
+        "## Procedure",
+      );
 
-      expect(required).toContain("research-first-protocol.md");
-      expect(required).toContain("## Research Summary");
-      expect(required).toContain("04_Sources.md");
-      // The constitution defines this as the protocol run at the start of the
+      expect(research).toContain("research-first-protocol.md");
+      expect(pack).toContain("## Research Summary");
+      expect(pack).toContain("04_Sources.md");
+      // The shared rule defines this as the protocol run at the start of the
       // work, so it must precede the artifacts meant to consume its findings.
       // Placed after them it degrades into a summary filled in at the end.
-      expect(required.indexOf("research-first-protocol.md")).toBeLessThan(
-        required.indexOf("Inception Deck"),
-      );
-      expect(required.indexOf("research-first-protocol.md")).toBeLessThan(
-        required.indexOf("Story Workshop"),
-      );
+      const skill = await readFile(path.join(discussionRoot, "SKILL.md"), "utf-8");
+      expect(/^steps:\s*\[\s*([\w-]+)/m.exec(skill)?.[1]).toBe("discussion-research");
+      expect(pack.indexOf("## Research Summary")).toBeLessThan(pack.indexOf("Inception Deck"));
+      expect(pack.indexOf("## Research Summary")).toBeLessThan(pack.indexOf("Story Workshop"));
     });
 
     it(`${label}: completion cannot be declared without the stored summary`, async () => {
-      const skill = await readFile(path.join(discussionRoot, "SKILL.md"), "utf-8");
-      const completion = section(skill, "## Completion Contract (Shared)");
+      const assistantDir = path.dirname(path.dirname(discussionRoot));
+      const gate = section(await readDiscussionStep(assistantDir, "discussion-pack"), "## Gate");
 
-      expect(completion).toContain("Research Summary");
+      expect(gate).toContain("Research Summary");
     });
 
     it(`${label}: 04_Sources.md ships the storage slot the validator reads`, async () => {
@@ -213,6 +231,56 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
     it(`${path.relative(repoRoot, protocolPath)}: Storage names the file that holds the slot`, async () => {
       const protocol = await readFile(protocolPath, "utf-8");
       expect(section(protocol, "## Storage")).toContain("04_Sources.md");
+    });
+
+    it(`${path.relative(repoRoot, protocolPath)}: descriptions mark any phrase kept from the source`, async () => {
+      const quotation = section(await readFile(protocolPath, "utf-8"), "## Quotation Rule").replace(
+        /\s+/g,
+        " ",
+      );
+      expect(quotation).toContain(
+        "Each `best_practices` and `anti_patterns` `description` is written in the analyst's own words. " +
+          "A phrase kept from the source is marked as a quotation with ordinary quotation marks.",
+      );
+      // The rule is taught by one worked example: the source, the entry, and why.
+      expect(quotation).toContain(
+        'The source says: "Retry idempotent requests with exponential backoff and jitter; ' +
+          'never retry a non-idempotent write."',
+      );
+      expect(quotation).toContain(
+        "description: >- Only a request that is safe to repeat is retried, and the wait between " +
+          'attempts grows and is randomized, which the source calls "exponential backoff and jitter".',
+      );
+      expect(quotation).toContain(
+        "This is correct because the claim is restated in the analyst's words, and the one phrase " +
+          "kept verbatim is in quotation marks, so a reader can tell which words are the source's.",
+      );
+    });
+
+    it(`${path.relative(repoRoot, protocolPath)}: a recognized name is still searched`, async () => {
+      const names = section(
+        await readFile(protocolPath, "utf-8"),
+        "## Name Verification Rule",
+      ).replace(/\s+/g, " ");
+      expect(names).toContain(
+        "Where a query centers on a name — a framework, a model, a CLI tool, a component catalogue, " +
+          "a theme — that name is what gets verified. Search it as it was written.",
+      );
+      expect(names).toContain("Recognizing the name is not grounds to skip the search.");
+      // The lookup is a source like any other, so a verified name is told apart
+      // from one answered from memory.
+      expect(names).toContain("Record what the search found in the summary's `sources`");
+    });
+  }
+
+  for (const skillPath of webResearchSkillPaths) {
+    it(`${path.relative(repoRoot, skillPath)}: points to both rules instead of restating them`, async () => {
+      const skill = await readFile(skillPath, "utf-8");
+      expect(skill).toContain("research-first-protocol.md#name-verification-rule");
+      expect(skill).toContain("research-first-protocol.md#quotation-rule");
+      // A copy of the clause text would drift from the protocol it restates.
+      expect(skill).not.toContain("not grounds to skip the search");
+      expect(skill).not.toContain("This is correct because");
     });
   }
 
@@ -562,8 +630,8 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
 
   it("requires source_id and finding on every reflection entry", async () => {
     const filled = fillEveryPlaceholder(await readShippedTemplate()).replace(
-      "```\n\n## Trend Scan",
-      "    - action: defer\n      reason: Second entry without source_id or finding\n```\n\n- Every",
+      "```\n\n## Exploration Direction Inputs",
+      "    - action: defer\n      reason: Second entry without source_id or finding\n```\n\n## Exploration Direction Inputs",
     );
     const issues = await validateResearchSummary(await seedPack(filled), defaultConfig);
     const incomplete = issues.find((item) => item.code === "QFAI-RESEARCH-019");

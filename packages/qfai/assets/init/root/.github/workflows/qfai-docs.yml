@@ -4,16 +4,18 @@
 # and the syntax of every Mermaid diagram embedded in them.
 #
 # This is the check markdownlint cannot make. markdownlint answers "is this
-# well-formed Markdown" and treats a fenced block as opaque text, so a spec with
-# no Acceptance Criteria section, a test-case table missing its `EX-Ref` column,
-# and a diagram that renders as an error box all pass it. This lane answers the
-# other question, from the schemas the package ships:
+# well-formed Markdown" and treats a fenced block as opaque text, so a story
+# with no Criteria section, an example table missing its `AC-Ref` column, and a
+# diagram that renders as an error box all pass it. This lane answers the other
+# question, from the schemas the package ships:
 #
-#   - `mdschema` validates each SDD document against the schema for its path -
-#     which chapters it needs, and whether each is a list, a table with named
-#     columns, a Gherkin block or a Mermaid diagram. The schemas are the ones
-#     `qfai init` seeded your templates from, so a document written from the
-#     template passes by construction.
+#   - `mdschema` validates each document under your spec tree against the
+#     schema for its path. The schemas are closed: they fix the headings, their
+#     order, and the one kind of content each section holds - a list, a table
+#     with named columns, a paragraph, or one fenced block. A section the schema
+#     does not name fails, and no document may opt out. The schemas are the
+#     ones the `qfai-sdd` templates are written to, so a document written from
+#     its template passes by construction. `qfai validate` runs the same check.
 #   - the Mermaid lane parses every ```mermaid block with Mermaid's own grammar,
 #     under a headless DOM. No browser, and no rendering - only the parse the
 #     renderer performs before it draws.
@@ -29,7 +31,7 @@
 # | What reads the light one      | the jobs that install nothing and run no test - change detection and the aggregates                      |
 # | Wrong runner value            | GitHub does not fail fast: an unknown label leaves the job queued indefinitely, never red                |
 # | `packageManager` precondition | a `pnpm-lock.yaml` needs `"packageManager": "pnpm@<version>"` in package.json, or this lane stops CLOSED |
-# | Inert when                    | never inert; delete this file to opt out - `qfai init` will not recreate a file you removed              |
+# | Inert when                    | never inert; the lane is required, and `qfai doctor` reports this file missing if you remove it          |
 # | Skipped when                  | every changed path is code a document check never reads; anything else, or any doubt, runs both checks   |
 # | Default-branch push           | runs the checks the push reaches; with `vars.QFAI_CI_PUSH_POLICY` set to `protected`, runs neither       |
 # | Fail-open behaviour           | no `.nvmrc` / `.node-version` in your tree: warning annotation, Node 20, and the lane continues          |
@@ -99,8 +101,8 @@ jobs:
     outputs:
       run: ${{ steps.diff.outputs.run }}
     steps:
-      - name: Checkout with full history via actions/checkout 5.1.0
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Checkout with full history via actions/checkout 7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
           # The name-only diff needs the base commit reachable locally.
@@ -188,8 +190,8 @@ jobs:
       contents: read
     timeout-minutes: 15
     steps:
-      - name: Checkout via actions/checkout 5.1.0
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Checkout via actions/checkout 7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           # Nothing in this job pushes back, so the token never needs to
           # outlive the checkout step.
@@ -456,8 +458,8 @@ jobs:
           else
             echo "cache=" >> "$GITHUB_OUTPUT"
           fi
-      - name: Set up Node via actions/setup-node 5.0.0
-        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+      - name: Set up Node via actions/setup-node 7.0.0
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           # The version resolved by the step above: the adopter's own
           # version file when they have one, else the documented fallback
@@ -533,26 +535,39 @@ jobs:
           # moment the job runs, so the same commit could be checked by a
           # different rule set from one day to the next.
           #
-          # `--no-save` because nothing here belongs in the adopter's manifest:
-          # these are the lane's tools, not the project's dependencies. They are
-          # installed rather than run through `npx` for the same reason the
-          # version is pinned — `npx` resolves and caches on its own terms, and
-          # a lane that reports a verdict should be able to say which program
+          # `--prefix` puts them in a directory of their own, and that is what
+          # keeps this step independent of the package manager above. npm cannot
+          # read a `node_modules` that pnpm laid out - it stops with an internal
+          # error - so an install into your tree fails for every project that
+          # uses pnpm, and neither check ever runs. A prefix of its own has no
+          # tree to read, and `--no-save` keeps it from writing a manifest there.
+          # The two checker scripts below are given the directory with `--tools`.
+          # They are installed rather than run through `npx` for the same reason
+          # the version is pinned - `npx` resolves and caches on its own terms,
+          # and a lane that reports a verdict should be able to say which program
           # produced it.
           #
           # `--registry` on the command line outranks both `NPM_CONFIG_REGISTRY`
           # and a project `.npmrc`, so the version says WHAT and this says WHERE
-          # FROM. `--ignore-scripts` is deliberately NOT passed: the mdschema
-          # package resolves its platform binary in a postinstall script, and
-          # without it the binary never lands.
-          npm install --no-save --no-audit --no-fund --registry=https://registry.npmjs.org/ @jackchuka/mdschema@0.15.2 mermaid@11.17.2 jsdom@29.1.1
-          # QFAI itself, but only when your install did not already provide it.
+          # FROM. `--ignore-scripts` keeps every install script from running,
+          # which the lane does not need. The mdschema package brings its
+          # platform binary as an optional dependency, which npm installs
+          # without running a script, and its launcher finds the binary there.
+          # The package's postinstall only downloads a binary when that platform
+          # package is missing, as on an unsupported platform or under
+          # `--omit=optional`. `--include=optional` keeps a user-level npm
+          # setting that omits optional dependencies, as a self-hosted runner may
+          # carry, from dropping that platform package. Without a binary the shape
+          # check fails instead of passing.
+          #
+          # QFAI itself joins the same install, but only when your install did
+          # not already provide it.
           #
           # The two steps below run FILES out of the package rather than its
           # `qfai` bin. A lane that invokes the bin through `npx` needs nothing
           # on disk; naming a path inside the package needs it unpacked. And
           # `qfai init` does not add QFAI to your manifest, so a repository set
-          # up with `npx qfai init` alone has no `node_modules/qfai` — these
+          # up with `npx qfai init` alone has no `node_modules/qfai` - these
           # steps would fail on a missing module rather than on your documents.
           #
           # Guarded rather than unconditional, because a repository that DOES
@@ -561,20 +576,35 @@ jobs:
           # with the newest one. Unpinned in the bootstrap case for the same
           # reason a bare `npx qfai` is: with nothing in the manifest there is no
           # version to honour, and pinning one here would freeze every adopter's
-          # docs lane at whatever release generated this file.
-          if [ ! -d node_modules/qfai ]; then
-            npm install --no-save --no-audit --no-fund --registry=https://registry.npmjs.org/ qfai
+          # docs lane at whatever release generated this file. For the same
+          # reason the bootstrap install leaves the schema checker to QFAI: the
+          # release it fetches depends on one version of that checker, and its
+          # schemas are written for that version. One install for both cases,
+          # because a second `--no-save` install into the same prefix removes
+          # what the first one added.
+          if [ -d node_modules/qfai ]; then
+            npm install --no-save --no-audit --no-fund --ignore-scripts --include=optional --registry=https://registry.npmjs.org/ --prefix=tmp/qfai-docs-tools @jackchuka/mdschema@0.15.4 mermaid@11.17.2 jsdom@29.1.1
+          else
+            npm install --no-save --no-audit --no-fund --ignore-scripts --include=optional --registry=https://registry.npmjs.org/ --prefix=tmp/qfai-docs-tools mermaid@11.17.2 jsdom@29.1.1 qfai
           fi
       - name: Check SDD document shape
         if: matrix.check == 'shape'
         shell: bash
         run: |
           # The driver and the schemas both come out of the installed package,
-          # so this lane runs the same rules the QFAI repository runs against
-          # its own specs. `--scope all` checks every document the manifest
-          # matches; the driver reads `paths.specsDir` from your
-          # `qfai.config.yaml`, so a relocated specs tree is covered.
-          node node_modules/qfai/assets/scripts/check-mdschema.mjs --scope all --summary
+          # and `qfai validate` runs the same check. `--scope all` checks every
+          # document the manifest matches; the driver reads `paths.specsDir` and
+          # `paths.contractsDir` from your `qfai.config.yaml`, so a relocated
+          # tree is covered. A document carrying the opt-out marker fails.
+          #
+          # `--tools` names the directory the step above installed the checker
+          # into. With no QFAI of your own, the driver runs out of that same
+          # directory.
+          if [ -d node_modules/qfai ]; then
+            node node_modules/qfai/assets/scripts/check-mdschema.mjs --tools tmp/qfai-docs-tools --scope all --summary
+          else
+            node tmp/qfai-docs-tools/node_modules/qfai/assets/scripts/check-mdschema.mjs --tools tmp/qfai-docs-tools --scope all --summary
+          fi
       - name: Check Mermaid diagram syntax
         if: matrix.check == 'mermaid'
         shell: bash
@@ -582,8 +612,13 @@ jobs:
           # Every ```mermaid block in the tree, parsed with Mermaid's own
           # grammar. A block whose body is a template with `<placeholder>`
           # tokens opts out with `<!-- mermaid-lint:ignore -->` on the line
-          # directly above its opening fence.
-          node node_modules/qfai/assets/scripts/check-mermaid.mjs
+          # directly above its opening fence. `--tools` names the directory the
+          # install step put Mermaid and jsdom in.
+          if [ -d node_modules/qfai ]; then
+            node node_modules/qfai/assets/scripts/check-mermaid.mjs --tools tmp/qfai-docs-tools
+          else
+            node tmp/qfai-docs-tools/node_modules/qfai/assets/scripts/check-mermaid.mjs --tools tmp/qfai-docs-tools
+          fi
 
   docs:
     name: qfai docs (document shape and Mermaid syntax)

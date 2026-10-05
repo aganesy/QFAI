@@ -53,27 +53,9 @@ const KNOWN_COLLISIONS = new Map<string, readonly string[]>([]);
  * here.
  */
 const DYNAMIC_CODE_SITES = new Map<string, ReadonlyMap<string, number>>([
-  ["validators/agentDefinition.ts", new Map([["code", 1]])],
   ["validators/designAudit.ts", new Map([["finding.ruleId", 1]])],
-  // One emission site for two stages, each with its own code, taken from the
-  // subject table beside it. Both codes are module-level constants the
-  // ownership scan reads there, so the codes are attributed; what is dynamic is
-  // only which of the two a given run reaches.
-  ["validators/grillingTrace.ts", new Map([["subject.code", 1]])],
-  ["validators/layerCoverage.ts", new Map([["group.code", 1]])],
-  [
-    "validators/orphanProhibition.ts",
-    new Map([
-      ["input.missingCode", 1],
-      ["input.unknownCode", 2],
-    ]),
-  ],
-  // Two, not one. The second site is the workflow-set ingestion branch: it emits the
-  // finding's own code at `info` while that code's catalog registration is deferred,
-  // and the code it emits is the same `code` local the rejection site below uses. The
-  // two codes it can reach are declared in `justificationCatalog.ts` — which this scan
-  // reads as their owner — rather than restated here.
-  ["validators/reviewerJustification.ts", new Map([["code", 2]])],
+  // Story-tree validators select a code from a closed, module-declared table.
+  ["validators/storyTreeStructure.ts", new Map([["code", 1]])],
 ]);
 
 /**
@@ -135,74 +117,20 @@ const RETIRED_CODES: readonly string[] = [
  * literals, so they appear in `owners` too and a second emitter collides.
  */
 const DYNAMIC_SITE_CODES = new Map<string, readonly string[]>([
-  [
-    "validators/agentDefinition.ts",
-    [
-      "QFAI-AGENT-001",
-      "QFAI-AGENT-002",
-      "QFAI-AGENT-003",
-      "QFAI-AGENT-004",
-      "QFAI-AGENT-005",
-      "QFAI-AGENT-006",
-      "QFAI-AGENT-007",
-      "QFAI-AGENT-008",
-      "QFAI-AGENT-009",
-      "QFAI-AGENT-010",
-      "QFAI-AGENT-011",
-      "QFAI-AGENT-012",
-      "QFAI-AGENT-013",
-      "QFAI-AGENT-014",
-    ],
-  ],
   ["validators/designAudit.ts", ["QFAI-AUD-001", "QFAI-AUD-004", "QFAI-AUD-020", "QFAI-AUD-021"]],
-  // One per stage. The check reads a record a stage was told to write, and the
-  // two stages are gated by different profiles — a single code would be claimed
-  // whole by both while each evaluated half of it.
-  ["validators/grillingTrace.ts", ["QFAI-GRILL-001", "QFAI-GRILL-002"]],
   [
-    "validators/layerCoverage.ts",
+    "validators/storyTreeStructure.ts",
     [
-      "QFAI-COV-101",
-      "QFAI-COV-102",
-      "QFAI-COV-103",
-      "QFAI-COV-104",
-      "QFAI-COV-201",
-      "QFAI-COV-202",
-      "QFAI-COV-203",
-      "QFAI-COV-204",
-      "QFAI-COV-205",
-      "QFAI-COV-206",
-      "QFAI-COV-207",
-      "QFAI-COV-901",
-      "QFAI-PLAN-001",
-      "QFAI-PLAN-002",
-      "QFAI-PLAN-003",
-      "QFAI-PLAN-004",
-      "QFAI-PLAN-005",
+      "QFAI-SPACK-102",
+      "QFAI-STORY-001",
+      "QFAI-STORY-002",
+      "QFAI-STORY-003",
+      "QFAI-STORY-004",
+      "QFAI-STORY-005",
+      "QFAI-STORY-011",
+      "QFAI-STORY-012",
+      "QFAI-STORY-013",
     ],
-  ],
-  [
-    "validators/orphanProhibition.ts",
-    [
-      "QFAI-ORPHAN-100",
-      "QFAI-ORPHAN-101",
-      "QFAI-ORPHAN-102",
-      "QFAI-ORPHAN-103",
-      "QFAI-ORPHAN-104",
-      "QFAI-ORPHAN-105",
-      "QFAI-ORPHAN-106",
-      "QFAI-ORPHAN-107",
-      "QFAI-ORPHAN-108",
-      "QFAI-ORPHAN-109",
-    ],
-  ],
-  [
-    // Deliberately re-emits the finding's own code so the justification gap is
-    // reported under the code it applies to. `reviewerGate.ts` owns the first
-    // two as literals; `R-REJECTED-READOPT` reaches this gate only from a
-    // reviewer report.
-    "validators/reviewerJustification.ts",
-    ["R-CERTIFY-VERIFY-CIRCULAR", "R-PROMPT-SCANNER-DRIFT", "R-REJECTED-READOPT"],
   ],
 ]);
 
@@ -230,12 +158,9 @@ const ISSUE_FIRST_ARG =
  * The literal-or-identifier pattern above cannot see this. Its identifier
  * alternative matches `cond` and then demands a comma, which is not there — so
  * the call site produced no match at all, and both codes behind it went
- * unattributed and unchecked. `validators/reviewArtifacts.ts` emits
- * `QFAI-REVIEW-007` / `QFAI-REVIEW-009` exactly this way, twice.
+ * unattributed and unchecked.
  *
- * Nothing is currently hidden by it, and that is luck rather than design: both
- * codes are baseline, and both also appear as literal first arguments
- * elsewhere in the same file. The risk is structural: a NEW hard error emitted
+ * The risk is structural: a NEW hard error emitted
  * through a ternary would be registered nowhere and owned by nothing, despite
  * following the house style.
  *
@@ -249,7 +174,7 @@ const ISSUE_TERNARY_FIRST_ARG =
 /**
  * `code: "..."` / `ruleId: "..."` / `code: CONST` on an object literal that is
  * (or becomes) an `Issue`. Several validators build the object directly instead
- * of calling `issue()` — `skillsIntegrity.ts`, `justificationCatalog.ts` — and
+ * of calling `issue()` — `config.ts`, for one — and
  * a scan that only follows `issue()` records no
  * owner for those codes at all. `ruleId` is the same declaration on
  * `designAudit.ts`'s `DesignFinding`, whose codes reach `issue()` only through
@@ -263,14 +188,6 @@ const OBJECT_LITERAL_CODE =
 
 /** Any double-quoted string, used to harvest a dynamic site's reachable codes. */
 const STRING_LITERAL = /"([^"\n]+)"/g;
-
-/**
- * Modules that *declare* codes without emitting findings.
- * `justificationCatalog.ts` is a registry of every `R-*` code and its
- * justification contract, so counting it as an owner would make every
- * catalogued code look like a collision with its real emitter.
- */
-const DECLARATION_ONLY_MODULES = new Set(["validators/justificationCatalog.ts"]);
 
 /** `code: string` in a type declaration is a field type, not a rule code. */
 const TYPE_ANNOTATIONS = new Set(["string", "number", "boolean", "unknown", "any"]);
@@ -376,10 +293,6 @@ async function scanIssueSources(): Promise<Scan> {
       }
     }
 
-    if (DECLARATION_ONLY_MODULES.has(relative)) {
-      continue;
-    }
-
     const tokens = [
       ...[...source.matchAll(ISSUE_FIRST_ARG)].map((match) => match[1]),
       // Both branches, so a conditional emission attributes an owner to each
@@ -449,9 +362,9 @@ describe("validate rule codes are owned by exactly one module", () => {
 
   it("records codes built as an object literal, not only `issue()` calls", async () => {
     const { owners } = await scanIssueSources();
-    // Neither of these modules calls `issue()`; both return the `Issue` object
-    // directly, so a call-site-only scan gave them no owner at all.
-    expect(sorted(owners.get("QFAI-SKILLS-001") ?? [])).toEqual(["validators/skillsIntegrity.ts"]);
+    // `config.ts` returns the `Issue` object
+    // directly, so a call-site-only scan gave it no owner at all.
+    expect(sorted(owners.get("QFAI-CFG-001") ?? [])).toContain("config.ts");
     // The `ruleId` spelling of the same shape. It reaches `issue()` only
     // through `findingToIssue(finding)`, so a call-site scan sees the variable
     // and never the code.
@@ -538,20 +451,5 @@ describe("validate rule codes are owned by exactly one module", () => {
       reused,
       "these codes were published and then retired with their validator; taking a number back makes one public code mean two different checks across versions — pick an unused number instead",
     ).toEqual([]);
-  });
-
-  it("the screen-id casing check and specsCovered linkage no longer share a code", async () => {
-    const casing = await readFile(
-      path.join(coreRoot, "validators", "prototypingEvidence.ts"),
-      "utf-8",
-    );
-    const linkage = await readFile(
-      path.join(coreRoot, "validators", "prototyping", "specIdLinkage.ts"),
-      "utf-8",
-    );
-
-    expect(casing).toContain('"QFAI-PROT-010"');
-    expect(linkage).toContain('"QFAI-PROT-008"');
-    expect(linkage).not.toContain('"QFAI-PROT-010"');
   });
 });

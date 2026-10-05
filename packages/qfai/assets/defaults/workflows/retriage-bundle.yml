@@ -1,0 +1,17 @@
+route: retriage-bundle
+family: decide
+stages:
+  - id: recheck
+    kind: diagnose
+    steps:
+      - { step: implement-diagnose, mode: read-only }
+  - id: split
+    kind: triage
+    steps: [triage-decompose]
+    after: [recheck]
+  - id: close
+    kind: triage
+    steps: [triage-close]
+    after: [split]
+decisionPoints: []
+branchPoints: []

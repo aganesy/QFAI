@@ -6,17 +6,13 @@
  *
  *   - `scope: "layout"` — the regex is matched against the HTML string;
  *   - `scope: "semantic"` — the regex is a no-op (`(?!).*`), and something
- *     other than a regex over the HTML decides it. For most entries that is
- *     the reviewer. Two — `lap-009` and `lap-010` — are computed by
- *     `iterate --capture` from the capture itself, and reach the same
- *     `layoutAntiPatternsDetected[]` the reviewer writes into. Both kinds are
- *     registered here because the array has one vocabulary: a code in it that
- *     no entry declares is `QFAI-PROT-002`, whoever put it there.
+ *     other than a regex over the HTML decides it: the reviewer. Both
+ *     kinds are registered here because the reviewer's
+ *     `layoutAntiPatternsDetected[]` has one vocabulary.
  *
  * An entry describes a defect, not a shape. A layout being common is not
- * evidence of anything, and a detection blocks convergence, so an entry
- * that reports a familiar shape stops an ordinary product finishing the
- * loop.
+ * evidence of anything, and a detection is put to the user as a defect, so an
+ * entry that reports a familiar shape asks them to fix an ordinary product.
  *
  * The registry is data, and every entry names what makes it a defect. The
  * authority is a published heuristic, an accessibility criterion, or the
@@ -25,9 +21,8 @@
  * because common layouts are not defects; what is catalogued is
  * accessibility failures, deceptive patterns and heuristic violations.
  *
- * Definitions are pinned rather than researched per run: `certify` re-scans
- * the captures, so a check whose answer depends on what a search returned
- * that morning cannot agree with itself.
+ * Definitions are pinned rather than researched per run, so a check gives the
+ * same answer on every run.
  */
 
 import { existsSync, readFileSync } from "node:fs";

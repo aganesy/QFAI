@@ -1,0 +1,7 @@
+# Examples
+
+## Examples
+
+| EX-ID           | AC-Ref          | Input                                                                                                                                                                                                                          | Expected                                                                                                                                                                                                               |
+| --------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| EX-0001-0043-01 | AC-0001-0043-01 | A project on the `rule/ skill/ agent/ prompt/` tree, with its `step/` directory, a `.qfai/assistant/catalog/` directory, a `.qfai/assistant/instructions/` directory and a `skill.local/` directory, when `qfai validate` runs | `W-ASSISTANT-LAYOUT` at warning names `catalog/` and the layers `rule`, `skill`, `step`, `agent` and `prompt`; `D-DEPRECATED-PATH` at error names `instructions/`; neither `step/` nor `skill.local/` raises a finding |

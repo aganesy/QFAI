@@ -11,8 +11,6 @@
  * Integration scope: config loader + probe-order pin.
  */
 
-// QFAI:SPEC-0012:TC-0012-0439
-
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -51,8 +49,6 @@ async function writeConfigWithBrowserTool(root: string, browserTool: string): Pr
       "  testsDir: tests",
       "validation:",
       "  failOn: error",
-      "  require:",
-      "    specSections: []",
       "prototyping:",
       "  execution:",
       `    browserTool: ${browserTool}`,
@@ -61,6 +57,7 @@ async function writeConfigWithBrowserTool(root: string, browserTool: string): Pr
   );
 }
 
+// QFAI:EX-0001-0129-01
 describe("browserTool config — `playwright` primary path", () => {
   it("accepts browserTool: playwright with no issues raised", async () => {
     const root = await newTempDir();

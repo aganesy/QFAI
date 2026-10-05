@@ -1,12 +1,10 @@
 /**
  * The Change Type tag vocabulary has exactly one definition.
  *
- * `workflow.md` restated the tag list and offered a sixth value, `@ui`, that
- * the classification SSOT never defined and `CHANGE_TYPE_TAG_VALUES` never
- * accepted. `asTagArray` takes any string, `normalizeTag` returns `null` for
- * an unknown one and the report summary skips it, so an agent that followed
- * `workflow.md` had its tag accepted at write time and dropped at read time
- * with no diagnostic anywhere.
+ * `asTagArray` takes any string, `normalizeTag` returns `null` for an unknown
+ * one and the report summary skips it, so a tag the prose offers and the code
+ * does not know is accepted at write time and dropped at read time with no
+ * diagnostic anywhere.
  */
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
@@ -21,8 +19,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
 const ASSISTANT = "assistant";
-const WORKFLOW = "assistant/constitution/workflow.md";
-const CLASSIFICATION = "assistant/constitution/change-classification.md";
+const CLASSIFICATION = "assistant/rule/change-classification.md";
 
 const read = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
@@ -59,25 +56,22 @@ const markdownFilesUnder = async (dir: string): Promise<string[]> => {
 
 describe("the Change Type tag list agrees with its SSOT", () => {
   for (const tree of QFAI_TREES) {
-    it(`${tree}: workflow.md offers exactly the tags change-classification.md defines`, async () => {
-      const workflow = await read(tree, WORKFLOW);
+    it(`${tree}: the PR-body list offers exactly the tags the table defines`, async () => {
       const classification = await read(tree, CLASSIFICATION);
 
       const declared = tagsInClassificationTable(classification);
       expect(declared).toEqual(["@api", "@db", "@nfr", "@docs", "@test"]);
-
-      // The three restatements — the table, the PR-body list, and the
-      // workflow line an agent actually reads — must be one vocabulary.
       expect(tagsInListLine(classification, "- Tags: list from")).toEqual(declared);
-      expect(tagsInListLine(workflow, "- Tags (optional):")).toEqual(declared);
     });
 
     it(`${tree}: the shipped tag list matches CHANGE_TYPE_TAG_VALUES`, async () => {
-      const workflow = await read(tree, WORKFLOW);
+      const classification = await read(tree, CLASSIFICATION);
 
       // A tag the code cannot normalize is silently dropped from the report
       // summary, so prose must never offer one the constant omits.
-      expect(tagsInListLine(workflow, "- Tags (optional):")).toEqual([...CHANGE_TYPE_TAG_VALUES]);
+      expect(tagsInListLine(classification, "- Tags: list from")).toEqual([
+        ...CHANGE_TYPE_TAG_VALUES,
+      ]);
     });
 
     it(`${tree}: no undefined tag survives anywhere in the assistant tree`, async () => {
@@ -100,13 +94,6 @@ describe("the Change Type tag list agrees with its SSOT", () => {
       }
 
       expect(offenders).toEqual([]);
-    });
-
-    it(`${tree}: workflow.md points at the classification SSOT`, async () => {
-      const workflow = await read(tree, WORKFLOW);
-
-      // Restating a list without naming its owner is how the lists drifted.
-      expect(workflow).toContain("constitution/change-classification.md");
     });
   }
 });

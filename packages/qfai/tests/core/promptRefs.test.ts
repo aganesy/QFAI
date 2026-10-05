@@ -6,7 +6,8 @@ import { describe, expect, it } from "vitest";
 import { collectFiles } from "../../src/core/fs.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 
-const PROMPT_REF_PATTERN = /\/qfai-[a-z0-9-]+/g;
+// A slash after a path segment, as in `tmp/qfai-migration/`, is a path, not a command.
+const PROMPT_REF_PATTERN = /(?<![\w.-])\/qfai-[a-z0-9-]+/g;
 
 function toRel(base: string, abs: string): string {
   const rel = path.relative(base, abs);
@@ -15,7 +16,7 @@ function toRel(base: string, abs: string): string {
 
 describe("skill references", () => {
   it("fails when skill workflows reference missing /qfai-* commands", async () => {
-    const skillsDir = path.join(getInitAssetsDir(), ".qfai", "assistant", "skills");
+    const skillsDir = path.join(getInitAssetsDir(), ".qfai", "assistant", "skill");
     const skillDirs = (await readdir(skillsDir, { withFileTypes: true }))
       .filter((entry) => entry.isDirectory())
       .map((entry) => entry.name);

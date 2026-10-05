@@ -62,18 +62,19 @@ const LINT_PROFILE: Profile = {
     "node ./scripts/check-bidi.mjs",
     "node ./scripts/check-conflict-markers.mjs",
     "node ./scripts/check-tracked-scratch.mjs",
+    "node ./scripts/check-repository-language.mjs",
     "node ./scripts/check-tracked-symlinks.mjs",
     "node ./scripts/check-tracked-readmes.mjs",
     "node ./scripts/check-readme-alignment.mjs",
     "node ./scripts/check-instructions-size.mjs",
     "node ./scripts/check-review-profile-consistency.mjs",
-    "node ./scripts/check-prompt-scanner-pair.mjs",
     "node ./scripts/check-shipped-ci-parity.mjs",
+    "node ./scripts/check-route-catalog.mjs",
     "node ./scripts/check-changelog-released-sections.mjs",
     "node ./scripts/check-doc-clarity.mjs",
     "node ./scripts/check-simplification-ledger.mjs",
-    "node ./scripts/check-atdd-annotation-ledger.mjs --spec 0017",
     "node ./packages/qfai/scripts/check-pack-locations.mjs",
+    "node ./packages/qfai/scripts/check-markdownlint-config.mjs",
   ],
   groups: [
     ["pnpm format:check"],
@@ -91,18 +92,19 @@ const LINT_PROFILE: Profile = {
       "node ./scripts/check-bidi.mjs",
       "node ./scripts/check-conflict-markers.mjs",
       "node ./scripts/check-tracked-scratch.mjs",
+      "node ./scripts/check-repository-language.mjs",
       "node ./scripts/check-tracked-symlinks.mjs",
       "node ./scripts/check-tracked-readmes.mjs",
       "node ./scripts/check-readme-alignment.mjs",
       "node ./scripts/check-instructions-size.mjs",
       "node ./scripts/check-review-profile-consistency.mjs",
-      "node ./scripts/check-prompt-scanner-pair.mjs",
       "node ./scripts/check-shipped-ci-parity.mjs",
+      "node ./scripts/check-route-catalog.mjs",
       "node ./scripts/check-changelog-released-sections.mjs",
       "node ./scripts/check-doc-clarity.mjs",
       "node ./scripts/check-simplification-ledger.mjs",
-      "node ./scripts/check-atdd-annotation-ledger.mjs --spec 0017",
       "node ./packages/qfai/scripts/check-pack-locations.mjs",
+      "node ./packages/qfai/scripts/check-markdownlint-config.mjs",
     ],
   ],
 };
@@ -445,7 +447,7 @@ describe("the lane profile", () => {
 describe("script resolution through the helper", () => {
   it("keeps workflow hygiene ahead of every independent lane", () => {
     expect(rootScripts()["ci:lint"]).toBe(
-      "node ./scripts/check-workflow-hygiene.mjs --report-dir .qfai/review/workflow-hygiene && bash ./scripts/run-lint-checks.sh",
+      "node ./scripts/check-workflow-hygiene.mjs && bash ./scripts/run-lint-checks.sh",
     );
     const bodies = invokedScriptBodies("pnpm ci:lint", root);
     for (const key of [

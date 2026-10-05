@@ -5,44 +5,41 @@ dependencies: none
 version: 1.1.0
 ---
 
-# 深い思考と分析プロセス
+# Deep Thinking and Analysis Process
 
-普遍的に適用する思考手順を定義する。表面的に進めず、本質とリスクを洗い出す。
+Defines the thinking steps that apply universally. Do not proceed superficially; surface the essence and the risks.
 
-## 基本姿勢
+## Basic Stance
 
-- 常に「なぜ」を掘る。目的・制約・完了条件を明確化する。
-- 正常系だけでなく例外・エッジケースも同等に扱う。
-- 短期と長期のトレードオフを意識し、影響範囲を評価する。
+- Always dig into "why". Clarify the purpose, the constraints and the completion criteria.
+- Treat exceptions and edge cases on a par with the normal path.
+- Keep the short-term and long-term trade-offs in mind, and assess the scope of impact.
 
-## 多面的な分析視点
+## Perspectives for Analysis
 
-- **技術**: 実装方法、性能、拡張性、保守性。
-- **ビジネス**: ユースケース、価値、運用影響。
-- **UX**: 使いやすさ、アクセシビリティ、説明可能性。
-- **セキュリティ**: 認証/認可、データ保護、脆弱性。
-- **運用/信頼性**: ログ/監視、エラー復旧、テスト容易性。
+- **Technical**: Implementation method, performance, extensibility, maintainability.
+- **Business**: Use cases, value, operational impact.
+- **UX**: Usability, accessibility, explainability.
+- **Security**: Authentication/authorization, data protection, vulnerabilities.
+- **Operations/reliability**: Logging/monitoring, error recovery, testability.
 
-## 選択肢の洗い出しと比較
+## Listing and Comparing Options
 
-1. 標準的な実装案
-2. リスク低減を優先する保守的な案
-3. 改善幅の大きい革新的な案
+1. A standard implementation
+2. A conservative option that prioritizes reducing risk
+3. An innovative option with a larger improvement
 
-- 各案をコスト/リスク/保守性/性能で比較し、推奨理由を明示する。
+- Compare the options on cost, risk, maintainability and performance, and state the reason for the recommendation.
 
-## あいまいさの排除
+## Removing Ambiguity
 
-- あいまいな用語や前提を列挙し、質問で具体化する。
-- 測定可能な完了条件を定義する（例: 画面要素、API レスポンス、テスト観点）。
-- 95% 以上の確信が持てない場合は確認を優先する。
+- List ambiguous terms and assumptions, and make them concrete through questions.
+- Define measurable completion conditions (for example, screen elements, API responses and test perspectives).
+- If you cannot reach 95% confidence, prioritize confirmation.
 
-## 作業前の整理テンプレート
+## What the stage records
 
-```
-1. 目的と完了条件
-2. 既存構造・パターン・制約
-3. 想定インパクト（機能/性能/セキュリティ）
-4. 案の比較と推奨理由
-5. 不明点と確認事項
-```
+`qfai-sdd`, which owns `.qfai/spec/decisions.md`, records a decision as one row
+there. Every other stage records it in its own evidence file. Both use the
+Approach form stated at the top of
+`packages/qfai/assets/init/.qfai/assistant/skill/qfai-sdd/templates/spec/decisions.md`.

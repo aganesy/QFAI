@@ -71,10 +71,9 @@ export type SkillValidationResult = {
   requiredSectionsMissing: string[];
   hasCanonicalSurfaces: boolean;
   hasCliSurface: boolean;
-  hasUiBearingFalseExcl: boolean;
+  hasUiContractScope: boolean;
   isStaticFirstAligned: boolean;
   hasDelegationScopeTable: boolean;
-  hasMandatoryEvidencePaths: boolean;
   hasEnvironmentPreconditions: boolean;
   hasPreflightGuidance: boolean;
   hasPlaywrightCliFallback: boolean;
@@ -120,11 +119,18 @@ export function hasCliSurfaceDocumentation(content: string): boolean {
   );
 }
 
-export function hasUiBearingFalseExclusion(content: string): boolean {
+/**
+ * `UI-NNNN` standing on its own. A letter, digit, `_` or `-` on either side makes
+ * it part of a longer token, such as the retired `CON-UI-NNNN`.
+ */
+const UI_CONTRACT_ID_PLACEHOLDER = /(?<![\w-])ui-nnnn(?![\w-])/;
+
+export function hasUiContractScope(content: string): boolean {
   const lower = content.toLowerCase();
   return (
-    (lower.includes("ui_bearing: false") || lower.includes("ui_bearing:false")) &&
-    (lower.includes("not") || lower.includes("exempt") || lower.includes("excluded"))
+    UI_CONTRACT_ID_PLACEHOLDER.test(lower) &&
+    lower.includes("screens[]") &&
+    (lower.includes("only") || lower.includes("excluded"))
   );
 }
 
@@ -132,8 +138,7 @@ export function hasDelegationScopeTable(content: string): boolean {
   const lower = content.toLowerCase();
   return (
     lower.includes("delegation scope table") &&
-    (lower.includes("evaluation scoring") || lower.includes("evaluation l1-l2")) &&
-    (lower.includes("screenshot capture") || lower.includes("playwright cli execution & capture"))
+    (lower.includes("evaluation scoring") || lower.includes("evaluation l1-l2"))
   );
 }
 
@@ -145,17 +150,6 @@ export function isStaticFirstAligned(content: string): boolean {
   );
 }
 
-export function hasMandatoryEvidencePaths(content: string): boolean {
-  const lower = content.toLowerCase();
-  const hasLegacyAggregatePaths =
-    lower.includes(".qfai/evidence/prototyping/screenshots/<screen-id>.png") &&
-    lower.includes(".qfai/evidence/prototyping/html/<screen-id>.html");
-  const hasV2IterPaths =
-    lower.includes(".qfai/evidence/prototyping/iter-nn/<screen>.png") &&
-    lower.includes(".qfai/evidence/prototyping/iter-nn/<screen>.html");
-  return hasLegacyAggregatePaths || hasV2IterPaths;
-}
-
 export function hasEnvironmentPreconditions(content: string): boolean {
   const step2AIndex = content.search(/Step 2-A\s+—\s+Verify Contract Preconditions/i);
   const step2BIndex = content.search(/Step 2-B\s+—\s+Verify Environment Preconditions/i);
@@ -164,10 +158,7 @@ export function hasEnvironmentPreconditions(content: string): boolean {
 
 export function hasPreflightGuidance(content: string): boolean {
   const lower = content.toLowerCase();
-  return (
-    lower.includes("qfai prototyping preflight") ||
-    lower.includes("qfai doctor --profile prototyping")
-  );
+  return lower.includes("qfai doctor --profile prototyping");
 }
 
 /**
@@ -241,10 +232,9 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
     checkRequiredSections(content);
   const canonicalSurfaces = hasCanonicalSurfaceDocumentation(content);
   const cliSurface = hasCliSurfaceDocumentation(content);
-  const uiBearingFalseExcl = hasUiBearingFalseExclusion(content);
+  const uiContractScope = hasUiContractScope(content);
   const staticFirst = isStaticFirstAligned(content);
   const delegationScopeTable = hasDelegationScopeTable(content);
-  const mandatoryEvidencePaths = hasMandatoryEvidencePaths(content);
   const environmentPreconditions = hasEnvironmentPreconditions(content);
   const preflightGuidance = hasPreflightGuidance(content);
   const playwrightCliFallback = hasPlaywrightCliFallback(content);
@@ -256,7 +246,7 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
         "UIX-VAL-SKILL-BANNED-PHRASE",
         `Prototyping skill contains banned phrases: ${bannedPhraseMatches.join(", ")}`,
         "error",
-        "runtime-heavy default wording を削除し、mode-aware obligations に置き換えてください。",
+        "Remove the runtime-heavy default wording and replace it with mode-aware obligations.",
       ),
     );
   }
@@ -267,7 +257,7 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
         "UIX-VAL-SKILL-ASPIRATIONAL",
         `Prototyping skill contains aspirational claims: ${aspirationalClaims.join(", ")}`,
         "error",
-        "未実装 capability の断定表現を削除してください。",
+        "Remove the assertions about capabilities that are not implemented.",
       ),
     );
   }
@@ -278,7 +268,7 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
         "UIX-VAL-SKILL-SECTION-MISSING",
         `Prototyping skill missing required sections: ${requiredSectionsMissing.join(", ")}`,
         "error",
-        `required sections を追加してください: ${requiredSectionsMissing.join(", ")}`,
+        `Add the required sections: ${requiredSectionsMissing.join(", ")}`,
       ),
     );
   }
@@ -289,7 +279,7 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
         "UIX-VAL-SKILL-CANONICAL-SURFACE",
         "Prototyping skill must document supported UI prototyping surfaces: web, mobile, desktop, mixed.",
         "error",
-        "supported UI surface (web, mobile, desktop, mixed) を明記してください。",
+        "State the supported UI surfaces (web, mobile, desktop, mixed) explicitly.",
       ),
     );
   }
@@ -300,18 +290,18 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
         "UIX-VAL-SKILL-CLI-SURFACE",
         "Prototyping skill must document that cli surface is rejected from prototyping execution.",
         "error",
-        "cli surface は prototyping execution 対象外であることを明記してください。",
+        "State explicitly that the cli surface is out of scope for prototyping execution.",
       ),
     );
   }
 
-  if (!uiBearingFalseExcl) {
+  if (!uiContractScope) {
     issues.push(
       skillIssue(
         "UIX-VAL-SKILL-UI-BEARING-FALSE",
-        "Prototyping skill must document that ui_bearing: false specs are excluded from prototyping execution.",
+        "Prototyping skill must limit execution to UI contracts with a full UI-NNNN ID and non-empty screens[].",
         "error",
-        "ui_bearing: false spec は prototyping execution 対象外であることを明記してください。",
+        "State that only UI contracts with a full UI-NNNN ID and non-empty screens[] are eligible.",
       ),
     );
   }
@@ -322,7 +312,7 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
         "UIX-VAL-SKILL-STATIC-FIRST",
         "Prototyping skill is missing static-first wording.",
         "error",
-        "static-first / file-based default を明記してください。",
+        "State the static-first / file-based default explicitly.",
       ),
     );
   }
@@ -331,20 +321,9 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
     issues.push(
       skillIssue(
         "UIX-VAL-SKILL-DELEGATION",
-        "Prototyping skill is missing the delegation scope table for evaluator/capture/build roles.",
+        "Prototyping skill is missing the delegation scope table for the generation, evaluation and build roles.",
         "error",
-        "delegation scope table を追加してください。",
-      ),
-    );
-  }
-
-  if (!mandatoryEvidencePaths) {
-    issues.push(
-      skillIssue(
-        "UIX-VAL-SKILL-EVIDENCE-PATHS",
-        "Prototyping skill must declare canonical screenshot and HTML evidence paths.",
-        "error",
-        "canonical screenshot/html evidence path を明記してください。",
+        "Add the delegation scope table.",
       ),
     );
   }
@@ -355,7 +334,7 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
         "UIX-VAL-SKILL-ENV-PRECONDITIONS",
         "Prototyping skill must separate contract preconditions and environment preconditions.",
         "error",
-        "Step 2-A / Step 2-B で contract と environment の preconditions を分離してください。",
+        "Separate the contract and environment preconditions in Step 2-A / Step 2-B.",
       ),
     );
   }
@@ -364,9 +343,9 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
     issues.push(
       skillIssue(
         "UIX-VAL-SKILL-PREFLIGHT",
-        "Prototyping skill must document qfai prototyping preflight or qfai doctor --profile prototyping guidance.",
+        "Prototyping skill must document qfai doctor --profile prototyping guidance.",
         "error",
-        "preflight 実行導線（qfai prototyping preflight または qfai doctor --profile prototyping）を明記してください。",
+        "State the preflight entry point explicitly (qfai doctor --profile prototyping).",
       ),
     );
   }
@@ -377,7 +356,7 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
         "UIX-VAL-SKILL-PLAYWRIGHT-FALLBACK",
         "Prototyping skill must document a safe Playwright invocation path such as npx --no-install playwright.",
         "error",
-        "npx --no-install playwright または node_modules/.bin/playwright の経路を明記してください。",
+        "State the npx --no-install playwright or node_modules/.bin/playwright route explicitly.",
       ),
     );
   }
@@ -389,10 +368,9 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
     requiredSectionsMissing,
     hasCanonicalSurfaces: canonicalSurfaces,
     hasCliSurface: cliSurface,
-    hasUiBearingFalseExcl: uiBearingFalseExcl,
+    hasUiContractScope: uiContractScope,
     isStaticFirstAligned: staticFirst,
     hasDelegationScopeTable: delegationScopeTable,
-    hasMandatoryEvidencePaths: mandatoryEvidencePaths,
     hasEnvironmentPreconditions: environmentPreconditions,
     hasPreflightGuidance: preflightGuidance,
     hasPlaywrightCliFallback: playwrightCliFallback,

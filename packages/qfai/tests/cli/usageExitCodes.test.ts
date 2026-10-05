@@ -12,10 +12,6 @@ import { run } from "../../src/cli/main.js";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const commandsDir = path.resolve(here, "..", "..", "src", "cli", "commands");
 
-function isExitCodeName(value: string): value is keyof typeof EXIT_CODES {
-  return Object.prototype.hasOwnProperty.call(EXIT_CODES, value);
-}
-
 async function captureHelp(): Promise<string> {
   const chunks: string[] = [];
   const spy = vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
@@ -64,104 +60,23 @@ describe("qfai --help exit-code section", () => {
     const section = help.slice(help.indexOf("Exit codes:"));
 
     expect(section).toContain("validate / doctor");
-    expect(section).toContain("guardrails");
-    expect(section).toContain("prototyping iterate");
-    expect(section).toContain("prototyping certify");
-  });
-
-  it("states why guardrails alone returns 2 for a usage error", async () => {
-    const help = await captureHelp();
-    const section = help.slice(help.indexOf("Exit codes:"));
-
-    expect(section).toMatch(/guardrails[\s\S]*a usage error/);
+    expect(section).toContain("report");
+    expect(section).toMatch(
+      /atdd scaffold\s+0 = success,[\s\S]*?1 = a runtime read or write failure,[\s\S]*?2 = a usage error/,
+    );
   });
 
   it("records the non-usage exit codes the other commands actually return", async () => {
     const help = await captureHelp();
     const section = help.slice(help.indexOf("Exit codes:"));
 
-    // guardrails check reports a violation with 1, not only 0 / 2.
-    expect(section).toMatch(
-      new RegExp(`guardrails[\\s\\S]*?${EXIT_CODES.findings} = check found a violation`),
-    );
-    // report / show-spec exit 2 on a missing or unreadable input file — the
-    // catch-all "1 = a usage error" row would misreport them.
+    // report exits 2 on missing input — the catch-all "1 = a usage error"
+    // row would misreport it.
     expect(section).toMatch(
       new RegExp(
         `report\\s+${EXIT_CODES.ok} = success,[\\s\\S]*?${EXIT_CODES.inputError} = the input`,
       ),
     );
-    expect(section).toMatch(
-      new RegExp(
-        `prototyping show-spec\\s+${EXIT_CODES.ok} = success,[\\s\\S]*?${EXIT_CODES.inputError} = prototyping.json`,
-      ),
-    );
-    expect(section).toContain("--check found a certificate digest or gate mismatch");
-  });
-
-  it("names the iterate outcomes that share 0 and 2 with unrelated causes", async () => {
-    const help = await captureHelp();
-    const section = help.slice(help.indexOf("Exit codes:"));
-    const iterateRow = section.slice(
-      section.indexOf("prototyping iterate"),
-      section.indexOf("prototyping iterate --check-convergence"),
-    );
-
-    // 0 is not only "continue": cycle 0 with zero UI-bearing specs is a
-    // terminal no-op, and a loop that keeps going lands on 2 at cycle 1.
-    expect(iterateRow).toMatch(new RegExp(`${EXIT_CODES.ok} = [^\\n]*no-op`));
-    // 2 also covers --auto-serve / --capture runtime failures, which need a
-    // different recovery than fixing inputs.
-    expect(iterateRow).toContain("--auto-serve");
-    expect(iterateRow).toContain("--capture");
-  });
-
-  it("explains iterate's 64 by what the loop actually reads", async () => {
-    const help = await captureHelp();
-    const section = help.slice(help.indexOf("Exit codes:"));
-    const iterateRow = section.slice(
-      section.indexOf("prototyping iterate"),
-      section.indexOf("prototyping iterate --check-convergence"),
-    );
-
-    // `isConverged` reads three arrays. The four UX axes are still scored and
-    // still reported, and they no longer decide the stop — an operator given
-    // an axis value here would look for a cause the loop never consulted.
-    expect(iterateRow).toMatch(
-      new RegExp(`${EXIT_CODES.prototypingStop} = STOP: converged[^]*?no blocking finding`),
-    );
-    expect(iterateRow).toContain("DESIGN.md violation");
-    expect(iterateRow).toContain("anti-pattern");
-    expect(iterateRow).not.toMatch(/axis|axes|exceptional/i);
-  });
-
-  it("names the certify layout incompatibility that also returns 64", async () => {
-    const help = await captureHelp();
-    const section = help.slice(help.indexOf("Exit codes:"));
-    const certifyRow = section.slice(section.indexOf("prototyping certify"));
-
-    expect(certifyRow).toMatch(
-      new RegExp(`${EXIT_CODES.prototypingStop} = [^]*?flat layout, which is unsupported`),
-    );
-  });
-
-  it("splits --check-convergence from the ordinary iterate row", async () => {
-    const help = await captureHelp();
-    const section = help.slice(help.indexOf("Exit codes:"));
-
-    expect(section).toContain("prototyping iterate --check-convergence");
-    expect(section).toMatch(
-      new RegExp(`--check-convergence[\\s\\S]*?${EXIT_CODES.ok} = converged`),
-    );
-  });
-
-  it("does not advertise the reviewer hard-stop that no CLI path returns", async () => {
-    const help = await captureHelp();
-    const section = help.slice(help.indexOf("Exit codes:"));
-
-    // `shouldStop()` never inspects review.json#sessionStatus, so 64 from
-    // `prototyping iterate` is always convergence today.
-    expect(section).not.toMatch(/hard-stop/i);
   });
 
   it("documents report's 1 for a corrupt input file, not only the missing-file 2", async () => {
@@ -169,7 +84,7 @@ describe("qfai --help exit-code section", () => {
     const section = help.slice(help.indexOf("Exit codes:"));
     const reportRow = section.slice(
       section.indexOf("\n  report"),
-      section.indexOf("prototyping iterate"),
+      section.indexOf("atdd scaffold"),
     );
 
     // A corrupt / schema-invalid validate.json throws out of runReport, and
@@ -199,35 +114,14 @@ describe("qfai --help exit-code section", () => {
     tempDirs.push(dir);
     const inputPath = path.join(dir, "validate.json");
     await writeFile(inputPath, "{ not json", "utf-8");
+    const specsDir = path.join(dir, ".qfai", "spec");
+    await mkdir(specsDir, { recursive: true });
+    await writeFile(path.join(specsDir, "decisions.md"), "# Decisions\n", "utf-8");
 
     // The throw is what cli/index.ts maps to exit 1; the row now names it.
     await expect(run(["report", "--root", dir, "--in", inputPath], dir)).rejects.toBeInstanceOf(
       Error,
     );
-  });
-
-  it("separates the --check-convergence cycle-range error from not-converged", async () => {
-    const help = await captureHelp();
-    const section = help.slice(help.indexOf("Exit codes:"));
-    const peekRow = section.slice(section.indexOf("prototyping iterate --check-convergence"));
-
-    expect(peekRow).toContain("--cycle is out of range");
-  });
-
-  it("returns the input-error code for an out-of-range --check-convergence cycle", async () => {
-    const dir = await mkdtemp(path.join(tmpdir(), "qfai-peek-range-"));
-    tempDirs.push(dir);
-    const previousExitCode = process.exitCode;
-    process.exitCode = undefined;
-    try {
-      await run(
-        ["prototyping", "iterate", "--check-convergence", "--cycle", "10", "--root", dir],
-        dir,
-      );
-      expect(process.exitCode).toBe(EXIT_CODES.inputError);
-    } finally {
-      process.exitCode = previousExitCode;
-    }
   });
 
   it("says an unknown option stops the run rather than being ignored", async () => {
@@ -261,42 +155,25 @@ describe("qfai --help exit-code section", () => {
     );
   });
 
-  it("names the certify runtime error that the 0 / 2 / 64 row omitted", async () => {
-    const help = await captureHelp();
-    const section = help.slice(help.indexOf("Exit codes:"));
-    const certifyRow = section.slice(section.indexOf("prototyping certify"));
-
-    // writeCompletionCertificate() throws on a read-only destination and
-    // cli/index.ts maps any throw to 1 — the row has to carry it.
-    expect(certifyRow).toMatch(new RegExp(`${EXIT_CODES.findings} = a runtime error`));
-    expect(certifyRow).toContain("a certificate I/O exception");
-  });
-
-  it("names the runtime error the validate / doctor / preflight rows blamed on --fail-on", async () => {
+  it("names the runtime error the validate / doctor row blamed on --fail-on", async () => {
     const help = await captureHelp();
     const section = help.slice(help.indexOf("Exit codes:"));
     const validateRow = section.slice(
       section.indexOf("validate / doctor"),
-      section.indexOf("prototyping preflight"),
-    );
-    const preflightRow = section.slice(
-      section.indexOf("prototyping preflight"),
-      section.indexOf("guardrails"),
+      section.indexOf("db-drift"),
     );
 
-    // emitJson() (validate) and the --out writeFile() (doctor / preflight)
+    // emitJson() (validate) and the --out writeFile() (doctor)
     // are unguarded, so an unwritable destination throws and cli/index.ts
     // maps it to 1. Presenting 1 as "the --fail-on threshold was reached"
     // makes an I/O failure read as a quality verdict.
-    for (const row of [validateRow, preflightRow]) {
-      expect(row).toMatch(
-        new RegExp(`${EXIT_CODES.findings} = the --fail-on threshold was reached, or a runtime`),
-      );
-      expect(row).toContain("an output I/O exception");
-    }
+    expect(validateRow).toMatch(
+      new RegExp(`${EXIT_CODES.findings} = the --fail-on threshold was reached, or a runtime`),
+    );
+    expect(validateRow).toContain("an output I/O exception");
   });
 
-  it("exits 1, not 0 or the --fail-on 1, when preflight cannot write its --out file", async () => {
+  it("exits 1, not 0 or the --fail-on 1, when doctor cannot write its --out file", async () => {
     const dir = await mkdtemp(path.join(tmpdir(), "qfai-preflight-out-"));
     tempDirs.push(dir);
     // A regular file where --out wants a parent directory makes doctor's
@@ -310,8 +187,9 @@ describe("qfai --help exit-code section", () => {
       await expect(
         run(
           [
+            "doctor",
+            "--profile",
             "prototyping",
-            "preflight",
             "--root",
             dir,
             "--format",
@@ -324,93 +202,6 @@ describe("qfai --help exit-code section", () => {
       ).rejects.toBeInstanceOf(Error);
     } finally {
       spy.mockRestore();
-    }
-  });
-
-  it("documents show-spec's 1 for a spec-resolution I/O error, not only the 0 / 2 pair", async () => {
-    const help = await captureHelp();
-    const section = help.slice(help.indexOf("Exit codes:"));
-    const showSpecRow = section.slice(
-      section.indexOf("prototyping show-spec"),
-      section.indexOf("その他のコマンド"),
-    );
-
-    // resolveSurfaceUnion() re-throws every non-ENOENT spec-body read error
-    // rather than classifying the spec as non-UI, so 1 is reachable with a
-    // perfectly valid prototyping.json.
-    expect(showSpecRow).toMatch(new RegExp(`${EXIT_CODES.findings} = a runtime error`));
-    expect(showSpecRow).toContain("an I/O exception while resolving the spec");
-    // Over-correction pin: the missing / corrupt prototyping.json stays 2.
-    expect(showSpecRow).toMatch(
-      new RegExp(`${EXIT_CODES.inputError} = prototyping.json is missing or corrupt`),
-    );
-  });
-
-  it("exits 1 when show-spec hits a non-ENOENT spec read failure", async () => {
-    const dir = await mkdtemp(path.join(tmpdir(), "qfai-showspec-io-"));
-    tempDirs.push(dir);
-    const protoJson = path.join(dir, ".qfai", "evidence", "prototyping", "prototyping.json");
-    await mkdir(path.dirname(protoJson), { recursive: true });
-    await writeFile(
-      protoJson,
-      `${JSON.stringify({ frozenSpecsCovered: ["spec-0001"], specsCovered: ["spec-0001"] }, null, 2)}\n`,
-      "utf-8",
-    );
-    // A directory named 01_Spec.md makes readFile fail with EISDIR — the
-    // non-ENOENT class resolveSurfaceUnion re-throws. Same reason as above:
-    // chmod-based unreadability is a no-op for uid 0.
-    await mkdir(path.join(dir, ".qfai", "specs", "spec-0001", "01_Spec.md"), { recursive: true });
-
-    const spy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
-    try {
-      await expect(run(["prototyping", "show-spec", "--root", dir], dir)).rejects.toBeInstanceOf(
-        Error,
-      );
-    } finally {
-      spy.mockRestore();
-    }
-  });
-
-  it("splits the parser-rejected --check-convergence cycle from the runner's range error", async () => {
-    const help = await captureHelp();
-    const section = help.slice(help.indexOf("Exit codes:"));
-    const peekRow = section.slice(section.indexOf("prototyping iterate --check-convergence"));
-
-    // `-1` never reaches the runner: parseNonNegativeInteger rejects it before
-    // peek, while `10` is rejected by the runner. Both stop at `inputError` —
-    // a rejected value is a CLI-arg error on every command — so what the row
-    // has to keep apart is the two CAUSES, not two codes. It said 1 for the
-    // first, which is the number the parser never returns.
-    expect(peekRow).toContain("--cycle is not a non-negative integer");
-    expect(peekRow).toContain("the parser refuses the");
-    expect(peekRow).toContain("10 or more stops without peeking");
-    expect(peekRow).not.toMatch(new RegExp(`${EXIT_CODES.findings} = --cycle`));
-  });
-
-  it("returns the CLI-arg-error code for a negative --check-convergence cycle", async () => {
-    const dir = await mkdtemp(path.join(tmpdir(), "qfai-peek-negative-"));
-    tempDirs.push(dir);
-    const parsed = parseArgs(
-      ["prototyping", "iterate", "--check-convergence", "--cycle", "-1"],
-      process.cwd(),
-    );
-    expect(parsed.invalid).toBe(true);
-
-    const previousExitCode = process.exitCode;
-    process.exitCode = undefined;
-    const spy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
-    try {
-      await run(
-        ["prototyping", "iterate", "--check-convergence", "--cycle", "-1", "--root", dir],
-        dir,
-      );
-      // A rejected value is a CLI-arg error on every command, so it shares the
-      // out-of-range case's code rather than the findings code the note used
-      // to promise.
-      expect(process.exitCode).toBe(EXIT_CODES.inputError);
-    } finally {
-      spy.mockRestore();
-      process.exitCode = previousExitCode;
     }
   });
 
@@ -480,40 +271,8 @@ describe("qfai --help exit-code section", () => {
     const section = formatExitCodesSection();
 
     expect(section.startsWith("Exit codes:")).toBe(true);
-    expect(section).toContain(`${EXIT_CODES.prototypingStop} =`);
-    expect(section).toContain(`${EXIT_CODES.prototypingBudgetExhausted} =`);
-    expect(section).toContain(`${EXIT_CODES.prototypingLicenseFailure} =`);
-  });
-
-  it("routes every sysexits-range return in the prototyping commands through EXIT_CODES", async () => {
-    const files = ["prototypingIterate.ts", "prototypingCertify.ts"];
-    const sources = await Promise.all(
-      files.map(async (file) => readFile(path.join(commandsDir, file), "utf-8")),
-    );
-
-    const literals: string[] = [];
-    const viaConstant: string[] = [];
-    sources.forEach((source, index) => {
-      for (const match of source.matchAll(/\breturn\s+(\d{2,3})\s*;/g)) {
-        if (Number.parseInt(match[1] ?? "", 10) >= 64) {
-          literals.push(`${files[index] ?? ""}: return ${match[1] ?? ""};`);
-        }
-      }
-      for (const match of source.matchAll(/\breturn\s+EXIT_CODES\.(\w+)\s*;/g)) {
-        viaConstant.push(match[1] ?? "");
-      }
-    });
-
-    // A new bare `return 64;` would document itself out of `--help`.
-    expect(literals).toEqual([]);
-    expect(viaConstant.length).toBeGreaterThan(0);
-    const section = formatExitCodesSection();
-    for (const name of viaConstant) {
-      expect(isExitCodeName(name)).toBe(true);
-      if (!isExitCodeName(name)) {
-        continue;
-      }
-      expect(section).toContain(`${EXIT_CODES[name]} =`);
+    for (const code of Object.values(EXIT_CODES)) {
+      expect(section).toContain(`${code} =`);
     }
   });
 });

@@ -1,0 +1,34 @@
+route: add-feature
+family: change
+stages:
+  - id: sdd
+    kind: sdd
+    steps:
+      - sdd-triage
+      - { step: sdd-flow, passThrough: true }
+      - sdd-story
+      - { step: sdd-contract, passThrough: true }
+      - { step: common-design-md, passThrough: true }
+      - { step: sdd-cycle, passThrough: true }
+    review: spec
+  - id: implement
+    kind: implement
+    steps: [implement-scaffold, implement-tdd]
+    after: [sdd]
+  - id: docs
+    kind: maintenance
+    steps:
+      - { step: maintain-edit, passThrough: true }
+    after: [implement]
+  - id: note
+    kind: verify
+    steps:
+      - { step: verify-change-note, passThrough: true }
+    after: [docs]
+    review: code
+  - id: verify
+    kind: verify
+    steps: [verify-qfai-gate, verify-repo-gate, verify-commit]
+    after: [note]
+decisionPoints: [sdd-triage]
+branchPoints: []

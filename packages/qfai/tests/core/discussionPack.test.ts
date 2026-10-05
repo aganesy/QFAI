@@ -25,11 +25,11 @@ describe("validateDiscussionPackReadiness — current-only wording", () => {
       const issues = await validateDiscussionPackReadiness(root, defaultConfig);
       const allMessages = issues.map((i) => `${i.message} ${i.suggested_action ?? ""}`).join("\n");
 
-      expect(allMessages).not.toContain("段階的に廃止");
-      expect(allMessages).not.toContain("移行時は");
-      expect(allMessages).not.toContain("legacy discussion-pack を検出しました");
-      expect(allMessages).not.toContain("legacy 連番 pack");
-      expect(allMessages).not.toContain("discussion-legacy-* へ退避");
+      expect(allMessages).not.toContain("phased out");
+      expect(allMessages).not.toContain("when migrating");
+      expect(allMessages).not.toContain("legacy discussion-pack detected");
+      expect(allMessages).not.toContain("legacy sequential pack");
+      expect(allMessages).not.toContain("move it aside to discussion-legacy-*");
     });
   });
 
@@ -68,7 +68,7 @@ describe("validateDiscussionPackReadiness — current-only wording", () => {
 
       expect(namingIssue).toBeDefined();
       const fullText = `${namingIssue?.message ?? ""} ${namingIssue?.suggested_action ?? ""}`;
-      expect(fullText).not.toContain("discussion-legacy-* などへ退避");
+      expect(fullText).not.toContain("move it aside to discussion-legacy-* or similar");
       expect(fullText).toContain("Remove or rename the non-canonical discussion directory");
     });
   });
@@ -76,7 +76,6 @@ describe("validateDiscussionPackReadiness — current-only wording", () => {
 
 const MINIMAL_PACK_FILES = [
   "01_Context.md",
-  "02_Inception-Deck.md",
   "03_Story-Workshop.md",
   "04_Sources.md",
   "05_Scope.md",
@@ -84,10 +83,5 @@ const MINIMAL_PACK_FILES = [
   "07_NFR.md",
   "08_Glossary.md",
   "09_Constraints.md",
-  "10_Policy.md",
   "11_OQ-Register.md",
-  "12_OQ-Resolution-Log.md",
-  "13_Deferred.md",
-  "14_Review-Request.md",
-  "99_delta.md",
 ] as const;

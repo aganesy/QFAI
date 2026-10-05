@@ -1,0 +1,227 @@
+# Routing defaults for the `qfai-implement` steps.
+# `_contract.yml` states what every file in this directory holds.
+
+routing:
+  # Reproduces and locates the cause; changes no code. The verdict names the
+  # layer a missing or defective test belongs to, which is the test design
+  # owner's call.
+  - step: implement-diagnose
+    phases:
+      - id: diagnose
+        mandatory_agents: [test-design-analyst, devops-ci-engineer]
+        conditional_agents: [frontend-engineer, backend-engineer]
+        parallel_groups: []
+        rerun_policy: changed-scope-dependents
+    review_profile: default
+
+  # `parallel_groups` describes ROLE FAN-OUT within a phase, not item
+  # dispatch. `iteration` says how often a phase runs: the TDD micro-cycle goes
+  # one ledger row at a time, so `build` and `test` run once per row.
+  - step: implement-tdd
+    phases:
+      # Once, before any ledger row is touched: `delivery-planner` frames the
+      # invocation; `test-design-analyst` reports coverage and layer-ownership
+      # findings.
+      - id: plan
+        iteration: per-invocation
+        mandatory_agents: [delivery-planner, test-design-analyst]
+        conditional_agents: []
+        parallel_groups: []
+        rerun_policy: changed-scope-dependents
+      - id: build
+        iteration: per-ledger-item
+        mandatory_agents: []
+        conditional_agents: [frontend-engineer, backend-engineer, devops-ci-engineer]
+        parallel_groups:
+          - [frontend-engineer, backend-engineer]
+        rerun_policy: changed-scope-dependents
+      # `acceptance-test-engineer` is not listed: acceptance tests belong to
+      # `implement-scaffold` and `implement-acceptance`, and this step does not
+      # author them.
+      - id: test
+        iteration: per-ledger-item
+        mandatory_agents: []
+        conditional_agents: [qa-strategist]
+        parallel_groups: []
+        rerun_policy: changed-scope-dependents
+    review_profile: default
+
+  # An existing correct test already fails, so there is no RED to take.
+  - step: implement-regression-fix
+    phases:
+      - id: build
+        mandatory_agents: []
+        conditional_agents: [frontend-engineer, backend-engineer]
+        parallel_groups: []
+        rerun_policy: changed-scope-dependents
+    review_profile: default
+
+  - step: implement-test-fix
+    phases:
+      - id: fix
+        mandatory_agents: []
+        conditional_agents: [frontend-engineer, backend-engineer, acceptance-test-engineer]
+        parallel_groups: []
+        rerun_policy: changed-scope-dependents
+    review_profile: default
+
+  # Only the seam an acceptance result asked for. Which production owner lands
+  # it depends on where the seam lives.
+  - step: implement-seam
+    phases:
+      - id: seam
+        mandatory_agents: []
+        conditional_agents: [frontend-engineer, backend-engineer]
+        parallel_groups: []
+        rerun_policy: changed-scope-dependents
+    review_profile: default
+
+  # Finds the culprit change; changes no tracked file.
+  - step: implement-bisect
+    phases:
+      - id: bisect
+        mandatory_agents: [devops-ci-engineer]
+        conditional_agents: [frontend-engineer, backend-engineer]
+        parallel_groups: []
+        rerun_policy: changed-scope-dependents
+    review_profile: default
+
+  - step: implement-revert
+    phases:
+      - id: revert
+        mandatory_agents: []
+        conditional_agents: [frontend-engineer, backend-engineer]
+        parallel_groups: []
+        rerun_policy: changed-scope-dependents
+    review_profile: default
+
+  # Shrinks the crashing input; changes no tracked file.
+  - step: implement-minimize
+    phases:
+      - id: minimize
+        mandatory_agents: [devops-ci-engineer]
+        conditional_agents: [frontend-engineer, backend-engineer]
+        parallel_groups: []
+        rerun_policy: changed-scope-dependents
+    review_profile: default
+
+  - step: implement-stress-harness
+    phases:
+      - id: harness
+        mandatory_agents: [devops-ci-engineer]
+        conditional_agents: [frontend-engineer, backend-engineer]
+        parallel_groups: []
+        rerun_policy: changed-scope-dependents
+    review_profile: default
+
+  # Which inputs the parity check covers is a test design call.
+  - step: implement-oracle-parity
+    phases:
+      - id: parity
+        mandatory_agents: [test-design-analyst]
+        conditional_agents: [frontend-engineer, backend-engineer, devops-ci-engineer]
+        parallel_groups: []
+        rerun_policy: changed-scope-dependents
+    review_profile: default
+
+  # Measures twice under the same conditions; changes no tracked file.
+  - step: implement-benchmark
+    phases:
+      - id: measure
+        mandatory_agents: [devops-ci-engineer]
+        conditional_agents: [qa-strategist]
+        parallel_groups: []
+        rerun_policy: changed-scope-dependents
+    review_profile: default
+
+  - step: implement-refactor
+    phases:
+      - id: move
+        mandatory_agents: []
+        conditional_agents: [frontend-engineer, backend-engineer]
+        parallel_groups: []
+        rerun_policy: changed-scope-dependents
+    review_profile: default
+
+  - step: implement-retire
+    phases:
+      - id: remove
+        mandatory_agents: []
+        conditional_agents: [frontend-engineer, backend-engineer, devops-ci-engineer, doc-steward]
+        parallel_groups: []
+        rerun_policy: changed-scope-dependents
+    review_profile: default
+
+  - step: implement-sweep
+    phases:
+      - id: sweep
+        mandatory_agents: [devops-ci-engineer]
+        conditional_agents: [frontend-engineer, backend-engineer]
+        parallel_groups: []
+        rerun_policy: changed-scope-dependents
+    review_profile: default
+
+  - step: implement-quarantine
+    phases:
+      - id: isolate
+        mandatory_agents: [devops-ci-engineer]
+        conditional_agents: [qa-strategist]
+        parallel_groups: []
+        rerun_policy: changed-scope-dependents
+    review_profile: default
+
+  - step: implement-dep-bump
+    phases:
+      - id: bump
+        mandatory_agents: [devops-ci-engineer]
+        conditional_agents: [frontend-engineer, backend-engineer]
+        parallel_groups: []
+        rerun_policy: changed-scope-dependents
+    review_profile: default
+
+  - step: implement-tooling
+    phases:
+      - id: edit
+        mandatory_agents: [devops-ci-engineer]
+        conditional_agents: []
+        parallel_groups: []
+        rerun_policy: changed-scope-dependents
+    review_profile: default
+
+  - step: implement-backport
+    phases:
+      - id: pick
+        mandatory_agents: [devops-ci-engineer]
+        conditional_agents: [frontend-engineer, backend-engineer]
+        parallel_groups: []
+        rerun_policy: changed-scope-dependents
+    review_profile: default
+
+  # Writes the acceptance tests a flow lacks, each with an empty body.
+  - step: implement-scaffold
+    phases:
+      - id: coverage
+        mandatory_agents: [test-design-analyst]
+        conditional_agents: []
+        parallel_groups: []
+        rerun_policy: failed-agents-only
+    review_profile: default
+
+  - step: implement-credentials
+    phases:
+      - id: implementation
+        mandatory_agents: [acceptance-test-engineer]
+        conditional_agents: [devops-ci-engineer]
+        parallel_groups: []
+        rerun_policy: changed-scope-dependents
+    review_profile: default
+
+  # Writes the bodies of empty acceptance tests, keeping each annotation.
+  - step: implement-acceptance
+    phases:
+      - id: implementation
+        mandatory_agents: [acceptance-test-engineer]
+        conditional_agents: [devops-ci-engineer]
+        parallel_groups: []
+        rerun_policy: changed-scope-dependents
+    review_profile: default

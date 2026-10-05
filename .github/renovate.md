@@ -4,6 +4,8 @@ Dependency updates arrive as pull requests, opened daily by this repository's ow
 merged by it. **Every update type is automerged, major included, and nothing waits for a review.**
 The only thing between a dependency bump and `main` is `ci-pass`.
 
+One package is held back: see [The test runner](#the-test-runner).
+
 - **What runs it:** `.github/workflows/renovate.yml`
 - **What it does:** `.github/renovate.json5`
 - **What other repositories can extend:** `.github/renovate-presets/` (see below)
@@ -126,6 +128,7 @@ running the bot the same way keeps it inside that.
 | Merge gate    | `ci-pass`, and nothing else. No review, no approval, no dashboard tick              |
 | Merged when   | As soon as the checks pass — not on the next scheduled run                          |
 | Not held back | Vulnerability alerts: no schedule, no age floor, opened immediately                 |
+| Held back     | `vitest`, which the filter would freeze and CI cannot judge                         |
 
 Nothing is held back for approval any more. `engines.node` and `packageManager` used to sit on the
 dashboard until someone ticked a box; they still get their own pull request rather than riding
@@ -135,6 +138,25 @@ else runs.
 
 The **Dependency dashboard** issue lists what is open and what has been detected. With nothing
 waiting on a human, it is the place to look when a dependency you expected to move has not moved.
+
+### The test runner
+
+`vitest` is the one package the bot does not offer.
+
+Every runner release since its third major declares an engine range that excludes at least one odd
+Node line. `constraintsFiltering` drops each of them against the Node range this repository
+declares, so an enabled runner would never be offered and nothing would say so.
+
+It is also the program CI runs to judge its own update. A release that reported success would be
+automerged without anyone reading it, and then run on every developer machine.
+
+**Raising it is a manual step, and nobody is reminded to take it.** Raise `vitest` in
+`packages/qfai/package.json`, read the release notes, and let CI judge the result. Check for a new
+release whenever the runner's release notes are worth reading; there is no pull request that will
+do it.
+
+A security fix is the exception, and it still arrives on its own. The vulnerability policy is
+applied as a forced override, so it reaches the runner like any other package.
 
 ### Why the config declares no schedule of its own
 
@@ -210,8 +232,8 @@ somebody looks at it.
 ## The presets other repositories extend
 
 `.github/renovate-presets/` holds the policy QFAI recommends to repositories that have run
-`qfai init`. They are not used by this repository — it declares no dependency on the `qfai` package,
-so no Renovate run here will ever produce a `qfai` bump — and they are published from here because
+`qfai init`. They are not used by this repository — its `qfai` dependency is a `workspace:*` link,
+which Renovate does not update, so no Renovate run here will ever produce a `qfai` bump — and they are published from here because
 that is where Renovate resolves a `github>` preset from.
 
 | Preset                                                           | Extend it when                                     |

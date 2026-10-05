@@ -14,7 +14,6 @@
  * alone is faked: the scan is real file I/O, and faking the timers with it
  * would put this suite's own scheduling into the fixture.
  */
-// QFAI:SPEC-0015:TC-0015-0033
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -22,6 +21,7 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { loadConfig } from "../../src/core/config.js";
 import { validateStaleReferences } from "../../src/core/validators/staleReferences.js";
 
 /** The date the rule used to escalate on. */
@@ -39,7 +39,7 @@ afterEach(async () => {
 });
 
 async function seedStaleRef(): Promise<void> {
-  const dir = path.join(root, ".qfai", "assistant", "skills", "qfai-prototyping", "references");
+  const dir = path.join(root, ".qfai", "assistant", "skill", "qfai-prototyping", "references");
   await mkdir(dir, { recursive: true });
   await writeFile(
     path.join(dir, "handoff.md"),
@@ -53,18 +53,21 @@ async function severitiesOn(dayIso: string): Promise<string[]> {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date(`${dayIso}T00:00:00Z`));
   try {
-    const issues = await validateStaleReferences(root);
+    const { config } = await loadConfig(root);
+    const issues = await validateStaleReferences(root, { config });
     return issues.filter((i) => i.code === "W-STALE-REFERENCE").map((i) => i.severity);
   } finally {
     vi.useRealTimers();
   }
 }
 
+// QFAI:EX-0001-0174-01
 describe("TC-0015-0033: the severity a stale reference reports", () => {
   it("emits W-STALE-REFERENCE at warning", async () => {
     await seedStaleRef();
 
-    const issues = await validateStaleReferences(root);
+    const { config } = await loadConfig(root);
+    const issues = await validateStaleReferences(root, { config });
 
     const findings = issues.filter((i) => i.code === "W-STALE-REFERENCE");
     expect(findings.length).toBeGreaterThanOrEqual(1);

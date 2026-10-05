@@ -21,8 +21,8 @@ import { describe, expect, it } from "vitest";
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
-const SKILL = "assistant/skills/qfai-grilling/SKILL.md";
-const ENTRY = "assistant/skills/qfai-grill/SKILL.md";
+const SKILL = "assistant/skill/qfai-grilling/SKILL.md";
+const ENTRY = "assistant/skill/qfai-grill/SKILL.md";
 
 const readSkill = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
@@ -183,7 +183,7 @@ describe("the grill entry point", () => {
       expect(text).toMatch(/\*\*Without the primitive, stop\.\*\*/);
       // Naming the missing file is the whole of the remedy: a stop that does not
       // say what is missing sends the user looking.
-      expect(text).toMatch(/assistant\/skills\/qfai-grilling\/SKILL\.md` is not present/);
+      expect(text).toMatch(/assistant\/skill\/qfai-grilling\/SKILL\.md` is not present/);
       expect(text).toMatch(/Do not interview from memory/);
       expect(text).toMatch(/an improvised interview is the failure this split exists to prevent/);
     });
@@ -194,7 +194,7 @@ describe("the grill entry point", () => {
       const text = flat(await readSkill(tree, ENTRY));
       expect(text).toMatch(/Not a place to state the method/);
       expect(text).toMatch(/A step this skill performs that the primitive does not describe/);
-      expect(text).toMatch(/Read `\.qfai\/assistant\/skills\/qfai-grilling\/SKILL\.md`/);
+      expect(text).toMatch(/Read `\.qfai\/assistant\/skill\/qfai-grilling\/SKILL\.md`/);
     });
 
     it(`${tree}: writes no file, and ties that to where the gate is`, async () => {
@@ -303,15 +303,15 @@ describe("the primitive carries the master's clauses", () => {
 // told it another, or where it left the agent holding a decision the user owns.
 describe("the session does not settle what the user settles", () => {
   for (const tree of QFAI_TREES) {
-    it(`${tree}: reading a fact directly is a sanctioned exception, not an override`, async () => {
-      // The delegation baseline hard-stops on `unavailable` and forbids
-      // continuing with self-execution. A skill that only says "read it
-      // yourself" leaves an agent to pick which instruction wins, and two
-      // agents pick differently.
+    it(`${tree}: reads a fact directly when its lookup is unavailable`, async () => {
+      // An unavailable delegation is done by the session itself, so the
+      // session reads the fact rather than stopping, and the decisions that
+      // wait on an unread fact stay open.
       const text = flat(await read(tree));
-      expect(text).toMatch(/under the baseline's sanctioned exception for a read-only fact lookup/);
-      expect(text).toMatch(/This is not an override of the hard stop/);
-      expect(text).toMatch(/it permits reading only/);
+      expect(text).toMatch(
+        /read what can be read directly, as the baseline's `unavailable` response sets out/,
+      );
+      expect(text).toMatch(/hold the decisions downstream of it open/);
     });
 
     it(`${tree}: closing the questions still finishes the lookups in flight`, async () => {
@@ -345,26 +345,6 @@ describe("the session does not settle what the user settles", () => {
       // Bounded to the verdict: a dispatched lookup is still a delegation.
       expect(text).toMatch(/The exemption covers the verdict and nothing else/);
       expect(text).toMatch(/disqualified from answering it again as a check on itself/);
-    });
-  }
-});
-
-// The sanctioned exception is only a resolution while the baseline states it.
-// Left to the skill alone it is the override the skill claims it is not.
-describe("the delegation baseline sanctions the read-only lookup", () => {
-  for (const tree of QFAI_TREES) {
-    it(`${tree}: names the exception, and bounds it to reading`, async () => {
-      const text = flat(
-        await readSkill(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
-      );
-      expect(text).toMatch(/### Sanctioned exception: a read-only fact lookup/);
-      expect(text).toMatch(/\*\*Reading, never authoring\.\*\*/);
-      expect(text).toMatch(
-        /A primary artifact and a blocking review stay under the hard stop whatever their class/,
-      );
-      // Citing it is what separates a skill that read the rule from one that
-      // simply carried on.
-      expect(text).toMatch(/A skill claiming it MUST cite this section/);
     });
   }
 });

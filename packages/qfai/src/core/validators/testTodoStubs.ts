@@ -14,17 +14,8 @@
  * implemented, while a `.skip` keeps its body and the fix is to drop the
  * modifier.
  *
- * A file `D-SCAFFOLD-PLACEHOLDER` will report — an unfilled skeleton, carrying
- * the scaffold sentinel beside a per-test-case TODO line, in a directory that
- * validator scans, for a test case that owes an ATDD annotation — is exempt
- * from `QFAI-TEST-003`. `qfai atdd scaffold` writes its skeletons as `it.skip`, and
- * `D-SCAFFOLD-PLACEHOLDER` already owns an unfilled scaffold — with a
- * deliberate ladder that stays a warning for `atdd.scaffoldEscalateCycles`
- * validate runs before it becomes an error. Reporting the same block here as
- * well would fail `qfai validate --fail-on error` on the scaffold's own output
- * before a line of it had been written, and would overrule that ladder from
- * outside. A `.todo` in the same file is still `QFAI-TEST-001`: the scaffold
- * does not write one.
+ * A test with an empty body is not a stub and raises nothing, whoever wrote
+ * it: `qfai atdd scaffold` writes its tests that way.
  *
  * `QFAI-TEST-002` (info) names the states in which the scan produced no
  * evidence: extensions with no dialect, an empty
@@ -693,6 +684,9 @@ function stubIssue(
   return found;
 }
 
+/** The marker line every placeholder the earlier scaffold wrote carries. */
+const LEGACY_SCAFFOLD_MARKER = "QFAI-SCAFFOLD-PLACEHOLDER";
+
 /**
  * Every stub occurrence in one already-read file, one issue per occurrence.
  *
@@ -718,20 +712,8 @@ function collectStubIssues(
   content: string,
   dialect: StubDialect,
   skippedTestSeverity: IssueSeverity,
-  placeholderReported: (relativePath: string, content: string) => boolean,
 ): Issue[] {
   const issues: Issue[] = [];
-  // An unfilled scaffold is `D-SCAFFOLD-PLACEHOLDER`'s, and its `it.skip` is
-  // what this scan would otherwise read as a parked suite. The marker is the
-  // scaffold's own, so it is gone the moment the block is authored — after
-  // which a `.skip` left behind is a hand-written one and is reported.
-  //
-  // The marker alone is not enough to hand it over. That validator scans four
-  // directories under `paths.testsDir`, reports a sentinel only beside a per-TC
-  // `TODO: implement assertion for` line, and passes over a TC whose `Level`
-  // owes no ATDD annotation. A file failing any of those is reported by nothing
-  // there, so it stays this gate's. The caller's predicate asks all of it.
-  const scaffolded = placeholderReported(relFile, content);
   // Offsets and line breaks survive both passes, so a match position in the
   // scanned text is still a position in the file the finding names.
   const masked = dialect.mask(content);
@@ -768,9 +750,6 @@ function collectStubIssues(
     // match spanned, and `refs` / the message are single-line surfaces.
     const matchedKind = dialect.label ? dialect.label(match) : match[0].trim().replace(/\s+/g, " ");
     const isSkip = dialect.isSkip?.(match) === true;
-    if (isSkip && scaffolded) {
-      continue;
-    }
     issues.push(
       stubIssue(
         relFile,
@@ -779,6 +758,24 @@ function collectStubIssues(
         lineNumber,
         match.index - lineStart + 1,
         isSkip,
+        skippedTestSeverity,
+      ),
+    );
+  }
+  // A placeholder an earlier `qfai atdd scaffold` wrote keeps its marker line.
+  // Its JS form is an `it.skip` the scan above reports; its Python form raises
+  // `NotImplementedError`, which no dialect pattern reads as a stub.
+  const legacy = content.indexOf(LEGACY_SCAFFOLD_MARKER);
+  if (legacy !== -1 && issues.length === 0) {
+    const before = content.slice(0, legacy);
+    issues.push(
+      stubIssue(
+        relFile,
+        runner,
+        LEGACY_SCAFFOLD_MARKER,
+        before.split("\n").length,
+        legacy - before.lastIndexOf("\n"),
+        false,
         skippedTestSeverity,
       ),
     );
@@ -1294,19 +1291,6 @@ export type TestTodoStubOptions = {
    * predicate takes a repository-relative, posix-slashed path.
    */
   fileFilter?: (relativePath: string) => boolean;
-  /**
-   * Whether `D-SCAFFOLD-PLACEHOLDER` reports this file.
-   *
-   * A file carrying the scaffold marker is exempt from `QFAI-TEST-003` only
-   * where that validator reports it instead. It scans four directories under
-   * `paths.testsDir` and nothing else, so a marked skeleton anywhere else — a
-   * package-local acceptance suite, which this gate does read — stays this
-   * gate's to report. Absent, no file is exempt: a run without that validator,
-   * as `--profile tdd` is, has nothing else to report a skeleton whose tests
-   * never run. The predicate takes a repository-relative, posix-slashed path
-   * and the file's content.
-   */
-  placeholderReported?: (relativePath: string, content: string) => boolean;
 };
 
 /**
@@ -1329,13 +1313,13 @@ export type TestTodoStubOptions = {
 function reportEmptyTestFileGlobs(): Issue {
   return issue(
     "QFAI-TEST-002",
-    "テストスタブ検出は有効ですが、`validation.traceability.testFileGlobs` が空のため 0 ファイルしか scan していません。クリーンな結果はスタブ不在の証拠になりません",
+    "Test stub detection is enabled, but `validation.traceability.testFileGlobs` is empty, so 0 files were scanned. A clean result is not evidence that no stubs exist",
     "info",
     "qfai.config.yaml",
     "validation.traceability.testFileGlobs",
     ["validation.traceability.testFileGlobs"],
     "canonical",
-    "`/qfai-configure` を実行するか、qfai.config.yaml の `validation.traceability.testFileGlobs` にリポジトリのテスト配置を設定してください。設定するまで QFAI-TEST-001 は 1 件も検出できません。",
+    "Run `/qfai-configure`, or set `validation.traceability.testFileGlobs` in qfai.config.yaml to the repository's test layout. Until it is set, QFAI-TEST-001 cannot detect anything.",
   );
 }
 
@@ -1571,15 +1555,7 @@ export async function validateTestTodoStubs(
       continue;
     }
 
-    issues.push(
-      ...collectStubIssues(
-        relFile,
-        content,
-        dialect,
-        skippedTestSeverity,
-        options.placeholderReported ?? (() => false),
-      ),
-    );
+    issues.push(...collectStubIssues(relFile, content, dialect, skippedTestSeverity));
   }
 
   if (truncated) {
@@ -1601,13 +1577,13 @@ export async function validateTestTodoStubs(
     issues.push(
       issue(
         "QFAI-TEST-002",
-        `テストスタブ検出の対象外な拡張子があります: ${extensions.join(", ")}。これらのファイルは QFAI-TEST-001 / QFAI-TEST-003 の対象外なので、クリーンな結果はスタブ不在の証拠になりません`,
+        `Some file extensions are outside test stub detection: ${extensions.join(", ")}. These files are outside QFAI-TEST-001 / QFAI-TEST-003, so a clean result is not evidence that no stubs exist`,
         "info",
         root,
         "validation.testStrategy.stubDialectCoverage",
         extensions,
         "canonical",
-        "対応済みの拡張子は .ts/.js 系 / .py / .go / .java / .kt / .rs / .rb / .cs です。未対応スタックのスタブは別途レビューで確認してください。",
+        "The supported extensions are .ts/.js variants, .py, .go, .java, .kt, .rs, .rb and .cs. Review stubs in unsupported stacks separately.",
       ),
     );
   }

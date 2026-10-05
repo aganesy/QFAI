@@ -11,8 +11,6 @@
  * There is no lower bound. A screen that does one thing is the shape the
  * ceiling protects, so it passes like any other count under it.
  */
-// QFAI:SPEC-0013:TC-0013-0032
-// QFAI:SPEC-0013:TC-0013-0033
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -34,7 +32,7 @@ const TEMPLATE_PATH = path.resolve(
   "init",
   ".qfai",
   "assistant",
-  "skills",
+  "skill",
   "qfai-sdd",
   "templates",
   "contracts",
@@ -46,7 +44,7 @@ const GUIDE_PATH = path.resolve(
   "init",
   ".qfai",
   "assistant",
-  "skills",
+  "skill",
   "qfai-sdd",
   "references",
   "ui-contract-guide.md",
@@ -59,12 +57,12 @@ async function withWorkspace(uiContract: string, task: (root: string) => Promise
       path.join(root, "qfai.config.yaml"),
       [
         "paths:",
-        "  contractsDir: .qfai/contracts",
-        "  specsDir: .qfai/specs",
+        "  contractsDir: .qfai/spec/03_contract",
+        "  specsDir: .qfai/spec",
         "  discussionDir: .qfai/discussion",
         "  outDir: .qfai/report",
-        "  skillsDir: .qfai/assistant/skills",
-        "  promptsDir: .qfai/assistant/skills",
+        "  skillsDir: .qfai/assistant/skill",
+        "  promptsDir: .qfai/assistant/skill",
         "  srcDir: src",
         "  testsDir: tests",
         "uiux:",
@@ -74,7 +72,7 @@ async function withWorkspace(uiContract: string, task: (root: string) => Promise
       ].join("\n"),
       "utf-8",
     );
-    const uiDir = path.join(root, ".qfai", "contracts", "ui");
+    const uiDir = path.join(root, ".qfai", "spec", "03_contract", "ui");
     await mkdir(uiDir, { recursive: true });
     await writeFile(path.join(uiDir, "sample.yaml"), uiContract, "utf-8");
     await task(root);
@@ -84,7 +82,10 @@ async function withWorkspace(uiContract: string, task: (root: string) => Promise
 }
 
 function uiContractWithPrimaryTaskCount(count: number): string {
-  const items = Array.from({ length: count }, (_, idx) => `      - task_${idx + 1}`);
+  const items = Array.from(
+    { length: count },
+    (_, idx) => `      - { id: task_${idx + 1}, label: task_${idx + 1}, acceptance: done }`,
+  );
   return [
     "screens:",
     "  - id: dashboard",
@@ -96,6 +97,7 @@ function uiContractWithPrimaryTaskCount(count: number): string {
   ].join("\n");
 }
 
+// QFAI:EX-0001-0155-01
 describe("TC-0013-0032: the primary_tasks ceiling is documented and named in the warning", () => {
   it("the shipped UI contract template documents the ceiling in its comments", async () => {
     const template = await readFile(TEMPLATE_PATH, "utf-8");
@@ -105,9 +107,7 @@ describe("TC-0013-0032: the primary_tasks ceiling is documented and named in the
   it("references/ui-contract-guide.md documents the ceiling", async () => {
     const guide = await readFile(GUIDE_PATH, "utf-8");
     expect(guide).toMatch(/at most 7/);
-    // And says there is no floor, which is the half a reader reaching for
-    // a count would otherwise have to infer from the table.
-    expect(guide).toMatch(/no lower bound/i);
+    expect(guide).toMatch(/required minimum is one/i);
   });
 
   it("the QFAI-AUD-020 warning message names the ceiling", async () => {
@@ -152,7 +152,7 @@ describe("TC-0013-0033: primary_tasks above 7 warns; 1 through 7 do not", () => 
 });
 
 describe("the shipped ui-contract.sample.yaml sits under its own ceiling", () => {
-  it("copied verbatim into .qfai/contracts/ui, the sample emits no QFAI-AUD-020", async () => {
+  it("copied verbatim into .qfai/spec/03_contract/ui, the sample emits no QFAI-AUD-020", async () => {
     const template = await readFile(TEMPLATE_PATH, "utf-8");
     await withWorkspace(template, async (root) => {
       const issues = await validateDesignAudit(root, defaultConfig);

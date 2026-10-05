@@ -21,7 +21,7 @@ name: Tag release commit
 # The push uses `RELEASE_AUTOMATION_TOKEN`, and that is load-bearing rather than incidental: GitHub
 # raises no workflow events for pushes made with `GITHUB_TOKEN`, so a tag pushed with the job token
 # would sit there without starting `release.yml`. It also keeps this workflow's `permissions:` at the
-# minimal `{ contents: read }`, leaving `BR-0017-0016`'s closed departure set untouched.
+# minimal `{ contents: read }`, leaving `BR-0015-0016`'s closed departure set untouched.
 #
 # One job of two steps, and neither the order nor the grouping is a leftover. The push is gated on
 # the decide step's output, so the two are one data dependency; what it writes is a single tag ref,
@@ -54,10 +54,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          # Shallow, deliberately. `BR-0017-0019` keeps full history job-scoped, and neither
+          # Shallow, deliberately. `BR-0015-0019` keeps full history job-scoped, and neither
           # question here needs a walk: the tag is created at HEAD, and whether one already
           # exists is a ref lookup asked of the API.
 
@@ -66,7 +66,7 @@ jobs:
         env:
           # The PAT, not the job token. Asking which pull request carried a commit needs
           # `pull-requests: read`, and granting that here would add a FOURTH member to
-          # `BR-0017-0016`'s closed departure set — a set whose whole point is that someone
+          # `BR-0015-0016`'s closed departure set — a set whose whole point is that someone
           # reads every addition. Reading through the secret keeps this workflow at
           # `{ contents: read }` and moves nothing into the permission surface.
           GH_TOKEN: ${{ secrets.RELEASE_AUTOMATION_TOKEN }}

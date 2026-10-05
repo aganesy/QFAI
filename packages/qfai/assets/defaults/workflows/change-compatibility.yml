@@ -1,0 +1,23 @@
+route: change-compatibility
+family: change
+stages:
+  - id: sdd
+    kind: sdd
+    steps: [sdd-triage, sdd-contract, sdd-story]
+    review: spec
+  - id: implement
+    kind: implement
+    steps: [implement-scaffold, implement-tdd]
+    after: [sdd]
+  - id: note
+    kind: verify
+    steps:
+      - { step: verify-change-note, passThrough: true }
+    after: [implement]
+    review: code
+  - id: verify
+    kind: verify
+    steps: [verify-qfai-gate, verify-repo-gate, verify-commit]
+    after: [note]
+decisionPoints: [sdd-triage]
+branchPoints: []

@@ -1,0 +1,19 @@
+route: backport-fix
+family: release
+stages:
+  - id: pick
+    kind: implement
+    steps: [implement-backport]
+  - id: note
+    kind: verify
+    steps:
+      - { step: verify-change-note, passThrough: true }
+    after: [pick]
+    review: code
+  - id: verify
+    kind: verify
+    steps: [verify-qfai-gate, verify-repo-gate, verify-commit]
+    after: [note]
+decisionPoints: []
+releasePoint: end
+branchPoints: []

@@ -1,0 +1,15 @@
+route: request-info
+family: close
+stages:
+  - id: ask
+    kind: triage
+    steps: [triage-request-info]
+  - id: close
+    kind: triage
+    steps: [triage-close]
+    after: [ask]
+decisionPoints: []
+branchPoints:
+  - step: triage-close
+    outcomes:
+      - { outcome: info-received, routes: decision-table }

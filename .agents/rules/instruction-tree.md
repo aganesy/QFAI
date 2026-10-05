@@ -15,12 +15,12 @@ directory an adopter does not have resolves to nothing.
 
 Four places own rules, and a file here restates none of them. It points.
 
-| Owner                             | Owns                                                  |
-| --------------------------------- | ----------------------------------------------------- |
-| `.agents/rules/**`                | The cross-AI rules, one master per rule               |
-| `.qfai/assistant/constitution/**` | The articles, and the Absolute Rules                  |
-| `AGENTS.md`, `CLAUDE.md`          | Naming, indexing, and which of the above applies when |
-| `REVIEW.md`, the agent cards      | What a reviewer looks for, and what each role does    |
+| Owner                        | Owns                                                  |
+| ---------------------------- | ----------------------------------------------------- |
+| `.agents/rules/**`           | The cross-AI rules, one master per rule               |
+| `.qfai/assistant/rule/**`    | The articles, and the Absolute Rules                  |
+| `AGENTS.md`, `CLAUDE.md`     | Naming, indexing, and which of the above applies when |
+| `REVIEW.md`, the agent cards | What a reviewer looks for, and what each role does    |
 
 On any disagreement the owner wins and the file here is wrong. A second
 statement of a rule is not a summary; it is a copy that drifts, and the drift is
@@ -28,7 +28,7 @@ invisible until someone follows the copy.
 
 ## Output language
 
-This directory pins none. `.qfai/assistant/constitution/constitution.md` states
+This directory pins none. `.qfai/assistant/rule/constitution.md` states
 the Absolute Rule — output in the user's working language — and that rule
 decides, here as everywhere.
 

@@ -1,7 +1,7 @@
 # UIX-REV: Scoring Review
 
 Review evaluator scoring quality against the four canonical UX axes
-fixed in `core/prototyping/evaluatorReview.ts#ORDINAL_AXES`.
+fixed in the prototyping reviewer prompt.
 
 ## Required Evaluation Axes
 
@@ -20,15 +20,7 @@ operator-authored rubric file is required or accepted):
 - `navigationFlow` and `functionality` must operate as floors, not style-dominant constraints
 - Reviewer prose must include good critique, too-lenient critique, blandness fail, and originality fail examples — calibration is enforced by reviewer-prompt content, not by a sidecar file
 
-## Aggregate Scoring Rules
-
-### Harness check
-
-- Plateau / breakthrough conditions are explicitly documented downstream
-- Later iterations are not automatically preferred over stronger earlier ones
-- Breakthrough branches are judged against the incumbent with best-of-history handling
-
 ## Aggregate Review Focus
 
 - Review axis pressure, floor conditions, and reviewer-prompt calibration quality as a single system
-- Remove old evaluation-axis vocabulary; only the four canonical UX axes (information architecture / navigation flow / usability / functionality) fixed in `core/prototyping/evaluatorReview.ts#ORDINAL_AXES` are valid
+- Remove old evaluation-axis vocabulary; only the four canonical UX axes (information architecture / navigation flow / usability / functionality) fixed in the prototyping reviewer prompt are valid

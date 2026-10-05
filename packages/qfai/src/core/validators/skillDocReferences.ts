@@ -4,47 +4,14 @@ import path from "node:path";
 
 import { resolvePath, type QfaiConfig } from "../config.js";
 import { isEnoent } from "../fs/errno.js";
-import { legacyAssistantSteeringSunsetLabel } from "../paths/assistantPaths.js";
 import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
 
-/**
- * The pre-recut paths are retired, so a reference to one is an error.
- *
- * Kept as a named export because the contract test drives it directly, and
- * shared with the assistantTreeMigration validator so both surfaces agree.
- */
-export function brokenRefSeverity(): "error" {
-  return "error";
-}
-
-// Paths that are legacy / non-canonical after the assistant-layer recut.
-// Any SKILL.md text that references these is flagged as broken.
-const NON_CANONICAL_REFS: Array<{ pattern: RegExp; reason: string }> = [
-  {
-    pattern: /\.qfai\/assistant\/steering\/agent-routing\.yml/,
-    reason: "agent-routing.yml has moved to .qfai/assistant/manifest/agent-routing.yml.",
-  },
-  {
-    pattern: /\.qfai\/assistant\/steering\/agent-catalog\.yml/,
-    reason: "agent-catalog.yml has moved to .qfai/assistant/manifest/agent-catalog.yml.",
-  },
-  {
-    pattern: /\.qfai\/assistant\/steering\/review-profiles\.yml/,
-    reason: "review-profiles.yml has moved to .qfai/assistant/manifest/review-profiles.yml.",
-  },
-  {
-    pattern: /\.qfai\/assistant\/steering\/test-layers\.md/,
-    reason: "test-layers.md has moved to .qfai/assistant/catalog/test-layers.md.",
-  },
-];
-
-// Every `qfai-*` skill MUST declare a trailing `project_memory:` block.
-// The block surfaces remembered-context invariants the skill expects
-// downstream agents to honor. The validator emits a warning when
-// missing (warning rather than error so projects mid-migration are
-// not broken; it becomes error once the seeded asset templates
-// uniformly carry the block).
+// A `qfai-*` skill MAY end with a `project_memory:` block: the
+// remembered-context invariants that skill expects downstream agents to
+// honor. The block is the skill's own, and no baseline states one for every
+// skill, so a skill with nothing to remember carries none. A declared block
+// that is not the last thing in the file is warned about.
 const QFAI_SKILL_ID_RE = /^qfai-/;
 
 export async function validateSkillDocReferences(
@@ -55,15 +22,13 @@ export async function validateSkillDocReferences(
   // Honor `config.paths.skillsDir` via the canonical resolvePath
   // helper so a project that relocates its skills tree (relative
   // OR absolute) is still scanned. Pre-fix the validator hardcoded
-  // `.qfai/assistant/skills` and silently SKIPped every qfai-* SKILL
+  // `.qfai/assistant/skill` and silently SKIPped every qfai-* SKILL
   // file under the actual configured location — letting
-  // W-SKILL-DOC-BROKEN-REF / W-SKILL-PROJECT-MEMORY drift go
+  // W-SKILL-PROJECT-MEMORY drift go
   // unreported. The fix mirrors the sister validators
   // `staleReferences.ts` and `autopilotPolicy.ts`.
   const skillsDir = resolvePath(root, config, "skillsDir");
   if (!(await exists(skillsDir))) return issues;
-
-  const refSeverity = brokenRefSeverity();
 
   let entries: Dirent[];
   try {
@@ -79,7 +44,7 @@ export async function validateSkillDocReferences(
     const skillDoc = path.join(skillsDir, skillId, "SKILL.md");
     // Operator-facing relPath derived from the actual scan path so
     // relocated skillsDir surfaces under its real (root-relative or
-    // absolute) location — not the hardcoded `.qfai/assistant/skills/`
+    // absolute) location — not a hardcoded default skill directory.
     // legacy.
     const skillDocRelPath = path.relative(root, skillDoc).replace(/\\/g, "/");
     let body: string;
@@ -90,33 +55,11 @@ export async function validateSkillDocReferences(
       throw err;
     }
 
-    // W-SKILL-DOC-BROKEN-REF — scoped to qfai-* skills per contract.
-    // User-defined non-qfai-* skills under .qfai/assistant/skills/ are
-    // intentionally NOT flagged so consumers can author their own
-    // SKILL.md without colliding with QFAI's path-migration finding.
-    // The severity matches the qfai-validate.md contract.
-    if (QFAI_SKILL_ID_RE.test(skillId)) {
-      for (const ref of NON_CANONICAL_REFS) {
-        if (ref.pattern.test(body)) {
-          const headline = `${skillId}/SKILL.md references a non-canonical path (post-recut) past the announced sunset (v${legacyAssistantSteeringSunsetLabel()}). Migrate the reference to fix.`;
-          issues.push(
-            issue(
-              "W-SKILL-DOC-BROKEN-REF",
-              `${headline} ${ref.reason}`,
-              refSeverity,
-              skillDocRelPath,
-              "skillDocReferences.brokenRef",
-            ),
-          );
-        }
-      }
-    }
-
-    // project_memory enforcement (warning-only — opt-in convention).
-    // The block MUST be the trailing structure of the SKILL.md so the
-    // remembered-context declaration is the last thing the loader
+    // project_memory shape (warning-only — opt-in convention).
+    // A declared block MUST be the trailing structure of the SKILL.md so
+    // the remembered-context declaration is the last thing the loader
     // reads. Mid-file `project_memory:` lines followed by other
-    // sections are NOT compliant.
+    // sections are NOT compliant. A SKILL.md that declares no block is.
     //
     // Algorithm:
     //   1. Walk the full body line-by-line and remember the LAST
@@ -139,7 +82,7 @@ export async function validateSkillDocReferences(
     //          Any other indented content (e.g. indented prose
     //          paragraph, indented standalone value, indented HTML
     //          comment) is rejected so the trailing block does not
-    //          silently absorb non-YAML text per BR-0004-0022.
+    //          silently absorb non-YAML text under the YAML block rule.
     //      Reject:
     //        - any line starting with `#` (markdown heading) — the
     //          strongest "not trailing" signal
@@ -154,7 +97,6 @@ export async function validateSkillDocReferences(
         if (line !== undefined && declRe.test(line)) lastDeclIdx = i;
       }
       const isTrailing = (() => {
-        if (lastDeclIdx === -1) return false;
         // YAML-syntactic indented-continuation patterns. Both
         // regexes use `\s+` (one-or-more) to make the indent
         // requirement explicit and symmetric:
@@ -183,11 +125,11 @@ export async function validateSkillDocReferences(
         }
         return true;
       })();
-      if (!isTrailing) {
+      if (lastDeclIdx !== -1 && !isTrailing) {
         issues.push(
           issue(
             "W-SKILL-PROJECT-MEMORY",
-            `${skillId}/SKILL.md is missing a trailing project_memory: block for its remembered context.`,
+            `${skillId}/SKILL.md declares a project_memory: block that is not the last thing in the file. Move the block to the end, or remove it if the skill has nothing to remember.`,
             "warning",
             skillDocRelPath,
             "skillDocReferences.projectMemory",

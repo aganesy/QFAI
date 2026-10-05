@@ -1,12 +1,9 @@
 /**
- * Validator: assistantTreeMigration (.qfai/assistant/{constitution,manifest,catalog,process}/).
+ * Validator: assistantTreeMigration (.qfai/assistant/{rule,skill,agent,prompt}/).
  *
  * Covers TC-0004-0015 (4-layer enum guard), TC-0004-0022 (D-DEPRECATED-PATH
  * sunset literal), TC-0004-0025 (W-USER-EDIT-PRESERVED info pass-through).
  */
-// QFAI:SPEC-0004:TC-0004-0015
-// QFAI:SPEC-0004:TC-0004-0022
-// QFAI:SPEC-0004:TC-0004-0025
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -20,7 +17,7 @@ async function newRoot(prefix: string): Promise<string> {
 }
 
 async function seed4LayerTree(root: string): Promise<void> {
-  for (const layer of ["constitution", "manifest", "catalog", "process"]) {
+  for (const layer of ["rule", "skill", "step", "agent", "prompt"]) {
     const dir = path.join(root, ".qfai", "assistant", layer);
     await mkdir(dir, { recursive: true });
     await writeFile(path.join(dir, ".gitkeep"), `# ${layer}\n`, "utf-8");
@@ -32,6 +29,8 @@ async function getConfig(root: string) {
   return r.config;
 }
 
+// QFAI:EX-0001-0045-01
+// QFAI:EX-0001-0046-02
 describe("assistantTreeMigration validator", () => {
   it("returns no issues when .qfai/assistant/ is absent", async () => {
     const root = await newRoot("treemig-absent");
@@ -44,7 +43,8 @@ describe("assistantTreeMigration validator", () => {
   });
 
   // TC-0004-0015: 4-layer enum guard
-  it("TC-0004-0015: emits W-ASSISTANT-LAYOUT for a non-canonical layer dir", async () => {
+  // QFAI:EX-0001-0012-05
+  it("TC-0004-0015: reports a non-canonical layer dir", async () => {
     const root = await newRoot("treemig-enum");
     try {
       await seed4LayerTree(root);
@@ -57,56 +57,20 @@ describe("assistantTreeMigration validator", () => {
       );
       expect(enumIssues.length).toBe(1);
       expect(enumIssues[0]?.message).toContain("extras");
-      expect(enumIssues[0]?.message).toContain("constitution");
+      expect(enumIssues[0]?.message).toContain("rule");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
   });
 
-  // TC-0004-0022: D-DEPRECATED-PATH with sunset literal
-  it("TC-0004-0022: emits D-DEPRECATED-PATH containing 'sunset: vX.Y.Z' when legacy steering/ exists", async () => {
-    const root = await newRoot("treemig-sunset");
-    try {
-      await seed4LayerTree(root);
-      const legacy = path.join(root, ".qfai", "assistant", "steering");
-      await mkdir(legacy, { recursive: true });
-      await writeFile(path.join(legacy, "test-layers.md"), "old\n", "utf-8");
-
-      const issues = await validateAssistantTreeMigration(root, await getConfig(root));
-      const sunsetIssues = issues.filter((i) => i.code === "D-DEPRECATED-PATH");
-      expect(sunsetIssues.length).toBe(1);
-      expect(sunsetIssues[0]?.message).toMatch(/sunset:\s*v\d+\.\d+\.\d+/);
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  // TC-0004-0022 (symmetric): legacy instructions/ fires D-DEPRECATED-PATH symmetrically with steering/
-  it("TC-0004-0022 (symmetric): emits D-DEPRECATED-PATH for legacy .qfai/assistant/instructions/ in parallel with steering/", async () => {
-    const root = await newRoot("treemig-sunset-symmetric");
-    try {
-      await seed4LayerTree(root);
-      const legacyInstr = path.join(root, ".qfai", "assistant", "instructions");
-      await mkdir(legacyInstr, { recursive: true });
-      await writeFile(path.join(legacyInstr, "drift-protocol.md"), "old\n", "utf-8");
-      const issues = await validateAssistantTreeMigration(root, await getConfig(root));
-      const instrIssues = issues.filter(
-        (i) => i.code === "D-DEPRECATED-PATH" && i.file?.includes("instructions"),
-      );
-      expect(instrIssues.length).toBe(1);
-      expect(instrIssues[0]?.message).toMatch(/sunset:\s*v\d+\.\d+\.\d+/);
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  // TC-0004-0022 (severity escalation): legacy steering/ still present at or past sunset minor escalates to error
+  // TC-0004-0022: a legacy instructions/ layer is reported as D-DEPRECATED-PATH at error
+  // QFAI:EX-0001-0043-01
   it("TC-0004-0022 (severity): D-DEPRECATED-PATH reports at error", async () => {
     const mod = await import("../../src/core/validators/assistantTreeMigration.js");
     const root = await newRoot("treemig-severity");
     try {
       await seed4LayerTree(root);
-      const legacy = path.join(root, ".qfai", "assistant", "steering");
+      const legacy = path.join(root, ".qfai", "assistant", "instructions");
       await mkdir(legacy, { recursive: true });
       await writeFile(path.join(legacy, "test-layers.md"), "old\n", "utf-8");
 
@@ -115,6 +79,7 @@ describe("assistantTreeMigration validator", () => {
       expect(sunsetIssues.length).toBe(1);
       expect(sunsetIssues[0]?.severity).toBe("error");
       expect(sunsetIssues[0]?.message).toMatch(/past the announced sunset/);
+      expect(sunsetIssues[0]?.message).toMatch(/sunset:\s*v\d+\.\d+\.\d+/);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -125,7 +90,7 @@ describe("assistantTreeMigration validator", () => {
     const root = await newRoot("treemig-info");
     try {
       // Only seed 3 of the 4 layers.
-      for (const layer of ["constitution", "manifest", "catalog"]) {
+      for (const layer of ["rule", "skill", "agent"]) {
         const dir = path.join(root, ".qfai", "assistant", layer);
         await mkdir(dir, { recursive: true });
         await writeFile(path.join(dir, ".gitkeep"), "", "utf-8");
@@ -133,9 +98,32 @@ describe("assistantTreeMigration validator", () => {
       const issues = await validateAssistantTreeMigration(root, await getConfig(root));
       const infoIssues = issues.filter((i) => i.code === "I-ASSISTANT-LAYER-UNSEEDED");
       expect(infoIssues.length).toBeGreaterThanOrEqual(1);
-      // process/ should be the named offender.
-      expect(infoIssues.some((i) => i.message.includes("process"))).toBe(true);
+      // prompt/ should be the named offender.
+      expect(infoIssues.some((i) => i.message.includes("prompt"))).toBe(true);
       expect(infoIssues[0]?.severity).toBe("info");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:EX-0001-0043-01
+  it("allows step and skill.local and reports a legacy catalog directory", async () => {
+    const root = await newRoot("treemig-catalog");
+    try {
+      await seed4LayerTree(root);
+      const assistant = path.join(root, ".qfai", "assistant");
+      await mkdir(path.join(assistant, "skill.local"));
+      const catalog = path.join(assistant, "catalog");
+      await mkdir(catalog);
+      await writeFile(path.join(catalog, "product.md"), "# Old\n", "utf-8");
+      await mkdir(path.join(assistant, "skills"));
+      const changed = await validateAssistantTreeMigration(root, await getConfig(root));
+      expect(
+        changed.filter((found) => found.code === "W-ASSISTANT-LAYOUT").map((found) => found.file),
+      ).toEqual([".qfai/assistant/catalog/", ".qfai/assistant/skills/"]);
+      const catalogIssue = changed.find((found) => found.file === ".qfai/assistant/catalog/");
+      expect(catalogIssue?.severity).toBe("warning");
+      expect(catalogIssue?.message).toContain("rule, skill, step, agent, prompt");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

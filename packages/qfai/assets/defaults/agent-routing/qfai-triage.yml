@@ -1,0 +1,90 @@
+# Routing defaults for the `qfai-triage` steps.
+# `_contract.yml` states what every file in this directory holds.
+
+routing:
+  # The triage steps change no tracked file, so each has one author and no
+  # build or test phase.
+  - step: triage-close
+    phases:
+      - id: record
+        mandatory_agents: [requirements-analyst]
+        conditional_agents: []
+        parallel_groups: []
+        rerun_policy: changed-scope-dependents
+    review_profile: default
+
+  - step: triage-answer
+    phases:
+      - id: answer
+        mandatory_agents: [discovery-analyst]
+        conditional_agents: []
+        parallel_groups: []
+        rerun_policy: changed-scope-dependents
+    review_profile: default
+
+  # A production owner joins when the question is about the code it owns.
+  - step: triage-investigate
+    phases:
+      - id: investigate
+        mandatory_agents: [discovery-analyst]
+        conditional_agents: [frontend-engineer, backend-engineer]
+        parallel_groups: []
+        rerun_policy: changed-scope-dependents
+    review_profile: default
+
+  - step: triage-request-info
+    phases:
+      - id: ask
+        mandatory_agents: [discovery-analyst]
+        conditional_agents: []
+        parallel_groups: []
+        rerun_policy: changed-scope-dependents
+    review_profile: default
+
+  - step: triage-dedupe
+    phases:
+      - id: dedupe
+        mandatory_agents: [discovery-analyst]
+        conditional_agents: []
+        parallel_groups: []
+        rerun_policy: changed-scope-dependents
+    review_profile: default
+
+  # The children are acceptance signals, which are the analyst's; their order
+  # and dependencies are the planner's.
+  - step: triage-decompose
+    phases:
+      - id: split
+        mandatory_agents: [requirements-analyst, delivery-planner]
+        conditional_agents: []
+        parallel_groups: []
+        rerun_policy: changed-scope-dependents
+    review_profile: default
+
+  # A production owner joins to say whether a frame is the product's own.
+  - step: triage-cluster
+    phases:
+      - id: cluster
+        mandatory_agents: [devops-ci-engineer]
+        conditional_agents: [frontend-engineer, backend-engineer]
+        parallel_groups: []
+        rerun_policy: changed-scope-dependents
+    review_profile: default
+
+  - step: triage-security-intake
+    phases:
+      - id: intake
+        mandatory_agents: [solution-architect]
+        conditional_agents: []
+        parallel_groups: []
+        rerun_policy: changed-scope-dependents
+    review_profile: default
+
+  - step: triage-handoff
+    phases:
+      - id: handoff
+        mandatory_agents: [devops-ci-engineer]
+        conditional_agents: []
+        parallel_groups: []
+        rerun_policy: changed-scope-dependents
+    review_profile: default

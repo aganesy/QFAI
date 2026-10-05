@@ -12,8 +12,6 @@ import {
   atddAcceptanceLayerFilter,
   atddAcceptanceTestGlobs,
 } from "../../src/core/atddTraceability.js";
-import { SCAFFOLD_PLACEHOLDER_MARKER } from "../../src/core/atdd/scaffold.js";
-import { scaffoldPlaceholderReportedFilter } from "../../src/core/validators/scaffoldPlaceholder.js";
 import {
   STUB_SOURCE_FILE_PATTERN,
   stubSourceFilePattern,
@@ -492,30 +490,6 @@ describe("the ATDD gate's file selection", () => {
     expect(issues.filter((issue) => issue.code === "QFAI-TEST-001")).toEqual([]);
   });
 
-  // `D-SCAFFOLD-PLACEHOLDER` is what reports an unfilled skeleton, so this gate
-  // stands aside for one — but only where that validator looks. It scans four
-  // directories under `paths.testsDir`; this gate also reads a monorepo's
-  // package-local acceptance suites, and a marked skeleton there was exempt
-  // here and unseen by it.
-  const scaffolded = (): string =>
-    [
-      `// ${SCAFFOLD_PLACEHOLDER_MARKER}`,
-      "// TODO: implement assertion for TC-0001-0001",
-      "it.skip('TC-0001-0001: pays', () => {});",
-      "",
-    ].join("\n");
-
-  // The same skeleton with its TODO written out and the sentinel left behind.
-  // `D-SCAFFOLD-PLACEHOLDER` requires both, so it reports nothing here.
-  const progressed = (): string =>
-    [
-      `// ${SCAFFOLD_PLACEHOLDER_MARKER}`,
-      "it.skip('TC-0001-0001: pays', () => {",
-      "  expect(pay()).toBe(true);",
-      "});",
-      "",
-    ].join("\n");
-
   it("leaves a fixture an extension-broad project glob swept in", async () => {
     const root = await newTempDir();
     const config = atddConfig(["packages/*/tests/**/*"]);
@@ -830,88 +804,5 @@ describe("the ATDD gate's file selection", () => {
     });
 
     expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-001");
-  });
-
-  it("stands aside for a marked skeleton the placeholder validator scans", async () => {
-    const root = await newTempDir();
-    const config = atddConfig(["packages/*/tests/**/*.test.ts"]);
-    await writeTestFile(root, "tests/integration/pay.test.ts", scaffolded());
-
-    const issues = await validateTestTodoStubs(root, config, {
-      globs: atddAcceptanceTestGlobs(root, config, "**/*.ts"),
-      fileFilter: atddAcceptanceLayerFilter(root, config),
-      placeholderReported: scaffoldPlaceholderReportedFilter(root, config),
-    });
-
-    expect(issues.filter((issue) => issue.code === "QFAI-TEST-003")).toEqual([]);
-  });
-
-  it("reports a progressed skeleton the placeholder validator passes over", async () => {
-    const root = await newTempDir();
-    const config = atddConfig(["packages/*/tests/**/*.test.ts"]);
-    // Inside the scanned directory, so the path half of the hand-off holds.
-    // What does not hold is the content half: the TODO line is written out,
-    // so the placeholder validator reports nothing and the sentinel is all
-    // that is left. Suppressing on the sentinel alone left the file reported
-    // by neither, with its skipped case discharging an obligation.
-    await writeTestFile(root, "tests/integration/pay.test.ts", progressed());
-
-    const issues = await validateTestTodoStubs(root, config, {
-      globs: atddAcceptanceTestGlobs(root, config, "**/*.ts"),
-      fileFilter: atddAcceptanceLayerFilter(root, config),
-      placeholderReported: scaffoldPlaceholderReportedFilter(root, config),
-    });
-
-    expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-003");
-  });
-
-  it("reports a marked skeleton outside that scan rather than exempting it", async () => {
-    const root = await newTempDir();
-    const config = atddConfig(["packages/*/tests/**/*.test.ts"]);
-    await writeTestFile(root, "packages/checkout/tests/integration/pay.test.ts", scaffolded());
-
-    const issues = await validateTestTodoStubs(root, config, {
-      globs: atddAcceptanceTestGlobs(root, config, "**/*.ts"),
-      fileFilter: atddAcceptanceLayerFilter(root, config),
-      placeholderReported: scaffoldPlaceholderReportedFilter(root, config),
-    });
-
-    // Exempting it here would leave the file reported by neither validator, and
-    // the ATDD gate green over a suite whose tests do not run.
-    expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-003");
-  });
-
-  it("reports a marked skeleton under a dot directory the placeholder scan skips", async () => {
-    const root = await newTempDir();
-    const config = atddConfig(["tests/integration/.generated/**/*.test.ts"]);
-    // The directory is a scanned one and the basename is the writer's own, so
-    // both halves of the earlier check hold. But the placeholder scan globs
-    // with `dot: false` and never enters `.generated`, while the project glob
-    // names it and this gate reads it — so standing aside left the skeleton
-    // reported by neither.
-    await writeTestFile(root, "tests/integration/.generated/pay.test.ts", scaffolded());
-
-    const issues = await validateTestTodoStubs(root, config, {
-      globs: ["tests/integration/.generated/**/*.test.ts"],
-      placeholderReported: scaffoldPlaceholderReportedFilter(root, config),
-    });
-
-    expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-003");
-  });
-
-  it("reports a marked file the placeholder validator's globs do not collect", async () => {
-    const root = await newTempDir();
-    const config = atddConfig(["packages/*/tests/**/*.test.ts"]);
-    // `pay.ts` sits in a scanned directory and matches no scaffold basename
-    // pattern, so `D-SCAFFOLD-PLACEHOLDER` never opens it. Standing aside on
-    // the directory alone would leave the file reported by neither.
-    await writeTestFile(root, "tests/integration/pay.ts", scaffolded());
-
-    const issues = await validateTestTodoStubs(root, config, {
-      globs: ["tests/integration/**/*.ts"],
-      placeholderReported: scaffoldPlaceholderReportedFilter(root, config),
-    });
-
-    expect(issues.map((issue) => issue.code)).toContain("QFAI-TEST-003");
   });
 });

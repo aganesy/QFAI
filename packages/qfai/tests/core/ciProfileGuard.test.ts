@@ -4,9 +4,9 @@
  * `buildCiProfileIssue` returning a hard `error` for any profile outside
  * `{full, verify, tdd, sdd}` whenever `CI=true` would make `runValidate`
  * short-circuit: zero validators run and the command exits non-zero.
- * `qfai-atdd`, `qfai-discussion` and `qfai-prototyping` each name one of
- * those profiles as their **only** completion gate, with no CI-legal
- * fallback documented — so all three would become uncompletable the moment
+ * `qfai-discussion` and `qfai-prototyping` each name one of those profiles
+ * as their **only** completion gate, with no CI-legal fallback documented —
+ * so both would become uncompletable the moment
  * they ran anywhere that exports `CI=true`.
  *
  * The operator-facing strings must also name all four profiles the
@@ -85,7 +85,7 @@ describe("buildCiProfileIssue", () => {
   it("says the stage run is valid and what completion still needs", () => {
     const found = buildCiProfileIssue("prototyping", CI_ENV);
 
-    expect(found?.message).toContain("stage gate としては有効");
+    expect(found?.message).toContain("It is valid as a stage gate");
     expect(found?.suggested_action).toContain("full-scan");
   });
 });

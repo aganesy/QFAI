@@ -5,7 +5,7 @@ name: Release
 #   push tag vX.Y.Z   -> verify + gate + GitHub Release + npm publish
 #   workflow_dispatch -> verify + gate + npm publish, for a tag that already exists
 #
-# `RELEASE.md` treats tag creation and `npm publish（必要な場合）` as separate
+# `RELEASE.md` treats tag creation and `npm publish` (when needed) as separate
 # steps, and the repo rules require an explicit instruction for each. That
 # separation is now enforced by the `release` **environment** rather than by
 # withholding the trigger: the publish job cannot start until a required
@@ -75,7 +75,7 @@ env:
   # current LTS major instead, and let setup-node resolve its newest patch.
   #
   # Only the publish job runs on it, and it is the ONE workflow-level Node literal this repository
-  # allows (BR-0017-0027). It survives because it encodes npm's engine range for trusted publishing,
+  # allows (BR-0015-0027). It survives because it encodes npm's engine range for trusted publishing,
   # which no file in the repository expresses. Every other job, the release gate included, takes its
   # Node from `./.github/actions/setup`.
   NODE_PUBLISH: "24"
@@ -99,7 +99,7 @@ jobs:
       suite-shape: ${{ steps.shape.outputs.suite-shape }}
       checks-shape: ${{ steps.shape.outputs.checks-shape }}
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           # Not the input: the repository default, so nothing the dispatcher
@@ -279,9 +279,8 @@ jobs:
             !Array.isArray(packageScripts) ? Object.keys(packageScripts) : [];
           // `test:windows-parity` is a suite list the Windows job runs, not a slice of the suite:
           // its files belong to slices already counted here.
-          // SHIPPED-CI: not-applicable
-          // Because: the shipped set carries no publish workflow, so it has no release gate to classify.
-          const NOT_SLICES = ["test:assets", "test:coverage", "test:windows-parity"];
+          // SHIPPED-CI: not-applicable. Because: the shipped set has no release gate to list these.
+          const NOT_SLICES = ["test:assets", "test:windows-parity"];
           const sliceScripts = scriptNames.filter((name) =>
             name.startsWith("test:") && !NOT_SLICES.includes(name)
           );
@@ -339,7 +338,7 @@ jobs:
       # because either of the two gate steps below may be the one that runs.
       VERSION_PIN_SKIP: "1"
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           ref: ${{ needs.verify.outputs.sha }}
@@ -361,9 +360,9 @@ jobs:
       #
       # Not `uses: aganesy/QFAI/.github/actions/setup@main`: that is a moving reference, and
       # this repository pins every `uses:` to an immutable ref. Not a re-inlined preamble
-      # either — `BR-0017-0027` makes the composite action the single definition, and a copy
+      # either — `BR-0015-0027` makes the composite action the single definition, and a copy
       # here is the drift its extraction removed.
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           ref: ${{ github.sha }}
@@ -377,7 +376,7 @@ jobs:
           # which does not match a nested copy. Measured: 376 errors, on every release rather than
           # only on the re-publish path this sidecar exists for.
           sparse-checkout-cone-mode: false
-      # The one definition of how this repository installs a toolchain (BR-0017-0027). It enables
+      # The one definition of how this repository installs a toolchain (BR-0015-0027). It enables
       # corepack, resolves Node from `package.json#engines`, re-shims pnpm against the toolcache Node
       # in that order, and installs frozen. Inlining any of it is what let the gate and `ci.yml` drift.
       #
@@ -430,11 +429,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           ref: ${{ needs.verify.outputs.sha }}
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           ref: ${{ github.sha }}
@@ -454,11 +453,11 @@ jobs:
     env:
       VERSION_PIN_SKIP: "1"
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           ref: ${{ needs.verify.outputs.sha }}
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           ref: ${{ github.sha }}
@@ -476,11 +475,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           ref: ${{ needs.verify.outputs.sha }}
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           ref: ${{ github.sha }}
@@ -519,7 +518,7 @@ jobs:
       matrix:
         slice: [core, validators, integration, e2e, cli, unit, scripts]
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           ref: ${{ needs.verify.outputs.sha }}
@@ -531,7 +530,7 @@ jobs:
           fetch-depth: 2
       # The composite action from THIS workflow's revision, for the reason the gate documents: a tag
       # cut before the action existed has no `./.github/actions/setup` in its tree.
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           ref: ${{ github.sha }}
@@ -585,7 +584,7 @@ jobs:
       matrix:
         slice: [core, validators, integration, e2e, cli, unit, scripts]
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           ref: ${{ needs.verify.outputs.sha }}
@@ -595,7 +594,7 @@ jobs:
           fetch-depth: 2
       # The composite action from THIS workflow's revision, for the reason the gate documents: a tag
       # cut before the action existed has no `./.github/actions/setup` in its tree.
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           ref: ${{ github.sha }}
@@ -660,13 +659,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           ref: ${{ needs.verify.outputs.sha }}
       # The composite action from THIS workflow's revision, for the reason the gate documents: a tag
       # cut before the action existed has no `./.github/actions/setup` in its tree.
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           ref: ${{ github.sha }}
@@ -738,7 +737,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           ref: ${{ needs.verify.outputs.sha }}
@@ -901,7 +900,7 @@ jobs:
               ;;
           esac
         shell: bash
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           ref: ${{ needs.verify.outputs.sha }}
@@ -910,7 +909,7 @@ jobs:
       # existed does not carry it, so reading it out of the tag's tree made the refusal below
       # fire on every re-publish of an older tag — a documented route, stopped by a guard meant
       # to protect it.
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           ref: ${{ github.sha }}
@@ -921,7 +920,7 @@ jobs:
       - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
         run: corepack enable
         shell: bash
-      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ env.NODE_PUBLISH }}
           cache: pnpm
@@ -960,13 +959,8 @@ jobs:
           echo "rebuilt ${names} permitted dependency package(s)"
         shell: bash
       - name: Drop the placeholder auth line so npm reaches the OIDC exchange
-        # setup-node writes `//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}`
-        # and exports NODE_AUTH_TOKEN as the literal `XXXXX-XXXXX-XXXXX-XXXXX`
-        # when no token is supplied. npm reads that as a configured credential,
-        # skips trusted publishing entirely, and sends a token the registry has
-        # never seen. Removing the line is the workaround tracked in
-        # actions/setup-node#1551; npm then finds ACTIONS_ID_TOKEN_REQUEST_* and
-        # exchanges properly.
+        # setup-node writes an auth-token entry for registry-url. Remove that
+        # entry before trusted publishing so npm uses the OIDC exchange.
         run: |
           set -euo pipefail
           npmrc="${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}"

@@ -2,33 +2,29 @@
  * Integration: init writes no workflow mode and asks for none, and its summary names the mode in
  * force on one line, `active` when the key is absent.
  */
-// QFAI:SPEC-0003:TC-0003-0071
-// QFAI:SPEC-0003:TC-0003-0072
-// QFAI:SPEC-0003:TC-0003-0073
+// QFAI:AC-0001-0196-04
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 
-import { initQuietly, withEmptyRepo, withInstall } from "./upgradeStates.js";
-
-const MODE_LINE = /^Workflow mode: .*$/gm;
+import { initQuietly, modeLines, withEmptyRepo, withInstall } from "./upgradeStates.js";
 
 function configPath(root: string): string {
   return path.join(root, "qfai.config.yaml");
 }
 
-function modeLines(output: string): string[] {
-  return output.match(MODE_LINE) ?? [];
-}
-
+// QFAI:EX-0001-0196-11
+// QFAI:EX-0001-0196-12
+// QFAI:EX-0001-0196-13
 describe("the mode line", () => {
   afterEach(() => {
     process.exitCode = undefined;
   });
 
-  it("TC-0003-0071: Fresh non-interactive init: no mode key, mode line active", async () => {
+  // QFAI:EX-0001-0196-11
+  it("Fresh non-interactive init: no mode key, mode line active", async () => {
     await withEmptyRepo(async (root) => {
       const output = await initQuietly(root, false, false);
 
@@ -40,7 +36,8 @@ describe("the mode line", () => {
     });
   });
 
-  it("TC-0003-0072: Upgrade with no mode key: config unchanged, mode active", async () => {
+  // QFAI:EX-0001-0196-12
+  it("Upgrade with no mode key: config unchanged, mode active", async () => {
     await withInstall([], async (root) => {
       const before = await readFile(configPath(root));
       expect(before.toString("utf-8")).not.toMatch(/^workflow:/m);
@@ -52,7 +49,8 @@ describe("the mode line", () => {
     });
   });
 
-  it("TC-0003-0073: Mode line for active, shadow, off and an invalid value", async () => {
+  // QFAI:EX-0001-0196-13
+  it("Mode line for active, shadow, off and an invalid value", async () => {
     const expected: Record<string, string> = {
       active: "Workflow mode: active",
       shadow: "Workflow mode: shadow",
@@ -67,9 +65,9 @@ describe("the mode line", () => {
 
         const output = await initQuietly(root);
 
-        expect(await readFile(file)).toEqual(before);
-        expect(modeLines(output)).toEqual([line]);
-        expect(process.exitCode ?? 0).toBe(0);
+        expect(await readFile(file), mode).toEqual(before);
+        expect(modeLines(output), mode).toEqual([line]);
+        expect(process.exitCode ?? 0, mode).toBe(0);
       });
     }
   });

@@ -1,58 +1,30 @@
-// QFAI:SPEC-0018:TC-0018-0019
-// QFAI:SPEC-0018:TC-0018-0020
-// QFAI:SPEC-0018:TC-0018-0094
-// QFAI:SPEC-0018:TC-0018-0164
-// QFAI:SPEC-0018:TC-0018-0183
-// QFAI:SPEC-0018:TC-0018-0184
-// QFAI:SPEC-0018:TC-0018-0185
-// QFAI:SPEC-0018:TC-0018-0186
+// QFAI:AC-0001-0188-05
+// QFAI:AC-0001-0191-01
+// QFAI:AC-0001-0210-05
+// QFAI:AC-0001-0218-01
+// QFAI:AC-0001-0218-02
+// QFAI:AC-0001-0218-03
+// QFAI:AC-0001-0218-04
+// QFAI:AC-0001-0218-05
+// QFAI:EX-0001-0188-08
+// QFAI:EX-0001-0210-08
 
-import { existsSync } from "node:fs";
-import { cp, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
-import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 
-import { readWorkflowMode } from "../../../src/core/config.js";
-import { decide } from "../../../src/core/workflow/decide.js";
+import { loadConfig } from "../../../src/core/config.js";
+import { planOf as planned } from "../../../src/core/workflow/plan.js";
 import {
-  checkInstalledPlans,
+  allPlanRefusals,
   loadBuiltInPlans,
+  packagePlansDir,
+  parsePlan,
   type WorkflowPlanFile,
 } from "../../../src/core/workflow/plans.js";
-import { getInitAssetsDir } from "../../../src/shared/assets.js";
 import { removeTempTree } from "../../helpers/tempTree.js";
-
-type Facts = Parameters<typeof decide>[2];
-
-const WORKFLOWS = path.join(".qfai", "assistant", "process", "workflows");
-const ROUTING = path.join(".qfai", "assistant", "manifest", "agent-routing.yml");
-
-const startFacts: Facts = {
-  start: {
-    runId: "run-20260925000000010",
-    qfaiVersion: "2.0.0",
-    digestKey: "d".repeat(64),
-    policyDigests: {},
-    manifestDigests: {},
-    planDigests: {},
-  },
-};
-
-const capabilities = Object.fromEntries(
-  [
-    "fetchSkillBody",
-    "invokeStage",
-    "delegateSubAgent",
-    "relayQuestion",
-    "runShellAndTests",
-    "writeProjectRoot",
-    "keepRunRecord",
-    "resume",
-  ].map((capability) => [capability, true]),
-);
 
 const roots: string[] = [];
 
@@ -60,294 +32,461 @@ afterEach(async () => {
   await Promise.all(roots.splice(0).map((root) => removeTempTree(root)));
 });
 
-// A minimal project: the installed plans, each skill's Operations table and the routing manifest,
-// as `qfai init` would leave them, and no other part of an initialized tree.
-async function project(): Promise<string> {
+// A minimal project: one `STEP.md` per step the package's plans run, and the `qfai.config.yaml`
+// given. The plans and the routing stay in the package.
+async function project(config?: string): Promise<string> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-plans-"));
   roots.push(root);
-  const assets = path.join(getInitAssetsDir(), ".qfai", "assistant");
-  await cp(path.join(assets, "process", "workflows"), path.join(root, WORKFLOWS), {
-    recursive: true,
-  });
-  await mkdir(path.dirname(path.join(root, ROUTING)), { recursive: true });
-  await cp(path.join(assets, "manifest", "agent-routing.yml"), path.join(root, ROUTING));
-  for (const skill of await readdir(path.join(assets, "skills"))) {
-    const table = path.join("skills", skill, "references", "orchestrated-mode.md");
-    if (!existsSync(path.join(assets, table))) continue;
-    await mkdir(path.dirname(path.join(root, ".qfai", "assistant", table)), { recursive: true });
-    await cp(path.join(assets, table), path.join(root, ".qfai", "assistant", table));
+  const plans = await loadBuiltInPlans();
+  const names = plans.flatMap((plan) => plan.stages.flatMap((stage) => stage.steps));
+  for (const name of new Set(names.map((step) => step.name))) {
+    const dir = path.join(root, ".qfai", "assistant", "step", name);
+    await mkdir(dir, { recursive: true });
+    await writeFile(path.join(dir, "STEP.md"), `# ${name}\n`);
   }
+  if (config !== undefined) await writeFile(path.join(root, "qfai.config.yaml"), config);
   return root;
 }
 
-async function edit(root: string, route: string, change: (text: string) => string) {
-  const file = path.join(root, WORKFLOWS, `${route}.yml`);
-  await writeFile(file, change(await readFile(file, "utf8")));
+// Every refusal over the package's plans for the project.
+async function refusalsFor(root: string) {
+  const { config } = await loadConfig(root);
+  return allPlanRefusals(root, config);
 }
 
-// `start` on the project, with the cause the plan check found in its facts.
-async function startOn(root: string) {
-  const check = await checkInstalledPlans(root);
-  const facts = check.cause ? { ...startFacts, cause: check.cause } : startFacts;
-  const decision = decide(
-    null,
-    {
-      operation: "start",
-      request: { text: "Fix the export." },
-      harness: { host: "claude-code", capabilities },
-    },
-    facts,
-  );
-  const error = decision.verdict.error;
-  return {
-    run: decision.verdict.run,
-    code: error?.code,
-    cause: error && "cause" in error ? error.cause : undefined,
-    events: decision.events.length,
-    reasons: check.refusals.map((refusal) => refusal.reason),
-  };
-}
-
-function refusedWith(reason: string) {
-  return {
-    run: null,
-    code: "fail-closed",
-    cause: "contract-undeclared",
-    events: 0,
-    reasons: expect.arrayContaining([reason]),
-  };
-}
-
+// Each stage as its kind and its steps, a pass-through step marked with `°`.
 function shape(plan: WorkflowPlanFile | undefined) {
   return (plan?.stages ?? []).map((stage) => [
     stage.kind,
-    stage.skills,
-    stage.operation,
-    stage.when,
+    stage.steps.map((step) => (step.passThrough ? `${step.name}°` : step.name)),
   ]);
 }
 
-// Whether every stage has a path to a `verify-full` stage, and the stages nothing follows.
-function verifyReach(plan: WorkflowPlanFile | undefined) {
-  const stages = plan?.stages ?? [];
-  const followers = (id: string) => stages.filter((stage) => stage.after.includes(id));
-  const reaches = (id: string): boolean => {
-    const stage = stages.find((candidate) => candidate.id === id);
-    if (stage?.kind === "verify" && stage.operation === "verify-full") return true;
-    return followers(id).some((next) => reaches(next.id));
-  };
-  return {
-    everyStageReachesVerify: stages.length > 0 && stages.every((stage) => reaches(stage.id)),
-    ends: stages.filter((stage) => followers(stage.id).length === 0).map((stage) => stage.kind),
-  };
+async function planOf(route: string): Promise<WorkflowPlanFile | undefined> {
+  return (await loadBuiltInPlans()).find((plan) => plan.route === route);
 }
 
-it("TC-0018-0019 (TDD-0263): Load the shipped feature", async () => {
-  const plans = await loadBuiltInPlans();
+const VERIFY = ["verify-qfai-gate", "verify-repo-gate", "verify-commit"];
 
-  expect(shape(plans.feature)).toEqual([
-    ["sdd", ["qfai-sdd"], "new-capability", "always"],
-    ["prototype", ["qfai-prototyping"], "existing-runtime-contract", "prototype_decision_needed"],
-    ["acceptance", ["qfai-atdd"], "author-acceptance-tests", "acceptance_obligations_unmet"],
-    ["implement", ["qfai-implement"], "implement", "always"],
-    ["verify", ["qfai-verify"], "verify-full", "always"],
-  ]);
+// QFAI:EX-0001-0220-15
+// QFAI:EX-0001-0220-16
+// QFAI:EX-0001-0191-01
+it("The shipped add-feature and prototype-feature plans", async () => {
+  const kinds = async (route: string) =>
+    ((await planOf(route))?.stages ?? []).map((stage) => stage.kind);
+
+  expect({
+    addFeature: await kinds("add-feature"),
+    prototypeFeature: await kinds("prototype-feature"),
+    verify: shape(await planOf("add-feature")).at(-1),
+  }).toEqual({
+    addFeature: ["sdd", "implement", "maintenance", "verify", "verify"],
+    prototypeFeature: ["sdd", "prototype", "implement", "maintenance", "verify", "verify"],
+    verify: ["verify", VERIFY],
+  });
 });
 
-const changeRoutes: [string, "direct" | "bugfix" | "bounded-change" | "feature"][] = [
-  ["TC-0018-0020 (TDD-0264): direct", "direct"],
-  ["TC-0018-0020 (TDD-0265): bugfix", "bugfix"],
-  ["TC-0018-0020 (TDD-0266): bounded-change", "bounded-change"],
-  ["TC-0018-0020 (TDD-0267): feature", "feature"],
-];
-
-for (const [title, route] of changeRoutes) {
-  it(title, async () => {
-    const plans = await loadBuiltInPlans();
-
-    expect(verifyReach(plans[route])).toEqual({ everyStageReachesVerify: true, ends: ["verify"] });
-  });
+// Whether every stage but a trailing `verify-external` one reaches the verify block, and the
+// stages nothing follows.
+function verifyReach(plan: WorkflowPlanFile) {
+  const { stages } = plan;
+  const followers = (id: string) => stages.filter((stage) => stage.after.includes(id));
+  const isBlock = (id: string) =>
+    stages.some(
+      (stage) => stage.id === id && stage.steps.some((step) => step.name === "verify-repo-gate"),
+    );
+  const reaches = (id: string): boolean =>
+    isBlock(id) || followers(id).some((next) => reaches(next.id));
+  const external = (id: string) =>
+    stages.some((stage) => stage.id === id && stage.steps[0]?.name === "verify-external");
+  return {
+    reached: stages.every((stage) => external(stage.id) || reaches(stage.id)),
+    blocks: stages
+      .filter((stage) => isBlock(stage.id))
+      .map((stage) => shape({ ...plan, stages: [stage] })[0]),
+  };
 }
 
-it("TC-0018-0094 (TDD-0315): Load the five shipped plans", async () => {
+// QFAI:EX-0001-0218-03
+it("The plan of every change route the package ships", async () => {
   const plans = await loadBuiltInPlans();
-  const stages = Object.values(plans).flatMap((plan) =>
+  const changeRoutes = plans.filter((plan) =>
+    plan.stages.some((stage) => stage.steps.some((step) => step.name === "verify-repo-gate")),
+  );
+
+  expect({
+    count: changeRoutes.length,
+    reach: [...new Set(changeRoutes.map((plan) => JSON.stringify(verifyReach(plan))))],
+  }).toEqual({
+    count: 24,
+    reach: [JSON.stringify({ reached: true, blocks: [["verify", VERIFY]] })],
+  });
+});
+
+it("The plans the package ships name no grill stage", async () => {
+  const plans = await loadBuiltInPlans();
+  const stages = plans.flatMap((plan) =>
     plan.stages.map((stage) => ({ route: plan.route, ...stage })),
   );
 
   expect({
-    routes: Object.keys(plans).sort(),
-    grill: stages.filter((stage) => stage.skills.some((skill) => skill.startsWith("qfai-grill"))),
-    discussion: stages
-      .filter((stage) => stage.kind === "discussion")
-      .map((stage) => [stage.route, stage.when]),
+    grill: stages.filter((stage) => stage.steps.some((step) => step.name.startsWith("grill"))),
+    discussion: [
+      ...new Set(stages.filter((stage) => stage.kind === "discussion").map((each) => each.route)),
+    ],
   }).toEqual({
-    routes: ["bounded-change", "bugfix", "direct", "discovery", "feature"],
     grill: [],
-    discussion: [["discovery", "full_discussion_needed"]],
+    discussion: ["decide-design", "decompose-epic"],
   });
 });
 
-it("TC-0018-0164 (TDD-0365): Load the shipped direct", async () => {
-  const plans = await loadBuiltInPlans();
-
-  expect(shape(plans.direct)).toEqual([
-    ["maintenance", ["qfai-maintain"], "non-normative-edit", "always"],
-    ["verify", ["qfai-verify"], "verify-full", "always"],
+it("The shipped edit-text plan", async () => {
+  expect(shape(await planOf("edit-text"))).toEqual([
+    ["maintenance", ["maintain-edit"]],
+    ["verify", ["verify-change-note°"]],
+    ["verify", VERIFY],
   ]);
 });
 
-it("TC-0018-0183 (TDD-0389): A project agent-routing", async () => {
-  const root = await project();
-  const routingPath = path.join(root, ROUTING);
-  const routing = parseYaml(await readFile(routingPath, "utf8"));
-  routing.routing.reverse();
-  routing.routing[0].phases[0].conditional_agents.push("project-helper");
-  await writeFile(routingPath, stringifyYaml(routing));
-  await writeFile(path.join(root, "qfai.config.yaml"), "workflow:\n  mode: active\n");
-  const config = parseYaml(await readFile(path.join(root, "qfai.config.yaml"), "utf8"));
+const EDIT_STAGE = "  - id: edit\n    kind: maintenance\n    steps: [maintain-edit]\n";
+const EDIT_STEPS = "steps: [maintain-edit]";
 
-  expect({ mode: readWorkflowMode(config), ...(await startOn(root)) }).toEqual({
-    mode: "active",
-    run: { id: "run-20260925000000010", state: "routing", sequence: 2 },
-    code: undefined,
-    cause: undefined,
-    events: 2,
-    reasons: [],
-  });
-});
+async function packaged(route: string): Promise<string> {
+  return readFile(path.join(packagePlansDir(), `${route}.yml`), "utf8");
+}
 
-const DIRECT_STAGE = "  - id: edit\n    kind: maintenance\n    skill: qfai-maintain\n";
+// The refusals a changed copy of a packaged plan meets on load.
+async function refusalsOf(route: string, change: (text: string) => string) {
+  const loaded = parsePlan(change(await packaged(route)), route);
+  return loaded.ok ? [] : loaded.refusals.map(({ reason, subject }) => ({ reason, subject }));
+}
 
-const loadRefusals: [string, string, (root: string) => Promise<void>][] = [
+const loadRefusals: [string, (text: string) => string][] = [
+  ["not-mapping", () => "- route\n- stages\n"],
+  // QFAI:EX-0001-0218-06
+  ["unknown-key", (text) => `${text}owner: platform-team\n`],
+  ["route-name", (text) => text.replace("route: edit-text", "route: fix-defect")],
+  ["family", (text) => text.replace("family: change", "family: chores")],
+  // QFAI:EX-0001-0218-01
+  ["out-of-vocabulary", (text) => text.replace("kind: verify", "kind: verification")],
+  // QFAI:EX-0001-0218-01
+  ["kind-mismatch", (text) => text.replace(EDIT_STEPS, "steps: [sdd-story]")],
+  ["shape", (text) => text.replace("- id: edit", '- id: ""')],
+  ["after-missing", (text) => text.replace("after: [edit]", "after: [review]")],
+  // QFAI:EX-0001-0218-09
   [
-    "TC-0018-0184 (TDD-0390): file-missing",
-    "file-missing",
-    (root) => rm(path.join(root, WORKFLOWS, "direct.yml")),
+    "after-order",
+    (text) => text.replace(EDIT_STAGE, "").replace("decisionPoints", `${EDIT_STAGE}decisionPoints`),
   ],
+  ["cycle", (text) => text.replace(EDIT_STAGE, `${EDIT_STAGE}    after: [verify]\n`)],
+  ["unreachable", (text) => text.replace(EDIT_STAGE, `${EDIT_STAGE}    after: [edit]\n`)],
+  // QFAI:EX-0001-0218-04
   [
-    "TC-0018-0184 (TDD-0391): not-mapping",
-    "not-mapping",
-    (root) => edit(root, "direct", () => "- route\n- stages\n"),
-  ],
-  [
-    "TC-0018-0184 (TDD-0392): unknown-key",
-    "unknown-key",
-    (root) => edit(root, "direct", (text) => `${text}owner: platform-team\n`),
-  ],
-  [
-    "TC-0018-0184 (TDD-0393): route-name",
-    "route-name",
-    (root) => edit(root, "direct", (text) => text.replace("route: direct", "route: bugfix")),
-  ],
-  [
-    "TC-0018-0184 (TDD-0394): out-of-vocabulary",
-    "out-of-vocabulary",
-    (root) => edit(root, "direct", (text) => text.replace("when: always", "when: sometimes")),
-  ],
-  [
-    "TC-0018-0184 (TDD-0395): kind-mismatch",
-    "kind-mismatch",
-    (root) =>
-      edit(root, "direct", (text) => text.replace("skill: qfai-maintain", "skill: qfai-sdd")),
-  ],
-  [
-    "TC-0018-0184 (TDD-0396): after-missing",
-    "after-missing",
-    (root) => edit(root, "direct", (text) => text.replace("after: [edit]", "after: [review]")),
-  ],
-  [
-    "TC-0018-0184 (TDD-0397): cycle",
-    "cycle",
-    (root) =>
-      edit(root, "direct", (text) =>
-        text.replace(DIRECT_STAGE, `${DIRECT_STAGE}    after: [verify]\n`),
-      ),
-  ],
-  [
-    "TC-0018-0184 (TDD-0398): unreachable",
-    "unreachable",
-    (root) =>
-      edit(root, "direct", (text) =>
-        text.replace(DIRECT_STAGE, `${DIRECT_STAGE}    after: [edit]\n`),
-      ),
-  ],
-  [
-    "TC-0018-0184 (TDD-0399): no-verify-path",
     "no-verify-path",
-    (root) =>
-      edit(
-        root,
-        "direct",
-        (text) =>
-          `${text}  - id: tidy\n    kind: maintenance\n    skill: qfai-maintain\n` +
-          "    operation: non-normative-edit\n    when: always\n    after: [edit]\n",
+    (text) =>
+      text.replace(
+        "decisionPoints",
+        "  - id: tidy\n    kind: maintenance\n    steps: [maintain-edit]\n    after: [edit]\ndecisionPoints",
       ),
   ],
 ];
 
-for (const [title, reason, plant] of loadRefusals) {
-  it(title, async () => {
-    const root = await project();
-    await plant(root);
+for (const [reason, change] of loadRefusals) {
+  // BR-0020-0016
+  it(reason, async () => {
+    const reasons = (await refusalsOf("edit-text", change)).map((refusal) => refusal.reason);
 
-    expect(await startOn(root)).toEqual(refusedWith(reason));
+    expect(reasons).toContain(reason);
   });
 }
 
-const retiredNames: [string, string, string][] = [
-  ["TC-0018-0185 (TDD-0400): repair-prepare", "kind: maintenance", "kind: repair_prepare"],
-  ["TC-0018-0185 (TDD-0401): sdd-reconcile", "kind: maintenance", "kind: sdd_reconcile"],
-  ["TC-0018-0185 (TDD-0402): defect-reopen", "kind: maintenance", "kind: defect_reopen"],
-  ["TC-0018-0185 (TDD-0403): configure", "kind: maintenance", "kind: configure"],
-  ["TC-0018-0185 (TDD-0404): research", "kind: maintenance", "kind: research"],
-  [
-    "TC-0018-0185 (TDD-0405): ledger-reconcile-needed",
-    "when: always",
-    "when: ledger_reconcile_needed",
-  ],
+const stepRefusals: [string, string, string][] = [
+  // QFAI:EX-0001-0218-01
+  ["a step outside the vocabulary", "steps: [maintain-rewrite]", "out-of-vocabulary"],
+  // QFAI:EX-0001-0218-01
+  ["a step another kind runs", "steps: [maintain-edit, sdd-gate]", "kind-mismatch"],
+  ["the seam step in a plan", "steps: [implement-seam]", "seam"],
+  ["a step listed twice", "steps: [maintain-edit, maintain-edit]", "shape"],
+  ["no step", "steps: []", "shape"],
+  // QFAI:EX-0001-0218-06
+  ["an operation beside the steps", `${EDIT_STEPS}\n    operation: edit`, "unknown-key"],
+  // QFAI:EX-0001-0218-06
+  ["an external effect beside the steps", `${EDIT_STEPS}\n    effects: [push]`, "unknown-key"],
 ];
 
-for (const [title, from, to] of retiredNames) {
+for (const [title, steps, reason] of stepRefusals) {
+  // BR-0020-0016
   it(title, async () => {
-    const root = await project();
-    await edit(root, "direct", (text) => text.replace(from, to));
+    const reasons = (await refusalsOf("edit-text", (text) => text.replace(EDIT_STEPS, steps))).map(
+      (refusal) => refusal.reason,
+    );
 
-    expect(await startOn(root)).toEqual(refusedWith("out-of-vocabulary"));
+    expect(reasons).toContain(reason);
   });
 }
 
-it("TC-0018-0186 (TDD-0406): crlf-equal", async () => {
-  const root = await project();
-  for (const route of ["direct", "bugfix", "bounded-change", "feature", "discovery"]) {
-    await edit(root, route, (text) => text.replace(/\r?\n/g, "\r\n"));
-  }
+const retiredNames: [string, string][] = [
+  ["repair-prepare", "kind: repair_prepare"],
+  ["sdd-reconcile", "kind: sdd_reconcile"],
+  ["defect-reopen", "kind: defect_reopen"],
+  ["configure", "kind: configure"],
+  ["research", "kind: research"],
+  ["sdd-delta", "kind: sdd_delta"],
+];
 
-  expect(await startOn(root)).toEqual({
-    run: { id: "run-20260925000000010", state: "routing", sequence: 2 },
-    code: undefined,
-    cause: undefined,
-    events: 2,
-    reasons: [],
+for (const [title, to] of retiredNames) {
+  // BR-0020-0016
+  // QFAI:EX-0001-0218-01
+  it(title, async () => {
+    const refusals = await refusalsOf("edit-text", (text) => text.replace("kind: maintenance", to));
+
+    expect(refusals.map((refusal) => refusal.reason)).toContain("out-of-vocabulary");
+  });
+}
+
+// QFAI:EX-0001-0218-01
+it("A plan naming implement-guess, a test fix under an implement kind, and a mixed stage", async () => {
+  expect({
+    guess: await refusalsOf("add-feature", (text) =>
+      text.replace("steps: [implement-scaffold, implement-tdd]", "steps: [implement-guess]"),
+    ),
+    fixAsImplement: await refusalsOf("repair-test", (text) =>
+      text.replace("kind: test_fix", "kind: implement"),
+    ),
+    mixed: await refusalsOf("add-feature", (text) =>
+      text.replace(
+        "steps: [implement-scaffold, implement-tdd]",
+        "steps: [implement-tdd, sdd-flow]",
+      ),
+    ),
+  }).toEqual({
+    guess: [{ reason: "out-of-vocabulary", subject: "implement-guess" }],
+    fixAsImplement: [{ reason: "kind-mismatch", subject: "fix" }],
+    mixed: [{ reason: "kind-mismatch", subject: "implement" }],
   });
 });
 
-it("TC-0018-0186 (TDD-0407): discovery-ends-routing", async () => {
-  const root = await project();
-  const plans = await loadBuiltInPlans();
+// QFAI:EX-0001-0218-02
+it("A plan marking implement-regression-fix pass-through, and one marking implement-credentials", async () => {
+  const marked = "steps: [{ step: implement-regression-fix, passThrough: true }]";
 
   expect({
-    discovery: shape(plans.discovery),
-    refusals: (await checkInstalledPlans(root)).refusals,
+    regression: await refusalsOf("fix-red-main", (text) =>
+      text.replace("steps: [implement-regression-fix]", marked),
+    ),
+    credentials: await refusalsOf("write-acceptance-tests", (text) => text),
   }).toEqual({
-    discovery: [
-      [
-        "discussion",
-        ["qfai-discussion"],
-        "resolve-unsettled-product-scope",
-        "full_discussion_needed",
-      ],
+    regression: [{ reason: "pass-through", subject: "implement-regression-fix" }],
+    credentials: [],
+  });
+});
+
+// QFAI:EX-0001-0218-02
+it("a pass-through mark on a step off the pass-through list", async () => {
+  expect(
+    await refusalsOf("edit-text", (text) =>
+      text.replace(
+        "steps: [verify-qfai-gate, verify-repo-gate, verify-commit]",
+        "steps: [{ step: verify-qfai-gate, passThrough: true }, verify-repo-gate, verify-commit]",
+      ),
+    ),
+  ).toEqual([{ reason: "pass-through", subject: "verify-qfai-gate" }]);
+});
+
+const VERIFY_STAGE =
+  "  - id: verify\n    kind: verify\n    steps: [verify-qfai-gate, verify-repo-gate, verify-commit]\n    after: [note]\n";
+
+const SPLIT_VERIFY = [
+  "  - id: verify",
+  "    kind: verify",
+  "    steps: [verify-qfai-gate]",
+  "    after: [note]",
+  "  - id: gate",
+  "    kind: verify",
+  "    steps: [verify-repo-gate, verify-commit]",
+  "    after: [verify]",
+  "",
+].join("\n");
+
+// QFAI:EX-0001-0218-04
+it("A split verify block, and an answer-question whose last stage answers", async () => {
+  const splitVerify = (text: string) => text.replace(VERIFY_STAGE, SPLIT_VERIFY);
+
+  expect({
+    split: await refusalsOf("fix-defect", splitVerify),
+    answer: await refusalsOf("answer-question", (text) =>
+      text.replace("      - triage-close\n", ""),
+    ),
+  }).toEqual({
+    split: [{ reason: "terminal", subject: "gate" }],
+    answer: [{ reason: "terminal", subject: "answer" }],
+  });
+});
+
+// QFAI:EX-0001-0218-04
+it("A verify block without verify-commit, and one that commits before the gates", async () => {
+  const block = "steps: [verify-qfai-gate, verify-repo-gate, verify-commit]";
+  expect({
+    none: await refusalsOf("edit-text", (text) =>
+      text.replace(block, "steps: [verify-qfai-gate, verify-repo-gate]"),
+    ),
+    early: await refusalsOf("edit-text", (text) =>
+      text.replace(block, "steps: [verify-commit, verify-qfai-gate, verify-repo-gate]"),
+    ),
+  }).toEqual({
+    none: [{ reason: "terminal", subject: "verify" }],
+    early: [{ reason: "terminal", subject: "verify" }],
+  });
+});
+
+// QFAI:AC-0001-0218-06
+// QFAI:EX-0001-0218-08
+it("A code review after the edit stage, a review of another value, and two on a triage stage", async () => {
+  const onTriage = (value: string) => (text: string) =>
+    text.replace("      - triage-close\n", `      - triage-close\n    review: ${value}\n`);
+  expect({
+    kept: await refusalsOf("edit-text", (text) =>
+      text.replace("    review: code\n", "").replace(EDIT_STEPS, `${EDIT_STEPS}\n    review: code`),
+    ),
+    other: await refusalsOf("edit-text", (text) => text.replace("review: code", "review: all")),
+    spec: await refusalsOf("answer-question", onTriage("spec")),
+    none: await refusalsOf("answer-question", onTriage("none")),
+  }).toEqual({
+    kept: [],
+    other: [{ reason: "shape", subject: "note" }],
+    spec: [{ reason: "shape", subject: "answer" }],
+    none: [{ reason: "shape", subject: "answer" }],
+  });
+});
+
+// QFAI:AC-0001-0218-07
+// QFAI:EX-0001-0218-09
+it("A fix-defect whose implement stage is listed before the diagnose stage it follows", async () => {
+  const DIAGNOSE = "  - id: diagnose\n    kind: diagnose\n    steps: [implement-diagnose]\n";
+  const IMPLEMENT = / {2}- id: implement\n[\s\S]*?after: \[diagnose\]\n/;
+  const swapped = (text: string) => {
+    const implement = IMPLEMENT.exec(text)?.[0] ?? "";
+    return text.replace(implement, "").replace(DIAGNOSE, `${implement}${DIAGNOSE}`);
+  };
+
+  expect(await refusalsOf("fix-defect", swapped)).toEqual([
+    { reason: "after-order", subject: "implement:diagnose" },
+  ]);
+});
+
+// QFAI:EX-0001-0218-05
+it("A point naming a step the plan lacks, an unknown destination, and a step run twice", async () => {
+  expect({
+    missing: await refusalsOf("edit-text", (text) =>
+      text.replace("decisionPoints: []", "decisionPoints: [sdd-flow]"),
+    ),
+    destination: await refusalsOf("fix-defect", (text) =>
+      text.replace("routes: [answer-question]", "routes: [fix-everything]"),
+    ),
+    twice: await refusalsOf("improve-performance", (text) =>
+      text.replace("decisionPoints: [implement-diagnose]", "decisionPoints: [implement-benchmark]"),
+    ),
+  }).toEqual({
+    missing: [{ reason: "point", subject: "sdd-flow" }],
+    destination: [{ reason: "destination", subject: "fix-everything" }],
+    twice: [{ reason: "point", subject: "implement-benchmark" }],
+  });
+});
+
+// QFAI:EX-0001-0218-06
+it("A stage carrying when: always, and a step entry carrying when: proposed", async () => {
+  expect({
+    stage: await refusalsOf("edit-text", (text) =>
+      text.replace(EDIT_STEPS, `${EDIT_STEPS}\n    when: always`),
+    ),
+    step: await refusalsOf("edit-text", (text) =>
+      text.replace(EDIT_STEPS, "steps: [{ step: maintain-edit, when: proposed }]"),
+    ),
+  }).toEqual({
+    stage: [{ reason: "unknown-key", subject: "when" }],
+    step: [{ reason: "unknown-key", subject: "when" }],
+  });
+});
+
+// QFAI:EX-0001-0218-07
+it("A mode on the wrong step, and a plan holding default modifiers", async () => {
+  expect({
+    readOnlyTriage: await refusalsOf("apply-settled", (text) =>
+      text.replace("mode: settled", "mode: read-only"),
+    ),
+    settledDiagnose: await refusalsOf("retriage-bundle", (text) =>
+      text.replace("mode: read-only", "mode: settled"),
+    ),
+    modifiers: await refusalsOf("edit-text", (text) => `${text}defaultModifiers: []\n`),
+  }).toEqual({
+    readOnlyTriage: [{ reason: "mode", subject: "sdd-triage" }],
+    settledDiagnose: [{ reason: "mode", subject: "implement-diagnose" }],
+    modifiers: [{ reason: "unknown-key", subject: "defaultModifiers" }],
+  });
+});
+
+it("crlf-equal", async () => {
+  expect(await refusalsOf("edit-text", (text) => text.replace(/\r?\n/g, "\r\n"))).toEqual([]);
+});
+
+it("A plan copy under the project's assistant tree is never read", async () => {
+  const root = await project();
+  const copy = path.join(root, ".qfai", "assistant", "process", "workflows", "edit-text.yml");
+  await mkdir(path.dirname(copy), { recursive: true });
+  await writeFile(copy, "route: edit-text\nstages: []\n");
+
+  expect((await planned(root, { route: "edit-text" })).ok).toBe(true);
+});
+
+it("Every shipped plan loads and every step it names is installed", async () => {
+  const root = await project();
+
+  expect(await refusalsFor(root)).toEqual([]);
+});
+
+// A `routing:` override for `maintain-edit` whose edit phase binds the agents given.
+function maintainEditOverride(mandatory: string, conditional: string): string {
+  return [
+    "routing:",
+    "  - step: maintain-edit",
+    "    phases:",
+    "      - id: edit",
+    `        mandatory_agents: [${mandatory}]`,
+    `        conditional_agents: [${conditional}]`,
+    "        parallel_groups: []",
+    "        rerun_policy: changed-scope-dependents",
+    "    review_profile: default",
+    "",
+  ].join("\n");
+}
+
+it("A routing override that keeps every required agent, and one that drops one", async () => {
+  const kept = await project(maintainEditOverride("doc-steward", "qa-strategist"));
+  const dropped = await project(maintainEditOverride("qa-strategist", ""));
+
+  expect({
+    kept: await refusalsFor(kept),
+    dropped: (await refusalsFor(dropped)).map(({ reason, subject }) => ({ reason, subject })),
+  }).toEqual({
+    kept: [],
+    dropped: [{ reason: "reviewer-missing", subject: "maintain-edit:doc-steward" }],
+  });
+});
+
+it("A project whose sdd-story step is not installed", async () => {
+  const root = await project();
+  await rm(path.join(root, ".qfai", "assistant", "step", "sdd-story"), { recursive: true });
+
+  expect(await planned(root, { route: "add-feature" })).toEqual({
+    ok: false,
+    message: expect.any(String),
+    reasons: [
+      {
+        reason: "plan-invalid",
+        subject: "sdd-story",
+        file: "add-feature.yml",
+        cause: "step-missing",
+      },
     ],
-    refusals: [],
   });
 });

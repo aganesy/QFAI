@@ -5,7 +5,7 @@
  * initializes. Its legacy-layout line has to describe the layout the way init
  * itself reports it: past the compatibility window, as an error on stderr.
  */
-// QFAI:SPEC-0003:TC-0003-0059
+// QFAI:AC-0001-0029-03
 import { mkdtemp, readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -15,13 +15,14 @@ import { runInit } from "../../src/cli/commands/init.js";
 import { captureStdout } from "../helpers/stdout.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
-describe("TC-0003-0059 (TDD-0094): generated Copilot instructions state the closed legacy window", () => {
+// QFAI:EX-0001-0029-03
+describe("generated Copilot instructions state the closed legacy window", () => {
   let dir = "";
   let text = "";
   let legacyItem = "";
 
   beforeAll(async () => {
-    dir = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tc0059-"));
+    dir = await mkdtemp(path.join(os.tmpdir(), "qfai-init-copilot-legacy-"));
     await captureStdout(() => runInit({ dir, force: false, dryRun: false, yes: true }));
     text = await readFile(path.join(dir, ".github", "copilot-instructions.md"), "utf-8");
     // The top-level list item that mentions the legacy finding, with its
@@ -37,8 +38,7 @@ describe("TC-0003-0059 (TDD-0094): generated Copilot instructions state the clos
     if (dir) await removeTempTree(dir);
   });
 
-  it("names both legacy surfaces and says their compatibility window has closed", () => {
-    expect(legacyItem).toContain("`.qfai/assistant/steering/`");
+  it("names the legacy surface and says its compatibility window has closed", () => {
     expect(legacyItem).toContain("`.qfai/assistant/instructions/`");
     expect(legacyItem).toContain("past its compatibility window");
   });

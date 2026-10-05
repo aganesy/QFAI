@@ -1,0 +1,20 @@
+route: decide-design
+family: decide
+stages:
+  - id: discussion
+    kind: discussion
+    steps:
+      - discussion-research
+      - discussion-interview
+      - { step: discussion-pack, passThrough: true }
+      - { step: discussion-uiux, passThrough: true }
+      - discussion-oq
+  - id: close
+    kind: triage
+    steps: [triage-close]
+    after: [discussion]
+decisionPoints: [discussion-interview]
+branchPoints:
+  - step: triage-close
+    outcomes:
+      - { outcome: adopted, routes: [add-feature, prototype-feature, change-compatibility] }

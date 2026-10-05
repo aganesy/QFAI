@@ -6,18 +6,16 @@ import type { QfaiConfig } from "../config.js";
 import {
   ASSISTANT_LAYERS,
   LEGACY_ASSISTANT_INSTRUCTIONS_DIR,
-  LEGACY_ASSISTANT_STEERING_DIR,
   joinAssistantLayer,
   joinLegacyAssistantInstructions,
-  joinLegacyAssistantSteering,
   isAssistantLayer,
-  legacyAssistantSteeringSunsetLabel,
+  legacyAssistantTreeSunsetLabel,
 } from "../paths/assistantPaths.js";
 import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
 
 /**
- * The pre-recut `.qfai/assistant/{steering,instructions}/` layout was retired
+ * The pre-recut `.qfai/assistant/instructions/` layout was retired
  * at the release the message names, so a tree still holding it is an error.
  */
 
@@ -27,9 +25,7 @@ export async function validateAssistantTreeMigration(
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
 
-  // 1. 4-layer enum guard — any assistant-tree dir outside the 4 canonical
-  // names is flagged (except the documented exceptions: agents/, skills/,
-  // instructions/ — these are existing pre-recut surfaces).
+  // 1. Canonical assistant-layer enum guard.
   const assistantRoot = path.join(root, ".qfai", "assistant");
   if (await exists(assistantRoot)) {
     let dirEntries: Dirent[];
@@ -38,24 +34,18 @@ export async function validateAssistantTreeMigration(
     } catch {
       dirEntries = [];
     }
-    const PRE_RECUT_DIRS = new Set([
-      "agents",
-      "skills",
-      // skills.local/ is the protected user-customization surface.
-      "skills.local",
-    ]);
-    // instructions/ and steering/ are pre-recut layers that get their
-    // own D-DEPRECATED-PATH below (symmetric per qfai-init.md contract).
-    const PRE_RECUT_DEPRECATED_DIRS = new Set(["instructions", "steering"]);
+    const EXTRA_DIRS = new Set(["skill.local"]);
+    // instructions/ is a pre-recut layer that gets its own D-DEPRECATED-PATH below.
+    const PRE_RECUT_DEPRECATED_DIRS = new Set(["instructions"]);
     for (const entry of dirEntries) {
       if (!entry.isDirectory()) continue;
       if (isAssistantLayer(entry.name)) continue;
-      if (PRE_RECUT_DIRS.has(entry.name)) continue;
+      if (EXTRA_DIRS.has(entry.name)) continue;
       if (PRE_RECUT_DEPRECATED_DIRS.has(entry.name)) continue;
       issues.push(
         issue(
           "W-ASSISTANT-LAYOUT",
-          `.qfai/assistant/${entry.name}/ is not in the canonical 4-layer enum (${ASSISTANT_LAYERS.join(", ")}).`,
+          `.qfai/assistant/${entry.name}/ is not in the canonical layer set (${ASSISTANT_LAYERS.join(", ")}).`,
           "warning",
           `.qfai/assistant/${entry.name}/`,
           "assistantTreeMigration.enumGuard",
@@ -64,35 +54,23 @@ export async function validateAssistantTreeMigration(
     }
   }
 
-  // 2. D-DEPRECATED-PATH — the pre-recut legacy layers (.qfai/assistant/
-  // steering/ AND .qfai/assistant/instructions/) are retired, so both surfaces
-  // fire symmetric errors.
-  const sunset = legacyAssistantSteeringSunsetLabel();
-  const severity = "error" as const;
-  for (const legacySurface of [
-    {
-      dir: joinLegacyAssistantSteering(root),
-      label: `${LEGACY_ASSISTANT_STEERING_DIR}/`,
-    },
-    {
-      dir: joinLegacyAssistantInstructions(root),
-      label: `${LEGACY_ASSISTANT_INSTRUCTIONS_DIR}/`,
-    },
-  ]) {
-    if (!(await exists(legacySurface.dir))) continue;
-    const headline = `${legacySurface.label} is past the announced sunset (v${sunset}).`;
+  // 2. D-DEPRECATED-PATH — the pre-recut .qfai/assistant/instructions/ layer is retired.
+  if (await exists(joinLegacyAssistantInstructions(root))) {
+    const sunset = legacyAssistantTreeSunsetLabel();
+    const label = `${LEGACY_ASSISTANT_INSTRUCTIONS_DIR}/`;
+    const severity = "error" as const;
     issues.push(
       issue(
         "D-DEPRECATED-PATH",
-        `${headline} sunset: v${sunset}. Run \`qfai init --upgrade-assistant-tree\` to migrate.`,
+        `${label} is past the announced sunset (v${sunset}). sunset: v${sunset}. Run \`qfai init --upgrade-assistant-tree\` to migrate.`,
         severity,
-        legacySurface.label,
+        label,
         "assistantTreeMigration.deprecatedPath",
       ),
     );
   }
 
-  // 3. Each of the 4 canonical layers should have at least a .gitkeep so the
+  // 3. Each canonical layer should have at least a .gitkeep so the
   // tree is visible to consumers. Missing layer = info-only (the upgrade
   // helper will seed it). We intentionally use "info" severity so this
   // can't fail validate by itself.
@@ -105,7 +83,7 @@ export async function validateAssistantTreeMigration(
       issues.push(
         issue(
           "I-ASSISTANT-LAYER-UNSEEDED",
-          `.qfai/assistant/${layer}/ is not seeded yet. Run \`qfai init\` to seed the 4-layer tree.`,
+          `.qfai/assistant/${layer}/ is not seeded yet. Run \`qfai init\` to seed the assistant tree.`,
           "info",
           `.qfai/assistant/${layer}/`,
           "assistantTreeMigration.layerSeed",

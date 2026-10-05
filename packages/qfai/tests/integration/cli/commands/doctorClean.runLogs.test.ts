@@ -1,11 +1,13 @@
+// QFAI:AC-0003-0008-04
+//
 // Integration: `qfai doctor --clean` prunes TTL-expired validate run
-// logs under `paths.outDir` in addition to archiving review packs, and
+// logs under `paths.outDir`, and
 // `qfai doctor` surfaces the run-log count so the accumulation is
 // visible before it is measured in tens of megabytes. Uses the
 // in-process `runDoctor` entry point with deterministic temp-dir
 // fixtures (no shelling out so Windows parallel-FS flake stays bounded).
 
-import { access, mkdir, mkdtemp, rm, symlink, utimes, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, symlink, utimes, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -14,6 +16,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { runDoctor } from "../../../../src/cli/commands/doctor.js";
 import { createDoctorData } from "../../../../src/core/doctor.js";
 import { findOutDirCoOwners } from "../../../../src/core/doctor/outDirCollisions.js";
+import { pathExists } from "../../../helpers/pathExists.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const tempDirs: string[] = [];
@@ -21,6 +24,9 @@ const tempDirs: string[] = [];
 async function newTempDir(label: string): Promise<string> {
   const dir = await mkdtemp(path.join(os.tmpdir(), `qfai-doctor-runlogs-${label}-`));
   tempDirs.push(dir);
+  // A project carries the document-schema lane; doctor reports its absence as an error.
+  await mkdir(path.join(dir, ".github", "workflows"), { recursive: true });
+  await writeFile(path.join(dir, ".github", "workflows", "qfai-docs.yml"), "name: qfai-docs\n");
   return dir;
 }
 
@@ -42,15 +48,6 @@ async function seedRunLog(root: string, runId: string, ageDays: number): Promise
   return dir;
 }
 
-async function exists(target: string): Promise<boolean> {
-  try {
-    await access(target);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 /** Directory symlinks need Developer Mode or elevation on Windows. */
 async function canCreateSymlink(root: string): Promise<boolean> {
   const probe = path.join(root, "probe-link");
@@ -63,6 +60,9 @@ async function canCreateSymlink(root: string): Promise<boolean> {
   }
 }
 
+// QFAI:EX-0003-0008-06
+// QFAI:EX-0003-0008-07
+// QFAI:EX-0003-0008-08
 describe("doctor --clean prunes stale validate run logs", () => {
   it("removes a 30-day-old run and keeps the newest ones", async () => {
     const root = await newTempDir("prune");
@@ -73,8 +73,8 @@ describe("doctor --clean prunes stale validate run logs", () => {
     const exit = await runDoctor({ root, rootExplicit: true, format: "text", clean: true });
 
     expect(exit).toBe(0);
-    expect(await exists(stale)).toBe(false);
-    expect(await exists(fresh)).toBe(true);
+    expect(await pathExists(stale)).toBe(false);
+    expect(await pathExists(fresh)).toBe(true);
   });
 
   it("honors report.staleTtlDays: 0 as a full opt-out", async () => {
@@ -89,7 +89,7 @@ describe("doctor --clean prunes stale validate run logs", () => {
     const exit = await runDoctor({ root, rootExplicit: true, format: "text", clean: true });
 
     expect(exit).toBe(0);
-    expect(await exists(stale)).toBe(true);
+    expect(await pathExists(stale)).toBe(true);
   });
 
   it("--dry-run leaves every run in place", async () => {
@@ -106,7 +106,7 @@ describe("doctor --clean prunes stale validate run logs", () => {
     });
 
     expect(exit).toBe(0);
-    expect(await exists(stale)).toBe(true);
+    expect(await pathExists(stale)).toBe(true);
   });
 
   it("refuses to prune while the config carries issues", async () => {
@@ -129,7 +129,7 @@ describe("doctor --clean prunes stale validate run logs", () => {
     const exit = await runDoctor({ root, rootExplicit: true, format: "text", clean: true });
 
     expect(exit).toBe(1);
-    expect(await exists(stale)).toBe(true);
+    expect(await pathExists(stale)).toBe(true);
 
     // With the diagnostic graded away, nothing is left to fail: the
     // refusal itself is not an error, and it is still a refusal.
@@ -142,14 +142,18 @@ describe("doctor --clean prunes stale validate run logs", () => {
     });
 
     expect(optedOut).toBe(0);
-    expect(await exists(stale)).toBe(true);
+    expect(await pathExists(stale)).toBe(true);
   });
 
   it("refuses to prune an outDir shared with another project root", async () => {
     const mono = await newTempDir("shared-outdir");
     await writeFile(path.join(mono, "pnpm-workspace.yaml"), "packages:\n  - '*'\n", "utf-8");
     for (const app of ["app-a", "app-b"]) {
-      await mkdir(path.join(mono, app), { recursive: true });
+      await mkdir(path.join(mono, app, ".github", "workflows"), { recursive: true });
+      await writeFile(
+        path.join(mono, app, ".github", "workflows", "qfai-docs.yml"),
+        "name: qfai-docs\n",
+      );
       await writeFile(
         path.join(mono, app, "qfai.config.yaml"),
         "paths:\n  outDir: ../shared-report\nreport:\n  keepLatestRuns: 1\n",
@@ -176,7 +180,7 @@ describe("doctor --clean prunes stale validate run logs", () => {
     });
 
     expect(exit).toBe(0);
-    expect(await exists(shared)).toBe(true);
+    expect(await pathExists(shared)).toBe(true);
   });
 
   it("refuses to prune an outDir another project reaches through a symlink", async ({ skip }) => {
@@ -199,7 +203,11 @@ describe("doctor --clean prunes stale validate run logs", () => {
       ["app-a", "../shared-report"],
       ["app-b", "../linked-report"],
     ] as const) {
-      await mkdir(path.join(mono, app), { recursive: true });
+      await mkdir(path.join(mono, app, ".github", "workflows"), { recursive: true });
+      await writeFile(
+        path.join(mono, app, ".github", "workflows", "qfai-docs.yml"),
+        "name: qfai-docs\n",
+      );
       await writeFile(
         path.join(mono, app, "qfai.config.yaml"),
         `paths:\n  outDir: ${outDir}\nreport:\n  keepLatestRuns: 1\n`,
@@ -222,7 +230,7 @@ describe("doctor --clean prunes stale validate run logs", () => {
     });
 
     expect(exit).toBe(0);
-    expect(await exists(shared)).toBe(true);
+    expect(await pathExists(shared)).toBe(true);
   });
 
   it("refuses to prune when validate.log exists but cannot be read", async () => {
@@ -246,7 +254,7 @@ describe("doctor --clean prunes stale validate run logs", () => {
     const exit = await runDoctor({ root, rootExplicit: true, format: "text", clean: true });
 
     expect(exit).toBe(0);
-    expect(await exists(stale)).toBe(true);
+    expect(await pathExists(stale)).toBe(true);
   });
 
   it("keeps pruning when validate.log simply does not exist", async () => {
@@ -262,7 +270,7 @@ describe("doctor --clean prunes stale validate run logs", () => {
 
     await runDoctor({ root, rootExplicit: true, format: "text", clean: true });
 
-    expect(await exists(stale)).toBe(false);
+    expect(await pathExists(stale)).toBe(false);
   });
 
   it("refuses to prune when the ownership scan could not enumerate every config", async () => {

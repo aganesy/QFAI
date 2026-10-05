@@ -1,0 +1,12 @@
+route: verify-manually
+family: release
+stages:
+  - id: check
+    kind: verify
+    steps: [verify-manual]
+  - id: close
+    kind: triage
+    steps: [triage-close]
+    after: [check]
+decisionPoints: []
+branchPoints: []

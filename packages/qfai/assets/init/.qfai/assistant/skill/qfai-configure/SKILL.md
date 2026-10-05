@@ -1,0 +1,426 @@
+---
+name: qfai-configure
+title: QFAI Configure (Tune qfai.config.yaml)
+description: "Analyze the repository and tune qfai.config.yaml test globs and project overrides."
+argument-hint: "[--auto]"
+allowed-tools: [Read, Glob, Write, Edit, TodoWrite, Task, Agent]
+roles:
+  [
+    orchestrator,
+    delivery-planner,
+    qa-strategist,
+    devops-ci-engineer,
+    qa-gatekeeper,
+    implementation-reviewer,
+  ]
+routing-profile: runtime-heavy
+mode: evidence-focused
+---
+
+<!--
+QFAI Skill Body (SSOT)
+- This file is intended to be referenced by tool-specific wrappers (e.g., GitHub/Claude/Codex skills).
+- Keep wrappers thin and route users to this skill body.
+-->
+
+## /qfai-configure - Configure QFAI for this repository
+
+[DRIFT-PROTOCOL:MANDATORY]
+
+## User Questions (AskUserQuestion Protocol)
+
+Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
+
+Skill-specific examples:
+
+- configuration decisions
+- glob pattern confirmation
+
+Both examples are clarifications and count against the Article VI budget: at
+most 5 per invocation of this skill, after which the remaining choices are taken
+as labelled assumptions and recorded in the config diff — see
+`.qfai/assistant/rule/constitution.md` Article VI. The `hard-required`
+inputs in Default Autopilot Policy are the exception: they are never assumed,
+and a missing one blocks the run until it is provided — but only where this run
+consumes it; one this run never reads is not asked for at all. The stops this
+skill declares — Step 5's zero-match glob, and an ambiguous tooling choice or
+runnable path — are `hard-required` inputs, not clarifications to assume, so
+both outlive an exhausted budget.
+
+## FORMAT SSOT (Mandatory)
+
+- Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#format-ssot-mandatory`.
+
+- Before writing or editing any `.qfai/**` artifact, read the relevant skill-local reference or template:
+  - `.qfai/assistant/skill/qfai-discussion/references/discussion-artifact-rules.md`
+  - `.qfai/assistant/skill/qfai-sdd/references/spec-traceability-rules.md`
+  - `.qfai/assistant/skill/qfai-sdd/references/contract-artifact-rules.md`
+
+## Inputs Priority (Preflight)
+
+When unsure, read inputs in this order:
+
+- P1: `.qfai/assistant/rule/*`
+- P2: Read `.qfai/assistant/rule/agent-selection.md`, the routed cards under `.qfai/assistant/agent/`, and project context under `.qfai/spec/01_policy/` and `.qfai/spec/03_contract/`.
+- P3: `.qfai/spec/decisions.md` (Decision Records; if no decision exists, state "not applicable").
+- P4: the business flows, stories, contracts, tests, and evidence relevant to the configuration.
+
+## Sub-agent Delegation (MANDATORY)
+
+Follow `.qfai/assistant/rule/shared-skill-delegation-baseline.md`.
+
+### Work Orders Summary (evidence)
+
+Use the shared schema.
+
+### Stage Minimum Roles
+
+- Author: the orchestrator writes the artifacts itself, or gives independent parts to sub-agents that run in parallel.
+- Integrate: the orchestrator presents the result to the user for confirmation.
+- Gate: a reviewer that did not author the work returns only `PASS` or `REVISE`. The orchestrator never approves its own work.
+
+### Reviewer Gate
+
+- Follow `.qfai/assistant/rule/shared-skill-delegation-baseline.md#reviewer-gate-baseline`.
+- Reviewer checks:
+  - no reviewer authored what it reviewed;
+  - doctor evidence exists: `npx qfai doctor --fail-on error` completed without failing checks;
+  - Drift Protocol enforced;
+  - test-layer policy enforced against `.qfai/assistant/rule/test-layers.md`;
+  - tool-count heuristics are signals, not gates.
+- Route specialist reviewers from `.qfai/assistant/rule/agent-selection.md`.
+- Default configure review set:
+  - `qa-gatekeeper`
+- Do not declare DONE or handoff until every finding of its one review is fixed or answered.
+
+### Work order template (copy/paste)
+
+Use the shared template.
+
+### Reviewer response template
+
+Use the shared template.
+
+- Required field: `Status (PASS/REVISE/PENDING)`. `PENDING` marks a gate that could not be run (see the baseline's reviewer-budget branch); it never counts as `PASS`.
+
+## Policy check (mandatory)
+
+Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#policy-check-mandatory`.
+
+- Fill policy from verifiable repository evidence first; when evidence is missing, mark the field `TBD` and name the gap in the final report.
+
+## Rejected Option Guard (Mandatory)
+
+Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#rejected-option-guard-mandatory`.
+
+## Hard Constraints (Read First)
+
+- Only update `qfai.config.yaml` and project-owned policy and contract files under `.qfai/spec/` unless explicitly asked.
+- Run the mandatory checks listed below and record outcomes.
+- Stop and escalate if tooling choices or runnable path remain ambiguous. This stop is a `hard-required` input, not a clarification, so it outlives an exhausted Article VI budget — with the budget spent and the ambiguity unresolved, escalate rather than picking a runner.
+- Completion must be approved by a reviewer who did not modify the config.
+
+## Completion Contract (Shared)
+
+Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#completion-contract-shared`. The smallest applicable smoke check is one terminating command from the documented runnable path plus `npx qfai doctor --fail-on error`. Require `traceability.testGlobs` to report `[ok]`; exit 0 with a warning or truncated scan does not prove test discovery. Also run `npx qfai validate --fail-on error` and inspect `.qfai/report/validate.json#issues` by code. Resolve config and test-glob errors this skill owns, including `QFAI-SCAN-002`; report `QFAI-STORY-006` through `QFAI-STORY-009` uncovered obligations to the testing stage. A path recorded but never executed is UNRUN.
+Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.
+
+## Goal
+
+Analyze the repository and update `qfai.config.yaml` so traceability checks are actionable, with a documented minimum runnable path.
+
+Note: /qfai-sdd includes a preflight step that bootstraps missing config/policy when run directly after init.
+/qfai-configure remains the recommended way to tune `qfai.config.yaml` early with a clean, minimal diff.
+
+## Success Criteria (Definition of Done)
+
+- `qfai.config.yaml` is updated with a **minimal diff** focused on traceability globs.
+- `validation.traceability.testFileGlobs` reflects the real test layout.
+  - `npx qfai init` ships this empty on purpose. Detect the stack before setting it — `pyproject.toml` / `setup.cfg` (Python), `go.mod` (Go), `pom.xml` / `build.gradle` (JVM), `Cargo.toml` (Rust), `package.json` (JS/TS), `Gemfile` (Ruby), `composer.json` (PHP) — and derive globs from the test paths that actually exist, not from the language's convention alone.
+  - Cross-check the matched files against the business flows, acceptance criteria, and examples under `.qfai/spec/02_business-flow/`. BF needs E2E coverage, AC needs integration or API coverage, and EX needs a selected non-E2E test.
+  - The final report must show at least one matched file per declared test layer (unit / integration / api / e2e / component as applicable). A layer with zero matched files is a blocking gap, not a note.
+  - A scan failure is `QFAI-SCAN-002`; the run is not done until the configured selection scans completely. `QFAI-STORY-006` through `QFAI-STORY-009` report uncovered BF, AC, and EX obligations for the testing stages.
+- `validation.traceability.testFileExcludeGlobs` is added only when needed.
+- A validation checklist with evidence (sample matched files) is produced.
+- Project-owned policy and contract files are filled or refreshed from evidence, or marked `TBD` when evidence is missing. Keep quality-gate commands solely in `03_contract/tech.md` under Standard commands.
+- Completion is approved by a reviewer who did not modify the config.
+
+## Mandatory checks
+
+- Tool selection rationale is recorded (per layer if applicable).
+- A minimum runnable path is described (dev server, db, env, commands).
+
+## Not-done criteria
+
+- Tool selection rationale missing.
+- Minimum runnable path missing or unverifiable.
+
+## Final report
+
+The final report includes:
+
+- chosen tools per layer (E2E/API/Integration/Component/Unit)
+- the Standard commands section in `03_contract/tech.md` and the commands actually executed
+- the proposed include and exclude globs, with 5 to 15 sample matched files
+- the minimum runnable path
+- the files changed
+- gaps and open risks ("none" is acceptable if justified)
+- the final status (PASS/FAIL) and who confirmed it
+
+## Non-Negotiable Principles (QFAI Articles)
+
+These principles are inspired by "constitution / articles" patterns used by other agent frameworks, but adapted to QFAI.
+
+1. **SDD First (Specification is the source of truth)**  
+   If there is a conflict between code and spec, treat the spec as authoritative and either (a) fix code or (b) raise an explicit Open Question to change the spec.
+
+2. **Traceability is mandatory**  
+   Every meaningful change must connect a business flow, story, acceptance criterion, example, test, code, and verification evidence. BF is covered by E2E tests, AC by integration or API tests, and EX by a selected non-E2E test. Full rule: `.qfai/assistant/rule/constitution.md` Article V.
+
+3. **Evidence over confidence**  
+   Prefer observable proof (logs, commands, file diffs, test results). If you cannot verify, say so and record it.
+
+4. **Minimize scope, but never hide gaps**  
+   Keep changes minimal, but do not "paper over" missing decisions. If something blocks correctness, stop and ask.
+
+5. **Quality gates are the decision mechanism**  
+   Use tests/lint/typecheck/build/pack verification (whatever the repo defines) as the primary guardrail. Fix until PASS.
+
+6. **Make it runnable**  
+   Outputs must be executable in terminal/CI. Provide copy-paste commands.
+
+7. **User time is expensive**  
+   Ask only the questions that are truly blocking. Everything else: make reasonable assumptions and label them clearly.
+
+## README Rule
+
+Do not create `.qfai/**/README.md` files as scaffold or format documentation; keep artifact guidance in skill references/templates.
+
+- READMEs are reference guides. Follow their structure, templates, and checklists.
+
+## Absolute Rule - Output Language
+
+**Write all outputs in the user's working language for this session.**
+
+- If the user writes in Japanese, output Japanese.
+- If the user writes in English, output English.
+- If the user mixes languages, prefer the dominant language unless explicitly instructed otherwise.  
+  This rule overrides all other stylistic preferences.
+
+## Multi-Role Orchestration (Subagents)
+
+When the orchestrator delegates, it uses the platform's native sub-agent mechanism for Claude Code, GitHub Copilot, and Codex.
+
+### Delegation order
+
+Use `.qfai/assistant/rule/agent-selection.md` as the routing SSOT.
+
+- Routed phases, in order: `analysis` (`delivery-planner`, `qa-strategist`) -> `config` (`devops-ci-engineer`) -> `review` (`qa-gatekeeper`).
+
+### Delegation contract (tool-neutral)
+
+```text
+Role: delivery-planner
+Task title: Analyze repo and propose testFileGlobs
+Goal: Tune qfai.config.yaml with a minimal diff
+Inputs:
+- relevant policy and repo layout
+Constraints:
+- minimal diff
+- evidence-first
+Return:
+- proposed globs + rationale + evidence refs
+```
+
+## Completion Separation (mandatory)
+
+- Config changes (`devops-ci-engineer`) and their approval (`qa-gatekeeper`) must be separate.
+- `qa-gatekeeper` must confirm evidence sampling before approval.
+
+## Context Refresh (mandatory for long tasks)
+
+Every 5 major actions, pause and restate:
+
+- DoD and prohibited "done" criteria
+- Evidence samples collected vs missing
+- Config changes and policy updates completed
+
+## Constraints
+
+- Only update `qfai.config.yaml` and project-owned policy and contract files under `.qfai/spec/` unless explicitly asked.
+- Do **not** modify tests or source code.
+- Avoid overly broad globs (e.g., `**/*`).
+- Exclude generated/output directories (`node_modules`, `.git`, `.qfai`, `dist`, `build`, `coverage`, `.next`, `out`, etc.).
+- Write no `validation.require` key; the sections of a story-tree document come from the shipped schemas.
+
+## Step 0 - Load Context (always)
+
+1. Read relevant **project policy** (if present):
+   - `.qfai/spec/01_policy/objective.md`
+   - `.qfai/spec/01_policy/initiative.md`
+   - `.qfai/spec/03_contract/tech.md`
+   - `.qfai/assistant/rule/agent-selection.md`, and
+   - the acting role's card under `.qfai/assistant/agent/`.
+
+2. Read **project constitution / instructions** (if present):
+   - `.qfai/assistant/rule/constitution.md`
+   - `.qfai/assistant/rule/workflow.md` (or equivalent)
+   - `.qfai/assistant/rule/quality.md` for general gate policy. Reconcile
+     project commands against the toolchain detected in step 3, and record
+     them only under `03_contract/tech.md#standard-commands-copy-paste`.
+
+3. Inspect repo conventions:
+   - package manager (pnpm/npm/yarn), test runner, lint/typecheck scripts, CI definitions
+   - existing test patterns (unit/integration/e2e)
+
+4. Inspect project-owned policy and contract files for placeholders.
+
+## Step 0 - Project Analysis (mandatory)
+
+Before editing config, **thoroughly analyze the current project**:
+
+- background and goals
+- directory structure and conventions
+- chosen technologies and versions (runtime, package manager, test runner)
+- test locations (unit/integration/e2e)
+- existing test naming rules (`*.test.*`, `*.spec.*`, `*_test.*`, etc.)
+
+If analysis cannot be performed (missing access), clearly state what could not be verified and proceed with minimal-risk assumptions.
+
+## Step 1 - Identify test frameworks and locations
+
+1. Inspect `package.json` and config files (e.g., `vitest.config.*`, `jest.config.*`, `playwright.config.*`, `pytest.ini`, `go.mod`).
+2. Enumerate directories that contain tests (e.g., `tests/`, `src/`, `e2e/`, `integration/`).
+3. Note naming rules and extensions that indicate test files.
+4. Inspect the story tree and its tests to identify which BF, AC, and EX layers are present.
+
+## Step 2 - Propose glob patterns
+
+Provide 3-10 **include globs** that cover all known test locations:
+
+- Prefer explicit patterns (e.g., `src/**/*.test.ts`, `tests/**/*.spec.ts`).
+- Include src-colocated tests if they exist.
+
+Provide **exclude globs** only when necessary (beyond the default exclusions).
+
+## Step 3 - Update project context (evidence-first)
+
+Fill policy templates with repo evidence.
+
+- Keep existing content when already accurate.
+- When evidence is missing, write `TBD` and record what is missing.
+- Do not invent facts.
+- Fill `03_contract/tech.md` in its template's shape: a Stack row for the runtime, the platform and each tool detected, each runtime dependency with its reason, and the quality-gate commands under Standard commands, one labelled item each. It holds no rule and no constraint; a constraint goes to `01_policy/constraint.md`.
+- Fill `## Architecture` of `03_contract/tech.md` from the codebase: one row per layer the module layout shows, what it is responsible for, and the layers its imports reach, or `-`. Name layers, never paths. Implementation places new code by this table and reviewers judge a change against it, so write the import directions the code has.
+  - A layer is a group of modules whose imports point one way: an upper layer uses the layers below it, and a lower layer never imports an upper one.
+  - Draw the layers first, as one `mermaid` `flowchart TD` with a node per layer and an `Upper --> Lower` edge per import direction. Then write the table rows from the uppermost layer down, so each Depends on names only rows below it. `npx qfai validate` reports a diagram and a table that disagree.
+
+## Step 4 - Update `qfai.config.yaml` (minimal diff)
+
+Edit:
+
+- `validation.traceability.testFileGlobs`
+- `validation.traceability.testFileExcludeGlobs` (only if needed)
+- `routing` or `reviewProfiles` only when the project needs an override; each matching entry replaces the shipped default as a whole
+- `uiux.surfacePaths`: the repository-relative globs of the paths observed to render a user-visible surface, or `[]` when the repository renders none. Keep an existing value unless the user asks to change it. An absent key leaves the UI impact decision unevaluable.
+
+Keep all other config keys unchanged.
+
+## Step 5 - Evidence sampling
+
+Sample 5-15 actual test files that match the proposed globs.
+
+- If zero matches exist, stop and ask for clarification. Under `--auto` do not ask:
+  zero matches leave nothing to assume from, so stop with the empty match set reported
+  as a blocker and leave `testFileGlobs` unchanged.
+  This stop is **not subject to the Article VI budget** — it is a `hard-required`
+  input this run consumes, so it survives clarification-exhausted mode. Do not
+  assume a glob and do not write the key; report the unresolved glob as the
+  blocker.
+- If some directories are ambiguous, list them as Open Questions.
+
+## Checkpoints
+
+- [ ] Repository analysis completed (frameworks, test layout, naming rules).
+- [ ] Project-owned policy and contract files updated with evidence or `TBD`.
+- [ ] Standard commands recorded only in `03_contract/tech.md`.
+- [ ] Proposed include/exclude globs with rationale.
+- [ ] `qfai.config.yaml` updated (minimal diff).
+- [ ] BF, AC, and EX test layers inspected.
+- [ ] Evidence: sample matched files listed.
+
+## Output
+
+Provide:
+
+1. Updated `qfai.config.yaml` (diff or full file, as appropriate).
+2. Updated project-owned policy and contract files (diff or summary).
+3. A short summary of changes and rationale.
+4. Validation checklist with sampled files.
+5. If routing or review profiles changed, list each whole-entry override and its reason.
+6. Open questions (blocking vs non-blocking).
+
+Suggest next step: `/qfai-discussion` (or rerun `/qfai-configure` if configuration is not ready).
+
+## DONE Declaration (Mandatory Output)
+
+When you declare DONE, include:
+
+- Referenced inputs: instructions, project context, `decisions.md`, and any applicable story.
+- DEC IDs referenced (or "none" when no decision applies).
+- Confirmation that no rejected option was reintroduced.
+
+## FINAL CHECKLIST (Check Last)
+
+- [ ] Hard Constraints were followed.
+- [ ] The final report exists and is complete.
+- [ ] All mandatory checks were executed and recorded.
+- [ ] No untracked gaps remain (or they are explicitly documented).
+- [ ] Completion approved by a reviewer who did not modify the config.
+
+## Completion Checklist
+
+- [ ] This skill's Definition of Done is satisfied.
+- [ ] Required artifacts were produced or updated (if applicable).
+- [ ] Open questions that place a **new obligation on the product** were routed to the owner phase (`/qfai-sdd`) as an advisory / Change Request proposal per `.qfai/assistant/rule/drift-protocol.md#reviewer-originated-obligations`; questions about this skill's own inputs or settings stay in its own output for the user to answer. This skill does not write `open-questions.md`.
+- [ ] The completion message was presented to the user.
+- [ ] Next actions were enumerated for all available options.
+
+## Completion Message & Next Actions
+
+When this skill is complete, provide a final user-facing completion message and enumerate all actionable next steps.
+
+- Proceed (recommended): `/qfai-discussion`.
+  Action: run it to formalize requirements from the configured project context.
+- Discussion needs more input: rerun `/qfai-discussion`.
+  Action: collect missing scope, constraints, and assumptions first.
+- Configuration needs refinement: rerun `/qfai-configure`.
+  Action: provide additional include/exclude evidence and update `qfai.config.yaml`.
+
+## Default Autopilot Policy
+
+The skill collapses avoidable per-session prompts to 0-1 by classifying every decision into one of three named buckets:
+
+- auto-decide:
+  - output formatting
+  - ID / sequence numbering
+  - append-vs-create on subject overlap
+  - equivalent-option pick
+- ask-user:
+  - CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE triage operations (each with a prompt template that names the target and rationale)
+  - destructive operations (rm / overwrite / force-push)
+  - version-pin changes (`package.json#version`, branch pin)
+  - scope expansions outside the active envelope
+- hard-required:
+  - brand intent
+  - a business-flow ID when the user requests flow-scoped configuration and the target cannot be inferred
+  - a `testFileGlobs` proposal that matches at least one real file (Step 5)
+  - a resolved tooling choice with a runnable path (Hard Constraints)
+    — neither this nor the proposal above has a defensible default, and a guess
+    is saved as if it were evidence
+
+project_memory:
+
+- qfai-configure is the user-facing entrypoint for editing `qfai.config.yaml`, including the `routing:` and `reviewProfiles:` overrides. The package supplies their defaults; an override replaces a matching entry as a whole.
+- Each agent card under `.qfai/assistant/agent/` is the sole definition of that role. Edit the card to change its mission or other role metadata.
+- Run after every major workflow change to refresh the consuming project to the current QFAI baseline. Do NOT edit `qfai.config.yaml` directly when the skill is available.

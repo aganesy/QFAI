@@ -5,8 +5,6 @@
  * and multiple candidate `discussion-*` dirs exist, `list --active`
  * exits non-zero naming the candidates and the recovery command.
  */
-// QFAI:SPEC-0010:TC-0010-0012
-// QFAI:SPEC-0010:TC-0010-0013
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -42,6 +40,8 @@ async function makePack(id: string): Promise<void> {
   await mkdir(path.join(root, ".qfai", "discussion", id), { recursive: true });
 }
 
+// QFAI:EX-0001-0090-01
+// QFAI:EX-0001-0090-02
 describe("TC-0010-0012: discussion use writes pointer; list --active reads it", () => {
   it("`discussion use <id>` sets state.json#discussion.currentId", async () => {
     await makePack("discussion-20260527075558258");
@@ -130,6 +130,7 @@ describe("TC-0010-0013: ambiguous/absent pointer recovery error", () => {
     expect(combined).toMatch(/qfai discussion use <id>/);
   });
 
+  // QFAI:EX-0001-0090-03
   it("exits non-zero when currentId resolves to a missing pack with multiple candidates", async () => {
     await makePack("discussion-20260101000000000");
     await makePack("discussion-20260202000000000");
@@ -152,6 +153,23 @@ describe("TC-0010-0013: ambiguous/absent pointer recovery error", () => {
     expect(code).not.toBe(0);
     const combined = cap.out.join("\n") + cap.err.join("\n");
     expect(combined).toMatch(/qfai discussion use <id>/);
+  });
+
+  // QFAI:EX-0001-0090-04
+  it("returns a lone pack with exit 0 and a stderr note when currentId is absent", async () => {
+    await makePack("discussion-20260101000000000");
+    const cap = capture();
+    const code = await runDiscussion({
+      root,
+      action: "list",
+      active: true,
+      format: "text",
+      write: cap.write,
+      writeErr: cap.writeErr,
+    });
+    expect(code).toBe(0);
+    expect(cap.out.join("\n")).toMatch(/discussion-20260101000000000/);
+    expect(cap.err.join("\n")).toMatch(/no pointer set; single candidate assumed/);
   });
 });
 
@@ -214,6 +232,7 @@ describe("resolveDiscussionRoot honors absolute discussionDir verbatim", () => {
 // effect of the `list --active` ambiguity error — i.e. only while the
 // operator is already stuck. Enumeration is the unflagged
 // behaviour of the verb instead, with the active pointer marked by `*`.
+// QFAI:EX-0001-0090-05
 describe("bare `discussion list` enumerates packs", () => {
   it("prints every pack, marking the active pointer target", async () => {
     await makePack("discussion-20260101000000000");
@@ -345,6 +364,7 @@ describe("bare `discussion list` enumerates packs", () => {
   // "which packs exist?" from the DEFAULT `.qfai/discussion` while the
   // operator believes they are seeing the configured location — a wrong
   // candidate set handed back under exit 0. The listing must abort.
+  // QFAI:EX-0001-0090-06
   it("exits non-zero naming the config problem instead of listing the default dir", async () => {
     const { writeFile } = await import("node:fs/promises");
     await makePack("discussion-20260101000000000");
@@ -585,8 +605,8 @@ describe("bare `discussion list` rejects an invalid --format at the CLI entry po
       process.stdout.write = originalOut;
       process.exitCode = previousExitCode;
     }
-    // `invalidExitCode`, which the exit-code table in
-    // `.qfai/contracts/cli/qfai-init.md` reserves as 2 for a malformed option
+    // `invalidExitCode`, which BR-0009-0045 of
+    // `.qfai/spec/03_contract/cli/cli-0009-qfai-init.md` reserves as 2 for a malformed option
     // value. It was 1 when this case was written and moved upstream; the
     // assertion is on the same code path, not a new one.
     expect(exitCode).toBe(2);

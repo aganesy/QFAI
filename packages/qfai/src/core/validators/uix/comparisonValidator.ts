@@ -31,7 +31,7 @@ export async function validateExplorationArtifacts(
   const issues: Issue[] = [];
   // The legacy `33_exploration_rubric.md` and `34_evaluator_calibration.md`
   // sidecars were removed when DESIGN.md became the brand SSOT and the
-  // review contract moved to `core/prototyping/evaluatorReview.ts`.
+  // review contract moved to the prototyping reviewer prompt.
   // Validating discussion packs against those deleted
   // template files would fail every freshly-generated pack from the
   // current workflow.
@@ -42,10 +42,10 @@ export async function validateExplorationArtifacts(
     issues.push(
       canonicalIssue(
         "UIX-VAL-DIRECTION-HISTORY-MISSING",
-        "50_review_input_bundle.md must document best-of-history review handling.",
+        "50_review_input_bundle.md must state its one-lineage handling (latest iteration accepted, no best-of-history).",
         "warning",
         "uiux/50_review_input_bundle.md",
-        "Document that later iterations are not automatically preferred over earlier stronger directions.",
+        "State that the latest iteration is the accepted one and that no earlier iteration is restored (no best-of-history).",
       ),
     );
   }

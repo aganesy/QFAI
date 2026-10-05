@@ -9,8 +9,6 @@
  * candidate `discussion-*` dir and the literal recovery command
  * `qfai discussion use <id>`.
  */
-// QFAI:SPEC-0013:TC-0013-0028
-// QFAI:SPEC-0013:TC-0013-0029
 
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
@@ -42,6 +40,8 @@ async function makePack(name: string): Promise<string> {
   return packDir;
 }
 
+// QFAI:EX-0001-0154-01
+// QFAI:EX-0001-0154-02
 describe("TC-0013-0028: active pack resolved from state.json#discussion.currentId", () => {
   it("returns the pack path named in state.json when the dir exists", async () => {
     const packName = "discussion-20260527075558258";

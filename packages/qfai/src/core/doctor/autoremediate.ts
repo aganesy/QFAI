@@ -1,44 +1,30 @@
 /**
  * `qfai doctor --autoremediate` orchestrator.
  *
- * Coordinates three remediations on demand:
+ * Coordinates two remediations on demand:
  *   1. install unmet runtimeDependencies (via `npm install <name>`).
- *   2. archive stale review packs (delegates to `cleanStaleReviewPacks`)
- *      and prune stale validate run logs (via `cleanStaleRunLogs`).
- *   3. write missing default-keyed config fields (does NOT overwrite
- *      user-authored values).
+ *   2. prune stale validate run logs (via `cleanStaleRunLogs`).
  *
  * Disabled in CI by default: the caller detects a standard CI environment
  * via the framework's `isCiEnvironment` predicate (any truthy `CI` value,
  * or `GITHUB_ACTIONS=true`) and passes `isCi`, on which this orchestrator
  * emits `"autoremediate disabled in CI"` and returns without remediating.
  * Honors `--dry-run` by surfacing the plan in the future tense, without
- * side effects. The plan is the one a live run would execute: the
- * config-fill preview parses the config and names only the fields that
- * are actually missing, and reports the same decline a live run would.
+ * side effects.
  *
  * `--yes` is meant to skip the interactive confirmation the CLI contract
- * requires before any install / tracked-file write. That prompt is NOT
- * implemented yet — this CLI is non-interactive today — so the pass runs
- * unattended either way. That is a known deviation from the contract (see
- * `.qfai/contracts/cli/qfai-doctor.md`), not a relaxation of it.
+ * requires before an install. That prompt is NOT implemented yet — this CLI
+ * is non-interactive today — so the pass runs unattended either way. That is
+ * a known deviation from the `qfai doctor` contract, not a relaxation of it.
  *
  * The `npm install` call is routed through a pluggable runner so tests
  * can substitute a no-op stub. The default runner is loaded lazily and
  * skipped entirely under `dryRun`.
  */
 
-import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { parse as parseYaml } from "yaml";
-
-import { exists } from "../validators/utils.js";
-import { loadConfig, resolvePath } from "../config.js";
-import { applyCapCatalogSpecColumn, planCapCatalogSpecColumn } from "./capCatalogSpecColumn.js";
-import { migrateLegacyReviewPacks } from "./migrateLegacyReviewPacks.js";
-import { WOULD_UNTRACK_REASON } from "./archiveVisibility.js";
-import { cleanStaleReviewPacks } from "./cleanReviewPacks.js";
+import { loadConfig } from "../config.js";
 import { cleanStaleRunLogs, precheckRunLogPrune } from "./cleanRunLogs.js";
 import { probeSkillManifest, type SkillManifestProbeResult } from "./skillManifestProbe.js";
 
@@ -61,8 +47,6 @@ export type AutoremediateSummary = {
   readonly disabledInCi: boolean;
   readonly lines: string[];
   readonly installed: readonly string[];
-  readonly archived: readonly string[];
-  readonly configFieldsWritten: readonly string[];
   /** Validate run-log directories pruned by this run. */
   readonly prunedRunLogs: readonly string[];
   /**
@@ -71,60 +55,7 @@ export type AutoremediateSummary = {
    * gone — and the caller must exit non-zero.
    */
   readonly failedRunLogPrunes: readonly string[];
-  /** Review packs recorded as predating `revision_form` by this run. */
-  readonly legacyPacksRecorded: readonly string[];
-  /**
-   * CAP ids whose catalog row this run gave a `Spec` cell.
-   *
-   * Empty when the catalog already declares the column, when there is none, and
-   * when the positions do not describe the tree — the last of those is reported
-   * in {@link AutoremediateSummary.lines} rather than written.
-   */
-  readonly capCatalogRowsDeclared: readonly string[];
 };
-
-const DEFAULT_KEYED_CONFIG_FIELDS: ReadonlyArray<{
-  /** Top-level mapping key, as the parsed document spells it (no colon). */
-  key: string;
-  defaultLine: string;
-}> = [{ key: "review", defaultLine: "review:\n  staleTtlDays: 14\n" }];
-
-/**
- * The document's top-level mapping keys, or `null` when the file is not a
- * mapping this pass may safely append to.
- *
- * A raw-text `^review:` regex would read a *spelling* rather than the document.
- * `"review":` and `'review':` are valid YAML for the same key, so a config
- * that set `staleTtlDays: 30` under a quoted key would misread as unset: the
- * pass would append a second `review:` block, which either makes the file
- * invalid (duplicate key) or — on a last-wins reader — silently replaces the
- * operator's 30 with 14. Parsing the document answers for every spelling of
- * the key at once.
- *
- * `null` is also the answer for a document that does not parse or is not a
- * mapping (a list, a scalar): appending text to it cannot be made safe, so the
- * caller declines rather than guessing.
- */
-function topLevelKeys(source: string): Set<string> | null {
-  if (source.trim().length === 0) {
-    return new Set<string>();
-  }
-  let parsed: unknown;
-  try {
-    parsed = parseYaml(source);
-  } catch {
-    return null;
-  }
-  // An empty document (`---`, or a comment-only file) parses to null and is
-  // still a file this pass may append a first key to.
-  if (parsed === null || parsed === undefined) {
-    return new Set<string>();
-  }
-  if (typeof parsed !== "object" || Array.isArray(parsed)) {
-    return null;
-  }
-  return new Set(Object.keys(parsed));
-}
 
 async function defaultInstallRunner(name: string, cwd: string): Promise<void> {
   const { spawn } = await import("node:child_process");
@@ -143,103 +74,6 @@ async function defaultInstallRunner(name: string, cwd: string): Promise<void> {
       }
     });
   });
-}
-
-type ConfigFillPlan = {
-  readonly configPath: string;
-  /** Default-keyed fields absent from the PARSED document, in declaration order. */
-  readonly missing: readonly string[];
-  /** Exact content a live run would write; `null` when there is nothing to write. */
-  readonly nextSource: string | null;
-  /** Set when the pass declines outright (unreadable, or not a YAML mapping). */
-  readonly skipLine: string | null;
-};
-
-/**
- * Decide — without writing — what a config-fill would do.
- *
- * The dry-run branch used to skip this work entirely and print a fixed
- * `would fill default-keyed config fields` line, so a preview promised an
- * append for a config that already carried the key (live run: writes nothing)
- * and for one that does not parse as a mapping (live run: `skipped
- * config-fill`). Both paths now read the same plan, so the preview cannot
- * claim a change the live run will not make.
- */
-async function planConfigFill(root: string): Promise<ConfigFillPlan> {
-  const configPath = path.join(root, "qfai.config.yaml");
-  let existing = "";
-  if (await exists(configPath)) {
-    try {
-      existing = await readFile(configPath, "utf-8");
-    } catch {
-      return {
-        configPath,
-        missing: [],
-        nextSource: null,
-        skipLine: `autoremediate: skipped config-fill (failed to read ${configPath})`,
-      };
-    }
-  }
-  const presentKeys = topLevelKeys(existing);
-  if (presentKeys === null) {
-    return {
-      configPath,
-      missing: [],
-      nextSource: null,
-      skipLine: `autoremediate: skipped config-fill (${configPath} is not a parseable YAML mapping)`,
-    };
-  }
-  const missing: string[] = [];
-  let appended = existing;
-  for (const field of DEFAULT_KEYED_CONFIG_FIELDS) {
-    if (!presentKeys.has(field.key)) {
-      appended = `${appended.replace(/\s*$/u, "")}\n${field.defaultLine}`;
-      missing.push(field.key);
-    }
-  }
-  return {
-    configPath,
-    missing,
-    nextSource: missing.length > 0 ? appended : null,
-    skipLine: null,
-  };
-}
-
-/** Report a plan in the future tense. Issues no filesystem write. */
-function describeConfigFillPlan(plan: ConfigFillPlan): string {
-  if (plan.skipLine !== null) {
-    return plan.skipLine;
-  }
-  if (plan.missing.length === 0) {
-    return "autoremediate: config-fill not needed, default-keyed fields present (dry-run)";
-  }
-  return `autoremediate: would fill default-keyed config fields: ${plan.missing.join(", ")} (dry-run)`;
-}
-
-async function applyConfigFill(
-  plan: ConfigFillPlan,
-): Promise<{ written: string[]; lines: string[] }> {
-  if (plan.skipLine !== null) {
-    return { written: [], lines: [plan.skipLine] };
-  }
-  if (plan.nextSource === null) {
-    return { written: [], lines: [] };
-  }
-  const written = [...plan.missing];
-  try {
-    await writeFile(plan.configPath, plan.nextSource, "utf-8");
-    return {
-      written,
-      lines: [`autoremediate: wrote default-keyed fields: ${written.join(", ")}`],
-    };
-  } catch (error) {
-    return {
-      written,
-      lines: [
-        `autoremediate: failed to write config defaults: ${error instanceof Error ? error.message : String(error)}`,
-      ],
-    };
-  }
 }
 
 /**
@@ -269,17 +103,13 @@ export async function runAutoremediate(
       disabledInCi: true,
       lines,
       installed: [],
-      archived: [],
-      configFieldsWritten: [],
       prunedRunLogs: [],
       failedRunLogPrunes: [],
-      legacyPacksRecorded: [],
-      capCatalogRowsDeclared: [],
     };
   }
 
   if (options.dryRun) {
-    lines.push("autoremediate: dry-run (no install / archive / config write)");
+    lines.push("autoremediate: dry-run (no install / run-log removal)");
   }
 
   // (1) Probe runtimeDependencies and (optionally) install missing ones.
@@ -318,48 +148,14 @@ export async function runAutoremediate(
     }
   }
 
-  // (2) Archive stale review packs (--clean behavior).
   const { config, issues: configIssues } = await loadConfig(options.root);
-  const ttlDays = config.review?.staleTtlDays;
-  const cleanResult = await cleanStaleReviewPacks(options.root, {
-    ...(typeof ttlDays === "number" ? { ttlDays } : {}),
-    ...(options.dryRun ? { dryRun: true } : {}),
-  });
-  const archivedNames = cleanResult.archived.map((entry) => entry.packName);
-  // `cleanStaleReviewPacks` populates `archived` under dry-run too — it lists
-  // the packs a live run WOULD move. Reporting that count with the past-tense
-  // `archived=N` wording made a preview read as a completed archive, so an
-  // operator checking the plan saw packs already gone. Mirror the `--clean`
-  // dry-run vocabulary instead (`would archive` / `would move ->`).
-  if (options.dryRun) {
-    lines.push(
-      `autoremediate: would archive review packs=${archivedNames.length}, in-ttl=${cleanResult.skippedInTtl.length}, kept-tracked=${cleanResult.skippedWouldUntrack.length}`,
-    );
-    for (const packName of archivedNames) {
-      lines.push(`  would move -> _archive/${packName}`);
-    }
-    for (const entry of cleanResult.skippedWouldUntrack) {
-      lines.push(`  kept ${entry.packName}: ${WOULD_UNTRACK_REASON}`);
-    }
-  } else {
-    lines.push(
-      `autoremediate: review packs archived=${archivedNames.length}, in-ttl=${cleanResult.skippedInTtl.length}, kept-tracked=${cleanResult.skippedWouldUntrack.length}`,
-    );
-    for (const packName of archivedNames) {
-      lines.push(`  -> _archive/${packName}`);
-    }
-    for (const entry of cleanResult.skippedWouldUntrack) {
-      lines.push(`  kept ${entry.packName}: ${WOULD_UNTRACK_REASON}`);
-    }
-  }
 
-  // (2b) Prune stale validate run logs (--clean behavior, second target).
+  // (2) Prune stale validate run logs (--clean behavior).
   // Kept in lockstep with the `--clean` branch in `cli/commands/doctor.ts`
   // so `--autoremediate` is not a narrower clean than `--clean`.
   // Same precondition gate as `--clean`: an invalid config or an outDir
   // shared with another project root means the retention numbers in
-  // hand are not the ones governing the directory, and this half of the
-  // cleanup deletes rather than moves.
+  // hand are not the ones governing the directory.
   const prunedRunLogs: string[] = [];
   const failedRunLogPrunes: string[] = [];
   const precheck = await precheckRunLogPrune(options.root, config, configIssues);
@@ -390,95 +186,11 @@ export async function runAutoremediate(
     }
   }
 
-  // (3) Write missing default-keyed config fields (user-authored values
-  // are NOT touched because we only append the key when absent).
-  // Both branches read the SAME plan. The dry-run branch used to short-circuit
-  // to a fixed `would fill default-keyed config fields` line without looking at
-  // the file, so it promised an append for a config that already declared the
-  // key — a live run writes nothing there — and for one that is not a parseable
-  // mapping, where a live run declines with `skipped config-fill`. Planning is
-  // read-only, so the preview costs nothing and cannot drift from the write.
-  const configPlan = await planConfigFill(options.root);
-  let configFieldsWritten: string[] = [];
-  if (options.dryRun) {
-    lines.push(describeConfigFillPlan(configPlan));
-  } else {
-    const filled = await applyConfigFill(configPlan);
-    configFieldsWritten = filled.written;
-    lines.push(...filled.lines);
-  }
-
-  // (4) Record the review packs that predate `revision_form`, once.
-  // Taking a version that requires the marker turns every pack already on disk
-  // into a blocking `QFAI-REVIEW-007` — a repository that keeps its review
-  // history fails `--fail-on error` on adoption, for a condition no producer
-  // can go back and fix. Additive and idempotent, so a repeat run is a no-op
-  // and a pack that forgets its marker *after* the migration is not excused.
-  // The managed `.gitignore` block is refreshed by the caller before this runs
-  // (`doctor.ts`): an existing repository still carries the older one, whose
-  // `.qfai/review/*` would ignore the record written below, so it never reaches
-  // a commit and every legacy claim is uncorroborated again in CI and in the
-  // next clone. It is done there rather than here because this module is core
-  // and that helper is CLI — importing it the other way is a cycle.
-  // The archive pass above already ran, so a live run no longer sees the packs
-  // it moved into `_archive/` and records none of them. A dry-run moves
-  // nothing, so without the same exclusion it enumerated those packs and
-  // reported `would record legacy review packs=N` for a live run whose answer
-  // is 0 — a preview that promised manifest and summary writes the run would
-  // never make. Handing the archived names over keeps both paths on the same
-  // post-archive set.
-  const migration = await migrateLegacyReviewPacks(options.root, {
-    ...(options.dryRun ? { dryRun: true } : {}),
-    excludePacks: archivedNames,
-  });
-  lines.push(
-    options.dryRun
-      ? `autoremediate: would record legacy review packs=${String(migration.added.length)} (dry-run)`
-      : `autoremediate: legacy review packs recorded=${String(migration.added.length)}`,
-  );
-
-  // (5) Give a legacy CAP catalog the declared `Spec` column.
-  // Written here rather than by `init` because it edits `.qfai/specs/**`, which
-  // is the project's own data and which `init` never rewrites, `--force`
-  // included. All rows or none: the column's presence selects the declared
-  // mapping however few cells carry a value, so a partial write reports a
-  // finding per empty cell instead of falling back to the derivation the
-  // project was working under.
-  const capCatalogRowsDeclared: string[] = [];
-  const catalogConfig = await loadConfig(options.root);
-  const catalogPlan = await planCapCatalogSpecColumn(
-    resolvePath(options.root, catalogConfig.config, "specsDir"),
-  );
-  if (catalogPlan.state === "ambiguous") {
-    lines.push(
-      "autoremediate: CAP catalog Spec column skipped — the row order does not describe the tree:",
-    );
-    for (const reason of catalogPlan.reasons) {
-      lines.push(`  ${reason}`);
-    }
-  } else if (catalogPlan.state === "migratable") {
-    if (options.dryRun) {
-      lines.push(
-        `autoremediate: would declare the CAP catalog Spec column for ${String(catalogPlan.pairs.length)} row(s) (dry-run)`,
-      );
-    } else {
-      await applyCapCatalogSpecColumn(catalogPlan);
-      capCatalogRowsDeclared.push(...catalogPlan.pairs.map((pair) => pair.capId));
-      lines.push(
-        `autoremediate: CAP catalog Spec column declared for ${String(catalogPlan.pairs.length)} row(s)`,
-      );
-    }
-  }
-
   return {
     disabledInCi: false,
     lines,
     installed,
-    archived: archivedNames,
     prunedRunLogs,
     failedRunLogPrunes,
-    configFieldsWritten,
-    legacyPacksRecorded: migration.added,
-    capCatalogRowsDeclared,
   };
 }

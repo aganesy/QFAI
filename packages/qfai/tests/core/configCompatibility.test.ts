@@ -61,9 +61,7 @@ describe("config legacy promptsDir alias (promptsDir -> skillsDir)", () => {
       expect(config.paths.skillsDir).toBe(defaultConfig.paths.skillsDir);
       expect(config.paths.promptsDir).toBe(defaultConfig.paths.promptsDir);
       expect(
-        issues.some((issue) =>
-          issue.message.includes("paths.promptsDir は文字列である必要があります。"),
-        ),
+        issues.some((issue) => issue.message.includes("paths.promptsDir must be a string.")),
       ).toBe(true);
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -109,27 +107,6 @@ describe("config legacy promptsDir alias (promptsDir -> skillsDir)", () => {
       const { config, issues } = await loadConfig(root);
       expect(issues).toEqual([]);
       expect(config.prototyping).toBeUndefined();
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  it("fills defaults for partial prototyping calibration config", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-prototyping-compat-"));
-    try {
-      await writeFile(
-        path.join(root, "qfai.config.yaml"),
-        ["prototyping:", "  calibration:", "    packPath: .qfai/evidence/custom.yaml", ""].join(
-          "\n",
-        ),
-        "utf-8",
-      );
-
-      const { config, issues } = await loadConfig(root);
-      expect(issues).toEqual([]);
-      expect(config.prototyping?.calibration).toEqual({
-        packPath: ".qfai/evidence/custom.yaml",
-      });
     } finally {
       await rm(root, { recursive: true, force: true });
     }

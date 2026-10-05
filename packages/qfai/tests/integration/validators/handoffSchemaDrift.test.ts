@@ -12,7 +12,6 @@
  * writer file's expected `writerToken`. Symmetric (both present or
  * both absent) → no finding. Asymmetric → fire.
  */
-// QFAI:SPEC-0015:TC-0015-0024
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -26,7 +25,7 @@ import {
   HANDOFF_WRITER_PAIRS,
 } from "../../../src/core/validators/handoffSchemaPairs.js";
 
-const SCHEMA_WITH_FIELDS = `export const HANDOFF_MINIMUM_FIELDS = ["companyName", "primarySpecId"] as const;\n`;
+const SCHEMA_WITH_FIELDS = `export const HANDOFF_MINIMUM_FIELDS = ["companyName", "primaryUiContract"] as const;\n`;
 
 const SCHEMA_WITHOUT_FIELDS = `// schema scaffold; no fields exported yet\nexport const PLACEHOLDER = 1;\n`;
 
@@ -46,6 +45,7 @@ async function writeAt(rel: string, body: string): Promise<void> {
   await writeFile(abs, body, "utf-8");
 }
 
+// QFAI:EX-0001-0171-01
 describe("TC-0015-0024: detectHandoffSchemaDrift fires on asymmetric Pair IV edits", () => {
   it("does NOT fire when neither source file exists (consumer install)", async () => {
     const issues = await detectHandoffSchemaDrift(root);
@@ -57,7 +57,7 @@ describe("TC-0015-0024: detectHandoffSchemaDrift fires on asymmetric Pair IV edi
     for (const pair of HANDOFF_WRITER_PAIRS) {
       await writeAt(
         pair.writerRel,
-        `// writer file\nexport function writeHandoff(a: ${pair.writerToken}) { return a; }\n`,
+        `// writer file: \`companyName\`, \`primaryUiContract\`\nexport function writeHandoff(a: ${pair.writerToken}) { return a; }\n`,
       );
     }
     const issues = await detectHandoffSchemaDrift(root);
@@ -83,6 +83,44 @@ describe("TC-0015-0024: detectHandoffSchemaDrift fires on asymmetric Pair IV edi
     expect(f?.message).toMatch(/writer=/);
     expect(f?.message).toMatch(/clause=/);
     expect(f?.message).toMatch(/justification/i);
+  });
+
+  it("fires naming the prototyping handoff reference when only it omits its token", async () => {
+    const PROTOTYPING_HANDOFF_REL =
+      "packages/qfai/assets/init/.qfai/assistant/skill/qfai-prototyping/references/handoff.md";
+    const prototypingPair = HANDOFF_WRITER_PAIRS.find(
+      (p) => p.writerRel === PROTOTYPING_HANDOFF_REL,
+    );
+    expect(prototypingPair).toBeDefined();
+    await writeAt(HANDOFF_SCHEMA_REL, SCHEMA_WITH_FIELDS);
+    for (const pair of HANDOFF_WRITER_PAIRS) {
+      const body =
+        pair === prototypingPair ? "Write a JSON record.\n" : `references ${pair.writerToken}\n`;
+      await writeAt(pair.writerRel, body);
+    }
+    const findings = (await detectHandoffSchemaDrift(root)).filter(
+      (i) => i.code === "R-HANDOFF-SCHEMA-DRIFT",
+    );
+    expect(findings.map((f) => f.file)).toEqual([PROTOTYPING_HANDOFF_REL]);
+  });
+
+  it("fires naming a schema field the prototyping handoff reference does not list", async () => {
+    const PROTOTYPING_HANDOFF_REL =
+      "packages/qfai/assets/init/.qfai/assistant/skill/qfai-prototyping/references/handoff.md";
+    await writeAt(HANDOFF_SCHEMA_REL, SCHEMA_WITH_FIELDS);
+    for (const pair of HANDOFF_WRITER_PAIRS) {
+      const body =
+        pair.writerRel === PROTOTYPING_HANDOFF_REL
+          ? `Write a ${pair.writerToken} record. Its fields are \`companyName\`.\n`
+          : `references ${pair.writerToken}\n`;
+      await writeAt(pair.writerRel, body);
+    }
+    const findings = (await detectHandoffSchemaDrift(root)).filter(
+      (i) => i.code === "R-HANDOFF-SCHEMA-DRIFT",
+    );
+    expect(findings.map((f) => f.file)).toEqual([PROTOTYPING_HANDOFF_REL]);
+    expect(findings[0]?.message).toContain("primaryUiContract");
+    expect(findings[0]?.message).not.toContain('"companyName"');
   });
 
   it("does NOT fire when schema does not yet export the canonical field set (symmetric absent)", async () => {

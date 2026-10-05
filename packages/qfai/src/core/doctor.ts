@@ -1,8 +1,9 @@
-import type { Dirent } from "node:fs";
-import { access, readdir, readFile } from "node:fs/promises";
+import { constants, type Dirent } from "node:fs";
+import { access, lstat, readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { parseAgentFrontmatter } from "./agentFrontmatter.js";
+import { isEnoent } from "./fs/errno.js";
 import {
   defaultConfig,
   findConfigRoot,
@@ -10,17 +11,13 @@ import {
   loadConfig,
   resolvePath,
   type ConfigPathKey,
-  type QfaiConfig,
 } from "./config.js";
 import { readUiContractScreenContracts } from "./contracts/screenContracts.js";
 import {
   DESIGN_MD_SAMPLE_MARKER,
-  hashDesignMd,
   isUnreplacedDesignMdSample,
   parseDesignMd,
 } from "./design/designMd.js";
-import { readDesignMdLockSha } from "./design/designMdLock.js";
-import { collectScenarioFiles } from "./discovery.js";
 import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "./fs.js";
 import { toRelativePath } from "./paths.js";
 import {
@@ -33,21 +30,19 @@ import {
   type PlaywrightLauncherResolution,
 } from "./prototyping/playwrightLauncher.js";
 import { resolvePrimaryPrototypingSpec } from "./prototyping/specResolution.js";
-import { collectSpecEntries } from "./specLayout.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
-import { diffProjectSkillsAgainstInitAssets, type SkillsIntegrityDiff } from "./skillsIntegrity.js";
+import { readStoryTreeModel } from "./storyTree/tree.js";
 import type { Issue } from "./types.js";
-import { validateSddDesignContractReadiness } from "./validators/designContractReadiness.js";
+import { validateDesignContractReadiness } from "./validators/designContractReadiness.js";
+import { BIDIRECTIONAL_CONTROLS, LINE_SEPARATORS } from "./validators/assistantAssets.js";
 import { validateIntegrationSurface } from "./validators/integrationSurface.js";
 import { applyWaivers } from "./waivers.js";
 import { resolveToolVersion } from "./version.js";
-import { loadDecisionGuardrails, normalizeDecisionGuardrails } from "./decisionGuardrails.js";
 import {
   probeSkillManifest,
   SKILL_MANIFEST_RUNTIME_DEPENDENCIES_FIELD,
   type SkillManifestProbeResult,
 } from "./doctor/skillManifestProbe.js";
-import { planCapCatalogSpecColumn } from "./doctor/capCatalogSpecColumn.js";
 import { detectOutDirCollisions } from "./doctor/outDirCollisions.js";
 import {
   checkAssistantAssetLineBudget,
@@ -55,7 +50,11 @@ import {
   type OversizedAssistantAsset,
   type WideLineAssistantAsset,
 } from "./doctor/assetLineBudget.js";
-import { diffInstalledShippedWorkflows } from "./doctor/workflowsIntegrity.js";
+import { checkDocsLane } from "./doctor/docsLane.js";
+import { checkMutationProofs } from "./doctor/mutationProofs.js";
+import { checkMdschemaBinary } from "./doctor/mdschemaBinary.js";
+import { checkWorkflowPreconditions } from "./doctor/workflowPreconditions.js";
+import { findLeftovers, leftoverLines } from "./leftovers.js";
 
 export type DoctorSeverity = "ok" | "info" | "warning" | "error";
 export type DoctorProfile = "prototyping";
@@ -90,7 +89,7 @@ type CreateDoctorDataOptions = {
   /**
    * Per-skill profile name (e.g. "qfai-prototyping"). Distinct from
    * the legacy `profile: "prototyping"` enum which gates the bundled
-   * prototyping preflight checks. When a skill profile is supplied,
+   * prototyping checks. When a skill profile is supplied,
    * the manifest probe runs and contributes `skill.runtimeDependencies`
    * findings.
    */
@@ -98,12 +97,36 @@ type CreateDoctorDataOptions = {
   targetUrl?: string;
 };
 
+/** Follows links on every platform, so a broken link does not exist; `access` succeeds on one on Windows. */
 async function exists(target: string): Promise<boolean> {
   try {
-    await access(target);
+    await stat(target);
     return true;
   } catch {
     return false;
+  }
+}
+
+/** True when the path is a regular file the process may read, which is what `qfai report` needs of validate.json. */
+async function isReadableFile(target: string): Promise<boolean> {
+  try {
+    if (!(await stat(target)).isFile()) {
+      return false;
+    }
+    await access(target, constants.R_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** True only when nothing is at the path; a file, a broken link or an unreadable path is not absent. */
+async function isAbsent(target: string): Promise<boolean> {
+  try {
+    await lstat(target);
+    return false;
+  } catch (error: unknown) {
+    return isEnoent(error);
   }
 }
 
@@ -167,22 +190,18 @@ function isDefaultSkillCreatedPath(key: ConfigPathKey, relPath: string): boolean
   return DEFAULT_SKILL_CREATED_PATH_KEYS.has(key) && relPath === defaultConfig.paths[key];
 }
 
-/**
- * `title` of every `workflows.integrity` emission.
- *
- * Extracted on the schedule its own call sites set: the drift branch's comment
- * held two literal copies with "extract both into a module constant when the
- * third copy arrives with the next emission branch", and TDD-0039's unresolved
- * skip is that branch. The four `skills.integrity` copies below are left inline —
- * different check, and this constant is not theirs to share.
- *
- * A LITERAL, and it must stay one. `TDD-0030` pins it with `toBe` against a
- * test-owned `.github/workflows` and records why deriving it from
- * `WorkflowsIntegrityDiff.workflowsDir` was rejected: that makes the assertion
- * check production against itself under the coordinated edit that moves the title
- * and the payload together.
- */
-const WORKFLOWS_INTEGRITY_TITLE = "Workflows integrity (.github/workflows)";
+const DEFAULT_ABSENT_NOTES: Partial<Record<ConfigPathKey, string>> = {
+  srcDir: "the project has no source yet",
+  testsDir: "the project has no tests yet",
+  outDir: "the first `qfai validate` creates it",
+};
+
+/** What an absent directory at its shipped default means, or undefined where it is a fault. */
+function defaultAbsentNote(key: ConfigPathKey, relPath: string): string | undefined {
+  return path.normalize(relPath) === path.normalize(defaultConfig.paths[key])
+    ? DEFAULT_ABSENT_NOTES[key]
+    : undefined;
+}
 
 export async function createDoctorData(options: CreateDoctorDataOptions): Promise<DoctorData> {
   const startDir = path.resolve(options.startDir);
@@ -224,16 +243,19 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     // Pinning every config issue to `warning` made `doctor --fail-on error`
     // exit 0 on a config the loader had rejected — a value past its sunset
     // reads as "normalized with defaults" rather than as the blocking fault
-    // `qfai-doctor.md` says it is. The check now carries the worst severity
+    // the `qfai doctor` contract says it is. The check now carries the worst severity
     // the loader actually reported.
     const configHasError = issues.some((issue) => issue.severity === "error");
+    // The text formatter prints only `message`, so the issues the loader
+    // returned are listed there, one line, `; `-joined.
+    const listed = issues.map((issue) => renderIssueForMessage(issue.message)).join("; ");
     addCheck(checks, {
       id: "config.load",
       severity: configHasError ? "error" : "warning",
       title: "Config load",
       message: configHasError
-        ? `Loaded with ${issues.length} issue(s), including ${issues.filter((i) => i.severity === "error").length} that must be fixed`
-        : `Loaded with ${issues.length} issue(s) (normalized with defaults when needed)`,
+        ? `Loaded with ${issues.length} issue(s), including ${issues.filter((i) => i.severity === "error").length} that must be fixed: ${listed}`
+        : `Loaded with ${issues.length} issue(s) (normalized with defaults when needed): ${listed}`,
       details: {
         configPath: toRelativePath(root, resolvedConfigPath),
         issues,
@@ -255,86 +277,30 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     const resolved = resolvePath(root, config, key);
     const ok = await exists(resolved);
     const missingDefaultSkillCreatedPath = !ok && isDefaultSkillCreatedPath(key, config.paths[key]);
+    const absentNote =
+      ok || missingDefaultSkillCreatedPath || !(await isAbsent(resolved))
+        ? undefined
+        : defaultAbsentNote(key, config.paths[key]);
     addCheck(checks, {
       id: `paths.${key}`,
-      severity: ok ? "ok" : missingDefaultSkillCreatedPath ? "info" : "warning",
+      severity: ok
+        ? "ok"
+        : missingDefaultSkillCreatedPath || absentNote !== undefined
+          ? "info"
+          : "warning",
       title: `Path exists: ${key}`,
       message: ok
         ? `${key} exists`
         : missingDefaultSkillCreatedPath
           ? `${key} is not created by init; QFAI skills create it when real artifacts exist`
-          : `${key} is missing (configure this path or create the directory)`,
+          : absentNote !== undefined
+            ? `${key} is the shipped default and does not exist yet: ${absentNote}`
+            : `${key} is missing (configure this path or create the directory)`,
       details: { path: toRelativePath(root, resolved) },
     });
 
     if (key === "outDir" && ok) {
       addCheck(checks, await buildRunLogVolumeCheck(root, resolved));
-    }
-
-    if (key === "skillsDir") {
-      // Isolated, not awaited bare: `collectFiles` inside the diff rejects on
-      // an unreadable skills tree, and this call sits before every check that
-      // follows — including `assets.lineBudget`, whose whole job is to report
-      // exactly that kind of damage. One EACCES here used to take the entire
-      // `qfai doctor` run down and emit no diagnostics at all.
-      const diff = await inspectSkillsIntegrity(root, config);
-      if (diff === null) {
-        addCheck(checks, {
-          id: "skills.integrity",
-          severity: "warning",
-          title: "Skills integrity (.qfai/assistant/skills)",
-          message:
-            "Could not inspect skills (reading a directory or a file failed). Check the permissions and the path.",
-          details: { skillsDir: toRelativePath(root, resolved) },
-        });
-      } else if (diff.status === "skipped_missing_skills") {
-        addCheck(checks, {
-          id: "skills.integrity",
-          severity: "info",
-          title: "Skills integrity (.qfai/assistant/skills)",
-          message:
-            "the skills directory has not been created yet, so the check was skipped " +
-            "(run 'qfai init')",
-          details: { skillsDir: toRelativePath(root, diff.skillsDir) },
-        });
-      } else if (diff.status === "skipped_missing_assets") {
-        addCheck(checks, {
-          id: "skills.integrity",
-          severity: "info",
-          title: "Skills integrity (.qfai/assistant/skills)",
-          message: "init assets not found, so the check was skipped (check the installation)",
-          details: { skillsDir: toRelativePath(root, diff.skillsDir) },
-        });
-      } else if (diff.status === "ok") {
-        addCheck(checks, {
-          id: "skills.integrity",
-          severity: "ok",
-          title: "Skills integrity (.qfai/assistant/skills)",
-          message: "Matches the standard assets",
-          details: { skillsDir: toRelativePath(root, diff.skillsDir) },
-        });
-      } else {
-        // skills.integrity defaults to `warning`: direct edits to
-        //.qfai/assistant/skills/** are advisory, not active-profile-blocking.
-        // The doctor 2-group renderer always routes this finding into the
-        // advisory group regardless of message wording.
-        addCheck(checks, {
-          id: "skills.integrity",
-          severity: "warning",
-          title: "Skills integrity (.qfai/assistant/skills)",
-          message:
-            "The standard assets under '.qfai/assistant/skills/**' have been modified. Editing skills directly is discouraged (an update or a re-init can overwrite them).",
-          details: {
-            skillsDir: toRelativePath(root, diff.skillsDir),
-            missing: diff.missing,
-            extra: diff.extra,
-            changed: diff.changed,
-            nextActions: [
-              "If needed, run qfai init --force to restore skills to their standard state",
-            ],
-          },
-        });
-      }
     }
   }
 
@@ -342,342 +308,55 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
   addCheck(checks, await buildAgentFrontmatterCheck(root));
   addCheck(checks, await buildAssetLineBudgetCheck(root));
 
-  // Installed shipped-workflow drift. `modified` is emitted as the `info`
-  // advisory below, the content-identical `ok` state as the `ok` check after it,
-  // and the unresolved-packaged-copy skip as the `info` skip after that.
-  //
-  // The chain is TOTAL AT ITS STATUS TESTS over `WorkflowsIntegrityStatus`,
-  // whose three members each have an arm. Scoped to the STATUS TESTS on
-  // purpose, because DISPATCH is not total:
-  // the `modified.length > 0` paragraph below says why, a `modified` status whose
-  // `modified` list is empty matching this arm's status test and still registering
-  // nothing. (Named rather than counted in lines — "the conjunct 16 lines below" was
-  // true when written and this commit moved it to 18.)
-  //
-  // The stronger form is worth having explicitly: a fourth status added to that
-  // union would fall through this chain silently, and the declaration of
-  // `WorkflowsIntegrityStatus` now carries a note saying so. Corrected where it
-  // lived — this read "the union is the only place a reader can see that it must
-  // not", which was false when written, that declaration having carried no comment
-  // at all.
-  //
-  // Severity is `info` deliberately, and unlike the skills-integrity branch
-  // above it is NOT `warning`: `shouldFailDoctor` counts `warning + error`
-  // under `--fail-on warning`, so a `warning` here would change the exit code
-  // for every adopter running behind the current package — exactly the
-  // population this advisory exists to inform, and none of whom has a repair
-  // command to run. `info` is the only severity that leaves the exit code
-  // untouched under every `--fail-on` value, and the 2-group text renderer
-  // routes `info` into the advisory group all the same.
-  //
-  // The `modified.length > 0` conjunct is NOT redundant with the status test
-  // and lint cannot prove it either way (TS will not correlate a string
-  // literal with an array length), so it has to be stated: BR-0006-0022
-  // forbids a finding whose `modified` is empty, and once `declined` lands the
-  // status is derived from ANY non-empty bucket — the sibling diff already
-  // reports `modified` for a `changed`-only or `missing`-only tree. Under that
-  // derivation the status test alone would emit an empty-`modified` finding.
-  // Do not simplify this to the status test.
-  //
-  // The `packagedDir !== undefined` conjunct is the third of these and, like
-  // the other two, TS cannot correlate it with the status literal. It is a
-  // CONTENT gate, not a type workaround: the doctor contract's required message
-  // content includes the packaged source path to copy from, so a finding that
-  // cannot name that path is not the finding the contract describes.
-  //
-  // It is UNREACHABLE at this revision — an unresolvable packaged tree yields
-  // `skipped_unresolved`, which this branch's status test already excludes — and
-  // that is the whole of its warrant. Deliberately NOT "routing it to silence
-  // here matches what the unresolved status produces": that reading goes stale
-  // the moment the unresolved skip lands its own emission at severity `info`
-  // with an empty `modified`, at which point silence is no longer what that
-  // status produces, while the unreachability is unaffected.
-  //
-  // That moment has arrived — the skip arm below is TDD-0039's — and the two
-  // halves of the sentence above landed as predicted: silence is no longer what
-  // the status produces, and the conjunct is still unreachable, because `status`
-  // still carries one value per run. So it is NOT this row that pays for it: the
-  // state needs a reader reporting `modified` with an unresolved operand, which no
-  // row has opened.
-  //
-  // Kept as an EQUIVALENT MUTANT by construction, and recorded as one rather
-  // than as covered code: deleting it leaves this file's behaviour, `tsc -b` and
-  // `eslint` all unchanged (measured — it is not load-bearing for lint either),
-  // so no oracle exists in the deletion direction and none can be written while
-  // the state is unreachable. It survives as an executable statement of the
-  // contract's content requirement, to be paid for by the row that makes the
-  // state reachable.
-  const workflowsDiff = await diffInstalledShippedWorkflows(root);
-  if (
-    workflowsDiff.status === "modified" &&
-    workflowsDiff.modified.length > 0 &&
-    workflowsDiff.packagedDir !== undefined
-  ) {
-    addCheck(checks, {
-      id: "workflows.integrity",
-      severity: "info",
-      title: WORKFLOWS_INTEGRITY_TITLE,
-      // `title` has no consumer in the text renderer — it prints
-      // `[severity] id: message` — so the prose has to live in `message`,
-      // including all four items the contract requires of it: the stale paths,
-      // the packaged source path, the no-overwrite statement, and NO imperative
-      // naming a `qfai` subcommand.
-      //
-      // That last one is why this message may not copy the `skills.integrity`
-      // branch above, which puts `qfai init --force` in `details.nextActions`.
-      // That string is honest there — `init --force` really does restore
-      // skills — but no command refreshes an installed shipped workflow at this
-      // revision, so naming one here would tell every adopter running a version
-      // behind to run something that does not exist. The command arrives in the
-      // same release that rewrites this message.
-      //
-      // `packagedDir` is emitted ABSOLUTE and unrelativized. Not an exception to
-      // this file's `toRelativePath` habit but the FIRST MEMBER OF A CLASS it has
-      // never had: every other `toRelativePath` call here relativizes a path
-      // INSIDE the adopter root and does it in `details`, never in a `message`.
-      // It is the operand the operator has to copy FROM, and it is frequently
-      // outside the adopter root (a global install, a pnpm store, or — as in this
-      // repo's own tests — a workspace checkout against a temp-dir root), where
-      // `path.relative` degrades to a `../..` chain or, across Windows drives,
-      // silently back to the absolute path it started from. A package-relative
-      // rendering was rejected for the same reason from the other side: under
-      // pnpm the install root is `node_modules/.pnpm/qfai@<version>/node_modules/qfai`,
-      // which an operator cannot guess.
-      //
-      // The cost is real and is stated rather than left silent: this is the first
-      // absolute HOST path in any human-facing `qfai doctor` output, and on a
-      // default Windows or global install it carries the OS username in text
-      // operators routinely paste into issues. The contract requires the packaged
-      // source path, so it is not a defect and nothing here suppresses it; the
-      // JSON surface is unaffected because `details.workflowsDir` stays
-      // root-relative. Raise redaction with the owner before adding any, rather
-      // than quietly truncating the one path the repair depends on.
-      //
-      // The stale file names are NOT repeated on the packaged side. Each is
-      // already listed above by its adopter-relative path, so directory plus
-      // "the copy of the same name" states the source path completely while
-      // keeping one path in the message instead of one per file. It also keeps
-      // the packaged clause incapable of carrying a FILENAME, which is the
-      // property the provenance-gate suite's absence assertion leans on.
-      //
-      // THIS MESSAGE IS PINNED BY EXACT EQUALITY. The repair-text integration
-      // suite (`tests/integration/spec0006WorkflowsIntegrity.repairText.test.ts`)
-      // composes the expected string test-side and asserts `toBe`, so ANY edit
-      // here — a comma, a reordering, an added sentence — reddens it. Editing
-      // this template means editing that expectation in the same commit, and the
-      // point of the pin is that you cannot do the first without being made to
-      // re-read the contract while doing the second. Do not "fix" the failure by
-      // pasting the new string in without checking the four required items; the
-      // labelled assertions beside the pin exist to catch exactly that, and they
-      // name which item you broke.
-      //
-      // The pin replaced four rounds of pattern oracles, each of which admitted a
-      // message asserting the opposite of a contract item — the last set carried
-      // a governing negation ("Do NOT do the following: replace …") that no
-      // adjacency pattern can see.
-      //
-      // THREE LABELLED NEEDLES are also asserted separately, and they are the
-      // ones that survive a careless re-pinning. All three are BROADER THAN THE
-      // CONTRACT, so a compliant rewording of this message can redden with no
-      // contract violation — deliberate on the test side, warned about here
-      // because the rewording happens in this file. Every one fails RED, never
-      // silently.
-      //
-      // The individual patterns are NOT restated here: a prose copy of them is a
-      // second SSOT that keeps claiming a constraint after the needle is
-      // loosened. What is stable is the two rules they are built from, and those
-      // are what a rewriter needs:
-      //   1. GAPS ARE BOUND IN WHOLE WORDS, never in characters, so no comma,
-      //      semicolon, dash, colon or parenthesis may appear inside a clause a
-      //      needle spans.
-      //   2. EVERY OPERAND THE REQUIREMENT NAMES IS BOUND — subject, verb, object
-      //      and instrument — so each is pinned as a noun phrase and cannot be
-      //      renamed, reordered or moved into another clause.
-      // Both are tight on purpose: every looser form was green on a message
-      // asserting the OPPOSITE of the contract item it was written for, including
-      // one that told the adopter their hand-edited file would be "refreshed in
-      // place on your next install". Loosen only with a witness set in hand.
-      //
-      // On a red, read the ASSERTION LABEL rather than the pattern. Each names
-      // its contract item and, where a needle over-fires, says so — the labels
-      // alone identified the broken requirement in every mutation run against
-      // this row so far.
-      message:
-        `installed shipped workflows differ from the packaged copy: ${workflowsDiff.modified.join(", ")}. ` +
-        `Manual repair: replace each listed file with the copy of the same name in ${workflowsDiff.packagedDir}. ` +
-        `The installed file is never overwritten by QFAI: this finding reports the difference and writes nothing.`,
-      // BR-0006-0022's payload. `declined` is carried here and NOWHERE in
-      // `message`: the message's repair instruction tells the operator to replace
-      // each listed file with the packaged copy, and a declined file listed there
-      // would instruct them to undo a removal this check has promised never to
-      // undo. `packagedDir` appears in both, and that is not a duplication to
-      // collapse — the message needs it as prose the operator copies from, and
-      // `details` needs it as a machine-readable field a JSON consumer can read
-      // without parsing English.
-      //
-      // This branch is gated on `packagedDir !== undefined`, so the field is a
-      // string here and the `string | undefined` on the diff does not leak out.
-      details: {
-        workflowsDir: workflowsDiff.workflowsDir,
-        modified: workflowsDiff.modified,
-        declined: workflowsDiff.declined,
-        packagedDir: workflowsDiff.packagedDir,
-      },
-    });
-  } else if (workflowsDiff.status === "ok" && workflowsDiff.comparedCount > 0) {
-    // The `comparedCount > 0` conjunct is the mirror of the `modified.length`
-    // one above, and it is a CORRECTNESS gate, not a tidiness one. The
-    // provenance record is empty for a missing, unreadable or malformed file by
-    // contract, and `status: "ok"` is what the reader returns after comparing
-    // NOTHING. Every shipped name in that tree is `adopter-owned` or `absent`
-    // in the shipped-workflows state enum (§3) and both rows require silence;
-    // the doctor contract keys `ok` to `installed` alone and says outright that
-    // it reports nothing for a workflow with no provenance entry. Emitting here
-    // would tell an adopter their workflows match a packaged copy that was
-    // never opened — including the adopter who installed before the record
-    // existed, for whom §3's known limitation says this channel is silent.
-    //
-    // Deliberately the count and not "some name resolved to `installed`":
-    // BR-0006-0022 requires `ok` on a tree whose recorded files were all
-    // deliberately removed, which has zero `installed` names and where the
-    // claim is nonetheless true.
-    //
-    // `details` carries `workflowsDir` and NOTHING else. The four-key payload
-    // of BR-0006-0022 belongs to the drift emission alone: `modified` here
-    // would render an empty file list as a drift report, and `declined` here
-    // would contradict the declined-only tree's requirement that severity be
-    // `ok` while `details.declined` does not appear at all.
-    //
-    // `message` is non-empty because the text renderer prints
-    // `[severity] id: message` and nothing else — an empty message would print
-    // the bare line `[ok] workflows.integrity:`. It is phrased in English to
-    // match the drift emission directly above it, which is the same check id
-    // the same operator reads; the Japanese `skills.integrity` ok branch is a
-    // different check and its language is not this one's to inherit.
-    addCheck(checks, {
-      id: "workflows.integrity",
-      severity: "ok",
-      title: WORKFLOWS_INTEGRITY_TITLE,
-      // Two messages, because ONE of them would be false on one of the two
-      // trees that reach this arm. A tree whose every recorded name was
-      // deliberately removed has NO installed workflow at all, so claiming its
-      // installed files match a packaged copy states something QFAI never
-      // observed — the check is still `ok` (a declined name is never reported
-      // again), but the prose has to say what was actually established.
-      message:
-        workflowsDiff.declined.length === workflowsDiff.comparedCount
-          ? "every recorded shipped workflow was removed by this repository; nothing to compare"
-          : "installed shipped workflow(s) match the packaged copy",
-      details: { workflowsDir: workflowsDiff.workflowsDir },
-    });
-  } else if (workflowsDiff.status === "skipped_unresolved") {
-    // BR-0006-0020's closing clause — 「package 同梱 copy を解決できない場合は
-    // severity `info` で skip する」 (TC-0006-0030 leg (c) / AC-0006-0023). The
-    // packaged operand could not be resolved, so nothing was compared and nothing
-    // may be claimed about the adopter's files in either direction.
-    //
-    // The shape is the sibling's: the `skills.integrity` chain above emits its own
-    // unresolvable-assets skip at `info` with only its directory in `details`,
-    // from the same `getInitAssetsDir` throw. Same cause, same severity, same
-    // payload width.
-    //
-    // GATED ON `status` ALONE, which is this row's decision rather than its
-    // omission. Both arms above carry a count conjunct and the `ok` one exists
-    // because review caught that arm making a positive claim about a tree it had
-    // never opened, so the question is whether a status-only gate reproduces that.
-    // It does not, and the mirror conjunct would introduce the inverse defect:
-    //   - `ok` is the reader's FALL-THROUGH value, produced both by "compared
-    //     names, all matched" and by "compared nothing"; the count is what
-    //     separates them. `skipped_unresolved` is returned from exactly ONE site,
-    //     the reader's early return on an unresolvable operand, with `modified:
-    //     []`, `comparedCount: 0` and `packagedDir: undefined` all constant there
-    //     — so no second tree arrives here to be mis-described.
-    //   - the EXCLUDED tree is what matters, more than the ambiguity.
-    //     `comparedCount > 0` excludes a tree the contract requires to be SILENT.
-    //     A conjunct here (`packagedDir === undefined`, `comparedCount === 0`)
-    //     would exclude a tree BR-0006-0020 requires to SKIP: a reader that ever
-    //     reported this status with a resolved-but-unusable operand would fall
-    //     through all three arms and emit nothing, which is precisely the defect
-    //     this row closes, reintroduced one state along.
-    // And neither conjunct could be FALSE at this revision, so neither would have an
-    // oracle: falsifying one needs a reader that returns `skipped_unresolved` with a
-    // RESOLVED `packagedDir` or a non-zero `comparedCount`, and the single producing
-    // site sets both constants. Corrected in place — this said "the state that would
-    // falsify either is the unreachable one above", which names the DRIFT arm's
-    // unreachable state (`modified` reported with an unresolved operand); that is a
-    // different state on the other side of the chain, and it falsifies neither of
-    // these two conjuncts. The drift arm does already carry one such predicate,
-    // recorded there as an equivalent mutant; a second would be a second untestable
-    // one on the same emission.
-    //
-    // EXCLUSIVITY holds twice over, and TDD-0032's and TDD-0038's
-    // `toHaveLength(1)` pins depend on it: `status` carries one value per run, so
-    // no two arms' status tests can both be true, and `else if` makes that
-    // structural rather than value-dependent. The chain form is the belt and not
-    // the load — measured, converting this arm to a standalone `if` leaves both of
-    // those suites green — so keep it anyway rather than resting the pins on the
-    // reader continuing to return one status per run.
-    //
-    // `details` carries `workflowsDir` and NOTHING else, the same width as the
-    // `ok` arm: `modified: []` would claim nothing is stale about a tree that was
-    // never compared, `packagedDir` is `undefined` here by construction, and
-    // `declined` is part of BR-0006-0022's payload for the DRIFT finding, owned by
-    // TDD-0036. This arm adds no key of its own, so it decides nothing for that
-    // row.
-    //
-    // `message` is English to match the two arms above — one check id, one
-    // operator — and interpolates NOTHING: the only operand this state has is the
-    // unresolved packaged directory, and rendering it would print the literal
-    // `undefined`.
-    //
-    // Its WORDING is not contract-fixed, the emission table having no row for this
-    // state — but "leaves the text editable", which stood here, is wrong about what
-    // TDD-0039 leaves. FOUR pins hold this string, enumerated so an editor knows
-    // which one will redden: `/\S/` for non-emptiness (the renderer prints
-    // `[severity] id: message` and nothing else); `details.modified` must stay
-    // `undefined`; and two NEGATIVE sweeps over this text — drift vocabulary
-    // (`differ`, `stale`, `outdated`, `out of date`, `mismatch`, `drifted`) and the
-    // literal `undefined`. Both sweeps are broader than the contract deliberately: a
-    // negative sweep fails only in the FALSE-RED direction, so breadth cannot admit a
-    // violation while narrowing could — hence a COMPLIANT rewording can redden, the
-    // same warning the drift arm above carries about its three needles. The bare noun
-    // `drift` is excluded from the vocabulary sweep for one reason only: THIS text
-    // denies drift using it. Reword that denial and re-read the needle before
-    // widening it.
-    //
-    // It also carries no command token, which is measured rather than asserted:
-    // under the mutation that makes this arm fire in TDD-0032's fixture, all eight
-    // of that row's tokens pass on this text. BR-0006-0020 scopes the no-command
-    // rule to the DRIFT finding's body, so no oracle holds it here — but that row's
-    // sweeps do read this message under that mutation, so an edit adding a `qfai`
-    // subcommand to it would surface there and not here.
-    addCheck(checks, {
-      id: "workflows.integrity",
-      severity: "info",
-      title: WORKFLOWS_INTEGRITY_TITLE,
-      message:
-        "the packaged shipped-workflow copy could not be resolved, so installed shipped workflow(s) were not compared and no drift is reported",
-      details: { workflowsDir: workflowsDiff.workflowsDir },
-    });
-  }
+  addCheck(checks, await checkDocsLane(root));
+  const mutationProofs = await checkMutationProofs(root, config);
+  if (mutationProofs)
+    addCheck(checks, { ...mutationProofs, message: escapeForMessage(mutationProofs.message) });
+  addCheck(checks, await checkMdschemaBinary());
+  for (const check of await checkWorkflowPreconditions(root)) addCheck(checks, check);
 
   const deprecatedPromptsDir = resolvePath(root, config, "promptsDir");
   const deprecatedPromptsExists = await exists(deprecatedPromptsDir);
+  let deprecatedPromptsContainContent = false;
+  if (deprecatedPromptsExists) {
+    try {
+      const entries = await readdir(deprecatedPromptsDir, { withFileTypes: true });
+      deprecatedPromptsContainContent =
+        entries.length !== 1 || entries[0]?.name !== ".gitkeep" || !entries[0].isFile();
+    } catch {
+      // A path that cannot be inspected is not the known empty init seed.
+      deprecatedPromptsContainContent = true;
+    }
+  }
   // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional: checking deprecated promptsDir for diagnostic
   const deprecatedPromptsConfigured = config.paths.promptsDir !== defaultConfig.paths.promptsDir;
   addCheck(checks, {
     id: "paths.promptsDirDeprecated",
-    severity: deprecatedPromptsExists || deprecatedPromptsConfigured ? "warning" : "ok",
+    severity: deprecatedPromptsContainContent || deprecatedPromptsConfigured ? "warning" : "ok",
     title: "Deprecated path: promptsDir",
     message: deprecatedPromptsConfigured
       ? "promptsDir is deprecated and is set in the config (migrate to skillsDir)"
-      : deprecatedPromptsExists
+      : deprecatedPromptsContainContent
         ? "promptsDir is deprecated; even when it exists it is not used by validation (use skillsDir)"
-        : "promptsDir is deprecated (not being created is fine)",
+        : deprecatedPromptsExists
+          ? "promptsDir is deprecated; the shipped empty directory contains no prompts"
+          : "promptsDir is deprecated (not being created is fine)",
     details: {
       path: toRelativePath(root, deprecatedPromptsDir),
       configured: deprecatedPromptsConfigured,
     },
+  });
+
+  const leftovers = await findLeftovers(root, resolvePath(root, config, "discussionDir"));
+  addCheck(checks, {
+    id: "paths.leftovers",
+    severity: leftovers.paths.length > 0 ? "info" : "ok",
+    title: "Paths an earlier release left",
+    message:
+      leftovers.paths.length > 0
+        ? leftoverLines(leftovers).join("\n")
+        : "No path an earlier release left is present",
+    details: { paths: leftovers.paths },
   });
 
   if (options.profile === "prototyping") {
@@ -688,158 +367,20 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     checks.push(...(await buildSkillManifestProbeChecks(root, options.skillProfile)));
   }
 
-  const specsRoot = resolvePath(root, config, "specsDir");
-  const entries = await collectSpecEntries(specsRoot);
-  let missingCoreFiles = 0;
-  let missingHowSsotFiles = 0;
-  let duplicatedHowSsotFiles = 0;
-  let legacyImplementationBriefOnly = 0;
-
-  for (const entry of entries) {
-    if (entry.layout === "layered") {
-      const layeredRequired = [
-        entry.userStoriesPath,
-        entry.acceptanceCriteriaPath,
-        entry.businessRulesPath,
-        entry.examplesPath,
-        entry.testCasesPath,
-      ];
-      for (const filePath of layeredRequired) {
-        if (!(await exists(filePath))) {
-          missingCoreFiles += 1;
-        }
-      }
-      const hasDelta = (
-        await Promise.all(entry.deltaCandidates.map((target) => exists(target)))
-      ).some(Boolean);
-      if (!hasDelta) {
-        missingCoreFiles += 1;
-      }
-      const hasPlan = await exists(entry.planPath);
-      if (!hasPlan) {
-        missingHowSsotFiles += 1;
-      }
-      continue;
-    }
-
-    const legacyCoreRequired = [
-      entry.specPath,
-      entry.deltaPath,
-      entry.scenarioPath,
-      entry.caseCataloguePath,
-      entry.traceabilityMatrixPath,
-    ];
-    for (const filePath of legacyCoreRequired) {
-      if (!(await exists(filePath))) {
-        missingCoreFiles += 1;
-      }
-    }
-    const hasPlan = await exists(entry.planPath);
-    const hasLegacy = await exists(entry.legacyImplementationBriefPath);
-    if (!hasPlan && !hasLegacy) {
-      missingHowSsotFiles += 1;
-    } else if (hasPlan && hasLegacy) {
-      duplicatedHowSsotFiles += 1;
-    } else if (!hasPlan && hasLegacy) {
-      legacyImplementationBriefOnly += 1;
-    }
-  }
-
-  const hasCoreMissing = missingCoreFiles > 0;
-  const hasHowSsotError = missingHowSsotFiles > 0 || duplicatedHowSsotFiles > 0;
-  const hasLegacyOnly = legacyImplementationBriefOnly > 0;
-  const specLayoutSeverity: DoctorSeverity =
-    hasCoreMissing || hasHowSsotError ? "warning" : hasLegacyOnly ? "info" : "ok";
-  const specLayoutMessage =
-    hasCoreMissing || hasHowSsotError
-      ? `Missing required files in spec packs (missingCoreFiles=${missingCoreFiles}, missingHowSsotFiles=${missingHowSsotFiles}, duplicatedHowSsotFiles=${duplicatedHowSsotFiles}, legacyImplementationBriefOnly=${legacyImplementationBriefOnly})`
-      : hasLegacyOnly
-        ? `legacy implementation-brief.md is used in ${legacyImplementationBriefOnly} spec pack(s). Migrate to plan.md.`
-        : `All spec packs have required files (count=${entries.length})`;
-
-  addCheck(checks, {
-    id: "spec.layout",
-    severity: specLayoutSeverity,
-    title: "Spec pack shape",
-    message: specLayoutMessage,
-    details: {
-      specPacks: entries.length,
-      missingCoreFiles,
-      missingHowSsotFiles,
-      duplicatedHowSsotFiles,
-      legacyImplementationBriefOnly,
-    },
-  });
-
-  // A catalog written before the `Spec` column existed maps CAP to spec by row
-  // position, and that derivation cannot hold the ID gap an approved DELETE
-  // leaves — so the DELETE cannot be completed until the column is declared.
-  // Reported here and written by `--autoremediate`: the file is the project's
-  // own data, so nothing adds the column as a side effect of an upgrade.
-  const capCatalogPlan = await planCapCatalogSpecColumn(specsRoot);
-  if (capCatalogPlan.state !== "no-catalog") {
-    addCheck(checks, {
-      id: "spec.capCatalogSpecColumn",
-      severity: capCatalogPlan.state === "declared" ? "ok" : "warning",
-      title: "CAP catalog mapping",
-      message:
-        capCatalogPlan.state === "declared"
-          ? "The CAP catalog declares its Spec column"
-          : capCatalogPlan.state === "migratable"
-            ? `The CAP catalog maps CAP to spec by row position (rows=${String(capCatalogPlan.pairs.length)}). Run qfai doctor --autoremediate to declare the Spec column.`
-            : "The CAP catalog maps CAP to spec by row position, and the order does not describe the tree, so the pairing cannot be derived. Declare the Spec column by hand.",
-      details: {
-        state: capCatalogPlan.state,
-        ...(capCatalogPlan.state === "migratable"
-          ? { rows: capCatalogPlan.pairs.map((pair) => `${pair.capId} -> ${pair.specId}`) }
-          : {}),
-        ...(capCatalogPlan.state === "ambiguous" ? { reasons: capCatalogPlan.reasons } : {}),
-      },
-    });
-  }
-
-  const guardrailsLoad = await loadDecisionGuardrails(root, {
-    specsRoot,
-  });
-  const guardrailsItems = normalizeDecisionGuardrails(guardrailsLoad.entries);
-  let guardrailsSeverity: DoctorSeverity;
-  let guardrailsMessage: string;
-  if (guardrailsLoad.errors.length > 0) {
-    guardrailsSeverity = "warning";
-    guardrailsMessage = `Decision Guardrails scan failed (errors=${guardrailsLoad.errors.length})`;
-  } else if (guardrailsItems.length === 0) {
-    guardrailsSeverity = "info";
-    guardrailsMessage = "Decision Guardrails not found (optional)";
-  } else {
-    guardrailsSeverity = "ok";
-    guardrailsMessage = `Decision Guardrails detected (count=${guardrailsItems.length})`;
-  }
-
-  addCheck(checks, {
-    id: "guardrails.present",
-    severity: guardrailsSeverity,
-    title: "Decision Guardrails",
-    message: guardrailsMessage,
-    details: {
-      count: guardrailsItems.length,
-      errors: guardrailsLoad.errors.map((item) => ({
-        path: toRelativePath(root, item.path),
-        message: item.message,
-      })),
-    },
-  });
-
   const validateJsonAbs = path.isAbsolute(config.output.validateJsonPath)
     ? config.output.validateJsonPath
     : path.resolve(root, config.output.validateJsonPath);
-  const validateJsonExists = await exists(validateJsonAbs);
+  const validateJsonExists = await isReadableFile(validateJsonAbs);
+  const validateJsonAbsent = !validateJsonExists && (await isAbsent(validateJsonAbs));
   addCheck(checks, {
     id: "output.validateJson",
-    severity: validateJsonExists ? "ok" : "warning",
+    severity: validateJsonExists ? "ok" : validateJsonAbsent ? "info" : "warning",
     title: "validate.json",
     message: validateJsonExists
       ? "validate.json exists (report can run)"
-      : "validate.json is missing (run 'qfai validate' before 'qfai report')",
+      : validateJsonAbsent
+        ? "validate.json is missing (run 'qfai validate' before 'qfai report')"
+        : "validate.json is not a readable file (a directory, a broken link or an unreadable path); fix or remove it, then run 'qfai validate'",
     details: { path: toRelativePath(root, validateJsonAbs) },
   });
 
@@ -863,7 +404,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     addCheck(checks, await buildOutDirCollisionCheck(root));
   }
 
-  const scenarioFiles = await collectScenarioFiles(specsRoot);
+  const storyTree = await readStoryTreeModel(root, config);
   const globs = normalizeGlobs(config.validation.traceability.testFileGlobs);
   const exclude = normalizeGlobs([
     ...DEFAULT_TEST_FILE_EXCLUDE_GLOBS,
@@ -883,24 +424,15 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     const matchedCount = scanResult.matchedFileCount;
     const truncated = scanResult.truncated;
 
-    // Globs that are set but collect nothing are `error`, not `warning`: the
-    // SC->Test gate is armed (`scMustHaveTest` with scenario files present) and
-    // matched no file, so it reports success while covering nothing — the
-    // "a gate that cannot run is a gate that silently passes" case. `validate`
-    // already calls this class an error (`QFAI-TRACE-124` /
-    // `traceability.layered.testFileGlobsNoMatch`) under the same precondition,
-    // and the two tools disagreeing meant `--fail-on error` on this one passed
-    // the exact misconfiguration the other fails. Unset globs stay `warning`
-    // here for the same reason `validate` keeps them a warning: a project that
-    // has not configured the gate yet has not broken it.
+    // A configured glob that matches no test cannot verify a declared flow.
+    // An empty story tree has no obligation to scan, and an unset glob is
+    // advisory until the project configures its test layout.
     const severity: DoctorSeverity =
       globs.length === 0
         ? "warning"
         : truncated
           ? "warning"
-          : scenarioFiles.length > 0 &&
-              config.validation.traceability.scMustHaveTest &&
-              matchedCount === 0
+          : storyTree.flows.length > 0 && matchedCount === 0
             ? "error"
             : "ok";
 
@@ -910,15 +442,14 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
       title: "Test file globs",
       message:
         globs.length === 0
-          ? "testFileGlobs is empty (SC→Test cannot be verified)"
+          ? "testFileGlobs is empty (flow test coverage cannot be verified)"
           : truncated
             ? `fileCount=${matchedCount} (truncated, limit=${scanResult.limit})`
             : `fileCount=${matchedCount}`,
       details: {
         globs,
         excludeGlobs: exclude,
-        scenarioFiles: scenarioFiles.length,
-        scMustHaveTest: config.validation.traceability.scMustHaveTest,
+        flows: storyTree.flows.length,
         truncated,
         limit: scanResult.limit,
       },
@@ -1067,38 +598,90 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
 }
 
 /**
- * Whether one code point is a C0, DEL or C1 control character.
+ * Whether one code point must not reach a single-line message: a C0, DEL or C1
+ * control character, a Unicode line or paragraph separator, or a bidirectional
+ * control.
  *
  * Read as code points rather than matched with the equivalent character-class
  * regular expression: that pattern needs an `eslint-disable no-control-regex`,
  * and the universal quality rule forbids adding a suppression without the
- * user’s explicit permission. `reviewerJustification.ts` refuses control
- * characters the same way, for the same reason.
+ * user’s explicit permission.
  */
 function isControlCodePoint(code: number): boolean {
-  return code <= 0x1f || (code >= 0x7f && code <= 0x9f);
+  return (
+    code <= 0x1f ||
+    (code >= 0x7f && code <= 0x9f) ||
+    LINE_SEPARATORS.has(code) ||
+    BIDIRECTIONAL_CONTROLS.has(code)
+  );
+}
+
+/** The longest one loader issue may run in the `config.load` message; `details.issues` keeps it whole. */
+const MAX_LISTED_ISSUE_LENGTH = 500;
+
+const CUT_MARKER = " ... ";
+
+/** Takes whole tokens from the front of `tokens` while they fit in `budget` characters. */
+function takeWithin(tokens: ReadonlyArray<string>, budget: number): string[] {
+  const taken: string[] = [];
+  let used = 0;
+  for (const token of tokens) {
+    if (used + token.length > budget) {
+      break;
+    }
+    taken.push(token);
+    used += token.length;
+  }
+  return taken;
 }
 
 /**
- * Makes one path safe to splice into a single-line finding message.
+ * Renders one loader issue for the `config.load` message: without a YAML parse
+ * error's source excerpt, escaped, and at most `MAX_LISTED_ISSUE_LENGTH`
+ * characters as displayed. Several loader messages quote the rejected value, so a
+ * very large value is cut. The middle goes, so the start of the message and the
+ * diagnosis at its end both stay, and no escape sequence is split.
+ */
+function renderIssueForMessage(message: string): string {
+  const tokens = Array.from(withoutYamlExcerpt(message), escapeCharacter);
+  if (tokens.reduce((total, token) => total + token.length, 0) <= MAX_LISTED_ISSUE_LENGTH) {
+    return tokens.join("");
+  }
+  const kept = MAX_LISTED_ISSUE_LENGTH - CUT_MARKER.length;
+  const head = takeWithin(tokens, Math.ceil(kept / 2));
+  const tail = takeWithin(tokens.slice().reverse(), Math.floor(kept / 2)).reverse();
+  return `${head.join("")}${CUT_MARKER}${tail.join("")}`;
+}
+
+/**
+ * A YAML parse error ends with an excerpt of the offending source after a blank
+ * line, and that excerpt can hold any value the file holds. This keeps the cause
+ * and its position and drops the excerpt; any other issue is returned whole.
+ */
+function withoutYamlExcerpt(message: string): string {
+  return message.replace(/^([^\r\n]* at line \d+, column \d+:)\r?\n\r?\n[\s\S]*$/, "$1");
+}
+
+/**
+ * Makes any display string — a path, a filename or a loader message — safe to
+ * splice into a single-line finding message.
  *
  * A filename may legally contain a newline or an ANSI escape on POSIX, and
- * `formatDoctorText` prints `check.message` verbatim. Left raw, one oversized
- * asset could inject extra lines — including counterfeit `[ok]` / `[error]`
- * lines — into the very output whose one-finding-per-line shape downstream
- * severity greps rely on. `details` keeps the raw path; only what is rendered
- * is escaped.
+ * `formatDoctorText` prints `check.message` verbatim. Left raw, such a string
+ * could inject extra lines — including counterfeit `[ok]` / `[error]` lines —
+ * into the very output whose one-finding-per-line shape downstream severity
+ * greps rely on. `details` keeps the raw value; only what is rendered is
+ * escaped.
  */
+function escapeCharacter(character: string): string {
+  const code = character.codePointAt(0);
+  return code !== undefined && isControlCodePoint(code)
+    ? `\\${code > 0xff ? "u" : "x"}${code.toString(16).padStart(code > 0xff ? 4 : 2, "0")}`
+    : character;
+}
+
 function escapeForMessage(value: string): string {
-  let escaped = "";
-  for (const character of value) {
-    const code = character.codePointAt(0);
-    escaped +=
-      code !== undefined && isControlCodePoint(code)
-        ? `\\x${code.toString(16).padStart(2, "0")}`
-        : character;
-  }
-  return escaped;
+  return Array.from(value, escapeCharacter).join("");
 }
 
 function formatMessagePaths(paths: ReadonlyArray<string>): string {
@@ -1166,7 +749,7 @@ function formatNextActionHint(actions: ReadonlyArray<string>): string {
  *
  * `assets.lineBudget` measures every assistant asset, not just skills, so a
  * blanket "move a section under the skill's references/" would tell a reader to
- * relocate a constitution document or a manifest YAML into an unrelated skill
+ * relocate a rule document or an agent card into an unrelated skill
  * and break the loader contract that reads it from its own layer.
  */
 function assetLineBudgetNextActions(
@@ -1175,14 +758,14 @@ function assetLineBudgetNextActions(
 ): string[] {
   const actions: string[] = [];
   const paths = [...new Set(oversized.map((entry) => entry.path))];
-  const hasSkillAsset = paths.some((entry) => entry.startsWith("assistant/skills/"));
-  const hasOtherAsset = paths.some((entry) => !entry.startsWith("assistant/skills/"));
+  const hasSkillAsset = paths.some((entry) => entry.startsWith("assistant/skill/"));
+  const hasOtherAsset = paths.some((entry) => !entry.startsWith("assistant/skill/"));
   if (hasSkillAsset) {
     actions.push("move one topic out of the oversized skill into that skill's own references/");
   }
   if (hasOtherAsset) {
     actions.push(
-      "split a non-skill asset (constitution/, catalog/, manifest/, ...) by topic within its own layer, and update the paths that reference it",
+      "split a non-skill asset (rule/, agent/, prompt/) by topic within its own layer, and update the paths that reference it",
     );
   }
   // A separate action, because the two ceilings ask for different edits. A file
@@ -1198,32 +781,10 @@ function assetLineBudgetNextActions(
 }
 
 /**
- * The skills diff, or `null` when the tree could not be inspected.
- *
- * `diffProjectSkillsAgainstInitAssets` walks the configured skills directory,
- * so an unreadable subdirectory rejects it. That call runs before every later
- * check, so letting the rejection escape means `qfai doctor` reports nothing —
- * not even the findings that exist to describe an unreadable tree.
- */
-async function inspectSkillsIntegrity(
-  root: string,
-  config: QfaiConfig,
-): Promise<SkillsIntegrityDiff | null> {
-  try {
-    return await diffProjectSkillsAgainstInitAssets(root, config);
-  } catch {
-    return null;
-  }
-}
-
-/**
  * Whether the integration wrappers a skill is loaded through actually resolve.
  *
  * Asks the question `validate` asks, through the same code and at the severity
- * that code chose, so the two cannot disagree about one tree. `skills.integrity`
- * answers a different question — whether the CONTENT matches — and a tree whose
- * wrappers are broken passes it, because the canonical documents behind them are
- * untouched.
+ * that code chose, so the two cannot disagree about one tree.
  *
  * Severity is carried, not decided here. `QFAI-LINK-001` is a `warning` when the
  * canonical document is readable and an `error` when it is not, and choosing one
@@ -1361,7 +922,7 @@ async function buildIntegrationLinksCheck(root: string): Promise<DoctorCheck> {
 }
 
 async function buildAgentFrontmatterCheck(root: string): Promise<DoctorCheck> {
-  const agentsDir = path.join(root, ".qfai", "assistant", "agents");
+  const agentsDir = path.join(root, ".qfai", "assistant", "agent");
   if (!(await exists(agentsDir))) {
     return {
       id: "agents.frontmatter",
@@ -1411,13 +972,13 @@ async function buildAgentFrontmatterCheck(root: string): Promise<DoctorCheck> {
     } catch {
       // Deleted between the listing and the read, or unreadable. It is not
       // "valid frontmatter" and it must not reject the run either.
-      unreadableFiles.push(`.qfai/assistant/agents/${fileName}`);
+      unreadableFiles.push(`.qfai/assistant/agent/${fileName}`);
       continue;
     }
     const parsed = parseAgentFrontmatter(content);
     if (!parsed.ok) {
       invalidFiles.push({
-        file: `.qfai/assistant/agents/${fileName}`,
+        file: `.qfai/assistant/agent/${fileName}`,
         error: parsed.error,
       });
     }
@@ -1471,7 +1032,7 @@ async function buildAgentFrontmatterCheck(root: string): Promise<DoctorCheck> {
  *   configured `paths.skillsDir` is gone). Every skill name resolves
  *   to a missing directory then, so blaming `--profile` would be a
  *   misdiagnosis; this is the same "run init" condition that the
- *   `paths.skillsDir` / `skills.integrity` checks report, and it stays
+ *   `paths.skillsDir` check reports, and it stays
  *   a warning so `--fail-on error` is not tripped by it.
  * - skill directory missing inside an existing skills root — only
  *   here is the `--profile` value itself wrong (a typo, or a skill
@@ -1591,22 +1152,28 @@ async function buildPrototypingDoctorChecks(
   targetUrlOverride?: string,
 ): Promise<DoctorCheck[]> {
   const targetUrl = targetUrlOverride ?? config.prototyping?.execution?.targetUrl ?? undefined;
-  const [primarySpec, uiContracts, designContracts, requiredRoles, launcherChecks, targetUrlCheck] =
-    await Promise.all([
-      buildPrototypingPrimarySpecCheck(root, config),
-      buildPrototypingUiContractsCheck(root, config),
-      buildPrototypingDesignContractsCheck(root, config),
-      buildPrototypingRolesCheck(root),
-      buildPlaywrightLauncherChecks(root),
-      buildTargetUrlCheck(root, targetUrl, targetUrlOverride ? "cli" : "config"),
-    ]);
-  const designMdChecks = await buildPrototypingDesignMdChecks(root, config);
+  const [
+    primarySpec,
+    uiContracts,
+    designMdReadiness,
+    requiredRoles,
+    launcherChecks,
+    targetUrlCheck,
+  ] = await Promise.all([
+    buildPrototypingPrimarySpecCheck(root, config),
+    buildPrototypingUiContractsCheck(root, config),
+    buildPrototypingDesignMdReadinessCheck(root, config),
+    buildPrototypingRolesCheck(root),
+    buildPlaywrightLauncherChecks(root),
+    buildTargetUrlCheck(root, targetUrl, targetUrlOverride ? "cli" : "config"),
+  ]);
+  const designMdChecks = await buildPrototypingDesignMdChecks(root);
   // `launcherChecks` may yield 1 or 2 entries: the primary check plus an
   // optional `D-DEPRECATED-PROBE` finding when the deprecated stage resolves.
   return [
     primarySpec,
     uiContracts,
-    designContracts,
+    designMdReadiness,
     requiredRoles,
     ...launcherChecks,
     targetUrlCheck,
@@ -1614,14 +1181,9 @@ async function buildPrototypingDoctorChecks(
   ];
 }
 
-async function buildPrototypingDesignMdChecks(
-  root: string,
-  config: Awaited<ReturnType<typeof loadConfig>>["config"],
-): Promise<DoctorCheck[]> {
+async function buildPrototypingDesignMdChecks(root: string): Promise<DoctorCheck[]> {
   const designMdRel = "DESIGN.md";
-  const lockRel = path.join(config.paths.contractsDir, "design", "DESIGN.md.lock.yaml");
   const designMdAbs = path.join(root, designMdRel);
-  const lockAbs = path.join(root, lockRel);
 
   const checks: DoctorCheck[] = [];
   let designMdText: string | null;
@@ -1642,8 +1204,8 @@ async function buildPrototypingDesignMdChecks(
   } else if (isUnreplacedDesignMdSample(designMdText)) {
     // `qfai init` seeds the shipped sample brand into the project root,
     // so "file exists and parses" cannot distinguish an authored brand
-    // from an unauthored one. Report it here, before /qfai-sdd Phase 0
-    // freezes its sha256 as the project's brand contract.
+    // from an unauthored one. Report it here, before a prototyping loop
+    // records its sha256 as the brand the loop runs against.
     //
     // Samples seeded by releases that predate the marker are detected by
     // content fingerprint instead, so the remediation text must not tell
@@ -1654,8 +1216,8 @@ async function buildPrototypingDesignMdChecks(
       severity: "error",
       title: "Root DESIGN.md",
       message: markerPresent
-        ? "root DESIGN.md is still the qfai sample brand — replace it with this product's brand SSOT and delete the sample marker before freezing"
-        : "root DESIGN.md is still the qfai sample brand (seeded by a release older than the sample marker) — replace it with this product's brand SSOT before freezing",
+        ? "root DESIGN.md is still the qfai sample brand — replace it with this product's brand SSOT and delete the sample marker before prototyping"
+        : "root DESIGN.md is still the qfai sample brand (seeded by a release older than the sample marker) — replace it with this product's brand SSOT before prototyping",
       details: { path: designMdRel, marker: markerPresent ? DESIGN_MD_SAMPLE_MARKER : null },
     });
   } else {
@@ -1679,62 +1241,6 @@ async function buildPrototypingDesignMdChecks(
     }
   }
 
-  let lockText: string | null;
-  try {
-    lockText = await readFile(lockAbs, "utf-8");
-  } catch {
-    lockText = null;
-  }
-  let lockSha: string | null = null;
-  if (lockText === null) {
-    checks.push({
-      id: "prototyping.designMdLock",
-      severity: "error",
-      title: "DESIGN.md.lock.yaml",
-      message: `DESIGN.md.lock.yaml is missing at ${toRelativePath(root, lockAbs)}`,
-      details: { path: toRelativePath(root, lockAbs) },
-    });
-  } else {
-    lockSha = readDesignMdLockSha(lockText);
-    if (lockSha === null) {
-      checks.push({
-        id: "prototyping.designMdLock",
-        severity: "error",
-        title: "DESIGN.md.lock.yaml",
-        message: "DESIGN.md.lock.yaml is missing 'designMdSha256' or is malformed YAML",
-        details: { path: toRelativePath(root, lockAbs) },
-      });
-    } else {
-      checks.push({
-        id: "prototyping.designMdLock",
-        severity: "ok",
-        title: "DESIGN.md.lock.yaml",
-        message: "DESIGN.md.lock.yaml carries designMdSha256",
-        details: { path: toRelativePath(root, lockAbs) },
-      });
-    }
-  }
-
-  if (designMdText !== null && lockSha !== null) {
-    const currentSha = hashDesignMd(designMdText);
-    if (currentSha === lockSha) {
-      checks.push({
-        id: "prototyping.designMdSha",
-        severity: "ok",
-        title: "DESIGN.md sha256 freeze",
-        message: "DESIGN.md sha256 matches DESIGN.md.lock.yaml",
-        details: { sha256: currentSha },
-      });
-    } else {
-      checks.push({
-        id: "prototyping.designMdSha",
-        severity: "error",
-        title: "DESIGN.md sha256 freeze",
-        message: `DESIGN.md sha256 mismatch: lock=${lockSha} current=${currentSha}`,
-        details: { lock: lockSha, current: currentSha },
-      });
-    }
-  }
   return checks;
 }
 
@@ -1742,25 +1248,24 @@ async function buildPrototypingPrimarySpecCheck(
   root: string,
   config: Awaited<ReturnType<typeof loadConfig>>["config"],
 ): Promise<DoctorCheck> {
-  const resolvedSpec = await resolvePrimaryPrototypingSpec(root, config);
-  if (!resolvedSpec) {
+  const resolvedContract = await resolvePrimaryPrototypingSpec(root, config);
+  if (!resolvedContract) {
     return {
-      id: "prototyping.primarySpec",
+      id: "prototyping.primaryUiContract",
       severity: "error",
-      title: "Primary prototyping spec",
-      message:
-        "no primary prototyping spec resolved (set prototyping.primarySpecId or add `surface_type: ui-bearing` to 01_Spec.md)",
+      title: "Primary UI contract",
+      message: "no UI contract with UI-NNNN and screens[] resolved under contractsDir/ui",
     };
   }
 
   return {
-    id: "prototyping.primarySpec",
+    id: "prototyping.primaryUiContract",
     severity: "ok",
-    title: "Primary prototyping spec",
-    message: `resolved primary prototyping spec ${resolvedSpec.specId}`,
+    title: "Primary UI contract",
+    message: `resolved primary UI contract ${resolvedContract.uiContractId}`,
     details: {
-      specId: resolvedSpec.specId,
-      path: toRelativePath(root, resolvedSpec.specMdPath),
+      uiContractId: resolvedContract.uiContractId,
+      path: resolvedContract.contractPath,
     },
   };
 }
@@ -1786,15 +1291,32 @@ async function buildPrototypingUiContractsCheck(
   // A prototype is built around each screen's primary tasks, so the stage does
   // not start while a screen has none. The audit lane refuses the same contract
   // under `QFAI-AUD-001`; without this, the stage's own preflight passed it.
+  // A screen whose every entry is malformed has no task either, but telling
+  // its author to add one hides the cause: the entries are there, in the
+  // wrong shape.
   const withoutTasks = screens.filter((screen) => screen.primaryTasks.length === 0);
   if (withoutTasks.length > 0) {
+    const refs = (list: typeof screens): string =>
+      list.map((screen) => screen.sourceRef || screen.screenId).join(", ");
+    const malformed = withoutTasks.filter((screen) => screen.primaryTaskShapeFindings.length > 0);
+    const empty = withoutTasks.filter((screen) => screen.primaryTaskShapeFindings.length === 0);
+    const problems = [
+      ...(empty.length > 0
+        ? [
+            `UI contract screen(s) with no primary_tasks: ${refs(empty)}; add at least one primary_task to each screen`,
+          ]
+        : []),
+      ...(malformed.length > 0
+        ? [
+            `UI contract screen(s) whose primary_tasks entries are not {id, label, acceptance} mappings: ${refs(malformed)}; write each entry as a mapping with exactly id, label and acceptance`,
+          ]
+        : []),
+    ];
     return {
       id: "prototyping.uiContracts",
       severity: "error",
       title: "UI contracts",
-      message: `UI contract screen(s) with no primary_tasks: ${withoutTasks
-        .map((screen) => screen.sourceRef || screen.screenId)
-        .join(", ")}; add at least one primary_task to each screen before prototyping`,
+      message: `${problems.join("; ")} before prototyping`,
       details: {
         contractsDir: config.paths.contractsDir,
         screenIds: withoutTasks.map((screen) => screen.screenId),
@@ -1814,19 +1336,19 @@ async function buildPrototypingUiContractsCheck(
   };
 }
 
-async function buildPrototypingDesignContractsCheck(
+async function buildPrototypingDesignMdReadinessCheck(
   root: string,
   config: Awaited<ReturnType<typeof loadConfig>>["config"],
 ): Promise<DoctorCheck> {
-  const issues = await validateSddDesignContractReadiness(root, config);
+  const issues = await validateDesignContractReadiness(root, config);
   if (issues.length === 0) {
     return {
-      id: "prototyping.designContracts",
+      id: "prototyping.designMdReadiness",
       severity: "ok",
-      title: "Pre-prototyping design contracts",
-      message: "pre-prototyping design contracts satisfy readiness checks",
+      title: "Root DESIGN.md readiness",
+      message: "root DESIGN.md satisfies the readiness checks",
       details: {
-        designDir: `${config.paths.contractsDir}/design`,
+        designMd: "DESIGN.md",
       },
     };
   }
@@ -1837,12 +1359,12 @@ async function buildPrototypingDesignContractsCheck(
   }
 
   return {
-    id: "prototyping.designContracts",
+    id: "prototyping.designMdReadiness",
     severity: issues.some((item) => item.severity === "error") ? "error" : "warning",
-    title: "Pre-prototyping design contracts",
-    message: `pre-prototyping design contracts have blocking issue(s) (count=${issues.length})`,
+    title: "Root DESIGN.md readiness",
+    message: `root DESIGN.md has blocking issue(s) (count=${issues.length})`,
     details: {
-      designDir: `${config.paths.contractsDir}/design`,
+      designMd: "DESIGN.md",
       issues: issues.map((item) => ({
         code: item.code,
         severity: item.severity,
@@ -1880,7 +1402,7 @@ async function buildPrototypingRolesCheck(root: string): Promise<DoctorCheck> {
 
   const roleFindings: Array<Record<string, unknown>> = [];
   for (const roleId of PROTOTYPING_REQUIRED_ROLE_IDS) {
-    const canonicalPath = path.join(root, ".qfai", "assistant", "agents", `${roleId}.md`);
+    const canonicalPath = path.join(root, ".qfai", "assistant", "agent", `${roleId}.md`);
     const canonicalExists = await exists(canonicalPath);
     const finding: Record<string, unknown> = {
       roleId,
@@ -2112,7 +1634,7 @@ async function buildTargetUrlCheck(
       severity: "warning",
       title: "Target URL",
       message:
-        "no targetUrl configured for prototyping preflight (set prototyping.execution.targetUrl or pass --target-url)",
+        "no targetUrl configured for the prototyping profile (set prototyping.execution.targetUrl or pass --target-url)",
     };
   }
 
@@ -2175,7 +1697,7 @@ async function probeHttpUrl(
  * The path a required-input bullet names, taken off the front of it.
  *
  * A bullet is free to say what the input is for, and the explanation is not
- * part of the path. Read whole, `.qfai/assistant/catalog/test-layers.md (SSOT
+ * part of the path. Read whole, `.qfai/assistant/rule/test-layers.md (SSOT
  * for hard coverage obligations)` is a required input no tree can satisfy —
  * while the file it names is on disk.
  *
@@ -2238,8 +1760,8 @@ export function extractLiteralRequiredInputs(content: string): string[] {
         .filter((item) => !/\boptional\b|\bwhen available\b/iu.test(item))
         .map((item) => leadingPath(item.replace(/`/gu, "").trim()))
         // A glob names a set and a `<placeholder>` names a shape, so neither is
-        // a file to find: `.qfai/specs/<spec-id>/tdd/test-list.md` is one path
-        // per spec and none of them is at that name. Tested on the path so
+        // a file to find: `.qfai/spec/02_business-flow/business-flow-<id>/business-flow.md`
+        // names a shape and no file exists at that literal path. Tested on the path so
         // that a glob or a placeholder written in a bullet's explanation does
         // not drop the file the bullet actually requires.
         .filter((item) => item.startsWith(".") && !/[*?<>]/u.test(item)),

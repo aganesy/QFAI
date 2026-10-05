@@ -1,0 +1,12 @@
+route: close-duplicate
+family: close
+stages:
+  - id: dedupe
+    kind: triage
+    steps: [triage-dedupe]
+  - id: close
+    kind: triage
+    steps: [triage-close]
+    after: [dedupe]
+decisionPoints: []
+branchPoints: []

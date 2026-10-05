@@ -1,191 +1,174 @@
-// QFAI:SPEC-0018:TC-0018-0235
-// QFAI:SPEC-0018:TC-0018-0236
+// QFAI:AC-0001-0194-05
+// QFAI:EX-0001-0194-15
 
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import Ajv2020 from "ajv/dist/2020";
-import { expect, it } from "vitest";
+import { afterEach, expect, it } from "vitest";
 
-import {
-  parseMeasurement,
-  parseQuestionInput,
-  parseRouteReferences,
-} from "../../../src/core/workflow/parse.js";
-import { workOrderDocument } from "../../../src/core/workflow/decide.js";
+import { extractionFaults } from "../../../src/core/workflow/extractionShape.js";
+import { planOf } from "../../../src/core/workflow/plan.js";
+import { WORKFLOW_ROUTES } from "../../../src/core/workflow/routes.js";
 import { getInitAssetsDir } from "../../../src/shared/assets.js";
+import { extraction } from "../../helpers/workflowExtraction.js";
+import { minimalProject, removeProjects } from "./workflowProject.js";
+
+afterEach(removeProjects);
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const schemaDir = path.join(packageRoot, "assets", "schemas", "workflow");
-const payloadsDoc = path.join(
+const planDoc = path.join(
   getInitAssetsDir(),
   ".qfai",
   "assistant",
-  "skills",
+  "skill",
   "qfai-run",
   "references",
-  "payloads.md",
+  "plan.md",
 );
 
-// Strict, with formats left to the parser, which owns timestamp checks.
-async function loadValidator() {
-  const ajv = new Ajv2020({ strict: true, validateFormats: false, allErrors: true });
-  const files = (await readdir(schemaDir)).filter((file) => file.endsWith(".schema.json"));
-  for (const file of files)
-    ajv.addSchema(JSON.parse(await readFile(path.join(schemaDir, file), "utf8")));
-  for (const file of files) ajv.getSchema(`urn:qfai:workflow:${file.replace(".schema.json", "")}`);
-  return (ref: string, payload: unknown) => ajv.validate(ref, payload);
+const EXTRACTION = "urn:qfai:workflow:extraction";
+const PLAN = "urn:qfai:workflow:plan";
+
+async function schemaFiles(): Promise<string[]> {
+  return (await readdir(schemaDir)).filter((file) => file.endsWith(".schema.json")).sort();
 }
 
-// Each JSON example in the qfai-run payload reference, under the heading it sits beneath.
-async function payloadExamples(): Promise<{ heading: string; payload: unknown }[]> {
-  const text = await readFile(payloadsDoc, "utf8");
-  const examples: { heading: string; payload: unknown }[] = [];
+async function loadValidator() {
+  const ajv = new Ajv2020({ strict: true, allErrors: true });
+  for (const file of await schemaFiles()) {
+    ajv.addSchema(JSON.parse(await readFile(path.join(schemaDir, file), "utf8")));
+  }
+  return (ref: string, value: unknown) => ajv.validate(ref, value);
+}
+
+// Each JSON example in the qfai-run plan reference, under the heading it sits beneath.
+async function referenceExamples(): Promise<{ heading: string; value: unknown }[]> {
+  const text = await readFile(planDoc, "utf8");
+  const examples: { heading: string; value: unknown }[] = [];
   let heading = "";
   for (const block of text.split(/^```/m)) {
     const title = [...block.matchAll(/^## (.+)$/gm)].at(-1)?.[1];
     if (title) heading = title;
-    if (block.startsWith("json\n")) examples.push({ heading, payload: JSON.parse(block.slice(5)) });
+    if (block.startsWith("json\n")) examples.push({ heading, value: JSON.parse(block.slice(5)) });
   }
   return examples;
 }
 
-function routingResult(examples: { heading: string; payload: unknown }[]) {
-  const found = examples.find((example) => example.heading === "Routing result")?.payload;
-  if (typeof found !== "object" || found === null || !("proposal" in found)) {
-    throw new Error("The payload reference carries no routing result example.");
+it("The two shipped schemas carry an unversioned URN and no private marker", async () => {
+  const files = await schemaFiles();
+  const headers = [];
+  for (const file of files) {
+    const text = await readFile(path.join(schemaDir, file), "utf8");
+    const schema: unknown = JSON.parse(text);
+    headers.push([
+      Reflect.get(Object(schema), "$id"),
+      Reflect.get(Object(schema), "$schema"),
+      /schemaVersion|commandId|"contract"\s*:|\bv\d+\.\d+/.test(text),
+    ]);
   }
-  return { result: found, proposal: found.proposal };
-}
 
-const PROPOSAL = "urn:qfai:workflow:route-proposal";
-const QUESTION = `${PROPOSAL}#/$defs/question`;
-const RESULT = "urn:qfai:workflow:stage-result";
-const MEASUREMENT = `${RESULT}#/properties/measurement`;
-const WORK_ORDER = "urn:qfai:workflow:work-order";
+  expect(headers).toEqual([
+    [EXTRACTION, "https://json-schema.org/draft/2020-12/schema", false],
+    [PLAN, "https://json-schema.org/draft/2020-12/schema", false],
+  ]);
+});
 
-const measurement = {
-  inputTokens: 1200,
-  outputTokens: 300,
-  cachedTokens: null,
-  subAgentTokens: 4000,
-  toolDefinitionBytes: null,
-  referenceBytesRead: 5120,
-  wallClockMs: 61000,
-  questionsPut: 0,
-  reworkCount: 0,
-};
-
-// A proposal with one reference entry replaced, for the reference shape cases.
-function withReference(proposal: unknown, field: string, entry: unknown) {
-  return { ...(typeof proposal === "object" ? proposal : {}), [field]: [entry] };
-}
-
-it("TC-0018-0235 (TDD-0452): Validate every payload example and fixture with the parser and with the five schemas", async () => {
+it("Every example in the qfai-run plan reference validates against its schema", async () => {
   const validate = await loadValidator();
-  const examples = await payloadExamples();
-  const { result, proposal } = routingResult(examples);
-  const question = examples.find((example) => example.heading === "Question input")?.payload;
-  const cases: { name: string; schema: string; payload: unknown; parser: boolean }[] = [
-    {
-      name: "routing result",
-      schema: RESULT,
-      payload: result,
-      parser: parseRouteReferences(proposal).ok,
-    },
-    {
-      name: "proposal",
-      schema: PROPOSAL,
-      payload: proposal,
-      parser: parseRouteReferences(proposal).ok,
-    },
-    {
-      name: "question",
-      schema: QUESTION,
-      payload: question,
-      parser: parseQuestionInput(question) !== undefined,
-    },
-    {
-      name: "measurement",
-      schema: MEASUREMENT,
-      payload: measurement,
-      parser: parseMeasurement(measurement).ok,
-    },
-  ];
-  const shapeCases: [string, string, unknown][] = [
-    ["legacy string", "expectedBehaviorRefs", "spec-0002"],
-    ["unknown kind", "expectedBehaviorRefs", { kind: "ticket", ref: "T-1" }],
-    [
-      "observed kind in the normative array",
-      "expectedBehaviorRefs",
-      { kind: "evidence", ref: "a.log" },
-    ],
-    ["normative kind in the observed array", "observedRefs", { kind: "spec-id", ref: "spec-0002" }],
-    ["empty ref", "observedRefs", { kind: "path", ref: "" }],
-    ["missing ref", "observedRefs", { kind: "path" }],
-  ];
-  for (const [name, field, entry] of shapeCases) {
-    const payload = withReference(proposal, field, entry);
-    cases.push({ name, schema: PROPOSAL, payload, parser: parseRouteReferences(payload).ok });
-  }
-  const unmeasured = { ...measurement, wallClockMs: undefined };
-  cases.push({
-    name: "measurement missing a field",
-    schema: MEASUREMENT,
-    payload: JSON.parse(JSON.stringify(unmeasured)),
-    parser: parseMeasurement(JSON.parse(JSON.stringify(unmeasured))).ok,
-  });
-
-  const disagreements = cases
-    .filter((entry) => validate(entry.schema, entry.payload) !== entry.parser)
-    .map((entry) => entry.name);
+  const examples = await referenceExamples();
+  const verdicts = examples.map(({ heading, value }) => [
+    heading,
+    validate(heading === "Extraction" ? EXTRACTION : PLAN, value),
+  ]);
 
   expect({
-    examples: examples.map((example) => example.heading),
-    accepted: cases.filter((entry) => entry.parser).map((entry) => entry.name),
-    disagreements,
+    headings: [...new Set(examples.map((example) => example.heading))],
+    failing: verdicts.filter(([, valid]) => !valid),
   }).toEqual({
-    examples: ["Start input", "Routing result", "Question input", "Decision input"],
-    accepted: ["routing result", "proposal", "question", "measurement"],
-    disagreements: [],
+    headings: ["Extraction", "Plan", "Candidates", "Refusal"],
+    failing: [],
   });
 });
 
-it("TC-0018-0236 (TDD-0453): A planted payload with an unknown key", async () => {
+it("The extraction schema and the parser accept and refuse the same extractions", async () => {
   const validate = await loadValidator();
-  const { proposal } = routingResult(await payloadExamples());
-  const reference = withReference(proposal, "observedRefs", {
-    kind: "path",
-    ref: "src/checkout/total.ts",
-    note: "added by hand",
-  });
-  const extraMeasure = { ...measurement, gpuSeconds: 3 };
+  const reading = { intent: "design", entryFlags: [], qualifiers: [], signals: [] };
+  const samples = [
+    extraction(),
+    extraction({ intent: null }),
+    extraction({ confidence: "low", alternatives: [{ ...reading, intent: "design" }] }),
+    { ...extraction(), intent: "bug" },
+    { ...extraction(), entryFlags: ["urgent"] },
+    { ...extraction(), confidence: 0.9 },
+    { ...extraction(), alternatives: [reading] },
+    { ...extraction(), confidence: "low" },
+    { ...extraction(), route: "add-feature" },
+  ];
 
-  expect({
-    reference: [parseRouteReferences(reference).ok, validate(PROPOSAL, reference)],
-    measurement: [parseMeasurement(extraMeasure).ok, validate(MEASUREMENT, extraMeasure)],
-  }).toEqual({ reference: [false, false], measurement: [false, false] });
+  expect(samples.map((sample) => validate(EXTRACTION, sample))).toEqual(
+    samples.map((sample) => extractionFaults(sample).length === 0),
+  );
 });
 
-it("A work order carries a target unless it is the routing or a discussion work order", async () => {
+it("The plan of every route validates against the plan schema", async () => {
   const validate = await loadValidator();
-  const order = (stageKind: string, target?: { kind: "spec"; specId: string }) =>
-    workOrderDocument("run-20260925000000000", 3, {
-      workOrderId: `work-order-${stageKind}-1`,
-      stageInstanceId: stageKind,
-      attempt: 1,
-      stageKind,
-      executor: { skill: "qfai-run" },
-      operation: stageKind,
-      ...(target ? { target } : {}),
-    });
-  const spec = { kind: "spec" as const, specId: "spec-0001" };
+  const root = await minimalProject();
+  const failing: string[] = [];
+  for (const route of WORKFLOW_ROUTES) {
+    const document = await planOf(root, { route });
+    if (!document.ok || !validate(PLAN, document)) failing.push(route);
+  }
 
-  expect({
-    route: validate(WORK_ORDER, order("route")),
-    discussion: validate(WORK_ORDER, order("discussion")),
-    implementWithTarget: validate(WORK_ORDER, order("implement", spec)),
-    implementWithout: validate(WORK_ORDER, order("implement")),
-  }).toEqual({ route: true, discussion: true, implementWithTarget: true, implementWithout: false });
+  expect(failing).toEqual([]);
+});
+
+// QFAI:EX-0001-0229-01
+// QFAI:EX-0001-0229-09
+it("A plan from an extraction and its candidates validate with their scopes", async () => {
+  const validate = await loadValidator();
+  const root = await minimalProject();
+  const reading = { entryFlags: [], qualifiers: [], signals: [] };
+  const documents = await Promise.all([
+    planOf(root, {
+      extraction: extraction({ qualifiers: ["visual-open"], artifacts: ["spec", "ui"] }),
+    }),
+    planOf(root, {
+      extraction: extraction({
+        confidence: "low",
+        alternatives: [{ ...reading, intent: "design" }],
+      }),
+    }),
+  ]);
+
+  expect(
+    documents.map((document) => [
+      Object.hasOwn(document, "scopes") || Object.hasOwn(document, "candidates"),
+      validate(PLAN, document),
+    ]),
+  ).toEqual([
+    [true, true],
+    [true, true],
+  ]);
+});
+
+// QFAI:EX-0001-0229-01
+it("The plan schema refuses scopes whose recommendation is not the narrowest alone", async () => {
+  const validate = await loadValidator();
+  const root = await minimalProject();
+  const document = await planOf(root, {
+    extraction: extraction({ qualifiers: ["visual-open"], artifacts: ["spec", "ui"] }),
+  });
+  const scopes = Reflect.get(Object(document), "scopes");
+  const list = Array.isArray(scopes) ? scopes : [];
+  const flipped = list.map((each, index) => ({ ...each, recommended: index === 1 }));
+  const twice = list.map((each) => ({ ...each, recommended: true }));
+
+  expect([
+    validate(PLAN, document),
+    validate(PLAN, { ...document, scopes: flipped }),
+    validate(PLAN, { ...document, scopes: twice }),
+  ]).toEqual([true, false, false]);
 });

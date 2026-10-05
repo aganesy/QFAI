@@ -35,12 +35,18 @@ type Settings = { readonly hooks: Record<string, readonly Group[] | undefined> }
 const readSettings = async (rel: string): Promise<Settings> =>
   JSON.parse(await readFile(path.join(repoRoot, rel), "utf-8"));
 
-/** The one `UserPromptSubmit` group; absent is the failure to report. */
+/**
+ * The `UserPromptSubmit` group carrying this reminder's marker; absent is the
+ * failure to report. Found by marker, because another prompt-time reminder
+ * shares the event.
+ */
 function promptGroup(settings: Settings): Group {
-  const groups = settings.hooks.UserPromptSubmit ?? [];
-  expect(groups, "no UserPromptSubmit reminder").toHaveLength(1);
+  const groups = (settings.hooks.UserPromptSubmit ?? []).filter((candidate) =>
+    candidate.hooks.some((hook) => hook.statusMessage === STRUCTURED_QUESTION_HOOK_MARKER),
+  );
+  expect(groups, "no structured-question reminder").toHaveLength(1);
   const group = groups[0];
-  if (group === undefined) throw new Error("no UserPromptSubmit group");
+  if (group === undefined) throw new Error("no structured-question group");
   return group;
 }
 
@@ -95,7 +101,58 @@ describe("the structured-question reminder", () => {
     expect(payload).toContain("No question is light enough to skip it");
     // The fallback, so a host without the tool is not read as an exemption.
     expect(payload).toContain("through that rule's fallback where it is not");
+    // The turn that waits on the user, which otherwise ends on a report and
+    // leaves the session idle with nothing saying it waits.
+    expect(payload).toContain(
+      "A turn that leaves the next step to the user ends with such a question, listing the next actions with the recommended one first",
+    );
   });
+
+  /** What the host writes to a `UserPromptSubmit` hook's stdin for one prompt. */
+  const promptInput = (prompt: string): string =>
+    JSON.stringify({ hook_event_name: "UserPromptSubmit", prompt });
+
+  /** What the group prints for `input`, run against the project the settings file serves. */
+  async function printedFor(rel: string, input: string): Promise<string> {
+    const group = promptGroup(await readSettings(rel));
+    const outputs = await Promise.all(
+      group.hooks.map((hook) => runReminderHook(hook, projectDirOf(repoRoot, rel), input)),
+    );
+    return outputs.join("");
+  }
+
+  it.each(SETTINGS)("%s stays silent on an automated wake-up", async (rel) => {
+    // A notification, a scheduled check-in or a sub-agent's report is not typed
+    // by the user, and no question to the user forms on it. Printing there turns
+    // the reminder into background noise.
+    for (const prompt of [
+      "<task-notification>\n<task-id>b1</task-id>\n<status>completed</status>",
+      '<wake reason="external-event">CI finished</wake>',
+      "[SYSTEM NOTIFICATION]\n\n<task-notification>\n<task-id>b1</task-id>",
+      "[SYSTEM NOTIFICATION - NOT USER INPUT]\n\nActivity on a subscribed pull request.",
+    ]) {
+      await expect(printedFor(rel, promptInput(prompt)), prompt).resolves.toBe("");
+    }
+  });
+
+  it.each(SETTINGS)(
+    "%s still prints on a typed prompt, and on input it cannot read",
+    async (rel) => {
+      // Silence is kept for the wrappers it recognises. A prompt that only
+      // mentions one, and input with no prompt at all, get the reminder.
+      for (const input of [
+        promptInput("Fix the failing test"),
+        promptInput("What does <task-notification> mean here?"),
+        promptInput("<wakeup> is not a wrapper"),
+        promptInput("What does [SYSTEM NOTIFICATION] mean here?"),
+        "",
+        "{ not json",
+        "{}",
+      ]) {
+        await expect(printedFor(rel, input), input).resolves.toContain("user-questions.md");
+      }
+    },
+  );
 
   it.each([
     ".agents/rules/user-questions.md",
@@ -111,6 +168,8 @@ describe("the structured-question reminder", () => {
     expect(master).toMatch(/reminds and never blocks/i);
     expect(master).toMatch(/no shell and\s+no\s+network/);
     expect(master).toContain("`.agents/rules/reminders.json`");
+    // Which turns it stays silent on, so a missing reminder there reads as intended.
+    expect(master).toContain("`<task-notification>`");
   });
 
   it("both settings files carry it", async () => {

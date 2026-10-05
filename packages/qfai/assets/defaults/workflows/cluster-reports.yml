@@ -1,0 +1,12 @@
+route: cluster-reports
+family: close
+stages:
+  - id: cluster
+    kind: triage
+    steps: [triage-cluster]
+  - id: close
+    kind: triage
+    steps: [triage-close]
+    after: [cluster]
+decisionPoints: []
+branchPoints: []

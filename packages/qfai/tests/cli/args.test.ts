@@ -4,6 +4,16 @@ import type { ParsedArgs } from "../../src/cli/lib/args.js";
 import { parseArgs } from "../../src/cli/lib/args.js";
 
 describe("parseArgs", () => {
+  it("routes story and flow scaffold options without accepting them on other commands", () => {
+    const story = parseArgs(["atdd", "scaffold", "--story", "US-0008-0007"], process.cwd());
+    expect(story.invalid).toBe(false);
+    expect(story.options.atddStoryId).toBe("US-0008-0007");
+    const flow = parseArgs(["atdd", "scaffold", "--flow", "BF-0008"], process.cwd());
+    expect(flow.invalid).toBe(false);
+    expect(flow.options.atddFlowId).toBe("BF-0008");
+    expect(parseArgs(["report", "--story", "US-0008-0007"], process.cwd()).invalid).toBe(true);
+  });
+
   it("does not skip other options when --format has no value", () => {
     const cwd = process.cwd();
     const parsed = parseArgs(["validate", "--format", "--strict"], cwd);
@@ -65,18 +75,10 @@ describe("parseArgs", () => {
     // accepted where nothing reads it reaches nothing and the run proceeds as if
     // it had not been given — `--dry-run` most sharply, since an operator who
     // believes a run is a rehearsal gets a real one.
-    //
-    // `handoff` and `prototyping` take a subcommand, so their rows name one: a
-    // bare `handoff` is invalid for its own reasons and would pass a rejection
-    // row without testing the flag.
     const OWNERS = [
-      ["--force", [["init"], ["handoff", "upgrade"], ["prototyping", "iterate"]], ["validate"]],
+      ["--force", [["init"]], ["validate"]],
       ["--yes", [["init"], ["doctor"]], ["validate", "report"]],
-      [
-        "--dry-run",
-        [["init"], ["doctor"], ["handoff", "upgrade"], ["prototyping", "iterate"]],
-        ["validate", "report", "atdd"],
-      ],
+      ["--dry-run", [["init"], ["doctor"]], ["validate", "report", "atdd"]],
     ] as const;
 
     for (const [flag, owners, strangers] of OWNERS) {
@@ -154,96 +156,11 @@ describe("parseArgs", () => {
     expect(parsed.options.help).toBe(true);
   });
 
-  it("parses guardrails options", () => {
-    const cwd = process.cwd();
-    const parsed = parseArgs(
-      [
-        "guardrails",
-        "extract",
-        "--path",
-        "18_delta.md",
-        "--path",
-        "more",
-        "--max",
-        "12",
-        "--keyword",
-        "layout",
-      ],
-      cwd,
-    );
-    expect(parsed.invalid).toBe(false);
-    expect(parsed.options.guardrailsAction).toBe("extract");
-    expect(parsed.options.guardrailsPaths).toEqual(["18_delta.md", "more"]);
-    expect(parsed.options.guardrailsMax).toBe(12);
-    expect(parsed.options.guardrailsKeyword).toBe("layout");
-  });
-
   it("parses --profile for validate", () => {
     const cwd = process.cwd();
     const parsed = parseArgs(["validate", "--profile", "atdd"], cwd);
     expect(parsed.invalid).toBe(false);
     expect(parsed.options.profile).toBe("atdd");
-  });
-
-  it("allows --out for prototyping preflight only", () => {
-    const cwd = process.cwd();
-    const parsed = parseArgs(["prototyping", "preflight", "--out", "tmp/out.json"], cwd);
-    expect(parsed.invalid).toBe(false);
-    expect(parsed.options.doctorOut).toBe("tmp/out.json");
-  });
-
-  it("parses a strict integer --cycle for prototyping iterate", () => {
-    const cwd = process.cwd();
-    const parsed = parseArgs(["prototyping", "iterate", "--cycle", "3"], cwd);
-    expect(parsed.invalid).toBe(false);
-    expect(parsed.options.prototypingAction).toBe("iterate");
-    expect(parsed.options.prototypingCycle).toBe(3);
-  });
-
-  it("rejects a partial numeric --cycle value for prototyping iterate", () => {
-    const cwd = process.cwd();
-    const parsed = parseArgs(["prototyping", "iterate", "--cycle", "3abc"], cwd);
-    expect(parsed.invalid).toBe(true);
-    expect(parsed.options.help).toBe(true);
-    expect(parsed.options.prototypingCycle).toBeUndefined();
-  });
-
-  it("rejects a fractional --cycle value for prototyping iterate", () => {
-    const cwd = process.cwd();
-    const parsed = parseArgs(["prototyping", "iterate", "--cycle", "1.5"], cwd);
-    expect(parsed.invalid).toBe(true);
-    expect(parsed.options.help).toBe(true);
-    expect(parsed.options.prototypingCycle).toBeUndefined();
-  });
-
-  // v2.0 (spec-0012 absorbed): the v1.x round-* / --candidates / --survivors
-  // arg surface was removed; the iterate command takes only --cycle and
-  // --target-url. No equivalent --out / --format rejection tests are needed
-  // because the new CLI surface does not accept those flags for `iterate`.
-
-  it("rejects unsupported --format values for prototyping preflight", () => {
-    const cwd = process.cwd();
-    const parsed = parseArgs(["prototyping", "preflight", "--format", "github"], cwd);
-    expect(parsed.invalid).toBe(true);
-    expect(parsed.options.help).toBe(true);
-  });
-
-  it("accepts --format text|json for guardrails", () => {
-    const cwd = process.cwd();
-    const json = parseArgs(["guardrails", "check", "--format", "json"], cwd);
-    expect(json.invalid).toBe(false);
-    expect(json.options.guardrailsFormat).toBe("json");
-
-    const text = parseArgs(["guardrails", "list", "--format", "text"], cwd);
-    expect(text.invalid).toBe(false);
-    expect(text.options.guardrailsFormat).toBe("text");
-  });
-
-  it("rejects unsupported --format values for guardrails", () => {
-    const cwd = process.cwd();
-    const parsed = parseArgs(["guardrails", "check", "--format", "github"], cwd);
-    expect(parsed.invalid).toBe(true);
-    expect(parsed.options.invalidExitCode).toBe(2);
   });
 
   it("parses sdd profile for validate", () => {
@@ -263,71 +180,6 @@ describe("parseArgs", () => {
   it("marks removed --phase option as invalid", () => {
     const cwd = process.cwd();
     const parsed = parseArgs(["validate", "--phase", "atdd"], cwd);
-    expect(parsed.invalid).toBe(true);
-    expect(parsed.options.help).toBe(true);
-  });
-
-  it("marks guardrails without action as invalid", () => {
-    const cwd = process.cwd();
-    const parsed = parseArgs(["guardrails", "--path", "18_delta.md"], cwd);
-    expect(parsed.invalid).toBe(true);
-    expect(parsed.options.help).toBe(true);
-    expect(parsed.options.invalidExitCode).toBe(2);
-  });
-
-  // Flag parsing for spec-0012:
-  //   --emit-skeletons / --skeleton-mode / --mode under `prototyping iterate`.
-
-  it("parses --emit-skeletons on prototyping iterate (default-OFF without the flag)", () => {
-    const cwd = process.cwd();
-    const without = parseArgs(["prototyping", "iterate", "--cycle", "0"], cwd);
-    expect(without.invalid).toBe(false);
-    expect(without.options.prototypingEmitSkeletons).toBeUndefined();
-    const withFlag = parseArgs(["prototyping", "iterate", "--cycle", "0", "--emit-skeletons"], cwd);
-    expect(withFlag.invalid).toBe(false);
-    expect(withFlag.options.prototypingEmitSkeletons).toBe(true);
-  });
-
-  it("parses --skeleton-mode {placeholder|full|stub} and rejects other values", () => {
-    const cwd = process.cwd();
-    for (const value of ["placeholder", "full", "stub"] as const) {
-      const parsed = parseArgs(
-        ["prototyping", "iterate", "--cycle", "0", "--skeleton-mode", value],
-        cwd,
-      );
-      expect(parsed.invalid).toBe(false);
-      expect(parsed.options.prototypingSkeletonMode).toBe(value);
-    }
-    const bogus = parseArgs(
-      ["prototyping", "iterate", "--cycle", "0", "--skeleton-mode", "bogus"],
-      cwd,
-    );
-    expect(bogus.invalid).toBe(true);
-    expect(bogus.options.help).toBe(true);
-  });
-
-  it("requires a value for --skeleton-mode", () => {
-    const cwd = process.cwd();
-    const parsed = parseArgs(["prototyping", "iterate", "--cycle", "0", "--skeleton-mode"], cwd);
-    expect(parsed.invalid).toBe(true);
-    expect(parsed.options.help).toBe(true);
-  });
-
-  it("parses --mode {convergence|exploration} and rejects other values", () => {
-    const cwd = process.cwd();
-    for (const value of ["convergence", "exploration"] as const) {
-      const parsed = parseArgs(["prototyping", "iterate", "--cycle", "0", "--mode", value], cwd);
-      expect(parsed.invalid).toBe(false);
-      expect(parsed.options.prototypingMode).toBe(value);
-    }
-    const bogus = parseArgs(["prototyping", "iterate", "--cycle", "0", "--mode", "feral"], cwd);
-    expect(bogus.invalid).toBe(true);
-    expect(bogus.options.help).toBe(true);
-  });
-
-  it("requires a value for --mode", () => {
-    const cwd = process.cwd();
-    const parsed = parseArgs(["prototyping", "iterate", "--cycle", "0", "--mode"], cwd);
     expect(parsed.invalid).toBe(true);
     expect(parsed.options.help).toBe(true);
   });
@@ -362,62 +214,39 @@ describe("parseArgs", () => {
   // --clause are used on a subcommand that does NOT accept the flag,
   // the parser MUST (1) consume the value token so it cannot leak
   // into the positional stream, AND (2) call markInvalid() so the
-  describe("validate --spec", () => {
-    it("collects a single --spec value", () => {
-      const parsed = parseArgs(["validate", "--spec", "0003"], process.cwd());
-      expect(parsed.invalid).toBe(false);
-      expect(parsed.options.validateSpecIds).toEqual(["0003"]);
-    });
+  describe("validate/report --spec", () => {
+    for (const command of ["validate", "report"] as const) {
+      it(`rejects the removed option on ${command} with a migration hint`, () => {
+        const parsed = parseArgs([command, "--spec", "0003"], process.cwd());
+        expect(parsed.invalid).toBe(true);
+        expect(parsed.invalidReason).toContain("--flow BF-NNNN");
+      });
+    }
+  });
 
-    it("is repeatable and preserves order", () => {
-      const parsed = parseArgs(
-        ["validate", "--spec", "0003", "--spec", "spec-0004", "--profile", "sdd"],
-        process.cwd(),
-      );
-      expect(parsed.invalid).toBe(false);
-      expect(parsed.options.validateSpecIds).toEqual(["0003", "spec-0004"]);
-      expect(parsed.options.profile).toBe("sdd");
-    });
+  describe("validate/report --flow", () => {
+    for (const command of ["validate", "report"] as const) {
+      it(`collects repeatable flow IDs on ${command}`, () => {
+        const parsed = parseArgs(
+          [command, "--flow", "BF-0002", "--flow", "BF-0001"],
+          process.cwd(),
+        );
+        expect(parsed.invalid).toBe(false);
+        expect(
+          command === "validate" ? parsed.options.validateFlowIds : parsed.options.reportFlowIds,
+        ).toEqual(["BF-0002", "BF-0001"]);
+      });
+    }
 
-    it("defaults to an empty scope, which means the whole repo", () => {
-      const parsed = parseArgs(["validate"], process.cwd());
-      expect(parsed.options.validateSpecIds).toEqual([]);
-    });
-
-    it("still marks --spec invalid on a subcommand that does not accept it", () => {
-      const parsed = parseArgs(["audit", "log", "--spec", "0003"], process.cwd());
+    it("rejects --flow on commands that do not consume it", () => {
+      const parsed = parseArgs(["init", "--flow", "BF-0001"], process.cwd());
       expect(parsed.invalid).toBe(true);
-      expect(parsed.options.validateSpecIds).toEqual([]);
     });
   });
 
-  // `report` accepts the same flag: the scoping `validate --spec` introduced
-  // used to stop at the report boundary, where `markInvalid()` rejected it.
-  describe("report --spec", () => {
-    it("collects --spec values without marking the parse invalid", () => {
-      const parsed = parseArgs(
-        ["report", "--spec", "0003", "--spec", "spec-0004", "--format", "json"],
-        process.cwd(),
-      );
-      expect(parsed.invalid).toBe(false);
-      expect(parsed.options.reportSpecIds).toEqual(["0003", "spec-0004"]);
-      expect(parsed.options.reportFormat).toBe("json");
-      // The validate slot must stay untouched — the two scopes are separate.
-      expect(parsed.options.validateSpecIds).toEqual([]);
-    });
-
-    it("defaults to an empty scope, which means the whole repo", () => {
-      const parsed = parseArgs(["report"], process.cwd());
-      expect(parsed.options.reportSpecIds).toEqual([]);
-    });
-  });
-
-  // `--dry-run` is implemented by init, doctor, handoff upgrade and
-  // prototyping iterate|rescope. On every other command it used to be
-  // accepted and then ignored, so an operator reaching for a preview flag
-  // got a real write instead. `prototyping` wired the flag upstream while
-  // this branch was open, so it moved from the rejected list to the
-  // accepted one - the rule is unchanged, its membership is not.
+  // `--dry-run` is implemented by init and doctor. On every other command it
+  // used to be accepted and then ignored, so an operator reaching for a
+  // preview flag got a real write instead.
   describe("--dry-run scope", () => {
     it.each(["init", "doctor"])("is accepted on %s", (command) => {
       const parsed = parseArgs([command, "--dry-run"], process.cwd());
@@ -425,7 +254,7 @@ describe("parseArgs", () => {
       expect(parsed.options.dryRun).toBe(true);
     });
 
-    it.each([["validate"], ["report"], ["guardrails"], ["audit"], ["atdd"], ["discussion"]])(
+    it.each([["validate"], ["report"], ["atdd"], ["discussion"]])(
       "marks --dry-run invalid on %s and leaves dryRun off",
       (command) => {
         const parsed = parseArgs([command, "--dry-run"], process.cwd());
@@ -434,26 +263,6 @@ describe("parseArgs", () => {
         expect(parsed.options.dryRun).toBe(false);
       },
     );
-
-    // `prototyping` wired the flag upstream, but only under a subcommand: the
-    // bare command is rejected for the missing subcommand, not for the flag.
-    it.each(["iterate", "rescope"])("is accepted on prototyping %s", (action) => {
-      const parsed = parseArgs(["prototyping", action, "--dry-run"], process.cwd());
-      expect(parsed.invalid).toBe(false);
-      expect(parsed.options.dryRun).toBe(true);
-      expect(parsed.options.prototypingAction).toBe(action);
-    });
-
-    // `handoff upgrade` implements the flag as a preview, so it must NOT be
-    // rejected: the guard above is about commands that would ignore it.
-    it("keeps --dry-run on handoff upgrade, which previews instead of writing", () => {
-      const parsed = parseArgs(["handoff", "upgrade", "legacy.yaml", "--dry-run"], process.cwd());
-      expect(parsed.invalid).toBe(false);
-      expect(parsed.options.dryRun).toBe(true);
-      // The subcommand and its positional still parse alongside the flag.
-      expect(parsed.options.handoffAction).toBe("upgrade");
-      expect(parsed.options.handoffLegacyFile).toBe("legacy.yaml");
-    });
 
     it("does not consume a following token when rejecting --dry-run", () => {
       const parsed = parseArgs(["validate", "--dry-run", "--format", "github"], process.cwd());
@@ -475,76 +284,20 @@ describe("parseArgs", () => {
   describe("misplaced-subcommand value-taking flags: markInvalid + consume value token", () => {
     it("--spec on a non-atdd subcommand marks invalid AND consumes the value token", () => {
       const cwd = process.cwd();
-      const parsed = parseArgs(["audit", "log", "--spec", "spec-0006", "--format", "json"], cwd);
+      const parsed = parseArgs(
+        ["discussion", "list", "--spec", "spec-0006", "--format", "json"],
+        cwd,
+      );
       expect(parsed.invalid).toBe(true);
       // The "spec-0006" value must NOT have shifted into a positional;
       // --format following it should still be honored.
-      expect(parsed.options.auditAction).toBe("log");
+      expect(parsed.options.discussionFormat).toBe("json");
       // No atdd spec id should have been recorded.
       expect(parsed.options.atddSpecId).toBeUndefined();
     });
-
-    it("--operator on a non-audit subcommand marks invalid AND consumes the value token", () => {
-      const cwd = process.cwd();
-      const parsed = parseArgs(["validate", "--operator", "alice", "--format", "github"], cwd);
-      expect(parsed.invalid).toBe(true);
-      // "alice" must NOT have shifted into a positional, so --format
-      // remains parseable downstream.
-      expect(parsed.options.validateFormat).toBe("github");
-      expect(parsed.options.auditOperator).toBeUndefined();
-    });
-
-    it("--clause on a non-audit subcommand marks invalid AND consumes the value token", () => {
-      const cwd = process.cwd();
-      const parsed = parseArgs(["report", "--clause", "skill-envelope", "--format", "json"], cwd);
-      expect(parsed.invalid).toBe(true);
-      expect(parsed.options.reportFormat).toBe("json");
-      expect(parsed.options.auditClause).toBeUndefined();
-    });
-
-    it("--scope on a non-audit/non-certify subcommand marks invalid AND consumes the value token", () => {
-      const cwd = process.cwd();
-      const parsed = parseArgs(["validate", "--scope", "saas-package", "--format", "github"], cwd);
-      expect(parsed.invalid).toBe(true);
-      expect(parsed.options.validateFormat).toBe("github");
-      // Neither audit-scope nor prototyping-scope should be populated.
-      expect(parsed.options.auditScope).toBeUndefined();
-      expect(parsed.options.prototypingScope).toBeUndefined();
-    });
-
-    it("--upgrade-scope on a non-certify subcommand marks invalid AND consumes the value token", () => {
-      const cwd = process.cwd();
-      const parsed = parseArgs(["validate", "--upgrade-scope", "full", "--format", "github"], cwd);
-      expect(parsed.invalid).toBe(true);
-      expect(parsed.options.validateFormat).toBe("github");
-      expect(parsed.options.prototypingUpgradeScopeFull).toBeUndefined();
-    });
-
-    // Adjacent-flag regression probe. If a misplaced value-taking flag
-    // skips its `i += 1` (the pre-PR `--upgrade-scope` bug), the next
-    // iteration sees the flag's intended value as a token, which can
-    // shift downstream flag parsing in subtle ways. With the unified
-    // contract, `--upgrade-scope` on a non-certify subcommand always
-    // consumes the next token, so a following `--scope full` on an
-    // `audit` subcommand still parses to `auditScope === "full"`. A
-    // regression that strips the consume would re-process the dangling
-    // `full` as a positional and break the chain.
-    it("misplaced --upgrade-scope consumes its value before --scope on a chained audit invocation", () => {
-      const cwd = process.cwd();
-      const parsed = parseArgs(
-        ["audit", "log", "--upgrade-scope", "full", "--scope", "deviation"],
-        cwd,
-      );
-      // The misplaced flag is invalid, but the downstream `--scope
-      // deviation` (which IS valid for audit) must still populate
-      // `auditScope`. With the consume contract this works because
-      // the dangling `full` does not interfere with the next iter.
-      expect(parsed.invalid).toBe(true);
-      expect(parsed.options.auditScope).toBe("deviation");
-    });
   });
-  // 引数拒否の理由 (invalidReason) は main.ts が stderr に出す診断文。
-  // 「どのトークンが拒否されたか」が出力に現れることを固定する。
+  // The rejection reason (invalidReason) is the diagnostic main.ts writes to
+  // stderr. Pin that the output names which token was rejected.
   describe("invalidReason", () => {
     it("names the flag when a value-taking flag has no value", () => {
       const parsed = parseArgs(["validate", "--format"], process.cwd());
@@ -567,23 +320,11 @@ describe("parseArgs", () => {
 
     it("reuses the per-family subcommand wording when the subcommand is missing", () => {
       const cwd = process.cwd();
-      expect(parseArgs(["audit"], cwd).invalidReason).toBe(
-        "qfai audit: unknown or missing subcommand. Expected: log",
-      );
       expect(parseArgs(["atdd"], cwd).invalidReason).toBe(
         "qfai atdd: unknown or missing subcommand. Expected: scaffold",
       );
-      expect(parseArgs(["handoff"], cwd).invalidReason).toBe(
-        "qfai handoff: unknown or missing subcommand. Expected: upgrade",
-      );
       expect(parseArgs(["discussion"], cwd).invalidReason).toBe(
         "qfai discussion: unknown or missing subcommand. Expected: list|use",
-      );
-      expect(parseArgs(["prototyping"], cwd).invalidReason).toBe(
-        "qfai prototyping: unknown or missing subcommand. Expected: preflight|iterate|certify|show-spec",
-      );
-      expect(parseArgs(["guardrails"], cwd).invalidReason).toBe(
-        "qfai guardrails: unknown or missing subcommand. Expected: list|extract|check",
       );
       expect(parseArgs(["sdd"], cwd).invalidReason).toBe(
         "qfai sdd: unknown or missing subcommand. Expected: preflight",
@@ -591,15 +332,15 @@ describe("parseArgs", () => {
     });
 
     it("quotes the rejected subcommand token", () => {
-      const parsed = parseArgs(["prototyping", "bogusaction"], process.cwd());
+      const parsed = parseArgs(["atdd", "bogusaction"], process.cwd());
       expect(parsed.invalid).toBe(true);
       expect(parsed.invalidReason).toBe(
-        'qfai prototyping: unknown subcommand "bogusaction". Expected: preflight|iterate|certify|show-spec',
+        'qfai atdd: unknown subcommand "bogusaction". Expected: scaffold',
       );
     });
 
     it("reports a flag used on a command that does not accept it", () => {
-      // `init` rather than `report`: `report --spec` is a real scoping flag
+      // `init` uses the generic refusal; validate/report add a migration hint.
       // now, so it is no longer an example of this class.
       const parsed = parseArgs(["init", "--spec", "0003"], process.cwd());
       expect(parsed.invalid).toBe(true);
@@ -616,17 +357,13 @@ describe("parseArgs", () => {
   // Unknown-flag handling. Pre-fix the flag switch ended with a bare
   // `default: break;`, so any unrecognized `--token` was silently
   // dropped: `qfai init --dryrun` performed a REAL init and still
-  // exited 0. `.qfai/contracts/cli/qfai-init.md` reserves exit 2 for
+  // exited 0. `.qfai/spec/03_contract/cli/cli-0009-qfai-init.md` reserves exit 2 for
   // CLI-arg errors, so an unknown flag must markInvalid() with 2.
   describe("unknown flags", () => {
-    // The usage-error code is one number for every command. It used to be 1 by
-    // default with `guardrails` alone raised to 2 by name, which contradicted
-    // `prototyping iterate`'s canonical matrix. The default is 2 now, so
-    // the by-name branch assigned the value it already had - dead, and still
-    // reading as "guardrails is special". Asserted over a spread of commands
-    // rather than one, because a single case cannot tell a default from a
-    // special case.
-    it.each(["init", "validate", "report", "doctor", "guardrails", "atdd", "discussion", "audit"])(
+    // The usage-error code is one number for every command. Asserted over a
+    // spread of commands rather than one, because a single case cannot tell a
+    // default from a special case.
+    it.each(["init", "validate", "report", "doctor", "atdd", "discussion"])(
       "reserves the same usage-error code on %s",
       (command) => {
         const parsed = parseArgs([command, "--bogus-flag"], process.cwd());
@@ -667,14 +404,9 @@ describe("parseArgs", () => {
       expect(use.invalid).toBe(false);
       expect(use.options.discussionId).toBe("disc-0001");
       expect(use.options.unknownFlags).toEqual([]);
-
-      const handoff = parseArgs(["handoff", "upgrade", "legacy.md"], cwd);
-      expect(handoff.invalid).toBe(false);
-      expect(handoff.options.handoffLegacyFile).toBe("legacy.md");
-      expect(handoff.options.unknownFlags).toEqual([]);
     });
 
-    it("routes arg errors on non-guardrails commands to exit 2 as well", () => {
+    it("routes a missing flag value to exit 2 as well", () => {
       const cwd = process.cwd();
       const parsed = parseArgs(["validate", "--format"], cwd);
       expect(parsed.invalid).toBe(true);
@@ -771,27 +503,6 @@ describe("parseArgs", () => {
         untouched: (o) => expect(o.reportBaseUrl).toBeUndefined(),
       },
       {
-        flag: "--path",
-        value: "18_delta.md",
-        wrongCommand: ["validate"],
-        probe: (o) => expect(o.validateFormat).toBe("github"),
-        untouched: (o) => expect(o.guardrailsPaths).toEqual([]),
-      },
-      {
-        flag: "--max",
-        value: "12",
-        wrongCommand: ["validate"],
-        probe: (o) => expect(o.validateFormat).toBe("github"),
-        untouched: (o) => expect(o.guardrailsMax).toBeUndefined(),
-      },
-      {
-        flag: "--keyword",
-        value: "layout",
-        wrongCommand: ["validate"],
-        probe: (o) => expect(o.validateFormat).toBe("github"),
-        untouched: (o) => expect(o.guardrailsKeyword).toBeUndefined(),
-      },
-      {
         flag: "--platform",
         value: "web",
         wrongCommand: ["report"],
@@ -804,41 +515,6 @@ describe("parseArgs", () => {
         wrongCommand: ["validate"],
         probe: (o) => expect(o.validateFormat).toBe("github"),
         untouched: (o) => expect(o.prototypingTargetUrl).toBeUndefined(),
-      },
-      {
-        flag: "--cycle",
-        value: "5",
-        wrongCommand: ["validate"],
-        probe: (o) => expect(o.validateFormat).toBe("github"),
-        untouched: (o) => expect(o.prototypingCycle).toBeUndefined(),
-      },
-      {
-        flag: "--license-patch",
-        value: "patch.json",
-        wrongCommand: ["validate"],
-        probe: (o) => expect(o.validateFormat).toBe("github"),
-        untouched: (o) => expect(o.prototypingLicensePatch).toBeUndefined(),
-      },
-      {
-        flag: "--primary-spec-id",
-        value: "spec-0001",
-        wrongCommand: ["validate"],
-        probe: (o) => expect(o.validateFormat).toBe("github"),
-        untouched: (o) => expect(o.prototypingPrimarySpecId).toBeUndefined(),
-      },
-      {
-        flag: "--skeleton-mode",
-        value: "stub",
-        wrongCommand: ["validate"],
-        probe: (o) => expect(o.validateFormat).toBe("github"),
-        untouched: (o) => expect(o.prototypingSkeletonMode).toBeUndefined(),
-      },
-      {
-        flag: "--mode",
-        value: "exploration",
-        wrongCommand: ["validate"],
-        probe: (o) => expect(o.validateFormat).toBe("github"),
-        untouched: (o) => expect(o.prototypingMode).toBeUndefined(),
       },
     ];
 
@@ -859,17 +535,6 @@ describe("parseArgs", () => {
 
     const booleanCases: { flag: string; untouched: (options: Options) => void }[] = [
       { flag: "--run-validate", untouched: (o) => expect(o.reportRunValidate).toBe(false) },
-      { flag: "--check", untouched: (o) => expect(o.prototypingCheckOnly).toBeUndefined() },
-      {
-        flag: "--check-convergence",
-        untouched: (o) => expect(o.prototypingCheckConvergence).toBeUndefined(),
-      },
-      { flag: "--capture", untouched: (o) => expect(o.prototypingCapture).toBeUndefined() },
-      { flag: "--auto-serve", untouched: (o) => expect(o.prototypingAutoServe).toBeUndefined() },
-      {
-        flag: "--emit-skeletons",
-        untouched: (o) => expect(o.prototypingEmitSkeletons).toBeUndefined(),
-      },
       { flag: "--active", untouched: (o) => expect(o.discussionActive).toBeUndefined() },
       { flag: "--clean", untouched: (o) => expect(o.doctorClean).toBeUndefined() },
       { flag: "--autoremediate", untouched: (o) => expect(o.doctorAutoremediate).toBeUndefined() },
@@ -886,43 +551,6 @@ describe("parseArgs", () => {
         untouched(parsed.options);
       },
     );
-
-    it("rejects prototyping flags used on the wrong prototyping subcommand", () => {
-      const cwd = process.cwd();
-      const capture = parseArgs(["prototyping", "certify", "--capture"], cwd);
-      expect(capture.invalid).toBe(true);
-      expect(capture.options.prototypingCapture).toBeUndefined();
-
-      const cycle = parseArgs(["prototyping", "preflight", "--cycle", "3"], cwd);
-      expect(cycle.invalid).toBe(true);
-      expect(cycle.options.prototypingCycle).toBeUndefined();
-
-      const check = parseArgs(["prototyping", "iterate", "--cycle", "0", "--check"], cwd);
-      expect(check.invalid).toBe(true);
-      expect(check.options.prototypingCheckOnly).toBeUndefined();
-    });
-
-    it("rejects guardrails flags used on a non-owning guardrails action", () => {
-      const cwd = process.cwd();
-
-      // runGuardrails reads `max` only on the extract path.
-      const listMax = parseArgs(["guardrails", "list", "--max", "0"], cwd);
-      expect(listMax.invalid).toBe(true);
-      expect(listMax.options.guardrailsMax).toBeUndefined();
-
-      // `check` returns before the keyword filter is applied.
-      const checkKeyword = parseArgs(["guardrails", "check", "--keyword", "foo"], cwd);
-      expect(checkKeyword.invalid).toBe(true);
-      expect(checkKeyword.options.guardrailsKeyword).toBeUndefined();
-
-      const extractMax = parseArgs(["guardrails", "extract", "--max", "0"], cwd);
-      expect(extractMax.invalid).toBe(false);
-      expect(extractMax.options.guardrailsMax).toBe(0);
-
-      const listKeyword = parseArgs(["guardrails", "list", "--keyword", "foo"], cwd);
-      expect(listKeyword.invalid).toBe(false);
-      expect(listKeyword.options.guardrailsKeyword).toBe("foo");
-    });
 
     it("accepts --active only on `discussion list`", () => {
       const cwd = process.cwd();
@@ -974,30 +602,14 @@ describe("parseArgs", () => {
       expect(initStrict.invalid).toBe(true);
       expect(initStrict.options.strict).toBe(false);
 
-      const auditFailOn = parseArgs(["audit", "log", "--fail-on", "warning"], cwd);
-      expect(auditFailOn.invalid).toBe(true);
-      expect(auditFailOn.options.failOn).toBeUndefined();
-
       const validateStrict = parseArgs(["validate", "--strict", "--fail-on", "warning"], cwd);
       expect(validateStrict.invalid).toBe(false);
       expect(validateStrict.options.strict).toBe(true);
       expect(validateStrict.options.failOn).toBe("warning");
 
-      const preflight = parseArgs(["prototyping", "preflight", "--fail-on", "error"], cwd);
-      expect(preflight.invalid).toBe(false);
-      expect(preflight.options.failOn).toBe("error");
-
       const doctorFailOn = parseArgs(["doctor", "--fail-on", "warning"], cwd);
       expect(doctorFailOn.invalid).toBe(false);
       expect(doctorFailOn.options.failOn).toBe("warning");
-
-      // `prototyping iterate` does not thread failOn into its runner.
-      const iterateFailOn = parseArgs(
-        ["prototyping", "iterate", "--cycle", "0", "--fail-on", "warning"],
-        cwd,
-      );
-      expect(iterateFailOn.invalid).toBe(true);
-      expect(iterateFailOn.options.failOn).toBeUndefined();
     });
 
     it("keeps every guarded flag valid on its owning command", () => {
@@ -1011,45 +623,6 @@ describe("parseArgs", () => {
       expect(report.options.reportIn).toBe("validate.json");
       expect(report.options.reportRunValidate).toBe(true);
       expect(report.options.reportBaseUrl).toBe("https://x/");
-
-      const iterate = parseArgs(
-        [
-          "prototyping",
-          "iterate",
-          "--cycle",
-          "0",
-          "--target-url",
-          "https://x/",
-          "--capture",
-          "--auto-serve",
-          "--check-convergence",
-          "--emit-skeletons",
-          "--skeleton-mode",
-          "stub",
-          "--mode",
-          "exploration",
-          "--license-patch",
-          "patch.json",
-          "--primary-spec-id",
-          "spec-0001",
-        ],
-        cwd,
-      );
-      expect(iterate.invalid).toBe(false);
-      expect(iterate.options.prototypingCycle).toBe(0);
-      expect(iterate.options.prototypingCapture).toBe(true);
-      expect(iterate.options.prototypingAutoServe).toBe(true);
-      expect(iterate.options.prototypingCheckConvergence).toBe(true);
-      expect(iterate.options.prototypingEmitSkeletons).toBe(true);
-      expect(iterate.options.prototypingSkeletonMode).toBe("stub");
-      expect(iterate.options.prototypingMode).toBe("exploration");
-      expect(iterate.options.prototypingLicensePatch).toBe("patch.json");
-      expect(iterate.options.prototypingPrimarySpecId).toBe("spec-0001");
-      expect(iterate.options.prototypingTargetUrl).toBe("https://x/");
-
-      const certify = parseArgs(["prototyping", "certify", "--check"], cwd);
-      expect(certify.invalid).toBe(false);
-      expect(certify.options.prototypingCheckOnly).toBe(true);
 
       // `doctor --profile prototyping` shares the targetUrl probe, so
       // --target-url stays valid there alongside doctor's own flags.
@@ -1073,38 +646,11 @@ describe("parseArgs", () => {
 
   // The contract block in args.ts claims to govern EVERY value-taking
   // arm of the flag switch. These cases pin the arms that used to opt
-  // out of it: the command-guarded four (`--path` / `--max` /
-  // `--keyword` / `--platform`, which returned before `i += 1` and so
-  // left the value token unconsumed) and the eight that carried no
-  // guard at all and were therefore accepted on any command.
+  // out of it: the command-guarded `--platform`, which returned before
+  // `i += 1` and so left the value token unconsumed, and the eight that
+  // carried no guard at all and were therefore accepted on any command.
   describe("command-scoped value-taking flags: markInvalid + consume value token", () => {
     const cwd = process.cwd();
-
-    it("--path / --max / --keyword outside guardrails mark invalid AND consume the value", () => {
-      for (const [flag, value] of [
-        ["--path", "18_delta.md"],
-        ["--max", "12"],
-        ["--keyword", "layout"],
-      ] as const) {
-        const parsed = parseArgs(["validate", flag, value, "--format", "github"], cwd);
-        expect(parsed.invalid).toBe(true);
-        // The value must NOT have shifted into a positional, so the
-        // trailing --format is still honored.
-        expect(parsed.options.validateFormat).toBe("github");
-        expect(parsed.options.guardrailsPaths).toEqual([]);
-        expect(parsed.options.guardrailsMax).toBeUndefined();
-        expect(parsed.options.guardrailsKeyword).toBeUndefined();
-      }
-    });
-
-    it("a misplaced --path consumes its value before a downstream audit --scope", () => {
-      const parsed = parseArgs(
-        ["audit", "log", "--path", "README.md", "--scope", "deviation"],
-        cwd,
-      );
-      expect(parsed.invalid).toBe(true);
-      expect(parsed.options.auditScope).toBe("deviation");
-    });
 
     it("--platform outside validate marks invalid AND consumes the value", () => {
       const parsed = parseArgs(["report", "--platform", "linux", "--format", "json"], cwd);
@@ -1123,27 +669,13 @@ describe("parseArgs", () => {
       }
     });
 
-    it("--target-url is accepted on doctor, prototyping preflight and prototyping iterate", () => {
+    it("--target-url is accepted on doctor", () => {
       const doctor = parseArgs(
         ["doctor", "--profile", "prototyping", "--target-url", "http://127.0.0.1:9"],
         cwd,
       );
       expect(doctor.invalid).toBe(false);
       expect(doctor.options.prototypingTargetUrl).toBe("http://127.0.0.1:9");
-
-      const preflight = parseArgs(
-        ["prototyping", "preflight", "--target-url", "http://127.0.0.1:9"],
-        cwd,
-      );
-      expect(preflight.invalid).toBe(false);
-      expect(preflight.options.prototypingTargetUrl).toBe("http://127.0.0.1:9");
-
-      const iterate = parseArgs(
-        ["prototyping", "iterate", "--cycle", "0", "--target-url", "http://127.0.0.1:9"],
-        cwd,
-      );
-      expect(iterate.invalid).toBe(false);
-      expect(iterate.options.prototypingTargetUrl).toBe("http://127.0.0.1:9");
     });
 
     it("--target-url elsewhere marks invalid AND consumes the value", () => {
@@ -1154,29 +686,6 @@ describe("parseArgs", () => {
       expect(parsed.invalid).toBe(true);
       expect(parsed.options.prototypingTargetUrl).toBeUndefined();
       expect(parsed.options.validateFormat).toBe("github");
-    });
-
-    it("iterate-only value flags outside `prototyping iterate` mark invalid AND consume the value", () => {
-      for (const [flag, value] of [
-        ["--cycle", "5"],
-        ["--license-patch", "patch.json"],
-        ["--primary-spec-id", "0003"],
-        ["--skeleton-mode", "stub"],
-        ["--mode", "exploration"],
-      ] as const) {
-        const parsed = parseArgs(["validate", flag, value, "--format", "github"], cwd);
-        expect(parsed.invalid).toBe(true);
-        expect(parsed.options.validateFormat).toBe("github");
-        expect(parsed.options.prototypingCycle).toBeUndefined();
-        expect(parsed.options.prototypingLicensePatch).toBeUndefined();
-        expect(parsed.options.prototypingPrimarySpecId).toBeUndefined();
-        expect(parsed.options.prototypingSkeletonMode).toBeUndefined();
-        expect(parsed.options.prototypingMode).toBeUndefined();
-
-        // Same flag on a sibling prototyping subcommand is equally invalid.
-        const sibling = parseArgs(["prototyping", "certify", flag, value], cwd);
-        expect(sibling.invalid).toBe(true);
-      }
     });
   });
 });
@@ -1241,15 +750,7 @@ describe("parseArgs --version", () => {
   // The subcommand scan runs before the flag loop and only skipped `--`
   // tokens, so a short flag was shifted away as an unknown action: the long
   // form worked on these commands and the short one printed help.
-  for (const command of [
-    "prototyping",
-    "guardrails",
-    "audit",
-    "handoff",
-    "atdd",
-    "discussion",
-    "sdd",
-  ] as const) {
+  for (const command of ["atdd", "discussion", "sdd"] as const) {
     for (const flag of ["--version", "-V"] as const) {
       it(`sets version for \`qfai ${command} ${flag}\``, () => {
         const parsed = parseArgs([command, flag], process.cwd());
@@ -1257,13 +758,6 @@ describe("parseArgs --version", () => {
       });
     }
   }
-
-  it("does not read a short flag as the handoff upgrade legacy file", () => {
-    const parsed = parseArgs(["handoff", "upgrade", "-V"], process.cwd());
-    expect(parsed.options.handoffAction).toBe("upgrade");
-    expect(parsed.options.handoffLegacyFile).toBeUndefined();
-    expect(parsed.options.version).toBe(true);
-  });
 
   it("does not read a short flag as the discussion use id", () => {
     const parsed = parseArgs(["discussion", "use", "-V"], process.cwd());
@@ -1275,41 +769,21 @@ describe("parseArgs --version", () => {
   it("still rejects an unknown subcommand name", () => {
     // Skipping dash-prefixed tokens must not skip a real typo: the post-loop
     // "action required" guard still has to fire.
-    const parsed = parseArgs(["prototyping", "itrate"], process.cwd());
+    const parsed = parseArgs(["atdd", "scafold"], process.cwd());
     expect(parsed.invalid).toBe(true);
-    expect(parsed.options.prototypingAction).toBeUndefined();
+    expect(parsed.options.atddAction).toBeUndefined();
   });
 
   it("still requires a subcommand when only flags follow", () => {
-    const parsed = parseArgs(["prototyping", "--root", "."], process.cwd());
+    const parsed = parseArgs(["atdd", "--root", "."], process.cwd());
     expect(parsed.invalid).toBe(true);
   });
 });
 
 describe("parseArgs dash-leading positionals", () => {
   // A subcommand name is a closed set and never starts with `-`, but the
-  // positional after it is caller data: a relative path may legitimately begin
-  // with a single `-`. Excluding every dash-prefixed token from both positions
-  // stopped `qfai handoff upgrade -legacy.yaml` from converting anything —
-  // the file was left unread and the command died on `<legacy-file> is
-  // required.`
-  it("accepts a legacy file whose name starts with a dash", () => {
-    const parsed = parseArgs(["handoff", "upgrade", "-legacy.yaml"], process.cwd());
-    expect(parsed.options.handoffAction).toBe("upgrade");
-    expect(parsed.options.handoffLegacyFile).toBe("-legacy.yaml");
-    expect(parsed.invalid).toBe(false);
-  });
-
-  it("accepts a legacy file that starts with a dash alongside a trailing flag", () => {
-    const parsed = parseArgs(
-      ["handoff", "upgrade", "-legacy.yaml", "--root", "/tmp/example"],
-      process.cwd(),
-    );
-    expect(parsed.options.handoffLegacyFile).toBe("-legacy.yaml");
-    expect(parsed.options.root).toBe("/tmp/example");
-    expect(parsed.invalid).toBe(false);
-  });
-
+  // positional after it is caller data and may legitimately begin with a
+  // single `-`.
   it("accepts a discussion id that starts with a dash", () => {
     const parsed = parseArgs(["discussion", "use", "-discussion-0001"], process.cwd());
     expect(parsed.options.discussionAction).toBe("use");
@@ -1317,17 +791,21 @@ describe("parseArgs dash-leading positionals", () => {
     expect(parsed.invalid).toBe(false);
   });
 
-  // Over-correction pins: relaxing the positional must not re-admit the two
-  // short flags the parser reserves, nor any long flag.
-  it("keeps -h out of the handoff upgrade legacy file", () => {
-    const parsed = parseArgs(["handoff", "upgrade", "-h"], process.cwd());
-    expect(parsed.options.handoffLegacyFile).toBeUndefined();
-    expect(parsed.options.help).toBe(true);
+  it("accepts a dash-leading discussion id alongside a trailing flag", () => {
+    const parsed = parseArgs(
+      ["discussion", "use", "-discussion-0001", "--root", "/tmp/example"],
+      process.cwd(),
+    );
+    expect(parsed.options.discussionId).toBe("-discussion-0001");
+    expect(parsed.options.root).toBe("/tmp/example");
+    expect(parsed.invalid).toBe(false);
   });
 
-  it("keeps a long flag out of the handoff upgrade legacy file", () => {
-    const parsed = parseArgs(["handoff", "upgrade", "--root", "/tmp/example"], process.cwd());
-    expect(parsed.options.handoffLegacyFile).toBeUndefined();
+  // Over-correction pins: relaxing the positional must not re-admit the two
+  // short flags the parser reserves, nor any long flag.
+  it("keeps a long flag out of the discussion use id", () => {
+    const parsed = parseArgs(["discussion", "use", "--root", "/tmp/example"], process.cwd());
+    expect(parsed.options.discussionId).toBeUndefined();
     expect(parsed.options.root).toBe("/tmp/example");
   });
 
@@ -1338,9 +816,9 @@ describe("parseArgs dash-leading positionals", () => {
   });
 
   it("still refuses a dash-leading token in the subcommand position", () => {
-    const parsed = parseArgs(["handoff", "-legacy.yaml"], process.cwd());
-    expect(parsed.options.handoffAction).toBeUndefined();
-    expect(parsed.options.handoffLegacyFile).toBeUndefined();
+    const parsed = parseArgs(["discussion", "-discussion-0001"], process.cwd());
+    expect(parsed.options.discussionAction).toBeUndefined();
+    expect(parsed.options.discussionId).toBeUndefined();
     expect(parsed.invalid).toBe(true);
   });
 });
@@ -1402,11 +880,21 @@ describe("parseArgs: qfai sdd <subcommand>", () => {
   it("collects repeatable --assume values for sdd preflight", () => {
     const cwd = process.cwd();
     const parsed = parseArgs(
-      ["sdd", "preflight", "--assume", "OQ-0001 は次フェーズ", "--assume", "W-PENDING-PROMOTION"],
+      [
+        "sdd",
+        "preflight",
+        "--assume",
+        "OQ-0001 deferred to the next phase",
+        "--assume",
+        "W-PENDING-PROMOTION",
+      ],
       cwd,
     );
     expect(parsed.invalid).toBe(false);
-    expect(parsed.options.sddAssumptions).toEqual(["OQ-0001 は次フェーズ", "W-PENDING-PROMOTION"]);
+    expect(parsed.options.sddAssumptions).toEqual([
+      "OQ-0001 deferred to the next phase",
+      "W-PENDING-PROMOTION",
+    ]);
   });
 
   it("keeps a help flag out of the sdd subcommand slot", () => {

@@ -1,0 +1,22 @@
+route: repair-test
+family: upkeep
+stages:
+  - id: diagnose
+    kind: diagnose
+    steps: [implement-diagnose]
+  - id: fix
+    kind: test_fix
+    steps: [implement-test-fix]
+    after: [diagnose]
+  - id: note
+    kind: verify
+    steps:
+      - { step: verify-change-note, passThrough: true }
+    after: [fix]
+    review: code
+  - id: verify
+    kind: verify
+    steps: [verify-qfai-gate, verify-repo-gate, verify-commit]
+    after: [note]
+decisionPoints: []
+branchPoints: []

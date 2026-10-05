@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, open, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
@@ -6,7 +6,6 @@ import { resolvePath } from "../config.js";
 import { inspectLatestDiscussionPack } from "../discussionPack.js";
 import { allocateRunDir, hasNewerRunDir } from "../runLog.js";
 import { containsMermaidBlock } from "../validators/discussionPack.js";
-import { resolveImportLiteEntrypoint } from "./importLiteEvidence.js";
 
 const REQ_ID_RE = /\bREQ-\d{4}\b/g;
 const PREFLIGHT_SUMMARY_FILE = "preflight_summary.md";
@@ -22,12 +21,10 @@ const PREFLIGHT_SUMMARY_FILE = "preflight_summary.md";
 const PREFLIGHT_RUN_ROOT = "preflight";
 
 /**
- * `import-lite` is the entrypoint for a project that already carries specs but
- * never ran `/qfai-discussion`: Stage 0 records the input source as
- * `.qfai/evidence/import-lite-<timestamp>.md` instead, which is the same
- * artifact `QFAI-IMPLITE-001` accepts. Without it here, a consumer driving
- * Stage 0 through this public entrypoint stayed `blocked` forever on a project
- * the validator considered compliant.
+ * The input source preflight selected: the discussion pack, or an imported
+ * specification the caller names with `importPath`. An explicit user
+ * requirement is not a file, so a project with neither reports `blocked` and
+ * SDD decides whether the user gave one.
  */
 export type SddPreflightSource = "discussion-pack" | "import-lite";
 export type SddPreflightStatus = "ready" | "blocked";
@@ -40,6 +37,8 @@ export type RunSddPreflightOptions = {
    * pointed-at pack so an explicitly pinned (older) pack is the one gated.
    */
   packDir?: string;
+  /** An imported specification to use when no discussion pack is usable. */
+  importPath?: string;
   startedAt?: Date;
 };
 
@@ -52,14 +51,14 @@ export type SddPreflightResult = {
   blockers: string[];
   /**
    * What the selected pack lacks or contradicts. Listed, never a stop: the pack
-   * is non-normative reference material, so SDD records each gap in its own
-   * delta or evidence and carries on.
+   * is non-normative reference material, so SDD states each gap in its final
+   * report and carries on.
    */
   packGaps: string[];
   nextCommands: string[];
   /** Run id of this preflight, in `run-<17-digit local timestamp>` form. */
   runId: string;
-  /** Immutable, run-scoped summary — the path evidence files must cite. */
+  /** Immutable, run-scoped summary of this run. */
   preflightSummaryPath: string;
   /** Overwritten-every-run copy at `<outDir>/preflight_summary.md`, for humans. */
   latestPreflightSummaryPath: string;
@@ -95,29 +94,27 @@ export async function runSddPreflight(
   ];
 
   if (blockers.length > 0) {
-    // `resolveImportLiteEntrypoint` gates the fallback to the shape the shipped
-    // Stage 0 step describes: specs already exist and there is no discussion
-    // pack at all (a misnamed pack still blocks — evidence is an entrypoint,
-    // never an override).
-    const importLiteEvidencePath = await resolveImportLiteEntrypoint(root, config);
-    if (importLiteEvidencePath !== null) {
-      return await completeReadyPreflight({
-        source: "import-lite",
-        selectedInputPath: importLiteEvidencePath,
-        // The shipped template is an explicit pointer artifact, "not
-        // requirement/spec SSOT", so it carries no REQ ids. Counting them would
-        // report a confident `0` for a project whose requirements live in the
-        // specs; the count is genuinely unknown on this path.
-        importedReqCount: null,
-        run,
-        openQuestions: carryOverOpenQuestions,
-        packGaps: [],
-        // `/qfai-discussion` is not the follow-up here — the input source is
-        // already recorded, so the caller continues the SDD workflow.
-        nextCommands: ["/qfai-sdd"],
-      });
+    // An imported specification stands in for a missing pack, never for a
+    // misnamed one.
+    if (options.importPath !== undefined) {
+      const readable = await isReadableFile(options.importPath);
+      if (readable && readiness.dangerousPackNames.length === 0) {
+        return await completeReadyPreflight({
+          source: "import-lite",
+          selectedInputPath: options.importPath,
+          // An imported specification carries no `REQ-*` index, so the count is
+          // unknown rather than a confident zero.
+          importedReqCount: null,
+          run,
+          openQuestions: carryOverOpenQuestions,
+          packGaps: [],
+          nextCommands: ["/qfai-sdd"],
+        });
+      }
+      if (!readable) {
+        blockers.push(`The imported specification ${options.importPath} is not a readable file.`);
+      }
     }
-
     await publishPreflightSummary(
       run,
       buildBlockedPreflightSummary({
@@ -157,10 +154,10 @@ export async function runSddPreflight(
 }
 
 /**
- * Write the ready summary and return the result. Shared by both sources so
- * `preflight_summary.md` and the returned record cannot drift apart between
- * them. `importedReqCount: null` means "not countable from this input source"
- * and renders as `unknown` rather than a confident zero.
+ * Write the ready summary and return the result, so `preflight_summary.md`
+ * and the returned record cannot drift apart. `importedReqCount: null` means
+ * "not countable from this input source" and renders as `unknown` rather than
+ * a confident zero.
  */
 async function completeReadyPreflight(input: {
   source: SddPreflightSource;
@@ -225,7 +222,7 @@ const PREFLIGHT_RUN_ID_LINE_RE = /^-\s*run id:\s*(run-\d{17})\s*$/m;
 
 /**
  * Write the run-scoped summary first, then refresh the latest pointer with the
- * same body. The run-scoped copy is never rewritten, so an evidence file that
+ * same body. The run-scoped copy is never rewritten, so a report that
  * cites it keeps resolving to the state that justified its decisions.
  *
  * The pointer refresh is conditional, for the same reason
@@ -270,7 +267,8 @@ type PackReadiness = {
   missingSideArtifacts: string[];
   incompleteFiles: string[];
   blockingOqIds: string[];
-  deferredWithoutDetails: string[];
+  incompleteDeferredOqIds: string[];
+  unmigratedFiles: readonly { legacy: string; target: string }[];
   prototypingRequired: boolean;
 };
 
@@ -283,13 +281,13 @@ function resolvePreflightBlockers(readiness: PackReadiness): string[] {
 
   if (!readiness.latestPackDir) {
     blockers.push(
-      "latest discussion-pack が見つかりません（`.qfai/discussion/discussion-YYYYMMDDhhmmssSSS/` を作成してください）。",
+      "The latest discussion-pack was not found (create `.qfai/discussion/discussion-YYYYMMDDhhmmssSSS/`).",
     );
   }
 
   if (readiness.dangerousPackNames.length > 0) {
     blockers.push(
-      `discussion 配下に命名不正の discussion-* が存在します: ${readiness.dangerousPackNames.join(", ")}`,
+      `Directories named discussion-* with an invalid name exist under the discussion directory: ${readiness.dangerousPackNames.join(", ")}`,
     );
   }
 
@@ -302,7 +300,7 @@ function resolvePreflightBlockers(readiness: PackReadiness): string[] {
  * The pack is non-normative reference material
  * (`constitution/drift-protocol.md#core-rule`), so an incomplete one, a
  * contradictory one or one carrying a blocking OQ does not stop SDD: each gap is
- * listed in the summary, recorded in the SDD-owned delta or evidence, and the
+ * listed in the summary and in the SDD final report, and the
  * correction lands in the spec rather than in the pack.
  */
 function resolvePackGaps(readiness: PackReadiness): string[] {
@@ -313,30 +311,42 @@ function resolvePackGaps(readiness: PackReadiness): string[] {
     const sideArtifactMissing = [...readiness.missingSideArtifacts];
 
     if (fileMissing.length > 0) {
-      gaps.push(`必須ファイル不足: ${fileMissing.join(", ")}`);
+      gaps.push(`Missing required files: ${fileMissing.join(", ")}`);
     }
     if (sideArtifactMissing.length > 0) {
       const message = readiness.prototypingRequired
-        ? `UI-bearing discussion pack に必須 side artifact が不足しています: ${sideArtifactMissing.join(", ")}`
-        : `必須 side artifact 不足: ${sideArtifactMissing.join(", ")}`;
+        ? `The UI-bearing discussion pack is missing required side artifacts: ${sideArtifactMissing.join(", ")}`
+        : `Missing required side artifacts: ${sideArtifactMissing.join(", ")}`;
       gaps.push(message);
     }
   }
 
   if (readiness.incompleteFiles.length > 0) {
-    gaps.push(`最小内容を満たしていないファイル: ${readiness.incompleteFiles.join(", ")}`);
+    gaps.push(
+      `Files that do not meet the minimum content: ${readiness.incompleteFiles.join(", ")}`,
+    );
+  }
+
+  // The preflight side of the relocated-file `QFAI-DPACK-003`, which
+  // `validate --profile sdd` does not run either.
+  if (readiness.unmigratedFiles.length > 0) {
+    gaps.push(
+      `Files whose content has moved and that the pack still holds: ${readiness.unmigratedFiles
+        .map(({ legacy, target }) => `${legacy} → ${target}`)
+        .join(", ")}`,
+    );
   }
 
   if (readiness.blockingOqIds.length > 0) {
-    gaps.push(`Blocking OQ（Disposition=open）: ${readiness.blockingOqIds.join(", ")}`);
+    gaps.push(`Blocking OQ (Disposition=open): ${readiness.blockingOqIds.join(", ")}`);
   }
 
   // The preflight side of `QFAI-DPACK-007`. `validate --profile sdd` does not
-  // run the discussion validator, so a deferral without its details would reach
-  // Stage 1 unnamed unless it is listed here.
-  if (readiness.deferredWithoutDetails.length > 0) {
+  // run the discussion validator, so an incomplete deferral would
+  // reach Stage 1 unnamed unless it is listed here.
+  if (readiness.incompleteDeferredOqIds.length > 0) {
     gaps.push(
-      `11_OQ-Register.md の deferred が 13_Deferred.md に存在しません: ${readiness.deferredWithoutDetails.join(", ")}`,
+      `Deferred entries in 11_OQ-Register.md lack a Resolution or a Next-Decision-Point: ${readiness.incompleteDeferredOqIds.join(", ")}`,
     );
   }
 
@@ -364,7 +374,7 @@ async function resolveStoryWorkshopGaps(packDir: string | null): Promise<string[
   if (text.length === 0 || containsMermaidBlock(text)) {
     return [];
   }
-  return ["03_Story-Workshop.md に Mermaid diagram が見つかりません。"];
+  return ["No Mermaid diagram was found in 03_Story-Workshop.md."];
 }
 
 /**
@@ -416,8 +426,7 @@ function buildReadyPreflightSummary(input: {
   packGaps: string[];
 }): string {
   const openQuestions = renderCarryOver(input.openQuestions);
-  const inputLabel =
-    input.source === "import-lite" ? "selected import-lite evidence" : "selected discussion-pack";
+  const inputLabel = `selected ${input.source}`;
 
   return [
     "# Preflight Summary",
@@ -455,7 +464,8 @@ function normalizeTextList(values: string[] | undefined): string[] {
  * With a `REQ-ID` column, only that column's declarations count. A column that
  * holds none — a different ID scheme, a renamed cell — makes the count unknown
  * (`null`) rather than a scan of the prose, which counts mentions: a sentence
- * saying the pack does not use `REQ-0001` counted as one requirement. Only a
+ * naming a requirement ID only to say the pack does not use it counted as one
+ * requirement. Only a
  * file with no `REQ-ID` column at all falls back to distinct IDs in the text.
  */
 function countReqIds(text: string): number | null {
@@ -524,5 +534,16 @@ async function readSafe(filePath: string): Promise<string> {
     return await readFile(filePath, "utf-8");
   } catch {
     return "";
+  }
+}
+
+/** Whether `filePath` names a regular file this process can read. */
+async function isReadableFile(filePath: string): Promise<boolean> {
+  try {
+    if (!(await stat(filePath)).isFile()) return false;
+    await (await open(filePath, "r")).close();
+    return true;
+  } catch {
+    return false;
   }
 }

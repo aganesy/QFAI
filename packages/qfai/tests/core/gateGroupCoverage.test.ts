@@ -83,8 +83,8 @@ const PROFILE_INDEPENDENT_CODES: ReadonlyMap<string, Exemption> = new Map([
   // by it — `--spec` resolution precedes the group dispatch, and provenance
   // survives the short-circuit so the operator still learns which qfai ran.
   ...raisedBy("src/core/validate.ts", {
-    "QFAI-SCOPE-001": "the `--spec` value's shape, resolved before any group is chosen",
-    "QFAI-SCOPE-002": "as QFAI-SCOPE-001, for a spec directory that does not exist",
+    "QFAI-FLOW-005": "the `--flow` value is resolved before a profile is dispatched",
+    "QFAI-LAYOUT-001": "old spec-pack layout is rejected before a profile is dispatched",
     "QFAI-TOOL-001": "which copy of qfai is running — a property of the invocation, not of a gate",
     "QFAI-TOOL-002": "as QFAI-TOOL-001",
   }),
@@ -106,15 +106,11 @@ const PROFILE_INDEPENDENT_CODES: ReadonlyMap<string, Exemption> = new Map([
     "QFAI-CFG-001": "the `qfai.config.yaml` read, which every profile needs first",
     QFAI_CONFIG_INVALID: "config parse failure: nothing downstream runs, so no group owns it",
   }),
-  ...raisedBy("src/core/report.ts", {
-    "QFAI-CTYPE-004": "the delta scan, which the report writer runs for every profile",
-  }),
   ...raisedBy("src/core/waivers.ts", {
     "QFAI-WAIVER-001": "the waiver engine, applied to the findings of whatever profile ran",
     "QFAI-WAIVER-002": "as QFAI-WAIVER-001",
-    "QFAI-WAIVER-003": "as QFAI-WAIVER-001; `report.ts` only counts it into expired_waivers",
+    "QFAI-WAIVER-003": "as QFAI-WAIVER-001",
     "QFAI-WAIVER-004": "as QFAI-WAIVER-001",
-    "QFAI-WAIVER-005": "as QFAI-WAIVER-001",
   }),
   ...raisedBy("src/core/phasePolicy.ts", {
     "QFAI-VALIDATE-017":
@@ -266,10 +262,9 @@ describe("QFAI-PROFILE-001's skip-set accounts for every code that can be emitte
  * group is listed by every profile that can reach one of them. Under any
  * narrower group the notice denies a gate the run just evaluated.
  *
- * Three of the four below are cross-dispatch and resolve the same way: the
- * group is one that both dispatching profiles list. The fourth has an emitter
- * that runs in every profile, which puts it outside that rule by construction
- * — its entry says how.
+ * A cross-dispatch code resolves by sitting in a group that both dispatching
+ * profiles list. The one below has an emitter that runs in every profile,
+ * which puts it outside that rule by construction — its entry says how.
  */
 interface DualEmitter {
   /** Every module with an emit site, package-relative and sorted. */
@@ -283,45 +278,6 @@ interface DualEmitter {
 }
 
 const DUAL_EMITTED_CODES: ReadonlyMap<string, DualEmitter> = new Map([
-  [
-    "R-AUTOPILOT-POLICY-MISSING",
-    {
-      modules: [
-        "src/core/validators/autopilotPolicy.ts",
-        "src/core/validators/justificationCatalog.ts",
-      ],
-      treatment:
-        "The easy case: both emitters are dispatched from `runSddValidators`, so one group " +
-        "listed by `sdd` covers both. `reviewer-gate-sdd`.",
-    },
-  ],
-  [
-    "R-DESIGN-MD-PATCH-OUT-OF-ZONE",
-    {
-      modules: [
-        "src/core/validators/designMdPatchZone.ts",
-        "src/core/validators/justificationCatalog.ts",
-      ],
-      treatment:
-        "Genuinely cross-dispatch: `validateDesignMdPatchZone` from " +
-        "`runPrototypingValidators`, `validateReviewerJustification` from `runSddValidators`. " +
-        "`reviewer-gate-shared`, which BOTH profiles list, so neither is told it skipped a " +
-        "code it can emit.",
-    },
-  ],
-  [
-    "R-MOCK-HREF-DRIFT",
-    {
-      modules: [
-        "src/core/validators/justificationCatalog.ts",
-        "src/core/validators/reviewerGate.ts",
-      ],
-      treatment:
-        "As R-DESIGN-MD-PATCH-OUT-OF-ZONE: `detectMockHrefDrift` from " +
-        "`runPrototypingValidators`, the catalog re-emit from `runSddValidators`. " +
-        "`reviewer-gate-shared`.",
-    },
-  ],
   [
     "D-DEPRECATED-PATH",
     {
@@ -360,8 +316,8 @@ function sourceFiles(root: string): string[] {
  *
  * Shape-matched rather than string-matched. A plain search for the quoted code
  * reports 139 codes in two or more modules, and almost every one of them is a
- * LIST rather than an emit — `core/prototyping/mode.ts` names the codes its
- * relaxation applies to, which raises nothing. Only three forms build a
+ * LIST rather than an emit — a module that names codes it applies to raises
+ * nothing. Only three forms build a
  * finding: the code as the first argument to `issue(` / `pushIssue(` on the
  * same line or the next, and a `code:` property. Matching those brings 139
  * down to 4, and the four are all real.

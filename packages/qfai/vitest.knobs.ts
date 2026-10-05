@@ -48,6 +48,25 @@ export const CONCURRENCY_ENV = "QFAI_TEST_MAX_CONCURRENCY";
  * transfer. Adopting a final value needs a timing artifact comparing at least two
  * settings on the largest project, one project per pull request; revising this declared
  * starting value needs the user's sign-off. Neither is a decision this file may take.
+ *
+ * ## The comparison ten was adopted against
+ *
+ * Largest project: `integration` (1944 tests), found with `vitest list --json` across every
+ * runner project. Its include globs held test files: 183 when it was measured.
+ *
+ * Six logical CPUs, `QFAI_TEST_MAX_WORKERS=<n> pnpm -C packages/qfai exec vitest run --project
+ * integration`, one full run per setting, on a machine other work was also using:
+ *
+ * | workers | duration | vs fastest |
+ * | ------- | -------- | ---------- |
+ * | 4       | 476.46s  | +25.70%    |
+ * | 6       | 384.15s  | +1.35%     |
+ * | 10      | 379.05s  | —          |
+ *
+ * adopted: 10
+ *
+ * Ten is the user's instruction and the fastest setting measured. `DR-0017-0009` records a
+ * proposal to lower it and its refusal.
  */
 export const DECLARED_START = 10;
 
@@ -71,9 +90,8 @@ export const DECLARED_START = 10;
  *
  * The summed figures are what the wall clock understates: most of each fork's measured
  * time at ten was spent waiting rather than working. A machine with ten cores or more is
- * unaffected, and the fourteen-core comparison in
- * `.qfai/evidence/timing-workers-spec-0017.md` is where ten was adopted in the first
- * place — this cap never lowers the value on a machine that can hold it. `DR-0017-0010`
+ * unaffected, and the comparison on {@link DECLARED_START} is where ten was
+ * adopted in the first place — this cap never lowers the value on a machine that can hold it. `DR-0017-0010`
  * carries the decision and the rest of the numbers.
  */
 export const DECLARED_WORKERS = Math.min(DECLARED_START, availableParallelism());
@@ -107,7 +125,7 @@ export const DECLARED_WORKERS = Math.min(DECLARED_START, availableParallelism())
  * machine that can hold ten still runs ten.
  *
  * `DECLARED_START` is untouched and the override is still honoured as asked, which is the
- * whole of what `BR-0017-0048` requires. `DR-0017-0010` records that reasoning for the worker
+ * whole of what `BR-0015-0048` requires. `DR-0017-0010` records that reasoning for the worker
  * axis and `DR-0017-0013` for this one, with the sweep above.
  */
 export const DECLARED_CONCURRENCY = Math.min(DECLARED_START, availableParallelism());

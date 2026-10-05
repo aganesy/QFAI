@@ -1,7 +1,7 @@
 import path from "node:path";
 
 /**
- * SSOT for the 4-layer assistant-tree path segments.
+ * SSOT for the assistant-tree path segments.
  * Hard-coded `.qfai/assistant/<layer>/` literals elsewhere in
  * the codebase are lint-rejected; build path strings through
  * the helpers in this module.
@@ -9,23 +9,19 @@ import path from "node:path";
 
 export const ASSISTANT_DIR = ".qfai/assistant" as const;
 
-export const ASSISTANT_LAYERS = ["constitution", "manifest", "catalog", "process"] as const;
+export const ASSISTANT_LAYERS = ["rule", "skill", "step", "agent", "prompt"] as const;
 
 export type AssistantLayer = (typeof ASSISTANT_LAYERS)[number];
 
-export const LEGACY_ASSISTANT_STEERING_DIR = ".qfai/assistant/steering" as const;
-
-export const MIGRATIONS_SUBDIR = "migrations" as const;
-
 /**
- * The release that retired the legacy `.qfai/assistant/steering/` layout.
+ * The release that retired the legacy `.qfai/assistant/instructions/` layout.
  *
- * A literal, because nothing compares against it any more: the readers accept
- * the old paths unconditionally and the finding that reports one is an `error`
+ * A literal, because nothing compares against it any more: no reader accepts
+ * the old path, and the finding that reports one is an `error`
  * outright. It survives only as the version an operator's message names, so
  * they know which release moved the layout under them.
  */
-export function legacyAssistantSteeringSunsetLabel(): string {
+export function legacyAssistantTreeSunsetLabel(): string {
   return "1.10.0";
 }
 
@@ -37,15 +33,12 @@ export function assistantLayerDir(layer: AssistantLayer): string {
   return `${ASSISTANT_DIR}/${layer}`;
 }
 
-/** A layer, or a directory inside one that is governed as a layer of its own. */
-export type AssistantLayerPath = AssistantLayer | `${AssistantLayer}/${string}`;
-
 export function joinAssistantLayer(
   destRoot: string,
-  layer: AssistantLayerPath,
+  layer: AssistantLayer,
   ...rest: string[]
 ): string {
-  return path.join(destRoot, ASSISTANT_DIR, ...layer.split("/"), ...rest);
+  return path.join(destRoot, ASSISTANT_DIR, layer, ...rest);
 }
 
 /**
@@ -67,28 +60,15 @@ export function joinAssistantAssetLayer(
   return path.join(assistantAssetsRoot, layer, ...rest);
 }
 
-export function joinLegacyAssistantSteering(destRoot: string, ...rest: string[]): string {
-  return path.join(destRoot, LEGACY_ASSISTANT_STEERING_DIR, ...rest);
-}
-
 /**
  * Legacy pre-recut `.qfai/assistant/instructions/` surface — relocated
- * to constitution/ by `qfai init --upgrade-assistant-tree`. Helper kept
- * so call sites do not embed the literal segments and remain consistent
- * with the SSOT-style accessor used for the legacy steering surface.
+ * by `qfai init --upgrade-assistant-tree`. The helper keeps call sites from
+ * embedding the literal segments.
  */
 export const LEGACY_ASSISTANT_INSTRUCTIONS_DIR = ".qfai/assistant/instructions" as const;
 
 export function joinLegacyAssistantInstructions(destRoot: string, ...rest: string[]): string {
   return path.join(destRoot, LEGACY_ASSISTANT_INSTRUCTIONS_DIR, ...rest);
-}
-
-export function migrationMemoRelativePath(version: string): string {
-  return `${ASSISTANT_DIR}/process/${MIGRATIONS_SUBDIR}/v${version}-assistant-layer-recut.md`;
-}
-
-export function joinMigrationMemo(destRoot: string, version: string): string {
-  return path.join(destRoot, migrationMemoRelativePath(version));
 }
 
 /**

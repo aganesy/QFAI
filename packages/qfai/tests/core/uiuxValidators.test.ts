@@ -4,12 +4,11 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { defaultConfig } from "../../src/core/config.js";
+import { legacyLayoutConfig as defaultConfig } from "./legacyLayoutConfig.js";
 import { parseDesignToken } from "../../src/core/parse/designToken.js";
 import { computeContrastRatio } from "../../src/core/uiux/contrastRatio.js";
 import { parseHtmlMock } from "../../src/core/uiux/htmlMockDom.js";
 import { validateAgentDefinition } from "../../src/core/validators/agentDefinition.js";
-import { validateBpApDb } from "../../src/core/validators/bpApDb.js";
 import { validateDesignToken } from "../../src/core/validators/designToken.js";
 import { validateHtmlMock } from "../../src/core/validators/htmlMock.js";
 import { detectPlatform } from "../../src/core/validators/platformDetection.js";
@@ -18,6 +17,11 @@ import { validateResearchSummary } from "../../src/core/validators/researchSumma
 import { validateUiDefinitionConsistency } from "../../src/core/validators/uiDefinitionConsistency.js";
 
 const tempDirs: string[] = [];
+/** Design token files are read only from the directory `uiux.designTokensDir` names. */
+const tokensConfig = {
+  ...defaultConfig,
+  uiux: { ...defaultConfig.uiux, designTokensDir: "tokens" },
+};
 
 afterEach(async () => {
   while (tempDirs.length > 0) {
@@ -203,7 +207,7 @@ describe("uiux validators", () => {
       // `published`.
       const codes = await codesForSources([
         "  - id: SRC-0001",
-        "    title: 商材管理一覧のスクリーンショット",
+        "    title: Screenshot of the product management list",
         "    type: primary",
         "    locator: page=pods-manage-syozai",
         "    observed: 2026-09-01",
@@ -218,7 +222,7 @@ describe("uiux validators", () => {
       // Only the fields carrying them move.
       const codes = await codesForSources([
         "  - id: SRC-0001",
-        "    title: 商材管理一覧のスクリーンショット",
+        "    title: Screenshot of the product management list",
         "    type: primary",
       ]);
 
@@ -272,7 +276,7 @@ describe("uiux validators", () => {
       // entry alone it is 0%, which is the true answer for this pack.
       const primary = (n: number): string[] => [
         `  - id: SRC-000${String(n)}`,
-        "    title: 画面キャプチャ",
+        "    title: Screen capture",
         "    type: primary",
         "    locator: page=pods-manage-syozai",
         "    observed: 2026-09-01",
@@ -516,7 +520,7 @@ describe("uiux validators", () => {
     const template = await readFile(
       path.resolve(
         process.cwd(),
-        "assets/init/.qfai/assistant/skills/qfai-discussion/templates/04_Sources.md",
+        "assets/init/.qfai/assistant/skill/qfai-discussion/templates/04_Sources.md",
       ),
       "utf-8",
     );
@@ -845,12 +849,6 @@ describe("uiux validators", () => {
     expect(result.issues).toHaveLength(0);
   });
 
-  it("returns empty issues for bp/ap validator when rule files are absent", async () => {
-    const root = await newTempDir();
-    const issues = await validateBpApDb(root, defaultConfig);
-    expect(issues).toHaveLength(0);
-  });
-
   it("returns empty issues for mermaid screen flow validator when markdown is absent", async () => {
     const root = await newTempDir();
     const issues = await validateMermaidScreenFlow(root, defaultConfig);
@@ -864,14 +862,14 @@ describe("uiux validators", () => {
       ".qfai",
       "discussion",
       "discussion-20260416000000000",
-      "02_Inception-Deck.md",
+      "01_Context.md",
     );
     const latestPackPath = path.join(
       root,
       ".qfai",
       "discussion",
       "discussion-20260417000000000",
-      "02_Inception-Deck.md",
+      "01_Context.md",
     );
     await mkdir(path.dirname(stalePackPath), { recursive: true });
     await mkdir(path.dirname(latestPackPath), { recursive: true });
@@ -958,6 +956,14 @@ describe("uiux validators", () => {
         "name: frontend-engineer",
         'description: "Implement frontend behavior aligned with the selected direction."',
         "tools: [Read, Write, Edit, Glob, Grep, Bash]",
+        "kind: worker",
+        "domain: frontend",
+        "mission: Implement frontend behavior.",
+        "replaces: [frontend-engineer]",
+        "owned_artifacts: [ui-implementation]",
+        "tool_profile: frontend",
+        "permission_profile: authoring",
+        "specialization_tags: [frontend]",
         "---",
         "",
         "# Frontend Engineer",
@@ -990,7 +996,9 @@ describe("uiux validators", () => {
     );
 
     const issues = await validateAgentDefinition(root, defaultConfig);
-    expect(issues).toEqual([]);
+    expect(
+      issues.filter((item) => item.file === ".qfai/assistant/agent/frontend-engineer.md"),
+    ).toEqual([]);
   });
 
   it("detects key html mock violations with stable code/severity", async () => {
@@ -1068,7 +1076,7 @@ describe("uiux validators", () => {
 
   it("checks fallback consistency for inline visual mock blocks", async () => {
     const root = await newTempDir();
-    const designDir = path.join(root, ".qfai", "contracts", "design");
+    const designDir = path.join(root, "tokens");
     const discussionDir = path.join(root, ".qfai", "discussion");
     await mkdir(designDir, { recursive: true });
     await mkdir(discussionDir, { recursive: true });
@@ -1097,7 +1105,7 @@ describe("uiux validators", () => {
     ].join("\n");
     await writeFile(path.join(discussionDir, "consistency-inline.md"), md, "utf-8");
 
-    const issues = await validateUiDefinitionConsistency(root, defaultConfig);
+    const issues = await validateUiDefinitionConsistency(root, tokensConfig);
     expect(issues.some((item) => item.code === "QFAI-CONSISTENCY-001")).toBe(true);
   });
 
@@ -1160,9 +1168,31 @@ describe("uiux validators", () => {
     expect(codes).toContain("QFAI-MOCK-009"); // touch-target violation
   });
 
+  // QFAI:EX-0001-0039-10
+  it("reads design tokens only from the configured directory, by category severity", async () => {
+    const root = await newTempDir();
+    await mkdir(path.join(root, "tokens"), { recursive: true });
+    const tokenYaml = [
+      "primitive:",
+      "  color:",
+      "    base:",
+      "      $value: ''",
+      "    accent:",
+      "      $value: '#ffffff'",
+      "      platform: kiosk",
+      "",
+    ].join("\n");
+    await writeFile(path.join(root, "tokens", "design-tokens.yaml"), tokenYaml, "utf-8");
+
+    const issues = await validateDesignToken(root, tokensConfig);
+    expect(issues.find((item) => item.code === "QFAI-DT-004")?.severity).toBe("error");
+    expect(issues.find((item) => item.code === "QFAI-DT-006")?.severity).toBe("warning");
+    expect(await validateDesignToken(root, defaultConfig)).toEqual([]);
+  });
+
   it("normalizes design token platform values before validation", async () => {
     const root = await newTempDir();
-    const designDir = path.join(root, ".qfai", "contracts", "design");
+    const designDir = path.join(root, "tokens");
     await mkdir(designDir, { recursive: true });
 
     const tokenYaml = [
@@ -1180,7 +1210,7 @@ describe("uiux validators", () => {
     ].join("\n");
     await writeFile(path.join(designDir, "design-tokens-platform.yaml"), tokenYaml, "utf-8");
 
-    const issues = await validateDesignToken(root, defaultConfig);
+    const issues = await validateDesignToken(root, tokensConfig);
     expect(issues.some((item) => item.code === "QFAI-DT-006")).toBe(false);
   });
 });
@@ -1199,44 +1229,7 @@ async function newTempDir(): Promise<string> {
 }
 
 async function seedAgentDefinitionFixture(root: string, agentMarkdown: string): Promise<void> {
-  const steeringDir = path.join(root, ".qfai", "assistant", "steering");
-  const agentsDir = path.join(root, ".qfai", "assistant", "agents");
-  await mkdir(steeringDir, { recursive: true });
+  const agentsDir = path.join(root, ".qfai", "assistant", "agent");
   await mkdir(agentsDir, { recursive: true });
-
-  // The catalog embeds a verbatim copy of the agent body under
-  // `developer_instructions`; QFAI-AGENT-014 warns when an entry omits it or
-  // lets it drift. Derive the block from this fixture's own markdown so the
-  // fixture stays a clean tree whatever body a caller passes.
-  const body = agentMarkdown.slice(agentMarkdown.indexOf("## Mission")).trimEnd();
-  const block = body
-    .split("\n")
-    .map((line) => (line.length === 0 ? "" : `      ${line}`))
-    .join("\n");
-  await writeFile(
-    path.join(steeringDir, "agent-catalog.yml"),
-    [
-      'schema_version: "1.0"',
-      "agents:",
-      "  - id: frontend-engineer",
-      "    kind: worker",
-      "    developer_instructions: |",
-      block,
-      "",
-    ].join("\n"),
-    "utf-8",
-  );
-  await writeFile(
-    path.join(steeringDir, "agent-routing.yml"),
-    [
-      "routing:",
-      "  - skill: qfai-prototyping",
-      "    phases:",
-      "      - mandatory_agents: [frontend-engineer]",
-      "",
-    ].join("\n"),
-    "utf-8",
-  );
-  await writeFile(path.join(steeringDir, "review-profiles.yml"), "profiles: {}\n", "utf-8");
   await writeFile(path.join(agentsDir, "frontend-engineer.md"), `${agentMarkdown}\n`, "utf-8");
 }

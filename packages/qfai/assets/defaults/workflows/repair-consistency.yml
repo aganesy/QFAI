@@ -1,0 +1,38 @@
+route: repair-consistency
+family: consistency
+stages:
+  - id: diagnose
+    kind: diagnose
+    steps: [implement-diagnose]
+  - id: sdd
+    kind: sdd
+    steps:
+      - sdd-triage
+      - { step: sdd-flow, passThrough: true }
+      - { step: sdd-story, passThrough: true }
+      - { step: sdd-contract, passThrough: true }
+      - { step: sdd-cycle, passThrough: true }
+    after: [diagnose]
+    review: spec
+  - id: implement
+    kind: implement
+    steps:
+      - implement-scaffold
+      - implement-tdd
+      - { step: implement-sweep, passThrough: true }
+    after: [sdd]
+  - id: note
+    kind: verify
+    steps:
+      - { step: verify-change-note, passThrough: true }
+    after: [implement]
+    review: code
+  - id: verify
+    kind: verify
+    steps: [verify-qfai-gate, verify-repo-gate, verify-commit]
+    after: [note]
+decisionPoints: [sdd-triage, implement-sweep]
+branchPoints:
+  - step: sdd-triage
+    outcomes:
+      - { outcome: retire, routes: [retire-mechanism] }

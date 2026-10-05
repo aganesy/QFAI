@@ -5,7 +5,7 @@
  *
  * Scope is the own tree ONLY. The shipped set under
  * `packages/qfai/assets/init/root/.github/workflows/**` is governed by
- * `.qfai/contracts/cli/shipped-workflows.md` §5/§6 and by a different spec; the
+ * `.qfai/spec/03_contract/cli/cli-0018-shipped-workflows.md` (BR-0018-0023, BR-0018-0043) and by a different spec; the
  * rules that reach it arrive with the shipped-file half of this lane, not here.
  * A lane that quietly scanned both would enforce this repository's conventions on
  * every adopter's tree.
@@ -33,9 +33,8 @@
  * follows the existing bare-`R-` lint namespace rather than the `QFAI-XXX-NNN`
  * grammar, which is why the three-digit waiver alias rule does not reach it.
  */
-import { mkdirSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
-import { createHash, randomBytes } from "node:crypto";
-import { closeSync, fstatSync, lstatSync, openSync, readdirSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { lstatSync, readdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { argv, exit, stderr, stdout } from "node:process";
@@ -55,7 +54,7 @@ const CODE = "R-WORKFLOW-HYGIENE-DRIFT";
 /**
  * The rule set, SCOPED, and printed on success so a green run names its own coverage.
  *
- * The scope is load-bearing rather than decorative. `BR-0017-0037` closes the set over
+ * The scope is load-bearing rather than decorative. `BR-0016-0037` closes the set over
  * `.github/workflows/**` at exactly five obligations, and the declaration rule is not one of
  * them — its subject is a JSON file checked against the workflows and it comes from a
  * different criterion. Printing the two groups separately is what makes "exactly five"
@@ -125,7 +124,7 @@ const SCOPES = [
  * The two workflow trees the structural rules cover.
  *
  * Two roots rather than copying the shipped files into the workflows directory inside the CI
- * checkout. Both satisfy `BR-0017-0044`, and the copy makes the reported path ambiguous — an
+ * checkout. Both satisfy `BR-0016-0044`, and the copy makes the reported path ambiguous — an
  * adopter told to look at `.github/workflows/qfai-tests.yml` is being sent to a file they do
  * not have. The rule requires the shipped path to be named AS the shipped path.
  */
@@ -143,7 +142,7 @@ const WORKFLOW_ROOTS = [
 /**
  * The third-party action owners the shipped set may reference.
  *
- * A closed sanctioned SET, not a count of zero. `BR-0017-0046` rejects the count formulation
+ * A closed sanctioned SET, not a count of zero. `BR-0018-0027` rejects the count formulation
  * by name, and for a concrete reason: the shipped pin policy legitimately keeps the
  * package-manager setup action, so "zero third-party references" would fail the lane on the
  * one entry it is supposed to allow.
@@ -191,7 +190,7 @@ export function hasReachablePermissions(entry) {
  * Declaration-only counting — job-level blocks alone.
  *
  * Kept and exported deliberately, even though no rule judges by it:
- * `BR-0017-0014` forbids declaration-only counting *because* it cannot falsify a
+ * `BR-0016-0014` forbids declaration-only counting *because* it cannot falsify a
  * requirement written against reachability, and the cheapest way to keep that
  * claim honest is for both counters to exist and be compared by a test.
  */
@@ -1260,7 +1259,7 @@ function shellCommandLines(body) {
 /**
  * Every global package install names where the package comes from.
  *
- * A SIXTH scope, deliberately, and not a sixth structural rule. `BR-0017-0037` closes the set over
+ * A SIXTH scope, deliberately, and not a sixth structural rule. `BR-0016-0037` closes the set over
  * `.github/workflows/**` at exactly five obligations and `TC-0017-0045` pins that count — this rule
  * comes from a different criterion, the way the declaration rule does, so it is announced under its
  * own heading and counted separately. A green run stays readable and the five stay five.
@@ -1639,7 +1638,7 @@ function needsClosure(jobsByKey, jobKey) {
 /**
  * The shipped set references no unsanctioned third-party action.
  *
- * Scoped to the shipped tree because that is what `BR-0017-0046` governs: the own tree's
+ * Scoped to the shipped tree because that is what `BR-0018-0027` governs: the own tree's
  * third-party posture is a different question and is not decided here.
  */
 function checkShippedThirdParty(uses) {
@@ -3248,159 +3247,6 @@ export function runHygieneLane(root) {
   ];
 }
 
-/**
- * Write the findings where the Reviewer Gate can read them.
- *
- * The lane by itself only writes its findings to stderr as prose, and
- * `validateReviewerJustification` ingests only `{ findings: [...] }` JSON under `.qfai/review/**`.
- * Without this bridge there is no production path between the two anywhere in the repository — an
- * E2E test that demonstrates the ingestion by parsing stderr and hand-building the JSON itself
- * proves the GATE works and proves nothing about the path reaching it. A hygiene violation would
- * then fail the CI log and never once reach the reviewer the shipped-workflows contract promises
- * it reaches.
- *
- * The lane writes it, rather than a workflow step converting it: a converter in YAML would be a
- * second parser for this lane's own output, and the first wording change would silently empty it.
- *
- * Written on every run, INCLUDING a clean one. An empty `findings` array is the statement that the
- * bridge ran and found nothing; a missing file then means the bridge did not run, which is a
- * different fact and worth being able to tell apart. It also overwrites a stale artifact from an
- * earlier run rather than leaving one to be read as current.
- *
- * `justification` is deliberately absent. `R-WORKFLOW-HYGIENE-DRIFT` sits in
- * `DEFERRED_CATALOG_REGISTRATION_CODES`, so the gate recognizes it as ingested-and-exempt and does
- * not require one; inventing a justification here would be this lane answering a question the
- * reviewer is there to answer.
- */
-function writeReviewerArtifact(root, reportDir, findings) {
-  // BEFORE the mkdir and again after it. `mkdirSync(..., { recursive: true })` follows an existing
-  // component and creates nothing there, so checking only afterwards means the missing directories
-  // have already been created on the far side of the link. Checking only beforehand leaves the
-  // window in which one appears. Both, then — the first walk skips components that do not exist
-  // yet, because the mkdir is what creates them and a directory it creates is not a link.
-  refuseLinkedDescent(root, reportDir);
-  mkdirSync(reportDir, { recursive: true });
-  refuseLinkedDescent(root, reportDir);
-  const payload = {
-    findings: findings.map((f) => ({
-      code: CODE,
-      rule: f.rule,
-      file: f.file,
-      job: f.job,
-      detail: f.detail,
-    })),
-  };
-  const target = path.join(reportDir, WORKFLOW_HYGIENE_REPORT_FILE);
-  writeExclusivelyThenRename(target, `${JSON.stringify(payload, null, 2)}\n`);
-  return target;
-}
-
-/**
- * Refuses a report directory reached through a link.
- *
- * Every component between `root` and `dir` must be a real directory:
- * `.qfai/review/**` is gitignored but not unwritable, and a pull request can force-add a path
- * under it — including a directory component that is a symlink, which `mkdirSync` follows
- * without creating anything. This lane runs on an untrusted checkout, from `ci:lint` and from
- * the `build` bridge, so a followed component puts the write wherever the pull request says.
- */
-function refuseLinkedDescent(root, dir) {
-  // Inside the checkout, every component is checked: that is the surface a pull request can
-  // write. A report directory the OPERATOR named outside it is their own path, and only its final
-  // component is inspected — the exclusive create and rename below is what stops the artifact's
-  // own name from being a link either way.
-  const relative = path.relative(root, dir);
-  const inside = relative.length > 0 && !relative.startsWith("..") && !path.isAbsolute(relative);
-  const segments = inside ? relative.split(path.sep) : [path.basename(dir)];
-  let current = inside ? root : path.dirname(dir);
-  for (const segment of segments) {
-    current = path.join(current, segment);
-    let inspected;
-    try {
-      inspected = lstatSync(current);
-    } catch {
-      return; // not there yet: the mkdir creates it, and everything below it, as real directories
-    }
-    if (inspected.isSymbolicLink() || !inspected.isDirectory()) {
-      throw new Error(
-        `check-workflow-hygiene: ${current} is not a real directory; refusing to write the ` +
-          "reviewer artifact through it",
-      );
-    }
-  }
-}
-
-/**
- * Writes `text` to `target` without ever writing THROUGH `target`.
- *
- * `writeFileSync` follows a symlink and truncates whatever it points at, and this artifact's
- * name sits in a gitignored — not unwritable — directory on an untrusted checkout. So the
- * bytes go to an exclusive temp name beside it and a `rename` puts them in place: `rename`
- * REPLACES the name, link and all, rather than writing through it. It is the same shape the
- * provenance record writer uses, and for the same reason.
- */
-function writeExclusivelyThenRename(target, text) {
-  // The parent's IDENTITY — device and inode — pinned across the whole write.
-  //
-  // Comparing only `dev` proves the staging file and the verified directory
-  // are on one filesystem, which a checkout and any other directory on the same volume already
-  // are: swapping `reportDir` for a link to a sibling directory after the descent check would
-  // still pass this test, and the rename would then replace an artifact over there.
-  //
-  // The inode is what says it is the SAME directory. It is read before the open and again after
-  // it, and once more before the rename — Node has no `openat` or `renameat`, so the identity is
-  // compared rather than the operation being made relative to a held descriptor. What that buys
-  // is that a swap is a refusal instead of a silent write, and that the window is one syscall
-  // rather than the span between the descent check and the rename.
-  const parentPath = path.dirname(target);
-  const sameDirectory = (a, b) => a.dev === b.dev && a.ino === b.ino;
-  const parent = lstatSync(parentPath);
-  const staging = `${target}.${randomBytes(12).toString("hex")}.tmp`;
-  const handle = openSync(staging, "wx");
-  try {
-    const opened = fstatSync(handle);
-    if (opened.dev !== parent.dev || !sameDirectory(lstatSync(parentPath), parent)) {
-      throw new Error(
-        `check-workflow-hygiene: ${parentPath} is not the directory that was verified; refusing ` +
-          "to write the reviewer artifact",
-      );
-    }
-    writeFileSync(handle, text, "utf-8");
-  } catch (error) {
-    closeSync(handle);
-    try {
-      unlinkSync(staging);
-    } catch {
-      // the original failure is the one worth reporting
-    }
-    throw error;
-  }
-  closeSync(handle);
-  if (!sameDirectory(lstatSync(parentPath), parent)) {
-    try {
-      unlinkSync(staging);
-    } catch {
-      // going away with the run
-    }
-    throw new Error(
-      `check-workflow-hygiene: ${parentPath} changed while the reviewer artifact was being ` +
-        "written; refusing to rename into it",
-    );
-  }
-  try {
-    renameSync(staging, target);
-  } catch (error) {
-    try {
-      unlinkSync(staging);
-    } catch {
-      // the rename is the failure worth reporting
-    }
-    throw error;
-  }
-}
-
-/** The artifact's filename, exported so the gate's tests can name it without a second literal. */
-export const WORKFLOW_HYGIENE_REPORT_FILE = "workflow-hygiene.json";
 function main(argv) {
   const rootFlag = argv.indexOf("--root");
   const root =
@@ -3408,30 +3254,7 @@ function main(argv) {
       ? path.resolve(argv[rootFlag + 1])
       : path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-  const reportFlag = argv.indexOf("--report-dir");
-  const reportDir =
-    reportFlag >= 0 && argv[reportFlag + 1] !== undefined
-      ? path.resolve(root, argv[reportFlag + 1])
-      : undefined;
-
   const findings = runHygieneLane(root);
-
-  // BEFORE the exit-code branch, so a violating run — the only run whose findings matter to a
-  // reviewer — is the run that produces the artifact rather than the one that returns early.
-  if (reportDir !== undefined) {
-    try {
-      const target = writeReviewerArtifact(root, reportDir, findings);
-      stdout.write(`workflow hygiene: wrote ${findings.length} finding(s) to ${target}\n`);
-    } catch (error) {
-      // A failed write must not turn a clean tree red, and must not let a dirty one look clean:
-      // the exit code below still comes from the findings. It is reported, because a silently
-      // absent artifact is the defect this whole bridge exists to remove.
-      stderr.write(
-        `workflow hygiene: could not write the reviewer artifact to ${reportDir}: ` +
-          `${error instanceof Error ? error.message : String(error)}\n`,
-      );
-    }
-  }
 
   if (findings.length > 0) {
     for (const f of findings) {

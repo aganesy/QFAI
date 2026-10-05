@@ -5,16 +5,13 @@
  * a ratchet.
  *
  * The dogfooding lanes exist so QFAI meets its own gates before shipping them.
- * That was checked as `--fail-on error`, which worked while the ledger rules
- * reported `warning`. They report `error` now, and the repository carries a
- * backlog of rows written before those rules existed: prose in an `Evidence`
- * cell that owes a pointer, a cell past the length cap, a coverage row for a
- * test case the ledger does not own.
+ * The story-tree migration makes test obligations explicit at the BF, AC and
+ * EX layers. Historical artifacts have gaps that predate these checks, and a
+ * few existing tests are intentionally skipped. The first story-tree pin
+ * records those findings by file without inventing test annotations or proof.
  *
- * Fixing those means re-running the work and recording what it produced, spec
- * by spec. Writing a pointer to evidence nobody captured would be worse than
- * the backlog. Until the backfill lands, two contracts keep each lane
- * meaningful:
+ * Fixing them means adding the required tests and recording what they prove.
+ * Until that backfill lands, two contracts keep each lane meaningful:
  *
  * | Contract     | Holds                                                           |
  * | ------------ | --------------------------------------------------------------- |
@@ -30,6 +27,14 @@
  * zero is struck from the list rather than left at `0`, so the slot cannot be
  * taken by the next regression. `--pin` rewrites the profile's entry from a
  * live run.
+ *
+ * A pin describes the tree, so a finding that depends on the branch's diff
+ * against the base is never counted in it. `QFAI-DRIFT-001` reports a protected
+ * story-tree file changed since the base without a change request: a count
+ * pinned by the pull request that made the change reads one less on every pull
+ * request after it merges, and the ratchet then fails work that never touched
+ * the file. Those errors fail the lane outright instead, in the pull request
+ * whose diff produces them, and `--pin` does not record them.
  *
  * Findings print as GitHub annotations, so each lane's output is unchanged
  * from the raw `validate` call this replaces.
@@ -65,11 +70,25 @@ export function compareAgainstPin(counts, pinned) {
   };
 }
 
-/** Every error in a validate report, counted by the file it names. */
+/**
+ * Codes whose presence depends on the diff against the base branch rather than
+ * on the tree alone. `QFAI-STORY-010` runs only under the drift profile, which
+ * no lane ratchets; it is listed so that ratcheting that profile cannot pin it.
+ */
+export const EXCLUDED_FROM_PIN_CODES = new Set(["QFAI-DRIFT-001", "QFAI-STORY-010"]);
+
+/** Errors the pin may not hold, because the next branch would read them differently. */
+export function diffDependentErrors(report) {
+  return (report.issues ?? [])
+    .filter((issue) => issue.severity === "error" && EXCLUDED_FROM_PIN_CODES.has(issue.code))
+    .map(({ code, file, message }) => ({ code, file: file ?? "(no file)", message }));
+}
+
+/** Every error in a validate report the pin may hold, counted by the file it names. */
 export function errorsByFile(report) {
   const counts = new Map();
   for (const issue of report.issues ?? []) {
-    if (issue.severity !== "error") continue;
+    if (issue.severity !== "error" || EXCLUDED_FROM_PIN_CODES.has(issue.code)) continue;
     const file = issue.file ?? "(no file)";
     counts.set(file, (counts.get(file) ?? 0) + 1);
   }
@@ -79,8 +98,19 @@ export function errorsByFile(report) {
 /** Name the findings behind a changed file count when annotations are capped. */
 export function errorsForFile(report, file) {
   return (report.issues ?? [])
-    .filter((issue) => issue.severity === "error" && (issue.file ?? "(no file)") === file)
+    .filter(
+      (issue) =>
+        issue.severity === "error" &&
+        !EXCLUDED_FROM_PIN_CODES.has(issue.code) &&
+        (issue.file ?? "(no file)") === file,
+    )
     .map(({ code, message }) => ({ code, message }));
+}
+
+function reportDiffDependent(errors) {
+  for (const { code, file, message } of errors) {
+    console.error(`  ${file}: ${String(code)}: ${String(message)}`);
+  }
 }
 
 function fail(message) {
@@ -142,6 +172,7 @@ function main() {
   const counts = errorsByFile(report);
   const total = [...counts.values()].reduce((sum, n) => sum + n, 0);
   const pin = JSON.parse(readFileSync(PIN_PATH, "utf-8"));
+  const diffDependent = diffDependentErrors(report);
 
   if (process.argv.includes("--pin")) {
     pin.profiles[profile] = Object.fromEntries([...counts].sort(([a], [b]) => a.localeCompare(b)));
@@ -149,6 +180,12 @@ function main() {
     console.log(
       `check-dogfood-backlog: pinned ${profile} at ${String(total)} error(s) across ${String(counts.size)} file(s).`,
     );
+    if (diffDependent.length > 0) {
+      console.error(
+        `check-dogfood-backlog: ${String(diffDependent.length)} error(s) depend on this branch's diff and were not pinned. The lane still fails on them:`,
+      );
+      reportDiffDependent(diffDependent);
+    }
     return;
   }
 
@@ -179,12 +216,26 @@ function main() {
       console.error(`  ${String(code)}: ${String(message)}`);
     }
   }
-  if (unpinned.length > 0 || over.length > 0) {
+  if (diffDependent.length > 0) {
     console.error(
-      "\nA waiver cannot clear these: the rules are errors, and `QFAI-WAIVER-002` refuses a waiver on one.\n" +
-        "Fix the rows the findings name, then re-pin in the same change:\n\n" +
-        repinSteps(profile),
+      `check-dogfood-backlog: ${profile} reports ${String(diffDependent.length)} error(s) that depend on this branch's diff, which no pin holds:`,
     );
+    reportDiffDependent(diffDependent);
+  }
+  if (unpinned.length > 0 || over.length > 0 || diffDependent.length > 0) {
+    console.error(
+      "\nA waiver cannot clear these: the rules are errors, and `QFAI-WAIVER-002` refuses a waiver on one.",
+    );
+    if (unpinned.length > 0 || over.length > 0) {
+      console.error(
+        "Fix the rows the findings name, then re-pin in the same change:\n\n" + repinSteps(profile),
+      );
+    }
+    if (diffDependent.length > 0) {
+      console.error(
+        "Fix the diff-dependent findings and re-run this lane. Re-pinning will not clear these findings.",
+      );
+    }
     process.exit(1);
   }
 

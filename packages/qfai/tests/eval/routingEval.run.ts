@@ -1,40 +1,51 @@
 /**
- * The routing eval, run by a maintainer against one host at release and never by CI:
+ * The routing eval and the route evaluation, run by a maintainer against one host at release and
+ * never by CI:
  *
  *   QFAI_EVAL_HOST=claude-code QFAI_EVAL_COMMAND='["claude", "-p", "{prompt}"]' \
  *     node node_modules/vitest/vitest.mjs run --config tests/eval/vitest.config.ts
  *
+ *   QFAI_EVAL_HOST=codex \
+ *     QFAI_EVAL_COMMAND='["codex", "exec", "--sandbox", "workspace-write", "{prompt}"]' \
+ *     node node_modules/vitest/vitest.mjs run --config tests/eval/vitest.config.ts
+ *
+ * `codex exec` starts in a read-only sandbox, where `npx qfai` cannot write its run, so the
+ * Codex command asks for a writable workspace.
+ *
  * `QFAI_EVAL_COMMAND` is the host's argv as a JSON array, `{prompt}` standing for the seed's
- * prompt. It is spawned without a shell. Each seed's fixture is built from one `qfai init` base
- * with the local launcher installed; the runner reads what the run recorded, scores every case
- * and writes the eval record to `tests/eval/records/<host>-<version>.json`.
+ * prompt. It is spawned without a shell, so on Windows it names an executable such as
+ * `codex.exe`, not a `.cmd` shim. Each seed's fixture is built from one `qfai init` base with
+ * the local launcher installed; a route evaluation seed runs on the base as it is. The runner
+ * reads what each run recorded, scores every case and writes the eval record to
+ * `tests/eval/records/<host>-<version>.json`. A failing route evaluation blocks the verdict.
  */
 import { spawnSync } from "node:child_process";
-import { cp, mkdir, mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { it } from "vitest";
 
-import { hashAssistantAssetText } from "../../src/core/assistantAssetProvenance.js";
-import {
-  listRuns,
-  readJournal,
-  RUNS_DIR,
-  snapshotOf,
-} from "../../src/core/workflow/persistence.js";
+import { loadBuiltInPlans } from "../../src/core/workflow/plans.js";
 import {
   buildSeedFixture,
   evalRecordProblems,
   isSafetyRelevant,
   releaseVerdict,
+  runHost,
   scoreCases,
   UnknownFactKeyError,
   type RunRecord,
   type ScoredSeed,
 } from "../helpers/routingEval.js";
 import { buildBase, FACT_OVERLAYS } from "../helpers/routingEvalOverlays.js";
+import {
+  routeEvalVerdict,
+  scoreRouteSeeds,
+  type RouteRun,
+  type RouteSeed,
+} from "../helpers/routingEvalRoutes.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -67,12 +78,37 @@ function git(root: string, args: string[]): void {
   if (result.status !== 0) throw new Error(`git ${args.join(" ")}: ${result.stderr}`);
 }
 
-// The local launcher `npx qfai` resolves in the fixture, pointing at this package's build.
+// Where the launcher records each document `npx qfai workflow plan` printed in a seed's run.
+const PLAN_LOG = path.join("tmp", "qfai-plans.jsonl");
+
+// Runs this package's build and, for `workflow plan`, appends its one JSON document to the log.
+const RECORDER = `import { spawnSync } from "node:child_process";
+import { appendFileSync, mkdirSync } from "node:fs";
+import path from "node:path";
+const args = process.argv.slice(2);
+const run = spawnSync(process.execPath, [${JSON.stringify(CLI)}, ...args], {
+  stdio: ["inherit", "pipe", "inherit"],
+  encoding: "utf8",
+});
+process.stdout.write(run.stdout ?? "");
+if (args[0] === "workflow" && args[1] === "plan") {
+  const log = path.join(process.cwd(), ${JSON.stringify(PLAN_LOG)});
+  mkdirSync(path.dirname(log), { recursive: true });
+  appendFileSync(log, JSON.stringify(JSON.parse(run.stdout)) + "\\n");
+}
+process.exit(run.status ?? 1);
+`;
+
+// The local launcher `npx qfai` resolves in the fixture: this package's build, recording plans.
 async function installLauncher(root: string): Promise<void> {
   const bin = path.join(root, "node_modules", ".bin");
   await mkdir(bin, { recursive: true });
-  await writeFile(path.join(bin, "qfai"), `#!/bin/sh\nexec node "${CLI}" "$@"\n`, { mode: 0o755 });
-  await writeFile(path.join(bin, "qfai.cmd"), `@node "${CLI}" %*\r\n`);
+  const recorder = path.join(bin, "qfai-recorder.mjs");
+  await writeFile(recorder, RECORDER);
+  await writeFile(path.join(bin, "qfai"), `#!/bin/sh\nexec node "${recorder}" "$@"\n`, {
+    mode: 0o755,
+  });
+  await writeFile(path.join(bin, "qfai.cmd"), `@node "${recorder}" %*\r\n`);
 }
 
 async function base(): Promise<string> {
@@ -97,58 +133,111 @@ function commit(root: string): void {
   ]);
 }
 
-async function stageMeasurements(runDir: string): Promise<unknown[]> {
-  const dir = path.join(runDir, "results");
-  const names = await readdir(dir).catch(() => []);
-  const results = await Promise.all(
-    names.map(async (name) => readFile(path.join(dir, name), "utf8")),
-  );
-  return results.map((text): unknown => Reflect.get(JSON.parse(text), "measurement") ?? null);
+const read = (value: unknown, key: string): unknown =>
+  typeof value === "object" && value !== null ? Reflect.get(value, key) : undefined;
+
+// Every document `workflow plan` printed in the seed's run, in order.
+async function planDocuments(root: string): Promise<unknown[]> {
+  const text = await readFile(path.join(root, PLAN_LOG), "utf8").catch(() => "");
+  return text
+    .split("\n")
+    .filter(Boolean)
+    .map((line): unknown => JSON.parse(line));
 }
 
-// SIMPLIFIED: observes the route, the accepted stage kinds and whether a question was opened.
-// Lift when: a host transcript format is settled, so the other behaviour a token names can be read.
+const routesOf = (documents: unknown[]): string[] =>
+  documents.map((each) => read(each, "route")).filter((route) => typeof route === "string");
+
+// SIMPLIFIED: observes the route the last plan names and the stage kinds of that plan; whether
+// the session asked the user anything is not observed, so that axis is not scored.
+// Lift when: a host transcript format is settled, so a question put to the user can be read.
 async function observe(root: string, seedId: string) {
-  const runsDir = path.join(root, RUNS_DIR);
-  const [runId] = await listRuns(runsDir);
-  if (runId === undefined) {
-    return { run: { seedId, route: null, observed: [], askedQuestion: false }, measurements: [] };
-  }
-  const read = await readJournal(path.join(runsDir, runId));
-  const records = read.ok ? read.records : [];
+  const documents = await planDocuments(root);
+  const last = documents.filter((each) => typeof read(each, "route") === "string").at(-1);
+  const stages = read(last, "stages");
   const run: RunRecord = {
     seedId,
-    route: snapshotOf(records)?.plan?.route ?? null,
-    observed: records.flatMap((record) => (record.stageKind ? [record.stageKind] : [])),
-    askedQuestion: records.some((record) => record.event === "question-opened"),
+    route: routesOf(documents).at(-1) ?? null,
+    observed: (Array.isArray(stages) ? stages : []).map((stage) => String(read(stage, "kind"))),
+    askedQuestion: null,
   };
-  return { run, measurements: await stageMeasurements(path.join(runsDir, runId)) };
+  return { run, measurements: [] };
 }
 
-async function runSeed(baseRoot: string, seed: Seed, argv: string[]) {
+// What a route evaluation seed is scored on: every route the session planned, in order, and
+// `low` where `plan` returned candidates. Plans carry no modifiers, so a safety class is judged
+// by the route and the candidates alone.
+async function observeRoutes(root: string, seedId: string): Promise<RouteRun> {
+  const documents = await planDocuments(root);
+  const asked = documents.some((each) => Array.isArray(read(each, "candidates")));
+  return { seedId, routes: routesOf(documents), modifiers: [], confidence: asked ? "low" : null };
+}
+
+// Runs the host on `prompt` in `root`, which holds a committed fixture.
+function spawnHost(root: string, prompt: string, argv: string[]): number {
+  const [command = "", ...args] = argv.map((each) => (each === "{prompt}" ? prompt : each));
+  const started = Date.now();
+  runHost(command, args, root);
+  return Date.now() - started;
+}
+
+async function inTempCopy<T>(baseRoot: string, act: (root: string) => Promise<T>): Promise<T> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-eval-seed-"));
   try {
-    return await runIn(root, baseRoot, seed, argv);
+    await cp(baseRoot, root, { recursive: true });
+    return await act(root);
   } finally {
     await removeTempTree(root);
   }
 }
 
-async function runIn(root: string, baseRoot: string, seed: Seed, argv: string[]) {
-  await cp(baseRoot, root, { recursive: true });
-  try {
-    await buildSeedFixture(root, seed, FACT_OVERLAYS);
-  } catch (error) {
-    if (error instanceof UnknownFactKeyError) return { refused: [...error.keys] };
-    throw error;
-  }
-  commit(root);
-  const [command = "", ...args] = argv.map((each) =>
-    each === "{prompt}" ? seed.userPrompt : each,
-  );
-  const started = Date.now();
-  spawnSync(command, args, { cwd: root, encoding: "utf8", shell: false });
-  return { wallClockMs: Date.now() - started, ...(await observe(root, seed.id)) };
+async function runSeed(baseRoot: string, seed: Seed, argv: string[]) {
+  return inTempCopy(baseRoot, async (root) => {
+    try {
+      await buildSeedFixture(root, seed, FACT_OVERLAYS);
+    } catch (error) {
+      if (error instanceof UnknownFactKeyError) return { refused: [...error.keys] };
+      throw error;
+    }
+    commit(root);
+    const wallClockMs = spawnHost(root, seed.userPrompt, argv);
+    return { wallClockMs, ...(await observe(root, seed.id)) };
+  });
+}
+
+async function runRouteSeed(baseRoot: string, seed: RouteSeed, argv: string[]) {
+  return inTempCopy(baseRoot, async (root) => {
+    commit(root);
+    spawnHost(root, seed.request, argv);
+    return observeRoutes(root, seed.id);
+  });
+}
+
+function jsonLines(text: string): unknown[] {
+  return text
+    .split("\n")
+    .filter(Boolean)
+    .map((line): unknown => JSON.parse(line));
+}
+
+const isRouteSeed = (value: unknown): value is RouteSeed =>
+  typeof read(value, "request") === "string" && typeof read(value, "expected") === "object";
+
+// Scores every route evaluation seed against its run.
+async function routeEval(baseRoot: string, argv: string[]) {
+  const seedText = await readFile(path.join(FIXTURES, "route-eval-seeds.jsonl"), "utf8");
+  const seeds = jsonLines(seedText).filter(isRouteSeed);
+  const runs: RouteRun[] = [];
+  for (const seed of seeds) runs.push(await runRouteSeed(baseRoot, seed, argv));
+  const cases = scoreRouteSeeds(seeds, runs, await loadBuiltInPlans());
+  const withRuns = cases.map((score) => ({
+    ...score,
+    run: runs.find((run) => run.seedId === score.seedId),
+  }));
+  return {
+    verdict: routeEvalVerdict(seeds, cases),
+    cases: withRuns,
+  };
 }
 
 async function runEval(): Promise<void> {
@@ -156,34 +245,43 @@ async function runEval(): Promise<void> {
   const seedText = await readFile(path.join(FIXTURES, "routing-seeds.jsonl"), "utf8");
   const vocabularyText = await readFile(path.join(FIXTURES, "token-vocabulary.json"), "utf8");
   const vocabulary: Record<string, string> = JSON.parse(vocabularyText);
-  const seeds = seedText
-    .split("\n")
-    .filter(Boolean)
-    .map((line): unknown => JSON.parse(line))
-    .filter(isSeed);
+  const seeds = jsonLines(seedText).filter(isSeed);
   const safetyList = seeds
     .filter((seed) => isSafetyRelevant(seed, vocabulary))
     .map((seed) => seed.id);
   const baseRoot = await base();
   const runs: Record<string, Awaited<ReturnType<typeof runSeed>>> = {};
-  for (const seed of seeds) runs[seed.id] = await runSeed(baseRoot, seed, argv);
-  await removeTempTree(baseRoot);
+  let routes: Awaited<ReturnType<typeof routeEval>>;
+  try {
+    for (const seed of seeds) runs[seed.id] = await runSeed(baseRoot, seed, argv);
+    routes = await routeEval(baseRoot, argv);
+  } finally {
+    await removeTempTree(baseRoot);
+  }
   const observed = Object.values(runs).flatMap((each) => ("run" in each ? [each.run] : []));
-  const cases = scoreCases(seeds, observed).map((score) => ({ ...score, run: runs[score.seedId] }));
+  // A plan exposes its route and its stage kinds; every other token is reported not observed.
+  const plans = await loadBuiltInPlans();
+  const exposed = new Set([
+    ...plans.map((plan) => plan.route),
+    ...plans.flatMap((plan) => plan.stages.map((stage) => stage.kind)),
+  ]);
+  const cases = scoreCases(seeds, observed, (token) => exposed.has(token)).map((score) => ({
+    ...score,
+    run: runs[score.seedId],
+  }));
+  const verdict = releaseVerdict(cases, safetyList);
   const { version }: { version: string } = JSON.parse(
     await readFile(path.join(PACKAGE_ROOT, "package.json"), "utf8"),
   );
   const record = {
     host,
     version,
-    seedDigest: hashAssistantAssetText(seedText),
-    vocabularyDigest: hashAssistantAssetText(vocabularyText),
     safetyList,
-    safetyListDigest: hashAssistantAssetText(safetyList.join("\n")),
-    verdict: releaseVerdict(cases, safetyList),
+    verdict: { ...verdict, blocked: verdict.blocked || !routes.verdict.pass },
     cases,
+    routes,
   };
-  const problems = evalRecordProblems(record, seedText);
+  const problems = evalRecordProblems(record);
   if (problems.length > 0) throw new Error(`The eval record is incomplete: ${problems.join(", ")}`);
   await mkdir(RECORDS, { recursive: true });
   await writeFile(
@@ -192,4 +290,4 @@ async function runEval(): Promise<void> {
   );
 }
 
-it("runs the routing eval against one host", runEval);
+it("runs the routing eval and the route evaluation against one host", runEval);

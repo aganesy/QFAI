@@ -1,0 +1,58 @@
+# Acceptance Criteria
+
+## Criteria
+
+```gherkin
+Feature: A migrated project runs the free-text entry
+  # AC-0004-0013-01
+  Scenario: Step 11 installs the free-text entry
+    Given a 1.x project that steps 1 to 10 have migrated
+    When step 11 runs
+    Then every skill directory the installed package ships equals the package's copy
+    And each host skills directory links every shipped skill
+    And `AGENTS.md` and `CLAUDE.md` are left as the project has them, an earlier init's entry line included
+    And the managed `.gitignore` block equals the installed package's block
+    And `.claude/settings.json` and `.codex/hooks.json` carry the reminder hooks `qfai init` installs, merged the way it merges them
+    And `.agents/rules/reminders.json` holds the installed package's reminder text unless the project edited it
+
+  # AC-0004-0013-02
+  Scenario: A customised shipped skill is replaced
+    Given a shipped skill directory whose content differs from the package's copy
+    When step 11 runs
+    Then it is replaced with the package's copy, an uncommitted edit included
+    And the replacement is listed under Operations
+
+  # AC-0004-0013-03
+  Scenario: Step 12 passes on a migrated project
+    Given a project that steps 1 to 11 have migrated, whose tracked project files name no 1.x path
+    When step 12 runs
+    Then it changes no file and exits 0
+    And `npx qfai workflow plan` returns every shipped plan
+
+  # AC-0004-0013-04
+  Scenario: Step 12 reports what it cannot fix for a person
+    Given a project on which one of step 12's checks fails
+    When step 12 runs
+    Then each failed check is one item under `## For a person` naming the check, the file and the reason
+    And it changes no file and exits 3
+
+  # AC-0004-0013-05
+  Scenario: Steps 11 and 12 are safe to preview, repeat and run out of order
+    Given a project at any point of its migration
+    When step 11 or step 12 runs again, runs with `--dry-run`, or runs before step 1
+    Then a rerun changes no file, a dry run writes nothing and lists what the real run does
+    And a run before step 1 exits 2 naming step 1 and writes nothing
+
+  # AC-0004-0013-06
+  Scenario: The skill ends by handing over to `qfai-run`
+    Given the shipped `SKILL.md` of the migration skill
+    When an AI follows it past step 10
+    Then it runs steps 11 and 12, resolves what step 12 lists, runs `npx qfai validate`
+    And hands the first free-text change request to `qfai-run`
+
+  # AC-0004-0013-07
+  Scenario: The old skill name is retired
+    Given a project that installed the skill as `qfai-migration-spec-to-story`
+    When it upgrades and runs `qfai init --force`
+    Then no host link and no `qfai validate` finding names the old skill
+```

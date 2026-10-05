@@ -24,13 +24,11 @@ export type CanonicalScreenContract = {
   primaryTasksKeyPresent: boolean;
   sourceRef: string;
   /**
-   * Findings raised at parse time when a structured `primary_tasks`
-   * entry (a mapping object rather than a plain string) violates the
-   * closed `{id, label, acceptance}` schema — either by omitting a
-   * required key OR by carrying an extra key. Each entry names the
-   * offending task index (1-based), the offending key set, and a
-   * brief reason. Empty when every structured item conforms or every
-   * item is a string (legacy shape).
+   * Findings raised at parse time when a `primary_tasks` entry violates
+   * the closed `{id, label, acceptance}` schema — by not being a mapping,
+   * by omitting a required key, or by carrying an extra key. Each entry
+   * names the offending task index (1-based), the offending key set, and
+   * a brief reason. Empty when every item conforms.
    */
   primaryTaskShapeFindings: PrimaryTaskShapeFinding[];
 };
@@ -40,7 +38,7 @@ export type PrimaryTaskShapeFinding = {
   index: number;
   /** Identifier reported in messages: the entry's `id` when present, otherwise "#<index>". */
   taskRef: string;
-  reason: "missing-required-key" | "extra-key" | "not-string-or-object";
+  reason: "missing-required-key" | "extra-key" | "not-a-mapping";
   /** Required keys missing from the structured entry (if any). */
   missingKeys: string[];
   /** Extra keys present beyond the closed schema (if any). */
@@ -99,7 +97,7 @@ export async function readUiContractScreenContracts(
   // override — a least-astonishment violation that would silently
   // break certify's per-(spec × screen) gate.
   // Other call sites (lockAbs, designContractReadiness, designToken,
-  // uiDefinitionConsistency, bpApDb, designAudit, doctor) still use
+  // uiDefinitionConsistency, designAudit, doctor) still use
   // `path.join` and remain a deferred follow-up. This site is fixed here
   // because it directly partners with `readPerSpecScreens` and would
   // otherwise produce divergent contract-discovery behaviour between CLI
@@ -109,8 +107,7 @@ export async function readUiContractScreenContracts(
   // that author UI contracts with the `.yml` extension auto-derived
   // an empty screen list and the CLI capture path silently exited 0
   // with a "no screens" warning. Other contract-discovery surfaces in
-  // the repo accept both extensions (e.g. fast-glob brace expansion in
-  // validators/uiEvidenceArtifacts.ts), so harmonising here closes a
+  // the repo accept both extensions, so harmonising here closes a
   // least-astonishment gap rather than expanding surface.
   const screens: CanonicalScreenContract[] = [];
   for (const { relativePath, parsed } of await readUiContractDocuments(uiDir, root)) {
@@ -171,8 +168,7 @@ function screenIdsOf(parsed: unknown): string[] {
 
 /**
  * The spec a UI contract file belongs to by its name, or `null` for a file
- * read project-wide: the names `qfai prototyping certify` resolves one spec's
- * screens from, `spec-0001.yaml`, `0001.yaml`, `ui-0001.yaml`,
+ * read project-wide: `spec-0001.yaml`, `0001.yaml`, `ui-0001.yaml`,
  * `ui-0001-<part>.yaml` and anything under `spec-0001/`.
  */
 function specScopeOf(pathInUiDir: string): string | null {
@@ -450,8 +446,7 @@ function slugifyScreenId(value: string): string {
  * callers are responsible for attaching a real `sourceRef` (typically
  * `<rel-path>#<screenId>`).
  *
- * Exported so per-spec readers in CLI command layers (e.g. the per-(spec
- * x screen) certify gate in `prototypingCertify.ts`) reuse the same
+ * Exported so per-contract readers reuse the same
  * shape parser as the project-wide `readUiContractScreenContracts`
  * function. Pre-export the same id/route/title/primary_tasks extraction
  * logic was duplicated at two call sites; any future schema additions
@@ -514,13 +509,6 @@ function extractPrimaryTasks(value: unknown): {
   for (let index = 0; index < entries.length; index += 1) {
     const entry: unknown = entries[index];
     const taskNumber = index + 1;
-    if (typeof entry === "string") {
-      const trimmed = entry.trim();
-      if (trimmed.length > 0) {
-        primaryTasks.push(trimmed);
-      }
-      continue;
-    }
     if (entry !== null && typeof entry === "object" && !Array.isArray(entry)) {
       const record = entry as Record<string, unknown>;
       const presentKeys = Object.keys(record);
@@ -551,9 +539,8 @@ function extractPrimaryTasks(value: unknown): {
           extraKeys,
         });
       } else {
-        // Conforms to closed schema. Surface the label as the
-        // string-shape primaryTask so existing band / count semantics
-        // continue to work unchanged.
+        // Conforms to the closed schema. The label is what the band and
+        // count checks read.
         const label = typeof record.label === "string" ? record.label.trim() : "";
         if (label.length > 0) {
           primaryTasks.push(label);
@@ -561,12 +548,12 @@ function extractPrimaryTasks(value: unknown): {
       }
       continue;
     }
-    // Neither a string nor an object — surface as a shape finding so
-    // the audit lane can reject it.
+    // A plain string or any other non-mapping value — surface as a shape
+    // finding so the audit lane can reject it.
     findings.push({
       index: taskNumber,
       taskRef: `#${taskNumber}`,
-      reason: "not-string-or-object",
+      reason: "not-a-mapping",
       missingKeys: [],
       extraKeys: [],
     });

@@ -1,0 +1,9 @@
+route: draft-release-notes
+family: release
+stages:
+  - id: draft
+    kind: verify
+    steps: [verify-release-notes]
+decisionPoints: []
+releasePoint: end
+branchPoints: []

@@ -1,9 +1,8 @@
 /**
  * A missing newline can delete a shipped rule without deleting any text.
  *
- * `qfai-implement/SKILL.md` joined the tail of one Spec-completion-conditions
- * bullet to the whole of the next: `... hard gate at 0%- Each item reached
- * \`done\` or valid \`exception\` (with DR-ID)`. Because the joined line is a
+ * The implementation completion gate once joined the tail of a completion bullet
+ * to the next one. Because the joined line is a
  * two-space continuation of the preceding item, markdown renders all of it as
  * that item's text — so the skill's primary completion condition stopped being
  * a list item, and every downstream Decision Record that cited it by line
@@ -73,18 +72,5 @@ async function offendingLines(tree: string): Promise<string[]> {
 describe.each(TREES)("%s", (tree) => {
   it("has no list marker swallowed into the middle of a line", async () => {
     expect(await offendingLines(tree)).toEqual([]);
-  });
-});
-
-describe("the condition that was swallowed is a list item again", () => {
-  it.each(TREES)("%s", async (tree) => {
-    const skill = await readFile(
-      path.join(repoRoot, tree, "assistant/skills/qfai-implement/SKILL.md"),
-      "utf-8",
-    );
-    // Anchored at a line start, so a future re-join fails here too and names
-    // the clause rather than only the shape.
-    expect(skill).toMatch(/^- Each item reached `done` or valid `exception` \(with DR-ID\)$/m);
-    expect(skill).not.toContain("hard gate at 0%- Each item reached");
   });
 });

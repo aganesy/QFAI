@@ -55,6 +55,10 @@ The test: if deleting a sentence leaves the reader no worse off, delete it.
 ## 4. Plain language
 
 - Use ordinary vocabulary. Avoid coined terms and in-group phrasing.
+- State the point directly, not through a metaphor or a flourish. Write "a
+  parameter worth varying", not "a dial worth turning". A metaphor carries
+  associations the writer did not choose, and the reader has to translate it
+  back.
 - One claim per sentence. Keep sentences short.
 - Break lines so no line is hard to scan.
 
@@ -77,18 +81,19 @@ the way someone writing natively in that language would put it.
 
 ## Automatic reminder
 
-`.claude/settings.json` carries hooks that re-state this standard at the two
-moments it is easiest to forget:
+`.claude/settings.json` and `.codex/hooks.json` carry hooks that re-state this
+standard at the two moments it is easiest to forget:
 
 | Moment                                                           | Hook        |
 | ---------------------------------------------------------------- | ----------- |
 | Posting a pull request, issue or review through the GitHub tools | PreToolUse  |
 | Writing or editing a Markdown file                               | PostToolUse |
 
-Each hook runs `node` directly and prints one message from
-`.agents/rules/reminders.json`. No shell, no network, and a missing file prints
-nothing. Delete the entries from `.claude/settings.json` to turn the reminder
-off; the rule still applies.
+Each hook prints one message from `.agents/rules/reminders.json`, with no
+network, and a missing file prints nothing. Claude Code runs `node` directly,
+with no shell. Codex runs it as one command line, the same under every shell,
+once the project's hooks are trusted, and reminds after a patch that adds or changes a Markdown file. Delete
+the entries from both files to turn the reminder off; the rule still applies.
 
 The `gh` command line is out of scope. A shell-argument condition also matches
 compound commands that have nothing to do with GitHub, which would put the
