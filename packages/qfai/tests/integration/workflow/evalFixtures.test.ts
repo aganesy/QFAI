@@ -321,6 +321,16 @@ it("The safety list derived from the tracked seeds follows the rule, with no fix
   });
 });
 
+// The fixture records the safety cases before the release eval.
+// QFAI:EX-0001-0194-38
+it("The recomputed safety list equals the recorded list", async () => {
+  const recorded: unknown = JSON.parse(
+    await readFile(path.join(FIXTURES, "safety-list.json"), "utf8"),
+  );
+
+  expect(recorded).toEqual(await safetyList());
+});
+
 const roots: string[] = [];
 
 afterEach(async () => {

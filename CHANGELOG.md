@@ -97,6 +97,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   integrated tree as an extra check. The suite does not replace revalidating
   each flow, and the search is not reported complete. Refs #2424.
 
+- **The routing eval's safety-relevant list is recorded before the eval runs**
+  (#2304). The list holds every routing seed that needs human input or forbids
+  an effect, an authorization or a skipped gate, and nothing else. A test run
+  on every pull request recomputes it from the seed file and the token
+  vocabulary and requires the result to equal the recorded list. A seed or
+  vocabulary change that moves the list fails until the list is recorded again.
+
 - **The routing-eval token classes stay as they are** (#2305). No class in the
   routing-eval token vocabulary changes. The set of safety-relevant routing
   seeds is unchanged, and the list derived from these classes may now be
