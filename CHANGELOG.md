@@ -40,6 +40,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   three annotations sat at the top of the file, so any passing test there
   counted for all three. The test covering the four mode values names the value
   in each failing assertion. (#2287)
+- **The `qfai-sdd` triage reference lists every place a retirement touches**
+  (#2263). It spells the update operations `UPDATE:APPEND`, `UPDATE:MODIFY`
+  and `UPDATE:REMOVE`, and gains a section on retiring an EX, AC or BR: the
+  approved change request, the item itself, the examples cells of the rules
+  that cite it, the test annotations, an AC left without an example, and no
+  reuse of the ID. It names the `qfai validate` findings that catch a leftover.
 
 ### Changed
 
