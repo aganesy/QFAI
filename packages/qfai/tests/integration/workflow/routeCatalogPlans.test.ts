@@ -123,7 +123,7 @@ const CATALOG: [string, string][] = [
   ],
   [
     "change-tooling",
-    "Stages in order — `diagnose` (diagnose): `implement-diagnose`; `edit` (implement): `implement-tooling`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points none; release point none; branch points none",
+    "Stages in order — `edit` (implement): `implement-tooling`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points none; release point none; branch points none",
   ],
   [
     "bump-dependency",

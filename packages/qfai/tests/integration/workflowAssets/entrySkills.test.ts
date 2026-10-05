@@ -515,6 +515,20 @@ describe("qfai-run", () => {
     );
   });
 
+  it("stops before a step only a person can take, naming the action, its evidence and the read-only check", async () => {
+    const screens = await readShipped(SCREENS);
+    const step = flat(sectionOf(screens, "## A step only a person can take"));
+    expect(step).toMatch(/what the user must do/i);
+    expect(step).toMatch(/what shows it was done/i);
+    expect(step).toMatch(/what the agent will read to check it, which changes nothing/i);
+    expect(step).toMatch(/never types a password, token or key/i);
+    expect(step).toMatch(/never changes an account or service setting/i);
+    const extraction = flat(await readShipped(EXTRACTION));
+    expect(extraction).toMatch(
+      /takes the intent of the repository change, with the entry flag `env`/i,
+    );
+  });
+
   // QFAI:AC-0001-0194-05
   // QFAI:EX-0001-0194-17
   it("The operator-screens reference relays CLI strings in the user's working language", async () => {
