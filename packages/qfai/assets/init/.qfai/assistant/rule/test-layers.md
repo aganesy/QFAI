@@ -26,6 +26,9 @@ locations; a file outside the selection does not establish coverage.
 
 Exercise one unit's observable decisions without real infrastructure. A
 `QFAI:EX-NNNN-NNNN-NN` annotation links a behavioral unit test to its example.
+The annotation counts only on the comment line directly before the `it(`,
+`test(` or `describe(` it marks, or the equivalent test declaration of another
+framework; a file header or a comment inside a test body covers nothing.
 
 ### L2 Component
 

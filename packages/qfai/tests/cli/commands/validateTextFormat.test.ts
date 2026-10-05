@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0039-02
-// QFAI:EX-0001-0039-03
 /**
  * The validate contract's business rules declare the line grammar of
  * `qfai validate --format text` (the default format). Nothing else binds those
@@ -40,6 +38,8 @@ const OPTIONAL_SLOTS = {
 
 const DETAIL_LABELS = ["error_code", "target", "expected", "current", "fix"] as const;
 
+// QFAI:EX-0001-0039-02
+// QFAI:EX-0001-0039-03
 it("directs agent routing repairs to package defaults or project config overrides", () => {
   for (const code of ["QFAI-AGENT-015", "QFAI-AGENT-017", "QFAI-AGENT-018", "QFAI-AGENT-019"]) {
     const fix = resolveIssueFix({ code, severity: "error", category: "canonical", message: code });

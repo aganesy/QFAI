@@ -95,7 +95,7 @@ The test obligation is determined by the ID and the test's layer:
 
 - `BF-*` requires a `QFAI:BF-NNNN` annotation in an E2E test.
 - `AC-*` requires a `QFAI:AC-NNNN-NNNN-NN` annotation in an integration or API test.
-- `EX-*` requires a `QFAI:EX-NNNN-NNNN-NN` annotation in a selected non-E2E test file.
+- `EX-*` requires a `QFAI:EX-NNNN-NNNN-NN` annotation in a selected non-E2E test file, on the comment line directly before the test declaration it marks.
 
 `.qfai/assistant/rule/test-layers.md` defines the layer directories. Test
 selection uses `validation.traceability.testFileGlobs`. A missing BF, AC, or EX

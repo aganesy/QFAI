@@ -23,6 +23,7 @@ Feature: Layer-specific test obligations
     Given the story tree, and an EX that no file `validation.traceability.testFileGlobs` selects annotates with `QFAI:EX-NNNN-NNNN-NN`, and no `Test exception:` row in force naming it
     When `qfai validate --profile tdd` runs
     Then an error names the EX ID and the `03_Example.md` that defines it
+    And an annotation counts only on a comment directly before a test declaration such as `it(`, `test(` or `describe(`, with nothing but blank and comment lines between them
 
   # AC-0001-0056-04
   Scenario: An annotation in the wrong layer is reported
@@ -43,4 +44,11 @@ Feature: Layer-specific test obligations
     Then while the row's Status is DONE, the named item raises no test-obligation error and is listed at info with the row's DEC ID; at any other Status the error stands
     And the row exempts only the obligation of the named ID's own shape: exempting a BF leaves the ACs of its stories owed, and exempting an AC leaves its EXs owed
     And a named ID the tree does not define exempts nothing, and the row raises no other finding
+
+  # AC-0001-0056-07
+  Scenario: A trace mark no check reads is reported
+    Given the story tree, and a test file `validation.traceability.testFileGlobs` selects with a comment line carrying a `QFAI:US-`, `QFAI:TC-`, `QFAI:SC-` or `QFAI:SPEC-` mark
+    When `qfai validate --profile tdd` runs
+    Then a warning names the file, the line and the mark
+    And the same mark inside a string literal raises no warning
 ```

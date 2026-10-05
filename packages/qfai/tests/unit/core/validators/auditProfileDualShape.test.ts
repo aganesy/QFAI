@@ -11,7 +11,6 @@
  * - Verifies the auditProfile surface delegates to the shared
  *   designAudit lane.
  */
-// QFAI:EX-0001-0050-01
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -64,6 +63,7 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
+// QFAI:EX-0001-0050-01
 describe("TC-0004-0069: auditProfile accepts only structured primary_tasks", () => {
   it("rejects plain string primary_tasks, one QFAI-AUD-021 per entry", async () => {
     const ui = [

@@ -40,8 +40,8 @@ async function driftFindings(config: QfaiConfig): Promise<string[]> {
 
 describe("token drift", () => {
   // QFAI:AC-0001-0039-01
+  // QFAI:EX-0001-0039-11
   it("reads design tokens only from uiux.designTokensDir", async () => {
-    // QFAI:EX-0001-0039-11
     await put(`${contractsDir}/ui/ui-0001-home.yaml`, SCREEN);
     await put(`${contractsDir}/ui/home.html`, MOCK);
     await put(`${contractsDir}/design/tokens.yaml`, TOKENS);

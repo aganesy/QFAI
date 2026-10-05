@@ -7,7 +7,6 @@
 // QFAI:AC-0001-0218-04
 // QFAI:AC-0001-0218-05
 // QFAI:EX-0001-0188-08
-// QFAI:EX-0001-0191-01
 // QFAI:EX-0001-0210-08
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -71,6 +70,7 @@ const VERIFY = ["verify-qfai-gate", "verify-repo-gate", "verify-commit"];
 
 // QFAI:EX-0001-0220-15
 // QFAI:EX-0001-0220-16
+// QFAI:EX-0001-0191-01
 it("The shipped add-feature and prototype-feature plans", async () => {
   const kinds = async (route: string) =>
     ((await planOf(route))?.stages ?? []).map((stage) => stage.kind);

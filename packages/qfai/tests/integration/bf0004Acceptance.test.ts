@@ -619,8 +619,8 @@ describe("BF-0004 acceptance criteria", () => {
     expect(await fingerprint(root)).toBe(before);
   });
 
+  // QFAI:EX-0004-0003-25
   it("resolves the package from a parent directory's node_modules", async () => {
-    // QFAI:EX-0004-0003-25
     const parent = await mkdtemp(path.join(os.tmpdir(), "qfai-bf4-hoisted-"));
     temporary.push(parent);
     const root = path.join(parent, "app");
@@ -642,8 +642,8 @@ describe("BF-0004 acceptance criteria", () => {
     expect(result.stdout).toContain("## Operations");
   });
 
+  // QFAI:EX-0004-0003-28
   it("prints step 8's three sections, each empty one as none, in a dry run and a real run", async () => {
-    // QFAI:EX-0004-0003-28
     const root = await project();
     prepareAllowingPerson(root, 7);
     await rm(path.join(root, "tests"), { recursive: true, force: true });
@@ -707,8 +707,8 @@ describe("BF-0004 acceptance criteria", () => {
     ).toBe("# Second overlay\n");
   });
 
+  // QFAI:EX-0004-0003-05
   it("rejects each malformed migration plan before an ID map or tree write", async () => {
-    // QFAI:EX-0004-0003-05
     const root = await project();
     prepareThrough(root, 3);
     const plan = path.join(root, "tmp/qfai-migration/plan.yaml");
@@ -839,8 +839,8 @@ describe("BF-0004 acceptance criteria", () => {
     expect(journey.idMapUnchangedOnRerun).toBe(true);
   });
 
+  // QFAI:EX-0004-0003-18
   it("reports an empty step 1 rerun and creates only moved files without optional directories", async () => {
-    // QFAI:EX-0004-0003-18
     const root = await project();
     await rm(path.join(root, ".qfai/assistant/skills.local"), { recursive: true });
     await expect(lstat(path.join(root, ".qfai/assistant/skills.local"))).rejects.toMatchObject({
@@ -894,8 +894,8 @@ describe("BF-0004 acceptance criteria", () => {
     ).toContain("const unchangedLine = true;\n");
   });
 
+  // QFAI:EX-0004-0003-23
   it("writes migrated artifacts under configured spec and contract directories", async () => {
-    // QFAI:EX-0004-0003-23
     const root = await project();
     await rename(path.join(root, ".qfai/specs"), path.join(root, "docs/specs"));
     await rename(path.join(root, ".qfai/contracts"), path.join(root, "docs/contracts"));
@@ -1015,9 +1015,9 @@ describe("BF-0004 acceptance criteria", () => {
   });
 
   // QFAI:AC-0004-0003-07
+  // QFAI:EX-0004-0003-20
+  // QFAI:EX-0004-0003-50
   it("deletes the old plans and test lists, git history keeping what it tracked", async () => {
-    // QFAI:EX-0004-0003-20
-    // QFAI:EX-0004-0003-50
     const tracked = await project();
     prepareThrough(tracked, 3);
     const pack = ".qfai/spec/spec-0001";
@@ -1199,8 +1199,8 @@ describe("BF-0004 acceptance criteria", () => {
     expect(cells[3]).toMatch(/^(?:TODO|DONE|DEFERRED|WIP)$/);
   });
 
+  // QFAI:EX-0004-0005-05
   it("records a superseded pack as a completed decision without creating a flow", async () => {
-    // QFAI:EX-0004-0005-05
     const root = await project();
     await cp(
       path.join(fixtureRoot, ".qfai/specs/spec-0002"),
@@ -1223,8 +1223,8 @@ describe("BF-0004 acceptance criteria", () => {
     ).rejects.toMatchObject({ code: "ENOENT" });
   });
 
+  // QFAI:EX-0004-0003-29
   it("refuses a plan that places a story or rule of a superseded pack", async () => {
-    // QFAI:EX-0004-0003-29
     const root = await project();
     await cp(
       path.join(fixtureRoot, ".qfai/specs/spec-0002"),
@@ -1261,8 +1261,8 @@ describe("BF-0004 acceptance criteria", () => {
     }
   });
 
+  // QFAI:EX-0004-0005-10
   it("records a deprecated pack with no successor as a completed decision without a flow", async () => {
-    // QFAI:EX-0004-0005-10
     const root = await project();
     await cp(
       path.join(fixtureRoot, ".qfai/specs/spec-0002"),
@@ -1321,8 +1321,8 @@ describe("BF-0004 acceptance criteria", () => {
     );
   });
 
+  // QFAI:EX-0004-0006-01
   it("routes every policy and catalog section to its designated document", async () => {
-    // QFAI:EX-0004-0006-01
     const root = await project();
     prepareThrough(root, 2);
     const markers = [
@@ -1580,8 +1580,8 @@ describe("BF-0004 acceptance criteria", () => {
     }
   });
 
+  // QFAI:EX-0004-0007-01
   it("places an ambiguous criterion explicitly when every flow names its old section", async () => {
-    // QFAI:EX-0004-0007-01
     const root = await project();
     const stories = path.join(root, ".qfai/specs/spec-0001/02_User-stories.md");
     await writeFile(
@@ -1650,8 +1650,8 @@ describe("BF-0004 acceptance criteria", () => {
     ).toContain("AC-0001-0001-01");
   });
 
+  // QFAI:EX-0004-0007-08
   it("places an ambiguous criterion explicitly and creates a template for a new flow", async () => {
-    // QFAI:EX-0004-0007-08
     const root = await project();
     const stories = path.join(root, ".qfai/specs/spec-0001/02_User-stories.md");
     await writeFile(
@@ -1728,8 +1728,8 @@ describe("BF-0004 acceptance criteria", () => {
     expect(secondFlow).toContain("flowchart");
   });
 
+  // QFAI:EX-0004-0007-03
   it("places an example cited twice when both cases name the same criterion", async () => {
-    // QFAI:EX-0004-0007-03
     const root = await project();
     const cases = path.join(root, ".qfai/specs/spec-0001/06_Test-Cases.md");
     await writeFile(
@@ -1833,9 +1833,9 @@ describe("BF-0004 acceptance criteria", () => {
     });
   });
 
+  // QFAI:EX-0004-0007-04
+  // QFAI:EX-0004-0007-11
   it("keeps malformed criteria in the old pack while preserving the complete flow output", async () => {
-    // QFAI:EX-0004-0007-04
-    // QFAI:EX-0004-0007-11
     const normal = await project();
     for (const [name, id] of [
       ["05_Examples.md", "EX-0001-0003"],
@@ -1890,8 +1890,8 @@ describe("BF-0004 acceptance criteria", () => {
     expect(map.ids["spec-0001"]).not.toHaveProperty("AC-0001-0002");
   });
 
+  // QFAI:EX-0004-0007-10
   it("leaves an ambiguous criterion no story lists in the old pack for a person", async () => {
-    // QFAI:EX-0004-0007-10
     const root = await project();
     const criteria = path.join(root, ".qfai/specs/spec-0001/03_Acceptance-Criteria.md");
     const original = await readFile(criteria, "utf8");
@@ -1923,8 +1923,8 @@ describe("BF-0004 acceptance criteria", () => {
     expect(map.ids["spec-0001"]).not.toHaveProperty("AC-0001-0002");
   });
 
+  // QFAI:EX-0004-0007-13
   it("keeps examples whose one criterion takes no new ID in the old pack for a person", async () => {
-    // QFAI:EX-0004-0007-13
     const root = await project();
     const pack = path.join(root, ".qfai/specs/spec-0001");
     const criteria = path.join(pack, "03_Acceptance-Criteria.md");
@@ -1964,8 +1964,8 @@ describe("BF-0004 acceptance criteria", () => {
     expect(map.ids["spec-0001"]).not.toHaveProperty("EX-0001-0004");
   });
 
+  // QFAI:EX-0004-0007-12
   it("writes the unnamed initial flow section, prose and diagram, for the reserved selector", async () => {
-    // QFAI:EX-0004-0007-12
     const root = await project();
     await writeFile(
       path.join(root, ".qfai/specs/_policies/04_Business-Flow.md"),
@@ -2010,8 +2010,8 @@ describe("BF-0004 acceptance criteria", () => {
     expect(written).not.toContain("CHG-0001");
   });
 
+  // QFAI:EX-0004-0007-05
   it("maps one case to its cited example and a case-only row to its new example", async () => {
-    // QFAI:EX-0004-0007-05
     const root = await project();
     const pack = path.join(root, ".qfai/specs/spec-0001");
     const criteria = path.join(pack, "03_Acceptance-Criteria.md");
@@ -2377,8 +2377,8 @@ describe("BF-0004 acceptance criteria", () => {
     }
   });
 
+  // QFAI:EX-0004-0011-01
   it("repoints old host links, preserves occupied paths and refuses uninspectable wrappers", async () => {
-    // QFAI:EX-0004-0011-01
     const oldLinkRoot = await project();
     await rm(path.join(oldLinkRoot, ".qfai/assistant/skill/qfai-sdd"), { recursive: true });
     const oldSkill = path.join(oldLinkRoot, ".qfai/assistant/skills/qfai-sdd");
@@ -2442,8 +2442,8 @@ describe("BF-0004 acceptance criteria", () => {
   });
 
   // QFAI:AC-0004-0012-04
+  // QFAI:EX-0004-0012-05
   it("directs the AI to warn before the first real run and to say where the working state is", async () => {
-    // QFAI:EX-0004-0012-05
     const skill = await readFile(
       path.join(getInitAssetsDir(), ".qfai/assistant/skill/qfai-migration-v1-to-v2/SKILL.md"),
       "utf8",
@@ -2473,8 +2473,8 @@ describe("BF-0004 acceptance criteria", () => {
     ).toEqual([]);
   });
 
+  // QFAI:EX-0004-0012-03
   it("names only the newly uncovered BF, AC and EX obligations after the ten steps", async () => {
-    // QFAI:EX-0004-0012-03
     const ids = ["BF-0001", "AC-0001-0001-01", "EX-0001-0001-01"] as const;
     const e2e = path.join(journey.root, "tests/e2e/order.test.ts");
     const integration = path.join(journey.root, "tests/integration/order.test.ts");
