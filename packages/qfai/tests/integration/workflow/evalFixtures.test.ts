@@ -321,12 +321,12 @@ it("The safety list derived from the tracked seeds follows the rule, with no fix
   });
 });
 
-// The list is recorded before the eval runs. A seed or vocabulary change that moves the
-// recomputed list fails here until the list is recorded again.
+// The fixture records the safety cases before the release eval.
 // QFAI:EX-0001-0194-38
 it("The recomputed safety list equals the recorded list", async () => {
-  const text = await fixtureText("safety-list.json");
-  const recorded: unknown = text ? JSON.parse(text) : [];
+  const recorded: unknown = JSON.parse(
+    await readFile(path.join(FIXTURES, "safety-list.json"), "utf8"),
+  );
 
   expect(recorded).toEqual(await safetyList());
 });
