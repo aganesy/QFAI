@@ -25,6 +25,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai init --force` reports only the paths it changed.** The `written` count
+  and list included every distributed file, including those already identical to
+  the shipped copy. Rule files, the Copilot and Codex files and the agent and
+  skill links that need no change are now counted as skipped (#2986).
 - **The planner-first and design anti-goal examples are tested for what they
   say.** The planner-first example was annotated on a test that only checked
   three file names. Its test now reads the completion matrix and the
