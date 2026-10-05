@@ -58,7 +58,6 @@ specialization_tags:
 - QA strategy summary
 - Coverage and traceability posture
 - Quality risks and mitigation plan
-- Evidence summary for `.qfai/evidence/`
 
 ## Stop conditions
 

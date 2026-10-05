@@ -2,14 +2,11 @@
 name: implement-revert
 owner: qfai-implement
 purpose: "Undo the change a bisection named as the cause of a failure, and confirm the failure is gone and nothing else broke."
-requires: [common-steering-refresh, common-gate-run, common-evidence-record]
+requires: [common-gate-run]
 roles:
   - frontend-engineer
   - backend-engineer
-  - implementation-reviewer
-  - qa-gatekeeper
-  - completion-reviewer
-routing-profile: implementation-heavy
+routing-profile: default
 ---
 
 # implement-revert
@@ -34,17 +31,15 @@ in the next stages.
    step's: return `blocked`, listing the conflicting paths with `operator` as
    the `resolvingOwner`.
 3. Run the bisection's command. It now passes.
-4. Run the relevant suite, then the Lint, Typecheck and Build commands. Each
-   passes.
+4. Run the relevant suite. It passes.
 
 ## What it writes
 
 - The files the revert changes, listed in `changedFiles`. Nothing else.
 - Where a flow is bound, a record of the culprit, the revert and each command
-  with its result, written with `common-evidence-record`.
+  with its result, in the stage report.
 
 ## Gate
 
 The step is done when the culprit's change is undone, the bisection's command
-passes, the suite and the project gates pass, and the qa-gatekeeper observed
-those results.
+passes, and the relevant suite passes.

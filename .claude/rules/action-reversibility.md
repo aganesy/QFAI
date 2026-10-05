@@ -1,0 +1,1 @@
+../../.agents/rules/action-reversibility.md

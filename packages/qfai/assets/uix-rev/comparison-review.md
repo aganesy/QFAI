@@ -5,11 +5,11 @@ Review exploration artifacts as comparison inputs, not a fixed option-comparison
 ## Comparison Quality
 
 - Exploration must start from multiple divergent directions
-- Comparison criteria must reflect the four canonical UX axes (information architecture / navigation flow / usability / functionality), fixed in `core/prototyping/evaluatorReview.ts#ORDINAL_AXES`
+- Comparison criteria must reflect the four canonical UX axes (information architecture / navigation flow / usability / functionality), fixed in the prototyping reviewer prompt
 - Rejected or superseded directions must have explicit rationale
 - The latest iter is always accepted (no best-of-history; no winner ownership).
 
 ### Trend-derived conversion check
 
 - Reference-pool inputs are translated into deviate-from pressure (not imitate-this).
-- Stale / overused AI slop avoidance is reflected in the global anti-slop pattern list (`reviewer-prompt.md`).
+- No direction shows a pattern listed in `.qfai/assistant/skill/qfai-sdd/references/design-anti-patterns.md` that the recorded brand direction does not ask for. Name the pattern when flagging one.
