@@ -266,7 +266,7 @@ function rewriteEarlierDirectives(
     if (!entry.shipped) continue;
     const before = text.slice(0, entry.lineStart);
     const after = text.slice(entry.lineEnd);
-    const followsBlank = /^﻿?$|(?:^|\n)[ \t]*\r?\n$/.test(before);
+    const followsBlank = /^\uFEFF?$|(?:^|\n)[ \t]*\r?\n$/.test(before);
     const blank = /^[ \t]*\r?(?:\n|$)/.exec(after)?.[0] ?? "";
     text = `${before}${followsBlank ? after.slice(blank.length) : after}`;
   }
@@ -969,7 +969,7 @@ function prependDirective(existing: string, pointer: string): string {
             earlier.push({
               start: offset + lead.length,
               end: offset + lead.length + operative.length,
-              lineStart: offset + (line.startsWith("﻿") ? 1 : 0),
+              lineStart: offset + (line.startsWith("\uFEFF") ? 1 : 0),
               lineEnd: offset + raw.length + 1,
               shipped: SHIPPED_EARLIER_DIRECTIVES.includes(operative),
             });

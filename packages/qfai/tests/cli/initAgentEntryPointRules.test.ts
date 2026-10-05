@@ -1930,9 +1930,9 @@ describe("optional review directive detection", () => {
     );
 
     it("is removed when the current wording is already operative below it", () => {
-      const existing = `﻿${EARLIER}\n\n${REVIEW_POINTER}\n\nKeep this text.\n`;
+      const existing = `\uFEFF${EARLIER}\n\n${REVIEW_POINTER}\n\nKeep this text.\n`;
       expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(
-        `﻿${REVIEW_POINTER}\n\nKeep this text.\n`,
+        `\uFEFF${REVIEW_POINTER}\n\nKeep this text.\n`,
       );
     });
 
