@@ -1650,7 +1650,7 @@ function normalizeLevel(level: string): string {
 /**
  * `Level` values that carry no ATDD annotation obligation.
  *
- * The `atdd-author` step puts Unit and Component out of its scope, and
+ * Acceptance tests leave Unit and Component out of their scope, and
  * `catalog/test-layers.md` gives L1/L2 no mandated directory — only L3-L5 are
  * directory-pinned, and only those three roots are ever scanned. L1/L2 used to
  * fall through `LEVEL_TO_TEST_KIND`'s `?? "integration"`, which is the fallback
@@ -1678,14 +1678,9 @@ const NO_ATDD_OBLIGATION_LEVELS: ReadonlySet<string> = new Set(["unit", "compone
  * Where a declared `Level` routes its ATDD annotation obligation, or `null`
  * when it owes none at all (Unit / Component).
  *
- * **The single answer to "what does this `Level` mean for ATDD".** It used to
- * be three: `resolveTcHomeKind` matched `NO_ATDD_OBLIGATION_LEVELS` against the
- * raw value, `isOutsideAtddObligation` against a trimmed and lower-cased one,
- * and `qfai atdd scaffold` kept a third set with a third inline normalization.
- * One question answered in three places is three chances for the routing rule
- * and the exclusion rule to disagree about the same cell — which is the defect
- * class this routing exists to remove, so it must not be reintroduced by the
- * removal itself.
+ * **The single answer to "what does this `Level` mean for ATDD".** One
+ * question answered in several places is several chances for the routing rule
+ * and the exclusion rule to disagree about the same cell.
  *
  * `undefined` means the spec declares no `Level` for the TC (no column, no
  * row): that is not "no obligation", it is the default home.
@@ -1699,18 +1694,6 @@ export function resolveAtddHomeKind(level: string | undefined): AtddTestKind | n
     return null;
   }
   return LEVEL_TO_TEST_KIND.get(normalized) ?? DEFAULT_ATDD_HOME_KIND;
-}
-
-/**
- * True when a declared `Level` puts the TC outside every ATDD obligation.
- *
- * Exported so the rules that fire on ATDD artefacts agree on one answer.
- * `validateScaffoldPlaceholder` needs it: a skeleton generated for an L1 TC
- * would otherwise keep escalating to `error` and block
- * `validate --profile atdd` for a TC that ATDD no longer owes anything for.
- */
-export function isOutsideAtddObligation(level: string | undefined): boolean {
-  return resolveAtddHomeKind(level) === null;
 }
 
 /**
@@ -2461,8 +2444,7 @@ async function resolveUiBearingScope(
  *
  * `validation.traceability.testFileGlobs` describes executable test *code*, but
  * annotations also legitimately live in Gherkin features and in markdown
- * traceability files (this repository carries its own `US-*` annotations in
- * `tests/e2e/qfai-traceability.md`). These are annotation carriers, not code,
+ * traceability files. These are annotation carriers, not code,
  * so they are unioned in rather than replaced.
  */
 const STRUCTURAL_ANNOTATION_EXTENSIONS = ["feature", "md", "markdown"] as const;

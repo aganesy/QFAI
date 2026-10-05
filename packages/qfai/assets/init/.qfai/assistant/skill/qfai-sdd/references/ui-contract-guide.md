@@ -70,13 +70,12 @@ change.
 ## `elements[].label` is inspection-target text
 
 `label` is what a review looks for at runtime, not a caption. When UI text
-changes, three things move together:
+changes, two things move together:
 
 1. `elements[].label` in the contract,
-2. the rendered text, or the marker that stands in for it,
-3. the fidelity snapshot in `.qfai/evidence/prototyping/prototyping.json`.
+2. the rendered text, or the marker that stands in for it.
 
-Update one and the others disagree; the finding then stands unresolved with
+Update one and the other disagrees; the finding then stands unresolved with
 nothing saying which side is wrong.
 
 An element whose text is deliberately invisible — icon-only, or announced only
@@ -164,14 +163,12 @@ who reads only the template still learns the contract.
 
 ## Typical failures
 
-**The page renders a static string, and `QFAI-PROT-238` fires.** The contract
-declares elements and actions that the runtime evidence does not satisfy. Either
-render the declared elements, or add `data-qfai` markers and wire the minimum
-actions for that route.
+**A declared marker is rendered nowhere, and `QFAI-CONTRACT-037` fires.** The
+contract names a `data-qfai` marker that no file under `paths.srcDir` contains.
+Render the element with that marker, or remove the marker from the contract.
 
 **A label does not match.** Update the contract label, then the rendered text or
-marker mapping, then the fidelity evidence. Updating one side leaves
-`QFAI-PROT-238` standing.
+marker mapping. Updating one side leaves the two out of step.
 
 **The discussion pack already has screen contracts, so this looks redundant.**
 It is not. A discussion pack is discovery output and is non-normative; the
@@ -180,12 +177,9 @@ downstream skills and every validate lane read `<paths.contractsDir>/ui/*.yaml`.
 
 ## Prototyping coverage
 
-The prototyping cycle resolves UI-bearing contracts by their declared full `UI-NNNN` IDs across `<paths.contractsDir>/ui/`. `primaryUiContract` and `--primary-ui-contract` accept only a full ID; the CLI flag takes precedence. There is no filename alias or numeric shorthand.
+`/qfai-prototyping` resolves UI-bearing contracts by their declared full `UI-NNNN` IDs across `<paths.contractsDir>/ui/`. `prototyping.primaryUiContract` and a primary contract named in the request accept only a full ID; the request takes precedence. There is no filename alias or numeric shorthand.
 
-Cycle 0 freezes the full set of UI-bearing IDs in `uiContractsCovered[]` and its union of screen surfaces in
-`frozenSurfaceUnion[]`. Evidence for a screen is scoped beneath `iter-NN/UI-NNNN/<screen>.review.json`. A later
-iterate, certify, or show reads that frozen set. If an older record has `specsCovered` or `frozenSpecsCovered`, or lacks
-the new fields, seed a fresh cycle 0 with `npx qfai prototyping iterate --cycle 0`; retain the older evidence as history.
+The review of a screen is scoped beneath `.qfai/prototype/iter-NN/UI-NNNN/<screen>.review.json`.
 
 A malformed UI contract or an empty screen list is an authoring failure. Fix the declared contract and its index row, then refresh the affected flow's SDD validation and downstream evidence. Discussion UI/UX sidecars are source material; the contract is the execution authority.
 

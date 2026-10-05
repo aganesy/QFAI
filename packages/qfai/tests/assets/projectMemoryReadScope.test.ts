@@ -14,7 +14,10 @@ describe.each(trees)("%s project memory scope", (tree) => {
     const constitution = await read(tree, "assistant/rule/constitution.md");
     const article = constitution.split("## Article III")[1]?.split("## Article IV")[0];
     expect(article).toBeDefined();
-    expect(article).toContain(".qfai/assistant/rule/*");
+    expect(article).toContain(
+      "the rules under `.qfai/assistant/rule/` that the current step or skill cites",
+    );
+    expect(article).not.toContain(".qfai/assistant/rule/*");
     expect(article).toContain(".qfai/assistant/agent/");
     expect(article).toContain(".qfai/discussion/");
     expect(article).toContain(".qfai/spec/02_business-flow/");
@@ -50,10 +53,10 @@ describe.each(trees)("%s project memory scope", (tree) => {
     expect(selection).toContain("does not own copies of these default files");
   });
 
-  it("composes project memory with the stage steering refresh", async () => {
+  it("composes project memory with the policy check", async () => {
     const constitution = await read(tree, "assistant/rule/constitution.md");
     const workflow = await read(tree, "assistant/rule/workflow.md");
-    expect(constitution).toContain("Stage 0 — Steering refresh contract");
+    expect(constitution).toContain("**Policy check** contract");
     expect(workflow).toContain("Article III");
   });
 });

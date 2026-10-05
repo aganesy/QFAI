@@ -351,14 +351,7 @@ describe("doctor assets.lineBudget check", () => {
       await writeAsset(root, `skill/${UNLISTABLE_SKILL_DIR}/SKILL.md`, 3);
       await writeAsset(root, "constitution/long-rule.md", ASSISTANT_ASSET_MAX_LINES + 2);
 
-      // The skills diff runs first and used to reject, so the run produced no
-      // diagnostics at all — not even the oversized asset below it.
       const data = await createDoctorData({ startDir: root, rootExplicit: true });
-
-      const integrity = data.checks.find((entry) => entry.id === "skills.integrity");
-      expect(integrity?.severity).toBe("warning");
-      expect(integrity?.title).toContain(".qfai/assistant/skill");
-      expect(integrity?.message).toContain("Could not inspect skills");
 
       const budget = data.checks.find((entry) => entry.id === "assets.lineBudget");
       expect(budget?.severity).toBe("warning");

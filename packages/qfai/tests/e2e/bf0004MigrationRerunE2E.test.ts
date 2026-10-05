@@ -22,11 +22,6 @@ import process from "node:process";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { deleteE2eCaseAnnotation } from "../helpers/migrationE2eAnnotation.js";
-import {
-  isMigrationReportPath,
-  migrationReportFiles,
-  readMigrationReport,
-} from "../helpers/migrationReport.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");
@@ -66,7 +61,6 @@ const TRUST_CODEX_HOOKS =
 const ALREADY_DONE =
   "Already done: an earlier run migrated this project, and steps 1 to 10 have nothing left to do.";
 const REMINDERS = ".agents/rules/reminders.json";
-const RULE_LOCK = ".agents/rules/.qfai-rules.lock.json";
 const SHIPPED_REMINDERS = path.join(PACKAGE_ROOT, "assets/init/root", REMINDERS);
 const EARLIER_CODEX_HOOKS = path.join(
   PACKAGE_ROOT,
@@ -132,12 +126,6 @@ async function oldProject(): Promise<string> {
   return root;
 }
 
-async function cloneProject(source: string): Promise<string> {
-  const root = await scratch("qfai-migration-rerun-copy-");
-  await cp(source, root, { recursive: true, verbatimSymlinks: true });
-  return root;
-}
-
 /** Every file and link the project holds, with what it holds; `.git` and the package are left out. */
 async function snapshot(root: string): Promise<Map<string, string>> {
   const found = new Map<string, string>();
@@ -145,7 +133,6 @@ async function snapshot(root: string): Promise<Map<string, string>> {
     const file = path.join(entry.parentPath, entry.name);
     const relative = path.relative(root, file).split(path.sep).join("/");
     if (/^(?:\.git|node_modules)(?:\/|$)/.test(relative) || entry.isDirectory()) continue;
-    if (isMigrationReportPath(relative)) continue;
     found.set(
       relative,
       entry.isSymbolicLink()
@@ -193,11 +180,6 @@ function record(value: unknown): Record<string, unknown> {
     throw new Error("expected a JSON object");
   }
   return Object.fromEntries(Object.entries(value));
-}
-
-/** The hash a run records for a rule master: SHA-256 of the text with LF line endings. */
-function lfHash(text: string): string {
-  return createHash("sha256").update(text.replace(/\r\n/g, "\n"), "utf8").digest("hex");
 }
 
 /** The free-text entry hook a hook file of `root` declares. */
@@ -249,22 +231,6 @@ describe("BF-0004: the migration from a 1.x project, and again on a migrated one
       expect(result.stdout).not.toContain(ALREADY_DONE);
     }
     expect(applied.every((result) => result.status === 0 || result.status === 3)).toBe(true);
-    // Each of the twelve steps kept the report of its dry run and of its real run, and the exit code.
-    for (let number = 1; number <= 12; number += 1) {
-      for (const [kind, results] of [
-        ["dry-run", preview],
-        ["run", applied],
-      ] as const) {
-        const kept = await migrationReportFiles(root, kind, number);
-        expect(kept, `step ${number} ${kind}`).toHaveLength(1);
-        const text = await readMigrationReport(root, kept[0] ?? "");
-        const last = text
-          .split(/\r?\n/)
-          .filter((line) => line.trim() !== "")
-          .at(-1);
-        expect(last, `step ${number} ${kind}`).toBe(`Exit code: ${results[number - 1]?.status}`);
-      }
-    }
     // Steps 1 to 10 say what they found before they report; steps 11 and 12 open on their report.
     for (const [position, result] of [...preview, ...applied].entries()) {
       const index = position % 12;
@@ -276,15 +242,16 @@ describe("BF-0004: the migration from a 1.x project, and again on a migrated one
     expect(section(applied[10]?.stdout ?? "", "Operations")).toEqual(
       expect.arrayContaining(HOOK_WRITES),
     );
-    expect(section(applied[10]?.stdout ?? "", "Reminder hooks")).toEqual([TRUST_CODEX_HOOKS]);
+    expect(section(applied[10]?.stdout ?? "", "Reminder hooks")).toEqual([
+      TRUST_CODEX_HOOKS,
+      `${REMINDERS}: write from the package`,
+    ]);
 
     await expect(lstat(path.join(root, ".qfai/specs"))).rejects.toMatchObject({ code: "ENOENT" });
     expect(
       await textOrNull(root, ".qfai/spec/02_business-flow/business-flow-0001/business-flow.md"),
     ).not.toBeNull();
-    expect(
-      await textOrNull(root, ".qfai/evidence/migration-spec-to-story/id-map.json"),
-    ).not.toBeNull();
+    expect(await textOrNull(root, "tmp/qfai-migration/id-map.json")).not.toBeNull();
     const skill = ".qfai/assistant/skill/qfai-run/SKILL.md";
     const lf = (text: string | null) => text?.replace(/\r\n/g, "\n");
     expect(lf(await textOrNull(root, skill))).toBe(
@@ -302,11 +269,13 @@ describe("BF-0004: the migration from a 1.x project, and again on a migrated one
     }
   });
 
-  it("runs again on a project 2.0.0 migrated and brings only the hooks and their text up to date", async () => {
-    const root = await cloneProject(journey.root);
+  it("finds no 1.x layout on a project 2.0.0 migrated and brings only the hooks and their text up to date", async () => {
+    // The migrated tree itself, not a copy: on Windows a copy turns each host directory
+    // link into a file link, which step 9 then has to repair. This is the last test.
+    const root = journey.root;
     // What a person settles from the first run's reports, then what 2.0.0
-    // left: no Claude Code settings, its own Codex hook file, and a recorded
-    // reminder text without the free-text entry.
+    // left: no Claude Code settings, its own Codex hook file, and a reminder
+    // text without the free-text entry.
     await rm(path.join(root, ".qfai/spec/spec-0002"), { recursive: true });
     const test = "tests/integration/order.test.ts";
     await reannotate(root, test, "CON-API-0001", "API-0001");
@@ -319,9 +288,11 @@ describe("BF-0004: the migration from a 1.x project, and again on a migrated one
     const { "free-text-entry": freeText, ...older } = messages;
     const olderText = `${JSON.stringify(older, null, 2)}\n`;
     await writeFile(path.join(root, REMINDERS), olderText);
-    const lock = record(JSON.parse(await readFile(path.join(root, RULE_LOCK), "utf8")));
-    const recorded = { ...lock, "reminders.json": lfHash(olderText) };
-    await writeFile(path.join(root, RULE_LOCK), `${JSON.stringify(recorded, null, 2)}\n`);
+    // 2.0.0 kept its working state under the evidence tree, which no step reads.
+    const evidence = path.join(root, ".qfai/evidence/migration-spec-to-story");
+    await mkdir(path.dirname(evidence), { recursive: true });
+    await rename(path.join(root, "tmp/qfai-migration"), evidence);
+    const none = "no 1.x layout found under .qfai/spec (paths.specsDir=.qfai/spec)";
 
     for (const pass of [1, 2]) {
       const before = await snapshot(root);
@@ -332,11 +303,11 @@ describe("BF-0004: the migration from a 1.x project, and again on a migrated one
         expect(real.stdout, `pass ${pass} step ${number}`).toBe(dryRun.stdout);
         if (number <= 10) {
           expect(real.stdout.split(/\r?\n/).slice(0, 3), `step ${number}`).toEqual([
-            "already migrated (id-map.json present)",
+            none,
             "",
             "## Operations",
           ]);
-          expect(real.stdout.endsWith(`\n${ALREADY_DONE}\n`), `step ${number}`).toBe(true);
+          expect(real.stdout, `step ${number}`).not.toContain(ALREADY_DONE);
         } else {
           expect(real.stdout, `step ${number}`).not.toContain(ALREADY_DONE);
           expect(real.stdout.split(/\r?\n/)[0], `step ${number}`).toBe("## Operations");
@@ -344,12 +315,12 @@ describe("BF-0004: the migration from a 1.x project, and again on a migrated one
         if (number === 11) {
           expect(section(real.stdout, "Reminder hooks").join("\n")).not.toContain("edited here");
           expect(section(real.stdout, "Operations").map((line) => line.split(": ")[0])).toEqual(
-            pass === 1 ? [...HOOK_FILES, REMINDERS, RULE_LOCK] : [],
+            pass === 1 ? [...HOOK_FILES, REMINDERS] : [],
           );
         }
       }
       expect(changedPaths(before, await snapshot(root)), `pass ${pass}`).toEqual(
-        pass === 1 ? [RULE_LOCK, REMINDERS, ...HOOK_FILES] : [],
+        pass === 1 ? [REMINDERS, ...HOOK_FILES] : [],
       );
     }
     for (const file of HOOK_FILES) {

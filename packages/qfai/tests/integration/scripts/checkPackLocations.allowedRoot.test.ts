@@ -8,7 +8,6 @@
  * (under an allowed root) plus an unrelated README edit. The lane MUST
  * pass with exit code 0 and emit no `R-PACK-LOCATION-DRIFT` finding.
  */
-// QFAI:EX-0002-0011-02
 
 import { execFile } from "node:child_process";
 import path from "node:path";
@@ -43,6 +42,7 @@ async function runCheckScript(
   }
 }
 
+// QFAI:EX-0002-0011-02
 describe("TC-0004-0072: allowed-root discussion pack passes the lane silently", () => {
   it("PR diff adding .qfai/discussion/discussion-20260527075558258/ plus an unrelated README edit PASSes", async () => {
     const changed = [

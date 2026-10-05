@@ -55,17 +55,7 @@ Feature: Install or upgrade and get the free-text entry
     Given a project checked out with CRLF line endings under a root whose name contains a space
     When `qfai init` runs, then a plain upgrade
     Then both runs exit 0 with the same summary and tree as on Linux
-    And an unmodified shipped file with CRLF endings counts as unmodified
-    And every key of the provenance lock is a slash-separated relative path
-
-  # AC-0001-0196-07
-  Scenario: A plain upgrade counts the skills it skipped
-    Given a project whose copies of some shipped skills differ from the templates, ignoring line endings
-    When a plain `qfai init` runs
-    Then those skills are unchanged
-    And the summary counts them and names `qfai init --force` as the command that updates them
-    And it says that command replaces them with the shipped versions, overwriting local edits
-    And under `--force` no count is printed, because that run replaces them
+    And a managed `.gitignore` block with CRLF endings is replaced rather than duplicated
 
   # AC-0001-0196-08
   Scenario: Steps are installed with the assistant tree and linked into no host
@@ -99,7 +89,6 @@ Feature: Install or upgrade and get the free-text entry
     And the reminder before leaving plan mode has no Codex group, because Codex has no tool call that leaves plan mode
     And each runs under every shell as the prompt-time reminders do
     And an existing file gains the tool-time groups once, and a second run changes nothing
-    And in `.claude/settings.json` the reminders before and after a file write, the minimal-implementation one included, print nothing for a file under `.qfai/run/`
 
   # AC-0001-0196-13
   Scenario: Init allows the shipped skills and the launcher to run without a prompt

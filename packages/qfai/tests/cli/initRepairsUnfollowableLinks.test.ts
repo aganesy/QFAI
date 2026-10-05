@@ -56,7 +56,7 @@ function symlinkCallsFor(linkPath: string): unknown[][] {
 
 const { runInit } = await import("../../src/cli/commands/init.js");
 
-const LINK = path.join(".claude", "skills", "qfai-atdd");
+const LINK = path.join(".claude", "skills", "qfai-implement");
 
 function errno(code: string): NodeJS.ErrnoException {
   const error = new Error(`simulated ${code}`) as NodeJS.ErrnoException;

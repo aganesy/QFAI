@@ -6,13 +6,15 @@ stages:
     steps:
       - discussion-research
       - discussion-interview
-      - discussion-pack
+      - { step: discussion-pack, passThrough: true }
       - { step: discussion-uiux, passThrough: true }
       - discussion-oq
   - id: close
     kind: triage
     steps: [triage-close]
     after: [discussion]
-defaultModifiers: [gate:user, review:heavy]
 decisionPoints: [discussion-interview]
-branchPoints: []
+branchPoints:
+  - step: triage-close
+    outcomes:
+      - { outcome: adopted, routes: [add-feature, prototype-feature, change-compatibility] }
