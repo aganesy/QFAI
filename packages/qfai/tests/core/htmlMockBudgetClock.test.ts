@@ -36,6 +36,9 @@ const BUDGET_MS = 60;
 vi.mock("../../src/core/uiux/htmlMockDom.js", async () => {
   await new Promise((resolve) => setTimeout(resolve, LOAD_MS));
   return {
+    // The real module defers its DOM library until the first parse; the validator must pull that
+    // load forward, ahead of the parse clock, so it is slow here too.
+    loadJsdom: () => new Promise((resolve) => setTimeout(resolve, LOAD_MS)),
     // An empty result, so the PARSE costs nothing and the only thing that could exceed the budget
     // is the load above. That is the whole point of the row: a parse this fast must never trip it.
     parseHtmlMock: () =>
@@ -80,7 +83,7 @@ function config(): QfaiConfig {
 
 /** Runs the validator over `root` and returns only what it measured. */
 async function parseMsFor(root: string): Promise<number> {
-  const timing: HtmlMockTiming = { parseMs: -1 };
+  const timing: HtmlMockTiming = { parseMs: -1, loadMs: -1 };
   await validateHtmlMock(root, "web", config(), timing);
   return timing.parseMs;
 }
@@ -118,6 +121,14 @@ describe("the mock budget measures parsing, not the parser's load", () => {
     ).toBeLessThan(BUDGET_MS);
   });
 
+  it("reports the load apart, so the caller can keep it out of every budget", async () => {
+    const timing: HtmlMockTiming = { parseMs: -1, loadMs: -1 };
+    await validateHtmlMock(await treeWithOneMock(), "web", config(), timing);
+
+    // Timers may fire a millisecond early, so the bound is a little under the sleep.
+    expect(timing.loadMs).toBeGreaterThanOrEqual(LOAD_MS - 10);
+  });
+
   it("still overshoots a budget the parsing itself cannot meet", async () => {
     // The other direction, so the clock is a clock and not a removed check. Zero is a budget no
     // amount of work fits inside, and every block is validated regardless.
@@ -131,9 +142,10 @@ describe("the mock budget measures parsing, not the parser's load", () => {
     // as the caller set it — not overwritten with a stopwatch reading that spans the file walk.
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-mock-budget-"));
     dirs.push(root);
-    const timing: HtmlMockTiming = { parseMs: -1 };
+    const timing: HtmlMockTiming = { parseMs: -1, loadMs: -1 };
 
     await expect(validateHtmlMock(root, "web", config(), timing)).resolves.toEqual([]);
     expect(timing.parseMs, "an untouched sink keeps the caller's initial value").toBe(-1);
+    expect(timing.loadMs, "nothing was loaded, so nothing is reported").toBe(-1);
   });
 });

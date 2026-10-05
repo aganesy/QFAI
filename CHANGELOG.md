@@ -36,6 +36,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai validate` no longer reports the one-off load of its HTML parser as an
+  over-budget run.** The parser's DOM library loaded on the first parsed block,
+  inside the mock-parse clock, and the UI/UX group's clock counted it as well. On
+  a cold disk cache that load took about 25 seconds, so both checks printed
+  `timings: over budget` on a repository with a handful of mock blocks. The load
+  now happens before the parse clock starts and is left out of the group's
+  measurement. Fixes #2997.
+
 - **`qfai validate` and `qfai report --run-validate` no longer read an
   unreadable legacy validate path as absent.** The check for a stale
   `.qfai/output/validate.json` treated every `stat` failure as "not on disk".

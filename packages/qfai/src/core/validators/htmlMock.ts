@@ -22,8 +22,13 @@ const MOBILE_PLATFORMS = new Set(["mobile-ios", "mobile-android"]);
  * finished loading and the parsing began, and only the caller may decide what
  * to do with a number that describes the machine rather than the tree. Left at
  * whatever the caller initialised it to when there is nothing to parse.
+ *
+ * `loadMs` is the one-off cost of loading the parser and its DOM library. It
+ * is reported apart so the caller can keep it out of every budget: on a cold
+ * disk cache it can run to many seconds, and it is paid once per process
+ * whatever the size of the tree.
  */
-export type HtmlMockTiming = { parseMs: number };
+export type HtmlMockTiming = { parseMs: number; loadMs: number };
 
 export async function validateHtmlMock(
   root: string,
@@ -65,7 +70,14 @@ export async function validateHtmlMock(
 
   // Loaded here, not at module scope: this is the only production caller, and the module it pulls
   // in requires jsdom, which costs 910 ms measured. Static, every qfai command paid it.
-  const { parseHtmlMock } = await import("../uiux/htmlMockDom.js");
+  const loadStart = performance.now();
+  const { parseHtmlMock, loadJsdom } = await import("../uiux/htmlMockDom.js");
+  // The parser module defers its DOM library until the first block is parsed, so awaiting the
+  // import alone would leave that load to fall inside the parse clock below.
+  await loadJsdom();
+  if (timing) {
+    timing.loadMs = performance.now() - loadStart;
+  }
 
   // The clock starts AFTER the load, and that is the finding rather than a tidiness.
   //
