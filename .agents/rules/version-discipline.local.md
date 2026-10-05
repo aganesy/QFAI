@@ -4,6 +4,31 @@ Read with `version-discipline.md`. That file describes the branch-name pin as an
 optional convention and marks it not adopted. **This repository has adopted it**,
 and the rest of this file is what that means here.
 
+## Releasing a version
+
+Releasing goes through three workflows, and this is the default path.
+`RELEASE.md` holds the full procedure, the required secret and the manual path.
+
+1. **Prepare release** (`prepare-release.yml`) is dispatched with a bare
+   `X.Y.Z`, no leading `v`. The user names the version; an agent dispatches it
+   only with that version and never chooses one.
+   The workflow sets the manifest version, renames `## [Unreleased]`, and
+   opens a pull request from `release/vX.Y.Z`.
+2. **Merging that pull request is the instruction for the tag.**
+   `tag-release.yml` sees the manifest change reach `main` and pushes
+   `vX.Y.Z` itself.
+3. **`release.yml` runs on that tag** and publishes only after a reviewer of
+   the `release` environment approves.
+
+Three things follow.
+
+- Do not bump the manifest by hand first. Prepare release refuses a version the
+  manifest already has.
+- Never push a tag by hand on this path. A hand tag pushed before the workflow
+  tags takes the version, and the release no longer comes from the merge commit.
+- To publish a tag that already exists again, run `release.yml` by hand with
+  its `tag` input. That cuts no new tag.
+
 ## The pinned branch
 
 A branch named `<type>/v<X.Y.Z>[-<slug>]` carries a pin — `feature/v1.8.8`,
@@ -19,10 +44,13 @@ The guard takes MAJOR.MINOR.PATCH only, so `feature/api-2024.10.05`,
 `bugfix/issue-1.2.3-typo` and `fix/log4j-2.17.1` carry no pin. Run a pre-release
 branch with `VERSION_PIN_SKIP=1`.
 
-## What a pin authorizes
+## What a pin authorizes on the manual path
 
-The pin is the user's instruction to release that version, so these three need
-no further confirmation:
+On the default path Prepare release makes the release edits. They are made by
+hand only on the manual path, on a pinned branch.
+
+The pin is the user's instruction to release that version, so on the manual
+path these three need no further confirmation:
 
 1. Set `packages/qfai/package.json#version` to the pinned value.
 2. Rename `## [Unreleased]` in `CHANGELOG.md` to `## [X.Y.Z] - YYYY-MM-DD` and
@@ -31,6 +59,11 @@ no further confirmation:
 
 Do this once, when the pull request is being made ready to merge. Keep appending
 to `## [Unreleased]` until then.
+
+A pin authorizes a version, never a tag. A hand-made pull request is tagged on
+merge only when its branch is exactly `release/vX.Y.Z`. From any other pinned
+branch, `feature/vX.Y.Z` included, nothing is tagged: the tag is pushed by hand
+as `RELEASE.md` sets out, and only on the user's explicit instruction.
 
 Changing the version to anything other than the pin is not authorized. Ask
 before changing the pin itself.

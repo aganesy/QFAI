@@ -356,13 +356,6 @@ export function scopedReportPath(
  * `.qfai/output/foo-<profile>.json` — keeps backward compatibility with
  * non-default configurations.
  *
- * Exported so the certify-side `--upgrade-scope full` reader can derive
- * the same canonical signal path from the loaded config rather than
- * hardcoding a literal — otherwise an operator override of
- * `output.validateJsonPath` in `qfai.config.yaml` redirects the writer
- * but not the reader, and `--upgrade-scope full` refuses to upgrade
- * even when the saas-package gates are actually passing under the
- * custom location.
  */
 export function profileSuffixedReportPath(configured: string, profile: string): string {
   const dir = path.posix.dirname(configured.replace(/\\/g, "/"));
@@ -440,24 +433,18 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-STORY-007",
     "QFAI-STORY-008",
     "QFAI-STORY-009",
+    "QFAI-STORY-014",
     "QFAI-SCAN-002",
   ],
   sdd: [
     "QFAI-AUTOPILOT-*",
     "W-ASSISTANT-LAYOUT",
-    "W-SKILL-DOC-BROKEN-REF",
     "W-SKILL-PROJECT-MEMORY",
     "W-STALE-REFERENCE",
     "I-ASSISTANT-LAYER-UNSEEDED",
   ],
-  "reviewer-gate-sdd": [
-    "R-CERTIFY-VERIFY-CIRCULAR",
-    "R-PROMPT-SCANNER-DRIFT",
-    "R-AUTOPILOT-POLICY-*",
-    "R-REJECTED-READOPT",
-  ],
-  "reviewer-gate-shared": ["R-MOCK-HREF-DRIFT", "R-EVIDENCE-MUTATION-UNLOGGED"],
-  "reviewer-justification-only": ["R-PACK-LOCATION-DRIFT", "R-EXPLORATION-CERTIFY-ATTEMPT"],
+  "reviewer-gate-sdd": ["R-AUTOPILOT-POLICY-*"],
+  "reviewer-gate-shared": ["R-MOCK-HREF-DRIFT"],
   contracts: [
     "QFAI-CONTRACT-000",
     "QFAI-CONTRACT-010",
@@ -478,13 +465,8 @@ export const GATE_GROUP_FAMILIES = {
   "contract-parse": ["QFAI-CONTRACT-021"],
   "design-contract-readiness": ["QFAI-DCON-030", "QFAI-DCON-034"],
   "root-design-md-parse": ["QFAI-DCON-033"],
-  "design-contract-readiness-prototyping": ["QFAI-DCON-012", "QFAI-DCON-013"],
   "package-self-governance": PACKAGE_SELF_GOVERNANCE_FAMILIES,
-  "review-artifacts": ["QFAI-REVIEW-*"],
   prototyping: [
-    "QFAI-PROT-*",
-    "QFAI-CRIT-*",
-    "QFAI-UIE-*",
     "QFAI-DT-*",
     "QFAI-MOCK-*",
     "QFAI-FLOW-001",
@@ -497,7 +479,6 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-CFG-LINK-*",
   ],
   "prototyping-skill": ["UIX-VAL-SKILL-*"],
-  "atdd-scaffold": ["D-SCAFFOLD-PLACEHOLDER"],
   "test-stubs": ["QFAI-TEST-*"],
   drift: ["QFAI-DRIFT-*", "QFAI-STORY-010"],
   "saas-package-profile": [ATTESTATION_MISSING_CODE, HANDOFF_SCHEMA_CODE],
@@ -527,7 +508,6 @@ const PROTOTYPING_GATE_GROUPS: readonly GateGroup[] = [
   "contract-parse",
   "reviewer-gate-shared",
   "design-contract-readiness",
-  "design-contract-readiness-prototyping",
   "root-design-md-parse",
   "research-summary",
   "canonical-uix",
@@ -536,13 +516,7 @@ const PROTOTYPING_GATE_GROUPS: readonly GateGroup[] = [
 const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
   full: FULL_GATE_GROUPS,
   verify: FULL_GATE_GROUPS,
-  discussion: [
-    "discussion",
-    "research-summary",
-    "canonical-uix",
-    "review-artifacts",
-    "root-design-md-parse",
-  ],
+  discussion: ["discussion", "research-summary", "canonical-uix", "root-design-md-parse"],
   sdd: [
     "story-structure",
     "document-schema",
@@ -550,16 +524,13 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
     "design-contract-readiness",
     "sdd",
     "reviewer-gate-sdd",
-    "reviewer-gate-shared",
-    "reviewer-justification-only",
     "contracts",
     "ui-screen-entries",
     "contract-parse",
     "package-self-governance",
-    "review-artifacts",
   ],
   prototyping: PROTOTYPING_GATE_GROUPS,
-  atdd: ["story-test-obligations", "atdd-scaffold", "test-stubs"],
+  atdd: ["story-test-obligations", "test-stubs"],
   tdd: [
     "story-test-obligations",
     "test-stubs",
@@ -999,11 +970,11 @@ export function gitHubLevel(issue: Issue): GitHubLevel {
   return issue.severity === "warning" ? "warning" : "notice";
 }
 
-function emitGitHub(issue: Issue, failOn: FailOn): void {
+/** One issue as a GitHub workflow command on stdout. */
+export function emitGitHub(issue: Issue, failOn: FailOn): void {
   const level = gitHubLevel(issue);
   // The location metadata is ESCAPED, and by the property rules rather than the message
-  // ones. `issue.file` can come from a finding the reviewer gate
-  // ingested out of `.qfai/review/**`, which is a directory a pull request writes — so a
+  // ones. `issue.file` can name a path a pull request chose — so a
   // `file` of `x\n::stop-commands::token` split this line in two and let a fork's pull
   // request inject a workflow command, suppressing or forging every annotation after it.
   //
@@ -1151,7 +1122,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "The configured spec directory uses the story-tree layout without old spec-pack entries.",
   "QFAI-STORY-001": "Every required story-tree policy and contract file exists.",
   "QFAI-STORY-002": "Story-tree IDs are well formed, unique, and consistent with their paths.",
-  "QFAI-STORY-003": "The decisions and open-questions tables have valid records.",
+  "QFAI-STORY-003":
+    "The decisions and open-questions tables have valid records, and every decision or question a contract rule or a superseded row cites is declared by a row.",
   "QFAI-STORY-004": "Each story has acceptance criteria and examples with valid references.",
   "QFAI-STORY-005":
     "Every business rule and contract reference resolves, and a rule numbered BR-NNNN-NNNN carries the number of the contract that declares it.",
@@ -1171,14 +1143,14 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Each section of `01_policy/constraint.md` numbers its IDs from 01 in table order, with the section's prefix: TC, OC or BC.",
   "QFAI-STORY-013":
     "The `## Architecture` section of the contract-layer tech.md draws exactly the layers and dependencies its table lists, and each row depends only on layers in rows below it.",
+  "QFAI-STORY-014":
+    "A test file records its trace only as `QFAI:BF-`, `QFAI:AC-` or `QFAI:EX-` annotations, the shapes a check reads.",
   "QFAI-DOCSCHEMA-001":
     "Exactly one shipped schema covers each story-tree Markdown file, and the file has the sections, order and content that schema declares and carries no opt-out marker.",
   "QFAI-DOCSCHEMA-002": "The document-schema check runs over the story tree.",
   "QFAI-SPACK-102": "No open question is a decision the user was asked for and never took.",
   "QFAI-PROFILE-001":
     "A partial profile does not evaluate every hard gate; a PASS on it is not full-scan coverage.",
-  "QFAI-PROT-011":
-    "Every spec named in `prototyping.json#frozenSurfaceUnion` still resolves as UI-bearing, so the open loop describes screens that exist; a retired surface is either restored or the loop is reset deliberately from cycle 0.",
   "QFAI-SCAN-002":
     "`validate` runs to completion, so its output is a verdict; a run that could not finish reports that as a finding rather than as a bare stderr line with no counts, no run-log and no validate.json.",
   "QFAI-TOOL-002":
@@ -1207,7 +1179,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Discussion pack naming must use `discussion-YYYYMMDDhhmmssSSS` for canonical outputs.",
   "QFAI-DPACK-006": "Legacy discussion serial packs should be migrated or removed.",
   "QFAI-DPACK-007":
-    "Every deferred OQ in `11_OQ-Register.md` must have a corresponding row in `13_Deferred.md`.",
+    "Every deferred OQ row in `11_OQ-Register.md` records its `Resolution` and a `Next-Decision-Point` naming the next point at which it is decided.",
   "QFAI-DPACK-008": "`03_Story-Workshop.md` must include at least one Mermaid block.",
   "QFAI-DPACK-009":
     "`03_Story-Workshop.md` Mermaid content should include `flowchart` or `sequenceDiagram`.",
@@ -1217,16 +1189,9 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "On a visual surface, every `DESIGN.md` key and archetype a discussion pack proposes is one the front-matter schema accepts.",
   "QFAI-HYG-001": "Legacy directory aliases are forbidden and must be migrated to canonical names.",
   "QFAI-HYG-002": "Template/sample artifacts should not remain under `paths.specsDir`.",
-  "QFAI-REVIEW-001":
-    "Root `.gitignore` contains QFAI managed entries or legacy `.qfai/review/.gitignore` exists.",
-  "QFAI-REVIEW-002":
-    "At least one review pack directory exists under `.qfai/review/review-<timestamp>/`.",
-  "QFAI-REVIEW-003": "Each review pack contains `review_request.md`.",
-  "QFAI-REVIEW-004": "Each review pack contains `summary.json`.",
-  "QFAI-REVIEW-005": "Each review pack contains one or more reviewer files (`Rxx_*.md`).",
-  "QFAI-REVIEW-006": "Each review summary JSON is parseable.",
-  "QFAI-REVIEW-007": "Each review summary satisfies the minimum schema.",
-  "QFAI-VIS-001": "`02_Inception-Deck.md` should include at least one Mermaid diagram.",
+  "QFAI-HYG-003":
+    "The root `.gitignore` carries every recommended QFAI ignore entry, the root `tmp/` included.",
+  "QFAI-VIS-001": "`01_Context.md` should include at least one Mermaid diagram.",
   "QFAI-VIS-002":
     "HTML+CSS visual mock is an optional fallback aid and should only be referenced when intentionally selected. Sidecar artifacts (uiux/) are the primary UI definition.",
   "QFAI-PROT-244": "captured render artifacts must be path-only and referenced files must exist.",
@@ -1241,27 +1206,10 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "browser QA executed/status contradiction (e.g. executed=true but status!=completed).",
   "QFAI-PROT-275": "browser QA summary is malformed (non-object or invalid bucket counts).",
   "QFAI-PROT-276": "browser QA findings are malformed (non-array or invalid finding structure).",
-  "QFAI-PROT-311":
-    "executionPlan.delegationMap is present but is not an object, or one of its entries assigns a category to a role outside the SKILL.md Delegation Scope Table.",
-  "QFAI-PROT-335":
-    ".qfai/evidence/prototyping/completion-certificate.json is required when prototyping completion is claimed (run `qfai prototyping certify` after all gates pass).",
-  "QFAI-PROT-336":
-    ".qfai/evidence/prototyping/completion-certificate.json digest mismatch — evidence has been modified since certify; re-run `qfai prototyping certify`.",
   "QFAI-CFG-LINK-001":
     "qfai.config.yaml: prototyping.primaryUiContract names a UI-NNNN contract declared under `<paths.contractsDir>/ui/`.",
   "QFAI-CFG-LINK-002":
     "qfai.config.yaml: paths.* points to a directory that does not exist on disk.",
-  "QFAI-CFG-LINK-003":
-    "qfai.config.yaml: prototyping.calibration.packPath points to a directory that does not exist on disk.",
-  "QFAI-UIE-001":
-    "Every screen declared in `<paths.contractsDir>/ui/*.yaml` has a screenshot evidence file at `.qfai/evidence/prototyping/iter-NN/<screen-id>.png`, in an iteration directory at the top of the prototyping root.",
-  "QFAI-UIE-002":
-    "Every screen declared in `<paths.contractsDir>/ui/*.yaml` has an HTML snapshot evidence file at `.qfai/evidence/prototyping/iter-NN/<screen-id>.html`, in an iteration directory at the top of the prototyping root.",
-  "QFAI-UIE-003":
-    "Every declared screen id used for prototyping evidence filenames must be path-safe (`[A-Za-z0-9._-]+`).",
-  "QFAI-DCON-012": "prototyping.json must carry `handoff` as an object.",
-  "QFAI-DCON-013":
-    "prototyping.json#handoff must carry `finalArtifact` and `implementationNotes`, each as a non-empty string — the first the path of the final prototype, the second the prose the loop hands on. On a target whose UI contracts declare screens it carries `procurement`, a mapping of a `procured`, an `authored` and a `drawn-from-project` list and nothing else. A `procured` row names `screen`, `region` and `item` and an `authored` row `screen`, `region` and `why`, one row per region across the two; a `drawn-from-project` row names the `screen` that needed nothing. Every declared screen appears in one of the three, and none appears both as needing nothing and as needing something.",
   "QFAI-DCON-030":
     "Root DESIGN.md is required as the brand SSOT for UI-bearing projects (file missing).",
   "QFAI-DCON-033":
@@ -1280,8 +1228,6 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "A step's or skill's `roles:` is a superset of every agent the routing manifest binds to it, including the reviewers its review profile selects.",
   "QFAI-RESEARCH-012":
     "The latest discussion pack carries a `## Research Summary` section, so the research-first protocol has something to check.",
-  "QFAI-PROT-337":
-    "prototyping.mode=exploration downgraded one or more declared-error gates to warning; the notice names the source file and the affected codes.",
   // The apply-order family. Each of these reads a column or a declaration that
   // nothing read before them, so a project meeting one of them for the first
   // time has a backlog to work through rather than a single edit.
@@ -1309,11 +1255,6 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   // rung raises an even code when the `Parent` is absent and the odd one above
   // it when the `Parent` is there but names nothing the level above defines —
   // the same two states at five different heights.
-  // `paths.skillsDir` is configurable and the diff is taken against whatever it
-  // resolves to, so the expected state names the tree by role. The directory
-  // actually compared is on the finding's `target:` line.
-  "QFAI-SKILLS-001":
-    "The project's assistant skills directory matches the skill assets shipped by the installed QFAI version.",
   "QFAI-ASSETS-003":
     "The contract-layer tech.md holds project values rather than shipped `<...>` slots and TODO/TBD placeholders. qfai-implement reads gate commands from <paths.contractsDir>/tech.md#standard-commands-copy-paste.",
   // Both state the graph, not a path: `paths.skillsDir` is configurable, and
@@ -1332,23 +1273,6 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "A cross-skill handoff, when present, parses as an object and conforms to the handoff schema.",
   "QFAI-DRIFT-001":
     "Upstream SSOT files are unchanged relative to the base branch, or the change carries an approved Change Request.",
-  // The assistant-tree provenance family. Every governed file under
-  // `constitution/` and `catalog/` is either byte-identical to the installed
-  // release or an explicitly recorded local overlay; the four classifications
-  // below are the ways that can fail, and the fifth is the comparison itself
-  // being impossible.
-  "QFAI-ASSETS-004":
-    "Every governed assistant file qfai wrote is still the content the installed release ships (`qfai init --force` refreshes an unedited stale copy).",
-  "QFAI-ASSETS-005":
-    "No governed assistant file is a local fork: a project-specific rule lives in a `*.local.md` overlay of the same layer, not in the qfai-owned file.",
-  "QFAI-ASSETS-006":
-    "Every file under the governed assistant layers is either shipped by the installed release or a `*.local.md` overlay.",
-  "QFAI-ASSETS-007":
-    "Every normative file the installed release ships exists in the project as a regular file.",
-  "QFAI-ASSETS-008":
-    "The governed assistant layers can be read on both sides, so provenance is actually compared rather than assumed clean.",
-  "QFAI-ASSETS-009":
-    "The assistant layers `qfai init --force` regenerates (`skills/`, `agents/`) hold what the installed release ships, so the project is not running the skill bodies it initialised with.",
   "QFAI-RESEARCH-013":
     "A UI-bearing discussion pack registers at least `uiux.competitive_refs_min` complete competitive references (default 3) in `04_Sources.md`.",
   "QFAI-RESEARCH-014":
@@ -1389,7 +1313,8 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
     "Record the user's decision in the open-question row, or leave it open until the decision is made.",
   "QFAI-STORY-001": "Create the required policy or contract file named in the finding.",
   "QFAI-STORY-002": "Correct the named story-tree ID or directory so the ID and path agree.",
-  "QFAI-STORY-003": "Repair the named decisions or open-questions row and its required fields.",
+  "QFAI-STORY-003":
+    "Repair the named decisions or open-questions row and its required fields, or add the cited decision or question, or correct the citation.",
   "QFAI-STORY-004": "Add the missing AC or EX record and repair the cited story reference.",
   "QFAI-STORY-005":
     "Define the missing business rule or contract, correct the cited reference, or renumber the rule after the contract that declares it.",
@@ -1407,6 +1332,8 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
     "Renumber the named section of `constraint.md` from 01 in table order. A constraint ID is positional and is not meant to be cited; where another document cites the old ID, state the limit there in words instead.",
   "QFAI-STORY-013":
     "Order the Architecture rows from the uppermost layer down, so each Depends on names only rows below it, and give the diagram one node per layer and one Upper --> Lower edge per Depends on entry, nothing more.",
+  "QFAI-STORY-014":
+    "Replace the named mark with the `QFAI:BF-`, `QFAI:AC-` or `QFAI:EX-` annotation the test proves, or delete it.",
   "QFAI-DOCSCHEMA-001":
     "Rewrite the named section in the shape its qfai-sdd template shows, and remove the opt-out marker if the finding names it. Move a document no schema covers out of the spec tree.",
   "QFAI-DOCSCHEMA-002":

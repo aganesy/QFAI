@@ -24,8 +24,7 @@ import { QFAI_STATE_SCRATCH_SUFFIX } from "./gitignore.js";
 /**
  * `.qfai/state.json` is the single SSOT for ephemeral, per-runtime
  * session state (NOT committed configuration). It records the active
- * discussion session pointer under `discussion.currentId` and the ATDD
- * scaffold escalation counters under `atdd`.
+ * discussion session pointer under `discussion.currentId`.
  *
  * The file has several independent writers owning DISJOINT top-level
  * namespaces, and every write is a read-modify-write of the whole
@@ -35,10 +34,6 @@ import { QFAI_STATE_SCRATCH_SUFFIX } from "./gitignore.js";
  * silently destroys everyone else's.
  *
  * Therefore:
- *   - `readStateTolerant` is for READ-ONLY callers. It keeps the old
- *     permissive contract (missing file / unreadable file / malformed
- *     JSON all collapse to `null`) because a failed read cannot lose
- *     data.
  *   - `readStateStrict` is for READ-MODIFY-WRITE callers. It returns
  *     `null` ONLY for a genuinely absent file and throws
  *     `StateUnreadableError` for every other failure class, so the
@@ -182,17 +177,6 @@ async function loadState(root: string): Promise<StateLoad> {
 }
 
 /**
- * Read-only accessor: returns the parsed state, or `null` when the
- * file is missing / unreadable / not a JSON object. Never throws.
- * Use this ONLY when the result is not about to be written back —
- * a tolerated read failure that feeds a merge is data loss.
- */
-export async function readStateTolerant(root: string): Promise<Record<string, unknown> | null> {
-  const loaded = await loadState(root);
-  return loaded.kind === "ok" ? loaded.state : null;
-}
-
-/**
  * Read-modify-write accessor: returns the parsed state, or `null` when
  * the file genuinely does not exist (ENOENT) and the caller may start
  * from an empty document. Throws `StateUnreadableError` for any other
@@ -294,8 +278,7 @@ async function resolveLinkTarget(abs: string): Promise<string> {
  * direct `writeFile` it replaced it would happily overwrite a
  * `state.json` deliberately made read-only — and reset its mode to the
  * scratch file's while doing so. The explicit `access` check restores
- * the EACCES/EPERM the fail-soft callers already handle
- * (`validators/scaffoldPlaceholder.ts`), and the returned `Stats` of
+ * the EACCES/EPERM its callers already handle, and the returned `Stats` of
  * the existing document drive the mode / ownership handling in
  * {@link writeStateFile}.
  */
@@ -712,7 +695,7 @@ export async function readDiscussionPointer(root: string): Promise<DiscussionPoi
  * unrelated top-level key. An existing file that cannot be parsed is
  * NOT replaced: the write is refused with `StateUnreadableError`,
  * because rewriting it would discard the top-level keys owned by the
- * other writers (e.g. the ATDD escalation counters under `atdd`).
+ * other writers.
  */
 export async function writeDiscussionCurrentId(root: string, currentId: string): Promise<void> {
   // Through `updateState`, which holds the state-file lock across the read AND
@@ -903,7 +886,7 @@ async function removeLockIfUnchanged(lockPath: string, before: LockSnapshot): Pr
  * with no age gate: `LOCK_STALE_MS` is longer than `LOCK_TIMEOUT_MS`,
  * so gating the dead-owner case on age would make every run that
  * starts within the stale window after a holder crashed time out and
- * fail (`qfai atdd scaffold`, `qfai discussion use`) even though the
+ * fail (`qfai discussion use`) even though the
  * lock is known to be free. The age gate still governs the locks whose
  * owner cannot be read — a lock created microseconds ago but not yet
  * stamped must not be mistaken for an abandoned one.
@@ -961,9 +944,7 @@ async function lockStillOurs(lockPath: string, lock: StateLock): Promise<boolean
  * budget resumes, writes back the snapshot it read before us, and our
  * increment disappears. Refusing to write is the safe failure —
  * `.qfai/state.json` is bookkeeping, and its callers either surface the
- * error (`qfai discussion use`, `qfai atdd scaffold`) or degrade to
- * "counter unavailable" (the scaffold-placeholder validator, which
- * already catches per-TC state failures).
+ * error (`qfai discussion use`) or degrade on their own best-effort path.
  */
 async function acquireStateLock(lockPath: string): Promise<StateLock> {
   const owner: LockOwner = { pid: process.pid, token: randomUUID() };
@@ -1007,10 +988,10 @@ async function acquireStateLock(lockPath: string): Promise<StateLock> {
  * POSIX says `EEXIST` and only `EEXIST`. Windows does not: while the name is
  * being unlinked — which is every release, and every reap — `CreateFile` with
  * `CREATE_NEW` returns `ERROR_ACCESS_DENIED`, and libuv maps that to `EPERM`.
- * Measured at 2 failures in 8 runs of `atddScaffoldEscalation.test.ts` on
+ * Measured at 2 failures in 8 runs of a contended state-write test on
  * Windows 11; the CI matrix is Linux-only, so no lane can see it. Rethrowing
- * made every state write fail under contention — `qfai discussion use` and the
- * scaffold counters both go through `updateState`.
+ * made every state write fail under contention — `qfai discussion use` goes
+ * through `updateState`.
  *
  * Widening the check to the errno alone is what must NOT happen: `EPERM` and
  * `EACCES` are also what a genuinely unwritable `.qfai/` returns, and calling
@@ -1134,8 +1115,7 @@ export interface StateMutation<T> {
  * would leave one.
  *
  * Throws when the lock cannot be taken: no lock, no write. Callers on
- * a best-effort path must catch, as the scaffold-placeholder validator
- * already does.
+ * a best-effort path must catch.
  *
  * `mutate` is synchronous on purpose, to keep the critical section to
  * the two filesystem calls this function makes itself. A malformed

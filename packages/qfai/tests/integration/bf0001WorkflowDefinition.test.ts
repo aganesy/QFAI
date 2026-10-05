@@ -70,8 +70,8 @@ describe("BF-0001 workflow definition", () => {
     const ordered = [
       "Discussion (optional)",
       "Specification (SDD)",
-      "Acceptance tests (ATDD)",
-      "Implementation:",
+      "writes the BF E2E test and the AC integration tests",
+      "implements one EX at a time",
       "Verify:",
     ].map((phase) => workflow.indexOf(phase));
     expect(ordered.every((position) => position >= 0)).toBe(true);
@@ -79,10 +79,10 @@ describe("BF-0001 workflow definition", () => {
   });
 
   // QFAI:EX-0001-0001-02
-  it("hands a fifteen-file discussion pack with REQ and NFR seeds to SDD", async () => {
+  it("hands a nine-file discussion pack with REQ and NFR seeds to SDD", async () => {
     const discussion = await readDiscussionSkill(assistant);
     const sdd = await readSdd();
-    expect(discussion).toContain("unified 15-file discussion pack");
+    expect(discussion).toContain("nine-file discussion pack");
     expect(discussion).toContain("Capture scope, REQ, NFR");
     expect(sdd).toContain("Read the pack, its completed reviews");
   });
@@ -99,9 +99,9 @@ describe("BF-0001 workflow definition", () => {
       "utf8",
     );
     expect(sdd).toContain("Read the pack, its completed reviews");
-    expect(sdd).toContain("Record a discrepancy in an SDD-owned row or evidence");
+    expect(sdd).toContain("Record a discrepancy in an SDD-owned row or the SDD report");
     expect(sdd).toContain("do not edit the");
-    expect(playbook).toContain("Disposition its applicable review advice in SDD evidence");
+    expect(playbook).toContain("Disposition its applicable review advice in the SDD report");
     expect(checklist).toContain("A disagreement was resolved in an SDD-owned artifact");
   });
 
@@ -125,21 +125,20 @@ describe("BF-0001 workflow definition", () => {
 
   // QFAI:EX-0001-0003-01
   // QFAI:EX-0001-0004-01
-  it("defines an ordered, acyclic eight-stage workflow with the optional stages", async () => {
+  it("defines an ordered, acyclic six-stage workflow with the optional stages", async () => {
     const workflow = await readFile(rule("workflow.md"), "utf8");
     const canonicalStages = workflow.split("## Stages (canonical)")[1]?.split("\nStage 3")[0] ?? "";
     const stages = [...canonicalStages.matchAll(/^([0-7])\. (.+)$/gm)].map((match) => ({
       number: Number(match[1]),
       label: match[2] ?? "",
     }));
-    expect(stages.map(({ number }) => number)).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
-    expect(stages[0]?.label).toContain("Steering refresh");
-    expect(stages[1]?.label).toContain("Discussion (optional)");
-    expect(stages[4]?.label).toContain("Prototyping (optional)");
-    expect(stages[5]?.label).toContain("Acceptance tests (ATDD)");
-    expect(stages[6]?.label).toContain("Implementation:");
-    expect(stages[7]?.label).toContain("Verify:");
-    expect(workflow).toContain("At the beginning of each stage");
+    expect(stages.map(({ number }) => number)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(stages[0]?.label).toContain("Discussion (optional)");
+    expect(stages[3]?.label).toContain("Prototyping (optional)");
+    expect(stages[4]?.label).toContain("Implementation:");
+    expect(stages[4]?.label).toContain("AC integration tests with empty bodies");
+    expect(stages[5]?.label).toContain("Verify:");
+    expect(workflow).toContain("Once per run, at the start, before the first stage.");
     expect(workflow).toContain("implements one EX at a time through Red, Green, Refactor");
     const configure = await readFile(skill("qfai-configure"), "utf8");
     expect(configure).toContain("Configure QFAI for this repository");
@@ -164,14 +163,11 @@ describe("BF-0001 workflow definition", () => {
     const drift = await readFile(rule("drift-protocol.md"), "utf8");
     expect(drift).toContain("A downstream skill does not edit an approved specification");
     expect(drift).toContain("1. Stop work on the affected obligation");
-    expect(drift).toContain("2. Ask the SDD owner to append one DEC-NNNN row");
-    expect(drift).toContain("3. Obtain the operator's explicit answer");
+    expect(drift).toContain("2. Prepare the change request for the SDD owner");
+    expect(drift).toContain("3. Obtain the user's explicit answer");
     expect(drift).toContain("4. Rerun the owner skill");
     expect(drift).toContain("5. Recheck every dependent BF, AC, and EX test obligation");
     expect(drift).toContain("6. Complete the decision row");
-    expect(drift).toContain(
-      "A stage may write evidence and reports in the locations its completion contract names",
-    );
     expect(drift).toContain("A project may add a local overlay beside a shipped rule");
     expect(drift).toContain(
       "An owner skill may change its own upstream artifact after the required approval",
@@ -180,34 +176,34 @@ describe("BF-0001 workflow definition", () => {
 
   // QFAI:EX-0001-0007-09
   // QFAI:EX-0001-0007-10
-  it("routes retirement, triage and change requests into decision rows", async () => {
+  it("records an approved change request, retirement included, as one decision row", async () => {
     const sdd = await readSdd();
-    const triage = await readFile(
-      path.join(assistant, "skill", "qfai-sdd", "references", "sdd-triage.md"),
-      "utf8",
-    );
-    expect(sdd).toContain(
-      "Record triage, change requests, retired stories, and rejected options as rows",
-    );
+    const triage = (
+      await readFile(
+        path.join(assistant, "skill", "qfai-sdd", "references", "sdd-triage.md"),
+        "utf8",
+      )
+    ).replace(/\s+/g, " ");
+    expect(sdd).toContain("Record in `<paths.specsDir>/decisions.md` only what the user decided");
     expect(sdd).toContain(
       "Do not write a second decision-record directory or a retired story file",
     );
     expect(triage).toContain(
-      "Record a retired story in a decision row, not a separate retired-story file",
+      "Retiring a story removes its directory under the change request that names it, with no separate retired-story file",
     );
   });
 
   // QFAI:EX-0001-0012-03
   // QFAI:EX-0001-0012-04
-  it("keeps shared drift rules under rule and ATDD-only guidance under its references", async () => {
+  it("keeps shared drift rules under rule and implement-only guidance under its references", async () => {
     const drift = await readFile(rule("drift-protocol.md"), "utf8");
-    const atdd = await readFile(skill("qfai-atdd"), "utf8");
-    const crossSpec = await readFile(
-      path.join(assistant, "skill", "qfai-atdd", "references", "cross-spec-obligations.md"),
+    const implement = await readFile(skill("qfai-implement"), "utf8");
+    const credentials = await readFile(
+      path.join(assistant, "skill", "qfai-implement", "references", "credential-reuse.md"),
       "utf8",
     );
     expect(drift).toContain("# Drift Protocol");
-    expect(atdd).toContain("rule/drift-protocol.md");
-    expect(crossSpec).toContain("# Findings outside the active flow");
+    expect(implement).toContain("[DRIFT-PROTOCOL:MANDATORY]");
+    expect(credentials.length).toBeGreaterThan(0);
   });
 });

@@ -18,7 +18,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   addedEntries,
+  releasedAdditions,
   sectionEntries,
+  taggedBefore,
 } from "../../../../scripts/check-changelog-released-sections.mjs";
 
 // tests/scripts/<this file> -> tests -> packages/qfai -> packages -> repo root
@@ -80,11 +82,63 @@ describe("what a released section may gain", () => {
     expect(addedEntries(RELEASED, after)).toEqual([]);
   });
 
+  it("lets an untagged section gain entries, and refuses a tagged one", () => {
+    // Released means tagged: a section main carries whose tag does not exist yet
+    // has built no release page, so an entry added to it is still read.
+    const added = [
+      { version: "1.2.0", gained: ["- **Late.**"] },
+      { version: "1.3.0", gained: ["- **Early.**"] },
+    ];
+    const tagged = (version: string) => version === "1.2.0";
+
+    expect(releasedAdditions(added, tagged)).toEqual({
+      refused: [{ version: "1.2.0", gained: ["- **Late.**"] }],
+      notes: [],
+    });
+  });
+
+  it("refuses a section whose tag lookup failed, and says so", () => {
+    const added = [{ version: "1.3.0", gained: ["- **Unknown.**"] }];
+    const failing = (): boolean | null => null;
+
+    const result = releasedAdditions(added, failing);
+    expect(result.refused).toEqual(added);
+    expect(result.notes).toEqual([
+      "the tag v1.3.0 could not be looked up; the section is treated as released.",
+    ]);
+  });
+
   it("reads the released sections and leaves the unreleased one out", () => {
     const entries = sectionEntries(RELEASED);
 
     expect([...entries.keys()]).toEqual(["1.2.0"]);
     expect(entries.get("1.2.0")?.size).toBe(2);
+  });
+});
+
+describe("which tag makes a section released", () => {
+  const earlier = "a".repeat(40);
+  const head = "b".repeat(40);
+
+  it("counts a tag on an earlier commit", () => {
+    expect(taggedBefore(`${earlier}\trefs/tags/v1.2.0\n`, head)).toBe(true);
+  });
+
+  it("does not count a tag on the commit being checked", () => {
+    // The merge that folds the unreleased entries is the commit the tag is
+    // pushed to, so the release page has not been built from the section yet.
+    expect(taggedBefore(`${head}\trefs/tags/v1.2.0\n`, head)).toBe(false);
+  });
+
+  it("reads the commit of an annotated tag from its peeled line", () => {
+    const annotated = `${earlier}\trefs/tags/v1.2.0\n${head}\trefs/tags/v1.2.0^{}\n`;
+
+    expect(taggedBefore(annotated, head)).toBe(false);
+    expect(taggedBefore(annotated, "c".repeat(40))).toBe(true);
+  });
+
+  it("does not count a tag that does not exist", () => {
+    expect(taggedBefore("", head)).toBe(false);
   });
 });
 

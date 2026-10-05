@@ -23,19 +23,19 @@ export async function validateDiscussionVisuals(root: string): Promise<Issue[]> 
   }
 
   const issues: Issue[] = [];
-  const inceptionPath = path.join(latestPackDir, "02_Inception-Deck.md");
+  const inceptionPath = path.join(latestPackDir, "01_Context.md");
   const inceptionText = await readSafe(inceptionPath);
   if (inceptionText !== null && !MERMAID_FENCE_RE.test(inceptionText)) {
     issues.push(
       issue(
         "QFAI-VIS-001",
-        "No Mermaid diagram was found in 02_Inception-Deck.md.",
+        "No Mermaid diagram was found in 01_Context.md.",
         "warning",
         inceptionPath,
         "discussionVisuals.inceptionMermaid",
         undefined,
         "change",
-        "Add at least one ` ```mermaid ` diagram to 02_Inception-Deck.md, for example under `Show the Solution`.",
+        "Add at least one ` ```mermaid ` diagram to 01_Context.md, for example under `Show the Solution`.",
       ),
     );
   }

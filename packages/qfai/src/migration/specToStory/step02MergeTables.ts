@@ -236,32 +236,23 @@ function origin(record: OldRecord): string {
   return `${record.source}#${record.oldId}`;
 }
 
-type Candidate = { source: string; archive: string };
+type Candidate = { source: string };
 
-/** Every file step 2 merges and archives, whether or not it exists. */
+/** Every file step 2 merges and then deletes, whether or not it exists. */
 async function mergeCandidates(context: MigrationContext): Promise<Candidate[]> {
   const specsRelative = relative(context.root, context.specsDir);
   const candidates: Candidate[] = [];
   for (const pack of await listDirs(context.specsDir)) {
     if (!/^spec-\d{4}$/.test(pack)) continue;
     for (const file of ["07_Decisions.md", "08_Open-questions.md", "09_delta.md"]) {
-      candidates.push({
-        source: `${specsRelative}/${pack}/${file}`,
-        archive: `.qfai/evidence/migration-spec-to-story/retired/${pack}/${file}`,
-      });
+      candidates.push({ source: `${specsRelative}/${pack}/${file}` });
     }
   }
   for (const file of ["08_Decisions.md", "09_Open-questions.md", "10_delta.md"]) {
-    candidates.push({
-      source: `${specsRelative}/_policies/${file}`,
-      archive: `.qfai/evidence/migration-spec-to-story/retired/_policies/${file}`,
-    });
+    candidates.push({ source: `${specsRelative}/_policies/${file}` });
   }
   for (const file of await listChangeRequests(path.join(context.root, ".qfai/decisions"))) {
-    candidates.push({
-      source: `.qfai/decisions/${file}`,
-      archive: `.qfai/evidence/migration-spec-to-story/retired/decisions/${file}`,
-    });
+    candidates.push({ source: `.qfai/decisions/${file}` });
   }
   return candidates;
 }
@@ -282,7 +273,7 @@ async function retiredPackRecords(context: MigrationContext): Promise<OldRecord[
 
 /**
  * The first input step 2 has not merged, or null once it has run: a source
- * file it archives, or a retired pack with no decision row yet. A later step
+ * file it merges, or a retired pack with no decision row yet. A later step
  * moves those packs' files away, and step 2 could no longer read them.
  */
 export async function pendingMergeInput(context: MigrationContext): Promise<string | null> {
@@ -305,7 +296,7 @@ export const step02: MigrationStep = {
   async plan(context: MigrationContext) {
     const operations: MigrationOperation[] = [];
     const forAPerson: string[] = [];
-    const sources: Array<{ source: string; archive: string; text: string }> = [];
+    const sources: Array<{ source: string; text: string }> = [];
     const specsRelative = relative(context.root, context.specsDir);
     const records = await retiredPackRecords(context);
     for (const candidate of await mergeCandidates(context)) {
@@ -417,7 +408,7 @@ export const step02: MigrationStep = {
       });
     }
     for (const source of sources) {
-      operations.push({ kind: "move", source: source.source, target: source.archive });
+      operations.push({ kind: "remove", target: source.source, description: "delete: merged" });
     }
     const decisionsDir = path.join(context.root, ".qfai/decisions");
     const remainingDecisions = await listEntries(decisionsDir);

@@ -19,12 +19,7 @@ describe("SDD selected-source review precision", () => {
       );
       expect(skill).toContain("selectedInputPath");
       expect(skill).toContain("completed reviews");
-      expect(playbook).toContain("summary.json exists");
-      expect(playbook).toContain("Match the resolved pack path");
-      expect(playbook).toContain("include archived reviews");
-      expect(playbook).toContain(
-        "Do not treat an incomparable review as a current binding verdict",
-      );
+      expect(playbook).toContain("completed reviews that target it");
     });
   }
 });
