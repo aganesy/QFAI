@@ -226,6 +226,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   test that existed before the change. The three other questions a regression
   review asks point at the checks that already own them: the coverage gate, and
   the proof per example in the oracle strength reference.
+
+- **The repository's dogfooding ratchet pins each finding, not each file's
+  count.** `scripts/check-dogfood-backlog.mjs` keys an error by its code and the
+  IDs it names, so a change that clears one untested example and adds another
+  in the same file no longer passes at the same count. A pin still written as a
+  bare count is refused with the command that re-pins it. Fixes #2355.
+
 - **Five doctor criteria now name the tests that prove them.** Existing
   integration tests carry standalone `QFAI:AC-...` comments, and
   `AC-0003-0004-01` gains a deprecated `paths.promptsDir` warning case.

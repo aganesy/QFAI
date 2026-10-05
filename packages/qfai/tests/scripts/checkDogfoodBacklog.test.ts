@@ -1,11 +1,14 @@
 /**
  * The dogfooding lanes are a ratchet, and this is the ratchet's contract.
  *
- * The lanes report the ledger rules at `error`, and the repository carries a
- * backlog of rows written before those rules existed. A waiver cannot stand in
- * — `QFAI-WAIVER-002` refuses one whose rule is an error — so the pin is the
- * only thing between "this lane still catches a regression" and "this lane is
- * off".
+ * The lanes report the story-tree rules at `error`, and the repository carries
+ * a backlog of obligations written before those rules existed. A waiver cannot
+ * stand in — `QFAI-WAIVER-002` refuses one whose rule is an error — so the pin
+ * is the only thing between "this lane still catches a regression" and "this
+ * lane is off".
+ *
+ * The pin holds each finding by identity. A count per file let a change clear
+ * one finding and add a different one in the same file and still pass.
  *
  * Helper comparisons and a sandbox report exercise the ratchet without
  * depending on this repository's current backlog.
@@ -22,25 +25,40 @@ import { describe, expect, it } from "vitest";
 // tests/scripts/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 
+type Issue = {
+  code?: string;
+  file?: string;
+  message?: string;
+  refs?: string[];
+  severity: string;
+};
+type Found = Map<string, Map<string, number>>;
+type Pinned = Record<string, Record<string, number>>;
+
 type Guard = {
+  assertCompleteValidationReport: (report: {
+    issues: Issue[];
+    profileValidatorsRan?: boolean;
+  }) => void;
+  findingKey: (issue: Issue) => string;
   compareAgainstPin: (
-    counts: Map<string, number>,
-    pinned: Record<string, number>,
+    found: Found,
+    pinned: Pinned,
   ) => {
     unpinned: Array<[string, number]>;
-    over: Array<[string, number]>;
-    improved: Array<[string, number]>;
+    over: Array<[string, string, number, number]>;
+    improved: Array<[string, string, number, number]>;
   };
   diffDependentErrors: (report: {
-    issues?: Array<{ code?: string; file?: string; message?: string; severity: string }>;
+    issues?: Issue[];
   }) => Array<{ code?: string; file: string; message?: string }>;
-  errorsByFile: (report: unknown) => Map<string, number>;
+  errorsByFile: (report: { issues?: Issue[] }) => Found;
   errorsForFile: (
-    report: {
-      issues?: Array<{ code?: string; file?: string; message?: string; severity: string }>;
-    },
+    report: { issues?: Issue[] },
     file: string,
   ) => Array<{ code?: string; message?: string }>;
+  invalidPinnedFiles: (pinned: Record<string, unknown>) => string[];
+  pinEntry: (found: Found) => Pinned;
   repinSteps: (profile: string) => string;
 };
 
@@ -53,36 +71,130 @@ async function load(): Promise<Guard> {
   return (await import(url)) as Guard;
 }
 
-const LEDGER = ".qfai/specs/spec-0002/tdd/test-list.md";
-const CLEAN = ".qfai/specs/spec-0001/tdd/test-list.md";
+const PINNED = ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0001/03_Example.md";
+const CLEAN = ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0002/03_Example.md";
 
-function report(...issues: Array<{ code?: string; file?: string; severity: string }>): unknown {
-  return { issues };
-}
+const report = (...issues: Issue[]): { issues: Issue[] } => ({ issues });
+
+const untested = (id: string, file = PINNED): Issue => ({
+  code: "QFAI-STORY-006",
+  file,
+  message: `${id} has no test`,
+  refs: [id],
+  severity: "error",
+});
+
+const found = (entries: Record<string, Record<string, number>>): Found =>
+  new Map(Object.entries(entries).map(([file, keys]) => [file, new Map(Object.entries(keys))]));
+
+describe("assertCompleteValidationReport", () => {
+  it.each(["error", "warning", "info"])(
+    "refuses an incomplete scan at %s severity with an absent or true profile flag",
+    async (severity) => {
+      const { assertCompleteValidationReport } = await load();
+      const issues = [{ code: "QFAI-SCAN-002", severity, message: "scan interrupted" }];
+
+      expect(() => assertCompleteValidationReport({ issues })).toThrow("QFAI-SCAN-002");
+      expect(() => assertCompleteValidationReport({ issues, profileValidatorsRan: true })).toThrow(
+        "QFAI-SCAN-002",
+      );
+    },
+  );
+
+  it("refuses an explicitly unexecuted profile without an incomplete-scan finding", async () => {
+    const { assertCompleteValidationReport } = await load();
+
+    expect(() =>
+      assertCompleteValidationReport({
+        issues: [{ code: "QFAI-LAYOUT-001", severity: "error", message: "old layout" }],
+        profileValidatorsRan: false,
+      }),
+    ).toThrow("did not run profile validators");
+    expect(() =>
+      assertCompleteValidationReport({ issues: [], profileValidatorsRan: false }),
+    ).toThrow("did not run profile validators");
+  });
+
+  it("accepts ordinary error debt and a legitimate profile notice after validators ran", async () => {
+    const { assertCompleteValidationReport } = await load();
+
+    expect(() =>
+      assertCompleteValidationReport({
+        issues: [
+          untested("EX-0001-0001-01"),
+          { code: "QFAI-PROFILE-001", severity: "info", message: "selected profile gates" },
+        ],
+        profileValidatorsRan: true,
+      }),
+    ).not.toThrow();
+  });
+
+  it("accepts ordinary findings when the optional profile claim is absent", async () => {
+    const { assertCompleteValidationReport } = await load();
+
+    expect(() => assertCompleteValidationReport(report(untested("EX-0001-0001-01")))).not.toThrow();
+    expect(() => assertCompleteValidationReport(report())).not.toThrow();
+  });
+});
+
+describe("findingKey", () => {
+  it("keys a finding by its code and the IDs it names, not by its wording", async () => {
+    const { findingKey } = await load();
+
+    expect(findingKey(untested("EX-0001-0001-01"))).toBe("QFAI-STORY-006 EX-0001-0001-01");
+    expect(findingKey({ ...untested("EX-0001-0001-01"), message: "reworded" })).toBe(
+      "QFAI-STORY-006 EX-0001-0001-01",
+    );
+  });
+
+  it("distinguishes codes that name the same refs", async () => {
+    const { findingKey } = await load();
+    const issue = untested("EX-0001-0001-01");
+    expect(findingKey({ ...issue, code: "QFAI-STORY-007" })).toBe("QFAI-STORY-007 EX-0001-0001-01");
+    expect(findingKey({ ...issue, code: "QFAI-STORY-007" })).not.toBe(findingKey(issue));
+  });
+
+  it("falls back to the message only for a finding that names no ID", async () => {
+    const { findingKey } = await load();
+
+    expect(findingKey({ code: "QFAI-X", message: "no refs", severity: "error" })).toBe(
+      "QFAI-X no refs",
+    );
+  });
+});
 
 describe("errorsByFile", () => {
-  it("counts errors per file and ignores every softer severity", async () => {
+  it("groups errors by file and key, and ignores every softer severity", async () => {
     const { errorsByFile } = await load();
 
-    const counts = errorsByFile(
-      report(
-        { file: LEDGER, severity: "error" },
-        { file: LEDGER, severity: "error" },
-        { file: LEDGER, severity: "warning" },
-        { file: CLEAN, severity: "info" },
-      ),
-    );
+    const result = errorsByFile({
+      issues: [
+        untested("EX-0001-0001-01"),
+        untested("EX-0001-0001-01"),
+        untested("EX-0001-0001-02"),
+        { ...untested("EX-0001-0001-03"), severity: "warning" },
+        { ...untested("EX-0001-0002-01", CLEAN), severity: "info" },
+      ],
+    });
 
-    expect([...counts]).toEqual([[LEDGER, 2]]);
+    expect(result).toEqual(
+      found({
+        [PINNED]: { "QFAI-STORY-006 EX-0001-0001-01": 2, "QFAI-STORY-006 EX-0001-0001-02": 1 },
+      }),
+    );
   });
 
   it("files an error carrying no path under one bucket rather than dropping it", async () => {
     // A finding with no file still fails a lane, so it has to be ratchetable.
     const { errorsByFile } = await load();
 
-    expect([...errorsByFile(report({ severity: "error" }, { severity: "error" }))]).toEqual([
-      ["(no file)", 2],
-    ]);
+    const result = errorsByFile({
+      issues: [
+        { code: "QFAI-X", message: "m", severity: "error" },
+        { code: "QFAI-X", message: "m", severity: "error" },
+      ],
+    });
+    expect(result).toEqual(found({ "(no file)": { "QFAI-X m": 2 } }));
   });
 
   it("reads a report with no issues at all", async () => {
@@ -100,10 +212,10 @@ describe("diff-dependent findings", () => {
     ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0147/03_Example.md";
   const diffFindings = [
     { code: "QFAI-DRIFT-001", file: PROTECTED, severity: "error", message: "no request" },
-    { code: "QFAI-STORY-010", file: LEDGER, severity: "error", message: "drift" },
+    { code: "QFAI-STORY-010", file: PINNED, severity: "error", message: "drift" },
   ];
 
-  async function stageConsumer(root: string, pinnedCount: number): Promise<string> {
+  async function stageConsumer(root: string, pinnedCount: unknown): Promise<string> {
     const scriptDir = path.join(root, "scripts");
     const cliDir = path.join(root, "packages", "qfai", "dist", "cli");
     const reportDir = path.join(root, ".qfai", "report");
@@ -125,11 +237,34 @@ describe("diff-dependent findings", () => {
     );
     await writeFile(
       path.join(scriptDir, "dogfood-backlog.json"),
-      JSON.stringify({ profiles: { tdd: { [CLEAN]: pinnedCount }, sdd: { [LEDGER]: 7 } } }),
+      JSON.stringify({
+        profiles: {
+          tdd: { [CLEAN]: { "E-TREE tree problem": pinnedCount } },
+          sdd: { [PINNED]: { "E-TREE tree problem": 7 } },
+        },
+      }),
       "utf-8",
     );
     return script;
   }
+
+  it("refuses an invalid persisted finding count before accepting a lane", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-dogfood-invalid-"));
+    try {
+      const script = await stageConsumer(root, "2");
+      const result = spawnSync(process.execPath, [script, "--profile", "tdd"], {
+        cwd: root,
+        encoding: "utf-8",
+      });
+      expect(result.error).toBeUndefined();
+      expect(result.signal).toBeNull();
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("positive safe integer");
+      expect(result.stdout).not.toContain("all within the pinned backlog");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 
   it("leaves every diff-dependent code out of the count a pin records", async () => {
     const { errorsByFile } = await load();
@@ -142,7 +277,7 @@ describe("diff-dependent findings", () => {
       ),
     );
 
-    expect([...counts]).toEqual([[PROTECTED, 1]]);
+    expect(counts).toEqual(found({ [PROTECTED]: { "QFAI-STORY-006 ": 1 } }));
   });
 
   it("returns those errors separately, so the lane still fails on them", async () => {
@@ -216,7 +351,35 @@ describe("diff-dependent findings", () => {
       const saved: unknown = JSON.parse(
         await readFile(path.join(root, "scripts", "dogfood-backlog.json"), "utf-8"),
       );
-      expect(saved).toEqual({ profiles: { tdd: { [CLEAN]: 1 }, sdd: { [LEDGER]: 7 } } });
+      expect(saved).toEqual({
+        profiles: {
+          tdd: { [CLEAN]: { "E-TREE tree problem": 1 } },
+          sdd: { [PINNED]: { "E-TREE tree problem": 7 } },
+        },
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses a report of a run that could not complete, without pinning it", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-dogfood-incomplete-"));
+    try {
+      const script = await stageConsumer(root, 1);
+      await writeFile(
+        path.join(root, ".qfai", "report", "validate.json"),
+        JSON.stringify({ issues: [{ code: "QFAI-SCAN-002", severity: "warning", message: "x" }] }),
+        "utf-8",
+      );
+      const result = spawnSync(process.execPath, [script, "--profile", "tdd", "--pin"], {
+        cwd: root,
+        encoding: "utf-8",
+      });
+
+      expect(result.error).toBeUndefined();
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("QFAI-SCAN-002");
+      expect(result.stdout).not.toContain("pinned tdd");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -233,7 +396,7 @@ describe("errorsForFile", () => {
           { file: CLEAN, severity: "error", code: "QFAI-DRIFT-001", message: "no request" },
           { file: CLEAN, severity: "error", code: "QFAI-STORY-010", message: "drift" },
           { file: CLEAN, severity: "warning", code: "W-OLD", message: "warning" },
-          { file: LEDGER, severity: "error", code: "E-OTHER", message: "other file" },
+          { file: PINNED, severity: "error", code: "E-OTHER", message: "other file" },
         ],
       },
       CLEAN,
@@ -270,46 +433,139 @@ describe("repinSteps", () => {
 });
 
 describe("compareAgainstPin", () => {
-  it("passes a pinned file that reports exactly its pinned count", async () => {
+  const PIN: Pinned = {
+    [PINNED]: { "QFAI-STORY-006 EX-0001-0001-01": 1, "QFAI-STORY-006 EX-0001-0001-02": 1 },
+  };
+
+  it("passes a pinned file that reports exactly its pinned findings", async () => {
     const { compareAgainstPin } = await load();
 
-    const verdict = compareAgainstPin(new Map([[LEDGER, 13]]), { [LEDGER]: 13 });
+    expect(compareAgainstPin(found(PIN), PIN)).toEqual({ unpinned: [], over: [], improved: [] });
+  });
 
-    expect(verdict).toEqual({ unpinned: [], over: [], improved: [] });
+  it("fails a file that clears one finding and adds another, at the same count", async () => {
+    // The case a count per file could not see: 2 -> 2, with an untested
+    // example hidden behind the test written for another.
+    const { compareAgainstPin } = await load();
+
+    const verdict = compareAgainstPin(
+      found({
+        [PINNED]: { "QFAI-STORY-006 EX-0001-0001-02": 1, "QFAI-STORY-006 EX-0001-0001-12": 1 },
+      }),
+      PIN,
+    );
+
+    expect(verdict.over).toEqual([[PINNED, "QFAI-STORY-006 EX-0001-0001-12", 1, 0]]);
+    expect(verdict.improved).toEqual([[PINNED, "QFAI-STORY-006 EX-0001-0001-01", 1, 0]]);
+  });
+
+  it("refuses three occurrences of a finding held at two", async () => {
+    const { compareAgainstPin } = await load();
+    const key = "QFAI-STORY-006 EX-0001-0001-01";
+    expect(
+      compareAgainstPin(found({ [PINNED]: { [key]: 3 } }), { [PINNED]: { [key]: 2 } }),
+    ).toEqual({
+      unpinned: [],
+      over: [[PINNED, key, 3, 2]],
+      improved: [],
+    });
+  });
+
+  it("asks to reduce a finding held at two when only one remains", async () => {
+    const { compareAgainstPin } = await load();
+    const key = "QFAI-STORY-006 EX-0001-0001-01";
+    expect(
+      compareAgainstPin(found({ [PINNED]: { [key]: 1 } }), { [PINNED]: { [key]: 2 } }),
+    ).toEqual({
+      unpinned: [],
+      over: [],
+      improved: [[PINNED, key, 2, 1]],
+    });
   });
 
   it("reports a file the pin does not name, whatever the total", async () => {
-    // The half a bare count ratchet misses: a regression in a clean file, while
-    // some other file's backlog shrank by the same amount.
     const { compareAgainstPin } = await load();
 
-    const verdict = compareAgainstPin(new Map([[CLEAN, 1]]), { [LEDGER]: 13 });
+    const verdict = compareAgainstPin(
+      found({ ...PIN, [CLEAN]: { "QFAI-STORY-006 EX-0001-0002-01": 1 } }),
+      PIN,
+    );
 
     expect(verdict.unpinned).toEqual([[CLEAN, 1]]);
   });
 
-  it("reports a pinned file that reports one more than its pin", async () => {
-    const { compareAgainstPin } = await load();
-
-    expect(compareAgainstPin(new Map([[LEDGER, 14]]), { [LEDGER]: 13 }).over).toEqual([
-      [LEDGER, 14],
-    ]);
-  });
-
-  it("reports a pin the tree has moved past, so the ratchet cannot stall", async () => {
+  it("asks for a re-pin when a finding is cleared and nothing replaces it", async () => {
     // Without this the pin keeps the original headroom after a backfill, and
-    // the rows that were fixed can silently come back.
+    // the finding that was fixed can silently come back.
     const { compareAgainstPin } = await load();
 
-    const verdict = compareAgainstPin(new Map([[LEDGER, 4]]), { [LEDGER]: 13 });
+    const verdict = compareAgainstPin(
+      found({ [PINNED]: { "QFAI-STORY-006 EX-0001-0001-02": 1 } }),
+      PIN,
+    );
 
-    expect(verdict.improved).toEqual([[LEDGER, 13]]);
     expect(verdict.over).toEqual([]);
+    expect(verdict.improved).toEqual([[PINNED, "QFAI-STORY-006 EX-0001-0001-01", 1, 0]]);
   });
 
   it("reports a pinned file that has reached zero, so its slot is struck", async () => {
     const { compareAgainstPin } = await load();
 
-    expect(compareAgainstPin(new Map(), { [LEDGER]: 13 }).improved).toEqual([[LEDGER, 13]]);
+    expect(compareAgainstPin(new Map(), PIN).improved).toHaveLength(2);
+  });
+});
+
+describe("the pin's shape", () => {
+  const invalidCounts: Array<[string, unknown]> = [
+    ["string", "2"],
+    ["null", null],
+    ["boolean", true],
+    ["array", [2]],
+    ["object", { count: 2 }],
+    ["zero", 0],
+    ["negative", -1],
+    ["fraction", 1.5],
+    ["unsafe integer", Number.MAX_SAFE_INTEGER + 1],
+    ["infinity", Infinity],
+    ["not a number", NaN],
+  ];
+
+  it.each(invalidCounts)("refuses a %s finding count", async (_name, value) => {
+    const { invalidPinnedFiles } = await load();
+    expect(invalidPinnedFiles({ [PINNED]: { "QFAI-X m": value } })).toEqual([PINNED]);
+  });
+
+  it("accepts a positive safe boundary and an empty profile", async () => {
+    const { invalidPinnedFiles } = await load();
+    expect(invalidPinnedFiles({ [PINNED]: { "QFAI-X m": Number.MAX_SAFE_INTEGER } })).toEqual([]);
+    expect(invalidPinnedFiles({})).toEqual([]);
+  });
+
+  it("names a file still pinned as a bare count, which cannot say what it holds", async () => {
+    const { invalidPinnedFiles } = await load();
+
+    const counted = invalidPinnedFiles({
+      [PINNED]: 11,
+      [CLEAN]: { "QFAI-STORY-006 EX-0001-0002-01": 1 },
+    });
+
+    expect(counted).toEqual([PINNED]);
+  });
+
+  it("writes files and keys in a stable order", async () => {
+    const { pinEntry } = await load();
+
+    const entry = pinEntry(
+      found({
+        [PINNED]: { "QFAI-STORY-006 EX-0001-0001-02": 1, "QFAI-STORY-006 EX-0001-0001-01": 1 },
+        [CLEAN]: { "QFAI-STORY-006 EX-0001-0002-01": 1 },
+      }),
+    );
+
+    expect(Object.keys(entry)).toEqual([PINNED, CLEAN].sort((a, b) => a.localeCompare(b)));
+    expect(Object.keys(entry[PINNED] ?? {})).toEqual([
+      "QFAI-STORY-006 EX-0001-0001-01",
+      "QFAI-STORY-006 EX-0001-0001-02",
+    ]);
   });
 });
