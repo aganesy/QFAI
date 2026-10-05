@@ -44,9 +44,10 @@ commands entry named after the colon:
 7. build/package (if relevant): `Build`
 8. pack/verify (if distributed): `Pack / distribution`
 
-Run listed commands and record outputs. Where the environment cannot run a
-command, ask the user to run it and provide the output. Never assume PASS
-without evidence.
+Run listed commands and record outputs. A gate whose Standard commands entry
+is `CI only: <check name>` is not run here: record it `DELEGATED` with that
+check name. Where the environment cannot run any other command, ask the user to
+run it and provide the output. Never assume PASS without evidence.
 
 ## Fix loop
 
@@ -105,6 +106,8 @@ run's change and reports each result.
   from them.
 - `outcome` and `testObservation` are reported apart.
 - A required gate that did not run is reported `unrun`, never as a pass.
+- A gate the project runs in CI only is reported `delegated`, with its check
+  name.
 
 `verify.json` itself is unchanged inside a run: its fields and values are
 `.qfai/assistant/skill/qfai-verify/references/verify-output-contract.md`'s,
@@ -143,7 +146,7 @@ the run caused, so the user can decide whether to commit.
 The step is done when:
 
 - every gate in scope ran and is recorded, or is recorded UNRUN with the
-  reason;
+  reason, or is recorded DELEGATED with its CI check;
 - every gate passes, or each failure has an actionable fix list and an owner;
 - `verify.json` exists, its `status` matches the gate results and its `scope`
   matches the validate profile that ran.
