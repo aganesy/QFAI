@@ -33,6 +33,7 @@ const RUN = "skill/qfai-run/SKILL.md";
 const PLAN = "skill/qfai-run/references/plan.md";
 const SCREENS = "skill/qfai-run/references/operator-screens.md";
 const EXTRACTION = "skill/qfai-run/references/extraction.md";
+const STAGE_POINTS = "skill/qfai-run/references/stage-points.md";
 const MAINTAIN = "skill/qfai-maintain/SKILL.md";
 const MAINTAIN_EDIT = "step/maintain-edit/STEP.md";
 
@@ -338,7 +339,7 @@ describe("qfai-run", () => {
     expect(flat(sectionOf(run, "## Under a no-question mode"))).toMatch(
       /a third branch move, or one from a scope that leaves stages out, stops the work/i,
     );
-    expect(flat(sectionOf(run, "## The work"))).toMatch(
+    expect(flat(sectionOf(await readShipped(STAGE_POINTS), "## Branch point"))).toMatch(
       /from a scope that leaves stages out, ask before any move/i,
     );
     expect(flat(sectionOf(screens, "## The announcement"))).toMatch(/the chosen stages in order/i);
@@ -388,7 +389,7 @@ describe("qfai-run", () => {
   // QFAI:AC-0001-0224-04
   // QFAI:EX-0001-0224-05
   it("moves at a branch point by planning the destination, and asks before the third move", async () => {
-    const work = flat(sectionOf(await readShipped(RUN), "## The work"));
+    const work = flat(sectionOf(await readShipped(STAGE_POINTS), "## Branch point"));
     expect(work).toMatch(
       /take the destination's plan with `npx qfai workflow plan --route <route>`/i,
     );
@@ -406,7 +407,9 @@ describe("qfai-run", () => {
     for (const point of ["release point", "decision point", "branch point"]) {
       expect(loop.toLowerCase()).toContain(`**${point}.**`);
     }
-    expect(loop).toMatch(/at once: no later step of this route runs/i);
+    expect(flat(sectionOf(await readShipped(STAGE_POINTS), "## Branch point"))).toMatch(
+      /at once: no later step of this route runs/i,
+    );
   });
 
   // QFAI:AC-0001-0224-05
@@ -436,7 +439,7 @@ describe("qfai-run", () => {
   // QFAI:EX-0001-0223-01
   // QFAI:EX-0001-0223-02
   it("asks each critical decision at a decision point before anything that depends on it changes", async () => {
-    const work = flat(sectionOf(await readShipped(RUN), "## The work"));
+    const work = flat(sectionOf(await readShipped(STAGE_POINTS), "## Decision point"));
     expect(work).toMatch(
       /at a step `decisionPoints` names, put each critical decision to the user through the structured question tool before changing anything that depends on it/i,
     );
@@ -453,7 +456,7 @@ describe("qfai-run", () => {
   // QFAI:AC-0001-0223-02
   // QFAI:EX-0001-0223-03
   it("takes every other decision itself and lists it with its reason in the final report", async () => {
-    const work = flat(sectionOf(await readShipped(RUN), "## The work"));
+    const work = flat(sectionOf(await readShipped(STAGE_POINTS), "## Decision point"));
     expect(work).toMatch(
       /take every other decision yourself, ask nothing, and list it with its reason in the final report/i,
     );
@@ -466,7 +469,7 @@ describe("qfai-run", () => {
   // QFAI:EX-0001-0223-04
   // QFAI:EX-0001-0223-05
   it("asks for release approval at the release point, and the approval authorizes no push or publication", async () => {
-    const work = flat(sectionOf(await readShipped(RUN), "## The work"));
+    const work = flat(sectionOf(await readShipped(STAGE_POINTS), "## Release point"));
     expect(work).toMatch(
       /before a step `releasePoint` names runs, ask the user to approve the release; where it is `end`, ask once the last stage's gates have passed/i,
     );
@@ -480,11 +483,12 @@ describe("qfai-run", () => {
   // QFAI:EX-0001-0223-08
   it("records each approval as one decisions row, and no row for a decision taken without the user", async () => {
     const work = flat(sectionOf(await readShipped(RUN), "## The work"));
+    const release = flat(sectionOf(await readShipped(STAGE_POINTS), "## Release point"));
     expect(work).toMatch(
       /each approval of a specification change, a critical decision or a release is one `decisions\.md` row: what was approved, who approved it, when, and the chosen option's label/i,
     );
     expect(work).toMatch(/a decision you took appends no row/i);
-    expect(work).toMatch(/which authorizes no push, merge, tag or publication/i);
+    expect(release).toMatch(/which authorizes no push, merge, tag or publication/i);
   });
 
   // QFAI:AC-0001-0223-05

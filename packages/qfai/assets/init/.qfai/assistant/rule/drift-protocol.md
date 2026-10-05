@@ -73,6 +73,13 @@ Open requests have independent affected sets. Their union is the set of work pau
 
 A defect is demonstrable from the deliverable or an existing obligation: incorrect behavior, missing input validation, data loss, or a failing required quality gate. It is blocking with the concrete artifact and evidence as provenance.
 
+No repository gate scans for a security or data-integrity defect. Review is that
+class's detector: `.qfai/assistant/agent/implementation-reviewer.md` checks each
+change for missing validation on an input the code already treats as trusted,
+credential or personal-data exposure, and an injection or traversal path opened
+by the change. A finding the reviewer demonstrates traces to `defect:security`
+and blocks like the other blocking classes.
+
 New scope adds product behavior or a quality bar the approved story tree and contracts do not require. A reviewer records it as advisory and sends it to the SDD owner. It becomes binding only after the owner records the decision and updates the relevant BF, AC, EX, BR, or contract. An advisory does not create a test assertion by itself.
 
 ### Provenance and routing
