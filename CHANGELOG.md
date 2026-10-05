@@ -4,6 +4,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **The repository's scans lane refuses a tracked file under `.qfai/report/`,
+  `.qfai/evidence/`, `.qfai/review/` or `.qfai/output/`.** The managed
+  `.gitignore` block ignores those directories whole, but an ignore entry does
+  not untrack a file added before it or with `git add -f`, and every later
+  `qfai validate` then dirtied the tree. The guard that already refused a
+  tracked file under `tmp/` now checks these directories too, and a test holds
+  its list to the `.gitignore` entries. Fixes #2356.
+
 ## [2.1.0] - 2026-10-05
 
 ### Breaking changes
@@ -541,14 +551,6 @@ its code. Several commands, findings and files go with that.
   unmet. Fixes #2725.
 
 ### Changed
-
-- **The repository's scans lane refuses a tracked file under `.qfai/report/`,
-  `.qfai/evidence/`, `.qfai/review/` or `.qfai/output/`.** The managed
-  `.gitignore` block ignores those directories whole, but an ignore entry does
-  not untrack a file added before it or with `git add -f`, and every later
-  `qfai validate` then dirtied the tree. The guard that already refused a
-  tracked file under `tmp/` now checks these directories too, and a test holds
-  its list to the `.gitignore` entries. Fixes #2356.
 
 - **Every decision a stage records carries one fixed form** (#2236).
   The thinking rule now names where each decision is recorded.
