@@ -37,5 +37,8 @@ describe("Implementation evidence ownership", () => {
     expect(drift).toContain(
       "Complete the decision row by changing Status from WIP to DONE only after",
     );
+    const rule = drift.replaceAll("`", "").replace(/\s+/g, " ");
+    expect(rule).toMatch(/DONE claims every action[^.!?]*Approach/);
+    expect(rule).toMatch(/deferred[^.!?]*keep the row at WIP/i);
   });
 });

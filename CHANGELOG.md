@@ -6,6 +6,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`qfai validate` resolves the decisions and open questions a contract
+  cites.** A `DEC-NNNN` or `OQ-NNNN` in a contract rule's statement, and the
+  successor a `SUPERSEDED (by DEC-NNNN)` status names, must now be declared by a
+  row of `decisions.md` or `open-questions.md`. An undeclared one is a
+  `QFAI-STORY-003` error naming the citing rule or row and the missing ID.
+  Example narratives are not read, since they quote hypothetical IDs on
+  purpose. Fixes #2410.
+
 - **`qfai validate` warns about trace marks no check reads.** In the `tdd`
   profile, a comment line in a selected test file that carries a `QFAI:US-`,
   `QFAI:TC-`, `QFAI:SC-` or `QFAI:SPEC-` mark raises `QFAI-STORY-014` at
@@ -38,9 +46,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   three annotations sat at the top of the file, so any passing test there
   counted for all three. The test covering the four mode values names the value
   in each failing assertion. (#2287)
+- **The `qfai-sdd` triage reference lists every place a retirement touches**
+  (#2263). It spells the update operations `UPDATE:APPEND`, `UPDATE:MODIFY`
+  and `UPDATE:REMOVE`, and gains a section on retiring an EX, AC or BR: the
+  approved change request, the item itself, the examples cells of the rules
+  that cite it, the test annotations, an AC left without an example, and no
+  reuse of the ID. It names the `qfai validate` findings that catch a leftover.
 
 ### Changed
 
+- **A DONE change request claims every action it lists** (#2312). A
+  `decisions.md` row has one Status, so a request with one action deferred could
+  be marked DONE and the deferred action dropped from view. The drift protocol
+  now keeps such a row at WIP while any action it lists is deferred.
 - **An EX annotation counts only directly before a test declaration** (#2761).
   A `QFAI:EX-` annotation used to cover its example from anywhere in a selected
   test file, so a header comment above the imports, or one line in a file with
@@ -50,6 +68,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   annotation down to the test it describes; `qfai validate --profile tdd`
   otherwise reports the example as uncovered. BF and AC annotations are read as
   before.
+- **The SDD triage reference says how a shared ID is renumbered** (#2505). Two
+  branches can take the same next ID. The merge target keeps its item and the
+  incoming item is renumbered, with its children and directory when it is a BF
+  or a US. Every citation changes in the same commit, and the commit message
+  states the old ID, the new ID and the renamed record. A merged row keeps its
+  ID, and an ID two merged records already share is put to the user for a
+  change request row that says which record each citation meant.
 - **The repository's scans lane refuses a tracked file under `.qfai/report/`,
   `.qfai/evidence/`, `.qfai/review/`, `.qfai/output/`, `.qfai/discussion/` or
   `.qfai/review_archive/`.** The managed
@@ -59,6 +84,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   tracked file under `tmp/` now checks these directories too, and a test holds
   its list to the `.gitignore` entries. Fixes #2356.
 
+- **The repository's dogfooding ratchet keeps diff-dependent findings out of
+  its pins.** `QFAI-DRIFT-001` reports a protected story-tree file changed
+  since the base branch without a change request, so it exists only on the
+  branch that made the change. Pinned there, it read one less after the merge
+  and failed every later pull request. `scripts/check-dogfood-backlog.mjs` now
+  leaves it, and `QFAI-STORY-010`, out of the counts it compares and pins, and
+  fails the lane on them outright in the pull request that produces them.
+  Fixes #2352.
 - **The shipped cross-flow guidance says how to find the flows a shared change
   reaches, and what to do when that search cannot finish.**
   `qfai-implement/references/cross-spec-ownership.md` now searches outward from

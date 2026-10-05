@@ -56,7 +56,10 @@ Both classes use the same approval and owner-rerun path.
    A contract with a contract ID, such as `API-0002`, is selected by its full ID; a contract without one is selected by its repository-relative path.
    The owner updates the specification and its tests together, then validates the relevant flow.
 5. Recheck every dependent BF, AC, and EX test obligation and every affected contract reference. Rewrite tests where their former expectation is invalid. Report any uncovered obligation. No execution ledger, TC row, or status reset substitutes for this check.
-6. Complete the decision row by changing Status from WIP to DONE only after the owner artifact and dependent checks are complete. Cite the DEC ID in the stage report. A second open request on the same artifact waits for the first outcome and is restated if its premise changed.
+6. Complete the decision row by changing Status from WIP to DONE only after the owner artifact and dependent checks are complete.
+   A row has one Status, so DONE claims every action its Approach lists. While one of them is deferred, keep the row at WIP.
+   Cite the DEC ID in the stage report.
+   A second open request on the same artifact waits for the first outcome and is restated if its premise changed.
 
 The decision table has no separate Applied at field and no standalone CR file. Approval alone does not certify a change as applied.
 

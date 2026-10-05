@@ -36,4 +36,10 @@ Feature: Decision and open-question table validation
     When `qfai validate --profile sdd` runs
     Then `QFAI-SPACK-102` is raised at error naming the file and the row ID
     And the same row at DONE or DEFERRED raises no such finding
+
+  # AC-0001-0053-06
+  Scenario: A cited decision or question that no row declares is reported
+    Given the story tree, and a contract rule whose statement cites a `DEC-NNNN` or `OQ-NNNN` that no row declares, or a `decisions.md` row at `SUPERSEDED (by DEC-NNNN)` whose successor no row declares
+    When `qfai validate --profile sdd` runs
+    Then `QFAI-STORY-003` is raised at error naming the file, the citing rule or row, and the missing ID
 ```

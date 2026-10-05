@@ -548,7 +548,10 @@ describe("BF-0001 decision and question examples", () => {
     );
     contents.set(
       `${spec}/decisions.md`,
-      table(["| DEC-0001 | First decision | Reason | SUPERSEDED (by DEC-0002) |"]),
+      table([
+        "| DEC-0001 | First decision | Reason | SUPERSEDED (by DEC-0002) |",
+        "| DEC-0002 | Second decision | Reason | DONE |",
+      ]),
     );
     expect(
       findings(contents, "QFAI-STORY-003").some((entry) => entry.file === `${spec}/decisions.md`),
