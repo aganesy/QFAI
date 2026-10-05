@@ -45,27 +45,67 @@ function functionBody(source: string, marker: string): string {
 }
 
 describe("a workflows directory reached through a link is not this tree's to write", () => {
+  /** The error codes a filesystem raises when it cannot create a link at all. */
+  const UNSUPPORTED_LINK_CODES = new Set(["EPERM", "ENOTSUP", "EOPNOTSUPP"]);
+
   /**
-   * The link, as a JUNCTION on Windows and an ordinary symlink elsewhere. A
-   * filesystem that refuses either is a fixture problem, not a defect.
+   * The link, as a JUNCTION on Windows and an ordinary symlink elsewhere.
+   * `false` means the filesystem cannot create one, so the caller reports the
+   * test as skipped. Any other failure is rethrown unchanged.
    */
-  async function linkDir(target: string, at: string): Promise<boolean> {
+  async function linkDir(
+    target: string,
+    at: string,
+    create: typeof symlink = symlink,
+  ): Promise<boolean> {
     try {
-      await symlink(target, at, "junction");
+      await create(target, at, "junction");
       return true;
-    } catch {
-      return false;
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        "code" in error &&
+        typeof error.code === "string" &&
+        UNSUPPORTED_LINK_CODES.has(error.code)
+      ) {
+        return false;
+      }
+      throw error;
     }
   }
 
+  it("reports a filesystem that cannot link as unsupported", async () => {
+    const refuse = (): Promise<void> =>
+      Promise.reject(Object.assign(new Error("operation not permitted"), { code: "EPERM" }));
+    await expect(linkDir("target", "link", refuse)).resolves.toBe(false);
+  });
+
+  it("rethrows an unexpected link failure with its code, path and cause", async () => {
+    const cause = new Error("root cause");
+    const fail = (): Promise<void> =>
+      Promise.reject(
+        Object.assign(new Error("permission denied", { cause }), {
+          code: "EACCES",
+          path: "link",
+        }),
+      );
+    await expect(linkDir("target", "link", fail)).rejects.toMatchObject({
+      code: "EACCES",
+      path: "link",
+      cause,
+    });
+  });
+
   for (const linked of [".github", ".github/workflows"] as const) {
-    it(`writes no shipped workflow through a symlinked ${linked}`, async () => {
+    it(`writes no shipped workflow through a symlinked ${linked}`, async (ctx) => {
       const dir = await newTempDir();
       const outside = await newTempDir();
       if (linked === ".github/workflows") {
         await mkdir(path.join(dir, ".github"), { recursive: true });
       }
-      if (!(await linkDir(outside, path.join(dir, ...linked.split("/"))))) return;
+      if (!(await linkDir(outside, path.join(dir, ...linked.split("/"))))) {
+        ctx.skip();
+      }
 
       await runInitQuiet(dir);
 

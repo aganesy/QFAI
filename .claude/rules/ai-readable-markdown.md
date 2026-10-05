@@ -1,0 +1,1 @@
+../../.agents/rules/ai-readable-markdown.md
