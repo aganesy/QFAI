@@ -33,8 +33,16 @@
  * the slot cannot be taken by the next regression. `--pin` rewrites the
  * profile's entry from a live run.
  *
- * Findings that depend on the base diff fail ordinary runs without becoming
- * pins. `--pin` saves only tree findings and warns about each excluded error.
+ * A pin describes the tree, so a finding that depends on the branch's diff
+ * against the base is never held in it. `QFAI-DRIFT-001` reports a protected
+ * story-tree file changed since the base without a change request: a finding
+ * pinned by the pull request that made the change disappears from every pull
+ * request after it merges, and the ratchet then fails work that never touched
+ * the file. Those errors fail the lane outright instead, in the pull request
+ * whose diff produces them, and `--pin` does not record them.
+ *
+ * A run that could not complete is refused before any comparison or pin: its
+ * report holds fewer findings than the tree has.
  *
  * Findings print as GitHub annotations, so each lane's output is unchanged
  * from the raw `validate` call this replaces.
@@ -224,6 +232,12 @@ function main() {
     report = JSON.parse(readFileSync(REPORT, "utf-8"));
   } catch (err) {
     fail(`could not read ${REPORT}: ${String(err)}`);
+    return;
+  }
+  try {
+    assertCompleteValidationReport(report);
+  } catch (err) {
+    fail(err instanceof Error ? err.message : String(err));
     return;
   }
   const found = errorsByFile(report);

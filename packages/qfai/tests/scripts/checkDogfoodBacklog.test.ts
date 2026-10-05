@@ -359,6 +359,29 @@ describe("diff-dependent findings", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it("refuses a report of a run that could not complete, without pinning it", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-dogfood-incomplete-"));
+    try {
+      const script = await stageConsumer(root, 1);
+      await writeFile(
+        path.join(root, ".qfai", "report", "validate.json"),
+        JSON.stringify({ issues: [{ code: "QFAI-SCAN-002", severity: "warning", message: "x" }] }),
+        "utf-8",
+      );
+      const result = spawnSync(process.execPath, [script, "--profile", "tdd", "--pin"], {
+        cwd: root,
+        encoding: "utf-8",
+      });
+
+      expect(result.error).toBeUndefined();
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("QFAI-SCAN-002");
+      expect(result.stdout).not.toContain("pinned tdd");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("errorsForFile", () => {

@@ -3,7 +3,7 @@ name: triage-investigate
 owner: qfai-triage
 purpose: "Investigate a question the documents do not answer by reading internals, history and outside facts, without changing any tracked file."
 requires: []
-roles: [discovery-analyst, frontend-engineer, backend-engineer, completion-reviewer]
+roles: [discovery-analyst, frontend-engineer, backend-engineer]
 routing-profile: default
 ---
 
@@ -11,6 +11,12 @@ routing-profile: default
 
 Finds the facts an answer needs when the documents do not state them: why the
 code behaves as it does, when it changed, or what an outside source says.
+
+## Passes when
+
+Read first: the request and the documents it cites. The step passes when those
+documents already answer the question, so `triage-answer` needs no
+investigation. The pass names the documents read.
 
 ## Reads
 

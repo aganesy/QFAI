@@ -37,7 +37,6 @@ const OLD_PATHS: readonly OldPath[] = [
   written(".qfai/report/specs-coverage"),
   { label: "_policies/", names: (line) => POLICIES.test(line) },
   { label: "spec-NNNN", names: (line) => SPEC_ID.test(line) },
-  written("assistant/steering"),
   written("assistant/instructions"),
   written("01_Spec.md"),
 ];
