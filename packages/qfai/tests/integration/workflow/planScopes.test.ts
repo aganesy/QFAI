@@ -1,5 +1,6 @@
 // QFAI:AC-0001-0229-01
 // QFAI:AC-0001-0229-03
+// QFAI:AC-0001-0229-07
 
 import { afterEach, expect, it } from "vitest";
 
@@ -182,5 +183,53 @@ it("No scope runs the fix without the checks that verify it", async () => {
   );
 
   expect(field(planned.json, "route")).toBe("fix-intermittent");
+  expect(field(planned.json, "scopes")).toEqual(broadOnly(planned.json));
+});
+
+const reasonsOf = (json: unknown) => field(json, "reasons");
+
+// QFAI:EX-0001-0229-24
+it("A request whose artifact no stage of the route writes is refused before any stage", async () => {
+  const planned = await planFor(extraction({ intent: "feature", artifacts: ["release"] }));
+
+  expect(planned.status).toBe(2);
+  expect(field(planned.json, "ok")).toBe(false);
+  expect(reasonsOf(planned.json)).toEqual([{ reason: "artifact-unserved", subject: "release" }]);
+});
+
+const lowConfidence = (intent: "design" | "refactor", artifacts: WorkflowExtraction["artifacts"]) =>
+  extraction({
+    intent: "feature",
+    artifacts,
+    confidence: "low",
+    alternatives: [{ intent, entryFlags: [], qualifiers: [], signals: [] }],
+  });
+
+// QFAI:EX-0001-0229-25
+it("A candidate that cannot serve the request is left out, and the next one is recommended", async () => {
+  const planned = await planFor(lowConfidence("design", ["release"]));
+  const candidates = field(planned.json, "candidates");
+
+  expect(
+    (Array.isArray(candidates) ? candidates : []).map((each) => [
+      field(each, "route"),
+      field(each, "recommended"),
+    ]),
+  ).toEqual([["decide-design", true]]);
+});
+
+// QFAI:EX-0001-0229-27
+it("A request no candidate can serve is refused", async () => {
+  const planned = await planFor(lowConfidence("refactor", ["release"]));
+
+  expect(planned.status).toBe(2);
+  expect(reasonsOf(planned.json)).toEqual([{ reason: "artifact-unserved", subject: "release" }]);
+});
+
+// QFAI:EX-0001-0229-26
+it("A route that writes nothing is not refused for the artifacts the request names", async () => {
+  const planned = await planFor(extraction({ intent: "design", artifacts: ["spec"] }));
+
+  expect(field(planned.json, "route")).toBe("decide-design");
   expect(field(planned.json, "scopes")).toEqual(broadOnly(planned.json));
 });

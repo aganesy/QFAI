@@ -36,6 +36,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A request whose artifacts no stage of the route writes no longer runs every
+  stage unasked.** `npx qfai workflow plan --in` listed only the `broad` scope
+  there, so no scope question was put. It now refuses with `artifact-unserved`
+  and names each artifact, and the session stops before the first stage. A
+  route that writes nothing is not refused (#2964).
+
 - **The contract guide states one scope for contract kinds.** It named only
   `api/`, `db/` and `ui/` as contract directories in one place and `cli/` in
   another. It now says a project's contracts are the three directories and that
