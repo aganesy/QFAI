@@ -19,24 +19,48 @@ function unread(files: StoryTestFile[], profile: "atdd" | "tdd" = "tdd") {
   return findings.filter((finding) => finding.code === "QFAI-STORY-014");
 }
 
+function located(files: StoryTestFile[]) {
+  return unread(files).map((finding) => [finding.file, finding.loc?.line, finding.refs]);
+}
+
 describe("a trace mark no check reads", () => {
   // QFAI:EX-0001-0056-13
   // QFAI:AC-0001-0056-07
-  it("warns on each mark on a comment line, not inside a string literal", () => {
-    const comments = selected(
-      "tests/unit/order.test.ts",
-      `// ${story}\nit("pays", () => {});\n  # ${retired}\n`,
-    );
+  it("warns on each mark in a comment, not inside a string literal", () => {
+    const slashes = selected("tests/unit/order.test.ts", `// ${story}\nit("pays", () => {});\n`);
+    const hashes = selected("tests/unit/order_test.py", `x = 1\n# ${retired}\n`);
     const strings = selected(
       "tests/unit/migration.test.ts",
       `const input = "// ${story}";\nexpect(output).toContain("${retired}");\n`,
     );
-    const findings = unread([comments, strings]);
-    expect(findings.map((finding) => [finding.file, finding.loc?.line, finding.refs])).toEqual([
+    expect(located([slashes, hashes, strings])).toEqual([
       ["tests/unit/order.test.ts", 1, [story]],
-      ["tests/unit/order.test.ts", 3, [retired]],
+      ["tests/unit/order_test.py", 2, [retired]],
     ]);
-    expect(findings.every((finding) => finding.severity === "warning")).toBe(true);
+    expect(unread([slashes]).every((finding) => finding.severity === "warning")).toBe(true);
+  });
+
+  // QFAI:EX-0001-0056-13
+  it("reads a block comment whose continuation line has no leading asterisk", () => {
+    const block = selected("tests/unit/block.test.ts", `/*\n${story}\n*/\nit("pays", () => {});\n`);
+    expect(located([block])).toEqual([["tests/unit/block.test.ts", 2, [story]]]);
+  });
+
+  // QFAI:EX-0001-0056-13
+  it("leaves a mark inside a multiline string or after a private field alone", () => {
+    const template = selected(
+      "tests/unit/fixture.test.ts",
+      ["const text = `", `// ${story}`, `// ${retired}`, "`;", ""].join("\n"),
+    );
+    const privateField = selected(
+      "tests/unit/field.test.ts",
+      `class Box {\n  #label = "${story}";\n}\n`,
+    );
+    const docstring = selected(
+      "tests/unit/fixture_test.py",
+      [`text = """`, `# ${story}`, `"""`, ""].join("\n"),
+    );
+    expect(located([template, privateField, docstring])).toEqual([]);
   });
 
   // QFAI:EX-0001-0056-13
