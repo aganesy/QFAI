@@ -710,17 +710,9 @@ function skillPolicyIssues(
  * A skill with no section of its own and no declared input works under the
  * baseline alone and raises nothing.
  *
- * Code-registry note: `R-AUTOPILOT-POLICY-MISSING` is part of the
- * closed mandatory-justification catalog
- * (`justificationCatalog.ts`) — empty `justification:` on a finding
- * with that code is advisory-failing.
- * `R-AUTOPILOT-POLICY-WIDENED` is an AUXILIARY warning-class code that
- * lives OUTSIDE the mandatory-justification catalog: it is semantically
- * distinct from MISSING (different remediation: narrow the auto-decide
- * bucket back to the canonical set vs restore the policy), still useful
- * as a signal, but its severity (`warning`) and advisory contract are
- * not the same as the 7-code error-class catalog. It is intentionally
- * NOT added to `ADVISORY_FAILING_CODES` in `reviewerJustification.ts`.
+ * `R-AUTOPILOT-POLICY-WIDENED` is distinct from MISSING: its remedy is to
+ * narrow the auto-decide bucket back to the canonical set, not to restore
+ * the policy, so it stays a warning.
  */
 export async function validateAutopilotPolicy(
   root: string,

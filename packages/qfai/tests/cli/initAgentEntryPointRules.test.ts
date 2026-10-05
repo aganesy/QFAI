@@ -6,6 +6,7 @@
 
 import {
   chmod,
+  cp,
   link,
   mkdir,
   mkdtemp,
@@ -14,7 +15,6 @@ import {
   rm,
   stat,
   symlink,
-  utimes,
   writeFile,
 } from "node:fs/promises";
 import os from "node:os";
@@ -40,30 +40,10 @@ import {
   refreshSupersededRuleBulletsInList,
 } from "../../src/core/agentEntryPoints.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
-import { RULE_LOCK_BASENAME } from "../../src/core/ruleMasterUpdates.js";
 
-/**
- * The project as it is before a rule is shipped to it for the first time.
- *
- * Deleting the file alone no longer says that: `init` records what it wrote,
- * and a record entry with no file behind it is a rule the project removed on
- * purpose, which the run leaves removed. A rule the project has never had is
- * one the record does not name either.
- */
+/** The project as it is before a rule is shipped to it for the first time. */
 async function forgetMaster(root: string, master: string): Promise<void> {
   await rm(path.join(root, ...master.split("/")), { force: true });
-  const lock = path.join(root, ".agents", "rules", RULE_LOCK_BASENAME);
-  const recorded = await readFile(lock, "utf-8").catch(() => null);
-  if (recorded === null) return;
-  const entries = JSON.parse(recorded) as Record<string, string>;
-  const basename = path.posix.basename(master);
-  const kept = Object.fromEntries(Object.entries(entries).filter(([name]) => name !== basename));
-  await writeFile(
-    lock,
-    `${JSON.stringify(kept, null, 2)}
-`,
-    "utf-8",
-  );
 }
 
 /** The review policy the review directive points at; init adds the directive only beside it. */
@@ -797,27 +777,6 @@ describe("the append path refuses what the update path refuses", () => {
 
       expect(await readFile(shared, "utf-8")).toBe(PROJECT_TEXT);
       expect(stderr).toContain("symbolic link");
-    });
-  });
-});
-
-describe("staging an interrupted run left behind is reclaimed", () => {
-  it("removes the writer's own name shape and nothing else", async () => {
-    await withProject(async (root) => {
-      // What a kill between the write and the rename leaves: a full copy of the
-      // project's instructions, untracked, in the repository root.
-      const abandoned = path.join(root, ".qfai-entry-6f1d4b4e-0c2a-4f1e-9b0d-2a7c5e8f1a33.tmp");
-      const unrelated = path.join(root, "notes.tmp");
-      await writeFile(abandoned, PROJECT_TEXT, "utf-8");
-      await writeFile(unrelated, PROJECT_TEXT, "utf-8");
-      // Sat still long enough that no run is using it.
-      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
-      await utimes(abandoned, yesterday, yesterday);
-
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-      expect(await readdir(root)).not.toContain(path.basename(abandoned));
-      expect(await readFile(unrelated, "utf-8")).toBe(PROJECT_TEXT);
     });
   });
 });
@@ -1982,7 +1941,7 @@ describe("optional review directive detection", () => {
   });
 });
 
-describe("the staged write keeps the file's own permissions", () => {
+describe("the write keeps the file's own permissions", () => {
   it("restores the target's mode rather than the process default", async () => {
     await withProject(async (root) => {
       const master = ".agents/rules/grilling.md";
@@ -2004,36 +1963,6 @@ describe("the staged write keeps the file's own permissions", () => {
       expect(await readEntryPoint(root, "AGENTS.md")).toContain(master);
       // A file the project had kept to itself is not published by the rewrite.
       expect((await stat(target)).mode & 0o7777).toBe(before);
-    });
-  });
-});
-
-describe("what the reclaim refuses to remove", () => {
-  it("leaves a name the writer could not have produced, and a fresh one", async () => {
-    await withProject(async (root) => {
-      const hour = 60 * 60 * 1000;
-      // Right shape, sat still for a day: abandoned.
-      const stale = path.join(root, ".qfai-entry-6f1d4b4e-0c2a-4f1e-9b0d-2a7c5e8f1a33.tmp");
-      // Right shape, written a moment ago: another init is using it.
-      const fresh = path.join(root, ".qfai-entry-0b2c9d1e-7a3f-4c5b-8e6d-1f2a3b4c5d6e.tmp");
-      // Wrong shape. The dots are literal and the layout is the one
-      // `randomUUID` writes, so neither of these is the writer's.
-      const notOurs = [
-        path.join(root, "xqfai-entry-6f1d4b4e-0c2a-4f1e-9b0d-2a7c5e8f1a33Ytmp"),
-        path.join(root, ".qfai-entry-6f1d4b4e0c2a4f1e9b0d2a7c5e8f1a33----.tmp"),
-      ];
-      for (const file of [stale, fresh, ...notOurs]) {
-        await writeFile(file, PROJECT_TEXT, "utf-8");
-      }
-      const old = new Date(Date.now() - 24 * hour);
-      await utimes(stale, old, old);
-
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-      const left = await readdir(root);
-      expect(left).not.toContain(path.basename(stale));
-      expect(left).toContain(path.basename(fresh));
-      for (const file of notOurs) expect(left).toContain(path.basename(file));
     });
   });
 });
@@ -2536,37 +2465,109 @@ describe("a later init refreshes a rule summary the project never edited", () =>
     });
   });
 
-  it.each([
-    { edited: true, kept: "the file's own bullet" },
-    { edited: false, kept: "the release's bullet" },
-  ])(
-    "rebuilds the Copilot file under --force with $kept for a master edited: $edited",
-    async ({ edited }) => {
-      await withProject(async (root) => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
-        const copilot = path.join(root, ".github", "copilot-instructions.md");
-        const written = await readFile(copilot, "utf-8");
-        const current =
-          written.split("\n").find((line) => line.startsWith(`- \`${master}\``)) ?? "";
-        expect(current, "the Copilot file has no bullet for the master").not.toBe("");
-        await writeFile(copilot, written.replace(current, superseded), "utf-8");
-        if (edited) {
-          // The adopter's own master: the update pass keeps it, so the release's
-          // summary would describe a rule this tree does not have.
-          const file = path.join(root, ".agents", "rules", "grilling.md");
-          await writeFile(file, `${await readFile(file, "utf-8")}\n\nOur own addition.\n`, "utf-8");
-        }
+  it("rebuilds the Copilot file under --force with the release's bullet", async () => {
+    await withProject(async (root) => {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const copilot = path.join(root, ".github", "copilot-instructions.md");
+      const written = await readFile(copilot, "utf-8");
+      const current = written.split("\n").find((line) => line.startsWith(`- \`${master}\``)) ?? "";
+      expect(current, "the Copilot file has no bullet for the master").not.toBe("");
+      await writeFile(copilot, written.replace(current, superseded), "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      const after = await readFile(copilot, "utf-8");
+      expect(after).toContain(current);
+      expect(after).not.toContain(superseded);
+      expect(after).toContain("- `.agents/rules/user-questions.md` — ");
+    });
+  });
+
+  it("keeps the Copilot summary under --force where the master was refused", async () => {
+    await withProject(async (root) => {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const copilot = path.join(root, ".github", "copilot-instructions.md");
+      const written = await readFile(copilot, "utf-8");
+      const current = written.split("\n").find((line) => line.startsWith(`- \`${master}\``)) ?? "";
+      expect(current, "the Copilot file has no bullet for the master").not.toBe("");
+      // A master this run ships for the first time, with no bullet yet.
+      const missing = "- `.agents/rules/api-budget.md` — ";
+      await writeFile(
+        copilot,
+        written
+          .replace(current, superseded)
+          .split("\n")
+          .filter((line) => !line.startsWith(missing))
+          .join("\n"),
+        "utf-8",
+      );
+      // The masters live outside the project behind a link, so `--force`
+      // refuses to write them and the project's own grilling master stays.
+      const rules = path.join(root, ".agents", "rules");
+      const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-linked-rules-"));
+      try {
+        await cp(rules, outside, { recursive: true });
+        await writeFile(path.join(outside, "grilling.md"), "# Our grilling rule\n", "utf-8");
+        await rm(path.join(outside, "api-budget.md"));
+        await rm(rules, { recursive: true });
+        await symlink(outside, rules, "junction");
 
         await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
         const after = await readFile(copilot, "utf-8");
-        expect(after).toContain(edited ? superseded : current);
-        expect(after).not.toContain(edited ? current : superseded);
-        // Every other rule keeps the release's wording.
+        expect(after).toContain(superseded);
+        expect(after).not.toContain(current);
         expect(after).toContain("- `.agents/rules/user-questions.md` — ");
-      });
-    },
-  );
+        // The refused master is not there, so nothing cites it.
+        expect(after).not.toContain(missing);
+      } finally {
+        await rm(rules, { force: true });
+        await rm(outside, { recursive: true, force: true });
+      }
+    });
+  });
+
+  it("keeps only the operative Copilot bullet, whole, where the master was refused", async () => {
+    await withProject(async (root) => {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const copilot = path.join(root, ".github", "copilot-instructions.md");
+      const written = await readFile(copilot, "utf-8");
+      const current = written.split("\n").find((line) => line.startsWith(`- \`${master}\``)) ?? "";
+      expect(current, "the Copilot file has no bullet for the master").not.toBe("");
+      const example = `- \`${master}\` — an example in a fenced block, not the rule list.`;
+      const continuation = "  Our own second line of the summary.";
+      await writeFile(
+        copilot,
+        [
+          "## Examples",
+          "",
+          "```markdown",
+          example,
+          "```",
+          "",
+          written.replace(current, `${superseded}\n${continuation}`),
+        ].join("\n"),
+        "utf-8",
+      );
+      const rules = path.join(root, ".agents", "rules");
+      const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-linked-rules-"));
+      try {
+        await cp(rules, outside, { recursive: true });
+        await writeFile(path.join(outside, "grilling.md"), "# Our grilling rule\n", "utf-8");
+        await rm(rules, { recursive: true });
+        await symlink(outside, rules, "junction");
+
+        await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+        const after = await readFile(copilot, "utf-8");
+        expect(after).not.toContain(example);
+        expect(after).toContain(`${superseded}\n${continuation}`);
+      } finally {
+        await rm(rules, { force: true });
+        await rm(outside, { recursive: true, force: true });
+      }
+    });
+  });
 
   it("leaves the same line inside a fenced example as it is", async () => {
     await withProject(async (root) => {

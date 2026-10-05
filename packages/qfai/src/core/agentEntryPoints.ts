@@ -1200,6 +1200,30 @@ export function refreshSupersededRuleBulletsInList(
 }
 
 /**
+ * The bullet citing `master` in the rule list under `CROSS_AI_RULES_HEADING`,
+ * with its continuation lines and without line terminators, or `undefined`
+ * where the list has none.
+ *
+ * A matching line anywhere else — an example in a fenced block, a note in
+ * another section — does not instruct an agent, so it is never returned.
+ */
+export function ruleListBullet(existing: string, master: string): string | undefined {
+  const lines = existing.split("\n");
+  const open = outsideFences(lines);
+  const range = ruleListRange(lines, open);
+  if (range === null) return undefined;
+  for (let index = range.from; index < range.to; index += 1) {
+    if (open[index] !== true || !(lines[index] ?? "").startsWith(`- \`${master}\``)) continue;
+    const end = Math.min(endOfListItem(lines, open, index), range.to);
+    return lines
+      .slice(index, end)
+      .map((line) => line.replace(/\r$/, ""))
+      .join("\n");
+  }
+  return undefined;
+}
+
+/**
  * Whether the line is `CROSS_AI_RULES_HEADING` itself: the exact heading, at the
  * top level, in no blockquote.
  *
@@ -1336,47 +1360,6 @@ function replaceSupersededBullets(
   const held = [...withheld].sort();
   if (refreshed.size === 0) return { text: existing, refreshed: [], withheld: held };
   return { text: lines.join("\n"), refreshed: [...refreshed].sort(), withheld: held };
-}
-
-/** A rule bullet as the entry points write it: `` - `.agents/rules/<name>.md` — … ``. */
-const RULE_BULLET_MASTER_RE = /^- `(\.agents\/rules\/[A-Za-z0-9._-]+\.md)`/;
-
-/**
- * `generated` with the rule bullet of every master outside `installed` taken
- * from `existing`, where `existing` carries one in its rule list.
- *
- * A summary describes its master. `--force` rebuilds the Copilot instructions
- * whole, from the release's wording, and a master the adopter edited stays as
- * the adopter has it, so the release's bullet would assert a rule that file
- * does not carry. The bullet the file already had is the one that still
- * describes it. A master with no bullet there keeps the release's.
- */
-export function keepSummariesOfKeptMasters(
-  generated: string,
-  existing: string,
-  installed: ReadonlySet<string>,
-): string {
-  const lines = existing.split("\n");
-  const open = outsideFences(lines);
-  const range = ruleListRange(lines, open);
-  if (range === null) return generated;
-  const kept = new Map<string, string>();
-  for (let index = range.from; index < range.to; index += 1) {
-    if (open[index] !== true) continue;
-    const own = (lines[index] ?? "").replace(/\r$/, "");
-    const master = RULE_BULLET_MASTER_RE.exec(own)?.[1];
-    if (master !== undefined && !installed.has(master) && !kept.has(master)) {
-      kept.set(master, own);
-    }
-  }
-  if (kept.size === 0) return generated;
-  return generated
-    .split("\n")
-    .map((line) => {
-      const master = RULE_BULLET_MASTER_RE.exec(line)?.[1];
-      return master === undefined ? line : (kept.get(master) ?? line);
-    })
-    .join("\n");
 }
 
 /** The master `line` is a superseded bullet for, or `null` when it is not one. */

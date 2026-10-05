@@ -75,7 +75,6 @@ import {
   ALLOWED_MIGRATION_SCRIPTS,
   initSourceShipsAsData,
   INIT_SOURCE_MIRRORED_TREE,
-  ALLOWED_PROVENANCE_SHAPE,
   BUILD_DECORATION,
   LIVE_DECORATIONS,
   INERT_DECORATIONS,
@@ -671,60 +670,6 @@ describe(
       }
       expect
         .soft(contentDrift, "a reviewed init file whose content is not the reviewed content")
-        .toEqual([]);
-
-      // And the one file inside an instruction tree that is pinned anyway. See
-      // `ALLOWED_PROVENANCE_SHAPE`: `doctor` reads it to detect drift and init reads it to decide
-      // whether to DELETE an adopter's workflow, so "what matters about them is narrower than their
-      // contents" is false of this one, and it had no pin because of where it sits.
-      const provenanceAt = path.join(root, ...ALLOWED_PROVENANCE_SHAPE.path.split("/"));
-      const provenanceRaw = await readFile(provenanceAt, "utf-8").catch(() => undefined);
-      expect(
-        provenanceRaw,
-        `${ALLOWED_PROVENANCE_SHAPE.path} must be written by init — a pin over a file that is not ` +
-          "there is a pin over nothing",
-      ).toBeDefined();
-      const provenance: unknown = JSON.parse(provenanceRaw ?? "{}");
-      const shapeViolations: string[] = [];
-      if (!isRecord(provenance)) {
-        shapeViolations.push("the document is not an object");
-      } else {
-        for (const key of Object.keys(provenance)) {
-          if (!ALLOWED_PROVENANCE_SHAPE.topLevelKeys.has(key))
-            shapeViolations.push(`top-level ${key}`);
-        }
-        const workflows = provenance["workflows"];
-        if (!isRecord(workflows)) {
-          shapeViolations.push("`workflows` is not an object");
-        } else {
-          for (const [name, entry] of Object.entries(workflows)) {
-            if (!ALLOWED_WORKFLOW_FILES.has(name)) shapeViolations.push(`provenance for ${name}`);
-            if (!isRecord(entry)) {
-              shapeViolations.push(`${name}: entry is not an object`);
-              continue;
-            }
-            for (const [field, value] of Object.entries(entry)) {
-              if (!ALLOWED_PROVENANCE_SHAPE.entryKeys.has(field)) {
-                shapeViolations.push(`${name}.${field}`);
-                continue;
-              }
-              const must = ALLOWED_PROVENANCE_SHAPE.entryValues.get(field);
-              if (must !== undefined && !must.test(String(value))) {
-                shapeViolations.push(`${name}.${field} = ${JSON.stringify(value)}`);
-              }
-            }
-            for (const field of ALLOWED_PROVENANCE_SHAPE.entryKeys) {
-              if (!(field in entry)) shapeViolations.push(`${name}: missing ${field}`);
-            }
-          }
-        }
-      }
-      expect
-        .soft(
-          shapeViolations,
-          "a key or value in the provenance record that nobody enumerated — this file decides whether " +
-            "an adopter's workflow is deleted, so an unreviewed field in it is an unreviewed delete",
-        )
         .toEqual([]);
     });
 

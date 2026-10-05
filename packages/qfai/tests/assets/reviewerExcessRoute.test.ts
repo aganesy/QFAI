@@ -22,7 +22,7 @@ describe.each(trees)("reviewer excess route in %s", (tree) => {
       "utf-8",
     );
     const text = baseline.replace(/\s+/g, " ");
-    expect(text).toContain("Any in-scope blocking finding from an invoked reviewer prevents DONE");
+    expect(text).toContain("An in-scope blocking finding from a routed reviewer prevents DONE");
     expect(text).toContain("Article VII excess in the reviewing stage's own artifacts is in scope");
     expect(text).toContain(
       "quality of downstream implementation code is deferred at upstream stages",

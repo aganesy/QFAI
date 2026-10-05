@@ -15,18 +15,14 @@ import { notAContract, OLD_CONTRACT_TOKEN } from "./contractIds.js";
 import {
   ID_MAP_PATH,
   oldContractIds,
+  PLAN_PATH,
   readContractMap,
   readIdMap,
   serializeIdMap,
   type ContractMap,
   type MigrationIdMap,
 } from "./idMap.js";
-import {
-  parseLegacyRecords,
-  plainExampleCells,
-  retiredLegacyStatus,
-  withoutLegacyRecords,
-} from "./legacyRecords.js";
+import { parseLegacyRecords, plainExampleCells, retiredLegacyStatus } from "./legacyRecords.js";
 import {
   MigrationInputError,
   type MigrationContext,
@@ -65,7 +61,16 @@ export type MigrationPlan = {
   examples: PlannedExample[];
 };
 
-const PLAN_PATH = ".qfai/evidence/migration-spec-to-story/plan.yaml";
+/**
+ * The refusal for a plan entry no spec pack holds once an ID map exists. Step 7
+ * deletes what it has moved, and the migration keeps no copy of it, so a run of
+ * step 4 or 7 after step 7 cannot read the entry back.
+ */
+export function goneAfterStep7(id: string, kind: "story" | "rule"): MigrationInputError {
+  return new MigrationInputError(
+    `${PLAN_PATH}: ${id} names no ${kind} a spec pack holds. If step 7 has already removed it, steps 4 to 7 cannot run again: restore the spec packs from git history and run the migration again from step 1.`,
+  );
+}
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -326,7 +331,7 @@ type OldCase = {
   invalidExampleReference: boolean;
 };
 type OldRule = { id: string; statement: string; status: string; contractRefs: string };
-type OldPack = {
+export type OldPack = {
   id: string;
   dir: string;
   retired: boolean;
@@ -641,24 +646,29 @@ function splitIds(value: string, prefix: string): string[] {
   return [...new Set(value.match(pattern) ?? [])];
 }
 
-async function readOldPack(context: MigrationContext, id: string): Promise<OldPack> {
+/** The files of a spec pack the steps read, which step 7 deletes once all of it is placed. */
+export const PACK_FILES = [
+  "01_Spec.md",
+  "02_User-stories.md",
+  "03_Acceptance-Criteria.md",
+  "04_Business-Rules.md",
+  "05_Examples.md",
+  "06_Test-Cases.md",
+] as const;
+
+/** A spec pack as its files hold it. `missingIsEmpty` reads an absent file as one with nothing in it. */
+export async function readOldPack(
+  context: MigrationContext,
+  id: string,
+  missingIsEmpty = false,
+): Promise<OldPack> {
   const dir = path.join(context.specsDir, id);
-  const filenames = [
-    "01_Spec.md",
-    "02_User-stories.md",
-    "03_Acceptance-Criteria.md",
-    "04_Business-Rules.md",
-    "05_Examples.md",
-    "06_Test-Cases.md",
-  ] as const;
   const entries = await Promise.all(
-    filenames.map(async (file) => {
-      const current = await readOptional(path.join(dir, file));
-      const archived = await readOptional(
-        path.join(context.root, `.qfai/evidence/migration-spec-to-story/retired/${id}/${file}`),
-      );
-      const archiveFirst = file === "04_Business-Rules.md" || file === "05_Examples.md";
-      const raw = archiveFirst ? (archived ?? current) : (current ?? archived);
+    PACK_FILES.map(async (file) => {
+      const raw = await readOptional(path.join(dir, file));
+      // Step 7 deletes the rule file once every rule in it has moved.
+      if (raw === null && (missingIsEmpty || file === "04_Business-Rules.md"))
+        return [file, ""] as const;
       if (raw === null)
         throw new MigrationInputError(`${relative(context.root, dir)}/${file} is missing`);
       return [file, raw] as const;
@@ -946,8 +956,8 @@ function reportUnplaced(
 }
 
 const STORY_SENTENCE = /^As an? [^,]+, I want .+, so that .+\.$/;
-/** Fields of an old story block that the archive keeps and the story tree does not. */
-const ARCHIVED_STORY_FIELDS = new Set(["parent", "source", "flow"]);
+/** Fields of an old story block that the story tree does not keep. */
+const DROPPED_STORY_FIELDS = new Set(["parent", "source", "flow"]);
 
 type StoryParts = { sentence: string; nonGoals: string[] };
 /** A story block that holds some of its `As a`, `I want` and `So that` fields and not all. */
@@ -1026,7 +1036,7 @@ function storyParts(body: string): StoryParts | PartialStory | null {
       sentences.push(entry.text);
     } else if (entry.key === "non-goals") {
       nonGoals.push(...[entry.value, ...entry.items].map((text) => text.trim()).filter(Boolean));
-    } else if (ARCHIVED_STORY_FIELDS.has(entry.key)) {
+    } else if (DROPPED_STORY_FIELDS.has(entry.key)) {
       continue;
     } else if (entry.items.length > 0) {
       return null;
@@ -1036,7 +1046,7 @@ function storyParts(body: string): StoryParts | PartialStory | null {
       if (entry.article) fields.set("article", entry.article);
     } else if (entry.key === "goal") {
       sentences.push(entry.value);
-    } else if (!ARCHIVED_STORY_FIELDS.has(entry.key)) {
+    } else if (!DROPPED_STORY_FIELDS.has(entry.key)) {
       return null;
     }
   }
@@ -1062,11 +1072,11 @@ function storyFromFields(
 }
 
 /**
- * A story block without the top-level fields only the archive keeps, and their
+ * A story block without the top-level fields the story tree does not keep, and their
  * continuation lines. A line inside a fence is content, never a field. Every other
  * line stays as written, except a blank line a removed field leaves beside another.
  */
-function withoutArchivedFields(body: string): string {
+function withoutDroppedFields(body: string): string {
   const kept: string[] = [];
   let skipping = false;
   let removed = false;
@@ -1074,7 +1084,7 @@ function withoutArchivedFields(body: string): string {
   for (const line of body.replace(/\r\n/g, "\n").split("\n")) {
     const marker = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
     const field = fence === null ? /^-\s+([A-Za-z][A-Za-z-]*):/.exec(line) : null;
-    if (field) skipping = ARCHIVED_STORY_FIELDS.has((field[1] ?? "").toLowerCase());
+    if (field) skipping = DROPPED_STORY_FIELDS.has((field[1] ?? "").toLowerCase());
     else if (fence === null && line.trim() !== "" && !/^\s+\S/.test(line)) skipping = false;
     const run = marker?.[1] ?? "";
     if (marker && fence === null) fence = run;
@@ -1105,7 +1115,7 @@ function outputStory(
 ): string {
   const heading = `# ${newId}: ${story.title}\n\n## User Story\n\n`;
   if (parts === null) {
-    return `${heading}${replacedIds(withoutArchivedFields(story.body), ids).trim()}\n`;
+    return `${heading}${replacedIds(withoutDroppedFields(story.body), ids).trim()}\n`;
   }
   const nonGoals = parts.nonGoals.map((text) => `- ${replacedIds(text, ids)}`).join("\n");
   return `${heading}${replacedIds(parts.sentence, ids)}\n${nonGoals ? `\n## Non-goals\n\n${nonGoals}\n` : ""}`;
@@ -1262,60 +1272,13 @@ async function templateDiagram(): Promise<string> {
   throw new MigrationInputError("The qfai-sdd business flow template is missing");
 }
 
-async function archiveSource(
+/** Deletes a 1.x file nothing later reads, listed under `## Operations`. */
+async function retireSource(
   context: MigrationContext,
   source: string,
-  target: string,
 ): Promise<MigrationOperation[]> {
-  const original = await readOptional(path.join(context.root, source));
-  if (original === null) return [];
-  const archived = await readOptional(path.join(context.root, target));
-  if (archived !== null && archived !== original) {
-    throw new MigrationInputError(`${target} differs from ${source}`);
-  }
-  return archived === null
-    ? [{ kind: "move", source, target }]
-    : [{ kind: "remove", target: source, description: "remove after archival" }];
-}
-
-async function archiveExamples(
-  context: MigrationContext,
-  pack: OldPack,
-  source: string,
-  target: string,
-  map: MigrationIdMap,
-): Promise<MigrationOperation[]> {
-  const current = await readOptional(path.join(context.root, source));
-  const archived = await readOptional(path.join(context.root, target));
-  const original = archived ?? current;
-  if (original === null) return [];
-  const records = parseLegacyRecords(original, "EX", source);
-  const mapped = new Set(
-    records.filter((record) => map.ids[pack.id]?.[record.id]).map((record) => record.id),
-  );
-  const remaining = withoutLegacyRecords(original, records, mapped);
-  if (current !== null && current !== original && current !== remaining) {
-    throw new MigrationInputError(`${source} differs from its archived unmapped examples`);
-  }
-  const operations: MigrationOperation[] = [];
-  if (records.length === mapped.size) {
-    if (current === null) return operations;
-    operations.push(
-      archived === null
-        ? { kind: "move", source, target }
-        : {
-            kind: "remove",
-            target: source,
-            description: "archive complete; remove migrated examples",
-          },
-    );
-    return operations;
-  }
-  if (archived === null) operations.push({ kind: "write", target, content: original });
-  if (current !== null && current !== remaining) {
-    operations.push({ kind: "write", target: source, content: remaining });
-  }
-  return operations;
+  if ((await readOptional(path.join(context.root, source))) === null) return [];
+  return [{ kind: "remove", target: source, description: "delete" }];
 }
 
 /**
@@ -1365,7 +1328,7 @@ function assertExampleEntries(
 
 export const step04: MigrationStep = {
   number: 4,
-  writeSet: ["qfai", "specs", "contracts"],
+  writeSet: ["qfai", "specs", "contracts", "migration-state"],
   sections: ["For a person"],
   async plan(context: MigrationContext) {
     const operations: MigrationOperation[] = [];
@@ -1406,6 +1369,7 @@ export const step04: MigrationStep = {
     for (const flow of plan.flows) {
       for (const planned of flow.stories) {
         const story = storyById.get(planned.id);
+        if (!story && existingMap !== null) throw goneAfterStep7(planned.id, "story");
         if (!story || byPack.get(packOf(planned.id))?.retired) {
           throw new MigrationInputError(`${PLAN_PATH}: unknown active story ${planned.id}`);
         }
@@ -1496,6 +1460,7 @@ export const step04: MigrationStep = {
     for (const rule of [...plan.rules, ...plan.marks]) {
       const pack = byPack.get(packOf(rule.id));
       const oldRule = pack?.rules.find((candidate) => candidate.id === rule.id);
+      if (!oldRule && existingMap !== null) throw goneAfterStep7(rule.id, "rule");
       if (!oldRule || pack?.retired) {
         throw new MigrationInputError(`${PLAN_PATH}: unknown active rule ${rule.id}`);
       }
@@ -1575,15 +1540,7 @@ export const step04: MigrationStep = {
     );
     const specsRelative = relative(context.root, context.specsDir);
     const policyDir = path.join(context.specsDir, "_policies");
-    const oldFlowText =
-      (await readOptional(path.join(policyDir, "04_Business-Flow.md"))) ??
-      (await readOptional(
-        path.join(
-          context.root,
-          ".qfai/evidence/migration-spec-to-story/retired/_policies/04_Business-Flow.md",
-        ),
-      )) ??
-      "";
+    const oldFlowText = (await readOptional(path.join(policyDir, "04_Business-Flow.md"))) ?? "";
     const fallbackDiagram = await templateDiagram();
     operations.push({
       kind: "write",
@@ -1704,61 +1661,19 @@ export const step04: MigrationStep = {
         });
       }
     }
+    // The pack's stories, criteria, examples, cases and rules stay for steps 5 to 7,
+    // and for a later run of this step; step 7 deletes them once all are placed.
     for (const pack of packs) {
-      for (const [file, allMapped] of [
-        [
-          "02_User-stories.md",
-          pack.retired || pack.stories.every((story) => Boolean(map.ids[pack.id]?.[story.id])),
-        ],
-        [
-          "03_Acceptance-Criteria.md",
-          pack.retired ||
-            pack.criteria.every((criterion) => Boolean(map.ids[pack.id]?.[criterion.id])),
-        ],
-        [
-          "05_Examples.md",
-          pack.retired || pack.examples.every((example) => Boolean(map.ids[pack.id]?.[example.id])),
-        ],
-      ] as const) {
-        const source = `${specsRelative}/${pack.id}/${file}`;
-        if (file === "05_Examples.md") {
-          operations.push(
-            ...(await archiveExamples(
-              context,
-              pack,
-              source,
-              `.qfai/evidence/migration-spec-to-story/retired/${pack.id}/${file}`,
-              map,
-            )),
-          );
-          continue;
-        }
-        if (!allMapped) continue;
-        operations.push(
-          ...(await archiveSource(
-            context,
-            source,
-            `.qfai/evidence/migration-spec-to-story/retired/${pack.id}/${file}`,
-          )),
-        );
-      }
-      for (const file of ["06_Test-Cases.md", "10_Plan.md", "16_Traceability-ledger.md"]) {
-        const source = `${specsRelative}/${pack.id}/${file}`;
-        operations.push(
-          ...(await archiveSource(
-            context,
-            source,
-            `.qfai/evidence/migration-spec-to-story/retired/${pack.id}/${file}`,
-          )),
-        );
+      for (const file of ["10_Plan.md", "16_Traceability-ledger.md"]) {
+        operations.push(...(await retireSource(context, `${specsRelative}/${pack.id}/${file}`)));
       }
       const tddPath = path.join(pack.dir, "tdd");
       try {
         await readdir(tddPath);
         operations.push({
-          kind: "move",
-          source: `${specsRelative}/${pack.id}/tdd`,
-          target: `.qfai/evidence/migration-spec-to-story/retired/${pack.id}/tdd`,
+          kind: "remove",
+          target: `${specsRelative}/${pack.id}/tdd`,
+          description: "delete",
         });
       } catch (error: unknown) {
         if (!isEnoent(error))
@@ -1767,33 +1682,9 @@ export const step04: MigrationStep = {
           );
       }
     }
-    for (const file of ["03_Capabilities.md", "04_Business-Flow.md"]) {
-      const source = `${specsRelative}/_policies/${file}`;
-      operations.push(
-        ...(await archiveSource(
-          context,
-          source,
-          `.qfai/evidence/migration-spec-to-story/retired/_policies/${file}`,
-        )),
-      );
-    }
-    try {
-      const policyEntries = await readdir(policyDir);
-      if (
-        policyEntries.length > 0 &&
-        policyEntries.every((entry) =>
-          ["03_Capabilities.md", "04_Business-Flow.md"].includes(entry),
-        )
-      ) {
-        operations.push({ kind: "remove-empty-directory", target: `${specsRelative}/_policies` });
-      }
-    } catch (error: unknown) {
-      if (!isEnoent(error)) {
-        throw new MigrationInputError(
-          `${policyDir}: ${error instanceof Error ? error.message : String(error)}`,
-        );
-      }
-    }
+    operations.push(
+      ...(await retireSource(context, `${specsRelative}/_policies/03_Capabilities.md`)),
+    );
     return { operations, forAPerson };
   },
 };
