@@ -40,6 +40,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   with a space is matched with `?` or `[ ]`. A leading `!(` extglob is read as a
   pattern, not an exclusion. Fixes #2902.
 
+- **`qfai init --force` reports only the paths it changed.** The `written` count
+  and list included every distributed file, including those already identical to
+  the shipped copy. Rule files, the Copilot and Codex files and the agent and
+  skill links that need no change are now counted as skipped (#2986).
+
 - **The `qfai-run` entry reminder stays silent on a turn the host starts
   (#2989).** The Claude Code `UserPromptSubmit` hook that sends a request to
   `qfai-run` printed on every notification, so an agent could start a run from
@@ -55,6 +60,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `.claude/skills/qfai-run/SKILL.md` under the current directory. The reminder
   is read from the session's own checkout. Fixes #2972.
 
+- **The changelog guard no longer fails the commit a release is tagged at.**
+  The guard refuses an entry added to a section whose tag exists. The merge
+  that folds `## [Unreleased]` into the release is the commit the tag is pushed
+  to, so the push run read the release's own entries as late additions and
+  turned `main` red. A tag on the commit being checked is now the release being
+  cut and does not make its section released (#2945).
 - **The planner-first and design anti-goal examples are tested for what they
   say.** The planner-first example was annotated on a test that only checked
   three file names. Its test now reads the completion matrix and the
@@ -147,6 +158,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   routing-eval token vocabulary changes. The set of safety-relevant routing
   seeds is unchanged, and the list derived from these classes may now be
   recorded. The decision is recorded in `decisions.md`.
+
+- **The shipped guidance now bounds test-suite size and unrequested fixes**
+  (#2242). The test-layer rule gains a sizing section: a new test file is sized
+  like its neighbours, a process-per-case suite is a choice rather than an
+  inherited shape, and a scratch check does not become a permanent test file.
+  The minimal-implementation rule's section on what a change leaves out gains
+  two lines. A fix nobody asked for is reported as a follow-up, unless the
+  requested behaviour cannot work without it; the change's report then names
+  it. Where work goes ahead on an assumption about an ambiguous request, it is
+  built for one reading and the assumption is stated. The implementation and QA
+  reviewer cards and the review the implement skill gives each gain one check
+  for these. Test coverage for every source change is still required.
 
 ## [2.1.0] - 2026-10-05
 
