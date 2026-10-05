@@ -25,6 +25,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The contract guide states one scope for contract kinds.** It named only
+  `api/`, `db/` and `ui/` as contract directories in one place and `cli/` in
+  another. It now says a project's contracts are the three directories and that
+  `cli/` is the QFAI repository's own. The `QFAI-DB-001` row of the SQL findings
+  table, which rendered outside the table, now sits beside the other rows.
+  Fixes #2860.
 - **The planner-first and design anti-goal examples are tested for what they
   say.** The planner-first example was annotated on a test that only checked
   three file names. Its test now reads the completion matrix and the
