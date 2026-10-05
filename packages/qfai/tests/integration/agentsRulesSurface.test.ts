@@ -1293,7 +1293,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /every\s+session,\s+sub-agent\s+and\s+background\s+task\s+draws\s+on\s+the\s+same/,
         // The command that makes the cheap path the default, named by no path
         // an adopter lacks.
-        /A\s+project\s+that\s+writes\s+one\s+names\s+it\s+here/,
+        /a\s+project\s+that\s+writes\s+one\s+names\s+it\s+here/,
       ]) {
         expect(text).toMatch(clause);
       }
