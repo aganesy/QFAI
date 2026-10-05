@@ -72,7 +72,5 @@ coverage/
 .qfai/state.json.lock
 .qfai/run/
 !.qfai/
-!.qfai/install-provenance.json
 !.qfai/assistant/
 !.qfai/assistant/**
-!.qfai/assistant/.assets.lock.json

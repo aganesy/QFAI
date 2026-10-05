@@ -1,4 +1,4 @@
-# US-0001-0077: Steering Population
+# US-0001-0077: Policy Population
 
 ## User Story
 

@@ -247,6 +247,7 @@ export function validateStoryTreeStructureModel(model: StoryTreeModel): Issue[] 
     issues.push(finding("QFAI-STORY-005", error, ""));
   }
   issues.push(...validateRuleContractNumbers(model));
+  issues.push(...validateRecordCitations(model));
   return issues;
 }
 
@@ -265,6 +266,53 @@ function validateRuleContractNumbers(model: StoryTreeModel): Issue[] {
         `${rule.id} does not carry the number of its contract ${contractId ?? "(no contract ID)"} in ${rule.file}`,
         rule.file,
         [rule.id],
+      ),
+    );
+  }
+  return issues;
+}
+
+/**
+ * A `DEC-NNNN` or `OQ-NNNN` standing on its own. The guards keep a legacy
+ * `DEC-NNNN-NNNN` from being read as its leading segment.
+ */
+const CITED_RECORD_ID = /(?<![A-Za-z0-9_-])((?:DEC|OQ)-\d{4})(?![0-9-])/g;
+const SUPERSEDED_BY = /^(?:PARTLY )?SUPERSEDED \(by (DEC-\d{4})\)$/;
+
+/**
+ * Every decision or open question a contract rule cites, and every decision a
+ * superseded row names as its successor, is declared by a row.
+ */
+function validateRecordCitations(model: StoryTreeModel): Issue[] {
+  const decisions = new Set((model.decisions?.rows ?? []).map(({ id }) => id));
+  const questions = new Set((model.openQuestions?.rows ?? []).map(({ id }) => id));
+  const issues: Issue[] = [];
+  for (const rule of model.rules) {
+    const cited = new Set(
+      Array.from(rule.statement.matchAll(CITED_RECORD_ID), ([, id = ""]) => id),
+    );
+    for (const id of cited) {
+      if (decisions.has(id) || questions.has(id)) continue;
+      issues.push(
+        finding(
+          "QFAI-STORY-003",
+          `${rule.id} cites ${id}, which no decisions or open-questions row declares, in ${rule.file}`,
+          rule.file,
+          [rule.id, id],
+        ),
+      );
+    }
+  }
+  const decisionFile = model.decisionFile ?? "";
+  for (const row of model.decisions?.rows ?? []) {
+    const successor = SUPERSEDED_BY.exec(row.status)?.[1];
+    if (successor === undefined || decisions.has(successor)) continue;
+    issues.push(
+      finding(
+        "QFAI-STORY-003",
+        `${row.id} is superseded by ${successor}, which no decisions row declares, in ${decisionFile}`,
+        decisionFile,
+        [row.id, successor],
       ),
     );
   }

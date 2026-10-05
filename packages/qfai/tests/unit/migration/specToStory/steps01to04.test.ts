@@ -8,9 +8,9 @@ import {
 } from "../../../../src/migration/specToStory/step04RenumberIds.js";
 
 describe("migration record status", () => {
+  // QFAI:EX-0004-0005-03
+  // QFAI:EX-0004-0005-04
   it("maps current, superseded and absent statuses", () => {
-    // QFAI:EX-0004-0005-03
-    // QFAI:EX-0004-0005-04
     expect([
       mapDecisionStatus("proposed"),
       mapDecisionStatus("accepted"),
@@ -24,8 +24,8 @@ describe("migration record status", () => {
 });
 
 describe("migration numbering", () => {
+  // QFAI:EX-0004-0007-02
   it("numbers flows, stories, criteria, examples and rules in their specified order", () => {
-    // QFAI:EX-0004-0007-02
     expect(
       numberPlannedItems({
         flows: [

@@ -16,7 +16,7 @@ import {
 } from "./ownCi.js";
 
 // The workflow control-core suites, the Codex hook suites, the init suites, and the named
-// provenance, gitignore and migration tests. The literal is the declaration this case holds the
+// gitignore and migration tests. The literal is the declaration this case holds the
 // script to.
 const DECLARED_SUITES = [
   "tests/unit/workflow/",
@@ -25,8 +25,6 @@ const DECLARED_SUITES = [
   "tests/assets/freeTextEntryHook.test.ts",
   "tests/cli/init",
   "tests/integration/init/",
-  "tests/core/assistantAssetProvenance.test.ts",
-  "tests/unit/shared/provenanceLockConfirm.test.ts",
   "tests/core/gitignoreGovernanceRecords.test.ts",
   "tests/core/gitignoreMatcher.test.ts",
   "tests/validators/assistantTreeMigration.test.ts",

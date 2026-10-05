@@ -9,7 +9,7 @@ Feature: Decision and open-question tables
     Given a project on the story tree
     When `decisions.md` and `open-questions.md` are read
     Then each holds one table with exactly the columns ID, Content, Approach and Status
-    And a `decisions.md` row has an ID of the form `DEC-NNNN` and a Status of TODO, WIP, DONE, `SUPERSEDED (by DEC-NNNN)` or REJECTED
+    And a `decisions.md` row has an ID of the form `DEC-NNNN` and a Status of TODO, WIP, DONE, `SUPERSEDED (by DEC-NNNN)`, `PARTLY SUPERSEDED (by DEC-NNNN)` or REJECTED
     And an `open-questions.md` row has an ID of the form `OQ-NNNN` and a Status of TODO, WIP, DONE or DEFERRED
 
   # AC-0001-0007-02

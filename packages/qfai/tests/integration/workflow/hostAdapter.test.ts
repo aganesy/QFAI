@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0194-08
-
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { mkdtemp, readdir, readFile, realpath } from "node:fs/promises";
@@ -110,6 +108,7 @@ const HOSTS: [string, string, string][] = [
 ];
 
 for (const [host, skillDir, entryFile] of HOSTS) {
+  // QFAI:EX-0001-0194-08
   it(`The tree qfai init writes carries the ${host} adapter`, async () => {
     const skills = await entrySkills();
 

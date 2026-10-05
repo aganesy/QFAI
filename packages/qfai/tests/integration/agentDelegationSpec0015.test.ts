@@ -3,8 +3,6 @@
  * and delegation behavior.
  */
 // QFAI:AC-0001-0161-01
-// QFAI:EX-0001-0163-01
-// QFAI:EX-0001-0163-02
 import { mkdtemp, readdir, readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -83,6 +81,8 @@ async function manifestFilesUnder(dir: string): Promise<string[]> {
   return entries.filter((entry) => MANIFEST_FILE_NAMES.has(path.basename(entry)));
 }
 
+// QFAI:EX-0001-0163-01
+// QFAI:EX-0001-0163-02
 describe("agent cards are the only definitions", () => {
   it("ships nineteen complete cards without project manifest copies", async () => {
     const cards = (await readdir(AGENTS_DIR)).filter((name) => name.endsWith(".md"));
@@ -161,237 +161,110 @@ describe("routing defaults are package data", () => {
     ]);
     expect(migration?.phases[0]?.blocking_agents).toEqual(["solution-architect"]);
     expect(migration?.phases[1]?.mandatory_agents).toEqual(["devops-ci-engineer"]);
-    expect(migration?.phases[2]?.blocking_agents).toEqual([
-      "completion-reviewer",
-      "architecture-reviewer",
-    ]);
+    expect(migration?.phases[2]?.blocking_agents).toEqual(["architecture-reviewer"]);
     expect(migration?.review_profile).toBe("architecture-heavy");
   });
 });
-// TC-0015-0011: Delegation Failure Hard Stop Reporting
-describe("TC-0015-0011: Delegation Failure Hard Stop Reporting", () => {
-  it("stops the stage and reports hard-stop remediation details", async () => {
-    const [baselineContent, skillContent, liveBaselineContent, liveSkillContent] =
-      await Promise.all([
-        readAsset(SHARED_DELEGATION_BASELINE),
-        readAsset(QFAI_IMPLEMENT_SKILL),
-        readAsset(LIVE_SHARED_DELEGATION_BASELINE),
-        readAsset(LIVE_QFAI_IMPLEMENT_SKILL),
-      ]);
+/** The same section of the shipped baseline and of the repository's synced copy. */
+async function baselineSections(heading: string): Promise<string[]> {
+  const [shipped, live] = await Promise.all([
+    readAsset(SHARED_DELEGATION_BASELINE),
+    readAsset(LIVE_SHARED_DELEGATION_BASELINE),
+  ]);
+  return [getSection(shipped, heading), getSection(live, heading)].map((section) =>
+    section.replace(/\s+/g, " "),
+  );
+}
 
-    const capabilitySection = getSection(baselineContent, "### Capability Probe (MUST)");
-    const baselineHardStopSection = getSection(
-      baselineContent,
-      "### Delegation Failure (Hard Stop)",
-    );
-    expect(skillContent).toContain("rule/shared-skill-delegation-baseline.md");
+describe("the session agent holds the work and delegates by choice", () => {
+  // QFAI:AC-0001-0224-02
+  // QFAI:EX-0001-0224-02
+  it("lets the session author any artifact and keeps every review with a non-author", async () => {
+    for (const section of await baselineSections("### Orchestrator Protocol")) {
+      expect(section).toContain("may author any artifact itself");
+      expect(section).toContain("sub-agents that run in parallel");
+      expect(section).toContain(
+        "A review is done by an agent that did not author what it reviews.",
+      );
+      expect(section).toContain("never reviews its own work");
+    }
+    for (const content of [
+      await readAsset(SHARED_DELEGATION_BASELINE),
+      await readAsset(LIVE_SHARED_DELEGATION_BASELINE),
+    ]) {
+      expect(getSection(content, "## Sub-agent Delegation (MANDATORY)")).toContain(
+        "Delegation is optional.",
+      );
+    }
+    for (const skill of [QFAI_IMPLEMENT_SKILL, LIVE_QFAI_IMPLEMENT_SKILL]) {
+      expect(await readAsset(skill)).toContain("rule/shared-skill-delegation-baseline.md");
+    }
+  });
 
-    expect(capabilitySection).toContain("If the delegation fails, classify the failure first");
-    expect(capabilitySection).toContain(
-      "Never simulate roles and never continue with self-execution",
-    );
+  // QFAI:AC-0001-0163-02
+  // QFAI:EX-0001-0163-02
+  it("requires no delegation at stage start, and treats a chosen delegation as the capability check", async () => {
+    for (const section of await baselineSections("### Capability Probe (MUST)")) {
+      expect(section).toContain("No delegation attempt is required at the start of a stage.");
+      expect(section).toContain("delegates only when it chooses to");
+      expect(section).toContain("the real delegation attempt is the capability check");
+      expect(section).toContain("Do not gate execution on preflight availability questions");
+      expect(section).toContain("If the delegation fails, classify the failure first");
+    }
+  });
 
-    expect(baselineHardStopSection).toContain("Delegation failure:");
-    expect(baselineHardStopSection).toContain("Attempted role:");
-    expect(baselineHardStopSection).toContain("Attempted task:");
-    expect(baselineHardStopSection).toContain("User action needed:");
-    expect(baselineHardStopSection).toContain(
-      "Retry condition: rerun after the required delegation succeeds",
-    );
-
-    // Live operational files must satisfy the same hard-stop reporting contract
-    const liveCapabilitySection = getSection(liveBaselineContent, "### Capability Probe (MUST)");
-    const liveBaselineHardStopSection = getSection(
-      liveBaselineContent,
-      "### Delegation Failure (Hard Stop)",
-    );
-    expect(liveSkillContent).toContain("rule/shared-skill-delegation-baseline.md");
-
-    expect(liveCapabilitySection).toContain("If the delegation fails, classify the failure first");
-    expect(liveCapabilitySection).toContain(
-      "Never simulate roles and never continue with self-execution",
-    );
-
-    expect(liveBaselineHardStopSection).toContain("Delegation failure:");
-    expect(liveBaselineHardStopSection).toContain("Attempted role:");
-    expect(liveBaselineHardStopSection).toContain("Attempted task:");
-    expect(liveBaselineHardStopSection).toContain("User action needed:");
-    expect(liveBaselineHardStopSection).toContain(
-      "Retry condition: rerun after the required delegation succeeds",
-    );
+  // QFAI:AC-0001-0163-03
+  // QFAI:EX-0001-0163-01
+  it("has the session do the work itself when a delegation is unavailable, and report it", async () => {
+    for (const taxonomy of await baselineSections("### Delegation Failure Taxonomy (MUST)")) {
+      expect(taxonomy).toMatch(/\| `unavailable` \|[^|]*\| The orchestrator does the work itself/);
+    }
+    for (const section of await baselineSections(
+      "### Delegation Failure — `unavailable` (The Orchestrator Does The Work)",
+    )) {
+      expect(section).toContain("does the work itself and reports it as its own");
+      for (const field of [
+        "Delegation failure:",
+        "Failure class: unavailable",
+        "Attempted role:",
+        "Attempted task:",
+        "Done by: the orchestrator",
+      ]) {
+        expect(section).toContain(field);
+      }
+    }
   });
 });
 
-// TC-0015-0012: Capability Probe First Real Delegation Contract
-describe("TC-0015-0012: Capability Probe First Real Delegation Contract", () => {
-  it("uses the first required delegation as the capability probe", async () => {
-    const [baselineContent, skillContent, liveBaselineContent, liveSkillContent] =
-      await Promise.all([
-        readAsset(SHARED_DELEGATION_BASELINE),
-        readAsset(QFAI_IMPLEMENT_SKILL),
-        readAsset(LIVE_SHARED_DELEGATION_BASELINE),
-        readAsset(LIVE_QFAI_IMPLEMENT_SKILL),
-      ]);
-
-    const baselineCapabilitySection = getSection(baselineContent, "### Capability Probe (MUST)");
-    const baselineHardStopSection = getSection(
-      baselineContent,
-      "### Delegation Failure (Hard Stop)",
-    );
-    expect(skillContent).toContain("rule/shared-skill-delegation-baseline.md");
-
-    expect(baselineContent.indexOf("### Capability Probe (MUST)")).toBeLessThan(
-      baselineContent.indexOf("### Delegation Failure (Hard Stop)"),
-    );
-    expect(baselineCapabilitySection).toContain(
-      "Attempt the first required delegation at stage start",
-    );
-    expect(baselineCapabilitySection).toContain(
-      "Treat that first real delegation attempt as the capability check.",
-    );
-    expect(baselineCapabilitySection).toContain(
-      "If the delegation fails, classify the failure first",
-    );
-
-    expect(baselineHardStopSection).toContain("Delegation failure:");
-    expect(baselineHardStopSection).toContain("Attempted role:");
-    expect(baselineHardStopSection).toContain("Attempted task:");
-    expect(baselineHardStopSection).toContain(
-      "Why stopped: QFAI requires real sub-agent delegation in this environment.",
-    );
-    expect(baselineHardStopSection).toContain("User action needed:");
-    expect(baselineHardStopSection).toContain(
-      "Retry condition: rerun after the required delegation succeeds",
-    );
-
-    // Live operational files must satisfy the same capability probe contract
-    const liveBaselineCapabilitySection = getSection(
-      liveBaselineContent,
-      "### Capability Probe (MUST)",
-    );
-    const liveBaselineHardStopSection = getSection(
-      liveBaselineContent,
-      "### Delegation Failure (Hard Stop)",
-    );
-    expect(liveSkillContent).toContain("rule/shared-skill-delegation-baseline.md");
-
-    expect(liveBaselineContent.indexOf("### Capability Probe (MUST)")).toBeLessThan(
-      liveBaselineContent.indexOf("### Delegation Failure (Hard Stop)"),
-    );
-    expect(liveBaselineCapabilitySection).toContain(
-      "Attempt the first required delegation at stage start",
-    );
-    expect(liveBaselineCapabilitySection).toContain(
-      "Treat that first real delegation attempt as the capability check.",
-    );
-    expect(liveBaselineCapabilitySection).toContain(
-      "If the delegation fails, classify the failure first",
-    );
-
-    expect(liveBaselineHardStopSection).toContain("Delegation failure:");
-    expect(liveBaselineHardStopSection).toContain("Attempted role:");
-    expect(liveBaselineHardStopSection).toContain("Attempted task:");
-    expect(liveBaselineHardStopSection).toContain(
-      "Why stopped: QFAI requires real sub-agent delegation in this environment.",
-    );
-    expect(liveBaselineHardStopSection).toContain("User action needed:");
-    expect(liveBaselineHardStopSection).toContain(
-      "Retry condition: rerun after the required delegation succeeds",
-    );
-  });
-});
-
-// The taxonomy has to be usable
-// without mis-routing a permanent failure into a pointless wait, and the
-// status vocabulary has to admit the value the taxonomy mandates.
+// The taxonomy has to be usable without mis-routing a permanent failure into a
+// pointless wait.
 describe("delegation failure taxonomy is actionable", () => {
-  const SKILLS_WITH_STATUS_VOCABULARY = [
-    "qfai-atdd",
-    "qfai-configure",
-    "qfai-verify",
-    "qfai-sdd",
-    "qfai-discussion",
-    "qfai-implement",
-  ];
-
-  function shippedSkill(skillId: string): string {
-    return path.resolve(
-      __dirname,
-      "..",
-      "..",
-      "assets",
-      "init",
-      ".qfai",
-      "assistant",
-      "skill",
-      skillId,
-      "SKILL.md",
-    );
-  }
-
   it("classifies a limit the user must lift as unavailable, not saturated", async () => {
-    // A configured cap of 0, a max delegation depth, an input-size limit
-    // or an exhausted quota all name a "limit"/"quota" but never clear on
-    // their own. Routing them to the retry branch burns 30/60/120s and
-    // then reports that no user action is needed.
-    for (const file of [SHARED_DELEGATION_BASELINE, LIVE_SHARED_DELEGATION_BASELINE]) {
-      const content = await readAsset(file);
-      const taxonomy = getSection(content, "### Delegation Failure Taxonomy (MUST)");
+    for (const taxonomy of await baselineSections("### Delegation Failure Taxonomy (MUST)")) {
       expect(taxonomy).toContain("A limit or quota that only a user can lift is `unavailable`");
       expect(taxonomy).toMatch(/retryability is not explicit, default to `unavailable`/);
     }
   });
 
   // QFAI:EX-0001-0163-06
-  it("retries a saturated delegation and reports an exhausted budget", async () => {
-    for (const file of [SHARED_DELEGATION_BASELINE, LIVE_SHARED_DELEGATION_BASELINE]) {
-      const content = await readAsset(file);
-      const taxonomy = getSection(content, "### Delegation Failure Taxonomy (MUST)");
+  it("retries a saturated review delegation, then stops rather than reviewing its own work", async () => {
+    for (const taxonomy of await baselineSections("### Delegation Failure Taxonomy (MUST)")) {
       expect(taxonomy).toContain("`agent thread limit reached`");
-      expect(taxonomy).toContain("Bounded wait-and-retry on the same stage");
-      expect(taxonomy).toContain("report the class as `saturated (retry budget exhausted)`");
-      expect(taxonomy).toContain("`saturated` never authorises self-execution");
-    }
-  });
-
-  // QFAI:AC-0001-0163-06
-  // QFAI:EX-0001-0163-07
-  it("admits PENDING in the Work Orders status vocabulary everywhere it is mandated", async () => {
-    // The reviewer-budget branch mandates recording the gate as PENDING;
-    // a schema that allows only PASS/REVISE leaves an agent no legal way
-    // to do that.
-    for (const file of [SHARED_DELEGATION_BASELINE, LIVE_SHARED_DELEGATION_BASELINE]) {
-      const content = await readAsset(file);
-      expect(content).toContain(
-        "| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |",
+      expect(taxonomy).toContain("Bounded wait-and-retry of the identical delegation");
+      expect(taxonomy).toContain(
+        "handle the failure as `unavailable` and report the class as `saturated (retry budget exhausted)`",
       );
-      expect(content).toContain("Status (PASS/REVISE/PENDING)");
-      expect(getSection(content, "### Reviewer budget exhausted")).toContain("`PENDING`");
     }
-    const sddEvidence = await readAsset(
-      path.join(
-        ASSETS,
-        "init",
-        ".qfai",
-        "assistant",
-        "skill",
-        "qfai-sdd",
-        "templates",
-        "evidence",
-        "sdd-flow.md",
-      ),
-    );
-    expect(sddEvidence).toContain(
-      "| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |",
-    );
-    for (const skillId of SKILLS_WITH_STATUS_VOCABULARY) {
-      const content = await readAsset(shippedSkill(skillId));
-      // The closing `)` is what separates the retired schema from the current
-      // one, so the complete token catches it in both carriers the skills use:
-      // the code span `Status (PASS/REVISE)` and the bare Work Orders table
-      // header `| ... | Status (PASS/REVISE) |`.
-      expect(content).not.toContain("Status (PASS/REVISE)");
-      expect(content).toContain("shared-skill-delegation-baseline.md");
+    for (const retry of await baselineSections(
+      "### Delegation Failure — `saturated` (Bounded Retry)",
+    )) {
+      expect(retry).toContain("Retry the identical delegation with backoff");
+    }
+    for (const stop of await baselineSections("### Delegation Failure (Hard Stop)")) {
+      expect(stop).toContain("a review someone other than the author");
+      expect(stop).toContain("`saturated (retry budget exhausted)`");
+      expect(stop).toContain("User action needed:");
+      expect(stop).toContain("Retry condition: rerun after the review delegation succeeds");
     }
   });
 

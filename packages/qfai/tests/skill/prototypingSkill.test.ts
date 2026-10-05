@@ -12,7 +12,6 @@ import {
   isStaticFirstAligned,
   scanBannedPhrases,
   hasDelegationScopeTable,
-  hasMandatoryEvidencePaths,
   hasEnvironmentPreconditions,
   hasPreflightGuidance,
   hasPlaywrightCliFallback,
@@ -57,7 +56,7 @@ const VALID_SKILL_CONTENT = [
   "classification is UI-bearing",
   "",
   "### Step 2-B — Verify Environment Preconditions",
-  "Run qfai prototyping preflight --target-url <url> or qfai doctor --profile prototyping.",
+  "Run qfai doctor --profile prototyping --target-url <url>.",
   "Prefer npx --no-install playwright whenever PATH reachability is not guaranteed.",
   "",
   "## Evaluator Inputs (Mandatory)",
@@ -67,10 +66,6 @@ const VALID_SKILL_CONTENT = [
   "| Generation and implementation | product-experience-architect |",
   "| Live Playwright review and evaluation scoring | product-surface-reviewer |",
   "| Build | devops-ci-engineer, backend-engineer |",
-  "| Optional Playwright CLI execution & capture | devops-ci-engineer |",
-  "",
-  "Screenshot evidence path: .qfai/evidence/prototyping/iter-NN/<screen>.png",
-  "HTML snapshot path: .qfai/evidence/prototyping/iter-NN/<screen>.html",
 ].join("\n");
 
 describe("prototyping skill validator", () => {
@@ -97,8 +92,8 @@ describe("prototyping skill validator", () => {
     expect(hasUiContractScope("ui_bearing: false specs are excluded.")).toBe(false);
   });
 
+  // QFAI:EX-0001-0042-15
   it("does not read the retired CON-UI-NNNN form as the UI contract scope", () => {
-    // QFAI:EX-0001-0042-15
     const retired = VALID_SKILL_CONTENT.replace("full UI-NNNN ID", "full CON-UI-NNNN ID");
 
     expect(hasUiContractScope(retired)).toBe(false);
@@ -118,19 +113,10 @@ describe("prototyping skill validator", () => {
     expect(hasDelegationScopeTable(VALID_SKILL_CONTENT)).toBe(true);
   });
 
-  it("documents canonical mandatory evidence paths", () => {
-    expect(hasMandatoryEvidencePaths(VALID_SKILL_CONTENT)).toBe(true);
-  });
-
   // QFAI:EX-0001-0042-01
-  it("reports a missing required section and missing canonical evidence paths", () => {
+  it("reports a missing required section", () => {
     const withoutSection = VALID_SKILL_CONTENT.replace("## Required References\n", "");
     expect(checkRequiredSections(withoutSection).missing).toEqual(["## Required References"]);
-    const withoutPaths = VALID_SKILL_CONTENT.replace(
-      "Screenshot evidence path: .qfai/evidence/prototyping/iter-NN/<screen>.png\n",
-      "",
-    ).replace("HTML snapshot path: .qfai/evidence/prototyping/iter-NN/<screen>.html", "");
-    expect(hasMandatoryEvidencePaths(withoutPaths)).toBe(false);
   });
 
   it("documents environment preconditions as a separate step", () => {
@@ -231,13 +217,12 @@ describe("prototyping skill asset — the reviewer and its inputs", () => {
     return next < 0 ? body : body.slice(0, next);
   }
 
-  it("the reviewer prompt requires live operation and treats capture inputs as optional", async () => {
+  it("the reviewer prompt requires live operation and treats screenshots as optional", async () => {
     const inputs = section(await readPrototypingAsset("references/reviewer-prompt.md"), "Inputs");
     for (const input of [
       "live prototype URL",
       "your own Playwright session",
-      "When `iterate --capture` is selected",
-      "They are absent by default",
+      "A screenshot or HTML snapshot, only when one was taken",
       "Prior reviews:",
       "Root `DESIGN.md`",
     ]) {
@@ -259,9 +244,9 @@ describe("prototyping skill asset — the reviewer and its inputs", () => {
     expect(skill).toMatch(
       /^\|\s*Live Playwright review and evaluation scoring\s*\|\s*product-surface-reviewer\s*\|/m,
     );
-    expect(skill).toContain("does not require a third sub-agent identity");
-    expect(skill).toContain("optional `iterate --capture` CLI operation");
-    expect(skill).toContain("The reviewer operates Playwright live");
+    expect(skill).toMatch(/Generation and review use two distinct sub-agent\s+identities\./);
+    expect(skill).toMatch(/There is\s+no fixed capture identity/);
+    expect(skill).toMatch(/operates\s+Playwright live/);
   });
 
   it("requires the reviewer to score four ordinal axes while retaining six per-screen Feel fields", async () => {
@@ -280,22 +265,5 @@ describe("prototyping skill asset — the reviewer and its inputs", () => {
     expect(prompt).toContain("Good: on `checkout`");
     expect(prompt).toContain("Bad: record only");
     expect(prompt).not.toContain("No axis, no rating, no aggregate");
-  });
-
-  it("assigns review evidence conversion and screen coverage to the skill writer", async () => {
-    const [skill, loop, prompt] = await Promise.all([
-      readLoopStep(),
-      readPrototypingAsset("references/iteration-loop.md"),
-      readPrototypingAsset("references/reviewer-prompt.md"),
-    ]);
-    expect(skill).toContain("The CLI writes a seed iteration");
-    expect(skill).toContain("Check the summary's `evidenceRefs[]` array");
-    expect(skill).toContain("reject duplicate screen/kind pairs, missing screens");
-    expect(skill).toMatch(/With `--capture`, require a screenshot and HTML\s+path/);
-    expect(skill).toContain("Without `--capture`, store `evidenceRefs: []`");
-    expect(skill).toContain("`buildEvidenceRefs()` is a pure helper, not an automatic");
-    expect(loop).toMatch(/each declared screen must have exactly one entry per required kind/);
-    expect(loop).toContain("The closed");
-    expect(prompt).toContain('evidenceRefs: { kind: "screenshot" | "html"; path: string }[]');
   });
 });
