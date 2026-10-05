@@ -31,6 +31,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A padded or blank test glob selects the same files in every scan.** The
+  story-tree test scan and the spec-to-story annotation rewrite read
+  `validation.traceability.testFileGlobs` and `testFileExcludeGlobs` as written,
+  while the other scans trimmed them. All of them now trim whitespace at either
+  end of an entry, including after the `!` of an exclusion, and skip a blank
+  entry. Whitespace inside a path component is kept; a path that begins or ends
+  with a space is matched with `?` or `[ ]`. A leading `!(` extglob is read as a
+  pattern, not an exclusion. Fixes #2902.
+
 - **The `qfai-run` entry reminder stays silent on a turn the host starts
   (#2989).** The Claude Code `UserPromptSubmit` hook that sends a request to
   `qfai-run` printed on every notification, so an agent could start a run from
