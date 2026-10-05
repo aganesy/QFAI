@@ -41,10 +41,29 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A validator no longer reads an unreadable file as a missing one.** The
+  shared `exists` and `readSafe` helpers turned every failure, including
+  `EACCES` and `EIO`, into "absent" or an empty string, so a file the validator
+  could not read passed as one that was not there. Only `ENOENT` and `ENOTDIR`
+  now mean absent; any other error propagates unchanged. Fixes #2906.
+
+- **The contract guide states one scope for contract kinds.** It named only
+  `api/`, `db/` and `ui/` as contract directories in one place and `cli/` in
+  another. It now says a project's contracts are the three directories and that
+  `cli/` is the QFAI repository's own. The `QFAI-DB-001` row of the SQL findings
+  table, which rendered outside the table, now sits beside the other rows.
+  Fixes #2860.
 - **`qfai init --force` reports only the paths it changed.** The `written` count
   and list included every distributed file, including those already identical to
   the shipped copy. Rule files, the Copilot and Codex files and the agent and
   skill links that need no change are now counted as skipped (#2986).
+
+- **The handoff reader refuses an artifact whose fields have the wrong type.**
+  `HandoffReader.read` checked only that the five top-level keys were present
+  and then returned the file as a `HandoffArtifact`. It now also requires
+  `timestamp` and `iteration`, and checks each field and nested list against
+  the type it returns. A file that fails is refused with `null` and a logged
+  error, as a missing key already was. Fixes #2862.
 
 - **The `qfai-run` entry reminder stays silent on a turn the host starts
   (#2989).** The Claude Code `UserPromptSubmit` hook that sends a request to
@@ -72,6 +91,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   delegation-baseline and test-layers pointers started at `rule/`, so they did
   not resolve from the project root. Both now begin at `.qfai/assistant/rule/`.
   (#2858)
+- **A project can stop `qfai init` writing a shipped workflow.** Deleting
+  `qfai-tests.yml` was not enough: the next `qfai init` wrote it again, though
+  its header said it would not. `workflow.skipShipped` in `qfai.config.yaml`
+  now lists the shipped workflow files init leaves out, and `qfai validate`
+  reports a value that is not a list of shipped names. The headers of
+  `qfai-tests.yml` and `qfai-validate.yml` describe this. Fixes #2979.
 - **The planner-first and design anti-goal examples are tested for what they
   say.** The planner-first example was annotated on a test that only checked
   three file names. Its test now reads the completion matrix and the
@@ -96,6 +121,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **A mutation proof belongs to one example** (#2409). The `qfai-implement`
+  oracle-strength reference now says what to do when one mutation fails tests
+  annotated with different examples: record each failing assertion and the
+  boundary it proves, narrow an assertion that proves another example's
+  boundary, or have `/qfai-sdd` settle an unclear boundary in the examples. A
+  shared predicate may fail several tests whose assertions each prove their own
+  example.
 - **The orchestrator keeps working while a delegation runs** (#2244). The
   shared delegation baseline now says the orchestrator is not required to wait
   for a sub-agent. Where the host starts a delegation and returns at once,
@@ -104,6 +136,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   host without all three keeps it waiting. Starting another delegation still
   needs the independence conditions of the parallelization policy, and an
   ordering the ledger or a seam makes mandatory still holds.
+
+- **`qa-gatekeeper` asks whether a reviewed test would survive a refactor**
+  (#2253). A test that asserts on what the contract does not name, such as a
+  private function, an internal call order or a mock of the code's own
+  collaborators, fails on a change that keeps the behaviour. The new advisory
+  refactor survival check records such a test, and names the
+  behaviour-preserving change it would fail on; a finding without one is not
+  admitted. It never returns REVISE on its own and carries no score. It reads
+  the whole of every test file the change touches, and defers a finding on a
+  test that existed before the change. The three other questions a regression
+  review asks point at the checks that already own them: the coverage gate, and
+  the proof per example in the oracle strength reference.
 
 - **Five doctor criteria now name the tests that prove them.** Existing
   integration tests carry standalone `QFAI:AC-...` comments, and
@@ -173,6 +217,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   routing-eval token vocabulary changes. The set of safety-relevant routing
   seeds is unchanged, and the list derived from these classes may now be
   recorded. The decision is recorded in `decisions.md`.
+
+- **A test file missing from `packages/qfai/tsconfig.tests.json` now fails
+  `pnpm ci:lint`.** The check that every test file is either listed there or
+  recorded as uncovered ran only in the `scripts` test lane, so an author saw
+  it first in CI. `pnpm -C packages/qfai lint:shipping` now runs it too, so the
+  lint lane reports the omission before the test lanes start. Closes #2953 and
+  #2967.
 
 - **The shipped guidance now bounds test-suite size and unrequested fixes**
   (#2242). The test-layer rule gains a sizing section: a new test file is sized
