@@ -5,6 +5,7 @@ import { loadConfig } from "./config.js";
 import type { UiBearingClassification } from "./detection/surfaceType.js";
 import { readValidatedClassification } from "./detection/surfaceType.js";
 import { findPacks, latestPack as selectLatestPack } from "./packLocator.js";
+import { headingText, parseHeadings } from "./parse/markdown.js";
 import { readDiscussionCurrentIdState } from "./state.js";
 
 /**
@@ -38,7 +39,6 @@ export const DISCUSSION_PACK_DIR_RE = /^discussion-(\d{17})$/;
 
 export const REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES = [
   "01_Context.md",
-  "02_Inception-Deck.md",
   "03_Story-Workshop.md",
   "04_Sources.md",
   "05_Scope.md",
@@ -46,15 +46,39 @@ export const REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES = [
   "07_NFR.md",
   "08_Glossary.md",
   "09_Constraints.md",
-  "10_Policy.md",
   "11_OQ-Register.md",
-  "12_OQ-Resolution-Log.md",
-  "13_Deferred.md",
-  "14_Review-Request.md",
-  "99_delta.md",
 ] as const;
 
+/**
+ * The sections a required file must hold because a former pack file was merged
+ * into it: the inception deck into the context, the policies into the
+ * constraints.
+ */
+export const REQUIRED_DISCUSSION_PACK_SECTIONS: Partial<
+  Record<RequiredDiscussionPackMarkdownFile, readonly string[]>
+> = {
+  "01_Context.md": ["Inception Deck"],
+  "09_Constraints.md": [
+    "Security Policy",
+    "Compliance Policy",
+    "Development Policy",
+    "Operational Policy",
+  ],
+};
+
 export const REQUIRED_DISCUSSION_PACK_SIDE_ARTIFACTS = [] as const;
+
+/**
+ * Files a pack no longer holds whose content a required file now carries. A
+ * pack that still has one keeps that content where no later stage reads it.
+ */
+const RELOCATED_DISCUSSION_PACK_FILES = [
+  { legacy: "02_Inception-Deck.md", target: "01_Context.md" },
+  { legacy: "10_Policy.md", target: "09_Constraints.md" },
+  { legacy: "13_Deferred.md", target: "11_OQ-Register.md" },
+] as const;
+
+export type UnmigratedDiscussionPackFile = (typeof RELOCATED_DISCUSSION_PACK_FILES)[number];
 
 /** @deprecated Use REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES instead */
 export const REQUIRED_DISCUSSION_PACK_FILES = REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES;
@@ -79,7 +103,8 @@ export type DiscussionPackReadiness = {
   missingSideArtifacts: RequiredDiscussionPackSideArtifact[];
   incompleteFiles: RequiredDiscussionPackMarkdownFile[];
   blockingOqIds: string[];
-  deferredWithoutDetails: string[];
+  incompleteDeferredOqIds: string[];
+  unmigratedFiles: UnmigratedDiscussionPackFile[];
   prototypingRequired: boolean;
 };
 
@@ -136,7 +161,8 @@ export async function inspectLatestDiscussionPack(
       missingSideArtifacts: [],
       incompleteFiles: [],
       blockingOqIds: [],
-      deferredWithoutDetails: [],
+      incompleteDeferredOqIds: [],
+      unmigratedFiles: [],
       prototypingRequired: false,
     };
   }
@@ -145,7 +171,7 @@ export async function inspectLatestDiscussionPack(
   const missingSideArtifacts: RequiredDiscussionPackSideArtifact[] = [];
   const incompleteFiles: RequiredDiscussionPackMarkdownFile[] = [];
   let blockingOqIds: string[] = [];
-  let deferredWithoutDetails: string[] = [];
+  let incompleteDeferredOqIds: string[] = [];
   await readValidatedClassification(latestPackDir);
   const prototypingRequired = false;
 
@@ -156,19 +182,20 @@ export async function inspectLatestDiscussionPack(
       missingFiles.push(fileName);
       continue;
     }
-    if (isDiscussionPackFileIncomplete(content)) {
+    if (isDiscussionPackFileIncomplete(content) || lacksRequiredSection(fileName, content)) {
       incompleteFiles.push(fileName);
     }
     if (fileName === "11_OQ-Register.md") {
       blockingOqIds = extractBlockingOqIds(content);
+      incompleteDeferredOqIds = extractIncompleteDeferredOqIds(content);
     }
   }
 
-  // Check deferred coverage
-  const oqRegisterContent = await readSafe(path.join(latestPackDir, "11_OQ-Register.md"));
-  const deferredContent = await readSafe(path.join(latestPackDir, "13_Deferred.md"));
-  if (oqRegisterContent !== null && deferredContent !== null) {
-    deferredWithoutDetails = extractDeferredWithoutDetails(oqRegisterContent, deferredContent);
+  const unmigratedFiles: UnmigratedDiscussionPackFile[] = [];
+  for (const relocated of RELOCATED_DISCUSSION_PACK_FILES) {
+    if ((await readSafe(path.join(latestPackDir, relocated.legacy))) !== null) {
+      unmigratedFiles.push(relocated);
+    }
   }
 
   return {
@@ -181,7 +208,8 @@ export async function inspectLatestDiscussionPack(
     missingSideArtifacts,
     incompleteFiles,
     blockingOqIds,
-    deferredWithoutDetails,
+    incompleteDeferredOqIds,
+    unmigratedFiles,
     prototypingRequired,
   };
 }
@@ -364,6 +392,17 @@ function isDiscussionPackFileIncomplete(text: string): boolean {
   return false;
 }
 
+function lacksRequiredSection(fileName: RequiredDiscussionPackMarkdownFile, text: string): boolean {
+  const headings = new Set(
+    parseHeadings(text)
+      .filter((heading) => heading.level === 2)
+      .map((heading) => headingText(heading.title)),
+  );
+  return (REQUIRED_DISCUSSION_PACK_SECTIONS[fileName] ?? []).some(
+    (section) => !headings.has(section),
+  );
+}
+
 function isPlaceholderLine(line: string): boolean {
   const plain = line
     .replace(/[`*_~]/g, "")
@@ -426,14 +465,23 @@ function extractBlockingOqIds(text: string): string[] {
   return blocking;
 }
 
-function extractOqTableRows(text: string): Array<{ id: string; disposition: string }> {
+type OqTableRow = {
+  id: string;
+  disposition: string;
+  resolution: string;
+  nextDecisionPoint: string;
+};
+
+function extractOqTableRows(text: string): OqTableRow[] {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
-  const results: Array<{ id: string; disposition: string }> = [];
+  const results: OqTableRow[] = [];
 
   // Find table header
   let headerIndex = -1;
   let oqIdCol = -1;
   let dispositionCol = -1;
+  let resolutionCol = -1;
+  let nextDecisionPointCol = -1;
 
   for (let i = 0; i < lines.length - 1; i++) {
     const line = lines[i] ?? "";
@@ -443,6 +491,8 @@ function extractOqTableRows(text: string): Array<{ id: string; disposition: stri
 
     oqIdCol = normalizedCells.findIndex((c) => c === "oq-id" || c === "oqid");
     dispositionCol = normalizedCells.findIndex((c) => c === "disposition");
+    resolutionCol = normalizedCells.findIndex((c) => c === "resolution");
+    nextDecisionPointCol = normalizedCells.findIndex((c) => c === "next-decision-point");
 
     if (oqIdCol >= 0 && dispositionCol >= 0) {
       // Verify separator
@@ -469,6 +519,8 @@ function extractOqTableRows(text: string): Array<{ id: string; disposition: stri
       results.push({
         id: oqMatch[1].toUpperCase(),
         disposition: dispositionRaw.trim().toLowerCase(),
+        resolution: resolutionCol >= 0 ? (cells[resolutionCol] ?? "") : "",
+        nextDecisionPoint: nextDecisionPointCol >= 0 ? (cells[nextDecisionPointCol] ?? "") : "",
       });
     }
   }
@@ -476,43 +528,57 @@ function extractOqTableRows(text: string): Array<{ id: string; disposition: stri
   return results;
 }
 
-function extractDeferredWithoutDetails(oqRegisterText: string, deferredText: string): string[] {
-  const registerRows = extractOqTableRows(oqRegisterText);
-  const deferredIds = registerRows
+/**
+ * The deferred questions whose row lacks its `Resolution` or a
+ * `Next-Decision-Point` naming the next point at which it is decided: the
+ * column is absent, or the cell is empty, a dash or a placeholder.
+ */
+function extractIncompleteDeferredOqIds(oqRegisterText: string): string[] {
+  const ids = [...extractOqTableRows(oqRegisterText), ...extractOqHeadingEntries(oqRegisterText)]
     .filter((row) => row.disposition === "deferred")
+    .filter((row) => !hasContent(row.resolution) || !hasContent(row.nextDecisionPoint))
     .map((row) => row.id);
-
-  if (deferredIds.length === 0) return [];
-
-  // 13_Deferred.md may use table format (OQ-ID column without Disposition)
-  // or heading format (### OQ-XXXX:...).  Extract all OQ-ID references
-  // regardless of structure so both formats are supported.
-  const deferredDetailSet = extractAllOqIds(deferredText);
-
-  return deferredIds.filter((id) => !deferredDetailSet.has(id));
+  return [...new Set(ids)];
 }
 
 /**
- * Extract every OQ-ID reference from arbitrary markdown text.
- * Works with tables, headings, list items, or inline mentions.
+ * Register entries written as a heading naming the OQ, followed by
+ * `- Disposition:`, `- Resolution:` and `- Next-Decision-Point:` list items.
  */
-function extractAllOqIds(text: string): Set<string> {
-  const ids = new Set<string>();
-  const re = /\b(OQ-\d+)\b/gi;
-  let match: RegExpExecArray | null;
-  while ((match = re.exec(text)) !== null) {
-    if (match[1]) {
-      ids.add(match[1].toUpperCase());
+function extractOqHeadingEntries(text: string): OqTableRow[] {
+  const entries: OqTableRow[] = [];
+  let current: OqTableRow | null = null;
+  for (const line of text.replace(/\r\n/g, "\n").split("\n")) {
+    if (/^\s*#/.test(line)) {
+      const id = /\b(OQ-\d+)\b/i.exec(line)?.[1];
+      current = id
+        ? { id: id.toUpperCase(), disposition: "", resolution: "", nextDecisionPoint: "" }
+        : null;
+      if (current) entries.push(current);
+      continue;
     }
+    if (current === null) continue;
+    const field = /^\s*[-*]\s*([A-Za-z][A-Za-z -]*?)\s*:\s*(.*)$/.exec(line);
+    if (!field?.[1]) continue;
+    const name = field[1].toLowerCase().replace(/[\s-]+/g, "-");
+    const value = (field[2] ?? "").trim();
+    if (name === "disposition") current.disposition = value.toLowerCase();
+    else if (name === "resolution") current.resolution = value;
+    else if (name === "next-decision-point") current.nextDecisionPoint = value;
   }
-  return ids;
+  return entries;
 }
 
+function hasContent(cell: string): boolean {
+  return /[\p{L}\p{N}]/u.test(cell) && !isPlaceholderLine(cell);
+}
+
+/** Splits a table row on unescaped pipes, so `A \| B` stays one cell. */
 function parseTableCells(line: string): string[] {
   const trimmed = line.trim();
   if (!trimmed.startsWith("|")) return [];
-  const normalized = trimmed.replace(/^\|/, "").replace(/\|$/, "");
-  return normalized.split("|").map((cell) => cell.trim());
+  const normalized = trimmed.replace(/^\|/, "").replace(/(?<!\\)\|$/, "");
+  return normalized.split(/(?<!\\)\|/).map((cell) => cell.trim());
 }
 
 async function readSafe(filePath: string): Promise<string | null> {

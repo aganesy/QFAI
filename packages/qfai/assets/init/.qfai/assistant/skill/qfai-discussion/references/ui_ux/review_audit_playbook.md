@@ -101,4 +101,4 @@ A good discussion artifact should make these reviewable without guesswork:
 3. Validate state coverage and contracts.
 4. Validate accessibility and platform fit.
 5. Validate anti-pattern absence.
-6. Validate traceability into `04_Sources.md`, `14_Review-Request.md`, and `99_delta.md`.
+6. Validate traceability into `04_Sources.md` and `11_OQ-Register.md`.

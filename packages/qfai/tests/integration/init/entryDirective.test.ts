@@ -4,11 +4,6 @@
  * init wrote as written, without removing or editing it. The review directive is the only line init still prepends.
  */
 // QFAI:AC-0001-0196-03
-// QFAI:EX-0001-0196-05
-// QFAI:EX-0001-0196-06
-// QFAI:EX-0001-0196-07
-// QFAI:EX-0001-0196-08
-// QFAI:EX-0001-0196-09
 import { lstat, readFile, readlink, symlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -42,6 +37,11 @@ async function entryPointsAfterInit(root: string, text: string): Promise<string[
   return Promise.all(ENTRY_POINTS.map((name) => read(root, name)));
 }
 
+// QFAI:EX-0001-0196-05
+// QFAI:EX-0001-0196-06
+// QFAI:EX-0001-0196-07
+// QFAI:EX-0001-0196-08
+// QFAI:EX-0001-0196-09
 describe("the entry line", () => {
   it("Fresh init: no line naming qfai-run in AGENTS.md, CLAUDE.md or Copilot", async () => {
     await withEmptyRepo(async (root) => {

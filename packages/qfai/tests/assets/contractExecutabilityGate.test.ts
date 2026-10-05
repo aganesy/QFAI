@@ -11,15 +11,11 @@ const read = (tree: string, relative: string): Promise<string> =>
 
 describe("qfai-sdd contract executability evidence", () => {
   for (const tree of trees) {
-    it(`${tree}: requires an executable DB contract and flow evidence`, async () => {
+    it(`${tree}: requires an executable DB contract and reports it`, async () => {
       const gate = await read(tree, "assistant/skill/qfai-sdd/references/sdd-quality-gate.md");
-      const evidence = await read(tree, "assistant/skill/qfai-sdd/templates/evidence/sdd-flow.md");
       expect(gate).toContain("applied to a scratch database");
       expect(gate).toContain("declared write paths were exercised");
       expect(gate).toContain("Contract executability");
-      expect(evidence).toContain("## Contract executability");
-      expect(evidence).toContain("## Validation");
-      expect(evidence).toContain("--flow BF-NNNN");
     });
   }
 });

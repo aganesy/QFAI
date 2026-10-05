@@ -71,3 +71,70 @@ Notes:
 
 - Issue 1:
 - Issue 2:
+
+## Inception Deck
+
+### Why Are We Here?
+
+- Purpose:
+
+### Elevator Pitch
+
+- For: <target users>
+- Who: <need/problem>
+- The: <product name>
+- Is a: <category>
+- That: <key benefit>
+- Unlike: <alternatives>
+- Our product: <differentiator>
+
+### Product Box
+
+- Headline feature 1:
+- Headline feature 2:
+- Headline feature 3:
+
+### Meet Your Neighbors
+
+- Upstream dependencies:
+- Downstream dependencies:
+- External integrations:
+
+### Show the Solution
+
+- High-level architecture:
+- Key components:
+
+```mermaid
+flowchart LR
+    User["User"] --> App["App / Service"]
+    App --> Data["Data Store"]
+```
+
+<!-- UX-INTENT: If UI-bearing, reference 04_Sources.md and uiux/40_screen_contracts.md for design direction alignment -->
+
+### What Keeps Us Up at Night
+
+| Risk | Probability | Impact | Mitigation |
+| ---- | ----------- | ------ | ---------- |
+| R1   | medium      | high   | TBD        |
+
+### Size It Up
+
+- Estimated effort:
+- Target timeline:
+
+### What's Going to Give
+
+| Dimension | Priority | Notes |
+| --------- | -------- | ----- |
+| Scope     | 1        |       |
+| Quality   | 2        |       |
+| Time      | 3        |       |
+| Budget    | 4        |       |
+
+### What's It Going to Take
+
+- Required skills:
+- Team composition:
+- Infrastructure:

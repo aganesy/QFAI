@@ -1,10 +1,9 @@
 /**
  * Tests for validateConfigReferenceIntegrity (v1.8.4 Phase 7).
  *
- * Verifies the three QFAI-CFG-LINK-* codes:
+ * Verifies the two QFAI-CFG-LINK-* codes:
  *   001: primarySpecId points to a missing spec dir
  *   002: paths.* points to a missing directory (warning; info when it is a shipped default that is absent)
- *   003: calibration.packPath points to a missing dir
  */
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -32,7 +31,7 @@ afterEach(async () => {
   }
 });
 
-function makeConfig(overrides: { primaryUiContract?: string; packPath?: string } = {}): QfaiConfig {
+function makeConfig(overrides: { primaryUiContract?: string } = {}): QfaiConfig {
   return {
     paths: {
       contractsDir: ".qfai/spec/03_contract",
@@ -60,9 +59,6 @@ function makeConfig(overrides: { primaryUiContract?: string; packPath?: string }
     prototyping: {
       ...(overrides.primaryUiContract !== undefined
         ? { primaryUiContract: overrides.primaryUiContract }
-        : {}),
-      ...(overrides.packPath !== undefined
-        ? { calibration: { packPath: overrides.packPath } }
         : {}),
     },
   };
@@ -190,42 +186,6 @@ describe("validateConfigReferenceIntegrity", () => {
 
     const issues = await validateConfigReferenceIntegrity(root, config);
     expect(issues.some((i) => i.rule === "config.paths.contractsDir.reality")).toBe(true);
-  });
-
-  it("emits QFAI-CFG-LINK-003 (error) when calibration.packPath is missing", async () => {
-    const root = await newTempDir();
-    await seedDirs(root, [
-      ".qfai/spec",
-      ".qfai/spec/03_contract",
-      ".qfai/discussion",
-      ".qfai/assistant/skill",
-      "src",
-      "tests",
-    ]);
-    const issues = await validateConfigReferenceIntegrity(
-      root,
-      makeConfig({ packPath: "missing-pack-dir" }),
-    );
-    const linkIssue = issues.find((i) => i.code === "QFAI-CFG-LINK-003");
-    expect(linkIssue).toBeDefined();
-    expect(linkIssue?.severity).toBe("error");
-  });
-
-  it("does not require the default calibration pack on a fresh init workspace", async () => {
-    const root = await newTempDir();
-    await seedDirs(root, [
-      ".qfai/spec",
-      ".qfai/spec/03_contract",
-      ".qfai/discussion",
-      ".qfai/assistant/skill",
-      "src",
-      "tests",
-    ]);
-    const issues = await validateConfigReferenceIntegrity(
-      root,
-      makeConfig({ packPath: ".qfai/evidence/calibration.yaml" }),
-    );
-    expect(issues.some((i) => i.code === "QFAI-CFG-LINK-003")).toBe(false);
   });
 
   it("treats outDir absence as silent (lazy creation)", async () => {

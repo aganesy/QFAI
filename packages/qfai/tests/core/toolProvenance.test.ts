@@ -186,8 +186,8 @@ describe("classifyToolLocation", () => {
     expect(classifyToolLocation(at("proj"), lookalike)).toBe(false);
   });
 
+  // QFAI:EX-0001-0039-14
   it("reports a workspace link reached through a node_modules outside the project", () => {
-    // QFAI:EX-0001-0039-14
     // A worktree with no `node_modules` of its own inherits the main checkout's,
     // whose `qfai` is a workspace link to that checkout's source. The worktree
     // declares qfai itself, so the main checkout's link is not its choice.
@@ -203,15 +203,15 @@ describe("classifyToolLocation", () => {
     expect(classifyToolLocation(root, source, undeclared)).toBe(true);
   });
 
+  // QFAI:EX-0001-0039-14
   it("stays quiet for a link in the project's own node_modules", () => {
-    // QFAI:EX-0001-0039-14
     // The project chose where its own `node_modules/qfai` points, as `npm link` does.
     const own = { nodeModules: at("proj", "node_modules"), declaringDir: at("proj") };
     expect(classifyToolLocation(at("proj"), at("src", "qfai"), own)).toBe(false);
   });
 
+  // QFAI:EX-0001-0039-14
   it("stays quiet for a link in the node_modules of the directory that declares qfai", () => {
-    // QFAI:EX-0001-0039-14
     // A monorepo top level that links qfai chose that copy for every package below it.
     const top = { nodeModules: at("top", "node_modules"), declaringDir: at("top") };
     expect(classifyToolLocation(at("top", "packages", "web"), at("src", "qfai"), top)).toBe(false);
@@ -503,8 +503,8 @@ describe("locateToolAgainstProject", () => {
     });
   });
 
+  // QFAI:EX-0001-0039-14
   it("reports a project whose node_modules links to another checkout's", async (ctx) => {
-    // QFAI:EX-0001-0039-14
     // The worktree case: `other/node_modules/qfai` is the workspace link to the
     // running package, and the project's `node_modules` is a link to it.
     await withTempDir(async (dir) => {
@@ -529,8 +529,8 @@ describe("locateToolAgainstProject", () => {
     });
   });
 
+  // QFAI:EX-0001-0039-14
   it("reports a project below a directory whose node_modules links to the package", async (ctx) => {
-    // QFAI:EX-0001-0039-14
     await withTempDir(async (dir) => {
       const packageDir = String(await resolveToolPackageDir());
       const root = path.join(dir, "project");
@@ -544,8 +544,8 @@ describe("locateToolAgainstProject", () => {
     });
   });
 
+  // QFAI:EX-0001-0039-14
   it("stays quiet when a nearer copy is what npx would run", async (ctx) => {
-    // QFAI:EX-0001-0039-14
     // The checkout was run by its path against a project with its own install;
     // the link farther up is not how it was reached.
     await withTempDir(async (dir) => {
@@ -560,8 +560,8 @@ describe("locateToolAgainstProject", () => {
     });
   });
 
+  // QFAI:EX-0001-0039-14
   it("stays quiet for a link in the project's own node_modules", async (ctx) => {
-    // QFAI:EX-0001-0039-14
     await withTempDir(async (root) => {
       const packageDir = String(await resolveToolPackageDir());
       await mkdir(path.join(root, "node_modules"), { recursive: true });
@@ -577,8 +577,8 @@ describe("locateToolAgainstProject", () => {
     });
   });
 
+  // QFAI:EX-0001-0039-14
   it("stays quiet for a sub-package of a monorepo whose top level links qfai", async (ctx) => {
-    // QFAI:EX-0001-0039-14
     // `npm link qfai`, or qfai as a workspace member, at the top level that
     // declares it: the choice holds for every package below it.
     await withTempDir(async (dir) => {
@@ -599,8 +599,8 @@ describe("locateToolAgainstProject", () => {
     });
   });
 
+  // QFAI:EX-0001-0039-14
   it("stays quiet when the nearest node_modules/qfai above is another copy", async () => {
-    // QFAI:EX-0001-0039-14
     // A real directory, not a link to the running package: the checkout was run
     // by its path, and nothing links to it.
     await withTempDir(async (dir) => {

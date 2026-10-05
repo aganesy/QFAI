@@ -17,7 +17,7 @@ dependency is a workspace link to `packages/qfai`, not a separate installed copy
 Select agents by artifact and phase.
 
 > This file is a navigation guide. The agent cards, resolved routing and
-> review profiles decide mandatory agents, blocking reviewers and reruns.
+> review profiles decide mandatory agents and reruns.
 
 ## Core Principles
 

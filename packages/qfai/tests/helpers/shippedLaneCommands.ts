@@ -1268,11 +1268,9 @@ export function fileDigest(raw: Buffer): string {
  * `INIT_MUST_NOT_SHIP` states. This paragraph named four of the eight for a round after the list grew —
  * two copies of one fact, and the one nobody was looking at was wrong.
  *
- * **The justification is false of two files in those trees**, and each is covered below for that
- * reason. `.qfai/install-provenance.json` is not an agent instruction, does not change when a skill
- * does, and gates whether init DELETES an adopter's workflow; `ALLOWED_PROVENANCE_SHAPE` pins its
- * shape. `.claude/settings.json` does not change when a skill does either, and its contents are a
- * program an adopter's agent runs — `ALLOWED_INIT_CONTENT` pins its bytes. Neither can appear in the
+ * **The justification is false of one file in those trees**, and it is covered below for that
+ * reason. `.claude/settings.json` does not change when a skill does, and its contents are a
+ * program an adopter's agent runs — `ALLOWED_INIT_CONTENT` pins its bytes. It cannot appear in the
  * path set: that set is compared against the files OUTSIDE these trees, so naming a file inside one
  * of them claims a path the walk never offers.
  */
@@ -1359,10 +1357,10 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // the forge may be asked of. Derived by running `qfai init` into a temp root and hashing what
     // it wrote; dropping that one bullet reproduces `7f4f473a…` byte for byte.
     //
-    // Re-pinned for the legacy-layout item, which now says the `steering/` and `instructions/`
-    // layout is past its compatibility window and that `qfai init` reports it on stderr as a
-    // `D-DEPRECATED-PATH` error naming `--upgrade-assistant-tree`. Derived by running `qfai init`
-    // into a temp root; restoring the old item reproduces `12e26902…` byte for byte.
+    // Re-pinned for the legacy-layout item, which says the `instructions/` layout is past its
+    // compatibility window and that `qfai init` reports it on stderr as a `D-DEPRECATED-PATH`
+    // error naming `--upgrade-assistant-tree`. Derived by running `qfai init` into a temp root;
+    // naming the second retired layout in that item again reproduces `5ebaa61d…` byte for byte.
     //
     // Re-pinned for the work-log surface item, which the run no longer writes into the list of
     // canonical `.qfai/` locations. Derived by running `qfai init` into a temp root; restoring
@@ -1379,7 +1377,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // The generated rule list cites action-reversibility and untrusted-content.
     // This digest covers the bytes produced by the builder strings.
     ".github/copilot-instructions.md",
-    "5ebaa61d69fb28c4df4583f522d53af514465cabdc82d7621f6ae92595621de5",
+    "f6037364baf93bf10179dc6d500da410401094f9e6590395dba383cd9069483e",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1400,12 +1398,12 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // The shipped `.gitignore` IS the generated managed block, so every line of it
   // moves this digest by construction. The block ignores `.qfai/evidence/` whole
   // and re-includes nothing under it; its only negations are `!.qfai/` and the
-  // four that keep the assistant tree and the install-provenance record
+  // two that keep the assistant tree
   // reachable under a broad `.qfai/*` or `.qfai/**` rule a project already had.
   //
   // To re-pin: run `qfai init` into a temp root and hash the `.gitignore` it
   // wrote — never copy a value out of a failure message.
-  [".gitignore", "b7773796163f4f2fa0c9179eb8f4d54ebfdd35a9faf7d7b187b552b5925a919d"],
+  [".gitignore", "76c6c855ae5c4bf4d04a8d3ed34018b26d17d1b3a02ca68d60d1e514028ffc2f"],
   // One bullet each, inside the managed cross-AI rules block: the
   // `documentation-clarity.md` master that the same run seeds beside them.
   // Removing that line from both files reproduces the previous digests
@@ -1527,7 +1525,20 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // input prints the reminder as before. Still one `node -e` reader, the `reminders.json` path and
   // one message key, no shell and no network. Events, matchers and markers are unchanged; the
   // previous group is listed as superseded so the merge refreshes it.
-  [".claude/settings.json", "d3c9b6f5b4d4adde281fe0c36dec12dc1673eb8f07d06c4c854a0ce5ffa2897c"],
+  //
+  // Re-pinned when the write-time reminders stopped skipping `.qfai/run/`, which nothing writes
+  // now: the three groups read only the message file again, and their skipping spellings are
+  // listed as superseded.
+  //
+  // Re-pinned for the removal of the `Skill(qfai-atdd)` permission, the skill no longer shipping.
+  // The whole delta is that one line; restoring it reproduces `85902b08…` byte for byte.
+  //
+  // Re-pinned when the free-text entry group started reading its input, and both it and the
+  // structured-question group also skipped a prompt whose line opens with `[SYSTEM NOTIFICATION`.
+  // The two programs are now the same text. Events, matchers and markers are unchanged; the
+  // previous groups are listed as superseded so the merge refreshes them. Restoring the two
+  // programs reproduces `673f14b2…` byte for byte.
+  [".claude/settings.json", "0bf2f12f9f3bb18a767be123148e58db33fb635d2e5a945bbae32e383c64d681"],
   // Inside `.codex/`, and pinned for the reason `.claude/settings.json` is: its commands are a
   // program an adopter's agent runs. Two `UserPromptSubmit` groups, structured-question and
   // free-text entry. Codex takes one command string, so each runs the same `node -e` reader
@@ -1600,7 +1611,14 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // `Component catalogue` row of the Stack table in `tech.md` as the place that
   // says which registry is primary. The whole delta is those two comment lines:
   // restoring the previous wording reproduces `3c3c1be3…` byte for byte.
-  ["qfai.config.yaml", "1fea21e9a7d7d534920245d200b72a1a6d30aa0119855966b321d4886833e3b3"],
+  //
+  // Re-pinned for the removal of the `atdd` block and its `scaffoldEscalateCycles` key, which
+  // nothing reads any more. Restoring the block reproduces `1fea21e9…` byte for byte.
+  //
+  // Re-pinned for the removal of `prototyping.calibration`, which nothing reads: prototyping
+  // keeps no calibration pack. Restoring the two lines `calibration:` and
+  // `packPath: .qfai/evidence/calibration.yaml` reproduces `c1f4c390…` byte for byte.
+  ["qfai.config.yaml", "e9129574dd758cb14b57a20b310b7e5836e6de417b2af86292ba5887d2241ac8"],
 ]);
 
 /**
@@ -1868,37 +1886,6 @@ export function initSourceShipsAsData(relativePath: string): boolean {
     ALLOWED_INIT_SOURCE_BASENAMES.has(path.basename(relativePath))
   );
 }
-
-/**
- * The one file inside an instruction tree that is pinned anyway, by SHAPE.
- *
- * The exclusion above justifies itself on the trees being agent instructions "that change whenever a
- * skill does, and what matters about them is narrower than their contents". `.qfai/install-provenance.json`
- * is none of that. Another session added it while round 19 was in flight, and it is the record `doctor`
- * reads to detect drift and `resolvePrunableRetiredWorkflows` reads to decide whether to **delete an
- * adopter's workflow file** — so its contents are exactly what matters about it, and a file that gates
- * a delete had no pin at all because of where it happens to sit.
- *
- * Its bytes cannot be pinned: it carries a timestamp, the installed version, and a digest per workflow.
- * So the pin is the shape — which keys may appear at each level, and what each value must look like. A
- * key nobody enumerated is a channel nobody reviewed, which is the same rule the workflow shape pins
- * make one directory over.
- */
-export const ALLOWED_PROVENANCE_SHAPE: {
-  readonly path: string;
-  readonly topLevelKeys: ReadonlySet<string>;
-  readonly entryKeys: ReadonlySet<string>;
-  readonly entryValues: ReadonlyMap<string, RegExp>;
-} = {
-  path: ".qfai/install-provenance.json",
-  topLevelKeys: new Set(["workflows"]),
-  entryKeys: new Set(["sha256", "installedByVersion", "installedAt"]),
-  entryValues: new Map([
-    ["sha256", /^[0-9a-f]{64}$/],
-    ["installedByVersion", /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/],
-    ["installedAt", /^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/],
-  ]),
-};
 
 /** The eight trees excluded from the PATH pin, and excluded from nothing else — the kind rule reads them. */
 export const INIT_INSTRUCTION_TREES: ReadonlyArray<string> = [
