@@ -49,6 +49,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **A DONE change request claims every action it lists** (#2312). A
+  `decisions.md` row has one Status, so a request with one action deferred could
+  be marked DONE and the deferred action dropped from view. The drift protocol
+  now keeps such a row at WIP while any action it lists is deferred.
 - **An EX annotation counts only directly before a test declaration** (#2761).
   A `QFAI:EX-` annotation used to cover its example from anywhere in a selected
   test file, so a header comment above the imports, or one line in a file with
