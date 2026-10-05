@@ -128,7 +128,7 @@ export async function validateDiscussionPackReadiness(
     );
   }
 
-  for (const { legacy, target } of readiness.unmigratedFiles) {
+  for (const { legacy, target, move } of readiness.unmigratedFiles) {
     issues.push(
       issue(
         "QFAI-DPACK-003",
@@ -138,7 +138,10 @@ export async function validateDiscussionPackReadiness(
         "discussionPack.unmigratedFile",
         [legacy, target],
         "change",
-        `Move the content of ${legacy} into ${target}, then delete ${legacy}.`,
+        [
+          `Move the content of ${legacy} into ${target}. ${move}`,
+          `Then delete ${legacy} and replace its name wherever the pack still cites it. Packs other than the latest are not checked; see \`.qfai/assistant/skill/qfai-discussion/references/discussion-artifact-rules.md\`.`,
+        ].join("\n"),
       ),
     );
   }

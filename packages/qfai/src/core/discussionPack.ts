@@ -73,9 +73,21 @@ export const REQUIRED_DISCUSSION_PACK_SIDE_ARTIFACTS = [] as const;
  * pack that still has one keeps that content where no later stage reads it.
  */
 const RELOCATED_DISCUSSION_PACK_FILES = [
-  { legacy: "02_Inception-Deck.md", target: "01_Context.md" },
-  { legacy: "10_Policy.md", target: "09_Constraints.md" },
-  { legacy: "13_Deferred.md", target: "11_OQ-Register.md" },
+  {
+    legacy: "02_Inception-Deck.md",
+    target: "01_Context.md",
+    move: "Put it under a `## Inception Deck` heading, one heading level lower than it has now: `## 1. Why Are We Here?` becomes `### 1. Why Are We Here?`.",
+  },
+  {
+    legacy: "10_Policy.md",
+    target: "09_Constraints.md",
+    move: "Make each policy a `##` section: `Security Policy`, `Compliance Policy`, `Development Policy` and `Operational Policy` are required. A policy section with no such home goes under `## Development Policy` as a `###` section, or is dropped.",
+  },
+  {
+    legacy: "13_Deferred.md",
+    target: "11_OQ-Register.md",
+    move: "Make each deferred item a row with `Disposition` deferred, a `Resolution` and a `Next-Decision-Point`.",
+  },
 ] as const;
 
 export type UnmigratedDiscussionPackFile = (typeof RELOCATED_DISCUSSION_PACK_FILES)[number];

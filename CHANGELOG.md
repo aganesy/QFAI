@@ -36,6 +36,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Moving a discussion pack to the current layout is documented, and the
+  `QFAI-DPACK-003` suggestion says how** (#2980). The finding for a file that
+  still holds content a required file now carries names the heading level the
+  moved content takes, where a policy section with no required home goes, and
+  that the old file name must be replaced where the pack still cites it. The
+  `qfai-discussion` pack rules gain a table for every earlier file, including
+  where the content of `12_OQ-Resolution-Log.md`, `14_Review-Request.md` and
+  `99_delta.md` goes, and say that only the latest pack is checked.
+
 - **`qfai init --force` reports only the paths it changed.** The `written` count
   and list included every distributed file, including those already identical to
   the shipped copy. Rule files, the Copilot and Codex files and the agent and

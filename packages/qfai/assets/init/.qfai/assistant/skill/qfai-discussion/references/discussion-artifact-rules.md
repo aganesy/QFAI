@@ -30,6 +30,23 @@ Discussion packs with a visual prototyping surface (`web`, `mobile`, `desktop`, 
 - `03_Story-Workshop.md` must include at least one Mermaid diagram.
 - Use Mermaid fences only for diagrams.
 
+## A Pack in an Earlier Layout
+
+`qfai validate` checks only the latest pack. An older pack keeps the layout it was written in; move one the same way before a stage reads it.
+
+| Earlier file              | Where its content goes                                                                                                                                        |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `02_Inception-Deck.md`    | `01_Context.md`, under `## Inception Deck`, each heading one level lower (`## 1. Why Are We Here?` becomes `### 1. Why Are We Here?`)                         |
+| `10_Policy.md`            | `09_Constraints.md`: `Security Policy`, `Compliance Policy`, `Development Policy` and `Operational Policy`, each a `##` section                               |
+| `13_Deferred.md`          | `11_OQ-Register.md`: a row with `Disposition` deferred, a `Resolution` and a `Next-Decision-Point`                                                            |
+| `12_OQ-Resolution-Log.md` | `11_OQ-Register.md`: edit the row, and its `Resolution` says how the question was settled                                                                     |
+| `14_Review-Request.md`    | Nothing: the review templates are gone                                                                                                                        |
+| `99_delta.md`             | A decision goes to the file it shapes, a rejected direction to `04_Sources.md`, and a discrepancy that still needs action to an open question with Gate `sdd` |
+
+- A `10_Policy.md` section with no required home, such as an ID or design policy, goes under `## Development Policy` as a `###` section if a later stage still needs it, and is dropped otherwise.
+- `qfai validate` asks only for the three moves that fill a required file. The last three files are listed by `qfai doctor` and `qfai init` as left over, and nothing deletes them. Read each before deleting it: it may hold the only record of a decision or a drift event.
+- After a move, search the pack for the old file names and replace each with the new location, since `06_REQ.md` and the other files may still cite them.
+
 ## UI/UX Exploration Family
 
 For UI-bearing packs, use:
