@@ -6,16 +6,18 @@ Canonical path: `.qfai/report/verify.json` (NOT `.qfai/output/`). Create the `.q
 
 `.qfai/output/verify.json` is the legacy location, history for projects created before the move. Never write there.
 
-| Field        | Type             | Required | Meaning                                                                                                  |
-| ------------ | ---------------- | -------- | -------------------------------------------------------------------------------------------------------- |
-| `status`     | string           | yes      | `"PASS"` when every gate in scope passed; `"FAIL"` otherwise. Only `"PASS"` satisfies a downstream gate. |
-| `scope`      | string           | yes      | Which stage's gate set this run covers. See the enum below.                                              |
-| `flowId`     | string           | no       | The business flow this run targeted, when scoped to one (e.g. `"BF-0001"`).                              |
-| `recordedAt` | ISO-8601 string  | no       | When the run completed.                                                                                  |
-| `summary`    | string           | no       | One or two sentences an operator can read without opening the stage report.                              |
-| `gates`      | array of objects | no       | Per-gate results: `{ name, status, command }`. Advisory; no reader gates on it today.                    |
+| Field        | Type             | Required | Meaning                                                                                                                                                 |
+| ------------ | ---------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `status`     | string           | yes      | `"PASS"` when every gate in scope passed, or is delegated to a CI check that is not red; `"FAIL"` otherwise. Only `"PASS"` satisfies a downstream gate. |
+| `scope`      | string           | yes      | Which stage's gate set this run covers. See the enum below.                                                                                             |
+| `flowId`     | string           | no       | The business flow this run targeted, when scoped to one (e.g. `"BF-0001"`).                                                                             |
+| `recordedAt` | ISO-8601 string  | no       | When the run completed.                                                                                                                                 |
+| `summary`    | string           | no       | One or two sentences an operator can read without opening the stage report.                                                                             |
+| `gates`      | array of objects | no       | Per-gate results: `{ name, status, command }`. Advisory; no reader gates on it today.                                                                   |
 
 `status` is a closed two-value enum: `"PASS"` / `"FAIL"`. There is no `"WARN"` — a run with only `warning` / `info` findings is `"PASS"` (waivers apply to those severities only). Any `error` finding makes it `"FAIL"`.
+
+A gate the project runs in CI only is recorded in `gates` as `{ name, status: "DELEGATED", check, ci }`. `check` names the CI check that runs it, and `ci` is `"green"`, `"red"` or `"pending"`, the state of that check when the file is written. A `"red"` check makes the top-level `status` `"FAIL"`. A `"pending"` one does not, and `summary` names it, so a reader sees what the run left to CI. A gate that can run here is never delegated to avoid running it.
 
 `scope` is a closed enum. Write the one that matches the stage you were invoked for:
 

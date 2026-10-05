@@ -6,6 +6,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A gate the project runs in CI only is recorded as delegated, not as a pass or a
+  failure.** A Standard commands entry written `CI only: <check name>` makes
+  `verify-repo-gate` record the gate `DELEGATED` with that check, and
+  `verify.json` carries it in `gates` with the check name and its state. A red
+  check makes `status` `FAIL`; a pending one does not stop `verify-commit`,
+  because the pull request is where the check runs. Fixes #2996.
+
 - **A shipped rule sets how Markdown an agent reads is sized and split**
   (#2246). Markdown stays within 500 lines and a `SKILL.md` body within 20,000
   characters. Pointers say when to read the file they name, references stay one

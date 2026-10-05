@@ -27,7 +27,9 @@ the user's own instruction.
 
 ## Procedure
 
-1. Stop when a verify gate failed or did not run, and say which.
+1. Stop when a verify gate failed or did not run, and say which. A gate
+   recorded `DELEGATED` does not stop the commit while its CI check is pending,
+   because the pull request is where it runs; one whose check is red does.
 2. Stage exactly the tracked deliverables the run wrote, with
    `git add <those paths>`. Never `git add -A`, `git add .` or `git add -f`,
    and never a file git ignores, such as `.qfai/report/*`. A file that was
