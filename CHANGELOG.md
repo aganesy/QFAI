@@ -4,6 +4,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **The SDD triage reference says how a shared ID is renumbered** (#2505). Two
+  branches can take the same next ID. The renumbered item is the one the later
+  branch added, every citation changes in the same commit, and the commit
+  message states the old and new ID so an older citation stays readable. A
+  merged row keeps its ID; a later row says which record a shared ID meant, as
+  this repository's decision table now does for two archived change request
+  IDs.
+
 ## [2.1.0] - 2026-10-05
 
 ### Breaking changes
@@ -542,13 +552,6 @@ its code. Several commands, findings and files go with that.
 
 ### Changed
 
-- **The SDD triage reference says how a shared ID is renumbered** (#2505). Two
-  branches can take the same next ID. The renumbered item is the one the later
-  branch added, every citation changes in the same commit, and the commit
-  message states the old and new ID so an older citation stays readable. A
-  merged row keeps its ID; a later row says which record a shared ID meant, as
-  this repository's decision table now does for two archived change request
-  IDs.
 - **Every decision a stage records carries one fixed form** (#2236).
   The thinking rule now names where each decision is recorded.
   `qfai-sdd`, which owns `decisions.md`, records it as a row
