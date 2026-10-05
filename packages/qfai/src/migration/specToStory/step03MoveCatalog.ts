@@ -16,7 +16,7 @@ import {
   type MigrationOperation,
   type MigrationStep,
 } from "./harness.js";
-import { oldContractIds, type ContractMap } from "./idMap.js";
+import { oldContractIds, readIdMap, type ContractMap } from "./idMap.js";
 import {
   isPolicyDocument,
   movePolicySection,
@@ -39,7 +39,6 @@ const POLICY_SOURCES = [
 
 const ASSISTANT_DIRS = ["constitution", "catalog", "manifest", "process"] as const;
 const CATALOG_FILES = ["product.md", "manifest.md", "tech.md", "structure.md"] as const;
-const RETIRED = ".qfai/evidence/migration-spec-to-story/retired";
 function relative(root: string, absolute: string): string {
   return path.relative(root, absolute).split(path.sep).join("/");
 }
@@ -164,16 +163,6 @@ function route(source: string, heading: string, context: MigrationContext): stri
   return mapped === "contracts.md" ? contract(mapped) : policy(mapped);
 }
 
-async function uniqueRetired(root: string, base: string, reserved: Set<string>): Promise<string> {
-  for (let suffix = 0; ; suffix += 1) {
-    const candidate = suffix === 0 ? base : `${base}-${suffix}`;
-    if (!reserved.has(candidate) && !(await exists(path.join(root, candidate)))) {
-      reserved.add(candidate);
-      return candidate;
-    }
-  }
-}
-
 function parseYamlInput(content: string, file: string): unknown {
   try {
     return parseYaml(content);
@@ -210,8 +199,7 @@ type PrimaryReplacement = { notes: string[]; forAPerson: string[] };
 
 /**
  * The UI contracts a spec pack is tied to: the new IDs the `CON-UI-*` IDs in its
- * rules' `Contract-Refs` translate to. The rules come from the pack, or from the
- * archive step 7 moved them to.
+ * rules' `Contract-Refs` translate to.
  */
 async function tiedUiContracts(
   context: MigrationContext,
@@ -219,18 +207,28 @@ async function tiedUiContracts(
   specId: string,
 ): Promise<string[]> {
   const translated = oldContractIds(contractMap);
-  const rows = [
-    ...(await readLegacyRows(context, "04_Business-Rules.md", false)),
-    ...(await readLegacyRows(context, "04_Business-Rules.md", true)),
-  ];
+  const rows = (await readLegacyRows(context, "04_Business-Rules.md")).filter(
+    (row) => row.specId === specId,
+  );
   const tied = new Set<string>();
   for (const row of rows) {
-    if (row.specId !== specId) continue;
     const refs = Object.entries(row.cells).find(([name]) => /^contract-refs$/i.test(name))?.[1];
     for (const token of refs?.match(OLD_CONTRACT_TOKEN) ?? []) {
       const id = translated[token];
       if (id?.startsWith("UI-")) tied.add(id);
     }
+  }
+  // The rules step 7 already deleted are gone from the pack, while the ID map
+  // records the contract each was placed in. A rule still in the pack is read
+  // from its row: its placement is only where step 7 plans to move it.
+  const remaining = new Set(
+    rows.map((row) => Object.entries(row.cells).find(([name]) => /^br-id$/i.test(name))?.[1]),
+  );
+  const map = await readIdMap(context.root);
+  for (const [oldId, contract] of Object.entries(map?.placements[specId] ?? {})) {
+    if (!oldId.startsWith("BR-") || remaining.has(oldId)) continue;
+    const id = contractMap[contract]?.id ?? map?.contracts?.[contract]?.id;
+    if (id?.startsWith("UI-")) tied.add(id);
   }
   return [...tied].sort();
 }
@@ -278,6 +276,40 @@ async function replacePrimarySpec(
   return replacement;
 }
 
+/**
+ * The entries of a project's routing manifest that differ from the installed
+ * default of the same name. Each is kept as a configuration override and listed
+ * for a person, because an entry copied from a 1.x manifest hides the roles the
+ * 2.x skills declare.
+ */
+async function planRoutingOverrides(
+  routing: unknown[],
+): Promise<{ overrides: unknown[]; forAPerson: string[] }> {
+  const defaultByName = new Map(
+    (await defaultRoutingEntries()).map((entry) => {
+      const name = routingEntryName(asRecord(entry, "default routing entry"));
+      if (name === undefined)
+        throw new MigrationInputError("Default routing entry needs a step or a skill.");
+      return [name, entry] as const;
+    }),
+  );
+  const overrides: unknown[] = [];
+  const forAPerson: string[] = [];
+  for (const entry of routing) {
+    const name = routingEntryName(asRecord(entry, "project routing entry"));
+    if (name === undefined)
+      throw new MigrationInputError("Project routing entry needs a step or a skill.");
+    if (isDeepStrictEqual(entry, defaultByName.get(name))) continue;
+    overrides.push(entry);
+    forAPerson.push(
+      defaultByName.has(name)
+        ? `qfai.config.yaml routing ${name}: an entry copied from a 1.x routing manifest hides the roles the 2.x skills declare; delete it from routing to use the installed one, or keep it to override.`
+        : `qfai.config.yaml routing ${name}: an entry copied from a 1.x routing manifest hides the roles the 2.x skills declare; no installed entry has this name, so it is kept as written and deleting it removes the route.`,
+    );
+  }
+  return { overrides, forAPerson };
+}
+
 async function planOverrides(
   context: MigrationContext,
   contractMap: ContractMap,
@@ -286,6 +318,7 @@ async function planOverrides(
   const root = context.root;
   const routingPath = path.join(root, ".qfai/assistant/manifest/agent-routing.yml");
   const reviewPath = path.join(root, ".qfai/assistant/manifest/review-profiles.yml");
+  const forAPerson: string[] = [];
   const hasRouting = await exists(routingPath);
   const hasReview = await exists(reviewPath);
   const configPath = path.join(root, "qfai.config.yaml");
@@ -307,24 +340,12 @@ async function planOverrides(
       routingPath,
     );
     if (!Array.isArray(project.routing)) throw new MigrationInputError("Routing must be a list.");
-    const defaultByName = new Map(
-      (await defaultRoutingEntries()).map((entry) => {
-        const name = routingEntryName(asRecord(entry, "default routing entry"));
-        if (name === undefined)
-          throw new MigrationInputError("Default routing entry needs a step or a skill.");
-        return [name, entry] as const;
-      }),
-    );
-    const overrides = project.routing.filter((entry) => {
-      const name = routingEntryName(asRecord(entry, "project routing entry"));
-      if (name === undefined)
-        throw new MigrationInputError("Project routing entry needs a step or a skill.");
-      return !isDeepStrictEqual(entry, defaultByName.get(name));
-    });
-    if (overrides.length > 0) {
-      config.set("routing", overrides);
+    const planned = await planRoutingOverrides(project.routing);
+    if (planned.overrides.length > 0) {
+      config.set("routing", planned.overrides);
       changed = true;
     }
+    forAPerson.push(...planned.forAPerson);
   }
   if (hasReview) {
     const project = asRecord(parseYamlInput(await readInput(reviewPath), reviewPath), reviewPath);
@@ -348,7 +369,7 @@ async function planOverrides(
     operation: changed
       ? { kind: "write", target: "qfai.config.yaml", content: String(config), notes: primary.notes }
       : null,
-    forAPerson: primary.forAPerson,
+    forAPerson: [...primary.forAPerson, ...forAPerson],
   };
 }
 
@@ -384,20 +405,26 @@ async function contestedOverlays(root: string): Promise<string[]> {
   return contested;
 }
 
+/** The item for a destination step 3 leaves as it is because it exists and differs. */
+function notWritten(target: string): string {
+  return `${target}: the file already exists, so step 3 did not write it; carry what its sources state by hand`;
+}
+
 /**
  * Puts the new `contracts.md` among the documents step 3 writes, and returns what
- * a person carries by hand. An existing file that differs is left as it is.
+ * a person carries by hand. An existing file that differs is left as it is and
+ * added to `refused`.
  */
 async function writeContractIndex(
   context: MigrationContext,
-  old: { source: string; content: string; archive: string; target: string },
+  old: { source: string; content: string; target: string },
   contracts: ContractPlan,
   documents: Map<string, string>,
+  refused: Set<string>,
 ): Promise<string[]> {
   const index = renderContractIndex({
     source: old.content,
     sourcePath: old.source,
-    archive: old.archive,
     target: old.target,
     contractsDir: relative(context.root, context.contractsDir),
     contracts: contracts.contracts,
@@ -405,10 +432,10 @@ async function writeContractIndex(
   });
   const absolute = path.join(context.root, old.target);
   if (!(await exists(absolute))) documents.set(old.target, index.content);
-  else if ((await readInput(absolute)) !== index.content)
-    index.forAPerson.push(
-      `${old.target}: the file already exists, so step 3 did not write it; carry its sources from ${RETIRED} by hand`,
-    );
+  else if ((await readInput(absolute)) !== index.content) {
+    refused.add(old.target);
+    index.forAPerson.push(notWritten(old.target));
+  }
   return index.forAPerson;
 }
 
@@ -417,7 +444,6 @@ async function routeStructure(
   context: MigrationContext,
   parts: {
     source: string;
-    archive: string;
     preamble: string;
     sections: { heading: string; body: string }[];
   },
@@ -435,7 +461,7 @@ async function routeStructure(
 
 export const step03: MigrationStep = {
   number: 3,
-  writeSet: ["qfai", "specs", "contracts", "config"],
+  writeSet: ["qfai", "specs", "contracts", "config", "migration-state"],
   sections: ["For a person"],
   async plan(context) {
     const contested = await contestedOverlays(context.root);
@@ -445,8 +471,11 @@ export const step03: MigrationStep = {
     const contracts = await planContracts(context);
     const forAPerson: string[] = [...contracts.forAPerson];
     const identifiers: string[] = [];
-    const reserved = new Set<string>();
     const documents = new Map<string, string>();
+    // Each source and the destinations its content goes to. A source is deleted only
+    // once every one of them is written; one that exists and differs keeps it.
+    const routedTo = new Map<string, Set<string>>();
+    const refused = new Set<string>();
     let surfacePaths: string[] | undefined;
     const policies = relative(context.root, path.join(context.specsDir, "_policies"));
     const sources = POLICY_SOURCES.map(([name]) => `${policies}/${name}`);
@@ -465,21 +494,14 @@ export const step03: MigrationStep = {
       if (!(await exists(absolute))) continue;
       const content = await readInput(absolute);
       const { preamble, sections } = sectionParts(content);
-      const archive = await uniqueRetired(
-        context.root,
-        `${RETIRED}/${source.startsWith(".qfai/assistant/") ? source.slice(".qfai/".length) : `_policies/${path.posix.basename(source)}`}`,
-        reserved,
-      );
+      const targets = new Set<string>();
+      routedTo.set(source, targets);
       if (source.endsWith("/structure.md")) {
-        const routed = await routeStructure(
-          context,
-          { source, archive, preamble, sections },
-          draftFor,
-        );
+        const routed = await routeStructure(context, { source, preamble, sections }, draftFor);
         forAPerson.push(...routed.forAPerson);
         surfacePaths = routed.surfacePaths;
         if (routed.skeletonLines.length > 0) addTechCommands(draftFor(tech), routed.skeletonLines);
-        operations.push({ kind: "move", source, target: archive });
+        if (drafts.has(tech)) targets.add(tech);
         continue;
       }
       const fallback = route(source, "", context);
@@ -487,14 +509,16 @@ export const step03: MigrationStep = {
         forAPerson.push(
           ...(await writeContractIndex(
             context,
-            { source, content, archive, target: fallback },
+            { source, content, target: fallback },
             contracts,
             documents,
+            refused,
           )),
         );
-        operations.push({ kind: "move", source, target: archive });
+        targets.add(fallback);
         continue;
       }
+      targets.add(fallback);
       if (shaped(fallback)) {
         draftFor(fallback);
         const h1 = parseHeadings(content).find((item) => item.level === 1);
@@ -506,12 +530,10 @@ export const step03: MigrationStep = {
             .join("\n")
             .trim() !== ""
         )
-          forAPerson.push(
-            `${fallback}: rewrite the text before the title of ${source} by hand (kept at ${archive})`,
-          );
+          forAPerson.push(`${fallback}: rewrite the text before the title of ${source} by hand`);
         if (preamble)
           forAPerson.push(
-            `${fallback}: rewrite the text before the first section of ${source} by hand (kept at ${archive})`,
+            `${fallback}: rewrite the text before the first section of ${source} by hand`,
           );
       } else {
         if (!documents.has(fallback)) {
@@ -522,9 +544,10 @@ export const step03: MigrationStep = {
       }
       for (const section of sections) {
         const target = route(source, section.heading, context);
+        targets.add(target);
         if (shaped(target)) {
           const move = target === tech ? moveTechSection : movePolicySection;
-          forAPerson.push(...move(draftFor(target), { ...section, source, archive }));
+          forAPerson.push(...move(draftFor(target), { ...section, source }));
           continue;
         }
         if (!documents.has(target)) {
@@ -535,7 +558,6 @@ export const step03: MigrationStep = {
           appendSection(documents.get(target) ?? "", section.heading, section.body),
         );
       }
-      operations.push({ kind: "move", source, target: archive });
     }
     for (const [target, draft] of drafts) {
       if (isPolicyDocument(target) && path.posix.basename(target) === "constraint.md")
@@ -544,21 +566,28 @@ export const step03: MigrationStep = {
         target === tech ? await renderTechDocument(draft) : await renderPolicyDocument(draft);
       const absolute = path.join(context.root, target);
       if (!(await exists(absolute))) documents.set(target, content);
-      else if ((await readInput(absolute)) !== content)
-        forAPerson.push(
-          `${target}: the file already exists, so step 3 did not write it; carry its sources from ${RETIRED} by hand`,
-        );
+      else if ((await readInput(absolute)) !== content) {
+        refused.add(target);
+        forAPerson.push(notWritten(target));
+      }
+    }
+    const keptSources = new Set<string>();
+    for (const [source, targets] of routedTo) {
+      const blocked = [...targets].filter((target) => refused.has(target));
+      if (blocked.length === 0) {
+        operations.push({ kind: "remove", target: source, description: "delete" });
+        continue;
+      }
+      keptSources.add(source);
+      forAPerson.push(
+        `${source}: kept, since ${blocked.join(" and ")} was not written; delete it once what it states is carried by hand`,
+      );
     }
 
     const sliceSource = `${policies}/11_Slice-Policy.md`;
     if (await exists(path.join(context.root, sliceSource))) {
       await readInput(path.join(context.root, sliceSource));
-      const archive = await uniqueRetired(
-        context.root,
-        `${RETIRED}/_policies/11_Slice-Policy.md`,
-        reserved,
-      );
-      operations.push({ kind: "move", source: sliceSource, target: archive });
+      operations.push({ kind: "remove", target: sliceSource, description: "delete" });
     }
 
     const overrides = await planOverrides(context, contracts.map, surfacePaths);
@@ -569,45 +598,49 @@ export const step03: MigrationStep = {
       const dir = `.qfai/assistant/${directory}`;
       const absolute = path.join(context.root, dir);
       if (!(await exists(absolute))) continue;
+      let kept = false;
       for (const entry of (await readdir(absolute, { withFileTypes: true })).sort((a, b) =>
         a.name.localeCompare(b.name),
       )) {
         const source = `${dir}/${entry.name}`;
         if (
-          operations.some((operation) => operation.kind === "move" && operation.source === source)
+          operations.some((operation) => operation.kind === "remove" && operation.target === source)
         )
           continue;
+        if (keptSources.has(source)) {
+          kept = true;
+          continue;
+        }
         if (entry.isSymbolicLink())
           throw new MigrationInputError(`Migration input is a symbolic link: ${source}`);
         if (entry.name.endsWith(".local.md") && entry.isFile()) {
           const master = entry.name.replace(/\.local\.md$/, ".md");
           const target = `.qfai/assistant/rule/${entry.name}`;
-          if (
-            (await exists(path.join(context.root, `.qfai/assistant/rule/${master}`))) &&
-            !(await exists(path.join(context.root, target)))
-          ) {
-            operations.push({ kind: "move", source, target });
+          if (await exists(path.join(context.root, `.qfai/assistant/rule/${master}`))) {
+            if (!(await exists(path.join(context.root, target)))) {
+              operations.push({ kind: "move", source, target });
+              continue;
+            }
+            forAPerson.push(
+              `${source}: ${target} already exists, so the overlay stays here; merge it by hand.`,
+            );
+            kept = true;
             continue;
           }
           forAPerson.push(
-            `${source}: no rule master or the overlay destination exists; review the archived overlay.`,
+            `${source}: no rule master ${master} exists, so the overlay is deleted; carry what it states by hand from git history.`,
           );
         }
-        const archive = await uniqueRetired(
-          context.root,
-          `${RETIRED}/assistant/${directory}/${entry.name}`,
-          reserved,
-        );
-        operations.push({ kind: "move", source, target: archive });
+        operations.push({ kind: "remove", target: source, description: "delete" });
       }
-      operations.push({ kind: "remove-empty-directory", target: dir });
+      if (!kept) operations.push({ kind: "remove-empty-directory", target: dir });
     }
     if (await exists(path.join(context.root, policies))) {
       const entries = await readdir(path.join(context.root, policies));
       const moved = new Set(
         operations.flatMap((operation) =>
-          operation.kind === "move" && path.posix.dirname(operation.source) === policies
-            ? [path.posix.basename(operation.source)]
+          operation.kind === "remove" && path.posix.dirname(operation.target) === policies
+            ? [path.posix.basename(operation.target)]
             : [],
         ),
       );

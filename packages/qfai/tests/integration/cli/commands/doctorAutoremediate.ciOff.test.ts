@@ -1,10 +1,11 @@
+// QFAI:AC-0003-0009-02
 // QFAI:EX-0003-0009-02
 //
 // Error/boundary: `qfai doctor --autoremediate` is disabled in CI by
 // default (the `isCiEnvironment()` path) and surfaces the
 // "autoremediate disabled in CI" line without performing any remediation.
 // The `--dry-run` flag preview-only path performs zero side effects on
-// install / archive / config-write.
+// install / run-log removal.
 //
 // BR-0008-0015 speaks of "standard CI env vars", with
 // `CI=true` given only as an example, so the CLI-level cases below pin the
@@ -40,6 +41,16 @@ afterEach(async () => {
   }
 });
 
+/** One run log past the TTL and one from today; returns the stale one. */
+async function seedStaleRunLogs(root: string): Promise<string> {
+  const staleRun = path.join(root, ".qfai", "report", "run-20260401120000001");
+  await mkdir(staleRun, { recursive: true });
+  await mkdir(path.join(root, ".qfai", "report", "run-20260811120000002"), { recursive: true });
+  const aged = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  await utimes(staleRun, aged, aged);
+  return staleRun;
+}
+
 async function fileExists(target: string): Promise<boolean> {
   try {
     await access(target);
@@ -52,11 +63,8 @@ async function fileExists(target: string): Promise<boolean> {
 describe("doctor --autoremediate CI-off / --dry-run side-effect gates", () => {
   it("CI=true short-circuits with 'autoremediate disabled in CI'", async () => {
     const root = await newTempDir("ci");
-    const oldTs = "20260401120000333";
-    const oldDir = path.join(root, ".qfai", "review", `review-${oldTs}`);
-    await mkdir(oldDir, { recursive: true });
-    const mtime = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    await utimes(oldDir, mtime, mtime);
+    await writeFile(path.join(root, "qfai.config.yaml"), "report:\n  keepLatestRuns: 1\n", "utf-8");
+    const staleRun = await seedStaleRunLogs(root);
 
     const summary = await runAutoremediate({
       root,
@@ -67,17 +75,13 @@ describe("doctor --autoremediate CI-off / --dry-run side-effect gates", () => {
 
     expect(summary.disabledInCi).toBe(true);
     expect(summary.lines.join("\n")).toContain("autoremediate disabled in CI");
-    // No archival despite the stale pack.
-    expect(await fileExists(oldDir)).toBe(true);
-    expect(
-      await fileExists(path.join(root, ".qfai", "review", "_archive", `review-${oldTs}`)),
-    ).toBe(false);
+    // No prune despite the stale run log.
+    expect(await fileExists(staleRun)).toBe(true);
     expect(summary.installed).toEqual([]);
-    expect(summary.archived).toEqual([]);
-    expect(summary.configFieldsWritten).toEqual([]);
+    expect(summary.prunedRunLogs).toEqual([]);
   });
 
-  it("--dry-run yields no install / archive / config-write side effects", async () => {
+  it("--dry-run yields no install / run-log removal side effects", async () => {
     // QFAI:EX-0003-0009-05
     const root = await newTempDir("dry");
     // Seed skill manifest declaring a missing dep.
@@ -88,16 +92,10 @@ describe("doctor --autoremediate CI-off / --dry-run side-effect gates", () => {
       JSON.stringify({ runtimeDependencies: ["playwright"] }, null, 2),
       "utf-8",
     );
-    // Seed a stale pack.
-    const oldTs = "20260401120000444";
-    const oldDir = path.join(root, ".qfai", "review", `review-${oldTs}`);
-    await mkdir(oldDir, { recursive: true });
-    const mtime = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    await utimes(oldDir, mtime, mtime);
-    // Seed minimal config WITHOUT review section.
     const configPath = path.join(root, "qfai.config.yaml");
-    await writeFile(configPath, "paths:\n  specsDir: .qfai/specs\n", "utf-8");
+    await writeFile(configPath, "report:\n  keepLatestRuns: 1\n", "utf-8");
     const originalConfig = await readFile(configPath, "utf-8");
+    const staleRun = await seedStaleRunLogs(root);
 
     const installCalls: string[] = [];
     const summary = await runAutoremediate({
@@ -115,29 +113,14 @@ describe("doctor --autoremediate CI-off / --dry-run side-effect gates", () => {
     // No install side effect.
     expect(installCalls).toEqual([]);
     expect(summary.installed).toEqual([]);
-    // No archival side effect (pack remains in top-level).
-    expect(await fileExists(oldDir)).toBe(true);
-    expect(
-      await fileExists(path.join(root, ".qfai", "review", "_archive", `review-${oldTs}`)),
-    ).toBe(false);
-    // No config write side effect.
+    // No run-log removal: the stale run is still there.
+    expect(await fileExists(staleRun)).toBe(true);
     expect(await readFile(configPath, "utf-8")).toBe(originalConfig);
-    expect(summary.configFieldsWritten).toEqual([]);
-    // Dry-run line surfaced.
-    expect(summary.lines.join("\n")).toMatch(/dry-run/u);
-    // The archive plan is reported in the FUTURE tense. `cleanStaleReviewPacks`
-    // still populates `archived` under dry-run (the packs a live run would
-    // move), so the past-tense `review packs archived=N` wording read as a
-    // completed archive and an operator checking the preview saw packs already
-    // gone. `--clean --dry-run` says `would move ->`; so must this.
+    // The plan is reported in the future tense.
     const dryRunLines = summary.lines.join("\n");
-    expect(dryRunLines).not.toMatch(/review packs archived=/u);
-    expect(dryRunLines).toContain("autoremediate: would archive review packs=1");
-    expect(dryRunLines).toContain(`  would move -> _archive/review-${oldTs}`);
-    // The config here genuinely lacks `review:`, so the fill IS planned — and
-    // the plan names the field it would add rather than claiming a fill
-    // unconditionally (see `doctorAutoremediate.fixes.test.ts`).
-    expect(dryRunLines).toContain("autoremediate: would fill default-keyed config fields: review");
+    expect(dryRunLines).toMatch(/dry-run/u);
+    expect(dryRunLines).toContain("autoremediate: would run npm install");
+    expect(dryRunLines).toContain("autoremediate: would prune run logs=1");
   });
 });
 
@@ -145,8 +128,8 @@ describe("doctor --autoremediate CI-off / --dry-run side-effect gates", () => {
 // `process.env["CI"] === "true"`, an exact comparison that read the
 // conventional truthy-by-presence spellings (`CI=1`, Vercel's default) as
 // "local". Under those the full mutating path ran on a CI checkout: the
-// root `.gitignore` was rewritten, config fields were filled and review
-// packs archived — precisely what AC-0006-0018 forbids. `GITHUB_ACTIONS`
+// root `.gitignore` was rewritten and run logs pruned — precisely what
+// AC-0006-0018 forbids. `GITHUB_ACTIONS`
 // was not consulted at all.
 describe("doctor --autoremediate CI detection follows the convention", () => {
   const CI_ENV_KEYS = ["CI", "GITHUB_ACTIONS"] as const;

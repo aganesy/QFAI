@@ -8,7 +8,7 @@ Feature: Tool Selection Documentation
   Scenario: Tool Selection Rationale Recorded
     Given the configure workflow
     When tool selection is made per layer
-    Then rationale is recorded in the evidence file.
+    Then the rationale is recorded in `tech.md`.
 
   # AC-0001-0079-02
   Scenario: Minimum Runnable Path Documented

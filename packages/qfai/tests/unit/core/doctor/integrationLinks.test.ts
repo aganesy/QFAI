@@ -3,10 +3,6 @@
 // asks that same question in `doctor`, through the same code, and carries what
 // it answered: the severity, the waivers, and the fact that the remedy differs
 // by damage class and is the validator's to state.
-//
-// `skills.integrity` is the neighbouring check and answers a different
-// question — whether the content matches what was shipped — which a broken
-// wrapper leaves untouched. Both belong.
 
 import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -68,7 +64,7 @@ afterEach(() => {
 });
 
 /** A skill the shipped roster carries, so its wrapper is in scope. */
-const SHIPPED_SKILL = "qfai-atdd";
+const SHIPPED_SKILL = "qfai-implement";
 
 async function withProject(task: (root: string) => Promise<void>): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-links-"));
@@ -142,7 +138,7 @@ describe("integration.links", () => {
 
       expect(check?.severity).toBe("error");
       expect(check?.message).toContain("need attention");
-      expect(check?.details?.["wrappers"]).toEqual([".claude/skills/qfai-atdd"]);
+      expect(check?.details?.["wrappers"]).toEqual([".claude/skills/qfai-implement"]);
     });
   });
 
@@ -155,7 +151,7 @@ describe("integration.links", () => {
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;
       await wireProject(root);
-      injectedFindings = [linkFinding("warning", ".claude/skills/qfai-atdd")];
+      injectedFindings = [linkFinding("warning", ".claude/skills/qfai-implement")];
 
       const check = linksCheck(await createDoctorData({ startDir: root, rootExplicit: true }));
 
@@ -168,8 +164,8 @@ describe("integration.links", () => {
       if (!(await canCreateSymlink(root))) return;
       await wireProject(root);
       injectedFindings = [
-        linkFinding("warning", ".claude/skills/qfai-atdd"),
-        linkFinding("error", ".codex/skills/qfai-atdd"),
+        linkFinding("warning", ".claude/skills/qfai-implement"),
+        linkFinding("error", ".codex/skills/qfai-implement"),
       ];
 
       const check = linksCheck(await createDoctorData({ startDir: root, rootExplicit: true }));
@@ -202,7 +198,7 @@ describe("integration.links", () => {
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;
       await wireProject(root);
-      const suppressed = linkFinding("warning", ".claude/skills/qfai-atdd");
+      const suppressed = linkFinding("warning", ".claude/skills/qfai-implement");
       injectedFindings = [{ ...suppressed, suppressed: true }];
 
       const check = linksCheck(await createDoctorData({ startDir: root, rootExplicit: true }));
@@ -220,12 +216,12 @@ describe("integration.links", () => {
       if (!(await canCreateSymlink(root))) return;
       await wireProject(root);
       await writeFile(path.join(root, ".qfai", "waivers.yml"), "waivers: [\n", "utf-8");
-      injectedFindings = [linkFinding("warning", ".claude/skills/qfai-atdd")];
+      injectedFindings = [linkFinding("warning", ".claude/skills/qfai-implement")];
 
       const check = linksCheck(await createDoctorData({ startDir: root, rootExplicit: true }));
 
       expect(check?.severity).toBe("error");
-      expect(check?.details?.["wrappers"]).toEqual([".claude/skills/qfai-atdd"]);
+      expect(check?.details?.["wrappers"]).toEqual([".claude/skills/qfai-implement"]);
     });
   });
 
@@ -253,7 +249,7 @@ describe("integration.links", () => {
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;
       await wireProject(root);
-      const finding = linkFinding("warning", ".claude/skills/qfai-atdd");
+      const finding = linkFinding("warning", ".claude/skills/qfai-implement");
       injectedFindings = [{ ...finding, suppressed: true }];
 
       const check = linksCheck(await createDoctorData({ startDir: root, rootExplicit: true }));
@@ -273,7 +269,7 @@ describe("integration.links", () => {
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;
       await wireProject(root);
-      injectedFindings = [linkFinding("info", ".claude/skills/qfai-atdd")];
+      injectedFindings = [linkFinding("info", ".claude/skills/qfai-implement")];
 
       const check = linksCheck(await createDoctorData({ startDir: root, rootExplicit: true }));
 
@@ -296,7 +292,7 @@ describe("integration.links", () => {
       await wireProject(root);
       injectedFindings = [
         {
-          ...linkFinding("warning", ".claude/skills/qfai-atdd"),
+          ...linkFinding("warning", ".claude/skills/qfai-implement"),
           suggested_action: REMEDY,
         },
       ];
@@ -354,22 +350,6 @@ describe("integration.links", () => {
       const check = linksCheck(await createDoctorData({ startDir: root, rootExplicit: true }));
 
       expect(check?.severity).toBe("ok");
-    });
-  });
-
-  it("agrees with skills.integrity rather than replacing it", async () => {
-    // The two ask different questions and both belong: content is unchanged on
-    // a tree whose wrappers are broken, which is exactly why one check could
-    // not answer for the other.
-    await withProject(async (root) => {
-      if (!(await canCreateSymlink(root))) return;
-      await wireProject(root);
-      await repoint(root, [".qfai", "assistant", "skill", "gone"]);
-
-      const data = await createDoctorData({ startDir: root, rootExplicit: true });
-
-      expect(linksCheck(data)?.severity).toBe("error");
-      expect(data.checks.find((check) => check.id === "skills.integrity")).toBeDefined();
     });
   });
 });

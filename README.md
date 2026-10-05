@@ -92,15 +92,14 @@ See [Invoking a stage directly](#invoking-a-stage-directly-expert-path).
 
 You state the change once, in your own words.
 The `qfai-run` skill reads it into facts: what it asks for, its risks, and how sure that reading is.
-`npx qfai workflow` then picks one of 39 fixed routes from those facts by ordered decision rules,
-and each stage of the route runs through its own skill until `finish` confirms the completion target.
-You type no stage name.
+`npx qfai workflow plan` then picks one of 35 fixed routes from those facts by ordered decision rules
+and returns the route's plan, writing nothing. The session runs each step of the plan in order and
+asks you only the decisions that are yours and each release. You type no stage name.
 
 `npx qfai init` adds a hook that repeats this on every prompt: a request that names no skill goes
 to `qfai-run`. Claude Code reads it from `.claude/settings.json` and Codex from `.codex/hooks.json`.
-Each stage of a run is a sub-agent, so a question that one command or one file read answers
-is answered directly, with no run. Any other question about the project that changes no file runs one
-stage, in one sub-agent, with no separate reviewer unless the run carries `review:heavy`.
+A question that one command or one file read answers is answered directly, with no plan. Any other
+question about the project that changes no file plans a route that answers it and changes nothing.
 An existing `.codex/hooks.json` gains the hooks the way `.claude/settings.json` does.
 Codex runs a project's hooks only after you review and trust them with `/hooks`.
 
@@ -116,22 +115,20 @@ parent directory. Where it is missing the hook says to run the project's install
 `npm i -D qfai` when `package.json` does not list `qfai`.
 
 - Every run on a route runs the same steps. A step with nothing to do records why and passes.
-- Three modifiers, `review:heavy`, `gate:user` and `gate:release`, can raise the review or add a
-  stop for your approval. They never change the steps, and a run never loses one.
+- Two modifiers, `gate:user` and `gate:release`, can add a stop for your approval. They never change the steps, and a run never loses one.
 - A question, a duplicate, a request missing information or an operation only a person can run
   takes a route that changes no file, run by `qfai-triage`.
-- When a diagnosis shows the run is on the wrong route, the run moves at a point its route
-  declares and keeps its evidence. A third move asks you first.
+- When a diagnosis shows the work is on the wrong route, it moves at a point its route
+  declares. A third move asks you first.
 
 The package ships one plan file per route under `assets/defaults/workflows/`,
 named after the route.
 
-- Say `continue` to resume an interrupted run where it stopped.
-- Say `stop` to cancel the run.
-- The run asks you only for a decision it cannot take: which route a request that reads two ways
-  should take, creating a new story, approving a change to the story tree, accepting a material
-  risk such as data loss, a broken public contract or a production effect, or a fact only you hold.
-- Say you do not want a commit, and the run stops at a verified working tree instead of done.
+- Say `stop` to end the work.
+- You are asked only which route a request that reads two ways should take, each decision that
+  contradicts a specification, a contract or a recorded decision, cannot be taken back or rests
+  on product intent nothing written states, each release, and a fact only you hold. Every other
+  decision is taken and listed in the final report.
 
 `workflow.mode` in `qfai.config.yaml` sets how far the entry goes:
 
@@ -139,10 +136,7 @@ named after the route.
 | -------- | ------------------------------------------------------ |
 | `active` | The default. Runs the stages one after another         |
 | `shadow` | Says what the request asks and why, and writes nothing |
-| `off`    | Starts no run. You invoke the stage skills by name     |
-
-`active` chains stages only on a host whose capability report and first delegation pass.
-See [Supported hosts](#supported-hosts).
+| `off`    | Plans nothing. You invoke the stage skills by name     |
 
 ### Invoking a stage directly (expert path)
 
@@ -160,9 +154,8 @@ The agent reads QFAI assets under `.qfai/assistant/` and writes story-tree docum
 
 QFAI includes a small set of custom skills (stored under `.qfai/assistant/skill/`) designed to keep the workflow opinionated and repeatable.
 
-- **qfai-run**: The free-text entry. Takes a change stated in your own words through the stages of
-  the route the CLI picks, hands each stage to the skill below that owns it, and reports when
-  `finish` confirms the result.
+- **qfai-run**: The free-text entry. Takes a change stated in your own words through the steps of
+  the plan the CLI returns, and reports what changed and each gate's verdict.
 - **qfai-triage**: Answer a question, close a duplicate, ask for missing information, split a
   request, group automated reports, take in a security report or hand over an operation only a
   person can run. It changes no tracked file, and records any work needed as a follow-up request.
@@ -180,23 +173,24 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skill/
   policy, business flows, stories with AC and EX, then enforcing contracts with
   BR. Record triage, change requests and unresolved questions in the two root
   tables. The discussion pack is input; the story tree is the execution SSOT.
-- **qfai-prototyping**: Iterate every UI-bearing contract and its screens
-  through up to ten generate, capture and review cycles. Convergence requires
-  exceptional scores on all four UX axes with no layout or design-token
-  violations. The primary UI contract is a selection pin, not a limit on
-  coverage.
-- **qfai-atdd**: Write E2E tests for each BF and integration or API tests for
-  each AC of the selected flow.
+- **qfai-prototyping**: Build and review every UI-bearing contract and its
+  screens with the user, one iteration at a time, until the user confirms the
+  prototype. No command certifies it. The loop's files stay under
+  `.qfai/prototype/`, and the primary UI contract is a selection pin, not a
+  limit on coverage.
 - **qfai-implement**: Implement a BF through EX tests and a Red, Green,
-  Refactor cycle for each example.
+  Refactor cycle for each example. Its E2E test for the BF and its integration
+  test for each AC are written first with empty bodies, and their
+  bodies later.
 - **qfai-migration-v1-to-v2**: Move an existing spec-pack project to the
   story tree with twelve bundled scripts. Preview and apply each step, then
   resolve items retained in the migration reports. The last two install the
-  free-text entry and check that `qfai-run` can start a run. The installed
+  free-text entry and check that `qfai-run` can start a run. The last also
+  lists the tracked project files that still name a 1.x path. The installed
   `.qfai/assistant/skill/qfai-migration-v1-to-v2/references/migration-guide.md`
   defines the plan and report. This skill is not
   a CLI command. See the [2.0.0 migration guide](https://github.com/aganesy/QFAI/blob/main/packages/qfai/docs/MIGRATION-2.0.0.md).
-- **qfai-verify**: Run documented quality gates and produce reviewer-approved evidence under `.qfai/evidence/`.
+- **qfai-verify**: Run documented quality gates and report the reviewer-approved result.
 
 On a project with the old spec layout, `qfai init` installs the migration skill
 without seeding a competing `.qfai/spec/` tree. Run the skill before adopting
@@ -217,29 +211,19 @@ O->>R: Run npx qfai init
 R-->>O: Story tree and assistant kit installed
 
 O->>AG: Describe the change in your own words
-AG->>W: start, then the facts read from the request
+AG->>W: plan, with the facts read from the request
 W-->>AG: The route the rules chose, and its plan
 AG-->>O: The goal, the stages in order and the files it may change
 
-opt The change needs a new story
-AG-->>O: Ask whether to create it
-O->>AG: Answer
-end
-
 loop Each stage of the plan
-AG->>W: next
-W-->>AG: Work order for the stage
-AG->>R: Run the stage skill: story tree, acceptance tests, implementation or verification
-opt The stage changes the story tree
-AG-->>O: Ask to approve the change
+AG->>R: Run each step: story tree, tests, implementation or verification
+opt A decision point reaches a critical decision
+AG-->>O: Ask the decision
 O->>AG: Answer
 end
-AG->>W: accept the stage result
 end
 
-AG->>W: finish
-W-->>AG: Completion target confirmed by validate
-AG-->>O: Completion report
+AG-->>O: Final report
 ```
 
 Notes on the skills.
@@ -250,7 +234,6 @@ Notes on the skills.
 - Skills delegate to role-based sub-agents (Planner, Architect, Contract Designer, QA, Code Reviewer and so on), so each change passes through separate roles.
 - Triage decisions and change requests live in `.qfai/spec/decisions.md`;
   unresolved questions live in `.qfai/spec/open-questions.md`.
-- Review pack structure — `.qfai/review/review-<YYYYMMDDhhmmssSSS>/{review_request.md,R01_*.md,summary.json}` — is the one layout enforced by validation (`QFAI-REVIEW-*`).
 - Agent cards under `.qfai/assistant/agent/` define each role. The installed package supplies routing and review-profile defaults in `assets/defaults/`.
 - Project `routing` and `reviewProfiles` entries in `qfai.config.yaml` replace matching defaults as complete entries.
 
@@ -330,25 +313,24 @@ flowchart LR
     (`assistant/rule/`, `skill/`, `agent/` and `prompt/`), plus `qfai.config.yaml`.
   - Options:
 
-    | Flag                       | Effect                                                                                                                                                                                                                                                                                                                         |
-    | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-    | `--dir <path>`             | Output directory (default: the current directory). Wins over `--root` when both are given.                                                                                                                                                                                                                                     |
-    | `--root <path>`            | Every other command reads this as the target directory; `init` reads it as the output directory too, but only when `--dir` is omitted.                                                                                                                                                                                         |
-    | `--force`                  | Refresh shipped skills and agents, their host wrappers, and generated Copilot instructions. Shipped rules are refreshed only when their provenance shows they are unedited. Project content and routing overrides are preserved. The managed `.gitignore` block and `core.symlinks` setting are repaired on every non-dry-run. |
-    | `--dry-run`                | Report what would change and write nothing. Use it to rehearse `--upgrade-assistant-tree`.                                                                                                                                                                                                                                     |
-    | `--upgrade-assistant-tree` | Copy recognized legacy assistant files into the singular tree without deleting a source or overwriting a destination. Migrate old spec packs with `/qfai-migration-v1-to-v2`. Unrecognized assistant files stay in place.                                                                                                      |
-    | `--yes`                    | Reserved for a future interactive mode; no behavioural difference today.                                                                                                                                                                                                                                                       |
-    | `--verbose`                | Expand the run report's `skipped` list to the full path listing. Off by default, so a no-op re-run prints the skip count and a pointer to this flag instead of every shipped asset path. It does not gate the written or removed listings: those are printed whenever they have entries, with or without this flag.            |
-    | `--help`, `-h`             | Print the CLI usage banner and exit without writing anything. Accepted by every command, `init` included, and handled before the command runs.                                                                                                                                                                                 |
-    | `--version`, `-V`          | Print the installed QFAI version to stdout and exit 0. Accepted by every command, `init` included, and handled before the command runs, so it works outside a project too.                                                                                                                                                     |
+    | Flag                       | Effect                                                                                                                                                                                                                                                                                                                                                                                                 |
+    | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+    | `--dir <path>`             | Output directory (default: the current directory). Wins over `--root` when both are given.                                                                                                                                                                                                                                                                                                             |
+    | `--root <path>`            | Every other command reads this as the target directory; `init` reads it as the output directory too, but only when `--dir` is omitted.                                                                                                                                                                                                                                                                 |
+    | `--force`                  | Overwrite the shipped skills, steps, agents and rules, the rule masters under `.agents/rules/`, their host wrappers, and generated Copilot instructions, whether or not you edited them. Project content, `qfai.config.yaml`, `DESIGN.md`, `AGENTS.md`, `CLAUDE.md` and routing overrides are preserved. The managed `.gitignore` block and `core.symlinks` setting are repaired on every non-dry-run. |
+    | `--dry-run`                | Report what would change and write nothing. Use it to rehearse `--upgrade-assistant-tree`.                                                                                                                                                                                                                                                                                                             |
+    | `--upgrade-assistant-tree` | Copy recognized legacy assistant files into the singular tree without deleting a source or overwriting a destination. Migrate old spec packs with `/qfai-migration-v1-to-v2`. Unrecognized assistant files stay in place.                                                                                                                                                                              |
+    | `--yes`                    | Reserved for a future interactive mode; no behavioural difference today.                                                                                                                                                                                                                                                                                                                               |
+    | `--verbose`                | Expand the run report's `skipped` list to the full path listing. Off by default, so a no-op re-run prints the skip count and a pointer to this flag instead of every shipped asset path. It does not gate the written or removed listings: those are printed whenever they have entries, with or without this flag.                                                                                    |
+    | `--help`, `-h`             | Print the CLI usage banner and exit without writing anything. Accepted by every command, `init` included, and handled before the command runs.                                                                                                                                                                                                                                                         |
+    | `--version`, `-V`          | Print the installed QFAI version to stdout and exit 0. Accepted by every command, `init` included, and handled before the command runs, so it works outside a project too.                                                                                                                                                                                                                             |
 
-  - `D-DEPRECATED-PATH` means legacy assistant steering remains past its
+  - `D-DEPRECATED-PATH` means the legacy assistant layout remains past its
     supported window. Run `npx qfai init --upgrade-assistant-tree` to copy
     recognized files into the current tree without deleting their sources.
 
 - `npx qfai validate`
-  - Validates the story tree, contracts, test obligations and review artifacts
-    (`.qfai/review/review-*/summary.json` + minimum schema), writes `.qfai/report/validate.json`,
+  - Validates the story tree, contracts and test obligations, writes `.qfai/report/validate.json`,
     and appends run logs to `.qfai/report/run-*/`; use `--fail-on error` (or `--fail-on warning`) to turn it into a CI gate,
     and `--format github` to emit GitHub-friendly annotations.
     Use `--flow BF-0001` to scope a run to one business flow. `--spec` is retired.
@@ -362,34 +344,13 @@ flowchart LR
     `--profile prototyping` adds preflight checks for the primary UI contract, design contract readiness,
     active agent-wrapper integrations, shipped role-input readiness, Playwright CLI launcher resolution and probing,
     and target URL reachability.
-- `npx qfai prototyping`
-  - Prototyping is UI-only. The AI workflow (`/qfai-prototyping`) drives it and produces its evidence,
-    `.qfai/evidence/prototyping/prototyping.json`; it is not a general-purpose end-user flow.
-    Runtime observation is observed-only: no synthetic 200, API or DB coverage is recorded.
-  - `npx qfai prototyping preflight --target-url <url>` is a focused check before the skill starts. It surfaces blocking
-    `QFAI-DCON-*` design-contract issues alongside runtime assumptions and resolves a runnable Playwright CLI launcher.
-  - `npx qfai prototyping iterate --cycle <n> --target-url <url>` runs one cycle, 0 to 9, of the UI contract evolution loop over every
-    UI-bearing contract and each screen it declares. Exit codes: 0 (continue), 64 (converged), 65 (cycle limit),
-    66 (license-verify failure), 2 (input or lock drift).
-  - `prototyping.primaryUiContract` in `qfai.config.yaml` pins the primary contract, and
-    `--primary-ui-contract UI-0001` overrides it. The pin selects; it does not limit coverage.
-    Cycle 0 records the full set as `uiContractsCovered` and `frozenSurfaceUnion` in `prototyping.json`.
-  - Per-iteration evidence goes into `iter-NN/`: the reviewer's `UI-NNNN/<screen>.review.json` per contract and screen, and the CLI's
-    own `iterate-plan.json`. From cycle 1 an advisory `iterate-context.json` adds the prior scores and open blockers.
-    `--capture` and `--cycle 0 --emit-skeletons` also write `<screen>.png` and `<screen>.html`.
-    Archive the whole `iter-NN/` directory; no `interaction.json` is written on any path.
-  - Certification records `uiContractsCovered`, `convergedUiContracts` and `laggingUiContracts`. Evidence refs must
-    resolve to repository-relative artifacts, and absolute paths are invalid. Coverage and reviews use full `UI-NNNN` IDs.
-  - `fullHarness` follows a terminal-first state machine: `status="in-progress"` requires `finalDecision="pending"`,
-    `reviewerSignoff.status="pending"`, and no `terminationReason`; `status="completed"` requires `terminationReason`,
-    a non-pending `finalDecision`, and a terminal `reviewerSignoff`.
-- `npx qfai workflow`
-  - The run control behind the free-text entry. The `qfai-run` skill calls its seven operations
-    (`start`, `next`, `accept`, `decision`, `status`, `resume` and `finish`), and each prints one
-    JSON document. `npx qfai workflow --help` lists them. A run's state lives under the git-ignored
-    `.qfai/run/`; its summary and the answers it recorded are written to
-    `.qfai/evidence/workflow/<runId>/`, which stays local like all evidence. Only `finish`
-    reports a run complete, after it runs `validate` itself.
+- `npx qfai workflow plan`
+  - The route planning behind the free-text entry. `--in <path>`, or `--in -` for standard input,
+    reads a request's extraction; `--route <route>` names a route instead. It prints one JSON
+    document: the route's stages and step files with its decision, release and branch points, the
+    candidate routes of an unsure extraction, or a refusal. It starts nothing and writes no file.
+    Exit codes: 0 (a plan or candidates), 2 (input refused), 1 (the `--in` file cannot be read, or a
+    shipped plan does not load).
 - `npx qfai sdd preflight`
   - Runs the Stage 0 gate of `/qfai-sdd`: selects the active discussion pack, counts the imported `REQ-*`,
     resolves the blockers, and writes the summary run-scoped at
@@ -461,18 +422,14 @@ Notes.
   `.qfai/assistant/rule/change-classification.md`. The `message` text and
   issue order are not stable; match on `issues[].code`.
 - `report.json`, `doctor.json`, and `run-*` JSON logs are internal exports and are not a stable external contract; prefer `report.md` for integrations that must survive tool upgrades.
-- `prototyping.calibration.packPath` points to the calibration pack SSOT; runtime and validator both resolve thresholds and iteration parameters from that pack.
-- `prototyping.calibration.thresholds`, `maxIterations`, `plateauDelta`, and `plateauLookback` are unsupported public config fields.
-  Put calibration values in the referenced pack instead of `qfai.config.yaml`.
 
 ## Minimal tutorial
 
 1. `npx qfai init`
 2. Open your AI coding agent in the repository and describe the change in your own words.
    If you only have an idea, say so: the run starts with a discussion that structures scope and open questions.
-3. Answer the questions the run puts to you. Say `continue` to resume after an interruption, or `stop` to cancel.
-4. Keep each completed review under `.qfai/review/review-<timestamp>/`.
-5. Run `npx qfai validate` then `npx qfai report`.
+3. Answer the questions the work puts to you, or say `stop` to end it.
+4. Run `npx qfai validate` then `npx qfai report`.
 
 To choose each stage yourself, see [Invoking a stage directly](#invoking-a-stage-directly-expert-path).
 
@@ -551,22 +508,17 @@ request first. If your branch protection requires these checks before every merg
 set the repository variable `QFAI_CI_PUSH_POLICY` to `protected`: the push then runs
 neither, and `qfai validate` still runs as the post-merge check.
 
-All three files are copied create-only — `qfai init` never overwrites an existing
-copy, not even with `--force` — so edit them freely. Deleting one is a choice
-`qfai init` remembers rather than undoes: it records what it installed in
-`.qfai/install-provenance.json` (keep that file committed), and never recreates
-a workflow you removed.
+All three files are copied create-only — `qfai init` writes a workflow only
+where no file of that name exists, and never overwrites one, not even with
+`--force` — so edit them freely. A workflow you delete is written again by the
+next `qfai init`. A workflow an earlier version shipped and this one does not is
+listed by `qfai init` and left for you to delete.
 
-Those two rules together mean a corrected template does not arrive on its own.
-`qfai doctor` reports an installed workflow whose content no longer matches the
-packaged one; taking the new copy is yours to do, either way round:
+A corrected template therefore does not arrive on its own. Take the packaged copy
+yourself, or delete yours and run `qfai init`:
 
 ```bash
-# Take the packaged file directly, leaving the record alone.
 cp node_modules/qfai/assets/init/root/.github/workflows/qfai-docs.yml .github/workflows/
-
-# Or let init write it: remove the file and its entry from the record first,
-# otherwise the deletion reads as a decision and init writes nothing.
 ```
 
 Read your own edits out of the old copy before you replace it. Neither route

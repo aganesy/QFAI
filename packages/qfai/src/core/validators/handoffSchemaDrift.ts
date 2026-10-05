@@ -24,6 +24,12 @@ const FINDING_CODE = "R-HANDOFF-SCHEMA-DRIFT";
 /** Stable token whose presence in the schema source proves the canonical field set is exported. */
 const SCHEMA_TOKEN = "HANDOFF_MINIMUM_FIELDS";
 
+/** The field names the schema source lists in its `HANDOFF_MINIMUM_FIELDS` array literal. */
+function schemaFields(schemaText: string): string[] {
+  const list = /HANDOFF_MINIMUM_FIELDS\s*=\s*\[([^\]]*)\]/.exec(schemaText)?.[1] ?? "";
+  return [...list.matchAll(/["']([^"']+)["']/g)].flatMap((m) => (m[1] ? [m[1]] : []));
+}
+
 /**
  * Detect asymmetric edits across the CLI-HANDOFF SSOT-sync pair.
  *
@@ -32,6 +38,8 @@ const SCHEMA_TOKEN = "HANDOFF_MINIMUM_FIELDS";
  *     source exists but does NOT contain the writer's expected token,
  *     fire `R-HANDOFF-SCHEMA-DRIFT` naming the writer file as the
  *     un-paired counterpart.
+ *   - When the pair names the schema fields, the same finding fires for
+ *     every field the schema lists that the writer does not name.
  *   - When neither source file exists in the repo (consumer install
  *     without source), no finding is emitted.
  */
@@ -47,6 +55,7 @@ export async function detectHandoffSchemaDrift(root: string): Promise<Issue[]> {
   const schemaHasField = schemaText.includes(SCHEMA_TOKEN);
   if (!schemaHasField) return [];
 
+  const fields = schemaFields(schemaText);
   const issues: Issue[] = [];
   for (const pair of HANDOFF_WRITER_PAIRS) {
     const writerAbs = path.join(root, pair.writerRel);
@@ -57,12 +66,15 @@ export async function detectHandoffSchemaDrift(root: string): Promise<Issue[]> {
     } catch {
       continue;
     }
-    const writerHasToken = writerText.includes(pair.writerToken);
-    if (writerHasToken) continue;
+    const missing = writerText.includes(pair.writerToken) ? [] : [pair.writerToken];
+    if (pair.namesSchemaFields) {
+      missing.push(...fields.filter((field) => !writerText.includes(`\`${field}\``)));
+    }
+    if (missing.length === 0) continue;
     const message =
       `${FINDING_CODE}: SSOT-sync pair for clause "${pair.clause}" is asymmetric ` +
       `(justification: schema=${HANDOFF_SCHEMA_REL} exports ${SCHEMA_TOKEN}, ` +
-      `writer=${pair.writerRel} does NOT reference "${pair.writerToken}". ` +
+      `writer=${pair.writerRel} does NOT reference ${missing.map((m) => `"${m}"`).join(", ")}. ` +
       `clause=${pair.clause} — un-paired counterpart=${pair.writerRel}).`;
     issues.push(
       issue(FINDING_CODE, message, "error", pair.writerRel, "reviewerGate.handoffSchemaDrift"),

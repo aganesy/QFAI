@@ -63,7 +63,6 @@ specialization_tags:
 - Architecture decisions with trade-offs
 - Contract decisions and ownership boundaries
 - Risks, mitigations, and non-goals
-- Evidence summary for `.qfai/evidence/`
 - Principle-based rationale for why the chosen design is simpler, necessary, and maintainable enough
 
 ## Stop conditions

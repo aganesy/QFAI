@@ -39,8 +39,6 @@ describe("validate.ts QFAI-DCON-* known codes (TC-3.9.x)", () => {
   it("TC-3.9.1: new validator IDs return correct error messages", async () => {
     const src = await readSrc("validate.ts");
     expect(src).toMatch(/"QFAI-DCON-030":[\s\S]*?DESIGN\.md/);
-    expect(src).toMatch(/"QFAI-DCON-012":[\s\S]*?prototyping\.json/);
-    expect(src).toMatch(/"QFAI-DCON-013":[\s\S]*?prototyping\.json#handoff/);
   });
 
   it("TC-3.9.2: removed validator IDs are no longer in the lookup map", async () => {
@@ -54,6 +52,8 @@ describe("validate.ts QFAI-DCON-* known codes (TC-3.9.x)", () => {
       "QFAI-DCON-008",
       "QFAI-DCON-010",
       "QFAI-DCON-011",
+      "QFAI-DCON-012",
+      "QFAI-DCON-013",
       "QFAI-DCON-014",
       "QFAI-DCON-015",
       "QFAI-DCON-016",
@@ -66,15 +66,9 @@ describe("validate.ts QFAI-DCON-* known codes (TC-3.9.x)", () => {
     }
   });
 
-  it("TC-3.9.3: gap-allowed numbering preserved (012/013/030/033/034 present)", async () => {
+  it("TC-3.9.3: gap-allowed numbering preserved (030/033/034 present)", async () => {
     const src = await readSrc("validate.ts");
-    for (const preserved of [
-      "QFAI-DCON-012",
-      "QFAI-DCON-013",
-      "QFAI-DCON-030",
-      "QFAI-DCON-033",
-      "QFAI-DCON-034",
-    ]) {
+    for (const preserved of ["QFAI-DCON-030", "QFAI-DCON-033", "QFAI-DCON-034"]) {
       expect(src.includes(`"${preserved}":`), `${preserved} must be present`).toBe(true);
     }
   });
@@ -84,7 +78,7 @@ describe("validate.ts QFAI-DCON-* known codes (TC-3.9.x)", () => {
     // The literal map is in src; we extract each line and assert non-empty
     // value. Robustness > exhaustiveness here — the smoke is sufficient
     // because TC-3.9.1 already pinned content.
-    for (const id of ["QFAI-DCON-012", "QFAI-DCON-013", "QFAI-DCON-030"]) {
+    for (const id of ["QFAI-DCON-030", "QFAI-DCON-033", "QFAI-DCON-034"]) {
       const re = new RegExp(`"${id}":[\\s\\S]*?"([^"]+)"`);
       const match = re.exec(src);
       expect(match, `${id} should map to a non-empty string`).not.toBeNull();

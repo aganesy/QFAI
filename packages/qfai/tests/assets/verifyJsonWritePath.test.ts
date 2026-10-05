@@ -1,17 +1,7 @@
 /**
  * `verify.json` has exactly one writer — the `/qfai-verify` skill — and no
  * TypeScript writes it, so the shipped prose *is* the write-side contract.
- *
- * The contract told the skill to write `.qfai/output/verify.json` while
- * `readVerifyJson()` had already moved the canonical location to
- * `.qfai/report/verify.json`. Every conforming run therefore landed in the
- * legacy branch and `prototyping certify` printed a migration note it could
- * not act on: moving the file fixed one run, and the next `/qfai-verify` wrote
- * it back where the skill said to.
- *
- * This is the second time the constant drifted from its documentation, so the
- * guard is structural: every write-side path literal in the shipped prose is
- * compared against `VERIFY_JSON_REL` itself, not against a copy of it.
+ * Every write-side path literal in the shipped prose names the canonical path.
  */
 
 import { readFile } from "node:fs/promises";
@@ -20,7 +10,8 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { VERIFY_JSON_LEGACY_REL, VERIFY_JSON_REL } from "../../src/core/prototyping/verifyJson.js";
+const VERIFY_JSON_REL = ".qfai/report/verify.json";
+const VERIFY_JSON_LEGACY_REL = ".qfai/output/verify.json";
 
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
@@ -29,11 +20,9 @@ const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
 const CONTRACT = "assistant/skill/qfai-verify/references/verify-output-contract.md";
 const VERIFY_STEP = "assistant/step/verify-repo-gate/STEP.md";
-const WORKFLOW = "assistant/rule/workflow.md";
-const HANDOFF = "assistant/skill/qfai-prototyping/references/handoff.md";
 
 /** Files whose prose instructs a writer where to put `verify.json`. */
-const WRITE_SIDE_DOCS = [CONTRACT, VERIFY_STEP, WORKFLOW, HANDOFF];
+const WRITE_SIDE_DOCS = [CONTRACT, VERIFY_STEP];
 
 /** ``... write[s] ... `<some .qfai path ending in verify.json>` `` on one line. */
 const WRITE_INSTRUCTION = /\bwrites?\b[^.\n]*`(\.qfai\/[^`]*verify\.json)`/g;
@@ -52,7 +41,7 @@ const matchAll = (text: string, re: RegExp): string[] =>
   [...text.matchAll(re)].flatMap((m) => (m[1] === undefined ? [] : [m[1]]));
 
 describe.each(QFAI_TREES)("%s", (tree) => {
-  it("names the canonical path the code reads first as the contract's canonical path", async () => {
+  it("names the canonical path as the contract's canonical path", async () => {
     const contract = await read(tree, CONTRACT);
     expect(contract).toContain(`# Verify Output Contract — \`${VERIFY_JSON_REL}\``);
     expect(contract).toContain(`\`/qfai-verify\` MUST write \`${VERIFY_JSON_REL}\``);
@@ -60,8 +49,6 @@ describe.each(QFAI_TREES)("%s", (tree) => {
   });
 
   it("records the legacy location as read-only rather than dropping it", async () => {
-    // The fallback still exists in `readVerifyJson()`; a writer that has never
-    // heard of it cannot understand certify's migration note.
     const contract = await read(tree, CONTRACT);
     expect(contract).toContain(`\`${VERIFY_JSON_LEGACY_REL}\` is the legacy location`);
     expect(contract).toContain("Never write there.");

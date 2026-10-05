@@ -138,7 +138,7 @@ function policyName(target: string): PolicyDocument {
 }
 
 /** One old section, read from its source file. */
-export type PolicySection = { source: string; archive: string; heading: string; body: string };
+export type PolicySection = { source: string; heading: string; body: string };
 
 /** What the sections moved into one policy document, section by section. */
 export type PolicyDraft = {
@@ -287,7 +287,7 @@ export function rewrite(
   into: string | undefined,
 ): string {
   const where = into === undefined ? draft.target : `${draft.target} ## ${into}`;
-  return `${where}: rewrite "## ${section.heading}" of ${section.source} by hand (kept at ${section.archive})`;
+  return `${where}: rewrite "## ${section.heading}" of ${section.source} by hand`;
 }
 
 /**
@@ -322,7 +322,7 @@ export function movePolicySection(draft: PolicyDraft, section: PolicySection): s
   addUnique(draft.rows, into, table.rows, sameRow);
   return table.dropped.map(
     (column) =>
-      `${draft.target} ## ${into}: carry the "${column}" column of "## ${section.heading}" in ${section.source} by hand (kept at ${section.archive})`,
+      `${draft.target} ## ${into}: carry the "${column}" column of "## ${section.heading}" in ${section.source} by hand`,
   );
 }
 
@@ -331,19 +331,19 @@ function moveConstraintSection(draft: PolicyDraft, section: PolicySection): stri
   if (table === null) return [rewrite(draft, section, undefined)];
   const person = table.dropped.map(
     (column) =>
-      `${draft.target}: move what the "${column}" column of "## ${section.heading}" in ${section.source} states to the contract or tech.md that owns it, or drop it (kept at ${section.archive})`,
+      `${draft.target}: move what the "${column}" column of "## ${section.heading}" in ${section.source} states to the contract or tech.md that owns it, or drop it`,
   );
   for (const row of table.rows) {
     const into = CONSTRAINT_SECTIONS[/^([A-Z]{2})-/.exec(row[0] ?? "")?.[1] ?? ""];
     if (into === undefined) {
       person.push(
-        `${draft.target}: place ${row[0] || "a row with no ID"} of "## ${section.heading}" in ${section.source} under the section its kind belongs to, with a TC-, OC- or BC- ID (kept at ${section.archive})`,
+        `${draft.target}: place ${row[0] || "a row with no ID"} of "## ${section.heading}" in ${section.source} under the section its kind belongs to, with a TC-, OC- or BC- ID`,
       );
       continue;
     }
     if (row.some((cell) => CONCRETE_CONSTRAINT.test(cell))) {
       person.push(
-        `${draft.target} ## ${into}: rewrite ${row[0]} of "## ${section.heading}" in ${section.source} in plain words, with no file name, command or rule ID, by hand (kept at ${section.archive})`,
+        `${draft.target} ## ${into}: rewrite ${row[0]} of "## ${section.heading}" in ${section.source} in plain words, with no file name, command or rule ID, by hand`,
       );
       continue;
     }
