@@ -134,6 +134,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   delegation-baseline and test-layers pointers started at `rule/`, so they did
   not resolve from the project root. Both now begin at `.qfai/assistant/rule/`.
   (#2858)
+- **A change that leaves nothing to migrate no longer owes a migration
+  note.** On the `change-compatibility` route the change note step could not
+  pass, so a one-line display-text change had to write migration steps and a
+  breaking change that did not exist. It now passes when no user has anything
+  to migrate, and still does not pass when one has. Fixes #2990.
+
 - **A project can stop `qfai init` writing a shipped workflow.** Deleting
   `qfai-tests.yml` was not enough: the next `qfai init` wrote it again, though
   its header said it would not. `workflow.skipShipped` in `qfai.config.yaml`
