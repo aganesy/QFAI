@@ -36,6 +36,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The contract guide states one scope for contract kinds.** It named only
+  `api/`, `db/` and `ui/` as contract directories in one place and `cli/` in
+  another. It now says a project's contracts are the three directories and that
+  `cli/` is the QFAI repository's own. The `QFAI-DB-001` row of the SQL findings
+  table, which rendered outside the table, now sits beside the other rows.
+  Fixes #2860.
 - **`qfai init --force` reports only the paths it changed.** The `written` count
   and list included every distributed file, including those already identical to
   the shipped copy. Rule files, the Copilot and Codex files and the agent and
