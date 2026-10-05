@@ -43,3 +43,12 @@
 /.github/workflows/qfai-validate.yml text=auto eol=lf
 /.github/workflows/qfai-tests.yml text=auto eol=lf
 /.github/workflows/qfai-docs.yml text=auto eol=lf
+
+# Git union merging keeps both branches' appended register lines. Validation
+# still reports duplicate IDs. For two new rows that reuse an ID, renumber only
+# the unmerged row and its references. For competing Status edits to an existing
+# row, keep its ID, Content and Approach; resolve Status from the recorded
+# approval and application. These paths assume the default paths.specsDir;
+# update them if the project moves its spec tree.
+/.qfai/spec/decisions.md merge=union
+/.qfai/spec/open-questions.md merge=union
