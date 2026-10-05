@@ -64,9 +64,7 @@ describe("legacy validate path lookup", () => {
   });
 
   it("reads a missing legacy file as absent, with no finding", async () => {
-    stubLegacyStat(async () => {
-      throw errnoError("ENOENT", legacyPath);
-    });
+    stubLegacyStat(() => Promise.reject(errnoError("ENOENT", legacyPath)));
 
     const gate = await evaluateLegacyValidateJsonGate({
       root,
@@ -91,9 +89,7 @@ describe("legacy validate path lookup", () => {
 
   it.each(["EACCES", "EIO"])("rethrows the same %s error unchanged", async (code) => {
     const failure = errnoError(code, legacyPath);
-    stubLegacyStat(async () => {
-      throw failure;
-    });
+    stubLegacyStat(() => Promise.reject(failure));
 
     await expect(
       evaluateLegacyValidateJsonGate({
@@ -105,9 +101,7 @@ describe("legacy validate path lookup", () => {
 
   it("rethrows an unexpected failure when the config names the legacy path", async () => {
     const failure = errnoError("EACCES", legacyPath);
-    stubLegacyStat(async () => {
-      throw failure;
-    });
+    stubLegacyStat(() => Promise.reject(failure));
 
     await expect(
       evaluateLegacyValidateJsonGate({
