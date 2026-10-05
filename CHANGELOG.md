@@ -34,6 +34,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   input it cannot read, still get the reminder. `qfai init` replaces an unedited
   copy of either earlier group.
 
+- **The free-text entry reminder points a worktree session at its own copy of
+  `qfai-run`.** The host can load the skill from the main checkout, which may
+  lag the worktree, so the reminder now tells the agent to read
+  `.claude/skills/qfai-run/SKILL.md` under the current directory. The reminder
+  is read from the session's own checkout. Fixes #2972.
+
 - **The planner-first and design anti-goal examples are tested for what they
   say.** The planner-first example was annotated on a test that only checked
   three file names. Its test now reads the completion matrix and the
@@ -58,6 +64,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Five doctor criteria now name the tests that prove them.** Existing
+  integration tests carry standalone `QFAI:AC-...` comments, and
+  `AC-0003-0004-01` gains a deprecated `paths.promptsDir` warning case.
+  The BF-0003 full pin keeps only `AC-0003-0006-01` and `AC-0003-0006-03`.
+  Refs #2367.
+
 - **A DONE change request claims every action it lists** (#2312). A
   `decisions.md` row has one Status, so a request with one action deferred could
   be marked DONE and the deferred action dropped from view. The drift protocol
@@ -71,6 +83,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   annotation down to the test it describes; `qfai validate --profile tdd`
   otherwise reports the example as uncovered. BF and AC annotations are read as
   before.
+- **The SDD triage reference says how a shared ID is renumbered** (#2505). Two
+  branches can take the same next ID. The merge target keeps its item and the
+  incoming item is renumbered, with its children and directory when it is a BF
+  or a US. Every citation changes in the same commit, and the commit message
+  states the old ID, the new ID and the renamed record. A merged row keeps its
+  ID, and an ID two merged records already share is put to the user for a
+  change request row that says which record each citation meant.
 - **The repository's scans lane refuses a tracked file under `.qfai/report/`,
   `.qfai/evidence/`, `.qfai/review/`, `.qfai/output/`, `.qfai/discussion/` or
   `.qfai/review_archive/`.** The managed
@@ -80,6 +99,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   tracked file under `tmp/` now checks these directories too, and a test holds
   its list to the `.gitignore` entries. Fixes #2356.
 
+- **The repository's dogfooding ratchet keeps diff-dependent findings out of
+  its pins.** `QFAI-DRIFT-001` reports a protected story-tree file changed
+  since the base branch without a change request, so it exists only on the
+  branch that made the change. Pinned there, it read one less after the merge
+  and failed every later pull request. `scripts/check-dogfood-backlog.mjs` now
+  leaves it, and `QFAI-STORY-010`, out of the counts it compares and pins, and
+  fails the lane on them outright in the pull request that produces them.
+  Fixes #2352.
 - **The shipped cross-flow guidance says how to find the flows a shared change
   reaches, and what to do when that search cannot finish.**
   `qfai-implement/references/cross-spec-ownership.md` now searches outward from
@@ -90,6 +117,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   as an unresolved obligation and run the full test suite once on the
   integrated tree as an extra check. The suite does not replace revalidating
   each flow, and the search is not reported complete. Refs #2424.
+
+- **The routing eval's safety-relevant list is recorded before the eval runs**
+  (#2304). The list holds every routing seed that needs human input or forbids
+  an effect, an authorization or a skipped gate, and nothing else. A test run
+  on every pull request recomputes it from the seed file and the token
+  vocabulary and requires the result to equal the recorded list. A seed or
+  vocabulary change that moves the list fails until the list is recorded again.
 
 - **The routing-eval token classes stay as they are** (#2305). No class in the
   routing-eval token vocabulary changes. The set of safety-relevant routing
