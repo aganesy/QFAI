@@ -31,6 +31,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai validate` and `qfai report --run-validate` no longer read an
+  unreadable legacy validate path as absent.** The check for a stale
+  `.qfai/output/validate.json` treated every `stat` failure as "not on disk".
+  Now only a missing path counts as absent, and any other failure, such as
+  `EACCES` or `EIO`, reaches the caller with its code, path and message
+  (#2915).
+
 - **The `qfai-run` entry reminder stays silent on a turn the host starts
   (#2989).** The Claude Code `UserPromptSubmit` hook that sends a request to
   `qfai-run` printed on every notification, so an agent could start a run from

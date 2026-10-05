@@ -187,6 +187,7 @@
     "tests/helpers/validatorGraph.ts",
     "tests/integration/atddCredentialReuseGuidance.test.ts",
     "tests/integration/cli/commands/doctorClean.runLogs.test.ts",
+    "tests/integration/cli/commands/validate.legacyPathStatFailure.test.ts",
     "tests/integration/cli/commands/validate.profileCoverageNotice.test.ts",
     "tests/integration/cli/commands/validate.strictFailOnPrecedence.test.ts",
     "tests/integration/cliStartupCost.test.ts",
