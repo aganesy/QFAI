@@ -13,7 +13,6 @@
  * Exercises `runSaasPackageProfile` directly (unit-level) without
  * shelling out to the CLI.
  */
-// QFAI:EX-0001-0049-01
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -105,6 +104,7 @@ describe("TC-0004-0068: saas-package profile rejects a missing design-system att
       "QFAI-STORY-007",
       "QFAI-STORY-008",
       "QFAI-STORY-009",
+      "QFAI-STORY-014",
       "QFAI-SCAN-002",
       "QFAI-TEST-*",
       "QFAI-DRIFT-001",

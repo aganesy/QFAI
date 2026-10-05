@@ -1,5 +1,4 @@
 // QFAI:AC-0003-0009-02
-// QFAI:EX-0003-0009-02
 //
 // Error/boundary: `qfai doctor --autoremediate` is disabled in CI by
 // default (the `isCiEnvironment()` path) and surfaces the
@@ -60,6 +59,7 @@ async function fileExists(target: string): Promise<boolean> {
   }
 }
 
+// QFAI:EX-0003-0009-02
 describe("doctor --autoremediate CI-off / --dry-run side-effect gates", () => {
   it("CI=true short-circuits with 'autoremediate disabled in CI'", async () => {
     const root = await newTempDir("ci");
@@ -81,8 +81,8 @@ describe("doctor --autoremediate CI-off / --dry-run side-effect gates", () => {
     expect(summary.prunedRunLogs).toEqual([]);
   });
 
+  // QFAI:EX-0003-0009-05
   it("--dry-run yields no install / run-log removal side effects", async () => {
-    // QFAI:EX-0003-0009-05
     const root = await newTempDir("dry");
     // Seed skill manifest declaring a missing dep.
     const manifestDir = path.join(root, ".qfai", "assistant", "skill", "qfai-prototyping");
@@ -194,12 +194,12 @@ describe("doctor --autoremediate CI detection follows the convention", () => {
     { label: "CI unset", env: {} },
     { label: "CI=false", env: { CI: "false" } },
     { label: "CI=0", env: { CI: "0" } },
-    // QFAI:EX-0003-0009-07
     { label: "CI empty", env: { CI: "" } },
   ];
 
   for (const { label, env } of ciCases) {
     // QFAI:EX-0003-0009-04 (the GITHUB_ACTIONS=true case)
+    // QFAI:EX-0003-0009-07
     it(`${label} leaves the root .gitignore untouched`, async () => {
       expect(await runInEnv(label, env)).toBe(false);
     });

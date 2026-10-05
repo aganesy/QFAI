@@ -1,10 +1,3 @@
-// QFAI:EX-0001-0038-01
-// QFAI:EX-0001-0038-02
-// QFAI:EX-0001-0038-03
-// QFAI:EX-0001-0038-04
-// QFAI:EX-0001-0038-05
-// QFAI:EX-0001-0038-06
-// QFAI:EX-0001-0038-07
 import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import os from "node:os";
@@ -60,6 +53,13 @@ afterEach(async () => {
   await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
 });
 
+// QFAI:EX-0001-0038-01
+// QFAI:EX-0001-0038-02
+// QFAI:EX-0001-0038-03
+// QFAI:EX-0001-0038-04
+// QFAI:EX-0001-0038-05
+// QFAI:EX-0001-0038-06
+// QFAI:EX-0001-0038-07
 describe("story-tree initialization", () => {
   it("seeds only the shared story documents and contract-kind directories", async () => {
     const root = await sandbox();
@@ -130,8 +130,8 @@ describe("story-tree initialization", () => {
     expect(config).toContain("contractsDir: .qfai/spec/03_contract\n");
   });
 
+  // QFAI:EX-0001-0038-09
   it("writes no validation.require section into the project config", async () => {
-    // QFAI:EX-0001-0038-09
     const root = await sandbox();
     await init(root);
     const config = await readFile(path.join(root, "qfai.config.yaml"), "utf-8");

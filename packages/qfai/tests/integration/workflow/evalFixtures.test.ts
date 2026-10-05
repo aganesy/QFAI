@@ -5,22 +5,7 @@
 // QFAI:AC-0001-0221-03
 // QFAI:AC-0001-0221-04
 // QFAI:AC-0001-0221-05
-// QFAI:EX-0001-0186-09
-// QFAI:EX-0001-0190-03
-// QFAI:EX-0001-0190-04
-// QFAI:EX-0001-0191-03
-// QFAI:EX-0001-0194-01
 // QFAI:EX-0001-0194-03
-// QFAI:EX-0001-0194-04
-// QFAI:EX-0001-0194-27
-// QFAI:EX-0001-0194-34
-// QFAI:EX-0001-0194-35
-// QFAI:EX-0001-0194-36
-// QFAI:EX-0001-0194-38
-// QFAI:EX-0001-0221-01
-// QFAI:EX-0001-0221-02
-// QFAI:EX-0001-0221-04
-// QFAI:EX-0001-0221-06
 
 import { cp, mkdtemp, readdir, readFile } from "node:fs/promises";
 import os from "node:os";
@@ -82,6 +67,21 @@ async function fixtureText(name: string): Promise<string> {
   });
 }
 
+// QFAI:EX-0001-0186-09
+// QFAI:EX-0001-0190-03
+// QFAI:EX-0001-0190-04
+// QFAI:EX-0001-0191-03
+// QFAI:EX-0001-0194-01
+// QFAI:EX-0001-0194-04
+// QFAI:EX-0001-0194-27
+// QFAI:EX-0001-0194-34
+// QFAI:EX-0001-0194-35
+// QFAI:EX-0001-0194-36
+// QFAI:EX-0001-0194-38
+// QFAI:EX-0001-0221-01
+// QFAI:EX-0001-0221-02
+// QFAI:EX-0001-0221-04
+// QFAI:EX-0001-0221-06
 it("An existing fixture returns its text", async () => {
   await expect(fixtureText("routing-seeds.jsonl")).resolves.toContain('"ROUTE-001"');
 });
