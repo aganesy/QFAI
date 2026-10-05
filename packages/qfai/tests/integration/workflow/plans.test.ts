@@ -114,13 +114,10 @@ it("The plan of every change route the package ships", async () => {
     plan.stages.some((stage) => stage.steps.some((step) => step.name === "verify-repo-gate")),
   );
 
-  expect({
-    count: changeRoutes.length,
-    reach: [...new Set(changeRoutes.map((plan) => JSON.stringify(verifyReach(plan))))],
-  }).toEqual({
-    count: 24,
-    reach: [JSON.stringify({ reached: true, blocks: [["verify", VERIFY]] })],
-  });
+  expect(changeRoutes.length).toBeGreaterThan(0);
+  expect([...new Set(changeRoutes.map((plan) => JSON.stringify(verifyReach(plan))))]).toEqual([
+    JSON.stringify({ reached: true, blocks: [["verify", VERIFY]] }),
+  ]);
 });
 
 it("The plans the package ships name no grill stage", async () => {

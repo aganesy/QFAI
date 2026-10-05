@@ -17,6 +17,7 @@ import {
   ASSISTANT_ASSET_MAX_LINE_CHARS,
 } from "../../../src/core/doctor/assetLineBudget.js";
 import { validateAgentDefinition } from "../../../src/core/validators/agentDefinition.js";
+import { WORKFLOW_ROUTES } from "../../../src/core/workflow/routes.js";
 import {
   PACKAGE_DEFAULTS,
   SHIPPED_ASSISTANT,
@@ -261,7 +262,7 @@ describe("qfai-run", () => {
         }
       }
     }
-    expect(routes.length).toBe(35);
+    expect([...routes].sort()).toEqual([...WORKFLOW_ROUTES].sort());
     expect(naming).toEqual([]);
   });
 
