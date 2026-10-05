@@ -81,7 +81,7 @@ A retirement touches every place the ID is written. Do all of them in one change
 5. An AC left with no example gets one or is retired in the same row.
 6. Never reuse a retired ID. The decision row keeps it counted.
 
-`qfai validate` reports what step 3, 4 or 5 left behind: a BR citing an unknown example (`QFAI-STORY-005`), a test annotation naming an undeclared ID (`QFAI-STORY-008`), and an AC with no example (`QFAI-STORY-004`).
+`npx qfai validate` reports what step 3, 4 or 5 left behind: a BR citing an unknown example (`QFAI-STORY-005`), a test annotation naming an undeclared ID (`QFAI-STORY-008`), and an AC with no example (`QFAI-STORY-004`).
 
 ## ID allocation
 
