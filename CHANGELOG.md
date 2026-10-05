@@ -140,6 +140,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   that cite it, the test annotations, an AC left without an example, and no
   reuse of the ID. It names the `qfai validate` findings that catch a leftover.
 
+- **The Claude Code tool-time reminders no longer repeat on every call
+  (#2994).** The grilling reminders before a write, an edit and a delegation,
+  the API-budget reminder, the documentation-clarity reminders after a
+  Markdown write or edit, and the minimal-implementation reminder were added to
+  the context after each matching call, so a long session carried hundreds of
+  identical paragraphs. Each now prints on a session's first matching call and
+  on every twentieth after it, counted separately for each session and each
+  sub-agent, and the API-budget reminder counts only commands that name the
+  forge. Input with no session id, the reminder before a post and the one
+  before leaving plan mode print on every call as before. `qfai init` replaces
+  an unedited copy of each earlier group. The Codex hooks are unchanged.
+
 ### Changed
 
 - **The `qfai-run` entry skill has room for another step** (#2966). The text
