@@ -26,11 +26,12 @@ describe("removeOwnedDirs", () => {
 
   it("attempts every removal and reports each rejected path with its cause", async () => {
     const attempted: string[] = [];
-    const remove = async (dir: string): Promise<void> => {
+    const remove = (dir: string): Promise<void> => {
       attempted.push(dir);
       if (dir === "dir-a" || dir === "dir-c") {
-        throw new Error(`denied ${dir}`);
+        return Promise.reject(new Error(`denied ${dir}`));
       }
+      return Promise.resolve();
     };
 
     const failure: unknown = await removeOwnedDirs(["dir-a", "dir-b", "dir-c"], remove).then(
