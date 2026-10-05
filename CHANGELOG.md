@@ -36,6 +36,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The shipped API budget rule names no script a project lacks.** It named
+  this repository's own helper script, so every project that carried the rule
+  held a path that did not resolve. It now describes what such a command
+  answers and says a project names its own (#3001).
+
 - **`qfai validate` and `qfai report --run-validate` no longer read an
   unreadable legacy validate path as absent.** The check for a stale
   `.qfai/output/validate.json` treated every `stat` failure as "not on disk".

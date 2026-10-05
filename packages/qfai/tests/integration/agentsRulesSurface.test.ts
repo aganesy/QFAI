@@ -1291,8 +1291,9 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /the\s+response\s+to\s+a\s+call\s+that\s+was\s+going\s+to\s+be\s+made\s+anyway/,
         // Whose allowance it is, which is why one agent's habits reach the rest.
         /every\s+session,\s+sub-agent\s+and\s+background\s+task\s+draws\s+on\s+the\s+same/,
-        // The command that makes the cheap path the default.
-        /scripts\/gh-budget\.mjs/,
+        // The command that makes the cheap path the default, named by no path
+        // an adopter lacks.
+        /A\s+project\s+that\s+writes\s+one\s+names\s+it\s+here/,
       ]) {
         expect(text).toMatch(clause);
       }
