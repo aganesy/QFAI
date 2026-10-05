@@ -1547,7 +1547,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // when the input names no session. Events, matchers, markers, `if` conditions and message keys are
   // unchanged; the previous groups are listed as superseded so the merge refreshes them. Restoring
   // the six programs reproduces `0bf2f12f…` byte for byte.
-  [".claude/settings.json", "2090b72084d000db385342823fc72107490bb8a6c96f9d8b7ac4f91e8a1f4aab"],
+  [".claude/settings.json", "57d8dfe1a5e8768c257a76036c8dbd4e1c8e5c3b6dba91ad65b44e7dbdab3776"],
   // Inside `.codex/`, and pinned for the reason `.claude/settings.json` is: its commands are a
   // program an adopter's agent runs. Two `UserPromptSubmit` groups, structured-question and
   // free-text entry. Codex takes one command string, so each runs the same `node -e` reader
