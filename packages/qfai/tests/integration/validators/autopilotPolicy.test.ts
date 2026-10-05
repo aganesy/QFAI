@@ -154,8 +154,8 @@ describe("autopilot policy in the story-tree assistant layout", () => {
     );
   });
 
+  // QFAI:EX-0001-0169-05
   it("does not read the retired CON-UI-NNNN form as the UI-NNNN that qfai-verify declares", async () => {
-    // QFAI:EX-0001-0169-05
     const entry = (id: string): string =>
       [
         "brand intent",

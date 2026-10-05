@@ -1,11 +1,7 @@
 ---
 name: qfai-triage
 title: QFAI Triage (Requests that end without a change)
-description: "Use when invoked by name or handed a QFAI work order for a request that ends
-  without a change to the project: a question to answer, a duplicate, missing information, a
-  request to split, automated reports, a security report to take in, or an operation only a
-  person can run. A request that needs a change belongs to another stage. A free-text request
-  that names no stage goes to qfai-run."
+description: "Use when invoked by name or handed a QFAI work order for a request that ends without a change to the project: a question to answer, a duplicate, missing information, a request to split, automated reports, a security report to take in, or an operation only a person can run."
 argument-hint: "<the request, as it was reported>"
 allowed-tools: [Read, Glob, Grep, Write, Bash, TodoWrite, Task, Agent]
 roles:
@@ -18,8 +14,6 @@ roles:
     frontend-engineer,
     backend-engineer,
     devops-ci-engineer,
-    completion-reviewer,
-    requirements-reviewer,
   ]
 steps:
   - triage-dedupe
@@ -31,7 +25,7 @@ steps:
   - triage-security-intake
   - triage-handoff
   - triage-close
-requires: [common-review-cycle]
+requires: []
 mode: execution-focused
 ---
 
@@ -85,9 +79,8 @@ this file adds nothing to it.
 
 ## Review
 
-After the last step, run one review through `common-review-cycle`, with the
-union of the reviewers of the steps that ran. Each step's `## Gate` section
-says what its reviewers check.
+Invoked by name, the skill runs no review: its steps change no tracked file.
+Each step's `## Gate` section says what passes it.
 
 ### Reviewer Gate
 

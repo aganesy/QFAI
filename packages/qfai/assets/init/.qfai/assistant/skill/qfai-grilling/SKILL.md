@@ -46,19 +46,12 @@ least beyond the request.
 
 ## Preconditions
 
-| Condition                           | Effect                                                                    |
-| ----------------------------------- | ------------------------------------------------------------------------- |
-| A design that is not yet fixed      | Proceed                                                                   |
-| The work is already specified       | Do not invoke; the spec is the authority                                  |
-| A no-question mode is active        | Run without asking; open every node left over as a question               |
-| An ambiguity met while implementing | Not a session on its own — an ordinary clarification under its own budget |
-| An execution stage declaring one    | A session. Article IX names two, at the preflight and on detection        |
-
-The last two rows are the same rule from both sides: meeting an ambiguity does
-not start a session, and a stage that **declares** one has started it. What
-separates them is the declaration, which is what makes the class decidable when
-the question is asked rather than arguable afterwards
-(`.qfai/assistant/rule/constitution.md` Article IX).
+| Condition                           | Effect                                                      |
+| ----------------------------------- | ----------------------------------------------------------- |
+| A design that is not yet fixed      | Proceed                                                     |
+| The work is already specified       | Do not invoke; the spec is the authority                    |
+| A no-question mode is active        | Run without asking; open every node left over as a question |
+| An ambiguity met while implementing | Not a session — stop under Article IX of the constitution   |
 
 **A no-question mode silences the questions, not the session.** An invocation
 told not to ask — `--auto`, or whatever the host spells it as — settles what the
@@ -357,19 +350,16 @@ decisions belonging to different drafting roles.
 
 ### Capability Probe
 
-1. Attempt the first fact lookup a decision waits on at session start.
-2. Treat that real delegation attempt as the capability check.
-3. If it fails, classify per the baseline taxonomy before doing anything else.
+1. A fact lookup the session dispatches is its own capability check.
+2. If it fails, classify per the baseline taxonomy before doing anything else.
 
 ### Delegation Failure (Hard Stop)
 
 - `unavailable`: stop dispatching lookups and read what can be read directly,
-  under the baseline's sanctioned exception for a read-only fact lookup
-  (`.qfai/assistant/rule/shared-skill-delegation-baseline.md`). This is
-  not an override of the hard stop — the exception is what permits it, and it
-  permits reading only. Report the class, report every fact that stayed unread,
-  and hold the decisions downstream of it open rather than asking the user for
-  it.
+  as the baseline's `unavailable` response sets out
+  (`.qfai/assistant/rule/shared-skill-delegation-baseline.md`). Report the
+  class, report every fact that stayed unread, and hold the decisions
+  downstream of it open rather than asking the user for it.
 - `saturated`: use the baseline's bounded retry branch. The session stays open.
 - Do not simulate roles. An agent that answers a dispatched lookup out of its
   own recollection has recorded a guess as a fact, which the frontier then

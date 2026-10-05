@@ -23,7 +23,8 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { runInit } from "../../src/cli/commands/init.js";
-import { buildShippedAssistantHashes } from "../../src/core/assistantAssetProvenance.js";
+import { collectTemplateFiles } from "../../src/core/fs/templateCopy.js";
+import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { captureStdout } from "../helpers/stdout.js";
 
 /** The `    - <relative path>` entries under a given report heading. */
@@ -52,28 +53,26 @@ function reportedCount(output: string, heading: string): number {
 
 describe("qfai init run report", () => {
   it.each([false, true])(
-    "lists every canonical governed asset on a no-op verbose rerun with dryRun=%s",
+    "lists every shipped rule on a no-op verbose rerun with dryRun=%s",
     async (dryRun) => {
       const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-report-"));
       try {
         await runInit({ dir: root, force: false, dryRun: false, yes: true });
-        const assistant = path.join(root, ".qfai", "assistant");
-        const receiptBefore = await readFile(path.join(assistant, ".assets.lock.json"));
-        const shipped = await buildShippedAssistantHashes(assistant);
-        expect(Object.keys(shipped).length).toBeGreaterThan(0);
+        const ruleAssets = path.join(getInitAssetsDir(), ".qfai", "assistant", "rule");
+        const shipped = (await collectTemplateFiles(ruleAssets)).map(
+          (file) => `rule/${path.relative(ruleAssets, file).split(path.sep).join("/")}`,
+        );
+        expect(shipped.length).toBeGreaterThan(0);
         const output = await captureStdout(() =>
           runInit({ dir: root, force: false, dryRun, yes: true, verbose: true }),
         );
         const skipped = pathsUnder(output, "  skipped paths:");
-        for (const relative of Object.keys(shipped)) {
+        for (const relative of shipped) {
           expect(skipped).toContain(`.qfai/assistant/${relative}`);
         }
         expect(new Set(skipped).size).toBe(skipped.length);
         expect(reportedCount(output, "skipped")).toBe(skipped.length);
         expect(pathsUnder(output, "  written paths:")).toEqual([]);
-        expect(
-          (await readFile(path.join(assistant, ".assets.lock.json"))).equals(receiptBefore),
-        ).toBe(true);
       } finally {
         await rm(root, { recursive: true, force: true });
       }

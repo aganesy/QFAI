@@ -508,7 +508,7 @@ async function reportUnroutedSkills(
     entries = await readdir(skillsDir);
   } catch {
     // No skills directory at all, or one replaced by a file: `QFAI-LINK-001`
-    // and `validateSkillsIntegrity` own that, not this rule.
+    // owns that, not this rule.
     return;
   }
   for (const name of entries.sort()) {

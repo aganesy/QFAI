@@ -1,10 +1,10 @@
 ---
 name: qfai-maintain
 title: QFAI Maintain (Non-normative edits)
-description: "Use when invoked by name or handed a QFAI work order for a change meant to alter no behaviour: wording, a typo, a code comment or document prose. An edit with any semantic effect, including rearranging code, belongs to qfai-implement, and a change to a story or a contract to qfai-sdd. A free-text request that names no stage goes to qfai-run."
+description: "Use when invoked by name or handed a QFAI work order. Use it for a change to wording, a typo, a code comment or document prose that is meant to change no behaviour."
 argument-hint: "<the text or comment to change>"
 allowed-tools: [Read, Glob, Grep, Write, Edit, Bash, TodoWrite, Task, Agent]
-roles: [orchestrator, doc-steward, completion-reviewer]
+roles: [orchestrator, doc-steward, implementation-reviewer]
 steps: [maintain-edit]
 requires: [common-review-cycle]
 mode: execution-focused
@@ -39,8 +39,8 @@ run it, then the next. No step is skipped.
 
 ## Review
 
-After the last step, run one review through `common-review-cycle`, with the
-union of the reviewers the steps' profiles require. The reviewer rules on the
+After the last step, run one review through `common-review-cycle`: the code
+review, by `implementation-reviewer`. The reviewer rules on the
 diff and on the no-behaviour-change judgement, and never reviews an edit it
 made. A REVISE sends the finding back to the step's author.
 

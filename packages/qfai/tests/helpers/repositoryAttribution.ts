@@ -9,8 +9,8 @@ import fg from "fast-glob";
  * `qfai init`, so "this repository" resolves to the *consuming* project.
  * Pairing that phrase with a concrete `spec-NNNN` / `TC-NNNN-NNNN` /
  * `API-NNNN` id therefore asserts a fact about an artifact the consumer
- * does not have. The bare phrase is legitimate (`qfai-atdd`, `qfai-configure`
- * and `qfai-verify` all use it correctly), so the matcher fires only on the
+ * does not have. The bare phrase is legitimate (`qfai-configure` and
+ * `qfai-verify` both use it correctly), so the matcher fires only on the
  * phrase plus an id inside the same sentence.
  *
  * The matcher and the file list live here, in one module, because the guard in

@@ -16,7 +16,7 @@ update_frequency: rare
 
 The stage that owns `<paths.specsDir>/decisions.md`, `qfai-sdd`, records each
 decision as one row there. Every other stage records each decision in its own
-evidence file.
+final report.
 
 Either record carries the four labelled Approach items, under the rules stated
 at the top of `.qfai/assistant/skill/qfai-sdd/templates/spec/decisions.md`.

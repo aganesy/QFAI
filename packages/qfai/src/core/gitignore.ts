@@ -38,9 +38,8 @@ export const QFAI_STATE_SCRATCH_SUFFIX = ".qfai-state.tmp";
 export const QFAI_STATE_SCRATCH_IGNORE = `*${QFAI_STATE_SCRATCH_SUFFIX}`;
 
 /**
- * The run state `qfai workflow` keeps under `.qfai/run/`: the journal, the lock and each run's
- * snapshot. It is per-checkout and rebuilt from the journal, so it never belongs in a commit, and
- * init adds it to an existing block that lacks it.
+ * `.qfai/run/` is a leftover path: `qfai workflow` no longer writes it, but a project may still
+ * hold one. It stays in the managed ignore block so a leftover never lands in a commit.
  */
 export const QFAI_RUN_STATE_IGNORE = ".qfai/run/";
 
@@ -66,11 +65,9 @@ export const ARTICLE_XI_TMP_SAMPLE_PATH = "tmp/scratch.txt";
 /**
  * Gitignore entries qfai init writes alongside the marker.
  *
- * Recommended, not required: QFAI-REVIEW-008 reports a missing one at
- * info. A project may legitimately choose to track .qfai/review/** or
- * .qfai/discussion/**, and failing validation for that is the wrong answer.
- * Named for that semantics — the old _REQUIRED_ read as a hard gate this
- * has not been since the severity moved to info.
+ * Recommended, not required: QFAI-HYG-003 reports a missing one at info. A
+ * project may legitimately choose to track `.qfai/discussion/**`, and failing
+ * validation for that is the wrong answer.
  */
 export const QFAI_GITIGNORE_RECOMMENDED_ENTRIES: readonly string[] = [
   ".qfai/report/*",
@@ -117,42 +114,12 @@ export const QFAI_GITIGNORE_GOVERNANCE_NEGATIONS: readonly string[] = [
   // already had. `!.qfai/` matches the directory only, so the `.qfai/<subtree>/*` ignores above
   // still win for every generated file.
   "!.qfai/",
-  // The install-provenance record. It is the only thing that tells a FRESH CLONE
-  // which shipped files QFAI wrote and which the adopter deliberately deleted, so
-  // it has to survive in version control — and it sits directly under `.qfai/`,
-  // where a broad rule an adopting project already had (`.qfai/*`) matches it.
-  // Measured with `git check-ignore -v .qfai/install-provenance.json` on a tree
-  // carrying `.qfai/*` above the managed block: without this line the broad rule is
-  // still the winner, because `!.qfai/` re-includes only the DIRECTORY. Commit an
-  // install and then a deletion in that state and the fresh clone has neither the
-  // workflow nor the record, so the next `qfai init` reads the declined name as
-  // never-installed and writes it back — the one outcome the record exists to stop.
-  "!.qfai/install-provenance.json",
-  // The vendored assistant tree and the provenance record inside it. Same
-  // measurement, same rule: `!.qfai/` re-includes only the DIRECTORY `.qfai`,
-  // so a broad `.qfai/*` an adopting project already had still wins for
-  // `.qfai/assistant` — and git never descends into an ignored directory, which
-  // takes `constitution/`, `catalog/` and `.assets.lock.json` with it.
-  // Verified with `git check-ignore -v .qfai/assistant/.assets.lock.json` on a
-  // tree carrying `.qfai/*` above the managed block: ignored by that rule
-  // before these two lines, un-ignored after.
-  //
-  // The record specifically has to reach a FRESH CLONE. It is what tells the
-  // next `qfai init` which governed files qfai itself wrote: without it an
-  // untouched copy from an older release reads as a local fork
-  // (`QFAI-ASSETS-005`) that `--force` then refuses to refresh, and a rule the
-  // release withdrew can never be retired. The vendored rules are committed —
-  // they are cited by line number — so the record that explains them has to be
-  // committed beside them.
+  // The vendored assistant tree. `!.qfai/` re-includes only the directory, so a broad `.qfai/*`
+  // still wins for `.qfai/assistant`, and git never descends into an ignored directory.
   "!.qfai/assistant/",
-  // The subtree, not only its root. A project whose broad rule is `.qfai/**`
-  // rather than `.qfai/*` has every descendant matched in its own right, so
-  // re-including the directory re-includes nothing inside it: measured with
-  // `git status --ignored` on such a tree, the lock came back `??` from its
-  // leaf negation below while both governed files stayed `!!`. A fresh clone
-  // would then carry the record and none of the rules it vouches for.
+  // The subtree as well: under a broad `.qfai/**` every descendant is matched in its own right,
+  // so re-including the directory re-includes nothing inside it.
   "!.qfai/assistant/**",
-  "!.qfai/assistant/.assets.lock.json",
 ] as const;
 
 /**
@@ -218,6 +185,9 @@ export const QFAI_GITIGNORE_LEGACY_LINES: readonly string[] = [
   `!.qfai/evidence/import-lite-${CANONICAL_TIMESTAMP_GLOB}.md`,
   "!.qfai/evidence/coverage-depth-*.md",
   "!.qfai/evidence/skeleton.md",
+  // QFAI keeps no install record, so the negations that kept its two records tracked are retired.
+  "!.qfai/install-provenance.json",
+  "!.qfai/assistant/.assets.lock.json",
 ] as const;
 
 export const QFAI_GITIGNORE_BLOCK = [
@@ -264,7 +234,7 @@ export const QFAI_GITIGNORE_BLOCK = [
  * matching pattern, so a negation is effective only when no ignore line below
  * it matches the same path. Deciding that needs real gitignore glob semantics,
  * not a prefix comparison — a prefix test cannot see that `*.json` or
- * `**` + `/*.json`, placed after `!.qfai/install-provenance.json`,
+ * `**` + `/*.json`, placed after `!.qfai/assistant/**`,
  * re-ignores exactly what the negation re-included.
  *
  * Implemented rules, the ones a real `.gitignore` uses:
@@ -621,23 +591,17 @@ export function effectivelyIgnores(lines: readonly string[], samplePath: string)
 }
 
 /**
- * The recommended entries `content` does not satisfy, for `QFAI-REVIEW-008`.
+ * The recommended entries `content` does not satisfy, for `QFAI-HYG-003`.
  *
- * One function because two readings of "satisfied" would drift. The `.qfai/**`
- * entries are literal paths under a directory QFAI owns, and a project that
- * ignores one from its own section satisfies the recommendation just as well —
- * so containment is the right question for them, and reporting a rule the author
- * already has would only push them to duplicate it.
+ * The `.qfai/**` entries are literal paths under a directory QFAI owns, and a
+ * project that ignores one from its own section satisfies the recommendation
+ * just as well, so containment is the question for them.
  *
- * {@link ARTICLE_XI_TMP_ENTRY} is not like that, and containment answers the
- * wrong question for it. The entry is spelled unanchored while the block writes
- * the anchored `/tmp/`, so the substring `tmp/` is also inside a project's own
- * `src/tmp/` — a directory Article XI makes no claim about — inside prose that
- * merely mentions `tmp/`, and inside a later `!/tmp/` that cancels the ignore
- * outright. In all three the root staging area is still tracked while the notice
- * that exists to say so is suppressed. So this entry is decided by asking git's
- * question — is {@link ARTICLE_XI_TMP_SAMPLE_PATH} ignored once the whole file
- * has had its say — which both spellings of a real ignore still answer yes to.
+ * {@link ARTICLE_XI_TMP_ENTRY} is decided by asking git's question instead —
+ * is {@link ARTICLE_XI_TMP_SAMPLE_PATH} ignored once the whole file has had its
+ * say. The substring `tmp/` also sits inside a project's own `src/tmp/`, inside
+ * a comment, and inside a later `!/tmp/` that cancels the ignore, and in all
+ * three the root staging area is still tracked.
  */
 export function missingRecommendedGitignoreEntries(content: string): string[] {
   const lines = content.split(/\r?\n/);

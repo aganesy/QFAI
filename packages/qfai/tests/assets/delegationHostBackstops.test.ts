@@ -101,7 +101,6 @@ describe.each(trees)("%s — host backstops in the delegation baseline", (tree) 
     expect(definition).toContain("**The reviewer gate is not self-verification.**");
     expect(definition).toContain("don't use subagents to verify your own work");
     expect(definition).toContain("excludes an agent reviewing its own output");
-    expect(definition).toContain("pinned to a hash of the reviewed state");
     expect(definition).toContain("The author cannot accept its own output.");
   });
 

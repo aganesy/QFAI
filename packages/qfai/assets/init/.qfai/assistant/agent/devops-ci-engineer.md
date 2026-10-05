@@ -47,7 +47,6 @@ specialization_tags:
 - .qfai/assistant/rule/agent-selection.md (routing and this card's frontmatter are authoritative)
 - <paths.specsDir>/decisions.md and open-questions.md
 - package.json scripts, CI config, and runbooks
-- Evidence summaries under `.qfai/evidence/`
 
 ## Deliverables
 

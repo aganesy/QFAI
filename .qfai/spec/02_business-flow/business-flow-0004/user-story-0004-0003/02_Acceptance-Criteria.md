@@ -21,17 +21,15 @@ Feature: Run any migration step without risk to the project
   Scenario: A dry run lists the operations the real run then performs
     Given a project on the spec-pack layout
     When a step is run with --dry-run and then without it
-    Then the dry run changes no file, its report file aside
+    Then the dry run changes no file
     And the operations it prints are, in order, the operations the real run prints
     And they name exactly the files the real run changes
 
   # AC-0004-0003-04
-  Scenario: Running a step again is safe
+  Scenario: Running a finished step again changes nothing
     Given a project a step has already migrated
     When the step is run again
     Then no file changes
-    And given a tree that step left half migrated, running it again leaves the tree an uninterrupted run leaves
-    And step 10 leaves in place, and lists under For a person, any staging file it cannot verify as its own
     And on a project whose migration finished, steps 1 to 10 say that the migration is already done
     And once no spec pack is left, steps 4 and 7 need no plan.yaml
 
@@ -43,20 +41,19 @@ Feature: Run any migration step without risk to the project
     And no step opens a network connection
 
   # AC-0004-0003-06
-  Scenario: A step reports on standard output, keeps the report and exits 3 only when a person must act
+  Scenario: A step reports on standard output and exits 3 only when a person must act
     Given a project on the spec-pack layout
     When a step completes
     Then it prints its report sections as Markdown on standard output, with none under an empty section
-    And it writes the same report and its exit code to a file under the migration evidence's report directory, a dry run and a real run in separate directories
-    And that report file is left out wherever a criterion or example says a step writes nothing or changes no file
+    And it writes the report to no file
     And it exits 3 when its For a person section lists an item, and 0 otherwise
 
   # AC-0004-0003-07
-  Scenario: A step removes or archives what it consumed
+  Scenario: A step removes what it consumed and deletes what has no destination
     Given a project on the spec-pack layout
     When a step has written a source file's content to its destinations
     Then the source file is gone from the old layout
-    And a source file holding content with no destination is kept under the migration's retired archive
+    And a source file holding content with no destination is deleted, untracked content and uncommitted edits included
     And a directory left empty is removed
 
   # AC-0004-0003-08
