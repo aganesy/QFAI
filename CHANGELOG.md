@@ -20,8 +20,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reached, then read its `QFAI:` annotations to name the dependent flows. An edge
   that cannot be followed by reading (a computed import path, a glob-loaded
   fixture, a path built at run time) leaves the dependent set unknown: record it
-  and run the full test suite once on the integrated tree instead of re-proving
-  every flow. Refs #2424.
+  as an unresolved obligation and run the full test suite once on the
+  integrated tree as an extra check. The suite does not replace revalidating
+  each flow, and the search is not reported complete. Refs #2424.
 
 ## [2.1.0] - 2026-10-05
 

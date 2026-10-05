@@ -28,9 +28,19 @@ describe("story-tree acceptance and implementation assets", () => {
     );
     expect(ownership).toContain("Run the scoped validation gate for each affected BF ID");
     expect(ownership).toContain("does not authorize a downstream stage to rewrite the story tree");
+    expect(ownership).toContain("## Finding the dependents");
     expect(ownership).toContain("Search from the changed files outward");
+    expect(ownership).toContain("Start from the files the step plans to edit");
+    expect(ownership).toContain("List a renamed file under both its old and new path");
+    expect(ownership).toContain("Never read that failure as an empty list");
+    expect(ownership).toContain("read the `Examples` citations of its rules");
+    expect(ownership).toContain("Continue through a runtime");
+    expect(ownership).toContain("both give `BF-0007`");
+    expect(ownership).toContain("## When the search cannot finish");
     expect(ownership).toContain("the dependent set is unknown, not empty");
-    expect(ownership).toContain("run the full test suite once on the");
+    expect(ownership).toContain("unresolved cross-flow obligation");
+    expect(ownership).toContain("A passing suite does not replace the per-flow");
+    expect(ownership).toContain("Do not report the search");
   });
 
   it("proves each runnable entrypoint through an observed smoke response", async () => {
