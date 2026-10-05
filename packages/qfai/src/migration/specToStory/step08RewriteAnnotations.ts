@@ -1,5 +1,6 @@
 import { createTestLayerRoots, resolveTestKind } from "../../core/atddTraceability.js";
 import { collectFilesByGlobs } from "../../core/fs.js";
+import { normalizeGlobs } from "../../core/traceability.js";
 import { oldContractIds, readIdMap } from "./idMap.js";
 import { MigrationInputError, type MigrationOperation, type MigrationStep } from "./harness.js";
 import { readMigrationInput, repositoryRelative } from "./step05CasesToExamples.js";
@@ -30,12 +31,12 @@ export const step08: MigrationStep = {
   async plan(context) {
     const map = await readIdMap(context.root);
     if (!map) return { operations: [] };
-    const globs = context.config.validation.traceability.testFileGlobs;
+    const globs = normalizeGlobs(context.config.validation.traceability.testFileGlobs);
     let selected: Awaited<ReturnType<typeof collectFilesByGlobs>>;
     try {
       selected = await collectFilesByGlobs(context.root, {
         globs,
-        ignore: context.config.validation.traceability.testFileExcludeGlobs,
+        ignore: normalizeGlobs(context.config.validation.traceability.testFileExcludeGlobs),
         limit: FILE_LIMIT,
       });
     } catch (error) {

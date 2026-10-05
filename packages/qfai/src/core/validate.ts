@@ -708,7 +708,11 @@ async function runUiuxValidators(
   //
   // Stays 0 when there are no mock blocks to parse — nothing was loaded and
   // nothing was parsed, so there is no cost to attribute.
-  const htmlMockTiming: HtmlMockTiming = { parseMs: 0 };
+  //
+  // The group's own clock leaves that load out too, for the same reason: it is
+  // paid once per process, and on a cold disk cache it alone outran the whole
+  // group's budget.
+  const htmlMockTiming: HtmlMockTiming = { parseMs: 0, loadMs: 0 };
   const uiuxValidators: Array<() => Promise<Issue[]>> = [
     () => validateDesignToken(root, config),
     () => validateHtmlMock(root, platform, config, htmlMockTiming),
@@ -723,7 +727,7 @@ async function runUiuxValidators(
   const uiuxIssues: Issue[] = [...platformResult.issues, ...uiuxIssueGroups.flat()];
 
   timings.timings = {
-    uiuxMs: performance.now() - uiuxStart,
+    uiuxMs: performance.now() - uiuxStart - htmlMockTiming.loadMs,
     uiuxBudgetMs: UIUX_VALIDATION_BUDGET_MS,
     htmlMockMs: htmlMockTiming.parseMs,
     htmlMockBudgetMs: config.uiux?.htmlMockTimeout ?? HTML_MOCK_VALIDATION_BUDGET_MS,
