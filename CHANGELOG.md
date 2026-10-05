@@ -4,6 +4,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **`qfai validate` warns about trace marks no check reads.** In the `tdd`
+  profile, a comment line in a selected test file that carries a `QFAI:US-`,
+  `QFAI:TC-`, `QFAI:SC-` or `QFAI:SPEC-` mark raises `QFAI-STORY-014` at
+  warning, naming the file, the line and the mark. Only `QFAI:BF-`, `QFAI:AC-`
+  and `QFAI:EX-` annotations record coverage, so such a mark records nothing.
+  A mark inside a string literal is left alone. The marks this repository
+  still carried are rewritten as plain comments, and its migration fixtures
+  are excluded from the test globs (#2308).
+
 ### Fixed
 
 - **The planner-first and design anti-goal examples are tested for what they
