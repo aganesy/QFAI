@@ -13,9 +13,19 @@ Canonical path: `.qfai/report/verify.json` (NOT `.qfai/output/`). Create the `.q
 | `flowId`     | string           | no       | The business flow this run targeted, when scoped to one (e.g. `"BF-0001"`).                              |
 | `recordedAt` | ISO-8601 string  | no       | When the run completed.                                                                                  |
 | `summary`    | string           | no       | One or two sentences an operator can read without opening the stage report.                              |
-| `gates`      | array of objects | no       | Per-gate results: `{ name, status, command }`. Advisory; no reader gates on it today.                    |
+| `gates`      | array of objects | no       | Per-gate results: as set out below. Advisory; no reader gates on it today.                               |
 
 `status` is a closed two-value enum: `"PASS"` / `"FAIL"`. There is no `"WARN"` — a run with only `warning` / `info` findings is `"PASS"` (waivers apply to those severities only). Any `error` finding makes it `"FAIL"`.
+
+Each entry of `gates` is `{ name, status, command }`, plus two optional fields:
+
+| Field      | Type   | Meaning                                                                                                                       |
+| ---------- | ------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| `status`   | string | `"PASS"`, `"FAIL"` or `"UNRUN"`. `"UNRUN"` is a gate with no command, launcher or environment; it is never a pass.            |
+| `baseline` | string | On a `"FAIL"`: `"same"` when the base commit fails identically, `"different"` when it does not, `"unrun"` when it cannot run. |
+| `reason`   | string | On an `"UNRUN"` gate, or a `baseline` of `"unrun"`: what is missing.                                                          |
+
+A gate that fails identically on the base, or did not run, still makes the top-level `status` `"FAIL"`. The fields let a reader tell it from a failure the run caused.
 
 `scope` is a closed enum. Write the one that matches the stage you were invoked for:
 
