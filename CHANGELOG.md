@@ -38,13 +38,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   at that Status stays in force. The story-tree authoring rules also say that a
   project counting the IDs of its open pull requests may take a next ID above
   the tree's own highest plus one (#2969).
+- **`qfai-run` has guidance for a change that needs a person's action outside
+  the repository.** When a change depends on something only the user can do,
+  such as a hosted dashboard setting or a token issued in a web console, the
+  work stops before that stage and says what the user must do, what shows it was
+  done and what the agent will read to check it. The agent never enters a
+  password, token or key and never changes an account setting. The extraction
+  reference says such a request keeps the repository change's intent with the
+  `env` flag (#2999).
 
 ### Fixed
 
-- **The shipped API budget rule names no script a project lacks.** It named
-  this repository's own helper script, so every project that carried the rule
-  held a path that did not resolve. It now describes what such a command
-  answers and says a project names its own (#3001).
+- **A verify run tells a failure that predates the change from one it caused.**
+  A failing gate is now run again on the base commit, and the result is
+  recorded in the `gates` of `verify.json` as a `baseline` of `same`,
+  `different` or `unrun`. A gate that could not run is recorded `UNRUN` with
+  its `reason`. The run still stops before the commit, and the final report
+  lists these gates apart from the failures the run caused. Fixes #2982.
 
 - **`qfai validate` and `qfai report --run-validate` no longer read an
   unreadable legacy validate path as absent.** The check for a stale
@@ -123,6 +133,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   that file. A base row whose Content or Approach changed now authorizes
   nothing, in the `tdd` and `drift` profiles alike (#2891).
 
+- **The shipped API budget rule names no script a project lacks.** It named
+  this repository's own helper script, so every project that carried the rule
+  held a path that did not resolve. It now describes what such a command
+  answers and says a project names its own (#3001).
+
 - **The planner-first and design anti-goal examples are tested for what they
   say.** The planner-first example was annotated on a test that only checked
   three file names. Its test now reads the completion matrix and the
@@ -145,13 +160,39 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   that cite it, the test annotations, an AC left without an example, and no
   reuse of the ID. It names the `qfai validate` findings that catch a leftover.
 
+- **The Claude Code tool-time reminders no longer repeat on every call
+  (#2994).** The grilling reminders before a write, an edit and a delegation,
+  the API-budget reminder, the documentation-clarity reminders after a
+  Markdown write or edit, and the minimal-implementation reminder were added to
+  the context after each matching call, so a long session carried hundreds of
+  identical paragraphs. Each now prints on a session's first matching call and
+  on every twentieth after it, counted separately for each session and each
+  sub-agent, and the API-budget reminder counts only commands that name the
+  forge. Input with no session id, the reminder before a post and the one
+  before leaving plan mode print on every call as before. `qfai init` replaces
+  an unedited copy of each earlier group. The Codex hooks are unchanged.
+
 ### Changed
+
+- **Every skill the agent may select says when to select it** (#2247).
+  `qfai-configure`, `qfai-grilling`, `qfai-migration-v1-to-v2` and
+  `web-research` gain a "Use when" sentence in their `description:`.
+  `qfai-grilling` is selected when a stage calls for a session, or when asked
+  to grill or stress-test a design. A new asset test holds every skill without
+  `disable-model-invocation: true` to a "Use when" sentence, the third person,
+  1,024 characters, and a name without "anthropic" or "claude".
 
 - **The `qfai-run` entry skill has room for another step** (#2966). The text
   for a release, decision or branch point moves into a new reference,
   `references/stage-points.md`, which the skill points to at each step. The
   skill keeps its 150-line limit, at 135 lines instead of 150, and its
   behaviour is unchanged.
+
+- **The `change-tooling` route starts at `edit`** (#2995). A change to CI, a
+  workflow or a build script has no business flow, story or example, so the
+  `implement-diagnose` stage it began with had nothing to record and was passed
+  over. The plan is now `edit`, `note`, `verify`, and the contract rule and the
+  example that state it say the same.
 
 - **A mutation proof belongs to one example** (#2409). The `qfai-implement`
   oracle-strength reference now says what to do when one mutation fails tests
@@ -160,6 +201,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   boundary, or have `/qfai-sdd` settle an unclear boundary in the examples. A
   shared predicate may fail several tests whose assertions each prove their own
   example.
+
 - **The orchestrator keeps working while a delegation runs** (#2244). The
   shared delegation baseline now says the orchestrator is not required to wait
   for a sub-agent. Where the host starts a delegation and returns at once,
