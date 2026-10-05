@@ -3,7 +3,7 @@ name: triage-security-intake
 owner: qfai-triage
 purpose: "Take a vulnerability report in privately, set its severity, and hold back anything that would publish it before the fix is ready."
 requires: []
-roles: [solution-architect, completion-reviewer]
+roles: [solution-architect]
 routing-profile: default
 ---
 

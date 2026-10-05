@@ -2,7 +2,7 @@
 
 Scratch files an agent creates for its own convenience (working notes, one-off
 scripts, captured command output, downloaded samples, intermediate data)
-**MUST** be placed under the repository-root `tmp/` directory.
+must be placed under the repository-root `tmp/` directory.
 
 ## Rules
 

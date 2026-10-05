@@ -1,5 +1,5 @@
 /**
- * A workspace on which `qfai prototyping preflight` passes every check, so a
+ * A workspace on which `qfai doctor --profile prototyping` passes every check, so a
  * test can change one input and attribute the command's exit code to it.
  *
  * The preflight runs its whole profile. In a workspace missing the primary
