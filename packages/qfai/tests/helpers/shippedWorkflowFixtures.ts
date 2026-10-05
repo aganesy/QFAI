@@ -225,17 +225,44 @@ export function firstRunBody(job: Record<string, unknown>): string | undefined {
 }
 
 /**
+ * Removes every directory, attempting each one even when another removal
+ * rejects, then throws one error naming each path whose removal failed and
+ * its cause. A failed removal is reported rather than lost.
+ */
+export async function removeOwnedDirs(
+  dirs: readonly string[],
+  remove: (dir: string) => Promise<void> = (dir) => rm(dir, { recursive: true, force: true }),
+): Promise<void> {
+  const results = await Promise.allSettled(dirs.map((dir) => remove(dir)));
+  const failures: Error[] = [];
+  results.forEach((result, index) => {
+    if (result.status === "rejected") {
+      const reason: unknown = result.reason;
+      const detail = reason instanceof Error ? reason.message : String(reason);
+      failures.push(new Error(`${dirs[index]}: ${detail}`, { cause: reason }));
+    }
+  });
+  if (failures.length > 0) {
+    const noun = failures.length === 1 ? "directory" : "directories";
+    const lines = failures.map((failure) => failure.message).join("\n");
+    throw new AggregateError(
+      failures,
+      `Could not remove ${failures.length} temp ${noun}:\n${lines}`,
+    );
+  }
+}
+
+/**
  * Registers an afterEach-scoped temp-directory pool for the calling suite
  * and returns its allocator. Cleanup drains the whole pool at once
- * (splice) and removes the directories in parallel via allSettled, so a
- * failed removal neither aborts the remaining removals nor drops a pool
- * entry mid-loop.
+ * (splice) and removes the directories in parallel, so a failed removal
+ * neither aborts the remaining removals nor drops a pool entry mid-loop.
+ * A failed removal fails the hook once every removal has been attempted.
  */
 export function useTempDirPool(prefix: string): () => Promise<string> {
   const tempDirs: string[] = [];
   afterEach(async () => {
-    const dirs = tempDirs.splice(0, tempDirs.length);
-    await Promise.allSettled(dirs.map((dir) => rm(dir, { recursive: true, force: true })));
+    await removeOwnedDirs(tempDirs.splice(0, tempDirs.length));
   });
   return async (): Promise<string> => {
     const dir = await mkdtemp(path.join(os.tmpdir(), prefix));
