@@ -32,9 +32,7 @@
  * condition semantics with the inertness row. Restating those here would
  * reproduce the very duplication this gate exists to remove.
  */
-import { randomBytes } from "node:crypto";
-import type { Stats } from "node:fs";
-import { lstat, mkdir, open, readdir, readFile, rename, rm } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { parse } from "yaml";
@@ -1195,115 +1193,6 @@ export async function diffShippedWorkflowShape(rootDir: string): Promise<ShapeFi
  * value. Empty string for an accepted tree, so the gate's own assertion can
  * compare against it directly.
  */
-/** The file the shape lane leaves for the Reviewer Gate, relative to the directory it is given. */
-export const SHAPE_REVIEW_ARTIFACT = "shipped-workflow-shape.json";
-
-/**
- * Write the shape findings in the shape the Reviewer Gate ingests.
- *
- * `R-SHIPPED-WORKFLOW-SHAPE-DRIFT` sits in `DEFERRED_CATALOG_REGISTRATION_CODES` beside
- * `R-WORKFLOW-HYGIENE-DRIFT`, and the gate is required to ingest BOTH. The hygiene lane has a
- * producer; this code had none anywhere in the repository — it appeared only in the catalog and in
- * tests — so shape drift reddened `lint:workflow-shape` and reached no reviewer.
- *
- * It lives HERE, in the module that owns the shape, rather than in the gate that calls it: the
- * ingestion suite has to be able to run the producer to check that one exists, and importing a
- * `.test.ts` from another test file to reach it is not a module surface.
- *
- * `file` / `job` / `rule` are the three fields the gate passes through verbatim, so a shape finding
- * arrives carrying the same site information a hygiene finding does. `site` is `<file>` or
- * `<file>:<job>`, split back apart here — a reviewer reading `job=` should see a job.
- *
- * Written on EVERY run, empty array included: that is the statement that the lane ran and found
- * nothing, so a missing file means it did not run. Two different facts.
- */
-export async function writeShapeFindingsForReviewerGate(
-  reviewDir: string,
-  findings: readonly ShapeFinding[],
-  boundary: string = path.dirname(reviewDir),
-): Promise<void> {
-  const payload = {
-    findings: findings.map((finding) => {
-      const [file, job] = finding.site.split(":");
-      return {
-        code: finding.code,
-        rule: `dimension ${String(finding.dimension)}`,
-        file,
-        ...(job === undefined ? {} : { job }),
-        detail: `expected ${finding.expected}, found ${finding.actual}`,
-      };
-    }),
-  };
-  // Every component from `boundary` down must be a real directory, and the artifact goes to an
-  // exclusive temp name that is RENAMED into place.
-  //
-  // The same reasoning as the hygiene lane's identical writer, applying here
-  // word for word: `.qfai/review/**` is gitignored but not unwritable, and a pull request can
-  // force-add a path under it — the artifact's own name as a symlink, or a directory component
-  // as one, which `mkdir` follows without creating anything. `writeFile` then truncates whatever
-  // the link points at. `rename` REPLACES the name, link and all, rather than writing through
-  // it; it is the shape the provenance record writer uses, for the same reason.
-  let current = boundary;
-  const descent = path.relative(boundary, reviewDir);
-  if (descent.startsWith("..") || path.isAbsolute(descent)) {
-    throw new Error(`${reviewDir} is not inside ${boundary}; refusing to write there`);
-  }
-  const segments = descent.length === 0 ? [] : descent.split(path.sep);
-  // Walked BEFORE the mkdir and again after it. `mkdir(..., { recursive: true })` follows an
-  // existing component and creates nothing there, so checking only afterwards means the missing
-  // directories have already been created on the far side of the link; checking only beforehand
-  // leaves the window in which one appears. The first walk stops at the first absent component,
-  // because the mkdir is what creates it and a directory it creates is not a link.
-  const walk = async (): Promise<void> => {
-    current = boundary;
-    for (const segment of segments) {
-      current = path.join(current, segment);
-      const inspected = await lstat(current).catch(() => undefined);
-      if (inspected === undefined) return;
-      if (inspected.isSymbolicLink() || !inspected.isDirectory()) {
-        throw new Error(
-          `${current} is not a real directory; refusing to write the reviewer artifact through it`,
-        );
-      }
-    }
-  };
-  await walk();
-  await mkdir(reviewDir, { recursive: true });
-  await walk();
-
-  // The parent's IDENTITY — device and inode — pinned across the write, the same way the
-  // hygiene lane's writer does it. Without it, this producer would be the one with no
-  // identity comparison at all: the descent walk above and the `open` below are separate
-  // operations on a name, and a directory swapped for a link in between puts both the staging
-  // file and the rename on the far side.
-  //
-  // Node has no `openat` or `renameat`, so the identity is compared rather than the operation
-  // being made relative to a held descriptor. A swap becomes a refusal instead of a silent
-  // write.
-  const target = path.join(reviewDir, SHAPE_REVIEW_ARTIFACT);
-  const sameDirectory = (a: Stats, b: Stats): boolean => a.dev === b.dev && a.ino === b.ino;
-  const parent = await lstat(reviewDir);
-  const staging = `${target}.${randomBytes(12).toString("hex")}.tmp`;
-  const handle = await open(staging, "wx");
-  try {
-    const opened = await handle.stat();
-    if (opened.dev !== parent.dev || !sameDirectory(await lstat(reviewDir), parent)) {
-      throw new Error(`${reviewDir} is not the directory that was verified; refusing to write`);
-    }
-    await handle.writeFile(`${JSON.stringify(payload, null, 2)}\n`, "utf-8");
-  } finally {
-    await handle.close();
-  }
-  try {
-    if (!sameDirectory(await lstat(reviewDir), parent)) {
-      throw new Error(`${reviewDir} changed while the artifact was being written`);
-    }
-    await rename(staging, target);
-  } catch (error) {
-    await rm(staging, { force: true }).catch(() => undefined);
-    throw error;
-  }
-}
 export function renderShapeGateReport(findings: readonly ShapeFinding[]): string {
   return findings
     .map(

@@ -378,17 +378,17 @@ describe("a table-only section holds its template's columns and nothing above th
     expect(extraColumn.length).toBe(16);
   });
 
+  // QFAI:EX-0001-0011-10
   it.each(extraColumn)("reports an added column in %s", (_label, name, text) => {
-    // QFAI:EX-0001-0011-10
     const result = check(name, text);
     expect(result.output).toContain("[forbidden-text]");
     expect(result.status).not.toBe(0);
   });
 
+  // QFAI:EX-0001-0011-11
   it.each(noteAbove)(
     "reports a pipe line directly above the header in %s",
     (_label, name, text) => {
-      // QFAI:EX-0001-0011-11
       const result = check(name, text);
       expect(result.output).toContain("[forbidden-text]");
       expect(result.status).not.toBe(0);
@@ -399,10 +399,10 @@ describe("a table-only section holds its template's columns and nothing above th
     table.map((line, index) => (index === 1 ? line.replace(/ (-+) /g, ":$1:") : line)),
   );
 
+  // QFAI:EX-0001-0011-10
   it.each(aligned)(
     "accepts a delimiter row carrying alignment colons in %s",
     (_label, name, text) => {
-      // QFAI:EX-0001-0011-10
       expect(text).toContain("|:-");
       const result = check(name, text);
       expect(result.output).toContain("No violations");
@@ -548,8 +548,8 @@ describe("the technology document holds only its three sections, each in its sha
     ],
   ];
 
+  // QFAI:EX-0001-0006-07
   it.each(refusedArchitecture)("reports %s", (_label, change, finding) => {
-    // QFAI:EX-0001-0006-07
     const template = readFileSync(TECH_TEMPLATE, "utf-8");
     expect(template).toMatch(LAYER_ROW);
     const result = check(change(template));
@@ -557,8 +557,8 @@ describe("the technology document holds only its three sections, each in its sha
     expect(result.status).not.toBe(0);
   });
 
+  // QFAI:EX-0001-0006-07
   it("accepts layers that name the layers each imports from, and a slash between words", () => {
-    // QFAI:EX-0001-0006-07
     const template = readFileSync(TECH_TEMPLATE, "utf-8")
       .replace(
         DIAGRAM,
@@ -631,15 +631,15 @@ describe("the constraint document states each limit in plain words", () => {
     ],
   ];
 
+  // QFAI:EX-0001-0006-06
   it.each(refused)("reports %s", (_label, table) => {
-    // QFAI:EX-0001-0006-06
     const result = check(table);
     expect(result.output).toContain("[forbidden-text]");
     expect(result.status).not.toBe(0);
   });
 
+  // QFAI:EX-0001-0006-06
   it("accepts a row in plain words", () => {
-    // QFAI:EX-0001-0006-06
     const result = check(
       `${TECHNICAL}| TC-01 | The package runs on the Node.js floor it declares | Adopters install it on Linux and on Windows |\n`,
     );

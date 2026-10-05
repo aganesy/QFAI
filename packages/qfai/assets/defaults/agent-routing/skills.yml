@@ -17,10 +17,10 @@ routing:
         blocking_agents: []
         rerun_policy: changed-scope-dependents
       - id: review
-        mandatory_agents: [completion-reviewer, architecture-reviewer]
+        mandatory_agents: [architecture-reviewer]
         conditional_agents: []
         parallel_groups: []
-        blocking_agents: [completion-reviewer, architecture-reviewer]
+        blocking_agents: [architecture-reviewer]
         rerun_policy: changed-scope-dependents
     review_profile: architecture-heavy
 
@@ -39,10 +39,10 @@ routing:
         blocking_agents: []
         rerun_policy: changed-scope-dependents
       - id: review
-        mandatory_agents: [completion-reviewer, qa-gatekeeper]
+        mandatory_agents: [qa-gatekeeper]
         conditional_agents: []
         parallel_groups: []
-        blocking_agents: [qa-gatekeeper, completion-reviewer]
+        blocking_agents: [qa-gatekeeper]
         rerun_policy: changed-scope-dependents
     review_profile: runtime-heavy
 

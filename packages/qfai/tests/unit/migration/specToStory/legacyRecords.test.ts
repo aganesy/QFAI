@@ -348,8 +348,8 @@ describe("legacy migration records, ID headers written with a space", () => {
     },
   ];
 
+  // QFAI:EX-0004-0007-37
   it("reads a spaced ID header as the hyphen header", () => {
-    // QFAI:EX-0004-0007-37
     for (const { kind, file, text, canonical, spaced } of tables) {
       const hyphen = parseLegacyRecords(text(canonical), kind, file);
       expect(hyphen.length, kind).toBeGreaterThan(0);
@@ -358,8 +358,8 @@ describe("legacy migration records, ID headers written with a space", () => {
     }
   });
 
+  // QFAI:EX-0004-0007-37
   it("reads a spaced ID header beside a heading section of the same ID as one record", () => {
-    // QFAI:EX-0004-0007-37
     const read = (header: string) =>
       parseLegacyRecords(
         `# Rules\n\n| ${header} | Status |\n| --- | --- |\n| BR-0001-0001 | active |\n\n## BR-0001-0001: Orders have an item\n\n- Status: active\n- Orders have an item.\n`,
@@ -371,8 +371,8 @@ describe("legacy migration records, ID headers written with a space", () => {
     expect(read("BR ID")).toEqual(hyphen);
   });
 
+  // QFAI:EX-0004-0007-38
   it("refuses a table holding only IDs of the file's kind under an unknown header, naming the file and the header line", () => {
-    // QFAI:EX-0004-0007-38
     for (const { kind, file, text, canonical, unknown } of tables) {
       expect(() => parseLegacyRecords(text(canonical), kind, file), kind).not.toThrow();
       let error: unknown;
@@ -386,8 +386,8 @@ describe("legacy migration records, ID headers written with a space", () => {
     }
   });
 
+  // QFAI:EX-0004-0007-38
   it("names the line of the header when an earlier table of the file is an ordinary one", () => {
-    // QFAI:EX-0004-0007-38
     expect(() =>
       parseLegacyRecords(
         "# Rules\n\n| Area | Owner |\n| --- | --- |\n| Orders | Ann |\n\n| Rule No | Rule |\n| --- | --- |\n| BR-0001-0001 | Orders have an item. |\n",

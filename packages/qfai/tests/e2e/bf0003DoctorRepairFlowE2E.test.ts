@@ -65,10 +65,7 @@ afterEach(async () => {
 });
 
 describe("BF-0003: diagnose and repair a QFAI workspace", () => {
-  // QFAI:US-0003-0001
-  // QFAI:US-0003-0002
-  // QFAI:US-0003-0005
-  // QFAI:US-0003-0012
+  // Exercises US-0003-0001, US-0003-0002, US-0003-0005 and US-0003-0012.
   it("QFAI:BF-0003 records the finding, owner, targeted repair and confirming checks", async () => {
     const root = await fixture();
     const beforePath = path.join(root, ".qfai/report/doctor.before.json");
@@ -193,7 +190,7 @@ describe("BF-0003: diagnose and repair a QFAI workspace", () => {
     expect(await exists(afterPath)).toBe(true);
   });
 
-  // QFAI:US-0003-0001
+  // Exercises US-0003-0001.
   it("reports malformed configuration", async () => {
     const root = await fixture();
     await writeFile(

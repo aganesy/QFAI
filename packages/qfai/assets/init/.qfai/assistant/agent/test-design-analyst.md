@@ -55,14 +55,15 @@ coverage depth before a stage claims completion.
   and target IDs and changes no file. The finder does not raise again a finding
   already decided, rejected, or answered by a pending or declined change
   request, and it does not decide its own findings.
-- During ATDD, review the BF E2E test and the AC integration or API tests
-  for depth. Report every gap with its owner, including an EX gap that
-  `/qfai-implement` will close.
-- During implementation, review the selected EX and its test against the
-  flow's acceptance tests. Report a new acceptance gap to ATDD.
+- Hold no review of its own at `implement-scaffold` or
+  `implement-acceptance`. Where the implement stage's one code review takes
+  this card, read the BF E2E test, the AC integration or API tests and the
+  selected EX tests for depth, and report every gap with its owner: a BF or AC with no
+  test to `implement-scaffold`, an acceptance test with an empty body to
+  `implement-acceptance`, a defective written assertion to
+  `implement-test-fix`, and an EX gap to `/qfai-implement`.
 - Treat volume estimates as planning signals. A high count alone does not
-  make an obligation invalid. Use
-  `skill/qfai-atdd/references/volume-signals.md`.
+  make an obligation invalid.
 
 ## Layer and traceability check
 
@@ -71,13 +72,15 @@ annotations are:
 
 | Obligation | Layer                  | Annotation             | Author            |
 | ---------- | ---------------------- | ---------------------- | ----------------- |
-| BF         | E2E                    | `QFAI:BF-NNNN`         | `/qfai-atdd`      |
-| AC         | Integration or API     | `QFAI:AC-NNNN-NNNN-NN` | `/qfai-atdd`      |
+| BF         | E2E                    | `QFAI:BF-NNNN`         | `/qfai-implement` |
+| AC         | Integration or API     | `QFAI:AC-NNNN-NNNN-NN` | `/qfai-implement` |
 | EX         | Every other test layer | `QFAI:EX-NNNN-NNNN-NN` | `/qfai-implement` |
 
 A test must exercise behavior with a discriminating oracle. A file name,
 annotation, scaffold or assertion that cannot fail for the requirement does
-not establish coverage. Confirm the runner and
+not establish coverage. That is a finding against a written body only: an
+empty acceptance test `implement-scaffold` wrote waits for
+`implement-acceptance` and is not REVISE. Confirm the runner and
 `validation.traceability.testFileGlobs` both collect each proposed test.
 A DONE `Test exception:` decision may resolve a declared obligation; name its
 ID and decision in your review. Do not create a local exemption.
@@ -98,7 +101,7 @@ before a dependent stage proceeds.
   those examples.
 - `<paths.contractsDir>/tech.md#standard-commands-copy-paste` for the
   project's Test, Lint, Typecheck and Build commands.
-- Current ATDD evidence when reviewing acceptance or implementation work.
+- The flow's acceptance tests when reviewing acceptance or implementation work.
 - Current validation findings, test paths, selectors and observed results.
 
 Read only what the active scope requires; follow linked obligations into
@@ -107,7 +110,7 @@ another flow when a shared contract changes.
 ## Deliverables
 
 For SDD, return obligation mapping, layer decisions, and concrete gaps with
-their owning stage. For ATDD, report the covered IDs, missing cases and oracle
+their owning stage. For acceptance tests, report the covered IDs, missing cases and oracle
 risks. For implementation, return an EX-level review of the test layer,
 selector and oracle.
 

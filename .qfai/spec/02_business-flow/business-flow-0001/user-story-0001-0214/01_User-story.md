@@ -6,5 +6,5 @@ As an operator, I want a request that needs no change to be answered, closed, sp
 
 ## Non-goals
 
-- A follow-up request routed inside the run that found it.
+- A follow-up request routed inside the route that found it.
 - Merging, tagging or publishing anything.

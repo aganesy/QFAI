@@ -29,11 +29,11 @@ Feature: Runner parallelism derived from QFAI's own workload
   # AC-0002-0019-03
   Scenario: The declared starting value is a hypothesis, and the measurement decides
     Given the source repository's numbers are justified as network-bound while this suite is filesystem- and subprocess-bound
-    When a timing artifact under the evidence tree compares at least two worker settings on the largest project
+    When a timing artifact compares at least two worker settings on the largest project
     Then the adopted setting is the fastest measured, or within ten percent of it with a written reason
     And when the higher value measures slower or flakier, the contended structure is investigated first: a removable cause is repaired and the higher value kept, and only where no such cause is found is the lower value kept with the measurement recorded as the reason
     And revising the user's stated starting value requires the user's sign-off
-    And the timings are quoted in the pull-request description as well as written to the evidence tree
+    And the timings are quoted in the pull-request description
 
   # AC-0002-0019-04
   Scenario: Newly created races surface instead of being masked
