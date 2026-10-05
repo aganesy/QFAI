@@ -10,18 +10,18 @@ roles:
     delivery-planner,
     test-design-analyst,
     qa-strategist,
+    acceptance-test-engineer,
     frontend-engineer,
     backend-engineer,
     devops-ci-engineer,
     implementation-reviewer,
-    qa-gatekeeper,
-    completion-reviewer,
     product-surface-reviewer,
     doc-steward,
   ]
 steps:
+  - implement-scaffold
+  - implement-credentials
   - implement-tdd
-  - implement-checkpoint
   - implement-diagnose
   - implement-regression-fix
   - implement-test-fix
@@ -39,6 +39,7 @@ steps:
   - implement-dep-bump
   - implement-tooling
   - implement-backport
+  - implement-acceptance
 requires: [common-review-cycle]
 mode: approval-gated
 ---
@@ -67,12 +68,23 @@ Every step follows `.qfai/assistant/rule/shared-skill-operating-baseline.md`,
 
 ## Steps
 
-`<BF-ID> [EX-ID...]` runs two steps, in this order:
+`<BF-ID> [EX-ID...]` runs these steps, in this order:
 
-| Step                   | File                                                | Runs                                            |
-| ---------------------- | --------------------------------------------------- | ----------------------------------------------- |
-| `implement-tdd`        | `.qfai/assistant/step/implement-tdd/STEP.md`        | First: every owed example, Red, Green, Refactor |
-| `implement-checkpoint` | `.qfai/assistant/step/implement-checkpoint/STEP.md` | Last: the flow checkpoint and completion gate   |
+| Step                    | File                                                 | Runs                                                                |
+| ----------------------- | ---------------------------------------------------- | ------------------------------------------------------------------- |
+| `implement-scaffold`    | `.qfai/assistant/step/implement-scaffold/STEP.md`    | First: the flow's missing acceptance tests, each with an empty body |
+| `implement-credentials` | `.qfai/assistant/step/implement-credentials/STEP.md` | Only when an acceptance test in scope needs an authenticated actor  |
+| `implement-tdd`         | `.qfai/assistant/step/implement-tdd/STEP.md`         | Every owed example, Red, Green, Refactor                            |
+
+Acceptance tests come in two phases. `implement-scaffold` writes them with
+empty bodies before the examples are implemented; `implement-acceptance`
+writes their bodies once the system's shape has settled. Unit and component
+tests stay test first, in `implement-tdd`.
+
+The completion gate above therefore leaves the acceptance bodies empty, by
+design. They are written by the `write-acceptance-tests` route, or by
+`implement-acceptance` run alone, and the report says which BF and AC tests
+still have an empty body.
 
 Each of these runs alone, instead of that order, when the request is not new
 behaviour but a failure, a repair or upkeep:
@@ -81,7 +93,7 @@ behaviour but a failure, a repair or upkeep:
 | -------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------- |
 | `implement-diagnose`       | `.qfai/assistant/step/implement-diagnose/STEP.md`       | A failure is reported and its cause is not yet known                      |
 | `implement-regression-fix` | `.qfai/assistant/step/implement-regression-fix/STEP.md` | A diagnosis found a regression that a correct existing test catches       |
-| `implement-test-fix`       | `.qfai/assistant/step/implement-test-fix/STEP.md`       | A diagnosis found a defective test whose first matched ID is an EX        |
+| `implement-test-fix`       | `.qfai/assistant/step/implement-test-fix/STEP.md`       | A diagnosis found a defective test                                        |
 | `implement-seam`           | `.qfai/assistant/step/implement-seam/STEP.md`           | An acceptance result asks for a seam before its RED can be taken          |
 | `implement-bisect`         | `.qfai/assistant/step/implement-bisect/STEP.md`         | A behaviour that worked at an earlier revision fails now                  |
 | `implement-revert`         | `.qfai/assistant/step/implement-revert/STEP.md`         | A bisection named a culprit that can be undone whole                      |
@@ -96,6 +108,7 @@ behaviour but a failure, a repair or upkeep:
 | `implement-dep-bump`       | `.qfai/assistant/step/implement-dep-bump/STEP.md`       | A dependency is to be raised to a new version                             |
 | `implement-tooling`        | `.qfai/assistant/step/implement-tooling/STEP.md`        | A workflow, a script or a development tool is to change                   |
 | `implement-backport`       | `.qfai/assistant/step/implement-backport/STEP.md`       | A merged change is to be carried to a release branch                      |
+| `implement-acceptance`     | `.qfai/assistant/step/implement-acceptance/STEP.md`     | The flow's acceptance tests have empty bodies to write                    |
 
 Read the `STEP.md` of the current step only, run it, then move to the next.
 Each step names the common steps it runs in `requires`; read those when the
@@ -106,8 +119,8 @@ this file adds nothing to it.
 
 ### Reviewer Gate
 
-After the last step, run one review through `common-review-cycle` with the
-union of the reviewers of the steps that ran. The review also checks for code
+After the last step, run one review through `common-review-cycle`: the code
+review, by `implementation-reviewer`. The review also checks for code
 written only to pass a test: no value hard-coded to the test's inputs and no branch written only for the test, and a wrong test or infeasible task raised as a Change Request, not worked around
 (`.qfai/assistant/rule/test-layers.md#a-passing-test-is-not-the-solution`).
 
@@ -120,8 +133,12 @@ and reporting requirement, and states any assumption it built on
 
 ## Completion
 
-The invocation completes on the gate of its last step and a PASS of the review
-above. For `<BF-ID>`, that is the completion gate of `implement-checkpoint`.
+The invocation completes on the gate of its last step once
+every finding of its one review is fixed or answered. Invoked by name, it runs
+`npx qfai validate --profile tdd --fail-on error --flow BF-NNNN` once, at
+completion; when that fresh validate result has no test-obligation EX finding
+for this BF, the invocation reports "nothing to do", and reads or writes no
+ledger status. Inside a route it runs no validate: the verify stage does.
 The report ends with a question listing the next actions, `/qfai-verify`
 recommended, as `.agents/rules/user-questions.md` § 6 sets out.
 Under a no-question mode, list them in the report instead.
@@ -138,4 +155,4 @@ If they cannot be resolved, stop at preflight and report the missing source.
 project_memory:
 
 - Select EX work from a fresh flow-scoped validator result, one EX at a time.
-- Keep BF E2E and AC integration or API obligations with `/qfai-atdd`.
+- BF maps to E2E; AC maps to integration or API; EX maps to every other test.

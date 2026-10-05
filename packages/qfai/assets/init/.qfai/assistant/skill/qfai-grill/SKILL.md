@@ -104,9 +104,9 @@ fact the environment holds, and the questions are never delegated.
 ### Delegation Failure (Hard Stop)
 
 - The primitive unreadable: stop and report it, as above.
-- A lookup `unavailable`: read what can be read directly, under the baseline's
-  sanctioned exception for a read-only fact lookup. Report the class, report
-  every fact that stayed unread, and hold the decisions downstream of it open.
+- A lookup `unavailable`: read what can be read directly, as the baseline's
+  `unavailable` response sets out. Report the class, report every fact that
+  stayed unread, and hold the decisions downstream of it open.
 - A lookup `saturated`: use the baseline's bounded retry branch.
 - Do not simulate roles. Do not answer a dispatched lookup from recollection —
   the frontier would then treat a guess as settled.

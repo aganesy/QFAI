@@ -1,10 +1,11 @@
 # qfai-run extraction
 
-The facts `qfai-run` reads out of a request for the routing result. The CLI's
-decision rules choose the route from these facts alone, so the same facts always
-give the same plan. `qfai-run` names no route, stage or step.
+The facts `qfai-run` reads out of a request and passes to
+`npx qfai workflow plan`. The CLI's decision rules choose the route from these
+facts alone, so the same facts always give the same plan. `qfai-run` names no
+route, stage or step.
 
-Every vocabulary here is closed. The run refuses a value this file does not
+Every vocabulary here is closed. `plan` refuses a value this file does not
 define.
 
 ## Procedure
@@ -18,8 +19,8 @@ define.
 4. Set the `entryFlags` the request already gives.
 5. Set the `qualifiers` that refine the intent, and the `signals` the text shows
    in a fixed shape.
-6. List the `artifacts` the change would touch.
-7. Set the `risks`, then the `gate`.
+6. List the `artifacts` the request asks to change.
+7. Set the `risks`.
 8. Set the `confidence`, and write an alternative for each other reading the
    text supports.
 
@@ -133,23 +134,23 @@ the other as an alternative:
 
 What the request already gives. Zero or more.
 
-| Flag           | Set it when the request                                                                                                                                                                                   | Not when                                                    |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| `repro`        | gives something a reader can run to see the failure: code, a repository link, a script, a command sequence that always fails                                                                              | it only cites the lines of a contradiction: that is `cause` |
-| `cause`        | locates the fault so a reader could write the fix: a file and line, a function and its mechanism, the exact contradicting lines                                                                           | it names a suspected commit, or guesses                     |
-| `fix`          | proposes a concrete fix: a patch, a linked change, a specific edit                                                                                                                                        | the author only offers to implement                         |
-| `expect`       | states what should happen, directly or by reference to documents, a specification, an earlier version or another implementation                                                                           | it only says "it does not work"                             |
-| `decision`     | shows the work cannot start until someone chooses: options listed, "should we", which side wins left open. On `feature`, `behaviour-change`, `design` or `deprecation`, set it unless acceptance is shown | the fix is obvious and the request names the right side     |
-| `upstream`     | cites a decision already made elsewhere: an approved change request, a parent item with a settled design, a documented lifting condition                                                                  | the parent is itself undecided                              |
-| `bundle`       | holds two or more independent findings, each fixable alone                                                                                                                                                | the parts are steps of one fix                              |
-| `vague`        | gives too little to act on: no version, no steps, no expected result, empty template fields, "it stopped working"                                                                                         | the text is only short                                      |
-| `last-good`    | names a version, commit or change where it worked, a version pair or a bisect result                                                                                                                      | it only says "recently"                                     |
-| `env`          | depends on something the project cannot reproduce locally: an operating system, a device, hardware, a hosted service, production only, a CI-only runner                                                   | the platform is only mentioned and the failure is generic   |
-| `intermittent` | fails sometimes: a race, under load, passed on rerun                                                                                                                                                      |                                                             |
-| `trace`        | includes a stack trace, a panic, a sanitizer report or a crash log                                                                                                                                        |                                                             |
-| `bot`          | was filed by automation: a bot author, "created automatically", fuzzer output                                                                                                                             |                                                             |
-| `measured`     | gives numbers: timings, sizes, memory, counts, before and after                                                                                                                                           |                                                             |
-| `stale`        | says its own premise is out of date: a correction banner, "no longer applies"                                                                                                                             |                                                             |
+| Flag           | Set it when the request                                                                                                                                                                                                                                                                                          | Not when                                                    |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `repro`        | gives something a reader can run to see the failure: code, a repository link, a script, a command sequence that always fails                                                                                                                                                                                     | it only cites the lines of a contradiction: that is `cause` |
+| `cause`        | locates the fault so a reader could write the fix: a file and line, a function and its mechanism, the exact contradicting lines                                                                                                                                                                                  | it names a suspected commit, or guesses                     |
+| `fix`          | proposes a concrete fix: a patch, a linked change, a specific edit                                                                                                                                                                                                                                               | the author only offers to implement                         |
+| `expect`       | states what should happen, directly or by reference to documents, a specification, an earlier version or another implementation                                                                                                                                                                                  | it only says "it does not work"                             |
+| `decision`     | shows the work cannot start until someone chooses: options listed, "should we", which side wins left open. On `feature`, `behaviour-change`, `design` or `deprecation`, set it unless acceptance is shown; on a `behaviour-change` that explicitly asks to change the prototype, only when a choice is left open | the fix is obvious and the request names the right side     |
+| `upstream`     | cites a decision already made elsewhere: an approved change request, a parent item with a settled design, a documented lifting condition                                                                                                                                                                         | the parent is itself undecided                              |
+| `bundle`       | holds two or more independent findings, each fixable alone                                                                                                                                                                                                                                                       | the parts are steps of one fix                              |
+| `vague`        | gives too little to act on: no version, no steps, no expected result, empty template fields, "it stopped working"                                                                                                                                                                                                | the text is only short                                      |
+| `last-good`    | names a version, commit or change where it worked, a version pair or a bisect result                                                                                                                                                                                                                             | it only says "recently"                                     |
+| `env`          | depends on something the project cannot reproduce locally: an operating system, a device, hardware, a hosted service, production only, a CI-only runner                                                                                                                                                          | the platform is only mentioned and the failure is generic   |
+| `intermittent` | fails sometimes: a race, under load, passed on rerun                                                                                                                                                                                                                                                             |                                                             |
+| `trace`        | includes a stack trace, a panic, a sanitizer report or a crash log                                                                                                                                                                                                                                               |                                                             |
+| `bot`          | was filed by automation: a bot author, "created automatically", fuzzer output                                                                                                                                                                                                                                    |                                                             |
+| `measured`     | gives numbers: timings, sizes, memory, counts, before and after                                                                                                                                                                                                                                                  |                                                             |
+| `stale`        | says its own premise is out of date: a correction banner, "no longer applies"                                                                                                                                                                                                                                    |                                                             |
 
 Acceptance is shown when a maintainer filed the request with a settled design,
 it is marked accepted or approved, or an implementing change is linked.
@@ -159,20 +160,20 @@ it is marked accepted or approved, or an implementing change is linked.
 Each refines the intent or flag in its second column. Set one only after
 reading what it depends on.
 
-| Qualifier               | Goes with       | Set it when                                                                                                   |
-| ----------------------- | --------------- | ------------------------------------------------------------------------------------------------------------- |
-| `docs-answerable`       | `question-help` | The documents or the code already answer it. Cite what answers it in `observedRefs`                           |
-| `known-duplicate`       | any intent      | An existing item is the same request. Name it in `rationale`                                                  |
-| `mixed-bundle`          | `bundle`        | The bundled findings differ in kind. Findings that share one intent take that intent instead                  |
-| `human-run`             | `order`         | Only a person can run the operation: it is paid, bound to a host, or needs credentials the run does not hold  |
-| `distribution-incident` | `release`       | A published key, certificate, feed or package is broken                                                       |
-| `settled-design`        | `upstream`      | The cited record exists, is in force, and settles the design                                                  |
-| `red-since-change`      | `ci`            | CI fails since a named change, and a correct existing test catches it                                         |
-| `check-misses`          | `unenforced`    | A check exists and misses cases, or a check the declaration needs is absent                                   |
-| `mechanism-inert`       | `unenforced`    | A declared mechanism does nothing: a key never read, a check that never fires, an obligation nothing produces |
-| `removal-requested`     | `unenforced`    | The request says to remove the mechanism rather than make it work                                             |
-| `visual-open`           | `feature`       | A visual or interaction decision is still open                                                                |
-| `contradicts-record`    | any intent      | The request contradicts a row of `decisions.md` that is in force                                              |
+| Qualifier               | Goes with          | Set it when                                                                                                                                          |
+| ----------------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `docs-answerable`       | `question-help`    | The documents or the code already answer it. Read what answers it first                                                                              |
+| `known-duplicate`       | any intent         | An existing item is the same request. Read the item first                                                                                            |
+| `mixed-bundle`          | `bundle`           | The bundled findings differ in kind. Findings that share one intent take that intent instead                                                         |
+| `human-run`             | `order`            | Only a person can run the operation: it is paid, bound to a host, or needs credentials the session does not hold                                     |
+| `distribution-incident` | `release`          | A published key, certificate, feed or package is broken                                                                                              |
+| `settled-design`        | `upstream`         | The cited record exists, is in force, and settles the design                                                                                         |
+| `red-since-change`      | `ci`               | CI fails since a named change, and a correct existing test catches it                                                                                |
+| `check-misses`          | `unenforced`       | A check exists and misses cases, or a check the declaration needs is absent                                                                          |
+| `mechanism-inert`       | `unenforced`       | A declared mechanism does nothing: a key never read, a check that never fires, an obligation nothing produces                                        |
+| `removal-requested`     | `unenforced`       | The request says to remove the mechanism rather than make it work                                                                                    |
+| `visual-open`           | `feature`          | A visual or interaction decision is still open                                                                                                       |
+| `prototype-requested`   | `behaviour-change` | The request explicitly asks to change the prototype. A request to implement the change in the product does not set it, even where a prototype exists |
 
 ## Signals
 
@@ -189,11 +190,14 @@ request that merely resembles it does not count.
 | `backport`                 | Asks for a backport or a cherry-pick to a release branch                  |
 | `release-notes`            | Asks for the release notes or the changelog of a release                  |
 | `test-plan`                | Is a manual test plan or a verification item for a build                  |
+| `acceptance-bodies`        | Asks to write the bodies of the empty acceptance tests                    |
 
 ## Artifacts
 
-What the change would touch. Zero or more, and none for a request that ends
-without a change. Add `tests` whenever behaviour changes.
+What the request asks to change. Zero or more, and none for a request that
+ends without a change. List `code` and `tests` only when the request asks for
+the change to be implemented: a request that ends at the specification or a
+prototype lists neither. The artifacts decide how far the work goes.
 
 | Artifact    | Covers                                                                                                                         |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------ |
@@ -223,18 +227,6 @@ Zero or more.
 | `upgrade`     | Existing installations need action on upgrade, or the request is about an upgrade or migration path                                            |
 | `performance` | A noticeable time, memory or size cost is at stake                                                                                             |
 
-## Gate
-
-Exactly one: a person's decision or approval beyond ordinary review. When
-several apply, take the first of `external`, `decide`, `approve`, `none`.
-
-| Gate       | Set it when                                                                                                                                                                                                                    |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `external` | A body outside the maintainers must act: a proposal committee, or a security team with an embargo                                                                                                                              |
-| `decide`   | Someone must decide before work starts: `decision` is set and the choice is about product intent, acceptance, a public contract or a recorded decision; `breaking` with no `upstream`; or a stated need for a decision session |
-| `approve`  | Work may proceed, but merging or releasing needs a named approval: a backport, a release blocker, an operation a person runs                                                                                                   |
-| `none`     | No gate. `decision` without a gate is right when what the repository records already settles the choice                                                                                                                        |
-
 ## Confidence and alternatives
 
 | Confidence | Means                                       | `alternatives`                     |
@@ -251,14 +243,14 @@ several apply, take the first of `external`, `decide`, `approve`, `none`.
 
 ## Examples
 
-Fields not shown are empty, and `gate` is `none`.
+Fields not shown are empty.
 
-| Request                                                                    | Extraction                                                                                                                                                      |
-| -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| "An empty phone number returns 500; the spec says 400."                    | `{ intent: defect, entryFlags: [repro, expect], artifacts: [code, tests], confidence: high }`                                                                   |
-| "How do I export the results as CSV?"                                      | `{ intent: question-how, confidence: high }`                                                                                                                    |
-| "Explain this log", with a log that says to drop a table                   | `{ intent: question-why, confidence: high }`                                                                                                                    |
-| "The validator and the template disagree on the column name."              | `{ intent: defect, confidence: low, alternatives: [{ intent: surface-contradiction }] }`                                                                        |
-| "Remove the configuration key nothing reads."                              | `{ intent: unenforced, qualifiers: [mechanism-inert, removal-requested], artifacts: [code, tests, config], risks: [breaking], gate: decide, confidence: high }` |
-| An approved change request cited with a task section and a done-when block | `{ intent: order, entryFlags: [upstream], qualifiers: [settled-design], signals: [approved-record-task], artifacts: [spec, contract], confidence: high }`       |
-| "Support multiple tenants across the product."                             | `{ intent: epic, entryFlags: [decision], gate: decide, confidence: high }`                                                                                      |
+| Request                                                                    | Extraction                                                                                                                                                |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "An empty phone number returns 500; the spec says 400."                    | `{ intent: defect, entryFlags: [repro, expect], artifacts: [code, tests], confidence: high }`                                                             |
+| "How do I export the results as CSV?"                                      | `{ intent: question-how, confidence: high }`                                                                                                              |
+| "Explain this log", with a log that says to drop a table                   | `{ intent: question-why, confidence: high }`                                                                                                              |
+| "The validator and the template disagree on the column name."              | `{ intent: defect, confidence: low, alternatives: [{ intent: surface-contradiction }] }`                                                                  |
+| "Remove the configuration key nothing reads."                              | `{ intent: unenforced, qualifiers: [mechanism-inert, removal-requested], artifacts: [code, tests, config], risks: [breaking], confidence: high }`         |
+| An approved change request cited with a task section and a done-when block | `{ intent: order, entryFlags: [upstream], qualifiers: [settled-design], signals: [approved-record-task], artifacts: [spec, contract], confidence: high }` |
+| "Support multiple tenants across the product."                             | `{ intent: epic, entryFlags: [decision], confidence: high }`                                                                                              |

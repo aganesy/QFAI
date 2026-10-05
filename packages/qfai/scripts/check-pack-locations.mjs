@@ -378,7 +378,7 @@ function main() {
     const computed = readChangedFromGit(args.baseRef);
     if (computed === null) {
       // Soft-pass when git is unavailable / errored — see comment in
-      // readChangedFromGit. Mirrors the prompt-scanner pair lane.
+      // readChangedFromGit.
       return 0;
     }
     changed = computed;

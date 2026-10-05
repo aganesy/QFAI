@@ -1,8 +1,10 @@
-import { readdir, stat } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import type { Dirent } from "node:fs";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
+import { isEnoent } from "../fs/errno.js";
+import { QFAI_GITIGNORE_MARKER, missingRecommendedGitignoreEntries } from "../gitignore.js";
 import { resolvePath } from "../config.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
@@ -50,6 +52,8 @@ export async function validateRepositoryHygiene(
       ),
     );
   }
+
+  issues.push(...(await recommendedGitignoreIssues(root)));
 
   const suspiciousPaths = await collectSuspiciousTemplatePaths(specsRoot);
   if (suspiciousPaths.length > 0) {
@@ -124,4 +128,38 @@ async function isDirectory(target: string): Promise<boolean> {
 
 function toPosix(value: string): string {
   return value.replace(/\\/g, "/");
+}
+
+/**
+ * The recommended ignore entries a root `.gitignore` carrying the QFAI marker
+ * lacks, read across the whole file.
+ *
+ * `qfai init` never re-adds a recommended entry to an existing block, so a
+ * project whose block predates one — the root `tmp/` that Article XI requires
+ * is the case that matters — learns of it only here.
+ */
+async function recommendedGitignoreIssues(root: string): Promise<Issue[]> {
+  const gitignorePath = path.join(root, ".gitignore");
+  let content: string;
+  try {
+    content = await readFile(gitignorePath, "utf-8");
+  } catch (err: unknown) {
+    if (isEnoent(err)) return [];
+    throw err;
+  }
+  if (!content.includes(QFAI_GITIGNORE_MARKER)) return [];
+  const missing = missingRecommendedGitignoreEntries(content);
+  if (missing.length === 0) return [];
+  return [
+    issue(
+      "QFAI-HYG-003",
+      `The root .gitignore is missing recommended entries: ${missing.join(", ")}`,
+      "info",
+      gitignorePath,
+      "hygiene.gitignoreRecommended",
+      [...missing],
+      "change",
+      "No action is needed if you track them on purpose. Rerunning `qfai init` does not restore an entry you removed; add it by hand to return to the default.",
+    ),
+  ];
 }

@@ -18,21 +18,21 @@ import {
   skillSteps,
 } from "../../helpers/shippedAssistant.js";
 
-/** Each step the routes add to `qfai-implement`, with the review profile it carries. */
+/** Each step the routes add to `qfai-implement`, with the review profile it carries: none of its own. */
 const ROUTE_STEPS: Record<string, string> = {
   "implement-bisect": "default",
-  "implement-revert": "implementation-heavy",
+  "implement-revert": "default",
   "implement-minimize": "default",
-  "implement-stress-harness": "runtime-heavy",
-  "implement-oracle-parity": "runtime-heavy",
-  "implement-benchmark": "runtime-heavy",
-  "implement-refactor": "implementation-heavy",
-  "implement-retire": "implementation-heavy",
-  "implement-sweep": "implementation-heavy",
-  "implement-quarantine": "runtime-heavy",
-  "implement-dep-bump": "implementation-heavy",
-  "implement-tooling": "implementation-heavy",
-  "implement-backport": "implementation-heavy",
+  "implement-stress-harness": "default",
+  "implement-oracle-parity": "default",
+  "implement-benchmark": "default",
+  "implement-refactor": "default",
+  "implement-retire": "default",
+  "implement-sweep": "default",
+  "implement-quarantine": "default",
+  "implement-dep-bump": "default",
+  "implement-tooling": "default",
+  "implement-backport": "default",
 };
 
 const VERDICTS = [
@@ -81,7 +81,7 @@ describe("the steps the routes add to qfai-implement", () => {
     for (const name of ["implement-bisect", "implement-minimize", "implement-benchmark"]) {
       const written = flat(sectionOf(await stepText(name), "## What it writes"));
       expect(written, name).toMatch(/the step changes no file git tracks/i);
-      expect(written, name).toMatch(/named in `artifactRefs`/i);
+      expect(written, name).toMatch(/the stage report holds/i);
     }
     for (const name of ["implement-stress-harness", "implement-oracle-parity"]) {
       expect(flat(await stepText(name)), name).toMatch(/the step changes no production code/i);
@@ -119,7 +119,9 @@ describe("the steps the routes add to qfai-implement", () => {
     expect(tooling).toMatch(/record it as unverified until the next release/i);
 
     const backport = flat(await stepText("implement-backport"));
-    expect(backport).toMatch(/`git cherry-pick -x`/);
+    expect(backport).toMatch(
+      /`git cherry-pick -n -x`. It changes the working tree and commits nothing/,
+    );
     expect(backport).toMatch(/do not push, merge, tag or publish/i);
 
     const benchmark = flat(await stepText("implement-benchmark"));
@@ -148,7 +150,7 @@ describe("implement-diagnose", () => {
     expect(readOnly).toMatch(/reproduces only by reading and by commands that change nothing/i);
     expect(readOnly).toMatch(/not the operation the request asks a person to run/i);
     expect(flat(sectionOf(text, "## What it writes"))).toMatch(
-      /the step changes no file git tracks, in either mode/i,
+      /elsewhere, and in read-only mode, the step changes no file git tracks/i,
     );
   });
 });

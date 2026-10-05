@@ -1,9 +1,8 @@
-// QFAI:EX-0001-0194-03
-
 import { expect, it, vi } from "vitest";
 
 import { buildSeedFixture, untypedTokens } from "../../helpers/routingEval.js";
 
+// QFAI:EX-0001-0194-03
 it("The fixture factory refuses a seed with an unknown fact key before touching the tree", async () => {
   const overlay = vi.fn(async () => {});
   const seed = { id: "ROUTE-900", repoFacts: { newCapability: true, notAFact: true } };

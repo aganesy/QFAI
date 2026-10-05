@@ -588,7 +588,7 @@ describe("applyWaivers", () => {
   it.each([
     ["QFAI-STORY-006", "storyTree.testObligation"],
     ["QFAI-STORY-007", "storyTree.misplacedAnnotation"],
-    ["D-SCAFFOLD-PLACEHOLDER", "distributedSurface.scaffold"],
+    ["D-DEPRECATED-PATH", "config.deprecatedPath"],
     ["QFAI-CFG-LINK-001", "config.link"],
     ["QFAI-STORY-008", "storyTree.undeclaredAnnotation"],
     ["QFAI-STORY-009", "storyTree.testException"],
@@ -755,8 +755,8 @@ describe("applyWaivers", () => {
   // waivable — one emitted only at `error` is refused for that reason instead,
   // which the error-only case below covers.
   it.each([
-    ["QFAI-PROT-337", "a code the emitter names through a constant"],
-    ["PROT-337", "the back-compat stripped alias"],
+    ["QFAI-DPACK-011", "a code the emitter names through a constant"],
+    ["DPACK-011", "the back-compat stripped alias"],
     ["W-STALE-REFERENCE", "a single-segment prefixed code"],
   ])("keeps a waiver for the quiet rule %s active (%s)", async (rule) => {
     const root = await createRoot();
@@ -892,39 +892,6 @@ describe("applyWaivers", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
-
-  it.each([["QFAI-CRIT-008"], ["QFAI-DCON-030"]])(
-    "keeps a waiver for the exploration-relaxable rule %s active on a quiet run",
-    async (rule) => {
-      const root = await createRoot();
-      try {
-        await writeWaivers(
-          root,
-          [
-            "version: 1",
-            "waivers:",
-            "  - id: WVR-20260208-15",
-            `    rule: ${rule}`,
-            "    scope:",
-            '      paths: [".qfai/prototyping/**"]',
-            '    reason: "soft-rubric gate, relaxed under exploration"',
-            '    expires: "2099-01-01"',
-            '    evidence: "delta.md#DL-20260208-01"',
-            "",
-          ].join("\n"),
-        );
-
-        // The rule produced nothing on this run.
-        const result = await applyWaivers(root, [buildIssue({ rule: "COMPAT-003" })]);
-
-        expect(result.issues.some((item) => item.code === "QFAI-WAIVER-002")).toBe(false);
-        expect(result.issues.some((item) => item.code === "QFAI-WAIVER-004")).toBe(false);
-        expect(result.waivers.active.map((item) => item.id)).toEqual(["WVR-20260208-15"]);
-      } finally {
-        await rm(root, { recursive: true, force: true });
-      }
-    },
-  );
 
   // The property-resolved emitters must reach the registry too: a waiver for
   // one of them read as an unknown rule on every run where it stayed quiet.

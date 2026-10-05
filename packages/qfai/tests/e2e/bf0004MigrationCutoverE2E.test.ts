@@ -21,7 +21,6 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { isMigrationReportAncestor, isMigrationReportPath } from "../helpers/migrationReport.js";
 import { seedOldHostLinks } from "../helpers/oldHostLinks.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
@@ -151,14 +150,12 @@ async function hashTree(root: string): Promise<string> {
     for (const name of (await readdir(directory)).sort()) {
       const item = path.join(directory, name);
       const relative = path.relative(root, item).replace(/\\/g, "/");
-      if (isMigrationReportPath(relative)) continue;
       const stat = await lstat(item);
-      const holdsOnlyReports = isMigrationReportAncestor(relative);
-      if (!holdsOnlyReports) hash.update(`${relative}\0${stat.mode}\0`);
+      hash.update(`${relative}\0${stat.mode}\0`);
       if (stat.isSymbolicLink()) {
         hash.update(`link\0${await readlink(item)}\0`);
       } else if (stat.isDirectory()) {
-        if (!holdsOnlyReports) hash.update("directory\0");
+        hash.update("directory\0");
         await visit(item);
       } else {
         hash.update("file\0");
@@ -267,7 +264,7 @@ beforeAll(async () => {
   }
   const rerunUnchanged = (await hashTree(root)) === firstHash;
   const map = JSON.parse(
-    await readFile(path.join(root, ".qfai/evidence/migration-spec-to-story/id-map.json"), "utf8"),
+    await readFile(path.join(root, "tmp/qfai-migration/id-map.json"), "utf8"),
   ) as IdMap;
   const validation = run(root, process.execPath, [
     cli,
@@ -315,7 +312,7 @@ beforeAll(async () => {
 
   const invalidRoot = await project();
   prepareThrough(invalidRoot, 3);
-  const planPath = path.join(invalidRoot, ".qfai/evidence/migration-spec-to-story/plan.yaml");
+  const planPath = path.join(invalidRoot, "tmp/qfai-migration/plan.yaml");
   const originalPlan = await readFile(planPath, "utf8");
   const brokenPlan = originalPlan.replace(
     'from: "CHG-0001: Order flow"',
@@ -446,15 +443,9 @@ describe("BF-0004 migration cutover", () => {
     await expect(
       lstat(path.join(journey.root, ".qfai/spec/spec-0001/04_Business-Rules.md")),
     ).rejects.toMatchObject({ code: "ENOENT" });
-    expect(
-      await readFile(
-        path.join(
-          journey.root,
-          ".qfai/evidence/migration-spec-to-story/retired/spec-0001/04_Business-Rules.md",
-        ),
-        "utf8",
-      ),
-    ).toContain("A valid order receives a receipt.");
+    await expect(lstat(path.join(journey.root, ".qfai/evidence"))).rejects.toMatchObject({
+      code: "ENOENT",
+    });
     expect(journey.oldReader.status).toBe(2);
     expect(`${journey.oldReader.stdout}\n${journey.oldReader.stderr}`).toContain("--flow BF-NNNN");
     for (const host of [".claude/skills", ".agents/skills", ".codex/skills", ".github/skills"]) {
