@@ -44,13 +44,15 @@ describe("the stage-skill entry check", () => {
 
   // QFAI:AC-0001-0195-03
   // QFAI:EX-0001-0195-05
-  it("runs /qfai-atdd and /qfai-sdd invoked by name standalone, each stopping at its own stage", async () => {
+  it("runs /qfai-implement and /qfai-sdd invoked by name standalone, each stopping at its own stage", async () => {
     const byName = rowOf(await entryCheck(), "`by-name`");
-    const atdd = flat(await readShipped("skill/qfai-atdd/SKILL.md"));
+    const implement = flat(await readShipped("skill/qfai-implement/SKILL.md"));
     const sdd = flat(await readShipped("skill/qfai-sdd/SKILL.md"));
     expect(byName).toMatch(/run standalone and end at this stage/i);
     expect(byName).toMatch(/start no other stage/i);
-    expect(atdd).toMatch(/`atdd-author`.*writes the tests and observes each red/i);
+    expect(implement).toMatch(/`implement-scaffold`.*the flow's missing acceptance tests/i);
+    expect(implement).toMatch(/`implement-tdd`.*every owed example, red, green, refactor/i);
+    expect(implement).toMatch(/the report ends with a question listing the next actions/i);
     expect(sdd).toMatch(/`sdd-story`.*stories, gherkin ac and ex/i);
     expect(sdd).toMatch(
       /invoked by name, `\/qfai-sdd` runs standalone, ends at sdd and creates no run/i,
