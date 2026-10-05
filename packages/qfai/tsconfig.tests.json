@@ -112,6 +112,7 @@
     "tests/assets/stageCost.test.ts",
     "tests/assets/structuredQuestionHook.test.ts",
     "tests/assets/tddIdAllocation.test.ts",
+    "tests/assets/testSuiteSizingRule.test.ts",
     "tests/assets/testTitleIdentifiers.test.ts",
     "tests/assets/thinkingRecordedObligations.test.ts",
     "tests/assets/tokenProvenance.test.ts",
