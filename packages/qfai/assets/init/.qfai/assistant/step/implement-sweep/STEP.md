@@ -3,17 +3,12 @@ name: implement-sweep
 owner: qfai-implement
 purpose: "Run a widened check over the whole tree and either fix each new finding or record it in the check's baseline with its reason."
 requires:
-  - common-steering-refresh
   - common-gate-run
-  - common-evidence-record
 roles:
   - devops-ci-engineer
   - frontend-engineer
   - backend-engineer
-  - implementation-reviewer
-  - qa-gatekeeper
-  - completion-reviewer
-routing-profile: implementation-heavy
+routing-profile: default
 ---
 
 # implement-sweep
@@ -21,6 +16,14 @@ routing-profile: implementation-heavy
 A check missed cases, or a needed check was absent. `implement-tdd` has just
 widened it or added it. This step runs it over everything it now covers and
 deals with what it finds.
+
+## Passes when
+
+Read first: the diff of the implement stage. The step passes when that diff
+adds or widens no check, such as a repair that only reconciles two declared
+surfaces, or when the widened check's result over the whole tree reports no
+new hit. The pass names which of the two holds, and the check command and its
+result where there is one.
 
 ## Reads
 
@@ -42,7 +45,7 @@ deals with what it finds.
 
 3. Apply the fixes. Run the check again: it reports nothing outside the
    baseline.
-4. Run the relevant suite and the project gates.
+4. Run the relevant suite.
 
 ## At the decision point
 
@@ -57,11 +60,10 @@ The choice between fix and baseline is this step's decision point.
 ## What it writes
 
 - The fixes and the baseline entries, listed in `changedFiles`.
-- A record of each finding and what was done with it, written with
-  `common-evidence-record`.
+- A record of each finding and what was done with it, in the stage report.
 
 ## Gate
 
 The step is done when the check passes over the whole tree with every
-remaining finding in its baseline with a reason, the project gates pass, and
-the qa-gatekeeper observed them.
+remaining finding in its baseline with a reason, and the relevant suite
+passes.

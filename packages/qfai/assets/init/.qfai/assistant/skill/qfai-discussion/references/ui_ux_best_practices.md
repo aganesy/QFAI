@@ -138,12 +138,8 @@ creating them fails validation.
   - rejected points
   - local translation
 - freshness-aware research for volatile topics
-
-### What belongs in `99_delta.md`
-
-- meaningful direction changes
-- rejected visual directions
-- recurrence prevention when a rejected idea comes back
+- rejected visual directions, each as a design anti-goal with the cue that
+  stops it coming back
 
 ## Compact Review Checklist
 

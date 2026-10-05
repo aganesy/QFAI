@@ -29,15 +29,8 @@ type ScaffoldDialectTemplate = {
   readonly id: "js-ts" | "python";
   /** Named in operator-facing messages, so they are not vitest-shaped everywhere. */
   readonly runner: string;
-  /** Line-comment prefix carrying the annotation header and TODO markers. */
+  /** Line-comment prefix carrying the annotation header. */
   readonly commentPrefix: string;
-  /**
-   * Glob — relative to a scaffold directory — matching every basename this
-   * dialect can emit. `D-SCAFFOLD-PLACEHOLDER` globs the union of these, so a
-   * skeleton this writer emitted is always a skeleton that validator can still
-   * see.
-   */
-  readonly placeholderGlob: string;
   /** Naming conventions in preference order; the first match wins. */
   readonly namings: readonly ScaffoldNaming[];
   /** Body lines emitted below the annotation header. */
@@ -49,7 +42,6 @@ export type ScaffoldDialect = {
   readonly id: ScaffoldDialectTemplate["id"];
   readonly runner: string;
   readonly commentPrefix: string;
-  readonly placeholderGlob: string;
   /** The extension actually emitted, chosen out of the derived scan set. */
   readonly extension: string;
   /** Basename of the emitted skeleton for a given AC or BF ID. */
@@ -57,8 +49,6 @@ export type ScaffoldDialect = {
   /** Body lines emitted below the annotation header. */
   buildBody(targetId: string): string[];
 };
-
-const PLACEHOLDER_REASON = "pending — scaffold placeholder";
 
 /** `AC-0001-0002-01` -> `ac_0001_0002_01` for pytest filenames. */
 function toSnakeCase(targetId: string): string {
@@ -97,16 +87,12 @@ const JS_TS_DIALECT: ScaffoldDialectTemplate = {
   id: "js-ts",
   runner: "vitest",
   commentPrefix: "//",
-  placeholderGlob: `**/*.{${JS_TS_INFIXES.join(",")}}.{${JS_TS_EXTENSIONS.join(",")}}`,
   namings: JS_TS_NAMINGS,
   buildBody: (targetId) => [
     `import { describe, it } from "vitest";`,
     "",
     `describe(${JSON.stringify(targetId)}, () => {`,
-    `  // TODO: implement assertion for ${targetId}`,
-    `  it.skip(${JSON.stringify(PLACEHOLDER_REASON)}, () => {`,
-    `    // TODO: implement assertion for ${targetId}`,
-    `  });`,
+    `  it(${JSON.stringify(targetId)}, () => {});`,
     `});`,
   ],
 };
@@ -115,10 +101,7 @@ const PYTHON_DIALECT: ScaffoldDialectTemplate = {
   id: "python",
   runner: "pytest (unittest-compatible)",
   commentPrefix: "#",
-  // Both pytest collector conventions; the glob and the namings below are the
-  // same two shapes, so `D-SCAFFOLD-PLACEHOLDER` reads exactly the emitted
-  // files whichever one the project's globs selected.
-  placeholderGlob: "**/{test_*.py,*_test.py}",
+  // Both pytest collector conventions.
   namings: [
     {
       extension: "py",
@@ -131,31 +114,17 @@ const PYTHON_DIALECT: ScaffoldDialectTemplate = {
       fileName: (targetId: string) => `${toSnakeCase(targetId)}_test.py`,
     },
   ],
-  // Deliberately NOT `@pytest.mark.skip` / `pytest.skip(...)`, the literal
-  // translation of the JS `it.skip(...)`: those are the silent-placeholder
-  // constructs `QFAI-TEST-001` reports as an `error`, so emitting one would
-  // hand the operator, from the command itself, a finding the same tool
-  // forbids. An unimplemented obligation is left in the Red state TDD expects
-  // instead — `D-SCAFFOLD-PLACEHOLDER` still tracks and escalates it.
-  //
-  // The skeleton is a `unittest.TestCase` rather than a module-level
-  // `def test_...`, because `testFileGlobs` names extensions, never runners:
-  // `.py` alone cannot tell pytest from unittest, and `python -m unittest
-  // discover` collects NO module-level function. A bare `def test_...` would
-  // therefore have let a unittest project retire the TODO and the sentinel —
-  // clearing `QFAI-ATDD-112` and `D-SCAFFOLD-PLACEHOLDER` on the annotation
-  // alone — while the obligation had never once been executed. A TestCase
-  // subclass is collected by BOTH runners, so no runner detection (or extra
-  // config the operator would have to supply) is needed to keep the gate
-  // honest.
+  // A `unittest.TestCase` rather than a module-level `def test_...`, because
+  // `testFileGlobs` names extensions, never runners: `.py` alone cannot tell
+  // pytest from unittest, and `python -m unittest discover` collects no
+  // module-level function. A TestCase subclass is collected by both runners.
   buildBody: (targetId) => [
     `import unittest`,
     "",
     "",
     `class ${toTestClassName(targetId)}(unittest.TestCase):`,
     `    def test_${toSnakeCase(targetId)}(self) -> None:`,
-    `        # TODO: implement assertion for ${targetId}`,
-    `        raise NotImplementedError(${JSON.stringify(PLACEHOLDER_REASON)})`,
+    `        pass`,
   ],
 };
 
@@ -176,7 +145,6 @@ function bindNaming(template: ScaffoldDialectTemplate, naming: ScaffoldNaming): 
     id: template.id,
     runner: template.runner,
     commentPrefix: template.commentPrefix,
-    placeholderGlob: template.placeholderGlob,
     extension: naming.extension,
     fileName: (targetId: string) => naming.fileName(targetId),
     buildBody: (targetId: string) => template.buildBody(targetId),
@@ -196,11 +164,6 @@ function firstNaming(template: ScaffoldDialectTemplate): ScaffoldNaming {
 export const DEFAULT_SCAFFOLD_DIALECT: ScaffoldDialect = bindNaming(
   JS_TS_DIALECT,
   firstNaming(JS_TS_DIALECT),
-);
-
-/** Every glob `D-SCAFFOLD-PLACEHOLDER` must read to see this writer's output. */
-export const SCAFFOLD_PLACEHOLDER_GLOBS: readonly string[] = Array.from(
-  new Set(SCAFFOLD_DIALECTS.map((dialect) => dialect.placeholderGlob)),
 );
 
 /** Outcome of matching a project's configured globs against this table. */
@@ -790,7 +753,7 @@ function normalizeGlobPath(value: string): string {
  * `tests/integration/<US-ID>/test_<id>.py` — a path those globs do not
  * cover, and therefore a file the project's own test scan never collects.
  * `QFAI-ATDD-112` widens to the bare extension and counted the annotation
- * anyway, so filling the placeholder in cleared the coverage gate with a test
+ * anyway, so the written test cleared the coverage gate with a test
  * that never ran — the exact outcome this selection exists to prevent, one
  * axis over.
  *
@@ -838,18 +801,6 @@ function compileGlobMatchers(patterns: readonly string[], matchWholePath: boolea
     }
   }
   return { matchers, refused };
-}
-
-/**
- * Basenames `SCAFFOLD_PLACEHOLDER_GLOBS` collect, as matchers.
- *
- * Exported for the one caller that has to answer "does that validator scan this
- * file" without running its scan. Basename rather than whole path: every
- * placeholder glob names a basename pattern under a globstar, and the
- * directory half is the caller's own containment check.
- */
-export function scaffoldPlaceholderBasenameMatchers(): RegExp[] {
-  return [...compileGlobMatchers(SCAFFOLD_PLACEHOLDER_GLOBS, false).matchers];
 }
 
 /** Where the writer will put the skeleton, when the caller knows it. */

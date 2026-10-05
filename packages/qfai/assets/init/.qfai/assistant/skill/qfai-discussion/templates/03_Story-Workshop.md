@@ -4,8 +4,9 @@
 
 > Discussion-layer IDs use the `D` prefix (`DUS-`, `DAC-`) so they cannot be read as
 > story-tree IDs (`US-0001-0001`, `AC-0001-0001-01`). They are source references,
-> not assigned story IDs. `/qfai-sdd` records the discussion REQ and the BF or US
-> it affects in a `decisions.md` triage row before authoring the story-tree files.
+> not assigned story IDs. `/qfai-sdd` names the discussion REQ and the BF or US
+> it affects in the approved `Change request:` row of `decisions.md` before
+> authoring the story-tree files.
 
 ### DUS-001: <Story Title>
 

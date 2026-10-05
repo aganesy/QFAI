@@ -115,13 +115,11 @@ describe("cli-0009-qfai-init.md matches the additive assistant-tree upgrade", ()
     return rule?.statement ?? "";
   }
 
-  it("copies only named legacy steering and instruction files", async () => {
+  it("copies only named legacy instruction files", async () => {
     const [rule, source] = await Promise.all([upgradeRule(), readFile(initSourcePath, "utf-8")]);
     expect(rule).toMatch(/copies each file the relocation table names/);
     expect(rule).toMatch(/A file the table does not recognise stays at its legacy path/);
-    expect(source).toMatch(
-      /const legacySurfaces: Array<\{ name: "steering" \| "instructions"; dir: string \}>/,
-    );
+    expect(source).toMatch(/const legacyDir = joinLegacyAssistantInstructions\(destRoot\)/);
     expect(source).toMatch(/if \(target === null\) continue/);
   });
 
@@ -131,9 +129,7 @@ describe("cli-0009-qfai-init.md matches the additive assistant-tree upgrade", ()
       expect(rule).toContain(name);
     }
     expect(rule).toMatch(/which migration step 3 merges into the spec tree/);
-    expect(source).toMatch(
-      /Unknown files and other legacy surfaces remain where the project put them/,
-    );
+    expect(source).toMatch(/Unknown files remain where the project put them/);
   });
 
   it("does not write the retired assistant directories or a migration memo", async () => {
@@ -306,9 +302,8 @@ function emitsDirectly(
 /**
  * Shape 2 — the code is a member of a gate the module tests findings against.
  *
- * `reviewerJustification.ts` reads codes off a review report and raises the
- * ones on `ADVISORY_FAILING_CODES`, so the literal is the gate rather than the
- * source. It counts only when that same binding is actually asked
+ * A module that reads codes off a report and raises the ones on a set holds the
+ * literal as the gate rather than the source. It counts only when that same binding is actually asked
  * (`NAME.has(x)` / `NAME.includes(x)`) **and** the module hands a non-literal
  * to a factory — an array nobody consults proves nothing, which is exactly how
  * a dead constant used to pass.

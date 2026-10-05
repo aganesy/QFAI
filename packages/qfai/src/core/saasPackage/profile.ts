@@ -5,8 +5,8 @@
  *   1. Prototyping-profile validators PASS (no error-severity findings).
  *   2. The design-system attestation, root `DESIGN.md`, is present and
  *      parses.
- *   3. The cross-skill handoff file (when present at
- *      `.qfai/handoff.yaml`) conforms to the canonical schema.
+ *   3. The prototyping handoff record `.qfai/prototype/final/handoff.json`
+ *      is present and conforms to the canonical CLI-HANDOFF schema.
  *
  * ATDD / implement-class gates are intentionally skipped — a
  * SaaS-tenant package does not exercise those phases. Each skipped
@@ -26,7 +26,7 @@ import { issue } from "../validators/utils.js";
 import { SAAS_PACKAGE_SKIPPED_GATES } from "./skippedGates.js";
 
 const DESIGN_ATTESTATION_REL = "DESIGN.md";
-const HANDOFF_REL = ".qfai/handoff.yaml";
+const HANDOFF_REL = ".qfai/prototype/final/handoff.json";
 
 const VERIFY_SKIPPED_CODE = "D-SAAS-PACKAGE-VERIFY-SKIPPED";
 const ATTESTATION_MISSING_CODE = "D-SAAS-PACKAGE-ATTESTATION-MISSING";
@@ -89,23 +89,31 @@ async function checkHandoffSchema(root: string): Promise<Issue[]> {
   const handoffPath = path.join(root, HANDOFF_REL);
   const text = await readTextOrNull(handoffPath);
   if (text === null) {
-    // Absence is not a saas-package failure on its own — the schema
-    // check applies only when a handoff file is present (consistent
-    // with the AC: "CLI-HANDOFF handoff conforms").
-    return [];
+    return [
+      issue(
+        HANDOFF_SCHEMA_CODE,
+        `The prototyping handoff record ${HANDOFF_REL} is missing; the saas-package profile requires a conformant handoff.`,
+        "error",
+        HANDOFF_REL,
+        "validate.saasPackage.handoffSchema",
+        [HANDOFF_REL],
+        "canonical",
+        "Confirm the prototype in /qfai-prototyping, whose handoff step writes this record, then rerun validate.",
+      ),
+    ];
   }
   const parsed = parseHandoff(text);
   if (parsed === null) {
     return [
       issue(
         HANDOFF_SCHEMA_CODE,
-        `Cross-skill handoff at ${HANDOFF_REL} is not a parseable object; the saas-package profile requires a conformant handoff.`,
+        `The prototyping handoff record ${HANDOFF_REL} is not a parseable object; the saas-package profile requires a conformant handoff.`,
         "error",
         HANDOFF_REL,
         "validate.saasPackage.handoffSchema",
         [HANDOFF_REL],
         "canonical",
-        `Author ${HANDOFF_REL} as a JSON / YAML object matching the canonical handoff schema, then rerun validate.`,
+        `Write ${HANDOFF_REL} as a JSON object matching the canonical handoff schema, then rerun validate.`,
       ),
     ];
   }
@@ -116,7 +124,7 @@ async function checkHandoffSchema(root: string): Promise<Issue[]> {
   return schemaIssues.map((schemaIssue) =>
     issue(
       HANDOFF_SCHEMA_CODE,
-      `Cross-skill handoff schema violation at ${HANDOFF_REL}: ${schemaIssue.message}`,
+      `Handoff schema violation at ${HANDOFF_REL}: ${schemaIssue.message}`,
       "error",
       HANDOFF_REL,
       "validate.saasPackage.handoffSchema",

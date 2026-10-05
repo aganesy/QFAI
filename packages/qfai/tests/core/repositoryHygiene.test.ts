@@ -1,4 +1,3 @@
-// QFAI:EX-0001-0039-07
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -8,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import { defaultConfig } from "../../src/core/config.js";
 import { validateRepositoryHygiene } from "../../src/core/validators/repositoryHygiene.js";
 
+// QFAI:EX-0001-0039-07
 describe("validateRepositoryHygiene", () => {
   async function withTempRoot(task: (root: string) => Promise<void>) {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-hygiene-"));

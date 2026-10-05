@@ -2,14 +2,12 @@
 # `_contract.yml` states what every file in this directory holds.
 
 routing:
-  # No review of its own: the gate steps after it are reviewed.
   - step: verify-context
     phases:
       - id: plan
         mandatory_agents: [delivery-planner, qa-strategist]
         conditional_agents: []
         parallel_groups: []
-        blocking_agents: [delivery-planner]
         rerun_policy: failed-agents-only
 
   - step: verify-qfai-gate
@@ -18,15 +16,8 @@ routing:
         mandatory_agents: [devops-ci-engineer]
         conditional_agents: []
         parallel_groups: []
-        blocking_agents: []
         rerun_policy: changed-scope-dependents
-      - id: review
-        mandatory_agents: [qa-gatekeeper, completion-reviewer]
-        conditional_agents: [implementation-reviewer]
-        parallel_groups: []
-        blocking_agents: [qa-gatekeeper, completion-reviewer]
-        rerun_policy: changed-scope-dependents
-    review_profile: runtime-heavy
+    review_profile: default
 
   - step: verify-repo-gate
     phases:
@@ -34,15 +25,8 @@ routing:
         mandatory_agents: [devops-ci-engineer]
         conditional_agents: []
         parallel_groups: []
-        blocking_agents: []
         rerun_policy: changed-scope-dependents
-      - id: review
-        mandatory_agents: [qa-gatekeeper, completion-reviewer]
-        conditional_agents: [implementation-reviewer]
-        parallel_groups: []
-        blocking_agents: [qa-gatekeeper, completion-reviewer]
-        rerun_policy: changed-scope-dependents
-    review_profile: runtime-heavy
+    review_profile: default
 
   - step: verify-change-note
     phases:
@@ -50,13 +34,6 @@ routing:
         mandatory_agents: [doc-steward]
         conditional_agents: []
         parallel_groups: []
-        blocking_agents: []
-        rerun_policy: changed-scope-dependents
-      - id: review
-        mandatory_agents: [completion-reviewer]
-        conditional_agents: []
-        parallel_groups: []
-        blocking_agents: [completion-reviewer]
         rerun_policy: changed-scope-dependents
     review_profile: default
 
@@ -66,15 +43,8 @@ routing:
         mandatory_agents: [devops-ci-engineer]
         conditional_agents: []
         parallel_groups: []
-        blocking_agents: []
         rerun_policy: changed-scope-dependents
-      - id: review
-        mandatory_agents: [qa-gatekeeper, completion-reviewer]
-        conditional_agents: [implementation-reviewer]
-        parallel_groups: []
-        blocking_agents: [qa-gatekeeper, completion-reviewer]
-        rerun_policy: changed-scope-dependents
-    review_profile: runtime-heavy
+    review_profile: default
 
   - step: verify-external
     phases:
@@ -82,13 +52,6 @@ routing:
         mandatory_agents: [qa-strategist]
         conditional_agents: []
         parallel_groups: []
-        blocking_agents: []
-        rerun_policy: changed-scope-dependents
-      - id: review
-        mandatory_agents: [completion-reviewer]
-        conditional_agents: []
-        parallel_groups: []
-        blocking_agents: [completion-reviewer]
         rerun_policy: changed-scope-dependents
     review_profile: default
 
@@ -98,13 +61,6 @@ routing:
         mandatory_agents: [qa-strategist]
         conditional_agents: [devops-ci-engineer]
         parallel_groups: []
-        blocking_agents: []
-        rerun_policy: changed-scope-dependents
-      - id: review
-        mandatory_agents: [completion-reviewer]
-        conditional_agents: []
-        parallel_groups: []
-        blocking_agents: [completion-reviewer]
         rerun_policy: changed-scope-dependents
     review_profile: default
 
@@ -114,13 +70,6 @@ routing:
         mandatory_agents: [doc-steward]
         conditional_agents: []
         parallel_groups: []
-        blocking_agents: []
-        rerun_policy: changed-scope-dependents
-      - id: review
-        mandatory_agents: [completion-reviewer]
-        conditional_agents: []
-        parallel_groups: []
-        blocking_agents: [completion-reviewer]
         rerun_policy: changed-scope-dependents
     review_profile: default
 
@@ -130,12 +79,14 @@ routing:
         mandatory_agents: [doc-steward]
         conditional_agents: []
         parallel_groups: []
-        blocking_agents: []
         rerun_policy: changed-scope-dependents
-      - id: review
-        mandatory_agents: [completion-reviewer]
+    review_profile: default
+
+  - step: verify-commit
+    phases:
+      - id: commit
+        mandatory_agents: [orchestrator]
         conditional_agents: []
         parallel_groups: []
-        blocking_agents: [completion-reviewer]
         rerun_policy: changed-scope-dependents
     review_profile: default

@@ -89,6 +89,8 @@ describe("re-init strips the evidence negations an earlier block carried", () =>
 
       const lines = (await readGitignore(root)).split(NL);
       expect(lines.filter((line) => line.startsWith("!.qfai/evidence/"))).toEqual([]);
+      expect(lines).not.toContain("!.qfai/install-provenance.json");
+      expect(lines).not.toContain("!.qfai/assistant/.assets.lock.json");
       expect(lines.filter((line) => line === QFAI_GITIGNORE_MARKER)).toHaveLength(1);
       expect(lines.filter((line) => line === ".qfai/run/")).toHaveLength(1);
       const record = ".qfai/evidence/sdd-BF-0001.md";
@@ -112,7 +114,7 @@ describe("re-init preserves what the project chose to track", () => {
       // governance negation so the freshness check fails on re-init.
       const pruned = (await readGitignore(root))
         .split("\n")
-        .filter((line) => line !== ".qfai/evidence/*" && line !== "!.qfai/install-provenance.json")
+        .filter((line) => line !== ".qfai/evidence/*" && line !== "!.qfai/assistant/")
         .join("\n");
       await writeFile(path.join(root, ".gitignore"), pruned, "utf-8");
 
@@ -121,7 +123,7 @@ describe("re-init preserves what the project chose to track", () => {
       const after = await readGitignore(root);
       expect(after.split("\n")).not.toContain(".qfai/evidence/*");
       // …while the missing governance negation is restored.
-      expect(after).toContain("!.qfai/install-provenance.json");
+      expect(after).toContain("!.qfai/assistant/");
       expect(after.split(QFAI_GITIGNORE_MARKER).length - 1).toBe(1);
     });
   });
@@ -159,7 +161,7 @@ describe("re-init preserves what the project chose to track", () => {
       expect(after).toContain(".qfai/discussion/*");
       // But an ignore this block simply never had is NOT added.
       expect(after).not.toContain(".qfai/evidence/*");
-      expect(after).toContain("!.qfai/install-provenance.json");
+      expect(after).toContain("!.qfai/assistant/");
     });
   });
 
@@ -389,8 +391,8 @@ describe("a duplicated managed block keeps every ignore line it carries", () => 
 
 describe("a project rule after the managed block does not win", () => {
   it("re-appends the block when a later ignore line re-ignores the negations", async () => {
-    // Git applies the last matching pattern, so `.qfai/*.json` appended below
-    // the managed block re-ignores the install-provenance record. The freshness
+    // Git applies the last matching pattern, so `.qfai/assistant/**/*.json` appended below
+    // the managed block re-ignores the vendored assistant tree. The freshness
     // check read the block only, called the negations effective and returned
     // early — while `git check-ignore -v` named the project's line.
     await withProject(async (root) => {
@@ -399,19 +401,19 @@ describe("a project rule after the managed block does not win", () => {
       const before = await readGitignore(root);
       await writeFile(
         path.join(root, ".gitignore"),
-        `${before}${NL}# project rules${NL}.qfai/*.json${NL}`,
+        `${before}${NL}# project rules${NL}.qfai/assistant/**/*.json${NL}`,
         "utf-8",
       );
 
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
       const lines = (await readGitignore(root)).split(NL).map((l) => l.trimEnd());
-      const projectRule = lines.lastIndexOf(".qfai/*.json");
-      const negation = lines.lastIndexOf("!.qfai/install-provenance.json");
+      const projectRule = lines.lastIndexOf(".qfai/assistant/**/*.json");
+      const negation = lines.lastIndexOf("!.qfai/assistant/**");
       expect(projectRule).toBeGreaterThan(-1);
       expect(negation).toBeGreaterThan(projectRule);
       // The project's own rule is preserved, not deleted.
-      expect(lines.filter((l) => l === ".qfai/*.json")).toHaveLength(1);
+      expect(lines.filter((l) => l === ".qfai/assistant/**/*.json")).toHaveLength(1);
     });
   });
 
@@ -506,7 +508,7 @@ describe("a project rule after the managed block keeps its place", () => {
       const conflicted = await readGitignore(root);
       await writeFile(
         path.join(root, ".gitignore"),
-        `${conflicted.trimEnd()}${NL}.qfai/*.json${NL}`,
+        `${conflicted.trimEnd()}${NL}.qfai/assistant/**/*.json${NL}`,
         "utf-8",
       );
 
@@ -523,8 +525,8 @@ describe("a project rule after the managed block keeps its place", () => {
 
       const after = (await readGitignore(root)).split(NL).map((l) => l.trimEnd());
       // The block moved below the project's ignore line, as the conflict requires…
-      expect(after.lastIndexOf("!.qfai/install-provenance.json")).toBeGreaterThan(
-        after.lastIndexOf(".qfai/*.json"),
+      expect(after.lastIndexOf("!.qfai/assistant/**")).toBeGreaterThan(
+        after.lastIndexOf(".qfai/assistant/**/*.json"),
       );
       // …and the negation that lost is reported, not swallowed.
       expect(lines.join("")).toContain("!.qfai/report/dashboard.md");
@@ -633,8 +635,8 @@ describe("nothing under a review directory reaches a commit", () => {
       await gitProject(root);
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const hidden = [".qfai/install-provenance.json", ".qfai/assistant/.assets.lock.json"].filter(
-        (sample) => ignoredByGit(root, sample),
+      const hidden = [".qfai/assistant/rule/drift-protocol.md"].filter((sample) =>
+        ignoredByGit(root, sample),
       );
       expect(hidden, "a governance record must stay committable").toEqual([]);
     });

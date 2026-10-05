@@ -1,23 +1,20 @@
 ---
 name: sdd-gate
 owner: qfai-sdd
-purpose: "Validate each affected business flow on its own and write its SDD evidence."
-requires: [common-gate-run, common-evidence-record]
-roles: [completion-reviewer, qa-gatekeeper]
-routing-profile: default
+purpose: "Validate each affected business flow on its own and report its result."
+requires: [common-gate-run]
+roles: []
 ---
 
 # sdd-gate
 
-The per-flow gate of the story tree, and the flow evidence the review reads.
+The per-flow gate of the story tree, and the per-flow report the review reads.
 
 ## Reads
 
 - `.qfai/assistant/skill/qfai-sdd/references/sdd-quality-gate.md`: what the
   gate checks.
 - `.qfai/assistant/skill/qfai-sdd/references/sdd-phase-checklists.md#validation-and-review`.
-- `.qfai/assistant/skill/qfai-sdd/templates/evidence/sdd-flow.md`: the flow
-  evidence shape.
 
 ## Which flows
 
@@ -36,10 +33,8 @@ For each flow:
 2. Resolve findings in their owning source and rerun until `error=0`. Follow
    `.qfai/assistant/rule/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol`;
    do not bypass a failed gate.
-3. Write `.qfai/evidence/sdd-BF-NNNN.md` from
-   `.qfai/assistant/skill/qfai-sdd/templates/evidence/sdd-flow.md` with
-   `common-evidence-record`: the source, changes, decisions, gate result and
-   validate log path, reviewer results, and remaining risks.
+3. Report, per flow, in the stage report: the source, changes, decisions,
+   gate result and validate log path, and remaining risks.
 
 ## A flow that does not exist yet
 
@@ -59,17 +54,8 @@ The stage's review through `common-review-cycle` takes one affected flow at a
 time, on the snapshot that passed validation:
 
 - The target is the flow's policy, stories, examples, enforcing contracts,
-  `contracts.md`, decisions and open questions, and
-  `.qfai/evidence/sdd-BF-NNNN.md`. Every sibling flow a shared contract change
+  `contracts.md`, decisions and open questions. Every sibling flow a shared contract change
   affected is included.
 - Reviewers check the BF → US → AC → EX ← BR edges, negative and boundary
   outcomes, contract realization, DB execution proof, decision and OQ state, and
   validation freshness.
-- `completion-reviewer` is the terminal blocking reviewer. Route
-  `architecture-reviewer` when a contract changed, `product-surface-reviewer`
-  for a UI-bearing flow, and `qa-gatekeeper` when the gate evidence is in doubt.
-- The flow's validate gate reads this flow's SDD pack, including an incomplete
-  pack its request attributes to the flow when `summary.json` is absent. A
-  sibling flow's in-flight pack neither clears nor blocks this flow.
-- The flow evidence lists the findings, repairs, rerun commands and final
-  blocking verdicts.

@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -11,7 +10,6 @@ import {
   FONT_KEYS,
   RADIUS_KEYS,
   SHADOW_KEYS,
-  hashDesignMd,
   isUnreplacedDesignMdSample,
   parseDesignMd,
   validateDesignMd,
@@ -1146,50 +1144,6 @@ describe("validateDesignMd shadow (TC-1.2.20..1.2.22)", () => {
     expect(
       issues.some((i) => i.path === "visual.shadow.md" && i.code === "invalid-shadow-format"),
     ).toBe(true);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// TC-1.3.x hashDesignMd
-// ---------------------------------------------------------------------------
-
-describe("hashDesignMd (TC-1.3.x)", () => {
-  it("TC-1.3.1: deterministic for identical input and matches a known sha256", () => {
-    const fixture = "fixed-fixture-string";
-    const expected = createHash("sha256").update(fixture, "utf8").digest("hex");
-    expect(hashDesignMd(fixture)).toBe(expected);
-    expect(hashDesignMd(fixture)).toBe(hashDesignMd(fixture));
-  });
-
-  it("TC-1.3.2: different inputs produce different hashes", () => {
-    expect(hashDesignMd("a")).not.toBe(hashDesignMd("b"));
-  });
-
-  it("TC-1.3.3: LF vs CRLF differ (no normalization)", () => {
-    expect(hashDesignMd("a\nb")).not.toBe(hashDesignMd("a\r\nb"));
-  });
-
-  it("TC-1.3.4: empty-string hash matches the standard sha256 of ''", () => {
-    expect(hashDesignMd("")).toBe(
-      "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    );
-  });
-
-  it("TC-1.3.5: front-matter key reorder produces different hash", () => {
-    const a = VALID_SAMPLE;
-    const b = VALID_SAMPLE.replace(
-      'name: "Acme Ledger"\n  archetype: tech',
-      'archetype: tech\n  name: "Acme Ledger"',
-    );
-    expect(a).not.toBe(b);
-    const pa = parseDesignMd(a);
-    const pb = parseDesignMd(b);
-    expect("error" in pa).toBe(false);
-    expect("error" in pb).toBe(false);
-    if (!("error" in pa) && !("error" in pb)) {
-      expect(pa.data).toEqual(pb.data);
-    }
-    expect(hashDesignMd(a)).not.toBe(hashDesignMd(b));
   });
 });
 
