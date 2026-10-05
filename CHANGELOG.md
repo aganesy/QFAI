@@ -48,6 +48,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `EACCES` and `EIO`, into "absent" or an empty string, so a file the validator
   could not read passed as one that was not there. Only `ENOENT` and `ENOTDIR`
   now mean absent; any other error propagates unchanged. Fixes #2906.
+- **The dogfooding backlog guard names every command a re-pin takes** (#2415).
+  `scripts/dogfood-backlog.json` is a pinned guard input, so re-pinning it
+  moves its digest. When a pin is behind the tree or a file is over its pin,
+  the guard now lists `node scripts/pin-guard-bytes.mjs` and then
+  `node scripts/pin-verification-bodies.mjs` after the `--pin` command.
+  Following the old message alone failed the lint lane on the stale digest.
 
 - **The contract guide states one scope for contract kinds.** It named only
   `api/`, `db/` and `ui/` as contract directories in one place and `cli/` in
