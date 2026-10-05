@@ -10,8 +10,6 @@
  *     under a one-minor-release deprecation window (sunset: qfai 1.10.0);
  *     non-blocking so legacy contracts can migrate without a hard break.
  */
-// QFAI:EX-0001-0153-02
-// QFAI:EX-0001-0153-02
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -186,6 +184,7 @@ function uiContractWithoutPrimaryTasksKey(): string {
   ].join("\n");
 }
 
+// QFAI:EX-0001-0153-02
 describe("TC-0013-0026: QFAI-AUD-001 aligned lane fails when primary_tasks is empty", () => {
   it("returns a severity=error finding naming file path, screen id, and rule token", async () => {
     await withWorkspace({ uiContract: uiContractWithEmptyPrimaryTasks() }, async (root) => {

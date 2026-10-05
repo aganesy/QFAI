@@ -25,7 +25,7 @@ const model = buildStoryTreeModel(
 function file(kind: StoryTestFile["kind"], id: string): StoryTestFile {
   return {
     file: `tests/${kind ?? "unit"}/sample.test.ts`,
-    content: `// ${["QFAI", id].join(":")}`,
+    content: `// ${["QFAI", id].join(":")}\nit("sample", () => {});\n`,
     kind,
     selectedForExample: true,
   };

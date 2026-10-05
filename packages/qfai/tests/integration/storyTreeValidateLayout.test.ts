@@ -198,8 +198,8 @@ describe("story-tree layout dispatch", () => {
     expect(result.issues.map((item) => item.code)).toEqual(["QFAI-LAYOUT-001"]);
   });
 
+  // QFAI:EX-0001-0150-02
   it("keeps only the named flow's finding under --flow", async () => {
-    // QFAI:EX-0001-0150-02
     for (const number of ["0001", "0002"]) {
       await put(
         `${specs}/02_business-flow/business-flow-${number}/business-flow.md`,

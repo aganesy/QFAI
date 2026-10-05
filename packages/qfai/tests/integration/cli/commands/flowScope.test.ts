@@ -137,8 +137,8 @@ describe("story-tree CLI flow scope", () => {
     },
   );
 
+  // QFAI:EX-0001-0094-05
   it("TC-0004-0112: refuses --spec on a story tree", async () => {
-    // QFAI:EX-0001-0094-05
     const root = await storyRoot();
     const parsed = parseArgs(["validate", "--spec", "0001"], root);
     expect(parsed.invalid).toBe(true);

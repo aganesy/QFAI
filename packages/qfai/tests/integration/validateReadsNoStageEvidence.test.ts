@@ -1,4 +1,3 @@
-// QFAI:EX-0001-0039-01
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -40,6 +39,7 @@ const identities = (runs: Issue[][]): string[][] =>
       .sort(),
   );
 
+// QFAI:EX-0001-0039-01
 describe("validate is deterministic", () => {
   // QFAI:EX-0001-0039-12
   it("gives the same findings on two runs over the same tree and configuration", async () => {

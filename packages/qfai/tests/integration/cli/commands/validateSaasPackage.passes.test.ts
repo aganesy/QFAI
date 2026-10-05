@@ -14,7 +14,6 @@
  * Drives `runValidate` directly (no subprocess shell-out) so the
  * harness can read the in-memory validation result deterministically.
  */
-// QFAI:EX-0001-0049-01
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -110,6 +109,7 @@ afterEach(async () => {
   if (savedGhaEnv !== undefined) process.env.GITHUB_ACTIONS = savedGhaEnv;
 });
 
+// QFAI:EX-0001-0049-01
 describe("TC-0004-0067: validate --profile saas-package PASSes + emits skip-set (normal)", () => {
   it("PASSes (exit 0) and writes a profile-suffixed report containing D-SAAS-PACKAGE-VERIFY-SKIPPED info findings", async () => {
     await seedDesignSystemAttestation();

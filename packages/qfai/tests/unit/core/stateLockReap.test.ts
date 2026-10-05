@@ -17,7 +17,6 @@
  * because `vi.mock` is file-scoped and the rest of that suite needs
  * the real module.
  */
-// QFAI:EX-0001-0090-01
 
 import { writeFileSync } from "node:fs";
 import type * as FsPromises from "node:fs/promises";
@@ -87,6 +86,7 @@ async function bumpCounter(target: string): Promise<number> {
   });
 }
 
+// QFAI:EX-0001-0090-01
 describe("TC-0010-0012: state lock reaper identity check", () => {
   it("reaps an abandoned lock while its identity is unchanged (control)", async () => {
     const lockPath = await plantAbandonedLock(root);

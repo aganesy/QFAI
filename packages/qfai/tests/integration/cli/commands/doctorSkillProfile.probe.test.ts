@@ -1,4 +1,3 @@
-// QFAI:EX-0003-0010-01
 //
 // Integration: `qfai doctor --profile <skill>` reads the skill's
 // manifest.json `runtimeDependencies` and probes the consumer
@@ -53,6 +52,7 @@ async function seedManifest(root: string, skill: string, deps: string[]): Promis
   );
 }
 
+// QFAI:EX-0003-0010-01
 describe("doctor --profile <skill> probes manifest runtimeDependencies", () => {
   it("missing dep reported with install command", async () => {
     const root = await newTempDir("missing");

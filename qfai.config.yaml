@@ -28,7 +28,10 @@ validation:
       - packages/*/src/**/*.spec.ts
       - features/**/*.feature
       - packages/*/features/**/*.feature
-    testFileExcludeGlobs: []
+    # Fixtures hold inputs for the migration tests, written in the retired
+    # annotation shapes on purpose. They are data, not tests.
+    testFileExcludeGlobs:
+      - packages/*/tests/fixtures/**
 output:
   validateJsonPath: .qfai/report/validate.json
 uiux:
