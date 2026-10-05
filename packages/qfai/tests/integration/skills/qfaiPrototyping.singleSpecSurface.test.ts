@@ -8,8 +8,6 @@
  * single-spec language without naming the multi-spec internal helper.
  */
 
-// QFAI:EX-0001-0134-01
-
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
@@ -35,6 +33,7 @@ async function listReferenceFiles(): Promise<string[]> {
   return entries.filter((name) => name.endsWith(".md")).map((name) => path.join(refDir, name));
 }
 
+// QFAI:EX-0001-0134-01
 describe("/qfai-prototyping public surface — single-spec alignment", () => {
   it("SKILL.md contains zero references to resolveSurfaceUnion", async () => {
     const content = await readFile(path.join(SKILL_ROOT, "SKILL.md"), "utf-8");

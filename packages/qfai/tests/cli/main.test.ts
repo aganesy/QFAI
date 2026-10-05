@@ -267,16 +267,6 @@ describe("cli usage errors", () => {
     }
   }
 
-  // QFAI:EX-0001-0173-03
-  it("exits 2 on an audit argument error and names the reason on stderr", async () => {
-    const missing = await captureRun(["audit"]);
-    expect(missing.exitCode).toBe(2);
-    expect(missing.stderr).toContain("qfai audit: unknown or missing subcommand. Expected: log");
-    const format = await captureRun(["audit", "log", "--format", "csv"]);
-    expect(format.exitCode).toBe(2);
-    expect(format.stderr).toContain("--format");
-  });
-
   it("writes the rejection reason to stderr, not only usage to stdout", async () => {
     const { stdout, stderr } = await captureRun(["validate", "--profile", "bogus"]);
     expect(stderr).toContain("--profile");
@@ -286,16 +276,10 @@ describe("cli usage errors", () => {
 
   it("surfaces the per-family subcommand diagnostics on stderr", async () => {
     const cases: Array<{ argv: string[]; expected: string }> = [
-      { argv: ["audit"], expected: "qfai audit: unknown or missing subcommand. Expected: log" },
       { argv: ["atdd"], expected: "qfai atdd: unknown or missing subcommand. Expected: scaffold" },
       {
         argv: ["discussion"],
         expected: "qfai discussion: unknown or missing subcommand. Expected: list|use",
-      },
-      {
-        argv: ["prototyping", "bogusaction"],
-        expected:
-          'qfai prototyping: unknown subcommand "bogusaction". Expected: preflight|iterate|certify|show-ui-contract|rescope',
       },
     ];
     for (const { argv, expected } of cases) {

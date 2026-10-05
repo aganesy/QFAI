@@ -19,7 +19,7 @@ describe("--auto question and approval boundary", () => {
       expect(skill).toContain("sdd-triage.md");
       expect(triage).toContain("Do not self-approve");
       expect(triage).toContain("In --auto, ask no question");
-      expect(triage).toContain("stop before their dependent writes");
+      expect(triage).toContain("stop before the dependent writes");
     });
   }
 });

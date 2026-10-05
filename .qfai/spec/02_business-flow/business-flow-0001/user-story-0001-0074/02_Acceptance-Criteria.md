@@ -6,9 +6,9 @@
 Feature: Worker-Scoped Credential-Reuse Guidance
   # AC-0001-0074-01
   Scenario: Seven Credential-Reuse Rules and the Companion Rule Are Stated
-    Given the `/qfai-atdd` credential-reuse guidance artifact
+    Given the `/qfai-implement` credential-reuse guidance artifact
     When it is read
-    Then it states all seven rules as distinct statements — never sign in per test; never share one account across parallel workers; key the cached session by the pair of worker index and actor; tear the cache down at worker exit; re-authenticate and rewrite the cache when a restored session is rejected; a test that mutates its own account creates a dedicated one; test-level parallelism costs more workers, not more sign-ins — and it states the companion rule that an environment identifier injected by the caller forbids the harness from provisioning or tearing down that environment; and the skill entry point cross-links the artifact.
+    Then it states all seven rules as distinct statements — never sign in per test; never share one account across parallel workers; key the cached session by the pair of worker index and actor; tear the cache down at worker exit; re-authenticate and rewrite the cache when a restored session is rejected; a test that mutates its own account creates a dedicated one; test-level parallelism costs more workers, not more sign-ins — and it states the companion rule that an environment identifier injected by the caller forbids the harness from provisioning or tearing down that environment; and the `implement-credentials` step cross-links the artifact.
 
   # AC-0001-0074-02
   Scenario: Guidance Is Backend-Agnostic and Grows No Vocabulary

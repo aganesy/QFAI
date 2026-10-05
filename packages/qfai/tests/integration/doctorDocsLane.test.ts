@@ -32,9 +32,9 @@ async function docsLane(root: string): Promise<{ severity: string; message: stri
 }
 
 describe("qfai doctor reports a missing document-schema lane", () => {
+  // QFAI:EX-0003-0011-14
   it("warns when the lane is missing and names the copy to restore", async () => {
     // QFAI:AC-0003-0011-07
-    // QFAI:EX-0003-0011-14
     const root = await project(false);
 
     const check = await docsLane(root);
@@ -44,18 +44,18 @@ describe("qfai doctor reports a missing document-schema lane", () => {
     expect(check?.message).toContain("qfai-docs.yml");
   });
 
+  // QFAI:EX-0003-0011-14
   it("warns as well when the lane was installed and then removed", async () => {
     // QFAI:AC-0003-0011-07
-    // QFAI:EX-0003-0011-14
     const root = await project(true);
     await rm(path.join(root, LANE));
 
     expect((await docsLane(root))?.severity).toBe("error");
   });
 
+  // QFAI:EX-0003-0011-15
   it("is ok when the lane is present", async () => {
     // QFAI:AC-0003-0011-07
-    // QFAI:EX-0003-0011-15
     const root = await project(true);
 
     expect((await docsLane(root))?.severity).toBe("ok");

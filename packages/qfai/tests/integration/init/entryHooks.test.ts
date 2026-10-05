@@ -4,15 +4,6 @@
  */
 // QFAI:AC-0001-0196-11
 // QFAI:AC-0001-0196-12
-// QFAI:EX-0001-0196-26
-// QFAI:EX-0001-0196-28
-// QFAI:EX-0001-0196-29
-// QFAI:EX-0001-0196-30
-// QFAI:EX-0001-0196-31
-// QFAI:EX-0001-0196-32
-// QFAI:EX-0001-0196-34
-// QFAI:EX-0001-0196-39
-// QFAI:EX-0001-0196-42
 import { lstat, mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -92,6 +83,15 @@ async function claudeStructuredQuestionGroup(): Promise<unknown> {
   return groups[0];
 }
 
+// QFAI:EX-0001-0196-26
+// QFAI:EX-0001-0196-28
+// QFAI:EX-0001-0196-29
+// QFAI:EX-0001-0196-30
+// QFAI:EX-0001-0196-31
+// QFAI:EX-0001-0196-32
+// QFAI:EX-0001-0196-34
+// QFAI:EX-0001-0196-39
+// QFAI:EX-0001-0196-42
 describe("the prompt-time reminder hooks", () => {
   afterEach(() => {
     process.exitCode = undefined;

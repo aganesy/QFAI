@@ -51,9 +51,9 @@ async function finding(root: string, id: string): Promise<Finding | undefined> {
 }
 
 describe("qfai doctor reports the repository facts the shipped workflows need", () => {
+  // QFAI:EX-0003-0011-16
   it("warns when pnpm-lock.yaml has no packageManager and says what to set", async () => {
     // QFAI:AC-0003-0011-08
-    // QFAI:EX-0003-0011-16
     const root = await project({
       packageJson: { name: "demo" },
       files: { "pnpm-lock.yaml": "lockfileVersion: 9\n" },
@@ -67,9 +67,9 @@ describe("qfai doctor reports the repository facts the shipped workflows need", 
     expect(check?.message).toContain("pnpm@");
   });
 
+  // QFAI:EX-0003-0011-16
   it("warns on a packageManager value that does not name a pnpm version", async () => {
     // QFAI:AC-0003-0011-08
-    // QFAI:EX-0003-0011-16
     for (const value of ["yarn@4.9.2", "pnpm", "pnpm@9", "pnpm@9.12.03", "pnpm@9.12.3+nope.beef"]) {
       const root = await project({
         packageJson: { packageManager: value },
@@ -83,9 +83,9 @@ describe("qfai doctor reports the repository facts the shipped workflows need", 
     }
   });
 
+  // QFAI:EX-0003-0011-17
   it("stays silent when packageManager names a pnpm version, or there is no pnpm lockfile", async () => {
     // QFAI:AC-0003-0011-08
-    // QFAI:EX-0003-0011-17
     for (const value of ["pnpm@9.15.9", "pnpm@10.0.0-rc.1", "pnpm@9.15.9+sha512.abcdef"]) {
       const root = await project({
         packageJson: { packageManager: value },
@@ -101,9 +101,9 @@ describe("qfai doctor reports the repository facts the shipped workflows need", 
     expect(await finding(npmOnly, "workflows.packageManager")).toBeUndefined();
   });
 
+  // QFAI:EX-0003-0011-18
   it("warns when two lockfiles are present and names the one the workflows use", async () => {
     // QFAI:AC-0003-0011-08
-    // QFAI:EX-0003-0011-18
     const root = await project({
       packageJson: { packageManager: "pnpm@9.15.9" },
       files: { "pnpm-lock.yaml": "", "package-lock.json": "{}" },
@@ -118,9 +118,9 @@ describe("qfai doctor reports the repository facts the shipped workflows need", 
     expect(check?.message).toMatch(/ignore package-lock\.json/u);
   });
 
+  // QFAI:EX-0003-0011-18
   it("stays silent with a single lockfile", async () => {
     // QFAI:AC-0003-0011-08
-    // QFAI:EX-0003-0011-18
     const root = await project({
       packageJson: { packageManager: "pnpm@9.15.9" },
       files: { "pnpm-lock.yaml": "" },
@@ -129,9 +129,9 @@ describe("qfai doctor reports the repository facts the shipped workflows need", 
     expect(await finding(root, "workflows.lockfiles")).toBeUndefined();
   });
 
+  // QFAI:EX-0003-0011-19
   it("warns when engines.node is declared and no Node version file exists", async () => {
     // QFAI:AC-0003-0011-08
-    // QFAI:EX-0003-0011-19
     const root = await project({ packageJson: { engines: { node: ">=22.0.0" } } });
 
     const check = await finding(root, "workflows.nodeVersionFile");
@@ -142,9 +142,9 @@ describe("qfai doctor reports the repository facts the shipped workflows need", 
     expect(check?.message).toContain("Node 20");
   });
 
+  // QFAI:EX-0003-0011-19
   it("treats an empty version file as absent and a filled one as present", async () => {
     // QFAI:AC-0003-0011-08
-    // QFAI:EX-0003-0011-19
     const empty = await project({
       packageJson: { engines: { node: ">=20" } },
       files: { ".nvmrc": "\n" },
@@ -160,17 +160,17 @@ describe("qfai doctor reports the repository facts the shipped workflows need", 
     }
   });
 
+  // QFAI:EX-0003-0011-19
   it("does not ask for a Node version file where engines.node is not declared", async () => {
     // QFAI:AC-0003-0011-08
-    // QFAI:EX-0003-0011-19
     const root = await project({ packageJson: { name: "demo" } });
 
     expect(await finding(root, "workflows.nodeVersionFile")).toBeUndefined();
   });
 
+  // QFAI:EX-0003-0011-20
   it("warns on a Node pinned below engines.node in another workflow", async () => {
     // QFAI:AC-0003-0011-08
-    // QFAI:EX-0003-0011-20
     const root = await project({
       packageJson: { engines: { node: ">=20.19.0" } },
       files: {
@@ -210,9 +210,9 @@ describe("qfai doctor reports the repository facts the shipped workflows need", 
     expect(check?.message).toContain(">=20.19.0");
   });
 
+  // QFAI:EX-0003-0011-20
   it("accepts pins that satisfy engines.node or that name no version", async () => {
     // QFAI:AC-0003-0011-08
-    // QFAI:EX-0003-0011-20
     const root = await project({
       packageJson: { engines: { node: ">=20.19.0" } },
       files: {
@@ -235,9 +235,9 @@ describe("qfai doctor reports the repository facts the shipped workflows need", 
     expect(await finding(root, "workflows.nodePin")).toBeUndefined();
   });
 
+  // QFAI:EX-0003-0011-16
   it("raises warnings only, so a project without CI is not blocked", async () => {
     // QFAI:AC-0003-0011-08
-    // QFAI:EX-0003-0011-16
     const root = await project({
       packageJson: { engines: { node: ">=22" } },
       files: { "pnpm-lock.yaml": "", "package-lock.json": "{}" },
@@ -253,9 +253,9 @@ describe("qfai doctor reports the repository facts the shipped workflows need", 
     expect(found.every((check) => check.severity === "warning")).toBe(true);
   });
 
+  // QFAI:EX-0003-0011-20
   it("finds the lower bound of engines.node wherever it stands in the range", async () => {
     // QFAI:AC-0003-0011-08
-    // QFAI:EX-0003-0011-20
     const root = await project({
       packageJson: { engines: { node: "<23 >=20.19.0" } },
       files: {
@@ -267,9 +267,9 @@ describe("qfai doctor reports the repository facts the shipped workflows need", 
     expect((await finding(root, "workflows.nodePin"))?.message).toContain("Node 18");
   });
 
+  // QFAI:EX-0003-0011-20
   it("reads a pin from the parsed workflow, not from a script that mentions the key", async () => {
     // QFAI:AC-0003-0011-08
-    // QFAI:EX-0003-0011-20
     const root = await project({
       packageJson: { engines: { node: ">=20.19.0" } },
       files: {
@@ -293,9 +293,9 @@ describe("qfai doctor reports the repository facts the shipped workflows need", 
     expect(message).not.toContain("Node 18");
   });
 
+  // QFAI:EX-0003-0011-16
   it("prints a repository-controlled value on one line without control characters", async () => {
     // QFAI:AC-0003-0011-08
-    // QFAI:EX-0003-0011-16
     const root = await project({
       packageJson: {
         engines: { node: ">=22\n[error] forged\u001b[31m" },
@@ -309,9 +309,9 @@ describe("qfai doctor reports the repository facts the shipped workflows need", 
     }
   });
 
+  // QFAI:EX-0003-0011-19
   it("names the same fallback Node the shipped workflows fall open to", async () => {
     // QFAI:AC-0003-0011-08
-    // QFAI:EX-0003-0011-19
     const lane = await readFile(
       path.join(getInitAssetsDir(), "root", ".github", "workflows", "qfai-docs.yml"),
       "utf-8",

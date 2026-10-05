@@ -1,4 +1,3 @@
-// QFAI:EX-0003-0010-02
 //
 // Boundary: a skill manifest declaring `runtimeDependencies: []` MUST
 // yield zero probe findings — no false positives, even when the
@@ -42,6 +41,7 @@ async function seedManifest(root: string, skill: string, deps: string[]): Promis
   );
 }
 
+// QFAI:EX-0003-0010-02
 describe("probeSkillManifestRuntimeDeps — empty runtimeDependencies", () => {
   it("emits zero probe findings when runtimeDependencies is []", async () => {
     const root = await newTempDir("empty");

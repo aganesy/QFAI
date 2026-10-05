@@ -1,6 +1,9 @@
 /**
  * A released changelog section, held against what it said when it was released.
  *
+ * Released means tagged: a section counts once the tag `v<version>` exists.
+ * Until then no release page was built from it, so it may still gain entries.
+ *
  * `release.yml` cuts the `## [X.Y.Z] - …` section out of `CHANGELOG.md` at the
  * tagged commit and creates the GitHub Release once. Nothing reads the file
  * again, so an entry appended to that section afterwards exists in the
@@ -31,6 +34,13 @@
  * Only additions are refused. An entry removed, or a section's prose reworded,
  * is a correction to what the release said and not a claim it never made.
  *
+ * ## The tag
+ *
+ * `git ls-remote --tags origin refs/tags/v<version>` answers whether a section
+ * is released, and works in a shallow checkout. A lookup that fails refuses the
+ * section as released and prints a note: an unknown answer does not open a
+ * released section.
+ *
  * ## The base
  *
  * The same one `check-shipped-ci-parity.mjs` resolves, imported from it: the
@@ -39,11 +49,12 @@
  * An unresolvable base warns and passes, because a check that cannot compute
  * its answer must not invent one.
  *
- * Exit codes: 0 clean or base unresolvable / 1 a released section gained an
+ * Exit codes: 0 clean or base unresolvable / 1 a tagged section gained an
  * entry / 2 a bad invocation.
  *
  * Usage: `node scripts/check-changelog-released-sections.mjs [--base <ref>]`
  */
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { argv, exit, stderr, stdout } from "node:process";
 import { pathToFileURL } from "node:url";
@@ -54,9 +65,9 @@ import { blobAt, resolveRange } from "./check-shipped-ci-parity.mjs";
 const CHANGELOG = "CHANGELOG.md";
 
 const REMEDIATION = [
-  "A released section may not gain an entry: the release page was built from that",
-  "section at its tag and nothing reads the file again, so the entry is in the",
-  "repository and in no page anybody reads.",
+  "A released section, one whose tag v<version> exists, may not gain an entry: the",
+  "release page was built from that section at its tag and nothing reads the file",
+  "again, so the entry is in the repository and in no page anybody reads.",
   "",
   "Move it to `## [Unreleased]`. A branch cut before a release carries its entry",
   "under the heading that was unreleased then, and merging after the release",
@@ -87,6 +98,35 @@ export function addedEntries(baseChangelog, headChangelog) {
   return added;
 }
 
+/** Whether `v<version>` is a tag on origin: true, false, or null when the lookup failed. */
+export function tagOnOrigin(version) {
+  const result = spawnSync("git", ["ls-remote", "--tags", "origin", `refs/tags/v${version}`], {
+    encoding: "utf-8",
+  });
+  if (result.status !== 0) return null;
+  return result.stdout.trim() !== "";
+}
+
+/**
+ * The additions to sections that are released, meaning tagged. A section whose
+ * tag lookup failed counts as released, with a note.
+ */
+export function releasedAdditions(added, tagExists) {
+  const refused = [];
+  const notes = [];
+  for (const entry of added) {
+    const tagged = tagExists(entry.version);
+    if (tagged === false) continue;
+    if (tagged === null) {
+      notes.push(
+        `the tag v${entry.version} could not be looked up; the section is treated as released.`,
+      );
+    }
+    refused.push(entry);
+  }
+  return { refused, notes };
+}
+
 function parseArgs(args) {
   const out = {};
   for (let i = 2; i < args.length; i += 1) {
@@ -113,7 +153,8 @@ function main() {
       [
         "Usage: check-changelog-released-sections.mjs [--base <ref>]",
         "",
-        "Refuses a change that adds an entry to a changelog section already released.",
+        "Refuses a change that adds an entry to a changelog section already released,",
+        "meaning one whose tag v<version> exists.",
         "",
         "  --base <ref>   compare against <ref> (default: $BASE_REF or origin/main).",
         "                 On a push event it is the previous head instead.",
@@ -141,7 +182,8 @@ function main() {
   }
   const head = readFileSync(CHANGELOG, "utf-8");
 
-  const added = addedEntries(base, head);
+  const { refused: added, notes } = releasedAdditions(addedEntries(base, head), tagOnOrigin);
+  for (const note of notes) stdout.write(`check-changelog-released-sections: ${note}\n`);
   if (added.length === 0) {
     stdout.write("check-changelog-released-sections: no released section gained an entry.\n");
     return 0;
