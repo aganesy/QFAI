@@ -49,6 +49,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Five doctor criteria now name the tests that prove them.** Existing
+  integration tests carry standalone `QFAI:AC-...` comments, and
+  `AC-0003-0004-01` gains a deprecated `paths.promptsDir` warning case.
+  The BF-0003 full pin keeps only `AC-0003-0006-01` and `AC-0003-0006-03`.
+  Refs #2367.
+
 - **A DONE change request claims every action it lists** (#2312). A
   `decisions.md` row has one Status, so a request with one action deferred could
   be marked DONE and the deferred action dropped from view. The drift protocol
