@@ -2,8 +2,8 @@
 name: verify-manual
 owner: qfai-verify
 purpose: "Follow a written test plan on each environment it names, record each check's result, and record each defect found as a follow-up request."
-requires: [common-evidence-record]
-roles: [orchestrator, qa-strategist, devops-ci-engineer, completion-reviewer]
+requires: []
+roles: [orchestrator, qa-strategist, devops-ci-engineer]
 routing-profile: default
 ---
 
@@ -19,7 +19,7 @@ nothing.
 
 ## Writes
 
-- In `.qfai/evidence/verify-<run-id>.md`: one line per check and environment,
+- In the stage report: one line per check and environment,
   with its result — pass, fail or unrun — and what was observed.
 - One follow-up request `{ goal, reason }` per defect found.
 

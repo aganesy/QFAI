@@ -216,7 +216,7 @@ describe("distributed surface leakage smoke", () => {
       "internal spec id (spec-0010+)",
     ]);
     expect(
-      await scanSingleName(path.join(".qfai", "assistant", "steering", "test-layers.md")),
+      await scanSingleName(path.join(".qfai", "assistant", "instructions", "test-layers.md")),
     ).toEqual([]);
   });
 

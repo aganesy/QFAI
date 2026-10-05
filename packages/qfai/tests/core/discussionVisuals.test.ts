@@ -18,7 +18,7 @@ describe("validateDiscussionVisuals", () => {
 
   async function writePackFile(
     root: string,
-    fileName: "02_Inception-Deck.md" | "03_Story-Workshop.md",
+    fileName: "01_Context.md" | "03_Story-Workshop.md",
     content: string,
   ): Promise<string> {
     const filePath = path.join(
@@ -37,8 +37,8 @@ describe("validateDiscussionVisuals", () => {
     await withTempRoot(async (root) => {
       const inceptionPath = await writePackFile(
         root,
-        "02_Inception-Deck.md",
-        "# 02 Inception Deck\n\nNo diagram is included.\n",
+        "01_Context.md",
+        "# 01 Context\n\nNo diagram is included.\n",
       );
       await writePackFile(
         root,
@@ -58,10 +58,8 @@ describe("validateDiscussionVisuals", () => {
     await withTempRoot(async (root) => {
       await writePackFile(
         root,
-        "02_Inception-Deck.md",
-        ["# 02 Inception Deck", "", "```mermaid", "flowchart TD", "  A --> B", "```", ""].join(
-          "\n",
-        ),
+        "01_Context.md",
+        ["# 01 Context", "", "```mermaid", "flowchart TD", "  A --> B", "```", ""].join("\n"),
       );
       await writePackFile(
         root,
@@ -78,10 +76,8 @@ describe("validateDiscussionVisuals", () => {
     await withTempRoot(async (root) => {
       await writePackFile(
         root,
-        "02_Inception-Deck.md",
-        ["# 02 Inception Deck", "", "```mermaid", "flowchart TD", "  A --> B", "```", ""].join(
-          "\n",
-        ),
+        "01_Context.md",
+        ["# 01 Context", "", "```mermaid", "flowchart TD", "  A --> B", "```", ""].join("\n"),
       );
       const storyPath = await writePackFile(
         root,
@@ -106,10 +102,8 @@ describe("validateDiscussionVisuals", () => {
     await withTempRoot(async (root) => {
       await writePackFile(
         root,
-        "02_Inception-Deck.md",
-        ["# 02 Inception Deck", "", "```mermaid", "flowchart TD", "  A --> B", "```", ""].join(
-          "\n",
-        ),
+        "01_Context.md",
+        ["# 01 Context", "", "```mermaid", "flowchart TD", "  A --> B", "```", ""].join("\n"),
       );
       await writePackFile(
         root,
@@ -131,10 +125,8 @@ describe("validateDiscussionVisuals", () => {
     await withTempRoot(async (root) => {
       await writePackFile(
         root,
-        "02_Inception-Deck.md",
-        ["# 02 Inception Deck", "", "```mermaid", "flowchart TD", "  A --> B", "```", ""].join(
-          "\n",
-        ),
+        "01_Context.md",
+        ["# 01 Context", "", "```mermaid", "flowchart TD", "  A --> B", "```", ""].join("\n"),
       );
       await writePackFile(
         root,
@@ -166,10 +158,8 @@ describe("validateDiscussionVisuals", () => {
     await withTempRoot(async (root) => {
       await writePackFile(
         root,
-        "02_Inception-Deck.md",
-        ["# 02 Inception Deck", "", "```mermaid", "flowchart TD", "  A --> B", "```", ""].join(
-          "\n",
-        ),
+        "01_Context.md",
+        ["# 01 Context", "", "```mermaid", "flowchart TD", "  A --> B", "```", ""].join("\n"),
       );
       await writePackFile(
         root,
@@ -201,10 +191,8 @@ describe("validateDiscussionVisuals", () => {
     await withTempRoot(async (root) => {
       await writePackFile(
         root,
-        "02_Inception-Deck.md",
-        ["# 02 Inception Deck", "", "```mermaid", "flowchart TD", "  A --> B", "```", ""].join(
-          "\n",
-        ),
+        "01_Context.md",
+        ["# 01 Context", "", "```mermaid", "flowchart TD", "  A --> B", "```", ""].join("\n"),
       );
       await writePackFile(
         root,

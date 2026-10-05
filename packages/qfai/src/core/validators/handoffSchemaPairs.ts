@@ -28,18 +28,32 @@ export type HandoffWriterPair = {
    * fields from `HANDOFF_MINIMUM_FIELDS`".
    */
   readonly writerToken: string;
+  /**
+   * When true, the writer must also name every field the schema lists in
+   * `HANDOFF_MINIMUM_FIELDS`, each as a code span. A prose writer has no
+   * type to import, so its field list is what has to move with the schema.
+   */
+  readonly namesSchemaFields: boolean;
 };
 
 /**
- * Initial registered writer list. Add a new entry whenever a new skill
- * gains a handoff-write call-site. The current canonical writer is the
- * library `core/handoff/writer.ts`; future skill-side writers must
- * register here so the pair-sync scan catches missing fields.
+ * Registered writer list. Add a new entry whenever a new skill gains a
+ * handoff-write call-site, so the pair-sync scan catches missing fields.
+ * The library writer is `core/handoff/writer.ts`; the prototyping skill
+ * writes its record by following its handoff reference.
  */
 export const HANDOFF_WRITER_PAIRS: readonly HandoffWriterPair[] = [
   {
     clause: "canonical-handoff-writer",
     writerRel: "packages/qfai/src/core/handoff/writer.ts",
     writerToken: "HandoffArtifact",
+    namesSchemaFields: false,
+  },
+  {
+    clause: "prototyping-handoff-writer",
+    writerRel:
+      "packages/qfai/assets/init/.qfai/assistant/skill/qfai-prototyping/references/handoff.md",
+    writerToken: "CLI-HANDOFF",
+    namesSchemaFields: true,
   },
 ];

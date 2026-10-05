@@ -58,7 +58,7 @@ The frozen families, none of which may take a new member:
 | `QFAI_`    | underscore-separated         | `QFAI_CONFIG_INVALID`          |
 | `R-`       | rule/report drift            | `R-SKILL-MANIFEST-DRIFT`       |
 | `E_`       | spec-layer errors            | `E_TC_ORPHAN`                  |
-| `D-`       | deprecation / degradation    | `D-SCAFFOLD-PLACEHOLDER`       |
+| `D-`       | deprecation / degradation    | `D-DEPRECATED-PATH`            |
 | `W-`       | warnings                     | `W-ASSISTANT-LAYOUT`           |
 | `UIX-`     | prototyping UI checks        | `UIX-VAL-OQ-OPEN-CRITICAL`     |
 | `HANDOFF-` | handoff schema               | `HANDOFF-SCHEMA-NOT-OBJECT`    |
