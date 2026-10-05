@@ -173,6 +173,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The documentation-clarity rule says where spec-tree IDs may appear** (#3002).
+  IDs the project's own spec tree defines stay in spec-tree documents and in code
+  or test comments that point at a contract or example. Operator-facing guides
+  and shipped files describe the rule in words instead.
+
 - **Every skill the agent may select says when to select it** (#2247).
   `qfai-configure`, `qfai-grilling`, `qfai-migration-v1-to-v2` and
   `web-research` gain a "Use when" sentence in their `description:`.
