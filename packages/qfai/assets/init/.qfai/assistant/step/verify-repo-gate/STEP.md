@@ -60,6 +60,10 @@ one code review reads the repair, as `qfai-verify`'s `## Review` section says.
 
 - If failing, produce an actionable fix list (not vague). Stop and escalate
   when a gate fails without one.
+- Before attributing a failure to the change, run the gate on the base commit,
+  as `common-gate-run`'s `## A failure that predates the change` says. A
+  failure that is the same there is reported with its baseline and is not
+  repaired.
 - Identify whether the failure is a spec mismatch, a test issue or an
   implementation defect, and fix the root cause. Do not silence a test without
   a reason.
@@ -125,6 +129,14 @@ These three are the only repairs verify routes.
 - A gate whose environment is missing returns the stage `blocked`, with the
   blocker `stage-blocked` and `operator` as the one who clears it.
 - No debt is listed for it, and no repair is routed.
+
+## A failure the run did not cause
+
+A gate that fails the same way on the base commit, or could not run, is
+recorded in the report and in `gates` of `verify.json`, with its `baseline` or
+its `reason`. The top-level `status` stays `"FAIL"`, so the run stops before
+`verify-commit`. The final report lists each such gate apart from the failures
+the run caused, so the user can decide whether to commit.
 
 ## Gate
 

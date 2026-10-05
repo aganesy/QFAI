@@ -1538,7 +1538,15 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // The two programs are now the same text. Events, matchers and markers are unchanged; the
   // previous groups are listed as superseded so the merge refreshes them. Restoring the two
   // programs reproduces `673f14b2…` byte for byte.
-  [".claude/settings.json", "0bf2f12f9f3bb18a767be123148e58db33fb635d2e5a945bbae32e383c64d681"],
+  //
+  // Re-pinned when the tool-time reminders were limited: the grilling reminders before a write,
+  // an edit and a delegation, the API-budget reminder, the documentation-clarity reminders after a
+  // Markdown write or edit, and the minimal-implementation reminder now print on a session's first
+  // call and on every twentieth after it, counted per session and per sub-agent, and on every call
+  // when the input names no session. Events, matchers, markers, `if` conditions and message keys are
+  // unchanged; the previous groups are listed as superseded so the merge refreshes them. Restoring
+  // the six programs reproduces `0bf2f12f…` byte for byte.
+  [".claude/settings.json", "57d8dfe1a5e8768c257a76036c8dbd4e1c8e5c3b6dba91ad65b44e7dbdab3776"],
   // Inside `.codex/`, and pinned for the reason `.claude/settings.json` is: its commands are a
   // program an adopter's agent runs. Two `UserPromptSubmit` groups, structured-question and
   // free-text entry. Codex takes one command string, so each runs the same `node -e` reader
