@@ -15,6 +15,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   tracked file under `tmp/` now checks these directories too, and a test holds
   its list to the `.gitignore` entries. Fixes #2356.
 
+### Fixed
+
+- **Each `qfai init` mode-line example is annotated on its own test.** The
+  three annotations sat at the top of the file, so any passing test there
+  counted for all three. The test covering the four mode values names the value
+  in each failing assertion. (#2287)
+
 ## [2.1.0] - 2026-10-05
 
 ### Breaking changes
