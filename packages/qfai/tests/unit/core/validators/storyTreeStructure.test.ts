@@ -305,12 +305,15 @@ describe("story-tree structure", () => {
       `| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n${rows}`;
     const dangling = validateStoryTreeStructureModel(
       model({
-        [`${contracts}/api/checkout.yaml`]: rule("Approved by DEC-0008, not DEC-0001-0002"),
+        [`${contracts}/api/checkout.yaml`]: rule(
+          "Approved by DEC-0008, again DEC-0008, then OQ-0002, not DEC-0001-0002",
+        ),
         [`${specs}/decisions.md`]: register("| DEC-0001 | Old | Kept | SUPERSEDED (by DEC-0009) |"),
       }),
     ).filter((item) => item.code === "QFAI-STORY-003");
     expect(dangling.map((item) => item.refs)).toEqual([
       ["BR-0001-0001", "DEC-0008"],
+      ["BR-0001-0001", "OQ-0002"],
       ["DEC-0001", "DEC-0009"],
     ]);
     expect(dangling.every((item) => item.severity === "error")).toBe(true);

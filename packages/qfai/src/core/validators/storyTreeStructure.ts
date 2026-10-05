@@ -288,7 +288,10 @@ function validateRecordCitations(model: StoryTreeModel): Issue[] {
   const questions = new Set((model.openQuestions?.rows ?? []).map(({ id }) => id));
   const issues: Issue[] = [];
   for (const rule of model.rules) {
-    for (const [, id = ""] of rule.statement.matchAll(CITED_RECORD_ID)) {
+    const cited = new Set(
+      Array.from(rule.statement.matchAll(CITED_RECORD_ID), ([, id = ""]) => id),
+    );
+    for (const id of cited) {
       if (decisions.has(id) || questions.has(id)) continue;
       issues.push(
         finding(
