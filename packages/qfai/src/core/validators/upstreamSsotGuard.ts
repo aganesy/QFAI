@@ -108,8 +108,13 @@ export async function validateStoryTreeDrift(
   return issues;
 }
 
-/** A DONE request applies only while newly appended or advanced from base WIP. */
+/**
+ * A request the base holds at DONE records a change already applied, so it authorises nothing
+ * whatever Status it now holds. Otherwise a WIP row authorises, and a DONE row only while newly
+ * appended or advanced from base WIP.
+ */
 function authorisesThisBranch(status: string, statusAtBase: string | undefined): boolean {
+  if (statusAtBase === "DONE") return false;
   return status === "WIP" || statusAtBase === undefined || statusAtBase === "WIP";
 }
 

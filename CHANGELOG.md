@@ -31,6 +31,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A completed change request can no longer be reopened (#2897).** A
+  `Change request:` row that the base branch holds at DONE authorised edits to
+  its paths again once a branch set it back to WIP. It now authorises nothing at
+  any status, so a later change needs a new approved request.
 - **The `qfai-run` entry reminder stays silent on a turn the host starts
   (#2989).** The Claude Code `UserPromptSubmit` hook that sends a request to
   `qfai-run` printed on every notification, so an agent could start a run from

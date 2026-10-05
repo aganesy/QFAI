@@ -135,6 +135,27 @@ describe("story-tree drift", () => {
     expect(reported).not.toContain(flows);
   });
 
+  // QFAI:EX-0001-0002-15
+  it("does not let a request the base holds at DONE regain authority by returning to WIP", async () => {
+    const flows = `${specs}/02_business-flow/business-flows.md`;
+    const done = `| DEC-0001 | Change request: ${glossary} | Applied | DONE |`;
+    await put(decisions, `${table}${done}\n`);
+    for (const file of [glossary, flows]) await put(file, "# Original\n");
+    git("add", ".");
+    git("commit", "-m", "base");
+    git("checkout", "-b", "topic");
+    for (const file of [glossary, flows]) await put(file, "# Changed\n");
+    await put(
+      decisions,
+      `${table}${done.replace("| DONE |", "| WIP |")}\n| DEC-0002 | Change request: ${flows} | Approved | WIP |\n`,
+    );
+    git("add", ".");
+    git("commit", "-m", "reopen a completed request and add a new one");
+    const reported = (await validateStoryTreeDrift(root, config(), "tdd")).map((item) => item.file);
+    expect(reported).toContain(glossary);
+    expect(reported).not.toContain(flows);
+  });
+
   // QFAI:EX-0001-0054-06
   // QFAI:EX-0001-0002-06
   // QFAI:EX-0001-0054-07
