@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:
 import os from "node:os";
 import path from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { assert, describe, expect, it } from "vitest";
 
 import { runDoctor } from "../../src/cli/commands/doctor.js";
 import { runValidate } from "../../src/cli/commands/validate.js";
@@ -48,7 +48,7 @@ async function tryBrokenLink(root: string, linkPath: string): Promise<boolean> {
 
 function check(data: Awaited<ReturnType<typeof createDoctorData>>, id: string) {
   const found = data.checks.find((entry) => entry.id === id);
-  expect(found, `missing doctor check ${id}`).toBeDefined();
+  assert.isDefined(found, `missing doctor check ${id}`);
   return found;
 }
 
@@ -225,6 +225,29 @@ describe("BF-0003 doctor acceptance", () => {
         details: { path: "lib" },
       });
       expect(check(data, "paths.outDir")).toMatchObject({ severity: "warning" });
+    });
+  });
+
+  // QFAI:AC-0003-0004-01
+  // QFAI:EX-0003-0004-01
+  it("warns about a configured legacy prompts directory and names the replacement", async () => {
+    await withWorkspace(async (root) => {
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        "paths:\n  promptsDir: .qfai/assistant/legacy-prompts\n",
+      );
+      const data = await createDoctorData({ startDir: root, rootExplicit: true });
+      const legacy = check(data, "paths.promptsDirDeprecated");
+      expect(legacy).toMatchObject({
+        severity: "warning",
+        details: { path: ".qfai/assistant/legacy-prompts", configured: true },
+      });
+      expect(legacy.message).toContain("migrate to skillsDir");
+
+      const output = await captureStdout(async () => {
+        await runDoctor({ root, rootExplicit: true, format: "text", failOn: "error" });
+      });
+      expect(output).toMatch(/\[warning\] paths\.promptsDirDeprecated:/u);
     });
   });
 

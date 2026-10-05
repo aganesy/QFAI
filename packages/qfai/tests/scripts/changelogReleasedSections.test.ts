@@ -20,6 +20,7 @@ import {
   addedEntries,
   releasedAdditions,
   sectionEntries,
+  taggedBefore,
 } from "../../../../scripts/check-changelog-released-sections.mjs";
 
 // tests/scripts/<this file> -> tests -> packages/qfai -> packages -> repo root
@@ -112,6 +113,32 @@ describe("what a released section may gain", () => {
 
     expect([...entries.keys()]).toEqual(["1.2.0"]);
     expect(entries.get("1.2.0")?.size).toBe(2);
+  });
+});
+
+describe("which tag makes a section released", () => {
+  const earlier = "a".repeat(40);
+  const head = "b".repeat(40);
+
+  it("counts a tag on an earlier commit", () => {
+    expect(taggedBefore(`${earlier}\trefs/tags/v1.2.0\n`, head)).toBe(true);
+  });
+
+  it("does not count a tag on the commit being checked", () => {
+    // The merge that folds the unreleased entries is the commit the tag is
+    // pushed to, so the release page has not been built from the section yet.
+    expect(taggedBefore(`${head}\trefs/tags/v1.2.0\n`, head)).toBe(false);
+  });
+
+  it("reads the commit of an annotated tag from its peeled line", () => {
+    const annotated = `${earlier}\trefs/tags/v1.2.0\n${head}\trefs/tags/v1.2.0^{}\n`;
+
+    expect(taggedBefore(annotated, head)).toBe(false);
+    expect(taggedBefore(annotated, "c".repeat(40))).toBe(true);
+  });
+
+  it("does not count a tag that does not exist", () => {
+    expect(taggedBefore("", head)).toBe(false);
   });
 });
 

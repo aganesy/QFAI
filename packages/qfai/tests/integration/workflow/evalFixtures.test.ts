@@ -321,6 +321,16 @@ it("The safety list derived from the tracked seeds follows the rule, with no fix
   });
 });
 
+// The fixture records the safety cases before the release eval.
+// QFAI:EX-0001-0194-38
+it("The recomputed safety list equals the recorded list", async () => {
+  const recorded: unknown = JSON.parse(
+    await readFile(path.join(FIXTURES, "safety-list.json"), "utf8"),
+  );
+
+  expect(recorded).toEqual(await safetyList());
+});
+
 const roots: string[] = [];
 
 afterEach(async () => {
@@ -398,8 +408,28 @@ async function workflowFiles(): Promise<string[]> {
   return listed.flat();
 }
 
+// The runner must exist and be readable, so every read failure propagates unchanged.
+async function requiredRunnerText(): Promise<string> {
+  return readFile(path.join(PACKAGE_ROOT, RUNNER), "utf8");
+}
+
+it("The required runner read returns the runner text", async () => {
+  await expect(requiredRunnerText()).resolves.toContain("QFAI_EVAL_COMMAND");
+});
+
+it.each(["ENOENT", "EACCES", "EPERM", "EIO", "EISDIR"])(
+  "A %s read failure of the required runner preserves the original error",
+  async (code) => {
+    const file = path.join(PACKAGE_ROOT, RUNNER);
+    const error = Object.assign(new Error(`${code}: cannot read ${file}`), { code, path: file });
+    vi.mocked(readFile).mockRejectedValueOnce(error);
+
+    await expect(requiredRunnerText()).rejects.toBe(error);
+  },
+);
+
 it("No workflow file names the eval runner, and no test project collects it", async () => {
-  const runner = await readFile(path.join(PACKAGE_ROOT, RUNNER), "utf8").catch(() => "");
+  const runner = await requiredRunnerText();
   const naming: string[] = [];
   for (const file of await workflowFiles()) {
     const text = await readFile(file, "utf8");

@@ -637,17 +637,6 @@ describe("assets guardrails", () => {
     }
   });
 
-  it("placeholder for removed v1.x test (ships ui contract sample) — replaced by ui-contract.sample.yaml direct check above", () => {
-    expect(true).toBe(true);
-  });
-
-  it("placeholder for retired evidence-requirements asset", () => {
-    // The legacy evidence-requirements.md asset has been replaced by
-    // qfai-prototyping/references/iteration-loop.md (covered by the
-    // dedicated iteration-loop test above).
-    expect(true).toBe(true);
-  });
-
   it("ships qa-gatekeeper agent card", async () => {
     const agentPath = path.join(templateQfaiDir, "assistant", "agent", "qa-gatekeeper.md");
     const content = await readFile(agentPath, "utf-8");
