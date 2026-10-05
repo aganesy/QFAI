@@ -31,6 +31,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai init --force` reports only the paths it changed.** The `written` count
+  and list included every distributed file, including those already identical to
+  the shipped copy. Rule files, the Copilot and Codex files and the agent and
+  skill links that need no change are now counted as skipped (#2986).
+
 - **The `qfai-run` entry reminder stays silent on a turn the host starts
   (#2989).** The Claude Code `UserPromptSubmit` hook that sends a request to
   `qfai-run` printed on every notification, so an agent could start a run from

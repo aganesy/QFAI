@@ -1,5 +1,5 @@
 import { constants as fsConstants } from "node:fs";
-import { copyFile, lstat, mkdir, readdir, rm, stat } from "node:fs/promises";
+import { copyFile, lstat, mkdir, readdir, readFile, rm, stat } from "node:fs/promises";
 import path from "node:path";
 
 /** The `code` of a Node filesystem error, or `undefined` for anything else thrown. */
@@ -128,6 +128,12 @@ async function copyFiles(
       skipped.push(dest);
       continue;
     }
+    // A forced copy over a file that already holds the template's bytes changes
+    // nothing, so it is reported as skipped rather than written.
+    if (options.force && (await holdsSameBytes(file, dest))) {
+      skipped.push(dest);
+      continue;
+    }
     // An overwrite follows a link at the destination, and truncates an inode
     // every hard-linked name shares. Either one is replaced as an entry, so its
     // target and its other names keep their content.
@@ -167,6 +173,20 @@ async function copyFiles(
   }
 
   return { copied, skipped, refused };
+}
+
+/**
+ * Whether `dest` is a regular file, not a link and not shared by a hard link,
+ * whose bytes equal `source`'s. A link or a shared inode is replaced as an
+ * entry on a forced copy, so it counts as a change.
+ */
+async function holdsSameBytes(source: string, dest: string): Promise<boolean> {
+  const existing = await lstatOrUndefined(dest);
+  if (existing === undefined || !existing.isFile() || existing.nlink > 1) {
+    return false;
+  }
+  const [wanted, present] = await Promise.all([readFile(source), readFile(dest)]);
+  return wanted.equals(present);
 }
 
 /** `lstat`, or `undefined` when nothing is at `target`. Other faults propagate. */
