@@ -42,6 +42,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and names each artifact, and the session stops before the first stage. A
   route that writes nothing is not refused (#2964).
 
+- **A validator no longer reads an unreadable file as a missing one.** The
+  shared `exists` and `readSafe` helpers turned every failure, including
+  `EACCES` and `EIO`, into "absent" or an empty string, so a file the validator
+  could not read passed as one that was not there. Only `ENOENT` and `ENOTDIR`
+  now mean absent; any other error propagates unchanged. Fixes #2906.
+
 - **The contract guide states one scope for contract kinds.** It named only
   `api/`, `db/` and `ui/` as contract directories in one place and `cli/` in
   another. It now says a project's contracts are the three directories and that
@@ -52,6 +58,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and list included every distributed file, including those already identical to
   the shipped copy. Rule files, the Copilot and Codex files and the agent and
   skill links that need no change are now counted as skipped (#2986).
+
+- **The handoff reader refuses an artifact whose fields have the wrong type.**
+  `HandoffReader.read` checked only that the five top-level keys were present
+  and then returned the file as a `HandoffArtifact`. It now also requires
+  `timestamp` and `iteration`, and checks each field and nested list against
+  the type it returns. A file that fails is refused with `null` and a logged
+  error, as a missing key already was. Fixes #2862.
 
 - **The `qfai-run` entry reminder stays silent on a turn the host starts
   (#2989).** The Claude Code `UserPromptSubmit` hook that sends a request to
@@ -103,6 +116,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **A mutation proof belongs to one example** (#2409). The `qfai-implement`
+  oracle-strength reference now says what to do when one mutation fails tests
+  annotated with different examples: record each failing assertion and the
+  boundary it proves, narrow an assertion that proves another example's
+  boundary, or have `/qfai-sdd` settle an unclear boundary in the examples. A
+  shared predicate may fail several tests whose assertions each prove their own
+  example.
 - **The orchestrator keeps working while a delegation runs** (#2244). The
   shared delegation baseline now says the orchestrator is not required to wait
   for a sub-agent. Where the host starts a delegation and returns at once,
@@ -192,6 +212,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   routing-eval token vocabulary changes. The set of safety-relevant routing
   seeds is unchanged, and the list derived from these classes may now be
   recorded. The decision is recorded in `decisions.md`.
+
+- **A test file missing from `packages/qfai/tsconfig.tests.json` now fails
+  `pnpm ci:lint`.** The check that every test file is either listed there or
+  recorded as uncovered ran only in the `scripts` test lane, so an author saw
+  it first in CI. `pnpm -C packages/qfai lint:shipping` now runs it too, so the
+  lint lane reports the omission before the test lanes start. Closes #2953 and
+  #2967.
 
 - **The shipped guidance now bounds test-suite size and unrequested fixes**
   (#2242). The test-layer rule gains a sizing section: a new test file is sized
