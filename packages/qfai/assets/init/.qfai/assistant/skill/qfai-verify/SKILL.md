@@ -11,8 +11,6 @@ roles:
     qa-strategist,
     devops-ci-engineer,
     doc-steward,
-    qa-gatekeeper,
-    completion-reviewer,
     implementation-reviewer,
   ]
 steps:
@@ -23,6 +21,7 @@ steps:
     verify-context,
     verify-qfai-gate,
     verify-repo-gate,
+    verify-commit,
     verify-external,
     verify-manual,
     verify-release-notes,
@@ -42,11 +41,11 @@ first.
 ## Inputs
 
 - `[--auto]`: ask nothing and record explicit assumptions.
-- The scope: `full` by default, or `prototyping` for the gate that runs before
-  `npx qfai prototyping certify`. `verify-context` fixes it.
+- The scope: `full` by default, or `prototyping` for the prototyping profile
+  alone. `verify-context` fixes it.
 - The change, and the story tree, contracts, tests and evidence it touches.
 
-The run's evidence is `.qfai/evidence/verify-<run-id>.md`, and its verdict is
+The run is reported in the stage report, and its verdict is
 `.qfai/report/verify.json`.
 
 ## Steps
@@ -61,7 +60,8 @@ condition holds:
 | `verify-change-note`   | The changelog entry, the migration steps, the breaking changes   | Never; it passes when there is nothing to write |
 | `verify-context`       | Reads the inputs, fixes the scope, finds a command for each gate | Never                                           |
 | `verify-qfai-gate`     | The QFAI validation of the scope                                 | Never                                           |
-| `verify-repo-gate`     | The repository gates, the fix loop, the evidence, `verify.json`  | Never                                           |
+| `verify-repo-gate`     | The repository gates, the fix loop, the report, `verify.json`    | Never                                           |
+| `verify-commit`        | Commits the change locally; never pushes                         | Invoked by name                                 |
 | `verify-external`      | Asks the reporter or a real environment to confirm the fix       | The gates here can confirm the fix              |
 | `verify-manual`        | Follows a written test plan on each environment                  | No written test plan is handed in               |
 | `verify-release-notes` | Drafts the release notes                                         | Release notes were not asked for                |
@@ -79,21 +79,17 @@ this file adds nothing to it.
 
 ## Review
 
-After the last step, run one review through `common-review-cycle`, with the
-union of the reviewers of the steps that ran: `completion-reviewer`, with
-`qa-gatekeeper` when a gate step or `verify-repeat-run` ran, and
-`implementation-reviewer` when the fix loop changed code. Each step's `## Gate` section says what its reviewers check.
-
-- Gate execution (`devops-ci-engineer`) and completion approval
-  (`completion-reviewer`) are separate agents. Completion is approved by a
-  reviewer who did not run the gates.
-- `qa-gatekeeper` confirms gate coverage before approval.
-- Do not hand off until all routed blocking reviewers return `PASS`.
+A run that wrote no tracked file holds no review: an exit code decides each
+gate, and each step's `## Gate` section says what passes it. A run that wrote a
+tracked file — a change note, an advisory draft, release notes, or a fix the
+fix loop of `verify-repo-gate` made — ends with the code review of what it
+wrote, by `implementation-reviewer`.
 
 ## Completion
 
-The invocation completes on the gate of the last step that ran and a PASS of
-the review above.
+The invocation completes on the gate of the last step that ran. Where
+the run wrote a tracked file, every finding of the code review above is fixed
+or answered.
 
 When declaring DONE, include:
 
@@ -109,16 +105,14 @@ the owner phase (`/qfai-sdd`) as an advisory / Change Request proposal per
 Questions about this skill's own inputs or settings stay in its own output for
 the user to answer. This skill does not write `open-questions.md`.
 
-The completion message lists each adopted decision — every
-`grilling(<Session>@<run key>/agents)` row — with its reason and any
-disagreeing position. None of them is put as a question. The message then
-ends with a question listing every next action, as
+The completion message lists each decision the agents adopted, with its
+reason and any disagreeing position. None of them is put as a question. The
+message then ends with a question listing every next action, as
 `.agents/rules/user-questions.md` § 6 sets out; under a no-question mode it lists
 them in the report instead:
 
 - Proceed (recommended): create a PR on your hosting platform, with the
-  verification evidence summary as its description.
-- A `prototyping` scope that passed: run `npx qfai prototyping certify`.
+  verification report as its description.
 - A gate failed: return to the owning skill, fix the issue, then rerun
   `/qfai-verify`.
 - A report is needed: run `npx qfai report` once the validation outputs are
@@ -135,4 +129,4 @@ them in the report instead:
 project_memory:
 
 - Verify is the full-scan approval gate; the validate runs of the other stages are signals, and the verify gate is the binding pass.
-- Verify never rewrites the story tree or a contract; drift fixes belong to `/qfai-sdd`, `/qfai-atdd` and `/qfai-implement`.
+- Verify never rewrites the story tree or a contract; drift fixes belong to `/qfai-sdd` and `/qfai-implement`.

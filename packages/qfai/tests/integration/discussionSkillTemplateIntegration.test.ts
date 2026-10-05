@@ -382,13 +382,8 @@ describe("discussion skill template integration", () => {
   // Root DESIGN.md is written by `/qfai-sdd` after discussion ends.
   // A discussion review line that asks for it can be satisfied by no pack at
   // all, so the gates check the direction record the pack does produce.
-  it("the Reviewer Gate and the review bundle look at the recorded design direction, not DESIGN.md", async () => {
-    const gatePaths = [
-      path.join(templateBase, "templates", "14_Review-Request.md"),
-      path.join(templateBase, "templates", "review", "review_request.md"),
-      path.join(templateBase, "templates", "review", "Rxx_reviewer.md"),
-      path.join(uiuxTemplateDir, "50_review_input_bundle.md"),
-    ];
+  it("the review bundle looks at the recorded design direction, not DESIGN.md", async () => {
+    const gatePaths = [path.join(uiuxTemplateDir, "50_review_input_bundle.md")];
     for (const gatePath of gatePaths) {
       const body = await readFile(gatePath, "utf-8");
       const name = path.basename(gatePath);
@@ -478,16 +473,9 @@ describe("discussion skill template integration", () => {
     expect(content).toMatch(/accessibility/);
   });
 
-  // The Reviewer Gate templates and the completion matrix are two halves of the
-  // same UI-bearing exit condition. When they disagree, a pack that satisfies
-  // the matrix is sent back by the reviewer, and a pack that satisfies the
-  // reviewer fails the forbidden-sidecar check — the UI-bearing pack cannot be
-  // completed at all.
-  it("the review template requires the same UI families as the completion matrix", async () => {
-    const reviewDir = path.join(templateBase, "templates", "review");
-
-    // Half one: the matrix itself must still carry the current UI family and
-    // must not have regrown any retired completion condition.
+  // The completion matrix carries the current UI family and has not regrown
+  // any retired completion condition.
+  it("the completion matrix requires the current UI family", async () => {
     const matrix = await readFile(completionMatrixPath, "utf-8");
     const uiBearingSection = matrix
       .split(/^## /m)
@@ -504,20 +492,6 @@ describe("discussion skill template integration", () => {
     expect(matrixConditions).toMatch(/unranked/i);
     expect(matrixConditions).toMatch(/forbidden legacy sidecar/i);
     expect(matrixConditions).toMatch(EXPLORATION_REFERENCE_PHRASE);
-
-    // Half two: the Reviewer Gate templates must demand the same family in the
-    // same words, so neither half can send back a pack the other accepts.
-    for (const fileName of ["review_request.md", "Rxx_reviewer.md"]) {
-      const content = await readFile(path.join(reviewDir, fileName), "utf-8");
-      for (const pattern of RETIRED_CONCEPT_PATTERNS) {
-        expect(content).not.toMatch(pattern);
-      }
-      expect(content).toMatch(/04_Sources\.md/);
-      expect(content).toMatch(/unranked/i);
-      expect(content).toMatch(/canonical `uiux\/` family/i);
-      expect(content).toMatch(/forbidden legacy sidecar/i);
-      expect(content).toMatch(EXPLORATION_REFERENCE_PHRASE);
-    }
   });
 });
 

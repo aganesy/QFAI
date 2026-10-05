@@ -110,7 +110,7 @@ afterEach(() => {
 });
 
 /** A skill the shipped roster carries, so its wrapper is one init would write. */
-const SHIPPED_SKILL = "qfai-atdd";
+const SHIPPED_SKILL = "qfai-implement";
 const WRAPPER = `.claude/skills/${SHIPPED_SKILL}`;
 /** What the wrapper named before the migration, and what it names after. */
 const PLURAL_TARGET = path.join("..", "..", ".qfai", "assistant", "skills", SHIPPED_SKILL);
@@ -236,7 +236,7 @@ describe("repairIntegrationWrappers", () => {
 
       const lines = await repair(root, false, { onlyRelative: new Set([relative]) });
       expect(lines.join("\n")).toContain("canonical source has a linked parent");
-      expect(await readlink(wrapper)).toBe(oldTarget);
+      expect(path.normalize(await readlink(wrapper))).toBe(path.normalize(oldTarget));
     });
   });
 

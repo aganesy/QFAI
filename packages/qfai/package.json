@@ -1,6 +1,6 @@
 {
   "name": "qfai",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "description": "Quality-first AI-driven development toolkit (SDD × ATDD × TDD).",
   "license": "MIT",
   "repository": {
@@ -43,10 +43,8 @@
     "lint:workflow-shape": "vitest run tests/integration/shippedWorkflowShapeGate.test.ts",
     "lint:mirror-surface": "vitest run tests/integration/agentsRulesSurface.test.ts tests/integration/skillLinkSurface.test.ts tests/core/integrationSurface.test.ts tests/core/integrationSurfaceReadErrors.test.ts tests/assets/reviewerVerdictVocabulary.test.ts tests/codex/agents.test.ts",
     "generate:rule-codes": "node scripts/generate-emitted-rule-codes.mjs",
-    "generate:governed-manifest": "node scripts/generate-governed-assistant-manifest.mjs",
     "check-types": "tsc --noEmit",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage tests/unit/core/prototyping tests/core/prototyping",
     "test:core": "vitest run --project core",
     "test:validators": "vitest run --project validators",
     "test:integration": "vitest run --project integration",
@@ -54,7 +52,7 @@
     "test:cli": "vitest run --project cli",
     "test:unit": "vitest run --project unit",
     "test:scripts": "vitest run --project scripts",
-    "test:windows-parity": "vitest run tests/unit/workflow/ tests/assets/codexToolHooks.test.ts tests/assets/freeTextEntryHook.test.ts tests/integration/workflow/ tests/cli/init tests/integration/init/ tests/core/assistantAssetProvenance.test.ts tests/unit/shared/provenanceLockConfirm.test.ts tests/core/gitignoreGovernanceRecords.test.ts tests/core/gitignoreMatcher.test.ts tests/validators/assistantTreeMigration.test.ts",
+    "test:windows-parity": "vitest run tests/unit/workflow/ tests/assets/codexToolHooks.test.ts tests/assets/freeTextEntryHook.test.ts tests/integration/workflow/ tests/cli/init tests/integration/init/ tests/core/gitignoreGovernanceRecords.test.ts tests/core/gitignoreMatcher.test.ts tests/validators/assistantTreeMigration.test.ts",
     "test:assets": "vitest run tests/assets",
     "self-validate": "node dist/cli/index.mjs validate --profile tdd --fail-on error --root ../.."
   },
@@ -74,7 +72,6 @@
     "@types/jsdom": "^30.0.0",
     "@types/markdown-it": "^14.2.0",
     "@types/node": "^24.0.0",
-    "@vitest/coverage-v8": "^4.1.11",
     "ajv": "^8.20.0",
     "markdown-it": "^15.0.0",
     "smol-toml": "^1.6.0",

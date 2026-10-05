@@ -34,7 +34,23 @@ specialization_tags:
 - Apply the repository review checklist and `.agents/rules/minimal-implementation.md`. Require a concrete smaller implementation when reporting excess; preserve every safety-floor obligation.
 - Check each new module against the `## Architecture` table of `<paths.contractsDir>/tech.md`: it belongs to one layer and imports only from the layers its row lists. A crossing is a finding.
 - In TypeScript, flag unjustified assertions, unchecked `unknown`, needless generic complexity and promises that callers neither await nor return.
-- Check the EX test's oracle, selector and RED/GREEN/Refactor evidence. The qa-gatekeeper owns observation verdicts; this role independently checks code and test quality.
+- Read the whole of every file the change touches for silent failure and type design, not only the lines the change adds or alters.
+  A finding on what the change added or altered can block. A finding on code that was already there is recorded and deferred, never blocking,
+  as the reviewer remit in `rule/shared-skill-delegation-baseline.md` sets out.
+  Write each finding as a concrete problem; give no rating per check.
+- Silent failure, against `.agents/rules/minimal-implementation.md` § 2 and § 3. Flag an empty catch or a silent return;
+  a catch that also catches errors it did not expect; a fallback that masks the problem instead of handling it;
+  a failure handled where § 2 does not admit it, which should propagate instead; a log entry without enough context to debug from;
+  and user feedback that does not say what to do next. A deliberate fallback carries the ceiling and lifting condition § 3 requires;
+  one without them is an unmarked simplification.
+- Type design, against § 2 of the same rule: a value crossing a trust boundary is parsed there into a form that cannot hold an invalid value.
+  Flag mutable internals exposed to outside code, an invariant held only by documentation, validation missing at construction,
+  enforcement that differs from one mutation to another, and outside code left to maintain an invariant the type should own.
+- Check the EX test's oracle, selector and RED/GREEN/Refactor evidence.
+- Check for code written only to pass a test: no value hard-coded to the test's
+  inputs and no branch written only for the test, and a wrong test or infeasible
+  task raised as a Change Request, not worked around
+  (`.qfai/assistant/rule/test-layers.md#a-passing-test-is-not-the-solution`).
 - Require more work only under `rule/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of-must`. Send new scope to the SDD owner as advisory.
 - Apply `rule/ui-procurement.md` to UI changes and report a usable standard or component that was passed over.
 
@@ -44,8 +60,7 @@ specialization_tags:
 - `qfai.config.yaml` and the affected BF/US/AC/EX story files under `<paths.specsDir>/02_business-flow/**`.
 - `<paths.specsDir>/03_contract/tech.md`, plus the active API, DB or UI contracts this change affects.
 - The changed code and tests, their diff, repository review instructions, and actual quality-gate results.
-- `.qfai/evidence/implement-BF-NNNN.md` for the reviewed EX; read `atdd-BF-NNNN.md` when its BF or AC acceptance obligation is affected.
-- The current EX review pack and its recorded revision. A missing required observation or an obsolete pack prevents PASS.
+- The stage report for the reviewed EX: its test, selector and observed results. A missing required observation prevents PASS.
 
 ## Deliverables
 

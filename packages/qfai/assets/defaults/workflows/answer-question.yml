@@ -3,8 +3,12 @@ family: close
 stages:
   - id: answer
     kind: triage
-    steps: [triage-answer, triage-close]
-    review: none
-defaultModifiers: []
+    steps:
+      - { step: triage-investigate, passThrough: true }
+      - triage-answer
+      - triage-close
 decisionPoints: []
-branchPoints: []
+branchPoints:
+  - step: triage-investigate
+    outcomes:
+      - { outcome: defect-found, routes: decision-table }

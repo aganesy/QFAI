@@ -32,6 +32,5 @@ describe.each(trees)("%s implementation micro-cycle", (tree) => {
     const skill = (await read(tree, "assistant/step/implement-tdd/STEP.md")).replace(/\s+/g, " ");
     expect(skill).toContain("references/red-not-observable.md");
     expect(skill).toContain("references/oracle-strength.md");
-    expect(skill).toContain("The qa-gatekeeper checks the observed RED and GREEN evidence");
   });
 });
