@@ -18,7 +18,7 @@ const SHIPPED_ASSISTANT_ROOT = "packages/qfai/assets/init/.qfai/assistant";
 
 /**
  * Root mirror of the shipped surface. Only mirrored paths are scanned — the root
- * tree also carries legacy, non-distributed docs (`steering/**`, superseded
+ * tree also carries legacy, non-distributed docs (superseded
  * migration notes) that this repo keeps for its own history.
  */
 const ROOT_ASSISTANT_MIRROR = ".qfai/assistant";
@@ -32,13 +32,12 @@ const BASELINE_PATHS = [
  * First-token commands the CLI actually registers; a bare invocation of any of
  * them is not on PATH.
  *
- * These are the FIRST token only. `audit` and `atdd` take their action as a
- * second token (`qfai audit log`, `qfai atdd scaffold` — see `cli/main.ts`
- * usage). Spelling them here as `audit-log` / `atdd-scaffold` matched nothing
- * the CLI accepts, so a doc that reintroduced a bare `qfai audit log` passed
- * this guard untouched.
+ * These are the FIRST token only. `atdd` takes its action as a second token
+ * (`qfai atdd scaffold` — see `cli/main.ts` usage). Spelling it here as
+ * `atdd-scaffold` matched nothing the CLI accepts, so a doc that reintroduced a
+ * bare `qfai atdd scaffold` passed this guard untouched.
  */
-const SUBCOMMANDS = "(?:validate|init|report|doctor|prototyping|discussion|audit|atdd|workflow)";
+const SUBCOMMANDS = "(?:validate|init|report|doctor|prototyping|discussion|atdd|workflow)";
 
 const INLINE_BARE = new RegExp("`qfai " + SUBCOMMANDS + "\\b");
 const FENCED_BARE = new RegExp("^\\s*qfai " + SUBCOMMANDS + "\\b");
@@ -133,6 +132,24 @@ describe("shipped assistant docs invoke qfai through the canonical launcher", ()
       expect(content).toContain("does not add itself to `package.json` on init");
       // `--no-install` may only appear as the thing that is NOT the guard.
       expect(content).toContain("The preflight is the guard, not a flag.");
+    }
+  });
+
+  // A fresh clone or a new worktree has no install, and `npx` then walks up to a parent
+  // directory's copy. Declared-but-not-installed and not-declared are different fixes.
+  // QFAI:EX-0001-0194-42
+  it("the preflight tells a declared dependency with no install here from no dependency", async () => {
+    for (const baseline of BASELINE_PATHS) {
+      const content = (await readFile(path.join(repoRoot, baseline), "utf-8")).replace(/\s+/g, " ");
+      expect(content).toContain("the project's install command in this checkout");
+      expect(content).toContain(
+        "**`qfai` is listed in `dependencies` or `devDependencies`, but this checkout has no install.**",
+      );
+      expect(content).toContain(
+        "a parent directory, which may be an older version of another checkout",
+      );
+      expect(content).toContain("**`qfai` is not listed.**");
+      expect(content).toContain("`npm i -D qfai`");
     }
   });
 

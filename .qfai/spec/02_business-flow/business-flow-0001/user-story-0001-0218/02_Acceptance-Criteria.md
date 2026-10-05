@@ -3,7 +3,7 @@
 ## Criteria
 
 ```gherkin
-Feature: Refuse a route catalog a run cannot use
+Feature: Refuse a route catalog a session cannot use
   # AC-0001-0218-01
   Scenario: A plan names only installed steps, in stages of one kind
     Given a plan
@@ -31,8 +31,21 @@ Feature: Refuse a route catalog a run cannot use
     And each branch destination is a catalog route or the decision table
 
   # AC-0001-0218-05
-  Scenario: A plan holds no predicate and only known modes and modifiers
-    Given a plan with a `when` key, an unknown mode or an unknown modifier
-    When the core loads it
+  Scenario: A plan holds no predicate, no modifier and only known modes
+    Given a plan with a `when` key, an unknown mode or a modifier
+    When `plan` loads it
     Then it is refused
+
+  # AC-0001-0218-06
+  Scenario: A triage stage carries no review
+    Given a plan whose stage carries `review`
+    When `plan` loads it
+    Then `spec` or `code` on a stage that is not a triage stage is admitted
+    And any other value, or any `review` on a triage stage, is refused
+
+  # AC-0001-0218-07
+  Scenario: A stage is listed after the stages it depends on
+    Given a plan whose stage names in `after` a stage listed after it
+    When `plan` loads it
+    Then the plan is refused, naming both stages
 ```

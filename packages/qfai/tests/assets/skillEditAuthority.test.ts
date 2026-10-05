@@ -4,12 +4,9 @@
  * `qfai init` publishes each shipped skill as a symlink into
  * `.qfai/assistant/skill/<id>/`, so the frontmatter in the body below is the
  * frontmatter the tool actually reads — `allowed-tools` is live, not
- * decorative. `/qfai-atdd` mandated "Create and update:
- * `.qfai/evidence/atdd-BF-NNNN.md`" while granting only `Write`, which turns
- * every append onto a multi-hundred-line evidence file into a whole-file
- * rewrite reproduced from context. That file is also the hash subject of the
- * stage review, so a lossy rewrite moves a hash a reviewer already recorded
- * and nothing downstream can tell it from a legitimate edit.
+ * decorative. A skill that mandates updating a file while granting only
+ * `Write` turns every append onto a long file into a whole-file rewrite
+ * reproduced from context.
  *
  * These tests pin the rule for every shipped skill: if the body mandates
  * creating *and updating* an artifact, the frontmatter must grant `Edit`.
@@ -79,26 +76,12 @@ const loadSkills = async (tree: string): Promise<readonly SkillFrontmatter[]> =>
 };
 
 describe.each(TREES)("%s", (tree) => {
-  it("grants /qfai-atdd the Edit tool its evidence file requires", async () => {
-    const skills = await loadSkills(tree);
-    const atdd = skills.find((skill) => skill.id === "qfai-atdd");
-    expect(atdd).toBeDefined();
-    if (atdd === undefined) return;
-    expect(atdd.allowedTools).toContain("Edit");
-    // The append target that made the omission load-bearing.
-    expect(atdd.body).toContain("`.qfai/evidence/atdd-BF-NNNN.md`");
-    // Edit is an addition, not a swap: whole-file authoring is still needed
-    // for the first write of each evidence file.
-    expect(atdd.allowedTools).toContain("Write");
-    expect(atdd.allowedTools).toContain("Read");
-  });
-
   it("grants Edit to every skill whose body mandates updating an artifact", async () => {
     const skills = await loadSkills(tree);
     const mandating = skills.filter((skill) => UPDATE_MANDATE.test(skill.body));
     // Guards the predicate itself: if the phrase is reworded away, this test
     // would otherwise pass vacuously.
-    expect(mandating.map((skill) => skill.id).sort()).toEqual(["qfai-configure", "qfai-verify"]);
+    expect(mandating.map((skill) => skill.id).sort()).toEqual(["qfai-verify"]);
     const missing = mandating
       .filter((skill) => !skill.allowedTools.includes("Edit"))
       .map((skill) => skill.id);

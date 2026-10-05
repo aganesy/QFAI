@@ -1,5 +1,6 @@
 import {
   mkdir,
+  mkdtemp,
   readdir,
   readlink,
   rename,
@@ -9,6 +10,7 @@ import {
   symlink,
   unlink,
 } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 
 import { isEnoent, isEperm } from "../fs/errno.js";
@@ -35,11 +37,6 @@ export type WrapperSyncOptions = {
   platform?: NodeJS.Platform;
   /** Previous generated target, accepted only when retargeting a flattened link. */
   legacyTarget?: string;
-  /**
-   * The masters whose file carries the release's text once this run is done.
-   * Given, a rebuilt Copilot file keeps its own bullet for every other master.
-   */
-  installedRuleMasters?: ReadonlySet<string>;
   /** Defaults to stdout, which is what `qfai init` wants. */
   report?: Note;
   /**
@@ -622,6 +619,38 @@ async function writeManagedLink(
   }
 
   return "created";
+}
+
+/**
+ * Creates and removes one symlink in a scratch directory under the system
+ * temporary directory, before anything is written to the project.
+ *
+ * Only the refusal Windows gives without Developer Mode stops the run. Any other
+ * failure of the probe is left to the writes that follow, which report their
+ * own error for the path they were creating.
+ */
+export async function requireSymlinkCreation(
+  options: Pick<WrapperSyncOptions, "createSymlink" | "platform"> = {},
+): Promise<void> {
+  let scratch: string;
+  try {
+    scratch = await mkdtemp(path.join(os.tmpdir(), "qfai-symlink-probe-"));
+  } catch {
+    return;
+  }
+  try {
+    // The target need not exist: creating the link is the whole probe.
+    await (options.createSymlink ?? symlink)(
+      path.join(scratch, "target"),
+      path.join(scratch, "qfai-symlink-probe"),
+      "file",
+    );
+  } catch (err: unknown) {
+    if (isEpermOnWindows(err, options.platform)) throw symlinkFailure(err, options.platform);
+  } finally {
+    // A scratch directory left in the temp area is harmless and not worth a failed init.
+    await rm(scratch, { recursive: true, force: true }).catch(() => undefined);
+  }
 }
 
 /** What a refused `symlink` raises: Developer Mode guidance on Windows, the error elsewhere. */

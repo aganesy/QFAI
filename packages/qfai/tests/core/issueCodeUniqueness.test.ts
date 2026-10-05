@@ -184,16 +184,9 @@ describe("issue code uniqueness", () => {
 // `suggested_action` is passed on only some of their call sites — every one of
 // those was invisible to an earlier cut of the helper, so the lists were
 // re-baselined each time to name the codes that hole had been hiding.
-//
-// `R-PACK-LOCATION-DRIFT` stays off the lists because it never belonged: it is a
-// `JustificationCatalogEntry` descriptor, not an emission. It does reach
-// `validate`, but only through `validateReviewerJustification` re-emitting a
-// code it read out of a reviewer report, a data-driven path no static census
-// can see; `R-REJECTED-READOPT` reaches it the same way and has never been
-// listed here either.
+
 const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "D-DEPRECATED-PATH",
-  "D-SCAFFOLD-PLACEHOLDER",
   "QFAI-AGENT-005",
   "QFAI-AGENT-007",
   "QFAI-AGENT-008",
@@ -211,15 +204,6 @@ const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "QFAI-CONTRACT-014",
   "QFAI-CONTRACT-020",
   "QFAI-CONTRACT-021",
-  "QFAI-CRIT-001",
-  "QFAI-CRIT-002",
-  "QFAI-CRIT-003",
-  "QFAI-CRIT-004",
-  "QFAI-CRIT-005",
-  "QFAI-CRIT-006",
-  "QFAI-CRIT-008",
-  "QFAI-CRIT-009",
-  "QFAI-CRIT-010",
   "QFAI-DB-002",
   "QFAI-DT-001",
   "QFAI-DT-002",
@@ -236,15 +220,6 @@ const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "QFAI-MOCK-010",
   "QFAI-MOCK-011",
   "QFAI-MOCK-012",
-  "QFAI-PROT-001",
-  "QFAI-PROT-002",
-  "QFAI-PROT-003",
-  "QFAI-PROT-004",
-  "QFAI-PROT-005",
-  "QFAI-PROT-006",
-  "QFAI-PROT-007",
-  "QFAI-PROT-008",
-  "QFAI-PROT-009",
   "QFAI-RESEARCH-001",
   "QFAI-RESEARCH-003",
   "QFAI-RESEARCH-004",
@@ -267,11 +242,8 @@ const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "QFAI-WAIVER-002",
   "QFAI_CONFIG_INVALID",
   "R-AUTOPILOT-POLICY-MISSING",
-  "R-EVIDENCE-MUTATION-UNLOGGED",
-  "R-EXPLORATION-CERTIFY-ATTEMPT",
   "R-HANDOFF-SCHEMA-DRIFT",
   "R-MOCK-HREF-DRIFT",
-  "R-PROMPT-SCANNER-DRIFT",
   "R-SKILL-MANIFEST-DRIFT",
   // The `core/uiux/**` validators route every finding through a file-local
   // `Issue` factory rather than calling `issue(...)` directly, so none of these
@@ -304,7 +276,6 @@ const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "UIX-VAL-SKILL-CLI-SURFACE",
   "UIX-VAL-SKILL-DELEGATION",
   "UIX-VAL-SKILL-ENV-PRECONDITIONS",
-  "UIX-VAL-SKILL-EVIDENCE-PATHS",
   "UIX-VAL-SKILL-PLAYWRIGHT-FALLBACK",
   "UIX-VAL-SKILL-PREFLIGHT",
   "UIX-VAL-SKILL-SECTION-MISSING",
@@ -314,7 +285,6 @@ const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "UIX-VAL-TREND-ENTRY-MISSING",
   "UIX-VAL-TREND-FIELD-MISSING",
   "UIX-VAL-TREND-SCAN-MISSING",
-  "W-SKILL-DOC-BROKEN-REF",
 ]);
 
 const PENDING_FIX_CATALOG_CODES = new Set<string>([
@@ -335,8 +305,6 @@ const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "QFAI-CONTRACT-013",
   "QFAI-CONTRACT-020",
   "QFAI-CONTRACT-021",
-  "QFAI-DCON-012",
-  "QFAI-DCON-013",
   "QFAI-DT-001",
   "QFAI-DT-002",
   "QFAI-DT-004",
@@ -352,15 +320,6 @@ const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "QFAI-MOCK-010",
   "QFAI-MOCK-011",
   "QFAI-MOCK-012",
-  "QFAI-PROT-001",
-  "QFAI-PROT-002",
-  "QFAI-PROT-003",
-  "QFAI-PROT-004",
-  "QFAI-PROT-005",
-  "QFAI-PROT-006",
-  "QFAI-PROT-007",
-  "QFAI-PROT-008",
-  "QFAI-PROT-009",
   "QFAI-PROT-251",
   "QFAI-PROT-252",
   "QFAI-PROT-253",
@@ -374,11 +333,6 @@ const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "QFAI-RESEARCH-009",
   "QFAI-RESEARCH-010",
   "QFAI-RESEARCH-011",
-  "QFAI-REVIEW-003",
-  "QFAI-REVIEW-004",
-  "QFAI-REVIEW-005",
-  "QFAI-REVIEW-006",
-  "QFAI-REVIEW-007",
   "QFAI-SKILLS-010",
   "QFAI-SKILLS-011",
   "QFAI-TRACE-118",
@@ -390,13 +344,9 @@ const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "QFAI-WAIVER-001",
   "QFAI_CONFIG_INVALID",
   "R-AUTOPILOT-POLICY-MISSING",
-  "R-EVIDENCE-MUTATION-UNLOGGED",
-  "R-EXPLORATION-CERTIFY-ATTEMPT",
   "R-HANDOFF-SCHEMA-DRIFT",
   "R-MOCK-HREF-DRIFT",
-  "R-PROMPT-SCANNER-DRIFT",
   "R-SKILL-MANIFEST-DRIFT",
-  "W-SKILL-DOC-BROKEN-REF",
 ]);
 
 async function collectErrorCapableUsage(): Promise<Map<string, IssueCodeUsage>> {
@@ -566,21 +516,6 @@ describe("issue report metadata", () => {
     expect(expected).not.toContain("htmlMock");
   });
 
-  it("states the skills-integrity expected state without naming a configured path", () => {
-    // `paths.skillsDir` is settable, so an expected state that spelled the
-    // default tree would contradict the finding's own `target:` line on any
-    // project that moved it.
-    const expected = resolveIssueExpected({
-      code: "QFAI-SKILLS-001",
-      severity: "error",
-      category: "change",
-      message: "Standard asset 'tools/skills/**' has been modified (changes: 1).",
-      rule: "skills.integrity",
-    });
-    expect(expected).not.toBe(UNCATALOGUED_EXPECTED);
-    expect(expected).not.toContain(".qfai/");
-  });
-
   it("resolves remediation from the emitter first, then the catalog, then the generic", () => {
     const base = { severity: "error", category: "canonical", message: "Unknown key" } as const;
     expect(
@@ -610,7 +545,6 @@ describe("the form of a finding code", () => {
     "D-SAAS-PACKAGE-ATTESTATION-MISSING",
     "D-SAAS-PACKAGE-HANDOFF-SCHEMA",
     "D-SAAS-PACKAGE-VERIFY-SKIPPED",
-    "D-SCAFFOLD-PLACEHOLDER",
     "I-ASSISTANT-LAYER-UNSEEDED",
     "QFAI-AGENT-005",
     "QFAI-AGENT-007",
@@ -636,16 +570,6 @@ describe("the form of a finding code", () => {
     "QFAI-CONTRACT-014",
     "QFAI-CONTRACT-020",
     "QFAI-CONTRACT-021",
-    "QFAI-CRIT-001",
-    "QFAI-CRIT-002",
-    "QFAI-CRIT-003",
-    "QFAI-CRIT-004",
-    "QFAI-CRIT-005",
-    "QFAI-CRIT-006",
-    "QFAI-CRIT-007",
-    "QFAI-CRIT-008",
-    "QFAI-CRIT-009",
-    "QFAI-CRIT-010",
     "QFAI-DB-001",
     "QFAI-DB-002",
     "QFAI-DT-001",
@@ -675,16 +599,6 @@ describe("the form of a finding code", () => {
     "QFAI-MOCK-012",
     "QFAI-PLATFORM-001",
     "QFAI-PLATFORM-002",
-    "QFAI-PROT-001",
-    "QFAI-PROT-002",
-    "QFAI-PROT-003",
-    "QFAI-PROT-004",
-    "QFAI-PROT-005",
-    "QFAI-PROT-006",
-    "QFAI-PROT-007",
-    "QFAI-PROT-008",
-    "QFAI-PROT-009",
-    "QFAI-PROT-010",
     "QFAI-RESEARCH-001",
     "QFAI-RESEARCH-002",
     "QFAI-RESEARCH-003",
@@ -696,9 +610,6 @@ describe("the form of a finding code", () => {
     "QFAI-RESEARCH-009",
     "QFAI-RESEARCH-010",
     "QFAI-RESEARCH-011",
-    "QFAI-REVIEW-008",
-    "QFAI-REVIEW-009",
-    "QFAI-REVIEW-010",
     "QFAI-SKILLS-010",
     "QFAI-SKILLS-011",
     "QFAI-SKILLS-012",
@@ -711,11 +622,8 @@ describe("the form of a finding code", () => {
     "QFAI_CONFIG_INVALID",
     "R-AUTOPILOT-POLICY-MISSING",
     "R-AUTOPILOT-POLICY-WIDENED",
-    "R-CERTIFY-VERIFY-CIRCULAR",
-    "R-EVIDENCE-MUTATION-UNLOGGED",
     "R-HANDOFF-SCHEMA-DRIFT",
     "R-MOCK-HREF-DRIFT",
-    "R-PROMPT-SCANNER-DRIFT",
     "R-SKILL-MANIFEST-DRIFT",
     "UIX-VAL-3LAYER-FORBIDDEN-FILE",
     "UIX-VAL-3LAYER-INCOMPLETE-FAMILY",
@@ -744,7 +652,6 @@ describe("the form of a finding code", () => {
     "UIX-VAL-SKILL-CLI-SURFACE",
     "UIX-VAL-SKILL-DELEGATION",
     "UIX-VAL-SKILL-ENV-PRECONDITIONS",
-    "UIX-VAL-SKILL-EVIDENCE-PATHS",
     "UIX-VAL-SKILL-PLAYWRIGHT-FALLBACK",
     "UIX-VAL-SKILL-PREFLIGHT",
     "UIX-VAL-SKILL-SECTION-MISSING",
@@ -756,7 +663,6 @@ describe("the form of a finding code", () => {
     "UIX-VAL-TREND-FIELD-MISSING",
     "UIX-VAL-TREND-SCAN-MISSING",
     "W-ASSISTANT-LAYOUT",
-    "W-SKILL-DOC-BROKEN-REF",
     "W-SKILL-PROJECT-MEMORY",
     "W-STALE-REFERENCE",
   ]);

@@ -74,7 +74,6 @@ export type SkillValidationResult = {
   hasUiContractScope: boolean;
   isStaticFirstAligned: boolean;
   hasDelegationScopeTable: boolean;
-  hasMandatoryEvidencePaths: boolean;
   hasEnvironmentPreconditions: boolean;
   hasPreflightGuidance: boolean;
   hasPlaywrightCliFallback: boolean;
@@ -139,8 +138,7 @@ export function hasDelegationScopeTable(content: string): boolean {
   const lower = content.toLowerCase();
   return (
     lower.includes("delegation scope table") &&
-    (lower.includes("evaluation scoring") || lower.includes("evaluation l1-l2")) &&
-    (lower.includes("screenshot capture") || lower.includes("playwright cli execution & capture"))
+    (lower.includes("evaluation scoring") || lower.includes("evaluation l1-l2"))
   );
 }
 
@@ -152,17 +150,6 @@ export function isStaticFirstAligned(content: string): boolean {
   );
 }
 
-export function hasMandatoryEvidencePaths(content: string): boolean {
-  const lower = content.toLowerCase();
-  const hasLegacyAggregatePaths =
-    lower.includes(".qfai/evidence/prototyping/screenshots/<screen-id>.png") &&
-    lower.includes(".qfai/evidence/prototyping/html/<screen-id>.html");
-  const hasV2IterPaths =
-    lower.includes(".qfai/evidence/prototyping/iter-nn/<screen>.png") &&
-    lower.includes(".qfai/evidence/prototyping/iter-nn/<screen>.html");
-  return hasLegacyAggregatePaths || hasV2IterPaths;
-}
-
 export function hasEnvironmentPreconditions(content: string): boolean {
   const step2AIndex = content.search(/Step 2-A\s+—\s+Verify Contract Preconditions/i);
   const step2BIndex = content.search(/Step 2-B\s+—\s+Verify Environment Preconditions/i);
@@ -171,10 +158,7 @@ export function hasEnvironmentPreconditions(content: string): boolean {
 
 export function hasPreflightGuidance(content: string): boolean {
   const lower = content.toLowerCase();
-  return (
-    lower.includes("qfai prototyping preflight") ||
-    lower.includes("qfai doctor --profile prototyping")
-  );
+  return lower.includes("qfai doctor --profile prototyping");
 }
 
 /**
@@ -251,7 +235,6 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
   const uiContractScope = hasUiContractScope(content);
   const staticFirst = isStaticFirstAligned(content);
   const delegationScopeTable = hasDelegationScopeTable(content);
-  const mandatoryEvidencePaths = hasMandatoryEvidencePaths(content);
   const environmentPreconditions = hasEnvironmentPreconditions(content);
   const preflightGuidance = hasPreflightGuidance(content);
   const playwrightCliFallback = hasPlaywrightCliFallback(content);
@@ -338,20 +321,9 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
     issues.push(
       skillIssue(
         "UIX-VAL-SKILL-DELEGATION",
-        "Prototyping skill is missing the delegation scope table for evaluator/capture/build roles.",
+        "Prototyping skill is missing the delegation scope table for the generation, evaluation and build roles.",
         "error",
         "Add the delegation scope table.",
-      ),
-    );
-  }
-
-  if (!mandatoryEvidencePaths) {
-    issues.push(
-      skillIssue(
-        "UIX-VAL-SKILL-EVIDENCE-PATHS",
-        "Prototyping skill must declare canonical screenshot and HTML evidence paths.",
-        "error",
-        "State the canonical screenshot/html evidence path explicitly.",
       ),
     );
   }
@@ -371,9 +343,9 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
     issues.push(
       skillIssue(
         "UIX-VAL-SKILL-PREFLIGHT",
-        "Prototyping skill must document qfai prototyping preflight or qfai doctor --profile prototyping guidance.",
+        "Prototyping skill must document qfai doctor --profile prototyping guidance.",
         "error",
-        "State the preflight entry point explicitly (qfai prototyping preflight or qfai doctor --profile prototyping).",
+        "State the preflight entry point explicitly (qfai doctor --profile prototyping).",
       ),
     );
   }
@@ -399,7 +371,6 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
     hasUiContractScope: uiContractScope,
     isStaticFirstAligned: staticFirst,
     hasDelegationScopeTable: delegationScopeTable,
-    hasMandatoryEvidencePaths: mandatoryEvidencePaths,
     hasEnvironmentPreconditions: environmentPreconditions,
     hasPreflightGuidance: preflightGuidance,
     hasPlaywrightCliFallback: playwrightCliFallback,

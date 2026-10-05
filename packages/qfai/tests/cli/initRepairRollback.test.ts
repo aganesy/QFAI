@@ -63,8 +63,8 @@ vi.mock("node:fs/promises", async () => {
 const { runInit } = await import("../../src/cli/commands/init.js");
 const { captureStdout } = await import("../helpers/stdout.js");
 
-const LINK = path.join(".claude", "skills", "qfai-atdd");
-const FLATTENED = "../../.qfai/assistant/skills/qfai-atdd";
+const LINK = path.join(".claude", "skills", "qfai-implement");
+const FLATTENED = "../../.qfai/assistant/skills/qfai-implement";
 
 function eperm(): NodeJS.ErrnoException {
   const error = new Error("simulated EPERM") as NodeJS.ErrnoException;
@@ -768,6 +768,8 @@ describe("the rollback does not overwrite a file created in the gap", () => {
       // and `symlink` fails with the `EEXIST` that announces it.
       const theirs = "# written between the rm and the symlink\n";
       symlinkSpy.mockImplementation(async (actual: FsPromises, ...args: never[]) => {
+        // Init's up-front probe is a symlink call too, and not the one racing.
+        if (String(args[1]).includes("qfai-symlink-probe")) return actual.symlink(...args);
         await actual.writeFile(linkPath, theirs, "utf-8");
         return actual.symlink(...args);
       });

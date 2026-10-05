@@ -20,12 +20,26 @@ import { validateIntegrationSurface } from "../../src/core/validators/integratio
 import { captureStdout } from "../helpers/stdout.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
-const SKILL = "qfai-atdd";
+const SKILL = "qfai-implement";
 const PLURAL_TARGET = path.join("..", "..", ".qfai", "assistant", "skills", SKILL);
 const SINGULAR_TARGET = path.join("..", "..", ".qfai", "assistant", "skill", SKILL);
 
 function eperm(): NodeJS.ErrnoException {
   return Object.assign(new Error("operation not permitted"), { code: "EPERM" });
+}
+
+/**
+ * A writer that refuses every symlink but the one init's up-front probe makes,
+ * so the refusal lands on the repair under test rather than on the probe.
+ */
+function refusingAfterProbe(onRefusal: () => void): typeof symlink {
+  return (target, linkPath, type) => {
+    if (path.basename(String(linkPath)).startsWith("qfai-symlink-probe")) {
+      return symlink(target, linkPath, type);
+    }
+    onRefusal();
+    return Promise.reject(eperm());
+  };
 }
 
 async function withInitializedProject(task: (root: string) => Promise<void>): Promise<void> {
@@ -88,10 +102,9 @@ describe("qfai init and the holds of an interrupted repair", () => {
           { dir: root, force: false, dryRun: false, yes: true },
           {
             platform: "win32",
-            createSymlink: () => {
+            createSymlink: refusingAfterProbe(() => {
               attempts += 1;
-              return Promise.reject(eperm());
-            },
+            }),
           },
         ),
       ).rejects.toThrow(/Failed to create a symlink \(EPERM\)/);
@@ -135,10 +148,9 @@ describe("qfai init and the holds of an interrupted repair", () => {
           { dir: root, force: false, dryRun: false, yes: true },
           {
             platform: "win32",
-            createSymlink: () => {
+            createSymlink: refusingAfterProbe(() => {
               attempts += 1;
-              return Promise.reject(eperm());
-            },
+            }),
           },
         ),
       ).rejects.toThrow(/Failed to create a symlink \(EPERM\)/);

@@ -1,7 +1,7 @@
 import { lstat, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { parseDocument } from "yaml";
+import { isMap, parseDocument, type Document } from "yaml";
 
 import { isEnoent } from "../../core/fs/errno.js";
 import {
@@ -20,7 +20,6 @@ export const STEP01_RENAMES = [
   [".qfai/assistant/skills.local", ".qfai/assistant/skill.local"],
   [".qfai/assistant/agents", ".qfai/assistant/agent"],
   [".qfai/assistant/prompts", ".qfai/assistant/prompt"],
-  [".qfai/evidence/decisions", ".qfai/evidence/decision"],
   [".qfai/report/specs-coverage", ".qfai/report/spec-coverage"],
 ] as const;
 
@@ -72,18 +71,22 @@ async function exists(absolutePath: string): Promise<boolean> {
   }
 }
 
-async function availableLegacyTarget(
-  root: string,
-  sourceDir: string,
-  name: string,
-  reserved: ReadonlySet<string>,
-): Promise<string> {
-  const sourceName = path.posix.basename(sourceDir);
-  const base = `.qfai/evidence/migration-spec-to-story/legacy/${sourceName}/${name}`;
-  for (let suffix = 1; ; suffix += 1) {
-    const candidate = suffix === 1 ? base : `${base}-${suffix}`;
-    if (!reserved.has(candidate) && !(await exists(path.join(root, candidate)))) return candidate;
+/** The traceability keys no check reads any longer, which step 1 removes. */
+const RETIRED_TRACEABILITY_KEYS = ["scMustHaveTest", "unknownContractIdSeverity"] as const;
+
+/** Removes the retired keys, and a mapping the removal leaves empty; returns the keys removed. */
+function removeRetiredTraceabilityKeys(document: Document): string[] {
+  const removed: string[] = [];
+  for (const key of RETIRED_TRACEABILITY_KEYS) {
+    if (!document.hasIn(["validation", "traceability", key])) continue;
+    document.deleteIn(["validation", "traceability", key]);
+    removed.push(`validation.traceability.${key}`);
   }
+  for (const mapping of [["validation", "traceability"], ["validation"]]) {
+    const node = document.getIn(mapping, true);
+    if (removed.length > 0 && isMap(node) && node.items.length === 0) document.deleteIn(mapping);
+  }
+  return removed;
 }
 
 async function planConfigRewrite(root: string): Promise<MigrationOperation | null> {
@@ -106,7 +109,14 @@ async function planConfigRewrite(root: string): Promise<MigrationOperation | nul
     document.setIn(["paths", key], newPath);
     changed = true;
   }
-  return changed ? { kind: "write", target, content: String(document) } : null;
+  const removed = removeRetiredTraceabilityKeys(document);
+  if (!changed && removed.length === 0) return null;
+  return {
+    kind: "write",
+    target,
+    content: String(document),
+    notes: removed.map((key) => `${target}: remove ${key}`),
+  };
 }
 
 export const step01: MigrationStep = {
@@ -114,7 +124,6 @@ export const step01: MigrationStep = {
   writeSet: ["qfai", "specs", "contracts", "config"],
   async plan(context: MigrationContext) {
     const operations: MigrationOperation[] = [];
-    const reserved = new Set<string>();
     for (const [sourceDir, targetDir] of STEP01_RENAMES) {
       if (!(await shouldRenameSource(context, sourceDir))) continue;
       const source = path.join(context.root, sourceDir);
@@ -128,13 +137,13 @@ export const step01: MigrationStep = {
         );
       }
       for (const name of entries.sort()) {
-        const originalTarget = `${targetDir}/${name}`;
-        const target =
-          reserved.has(originalTarget) || (await exists(path.join(context.root, originalTarget)))
-            ? await availableLegacyTarget(context.root, sourceDir, name, reserved)
-            : originalTarget;
-        operations.push({ kind: "move", source: `${sourceDir}/${name}`, target });
-        reserved.add(target);
+        const source = `${sourceDir}/${name}`;
+        const target = `${targetDir}/${name}`;
+        operations.push(
+          (await exists(path.join(context.root, target)))
+            ? { kind: "remove", target: source, description: "delete: the destination exists" }
+            : { kind: "move", source, target },
+        );
       }
       operations.push({ kind: "remove-empty-directory", target: sourceDir });
     }

@@ -1,6 +1,7 @@
 /**
- * Integration: the entry directive above the shipped templates' first heading passes the shipped
- * Markdown lint configuration, which still requires that first heading to be level 1.
+ * Integration: a directive above the first heading of an entry point, as init prepends the review
+ * directive, passes the shipped Markdown lint configuration, which still requires that first
+ * heading to be level 1.
  */
 // QFAI:AC-0001-0196-03
 // QFAI:EX-0001-0196-10
@@ -49,16 +50,22 @@ async function template(name: string): Promise<string> {
   return readFile(path.join(getInitAssetsDir(), "root", name), "utf-8");
 }
 
-describe("the entry directive and the first-heading rule", () => {
-  it("The shipped templates open with the directive and raise no MD041 finding", async () => {
+describe("a directive above the first heading and the first-heading rule", () => {
+  it("The shipped templates open with their heading and raise no MD041 finding", async () => {
     const files: Record<string, string> = {};
     for (const name of TEMPLATES) {
       const text = await template(name);
-      expect(text.split(/\r?\n/)[0], `${name} opens with the directive`).toContain("`qfai-run`");
+      expect(text.split(/\r?\n/)[0], `${name} opens with its heading`).toMatch(/^# /);
       files[name] = text;
     }
 
     expect(await firstHeadingFindings(files)).toEqual([]);
+  });
+
+  it("A directive line above a level-1 heading raises no MD041 finding", async () => {
+    const withDirective = `Read \`REVIEW.md\` before reviewing a pull request.\n\n${await template("AGENTS.md")}`;
+
+    expect(await firstHeadingFindings({ "AGENTS.md": withDirective })).toEqual([]);
   });
 
   it("A template whose first heading is not level 1 still raises MD041", async () => {

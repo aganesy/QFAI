@@ -8,7 +8,6 @@ To keep PR/design/review/test planning aligned, classify each change along two a
 This classification is used in:
 
 - PR body (Change Classification)
-- Decisions about changes in `<paths.specsDir>/decisions.md`
 - Review focus (QA / Architect / Code Reviewer)
 - Test strategy (which layers to add/update)
 
@@ -65,21 +64,13 @@ Tags indicate which surfaces are affected. They do not replace Primary.
 
 ---
 
-## 3. Where to declare (required)
+## 3. Where to declare
 
-### 3.1 PR body
-
-Include in the PR template:
+In the PR body:
 
 - Primary: `Initial | Behavior | Structural | Ops`
 - Tags: list from `@api @db @nfr @docs @test`
 - Rationale (1-3 lines)
-
-### 3.2 Decisions table
-
-Record the reason for a change in the `Content` and `Approach` cells of
-`<paths.specsDir>/decisions.md`. Name the affected flow, story or contract.
-Keep the table's four-column shape; change classification adds no columns.
 
 ---
 

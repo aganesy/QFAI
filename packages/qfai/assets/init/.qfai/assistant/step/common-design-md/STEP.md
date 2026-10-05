@@ -3,16 +3,15 @@ name: common-design-md
 owner: common
 purpose: "Author the root DESIGN.md from the recorded design direction when it is missing, validate it, and check it again before anything is built from it."
 requires: []
-roles: [product-experience-architect, completion-reviewer, product-surface-reviewer]
-routing-profile: ui-bearing
+roles: [product-experience-architect]
+routing-profile: default
 ---
 
 # common-design-md
 
 Root `DESIGN.md` at `<consuming-project-root>/DESIGN.md` is the brand SSOT.
-Everything downstream treats its tokens as exact: the prototyping loop records
-its sha256 at cycle 0 and refuses a later change, and `certify` re-scans every
-captured literal against them.
+Everything downstream treats its tokens as exact: the prototyping reviewer
+checks every literal of every iteration against them.
 
 ## When it applies
 
@@ -27,7 +26,7 @@ for it.
   `.qfai/assistant/skill/qfai-sdd/references/design-md-authoring.md#where-the-answers-come-from`
   lists it: `01_Context.md#Design Direction`, the reference registries in
   `04_Sources.md`, and the `uiux/` sidecars. For an imported tree, the surface
-  recorded in the import-lite evidence.
+  the import source names, or the user's answer.
 - The schema and validation rules:
   `.qfai/assistant/skill/qfai-prototyping/references/design-md-spec.md`.
 - The archetype catalog:
@@ -61,8 +60,8 @@ in `DESIGN.md`
 
 Before anything is generated from `DESIGN.md`:
 
-1. Run `npx qfai prototyping preflight --target-url <url>`, the alias of
-   `npx qfai doctor --profile prototyping`. It reports whether root `DESIGN.md`
+1. Run `npx qfai doctor --profile prototyping --target-url <url>`. It reports
+   whether root `DESIGN.md`
    exists, is not the unreplaced sample, and parses, and refuses while a UI
    contract screen has no primary task.
 2. `npx qfai validate` reports the same file: `QFAI-DCON-030` when it is
@@ -70,8 +69,8 @@ Before anything is generated from `DESIGN.md`:
    is still the unreplaced sample.
 3. On any of these, stop and fix `DESIGN.md` through § Author and validate.
 
-Once a prototyping loop has started, `DESIGN.md` stays as cycle 0 recorded it.
-To change it, edit it and start the loop again from cycle 0.
+Once a prototyping loop has started, `DESIGN.md` is read-only for it. To change
+it, edit it; the next iteration is built from it.
 
 ## Passes when
 
@@ -83,7 +82,7 @@ no issue. The pass names the surface set and the validation result.
 ## Writes
 
 - Root `DESIGN.md`, only when it was missing.
-- In the stage evidence: the source of each brand field and the validation
+- In the stage report: the source of each brand field and the validation
   result.
 
 ## Gate

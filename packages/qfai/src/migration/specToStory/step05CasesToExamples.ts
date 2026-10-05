@@ -13,7 +13,6 @@ import {
   type MigrationStep,
 } from "./harness.js";
 
-const RETIRED = ".qfai/evidence/migration-spec-to-story/retired";
 const OLD_AC = /AC-\d{4}-\d{4}/g;
 const OLD_EX = /EX-\d{4}-\d{4}/g;
 
@@ -32,12 +31,9 @@ export async function readMigrationInput(file: string): Promise<string | null> {
   }
 }
 
-export async function legacyPackFiles(
-  context: MigrationContext,
-  name: string,
-  retired = true,
-): Promise<string[]> {
-  const base = retired ? path.join(context.root, RETIRED) : context.specsDir;
+/** The file `name` of every spec pack left in the spec directory, whether or not it exists. */
+export async function legacyPackFiles(context: MigrationContext, name: string): Promise<string[]> {
+  const base = context.specsDir;
   let entries;
   try {
     entries = await readdir(base, { withFileTypes: true });
@@ -54,12 +50,11 @@ export async function legacyPackFiles(
 export async function readLegacyRows(
   context: MigrationContext,
   name: string,
-  retired = true,
 ): Promise<LegacyRow[]> {
   const kind: LegacyKind =
     name === "06_Test-Cases.md" ? "TC" : name === "05_Examples.md" ? "EX" : "BR";
   const rows: LegacyRow[] = [];
-  for (const file of await legacyPackFiles(context, name, retired)) {
+  for (const file of await legacyPackFiles(context, name)) {
     const content = await readMigrationInput(file);
     if (content === null) continue;
     const specId = path.basename(path.dirname(file));
@@ -80,6 +75,11 @@ export function oldExRefs(value: string): string[] {
 
 export function noReference(value: string): boolean {
   return value.trim() === "" || value.trim() === "—" || value.trim() === "-";
+}
+
+/** Whether an old `Contract-Refs` cell is the literal `-` that lets a rule bind no contract. */
+export function isDashReference(value: string): boolean {
+  return value.trim() === "-";
 }
 
 export function storyExampleFile(context: MigrationContext, mappedId: string): string {

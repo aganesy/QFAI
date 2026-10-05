@@ -131,7 +131,8 @@ function requireComplete(result: Result, stage: string, listsFlows: boolean): vo
 }
 
 function operations(report: string): string[] {
-  const section = /^## Operations\r?\n([\s\S]*?)(?=\r?\n## |$)/.exec(report)?.[1] ?? "";
+  // A report opens with its verdict line, so the heading is found at the start of a line.
+  const section = /(?:^|\n)## Operations\r?\n([\s\S]*?)(?=\r?\n## |$)/.exec(report)?.[1] ?? "";
   return section.split(/\r?\n/).filter((line) => line.trim() !== "" && line.trim() !== "none");
 }
 
@@ -263,7 +264,7 @@ beforeAll(async () => {
   }
   const rerunUnchanged = (await hashTree(root)) === firstHash;
   const map = JSON.parse(
-    await readFile(path.join(root, ".qfai/evidence/migration-spec-to-story/id-map.json"), "utf8"),
+    await readFile(path.join(root, "tmp/qfai-migration/id-map.json"), "utf8"),
   ) as IdMap;
   const validation = run(root, process.execPath, [
     cli,
@@ -311,7 +312,7 @@ beforeAll(async () => {
 
   const invalidRoot = await project();
   prepareThrough(invalidRoot, 3);
-  const planPath = path.join(invalidRoot, ".qfai/evidence/migration-spec-to-story/plan.yaml");
+  const planPath = path.join(invalidRoot, "tmp/qfai-migration/plan.yaml");
   const originalPlan = await readFile(planPath, "utf8");
   const brokenPlan = originalPlan.replace(
     'from: "CHG-0001: Order flow"',
@@ -364,6 +365,23 @@ describe("BF-0004 migration cutover", () => {
     expect(journey.dry.map((result) => operations(result.stdout))).toEqual(
       journey.real.map((result) => operations(result.stdout)),
     );
+    // Each step says what it found before it reports, and step 10 closes with a summary.
+    for (const result of [...journey.dry, ...journey.real]) {
+      expect(result.stdout.split(/\r?\n/).slice(0, 3)).toEqual([
+        "1.x layout found, migrating",
+        "",
+        "## Operations",
+      ]);
+    }
+    for (const results of [journey.dry, journey.real]) {
+      const summaries = results.map((result) =>
+        result.stdout.split(/\r?\n/).filter((line) => line.startsWith("Summary")),
+      );
+      expect(summaries).toEqual([
+        ...Array(9).fill([]),
+        ["Summary: a 1.x layout was found, so the steps are migrating it."],
+      ]);
+    }
     expect(journey.rerunUnchanged).toBe(true);
     expect(journey.map.version).toBe(1);
     expect(journey.map.ids["spec-0001"]).toMatchObject({
@@ -425,15 +443,9 @@ describe("BF-0004 migration cutover", () => {
     await expect(
       lstat(path.join(journey.root, ".qfai/spec/spec-0001/04_Business-Rules.md")),
     ).rejects.toMatchObject({ code: "ENOENT" });
-    expect(
-      await readFile(
-        path.join(
-          journey.root,
-          ".qfai/evidence/migration-spec-to-story/retired/spec-0001/04_Business-Rules.md",
-        ),
-        "utf8",
-      ),
-    ).toContain("A valid order receives a receipt.");
+    await expect(lstat(path.join(journey.root, ".qfai/evidence"))).rejects.toMatchObject({
+      code: "ENOENT",
+    });
     expect(journey.oldReader.status).toBe(2);
     expect(`${journey.oldReader.stdout}\n${journey.oldReader.stderr}`).toContain("--flow BF-NNNN");
     for (const host of [".claude/skills", ".agents/skills", ".codex/skills", ".github/skills"]) {
