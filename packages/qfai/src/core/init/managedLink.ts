@@ -465,6 +465,13 @@ async function writeManagedLink(
       // than skipped as right.
       const isValid = linkNamesTarget(currentTarget, target, options.platform);
 
+      // A forced run recreates a link that is wrong, not one that already works:
+      // replacing it with an identical link changes nothing, so it is reported
+      // as skipped.
+      if (isValid && options.force && (type === "file" || (await isFollowable(linkPath)))) {
+        return "skipped";
+      }
+
       if (isValid && !options.force) {
         // The target string being right is not the same as the link working.
         // On Windows a `git worktree add` writes these as FILE symlinks
