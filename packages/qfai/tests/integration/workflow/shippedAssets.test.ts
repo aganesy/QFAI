@@ -1,7 +1,4 @@
 // QFAI:AC-0001-0194-05
-// QFAI:EX-0001-0194-14
-// QFAI:EX-0001-0194-15
-// QFAI:EX-0001-0194-16
 
 import { spawnSync } from "node:child_process";
 import { cp, mkdir, mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
@@ -51,6 +48,9 @@ async function workflowAssets(): Promise<string[]> {
   ];
 }
 
+// QFAI:EX-0001-0194-14
+// QFAI:EX-0001-0194-15
+// QFAI:EX-0001-0194-16
 it("Run the asset line budget over qfai-run, qfai-maintain, the plans and the schemas", async () => {
   const files = await workflowAssets();
   const over: string[] = [];

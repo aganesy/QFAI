@@ -1,4 +1,3 @@
-// QFAI:EX-0003-0009-01
 //
 // Integration: `qfai doctor --profile <skill> --autoremediate` MUST
 // thread the resolved `skillProfile` down into `runAutoremediate(...)`
@@ -80,6 +79,7 @@ afterEach(async () => {
   }
 });
 
+// QFAI:EX-0003-0009-01
 describe("doctor CLI threads skillProfile into autoremediate", () => {
   it("invokes the install runner for the skill's runtimeDependencies via the CLI dispatch path", async () => {
     const root = await newTempDir("dispatch");
@@ -178,8 +178,8 @@ describe("doctor CLI threads skillProfile into autoremediate", () => {
     expect(resolved).not.toBe(subdir);
   });
 
+  // QFAI:EX-0003-0009-06
   it("omits skill when no skillProfile is set (legacy doctor flow unchanged)", async () => {
-    // QFAI:EX-0003-0009-06
     const root = await newTempDir("legacy");
 
     const seenOptions: autoremediateModule.AutoremediateOptions[] = [];
@@ -211,9 +211,9 @@ describe("doctor CLI threads skillProfile into autoremediate", () => {
   // on stdout when skillProfile is absent; (2) the note does NOT appear when
   // a valid skillProfile is passed. The `info()` logger writes to
   // process.stdout.write, so the capture target is stdout (not console.log).
+  // QFAI:EX-0003-0009-06
   it("emits 'install phase skipped' on stdout when no skillProfile is set, and suppresses it when one is", async () => {
     // QFAI:AC-0003-0009-03
-    // QFAI:EX-0003-0009-06
     vi.spyOn(autoremediateModule, "runAutoremediate").mockImplementation(async () => ({
       lines: [],
       disabledInCi: false,

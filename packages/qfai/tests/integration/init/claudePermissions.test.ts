@@ -4,9 +4,6 @@
  * project already has.
  */
 // QFAI:AC-0001-0196-13
-// QFAI:EX-0001-0196-46
-// QFAI:EX-0001-0196-47
-// QFAI:EX-0001-0196-48
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -43,6 +40,9 @@ async function shippedEntries(): Promise<string[]> {
   return [...skills.map((name) => `Skill(${name})`), ...LAUNCHER_ENTRIES];
 }
 
+// QFAI:EX-0001-0196-46
+// QFAI:EX-0001-0196-47
+// QFAI:EX-0001-0196-48
 describe("the permission entries of .claude/settings.json", () => {
   afterEach(() => {
     process.exitCode = undefined;

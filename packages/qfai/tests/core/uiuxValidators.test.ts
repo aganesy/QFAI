@@ -1168,8 +1168,8 @@ describe("uiux validators", () => {
     expect(codes).toContain("QFAI-MOCK-009"); // touch-target violation
   });
 
+  // QFAI:EX-0001-0039-10
   it("reads design tokens only from the configured directory, by category severity", async () => {
-    // QFAI:EX-0001-0039-10
     const root = await newTempDir();
     await mkdir(path.join(root, "tokens"), { recursive: true });
     const tokenYaml = [

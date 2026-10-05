@@ -23,6 +23,7 @@ Feature: Layer-specific test obligations
     Given the story tree, and an EX that no file `validation.traceability.testFileGlobs` selects annotates with `QFAI:EX-NNNN-NNNN-NN`, and no `Test exception:` row in force naming it
     When `qfai validate --profile tdd` runs
     Then an error names the EX ID and the `03_Example.md` that defines it
+    And an annotation counts only on a comment directly before a test declaration such as `it(`, `test(` or `describe(`, with nothing but blank and comment lines between them
 
   # AC-0001-0056-04
   Scenario: An annotation in the wrong layer is reported

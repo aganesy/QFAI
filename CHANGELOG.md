@@ -35,15 +35,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
-- **The repository's dogfooding ratchet keeps diff-dependent findings out of
-  its pins.** `QFAI-DRIFT-001` reports a protected story-tree file changed
-  since the base branch without a change request, so it exists only on the
-  branch that made the change. Pinned there, it read one less after the merge
-  and failed every later pull request. `scripts/check-dogfood-backlog.mjs` now
-  leaves it, and `QFAI-STORY-010`, out of the counts it compares and pins, and
-  fails the lane on them outright in the pull request that produces them.
-  Fixes #2352.
-
+- **An EX annotation counts only directly before a test declaration** (#2761).
+  A `QFAI:EX-` annotation used to cover its example from anywhere in a selected
+  test file, so a header comment above the imports, or one line in a file with
+  no test, discharged the obligation. It now counts only on a comment line
+  directly before `it(`, `test(`, `describe(` or another framework's test
+  declaration, with nothing but blank and comment lines between. Move a header
+  annotation down to the test it describes; `qfai validate --profile tdd`
+  otherwise reports the example as uncovered. BF and AC annotations are read as
+  before.
 - **The repository's scans lane refuses a tracked file under `.qfai/report/`,
   `.qfai/evidence/`, `.qfai/review/`, `.qfai/output/`, `.qfai/discussion/` or
   `.qfai/review_archive/`.** The managed
@@ -53,6 +53,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   tracked file under `tmp/` now checks these directories too, and a test holds
   its list to the `.gitignore` entries. Fixes #2356.
 
+- **The repository's dogfooding ratchet keeps diff-dependent findings out of
+  its pins.** `QFAI-DRIFT-001` reports a protected story-tree file changed
+  since the base branch without a change request, so it exists only on the
+  branch that made the change. Pinned there, it read one less after the merge
+  and failed every later pull request. `scripts/check-dogfood-backlog.mjs` now
+  leaves it, and `QFAI-STORY-010`, out of the counts it compares and pins, and
+  fails the lane on them outright in the pull request that produces them.
+  Fixes #2352.
 - **The shipped cross-flow guidance says how to find the flows a shared change
   reaches, and what to do when that search cannot finish.**
   `qfai-implement/references/cross-spec-ownership.md` now searches outward from
@@ -63,6 +71,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   as an unresolved obligation and run the full test suite once on the
   integrated tree as an extra check. The suite does not replace revalidating
   each flow, and the search is not reported complete. Refs #2424.
+
+- **The routing-eval token classes stay as they are** (#2305). No class in the
+  routing-eval token vocabulary changes. The set of safety-relevant routing
+  seeds is unchanged, and the list derived from these classes may now be
+  recorded. The decision is recorded in `decisions.md`.
 
 ## [2.1.0] - 2026-10-05
 

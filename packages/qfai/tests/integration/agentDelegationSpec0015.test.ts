@@ -3,8 +3,6 @@
  * and delegation behavior.
  */
 // QFAI:AC-0001-0161-01
-// QFAI:EX-0001-0163-01
-// QFAI:EX-0001-0163-02
 import { mkdtemp, readdir, readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -83,6 +81,8 @@ async function manifestFilesUnder(dir: string): Promise<string[]> {
   return entries.filter((entry) => MANIFEST_FILE_NAMES.has(path.basename(entry)));
 }
 
+// QFAI:EX-0001-0163-01
+// QFAI:EX-0001-0163-02
 describe("agent cards are the only definitions", () => {
   it("ships nineteen complete cards without project manifest copies", async () => {
     const cards = (await readdir(AGENTS_DIR)).filter((name) => name.endsWith(".md"));

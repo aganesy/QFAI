@@ -384,8 +384,8 @@ afterAll(async () => {
 
 describe("migration step 10: the managed .gitignore block", () => {
   // QFAI:AC-0004-0011-03
+  // QFAI:EX-0004-0011-03
   it("resets a 1.x managed block and keeps every line below it in order", async () => {
-    // QFAI:EX-0004-0011-03
     const root = await clone(migrated10);
     git(root, ["init", "-q"]);
     await writeLegacyIgnore(root);
@@ -410,9 +410,9 @@ describe("migration step 10: the managed .gitignore block", () => {
 
 describe("migration steps 11 and 12: the free-text entry", () => {
   // QFAI:AC-0004-0013-01
+  // QFAI:EX-0004-0013-01
+  // QFAI:EX-0004-0013-11
   it("installs the skills, host links and ignore lines, and leaves the entry points alone", async () => {
-    // QFAI:EX-0004-0013-01
-    // QFAI:EX-0004-0013-11
     const root = await clone(migrated10);
     await writeFile(path.join(root, "CLAUDE.md"), `${EARLIER_LINE}\n${CLAUDE_TEXT}`);
     const before = await entries(root);
@@ -458,8 +458,8 @@ describe("migration steps 11 and 12: the free-text entry", () => {
   });
 
   // QFAI:AC-0004-0013-01
+  // QFAI:EX-0004-0013-02
   it("leaves an occupied link path for a person and a linked entry point alone", async () => {
-    // QFAI:EX-0004-0013-02
     const occupied = await clone(migrated10);
     await mkdir(path.join(occupied, ".claude/skills/qfai-run"), { recursive: true });
     await writeFile(path.join(occupied, ".claude/skills/qfai-run/notes.md"), "ours\n");
@@ -491,9 +491,9 @@ describe("migration steps 11 and 12: the free-text entry", () => {
   });
 
   // QFAI:AC-0004-0013-02
+  // QFAI:EX-0004-0013-03
+  // QFAI:EX-0004-0013-04
   it("replaces a customised shipped skill, its uncommitted edit included", async () => {
-    // QFAI:EX-0004-0013-03
-    // QFAI:EX-0004-0013-04
     const root = await clone(migrated10);
     const skill = path.join(root, ".qfai/assistant/skill/qfai-sdd/SKILL.md");
     await appendFile(skill, "\nA line the project added.\n");
@@ -514,8 +514,8 @@ describe("migration steps 11 and 12: the free-text entry", () => {
   });
 
   // QFAI:AC-0004-0013-03
+  // QFAI:EX-0004-0013-05
   it("passes on a migrated project without writing, and every plan loads", async () => {
-    // QFAI:EX-0004-0013-05
     const root = await clone(migrated11);
     const before = await fingerprint(root);
     const result = await stepIn(root, 12);
@@ -529,8 +529,8 @@ describe("migration steps 11 and 12: the free-text entry", () => {
   });
 
   // QFAI:AC-0004-0013-04
+  // QFAI:EX-0004-0013-06
   it("names a routing override that drops a required reviewer", async () => {
-    // QFAI:EX-0004-0013-06
     const root = await clone(migrated11);
     const override = await routingWithoutSolutionArchitect();
     await writeConfig(root, (config) => {
@@ -546,9 +546,9 @@ describe("migration steps 11 and 12: the free-text entry", () => {
   });
 
   // QFAI:AC-0004-0013-04
+  // QFAI:EX-0004-0013-07
+  // QFAI:EX-0004-0013-08
   it("names an invalid workflow mode and a plan step that is not installed", async () => {
-    // QFAI:EX-0004-0013-07
-    // QFAI:EX-0004-0013-08
     const paused = await clone(migrated11);
     await writeConfig(paused, (config) => {
       config.workflow = { mode: "paused" };
@@ -573,8 +573,8 @@ describe("migration steps 11 and 12: the free-text entry", () => {
   });
 
   // QFAI:AC-0004-0013-04
+  // QFAI:EX-0004-0013-09
   it("names a lost ignore line or qfai-run link", async () => {
-    // QFAI:EX-0004-0013-09
     const cases: Array<[string, (root: string) => Promise<void>, string]> = [
       [
         "gitignore",
@@ -604,8 +604,8 @@ describe("migration steps 11 and 12: the free-text entry", () => {
   });
 
   // QFAI:AC-0004-0013-05
+  // QFAI:EX-0004-0013-10
   it("changes nothing on a rerun and reports the same in a dry run", async () => {
-    // QFAI:EX-0004-0013-10
     const root = await clone(migrated11);
     const before = await fingerprint(root);
     const again = await stepIn(root, 11);
@@ -620,8 +620,8 @@ describe("migration steps 11 and 12: the free-text entry", () => {
   });
 
   // QFAI:AC-0004-0013-05
+  // QFAI:EX-0004-0013-12
   it("refuses only before step 1", async () => {
-    // QFAI:EX-0004-0013-12
     const old = await oldProject();
     const before = await fingerprint(old);
     for (const step of [11, 12]) {
@@ -640,8 +640,8 @@ describe("migration steps 11 and 12: the free-text entry", () => {
   });
 
   // QFAI:AC-0004-0013-06
+  // QFAI:EX-0004-0013-13
   it("ends the skill procedure by handing over to qfai-run", async () => {
-    // QFAI:EX-0004-0013-13
     const skill = await readFile(
       path.join(SKILL_ASSETS, "qfai-migration-v1-to-v2/SKILL.md"),
       "utf8",
@@ -659,8 +659,8 @@ describe("migration steps 11 and 12: the free-text entry", () => {
   });
 
   // QFAI:AC-0004-0013-07
+  // QFAI:EX-0004-0013-14
   it("retires the old skill name on init --force", async () => {
-    // QFAI:EX-0004-0013-14
     const root = await scratch("qfai-migrate-retired-");
     await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
     const old = "qfai-migration-spec-to-story";
@@ -694,8 +694,8 @@ describe("migration steps 11 and 12: the free-text entry", () => {
   });
 
   // QFAI:AC-0004-0013-01
+  // QFAI:EX-0004-0013-18
   it("writes both hook files as qfai init does, and a dry run writes neither", async () => {
-    // QFAI:EX-0004-0013-18
     const root = await clone(migrated10);
     for (const file of HOOK_FILES) expect(await textOrNull(root, file), file).toBeNull();
     const preview = await stepIn(root, 11, ["--dry-run"]);
@@ -714,8 +714,8 @@ describe("migration steps 11 and 12: the free-text entry", () => {
   });
 
   // QFAI:AC-0004-0013-01
+  // QFAI:EX-0004-0013-19
   it("merges into the project's settings and keeps a hook group the project edited", async () => {
-    // QFAI:EX-0004-0013-19
     const template = await readFile(path.join(getInitAssetsDir(), ".claude/settings.json"), "utf8");
     const settings: unknown = JSON.parse(
       template.replace('"structured-question"', '"our-own-question"'),
@@ -762,8 +762,8 @@ describe("migration steps 11 and 12: the free-text entry", () => {
   });
 
   // QFAI:AC-0004-0013-01
+  // QFAI:EX-0004-0013-20
   it("leaves a linked hook file for a person and still writes the other", async () => {
-    // QFAI:EX-0004-0013-20
     const root = await clone(migrated10);
     const outside = path.join(await scratch("qfai-hooks-outside-"), "hooks.json");
     await writeFile(outside, "{}\n");
@@ -785,8 +785,8 @@ describe("migration steps 11 and 12: the free-text entry", () => {
   });
 
   // QFAI:AC-0004-0013-01
+  // QFAI:EX-0004-0013-21
   it("migrates a 1.x project in one run, the reminder hooks included", async () => {
-    // QFAI:EX-0004-0013-21
     const root = await clone(migrated11);
     const checked = await stepIn(root, 12);
     expect(checked.code, checked.output).toBe(0);
@@ -817,8 +817,8 @@ describe("migration steps 11 and 12: the free-text entry", () => {
 
 describe("migration step 11: the text the reminder hooks print", () => {
   // QFAI:AC-0004-0013-01
+  // QFAI:EX-0004-0013-22
   it("brings reminders.json to the package's text, writes a missing one and refuses a link", async () => {
-    // QFAI:EX-0004-0013-22
     const shipped = await readFile(SHIPPED_REMINDERS, "utf8");
 
     const absent = await clone(migrated10);
@@ -872,8 +872,8 @@ describe("migration steps 1 to 12 on a project an earlier 2.x release migrated",
   }
 
   // QFAI:AC-0004-0003-04
+  // QFAI:EX-0004-0003-30
   it("finds no 1.x layout on a 2.0.0 migration and brings only the hooks and their text up to date", async () => {
-    // QFAI:EX-0004-0003-30
     const { root } = await earlierRelease();
     // 2.0.0 kept its working state under the evidence tree, which no step reads.
     const state = path.join(root, "tmp/qfai-migration");
@@ -943,8 +943,8 @@ describe("migration steps 1 to 12 on a project an earlier 2.x release migrated",
   }, 300_000);
 
   // QFAI:AC-0004-0003-04
+  // QFAI:EX-0004-0003-31
   it("never reads a 1.x project or a stopped migration as finished", async () => {
-    // QFAI:EX-0004-0003-31
     const { afterStep7 } = await earlierRelease();
     const stopped = await clone(afterStep7);
     await rm(path.join(stopped, ".qfai/spec/spec-0002"), { recursive: true });
@@ -968,8 +968,8 @@ describe("migration steps 1 to 12 on a project an earlier 2.x release migrated",
   }, 300_000);
 
   // QFAI:AC-0004-0003-04
+  // QFAI:EX-0004-0003-32
   it("reads a finished migration as finished whatever plan.yaml now says", async () => {
-    // QFAI:EX-0004-0003-32
     // The finished tree itself, not a copy: on Windows a copy turns each host
     // directory link into a file link, which step 9 then has to repair.
     const { root } = await earlierRelease();
@@ -999,8 +999,8 @@ describe("migration steps 1 to 12 on a project an earlier 2.x release migrated",
   }, 300_000);
 
   // QFAI:AC-0004-0003-04
+  // QFAI:EX-0004-0003-35
   it("needs no plan.yaml once no spec pack is left, and still refuses one while a pack is left", async () => {
-    // QFAI:EX-0004-0003-35
     const { afterStep7 } = await earlierRelease();
     const plan = "tmp/qfai-migration/plan.yaml";
     const unsettled = await clone(afterStep7);
@@ -1044,8 +1044,8 @@ describe("migration steps 1 to 12 on a project an earlier 2.x release migrated",
   }, 300_000);
 
   // QFAI:AC-0004-0003-08
+  // QFAI:EX-0004-0003-44
   it("opens a stopped migration with the found line in steps 4, 5 and 7 and never with the already-migrated line", async () => {
-    // QFAI:EX-0004-0003-44
     const { afterStep7 } = await earlierRelease();
     const unsettled = await clone(afterStep7);
     await rm(path.join(unsettled, ".qfai/spec/spec-0002"), { recursive: true });
@@ -1103,8 +1103,8 @@ describe("migration steps 1 to 12 on a project holding a retired configuration k
     expect(config).toHaveProperty(["prototyping", "primarySpecId"], "spec-0001");
   });
 
+  // QFAI:EX-0004-0003-34
   it("runs steps 1 to 3 past primarySpecId and lists it for a person at step 3", async () => {
-    // QFAI:EX-0004-0003-34
     const root = await oldProject();
     await writeConfig(root, (config) => {
       config.prototyping = { primarySpecId: "spec-0001" };
@@ -1127,8 +1127,8 @@ describe("migration steps 1 to 12 on a project holding a retired configuration k
     ).toBe(true);
   }, 300_000);
 
+  // QFAI:EX-0004-0003-34
   it("refuses steps 4 to 12 naming primarySpecId and writes nothing but the report", async () => {
-    // QFAI:EX-0004-0003-34
     const root = await oldProject();
     await throughStep(root, 3);
     const control = await stepIn(root, 4, ["--dry-run"]);
@@ -1314,8 +1314,8 @@ const GUIDE_TABLE: ReadonlyArray<readonly [oldPath: string, now: readonly string
 
 describe("migration step 12: project files that still name a 1.x path", () => {
   // QFAI:AC-0004-0042-01
+  // QFAI:EX-0004-0042-01
   it("lists each line that names 1.x paths, in file order and line order, whatever the line ending", async () => {
-    // QFAI:EX-0004-0042-01
     const root = await indexedProject(migrated11, {
       ".agents/skills/intake/SKILL.md": linesWith(12, {
         7: "Read `.qfai/specs/_policies/01_Objective.md` first",
@@ -1338,8 +1338,8 @@ describe("migration step 12: project files that still name a 1.x path", () => {
   });
 
   // QFAI:AC-0004-0042-01
+  // QFAI:EX-0004-0042-02
   it("names each of the twelve 1.x paths, and only the one a line holds", async () => {
-    // QFAI:EX-0004-0042-02
     const named = Object.fromEntries(OLD_PATH_LINES.map(([line], at) => [at + 1, line]));
     const root = await indexedProject(migrated11, {
       "docs/paths.md": linesWith(OLD_PATH_LINES.length, named),
@@ -1352,8 +1352,8 @@ describe("migration step 12: project files that still name a 1.x path", () => {
   });
 
   // QFAI:AC-0004-0042-01
+  // QFAI:EX-0004-0042-03
   it("reads a line that only looks like a 1.x path as no 1.x path", async () => {
-    // QFAI:EX-0004-0042-03
     const named = Object.fromEntries(NEAR_MISSES.map((line, at) => [at + 1, line]));
     const root = await indexedProject(migrated11, {
       "docs/near.md": linesWith(NEAR_MISSES.length, named),
@@ -1365,8 +1365,8 @@ describe("migration step 12: project files that still name a 1.x path", () => {
   });
 
   // QFAI:AC-0004-0042-01
+  // QFAI:EX-0004-0042-13
   it("prints a name as git stores it, neither quoted nor escaped", async () => {
-    // QFAI:EX-0004-0042-13
     const file = "docs/my notes é.md";
     const root = await indexedProject(migrated11, {
       [file]: linesWith(2, { 2: "Open .qfai/specs" }),
@@ -1377,8 +1377,8 @@ describe("migration step 12: project files that still name a 1.x path", () => {
   });
 
   // QFAI:AC-0004-0042-02
+  // QFAI:EX-0004-0042-04
   it("leaves out the QFAI tree, the init-written copilot file and the files it does not own", async () => {
-    // QFAI:EX-0004-0042-04
     const copilot = await readFile(
       path.join(initialised, ".github/copilot-instructions.md"),
       "utf8",
@@ -1400,8 +1400,8 @@ describe("migration step 12: project files that still name a 1.x path", () => {
   });
 
   // QFAI:AC-0004-0042-02
+  // QFAI:EX-0004-0042-05
   it("lists a file a link leads to once, under its own path, and never a link", async () => {
-    // QFAI:EX-0004-0042-05
     const root = await indexedProject(migrated11, {
       ".agents/skills/intake/SKILL.md": linesWith(3, { 3: "Read .qfai/specs" }),
     });
@@ -1419,8 +1419,8 @@ describe("migration step 12: project files that still name a 1.x path", () => {
   });
 
   // QFAI:AC-0004-0042-02
+  // QFAI:EX-0004-0042-06
   it("leaves out a binary file, a file gone from the working tree and a file git does not track", async () => {
-    // QFAI:EX-0004-0042-06
     const root = await indexedProject(migrated11, {
       "assets/blob.bin": Buffer.concat([Buffer.from([0]), Buffer.from(".qfai/specs\n")]),
       "docs/old.md": "Read .qfai/specs\n",
@@ -1434,8 +1434,8 @@ describe("migration step 12: project files that still name a 1.x path", () => {
   });
 
   // QFAI:AC-0004-0042-02
+  // QFAI:EX-0004-0042-12
   it("leaves out a submodule and an indexed file that is a directory in the working tree", async () => {
-    // QFAI:EX-0004-0042-12
     const root = await indexedProject(migrated11, { "docs/dir.md": "placeholder\n" });
     git(root, ["update-index", "--add", "--cacheinfo", `160000,${"1".repeat(40)},vendor/lib`]);
     await rm(path.join(root, "docs/dir.md"));
@@ -1447,8 +1447,8 @@ describe("migration step 12: project files that still name a 1.x path", () => {
   });
 
   // QFAI:AC-0004-0042-02
+  // QFAI:EX-0004-0042-14
   it("leaves out the configured spec and contract directories", async () => {
-    // QFAI:EX-0004-0042-14
     const configured = await clone(migrated11);
     await writeConfig(configured, (config) => {
       const paths = isRecord(config.paths) ? config.paths : {};
@@ -1465,8 +1465,8 @@ describe("migration step 12: project files that still name a 1.x path", () => {
   });
 
   // QFAI:AC-0004-0042-03
+  // QFAI:EX-0004-0042-07
   it("says how many files it checked when it finds nothing, in a dry run too", async () => {
-    // QFAI:EX-0004-0042-07
     const root = await indexedProject(migrated11, {
       "README.md": "# Project\n",
       "qfai.config.yaml": null,
@@ -1487,8 +1487,8 @@ describe("migration step 12: project files that still name a 1.x path", () => {
   });
 
   // QFAI:AC-0004-0042-03
+  // QFAI:EX-0004-0042-08
   it("says that a project outside git was not checked, and lists nothing for it", async () => {
-    // QFAI:EX-0004-0042-08
     const root = await clone(migrated11);
     await put(root, "docs/old.md", "Read .qfai/specs\n");
     const real = await checkedStep12(root);
@@ -1504,8 +1504,8 @@ describe("migration step 12: project files that still name a 1.x path", () => {
   });
 
   // QFAI:AC-0004-0042-05
+  // QFAI:EX-0004-0042-11
   it("fails with git's message when git cannot read the index, and does not call it no repository", async () => {
-    // QFAI:EX-0004-0042-11
     const root = await indexedProject(migrated11, { "README.md": "# Project\n" });
     await writeFile(path.join(root, ".git/index"), "not an index\n");
     // A failure no step handles ends the script with exit 1, so a thrown error reads as that.
@@ -1524,8 +1524,8 @@ describe("migration step 12: project files that still name a 1.x path", () => {
   });
 
   // QFAI:AC-0004-0042-04
+  // QFAI:EX-0004-0042-09
   it("tells in the guide what the migration leaves alone and what each 1.x path is now", async () => {
-    // QFAI:EX-0004-0042-09
     const guide = await readFile(
       path.join(SKILL_ASSETS, "qfai-migration-v1-to-v2/references/migration-guide.md"),
       "utf8",
@@ -1569,8 +1569,8 @@ describe("migration step 12: project files that still name a 1.x path", () => {
   });
 
   // QFAI:AC-0004-0042-04
+  // QFAI:EX-0004-0042-10
   it("tells the AI in SKILL.md to resolve each old-path item with the person who wrote the file", async () => {
-    // QFAI:EX-0004-0042-10
     const skill = await readFile(
       path.join(SKILL_ASSETS, "qfai-migration-v1-to-v2/SKILL.md"),
       "utf8",

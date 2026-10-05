@@ -1,4 +1,3 @@
-// QFAI:EX-0001-0039-08
 /**
  * Meta-test: operator-facing strings are written in English.
  *
@@ -89,6 +88,7 @@ function srcSources(): Promise<[string, string][]> {
   return srcSourcesPromise;
 }
 
+// QFAI:EX-0001-0039-08
 describe("operator-facing CLI message language", () => {
   it("keeps every operator-facing string under src in English", async () => {
     const offenders = (await srcSources()).flatMap(([rel, source]) =>
