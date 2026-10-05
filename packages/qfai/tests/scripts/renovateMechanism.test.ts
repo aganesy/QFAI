@@ -434,7 +434,7 @@ describe("automerge is declared together with the check that decides whether any
     // The list is the claim. A rule that later widened to another package, or narrowed an
     // exception to one update type, changes what this reads and fails here rather than passing
     // green over an invariant it no longer holds.
-    const EXEMPT = ["@vitest/coverage-v8", "vitest"];
+    const EXEMPT = ["vitest"];
 
     // The config without its comments. A commented-out property is not a property Renovate
     // reads, so every assertion below reads this text and not the file's.
@@ -519,9 +519,8 @@ describe("automerge is declared together with the check that decides whether any
     ).toEqual([...EXEMPT].sort());
 
     // And the exception is a refusal to offer the package at all, not a narrowing to one update
-    // type or one dependency type. A narrowing leaves the same pairing broken on every update it
-    // does not name, which is the reading the provider's own peer range makes unsafe. So the
-    // package names are the only selector such a rule may carry.
+    // type or one dependency type. A narrowing leaves every update it does not name arriving as
+    // before. So the package names are the only selector such a rule may carry.
     for (const rule of disablingRules) {
       const selectors = [...rule.matchAll(/\b((?:match|exclude)[A-Z]\w*)\s*:/g)].map(
         (match) => match[1],
@@ -537,7 +536,7 @@ describe("automerge is declared together with the check that decides whether any
 
     // And a security fix still reaches them. The vulnerability block is applied as a forced
     // override, so its own `enabled` is the one thing that outranks the refusal above — without
-    // it, the manual-update exception silently becomes an exception to that policy too.
+    // it, a manual-update exception silently becomes an exception to that policy too.
     expect(
       /vulnerabilityAlerts:\s*\{[\s\S]*?\n {2}\}/.exec(config)?.[0] ?? "",
       "the vulnerability policy must state `enabled: true`, or a package switched off above " +
@@ -557,19 +556,16 @@ describe("automerge is declared together with the check that decides whether any
 
     // The names alone can survive the section that says what to do about them, so the section
     // is read too: its own heading, and the manual step it exists to describe.
-    const section =
-      /^### The test runner and its coverage provider\s*$([\s\S]*?)(?=^#{1,3} )/m.exec(
-        guide,
-      )?.[1] ?? "";
+    const section = /^### The test runner\s*$([\s\S]*?)(?=^#{1,3} )/m.exec(guide)?.[1] ?? "";
     for (const name of EXEMPT) {
       expect(
         section,
-        `the guide's section on the held-back pair has to name ${name} and say how it is raised`,
+        `the guide's section on the held-back runner has to name ${name} and say how it is raised`,
       ).toContain(name);
     }
     expect(
       section,
-      "the guide's section on the held-back pair has to say that raising it is a manual step, " +
+      "the guide's section on the held-back runner has to say that raising it is a manual step, " +
         "because Renovate sends no pull request that would remind anyone",
     ).toMatch(/manual step/);
   });

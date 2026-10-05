@@ -56,9 +56,9 @@ async function schemaFindings(
 }
 
 describe("qfai validate runs the document-schema check", () => {
+  // QFAI:EX-0001-0011-06
   it("reports each schema violation as an error naming the document and line", async () => {
     // QFAI:AC-0001-0011-03
-    // QFAI:EX-0001-0011-06
     const withoutFlow = (await template()).replace(/^## Flow\n[\s\S]*?(?=^## |(?![\s\S]))/m, "");
     const root = await treeWithFlow(withoutFlow);
 
@@ -73,9 +73,9 @@ describe("qfai validate runs the document-schema check", () => {
     expect(findings.map((finding) => finding.message).join("\n")).toContain("Flow");
   });
 
+  // QFAI:EX-0001-0011-13
   it("reports a Markdown file no schema covers as one error naming it", async () => {
     // QFAI:AC-0001-0011-05
-    // QFAI:EX-0001-0011-13
     const notes = ".qfai/spec/03_contract/design/notes.md";
     const root = await treeWithFlow(await template());
     await mkdir(path.dirname(path.join(root, notes)), { recursive: true });
@@ -99,9 +99,9 @@ describe("qfai validate runs the document-schema check", () => {
     expect(await schemaFindings(root)).toEqual([]);
   });
 
+  // QFAI:EX-0001-0011-08
   it("refuses the opt-out marker rather than skipping the document", async () => {
     // QFAI:AC-0001-0011-03
-    // QFAI:EX-0001-0011-08
     const root = await treeWithFlow(`<!-- mdschema:ignore -->\n\n${await template()}`);
 
     const findings = await schemaFindings(root);
@@ -111,10 +111,10 @@ describe("qfai validate runs the document-schema check", () => {
     expect(findings[0]?.message).toContain("is not accepted");
   });
 
+  // QFAI:EX-0001-0011-10
+  // QFAI:EX-0001-0011-11
   it("reports an added column and a pipe line above the header of a policy table", async () => {
     // QFAI:AC-0001-0011-04
-    // QFAI:EX-0001-0011-10
-    // QFAI:EX-0001-0011-11
     const glossary = await template("01_policy/glossary.md");
     expect(await schemaFindings(await treeWith(GLOSSARY, glossary))).toEqual([]);
 
@@ -132,8 +132,8 @@ describe("qfai validate runs the document-schema check", () => {
     }
   });
 
+  // QFAI:EX-0001-0011-09
   it("reports a check that could not run as an error of its own", () => {
-    // QFAI:EX-0001-0011-09
     const root = path.join(os.tmpdir(), "tree");
     const findings = documentSchemaIssues(
       { ok: false, reason: "no @jackchuka/mdschema installation was found" },

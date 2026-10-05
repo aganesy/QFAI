@@ -13,12 +13,7 @@
  * a command stays out of the table until it can actually be observed.
  */
 export const EXIT_CODES = {
-  /**
-   * Success, or below the fail-on threshold. For prototyping iterate this
-   * also covers "continue", and the terminal no-op at cycle 0 where no
-   * UI-bearing spec resolves (a normal skip that writes no iteration
-   * artifact).
-   */
+  /** Success, or below the fail-on threshold. */
   ok: 0,
   /**
    * validate / doctor / preflight: the --fail-on threshold was reached.
@@ -28,9 +23,8 @@ export const EXIT_CODES = {
    * exit-code table reserves 2 only for an unknown flag or a bad value, so a
    * misspelled command is not moved there.
    * A runtime error here means anything thrown that the top-level catch
-   * picks up: a failed certificate write in prototyping certify, a failed
-   * JSON output in validate or --out write in doctor / preflight, and
-   * prototyping show-ui-contract being unable to read the UI contract list.
+   * picks up: a failed JSON output in validate or --out write in doctor /
+   * preflight.
    * None of these is a failed check result, so note that the recovery
    * (fixing permissions, disk or paths) differs from reaching the threshold.
    */
@@ -39,47 +33,13 @@ export const EXIT_CODES = {
    * CLI argument error (an unknown flag, a bad or missing value). This is
    * the value `invalidExitCode` in `parseArgs` returns for every command,
    * and the row the init CLI contract's exit-code table reserves. A value
-   * flag whose value the parser rejects (--cycle with anything but a
-   * non-negative integer, --fail-on with anything but never / warning /
-   * error) also stops here, before any peek or main processing.
+   * flag whose value the parser rejects (--fail-on with anything but never /
+   * warning / error) also stops here, before any main processing.
    *
-   * Input and lock-drift errors use the same value.
-   * In report and prototyping show-ui-contract, a missing or corrupt input
-   * file does too; in prototyping certify, so does a certificate mismatch or
-   * a quality-gate rejection.
-   * prototyping iterate also includes execution-environment errors here: an
-   * --auto-serve server that fails to start, and a --capture runner
-   * rejection, exception or HTML copy failure (recovered by freeing a port,
-   * repairing dependencies or fixing permissions, not by correcting input).
+   * Input and lock-drift errors use the same value. In report, a missing
+   * input file does too.
    */
   inputError: 2,
-  /**
-   * prototyping: STOP. One class of refusal: the evidence shows that running
-   * the loop further would not change the result. The same number denotes
-   * different events per command, so the name refers to the class, not to an
-   * event:
-   *
-   * - iterate: convergence — no DESIGN.md violation, no layout anti-pattern
-   *   and no blocking finding. The loop's terminal on the success side.
-   * - certify: insufficient coverage in review.json. This also covers a
-   *   layout incompatibility, where a multi-spec frozen set is certified
-   *   with an accepted iteration in the legacy flat layout (it needs a move
-   *   to the per-spec layout, or a frozen set reduced to a single spec).
-   *
-   * The name `prototypingConverged` was misleading: the five certify call
-   * sites do not mean convergence, and it would misdirect whoever next adds a
-   * branch returning 64.
-   *
-   * 65 and 66 are separate constants for the opposite reason: each has a
-   * single cause (budget exhaustion, license-verify failure). Only 64 is
-   * reserved in the CLI contract as the cross-command "terminated by
-   * evidence" class.
-   */
-  prototypingStop: 64,
-  /** prototyping iterate: STOP, the budget (max iterations) is exhausted. */
-  prototypingBudgetExhausted: 65,
-  /** prototyping iterate: STOP, license-verify failed. */
-  prototypingLicenseFailure: 66,
 } as const;
 
 type ExitCodeRow = {
@@ -96,14 +56,6 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
       `${EXIT_CODES.ok} = success,`,
       `${EXIT_CODES.findings} = the --fail-on threshold was reached, or a runtime error`,
       "      (an output I/O exception: a failed validate JSON write, a failed doctor --out write)",
-    ],
-  },
-  {
-    label: "prototyping preflight",
-    lines: [
-      `${EXIT_CODES.ok} = success,`,
-      `${EXIT_CODES.findings} = the --fail-on threshold was reached, or a runtime error`,
-      "      (an output I/O exception, such as a failed --out write — the same path as doctor)",
     ],
   },
   {
@@ -125,47 +77,6 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
     ],
   },
   {
-    label: "prototyping iterate",
-    lines: [
-      `${EXIT_CODES.ok} = continue (next cycle), or a no-op exit with no UI contract,`,
-      `${EXIT_CODES.inputError} = an input or lock-drift error, or a runtime error`,
-      `      (--auto-serve could not start the server; --capture was refused by the runner or failed on I/O),`,
-      `${EXIT_CODES.prototypingStop} = STOP: converged (all four UX scores exceptional for every`,
-      `      UI contract/screen; no DESIGN.md violation, layout anti-pattern, or blocking finding),`,
-      `${EXIT_CODES.prototypingBudgetExhausted} = STOP: budget exhausted (max iterations),`,
-      `${EXIT_CODES.prototypingLicenseFailure} = STOP: license-verify failed`,
-    ],
-  },
-  {
-    label: "prototyping iterate --check-convergence",
-    lines: [
-      `${EXIT_CODES.ok} = converged,`,
-      `${EXIT_CODES.inputError} = not converged (including a missing or corrupt prototyping.json),`,
-      `      --cycle is not a non-negative integer (-1 / 1.5 / abc — the parser refuses the`,
-      `      value and the peek is never reached), or --cycle is out of range (10 or more stops without peeking)`,
-    ],
-  },
-  {
-    label: "prototyping certify",
-    lines: [
-      `${EXIT_CODES.ok} = success,`,
-      `${EXIT_CODES.findings} = a runtime error (a certificate I/O exception, such as a`,
-      `      failed certificate write),`,
-      `${EXIT_CODES.inputError} = an input error, or a quality gate refused it (a validate error, a failed`,
-      `      verify, a DESIGN.md breach), or --check found a certificate digest or gate mismatch,`,
-      `${EXIT_CODES.prototypingStop} = coverage is short (review.json is missing, or a`,
-      `      multi-spec frozen set on a flat layout, which is unsupported)`,
-    ],
-  },
-  {
-    label: "prototyping show-ui-contract",
-    lines: [
-      `${EXIT_CODES.ok} = success,`,
-      `${EXIT_CODES.findings} = a runtime error (an I/O exception while reading UI contracts),`,
-      `${EXIT_CODES.inputError} = prototyping.json is missing, legacy, or malformed, or qfai.config.yaml rejected prototyping.primaryUiContract`,
-    ],
-  },
-  {
     label: "atdd scaffold",
     lines: [
       `${EXIT_CODES.ok} = success,`,
@@ -176,10 +87,9 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
   {
     label: "workflow",
     lines: [
-      `${EXIT_CODES.ok} = the operation was processed, whatever state the run is left in,`,
-      `${EXIT_CODES.findings} = finish with an unmet target, a damaged run record, or a run file`,
-      "      that could not be written,",
-      `${EXIT_CODES.inputError} = every other refusal`,
+      `${EXIT_CODES.ok} = a plan or candidate routes,`,
+      `${EXIT_CODES.findings} = a file cannot be read or a shipped plan does not load,`,
+      `${EXIT_CODES.inputError} = the input is refused`,
     ],
   },
   {
@@ -187,7 +97,7 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
     lines: [
       `${EXIT_CODES.ok} = success, ${EXIT_CODES.inputError} = a usage error,`,
       `${EXIT_CODES.findings} = a runtime error`,
-      "(init / discussion / audit log)",
+      "(init / discussion)",
     ],
   },
 ];
@@ -205,9 +115,9 @@ const USAGE_ERROR_NOTE = [
   "     (so --help cannot make a misspelled command read as a success).",
   // The parser rejects a bad value for a value flag. Reading an unknown
   // --fail-on threshold as the default would silently make the written flag and
-  // the gate in effect disagree, so it is treated like --cycle.
+  // the gate in effect disagree.
   `  Note: a bad --fail-on value (--fail-on typo, say) is refused by the parser rather than read as`,
-  `     the default threshold, so it returns ${EXIT_CODES.inputError} without reaching the command (the same as --cycle).`,
+  `     the default threshold, so it returns ${EXIT_CODES.inputError} without reaching the command.`,
 ].join("\n");
 
 /** CJK punctuation / kana / ideographs / fullwidth forms. */

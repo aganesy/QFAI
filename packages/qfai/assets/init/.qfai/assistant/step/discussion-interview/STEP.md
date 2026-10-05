@@ -3,16 +3,8 @@ name: discussion-interview
 owner: qfai-discussion
 purpose: "Interview the user as a grilling session and record how and when it ended."
 requires: [common-grilling-record]
-roles:
-  [
-    discovery-analyst,
-    requirements-analyst,
-    solution-architect,
-    product-experience-architect,
-    completion-reviewer,
-    requirements-reviewer,
-  ]
-routing-profile: requirements-heavy
+roles: [discovery-analyst, requirements-analyst, solution-architect, product-experience-architect]
+routing-profile: default
 ---
 
 # discussion-interview
@@ -27,13 +19,11 @@ the user. An interview with no method is the agent deciding and reporting.
 - `.qfai/assistant/skill/qfai-discussion/references/discussion-coverage-checklist.md`.
 - `.qfai/assistant/skill/qfai-discussion/references/design-dna-intake.md`, where
   any classified surface is `web`, `mobile`, `desktop` or `mixed`.
-- The research summary `discussion-research` recorded in this run's stage
-  evidence.
+- The research summary `discussion-research` reported.
 
 ## Writes
 
-- The `## Grilling Session` row in
-  `.qfai/evidence/discussion-<YYYYMMDDhhmmssSSS>.md`.
+- The `## Grilling Session` row, in the stage report.
 
 The records the session's ending produces — register rows and labelled
 assumptions — are written by `discussion-oq` and `discussion-pack` once the row
@@ -67,19 +57,19 @@ is in place.
 
 Inside a workflow run, what the work order's `settled` field records is not
 asked again
-(`.qfai/assistant/rule/shared-skill-operating-baseline.md#a-work-orders-steps`),
+(`.qfai/assistant/rule/shared-skill-operating-baseline.md#a-plans-steps`),
 and the interview covers only the product scope it leaves unresolved.
 
 ## Writes that are not authoring
 
-**Authoring the pack** — the fifteen mandatory files and the UI sidecars, as the
+**Authoring the pack** — the nine mandatory files and the UI sidecars, as the
 artifacts a reader takes the design from — does not start until the session has
 ended. Three writes are not that authoring, and happen when the process reaches
 them:
 
 | Write                                                                       | When                | Why it is not authoring                                                                                                                                                                                     |
 | --------------------------------------------------------------------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The research summary in this run's stage evidence                           | Before the session  | The session reads it. Held back, the decisions are settled against evidence nobody had. It is not in the pack: no pack directory exists yet, and one opened here is what a cancelled run would leave behind |
+| The research summary in this run's stage report                             | Before the session  | The session reads it. Held back, the decisions are settled against evidence nobody had. It is not in the pack: no pack directory exists yet, and one opened here is what a cancelled run would leave behind |
 | A register entry or a labelled assumption the session's own ending produces | As the session ends | It records what the session did. Withheld, a no-question run cannot write the open questions that block its completion                                                                                      |
 | A throwaway artifact built to make a question answerable                    | Mid-session         | The method calls for it where talking cannot settle the question. It is not the pack, and it is not kept                                                                                                    |
 
@@ -131,11 +121,11 @@ after `stop` is the run doing exactly what the user told it not to.
 
 ## The record
 
-Write the stage evidence's `## Grilling Session` row in the shape
+Write the stage report's `## Grilling Session` row in the shape
 `.qfai/assistant/step/common-grilling-record/STEP.md#one-session` sets out, and
 write `Ended at` before the first pack file. The reviewer reads the session condition
 off that row. Without it a skipped session and a completed one present the same
-pack — fifteen files, every topic covered, every open question registered — so
+pack — nine files, every topic covered, every open question registered — so
 the reviewer would have to block every run or accept a claim it cannot check.
 
 A `stopped` session writes no row: the ending is reported, and no later step
@@ -145,7 +135,7 @@ runs.
 
 The reviewer confirms:
 
-- the stage evidence's `## Grilling Session` row shows the session ended before
+- the stage report's `## Grilling Session` row shows the session ended before
   authoring began, with `Ended` one of `confirmed`, `user-closed` or
   `no-question`;
 - every decision the session settled is recorded where

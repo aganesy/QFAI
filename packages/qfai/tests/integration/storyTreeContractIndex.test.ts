@@ -62,8 +62,8 @@ describe("story-tree contract index", () => {
   });
 
   // QFAI:AC-0001-0052-06
+  // QFAI:EX-0001-0052-10
   it("reports a file outside the contract kind directories once, as not a contract", async () => {
-    // QFAI:EX-0001-0052-10
     const config = storyTreeConfig();
     const base = config.paths.contractsDir;
     await put(

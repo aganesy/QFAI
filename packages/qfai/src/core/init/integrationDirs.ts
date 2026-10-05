@@ -3,19 +3,6 @@ import path from "node:path";
 
 import { exists } from "./fsGuards.js";
 
-/**
- * Where a skill directory that was replaced or retired is kept whole, beside
- * the migration's plan and ID map. The migration's own step 11 archives here
- * too, so a project has one place to look.
- */
-export const SKILL_ARCHIVE_DIR = path.join(
-  ".qfai",
-  "evidence",
-  "migration-spec-to-story",
-  "legacy",
-  "skill",
-);
-
 export const SKILL_INTEGRATION_DIRS = [
   ".claude/skills",
   ".agents/skills",

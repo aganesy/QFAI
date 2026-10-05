@@ -8,6 +8,5 @@ stages:
     kind: triage
     steps: [triage-close]
     after: [dedupe]
-defaultModifiers: []
 decisionPoints: []
 branchPoints: []
