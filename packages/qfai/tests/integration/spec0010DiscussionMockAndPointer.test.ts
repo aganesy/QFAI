@@ -7,11 +7,6 @@
  * production functions directly (no reliance on repo live state or a
  * rebuilt dist binary).
  */
-// QFAI:EX-0001-0089-01
-// QFAI:EX-0001-0089-02
-// QFAI:EX-0001-0089-03
-// QFAI:EX-0001-0090-01
-// QFAI:EX-0001-0090-02
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -38,6 +33,11 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
+// QFAI:EX-0001-0089-01
+// QFAI:EX-0001-0089-02
+// QFAI:EX-0001-0089-03
+// QFAI:EX-0001-0090-01
+// QFAI:EX-0001-0090-02
 describe("spec-0010 mock anchor-form hrefs CHG-006", () => {
   it("TC-0010-0009 — #anchor and external http(s) hrefs both PASS QFAI-MOCK-010 (normal)", async () => {
     const anchor = await parseHtmlMock('<a href="#orders">Orders</a>');

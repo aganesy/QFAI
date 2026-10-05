@@ -4,6 +4,6 @@ stages:
   - id: draft
     kind: verify
     steps: [verify-release-notes]
-defaultModifiers: [gate:release]
 decisionPoints: []
+releasePoint: end
 branchPoints: []

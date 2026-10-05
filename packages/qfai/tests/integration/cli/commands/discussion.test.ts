@@ -5,8 +5,6 @@
  * and multiple candidate `discussion-*` dirs exist, `list --active`
  * exits non-zero naming the candidates and the recovery command.
  */
-// QFAI:EX-0001-0090-01
-// QFAI:EX-0001-0090-02
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -42,6 +40,8 @@ async function makePack(id: string): Promise<void> {
   await mkdir(path.join(root, ".qfai", "discussion", id), { recursive: true });
 }
 
+// QFAI:EX-0001-0090-01
+// QFAI:EX-0001-0090-02
 describe("TC-0010-0012: discussion use writes pointer; list --active reads it", () => {
   it("`discussion use <id>` sets state.json#discussion.currentId", async () => {
     await makePack("discussion-20260527075558258");

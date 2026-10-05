@@ -11,14 +11,12 @@ const RULES_HEADING = /^(?:business )?rules$/i;
 /** A rule ID anywhere in a table row after its first cell, which the CLI schema refuses. */
 const RULE_ID_AFTER_FIRST_CELL = /^\|[^|\n]*\|[^\n]*BR-\d{4}-\d{4}/m;
 
-/** Where a contract is written, where it was read from, and where the original is kept. */
-export type CliContractPaths = { target: string; source: string; archive: string };
+/** Where a contract is written, and where it was read from. */
+export type CliContractPaths = { target: string; source: string };
 
 export type ShapedCliContract = {
   content: string;
   forAPerson: string[];
-  /** True when content of the original is not in `content`, so the original is archived. */
-  cut: boolean;
 };
 
 type Section = { heading: string; body: string };
@@ -76,8 +74,7 @@ function rulesBody(body: string): string | null {
 /**
  * A Markdown CLI contract in the shape of its `qfai-sdd` template: its H1, an
  * `## Ownership boundary` and a `## Business rules` table. `text` already
- * carries the new H1. Whatever does not fit is left out and named for a person,
- * who reads it in the archived original.
+ * carries the new H1. Whatever does not fit is left out and named for a person.
  */
 export async function shapeCliContract(
   text: string,
@@ -85,14 +82,13 @@ export async function shapeCliContract(
 ): Promise<ShapedCliContract> {
   const { title, beforeTitle, preamble, sections } = splitContract(text.replace(/\r\n/g, "\n"));
   const forAPerson: string[] = [];
-  const kept = `(kept at ${paths.archive})`;
   if (beforeTitle)
     forAPerson.push(
-      `${paths.target}: rewrite the text before the title of ${paths.source} by hand ${kept}`,
+      `${paths.target}: rewrite the text before the title of ${paths.source} by hand`,
     );
   if (preamble)
     forAPerson.push(
-      `${paths.target}: rewrite the text before the first section of ${paths.source} by hand ${kept}`,
+      `${paths.target}: rewrite the text before the first section of ${paths.source} by hand`,
     );
   let ownership: string | null = null;
   let rules: string | null = null;
@@ -108,9 +104,8 @@ export async function shapeCliContract(
     const into =
       section.heading === OWNERSHIP ? OWNERSHIP : RULES_HEADING.test(section.heading) ? RULES : "";
     const where = into === "" ? paths.target : `${paths.target} ## ${into}`;
-    forAPerson.push(`${where}: rewrite "## ${section.heading}" of ${paths.source} by hand ${kept}`);
+    forAPerson.push(`${where}: rewrite "## ${section.heading}" of ${paths.source} by hand`);
   }
-  const cut = forAPerson.length > 0;
   if (!sections.some((section) => section.heading === OWNERSHIP && section.body !== ""))
     forAPerson.push(
       `${paths.target} ## ${OWNERSHIP}: write what this contract decides, and which contract decides the rest, in place of the template's placeholder`,
@@ -119,5 +114,5 @@ export async function shapeCliContract(
     heading === OWNERSHIP ? (ownership ?? templateBody) : (rules ?? tableText(RULE_COLUMNS, [])),
   );
   const content = rendered.replace(/^[^\n]*/, () => title);
-  return { content, forAPerson, cut };
+  return { content, forAPerson };
 }

@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0039-02
-// QFAI:EX-0001-0039-03
 /**
  * The validate contract's business rules declare the line grammar of
  * `qfai validate --format text` (the default format). Nothing else binds those
@@ -10,7 +8,7 @@
  * The rules are used as a *complete* output contract, so the fixtures below
  * mirror production faithfully: counts skip suppressed issues (as `countIssues`
  * does), an error issue carries a multi-line `suggested_action` (as
- * `QFAI-SKILLS-001` does), and the trailing `run-log:` line is exercised through
+ * a real finding does), and the trailing `run-log:` line is exercised through
  * `runValidate`, not through the emitter alone.
  */
 
@@ -40,6 +38,8 @@ const OPTIONAL_SLOTS = {
 
 const DETAIL_LABELS = ["error_code", "target", "expected", "current", "fix"] as const;
 
+// QFAI:EX-0001-0039-02
+// QFAI:EX-0001-0039-03
 it("directs agent routing repairs to package defaults or project config overrides", () => {
   for (const code of ["QFAI-AGENT-015", "QFAI-AGENT-017", "QFAI-AGENT-018", "QFAI-AGENT-019"]) {
     const fix = resolveIssueFix({ code, severity: "error", category: "canonical", message: code });

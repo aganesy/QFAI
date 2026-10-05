@@ -1,146 +1,43 @@
 # Review Convergence
 
-How a review round ends, and what may follow it. Referenced from
-`.qfai/assistant/rule/shared-skill-delegation-baseline.md#round-budget-and-convergence-must`,
+How a stage's review ends, and what may follow it. Referenced from
+`.qfai/assistant/rule/shared-skill-delegation-baseline.md#review-convergence`,
 which owns the delegation rules these sit beside.
 
-## Round budget (MUST)
+## One review
 
-- **Two rounds per reviewer per artifact.** Round 1 is the initial review;
-  round 2 reviews the fixes. **The budget is spent the moment round 2 returns
-  `REVISE`**: the orchestrator MUST NOT start a third review, and MUST stop and
-  escalate to the user with the open findings, the fixes already applied, and a
-  recommendation. The decision point is round 2's verdict, never a prediction
-  about a review that must not run.
-- Escalation is not failure. The artifact stays at its current status and the
-  user decides: accept with the finding recorded as an Open Question, apply a
-  named fix, or drop the item from scope.
-- **Completion after escalation.** The user's decision is the exception to
-  "no DONE until all blocking reviewers `PASS`", so the escalation has an exit:
-  - _Accept as Open Question_ or _drop from scope_ — the artifact may reach
-    DONE with the finding recorded; the reviewer's outstanding `REVISE` is
-    superseded by the recorded user decision. Cite the decision where the
-    stage records decisions: the discussion pack's `99_delta.md`, or a row of
-    `<paths.specsDir>/decisions.md`, which is a `Change request:` row when the
-    decision changes a settled item.
-  - _Apply a named fix_ — one **verification review** of exactly that fix is
-    permitted and does not consume budget (it is round 2b, not round 3). Its
-    remit is the named fix only. It may not raise findings unrelated to that
-    fix, but a defect the fix **introduced or exposed** is in remit and MUST be
-    reported rather than passed over: verifying only the named lines and
-    returning `PASS` while a regression sits next to them is a false `PASS`.
-    Such a finding escalates immediately (see the severity floor below) and
-    still does not start a round 3. The review returns `PASS` or escalates
-    again.
-  - **One 2b per artifact, total.** The verification review is free of budget,
-    not unbounded: a second escalation on the same artifact MUST NOT be
-    answered with another _apply a named fix_ + 2b cycle. Without this cap the
-    two rules compose into a loop — 2b costs nothing, and escalating again is
-    always allowed — so the gate has no guaranteed end. At the second
-    escalation the user is offered only _accept as Open Question_ or _drop the
-    item from scope_. The severity floor below then withholds _accept as Open
-    Question_ for its classes, so for those findings the intersection of the
-    two rules leaves _drop the item from scope_ alone — which is the state
-    **Corrective review** below exists to give an exit.
-  - **Severity floor on the exit.** _Accept as Open Question_ is NOT available
-    for a finding that names a concrete security defect, data loss or
-    corruption, or a correctness defect that would break a released contract.
-    Present the user only _apply a named fix_ or _drop the item from scope_ for
-    those, and say why the third option is withheld. Without this the general
-    exit is a route around "deferring such a finding to an Open Question so a
-    `PASS` can be returned is prohibited" — one that needs no lateness and no
-    reviewer consent, only a user click.
-  - **Corrective review (the one exit the floor leaves open).** The two rules
-    above compose into a dead end, and it is reachable: a Round 2b that
-    correctly reports a defect the named fix INTRODUCED or EXPOSED escalates a
-    second time, at which point the 2b cap withholds _apply a named fix_ and
-    the severity floor withholds _accept as Open Question_ — so for a security,
-    data-loss or released-contract-correctness finding the only remaining
-    option is _drop the item from scope_. Fixing the defect and keeping the
-    requirement has no path: the fix cannot be verified, and the artifact
-    stays at `REVISE` forever. Round 2b doing its job is what puts the stage
-    there.
-
-    When that state is reached AND the user chooses to fix rather than drop,
-    the stage MAY open **one corrective review artifact**. It is not a third
-    round and not a budget reset; it is a separate artifact with a remit
-    narrower than any round, and it is bounded so that the two rules above
-    cannot compose through it either.
-
-    Required before the review runs — all of it, in the stage's evidence:
-    1. the originating artifact, and the Round 2b finding verbatim;
-    2. the user's decision, recorded where the stage records decisions, as
-       _Accept as Open Question_ above names;
-    3. what was changed to fix it;
-    4. the before and after revision of every artifact the fix touched, as
-       digests a reader can re-derive rather than as a round name.
-
-    Constraints on the review itself:
-    - **Remit is the finding and the named fix, nothing else.** Narrower than a
-      round: a corrective reviewer may not re-open the artifact generally. An
-      unrelated finding goes to the owning stage's decision record or a
-      `Change request:` row under the convergence rules, and does NOT extend
-      this review.
-    - **One independent review, once.** Recorded as `Round: corrective` — not
-      `2c`, and not a numbered round, because a number invites a successor.
-    - **`PASS` supersedes the Round 2b finding** on the originating artifact
-      and returns the stage to the review gates it had not yet reached. It does
-      not retro-`PASS` anything else.
-    - **`REVISE` is terminal.** The stage stops with the finding recorded. No
-      second corrective artifact, no further review, and no route back to
-      _apply a named fix_. This is the guaranteed end the 2b cap exists to
-      provide, moved one step later rather than removed.
-    - **The floor and the Open Question prohibition are unchanged.** A
-      corrective review cannot return `PASS` over a live security, data-loss or
-      released-contract defect, and the finding cannot be deferred to an Open
-      Question at any point in this path.
-    - **A discussion pack is not an input to this.** It is non-normative
-      reference material, so a corrective review neither repairs one nor treats
-      one as the upstream to fix.
-
-- The round number MUST be recorded on each reviewer response
-  (`Round:` in the shared response template).
-
-## Convergence (MUST)
-
-- A finding first raised in round N > 1 MUST state why it was not raisable in
-  round N-1 — the fix introduced it, or the fix exposed it. A finding that was
-  raisable in round 1 and was not raised is **out of budget**: record it as an
-  Open Question or a decision row for the owning stage, do not block on it.
-- A reviewer MUST NOT open a new blocking _class_ of finding after the artifact
-  under review has been declared stable. New classes go to the owning stage.
-- **Severity overrides lateness.** The out-of-budget rule is about review
-  discipline, not about shipping known harm. A late finding that names a
-  concrete security defect, data loss or corruption, or a correctness defect
-  that would break a released contract is **not** deferrable: the orchestrator
-  stops and escalates to the user immediately, exactly as it does when the
-  round budget is spent. It is still not a third round — no further review is
-  started, the finding goes straight to the user with its evidence. Deferring
-  such a finding to an Open Question so a `PASS` can be returned is prohibited.
-  That prohibition does not depend on lateness or on who proposes the deferral:
-  the escalation exit in the round budget withholds _Accept as Open Question_
-  for this same class, so a user choice cannot supersede it either.
+- The review runs once, after the stage's last step.
+- The author fixes or answers every finding: a fix in the finding's owning
+  source, or a reasoned answer recorded beside the finding.
+- There is no re-review and no `REVISE` loop. Once every finding is fixed or
+  answered, the work proceeds.
+- A finding the author cannot fix is reported in the stage's final report, with
+  the finding and why it stays open.
+- A critical decision still goes to the user: one that contradicts a spec, a
+  contract or a recorded decision, one whose effect cannot be taken back, or one
+  that rests on product intent nothing written states. So does a finding that
+  names a concrete security defect, data loss or corruption, or a correctness
+  defect that would break a released contract; it is never only reported.
 
 ## Answered demands (MUST)
 
-A demand already answered MUST NOT be re-raised under another wording. Close a
-repeat by citing its recorded answer. This bounds what a reviewer may require,
-not what a reviewer may report.
+Within a stage there is one review, so no demand comes back in it. The rules
+below are for a later, separate stage whose own one review reads an artifact an
+earlier stage's review already answered on; they never start a second review in
+the same stage.
 
-A demand is answered only after the authoritative reviewer accepts the fix or a
-reasoned decline, or the user adjudicates it. Record that disposition and its
-evidence in the existing Response and Evidence cells. A producer's reply alone
-does not close a demand. An unresolved blocking demand remains REVISE when
-repeated; cite its prior finding and unresolved disposition instead of requiring
-new work under another wording.
+Record each finding's fix or answer, and its evidence, in the Response and
+Evidence cells. When a later stage reviews the same artifact, its
+`review_request.md` carries those answers: each entry names the original
+finding source, demand, response and evidence. When there are none, write
+`None`.
 
-Carry prior answers forward, alongside newly answered demands, into the next
-cycle's `review_request.md` before dispatching reviewers. Each entry names the
-original finding source, demand, response and evidence supporting the response.
-When there are no answered demands, write `None`.
+In that later review an answered demand MUST NOT be re-raised under another wording.
+Close a repeat by citing its recorded answer. This bounds what a reviewer may
+require, not what a reviewer may report.
 
 A report of a new defect or evidence that an answer no longer applies must
-state what changed. The existing severity floor and escalation rules still apply.
+state what changed. A critical decision in it still goes to the user.
 
 ## Discussion review precision
 
@@ -168,23 +65,23 @@ and the baseline's `none` path is the right one for it.
 
 This section is the one place an obligation-traced finding is `advisory`, and
 both provenance contracts name it:
-`.qfai/assistant/rule/shared-skill-delegation-baseline.md#finding-provenance-must`
+`.qfai/assistant/rule/shared-skill-delegation-baseline.md#finding-provenance`
 and `.qfai/assistant/rule/drift-protocol.md#provenance-and-routing`. There
 the trace class bounds which findings may block, and the declared severity settles
 whether one does, so an item carried under this section is not also a defect
 forcing `REVISE` elsewhere.
 
-**A cycle that reruns one reviewer keeps the others' findings.** The pack is the
-cycle's record, not the rerun's: a reviewer that passed is not re-run, its
-verdict stands, and its advice stands in the same pack the next stage reads.
+**A cycle that reruns one reviewer keeps the others' findings.** The cycle's
+report is its record, not the rerun's: a reviewer that passed is not re-run, its
+verdict stands, and its advice stands in the same report the next stage reads.
 A rerun that dropped it would lose the advice of every reviewer who found
 nothing blocking.
 
-**Where it goes.** The advice stays in the review pack's findings, under the
-discussion pack the next stage inventories at its Stage 0 as non-normative
-reference material, like every other part of that pack. That stage gives each
+**Where it goes.** The advice stays in the cycle's findings, which the next
+stage reads at its start as non-normative reference material, like the
+discussion pack. That stage gives each
 item a disposition in its own artifacts — a plan step, a spec row, an open
-question, or a line in its evidence saying it was read and not adopted — and
+question, or a line in its report saying it was read and not adopted — and
 nothing is back-propagated into the pack. What it may not do is leave an item
 unmentioned: a decision nobody wrote down cannot be told from an item nobody
 read.
@@ -200,7 +97,7 @@ A grilling session between agents is a **delegated session**
 asked only a critical decision. These rules bound its rounds and say what
 settles each decision when they run out.
 
-**Two rounds**, the same budget a reviewer has. After the second round **every
+**Two rounds.** After the second round **every
 decision that is not critical takes the griller's recommendation** — the ones
 the agents agreed on and the ones still open alike. A third round is never
 started: partial agreement is the ordinary outcome, and rounds past two buy
@@ -226,7 +123,7 @@ a user session, and asking them again spends that session twice.
 
 Each critical decision goes to the user with every position and a
 recommendation. Escalating is not failure: the work stays where it is and the
-user accepts, decides, or drops the item, exactly as at the reviewer gate.
+user accepts, decides, or drops the item.
 
 **The budget does not end the session while a critical decision is open.** The
 session ends `adopted` once the user has answered every critical decision.

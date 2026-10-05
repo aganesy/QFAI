@@ -9,14 +9,6 @@ import { runValidate } from "../../src/cli/commands/validate.js";
 import { createDoctorData } from "../../src/core/doctor.js";
 import { isEperm } from "../../src/core/fs/errno.js";
 import { captureStdout } from "../helpers/stdout.js";
-import {
-  editShippedWorkflow,
-  quietUnrelatedWarnings,
-  runDoctorText,
-  useAdopterTreePool,
-} from "../helpers/workflowsIntegrityFixtures.js";
-
-const workflowPool = useAdopterTreePool();
 
 async function withWorkspace(task: (root: string) => Promise<void>): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-bf0003-acceptance-"));
@@ -324,20 +316,5 @@ describe("BF-0003 doctor acceptance", () => {
       expect(onError).toBe(0);
       expect(onWarning).toBe(1);
     });
-  });
-
-  // QFAI:AC-0003-0011-02
-  it("places shipped-workflow drift in the advisory group without blocking errors", async () => {
-    const root = await workflowPool.seedAdopterTree();
-    await quietUnrelatedWarnings(root);
-    await editShippedWorkflow(root, "qfai-tests.yml");
-
-    const data = await createDoctorData({ startDir: root, rootExplicit: true });
-    expect(check(data, "workflows.integrity")?.severity).toBe("info");
-    const result = await runDoctorText(root, "error");
-    expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain("== warnings advisory of drift ==");
-    const advisory = result.stdout.split("== warnings advisory of drift ==")[1];
-    expect(advisory).toContain("[info] workflows.integrity:");
   });
 });

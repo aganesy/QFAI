@@ -12,7 +12,7 @@ Feature: Contract index and contract-layer validation
     And a contract file that `contracts.md` lists raises no such finding
 
   # AC-0001-0052-02
-  Scenario: Placeholders are read from the contract-layer steering files
+  Scenario: Placeholders are read from the contract-layer policy files
     Given the story tree, and `tech.md` under `paths.contractsDir` with a section still holding a shipped placeholder, its Standard commands section included
     When `qfai validate` runs with a profile that runs `QFAI-ASSETS-*`
     Then `QFAI-ASSETS-003` names that file under `paths.contractsDir` and each section still holding a placeholder

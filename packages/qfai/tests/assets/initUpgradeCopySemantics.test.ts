@@ -45,9 +45,7 @@ describe("assistant-tree upgrade preserves adopter files", () => {
     expect(rule).toContain("writes no migration memo");
 
     const seeding = await ruleWith("Init seeds `.qfai/assistant/`");
-    expect(seeding).toContain(
-      "It writes none of `constitution/`, `manifest/`, `catalog/`, `process/` and `steering/`",
-    );
+    expect(seeding).toContain("It writes none of `constitution/`, `manifest/`, `catalog/`");
     await ruleWith("Init writes no `README.md` into `.qfai/assistant/`");
   });
 
