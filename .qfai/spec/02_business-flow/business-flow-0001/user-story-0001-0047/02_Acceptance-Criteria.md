@@ -16,10 +16,4 @@ Feature: Profile-specific validation reports
     When `qfai validate` runs during the deprecation window (current minor)
     Then the legacy path continues to receive a copy of the latest validate JSON and `D-DEPRECATED-PATH` is emitted at severity warning naming the sunset version `1.10.0` (literal string in the message body)
     And at sunset (when the running tool reaches the named version), the same condition escalates to severity error and the legacy path is no longer written
-
-  # AC-0001-0047-03
-  Scenario: Certify reads its profile report
-    Given a prototyping-profile report and a newer tdd-profile report both exist
-    When `qfai prototyping certify` checks validation evidence
-    Then it reads `validate-prototyping.json` and does not accept the newer tdd-profile `validate.json` pointer as its gate result
 ```

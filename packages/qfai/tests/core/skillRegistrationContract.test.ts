@@ -1,4 +1,3 @@
-// QFAI:EX-0001-0039-06
 /**
  * A skill a host cannot register.
  *
@@ -90,6 +89,7 @@ const registrationFindings = async (
     (finding) => finding.code === "QFAI-SKILLS-015",
   );
 
+// QFAI:EX-0001-0039-06
 describe("a skill carries what a host needs to register it", () => {
   it("accepts a skill with a description", async () => {
     const root = await projectWithSkill(['description: "Does the thing."']);

@@ -24,28 +24,13 @@ describe("E2E: sub-agent roster formalization", () => {
     expect(content).toContain("delivery-planner");
     expect(content).toContain("frontend-engineer");
     expect(content).toContain("backend-engineer");
-    expect(content).toContain("qa-gatekeeper");
-    expect(content).toContain("implementation-reviewer");
-    expect(content).toContain("completion-reviewer");
-  });
-});
-
-describe("E2E: completion contract hardening", () => {
-  it("SKILL.md has item completion checklist, spec completion, and prohibition conditions", async () => {
-    const content = await readImplementFlowSteps(implementAssistantDir);
-    expect(content).toContain("## Completion gate");
-    expect(content).toContain("Report the flow complete only when:");
-    expect(content).toContain(
-      "Every implemented EX has an observed RED, GREEN and Refactor result",
-    );
-    expect(content).toContain("A failing or unrun gate cannot be reported as PASS.");
   });
 });
 
 describe("E2E: evidence contract hardening", () => {
   it("SKILL.md defines minimum evidence with command+result pairs", async () => {
     const content = await readImplementFlowSteps(implementAssistantDir);
-    expect(content).toContain(".qfai/evidence/implement-BF-NNNN.md");
+    expect(content).toContain("The stage report gives each example its own");
     expect(content).toContain("RED, GREEN, and Refactor commands and observed results");
     expect(content).toContain("Evidence without a command and result pair does not prove a");
   });

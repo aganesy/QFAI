@@ -4,17 +4,19 @@ import path from "node:path";
 import { createTestLayerRoots, resolveTestKind, type AtddTestKind } from "../atddTraceability.js";
 import { resolvePath, type QfaiConfig } from "../config.js";
 import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "../fs.js";
-import { parseStoryTestAnnotations } from "../storyTree/ids.js";
+import { parseCountedExampleAnnotations, parseStoryTestAnnotations } from "../storyTree/ids.js";
 import { classifyRecordRow } from "../storyTree/tables.js";
 import { readStoryTreeModel, type StoryTreeModel } from "../storyTree/tree.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "../traceability.js";
 import type { Issue } from "../types.js";
+import { unreadTraceMarks } from "./unreadTraceMarks.js";
 import { issue } from "./utils.js";
 
 export type StoryTestFile = {
   file: string;
   content: string;
   kind: AtddTestKind | null;
+  /** Whether configured test-file globs select this file for BF, AC and EX coverage. */
   selectedForExample: boolean;
 };
 
@@ -39,6 +41,9 @@ export function validateStoryTreeObligationsModel(
   };
   const covered = { BF: new Set<string>(), AC: new Set<string>(), EX: new Set<string>() };
   for (const file of files) {
+    if (profile === "tdd" && file.selectedForExample) {
+      issues.push(...unreadTraceMarks(file.file, file.content));
+    }
     const annotations = parseStoryTestAnnotations(file.content);
     for (const id of annotations.BF) {
       if (!known.BF.has(id)) {
@@ -65,7 +70,7 @@ export function validateStoryTreeObligationsModel(
           ),
         );
       }
-      if (file.kind === "e2e") covered.BF.add(id);
+      if (file.selectedForExample && file.kind === "e2e") covered.BF.add(id);
     }
     for (const id of annotations.AC) {
       if (!known.AC.has(id)) {
@@ -92,8 +97,10 @@ export function validateStoryTreeObligationsModel(
           ),
         );
       }
-      if (file.kind === "integration" || file.kind === "api") covered.AC.add(id);
+      if (file.selectedForExample && (file.kind === "integration" || file.kind === "api"))
+        covered.AC.add(id);
     }
+    const counted = new Set(parseCountedExampleAnnotations(file.content));
     for (const id of annotations.EX) {
       if (!known.EX.has(id)) {
         issues.push(
@@ -119,7 +126,7 @@ export function validateStoryTreeObligationsModel(
           ),
         );
       }
-      if (countsForExample(file)) covered.EX.add(id);
+      if (countsForExample(file) && counted.has(id)) covered.EX.add(id);
     }
   }
 
@@ -176,7 +183,7 @@ function toPosix(value: string): string {
   return value.replace(/\\/g, "/");
 }
 
-/** Reads acceptance layers and the configured EX test selectors once per run. */
+/** Reads acceptance layers and configured test-file selectors once per run. */
 export async function readStoryTests(
   root: string,
   config: QfaiConfig,

@@ -1,5 +1,4 @@
 // QFAI:AC-0001-0194-05
-// QFAI:EX-0001-0194-17
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -23,6 +22,7 @@ async function workflowSources(): Promise<string[]> {
   ];
 }
 
+// QFAI:EX-0001-0194-17
 it("Run the CLI message language check", async () => {
   const files = (await workflowSources()).map((file) => relativeToPosix(SRC, file));
   const japanese = await Promise.all(

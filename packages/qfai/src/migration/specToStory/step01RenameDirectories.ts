@@ -20,7 +20,6 @@ export const STEP01_RENAMES = [
   [".qfai/assistant/skills.local", ".qfai/assistant/skill.local"],
   [".qfai/assistant/agents", ".qfai/assistant/agent"],
   [".qfai/assistant/prompts", ".qfai/assistant/prompt"],
-  [".qfai/evidence/decisions", ".qfai/evidence/decision"],
   [".qfai/report/specs-coverage", ".qfai/report/spec-coverage"],
 ] as const;
 
@@ -69,20 +68,6 @@ async function exists(absolutePath: string): Promise<boolean> {
     throw new MigrationInputError(
       `${absolutePath}: ${error instanceof Error ? error.message : String(error)}`,
     );
-  }
-}
-
-async function availableLegacyTarget(
-  root: string,
-  sourceDir: string,
-  name: string,
-  reserved: ReadonlySet<string>,
-): Promise<string> {
-  const sourceName = path.posix.basename(sourceDir);
-  const base = `.qfai/evidence/migration-spec-to-story/legacy/${sourceName}/${name}`;
-  for (let suffix = 1; ; suffix += 1) {
-    const candidate = suffix === 1 ? base : `${base}-${suffix}`;
-    if (!reserved.has(candidate) && !(await exists(path.join(root, candidate)))) return candidate;
   }
 }
 
@@ -139,7 +124,6 @@ export const step01: MigrationStep = {
   writeSet: ["qfai", "specs", "contracts", "config"],
   async plan(context: MigrationContext) {
     const operations: MigrationOperation[] = [];
-    const reserved = new Set<string>();
     for (const [sourceDir, targetDir] of STEP01_RENAMES) {
       if (!(await shouldRenameSource(context, sourceDir))) continue;
       const source = path.join(context.root, sourceDir);
@@ -153,13 +137,13 @@ export const step01: MigrationStep = {
         );
       }
       for (const name of entries.sort()) {
-        const originalTarget = `${targetDir}/${name}`;
-        const target =
-          reserved.has(originalTarget) || (await exists(path.join(context.root, originalTarget)))
-            ? await availableLegacyTarget(context.root, sourceDir, name, reserved)
-            : originalTarget;
-        operations.push({ kind: "move", source: `${sourceDir}/${name}`, target });
-        reserved.add(target);
+        const source = `${sourceDir}/${name}`;
+        const target = `${targetDir}/${name}`;
+        operations.push(
+          (await exists(path.join(context.root, target)))
+            ? { kind: "remove", target: source, description: "delete: the destination exists" }
+            : { kind: "move", source, target },
+        );
       }
       operations.push({ kind: "remove-empty-directory", target: sourceDir });
     }

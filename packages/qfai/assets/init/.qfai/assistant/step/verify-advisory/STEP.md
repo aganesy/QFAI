@@ -2,8 +2,8 @@
 name: verify-advisory
 owner: qfai-verify
 purpose: "Prepare the security advisory, the CVE request and the coordinated disclosure for a fixed vulnerability, without publishing any of them."
-requires: [common-evidence-record]
-roles: [orchestrator, doc-steward, completion-reviewer]
+requires: []
+roles: [orchestrator, doc-steward]
 routing-profile: default
 ---
 
@@ -21,7 +21,7 @@ reporter. This step prepares that and publishes nothing.
 
 ## Writes
 
-Only a git-ignored record under `.qfai/evidence/`, holding:
+No file. The stage report holds:
 
 - the advisory draft: a summary, the affected versions, the fixed release,
   the severity and how it was scored, the impact, any workaround, and the
@@ -44,5 +44,5 @@ vulnerability before the disclosure date.
 
 - The draft carries every part listed under Writes.
 - Nothing was published, requested or sent.
-- The completion reviewer checked the draft against the intake record and the
+- The code review checked the draft against the intake record and the
   fix.

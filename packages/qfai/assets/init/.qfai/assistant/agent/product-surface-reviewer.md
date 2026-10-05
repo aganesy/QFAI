@@ -74,8 +74,8 @@ specialization_tags:
 - UI contract files: every `.yaml` / `.yml` under `<paths.contractsDir>/ui/**`, walked recursively.
   `paths.contractsDir` comes from `qfai.config.yaml` (default `.qfai/spec/03_contract`).
   Read the same contracts that routed the review here (`skill/qfai-implement/references/ui-affecting.md`).
-- Prototype handoff at `.qfai/evidence/prototyping/prototyping.json#handoff` when a prototyping loop ran: the final prototype, `procurement` and implementation notes.
-  The evidence tree is local to the checkout, so read it in the checkout that ran the loop.
+- Prototype handoff at `.qfai/prototype/final/handoff.json` when a prototyping loop ran: the final prototype, `procurement` and implementation notes.
+  Read it in the checkout that ran the loop.
 - Root `DESIGN.md` for the brand tokens.
 - Runtime screenshots / HTML evidence / relevant diffs
 

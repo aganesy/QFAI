@@ -32,7 +32,7 @@ export class ModeGuidance {
       reasoning:
         reasons.length > 0
           ? `packages/qfai prototyping runs the single-thread evolution loop; project characteristics: ${reasons.join("; ")}.`
-          : "packages/qfai prototyping always runs the single-thread evolution loop (10 cycles, 4 ordinal axes).",
+          : "packages/qfai prototyping always runs the single-thread evolution loop (4 ordinal axes, until the user confirms the prototype).",
     };
   }
 }
