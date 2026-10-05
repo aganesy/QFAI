@@ -22,6 +22,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   A mark inside a string literal is left alone. The marks this repository
   still carried are rewritten as plain comments, and its migration fixtures
   are excluded from the test globs (#2308).
+- **A decision row can be marked as partly superseded.** `decisions.md` accepts
+  the Status `PARTLY SUPERSEDED (by DEC-NNNN)`, naming the later row that
+  narrows the decision without replacing it. A test exception or change request
+  at that Status stays in force. The story-tree authoring rules also say that a
+  project counting the IDs of its open pull requests may take a next ID above
+  the tree's own highest plus one (#2969).
 
 ### Fixed
 
@@ -29,6 +35,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and list included every distributed file, including those already identical to
   the shipped copy. Rule files, the Copilot and Codex files and the agent and
   skill links that need no change are now counted as skipped (#2986).
+
+- **The `qfai-run` entry reminder stays silent on a turn the host starts
+  (#2989).** The Claude Code `UserPromptSubmit` hook that sends a request to
+  `qfai-run` printed on every notification, so an agent could start a run from
+  one. It now prints nothing when a line of the prompt opens with
+  `<task-notification>`, `<wake>` or `[SYSTEM NOTIFICATION`, and the
+  question-form reminder skips the same header. A prompt with no such line, and
+  input it cannot read, still get the reminder. `qfai init` replaces an unedited
+  copy of either earlier group.
 
 - **The free-text entry reminder points a worktree session at its own copy of
   `qfai-run`.** The host can load the skill from the main checkout, which may
@@ -65,7 +80,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `AC-0003-0004-01` gains a deprecated `paths.promptsDir` warning case.
   The BF-0003 full pin keeps only `AC-0003-0006-01` and `AC-0003-0006-03`.
   Refs #2367.
-
+- **Configure and web research follow the shared delegation rules alone**
+  (#2857). Both skills carried empty override stanzas, and configure restated
+  the failure handling. A failed delegation is now classified and handled only
+  as the shared delegation baseline sets out.
 - **A DONE change request claims every action it lists** (#2312). A
   `decisions.md` row has one Status, so a request with one action deferred could
   be marked DONE and the deferred action dropped from view. The drift protocol
