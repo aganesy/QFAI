@@ -25,6 +25,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The migration skill cites its shared rules by full path.** The
+  delegation-baseline and test-layers pointers started at `rule/`, so they did
+  not resolve from the project root. Both now begin at `.qfai/assistant/rule/`.
+  (#2858)
 - **The planner-first and design anti-goal examples are tested for what they
   say.** The planner-first example was annotated on a test that only checked
   three file names. Its test now reads the completion matrix and the
