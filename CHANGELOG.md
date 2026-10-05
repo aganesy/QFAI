@@ -38,6 +38,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   at that Status stays in force. The story-tree authoring rules also say that a
   project counting the IDs of its open pull requests may take a next ID above
   the tree's own highest plus one (#2969).
+- **`qfai-run` has guidance for a change that needs a person's action outside
+  the repository.** When a change depends on something only the user can do,
+  such as a hosted dashboard setting or a token issued in a web console, the
+  work stops before that stage and says what the user must do, what shows it was
+  done and what the agent will read to check it. The agent never enters a
+  password, token or key and never changes an account setting. The extraction
+  reference says such a request keeps the repository change's intent with the
+  `env` flag (#2999).
 
 ### Fixed
 
@@ -174,6 +182,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   skill keeps its 150-line limit, at 135 lines instead of 150, and its
   behaviour is unchanged.
 
+- **The `change-tooling` route starts at `edit`** (#2995). A change to CI, a
+  workflow or a build script has no business flow, story or example, so the
+  `implement-diagnose` stage it began with had nothing to record and was passed
+  over. The plan is now `edit`, `note`, `verify`, and the contract rule and the
+  example that state it say the same.
+
 - **A mutation proof belongs to one example** (#2409). The `qfai-implement`
   oracle-strength reference now says what to do when one mutation fails tests
   annotated with different examples: record each failing assertion and the
@@ -212,6 +226,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   test that existed before the change. The three other questions a regression
   review asks point at the checks that already own them: the coverage gate, and
   the proof per example in the oracle strength reference.
+
+- **The repository's dogfooding ratchet pins each finding, not each file's
+  count.** `scripts/check-dogfood-backlog.mjs` keys an error by its code and the
+  IDs it names, so a change that clears one untested example and adds another
+  in the same file no longer passes at the same count. A pin still written as a
+  bare count is refused with the command that re-pins it. Fixes #2355.
+
 - **Five doctor criteria now name the tests that prove them.** Existing
   integration tests carry standalone `QFAI:AC-...` comments, and
   `AC-0003-0004-01` gains a deprecated `paths.promptsDir` warning case.
