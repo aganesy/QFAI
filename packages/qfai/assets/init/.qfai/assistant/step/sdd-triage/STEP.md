@@ -150,7 +150,9 @@ this step took it or the operator answered it.
 ## ID allocation
 
 Allocate each new ID from the highest ID of its kind in scope plus one,
-including retired IDs named in decisions rows. BF scope is project-wide; US
+including retired IDs named in decisions rows. A project that also counts the
+IDs its open pull requests add takes the highest across the tree and those pull
+requests, so a gap above the tree's own highest is allowed. BF scope is project-wide; US
 scope is its BF; AC and EX scope is their US; a contract number's scope is every
 contract of every kind; BR scope is its contract, whose number the BR carries
 (`BR-0002-0001` belongs to `API-0002`); DEC and OQ scope is their own table.

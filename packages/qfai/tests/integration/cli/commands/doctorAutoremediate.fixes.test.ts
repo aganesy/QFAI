@@ -6,13 +6,14 @@
 // validate run logs (--clean behavior). The npm install side effect is
 // routed through a test runner so the test never touches the network.
 
-import { access, mkdir, mkdtemp, readFile, rm, utimes, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, utimes, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
 import { runAutoremediate } from "../../../../src/core/doctor/autoremediate.js";
+import { pathExists } from "../../../helpers/pathExists.js";
 
 const tempDirs: string[] = [];
 
@@ -30,15 +31,6 @@ afterEach(async () => {
     }
   }
 });
-
-async function fileExists(target: string): Promise<boolean> {
-  try {
-    await access(target);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 describe("doctor --autoremediate fixes install + clean", () => {
   it("invokes install runner for missing deps, prunes a stale run log, leaves the config alone", async () => {
@@ -82,8 +74,8 @@ describe("doctor --autoremediate fixes install + clean", () => {
     expect(installCalls).toEqual(["playwright"]);
     expect(summary.installed).toContain("playwright");
     expect(summary.prunedRunLogs).toEqual(["run-20260401120000001"]);
-    expect(await fileExists(staleRun)).toBe(false);
-    expect(await fileExists(freshRun)).toBe(true);
+    expect(await pathExists(staleRun)).toBe(false);
+    expect(await pathExists(freshRun)).toBe(true);
     expect(await readFile(configPath, "utf-8")).toBe(config);
   });
 

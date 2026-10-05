@@ -22,8 +22,29 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   A mark inside a string literal is left alone. The marks this repository
   still carried are rewritten as plain comments, and its migration fixtures
   are excluded from the test globs (#2308).
+- **A decision row can be marked as partly superseded.** `decisions.md` accepts
+  the Status `PARTLY SUPERSEDED (by DEC-NNNN)`, naming the later row that
+  narrows the decision without replacing it. A test exception or change request
+  at that Status stays in force. The story-tree authoring rules also say that a
+  project counting the IDs of its open pull requests may take a next ID above
+  the tree's own highest plus one (#2969).
 
 ### Fixed
+
+- **The `qfai-run` entry reminder stays silent on a turn the host starts
+  (#2989).** The Claude Code `UserPromptSubmit` hook that sends a request to
+  `qfai-run` printed on every notification, so an agent could start a run from
+  one. It now prints nothing when a line of the prompt opens with
+  `<task-notification>`, `<wake>` or `[SYSTEM NOTIFICATION`, and the
+  question-form reminder skips the same header. A prompt with no such line, and
+  input it cannot read, still get the reminder. `qfai init` replaces an unedited
+  copy of either earlier group.
+
+- **The free-text entry reminder points a worktree session at its own copy of
+  `qfai-run`.** The host can load the skill from the main checkout, which may
+  lag the worktree, so the reminder now tells the agent to read
+  `.claude/skills/qfai-run/SKILL.md` under the current directory. The reminder
+  is read from the session's own checkout. Fixes #2972.
 
 - **The changelog guard no longer fails the commit a release is tagged at.**
   The guard refuses an entry added to a section whose tag exists. The merge
