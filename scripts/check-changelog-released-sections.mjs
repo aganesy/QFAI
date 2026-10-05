@@ -37,9 +37,10 @@
  * ## The tag
  *
  * `git ls-remote --tags origin refs/tags/v<version>` answers whether a section
- * is released, and works in a shallow checkout. A lookup that fails refuses the
- * section as released and prints a note: an unknown answer does not open a
- * released section.
+ * is released, and works in a shallow checkout. A tag on HEAD itself is the
+ * release being cut and does not count, so the push that merges a release
+ * passes. A lookup that fails refuses the section as released and prints a
+ * note: an unknown answer does not open a released section.
  *
  * ## The base
  *
@@ -98,13 +99,36 @@ export function addedEntries(baseChangelog, headChangelog) {
   return added;
 }
 
+/**
+ * Whether an `ls-remote` listing of one tag names a release built before
+ * `head`: true when the tag exists on another commit, false when there is no
+ * tag or it points at `head` itself. An annotated tag lists twice, and the
+ * peeled `^{}` line is the commit.
+ *
+ * A tag on `head` is the release being cut. The merge that folds
+ * `## [Unreleased]` into the released section is the commit the tag is pushed
+ * to, so no release page has been built from the section yet.
+ */
+export function taggedBefore(listing, head) {
+  const lines = listing
+    .split("\n")
+    .map((line) => line.trim().split(/\s+/))
+    .filter((parts) => parts.length === 2);
+  if (lines.length === 0) return false;
+  const peeled = lines.find(([, ref]) => ref.endsWith("^{}"));
+  const [commit] = peeled ?? lines[0];
+  return commit !== head;
+}
+
 /** Whether `v<version>` is a tag on origin: true, false, or null when the lookup failed. */
 export function tagOnOrigin(version) {
-  const result = spawnSync("git", ["ls-remote", "--tags", "origin", `refs/tags/v${version}`], {
+  const ref = `refs/tags/v${version}`;
+  const result = spawnSync("git", ["ls-remote", "--tags", "origin", ref, `${ref}^{}`], {
     encoding: "utf-8",
   });
   if (result.status !== 0) return null;
-  return result.stdout.trim() !== "";
+  const head = spawnSync("git", ["rev-parse", "HEAD"], { encoding: "utf-8" });
+  return taggedBefore(result.stdout, head.status === 0 ? head.stdout.trim() : "");
 }
 
 /**

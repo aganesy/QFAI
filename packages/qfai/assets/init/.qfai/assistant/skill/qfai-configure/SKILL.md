@@ -69,18 +69,6 @@ When unsure, read inputs in this order:
 
 Follow `.qfai/assistant/rule/shared-skill-delegation-baseline.md`.
 
-### Orchestrator Protocol
-
-- No additional overrides.
-
-### Capability Probe
-
-- No additional overrides.
-
-### Delegation Failure (Hard Stop)
-
-- No additional overrides.
-
 ### Work Orders Summary (evidence)
 
 Use the shared schema.
@@ -243,11 +231,6 @@ Constraints:
 Return:
 - proposed globs + rationale + evidence refs
 ```
-
-### Failure rule
-
-- A delegation the orchestrator chose to make is its own capability check.
-- A failed delegation is handled as `.qfai/assistant/rule/shared-skill-delegation-baseline.md` sets out. Do not simulate roles.
 
 ## Completion Separation (mandatory)
 

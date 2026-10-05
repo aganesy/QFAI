@@ -268,6 +268,42 @@ describe("assets guardrails", () => {
     }
   });
 
+  it("ensures shared delegation baseline lets the orchestrator work while a delegation runs", async () => {
+    const baselinePath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "rule",
+      "shared-skill-delegation-baseline.md",
+    );
+    const baseline = await readFile(baselinePath, "utf-8");
+    const start = baseline.indexOf("### Orchestrator Protocol");
+    const end = baseline.indexOf("### Capability Probe (MUST)");
+    expect(start).toBeGreaterThan(-1);
+    expect(end).toBeGreaterThan(start);
+    const protocol = baseline.slice(start, end).replace(/\s+/g, " ");
+
+    const requiredPhrases = [
+      // The permission itself: without it "delegate, then integrate" reads as
+      // an order and the orchestrator waits on every delegation.
+      "The orchestrator is not required to wait while a sub-agent runs.",
+      // The three host capabilities the permission depends on.
+      "starts a delegation and returns at once",
+      "delivers the finished result later as a message",
+      "lets the orchestrator wait for a result on purpose",
+      // With all three, the orchestrator works while work remains. Otherwise it waits.
+      "carries on with its own work meanwhile and waits only when it has none.",
+      "A host without all three keeps the orchestrator waiting.",
+      // The work it may do, and the bounds on it.
+      "It never repeats the work it handed out.",
+      "Starting another delegation needs the independence conditions of `.qfai/assistant/skill/qfai-implement/references/parallelization-policy.md`.",
+      "carrying on does not override it.",
+    ];
+
+    for (const phrase of requiredPhrases) {
+      expect(protocol).toContain(phrase);
+    }
+  });
+
   it("ensures shared operating baseline defines gate failure autorepair protocol", async () => {
     const baselinePath = path.join(
       templateQfaiDir,
@@ -635,17 +671,6 @@ describe("assets guardrails", () => {
     ]) {
       expect(findBudgetRestatements(allowed), `must allow: ${allowed}`).toEqual([]);
     }
-  });
-
-  it("placeholder for removed v1.x test (ships ui contract sample) — replaced by ui-contract.sample.yaml direct check above", () => {
-    expect(true).toBe(true);
-  });
-
-  it("placeholder for retired evidence-requirements asset", () => {
-    // The legacy evidence-requirements.md asset has been replaced by
-    // qfai-prototyping/references/iteration-loop.md (covered by the
-    // dedicated iteration-loop test above).
-    expect(true).toBe(true);
   });
 
   it("ships qa-gatekeeper agent card", async () => {
