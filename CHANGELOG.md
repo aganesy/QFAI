@@ -18,6 +18,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Two governance tests can now fail.** The missing-bucket test matched
+  bucket names the message always prints; it now checks the
+  `missingBuckets=[...]` list, with a second case where one bucket is missing.
+  The `qfai-maintain` routing test now finds no reviewer agent among the
+  agents of the route's phases. (#2295)
 - **Each `qfai init` mode-line example is annotated on its own test.** The
   three annotations sat at the top of the file, so any passing test there
   counted for all three. The test covering the four mode values names the value
