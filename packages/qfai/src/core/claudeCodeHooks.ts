@@ -179,6 +179,13 @@ const SUPERSEDED_HOOK_GROUPS: ReadonlySet<string> = new Set([
   "42e59754850b7e1e7e3b62e6ea596810552a0a05db64504ae17522748a7f1998",
   // free-text entry: the program that read no input, before it skipped automated turns
   "8ed926315594cbe69d000b754cbf4e67cedf3cdcaab82d60fdee20adcd6cc16e",
+  // minimal implementation and design-artifact grilling in `.claude/settings.json` and
+  // `.codex/hooks.json`, before the first skipped files that are not product source and the second
+  // reminded once per session
+  "cd1490ce2ef9062619617277eb4d684d6b1d934f9b1ed2df2751660d6c72e650",
+  "3d67d2654ce6fbe4cd060a55598ecd5b0198f06c7b13b8b75ea3462e0fc122ac",
+  "2ae0c735ac2c72fffd652a2cb3b818c8f2dbefd0493998a86d46c6160d99734b",
+  "8bd6fb0f6757f6b3e1d5091ff8725dafcd2647fcb5a848ec59659678c6b2eac7",
 ]);
 
 export type HookMergeResult =

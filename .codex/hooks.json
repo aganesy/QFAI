@@ -50,7 +50,7 @@
           {
             "type": "command",
             "statusMessage": "QFAI grilling reminder: design artifact",
-            "command": "node -e \"try{const f=require('fs'),p=require('path');let d=process.cwd(),r;for(;;){const c=p.join(d,'.agents','rules','reminders.json');if(r===undefined&&f.existsSync(c))r=c;if(f.existsSync(p.join(d,'.git')))break;const u=p.dirname(d);if(u===d){r=undefined;break}d=u}if(r){const m=JSON.parse(f.readFileSync(r,'utf8'))[process.argv[1]];m===undefined||console.log(JSON.stringify(m))}}catch{}\" grilling-design-artifact",
+            "command": "node -e \"try{const f=require('fs'),p=require('path');let d=process.cwd(),r;for(;;){const c=p.join(d,'.agents','rules','reminders.json');if(r===undefined&&f.existsSync(c))r=c;if(f.existsSync(p.join(d,'.git')))break;const u=p.dirname(d);if(u===d){r=undefined;break}d=u}if(r){let go=true;try{const s=JSON.parse(f.readFileSync(0,'utf8')).session_id;if(typeof s==='string'&&s.length>0){const k=p.join(require('os').tmpdir(),'qfai-grilling-'+require('crypto').createHash('sha256').update(s).digest('hex').slice(0,32));try{f.writeFileSync(k,'',{flag:'wx'})}catch(e){if(e.code==='EEXIST')go=false}}}catch{}if(go){const m=JSON.parse(f.readFileSync(r,'utf8'))[process.argv[1]];m===undefined||console.log(JSON.stringify(m))}}}catch{}\" grilling-design-artifact",
             "timeout": 10
           }
         ]
@@ -102,7 +102,7 @@
           {
             "type": "command",
             "statusMessage": "QFAI minimal-implementation reminder",
-            "command": "node -e \"try{const f=require('fs'),p=require('path');let d=process.cwd(),r;for(;;){const c=p.join(d,'.agents','rules','reminders.json');if(r===undefined&&f.existsSync(c))r=c;if(f.existsSync(p.join(d,'.git')))break;const u=p.dirname(d);if(u===d){r=undefined;break}d=u}if(r){const m=JSON.parse(f.readFileSync(r,'utf8'))[process.argv[1]];m===undefined||console.log(JSON.stringify(m))}}catch{}\" minimal-implementation",
+            "command": "node -e \"try{const f=require('fs'),p=require('path');let d=process.cwd(),r;for(;;){const c=p.join(d,'.agents','rules','reminders.json');if(r===undefined&&f.existsSync(c))r=c;if(f.existsSync(p.join(d,'.git')))break;const u=p.dirname(d);if(u===d){r=undefined;break}d=u}if(r){let go=true;try{const R=p.dirname(p.dirname(p.dirname(r))),n=(x=>{const s=x.split(p.sep),b=s.pop();return p.isAbsolute(x)||s[0]==='..'||s.some(y=>['tmp','test','tests','__tests__','node_modules','.qfai','.agents'].includes(y))||b[0]==='.'||/\\.(test|spec)\\./.test(b)||['.md','.mdx','.markdown','.txt','.rst','.yml','.yaml','.json','.jsonc','.json5','.toml','.ini','.csv','.tsv','.lock','.svg','.png','.jpg','.jpeg','.gif'].includes(p.extname(b).toLowerCase())}),a=[...JSON.parse(f.readFileSync(0,'utf8')).tool_input.command.matchAll(/^\\*\\*\\* (?:(?:Add|Update|Delete) File|Move to): (.+)/gm)].map(m=>p.relative(R,p.resolve(process.cwd(),m[1].trim())));if(a.length>0&&a.every(n))go=false}catch{}if(go){const m=JSON.parse(f.readFileSync(r,'utf8'))[process.argv[1]];m===undefined||console.log(JSON.stringify(m))}}}catch{}\" minimal-implementation",
             "timeout": 10
           }
         ]

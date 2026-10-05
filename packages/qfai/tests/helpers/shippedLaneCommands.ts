@@ -1539,7 +1539,15 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // The two programs are now the same text. Events, matchers and markers are unchanged; the
   // previous groups are listed as superseded so the merge refreshes them. Restoring the two
   // programs reproduces `673f14b2…` byte for byte.
-  [".claude/settings.json", "0bf2f12f9f3bb18a767be123148e58db33fb635d2e5a945bbae32e383c64d681"],
+  //
+  // Re-pinned when the minimal-implementation reminder after a write started reading the file the
+  // call names and staying silent for what is plainly not product source, and the design-artifact
+  // grilling reminder started printing on the first write or edit of a session only. Both read the
+  // tool call from stdin; the second leaves an empty file in the system temporary directory.
+  // Events, matchers and markers are unchanged; the previous groups are listed as superseded so
+  // the merge refreshes them. Derived by running `qfai init` into a temp root and hashing what it
+  // wrote.
+  [".claude/settings.json", "be7e479cddaf22f93aae90f10ffdde2112d31dcf51a3687f4dd16e361dba67a2"],
   // Inside `.codex/`, and pinned for the reason `.claude/settings.json` is: its commands are a
   // program an adopter's agent runs. Two `UserPromptSubmit` groups, structured-question and
   // free-text entry. Codex takes one command string, so each runs the same `node -e` reader
@@ -1566,7 +1574,12 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // file as every other line does, then looks for `node_modules/.bin/qfai`, or `.pnp.cjs` beside a `package.json` that lists qfai, from
   // that project up to the first directory that holds `.git`, and holds no character those shells
   // expand. Derived the same way; dropping that one group reproduces `d48bbc58…`.
-  [".codex/hooks.json", "d159e0319cdf72a8843a47f5943ca7fe7393d9e55225495020e2f7263dece46c"],
+  //
+  // Re-pinned for the same two changes as `.claude/settings.json`: the minimal-implementation entry
+  // reads the paths of the patch and the grilling entry before a patch prints once per session.
+  // Each is still one `node -e "<program>" <key>` line that holds no character a hook shell
+  // expands, and the walk that finds the message file is unchanged. Derived the same way.
+  [".codex/hooks.json", "4b7ef6e61b5b500a75fc23aa6b78609c48207261effe91f3ad4cf81a83f14218"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`

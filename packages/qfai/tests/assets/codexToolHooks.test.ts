@@ -11,12 +11,13 @@
  * `cmd.exe /C` and PowerShell.
  */
 
-import { copyFile, mkdir, mkdtemp, readFile } from "node:fs/promises";
+import { createHash, randomUUID } from "node:crypto";
+import { copyFile, mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 
 import {
   API_BUDGET_HOOK_MARKER,
@@ -26,7 +27,12 @@ import {
   GRILLING_PLAN_HOOK_MARKER,
   MINIMAL_IMPLEMENTATION_HOOK_MARKER,
 } from "../../src/core/claudeCodeHooks.js";
-import { runOnEveryShell } from "../helpers/codexHookShells.js";
+import {
+  CODEX_SHELLS,
+  type CodexShell,
+  runCodexLine,
+  runOnEveryShell,
+} from "../helpers/codexHookShells.js";
 import { EXIT_ZERO, spawnCaptured } from "../helpers/spawnCaptured.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
@@ -103,9 +109,14 @@ async function codexEntry(event: string, key: string): Promise<Entry> {
 }
 
 /** The hook input Codex writes to stdin for one tool call. */
-function codexInput(event: string, toolName: string, command: string): string {
+function codexInput(
+  event: string,
+  toolName: string,
+  command: string,
+  sessionId: string | null = "s",
+): string {
   return JSON.stringify({
-    session_id: "s",
+    ...(sessionId === null ? {} : { session_id: sessionId }),
     turn_id: "t",
     transcript_path: null,
     cwd: "/project",
@@ -151,13 +162,52 @@ async function firedEvent(entry: Entry, cwd: string, input: string): Promise<str
     outputs.add(result.stdout);
   }
   expect(outputs.size).toBe(1);
-  const stdout = [...outputs][0] ?? "";
+  return eventOf([...outputs][0] ?? "");
+}
+
+/** The event named in what an entry printed, or `null` when it printed nothing. */
+function eventOf(stdout: string): string | null {
   if (stdout.trim() === "") return null;
   const payload = asRecord(JSON.parse(stdout), "the output");
   const output = asRecord(payload.hookSpecificOutput, "hookSpecificOutput");
   expect(typeof output.additionalContext).toBe("string");
   return String(output.hookEventName);
 }
+
+/**
+ * Like `firedEvent`, one shell after another and with an input of each shell's own.
+ *
+ * An entry that remembers what it printed cannot be run by every shell at once on one input:
+ * the shell that runs second would find the first one's mark.
+ */
+async function firedPerShell(
+  entry: Entry,
+  cwd: string,
+  inputFor: (shell: CodexShell) => string,
+): Promise<string | null> {
+  const events = new Set<string | null>();
+  for (const shell of CODEX_SHELLS) {
+    const result = await runCodexLine(entry, shell, cwd, inputFor(shell));
+    expect(result.outcome, `${shell}: ${result.stderr}`).toBe(EXIT_ZERO);
+    expect(result.stderr, shell).toBe("");
+    events.add(eventOf(result.stdout));
+  }
+  expect(events.size).toBe(1);
+  return [...events][0] ?? null;
+}
+
+/** The files the grilling entry leaves in the system temporary directory, one per session. */
+const sessionMarkers: string[] = [];
+function freshSession(label: string): string {
+  const id = `${label}-${randomUUID()}`;
+  const digest = createHash("sha256").update(id).digest("hex").slice(0, 32);
+  sessionMarkers.push(path.join(os.tmpdir(), `qfai-grilling-${digest}`));
+  return id;
+}
+
+afterAll(async () => {
+  await Promise.all(sessionMarkers.map((marker) => rm(marker, { force: true })));
+});
 
 function patch(header: string): string {
   return `*** Begin Patch\n${header}\n@@\n-old\n+new\n*** End Patch\n`;
@@ -295,18 +345,70 @@ describe("the Codex tool-time reminders", () => {
     const grilling = await codexEntry("PreToolUse", "grilling-design-artifact");
     await withProject(async (cwd) => {
       const cases = [
-        ["*** Add File: docs/a.md", "PostToolUse", null],
-        ["*** Update File: README.md", null, "PostToolUse"],
-        ["*** Update File: src/a.ts", null, null],
-        ["*** Add File: docs/a.mdx", null, null],
+        ["*** Add File: docs/a.md", "PostToolUse", null, null],
+        ["*** Update File: README.md", null, "PostToolUse", null],
+        ["*** Update File: src/a.ts", null, null, "PostToolUse"],
+        ["*** Add File: docs/a.mdx", null, null, null],
       ] as const;
-      for (const [header, writeFires, editFires] of cases) {
+      for (const [header, writeFires, editFires, minimalFires] of cases) {
         const post = codexInput("PostToolUse", "apply_patch", patch(header));
         expect(await firedEvent(write, cwd, post), header).toBe(writeFires);
         expect(await firedEvent(edit, cwd, post), header).toBe(editFires);
-        expect(await firedEvent(minimal, cwd, post), header).toBe("PostToolUse");
-        const pre = codexInput("PreToolUse", "apply_patch", patch(header));
-        expect(await firedEvent(grilling, cwd, pre), header).toBe("PreToolUse");
+        expect(await firedEvent(minimal, cwd, post), header).toBe(minimalFires);
+        const fired = await firedPerShell(grilling, cwd, (shell) =>
+          codexInput("PreToolUse", "apply_patch", patch(header), freshSession(shell)),
+        );
+        expect(fired, header).toBe("PreToolUse");
+      }
+    });
+  });
+
+  // QFAI:EX-0001-0196-53
+  it("remind about implementation only for a patch that touches product source", async () => {
+    const minimal = await codexEntry("PostToolUse", "minimal-implementation");
+    await withProject(async (cwd) => {
+      for (const [header, fires] of [
+        ["*** Update File: src/a.ts", true],
+        ["*** Add File: docs/a.md\n*** Update File: src/a.ts", true],
+        ["*** Update File: src/a.ts\n*** Move to: tmp/a.ts", true],
+        ["*** Update File: tmp/x.py", false],
+        ["*** Update File: tests/a.ts", false],
+        ["*** Update File: src/a.test.ts", false],
+        ["*** Add File: README.md\n*** Update File: package.json", false],
+        ["*** Add File: .env.example", false],
+        ["*** Update File: ../../../../outside.ts", false],
+      ] as const) {
+        const input = codexInput("PostToolUse", "apply_patch", patch(header));
+        expect(await firedEvent(minimal, cwd, input), header).toBe(fires ? "PostToolUse" : null);
+      }
+      // A call that names no file is not a reason to stay silent.
+      const none = codexInput("PostToolUse", "apply_patch", "*** Begin Patch\n*** End Patch\n");
+      expect(await firedEvent(minimal, cwd, none)).toBe("PostToolUse");
+    });
+  });
+
+  // QFAI:EX-0001-0196-54
+  it("remind about grilling before a patch once per session", async () => {
+    const grilling = await codexEntry("PreToolUse", "grilling-design-artifact");
+    await withProject(async (cwd) => {
+      const input = (sessionId: string | null): string =>
+        codexInput("PreToolUse", "apply_patch", patch("*** Update File: src/a.ts"), sessionId);
+      for (const shell of CODEX_SHELLS) {
+        const first = freshSession(shell);
+        const events: (string | null)[] = [];
+        for (const sessionId of [first, first, freshSession(shell), null, null]) {
+          const result = await runCodexLine(grilling, shell, cwd, input(sessionId));
+          expect(result.outcome, `${shell}: ${result.stderr}`).toBe(EXIT_ZERO);
+          expect(result.stderr, shell).toBe("");
+          events.push(eventOf(result.stdout));
+        }
+        expect(events, shell).toEqual([
+          "PreToolUse",
+          null,
+          "PreToolUse",
+          "PreToolUse",
+          "PreToolUse",
+        ]);
       }
     });
   });

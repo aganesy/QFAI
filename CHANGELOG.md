@@ -36,6 +36,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The write-time reminders stop repeating on files they do not concern.**
+  The minimal-implementation reminder after a write or edit now prints only for
+  product source: not for a test, a file under `tmp/`, a document, a
+  configuration file or a file outside the project. The grilling reminder before
+  a write prints on the first write or edit of a session and not again in it.
+  Both apply to `.claude/settings.json` and `.codex/hooks.json`; a project that
+  kept an earlier group unedited gets the new one on the next `qfai init`
+  (#2993).
 - **The contract guide states one scope for contract kinds.** It named only
   `api/`, `db/` and `ui/` as contract directories in one place and `cli/` in
   another. It now says a project's contracts are the three directories and that
