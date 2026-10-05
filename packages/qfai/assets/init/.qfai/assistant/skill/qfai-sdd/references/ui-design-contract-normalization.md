@@ -13,7 +13,7 @@ A cli-only target has no root `DESIGN.md`; it still normalizes
 `.qfai/assistant/step/sdd-contract/STEP.md#ui-contracts` states.
 
 `/qfai-prototyping` records its handoff in
-`.qfai/evidence/prototyping/prototyping.json#handoff`. SDD does not author it.
+`.qfai/prototype/final/handoff.json`. SDD does not author it.
 
 ## Removed yaml contracts (permanent)
 

@@ -3,7 +3,7 @@
  *
  * After the second-wave implementation lands, the shipped reference docs
  * (`references/iteration-loop.md`, `references/generator-prompt.md`,
- * `references/handoff.md`, `references/evidence-requirements.md`) and
+ * `references/handoff.md`) and
  * each affected `SKILL.md` MUST be rewritten to match the chosen
  * implementations. A "stale reference" is a substring in one of those
  * docs that still describes pre-implementation behavior — captured by
@@ -66,12 +66,7 @@ export const STALE_REFERENCES: readonly StaleReferenceEntry[] = [
  * required document surfaces plus every
  * `SKILL.md` under `.qfai/assistant/skills/`.
  */
-const REFERENCE_DOC_NAMES = [
-  "iteration-loop.md",
-  "generator-prompt.md",
-  "handoff.md",
-  "evidence-requirements.md",
-] as const;
+const REFERENCE_DOC_NAMES = ["iteration-loop.md", "generator-prompt.md", "handoff.md"] as const;
 
 /**
  * Validate that no stale-reference tokens appear in the in-tree

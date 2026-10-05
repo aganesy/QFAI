@@ -16,7 +16,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { runInit } from "../../src/cli/commands/init.js";
 import { defaultConfig } from "../../src/core/config.js";
-import { validateStorySteeringPlaceholders } from "../../src/core/validators/assistantAssets.js";
+import { validateStoryPolicyPlaceholders } from "../../src/core/validators/assistantAssets.js";
 import { captureStdout } from "../helpers/stdout.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
@@ -42,12 +42,12 @@ describe("init acceptance: seed, managed block and symlink probe", () => {
       await rm(path.join(root, ".qfai", "spec", "03_contract", kind), { recursive: true });
     }
 
-    expect(await validateStorySteeringPlaceholders(root, defaultConfig)).toEqual([]);
+    expect(await validateStoryPolicyPlaceholders(root, defaultConfig)).toEqual([]);
 
     const objective = path.join(root, ".qfai", "spec", "01_policy", "objective.md");
     await writeFile(objective, `${await readFile(objective, "utf-8")}\nProject goal.\n`, "utf-8");
     expect(
-      (await validateStorySteeringPlaceholders(root, defaultConfig)).map((found) => found.code),
+      (await validateStoryPolicyPlaceholders(root, defaultConfig)).map((found) => found.code),
     ).toEqual(["QFAI-ASSETS-003"]);
   });
 

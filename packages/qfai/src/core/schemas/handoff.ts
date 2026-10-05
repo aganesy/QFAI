@@ -15,8 +15,6 @@
  * contract.
  */
 
-import { parse as parseYaml } from "yaml";
-
 export const HANDOFF_MINIMUM_FIELDS = [
   "companyName",
   "primaryUiContract",
@@ -72,7 +70,7 @@ export function validateHandoff(input: unknown): HandoffValidationIssue[] {
     return issues;
   }
   // `Record<string, unknown>` is the structural supertype of any parsed
-  // JSON/YAML object; per-field reads narrow types explicitly.
+  // JSON object; per-field reads narrow types explicitly.
   const obj = input as Record<string, unknown>;
   for (const field of HANDOFF_MINIMUM_FIELDS) {
     if (!(field in obj)) continue;
@@ -89,31 +87,22 @@ export function validateHandoff(input: unknown): HandoffValidationIssue[] {
 }
 
 /**
- * Parse a YAML OR JSON handoff payload into a `Record<string, unknown>`
- * view. The canonical handoff format is YAML (per `references/handoff.md`);
- * JSON parses too, because JSON is a subset of YAML.
+ * Parse a handoff record, which is a JSON file, into a plain-object view.
  *
- * The parser is intentionally permissive on input shape (both formats
- * reduce to a plain object). It does NOT enforce the schema — that is
- * `validateHandoff`'s job; this returns `null` only when:
- *   - YAML parsing throws (the YAML library accepts JSON, so this
- *     covers both formats),
- *   - the parsed value is `null` (empty document),
- *   - the parsed value is not a plain object (array, scalar).
- *
- * Function-narrow imports (`parse as parseYaml`) keep the tree-shake
- * surface tight; the `yaml` package is already a project dep.
+ * It does not enforce the schema; that is `validateHandoff`'s job. It
+ * returns `null` when the text is not JSON or its top-level value is not
+ * a plain object.
  */
 export function parseHandoff(text: string): Record<string, unknown> | null {
   let parsed: unknown;
   try {
-    parsed = parseYaml(text);
+    parsed = JSON.parse(text);
   } catch {
     return null;
   }
-  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) return null;
-  // Narrow via structural check above (non-null, object, non-array);
-  // the YAML library returns `unknown` so this cast is the standard
-  // safe-after-guard pattern, not a bare assertion on user data.
-  return parsed as Record<string, unknown>;
+  return isRecord(parsed) ? parsed : null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
 }

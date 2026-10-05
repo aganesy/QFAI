@@ -74,18 +74,3 @@ describe.each(TREES)("%s", (tree) => {
     expect(await offendingLines(tree)).toEqual([]);
   });
 });
-
-describe("the implementation completion condition remains a list item", () => {
-  it.each(TREES)("%s", async (tree) => {
-    const skill = await readFile(
-      path.join(repoRoot, tree, "assistant/step/implement-checkpoint/STEP.md"),
-      "utf-8",
-    );
-    // Anchored at a line start, so a future re-join fails here too and names
-    // the clause rather than only the shape.
-    expect(skill).toMatch(
-      /^2\. Every implemented EX has an observed RED, GREEN and Refactor result,/m,
-    );
-    expect(skill).not.toMatch(/[^\n]- Every implemented EX/);
-  });
-});

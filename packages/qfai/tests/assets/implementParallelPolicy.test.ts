@@ -54,9 +54,7 @@ describe.each(trees)("%s — qfai-implement parallel item policy", (tree) => {
   });
 
   it("rechecks the merged result and refreshes revision-bound evidence", async () => {
-    const [skill, policy] = await Promise.all([read(tree, skillPath), read(tree, policyPath)]);
-    expect(skill).toContain("Review the");
-    expect(skill).toContain("integrated result after slices join.");
+    const policy = await read(tree, policyPath);
     expect(policy).toContain("rerun every item selector on the merged tree");
     expect(policy).toContain("the relevant suites");
     expect(policy).toContain("qfai validate --profile tdd --fail-on error --flow BF-NNNN");

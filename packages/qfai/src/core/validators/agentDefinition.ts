@@ -43,16 +43,12 @@ type RoutingPhase = {
 /**
  * How often a routing phase runs.
  *
- * The schema had no iteration concept at all, so every phase list read as one
- * pass over the whole invocation. That is wrong for `qfai-implement`, which
- * drives the TDD micro-cycle one ledger row at a time: collapsing its phases
- * into a single pass left `qa-gatekeeper` no slot in which a RED state still
- * exists to be observed.
+ * `qfai-implement` drives the TDD micro-cycle one ledger row at a time, so a
+ * phase may run once per row rather than once per invocation.
  *
- * The key is optional and `per-invocation` is the default, so manifests that
- * predate it keep their meaning. What is validated is the *value*: a typo like
- * `per-item` would otherwise be read as "no iteration declared" and silently
- * restore the collapsed reading it was added to fix.
+ * The key is optional and `per-invocation` is the default. What is validated is
+ * the *value*: a typo like `per-item` would otherwise be read as "no iteration
+ * declared".
  */
 const ROUTING_ITERATIONS = new Set(["per-invocation", "per-ledger-item"]);
 
@@ -64,9 +60,12 @@ const ROUTING_ITERATIONS = new Set(["per-invocation", "per-ledger-item"]);
  * use were folklore. It is validated rather than deleted because the Drift
  * Protocol's rerun step needs exactly this vocabulary.
  *
- * - `failed-agents-only` — re-run only the agents that did not return PASS.
- * - `changed-scope-dependents` — re-run every agent whose inputs the change
- *   touched, including ones that passed.
+ * - `failed-agents-only` — when a step runs again, re-run only the agents whose
+ *   work failed.
+ * - `changed-scope-dependents` — when a step runs again, re-run every agent
+ *   whose inputs the change touched.
+ *
+ * Neither re-runs a review: a stage is reviewed once.
  */
 const RERUN_POLICIES = new Set(["failed-agents-only", "changed-scope-dependents"]);
 
@@ -581,7 +580,7 @@ function validateAgentRefs(
           "error",
           // Sourced from the caller's resolved routing path (manifestPathRel)
           // so the file: argument always points at the actual location read
-          // (manifest/ canonical or steering/ legacy fallback).
+          // (manifest/ canonical or a legacy fallback).
           routingPathRel,
           "agentDefinition.unknownRoutingAgent",
         ),

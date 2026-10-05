@@ -7,6 +7,6 @@ As an operator fixing a bug the stories already describe in general but no examp
 ## Non-goals
 
 - Changing a story, a criterion or a rule statement
-- Seeding when an example already states the case, which needs no SDD stage
-- Writing the test, which a later stage does
-- The Change request row every SDD-kind stage of a run appends, which US-0001-0207 states
+- Seeding when an example already states the case
+- Writing the test, which the same stage does next
+- Asking the user, except for an example that would contradict the specification

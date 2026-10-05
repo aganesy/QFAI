@@ -19,32 +19,22 @@ export {
   type PlanRefusal,
   type PlanRefusalReason,
   type PlanStage,
+  type PlanStep,
   type WorkflowPlanFile,
 } from "./planFormat.js";
-
-// The verdict over the package's plans, the steps they name and the reviewers the effective
-// routing keeps: a refusal is the cause `contract-undeclared` or `reviewer-missing`.
-export interface PlanCheck {
-  cause?: "contract-undeclared" | "reviewer-missing";
-  refusals: PlanRefusal[];
-}
 
 // Where the plans sit: in the installed package, never in a project.
 export function packagePlansDir(): string {
   return path.resolve(getInitAssetsDir(), "..", "defaults", "workflows");
 }
 
-// The name a plan's digest is recorded under: its path inside the package.
-export function planDigestKey(route: WorkflowRoute): string {
-  return `assets/defaults/workflows/${route}.yml`;
-}
-
-async function readIfPresent(file: string): Promise<string | undefined> {
+// The file's text, `undefined` when it does not exist, and `null` when it cannot be read.
+async function readIfPresent(file: string): Promise<string | null | undefined> {
   try {
     return await readFile(file, "utf8");
   } catch (error) {
     if (isRecord(error) && error.code === "ENOENT") return undefined;
-    throw error;
+    return null;
   }
 }
 
@@ -54,11 +44,14 @@ export async function loadPackagePlan(route: WorkflowRoute): Promise<PlanLoad> {
   if (text === undefined) {
     return { ok: false, refusals: [{ route, reason: "file-missing", subject: route }] };
   }
+  if (text === null) {
+    return { ok: false, refusals: [{ route, reason: "unreadable", subject: route }] };
+  }
   return parsePlan(text, route);
 }
 
-// The package's own plans, which are the ones a run follows. A plan that does not load is
-// trigger (b), which `start` refuses before any run reads the plans, so here it throws.
+// The package's own plans. A shipped plan that does not load is a defect of the package, so
+// here it throws.
 export async function loadBuiltInPlans(): Promise<WorkflowPlanFile[]> {
   return Promise.all(
     WORKFLOW_ROUTES.map(async (route) => {
@@ -96,6 +89,15 @@ function requiredAgents(routing: Map<string, SkillRouting> | undefined, step: st
   return [...agents].filter(([, binding]) => binding === "required").map(([agent]) => agent);
 }
 
+// One of the package's plans, refused as well when a step it runs is not installed in the
+// project.
+export async function loadInstalledPlan(root: string, route: WorkflowRoute): Promise<PlanLoad> {
+  const load = await loadPackagePlan(route);
+  if (!load.ok) return load;
+  const missing = await contractRefusals(root, planSteps([load.plan]));
+  return missing.length > 0 ? { ok: false, refusals: missing } : load;
+}
+
 // Every agent the package's default routing requires for a step a plan runs must still be
 // required by the effective routing. An agent the project adds is the project's.
 async function reviewerRefusals(
@@ -115,8 +117,8 @@ async function reviewerRefusals(
   return refusals;
 }
 
-// Every refusal of both triggers, for a caller that reports each failed check rather than
-// stopping at the first cause as `checkPlans` does.
+// Every refusal over the package's plans, the steps they run and the reviewers the effective
+// routing keeps.
 export async function allPlanRefusals(
   projectRoot: string,
   config: Pick<QfaiConfig, "routing" | "reviewProfiles">,
@@ -128,22 +130,4 @@ export async function allPlanRefusals(
     ...(await contractRefusals(projectRoot, steps)),
     ...(await reviewerRefusals(config, steps)),
   ];
-}
-
-// Trigger (b) over the package's plans and the steps they name, then trigger (c) over the
-// reviewers the effective routing keeps. The first that holds is the cause.
-export async function checkPlans(
-  projectRoot: string,
-  config: Pick<QfaiConfig, "routing" | "reviewProfiles">,
-): Promise<PlanCheck> {
-  const loaded = await Promise.all(WORKFLOW_ROUTES.map((route) => loadPackagePlan(route)));
-  const loadRefusals = loaded.flatMap((load) => (load.ok ? [] : load.refusals));
-  if (loadRefusals.length > 0) return { cause: "contract-undeclared", refusals: loadRefusals };
-  const steps = planSteps(loaded.flatMap((load) => (load.ok ? [load.plan] : [])));
-  const contract = await contractRefusals(projectRoot, steps);
-  if (contract.length > 0) return { cause: "contract-undeclared", refusals: contract };
-  const reviewers = await reviewerRefusals(config, steps);
-  return reviewers.length > 0
-    ? { cause: "reviewer-missing", refusals: reviewers }
-    : { refusals: [] };
 }
