@@ -8,8 +8,8 @@ Feature: Migrate a project with the skill
   Scenario: SKILL.md plans, previews, runs and reads the reports
     Given the installed /qfai-migration-v1-to-v2 skill
     When an AI follows SKILL.md on a project on the spec-pack layout
-    Then it writes the plan, runs each step with --dry-run and then without it, reads every report from the migration evidence's report directory, and runs qfai validate after step 10
-    And on a project with nothing to migrate it reports that there is nothing to migrate
+    Then it writes the plan, runs each step with --dry-run and then without it, reads every report from its standard output, and runs qfai validate after step 10
+    And on a project with nothing to migrate it reports that there is nothing to migrate, names the specs directory the steps looked in and asks the person to check that the specs live there
     And on a project an earlier 2.x release migrated it runs the steps again and reports that only what that release lacked changed
 
   # AC-0004-0012-02
@@ -28,9 +28,9 @@ Feature: Migrate a project with the skill
     And it states that each checkout and each git worktree needs its own install before `npx qfai` resolves 2.x
 
   # AC-0004-0012-04
-  Scenario: The person learns the migration records stay in the working copy only
+  Scenario: The person learns where the working state is and where retired files went
     Given the shipped SKILL.md of the migration skill
     When an AI follows it to the end of a migration
-    Then it tells the person that git does not track .qfai/evidence/, so the plan, the ID map and the archives under .qfai/evidence/migration-spec-to-story/ exist only in that working copy
-    And that a person who needs the archived copies of customised files beyond it keeps a copy elsewhere
+    Then it tells the person that the plan and the ID map are under tmp/qfai-migration/, which git ignores and which they may delete
+    And that every file the migration retired is kept only in git history
 ```

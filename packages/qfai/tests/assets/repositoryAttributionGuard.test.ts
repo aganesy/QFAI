@@ -115,7 +115,7 @@ describe("repository attribution matcher", () => {
 
   describe("leaves legitimate prose alone", () => {
     it("for the bare phrase", () => {
-      // qfai-atdd / qfai-configure / qfai-verify all say this correctly.
+      // qfai-configure and qfai-verify both say this correctly.
       expect(matchRepositoryAttribution("run the relevant test suite for this repository")).toBe(
         null,
       );
@@ -179,7 +179,7 @@ describe("repository attribution matcher", () => {
 
     expect(files).toContain("skill/qfai-prototyping/templates/DESIGN.md.sample");
     expect(files).toContain("skill/qfai-sdd/templates/contracts/db-contract.sample.sql");
-    expect(files).toContain("skill/qfai-discussion/templates/review/summary.json");
+    expect(files).toContain("skill/web-research/mcp-templates/brave-search/mcp-config.json");
     // And the markdown the narrower glob already covered.
     expect(files).toContain("skill/qfai-sdd/references/contract-artifact-rules.md");
   });

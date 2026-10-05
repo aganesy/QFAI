@@ -24,4 +24,5 @@ Feature: Configuration file diagnosis
     When `qfai doctor` runs
     Then the `config.load` check is `error`
     And `details.issues` lists the issues
+    And the `config.load` message names each issue
 ```

@@ -23,14 +23,12 @@ export { runBrowserQaOrchestrated, summarizeBrowserQaResult } from "./browserQa/
 export { BROWSER_QA_PHASES } from "./browserQa/types.js";
 // Render evidence runner (capture infra for the iteration loop).
 export { runRenderCapture } from "./evidence/renderRunner.js";
-// DESIGN.md brand SSOT primitives (Phase 0 freeze pipeline). Exposed on
-// the public `qfai` entry so consumer projects can implement the freeze
-// procedure documented in `qfai-sdd/SKILL.md` without reaching into the
-// monorepo source layout.
+// DESIGN.md brand SSOT primitives, exposed on the public `qfai` entry so
+// consumer projects can parse and check root `DESIGN.md` without reaching
+// into the monorepo source layout.
 export {
   parseDesignMd,
   validateDesignMd,
-  hashDesignMd,
   isUnreplacedDesignMdSample,
   DESIGN_MD_SAMPLE_MARKER,
   ARCHETYPES,

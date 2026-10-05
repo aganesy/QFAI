@@ -4,6 +4,5 @@ stages:
   - id: close
     kind: triage
     steps: [triage-close]
-defaultModifiers: []
 decisionPoints: []
 branchPoints: []

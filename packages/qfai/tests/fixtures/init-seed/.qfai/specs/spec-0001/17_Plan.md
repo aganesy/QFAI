@@ -28,7 +28,7 @@
 
 ## Verification and Gates
 
-- Keep `@layer-*` alignment with steering policy.
+- Keep `@layer-*` alignment with the layer policy.
 - Validate AC to EX to TC chain via `16_Traceability-ledger.md`.
 
 ## Risks and Mitigations

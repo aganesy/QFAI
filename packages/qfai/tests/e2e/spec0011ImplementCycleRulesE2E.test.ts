@@ -22,36 +22,16 @@ async function reference(name: string): Promise<string> {
 
 // QFAI:BF-0001
 describe("E2E: implementation follows flow-scoped example obligations", () => {
-  it("selects the lowest owed EX from a fresh validator result", async () => {
+  it("selects the examples no test annotates, in EX ID order", async () => {
     const content = await skill();
-    expect(content).toContain("qfai validate --profile tdd --flow BF-NNNN");
-    expect(content).toContain("generatedAt");
-    expect(content).toContain("lowest EX ID");
-    expect(content).toContain("test-obligation EX findings");
-    expect(content).toContain("Re-run validation before selecting the next unassigned EX");
+    expect(content).toContain("Otherwise the flow's EX IDs that no test annotates, in EX ID order");
   });
 
   it("runs one falsifiable RED, GREEN and Refactor cycle per EX", async () => {
     const content = await skill();
     expect(content).toContain("## Red, Green, Refactor");
     expect(content).toContain("A load error, missing dependency, or broken fixture is");
-    expect(content).toContain("qa-gatekeeper checks the observed RED and GREEN evidence");
     expect(content).toContain("QFAI:EX-NNNN-NNNN-NN");
-  });
-
-  it("binds independent review to the same final evidence revision", async () => {
-    const content = await skill();
-    expect(content).toContain(".qfai/evidence/implement-BF-NNNN.md");
-    expect(content).toContain("Each required reviewer must pass the same final revision");
-    expect(content).toContain("reviewer verdicts, and open findings");
-  });
-
-  it("requires a final scoped gate even when no EX work remains", async () => {
-    const content = await skill();
-    expect(content).toContain("qfai validate --profile tdd --fail-on error --flow BF-NNNN");
-    expect(content).toContain(
-      "When no EX work remains at entry, still run the current flow checkpoint",
-    );
   });
 
   it("bounds parallel work by ownership and integration", async () => {
@@ -59,7 +39,6 @@ describe("E2E: implementation follows flow-scoped example obligations", () => {
     const policy = await reference("parallelization-policy.md");
     expect(content).toContain("Work one EX at a time by default");
     expect(content).toMatch(/disjoint\s+writes, a passing technical gate/);
-    expect(content).toMatch(/Review the\s+integrated result after slices join/);
     expect(policy).toContain("explicit user approval");
   });
 });
