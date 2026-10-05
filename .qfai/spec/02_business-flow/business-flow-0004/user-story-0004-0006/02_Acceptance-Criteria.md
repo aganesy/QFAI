@@ -10,24 +10,24 @@ Feature: Move policy and catalog content into the merged files once
     When step 3 runs
     Then every section except those in the retired slice policy is in the destination the source map gives it, or, when it does not fit a section of the template of a policy file or of `tech.md`, is listed under For a person
     And each policy file and `tech.md` has its template's sections in the template's order
-    And the complete original `_policies/11_Slice-Policy.md` is archived without copying a section into `principle.md`
+    And the complete original `_policies/11_Slice-Policy.md` is retired without copying a section into `principle.md`
     And no paragraph appears twice in a destination
     And the consumed source files are gone
 
   # AC-0004-0006-02
   Scenario: A manifest entry that equals a shipped default is not carried, and a changed entry is listed
-    Given a project whose agent manifests hold one entry changed from the package default, one equal to it, and one equal to an entry of a 1.x release's routing manifest
+    Given a project whose agent manifests hold entries changed from the package default and entries equal to it
     When step 3 runs
-    Then qfai.config.yaml holds an override for the changed entry only
-    And the changed routing entry is listed under For a person with a warning that a copied 1.x entry hides roles the 2.x skills declare
+    Then qfai.config.yaml holds an override for each changed entry only
+    And each changed routing entry is listed under For a person with a warning that a copied 1.x entry hides roles the 2.x skills declare
 
   # AC-0004-0006-03
-  Scenario: An overlay moves beside its rule, or is archived for a person
+  Scenario: An overlay moves beside its rule, or is retired for a person
     Given `.local.md` overlays under the constitution and catalog directories, one whose rule is under `rule/` and one whose rule is not
     When step 3 runs
     Then the first is at `rule/<name>.local.md`
-    And the second is under the migration's retired archive and listed under For a person
-    And an overlay whose destination already holds a file is archived, leaving that file unchanged, and listed under For a person
+    And the second is retired and listed under For a person
+    And an overlay whose destination already holds a file stays where it is, leaving that file unchanged, and is listed under For a person
     And when overlays of one name under both directories could take the same place, step 3 writes nothing and lists both under For a person
 
   # AC-0004-0006-04
@@ -44,16 +44,16 @@ Feature: Move policy and catalog content into the merged files once
     Given a Markdown contract under `cli/` with text and sections the CLI contract template has no place for
     When step 3 runs
     Then the contract holds only its heading, `## Ownership boundary` and `## Business rules`
-    And every part left out is listed under For a person with the old file and its archived copy
+    And every part left out is listed under For a person with the old file
     And once step 7 has written its rules the contract passes the CLI contract schema
 
   # AC-0004-0006-06
-  Scenario: A 1.x file that is no contract is archived for a person
+  Scenario: A 1.x file that is no contract is retired for a person
     Given a Markdown file under `api/`, `db/` or `ui/`, and files under `design/`
     When step 3 runs
     Then none of them takes a contract ID or is written to the contract tree
-    And each is kept whole under the migration's retired contract archive
-    And each is listed under For a person with its archived copy and why it is no contract
+    And each is retired as a source with no destination
+    And each is listed under For a person with why it is no contract
 
   # AC-0004-0006-07
   Scenario: The primary spec becomes the primary UI contract, or goes to a person

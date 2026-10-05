@@ -10,7 +10,6 @@
  * not this test's subject. It ships filled entries, because a template that
  * emits an empty list hands the author a document that does not validate.
  */
-// QFAI:EX-0001-0153-01
 
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
@@ -49,6 +48,7 @@ type ParsedScreens = {
   screens?: Array<Record<string, unknown>>;
 };
 
+// QFAI:EX-0001-0153-01
 describe("TC-0013-0025: shipped ui-contract.sample.yaml carries a primary_tasks list per screen", () => {
   it("template parses with every screens[] entry exposing a primary_tasks slot", async () => {
     const raw = await readFile(TEMPLATE_PATH, "utf-8");
@@ -124,6 +124,6 @@ describe("shipped qfai-sdd design contracts", () => {
     );
     expect(normalization).toContain("common-design-md/STEP.md#author-and-validate");
     expect(designMd).toContain("## Author and validate");
-    expect(normalization).toContain("prototyping.json#handoff");
+    expect(normalization).toContain(".qfai/prototype/final/handoff.json");
   });
 });

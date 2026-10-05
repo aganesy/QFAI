@@ -2,14 +2,11 @@
 name: implement-quarantine
 owner: qfai-implement
 purpose: "Take a test that passes and fails on the same code out of the gating suite, with a record of why and of what lets it back in."
-requires: [common-steering-refresh, common-gate-run, common-evidence-record]
+requires: [common-gate-run]
 roles:
   - devops-ci-engineer
   - qa-strategist
-  - completion-reviewer
-  - qa-gatekeeper
-  - implementation-reviewer
-routing-profile: runtime-heavy
+routing-profile: default
 ---
 
 # implement-quarantine
@@ -41,10 +38,9 @@ it.
 - The quarantine entry or marker, listed in `changedFiles`. Next to it: the
   test, the failure's signature, the failure rate, and what lets it back in —
   a recorded number of consecutive passing runs.
-- A record of the runs, written with `common-evidence-record`.
+- A record of the runs, in the stage report.
 
 ## Gate
 
 The step is done when the flakiness is shown by a recorded failure rate, the
-test no longer gates, its quarantine entry states what lifts it, and the
-qa-gatekeeper observed the runs.
+test no longer gates, and its quarantine entry states what lifts it.

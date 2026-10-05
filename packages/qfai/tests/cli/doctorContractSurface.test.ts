@@ -2,9 +2,8 @@
  * The `qfai doctor` CLI contract must describe the command that ships.
  *
  * The contract once declared a one-flag surface and called doctor read-only,
- * while the binary accepted `--clean` and `--autoremediate`, which rewrite
- * `qfai.config.yaml` and the root `.gitignore` and rename directories under
- * `.qfai/review/`. A contract that does not know a flag exists cannot gate a
+ * while the binary accepted `--clean` and `--autoremediate`, which rewrite the
+ * root `.gitignore` and remove run logs. A contract that does not know a flag exists cannot gate a
  * change to what that flag writes.
  *
  * These assertions read the contract's business rules against the parser, so
@@ -108,13 +107,13 @@ function failOnValues(argsSource: string): string[] {
 }
 
 describe("`qfai doctor` CLI contract surface", () => {
-  it("says what doctor deletes, and that review packs are only renamed", async () => {
+  it("says what doctor deletes, and that nothing else is deleted", async () => {
     // A reader deciding whether the command is reversible must get one
-    // answer: a TTL-expired run log is removed, a review pack never is.
+    // answer: a TTL-expired run log is removed, and nothing else is.
     const rules = await readRules();
 
     ruleWith(rules, "`--clean` removes each `<outDir>/run-<ts>/`");
-    ruleWith(rules, "A run log is the one thing doctor deletes", "never removed");
+    ruleWith(rules, "A run log is the one thing doctor deletes", "nothing else is deleted");
     for (const statement of rules.values()) {
       expect(statement).not.toMatch(/does NOT delete anything|no path is removed on any flag/);
     }
@@ -192,16 +191,12 @@ describe("`qfai doctor` CLI contract surface", () => {
     const writes = ruleWith(rules, "`--autoremediate` writes only these paths");
 
     for (const written of [
-      "`qfai.config.yaml`",
       "`<root>/.gitignore`",
+      "`<outDir>/run-<ts>/` removed",
       "`npm install <name>`",
       // The `npm install` has no `--no-save`, so it lands on tracked files too.
       "`package.json`",
       "`package-lock.json`",
-      // Both halves of the legacy-pack migration, not the manifest alone.
-      "`.qfai/review/.legacy-packs`",
-      "`.qfai/review/review-<ts>/summary.json`",
-      "`.qfai/review/_archive/`",
     ]) {
       expect(writes).toContain(written);
     }
@@ -210,14 +205,11 @@ describe("`qfai doctor` CLI contract surface", () => {
   });
 
   it("declares the dry-run plan as decided, not assumed", async () => {
-    // The config-fill preview used to be a fixed line printed without reading
-    // the config, so it promised an append for a config that already declared
-    // the key and for one that does not parse.
     const statement = ruleWith(await readRules(), "`--dry-run` applies to `--clean` and");
 
     expect(statement).toContain("only the changes that pass would make");
-    expect(statement).toContain("would fill default-keyed config fields: review");
-    expect(statement).toContain("config-fill not needed, default-keyed fields present");
+    expect(statement).toContain("would remove -> <run id>");
+    expect(statement).toContain("writes nothing");
   });
 
   it("keeps the `--yes` confirmation gate as a requirement", async () => {

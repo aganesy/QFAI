@@ -1,4 +1,3 @@
-// QFAI:EX-0001-0021-09
 /**
  * What `qfai init` does about `.claude/settings.json`.
  *
@@ -132,6 +131,7 @@ async function withTempRoot(body: (root: string) => Promise<void>): Promise<void
   }
 }
 
+// QFAI:EX-0001-0021-09
 describe("qfai init and the reminder hooks", () => {
   it("seeds the whole settings file into a project that has none", async () => {
     await withTempRoot(async (root) => {
