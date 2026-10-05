@@ -302,6 +302,7 @@
     "tests/unit/issueCatalogHasEmitters.test.ts",
     "tests/unit/shared/boundedRead.test.ts",
     "tests/unit/shared/text.test.ts",
+    "tests/unit/removeOwnedDirs.test.ts",
     "tests/unit/shippedLaneCommands.test.ts",
     "tests/unit/spawnCaptured.test.ts",
     "tests/unit/sourceLayerDirections.test.ts",
