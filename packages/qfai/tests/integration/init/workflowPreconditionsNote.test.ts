@@ -18,9 +18,9 @@ describe("the shipped-workflow preconditions note", () => {
     process.exitCode = undefined;
   });
 
+  // QFAI:EX-0003-0011-21
   it("names how many facts are unmet and points at doctor", async () => {
     // QFAI:AC-0003-0011-09
-    // QFAI:EX-0003-0011-21
     await withEmptyRepo(async (root) => {
       await writeFile(path.join(root, "pnpm-lock.yaml"), "", "utf-8");
       await writeFile(path.join(root, "package-lock.json"), "{}", "utf-8");
@@ -33,9 +33,9 @@ describe("the shipped-workflow preconditions note", () => {
     });
   });
 
+  // QFAI:EX-0003-0011-21
   it("prints nothing when every fact is met", async () => {
     // QFAI:AC-0003-0011-09
-    // QFAI:EX-0003-0011-21
     await withEmptyRepo(async (root) => {
       expect(noteLines(await initQuietly(root))).toEqual([]);
     });

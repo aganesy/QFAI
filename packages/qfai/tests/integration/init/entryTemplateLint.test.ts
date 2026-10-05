@@ -4,7 +4,6 @@
  * heading to be level 1.
  */
 // QFAI:AC-0001-0196-03
-// QFAI:EX-0001-0196-10
 import { spawnSync } from "node:child_process";
 import { copyFile, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -50,6 +49,7 @@ async function template(name: string): Promise<string> {
   return readFile(path.join(getInitAssetsDir(), "root", name), "utf-8");
 }
 
+// QFAI:EX-0001-0196-10
 describe("a directive above the first heading and the first-heading rule", () => {
   it("The shipped templates open with their heading and raise no MD041 finding", async () => {
     const files: Record<string, string> = {};

@@ -5,7 +5,7 @@ import type { QfaiConfig } from "../config.js";
 import { DEFAULT_GLOB_FILE_LIMIT } from "../fs.js";
 import { getChangedFilesAgainstBase, normalizeRepoPath, readFileAtBase } from "../gitChanges.js";
 import { parseAllMarkdownTables } from "../specPackParsers.js";
-import { parseStoryTestAnnotations } from "../storyTree/ids.js";
+import { parseCountedExampleAnnotations } from "../storyTree/ids.js";
 import { classifyRecordRow, diffRecordTables, parseRecordTable } from "../storyTree/tables.js";
 import type { Issue } from "../types.js";
 import { countsForExample, readStoryTests, storyTestScanIssue } from "./storyTreeObligations.js";
@@ -95,6 +95,10 @@ export async function validateStoryTreeDrift(
       withoutChangeRequestRows(baseDecisions) === withoutChangeRequestRows(currentDecisions)
     )
       continue;
+    if (file.endsWith("/03_Example.md") && (await onlyAppendsExamples(root, baseBranch, file)))
+      continue;
+    if (file.startsWith(`${contracts}/`) && (await onlyCitesExamples(root, baseBranch, file)))
+      continue;
     issues.push(
       issue(
         "QFAI-DRIFT-001",
@@ -157,7 +161,7 @@ async function examplesWithoutTestChange(
   for (const test of scan.files) {
     if (!countsForExample(test) || !changed.has(normalizeRepoPath(path.relative(root, test.file))))
       continue;
-    for (const id of parseStoryTestAnnotations(test.content).EX) changedExamples.add(id);
+    for (const id of parseCountedExampleAnnotations(test.content)) changedExamples.add(id);
   }
   return rewritten
     .filter(({ id }) => !changedExamples.has(id))
@@ -198,6 +202,73 @@ function withoutChangeRequestRows(content: string): string {
     .split("\n")
     .filter((line) => !/^\|\s*DEC-\d{4}\s*\|\s*Change request:/i.test(line))
     .join("\n");
+}
+
+const EXAMPLE_ROW = /^\|\s*EX-\d{4}-\d{4}-\d{2}\s*\|/;
+
+/**
+ * Whether the file differs from its base only by appended example rows. Table padding is
+ * ignored, because a wider appended row makes the formatter re-pad every row.
+ */
+async function onlyAppendsExamples(
+  root: string,
+  baseBranch: string,
+  file: string,
+): Promise<boolean> {
+  const base = readFileAtBase(root, baseBranch, file);
+  if (base === null) return false;
+  const baseLines = unpadded(base);
+  const kept = new Set(baseLines);
+  const headLines = unpadded(await readSafePath(path.join(root, file)));
+  const remaining = headLines.filter((line) => kept.has(line) || !EXAMPLE_ROW.test(line));
+  return remaining.join("\n") === baseLines.join("\n");
+}
+
+const EXAMPLE_ID = /^EX-\d{4}-\d{4}-\d{2}$/;
+
+/**
+ * Whether the contract differs from its base only by EX IDs added to the Examples cell, the
+ * last cell, of business-rule rows it already holds. Table padding is ignored.
+ */
+async function onlyCitesExamples(root: string, baseBranch: string, file: string): Promise<boolean> {
+  const base = readFileAtBase(root, baseBranch, file);
+  if (base === null) return false;
+  const baseLines = unpadded(base);
+  const headLines = unpadded(await readSafePath(path.join(root, file)));
+  if (baseLines.length !== headLines.length) return false;
+  return baseLines.every(
+    (line, index) => line === headLines[index] || onlyAddsExampleIds(line, headLines[index] ?? ""),
+  );
+}
+
+function onlyAddsExampleIds(baseRow: string, headRow: string): boolean {
+  const before = baseRow.split(/(?<!\\)\|/).map((cell) => cell.trim());
+  const after = headRow.split(/(?<!\\)\|/).map((cell) => cell.trim());
+  const last = before.length - 2;
+  if (!/^BR-\d{4}-\d{4}$/.test(before[1] ?? "") || last < 2 || after.length !== before.length)
+    return false;
+  if (before.some((cell, index) => index !== last && cell !== after[index])) return false;
+  const cited = (cell: string | undefined) => (cell ?? "").split(/,\s*/).filter(Boolean);
+  const kept = cited(before[last]);
+  const now = cited(after[last]);
+  return (
+    kept.every((id) => now.includes(id)) &&
+    now.every((id) => kept.includes(id) || EXAMPLE_ID.test(id))
+  );
+}
+
+/** Each line with a table row's cell padding and separator dash widths removed, nothing else. */
+function unpadded(content: string): string[] {
+  return content
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => {
+      if (!line.startsWith("|")) return line;
+      return line
+        .split(/(?<!\\)\|/)
+        .map((cell) => cell.trim().replace(/^(:?)-{3,}(:?)$/, "$1---$2"))
+        .join("|");
+    });
 }
 
 async function readSafePath(file: string): Promise<string> {

@@ -13,7 +13,6 @@
  * Exercises `runSaasPackageProfile` directly (unit-level) without
  * shelling out to the CLI.
  */
-// QFAI:EX-0001-0049-01
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -79,6 +78,20 @@ async function seedAttestation(): Promise<void> {
   await writeFile(path.join(root, "DESIGN.md"), DESIGN_MD, "utf-8");
 }
 
+const HANDOFF_DIR = [".qfai", "prototype", "final"] as const;
+
+/** Writes the prototyping handoff record the saas-package profile reads. */
+async function seedHandoff(body: string): Promise<void> {
+  await mkdir(path.join(root, ...HANDOFF_DIR), { recursive: true });
+  await writeFile(path.join(root, ...HANDOFF_DIR, "handoff.json"), body, "utf-8");
+}
+
+const CONFORMING_HANDOFF = JSON.stringify({
+  finalArtifact: ".qfai/prototype/final/index.html",
+  procurement: { procured: [], authored: [], "drawn-from-project": [] },
+  implementationNotes: "The confirmed prototype.",
+});
+
 describe("TC-0004-0068: saas-package profile rejects a missing design-system attestation", () => {
   it("names current story-tree stage gates in its skip notice", () => {
     expect(SAAS_PACKAGE_SKIPPED_GATES).toEqual([
@@ -91,6 +104,7 @@ describe("TC-0004-0068: saas-package profile rejects a missing design-system att
       "QFAI-STORY-007",
       "QFAI-STORY-008",
       "QFAI-STORY-009",
+      "QFAI-STORY-014",
       "QFAI-SCAN-002",
       "QFAI-TEST-*",
       "QFAI-DRIFT-001",
@@ -103,6 +117,7 @@ describe("TC-0004-0068: saas-package profile rejects a missing design-system att
     // No attestation seeded. Prototyping issues are passed as an empty
     // list (clean prototyping pipeline) so the only failure source is
     // the attestation gate.
+    await seedHandoff(CONFORMING_HANDOFF);
     const issues = await runSaasPackageProfile(root, []);
     const errors = issues.filter((i) => i.severity === "error");
     expect(errors.map((i) => [i.code, i.file, i.message])).toEqual([
@@ -125,6 +140,7 @@ describe("TC-0004-0068: saas-package profile rejects a missing design-system att
 
   it("does NOT emit the attestation-missing finding when root DESIGN.md parses", async () => {
     await seedAttestation();
+    await seedHandoff(CONFORMING_HANDOFF);
     const issues = await runSaasPackageProfile(root, []);
     expect(issues.filter((i) => i.severity === "error")).toEqual([]);
   });
@@ -176,13 +192,43 @@ describe("TC-0004-0068: saas-package profile rejects a missing design-system att
   // QFAI:EX-0001-0049-01
   it("does not pass with a malformed CLI-HANDOFF handoff", async () => {
     await seedAttestation();
-    await mkdir(path.join(root, ".qfai"), { recursive: true });
-    await writeFile(path.join(root, ".qfai", "handoff.yaml"), "just a string\n", "utf-8");
+    await seedHandoff("just a string\n");
     const issues = await runSaasPackageProfile(root, []);
     expect(issues).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ code: "D-SAAS-PACKAGE-HANDOFF-SCHEMA", severity: "error" }),
+        expect.objectContaining({
+          code: "D-SAAS-PACKAGE-HANDOFF-SCHEMA",
+          severity: "error",
+          file: ".qfai/prototype/final/handoff.json",
+        }),
       ]),
     );
+  });
+
+  // QFAI:EX-0001-0049-01
+  it("does not pass with a handoff written as YAML rather than JSON", async () => {
+    await seedAttestation();
+    await seedHandoff("finalArtifact: .qfai/prototype/final/index.html\n");
+    const issues = await runSaasPackageProfile(root, []);
+    const rejected = issues.find((i) => i.code === "D-SAAS-PACKAGE-HANDOFF-SCHEMA");
+    expect(rejected?.severity).toBe("error");
+    expect(rejected?.file).toBe(".qfai/prototype/final/handoff.json");
+  });
+
+  // QFAI:EX-0001-0049-01
+  it("does not pass without the prototyping handoff record, and names the file", async () => {
+    await seedAttestation();
+    const issues = await runSaasPackageProfile(root, []);
+    const missing = issues.find((i) => i.code === "D-SAAS-PACKAGE-HANDOFF-SCHEMA");
+    expect(missing?.severity).toBe("error");
+    expect(missing?.file).toBe(".qfai/prototype/final/handoff.json");
+  });
+
+  it("reads no handoff file other than the prototyping record", async () => {
+    await seedAttestation();
+    await seedHandoff(CONFORMING_HANDOFF);
+    await writeFile(path.join(root, ".qfai", "handoff.yaml"), "just a string\n", "utf-8");
+    const issues = await runSaasPackageProfile(root, []);
+    expect(issues.filter((i) => i.code === "D-SAAS-PACKAGE-HANDOFF-SCHEMA")).toEqual([]);
   });
 });

@@ -132,6 +132,13 @@ describe("an example rewritten on the branch", () => {
     },
   );
 
+  it("does not let a changed annotation that sits before no test declaration suppress the warning", async () => {
+    await put(examples, `${header}| ${example} | AC-0001-0001-01 | an order | it is refunded |\n`);
+    await put(test, `// ${["QFAI", example].join(":")}\nconst unrelated = 1;\n`);
+    commit("annotate a line that is not a test");
+    expect(await warned()).toBe(true);
+  });
+
   it("detects internal cell-space changes next to an escaped pipe", async () => {
     await put(examples, `${header}| ${example} | AC-0001-0001-01 | a\\| b | it is paid |\n`);
     commit("base escaped pipe");
@@ -188,8 +195,8 @@ describe("an example rewritten on the branch", () => {
     },
   );
 
-  // QFAI:EX-0001-0054-12
-  // QFAI:AC-0001-0054-07
+  // QFAI:EX-0001-0054-15
+  // QFAI:AC-0001-0054-08
   it("warns until a test annotating the example changes too", async () => {
     await put(examples, `${header}| ${example} | AC-0001-0001-01 | an order | it is refunded |\n`);
     commit("rewrite the example");
@@ -200,7 +207,7 @@ describe("an example rewritten on the branch", () => {
     expect(await warned()).toBe(false);
   });
 
-  // QFAI:EX-0001-0054-12
+  // QFAI:EX-0001-0054-15
   it("does not warn when only the table padding changed", async () => {
     await put(
       examples,

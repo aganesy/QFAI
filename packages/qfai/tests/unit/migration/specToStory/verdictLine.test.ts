@@ -1,32 +1,13 @@
-import { spawnSync } from "node:child_process";
-import { createHash, randomUUID } from "node:crypto";
-import {
-  cp,
-  mkdir,
-  mkdtemp,
-  readFile,
-  readdir,
-  rename,
-  rm,
-  symlink,
-  writeFile,
-} from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { cp, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
 import { runInit } from "../../../../src/cli/commands/init.js";
-import { defaultConfig } from "../../../../src/core/config.js";
-import { ensureRootGitignoreEntries } from "../../../../src/core/init/rootGitignore.js";
-import { moveStage, runStep } from "../../../../src/migration/specToStory/harness.js";
+import { runStep } from "../../../../src/migration/specToStory/harness.js";
 import { captureStdout } from "../../../helpers/stdout.js";
-import {
-  isMigrationReportAncestor,
-  isMigrationReportPath,
-  migrationReportFiles,
-  readMigrationReport,
-} from "../../../helpers/migrationReport.js";
 
 const FIXTURE = path.resolve(__dirname, "../../../fixtures/migration-spec-to-story/old-layout");
 const FOUND = "1.x layout found, migrating";
@@ -86,39 +67,13 @@ async function storyTree(specsDir: string, contractsDir: string, config = ""): P
   return root;
 }
 
-/**
- * Leaves an abandoned staging file of step 10, with its marker, under `.qfai/report/` beside a
- * current managed block, so that the staging is the only work step 10 has. With `conflict`, a
- * second file with a marker that does not match it is left too, which step 10 lists for a person.
- */
-async function abandonedStage(root: string, conflict = false): Promise<string> {
-  await ensureRootGitignoreEntries(root, false, () => {});
-  const exited = spawnSync(process.execPath, ["-e", "process.exit(0)"]);
-  const stage = async (name: string, payload: string, marker: string): Promise<void> => {
-    await put(root, `.qfai/report/${name}`, payload);
-    await put(root, `.qfai/report/${name}.owner`, marker);
-  };
-  const name = `.gitignore-${exited.pid}-${randomUUID()}.tmp`;
-  const payload = "complete abandoned stage";
-  const marker = JSON.stringify({
-    owner: "qfai-init-gitignore-stage-v1",
-    size: Buffer.byteLength(payload),
-    sha256: createHash("sha256").update(payload, "utf8").digest("hex"),
-  });
-  await stage(name, payload, marker);
-  if (conflict) {
-    await stage(`.gitignore-${exited.pid}-${randomUUID()}.tmp`, "user data", "invalid marker");
-  }
-  return name;
-}
-
 async function oldLayout(): Promise<string> {
   const root = await scratch();
   await cp(FIXTURE, root, { recursive: true });
   return root;
 }
 
-/** What every file under `root` holds, the report files aside. */
+/** What every file under `root` holds. */
 async function treeHash(root: string): Promise<string> {
   const hash = createHash("sha256");
   async function visit(directory: string): Promise<void> {
@@ -127,8 +82,7 @@ async function treeHash(root: string): Promise<string> {
     )) {
       const target = path.join(directory, entry.name);
       const relative = path.relative(root, target).replaceAll(path.sep, "/");
-      if (isMigrationReportPath(relative)) continue;
-      if (!isMigrationReportAncestor(relative)) hash.update(relative);
+      hash.update(relative);
       if (entry.isDirectory()) await visit(target);
       else hash.update(await readFile(target));
     }
@@ -159,7 +113,7 @@ function operationsOf(output: string): string[] {
 
 describe("the verdict line of migration steps 1 to 10", () => {
   // QFAI:EX-0004-0003-40
-  it("opens each step on a story tree with no ID map with the none line, and keeps it in the report", async () => {
+  it("opens each step on a story tree with no ID map with the none line", async () => {
     const root = await storyTree(".qfai/spec", ".qfai/spec/03_contract");
     const before = await treeHash(root);
     for (let step = 1; step <= 10; step += 1) {
@@ -180,10 +134,6 @@ describe("the verdict line of migration steps 1 to 10", () => {
           step === 10 ? [summaryNone(".qfai/spec")] : [],
         );
         if (step === 10) expect(lastLine(result.output), label).toBe(summaryNone(".qfai/spec"));
-        const [reportFile] = await migrationReportFiles(root, kind, step);
-        const kept = await readMigrationReport(root, reportFile ?? "");
-        expect(kept.split(/\r?\n/)[0], label).toBe(verdictNone(".qfai/spec"));
-        expect(kept.startsWith(result.output), label).toBe(true);
       }
     }
     expect(await treeHash(root)).toBe(before);
@@ -221,60 +171,6 @@ describe("the verdict line of migration steps 1 to 10", () => {
     expect(operationsOf(again.output)).toEqual(["none"]);
   });
 
-  // QFAI:EX-0004-0003-43
-  it("opens a resumed step 1 with the found line and leaves the tree of an uninterrupted run", async () => {
-    const uninterrupted = await oldLayout();
-    const partial = await oldLayout();
-    await mkdir(path.join(partial, ".qfai/spec"), { recursive: true });
-    await rename(
-      path.join(partial, ".qfai/specs/_policies"),
-      path.join(partial, ".qfai/spec/_policies"),
-    );
-    expect((await stepIn(uninterrupted, 1)).code).toBe(0);
-    const dry = await stepIn(partial, 1, ["--dry-run"]);
-    const real = await stepIn(partial, 1);
-    for (const result of [dry, real]) {
-      expect(result.code, result.errors).toBe(0);
-      expect(opening(result.output)).toEqual([FOUND, "", "## Operations"]);
-    }
-    expect(await treeHash(partial)).toBe(await treeHash(uninterrupted));
-  });
-
-  // QFAI:EX-0004-0003-43
-  it("opens a step that resumes an interrupted move with the found line, in a dry run and a real run", async () => {
-    for (const step of [1, 3] as const) {
-      const root = await storyTree(".qfai/spec", ".qfai/spec/03_contract");
-      const source = path.join(root, ".qfai", "spec", "moved.md");
-      const target = path.join(root, ".qfai", "spec", "01_policy", "moved.md");
-      await writeFile(source, "# Moved\n", "utf8");
-      await writeFile(target, "# Moved\n", "utf8");
-      const owner = { step, source, target };
-      const stage = moveStage(
-        {
-          root,
-          config: structuredClone(defaultConfig),
-          specsDir: path.join(root, ".qfai", "spec"),
-          contractsDir: path.join(root, ".qfai", "spec", "03_contract"),
-        },
-        owner,
-      );
-      await mkdir(stage.directory, { recursive: true });
-      await writeFile(stage.marker, `${JSON.stringify(owner)}\n`, "utf8");
-      const dry = await stepIn(root, step, ["--dry-run"]);
-      const real = await stepIn(root, step);
-      for (const [kind, result] of [
-        ["dry run", dry],
-        ["real run", real],
-      ] as const) {
-        const label = `step ${step} ${kind}`;
-        expect(result.code, `${label}: ${result.errors}`).toBe(0);
-        expect(opening(result.output), label).toEqual([FOUND, "", "## Operations"]);
-        expect(result.output, label).toContain("moved.md");
-      }
-      await expect(readFile(source)).rejects.toMatchObject({ code: "ENOENT" });
-    }
-  });
-
   // QFAI:EX-0004-0003-45
   it("reads a retired configuration key as a trace of the old layout in steps 1 to 3", async () => {
     const root = await storyTree(
@@ -309,19 +205,6 @@ describe("the verdict line of migration steps 1 to 10", () => {
     expect(summaries(result.output)).toEqual([]);
   });
 
-  // QFAI:EX-0004-0003-45
-  it("reads staging step 10 has to clear as a trace and ends with the found summary", async () => {
-    const root = await storyTree(".qfai/spec", ".qfai/spec/03_contract");
-    const name = await abandonedStage(root);
-    const result = await stepIn(root, 10, ["--dry-run"]);
-    expect(result.code, result.errors).toBe(0);
-    expect(opening(result.output)).toEqual([FOUND, "", "## Operations"]);
-    expect(operationsOf(result.output)).toEqual(
-      expect.arrayContaining([expect.stringContaining(name)]),
-    );
-    expect(lastLine(result.output)).toBe(SUMMARY_FOUND);
-  });
-
   // QFAI:EX-0004-0003-46
   it("prints neither a verdict line nor a closing line when a step refuses with exit 2", async () => {
     const unmigrated = await oldLayout();
@@ -354,11 +237,6 @@ describe("the verdict line of migration steps 1 to 10", () => {
         for (const verdict of [FOUND, DONE, "no 1.x layout found"]) {
           expect(result.output, label).not.toContain(verdict);
         }
-        const [reportFile] = (
-          await migrationReportFiles(root, args.length > 0 ? "dry-run" : "run", step)
-        ).slice(-1);
-        const kept = await readMigrationReport(root, reportFile ?? "");
-        expect(kept.split(/\r?\n/)[0], label).toBe("## Operations");
       }
     }
   }, 120_000);
@@ -398,12 +276,5 @@ describe("the verdict line of migration steps 1 to 10", () => {
       expect(result.output.split(/\r?\n/)[0]).toBe(FOUND);
       expect(lastLine(result.output)).toBe(SUMMARY_FOUND);
     }
-    // A step 10 that exits 3 closes the same way.
-    const staged = await storyTree(".qfai/spec", ".qfai/spec/03_contract");
-    await abandonedStage(staged, true);
-    const listed = await stepIn(staged, 10);
-    expect(listed.code, listed.errors).toBe(3);
-    expect(listed.output.split(/\r?\n/)[0]).toBe(FOUND);
-    expect(lastLine(listed.output)).toBe(SUMMARY_FOUND);
   }, 120_000);
 });

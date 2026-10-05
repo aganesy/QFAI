@@ -129,6 +129,7 @@ describe("the structured-question reminder", () => {
       "<task-notification>\n<task-id>b1</task-id>\n<status>completed</status>",
       '<wake reason="external-event">CI finished</wake>',
       "[SYSTEM NOTIFICATION]\n\n<task-notification>\n<task-id>b1</task-id>",
+      "[SYSTEM NOTIFICATION - NOT USER INPUT]\n\nActivity on a subscribed pull request.",
     ]) {
       await expect(printedFor(rel, promptInput(prompt)), prompt).resolves.toBe("");
     }
@@ -143,6 +144,7 @@ describe("the structured-question reminder", () => {
         promptInput("Fix the failing test"),
         promptInput("What does <task-notification> mean here?"),
         promptInput("<wakeup> is not a wrapper"),
+        promptInput("What does [SYSTEM NOTIFICATION] mean here?"),
         "",
         "{ not json",
         "{}",

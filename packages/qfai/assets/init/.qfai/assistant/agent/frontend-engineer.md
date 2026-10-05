@@ -62,8 +62,7 @@ specialization_tags:
 - Frontend implementation summary
 - Changed files and affected flows
 - Local verification notes
-- Updated EX section in `.qfai/evidence/implement-BF-NNNN.md` with test path, selector, observed RED/GREEN/Refactor results, and changed files
-- Evidence summary for `.qfai/evidence/`
+- Test path, selector, observed RED/GREEN/Refactor results and changed files, in the stage report
 - Notes on how simplicity, necessity, and reuse were preserved in the chosen implementation
 
 ## Stop conditions
