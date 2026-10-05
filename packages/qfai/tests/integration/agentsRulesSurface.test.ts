@@ -269,6 +269,30 @@ describe("the minimal-implementation rule names the four shapes an addition take
   });
 });
 
+describe("§ 4 of the minimal-implementation rule bounds unrequested fixes and readings", () => {
+  it("states both lines, the needed-fix exception and grilling first", async () => {
+    const text = await readFile(
+      path.join(ROOT, "packages/qfai/assets/init/root/.agents/rules/minimal-implementation.md"),
+      "utf-8",
+    );
+    const section = text.split("## 4. What a change leaves out")[1]?.split(/^## /m)[0];
+    expect(section).toBeDefined();
+    const flat = section?.replace(/\s+/g, " ");
+    expect(flat).toContain("**A fix nobody asked for**");
+    expect(flat).toContain("is reported as a follow-up");
+    expect(flat).toContain("A fix the requested behaviour cannot work without stays in.");
+    expect(flat).toContain(
+      "The change's report names it, and it needs no expansion declared under Article VII.",
+    );
+    expect(flat).toContain("**An ambiguous request**, where the work goes ahead on an assumption");
+    expect(flat).toContain(
+      "is built only for the reading the wording and the surrounding code most directly support.",
+    );
+    expect(flat).toContain("State the assumption.");
+    expect(flat).toContain("Whether to ask instead is `grilling.md`'s to decide.");
+  });
+});
+
 /**
  * Every rule master, read off the directory.
  *
@@ -633,6 +657,8 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /accessibility/i,
         /SIMPLIFIED:/,
         /Lift when:/,
+        /reported as a\s+follow-up/,
+        /most directly support/,
         /Change Request/i,
       ]) {
         expect(text).toMatch(clause);
@@ -1519,6 +1545,60 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toMatch(/not\s+applied\s+on\s+the\s+strength\s+of\s+that\s+source\s+alone/);
       expect(text).toMatch(/verified\s+against\s+the\s+repository/);
       expect(text).toMatch(/nothing\s+verified\s+is\s+`defer`,\s+not\s+`apply`/);
+    });
+  });
+
+  // An adopter's agents read the skills and rules `qfai init` writes, and the
+  // adopter writes more of their own, so the master ships.
+  describe("ai-readable-markdown rule", () => {
+    const MASTERS = [
+      ".agents/rules/ai-readable-markdown.md",
+      "packages/qfai/assets/init/root/.agents/rules/ai-readable-markdown.md",
+    ];
+
+    it.each(MASTERS)("%s states every clause", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      // One token per clause that no other clause in the file carries.
+      for (const clause of [
+        // The two limits.
+        /stays\s+at\s+or\s+under\s+\*\*500\s+lines\*\*/,
+        /`SKILL\.md`\s+body\s+stays\s+at\s+or\s+under\s+\*\*20,000\s+characters\*\*/,
+        // A split pays only when it defers loading.
+        /Splitting\s+helps\s+only\s+when\s+the\s+pieces\s+are\s+loaded\s+on\s+demand/,
+        /the\s+budget\s+is\s+what\s+a\s+task\s+loads,\s+not\s+the\s+size\s+of\s+one\s+file/,
+        // The pointer, and the generic one that does not count.
+        /Every\s+pointer\s+to\s+another\s+file\s+says\s+when\s+to\s+read\s+it,\s+when\s+not\s+to,\s+and\s+what\s+it\s+holds/,
+        /A\s+generic\s+"see\s+`references\/`"\s+does\s+not\s+count/,
+        // Depth and the contents list.
+        /A\s+reference\s+does\s+not\s+point\s+to\s+another\s+reference/,
+        /over\s+100\s+lines\s+opens\s+with\s+a\s+`## Contents`\s+section/,
+        // What deferral may not take away.
+        /An\s+obligation\s+whose\s+trigger\s+the\s+agent\s+cannot\s+judge\s+for\s+itself\s+stays\s+in\s+the\s+entry\s+file/,
+        // One home.
+        /Each\s+rule\s+is\s+written\s+in\s+one\s+place,\s+and\s+every\s+other\s+file\s+references\s+it/,
+      ]) {
+        expect(text).toMatch(clause);
+      }
+    });
+
+    it("ships to adopters", async () => {
+      const shipped = path.join(
+        ROOT,
+        "packages/qfai/assets/init/root/.agents/rules/ai-readable-markdown.md",
+      );
+      expect((await lstat(shipped)).isFile()).toBe(true);
+    });
+
+    it.each([
+      "AGENTS.md",
+      "CLAUDE.md",
+      ".github/copilot-instructions.md",
+      "packages/qfai/assets/init/root/AGENTS.md",
+      "packages/qfai/assets/init/root/CLAUDE.md",
+      "packages/qfai/src/cli/commands/init.ts",
+    ])("%s cites the rule master", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toContain("ai-readable-markdown.md");
     });
   });
 });
