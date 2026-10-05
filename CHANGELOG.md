@@ -36,6 +36,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai init` and `qfai doctor` list the READMEs an earlier release
+  generated.** `.qfai/README.md` and `.qfai/discussion/README.md` still described
+  the retired discussion-pack files, and neither command mentioned them. Both now
+  appear in the leftover list while their text opens as the generated one did. A
+  README you wrote at either path is not listed, and none is deleted (#2985).
+
 - **The contract guide states one scope for contract kinds.** It named only
   `api/`, `db/` and `ui/` as contract directories in one place and `cli/` in
   another. It now says a project's contracts are the three directories and that
