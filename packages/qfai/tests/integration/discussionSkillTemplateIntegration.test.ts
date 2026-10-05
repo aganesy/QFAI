@@ -8,7 +8,7 @@ import {
   CANONICAL_REQUIRED_SIDECAR_FILES,
   FORBIDDEN_LEGACY_PATTERNS,
 } from "../../src/core/validators/uix/threeLayer.js";
-import { readDiscussionSkill } from "../helpers/discussionSteps.js";
+import { readDiscussionSkill, readDiscussionStep } from "../helpers/discussionSteps.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 const templateBase = path.join(
@@ -121,12 +121,50 @@ describe("discussion skill template integration", () => {
     expect(files).not.toContain("34_evaluator_calibration.md");
   });
 
-  // QFAI:EX-0001-0016-01
   it("SKILL.md requires the brand SSOT for UI-bearing completion", async () => {
     const content = await readFile(skillPath, "utf-8");
     expect(content).toMatch(/DESIGN\.md/);
     expect(content).toMatch(/40_screen_contracts\.md/);
     expect(content).toMatch(/50_review_input_bundle\.md/);
+  });
+
+  // QFAI:AC-0001-0016-01
+  // QFAI:EX-0001-0016-01
+  it("completes a UI-bearing pack with the brand theme recorded and the explorations unranked", async () => {
+    const matrix = (await readFile(completionMatrixPath, "utf-8")).replace(/\s+/g, " ");
+    const context = await readFile(path.join(templateBase, "templates", "01_Context.md"), "utf-8");
+    expect(matrix).toMatch(
+      /exploration directions are carried unranked — no single screen exploration is selected and the design system is not finalized here/i,
+    );
+    expect(matrix).toMatch(
+      /`01_Context\.md#Design Direction` names an adopted theme, what departs from it, and what stays ordinary/,
+    );
+    expect(context).toMatch(/^## Design Direction$/m);
+    expect(context).toMatch(/^- adopted_theme: /m);
+    expect(context).toMatch(/^- brand_accent: /m);
+    expect(context).toMatch(/^- conventions_kept: /m);
+    expect(context).toMatch(/^- chosen_by: \[user\|assumption\]$/m);
+  });
+
+  // QFAI:AC-0001-0082-01
+  // QFAI:EX-0001-0082-01
+  it("gives a rejected direction its reason and recurrence cue in 04_Sources.md", async () => {
+    const sources = await readFile(path.join(templateBase, "templates", "04_Sources.md"), "utf-8");
+    const section = sources.split(/^## /m).find((part) => part.startsWith("Design Anti-Goals"));
+    expect(section).toBeDefined();
+    expect(section?.replace(/\s+/g, " ")).toMatch(
+      /record each rejected direction with its reason and a concrete cue that would show it recurring in a prototype/i,
+    );
+    expect(section).toMatch(
+      /^\| Rejected direction \| Rejection reason \| Recurrence cue \| Source or decision \| Status\s*\|$/m,
+    );
+    const step = (await readDiscussionStep(assistantBase, "discussion-pack")).replace(/\s+/g, " ");
+    expect(step).toMatch(
+      /record each rejected direction, why it was rejected, a concrete cue for its recurrence, and its decision or source/i,
+    );
+    expect(step).toMatch(
+      /any rejected direction with a reason and recurrence cue\. No `missing` row passes/,
+    );
   });
 
   // SKILL.md is the only file the skill is guaranteed to load; references are

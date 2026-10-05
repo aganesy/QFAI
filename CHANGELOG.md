@@ -6,6 +6,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The planner-first and design anti-goal examples are tested for what they
+  say.** The planner-first example was annotated on a test that only checked
+  three file names. Its test now reads the completion matrix and the
+  `01_Context.md` template for the recorded brand theme, the unranked
+  explorations and the unfinalized design system. The anti-goal example, which
+  had no test, is checked against the `04_Sources.md` template. (#2286)
 - **Two governance tests can now fail.** The missing-bucket test matched
   bucket names the message always prints; it now checks the
   `missingBuckets=[...]` list, with a second case where one bucket is missing.
