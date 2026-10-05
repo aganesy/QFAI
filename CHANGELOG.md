@@ -16,6 +16,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   otherwise reports the example as uncovered. BF and AC annotations are read as
   before.
 
+### Fixed
+
+- **Each `qfai init` mode-line example is annotated on its own test.** The
+  three annotations sat at the top of the file, so any passing test there
+  counted for all three. The test covering the four mode values names the value
+  in each failing assertion. (#2287)
+
 ## [2.1.0] - 2026-10-05
 
 ### Breaking changes
