@@ -48,7 +48,7 @@ function functionBody(source: string, marker: string): string {
 /** The entry names of a directory, or none where it does not exist. Any other read failure is rethrown unchanged. */
 async function namesOrNoneWhereMissing(
   dir: string,
-  list: typeof readdir = readdir,
+  list: (path: string) => Promise<string[]> = readdir,
 ): Promise<string[]> {
   try {
     return await list(dir);
@@ -136,7 +136,7 @@ describe("a workflows directory reached through a link is not this tree's to wri
 
 describe("an absence check keeps a read failure apart from a missing directory", () => {
   const failWith =
-    (code: string): typeof readdir =>
+    (code: string): ((path: string) => Promise<string[]>) =>
     () =>
       Promise.reject(Object.assign(new Error(`${code} on read`), { code, path: "dir" }));
 
