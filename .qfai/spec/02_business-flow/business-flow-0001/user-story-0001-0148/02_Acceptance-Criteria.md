@@ -22,6 +22,6 @@ Feature: Discussion-Pack Preflight
     Given a discussion pack exists but is incomplete, contradictory, or carries a blocking open question
     When SDD starts
     Then it continues using that pack as non-normative reference material
-    And it records the discrepancy in SDD-owned decisions, questions, or evidence
+    And it states the discrepancy in its final report or as an open question
     And it does not edit the discussion pack to clear the discrepancy
 ```

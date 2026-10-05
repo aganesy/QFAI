@@ -279,9 +279,8 @@ jobs:
             !Array.isArray(packageScripts) ? Object.keys(packageScripts) : [];
           // `test:windows-parity` is a suite list the Windows job runs, not a slice of the suite:
           // its files belong to slices already counted here.
-          // SHIPPED-CI: not-applicable
-          // Because: the shipped set carries no publish workflow, so it has no release gate to classify.
-          const NOT_SLICES = ["test:assets", "test:coverage", "test:windows-parity"];
+          // SHIPPED-CI: not-applicable. Because: the shipped set has no release gate to list these.
+          const NOT_SLICES = ["test:assets", "test:windows-parity"];
           const sliceScripts = scriptNames.filter((name) =>
             name.startsWith("test:") && !NOT_SLICES.includes(name)
           );

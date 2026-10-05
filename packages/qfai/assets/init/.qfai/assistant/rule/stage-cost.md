@@ -30,8 +30,8 @@ At the top levels a model can draft most of a long output while reasoning, then
 write it again as the reply. This can lengthen the turn without improving the
 result.
 
-The stages that produce long documents are spec authoring, contract
-normalization and a full review pack. Run them at the default level unless a
+The stages that produce long documents are spec authoring and contract
+normalization. Run them at the default level unless a
 gain has been measured. Where a higher level is used, tell the model that
 reasoning and reply share one output limit, so drafting the deliverable twice
 cuts the reply off.

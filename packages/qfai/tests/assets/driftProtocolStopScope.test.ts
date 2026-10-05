@@ -23,7 +23,10 @@ describe.each(trees)("drift protocol in %s", (tree) => {
     ).replace(/\s*\n\s*/g, " ");
     expect(rule).toContain("Content starts with Change request:");
     expect(rule).toContain("TODO is not authorization.");
-    expect(rule).toContain("WIP or DONE Change request: row");
+    expect(rule).toContain("A WIP Change request: row is the in-force authorization");
+    expect(rule).toContain(
+      "A DONE row authorizes only on the branch that appended it or moved it from WIP.",
+    );
     expect(rule).not.toContain(".qfai/decisions/");
     expect(rule).not.toContain("tdd/test-list.md");
   });

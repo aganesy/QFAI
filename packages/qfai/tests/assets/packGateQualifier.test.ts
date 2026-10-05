@@ -12,17 +12,6 @@ const flat = (text: string): string => text.replace(/\s+/g, " ");
 
 describe("packaging verification is conditional on distribution", () => {
   for (const tree of TREES) {
-    it(tree + ": ATDD completion is scoped to the active flow", async () => {
-      const atdd = flat(await read(tree, "assistant/step/atdd-author/STEP.md"));
-      expect(atdd).toContain("may report PASS only when");
-      expect(atdd).toContain(
-        "Every BF and AC obligation in scope has an executed, behavior-checking test",
-      );
-      expect(atdd).toContain("Routed reviewers and qa-gatekeeper passed the current work");
-      expect(atdd).toContain("`/qfai-verify` runs the repository gate");
-      expect(atdd).not.toMatch(/pack\/verify.*pass with evidence/);
-    });
-
     it(tree + ": the repository gate retains the distribution qualifier", async () => {
       const [constitution, workflow, quality, verify] = await Promise.all([
         read(tree, "assistant/rule/constitution.md"),

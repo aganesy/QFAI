@@ -4,11 +4,6 @@
  * and are never written into the project.
  */
 // QFAI:AC-0001-0196-01
-// QFAI:EX-0001-0196-01
-// QFAI:EX-0001-0196-02
-// QFAI:EX-0001-0196-03
-// QFAI:EX-0001-0196-33
-// QFAI:EX-0001-0196-35
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import {
@@ -109,6 +104,11 @@ async function expectWrappersResolve(root: string): Promise<void> {
   }
 }
 
+// QFAI:EX-0001-0196-01
+// QFAI:EX-0001-0196-02
+// QFAI:EX-0001-0196-03
+// QFAI:EX-0001-0196-33
+// QFAI:EX-0001-0196-35
 describe("the workflow entry install set", () => {
   it("Fresh init installs the entry skills and every step the plans name", async () => {
     await withEmptyRepo(async (root) => {

@@ -1,4 +1,3 @@
-// QFAI:EX-0003-0010-01
 //
 // Integration: `qfai doctor --profile <skill>` reads the skill's
 // manifest.json `runtimeDependencies` and probes the consumer
@@ -53,6 +52,8 @@ async function seedManifest(root: string, skill: string, deps: string[]): Promis
   );
 }
 
+// QFAI:AC-0003-0010-01
+// QFAI:EX-0003-0010-01
 describe("doctor --profile <skill> probes manifest runtimeDependencies", () => {
   it("missing dep reported with install command", async () => {
     const root = await newTempDir("missing");
@@ -162,6 +163,7 @@ describe("doctor --profile <skill> does not report [ok] when nothing was probed"
     expect(finding.message).toMatch(/manifest\.json/u);
   });
 
+  // QFAI:AC-0003-0010-02
   it("stays [ok] — and names the manifest — when a manifest declares zero deps", async () => {
     const root = await newTempDir("zero-deps");
     await seedManifest(root, "qfai-prototyping", []);
@@ -176,7 +178,7 @@ describe("doctor --profile <skill> does not report [ok] when nothing was probed"
     // directory, so "unknown skill / check --profile" would be a
     // misdiagnosis, and `--fail-on error` must not trip on it.
     const root = await newTempDir("noskillsroot");
-    const finding = await runAndFind(root, "qfai-atdd");
+    const finding = await runAndFind(root, "qfai-implement");
     expect(finding.severity).toBe("warning");
     expect(finding.message).not.toMatch(/unknown skill/u);
     expect(finding.message).toMatch(/skills root/u);

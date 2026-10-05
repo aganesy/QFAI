@@ -9,7 +9,6 @@
  *   rejected by the closed-schema validator (`QFAI-AUD-021`,
  *   severity error).
  */
-// QFAI:EX-0001-0050-01
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -63,6 +62,7 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
+// QFAI:EX-0001-0050-01
 describe("TC-0004-0070: QFAI-AUD-020 ceiling warn + missing acceptance reject (error/boundary)", () => {
   it("9 primary_tasks fires QFAI-AUD-020 (warning) naming the ceiling", async () => {
     const tasks = Array.from(
