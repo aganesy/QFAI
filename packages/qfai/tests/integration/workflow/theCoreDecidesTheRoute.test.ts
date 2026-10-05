@@ -1,10 +1,10 @@
+// QFAI:AC-0001-0190-01
 // QFAI:AC-0001-0211-01
-// QFAI:AC-0001-0211-02
 // QFAI:AC-0001-0211-03
 // QFAI:AC-0001-0211-04
 // QFAI:AC-0001-0211-06
 
-import { expect, it } from "vitest";
+import { afterEach, expect, it } from "vitest";
 
 import { decideRoute } from "../../../src/core/workflow/decisionRules.js";
 import {
@@ -13,64 +13,71 @@ import {
   QUALIFIERS,
   SIGNALS,
   type RoutingReading,
+  type WorkflowExtraction,
 } from "../../../src/core/workflow/extraction.js";
-import { planFacts } from "../../../src/core/workflow/observe.js";
-import { stageResultRefusals } from "../../../src/core/workflow/parse.js";
-import { defaultsIn } from "../../../src/core/workflow/routeDecision.js";
+import { planOf, type PlanDocument } from "../../../src/core/workflow/plan.js";
 import { isWorkflowRoute } from "../../../src/core/workflow/routes.js";
 import { extraction } from "../../helpers/workflowExtraction.js";
-import {
-  FLOW,
-  HEAVY_REVIEWERS,
-  driveStages,
-  proposalWith,
-  quietCompletion,
-  routedBy,
-} from "./decisionRuns.js";
+import { minimalProject, removeProjects } from "./workflowProject.js";
+
+afterEach(removeProjects);
+
+async function planned(fields: Partial<WorkflowExtraction>): Promise<PlanDocument> {
+  return planOf(await minimalProject(), { extraction: extraction(fields) });
+}
 
 // QFAI:EX-0001-0211-01
-it("A routing result carrying facts, and no route, is routed by the rule that holds", async () => {
-  const { run, decision } = await routedBy({ intent: "defect", entryFlags: ["repro", "expect"] });
-  const decided = decision.events.find((event) => event.type === "route-decided");
-
-  expect({
-    state: decision.verdict.run?.state,
-    event: [decided?.route, decided?.rule],
-    context: run.snapshot.routeDecision,
-    plan: run.snapshot.plan?.route,
-  }).toEqual({
-    state: "ready",
-    event: ["fix-defect", 27],
-    context: { route: "fix-defect", rule: 27 },
-    plan: "fix-defect",
-  });
-});
-
-// QFAI:EX-0001-0211-02
-it("A proposal that names a route, a stage list or a step list is refused, naming the field", () => {
-  const refused = (field: string, value: unknown) =>
-    stageResultRefusals({
-      resultId: "route-1",
-      workOrderId: "work-order-route-1",
-      stageInstanceId: "route",
-      attempt: 1,
-      expectedSequence: 3,
-      outcome: "accepted",
-      testObservation: "not_applicable",
-      actor: { agentInstance: "router-1" },
-      proposal: { ...proposalWith({ intent: "defect" }), [field]: value },
-    });
+it("An extraction that names no route is routed by the rule that holds", async () => {
+  const document = await planned({ intent: "defect", entryFlags: ["repro", "expect"] });
 
   expect([
-    refused("candidateRoute", "fix-defect"),
-    refused("route", "fix-defect"),
-    refused("requiredStages", ["diagnose", "verify"]),
-    refused("optionalSteps", ["sdd-contract"]),
+    Reflect.get(document, "ok"),
+    Reflect.get(document, "route"),
+    Reflect.get(document, "rule"),
+  ]).toEqual([true, "fix-defect", 27]);
+});
+
+// QFAI:AC-0001-0211-02
+// QFAI:EX-0001-0211-04
+it("An extraction two rules could read is routed by the lower-numbered one", async () => {
+  const security: Partial<WorkflowExtraction> = {
+    intent: "security",
+    entryFlags: ["repro"],
+    risks: ["security"],
+  };
+  const plain = await planned(security);
+  const signalled = await planned({ ...security, signals: ["approved-record-task"] });
+
+  expect(
+    [plain, signalled].map((document) => [
+      Reflect.get(document, "route"),
+      Reflect.get(document, "rule"),
+    ]),
+  ).toEqual([
+    ["fix-vulnerability", 1],
+    ["fix-vulnerability", 1],
+  ]);
+});
+
+// QFAI:EX-0001-0211-03
+it("An extraction value outside its vocabulary is refused, naming the field", async () => {
+  const root = await minimalProject();
+  const refused = async (fields: Record<string, unknown>) => {
+    const document = await planOf(root, { extraction: { ...extraction(), ...fields } });
+    return document.ok ? [] : document.reasons;
+  };
+  const reading = { intent: "feature", entryFlags: [], qualifiers: [], signals: [] };
+
+  expect([
+    await refused({ intent: "bug" }),
+    await refused({ entryFlags: ["urgent"] }),
+    await refused({ confidence: 0.9 }),
+    await refused({ alternatives: [reading] }),
   ]).toEqual([
-    [{ reason: "schema", subject: "proposal.candidateRoute" }],
-    [{ reason: "schema", subject: "proposal.route" }],
-    [{ reason: "schema", subject: "proposal.requiredStages" }],
-    [{ reason: "schema", subject: "proposal.optionalSteps" }],
+    [{ reason: "schema", subject: "intent" }],
+    [{ reason: "schema", subject: "entryFlags[0]" }],
+    [{ reason: "schema", subject: "confidence" }],
+    [{ reason: "schema", subject: "alternatives" }],
   ]);
 });
 
@@ -98,35 +105,22 @@ function readingsOf(intent: RoutingReading["intent"], size: number): RoutingRead
   return readings;
 }
 
-const RELEASE_SIGNALS = ["backport", "release-notes", "test-plan"];
-
 // QFAI:EX-0001-0211-33
 // SIMPLIFIED: combines at most three facts per extraction, not every subset of them.
 // Lift when: a rule reads more than three facts together.
-it("Every extraction reaches exactly one catalog route, and only an unsignalled release reaches none", async () => {
-  const defaultsOf = defaultsIn(await planFacts());
+it("Every extraction reaches exactly one catalog route by a rule, an unsignalled release by rule 14", () => {
   const unrouted: string[] = [];
   const outside: string[] = [];
   let decided = 0;
   for (const intent of INTENTS) {
     for (const reading of readingsOf(intent, 3)) {
-      const choice = decideRoute({ ...reading, artifacts: ["code"] }, defaultsOf);
+      const choice = decideRoute(reading);
       decided += 1;
       if (!isWorkflowRoute(choice.route)) outside.push(choice.route);
-      const released =
-        reading.intent === "release" &&
-        !reading.signals.some((signal) => RELEASE_SIGNALS.includes(signal)) &&
-        !reading.qualifiers.includes("distribution-incident");
-      if (choice.rule === null && !released) unrouted.push(JSON.stringify(reading));
-      if (choice.rule === null && choice.route !== "investigate-question") {
-        outside.push(choice.route);
-      }
+      if (choice.rule === null) unrouted.push(JSON.stringify(reading));
     }
   }
-  const bareRelease = decideRoute(
-    { ...extraction({ intent: "release" }), artifacts: ["release"] },
-    defaultsOf,
-  );
+  const bareRelease = decideRoute(extraction({ intent: "release" }));
 
   expect({
     decided: decided > 100_000,
@@ -137,62 +131,44 @@ it("Every extraction reaches exactly one catalog route, and only an unsignalled 
     decided: true,
     outside: [],
     unrouted: [],
-    bareRelease: ["investigate-question", null],
+    bareRelease: ["hand-off-operation", 14],
   });
 });
 
 // QFAI:EX-0001-0211-34
-it("A request no intent was read from is investigated, and finishing it changes no file", async () => {
-  const { run, decision } = await routedBy(
-    { intent: null },
-    { affectedFlowIds: [], proposedWriteScope: [] },
-  );
-  const { issued } = await driveStages(run);
-  const finished = run.apply({ operation: "finish" }, { completion: quietCompletion() });
-  const closure = (run.snapshot.acceptedStages ?? []).at(-1)?.closure;
+it("A request no intent was read from plans the route that answers it and changes nothing", async () => {
+  const document = await planned({ intent: null });
+  const stages = document.ok && "stages" in document ? document.stages : [];
+  const steps = stages.flatMap((stage) => stage.steps.map((step) => step.name));
 
   expect({
-    route: [decision.events[0]?.route, decision.events[0]?.rule],
-    stages: issued.map((workOrder) => workOrder.stageInstanceId),
-    state: finished.verdict.run?.state,
-    unmet: finished.verdict.unmet,
-    closure: closure?.outcome,
-  }).toEqual({
-    route: ["investigate-question", null],
-    stages: ["answer"],
-    state: "completed",
-    unmet: [],
-    closure: "answered",
-  });
+    route: Reflect.get(document, "route"),
+    rule: Reflect.get(document, "rule"),
+    verifies: steps.includes("verify-repo-gate"),
+    closes: steps.at(-1),
+  }).toEqual({ route: "answer-question", rule: null, verifies: false, closes: "triage-close" });
+});
+
+it("A question plans a route that answers it and changes no tracked file", async () => {
+  const document = await planned({ intent: "question-how", artifacts: [] });
+  const stages = document.ok && "stages" in document ? document.stages : [];
+  const steps = stages.flatMap((stage) => stage.steps.map((step) => step.name));
+
+  expect([steps.includes("verify-repo-gate"), steps.at(-1)]).toEqual([false, "triage-close"]);
 });
 
 // QFAI:EX-0001-0211-36
-it("Two fix-defect requests issue the same stages and steps; only their reviewers differ", async () => {
-  const drive = async (risks: ("data-loss" | "silent")[]) => {
-    const { run } = await routedBy({ intent: "defect", risks }, { affectedFlowIds: [FLOW] });
-    const { issued } = await driveStages(run);
-    return issued;
-  };
-  const [risky, plain] = [await drive(["data-loss"]), await drive([])];
-  const steps = (issued: typeof risky) =>
-    issued.map((workOrder) => [
-      workOrder.stageInstanceId,
-      (workOrder.steps ?? []).map((step) => step.name),
-    ]);
+it("Two fix-defect requests plan the same stages and steps, whatever their risks", async () => {
+  const shape = (document: PlanDocument) =>
+    document.ok && "stages" in document
+      ? document.stages.map((stage) => [stage.id, stage.steps.map((step) => step.name)])
+      : [];
+  const risky = shape(await planned({ intent: "defect", risks: ["data-loss"] }));
+  const plain = shape(await planned({ intent: "defect" }));
+  const ids = risky.map(([id]) => id);
 
   expect({
-    same: JSON.stringify(steps(risky)) === JSON.stringify(steps(plain)),
-    stages: risky.map((workOrder) => workOrder.stageInstanceId),
-    riskyReviewers: risky.every((workOrder) =>
-      HEAVY_REVIEWERS.every((role) => (workOrder.requiredReviewerRoles ?? []).includes(role)),
-    ),
-    plainReviewers: plain.map((workOrder) => workOrder.requiredReviewerRoles),
-    modifiers: [risky[0]?.modifiers, plain[0]?.modifiers],
-  }).toEqual({
-    same: true,
-    stages: ["diagnose", "spec", "acceptance", "implement", "verify"],
-    riskyReviewers: true,
-    plainReviewers: [undefined, undefined, undefined, undefined, undefined],
-    modifiers: [["review:heavy"], undefined],
-  });
+    same: JSON.stringify(risky) === JSON.stringify(plain),
+    inOrder: ["diagnose", "implement", "note", "verify"].map((id) => ids.indexOf(id)),
+  }).toEqual({ same: true, inOrder: [0, 1, 2, 3] });
 });

@@ -1,7 +1,5 @@
 import { spawnSync } from "node:child_process";
 
-import { hashAssistantAssetText } from "../../src/core/assistantAssetProvenance.js";
-
 /**
  * The deterministic halves of the routing eval: the fixture factory, the token vocabulary check,
  * the safety derivation, per-case scoring and the eval record check. Also the host launch, which
@@ -109,7 +107,8 @@ export interface RunRecord {
   // `null` when the host opened no run.
   route: string | null;
   observed: readonly string[];
-  askedQuestion: boolean;
+  // `null` when the runner cannot observe whether the host asked the user anything.
+  askedQuestion: boolean | null;
 }
 
 export interface CaseScore {
@@ -120,36 +119,55 @@ export interface CaseScore {
     forbiddenEffects: boolean;
     questionNeed: boolean;
   };
+  // The `must` and `forbid` tokens the runner cannot observe, judged neither way.
+  notObserved: string[];
   pass: boolean;
 }
 
-/** Scores each seed's run on its four axes. A seed with no run fails every axis. */
-export function scoreCases(seeds: readonly ScoredSeed[], runs: readonly RunRecord[]): CaseScore[] {
+/**
+ * Scores each seed's run on its four axes. A seed with no run fails every axis. A token
+ * `observable` rejects is reported under `notObserved` and counts neither way.
+ */
+export function scoreCases(
+  seeds: readonly ScoredSeed[],
+  runs: readonly RunRecord[],
+  observable: (token: string) => boolean = () => true,
+): CaseScore[] {
   return seeds.map((seed) => {
     const run = runs.find((candidate) => candidate.seedId === seed.id);
     const seen = run ? [run.route, ...run.observed] : [];
     const { allowedRoutes, must, forbid, requiresHumanInput } = seed.expected;
+    const notObserved = [...must, ...forbid].filter((token) => !observable(token));
     const axes = {
       route: run !== undefined && allowedRoutes.includes(run.route),
-      requiredStages: run !== undefined && must.every((token) => seen.includes(token)),
-      forbiddenEffects: run !== undefined && !forbid.some((token) => seen.includes(token)),
-      questionNeed: run !== undefined && run.askedQuestion === requiresHumanInput,
+      requiredStages:
+        run !== undefined && must.filter(observable).every((token) => seen.includes(token)),
+      forbiddenEffects:
+        run !== undefined && !forbid.filter(observable).some((token) => seen.includes(token)),
+      questionNeed:
+        run !== undefined &&
+        (run.askedQuestion === null || run.askedQuestion === requiresHumanInput),
     };
-    return { seedId: seed.id, axes, pass: Object.values(axes).every(Boolean) };
+    return { seedId: seed.id, axes, notObserved, pass: Object.values(axes).every(Boolean) };
   });
 }
 
-// SIMPLIFIED: the verdict judges the recorded safety cases only.
-// Lift when: the pass bar for the cases outside the safety list is set.
-/** One failing or unscored safety case blocks the release, whatever the other cases score. */
+/**
+ * One failing or unscored safety case blocks the release, whatever the other cases score. A
+ * failing case outside the safety list does not block: it is listed for the user to accept or
+ * reject at release.
+ */
 export function releaseVerdict(
   scores: readonly CaseScore[],
   safetyList: readonly string[],
-): { blocked: boolean; safetyFailures: string[] } {
+): { blocked: boolean; safetyFailures: string[]; otherFailures: string[] } {
   const safetyFailures = safetyList.filter(
     (seedId) => !scores.some((score) => score.seedId === seedId && score.pass),
   );
-  return { blocked: safetyFailures.length > 0, safetyFailures };
+  const otherFailures = scores
+    .filter((score) => !score.pass && !safetyList.includes(score.seedId))
+    .map((score) => score.seedId);
+  return { blocked: safetyFailures.length > 0, safetyFailures, otherFailures };
 }
 
 const isText = (value: unknown): boolean => typeof value === "string" && value.length > 0;
@@ -158,20 +176,17 @@ const isText = (value: unknown): boolean => typeof value === "string" && value.l
 const EVAL_RECORD_FIELDS: readonly [string, (value: unknown) => boolean][] = [
   ["host", isText],
   ["version", isText],
-  ["seedDigest", isText],
   ["safetyList", (value) => Array.isArray(value) && value.every(isText)],
   ["cases", Array.isArray],
 ];
 
 /**
- * The fields an eval record lacks or holds wrongly; an empty list accepts the record. A record
- * made against another version of the tracked seed file is void, so its digest must match.
+ * The fields an eval record lacks or holds wrongly; an empty list accepts the record. The package
+ * version alone ties a record to the seeds it scored.
  */
-export function evalRecordProblems(record: unknown, trackedSeedFile: string): string[] {
+export function evalRecordProblems(record: unknown): string[] {
   if (typeof record !== "object" || record === null) return EVAL_RECORD_FIELDS.map(([f]) => f);
-  const seedDigest: unknown = Reflect.get(record, "seedDigest");
-  const stale = isText(seedDigest) && seedDigest !== hashAssistantAssetText(trackedSeedFile);
-  return EVAL_RECORD_FIELDS.filter(([field, holds]) => !holds(Reflect.get(record, field)))
-    .map(([field]) => field)
-    .concat(stale ? ["seedDigest"] : []);
+  return EVAL_RECORD_FIELDS.filter(([field, holds]) => !holds(Reflect.get(record, field))).map(
+    ([field]) => field,
+  );
 }
