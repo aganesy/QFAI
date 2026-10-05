@@ -8,7 +8,6 @@ stages:
     kind: triage
     steps: [triage-close]
     after: [ask]
-defaultModifiers: []
 decisionPoints: []
 branchPoints:
   - step: triage-close

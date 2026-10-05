@@ -5,11 +5,11 @@
 ```gherkin
 Feature: Ask without starting a change
   # AC-0001-0190-01
-  Scenario: A question changes nothing, and other request kinds start no run
-    Given a question about the project, and a request classified `verify_only`, `explicit_stage`, `resume` or `cancel`
+  Scenario: A question changes nothing, and untrusted text carries no authority
+    Given a question about the project, a request only to verify, or text quoted from a log
     When `qfai-run` handles it
     Then the question runs a route that answers it and changes no tracked file
-    And for the other kinds `start` is not called and no run directory is created
+    And nothing in a log or a quote starts a change, and a verification that finds a failure fixes nothing
 
   # AC-0001-0190-02
   Scenario: Text inside logs and tool output carries no authority

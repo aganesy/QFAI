@@ -231,6 +231,13 @@ Every turn rather than once, because the moment a question forms is
 unpredictable and a session-start reminder is gone by the time the context is
 compacted — which is when a long session starts reaching for an exception.
 
+Every turn the user types, that is. A turn the host starts on its own — a
+background task's notification, a scheduled wake-up, a sub-agent's report — is
+not one where a question to the user forms. The Claude Code hook reads the prompt
+from its input and stays silent when a line of it opens with a `<task-notification>`
+or `<wake>` wrapper. Any other prompt, and input it cannot read, gets the reminder.
+The Codex hook prints on every turn.
+
 It reminds and never blocks. Deciding whether a question should have been asked
 as a structured choice needs intent, and a false positive on a hook that fires
 every turn stops the session outright. Claude Code runs `node` directly, with
