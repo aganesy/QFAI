@@ -31,6 +31,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai init --force` reports only the paths it changed.** The `written` count
+  and list included every distributed file, including those already identical to
+  the shipped copy. Rule files, the Copilot and Codex files and the agent and
+  skill links that need no change are now counted as skipped (#2986).
+
 - **The `qfai-run` entry reminder stays silent on a turn the host starts
   (#2989).** The Claude Code `UserPromptSubmit` hook that sends a request to
   `qfai-run` printed on every notification, so an agent could start a run from
@@ -75,6 +80,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reuse of the ID. It names the `qfai validate` findings that catch a leftover.
 
 ### Changed
+
+- **`qa-gatekeeper` asks whether a reviewed test would survive a refactor**
+  (#2253). A test that asserts on what the contract does not name, such as a
+  private function, an internal call order or a mock of the code's own
+  collaborators, fails on a change that keeps the behaviour. The new advisory
+  refactor survival check records such a test, and names the
+  behaviour-preserving change it would fail on; a finding without one is not
+  admitted. It never returns REVISE on its own and carries no score. It reads
+  the whole of every test file the change touches, and defers a finding on a
+  test that existed before the change. The three other questions a regression
+  review asks point at the checks that already own them: the coverage gate, and
+  the proof per example in the oracle strength reference.
 
 - **Five doctor criteria now name the tests that prove them.** Existing
   integration tests carry standalone `QFAI:AC-...` comments, and
@@ -144,6 +161,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   routing-eval token vocabulary changes. The set of safety-relevant routing
   seeds is unchanged, and the list derived from these classes may now be
   recorded. The decision is recorded in `decisions.md`.
+
+- **The shipped guidance now bounds test-suite size and unrequested fixes**
+  (#2242). The test-layer rule gains a sizing section: a new test file is sized
+  like its neighbours, a process-per-case suite is a choice rather than an
+  inherited shape, and a scratch check does not become a permanent test file.
+  The minimal-implementation rule's section on what a change leaves out gains
+  two lines. A fix nobody asked for is reported as a follow-up, unless the
+  requested behaviour cannot work without it; the change's report then names
+  it. Where work goes ahead on an assumption about an ambiguous request, it is
+  built for one reading and the assumption is stated. The implementation and QA
+  reviewer cards and the review the implement skill gives each gain one check
+  for these. Test coverage for every source change is still required.
 
 ## [2.1.0] - 2026-10-05
 
@@ -414,18 +443,6 @@ its code. Several commands, findings and files go with that.
   down to `triage-close`. A triage stage carries no review. A defect found while investigating still
   re-routes by the decision rules. This replaces the earlier multi-stage
   question routes and their reviews. Fixes #2730.
-
-- **`qa-gatekeeper` asks whether a reviewed test would survive a refactor**
-  (#2253). A test that asserts on what the contract does not name, such as a
-  private function, an internal call order or a mock of the code's own
-  collaborators, fails on a change that keeps the behaviour. The new advisory
-  refactor survival check records such a test, and names the
-  behaviour-preserving change it would fail on; a finding without one is not
-  admitted. It never returns REVISE on its own and carries no score. It reads
-  the whole of every test file the change touches, and defers a finding on a
-  test that existed before the change. The three other questions a regression
-  review asks point at the checks that already own them: the coverage gate, and
-  the proof per example in the oracle strength reference.
 
 - **A DONE change request authorises only the branch that applies it**
   (#2251). A WIP row authorises as before, and a DONE row authorises
