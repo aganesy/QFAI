@@ -569,6 +569,35 @@ describe("TC-0017-0029 (TDD-0029): the shared definition keeps its four-step ord
       .soft(nodeWith["cache-dependency-path"], "and names its cache-dependency path explicitly")
       .toBeDefined();
   });
+
+  it("fetches the pnpm that packageManager names, with retries, and states no version of its own", () => {
+    const setupRun = String(setupActionSteps()[0]?.["run"] ?? "");
+    const releaseText = readFileSync(
+      path.join(REPO_ROOT, ".github", "workflows", "release.yml"),
+      "utf-8",
+    );
+    const setupText = readFileSync(
+      path.join(REPO_ROOT, ".github", "actions", "setup", "action.yml"),
+      "utf-8",
+    );
+
+    // The retry sits in the step that runs before Node setup, because setup-node's cache lookup
+    // is the first `pnpm` call and a failed download there cannot be retried from outside.
+    expect(setupRun, "step 1 retries the corepack download").toMatch(
+      /until corepack prepare --activate; do/,
+    );
+    expect(releaseText, "the release job retries the corepack download").toMatch(
+      /until corepack prepare --activate; do/,
+    );
+
+    // A literal version is a second statement of what `packageManager` already says.
+    for (const [name, text] of [
+      ["the setup action", setupText],
+      ["release.yml", releaseText],
+    ] as const) {
+      expect(text, `${name} must not name a pnpm version`).not.toMatch(/corepack prepare pnpm@/);
+    }
+  });
 });
 
 // ── TC-0017-0030 (TDD-0030) is deliberately NOT written here ───────────────

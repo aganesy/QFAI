@@ -19,7 +19,7 @@
 
 ```mermaid
 flowchart TD
-  Upper[<upper layer>] --> Lower[<lower layer>]
+  Upper["<upper layer>"] --> Lower["<lower layer>"]
 ```
 
 | Layer         | Responsibility                      | Depends on    |

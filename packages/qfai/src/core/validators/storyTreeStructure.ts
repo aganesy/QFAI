@@ -4,7 +4,7 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { extractH2Sections } from "../parse/markdown.js";
 import { parseAllMarkdownTables } from "../specPackParsers.js";
-import { architectureProblems } from "../storyTree/architecture.js";
+import { architectureProblems, MERMAID_FENCE } from "../storyTree/architecture.js";
 import {
   contractNumber,
   isStoryTreeId,
@@ -465,9 +465,7 @@ async function validateFlowMermaid(model: StoryTreeModel): Promise<Issue[]> {
   const issues: Issue[] = [];
   for (const flow of model.flows) {
     const content = await readFile(flow.file, "utf8");
-    const fences = content.matchAll(
-      /^ {0,3}(`{3,}|~{3,})[ \t]*mermaid[ \t]*\r?\n([\s\S]*?)^ {0,3}\1[ \t]*$/gim,
-    );
+    const fences = content.matchAll(MERMAID_FENCE);
     if ([...fences].some((match) => /^\s*(?:flowchart|sequenceDiagram)\b/im.test(match[2] ?? ""))) {
       continue;
     }

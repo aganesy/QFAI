@@ -141,16 +141,27 @@ export function moveArchitectureSection(draft: PolicyDraft, section: PolicySecti
       `${draft.target} ## ${ARCHITECTURE}: carry the "${column}" column of "## ${section.heading}" in ${section.source} by hand`,
   );
   const rows: string[][] = [];
+  const dropped = new Set<string>();
   for (const row of table.rows) {
-    if (row.some((cell) => LOCATED.test(cell)))
+    if (row.some((cell) => LOCATED.test(cell))) {
+      dropped.add(row[0] ?? "");
       person.push(
         `${draft.target} ## ${ARCHITECTURE}: rewrite the layer ${row[0] || "with no name"} of "## ${section.heading}" in ${section.source} without a path or file name by hand`,
       );
-    else rows.push(row);
+    } else rows.push(row);
   }
   const merged = [...(draft.rows.get(ARCHITECTURE) ?? [])];
   for (const row of rows) if (!merged.some((entry) => sameRow(entry, row))) merged.push(row);
-  const order = orderLayers(merged.map(layerOf));
+  const layers = merged.map(layerOf);
+  const lost = layers.flatMap((layer) =>
+    layer.dependsOn
+      .filter((name) => dropped.has(name) && !layers.some((other) => other.name === name))
+      .map(
+        (name) =>
+          `the layer ${layer.name} depends on ${name}, whose row was dropped for holding a path`,
+      ),
+  )[0];
+  const order = lost ?? orderLayers(layers);
   if (typeof order === "string") {
     person.push(
       `${draft.target} ## ${ARCHITECTURE}: order the layers of "## ${section.heading}" in ${section.source} from the uppermost down by hand, since ${order}`,

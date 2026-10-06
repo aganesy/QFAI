@@ -108,6 +108,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `EACCES` and `EIO`, into "absent" or an empty string, so a file the validator
   could not read passed as one that was not there. Only `ENOENT` and `ENOTDIR`
   now mean absent; any other error propagates unchanged. Fixes #2906.
+- **CI retries the pnpm download and reads its version from `packageManager`**
+  (#2816, #2773). The toolchain setup and the release job fetch the pnpm that
+  `package.json#packageManager` names before the first `pnpm` call, retrying up
+  to four times, so one network reset no longer fails a job. The hard-coded
+  `9.12.3` in both places is gone.
 - **The dogfooding backlog guard names every command a re-pin takes** (#2415).
   `scripts/dogfood-backlog.json` is a pinned guard input, so re-pinning it
   moves its digest. When a pin is behind the tree or a file is over its pin,
@@ -150,6 +155,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   (#2425). Step 2 of `qfai-migration-v1-to-v2` gave every `approved` change
   request the Status DONE, recording a change as made when only its approval
   was. A request whose `Applied at` is empty or `-` now becomes WIP.
+
+- **A trailing semicolon in the architecture diagram of `tech.md` is accepted.**
+  `flowchart TD;` and `CLI --> Core;` are valid Mermaid, yet `QFAI-STORY-013`
+  reported them. It now ignores one `;` at the end of each line, and when the
+  first line is not `flowchart TD` it quotes the line that was written.
+  Migration step 3 says the row of a layer was dropped for holding a path when
+  another layer depends on it, and the `tech.md` template and the authoring
+  guide draw layer labels in double quotes. Part of #2666.
 - **A configured spec path names one directory for every reader (#2632).**
   The document-schema lane now decodes a double-quoted `paths.specsDir` or
   `paths.contractsDir` the way the configuration loader does, so

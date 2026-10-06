@@ -48,7 +48,7 @@ A layer is a group of modules with a dependency direction. An upper layer may us
 
 The section holds two things, in this order:
 
-1. One `mermaid` block, `flowchart TD`, with one node per layer and one `Upper --> Lower` edge per dependency, and nothing else. A node is an ID, or an ID with its label in square brackets when the layer's name is not an ID.
+1. One `mermaid` block, `flowchart TD`, with one node per layer and one `Upper --> Lower` edge per dependency, and nothing else. A node is an ID, or an ID with its label in square brackets and double quotes, as in `Upper["Domain (core)"]`, when the layer's name is not an ID.
 2. One table of Layer, Responsibility and Depends on, one row per layer, from the uppermost layer to the lowermost. Depends on names only layers in rows below its own, comma-separated, or `-` for none. Peers at the same height may come in any order.
 
 `npx qfai validate` reports a Depends on that names a layer not below its row, and any node or edge the diagram and the table do not share.

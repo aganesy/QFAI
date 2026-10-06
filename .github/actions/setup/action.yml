@@ -134,6 +134,22 @@ runs:
             --registry https://registry.npmjs.org/ "${tgz}"
         fi
         corepack enable
+        # Fetch the pnpm that `package.json#packageManager` names now, with retries, so the first
+        # `pnpm` call (setup-node's cache lookup) finds it already downloaded. A failed download
+        # there is a network error with nothing of ours to blame, and it fails the whole job.
+        #
+        # SHIPPED-CI: deferred
+        # Because: the shipped templates enable corepack the same way and take the same retry once a shipped job is seen failing on the download.
+        attempt=1
+        until corepack prepare --activate; do
+          if [ "${attempt}" -ge 4 ]; then
+            echo "::error::corepack could not fetch the pnpm that package.json#packageManager names, after ${attempt} attempts."
+            exit 1
+          fi
+          echo "corepack could not fetch pnpm (attempt ${attempt} of 4); trying again"
+          sleep $((attempt * 5))
+          attempt=$((attempt + 1))
+        done
         if [ "${PIN_ENGINES_FLOOR}" = "true" ]; then
           # The manifest the CALLER named, which defaults to the repository root's.
           # The path is DATA, and reaches node as an ARGUMENT. Review finding [90]: it used to be
@@ -264,7 +280,9 @@ runs:
           npm install --global --ignore-scripts \
             --registry https://registry.npmjs.org/ "${tgz}"
         fi
-        corepack prepare pnpm@9.12.3 --activate
+        # The version comes from `package.json#packageManager`, the one place that names it, and
+        # step 1 has already fetched it, so this finds it downloaded.
+        corepack prepare --activate
       shell: bash
 
     # ── 4. Install ────────────────────────────────────────────────────────────
