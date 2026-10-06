@@ -87,10 +87,10 @@ the branch renames.
 2. **Keep the `<AREA>-<NNN>` suffix the old id had**, when the code being
    renamed has one. `resolveRuleKeys` in `src/core/waivers.ts` adds a stripped
    spelling of the emitted code to the keys a waiver may match on, so a finding
-   coded `QFAI-TDDLIST-007` also answers to `TDDLIST-007` and an existing
+   coded `QFAI-WAIVER-001` also answers to `WAIVER-001` and an existing
    `.qfai/waivers.yml` entry keeps matching. Change the number —
-   `QFAI-TDDLIST-007` to `QFAI-TDDLIST-011` — and the alias becomes
-   `TDDLIST-011` rather than `TDDLIST-007`, which is the spelling the entry
+   `QFAI-WAIVER-001` to `QFAI-WAIVER-011` — and the alias becomes
+   `WAIVER-011` rather than `WAIVER-001`, which is the spelling the entry
    names.
 3. **Check the stripped spelling for a collision, not only the full code.**
    A rule id that already carries the stripped spelling would let an existing
@@ -103,7 +103,7 @@ the branch renames.
    alias — the work `## Not covered here` defers.
 5. **Check whether the code already exists.** A family several branches reached
    for at once tends to have been settled by whichever landed first:
-   `QFAI-TDDLIST-007` through `-010` are on the default branch already. Adopt
+   `QFAI-WAIVER-001` through `-004` are on the default branch already. Adopt
    the landed spelling rather than minting a parallel one.
 
 ### Renaming a code that has shipped

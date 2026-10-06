@@ -106,10 +106,9 @@ const ACTIONS_DIR = path.join(REPO_ROOT, ".github", "actions");
  * never clear this job. The need is structural, not incidental.
  *
  * Five, and the fifth is `ci.yml::build`, on the same clause. It runs the dogfooding
- * validate lanes, and `QFAI-TDDLIST-009` asks whether anything a recorded observation
- * covered has moved since the revision it names. At depth 1 that revision resolves to
- * nothing, so the interval cannot be computed and the rule reports on no row at all —
- * in a job whose result blocks a merge.
+ * validate lanes, and the story-tree drift check compares the decisions and open-question
+ * registers against the merge base with `origin/main`. At depth 1 that merge base resolves
+ * to nothing, so the check returns without reporting — in a job whose result blocks a merge.
  */
 const FULL_HISTORY_JOBS = [
   "ci.yml::build",
