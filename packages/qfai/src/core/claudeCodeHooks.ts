@@ -191,6 +191,13 @@ const SUPERSEDED_HOOK_GROUPS: ReadonlySet<string> = new Set([
   // files that are not product source
   "7b5ba83e524a9c5a8f94f320cc0ac18b216b2c1e7b27497ccd8bb3e443f2b5c9",
   "2ae0c735ac2c72fffd652a2cb3b818c8f2dbefd0493998a86d46c6160d99734b",
+  // Codex: the tool-time groups that printed on every call, before they were limited per session:
+  // grilling before a delegation, API budget, documentation clarity after a Markdown write or
+  // edit, and minimal implementation. The grilling group before a write is listed above.
+  "18fec3634efbf8092a5fc1048e7f2270599fb80e80e149a317c50ceab5441f72",
+  "25d30caf60dad4693052424eb765c8a44d5743a458f18e267af290665c291b20",
+  "590c412049cd6cb5ff40c8f1d22bc4ae78f3fcee2301b077a3bdedf259397611",
+  "5d30d9e8e46c895af66eb5ac8c198662627c52ca0e2121835cc9ac0d0d1e830a",
 ]);
 
 export type HookMergeResult =
