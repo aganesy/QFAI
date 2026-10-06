@@ -22,6 +22,7 @@ import { fileURLToPath } from "node:url";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { seedOldHostLinks } from "../helpers/oldHostLinks.js";
+import { expectLinkToCanonicalSkill } from "../helpers/skillLink.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -450,7 +451,10 @@ describe("BF-0004 migration cutover", () => {
     expect(`${journey.oldReader.stdout}\n${journey.oldReader.stderr}`).toContain("--flow BF-NNNN");
     for (const host of [".claude/skills", ".agents/skills", ".codex/skills", ".github/skills"]) {
       const wrapper = path.join(journey.root, host, "qfai-sdd");
-      expect((await readlink(wrapper)).replace(/\\/g, "/")).toContain("assistant/skill/qfai-sdd");
+      await expectLinkToCanonicalSkill(
+        wrapper,
+        path.join(journey.root, ".qfai/assistant/skill/qfai-sdd"),
+      );
       expect((await stat(wrapper)).isDirectory()).toBe(true);
     }
     expect([0, 1], journey.validation.stderr + journey.validation.stdout).toContain(
