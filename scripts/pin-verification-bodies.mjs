@@ -25,16 +25,20 @@ import path from "node:path";
 import { argv, cwd, exit, stderr, stdout } from "node:process";
 import { fileURLToPath } from "node:url";
 
-import { effectiveRunDefaults, verificationBodyDigest } from "./check-workflow-hygiene.mjs";
-import { writeFormattedJson } from "./lib/write-declaration.mjs";
-
-const require = createRequire(import.meta.url);
-/** The parser the lane itself uses, out of the workspace that depends on it. */
-const { parse: parseYaml } = require("../packages/qfai/node_modules/yaml");
+import { checkInstalled } from "./lib/require-installed.mjs";
 
 const DECLARATION_REL = ".github/required-status-contexts.json";
 
 async function main(root) {
+  if (checkInstalled() !== 0) return 1;
+  // Loaded after the check rather than imported: a static import of a module whose dependency is
+  // missing ends the run with a stack trace before the check can speak.
+  const { effectiveRunDefaults, verificationBodyDigest } =
+    await import("./check-workflow-hygiene.mjs");
+  const { writeFormattedJson } = await import("./lib/write-declaration.mjs");
+  /** The parser the lane itself uses, out of the workspace that depends on it. */
+  const { parse: parseYaml } = createRequire(import.meta.url)("../packages/qfai/node_modules/yaml");
+
   const declarationPath = path.join(root, DECLARATION_REL);
   const declaration = JSON.parse(readFileSync(declarationPath, "utf-8"));
   const contexts = Array.isArray(declaration.contexts) ? declaration.contexts : [];
