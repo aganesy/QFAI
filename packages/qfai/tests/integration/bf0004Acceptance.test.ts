@@ -28,6 +28,7 @@ import { validateProject } from "../../src/core/validate.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { seedOldHostLinks } from "../helpers/oldHostLinks.js";
 import { legacyRoutingEntries } from "../helpers/legacyRouting.js";
+import { expectLinkToCanonicalSkill } from "../helpers/skillLink.js";
 import { atLocation } from "../helpers/reportLocation.js";
 import { defaultRoutingEntries } from "../helpers/shippedAssistant.js";
 import { expectSentence, sentencesOf } from "../helpers/shippedSentences.js";
@@ -2373,7 +2374,10 @@ describe("BF-0004 acceptance criteria", () => {
   it("repoints each managed host skill wrapper to the singular directory", async () => {
     for (const host of [".claude/skills", ".agents/skills", ".codex/skills", ".github/skills"]) {
       const link = path.join(journey.root, host, "qfai-sdd");
-      expect((await readlink(link)).replace(/\\/g, "/")).toContain("assistant/skill/qfai-sdd");
+      await expectLinkToCanonicalSkill(
+        link,
+        path.join(journey.root, ".qfai/assistant/skill/qfai-sdd"),
+      );
     }
   });
 
@@ -2396,7 +2400,10 @@ describe("BF-0004 acceptance criteria", () => {
     const beforeHostEntries = await hostEntries(oldLinkRoot);
     const linked = step(oldLinkRoot, 9);
     expect(linked.status).toBe(0);
-    expect((await readlink(wrapper)).replace(/\\/g, "/")).toContain("assistant/skill/qfai-sdd");
+    await expectLinkToCanonicalSkill(
+      wrapper,
+      path.join(oldLinkRoot, ".qfai/assistant/skill/qfai-sdd"),
+    );
     const afterLinks = await fileSnapshot(oldLinkRoot);
     expect(
       [...new Set([...beforeLinks.keys(), ...afterLinks.keys()])].filter(
@@ -2729,9 +2736,7 @@ describe("BF-0004 acceptance criteria", () => {
       expect(installedScripts).toContain("_step.mjs");
       for (const host of [".claude/skills", ".agents/skills", ".codex/skills", ".github/skills"]) {
         const link = path.join(target, host, "qfai-migration-v1-to-v2");
-        expect((await readlink(link)).replace(/\\/g, "/")).toContain(
-          "assistant/skill/qfai-migration-v1-to-v2",
-        );
+        await expectLinkToCanonicalSkill(link, skill);
       }
     }
     expect(await lstat(path.join(legacyRoot, ".qfai/specs/spec-0001"))).toBeDefined();

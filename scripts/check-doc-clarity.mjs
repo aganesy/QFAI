@@ -119,7 +119,7 @@ const MARKDOWN_EXTENSIONS = new Set([".md"]);
  *     number or a letter-prefixed one, e.g. `[86]` or `[E1]`.
  */
 const PATTERNS = [
-  { name: "issue-or-pr-number", re: /(?<![\w&])#\d{2,6}\b(?!["'])/g },
+  { name: "issue-or-pr-number", re: /(?<![\w&])#\d{2,5}\b(?!["'])/g },
   { name: "gh-issue-number", re: /\bGH-\d+\b/g },
   { name: "pr-or-issue-word", re: /\b(?:PR|pull request|issue|Issue)\s+#?\d{2,6}\b/g },
   { name: "codex-review-id", re: /\bcodex\s+(?:review\s+)?(?=[a-z0-9]*\d)[a-z0-9]{3,12}\b/gi },

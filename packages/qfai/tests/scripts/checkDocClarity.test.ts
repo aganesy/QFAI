@@ -252,6 +252,23 @@ describe("scripts/check-doc-clarity.mjs", () => {
     expect(result.status).toBe(0);
   });
 
+  it("leaves a six-digit hex color in Markdown alone", async () => {
+    const dir = await newRepo({ "docs/palette.md": "| Ink | #111111 |\n" });
+
+    const result = runGuard(dir, ["--scope", "all"]);
+
+    expect(result.status).toBe(0);
+  });
+
+  it("still reports a five-digit issue number in Markdown prose", async () => {
+    const dir = await newRepo({ "docs/guide.md": `Not covered today — see #${"12345"}.\n` });
+
+    const result = runGuard(dir, ["--scope", "all"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("docs/guide.md:1");
+  });
+
   it("reports a review shortcode list joined by a slash", async () => {
     const dir = await newRepo({
       "src/thing.ts": "// fixed in review AB12/CD34\nexport const a = 1;\n",
