@@ -169,7 +169,7 @@ describe("a verify gate that fails on the base commit or cannot run", () => {
     const contract = flat(
       await readShipped("skill/qfai-verify/references/verify-output-contract.md"),
     );
-    expect(contract).toMatch(/`"PASS"`, `"FAIL"` or `"UNRUN"`/);
+    expect(contract).toMatch(/`"PASS"`, `"FAIL"`, `"UNRUN"` or `"DELEGATED"`/);
     expect(contract).toMatch(/`baseline` \| string/);
     expect(contract).toMatch(/still makes the top-level `status` `"FAIL"`/);
   });

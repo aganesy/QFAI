@@ -38,6 +38,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   at that Status stays in force. The story-tree authoring rules also say that a
   project counting the IDs of its open pull requests may take a next ID above
   the tree's own highest plus one (#2969).
+- **A gate the project runs in CI only is recorded as delegated, not as a pass or a
+  failure.** A Standard commands entry written `CI only: <check name>` makes
+  `verify-repo-gate` record the gate `DELEGATED` with that check, and
+  `verify.json` carries it in `gates` with the check name and its state. A red
+  check makes `status` `FAIL`; a pending one does not stop `verify-commit`,
+  because the pull request is where the check runs. Fixes #2996.
+
 - **`qfai-run` has guidance for a change that needs a person's action outside
   the repository.** When a change depends on something only the user can do,
   such as a hosted dashboard setting or a token issued in a web console, the
@@ -46,6 +53,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   password, token or key and never changes an account setting. The extraction
   reference says such a request keeps the repository change's intent with the
   `env` flag (#2999).
+
+- **`qfai validate` warns when an example changes and no test annotating it
+  does.** In the `tdd` and `drift` profiles, an example row whose cells changed
+  since the base raises `QFAI-DRIFT-002` at warning, naming the example ID and
+  its `03_Example.md`, unless a selected non-E2E test annotating that example
+  changed too. A new row and a table that was only re-padded raise nothing. The
+  warning asks the owner to recheck the test; it does not prove the test asserts
+  the new row (#2748).
 
 ### Fixed
 
@@ -140,6 +155,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   delegation-baseline and test-layers pointers started at `rule/`, so they did
   not resolve from the project root. Both now begin at `.qfai/assistant/rule/`.
   (#2858)
+- **A change that leaves nothing to migrate no longer owes a migration
+  note.** On the `change-compatibility` route the change note step could not
+  pass, so a one-line display-text change had to write migration steps and a
+  breaking change that did not exist. It now passes when no user has anything
+  to migrate, and still does not pass when one has. Fixes #2990.
+
 - **A project can stop `qfai init` writing a shipped workflow.** Deleting
   `qfai-tests.yml` was not enough: the next `qfai init` wrote it again, though
   its header said it would not. `workflow.skipShipped` in `qfai.config.yaml`
@@ -160,6 +181,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   to name another protected file, and the drift guard then accepted an edit to
   that file. A base row whose Content or Approach changed now authorizes
   nothing, in the `tdd` and `drift` profiles alike (#2891).
+
+- **The shipped API budget rule names no script a project lacks.** It named
+  this repository's own helper script, so every project that carried the rule
+  held a path that did not resolve. It now describes what such a command
+  answers and says a project names its own (#3001).
 
 - **The planner-first and design anti-goal examples are tested for what they
   say.** The planner-first example was annotated on a test that only checked

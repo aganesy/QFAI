@@ -11,7 +11,7 @@ type Result = { issues: Array<{ code: string; message: string }> };
 it("describes the story obligation omitted by each partial profile", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-profile-story-"));
   try {
-    const notice = async (profile: "atdd" | "tdd" | "full") => {
+    const notice = async (profile: "atdd" | "tdd" | "drift" | "full") => {
       await runValidate({ root, strict: false, profile });
       const result = JSON.parse(
         await readFile(path.join(root, ".qfai", "report", "validate.json"), "utf8"),
@@ -22,6 +22,8 @@ it("describes the story obligation omitted by each partial profile", async () =>
     expect(await notice("atdd")).toContain("QFAI-STORY-001");
     expect(await notice("tdd")).toContain("QFAI-STORY-001");
     expect((await notice("full")) ?? "").not.toContain("QFAI-STORY-001");
+    expect(await notice("drift")).toContain("QFAI-STORY-006");
+    expect(await notice("drift")).not.toContain("QFAI-SCAN-002");
   } finally {
     await rm(root, { recursive: true, force: true });
   }
