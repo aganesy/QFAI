@@ -853,7 +853,7 @@ describe("assets guardrails", () => {
   });
 
   // .npmignore files removed — gitignore entries now live in root .gitignore
-  // (see ensureRootGitignoreEntries in init.ts)
+  // (see ensureRootGitignoreEntries in core/init/rootGitignore.ts)
 
   it("does not ship review_archive gitignore in init template", () => {
     const reviewArchiveIgnorePath = path.join(templateQfaiDir, "review_archive", ".gitignore");
@@ -888,7 +888,7 @@ describe("assets guardrails", () => {
   });
 
   // review .gitignore removed — entries now in root .gitignore managed block
-  // (see ensureRootGitignoreEntries in init.ts)
+  // (see ensureRootGitignoreEntries in core/init/rootGitignore.ts)
 
   it("keeps init template docs free of hard-coded versions", async () => {
     const markdownFiles = await fg(["**/*.md"], {
