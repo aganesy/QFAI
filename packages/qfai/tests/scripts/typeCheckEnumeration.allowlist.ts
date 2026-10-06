@@ -143,7 +143,6 @@ export const TYPE_CHECK_UNENUMERATED: readonly string[] = [
   "tests/e2e/spec0015GovernanceAndHandoffE2E.test.ts",
   "tests/e2e/wrapperParity.test.ts",
   "tests/integration/agentDelegationSpec0015.test.ts",
-  "tests/integration/agentsRulesSurface.test.ts",
   "tests/integration/atddScaffoldReachesTheGate.test.ts",
   "tests/integration/atddScaffoldSkeleton.test.ts",
   "tests/integration/cli/commands/discussion.test.ts",
