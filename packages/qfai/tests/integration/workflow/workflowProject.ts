@@ -10,11 +10,13 @@ import { fileURLToPath } from "node:url";
 
 import { parse as parseYaml } from "yaml";
 
+import { assertBuiltCliFresh } from "../../helpers/builtCli.js";
 import { removeTempTree } from "../../helpers/tempTree.js";
 
 const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const PLANS = path.join(PACKAGE_ROOT, "assets", "defaults", "workflows");
 export const CLI = path.join(PACKAGE_ROOT, "dist", "cli", "index.mjs");
+assertBuiltCliFresh(CLI);
 
 const roots: string[] = [];
 

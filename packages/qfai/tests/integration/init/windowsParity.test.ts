@@ -10,8 +10,10 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { HOST_SKILL_DIRS, initQuietly, modeLines, withEmptyRepo } from "./upgradeStates.js";
+import { assertBuiltCliFresh } from "../../helpers/builtCli.js";
 
 const CLI = path.resolve(import.meta.dirname, "../../../dist/cli/index.mjs");
+assertBuiltCliFresh(CLI);
 
 type RunView = { modeLines: string[]; wrappers: string[] };
 

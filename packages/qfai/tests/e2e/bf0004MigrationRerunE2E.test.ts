@@ -22,6 +22,7 @@ import process from "node:process";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { deleteE2eCaseAnnotation } from "../helpers/migrationE2eAnnotation.js";
+import { assertBuiltCliFresh } from "../helpers/builtCli.js";
 import { expectLinkToCanonicalSkill } from "../helpers/skillLink.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
@@ -36,6 +37,7 @@ const SKILL_SCRIPTS = path.join(
   "assets/init/.qfai/assistant/skill/qfai-migration-v1-to-v2/scripts",
 );
 const CLI = path.join(PACKAGE_ROOT, "dist/cli/index.mjs");
+assertBuiltCliFresh(CLI);
 const SCRIPT_NAMES = [
   "01-rename-directories.mjs",
   "02-merge-tables.mjs",
