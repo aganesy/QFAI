@@ -45,6 +45,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   check makes `status` `FAIL`; a pending one does not stop `verify-commit`,
   because the pull request is where the check runs. Fixes #2996.
 
+- **The `DESIGN.md` authoring step checks the finished file against the
+  generated-design pattern list.** A token that prescribes a listed pattern the
+  recorded brand direction does not ask for fails the gate, and the finding names
+  the pattern (#2619).
 - **`qfai-run` has guidance for a change that needs a person's action outside
   the repository.** When a change depends on something only the user can do,
   such as a hosted dashboard setting or a token issued in a web console, the
@@ -113,6 +117,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `package.json#packageManager` names before the first `pnpm` call, retrying up
   to four times, so one network reset no longer fails a job. The hard-coded
   `9.12.3` in both places is gone.
+- **The shipped delegation baseline no longer points at a removed validator.**
+  The `record:unchecked` clause named `validateTddList`, which does not exist;
+  it now states only that the class never substitutes for the repair.
+  `docs/finding-codes.md` and two test comments no longer use the retired TDD
+  ledger codes as examples (#2607).
 - **The dogfooding backlog guard names every command a re-pin takes** (#2415).
   `scripts/dogfood-backlog.json` is a pinned guard input, so re-pinning it
   moves its digest. When a pin is behind the tree or a file is over its pin,
