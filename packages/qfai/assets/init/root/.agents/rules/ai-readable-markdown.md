@@ -79,13 +79,13 @@ must never be assumed — is read in the entry file or not at all.
 
 Each rule is written in one place, and every other file references it.
 
-Two copies drift apart. When they contradict each other, an agent picks one of
+Two copies diverge over time. When they contradict each other, an agent picks one of
 them, and nothing says which.
 
 ## Held by
 
 Review, and any check a project adds for itself. `npx qfai doctor` reports an
-assistant asset over 800 lines, which is a backstop above the limit in § 1.
+assistant asset over 800 lines, which is a second check above the limit in § 1.
 
 ## Related
 
