@@ -273,6 +273,7 @@
     "tests/scripts/checkTrackedSymlinks.test.ts",
     "tests/scripts/checkShippedCiParity.test.ts",
     "tests/scripts/changelogReleasedSections.test.ts",
+    "tests/scripts/changelogEntries.test.ts",
     "tests/scripts/checkRepositoryLanguage.test.ts",
     "tests/scripts/shippedWorkflowCost.test.ts",
     "tests/scripts/checkSimplificationLedger.test.ts",
