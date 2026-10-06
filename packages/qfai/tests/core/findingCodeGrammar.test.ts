@@ -471,7 +471,7 @@ describe("finding code grammar", () => {
     const body = literal?.slice(1, literal.lastIndexOf("/")) ?? "";
     const re = new RegExp(body);
     // What the document promises an alias for.
-    expect(re.exec("QFAI-TDDLIST-007")?.[1]).toBe("TDDLIST-007");
+    expect(re.exec("QFAI-WAIVER-001")?.[1]).toBe("WAIVER-001");
     // And the two shapes it says get none.
     expect(re.test("QFAI-CFG-LINK-001")).toBe(false);
     expect(re.test("QFAI_CONFIG_INVALID")).toBe(false);
