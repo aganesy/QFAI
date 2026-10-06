@@ -1205,7 +1205,7 @@ async function buildPrototypingDesignMdChecks(root: string): Promise<DoctorCheck
     // `qfai init` seeds the shipped sample brand into the project root,
     // so "file exists and parses" cannot distinguish an authored brand
     // from an unauthored one. Report it here, before a prototyping loop
-    // records its sha256 as the brand the loop runs against.
+    // runs against it as the project's brand.
     //
     // Samples seeded by releases that predate the marker are detected by
     // content fingerprint instead, so the remediation text must not tell

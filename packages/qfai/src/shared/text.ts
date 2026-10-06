@@ -1,5 +1,3 @@
-import { createHash } from "node:crypto";
-
 /**
  * Text helpers for callers that compare file CONTENT for equality.
  *
@@ -24,9 +22,4 @@ import { createHash } from "node:crypto";
  */
 export function normalizeNewlines(text: string): string {
   return text.replace(/\r\n/g, "\n");
-}
-
-/** The sha256 of `text` with CRLF folded to LF, so a CRLF checkout hashes as an LF one. */
-export function hashAssistantAssetText(text: string): string {
-  return createHash("sha256").update(normalizeNewlines(text), "utf8").digest("hex");
 }

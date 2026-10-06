@@ -81,9 +81,8 @@ export type DesignMd = {
      * The published theme the token values were taken from, named so a
      * reader can install it.
      *
-     * Everything downstream is exact about those values — the prototyping loop hashes
-     * them, `certify` re-scans them, every literal in every capture is
-     * checked against them — and until this field existed there was nothing
+     * Everything downstream is exact about those values — `certify` re-scans them,
+     * every literal in every capture is checked against them — and until this field existed there was nothing
      * under the exactness: twelve colours, three families, four radii and
      * three shadows were written from a sentence of prose about the
      * archetype.
@@ -367,7 +366,7 @@ function buildDesignMd(raw: unknown): BuildResult {
   // Reject unknown root-level keys. The distributed DESIGN.md spec
   // forbids unknown keys at any level, and silently dropping an
   // authored top-level directive (e.g. `platform:`, `references:`)
-  // lets it hash into the recorded sha256 while never reaching the parsed
+  // lets it pass unnoticed while never reaching the parsed
   // tokens. Allowlist must be kept in sync with the optional sections
   // copied below (`audience`, `accessibility`).
   const ROOT_ALLOWED_KEYS = new Set<string>(DESIGN_MD_KEYS.root);
@@ -387,7 +386,7 @@ function buildDesignMd(raw: unknown): BuildResult {
   // pattern as accessibility / visual.spacing / typography token
   // blocks: checking only `isRecord(raw.audience)` would silently skip
   // scalars / arrays (`audience: "..."`, `audience: ["foo"]`), letting
-  // the invalid value hash into the recorded sha256 while downstream iterate /
+  // the invalid value pass while downstream iterate /
   // certify would see `audience: undefined` and lose the brand-context
   // tokens.
   if ("audience" in raw && raw.audience !== undefined && !isRecord(raw.audience)) {
@@ -404,7 +403,7 @@ function buildDesignMd(raw: unknown): BuildResult {
     // `visual` and `visual.typography`: the distributed DESIGN.md
     // spec forbids unknown keys at any level, and silently dropping
     // an authored directive (e.g. `audience.references`) lets it
-    // hash into the recorded sha256 while never reaching the parsed tokens.
+    // pass unnoticed while never reaching the parsed tokens.
     const AUDIENCE_ALLOWED_KEYS = new Set<string>(DESIGN_MD_KEYS.audience);
     const audienceError = rejectUnknownKeys(raw.audience, AUDIENCE_ALLOWED_KEYS, {
       kind: "section",
@@ -417,10 +416,10 @@ function buildDesignMd(raw: unknown): BuildResult {
     // `audience.do_not_look_like` as `string[]`. Pre-fix, both fields
     // were silently filtered (`.filter(typeof v === "string")` /
     // `Array.isArray` check), which let scalar / mixed-type authoring
-    // hash into the recorded DESIGN.md sha256 while the parsed brand
+    // pass while the parsed brand
     // context dropped the offending entries. Reject non-array values
     // and non-string entries with explicit invalid-type errors so the
-    // brand SSOT enforces the contract before anything hashes it.
+    // brand SSOT enforces the contract.
     if ("emotion" in raw.audience && raw.audience.emotion !== undefined) {
       const emotionError = parseDesignMdStringArrayField(raw.audience.emotion, "audience.emotion");
       if ("error" in emotionError) return emotionError;
@@ -439,7 +438,7 @@ function buildDesignMd(raw: unknown): BuildResult {
   // Reject present-but-non-record `accessibility`. Checking only
   // `isRecord(raw.accessibility)` would silently skip a scalar/array
   // (`accessibility: false`, `accessibility: "wcag-aa"`), letting the
-  // invalid value hash into the recorded sha256 while downstream iterate / certify
+  // invalid value pass while downstream iterate / certify
   // would see `accessibility: undefined` — the same SSOT-divergence
   // pattern the typography token-block check guards against.
   if ("accessibility" in raw && raw.accessibility !== undefined && !isRecord(raw.accessibility)) {
@@ -454,7 +453,7 @@ function buildDesignMd(raw: unknown): BuildResult {
   if (isRecord(raw.accessibility)) {
     // Reject unknown keys under `accessibility` for the same reason as
     // every other section: silently dropping authoring directives lets
-    // them freeze into the recorded hash while never reaching the parsed
+    // them pass unnoticed while never reaching the parsed
     // tokens consumed by iteration / certify.
     const ACCESSIBILITY_ALLOWED_KEYS = new Set<string>(DESIGN_MD_KEYS.accessibility);
     const accessibilityError = rejectUnknownKeys(raw.accessibility, ACCESSIBILITY_ALLOWED_KEYS, {
@@ -469,7 +468,7 @@ function buildDesignMd(raw: unknown): BuildResult {
     // rejected. Pre-fix the type-mismatch branches silently dropped
     // the authored value, so e.g. `contrast_ratio_min: "4.5"` (string
     // instead of number) or `motion: false` (boolean instead of
-    // string) hashed into the recorded sha256 while iterate / certify saw
+    // string) passed while iterate / certify saw
     // a clean DesignMd with the accessibility constraint missing.
     if ("contrast_ratio_min" in raw.accessibility) {
       const v = raw.accessibility.contrast_ratio_min;
@@ -524,7 +523,7 @@ function readBrand(raw: unknown): { value: DesignMd["brand"] } | { error: ParseE
     typeof archetypeRaw === "string" ? (archetypeRaw as Archetype) : undefined;
   // Strict-parse `brand.voice`. Pre-fix the parser silently filtered
   // non-string entries and accepted scalars / dropped non-arrays,
-  // letting malformed authoring hash into the recorded DESIGN.md sha256 while
+  // letting malformed authoring pass while
   // downstream consumers saw a different brand context. Symmetric
   // with `parseDesignMdStringArrayField` and the typography
   // / spacing strict-parse paths.
@@ -535,8 +534,8 @@ function readBrand(raw: unknown): { value: DesignMd["brand"] } | { error: ParseE
     voice = voiceParsed.value;
   }
   // `brand.theme` is strict-parsed for the same reason `brand.voice` is: a
-  // non-string here would otherwise hash into the recorded sha256 while every
-  // consumer saw nothing, which is the drift the hash exists to catch.
+  // non-string here would otherwise pass while every
+  // consumer saw nothing.
   let theme: string | undefined;
   if ("theme" in raw && raw.theme !== undefined) {
     if (typeof raw.theme !== "string" || raw.theme.trim() === "") {
@@ -574,9 +573,8 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
   // Reject unknown top-level keys under `visual` so authors who add
   // freelance directives (e.g. `visual.gradients`, `visual.motion`) get
   // a parse error instead of a silent drop. Allowed keys are listed in
-  // the distributed DESIGN.md spec; the value is still hashed in the
-  // recorded sha256 so prototyping would freeze a directive that the parser
-  // discards.
+  // the distributed DESIGN.md spec; the value would otherwise be accepted
+  // while the parser discards it.
   const VISUAL_ALLOWED_KEYS = new Set<string>(DESIGN_MD_KEYS.visual);
   const visualError = rejectUnknownKeys(raw, VISUAL_ALLOWED_KEYS, {
     kind: "section",
@@ -624,9 +622,8 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
   const typographyRaw = isRecord(raw.typography) ? raw.typography : {};
   // Reject unknown keys under `visual.typography` for the same reason
   // as the visual top level: silently dropping authoring directives
-  // (e.g. `font_pairing`, `fallback_policy`) lets them freeze into the
-  // recorded hash while never reaching the parsed tokens consumed by iteration
-  // / certification.
+  // (e.g. `font_pairing`, `fallback_policy`) lets them pass unnoticed while
+  // never reaching the parsed tokens consumed by iteration / certification.
   const TYPOGRAPHY_ALLOWED_KEYS = new Set<string>(DESIGN_MD_KEYS["visual.typography"]);
   const typographyError = rejectUnknownKeys(typographyRaw, TYPOGRAPHY_ALLOWED_KEYS, {
     kind: "section",
@@ -650,7 +647,7 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
   // The distributed DESIGN.md spec fixes the type-scale and weight
   // tokens. Allow the canonical names only — anything else is rejected
   // at parse time so an authored extra (`scale.hero`, `weight.black`)
-  // does not freeze into the recorded hash while iteration / certify ignore it.
+  // does not pass while iteration / certify ignore it.
   const TYPOGRAPHY_SCALE_ALLOWED_KEYS = new Set<string>(DESIGN_MD_KEYS["visual.typography.scale"]);
   const TYPOGRAPHY_WEIGHT_ALLOWED_KEYS = new Set<string>(
     DESIGN_MD_KEYS["visual.typography.weight"],
@@ -658,7 +655,7 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
   // Reject present-but-non-record `scale` / `weight` blocks. Checking
   // only `isRecord(typographyRaw.scale)` would silently skip a
   // string / array authored under `scale:` (`scale: "1rem"` or
-  // `scale: [1, 2]`), so an invalid DESIGN.md would hash into the recorded sha256
+  // `scale: [1, 2]`), so an invalid DESIGN.md would pass
   // while `designTokens.typography.scale` is missing for downstream
   // consumers. Same check below for `weight`.
   if (
@@ -684,8 +681,8 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
     // Strict-parse each scale value. The distributed DESIGN.md spec
     // requires CSS length tokens (e.g. `base: "1rem"`); pre-fix
     // `readStringRecord` (a) coerced numbers to strings (`1` -> `"1"`)
-    // and (b) accepted padded values (`" 1rem "`). Both leak into
-    // the recorded hash and every token reader as "validated"
+    // and (b) accepted padded values (`" 1rem "`). Both reach
+    // every token reader as "validated"
     // tokens that downstream CSS engines reject. Reject non-string
     // and padded / empty values at the brand SSOT.
     const scaleValues: Record<string, string> = {};
@@ -765,7 +762,7 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
   // Reject present-but-non-record `visual.spacing`. Checking only
   // `isRecord(raw.spacing)` would silently skip a scalar/array
   // (`spacing: "0.25rem"`, `spacing: [0,4,8]`), letting the invalid
-  // value hash into the recorded sha256 while the parsed DesignMd has no
+  // value pass while the parsed DesignMd has no
   // spacing tokens, so every token reader would see no spacing at all.
   // Same SSOT-divergence pattern the typography token-block check and
   // accessibility section check guard against.
@@ -870,7 +867,7 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
  * Strict-parse a DESIGN.md `string[]` field. Returns `{ value }` on
  * success or `{ error }` when the input is not an array or contains
  * a non-string entry. Silently filtering non-strings or accepting
- * scalars would let malformed authoring hash into the recorded DESIGN.md sha256
+ * scalars would let malformed authoring pass
  * while downstream consumers saw a different brand context.
  *
  * Used by:
@@ -924,9 +921,9 @@ function describeValueShape(value: unknown): string {
  * defines these values as strings; pre-fix the historical
  * `readStringRecord` coerced numbers (`shadow.sm: 0` became `"0"`),
  * letting validate pass on a parsed token that differed from the raw
- * DESIGN.md bytes the loop hashed. This rejects non-strings with
+ * DESIGN.md bytes. This rejects non-strings with
  * `invalid-type` at parse-time so the brand SSOT enforces the
- * contract before anything hashes it.
+ * contract.
  */
 function readStringRecordStrict(
   raw: unknown,
@@ -1269,7 +1266,7 @@ export const DESIGN_MD_SAMPLE_MARKER = "QFAI-SAMPLE-DESIGN-MD";
  * `src/cli/commands/init.ts`) — so a project that initialized on an older
  * release keeps its marker-less copy of `assets/init/root/DESIGN.md` even
  * across `qfai init --force`. Those projects are exactly the ones at risk
- * of freezing an unauthored brand.
+ * of adopting an unauthored brand.
  *
  * BOTH signals are required — the front-matter brand name AND the opening
  * sentence of the shipped brand-philosophy body. Requiring both keeps the
@@ -1283,7 +1280,7 @@ const LEGACY_SAMPLE_BODY_PHRASE = "Acme Ledger is a calm, confident financial co
 
 /**
  * True when `text` is still (or is derived from) a DESIGN.md the package
- * ships as a sample. Used to stop `/qfai-sdd` Phase 0 from sha256-freezing
+ * ships as a sample. Used to stop `/qfai-sdd` Phase 0 from adopting
  * an unauthored brand as the project's brand contract, and to surface the
  * same condition from `qfai validate` (QFAI-DCON-034).
  *
