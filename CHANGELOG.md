@@ -361,6 +361,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   skill keeps its 150-line limit, at 135 lines instead of 150, and its
   behaviour is unchanged.
 
+- **`QFAI-AUD-001` no longer describes a legacy form or a sunset.** For a screen
+  with no `primary_tasks`, the message now says the screen has no `primary_tasks`
+  and that `primary_tasks` must be declared as `{id, label, acceptance}`
+  mappings. The rule code and the error severity are unchanged (#2638).
 - **The `change-tooling` route starts at `edit`** (#2995). A change to CI, a
   workflow or a build script has no business flow, story or example, so the
   `implement-diagnose` stage it began with had nothing to record and was passed
