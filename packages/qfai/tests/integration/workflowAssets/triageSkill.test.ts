@@ -108,8 +108,8 @@ describe("qfai-triage invoked by name", () => {
     }
     expect(flat(await step("triage-dedupe"))).toMatch(/does not edit the items it links/);
     const remit = sectionOf(
-      await readShipped("rule/shared-skill-delegation-baseline.md"),
-      "### Reviewer remit",
+      await readShipped("rule/references/reviewer-remit.md"),
+      "## Reviewer remit",
     );
     expect(rowOf(remit, "`/qfai-triage`")).toMatch(/no tracked file changed/);
   });

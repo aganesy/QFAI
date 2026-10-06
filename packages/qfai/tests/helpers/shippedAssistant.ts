@@ -11,6 +11,7 @@ import { parse } from "yaml";
 
 import { readRoutingDefaultsFiles } from "../../src/core/routingDefaults.js";
 import { nextHeadingAt } from "./recordProse.js";
+import { readRule } from "./ruleWithReferences.js";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -23,9 +24,12 @@ export function shippedExists(relativePath: string): boolean {
   return existsSync(path.join(SHIPPED_ASSISTANT, relativePath));
 }
 
-/** A file under the shipped assistant tree, by its path relative to that tree. */
+/**
+ * A file under the shipped assistant tree, by its path relative to that tree. A shared baseline is
+ * returned together with the reference files it points to.
+ */
 export function readShipped(relativePath: string): Promise<string> {
-  return readFile(path.join(SHIPPED_ASSISTANT, relativePath), "utf-8");
+  return readRule(path.join(SHIPPED_ASSISTANT, relativePath));
 }
 
 /** A file under the package defaults, by its path relative to `assets/defaults`. */

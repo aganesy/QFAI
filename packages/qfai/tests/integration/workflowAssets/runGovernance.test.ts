@@ -105,7 +105,10 @@ describe("governance inside a run", () => {
   });
 
   it("gives the two entry skills a reviewer remit", async () => {
-    const remit = sectionOf(await readShipped(DELEGATION), "### Reviewer remit");
+    const remit = sectionOf(
+      await readShipped("rule/references/reviewer-remit.md"),
+      "## Reviewer remit",
+    );
     expect(rowOf(remit, "`/qfai-maintain`")).toMatch(/changes no behaviour/i);
     expect(rowOf(remit, "`/qfai-run`")).toMatch(/the artifacts the session writes/i);
   });

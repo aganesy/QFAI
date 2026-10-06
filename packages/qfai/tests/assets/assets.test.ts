@@ -1734,9 +1734,8 @@ describe("assets guardrails", () => {
     // so the constant could move while the baseline went on telling authors a
     // different number - and for a project that has only the published package
     // that prose is the only copy of the rule it can read.
-    const baseline = await readFile(
+    const baseline = await readRule(
       path.join(templateQfaiDir, "assistant", "rule", "shared-skill-operating-baseline.md"),
-      "utf-8",
     );
     expect(baseline).toContain(`**${SKILL_MD_MAX_LINES} lines per assistant asset file**`);
     // The width ceiling ships the same way and for the same reason: for a
