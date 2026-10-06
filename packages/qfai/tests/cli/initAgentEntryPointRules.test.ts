@@ -8,6 +8,7 @@ import {
   mkdtemp,
   readFile,
   readdir,
+  rename,
   rm,
   stat,
   symlink,
@@ -2288,6 +2289,38 @@ describe("a citation a refused rewrite could not write is kept for a later run",
       const after = await readEntryPoint(root, "AGENTS.md");
       expect(after).toContain(master);
       expect(after).not.toContain(deleted);
+    });
+  });
+
+  it("reads and writes no record through a linked rules directory", async () => {
+    await withProject(async (root) => {
+      await writeFile(path.join(root, "AGENTS.md"), PROJECT_TEXT, "utf-8");
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const written = (await readEntryPoint(root, "AGENTS.md"))
+        .split("\n")
+        .filter((line) => !(line.startsWith("- ") && line.includes(master)))
+        .join("\n");
+      await writeFile(path.join(root, "AGENTS.md"), written, "utf-8");
+
+      // The rules directory moves aside and becomes a link to it, with a record
+      // owing the citation the entry point lacks.
+      const shared = path.join(root, "shared-rules");
+      await rename(path.join(root, ".agents", "rules"), shared);
+      try {
+        await symlink(shared, path.join(root, ".agents", "rules"), "junction");
+      } catch {
+        // A host without link permission cannot exercise this case.
+        return;
+      }
+      const record = `${JSON.stringify({ "AGENTS.md": [master] })}\n`;
+      await writeFile(path.join(shared, ".qfai-citations.pending.json"), record, "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      expect(await readFile(path.join(shared, ".qfai-citations.pending.json"), "utf-8")).toBe(
+        record,
+      );
+      expect(await readEntryPoint(root, "AGENTS.md")).toBe(written);
     });
   });
 

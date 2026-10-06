@@ -33,9 +33,8 @@
  * its user story depends on and which stays true after the gap closes — the trigger a lint lane
  * would run on, the single-workflow shape a matrix would live in, and so on.
  *
- * That difference is the point of the Coverage Depth Matrix, and it is recorded there rather than
- * flattened here: `.qfai/evidence/coverage-depth-spec-0017.md` carries a `❌` per unsatisfied story
- * with the ledger rows that would close it.
+ * That difference is the point: an unsatisfied story is not flattened into an absence assertion
+ * here, and each one asserts the invariant that survives the gap closing.
  *
  * `runInit` once, shared. Nine inits of a full asset tree is nine times the same work, and this
  * spec's own integration slice was pushed past its timeout by exactly that shape.

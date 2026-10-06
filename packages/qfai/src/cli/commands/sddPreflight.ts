@@ -14,6 +14,10 @@
  * the existing summary untouched. Only when no pointer is set does it fall
  * back to the latest pack.
  *
+ * It stops before writing anything when the project declares qfai and the
+ * running copy is a different one, the case `qfai validate` reports as
+ * `QFAI-TOOL-002`: a summary written by the wrong copy would be judged by it.
+ *
  * Exit code: 1 for `status: "blocked"`, 0 for `ready`. Only `--fail-on never`
  * returns 0 for a blocked result (for when only the diagnosis is wanted).
  * Preflight has no warning tier, so `--fail-on warning` means the same as
@@ -30,6 +34,7 @@ import {
 } from "../../core/discussionPack.js";
 import { runSddPreflight, type SddPreflightResult } from "../../core/preflight/sddPreflight.js";
 import { readDiscussionCurrentId } from "../../core/state.js";
+import { locateToolAgainstProject } from "../../core/version.js";
 import { error as logError, info as logInfo } from "../../core/logger.js";
 
 export type SddPreflightCommandOptions = {
@@ -163,6 +168,16 @@ export async function runSddPreflightCommand(options: SddPreflightCommandOptions
   const write = options.write ?? logInfo;
   const writeErr = options.writeErr ?? logError;
   const format = options.format ?? "text";
+
+  const located = await locateToolAgainstProject(options.root);
+  if (located?.declaredElsewhere === true) {
+    writeErr(
+      "qfai sdd preflight: QFAI-TOOL-002: this project declares qfai as a dependency, but the " +
+        `running copy is a different one at ${located.packageDir}. No summary was written. ` +
+        "Run npm ci or pnpm install in this project, then run again.",
+    );
+    return options.failOn === "never" ? 0 : 1;
+  }
 
   let result: SddPreflightResult;
   try {
