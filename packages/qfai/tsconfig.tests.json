@@ -301,6 +301,7 @@
     "tests/scripts/workflowHygieneRequiredContext.test.ts",
     "tests/scripts/workflowShellSyntax.test.ts",
     "tests/unit/buildCommand.test.ts",
+    "tests/unit/builtCli.test.ts",
     "tests/unit/changelogUnreleasedHeadings.test.ts",
     "tests/unit/cli/initWorkflowOwnership.test.ts",
     "tests/unit/cli/repairIntegrationWrappers.test.ts",

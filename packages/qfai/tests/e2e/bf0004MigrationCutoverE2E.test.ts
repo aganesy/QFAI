@@ -22,6 +22,7 @@ import { fileURLToPath } from "node:url";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { seedOldHostLinks } from "../helpers/oldHostLinks.js";
+import { assertBuiltCliFresh } from "../helpers/builtCli.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -57,6 +58,7 @@ const scripts = path.join(
   "assets/init/.qfai/assistant/skill/qfai-migration-v1-to-v2/scripts",
 );
 const cli = path.join(packageRoot, "dist/cli/index.mjs");
+assertBuiltCliFresh(cli);
 const names = [
   "01-rename-directories.mjs",
   "02-merge-tables.mjs",

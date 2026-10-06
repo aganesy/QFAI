@@ -14,10 +14,12 @@ import { fileURLToPath } from "node:url";
 import { afterEach, expect, it } from "vitest";
 
 import { extraction } from "../helpers/workflowExtraction.js";
+import { assertBuiltCliFresh } from "../helpers/builtCli.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const CLI = path.join(PACKAGE_ROOT, "dist", "cli", "index.mjs");
+assertBuiltCliFresh(CLI);
 
 const roots: string[] = [];
 afterEach(async () => {
