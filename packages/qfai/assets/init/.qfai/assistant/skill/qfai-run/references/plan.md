@@ -149,7 +149,7 @@ the ids of the stages it runs in plan order, and `true` for the narrowest.
 - `broad` runs every stage.
 
 A scope holding every stage is `broad`, and `medium` is left out when it equals `narrow`. An extraction with
-no artifacts, or with none a stage writes, gets `broad` alone. A candidate
+no artifacts, or whose route writes nothing, gets `broad` alone. A candidate
 keeps its scopes: `--route` returns none.
 
 ## Refusal
@@ -165,4 +165,7 @@ keeps its scopes: `--route` returns none.
 `reason` is `invalid-input` for the command line or an input that is not JSON,
 `schema` for an extraction field, `unknown-route` for a route the catalog does
 not name, `plan-invalid` for a plan that does not load, naming its `file` and
-`cause`, and `io-error` for a file that cannot be read.
+`cause`, `artifact-unserved` for an artifact the extraction names when no stage
+of the route writes any artifact it names, so the work stops before the first
+stage and the session names the artifact, and `io-error` for a file that cannot
+be read.

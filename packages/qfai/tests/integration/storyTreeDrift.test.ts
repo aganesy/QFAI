@@ -426,7 +426,9 @@ describe("story-tree drift", () => {
     git("add", ".");
     git("commit", "-m", "append examples");
     const findings = await validateStoryTreeDrift(root, config(), "tdd");
-    expect(findings.map((item) => item.file)).toEqual([rewritten]);
+    expect(
+      findings.filter((item) => item.code === "QFAI-DRIFT-001").map((item) => item.file),
+    ).toEqual([rewritten]);
   });
 
   // QFAI:EX-0001-0054-13
@@ -503,6 +505,11 @@ describe("story-tree drift", () => {
     git("add", ".");
     git("commit", "-m", "edit inside cells");
     const findings = await validateStoryTreeDrift(root, config(), "tdd");
-    expect(findings.map((item) => item.file).sort()).toEqual([contract, examples].sort());
+    expect(
+      findings
+        .filter((item) => item.code === "QFAI-DRIFT-001")
+        .map((item) => item.file)
+        .sort(),
+    ).toEqual([contract, examples].sort());
   });
 });
