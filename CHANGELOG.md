@@ -356,6 +356,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   states the old ID, the new ID and the renamed record. A merged row keeps its
   ID, and an ID two merged records already share is put to the user for a
   change request row that says which record each citation meant.
+- **A request that changes only documentation is never handed over unchecked**
+  (#2998). The plan of the `edit-text` route lists `broad` alone, so the change
+  note, the QFAI gate, the repository gate and the local commit always run
+  after the edit and no scope question is put.
+
 - **The repository's scans lane refuses a tracked file under `.qfai/report/`,
   `.qfai/evidence/`, `.qfai/review/`, `.qfai/output/`, `.qfai/discussion/` or
   `.qfai/review_archive/`.** The managed
