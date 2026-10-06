@@ -147,6 +147,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `timestamp` and `iteration`, and checks each field and nested list against
   the type it returns. A file that fails is refused with `null` and a logged
   error, as a missing key already was. Fixes #2862.
+- **The tool-location check follows the directory the way `npx` does, and `init` leaves the
+  pending-citation record alone behind a linked rules directory.** The check began its
+  walk at the project's real path, so a project reached through a junction under
+  another checkout's `node_modules` was not reported. It now walks from the
+  directory as given. `qfai init` also no longer reads or writes
+  `.agents/rules/.qfai-citations.pending.json` when `.agents` or `.agents/rules`
+  is a link (#2687).
 - **`qfai init` carries on past a dangling `.github` link and names every skip relative to the project.**
   A `.github` that was a dangling link, or a file, stopped the run with
   `mkdir failed with ENOTDIR` while the review instruction files were written.
