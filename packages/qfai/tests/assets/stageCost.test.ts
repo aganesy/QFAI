@@ -1,5 +1,5 @@
 /**
- * What a stage costs, and the levers that change it.
+ * What a stage costs, and the settings that change it.
  *
  * The rule maps every role to a reasoning depth and admits a role-specific
  * level only with the measurement that chose it, since a level nobody measured

@@ -225,7 +225,7 @@ fact, say what depends on it, and leave the answer to them.
 **A value with no candidates goes through the tool's free-text path.**
 `user-questions.md` § 2 names that path for exactly this shape. Where the round
 falls back to plain text the value is put as a plain request instead — for one
-of the three reasons above, never because the answer is a value. Reaching past a
+of the three reasons above, never because the answer is a value. Not using a
 free-text path the tool has drops the structure for nothing. Where the
 candidates are listable the question is a choice, which the classifier above
 already settles.
@@ -354,8 +354,8 @@ lookup could have reached.
 
 Where a document requires the field to hold something, write the defaulted value
 and label it an assumption beside the open question. What is forbidden is the
-assumption on its own: unread, it is a decision nobody took, wearing the face of
-one somebody did.
+assumption on its own: unread, it is a decision nobody took, recorded as if
+somebody had.
 
 **A fact declared undefaultable stops the run.** There is no value to write
 down: the agent does not hold it, a guessed one is the corruption the tree warns
@@ -378,7 +378,7 @@ decision. An agent that builds one, judges it, and carries on has settled a
 question of taste on the user's behalf, which is the thing this rule spends
 every round avoiding.
 
-Talking through such a question is where a session balloons: you keep
+Talking through such a question is where a session grows without bound: you keep
 rephrasing, the user keeps guessing, and the scope grows to fill the
 uncertainty.
 

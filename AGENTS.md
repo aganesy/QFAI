@@ -28,6 +28,7 @@ workspace (`"qfai": "workspace:*"`).
 - `npx qfai` runs the build of the checkout that owns the `node_modules` it
   resolves. A worktree that needs its own build runs the three steps with its
   own `node_modules`, never through a junction shared with another checkout.
+- Where `pnpm` is not on `PATH`, run the same script as `corepack pnpm <script>`.
 - npm stops at the `workspace:` protocol before the install starts.
   `scripts/check-not-a-dependency.mjs` refuses a yarn install.
 

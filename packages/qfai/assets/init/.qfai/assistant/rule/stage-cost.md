@@ -1,6 +1,6 @@
 # Stage Cost
 
-What a stage costs, and the levers that change it: how deeply a model reasons
+What a stage costs, and the settings that change it: how deeply a model reasons
 per step, how long the stage is given, and how much of a file an edit rewrites.
 
 None of them is a cap. Where a hard limit is wanted, it is the per-request
