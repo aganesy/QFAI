@@ -455,6 +455,7 @@
     "tests/e2e/bf0001WorkflowPlanARouteE2E.test.ts",
     "tests/integration/workflow/planOneCommand.test.ts",
     "tests/integration/workflow/planPoints.test.ts",
-    "tests/integration/workflow/planScopes.test.ts"
+    "tests/integration/workflow/planScopes.test.ts",
+    "tests/e2e/routingEvalRunnerHostStop.test.ts"
   ]
 }
