@@ -395,6 +395,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   review asks point at the checks that already own them: the coverage gate, and
   the proof per example in the oracle strength reference.
 
+- **The two shared skill baselines carry only what every run needs.** Sections that
+  apply to one situation moved to files under `rule/references/`: asset authoring,
+  gate failure repair, context summaries, the placeholder scan, host limits and the
+  reviewer remit, findings and griller rules. Each baseline keeps its headings and
+  a pointer that says when to read the moved text. A test sets a per-skill budget
+  for what a skill loads at start (#2636).
 - **A request that names the exact change is the approval** (#2991). When
   the user asks in the session for a change to a story-tree or contract file and
   names the change and its effect, `sdd-triage` lists the files in its

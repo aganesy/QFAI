@@ -169,7 +169,6 @@ cannot accept its own output.
 - An in-scope blocking finding from a routed reviewer prevents DONE until it is fixed or answered; no reviewer is rerun.
 - Every reviewer returning `REVISE` must include a concrete fix proposal.
 
-
 #### A griller's recommendations, and what they disqualify
 
 Read `.qfai/assistant/rule/references/griller-recommendations.md` when a griller's recommendation is offered as evidence for a decision, or when you check whether a griller may review the work it interviewed. Not needed otherwise.

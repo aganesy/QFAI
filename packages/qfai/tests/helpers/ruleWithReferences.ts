@@ -19,6 +19,8 @@ export async function readRule(file: string): Promise<string> {
   } catch {
     return text;
   }
-  const bodies = await Promise.all(names.map((name) => readFile(path.join(references, name), "utf-8")));
+  const bodies = await Promise.all(
+    names.map((name) => readFile(path.join(references, name), "utf-8")),
+  );
   return [text, ...bodies].join("\n");
 }

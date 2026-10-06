@@ -39,6 +39,7 @@ import {
 } from "../helpers/skillBudget.js";
 import { readDiscussionSkill } from "../helpers/discussionSteps.js";
 import { readDefaultRoutingText } from "../helpers/shippedAssistant.js";
+import { readRule } from "../helpers/ruleWithReferences.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 const templateRoot = path.join(repoRoot, "packages", "qfai", "assets", "init");
