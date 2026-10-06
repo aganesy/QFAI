@@ -54,6 +54,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reference says such a request keeps the repository change's intent with the
   `env` flag (#2999).
 
+- **`qfai validate` warns when an example changes and no test annotating it
+  does.** In the `tdd` and `drift` profiles, an example row whose cells changed
+  since the base raises `QFAI-DRIFT-002` at warning, naming the example ID and
+  its `03_Example.md`, unless a selected non-E2E test annotating that example
+  changed too. A new row and a table that was only re-padded raise nothing. The
+  warning asks the owner to recheck the test; it does not prove the test asserts
+  the new row (#2748).
+
 ### Fixed
 
 - **The init skill-link test compares where each link resolves.** It matched
@@ -120,6 +128,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   lag the worktree, so the reminder now tells the agent to read
   `.claude/skills/qfai-run/SKILL.md` under the current directory. The reminder
   is read from the session's own checkout. Fixes #2972.
+
+- **A request whose artifacts no stage of the route writes no longer runs every
+  stage unasked.** `npx qfai workflow plan --in` listed only the `broad` scope
+  there, so no scope question was put. It now refuses with `artifact-unserved`
+  and names each artifact, and the session stops before the first stage. A
+  route that writes nothing is not refused (#2964).
 
 - **The changelog guard no longer fails the commit a release is tagged at.**
   The guard refuses an entry added to a section whose tag exists. The merge
