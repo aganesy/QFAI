@@ -45,6 +45,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   check makes `status` `FAIL`; a pending one does not stop `verify-commit`,
   because the pull request is where the check runs. Fixes #2996.
 
+- **The `DESIGN.md` authoring step checks the finished file against the
+  generated-design pattern list.** A token that prescribes a listed pattern the
+  recorded brand direction does not ask for fails the gate, and the finding names
+  the pattern (#2619).
 - **`qfai-run` has guidance for a change that needs a person's action outside
   the repository.** When a change depends on something only the user can do,
   such as a hosted dashboard setting or a token issued in a web console, the
