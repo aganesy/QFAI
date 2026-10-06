@@ -128,6 +128,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   input it cannot read, still get the reminder. `qfai init` replaces an unedited
   copy of either earlier group.
 
+- **The minimal-implementation reminder stops repeating on files it does not
+  concern.** After a write or edit it now prints only for product source: not
+  for a test, a file under `tmp/`, a document, a configuration file or a file
+  outside the project. This holds in `.claude/settings.json` and
+  `.codex/hooks.json`; a project that kept an earlier group unedited gets the
+  new one on the next `qfai init` (#2993).
 - **The free-text entry reminder points a worktree session at its own copy of
   `qfai-run`.** The host can load the skill from the main checkout, which may
   lag the worktree, so the reminder now tells the agent to read

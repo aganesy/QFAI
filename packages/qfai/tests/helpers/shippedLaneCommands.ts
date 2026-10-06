@@ -1546,7 +1546,13 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // when the input names no session. Events, matchers, markers, `if` conditions and message keys are
   // unchanged; the previous groups are listed as superseded so the merge refreshes them. Restoring
   // the six programs reproduces `0bf2f12f…` byte for byte.
-  [".claude/settings.json", "57d8dfe1a5e8768c257a76036c8dbd4e1c8e5c3b6dba91ad65b44e7dbdab3776"],
+  //
+  // Re-pinned when the minimal-implementation reminder after a write started reading the file the
+  // call names and staying silent for what is plainly not product source, before it counts the
+  // call. Events, matchers, markers and message keys are unchanged; the previous group is listed
+  // as superseded so the merge refreshes it. Derived by running `qfai init` into a temp root and
+  // hashing what it wrote.
+  [".claude/settings.json", "033259652238bbaaba1846f4a51ae1adc4f625436b519c74d08b1138d9f13711"],
   // Inside `.codex/`, and pinned for the reason `.claude/settings.json` is: its commands are a
   // program an adopter's agent runs. Two `UserPromptSubmit` groups, structured-question and
   // free-text entry. Codex takes one command string, so each runs the same `node -e` reader
@@ -1573,7 +1579,12 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // file as every other line does, then looks for `node_modules/.bin/qfai`, or `.pnp.cjs` beside a `package.json` that lists qfai, from
   // that project up to the first directory that holds `.git`, and holds no character those shells
   // expand. Derived the same way; dropping that one group reproduces `d48bbc58…`.
-  [".codex/hooks.json", "d159e0319cdf72a8843a47f5943ca7fe7393d9e55225495020e2f7263dece46c"],
+  //
+  // Re-pinned for the same change as `.claude/settings.json`: the minimal-implementation entry
+  // reads the paths of the patch. It is still one `node -e "<program>" <key>` line that holds no
+  // character a hook shell expands, and the walk that finds the message file is unchanged.
+  // Derived the same way.
+  [".codex/hooks.json", "9a562721076d38aec60601d514db0b69d4acc7bd651e4213570fe1e154f5dd78"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`

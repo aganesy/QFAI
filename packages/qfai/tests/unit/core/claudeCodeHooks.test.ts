@@ -357,7 +357,7 @@ describe("an earlier release's hook groups", () => {
   );
 
   it("covers every group the fixture holds", () => {
-    expect(cases).toHaveLength(21);
+    expect(cases).toHaveLength(22);
   });
 
   it.each(cases)("replaces $event group $index where it stands", ({ event, group }) => {
@@ -406,6 +406,34 @@ describe("an earlier release's hook groups", () => {
     if (result.outcome !== "merged") return;
     expect(groupsFor(result.settings, "PreToolUse")[0]).toEqual(edited);
     expect(result.edited).toEqual([`PreToolUse "${DOCUMENTATION_CLARITY_HOOK_MARKER}"`]);
+  });
+});
+
+describe("the Codex tool-time group an earlier release wrote", () => {
+  const CODEX_TEMPLATE = readFileSync(
+    path.join(packageRoot, "assets/init/.codex/hooks.json"),
+    "utf-8",
+  );
+  const CODEX_EARLIER = readFileSync(
+    path.join(packageRoot, "tests/fixtures/codex-hooks/earlier-tool-groups.json"),
+    "utf-8",
+  );
+
+  it("is replaced where it stands, and a second run changes nothing", () => {
+    const result = mergeDocumentationClarityHooks(CODEX_EARLIER, CODEX_TEMPLATE);
+    expect(result.outcome).toBe("merged");
+    if (result.outcome !== "merged") return;
+    expect(result.edited).toEqual([]);
+    const shipped: Record<string, unknown> = JSON.parse(CODEX_TEMPLATE);
+    const earlier = groupsFor(JSON.parse(CODEX_EARLIER), "PostToolUse")[0];
+    expect(groupsFor(result.settings, "PostToolUse")[0]).toEqual(
+      groupsFor(shipped, "PostToolUse").find((group) => markersOf(group) === markersOf(earlier)),
+    );
+    const again = mergeDocumentationClarityHooks(
+      serializeClaudeSettings(result.settings),
+      CODEX_TEMPLATE,
+    );
+    expect(again).toEqual({ outcome: "already-present", edited: [] });
   });
 });
 

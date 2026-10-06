@@ -181,18 +181,61 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
     ]);
   });
 
-  it("restates the implementation rule on every write, with no path condition", () => {
+  it("restates the implementation rule with no path condition of its own", () => {
     const postToolUse = hooks.get("PostToolUse") ?? [];
     const group = postToolUse[1];
 
     expect(group.hooks).toHaveLength(1);
     expect(group.hooks[0].statusMessage).toBe(MINIMAL_IMPLEMENTATION_HOOK_MARKER);
     // No `if`, deliberately. The condition is a permission-rule scope matched
-    // against the path, so naming source by extension means enumerating a
-    // language set — and a language left out is a hook that is silently absent
-    // exactly where the rule is needed. The cost of the broader match is one
-    // extra line on a Markdown edit, beside the clarity reminder already there.
+    // against the path, and naming source by extension would enumerate a
+    // language set: a language left out is a hook silently absent exactly where
+    // the rule is needed. The program decides instead, by what is plainly not
+    // source, so a language nobody listed still gets the reminder.
     expect(group.hooks[0].if).toBeUndefined();
+  });
+
+  // QFAI:EX-0001-0196-53
+  it("prints the implementation reminder only for a file that is product source", async () => {
+    const entry = (hooks.get("PostToolUse") ?? [])[1]?.hooks[0];
+    if (entry === undefined) throw new Error("no implementation reminder entry");
+    const project = projectDirOf(repoRoot, rel);
+    const input = (file: string): string =>
+      JSON.stringify({
+        hook_event_name: "PostToolUse",
+        tool_name: "Edit",
+        tool_input: { file_path: file },
+      });
+
+    for (const file of [
+      "src/a.ts",
+      "scripts/run.ps1",
+      "lib/tool.rb",
+      path.join(project, "packages", "x", "src", "b.py"),
+    ]) {
+      const text = await runReminderHook(entry, project, input(file));
+      expect(text, file).toContain("minimal-implementation.md");
+    }
+    for (const file of [
+      "tmp/x.py",
+      "tests/a.ts",
+      "src/a.test.ts",
+      "src/a.spec.ts",
+      "README.md",
+      "package.json",
+      "config/app.yaml",
+      ".env.example",
+      ".qfai/spec/a.md",
+      path.join(os.tmpdir(), "draft.ts"),
+      "../outside.ts",
+    ]) {
+      await expect(runReminderHook(entry, project, input(file)), file).resolves.toBe("");
+    }
+    // Input that names no file is not a reason to stay silent.
+    for (const none of ["{}", "", "{ not json"]) {
+      const text = await runReminderHook(entry, project, none);
+      expect(text, JSON.stringify(none)).toContain("minimal-implementation.md");
+    }
   });
 
   it("points at the floor and the interface rule instead of restating them", async () => {
@@ -225,16 +268,18 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
         }
       }
     }
-    // Five readers. One prints the named message. One does the same but prints
+    // Six readers. One prints the named message. One does the same but prints
     // only on the first call of a session and on every twentieth after it, which
     // is how a reminder on every write stays out of the way. One looks for this
     // checkout's launcher first and prints only where there is none. One reads
     // the hook's own input first and prints only for a command that names the
     // forge, and then counts like the second, which is what lets a `Bash` matcher
     // exist at all. One reads the prompt and stays silent on a turn the host
-    // started rather than the user typed. A seventh would mean a reminder had
-    // grown logic of its own, which is the thing kept out of this file.
-    expect(readers.size, "a reminder runs one of the five pinned readers").toBe(5);
+    // started rather than the user typed. One reads the file a write names,
+    // stays silent for what is plainly not source, and then counts like the
+    // second. A seventh would mean a reminder had grown logic of its own, which
+    // is the thing kept out of this file.
+    expect(readers.size, "a reminder runs one of the six pinned readers").toBe(6);
     for (const reader of readers) {
       expect(reader).toContain("process.argv[1]");
       expect(reader).toContain("process.argv[2]");
