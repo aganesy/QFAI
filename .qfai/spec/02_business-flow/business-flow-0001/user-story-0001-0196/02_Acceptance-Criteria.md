@@ -85,6 +85,7 @@ Feature: Install or upgrade and get the free-text entry
     When `qfai init` runs
     Then Codex runs each tool-time reminder Claude Code runs at the Codex tool call for the same moment, with the same marker and message
     And the documentation-clarity reminder after a write fires only for a patch that adds or changes a Markdown file
+    And the minimal-implementation reminder after a write fires only for a file that is product source: not a test, a file under `tmp/`, a document, a configuration file or a file outside the project
     And the API-budget reminder fires only for a shell command that names the forge's CLI or its API host
     And the reminder before leaving plan mode has no Codex group, because Codex has no tool call that leaves plan mode
     And each runs under every shell as the prompt-time reminders do
@@ -108,4 +109,11 @@ Feature: Install or upgrade and get the free-text entry
     And a project with a launcher in its own checkout, or below a git root that holds one, prints nothing
     And a launcher in a directory above the git root does not count
     And each Codex line prints the same through `sh`, `cmd.exe` and PowerShell
+
+  # AC-0001-0196-15
+  Scenario: Init seeds a union merge for the two registers
+    Given a fresh project with no `.gitattributes`
+    When `qfai init` runs
+    Then `.gitattributes` sets `merge=union` on `.qfai/spec/decisions.md` and `.qfai/spec/open-questions.md`, and on no other path
+    And an existing `.gitattributes` is left as it is
 ```

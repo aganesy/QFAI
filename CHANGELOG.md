@@ -6,6 +6,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **The seeded `.gitattributes` uses Git union merging for the two registers**
+  (#2265). A new file sets `merge=union` on `decisions.md` and
+  `open-questions.md` to keep both branches' appended lines. Validation still
+  reports duplicate IDs. Existing `.gitattributes` files remain unchanged.
+
 - **A shipped rule sets how Markdown an agent reads is sized and split**
   (#2246). Markdown stays within 500 lines and a `SKILL.md` body within 20,000
   characters. Pointers say when to read the file they name, references stay one
@@ -33,8 +38,43 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   at that Status stays in force. The story-tree authoring rules also say that a
   project counting the IDs of its open pull requests may take a next ID above
   the tree's own highest plus one (#2969).
+- **A gate the project runs in CI only is recorded as delegated, not as a pass or a
+  failure.** A Standard commands entry written `CI only: <check name>` makes
+  `verify-repo-gate` record the gate `DELEGATED` with that check, and
+  `verify.json` carries it in `gates` with the check name and its state. A red
+  check makes `status` `FAIL`; a pending one does not stop `verify-commit`,
+  because the pull request is where the check runs. Fixes #2996.
+
+- **`qfai-run` has guidance for a change that needs a person's action outside
+  the repository.** When a change depends on something only the user can do,
+  such as a hosted dashboard setting or a token issued in a web console, the
+  work stops before that stage and says what the user must do, what shows it was
+  done and what the agent will read to check it. The agent never enters a
+  password, token or key and never changes an account setting. The extraction
+  reference says such a request keeps the repository change's intent with the
+  `env` flag (#2999).
+
+- **`qfai validate` warns when an example changes and no test annotating it
+  does.** In the `tdd` and `drift` profiles, an example row whose cells changed
+  since the base raises `QFAI-DRIFT-002` at warning, naming the example ID and
+  its `03_Example.md`, unless a selected non-E2E test annotating that example
+  changed too. A new row and a table that was only re-padded raise nothing. The
+  warning asks the owner to recheck the test; it does not prove the test asserts
+  the new row (#2748).
 
 ### Fixed
+
+- **The init skill-link test compares where each link resolves.** It matched
+  the trailing text of the raw link target, so a dangling link, or one into a
+  copy outside the project, passed. It now compares the resolved path of each
+  link with that of the canonical skill directory. Fixes #2230.
+
+- **A verify run tells a failure that predates the change from one it caused.**
+  A failing gate is now run again on the base commit, and the result is
+  recorded in the `gates` of `verify.json` as a `baseline` of `same`,
+  `different` or `unrun`. A gate that could not run is recorded `UNRUN` with
+  its `reason`. The run still stops before the commit, and the final report
+  lists these gates apart from the failures the run caused. Fixes #2982.
 
 - **`qfai validate` and `qfai report --run-validate` no longer read an
   unreadable legacy validate path as absent.** The check for a stale
@@ -42,7 +82,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Now only a missing path counts as absent, and any other failure, such as
   `EACCES` or `EIO`, reaches the caller with its code, path and message
   (#2915).
-
 - **A validator no longer reads an unreadable file as a missing one.** The
   shared `exists` and `readSafe` helpers turned every failure, including
   `EACCES` and `EIO`, into "absent" or an empty string, so a file the validator
@@ -54,7 +93,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the guard now lists `node scripts/pin-guard-bytes.mjs` and then
   `node scripts/pin-verification-bodies.mjs` after the `--pin` command.
   Following the old message alone failed the lint lane on the stale digest.
-
 - **The contract guide states one scope for contract kinds.** It named only
   `api/`, `db/` and `ui/` as contract directories in one place and `cli/` in
   another. It now says a project's contracts are the three directories and that
@@ -66,14 +104,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and list included every distributed file, including those already identical to
   the shipped copy. Rule files, the Copilot and Codex files and the agent and
   skill links that need no change are now counted as skipped (#2986).
-
 - **The handoff reader refuses an artifact whose fields have the wrong type.**
   `HandoffReader.read` checked only that the five top-level keys were present
   and then returned the file as a `HandoffArtifact`. It now also requires
   `timestamp` and `iteration`, and checks each field and nested list against
   the type it returns. A file that fails is refused with `null` and a logged
   error, as a missing key already was. Fixes #2862.
-
+- **Migration keeps an approved but unapplied change request in progress**
+  (#2425). Step 2 of `qfai-migration-v1-to-v2` gave every `approved` change
+  request the Status DONE, recording a change as made when only its approval
+  was. A request whose `Applied at` is empty or `-` now becomes WIP.
 - **The `qfai-run` entry reminder stays silent on a turn the host starts
   (#2989).** The Claude Code `UserPromptSubmit` hook that sends a request to
   `qfai-run` printed on every notification, so an agent could start a run from
@@ -83,12 +123,27 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   input it cannot read, still get the reminder. `qfai init` replaces an unedited
   copy of either earlier group.
 
+- **The minimal-implementation reminder stops repeating on files it does not
+  concern.** After a write or edit it now prints only for product source: not
+  for a test, a file under `tmp/`, a document, a configuration file or a file
+  outside the project. This holds in `.claude/settings.json` and
+  `.codex/hooks.json`; a project that kept an earlier group unedited gets the
+  new one on the next `qfai init` (#2993).
 - **The free-text entry reminder points a worktree session at its own copy of
   `qfai-run`.** The host can load the skill from the main checkout, which may
   lag the worktree, so the reminder now tells the agent to read
   `.claude/skills/qfai-run/SKILL.md` under the current directory. The reminder
   is read from the session's own checkout. Fixes #2972.
 
+- **A completed change request can no longer be reopened (#2897).** A
+  `Change request:` row that the base branch holds at DONE authorised edits to
+  its paths again once a branch set it back to WIP. It now authorises nothing at
+  any status, so a later change needs a new approved request.
+- **A request whose artifacts no stage of the route writes no longer runs every
+  stage unasked.** `npx qfai workflow plan --in` listed only the `broad` scope
+  there, so no scope question was put. It now refuses with `artifact-unserved`
+  and names each artifact, and the session stops before the first stage. A
+  route that writes nothing is not refused (#2964).
 - **The changelog guard no longer fails the commit a release is tagged at.**
   The guard refuses an entry added to a section whose tag exists. The merge
   that folds `## [Unreleased]` into the release is the commit the tag is pushed
@@ -96,16 +151,58 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   turned `main` red. A tag on the commit being checked is now the release being
   cut and does not make its section released (#2945).
 
+- **A padded or blank test glob selects the same files in every scan.** The
+  story-tree test scan and the spec-to-story annotation rewrite read
+  `validation.traceability.testFileGlobs` and `testFileExcludeGlobs` as written,
+  while the other scans trimmed them. All of them now trim whitespace at either
+  end of an entry, including after the `!` of an exclusion, and skip a blank
+  entry. Whitespace inside a path component is kept; a path that begins or ends
+  with a space is matched with `?` or `[ ]`. A leading `!(` extglob is read as a
+  pattern, not an exclusion. Fixes #2902.
+
 - **The migration skill cites its shared rules by full path.** The
   delegation-baseline and test-layers pointers started at `rule/`, so they did
   not resolve from the project root. Both now begin at `.qfai/assistant/rule/`.
   (#2858)
+- **A change that leaves nothing to migrate no longer owes a migration
+  note.** On the `change-compatibility` route the change note step could not
+  pass, so a one-line display-text change had to write migration steps and a
+  breaking change that did not exist. It now passes when no user has anything
+  to migrate, and still does not pass when one has. Fixes #2990.
+
 - **A project can stop `qfai init` writing a shipped workflow.** Deleting
   `qfai-tests.yml` was not enough: the next `qfai init` wrote it again, though
   its header said it would not. `workflow.skipShipped` in `qfai.config.yaml`
   now lists the shipped workflow files init leaves out, and `qfai validate`
   reports a value that is not a list of shipped names. The headers of
   `qfai-tests.yml` and `qfai-validate.yml` describe this. Fixes #2979.
+
+- **`qfai validate` no longer reports the one-off load of its HTML parser as an
+  over-budget run.** The parser's DOM library loaded on the first parsed block,
+  inside the mock-parse clock, and the UI/UX group's clock counted it as well. On
+  a cold disk cache that load took about 25 seconds, so both checks printed
+  `timings: over budget` on a repository with a handful of mock blocks. The load
+  now happens before the parse clock starts and is left out of the group's
+  measurement. Fixes #2997.
+
+- **The verify gate can pass in a project that records a backlog.**
+  `verify-qfai-gate` now runs the project's `Validate` entry, and a project
+  whose entry runs a pinned ratchet passes while every error stays within its
+  pin. `verify-repo-gate` accepts that result. A project with no such entry
+  still fails on any `error`. This repository's `Validate` entry runs
+  `scripts/check-dogfood-backlog.mjs --profile full`. Fixes #2970.
+
+- **A rewritten decision row no longer authorizes a protected file.** A
+  `Change request:` row the base already holds could have its Content changed
+  to name another protected file, and the drift guard then accepted an edit to
+  that file. A base row whose Content or Approach changed now authorizes
+  nothing, in the `tdd` and `drift` profiles alike (#2891).
+
+- **The shipped API budget rule names no script a project lacks.** It named
+  this repository's own helper script, so every project that carried the rule
+  held a path that did not resolve. It now describes what such a command
+  answers and says a project names its own (#3001).
+
 - **The planner-first and design anti-goal examples are tested for what they
   say.** The planner-first example was annotated on a test that only checked
   three file names. Its test now reads the completion matrix and the
@@ -128,13 +225,44 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   that cite it, the test annotations, an AC left without an example, and no
   reuse of the ID. It names the `qfai validate` findings that catch a leftover.
 
+- **The Claude Code tool-time reminders no longer repeat on every call
+  (#2994).** The grilling reminders before a write, an edit and a delegation,
+  the API-budget reminder, the documentation-clarity reminders after a
+  Markdown write or edit, and the minimal-implementation reminder were added to
+  the context after each matching call, so a long session carried hundreds of
+  identical paragraphs. Each now prints on a session's first matching call and
+  on every twentieth after it, counted separately for each session and each
+  sub-agent, and the API-budget reminder counts only commands that name the
+  forge. Input with no session id, the reminder before a post and the one
+  before leaving plan mode print on every call as before. `qfai init` replaces
+  an unedited copy of each earlier group. The Codex hooks are unchanged.
+
 ### Changed
+
+- **The documentation-clarity rule says where spec-tree IDs may appear** (#3002).
+  IDs the project's own spec tree defines stay in spec-tree documents and in code
+  or test comments that point at a contract or example. Operator-facing guides
+  and shipped files describe the rule in words instead.
+
+- **Every skill the agent may select says when to select it** (#2247).
+  `qfai-configure`, `qfai-grilling`, `qfai-migration-v1-to-v2` and
+  `web-research` gain a "Use when" sentence in their `description:`.
+  `qfai-grilling` is selected when a stage calls for a session, or when asked
+  to grill or stress-test a design. A new asset test holds every skill without
+  `disable-model-invocation: true` to a "Use when" sentence, the third person,
+  1,024 characters, and a name without "anthropic" or "claude".
 
 - **The `qfai-run` entry skill has room for another step** (#2966). The text
   for a release, decision or branch point moves into a new reference,
   `references/stage-points.md`, which the skill points to at each step. The
   skill keeps its 150-line limit, at 135 lines instead of 150, and its
   behaviour is unchanged.
+
+- **The `change-tooling` route starts at `edit`** (#2995). A change to CI, a
+  workflow or a build script has no business flow, story or example, so the
+  `implement-diagnose` stage it began with had nothing to record and was passed
+  over. The plan is now `edit`, `note`, `verify`, and the contract rule and the
+  example that state it say the same.
 
 - **A mutation proof belongs to one example** (#2409). The `qfai-implement`
   oracle-strength reference now says what to do when one mutation fails tests
@@ -143,6 +271,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   boundary, or have `/qfai-sdd` settle an unclear boundary in the examples. A
   shared predicate may fail several tests whose assertions each prove their own
   example.
+
 - **The orchestrator keeps working while a delegation runs** (#2244). The
   shared delegation baseline now says the orchestrator is not required to wait
   for a sub-agent. Where the host starts a delegation and returns at once,
@@ -151,7 +280,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   host without all three keeps it waiting. Starting another delegation still
   needs the independence conditions of the parallelization policy, and an
   ordering the ledger or a seam makes mandatory still holds.
-
+- **Review is the detector for a security defect** (#2252). No repository gate
+  scans for a security or data-integrity defect, and the Drift Protocol now
+  says so. It names the implementation reviewer as that class's detector: a
+  finding the reviewer demonstrates traces to `defect:security` and blocks.
+  The reviewer card names concrete checks in place of the single word
+  "security": the three shapes the protocol names, and injection, cross-site
+  scripting, server-side request forgery, hardcoded secrets, insecure direct
+  object reference, auth bypass, unsafe deserialization and path traversal.
+  The check reads the whole of every touched file and follows each input the
+  change adds or alters to where it is used, across files the change did not
+  touch. Only a finding on what the change added or altered blocks.
 - **`qa-gatekeeper` asks whether a reviewed test would survive a refactor**
   (#2253). A test that asserts on what the contract does not name, such as a
   private function, an internal call order or a mock of the code's own
@@ -164,11 +303,35 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   review asks point at the checks that already own them: the coverage gate, and
   the proof per example in the oracle strength reference.
 
+- **A request that names the exact change is the approval** (#2991). When
+  the user asks in the session for a change to a story-tree or contract file and
+  names the change and its effect, `sdd-triage` lists the files in its
+  announcement and asks no second question, and records the request as the
+  option chosen. The same request shows acceptance, so `qfai-run` does not set
+  the `decision` flag for it.
+
+- **The repository's dogfooding ratchet pins each finding, not each file's
+  count.** `scripts/check-dogfood-backlog.mjs` keys an error by its code and the
+  IDs it names, so a change that clears one untested example and adds another
+  in the same file no longer passes at the same count. A pin still written as a
+  bare count is refused with the command that re-pins it. Fixes #2355.
+
+- **The documentation-clarity rule allows the names the reader sees in the
+  product** (#3008). A screen label, a button name, an item name in a sheet the
+  document tells the reader to fill in and a product term met on screen may
+  appear in a document written for that reader. A term the reader cannot already
+  know is defined once at its first use.
+
 - **Five doctor criteria now name the tests that prove them.** Existing
   integration tests carry standalone `QFAI:AC-...` comments, and
   `AC-0003-0004-01` gains a deprecated `paths.promptsDir` warning case.
   The BF-0003 full pin keeps only `AC-0003-0006-01` and `AC-0003-0006-03`.
   Refs #2367.
+- **A document-schema finding says what the section holds** (#3011). A
+  forbidden-text finding printed the regular expression that matched. It now
+  gives the section's description from the schema, and patterns that fail at one
+  position of a document are reported once. `--show-patterns` on the shipped
+  `check-mdschema.mjs` prints the expressions again, for a schema author.
 - **Configure and web research follow the shared delegation rules alone**
   (#2857). Both skills carried empty override stanzas, and configure restated
   the failure handling. A failed delegation is now classified and handled only

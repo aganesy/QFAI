@@ -38,6 +38,9 @@ Neither is restated here.
    gate is the matching entry of the Standard commands section, used as
    written. An entry that is missing makes the gate UNRUN: record it and route
    the gap as the rule says; never substitute a command from another stack.
+   An entry written `CI only: <check name>` instead of a command is not run
+   here: record the gate DELEGATED with that check name, and read the check's
+   state from the pull request when one exists.
 3. **Run it** on the tree the stage will hand to its reviewer, in the
    environment the `Runtime` and `Platform` rows declare.
 4. **Report** in the stage report: the exact
@@ -66,12 +69,32 @@ Neither is restated here.
 
 ## Outcomes
 
-| Outcome | Means                                                              |
-| ------- | ------------------------------------------------------------------ |
-| `PASS`  | The command ran on the reviewed tree and exited 0 with zero errors |
-| `FAIL`  | The command ran and reported an error or a non-zero exit           |
-| `UNRUN` | No command, no launcher, or no environment to run it in            |
+| Outcome     | Means                                                              |
+| ----------- | ------------------------------------------------------------------ |
+| `PASS`      | The command ran on the reviewed tree and exited 0 with zero errors |
+| `FAIL`      | The command ran and reported an error or a non-zero exit           |
+| `UNRUN`     | No command, no launcher, or no environment to run it in            |
+| `DELEGATED` | The project runs the gate in CI only, by the check its entry names |
 
-Only `PASS` satisfies a gate. `FAIL` and `UNRUN` go in the stop report with the
-reason and the retry condition. Do not weaken a profile, lower `--fail-on`,
+Only `PASS` satisfies a gate here. A `DELEGATED` gate is satisfied by its CI
+check, which runs on the pull request: it is not a pass, and it is not a
+failure until that check is red. `FAIL` and `UNRUN` go in the stop report with
+the reason and the retry condition. Do not weaken a profile, lower `--fail-on`,
 waive an error or invent a result to reach `PASS`.
+
+## A failure that predates the change
+
+Before a failing gate is attributed to the change, run it again on the base
+commit: the revision the change branched from, in a clean checkout that holds
+none of the change. Build it the same way, so a failure that needs a build is
+not read from a stale one.
+
+| Base result                            | Record                                       |
+| -------------------------------------- | -------------------------------------------- |
+| The same failures                      | `FAIL`, baseline `same`: it predates the run |
+| Fewer, other or no failures            | `FAIL`, baseline `different`: the run's own  |
+| The gate cannot run on the base either | `FAIL`, baseline `unrun`, with the reason    |
+
+The comparison is between the failing tests or findings, not the exit code.
+The result stays `FAIL`; a baseline of `same` explains it and never turns it
+into a pass. The run did not cause it, so it is reported and not repaired.

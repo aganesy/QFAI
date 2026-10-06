@@ -49,8 +49,9 @@ Both classes use the same approval and owner-rerun path.
 
    When the user cannot be asked, write no row to either table: report the proposed change as the decision still
    needed and keep the affected items stopped. A WIP Change request: row is the in-force authorization that the drift gate reads.
-   TODO is not authorization. A DONE row authorizes only on the branch that appended it or moved it from WIP. A DONE
-   row the base already holds records a change already applied, so a later edit to the same path needs a row of its own.
+   TODO is not authorization. A DONE row authorizes only on the branch that appended it or moved it from WIP. A row
+   the base already holds at DONE records a change already applied and authorizes nothing at any Status, so setting it back to WIP
+   reopens nothing and a later edit to the same path needs a row of its own.
 
 4. Rerun the owner skill against the affected artifact. The owner names the approved decision row, the input revision, and whether it is confirming existing content or changing it.
    A contract with a contract ID, such as `API-0002`, is selected by its full ID; a contract without one is selected by its repository-relative path.
@@ -72,6 +73,13 @@ Open requests have independent affected sets. Their union is the set of work pau
 ### Defect or new scope: decide this first
 
 A defect is demonstrable from the deliverable or an existing obligation: incorrect behavior, missing input validation, data loss, or a failing required quality gate. It is blocking with the concrete artifact and evidence as provenance.
+
+No repository gate scans for a security or data-integrity defect. Review is that
+class's detector: `.qfai/assistant/agent/implementation-reviewer.md` checks each
+change for missing validation on an input the code already treats as trusted,
+credential or personal-data exposure, and an injection or traversal path opened
+by the change. A finding the reviewer demonstrates traces to `defect:security`
+and blocks like the other blocking classes.
 
 New scope adds product behavior or a quality bar the approved story tree and contracts do not require. A reviewer records it as advisory and sends it to the SDD owner. It becomes binding only after the owner records the decision and updates the relevant BF, AC, EX, BR, or contract. An advisory does not create a test assertion by itself.
 

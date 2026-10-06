@@ -142,7 +142,7 @@ describe("the implementation reviewer reads silent failure and type design", () 
         "silent failure and type design across the whole of every file the change touches",
       );
       expect(row).toContain(
-        "a finding on code in a touched file that the change did not add or alter",
+        "| Upstream spec content, contract design, and a finding on code in a touched file that the change did not add or alter |",
       );
     },
   );
@@ -532,6 +532,8 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /#123|GH-123/,
         /git (history|log)/,
         /PostToolUse/,
+        /Spec-tree IDs/,
+        /Names the reader sees/,
         /State\s+the\s+point\s+directly,\s+not\s+through\s+a\s+metaphor\s+or\s+a\s+flourish/,
       ]) {
         expect(text).toMatch(clause);
@@ -1291,8 +1293,9 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /the\s+response\s+to\s+a\s+call\s+that\s+was\s+going\s+to\s+be\s+made\s+anyway/,
         // Whose allowance it is, which is why one agent's habits reach the rest.
         /every\s+session,\s+sub-agent\s+and\s+background\s+task\s+draws\s+on\s+the\s+same/,
-        // The command that makes the cheap path the default.
-        /scripts\/gh-budget\.mjs/,
+        // The command that makes the cheap path the default, named by no path
+        // an adopter lacks.
+        /a\s+project\s+that\s+writes\s+one\s+names\s+it\s+here/,
       ]) {
         expect(text).toMatch(clause);
       }

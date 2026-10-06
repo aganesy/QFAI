@@ -44,9 +44,10 @@ commands entry named after the colon:
 7. build/package (if relevant): `Build`
 8. pack/verify (if distributed): `Pack / distribution`
 
-Run listed commands and record outputs. Where the environment cannot run a
-command, ask the user to run it and provide the output. Never assume PASS
-without evidence.
+Run listed commands and record outputs. A gate whose Standard commands entry
+is `CI only: <check name>` is not run here: record it `DELEGATED` with that
+check name. Where the environment cannot run any other command, ask the user to
+run it and provide the output. Never assume PASS without evidence.
 
 ## Fix loop
 
@@ -60,6 +61,10 @@ one code review reads the repair, as `qfai-verify`'s `## Review` section says.
 
 - If failing, produce an actionable fix list (not vague). Stop and escalate
   when a gate fails without one.
+- Before attributing a failure to the change, run the gate on the base commit,
+  as `common-gate-run`'s `## A failure that predates the change` says. A
+  failure that is the same there is reported with its baseline and is not
+  repaired.
 - Identify whether the failure is a spec mismatch, a test issue or an
   implementation defect, and fix the root cause. Do not silence a test without
   a reason.
@@ -101,6 +106,8 @@ run's change and reports each result.
   from them.
 - `outcome` and `testObservation` are reported apart.
 - A required gate that did not run is reported `unrun`, never as a pass.
+- A gate the project runs in CI only is reported `delegated`, with its check
+  name.
 
 `verify.json` itself is unchanged inside a run: its fields and values are
 `.qfai/assistant/skill/qfai-verify/references/verify-output-contract.md`'s,
@@ -126,12 +133,20 @@ These three are the only repairs verify routes.
   blocker `stage-blocked` and `operator` as the one who clears it.
 - No debt is listed for it, and no repair is routed.
 
+## A failure the run did not cause
+
+A gate that fails the same way on the base commit, or could not run, is
+recorded in the report and in `gates` of `verify.json`, with its `baseline` or
+its `reason`. The top-level `status` stays `"FAIL"`, so the run stops before
+`verify-commit`. The final report lists each such gate apart from the failures
+the run caused, so the user can decide whether to commit.
+
 ## Gate
 
 The step is done when:
 
 - every gate in scope ran and is recorded, or is recorded UNRUN with the
-  reason;
+  reason, or is recorded DELEGATED with its CI check;
 - every gate passes, or each failure has an actionable fix list and an owner;
 - `verify.json` exists, its `status` matches the gate results and its `scope`
   matches the validate profile that ran.
@@ -141,5 +156,7 @@ For this skill, the smallest applicable smoke check of
 is the whole gate set of the scope, run to completion, with every outcome in
 `verify.json` and the report.
 
-A PASS needs zero errors in the declared profile, and, where the project has
-them, a clean distributed-surface guard and a clean branch version pin.
+A PASS needs zero errors in the declared profile, or errors only within the
+project's recorded backlog as `verify-qfai-gate` reports it, and, where the
+project has them, a clean distributed-surface guard and a clean branch version
+pin.

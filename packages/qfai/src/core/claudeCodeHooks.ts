@@ -179,6 +179,18 @@ const SUPERSEDED_HOOK_GROUPS: ReadonlySet<string> = new Set([
   "42e59754850b7e1e7e3b62e6ea596810552a0a05db64504ae17522748a7f1998",
   // free-text entry: the program that read no input, before it skipped automated turns
   "8ed926315594cbe69d000b754cbf4e67cedf3cdcaab82d60fdee20adcd6cc16e",
+  // tool-time reminders that printed on every call, before they were limited per session:
+  // grilling before a write or edit and before delegation, API budget, documentation clarity
+  // after a Markdown write or edit, and minimal implementation
+  "3d67d2654ce6fbe4cd060a55598ecd5b0198f06c7b13b8b75ea3462e0fc122ac",
+  "a6186d6a3c4723441e5604dfb1531faa80cceb1a6cfde8f3a88a379b65b54c7d",
+  "fd357165036f1d8546c6052160738ec64536e8063fa9e20427104a605d4953ce",
+  "871cd5dc08d66d273b1ce1be9325da13b53999269b5cd72831d5cf8d501c2b72",
+  "cd1490ce2ef9062619617277eb4d684d6b1d934f9b1ed2df2751660d6c72e650",
+  // minimal implementation in `.claude/settings.json` and `.codex/hooks.json`, before it skipped
+  // files that are not product source
+  "7b5ba83e524a9c5a8f94f320cc0ac18b216b2c1e7b27497ccd8bb3e443f2b5c9",
+  "2ae0c735ac2c72fffd652a2cb3b818c8f2dbefd0493998a86d46c6160d99734b",
 ]);
 
 export type HookMergeResult =

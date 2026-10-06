@@ -78,10 +78,9 @@ The cheap path holds only if it is the default. A repository that gives the
 recurring questions one command gets that; one where each agent reassembles the
 calls gets the habits above again.
 
-The QFAI repository's own command is `scripts/gh-budget.mjs`: the CI state of
-every branch from one call, and a job log saved once. A project with no
-equivalent composes its calls by hand under the rules above, and a project that
-writes one names it here.
+A useful command answers two questions: the CI state of every branch from one
+call, and a job log saved once. A project with no equivalent composes its calls
+by hand under the rules above, and a project that writes one names it here.
 
 ## The reminder
 

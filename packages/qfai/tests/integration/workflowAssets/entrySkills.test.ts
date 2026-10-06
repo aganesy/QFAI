@@ -17,6 +17,7 @@ import {
   ASSISTANT_ASSET_MAX_LINE_CHARS,
 } from "../../../src/core/doctor/assetLineBudget.js";
 import { validateAgentDefinition } from "../../../src/core/validators/agentDefinition.js";
+import { WORKFLOW_ROUTES } from "../../../src/core/workflow/routes.js";
 import {
   PACKAGE_DEFAULTS,
   SHIPPED_ASSISTANT,
@@ -262,7 +263,7 @@ describe("qfai-run", () => {
         }
       }
     }
-    expect(routes.length).toBe(35);
+    expect([...routes].sort()).toEqual([...WORKFLOW_ROUTES].sort());
     expect(naming).toEqual([]);
   });
 
@@ -351,6 +352,7 @@ describe("qfai-run", () => {
   // QFAI:AC-0001-0211-05
   // QFAI:EX-0001-0211-40
   // QFAI:EX-0001-0211-41
+  // QFAI:EX-0001-0211-44
   it("marks a behaviour change as a prototype request only when it asks to change the prototype", async () => {
     const reference = await readShipped(EXTRACTION);
     expect(rowOf(sectionOf(reference, "## Qualifiers"), "| `prototype-requested`")).toMatch(
@@ -358,6 +360,9 @@ describe("qfai-run", () => {
     );
     expect(rowOf(sectionOf(reference, "## Entry flags"), "| `decision`")).toMatch(
       /on a `behaviour-change` that explicitly asks to change the prototype, only when a choice is left open/i,
+    );
+    expect(flat(sectionOf(reference, "## Entry flags"))).toMatch(
+      /acceptance is shown when .* the user asks for the change in the session and names it and its effect/i,
     );
   });
 
@@ -508,6 +513,20 @@ describe("qfai-run", () => {
     expect(rowOf(questions, "| A missing fact")).toMatch(/no recommendation/i);
     expect(flat(questions)).toMatch(
       /when one missing value is all that blocks the plan, ask for it once, then plan/i,
+    );
+  });
+
+  it("stops before a step only a person can take, naming the action, its evidence and the read-only check", async () => {
+    const screens = await readShipped(SCREENS);
+    const step = flat(sectionOf(screens, "## A step only a person can take"));
+    expect(step).toMatch(/what the user must do/i);
+    expect(step).toMatch(/what shows it was done/i);
+    expect(step).toMatch(/what the agent will read to check it, which changes nothing/i);
+    expect(step).toMatch(/never types a password, token or key/i);
+    expect(step).toMatch(/never changes an account or service setting/i);
+    const extraction = flat(await readShipped(EXTRACTION));
+    expect(extraction).toMatch(
+      /takes the intent of the repository change, with the entry flag `env`/i,
     );
   });
 

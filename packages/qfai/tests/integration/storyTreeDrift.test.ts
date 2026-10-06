@@ -135,6 +135,27 @@ describe("story-tree drift", () => {
     expect(reported).not.toContain(flows);
   });
 
+  // QFAI:EX-0001-0002-15
+  it("does not let a request the base holds at DONE regain authority by returning to WIP", async () => {
+    const flows = `${specs}/02_business-flow/business-flows.md`;
+    const done = `| DEC-0001 | Change request: ${glossary} | Applied | DONE |`;
+    await put(decisions, `${table}${done}\n`);
+    for (const file of [glossary, flows]) await put(file, "# Original\n");
+    git("add", ".");
+    git("commit", "-m", "base");
+    git("checkout", "-b", "topic");
+    for (const file of [glossary, flows]) await put(file, "# Changed\n");
+    await put(
+      decisions,
+      `${table}${done.replace("| DONE |", "| WIP |")}\n| DEC-0002 | Change request: ${flows} | Approved | WIP |\n`,
+    );
+    git("add", ".");
+    git("commit", "-m", "reopen a completed request and add a new one");
+    const reported = (await validateStoryTreeDrift(root, config(), "tdd")).map((item) => item.file);
+    expect(reported).toContain(glossary);
+    expect(reported).not.toContain(flows);
+  });
+
   // QFAI:EX-0001-0054-06
   // QFAI:EX-0001-0002-06
   // QFAI:EX-0001-0054-07
@@ -206,6 +227,86 @@ describe("story-tree drift", () => {
           item.message.includes("DEC-0001 content"),
       ),
     ).toBe(true);
+  });
+
+  describe("a row the base holds", () => {
+    const objective = `${specs}/01_policy/objective.md`;
+
+    async function glossaryEditedUnder(baseRow: string, headRow: string): Promise<void> {
+      await put(decisions, `${table}${baseRow}\n`);
+      await put(glossary, "# Original\n");
+      await put(objective, "# Original\n");
+      git("add", ".");
+      git("commit", "-m", "base");
+      git("checkout", "-b", "topic");
+      await put(decisions, `${table}${headRow}\n`);
+      await put(glossary, "# Changed\n");
+      git("add", ".");
+      git("commit", "-m", "edit glossary under the head row");
+    }
+
+    async function reportedGlossary(profile: "tdd" | "drift"): Promise<boolean> {
+      const findings = await validateStoryTreeDrift(root, config(), profile);
+      return findings.some((item) => item.code === "QFAI-DRIFT-001" && item.file === glossary);
+    }
+
+    // QFAI:EX-0001-0054-15
+    it.each(["tdd", "drift"] as const)(
+      "grants nothing for a path its rewritten Content names, in %s",
+      async (profile) => {
+        await glossaryEditedUnder(
+          `| DEC-0001 | Change request: ${objective} | Approved | WIP |`,
+          `| DEC-0001 | Change request: ${glossary} | Approved | WIP |`,
+        );
+        expect(await reportedGlossary(profile)).toBe(true);
+      },
+    );
+
+    // QFAI:EX-0001-0054-15
+    it.each(["tdd", "drift"] as const)(
+      "grants nothing when an ordinary decision is rewritten into a change request, in %s",
+      async (profile) => {
+        await glossaryEditedUnder(
+          "| DEC-0001 | Choice A | Reason | DONE |",
+          `| DEC-0001 | Change request: ${glossary} | Reason | WIP |`,
+        );
+        expect(await reportedGlossary(profile)).toBe(true);
+      },
+    );
+
+    // QFAI:EX-0001-0054-15
+    it.each(["tdd", "drift"] as const)(
+      "grants nothing for a path its rewritten Approach names, in %s",
+      async (profile) => {
+        await glossaryEditedUnder(
+          `| DEC-0001 | Change request: ${glossary} | Reason | WIP |`,
+          `| DEC-0001 | Change request: ${glossary} | Another reason | WIP |`,
+        );
+        expect(await reportedGlossary(profile)).toBe(true);
+      },
+    );
+
+    // QFAI:EX-0001-0054-15
+    it.each(["tdd", "drift"] as const)(
+      "keeps authorising the path of an unchanged row, in %s",
+      async (profile) => {
+        const row = `| DEC-0001 | Change request: ${glossary} | Approved | WIP |`;
+        await glossaryEditedUnder(row, row);
+        expect(await reportedGlossary(profile)).toBe(false);
+      },
+    );
+
+    // QFAI:EX-0001-0054-15
+    it.each(["tdd", "drift"] as const)(
+      "keeps authorising the path of a row that only advances its Status, in %s",
+      async (profile) => {
+        await glossaryEditedUnder(
+          `| DEC-0001 | Change request: ${glossary} | Reason | TODO |`,
+          `| DEC-0001 | Change request: ${glossary} | Reason | WIP |`,
+        );
+        expect(await reportedGlossary(profile)).toBe(false);
+      },
+    );
   });
 
   // QFAI:EX-0001-0007-07
@@ -346,7 +447,9 @@ describe("story-tree drift", () => {
     git("add", ".");
     git("commit", "-m", "append examples");
     const findings = await validateStoryTreeDrift(root, config(), "tdd");
-    expect(findings.map((item) => item.file)).toEqual([rewritten]);
+    expect(
+      findings.filter((item) => item.code === "QFAI-DRIFT-001").map((item) => item.file),
+    ).toEqual([rewritten]);
   });
 
   // QFAI:EX-0001-0054-13
@@ -423,6 +526,11 @@ describe("story-tree drift", () => {
     git("add", ".");
     git("commit", "-m", "edit inside cells");
     const findings = await validateStoryTreeDrift(root, config(), "tdd");
-    expect(findings.map((item) => item.file).sort()).toEqual([contract, examples].sort());
+    expect(
+      findings
+        .filter((item) => item.code === "QFAI-DRIFT-001")
+        .map((item) => item.file)
+        .sort(),
+    ).toEqual([contract, examples].sort());
   });
 });

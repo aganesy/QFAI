@@ -29,6 +29,7 @@
     "means adding it here."
   ],
   "include": [
+    "tests/integration/storyTreeExampleDrift.test.ts",
     "vitest.config.ts",
     "vitest.knobs.ts",
     "vitest.workspace.ts",
@@ -54,6 +55,7 @@
     "tests/assets/constitutionFrontMatter.test.ts",
     "tests/assets/contractTemplateRules.test.ts",
     "tests/assets/decisionRecordIdGrammar.test.ts",
+    "tests/assets/delegatedGate.test.ts",
     "tests/assets/delegationHostBackstops.test.ts",
     "tests/assets/deltaTemplateParses.test.ts",
     "tests/assets/designDirectionInterview.test.ts",
@@ -88,6 +90,7 @@
     "tests/assets/prototypingScopeFloorHome.test.ts",
     "tests/assets/reviewerExcessRoute.test.ts",
     "tests/assets/reOpenRecordShape.test.ts",
+    "tests/assets/reminderRepeat.test.ts",
     "tests/assets/repositoryAttributionGuard.test.ts",
     "tests/assets/researchFirstOwner.test.ts",
     "tests/assets/researchFirstProtocolWiring.test.ts",
@@ -101,6 +104,7 @@
     "tests/assets/sddStage0PrototypingOptional.test.ts",
     "tests/assets/sddTestListMandatoryOutput.test.ts",
     "tests/assets/skillDelegationTool.test.ts",
+    "tests/assets/skillDescriptionTrigger.test.ts",
     "tests/assets/skillEditAuthority.test.ts",
     "tests/assets/sddInstructionConsistency.test.ts",
     "tests/assets/reviewWalkthroughCriteria.test.ts",

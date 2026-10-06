@@ -50,7 +50,7 @@ in Approach. It takes effect only at DONE; it never exempts descendant items.
 
 ## Approval and no-question mode
 
-Use the shared user-question protocol for CREATE, DELETE, SPLIT, MERGE, SUPERSEDE, and UPDATE:REMOVE. Present the target and rationale. Do not self-approve.
+Use the shared user-question protocol for CREATE, DELETE, SPLIT, MERGE, SUPERSEDE, and UPDATE:REMOVE. Present the target and rationale. Do not self-approve. A request from the user in the session that names the operation and its effect is the approval, and no second question is asked.
 In --auto, ask no question: append one `open-questions.md` row per pending operation naming it and its target, at TODO with its Content opening Unadjudicated:; stop before the dependent writes, and report every pending operation with its target as open.
 Approval-free changes may proceed only if they do not depend on a pending operation.
 
@@ -61,7 +61,10 @@ Clarifications follow the constitution's question budget. Approval questions are
 A story-tree or contract file changes only on the user's approval:
 
 1. Show the user the files the stage would change and the proposed change, and
-   change nothing until the user answers.
+   change nothing until the user answers. A request from the user in the
+   session that names the change and its effect is that answer: the stage lists
+   the files in its announcement, asks no second question, and records the
+   request as the option chosen.
 2. On approval, write the change and append one `decisions.md` row whose Content
    opens `Change request:` and names every story-tree and contract file it
    changed, and `decisions.md` when it appended any other row. Its Approach

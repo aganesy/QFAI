@@ -38,6 +38,10 @@ const GATE_STEPS = new Set([
 // A private security report must not reach a tracked file before its fix, so no scope stops early.
 const PRIVATE_INTAKE = "triage-security-intake";
 
+function hasPrivateIntake(stages: readonly PlanStage[]): boolean {
+  return stages.some((stage) => stage.steps.some((step) => step.name === PRIVATE_INTAKE));
+}
+
 function writesRequested(stage: PlanStage, artifacts: readonly Artifact[]): boolean {
   return artifacts.some((artifact) => WRITES[stage.kind]?.includes(artifact));
 }
@@ -63,9 +67,7 @@ function narrowerScopes(
   stages: readonly PlanStage[],
   artifacts: readonly Artifact[],
 ): { narrow: string[]; medium: string[] } | undefined {
-  if (stages.some((stage) => stage.steps.some((step) => step.name === PRIVATE_INTAKE))) {
-    return undefined;
-  }
+  if (hasPrivateIntake(stages)) return undefined;
   const end = lastIndex(stages, (stage) => writesRequested(stage, artifacts));
   if (end < 0) return undefined;
   // Implementation that writes nothing the request names stays out.
@@ -86,6 +88,19 @@ function narrowerScopes(
   const lastCode = lastIndex(stages, (stage) => WRITES_CODE.has(stage.kind));
   const narrow = ids([...kept, ...(lastCode <= end ? closing : gates)]);
   return { narrow, medium: narrow };
+}
+
+// The artifacts the extraction names when the route writes something and writes none of them. The
+// work cannot start then: every stage would run without the request asking for it. A route that
+// writes nothing, and a security intake plan, have none.
+export function unservedArtifacts(
+  stages: readonly PlanStage[],
+  artifacts: readonly Artifact[],
+): Artifact[] {
+  const writesAny = stages.some((stage) => (WRITES[stage.kind]?.length ?? 0) > 0);
+  const served = stages.some((stage) => writesRequested(stage, artifacts));
+  if (!writesAny || served || hasPrivateIntake(stages)) return [];
+  return [...artifacts];
 }
 
 // The plan's distinct scopes, narrowest first, the narrowest recommended.

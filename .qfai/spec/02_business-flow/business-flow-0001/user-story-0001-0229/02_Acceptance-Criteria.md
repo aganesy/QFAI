@@ -47,4 +47,12 @@ Feature: Choose how far the work on a request goes before it starts
     Given a request to change the specification and a prototype only
     When the session reads it into an extraction
     Then `artifacts` names what the request asks to change and holds no `tests` or `code`
+
+  # AC-0001-0229-07
+  Scenario: A request whose artifacts no stage of the route writes stops before the first stage
+    Given an extraction naming artifacts, a route with stages that write, and no stage that writes any of them
+    When `npx qfai workflow plan --in <path>` runs
+    Then it refuses and names each artifact no stage writes
+    And the session stops before the first stage and names the artifact in plain words
+    And a route no stage of which writes is not refused
 ```

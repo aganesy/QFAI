@@ -7,7 +7,8 @@ import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "../fs.js";
 import { parseCountedExampleAnnotations, parseStoryTestAnnotations } from "../storyTree/ids.js";
 import { classifyRecordRow } from "../storyTree/tables.js";
 import { readStoryTreeModel, type StoryTreeModel } from "../storyTree/tree.js";
-import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "../traceability.js";
+import { isGlobExclusion } from "../testGlobExtensions.js";
+import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS, normalizeGlobs } from "../traceability.js";
 import type { Issue } from "../types.js";
 import { unreadTraceMarks } from "./unreadTraceMarks.js";
 import { issue } from "./utils.js";
@@ -191,14 +192,16 @@ export async function readStoryTests(
   const testsRoot = resolvePath(root, config, "testsDir");
   const relativeTests = toPosix(path.relative(root, testsRoot)).replace(/\/$/, "");
   const layerGlobs = ["e2e", "integration", "api"].map((kind) => `${relativeTests}/${kind}/**/*`);
-  const configured = config.validation.traceability.testFileGlobs;
-  const negatives = configured
-    .filter((pattern) => pattern.startsWith("!"))
-    .map((pattern) => pattern.slice(1));
-  const positive = configured.filter((pattern) => !pattern.startsWith("!"));
+  // Normalised like every other reader of these lists, so a padded or blank
+  // entry selects here what it selects there.
+  const configured = normalizeGlobs(config.validation.traceability.testFileGlobs);
+  const negatives = normalizeGlobs(
+    configured.filter(isGlobExclusion).map((pattern) => pattern.slice(1)),
+  );
+  const positive = configured.filter((pattern) => !isGlobExclusion(pattern));
   const ignore = [
     ...DEFAULT_TEST_FILE_EXCLUDE_GLOBS,
-    ...config.validation.traceability.testFileExcludeGlobs,
+    ...normalizeGlobs(config.validation.traceability.testFileExcludeGlobs),
     ...negatives,
   ];
   const [acceptance, examples] = await Promise.all([
@@ -226,6 +229,10 @@ export async function readStoryTests(
   return { files, truncated: acceptance.truncated || examples.truncated };
 }
 
+export function storyTestScanIssue(root: string, message: string): Issue {
+  return issue("QFAI-SCAN-002", message, "error", root, "storyTree.testScan");
+}
+
 export async function validateStoryTreeObligations(
   root: string,
   config: QfaiConfig,
@@ -238,24 +245,13 @@ export async function validateStoryTreeObligations(
     scan = await readStoryTests(root, config);
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    return [
-      issue(
-        "QFAI-SCAN-002",
-        `Story-tree test scan failed: ${reason}`,
-        "error",
-        root,
-        "storyTree.testScan",
-      ),
-    ];
+    return [storyTestScanIssue(root, `Story-tree test scan failed: ${reason}`)];
   }
   if (scan.truncated) {
     return [
-      issue(
-        "QFAI-SCAN-002",
-        `Story-tree test scan stopped at the ${DEFAULT_GLOB_FILE_LIMIT} file limit; coverage is incomplete`,
-        "error",
+      storyTestScanIssue(
         root,
-        "storyTree.testScan",
+        `Story-tree test scan stopped at the ${DEFAULT_GLOB_FILE_LIMIT} file limit; coverage is incomplete`,
       ),
     ];
   }

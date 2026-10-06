@@ -143,3 +143,34 @@ describe("where qfai-run runs the policy check and the commit", () => {
     expect(baseline).toMatch(/2\. Run `common-policy-check` once/);
   });
 });
+
+describe("a verify gate that fails on the base commit or cannot run", () => {
+  it("runs the failing gate on the base commit and records the comparison", async () => {
+    const text = await section("common-gate-run", "## A failure that predates the change");
+    expect(text).toMatch(/run it again on the base commit/i);
+    expect(text).toMatch(/baseline `same`/i);
+    expect(text).toMatch(/baseline `different`/i);
+    expect(text).toMatch(/baseline `unrun`, with the reason/i);
+    expect(text).toMatch(/never turns it into a pass/i);
+  });
+
+  it("keeps the stop before the commit and lists such gates apart", async () => {
+    const text = await section("verify-repo-gate", "## A failure the run did not cause");
+    expect(text).toMatch(
+      /top-level `status` stays `"FAIL"`, so the run stops before `verify-commit`/i,
+    );
+    expect(text).toMatch(/apart from the failures the run caused/i);
+
+    const procedure = await section("verify-commit", "## Procedure");
+    expect(procedure).toMatch(/fails the same way on the base commit is still a failed gate/i);
+  });
+
+  it("lets verify.json record UNRUN and the baseline on a gate", async () => {
+    const contract = flat(
+      await readShipped("skill/qfai-verify/references/verify-output-contract.md"),
+    );
+    expect(contract).toMatch(/`"PASS"`, `"FAIL"`, `"UNRUN"` or `"DELEGATED"`/);
+    expect(contract).toMatch(/`baseline` \| string/);
+    expect(contract).toMatch(/still makes the top-level `status` `"FAIL"`/);
+  });
+});

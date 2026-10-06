@@ -29,6 +29,33 @@ Never write these into source code or Markdown files:
 When a reader needs the background, write the background itself in ordinary
 words instead of pointing at a number.
 
+### Spec-tree IDs
+
+An ID the project's own spec tree defines (a business flow, story, acceptance
+criterion, example, business rule, contract or decision) names a document the
+reader can open in the repository. It is not a local identifier where that
+document is the audience or the target:
+
+- a document inside the spec tree;
+- a comment or test annotation in code or tests that points at the contract or
+  example the code carries out.
+
+It is one wherever the reader has no access to the tree: a setup guide, a
+README or any other document written for operators, and every file the project
+ships (`distributed-surface.md`). Describe the rule in words there.
+
+### Names the reader sees
+
+A name the reader meets in the product is not one that only this project
+understands. These may appear in a document written for that reader:
+
+- a screen label or button name, exactly as the product shows it;
+- an item name in a sheet or form the document tells the reader to fill in;
+- a product term the reader meets on screen.
+
+Where the reader cannot already know a term, define it once at its first use.
+Use one spelling throughout.
+
 Pull request and issue bodies are outside this clause. Numbers and links belong
 there, and in commit messages and the changelog.
 

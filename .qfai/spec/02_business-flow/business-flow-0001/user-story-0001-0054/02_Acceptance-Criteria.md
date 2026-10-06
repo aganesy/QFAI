@@ -23,6 +23,7 @@ Feature: Append-only drift and change-request authorization
     When `qfai validate --profile tdd` or `qfai validate --profile drift` runs
     Then an error names the path unless a `decisions.md` row opening `Change request:` names that path with Status WIP or DONE
     And a `Change request:` row at TODO authorises nothing
+    And a row the base holds whose Content or Approach cell changed authorises nothing
     And a `03_Example.md` whose only change is appended example rows, and a contract whose only change is EX IDs added to the Examples cell of its rules, need no such row
 
   # AC-0001-0054-04
@@ -36,4 +37,11 @@ Feature: Append-only drift and change-request authorization
     Given the story tree, and a merge base of `baseBranch` and HEAD that holds no `decisions.md` at the configured `paths.specsDir`
     When `qfai validate --profile tdd` or `qfai validate --profile drift` runs
     Then neither the row-rewritten check nor the upstream-edit check reports anything
+
+  # AC-0001-0054-08
+  Scenario: An example rewritten with no test change is reported
+    Given the story tree, a base that holds `decisions.md`, and an EX row of a `03_Example.md` whose text changed since the base
+    When `qfai validate --profile tdd` or `qfai validate --profile drift` runs
+    Then a warning names the EX ID and its `03_Example.md` unless a non-E2E test file selected by the configured test globs and annotating that EX also changed since the base
+    And an EX row whose cells are unchanged raises no such warning
 ```

@@ -342,7 +342,14 @@
             "required": ["reason", "subject"],
             "properties": {
               "reason": {
-                "enum": ["invalid-input", "schema", "unknown-route", "plan-invalid", "io-error"]
+                "enum": [
+                  "invalid-input",
+                  "schema",
+                  "unknown-route",
+                  "plan-invalid",
+                  "artifact-unserved",
+                  "io-error"
+                ]
               },
               "subject": {
                 "description": "The operation, flag, file, field, route or step the reason is about.",

@@ -2,9 +2,18 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
+import { DEFAULT_GLOB_FILE_LIMIT } from "../fs.js";
 import { getChangedFilesAgainstBase, normalizeRepoPath, readFileAtBase } from "../gitChanges.js";
-import { classifyRecordRow, diffRecordTables, parseRecordTable } from "../storyTree/tables.js";
+import { parseAllMarkdownTables } from "../specPackParsers.js";
+import { parseCountedExampleAnnotations } from "../storyTree/ids.js";
+import {
+  classifyRecordRow,
+  diffRecordTables,
+  parseRecordTable,
+  type RecordRow,
+} from "../storyTree/tables.js";
 import type { Issue } from "../types.js";
+import { countsForExample, readStoryTests, storyTestScanIssue } from "./storyTreeObligations.js";
 import { issue } from "./utils.js";
 
 /** Story-tree protected files and append-only register rows. */
@@ -22,21 +31,23 @@ export async function validateStoryTreeDrift(
   const contracts = normalizeRepoPath(
     path.relative(root, path.resolve(root, config.paths.contractsDir)),
   ).replace(/\/$/, "");
-  const decisions = `${specs}/decisions.md`;
-  const questions = `${specs}/open-questions.md`;
+  const decisions = path.posix.join(specs, "decisions.md");
+  const questions = path.posix.join(specs, "open-questions.md");
   const baseDecisions = readFileAtBase(root, baseBranch, decisions);
   if (baseDecisions === null) return [];
 
   const currentDecisions = await readSafePath(path.join(root, decisions));
   const rows = parseRecordTable(currentDecisions, "decisions").rows;
-  const baseStatus = new Map(
-    parseRecordTable(baseDecisions, "decisions").rows.map((row) => [row.id, row.status]),
+  const baseRows = new Map(
+    parseRecordTable(baseDecisions, "decisions").rows.map((row) => [row.id, row]),
   );
   const authorised = new Map<string, string>();
   for (const row of rows) {
     const classified = classifyRecordRow(row);
     if (classified.kind !== "change-request" || !classified.inForce) continue;
-    if (!authorisesThisBranch(row.status, baseStatus.get(row.id))) continue;
+    const baseRow = baseRows.get(row.id);
+    if (!authorisesThisBranch(row.status, baseRow?.status)) continue;
+    if (baseRow && rewritesImmutableCell(baseRow, row)) continue;
     for (const file of classified.refs) authorised.set(normalizeRepoPath(file), row.id);
   }
   const issues: Issue[] = [];
@@ -78,8 +89,9 @@ export async function validateStoryTreeDrift(
   const decisionDiff = diffRecordTables(baseDecisions, currentDecisions, "decisions");
   for (const file of changed) {
     const protectedPath =
-      file.startsWith(`${specs}/01_policy/`) ||
-      file.startsWith(`${specs}/02_business-flow/`) ||
+      file.startsWith(`${path.posix.join(specs, "01_policy")}/`) ||
+      file.startsWith(`${path.posix.join(specs, "02_business-flow")}/`) ||
+      contracts === "" ||
       file.startsWith(`${contracts}/`) ||
       file === decisions ||
       file === questions;
@@ -105,12 +117,100 @@ export async function validateStoryTreeDrift(
       ),
     );
   }
+  issues.push(...(await examplesWithoutTestChange(root, config, changed, specs, baseBranch)));
   return issues;
 }
 
-/** A DONE request applies only while newly appended or advanced from base WIP. */
+/**
+ * An example whose row changed since the base while no test annotating it changed. The test may
+ * still assert the old expectation, so the owner rechecks it; a confirmed example needs no edit,
+ * which is why this is a warning.
+ */
+async function examplesWithoutTestChange(
+  root: string,
+  config: QfaiConfig,
+  changed: ReadonlySet<string>,
+  specs: string,
+  baseBranch: string,
+): Promise<Issue[]> {
+  const rewritten: { id: string; file: string }[] = [];
+  for (const file of changed) {
+    if (
+      !file.startsWith(`${path.posix.join(specs, "02_business-flow")}/`) ||
+      !file.endsWith("/03_Example.md")
+    ) {
+      continue;
+    }
+    const base = exampleRows(readFileAtBase(root, baseBranch, file) ?? "");
+    const head = exampleRows(await readSafePath(path.join(root, file)));
+    for (const [id, row] of base) {
+      const now = head.get(id);
+      if (now !== undefined && now !== row) rewritten.push({ id, file });
+    }
+  }
+  if (rewritten.length === 0) return [];
+  let scan: Awaited<ReturnType<typeof readStoryTests>>;
+  try {
+    scan = await readStoryTests(root, config);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    return [storyTestScanIssue(root, `Story-tree test scan failed: ${reason}`)];
+  }
+  if (scan.truncated) {
+    return [
+      storyTestScanIssue(
+        root,
+        `Story-tree test scan stopped at the ${DEFAULT_GLOB_FILE_LIMIT} file limit; example-change coverage is incomplete`,
+      ),
+    ];
+  }
+  const changedExamples = new Set<string>();
+  for (const test of scan.files) {
+    if (!countsForExample(test) || !changed.has(normalizeRepoPath(path.relative(root, test.file))))
+      continue;
+    for (const id of parseCountedExampleAnnotations(test.content)) changedExamples.add(id);
+  }
+  return rewritten
+    .filter(({ id }) => !changedExamples.has(id))
+    .map(({ id, file }) =>
+      issue(
+        "QFAI-DRIFT-002",
+        `${id} changed in ${file}; no test annotating it changed`,
+        "warning",
+        file,
+        "storyTree.exampleWithoutTestChange",
+        [id],
+      ),
+    );
+}
+
+/** Each example row by EX ID, cells trimmed so a re-padded table reads as unchanged. */
+function exampleRows(content: string): Map<string, string> {
+  const rows = new Map<string, string>();
+  for (const table of parseAllMarkdownTables(content)) {
+    const idColumn = table.headers.indexOf("EX-ID");
+    if (idColumn === -1) continue;
+    for (const cells of table.rows) {
+      const id = cells[idColumn] ?? "";
+      if (/^EX-\d{4}-\d{4}-\d{2}$/.test(id)) rows.set(id, JSON.stringify(cells));
+    }
+  }
+  return rows;
+}
+
+/**
+ * A request the base holds at DONE records a change already applied, so it authorises nothing
+ * whatever Status it now holds. Otherwise a WIP row authorises, and a DONE row only while newly
+ * appended or advanced from base WIP.
+ */
 function authorisesThisBranch(status: string, statusAtBase: string | undefined): boolean {
+  if (statusAtBase === "DONE") return false;
   return status === "WIP" || statusAtBase === undefined || statusAtBase === "WIP";
+}
+
+/** A row the base holds keeps its Content and Approach, so a rewrite of either grants nothing. */
+function rewritesImmutableCell(base: RecordRow, head: RecordRow): boolean {
+  return base.content !== head.content || base.approach !== head.approach;
 }
 
 function withoutChangeRequestRows(content: string): string {

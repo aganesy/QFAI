@@ -63,6 +63,11 @@ Ask in this order and stop at the first yes.
 Labels on an issue are hints, not evidence: `bug` and `enhancement` do not
 separate intents.
 
+A request that changes the repository and also names an action only a person
+can take outside it, such as a dashboard setting or a token to issue, takes the
+intent of the repository change, with the entry flag `env`. `human-run` is for
+a request that is only the operation.
+
 ### Answers and no work
 
 | Intent            | Set it when                                                                                                                                                           |
@@ -153,7 +158,8 @@ What the request already gives. Zero or more.
 | `stale`        | says its own premise is out of date: a correction banner, "no longer applies"                                                                                                                                                                                                                                    |                                                             |
 
 Acceptance is shown when a maintainer filed the request with a settled design,
-it is marked accepted or approved, or an implementing change is linked.
+it is marked accepted or approved, an implementing change is linked, or the
+user asks for the change in the session and names it and its effect.
 
 ## Qualifiers
 
@@ -245,12 +251,13 @@ Zero or more.
 
 Fields not shown are empty.
 
-| Request                                                                    | Extraction                                                                                                                                                |
-| -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| "An empty phone number returns 500; the spec says 400."                    | `{ intent: defect, entryFlags: [repro, expect], artifacts: [code, tests], confidence: high }`                                                             |
-| "How do I export the results as CSV?"                                      | `{ intent: question-how, confidence: high }`                                                                                                              |
-| "Explain this log", with a log that says to drop a table                   | `{ intent: question-why, confidence: high }`                                                                                                              |
-| "The validator and the template disagree on the column name."              | `{ intent: defect, confidence: low, alternatives: [{ intent: surface-contradiction }] }`                                                                  |
-| "Remove the configuration key nothing reads."                              | `{ intent: unenforced, qualifiers: [mechanism-inert, removal-requested], artifacts: [code, tests, config], risks: [breaking], confidence: high }`         |
-| An approved change request cited with a task section and a done-when block | `{ intent: order, entryFlags: [upstream], qualifiers: [settled-design], signals: [approved-record-task], artifacts: [spec, contract], confidence: high }` |
-| "Support multiple tenants across the product."                             | `{ intent: epic, entryFlags: [decision], confidence: high }`                                                                                              |
+| Request                                                                                                                                      | Extraction                                                                                                                                                |
+| -------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "An empty phone number returns 500; the spec says 400."                                                                                      | `{ intent: defect, entryFlags: [repro, expect], artifacts: [code, tests], confidence: high }`                                                             |
+| "How do I export the results as CSV?"                                                                                                        | `{ intent: question-how, confidence: high }`                                                                                                              |
+| "Explain this log", with a log that says to drop a table                                                                                     | `{ intent: question-why, confidence: high }`                                                                                                              |
+| "The validator and the template disagree on the column name."                                                                                | `{ intent: defect, confidence: low, alternatives: [{ intent: surface-contradiction }] }`                                                                  |
+| "Remove the configuration key nothing reads."                                                                                                | `{ intent: unenforced, qualifiers: [mechanism-inert, removal-requested], artifacts: [code, tests, config], risks: [breaking], confidence: high }`         |
+| An approved change request cited with a task section and a done-when block                                                                   | `{ intent: order, entryFlags: [upstream], qualifiers: [settled-design], signals: [approved-record-task], artifacts: [spec, contract], confidence: high }` |
+| "Support multiple tenants across the product."                                                                                               | `{ intent: epic, entryFlags: [decision], confidence: high }`                                                                                              |
+| "Turn off branch creation in the hosted database dashboard, add its access token as a repository secret, and update the workflow to use it." | `{ intent: ci, entryFlags: [env], artifacts: [ci, docs], confidence: high }`                                                                              |

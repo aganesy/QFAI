@@ -1392,10 +1392,9 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // asks for, and a project reads them in the language and the spelling its
   // neighbours in the same seeded tree use.
   //
-  // Derived by running the command into a temp root and hashing what it wrote.
-  // The comment block is the whole delta: the rule lines are byte-identical to
-  // the ones `c428b147…` covered.
-  [".gitattributes", "8787db9bb4011d5461314183735ba22d84390d6008d73322ddf18fbc00ff7ff1"],
+  // This digest covers the seed's raw UTF-8/LF bytes, including both union rules.
+  // `qfai init` copies those bytes only when the destination does not exist.
+  [".gitattributes", "495f9358f92c82ebebea3f5c9d6f391f6cea6b540749593fc47339c62340dbaf"],
   // The shipped `.gitignore` IS the generated managed block, so every line of it
   // moves this digest by construction. The block ignores `.qfai/evidence/` whole
   // and re-includes nothing under it; its only negations are `!.qfai/` and the
@@ -1539,7 +1538,21 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // The two programs are now the same text. Events, matchers and markers are unchanged; the
   // previous groups are listed as superseded so the merge refreshes them. Restoring the two
   // programs reproduces `673f14b2…` byte for byte.
-  [".claude/settings.json", "0bf2f12f9f3bb18a767be123148e58db33fb635d2e5a945bbae32e383c64d681"],
+  //
+  // Re-pinned when the tool-time reminders were limited: the grilling reminders before a write,
+  // an edit and a delegation, the API-budget reminder, the documentation-clarity reminders after a
+  // Markdown write or edit, and the minimal-implementation reminder now print on a session's first
+  // call and on every twentieth after it, counted per session and per sub-agent, and on every call
+  // when the input names no session. Events, matchers, markers, `if` conditions and message keys are
+  // unchanged; the previous groups are listed as superseded so the merge refreshes them. Restoring
+  // the six programs reproduces `0bf2f12f…` byte for byte.
+  //
+  // Re-pinned when the minimal-implementation reminder after a write started reading the file the
+  // call names and staying silent for what is plainly not product source, before it counts the
+  // call. Events, matchers, markers and message keys are unchanged; the previous group is listed
+  // as superseded so the merge refreshes it. Derived by running `qfai init` into a temp root and
+  // hashing what it wrote.
+  [".claude/settings.json", "033259652238bbaaba1846f4a51ae1adc4f625436b519c74d08b1138d9f13711"],
   // Inside `.codex/`, and pinned for the reason `.claude/settings.json` is: its commands are a
   // program an adopter's agent runs. Two `UserPromptSubmit` groups, structured-question and
   // free-text entry. Codex takes one command string, so each runs the same `node -e` reader
@@ -1566,7 +1579,12 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // file as every other line does, then looks for `node_modules/.bin/qfai`, or `.pnp.cjs` beside a `package.json` that lists qfai, from
   // that project up to the first directory that holds `.git`, and holds no character those shells
   // expand. Derived the same way; dropping that one group reproduces `d48bbc58…`.
-  [".codex/hooks.json", "d159e0319cdf72a8843a47f5943ca7fe7393d9e55225495020e2f7263dece46c"],
+  //
+  // Re-pinned for the same change as `.claude/settings.json`: the minimal-implementation entry
+  // reads the paths of the patch. It is still one `node -e "<program>" <key>` line that holds no
+  // character a hook shell expands, and the walk that finds the message file is unchanged.
+  // Derived the same way.
+  [".codex/hooks.json", "9a562721076d38aec60601d514db0b69d4acc7bd651e4213570fe1e154f5dd78"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`
