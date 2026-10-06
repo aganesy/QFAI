@@ -91,6 +91,7 @@
     "tests/assets/reviewerExcessRoute.test.ts",
     "tests/assets/reOpenRecordShape.test.ts",
     "tests/assets/reminderRepeat.test.ts",
+    "tests/assets/readmeFacts.test.ts",
     "tests/assets/repositoryAttributionGuard.test.ts",
     "tests/assets/researchFirstOwner.test.ts",
     "tests/assets/researchFirstProtocolWiring.test.ts",
