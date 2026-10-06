@@ -54,6 +54,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reference says such a request keeps the repository change's intent with the
   `env` flag (#2999).
 
+- **`scripts/pr-threads.mjs` reads and answers a pull request's review threads.**
+  `list <pr>` prints the unresolved threads and the Codex review comments of
+  one pull request from one GraphQL query and one REST call. `reply` answers a
+  thread with the text of a file, and `resolve` resolves the threads it is
+  given. It sits beside `scripts/gh-budget.mjs` and keeps that command's
+  reserve (#2962).
+
 - **`qfai validate` warns when an example changes and no test annotating it
   does.** In the `tdd` and `drift` profiles, an example row whose cells changed
   since the base raises `QFAI-DRIFT-002` at warning, naming the example ID and
