@@ -36,8 +36,8 @@ export type DesignFinding = {
   file?: string;
   /**
    * Optional severity override that bypasses the standard tier-mapping
-   * path. Used by the QFAI-AUD-001 deprecation-window emission to surface
-   * legacy slot-less UI contracts at severity=info while preserving the
+   * path. Used by the QFAI-AUD-001 key-absent emission to raise a screen
+   * with no primary_tasks to severity=error while preserving the
    * default tier-mapping for the rest of the rule set.
    */
   severityOverride?: IssueSeverity;
@@ -212,18 +212,18 @@ function checkContractsHierarchy(
           file,
         });
       } else {
-        // key-absent: legacy contract predates the primary_tasks slot. The
-        // retirement the message names has passed, so this is an error.
+        // key-absent: the screen declares no primary_tasks. The
+        // slot is required, so this is an error.
         findings.push({
           ruleId: "QFAI-AUD-001",
           dimension: "visualHierarchy",
           severityTier: 3,
           severityOverride: "error",
-          message: `[QFAI-AUD-001] ${file}: screen '${screen.screenId}' uses a legacy UI contract that predates the primary_tasks slot; add the slot during your next \`/qfai-sdd\` cycle (sunset: qfai 1.10.0)`,
-          why: "Legacy contracts authored before the primary_tasks lane lack the slot; this is a deprecation-window signal, not a violation",
+          message: `[QFAI-AUD-001] ${file}: screen '${screen.screenId}' has no primary_tasks; declare primary_tasks as {id, label, acceptance} mappings`,
+          why: "Each screen contract needs a clear primary task to anchor the core user action",
           evidence: [file, screen.screenId, "QFAI-AUD-001"],
           guidance:
-            "Add a `primary_tasks` slot (with at least one task) to the screen entry in the UI contract during your next `/qfai-sdd` cycle. Sunset: qfai 1.10.0.",
+            "Declare `primary_tasks` on the screen entry as at least one `{id, label, acceptance}` mapping.",
           file,
         });
       }
@@ -294,18 +294,18 @@ function checkContractHierarchyFromScreens(
           file: screen.sourceRef,
         });
       } else {
-        // key-absent: legacy contract predates the primary_tasks slot. The
-        // retirement the message names has passed, so this is an error.
+        // key-absent: the screen declares no primary_tasks. The
+        // slot is required, so this is an error.
         findings.push({
           ruleId: "QFAI-AUD-001",
           dimension: "visualHierarchy",
           severityTier: 3,
           severityOverride: "error",
-          message: `[QFAI-AUD-001] ${filePath}: screen '${screen.screenId}' uses a legacy UI contract that predates the primary_tasks slot; add the slot during your next \`/qfai-sdd\` cycle (sunset: qfai 1.10.0)`,
-          why: "Legacy contracts authored before the primary_tasks lane lack the slot; this is a deprecation-window signal, not a violation",
+          message: `[QFAI-AUD-001] ${filePath}: screen '${screen.screenId}' has no primary_tasks; declare primary_tasks as {id, label, acceptance} mappings`,
+          why: "Each screen contract needs a clear primary task to anchor the core user action",
           evidence: [filePath, screen.screenId, "QFAI-AUD-001"],
           guidance:
-            "Add a `primary_tasks` slot (with at least one task) to the screen entry in the UI contract during your next `/qfai-sdd` cycle. Sunset: qfai 1.10.0.",
+            "Declare `primary_tasks` on the screen entry as at least one `{id, label, acceptance}` mapping.",
           file: screen.sourceRef,
         });
       }
