@@ -1891,9 +1891,12 @@ describe("rule overlays", () => {
         // re-publishing an existing tag.
         "Do not bump the manifest by hand first",
         "Never push a tag by hand on this path",
+        // A hand tag on the merge commit still releases from it.
+        "A hand tag on the merge commit still releases from it",
         "To publish a tag that already exists again",
         // The pin edits belong to the manual path, and a pin is no tag.
         "What a pin authorizes on the manual path",
+        "On the default path Prepare release makes the release edits",
         "version, never a tag",
         // Only a merge from the exact release branch is tagged.
         "exactly `release/vX.Y.Z`",

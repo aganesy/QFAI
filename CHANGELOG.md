@@ -150,6 +150,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   fix text for a linked integration directory says to replace it with a real
   directory before rerunning `qfai init`, since init leaves such a directory
   alone. Fixes #2678.
+- **The release guide no longer tells a person to repeat what `release.yml` does.**
+  Manual steps 5 and 6 asked for a GitHub Release and an `npm publish` by hand,
+  but the tag push already starts `release.yml`, which creates the release and
+  publishes once the `release` environment approves. The guide now says so. The
+  repository's version rule also states that a hand tag on the merge commit
+  still releases from it, and only a hand tag on another commit takes the
+  version. Fixes #2826.
 
 - **Migration keeps an approved but unapplied change request in progress**
   (#2425). Step 2 of `qfai-migration-v1-to-v2` gave every `approved` change
