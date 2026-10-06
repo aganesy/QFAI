@@ -410,6 +410,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   option chosen. The same request shows acceptance, so `qfai-run` does not set
   the `decision` flag for it.
 
+- **The README's "Continuous integration" section covers cost, required checks and skipped tests.**
+  It states that `QFAI_CI_PUSH_POLICY=protected` is safe only when the branch must be up to date before
+  merging, and describes a light post-merge job as the middle option. It lists what the test stub gate
+  reports (`QFAI-TEST-001` for a todo, `QFAI-TEST-003` for a skip) and what it cannot see, and gives a
+  recipe that reads the test runner's JSON report and bounds skipped tests against an allowed list that
+  only shrinks. It explains how the shipped workflows are billed, with the jobs each one starts per pull
+  request event and the `ubuntu-slim` option for `QFAI_CI_LIGHT_RUNNER`. It names the three stable
+  required checks and why a skipped job satisfies one while a workflow `paths` filter does not. It also
+  adds rules for writing a change-scope gate and a method for measuring Actions minutes without admin
+  rights (#2785, #2786, #2789, #2790).
 - **The repository's dogfooding ratchet pins each finding, not each file's
   count.** `scripts/check-dogfood-backlog.mjs` keys an error by its code and the
   IDs it names, so a change that clears one untested example and adds another
