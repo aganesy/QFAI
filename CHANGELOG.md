@@ -383,6 +383,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   shared predicate may fail several tests whose assertions each prove their own
   example.
 
+- **The implement skill no longer cites a waiver that does not exist, or a path-matching
+  rule with nothing behind it.** The default policy drops the retired accepted-risk
+  waiver from the list of things `/qfai-implement` asks about, and the UI-affecting
+  reference drops its paragraph on how `uiux.surfacePaths` patterns are matched (#2612).
 - **The orchestrator keeps working while a delegation runs** (#2244). The
   shared delegation baseline now says the orchestrator is not required to wait
   for a sub-agent. Where the host starts a delegation and returns at once,
