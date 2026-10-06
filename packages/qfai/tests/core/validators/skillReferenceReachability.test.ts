@@ -63,14 +63,9 @@ async function writeSkillFixture(root: string): Promise<string> {
   await mkdir(referencesDir, { recursive: true });
   await writeFile(
     path.join(skillDir, "SKILL.md"),
-    [
-      "# demo-skill",
-      "",
-      "[DRIFT-PROTOCOL:REQUIRED]",
-      "",
-      "Follow `references/cited.md`.",
-      "",
-    ].join("\n"),
+    ["# demo-skill", "", "[DRIFT-PROTOCOL:REQUIRED]", "", "Follow `references/cited.md`.", ""].join(
+      "\n",
+    ),
     "utf-8",
   );
   await writeFile(
