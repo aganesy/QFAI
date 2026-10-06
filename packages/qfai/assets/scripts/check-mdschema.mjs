@@ -225,6 +225,27 @@ function mdschemaEntryPoint(packageDir) {
 }
 
 /**
+ * The text of a double-quoted YAML scalar, with its escapes decoded the way the
+ * configuration loader's YAML parser decodes them, so `"docs\tree"` names the
+ * directory the loader reads and not `docs/tree`.
+ *
+ * SIMPLIFIED: decodes the escapes JSON shares with YAML and keeps any other
+ * escape as written.
+ * Lift when: a configuration spells a path with an escape only YAML has, such
+ * as `\x41` or `\_`.
+ *
+ * @param {string} body The text between the quotes.
+ * @returns {string}
+ */
+function decodeDoubleQuoted(body) {
+  try {
+    return JSON.parse(`"${body}"`);
+  } catch {
+    return body;
+  }
+}
+
+/**
  * Reads one directory under `paths` out of `qfai.config.yaml`.
  *
  * A hand-rolled read of two known keys rather than a YAML parse: this script
@@ -256,13 +277,16 @@ function readConfiguredDir(root, key, fallback) {
   // to the block so an unrelated key under another mapping cannot win.
   const block = /^paths:[ \t]*$([\s\S]*?)^(?=\S)/m.exec(`${text}\n￿`);
   const scope = block === null ? text : block[1];
-  const found = new RegExp(`^[ \\t]+${key}:[ \\t]*["']?([^"'\\r\\n#]+)["']?[ \\t]*$`, "m").exec(
-    scope,
-  );
+  const found = new RegExp(
+    `^[ \\t]+${key}:[ \\t]*(?:"((?:[^"\\\\\\r\\n]|\\\\.)*)"|'([^'\\r\\n]*)'|([^"'\\r\\n#]+))[ \\t]*$`,
+    "m",
+  ).exec(scope);
   if (found === null) {
     return fallback;
   }
-  const value = found[1].trim();
+  const value = (
+    found[1] === undefined ? (found[2] ?? found[3]) : decodeDoubleQuoted(found[1])
+  ).trim();
   if (value === "") {
     return fallback;
   }

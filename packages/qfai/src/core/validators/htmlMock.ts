@@ -7,7 +7,7 @@ import type { QfaiConfig } from "../config.js";
 import type { Issue } from "../types.js";
 import { computeContrastRatio } from "../uiux/contrastRatio.js";
 import { extractTokenComments } from "../uiux/htmlMockParser.js";
-import { collectHtmlMockBlocks } from "./htmlMockBlocks.js";
+import { collectHtmlMockBlocks, mockMarkdownGlobs } from "./htmlMockBlocks.js";
 import { issue } from "./utils.js";
 
 const WCAG_AA_RATIO = 4.5;
@@ -38,12 +38,7 @@ export async function validateHtmlMock(
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
 
-  const patterns = [
-    path.posix.join(root.replace(/\\/g, "/"), config.paths.discussionDir, "**/*.md"),
-    path.posix.join(root.replace(/\\/g, "/"), config.paths.specsDir, "**/*.md"),
-  ];
-
-  const files = await fg(patterns, { absolute: true });
+  const files = await fg(mockMarkdownGlobs(root, config), { absolute: true });
   const mockBlocks: { file: string; html: string; rawBlock: string }[] = [];
 
   for (const filePath of files) {

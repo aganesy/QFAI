@@ -898,8 +898,8 @@ function readDirString(
 /**
  * A story-tree root, with every backslash read as `/` on every platform.
  *
- * The shipped document-schema checker reads these two keys itself, outside the
- * package, and takes a backslash as a separator. Folding here as well keeps
+ * The shipped document-schema checker reads these two keys itself, without
+ * loading the configuration module, and takes a backslash as a separator. Folding here as well keeps
  * `qfai validate` and that checker on one directory for one value: on Linux and
  * macOS the platform's own path rules would otherwise read `.qfai\spec` as a
  * single directory name.

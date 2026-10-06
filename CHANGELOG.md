@@ -145,6 +145,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   (#2425). Step 2 of `qfai-migration-v1-to-v2` gave every `approved` change
   request the Status DONE, recording a change as made when only its approval
   was. A request whose `Applied at` is empty or `-` now becomes WIP.
+- **A configured spec path names one directory for every reader (#2632).**
+  The document-schema lane now decodes a double-quoted `paths.specsDir` or
+  `paths.contractsDir` the way the configuration loader does, so
+  `"docs\tree"` is no longer read as `docs/tree`. The HTML mock checks read
+  a backslash in `paths.discussionDir` as a separator in their file glob.
 - **The `qfai-run` entry reminder stays silent on a turn the host starts
   (#2989).** The Claude Code `UserPromptSubmit` hook that sends a request to
   `qfai-run` printed on every notification, so an agent could start a run from
