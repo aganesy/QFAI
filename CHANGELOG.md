@@ -303,6 +303,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   review asks point at the checks that already own them: the coverage gate, and
   the proof per example in the oracle strength reference.
 
+- **A request that names the exact change is the approval** (#2991). When
+  the user asks in the session for a change to a story-tree or contract file and
+  names the change and its effect, `sdd-triage` lists the files in its
+  announcement and asks no second question, and records the request as the
+  option chosen. The same request shows acceptance, so `qfai-run` does not set
+  the `decision` flag for it.
+
 - **The repository's dogfooding ratchet pins each finding, not each file's
   count.** `scripts/check-dogfood-backlog.mjs` keys an error by its code and the
   IDs it names, so a change that clears one untested example and adds another

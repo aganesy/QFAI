@@ -158,7 +158,8 @@ What the request already gives. Zero or more.
 | `stale`        | says its own premise is out of date: a correction banner, "no longer applies"                                                                                                                                                                                                                                    |                                                             |
 
 Acceptance is shown when a maintainer filed the request with a settled design,
-it is marked accepted or approved, or an implementing change is linked.
+it is marked accepted or approved, an implementing change is linked, or the
+user asks for the change in the session and names it and its effect.
 
 ## Qualifiers
 
