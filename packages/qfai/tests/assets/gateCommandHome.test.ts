@@ -28,5 +28,20 @@ describe("the story-tree contract owns quality-gate commands", () => {
         expect(content).not.toContain(".qfai/assistant/catalog/tech.md");
       }
     });
+
+    it(`${tree}: the gate steps run the project's Validate entry and accept a recorded backlog`, async () => {
+      const qfaiGate = await read(tree, "assistant/step/verify-qfai-gate/STEP.md");
+      const repoGate = await read(tree, "assistant/step/verify-repo-gate/STEP.md");
+      const flat = (text: string): string => text.replace(/\s+/g, " ");
+      expect(flat(qfaiGate)).toContain("the project's `Validate` entry, where it has one");
+      expect(qfaiGate).toContain("## A recorded backlog");
+      expect(flat(qfaiGate)).toContain("The ratchet is not a waiver");
+      expect(flat(repoGate)).toContain("errors only within the project's recorded backlog");
+    });
   }
+
+  it("this repository's Validate entry runs the dogfood ratchet", async () => {
+    const tech = await readFile(path.join(repoRoot, ".qfai/spec/03_contract/tech.md"), "utf-8");
+    expect(tech).toContain("- Validate: `pnpm build && node scripts/check-dogfood-backlog.mjs");
+  });
 });

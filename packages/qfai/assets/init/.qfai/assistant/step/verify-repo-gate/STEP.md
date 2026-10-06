@@ -156,5 +156,7 @@ For this skill, the smallest applicable smoke check of
 is the whole gate set of the scope, run to completion, with every outcome in
 `verify.json` and the report.
 
-A PASS needs zero errors in the declared profile, and, where the project has
-them, a clean distributed-surface guard and a clean branch version pin.
+A PASS needs zero errors in the declared profile, or errors only within the
+project's recorded backlog as `verify-qfai-gate` reports it, and, where the
+project has them, a clean distributed-surface guard and a clean branch version
+pin.

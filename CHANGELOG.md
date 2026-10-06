@@ -187,6 +187,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   now happens before the parse clock starts and is left out of the group's
   measurement. Fixes #2997.
 
+- **The verify gate can pass in a project that records a backlog.**
+  `verify-qfai-gate` now runs the project's `Validate` entry, and a project
+  whose entry runs a pinned ratchet passes while every error stays within its
+  pin. `verify-repo-gate` accepts that result. A project with no such entry
+  still fails on any `error`. This repository's `Validate` entry runs
+  `scripts/check-dogfood-backlog.mjs --profile full`. Fixes #2970.
+
 - **A rewritten decision row no longer authorizes a protected file.** A
   `Change request:` row the base already holds could have its Content changed
   to name another protected file, and the drift guard then accepted an edit to
