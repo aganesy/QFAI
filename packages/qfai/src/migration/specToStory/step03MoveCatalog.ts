@@ -560,13 +560,17 @@ export const step03: MigrationStep = {
       }
     }
     for (const [target, draft] of drafts) {
-      if (isPolicyDocument(target) && path.posix.basename(target) === "constraint.md")
-        identifiers.push(...renumberConstraints(draft));
+      const renumbered =
+        isPolicyDocument(target) && path.posix.basename(target) === "constraint.md"
+          ? renumberConstraints(draft)
+          : [];
       const content =
         target === tech ? await renderTechDocument(draft) : await renderPolicyDocument(draft);
       const absolute = path.join(context.root, target);
-      if (!(await exists(absolute))) documents.set(target, content);
-      else if ((await readInput(absolute)) !== content) {
+      if (!(await exists(absolute))) {
+        documents.set(target, content);
+        identifiers.push(...renumbered);
+      } else if ((await readInput(absolute)) !== content) {
         refused.add(target);
         forAPerson.push(notWritten(target));
       }
