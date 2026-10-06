@@ -49,6 +49,16 @@ describe("findNonEnglish", () => {
     expect(findNonEnglish(allowed)).toEqual([]);
   });
 
+  it("allows a middle dot, which a script extension would otherwise name as Han", () => {
+    expect(findNonEnglish("alpha \u{00B7} beta")).toEqual([]);
+  });
+
+  it("still flags Han that sits next to a middle dot", () => {
+    expect(findNonEnglish("a\u{00B7}\u{4E2D}")).toEqual([
+      { line: 1, column: 3, codePoint: "U+4E2D", script: "Han" },
+    ]);
+  });
+
   it("reports line and column, counting an astral character once", () => {
     const text = "first\r\nsecond \u{20BB7}\u{3042}\nthird";
     expect(findNonEnglish(text)).toEqual([
