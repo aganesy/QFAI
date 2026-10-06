@@ -67,9 +67,15 @@ export function architectureDiagram(layers: readonly ArchitectureLayer[]): strin
 const NODE = String.raw`([A-Za-z0-9_]+)(?:\["([^"]*)"\]|\[([^\]"]*)\])?`;
 /** A node, or an edge between two nodes, each with or without its label. */
 const STATEMENT = new RegExp(`^${NODE}(?:[ \\t]*-->[ \\t]*${NODE})?$`);
-const MERMAID_FENCE = /^ {0,3}(`{3,}|~{3,})[ \t]*mermaid[ \t]*\r?\n([\s\S]*?)^ {0,3}\1[ \t]*$/m;
+
+/** A fenced `mermaid` block, whose body is group 2. Global, so `matchAll` reads every block. */
+export const MERMAID_FENCE =
+  /^ {0,3}(`{3,}|~{3,})[ \t]*mermaid[ \t]*\r?\n([\s\S]*?)^ {0,3}\1[ \t]*$/gim;
 
 type Diagram = { nodes: Set<string>; edges: Set<string>; problems: string[] };
+
+/** A statement without the one `;` Mermaid accepts after it. */
+const withoutSemicolon = (line: string): string => line.replace(/;$/, "").trimEnd();
 
 const edgeKey = (upper: string, lower: string): string => `${upper} --> ${lower}`;
 
@@ -83,11 +89,17 @@ function readDiagram(source: string): Diagram {
     .map((line) => line.trim())
     .filter((line) => line !== "");
   const problems: string[] = [];
-  if (lines[0] !== "flowchart TD") problems.push("the diagram does not open with flowchart TD");
+  if (withoutSemicolon(lines[0] ?? "") !== "flowchart TD") {
+    problems.push(
+      lines[0] === undefined
+        ? "the diagram is empty, so it does not open with flowchart TD"
+        : `the diagram opens with "${lines[0]}", not flowchart TD`,
+    );
+  }
   const statements: string[][] = [];
   const labels = new Map<string, string>();
   for (const line of lines.slice(1)) {
-    const match = STATEMENT.exec(line);
+    const match = STATEMENT.exec(withoutSemicolon(line));
     if (match === null) {
       problems.push(`the diagram line "${line}" is neither a layer nor an edge`);
       continue;
@@ -138,8 +150,8 @@ function orderProblems(layers: readonly ArchitectureLayer[]): string[] {
  * diagram or no table is the document schema's to report, and this reads nothing.
  */
 export function architectureProblems(body: string): string[] {
-  const fence = MERMAID_FENCE.exec(body);
-  if (fence === null) return [];
+  const fence = [...body.matchAll(MERMAID_FENCE)][0];
+  if (fence === undefined) return [];
   const after = body.slice(fence.index + fence[0].length);
   const table = parseAllMarkdownTables(after)[0];
   const headers = table?.headers.map((header) => header.trim()) ?? [];

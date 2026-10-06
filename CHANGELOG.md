@@ -140,6 +140,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   (#2425). Step 2 of `qfai-migration-v1-to-v2` gave every `approved` change
   request the Status DONE, recording a change as made when only its approval
   was. A request whose `Applied at` is empty or `-` now becomes WIP.
+
+- **A trailing semicolon in the architecture diagram of `tech.md` is accepted.**
+  `flowchart TD;` and `CLI --> Core;` are valid Mermaid, yet `QFAI-STORY-013`
+  reported them. It now ignores one `;` at the end of each line, and when the
+  first line is not `flowchart TD` it quotes the line that was written.
+  Migration step 3 says the row of a layer was dropped for holding a path when
+  another layer depends on it, and the `tech.md` template and the authoring
+  guide draw layer labels in double quotes. Part of #2666.
+
 - **The `qfai-run` entry reminder stays silent on a turn the host starts
   (#2989).** The Claude Code `UserPromptSubmit` hook that sends a request to
   `qfai-run` printed on every notification, so an agent could start a run from

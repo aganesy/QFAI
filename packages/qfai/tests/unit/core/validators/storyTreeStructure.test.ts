@@ -5,6 +5,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../../../src/core/config.js";
+import { architectureProblems, orderLayers } from "../../../../src/core/storyTree/architecture.js";
 import { buildStoryTreeModel } from "../../../../src/core/storyTree/tree.js";
 import {
   validateConstraintIds,
@@ -212,7 +213,7 @@ describe("story-tree structure", () => {
         "  %% a comment",
       ];
       expect(await problems(diagram, LAYERS)).toEqual([
-        "the diagram does not open with flowchart TD",
+        'the diagram opens with "flowchart LR", not flowchart TD',
         'the diagram line "%% a comment" is neither a layer nor an edge',
         "the diagram draws Extra, which is not a layer of the table",
         "the diagram has no edge Migration --> Core",
@@ -225,6 +226,41 @@ describe("story-tree structure", () => {
         "the diagram draws Core, which is not a layer of the table",
         "the diagram has no edge CLI --> Shared",
       ]);
+    });
+
+    // QFAI:EX-0001-0051-09
+    it("reads a diagram whose lines end in a semicolon", async () => {
+      const semicolons = DIAGRAM.map((line) => `${line};`);
+      expect(await problems(semicolons, LAYERS)).toEqual([]);
+      expect(await problems(["flowchart LR;", ...DIAGRAM.slice(1)], LAYERS)).toEqual([
+        'the diagram opens with "flowchart LR;", not flowchart TD',
+      ]);
+    });
+
+    // QFAI:EX-0001-0051-09
+    it("reads a quoted label, CRLF line ends, and a section missing its diagram or table", () => {
+      const rows = "| Layer | Responsibility | Depends on |\n| --- | --- | --- |\n";
+      const fence = "```";
+      const body = `${fence}mermaid\nflowchart TD\n  L1["Say #quot;hi#quot;"]\n${fence}\n\n${rows}| Say "hi" | Greets | - |\n`;
+      expect(architectureProblems(body)).toEqual([]);
+      expect(architectureProblems(body.replaceAll("\n", "\r\n"))).toEqual([]);
+      expect(architectureProblems(`${rows}| Core | Validates | - |\n`)).toEqual([]);
+      expect(architectureProblems(`${fence}mermaid\nflowchart TD\n  Core\n${fence}\n`)).toEqual([]);
+    });
+
+    it("orders no layers that have two rows", () => {
+      expect(
+        orderLayers([
+          { name: "Core", dependsOn: [] },
+          { name: "Core", dependsOn: [] },
+        ]),
+      ).toBe("the layer Core has more than one row");
+    });
+
+    // QFAI:EX-0001-0051-08
+    it("reports a layer that has two rows", async () => {
+      const twice = [...LAYERS, "| Shared | Another row | - |"];
+      expect(await problems(DIAGRAM, twice)).toEqual(["the layer Shared has more than one row"]);
     });
 
     it("reads nothing when the tree has no tech.md", async () => {
