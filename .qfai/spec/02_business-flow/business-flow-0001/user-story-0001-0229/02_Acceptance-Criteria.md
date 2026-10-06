@@ -11,6 +11,7 @@ Feature: Choose how far the work on a request goes before it starts
     Then the plan, and each candidate, holds its distinct scopes, narrowest first, each a set of the route's stages in plan order
     And the narrowest scope is recommended
     And a scope that writes code or tests also holds the route's closing verification stages
+    And a scope that writes only documentation holds them too
 
   # AC-0001-0229-02
   Scenario: The session asks for the scope before the first stage

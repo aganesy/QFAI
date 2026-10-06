@@ -184,3 +184,12 @@ it("No scope runs the fix without the checks that verify it", async () => {
   expect(field(planned.json, "route")).toBe("fix-intermittent");
   expect(field(planned.json, "scopes")).toEqual(broadOnly(planned.json));
 });
+
+// QFAI:EX-0001-0229-28
+it("A request that writes only documentation is never handed over unchecked", async () => {
+  const planned = await planFor(extraction({ intent: "docs", artifacts: ["docs"] }));
+
+  expect(field(planned.json, "route")).toBe("edit-text");
+  expect(field(planned.json, "scopes")).toEqual(broadOnly(planned.json));
+  expect(stageIds(planned.json)).toEqual(["edit", "note", "verify"]);
+});
