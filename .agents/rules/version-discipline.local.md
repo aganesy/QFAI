@@ -24,8 +24,10 @@ Three things follow.
 
 - Do not bump the manifest by hand first. Prepare release refuses a version the
   manifest already has.
-- Never push a tag by hand on this path. A hand tag pushed before the workflow
-  tags takes the version, and the release no longer comes from the merge commit.
+- Never push a tag by hand on this path. A hand tag pushed first on another
+  commit takes the version, and the release no longer comes from the merge
+  commit. A hand tag on the merge commit still releases from it, and
+  `tag-release.yml` then does nothing.
 - To publish a tag that already exists again, run `release.yml` by hand with
   its `tag` input. That cuts no new tag.
 

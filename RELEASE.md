@@ -156,14 +156,15 @@ Note: run the commands below from the repository root unless stated otherwise.
 
    Example: `git tag vX.Y.Z`
 
-5. Create the GitHub Release (quote the CHANGELOG)
+5. Approve the publish
 
-6. npm publish (when needed)
+   The tag push starts `release.yml`. It creates the GitHub Release from the
+   `CHANGELOG.md` section for the version, then publishes to npm once a
+   reviewer of the `release` environment approves. Do not create the release or
+   run `npm publish` by hand: that repeats the workflow or races it.
 
-   ```sh
-   cd packages/qfai
-   npm publish
-   ```
+   To publish a tag that already exists again, run `release.yml` by hand with
+   its `tag` input.
 
 ## Final check after the release
 
