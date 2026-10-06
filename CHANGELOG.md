@@ -107,6 +107,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   table, which rendered outside the table, now sits beside the other rows.
   Fixes #2860.
 
+- **Story-tree findings name a test file relative to the project.** A
+  `QFAI-STORY-007` or `QFAI-STORY-008` finding printed the absolute path of the
+  checkout in its message and target, which differs on every machine. It now
+  prints the path from the project root (#3012).
+
 - **`qfai init --force` reports only the paths it changed.** The `written` count
   and list included every distributed file, including those already identical to
   the shipped copy. Rule files, the Copilot and Codex files and the agent and

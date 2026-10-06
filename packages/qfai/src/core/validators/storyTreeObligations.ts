@@ -7,6 +7,7 @@ import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "../fs.js";
 import { parseCountedExampleAnnotations, parseStoryTestAnnotations } from "../storyTree/ids.js";
 import { classifyRecordRow } from "../storyTree/tables.js";
 import { readStoryTreeModel, type StoryTreeModel } from "../storyTree/tree.js";
+import { toRelativePath } from "../paths.js";
 import { isGlobExclusion } from "../testGlobExtensions.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS, normalizeGlobs } from "../traceability.js";
 import type { Issue } from "../types.js";
@@ -255,5 +256,8 @@ export async function validateStoryTreeObligations(
       ),
     ];
   }
-  return validateStoryTreeObligationsModel(tree, scan.files, profile);
+  // Findings name files relative to the project, so the text a run prints is the
+  // same on every machine.
+  const files = scan.files.map((file) => ({ ...file, file: toRelativePath(root, file.file) }));
+  return validateStoryTreeObligationsModel(tree, files, profile);
 }
