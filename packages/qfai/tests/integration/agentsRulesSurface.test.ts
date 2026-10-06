@@ -492,7 +492,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /CHANGELOG\.md/,
         /communication\.md/,
         /qfai init/,
-        /cliMessageLanguage/,
+        /check-repository-language/,
       ]) {
         expect(text).toMatch(clause);
       }

@@ -1,24 +1,8 @@
-/**
- * Lexical scan for Japanese text in TypeScript sources.
- *
- * Shared by the operator-facing message-language and changelog-language
- * meta-tests.
- */
+/** Lexical helpers for TypeScript sources: listing them and blanking their comments. */
 import { readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
 import ts from "typescript";
-
-/** Hiragana, katakana, CJK ideographs, and CJK/fullwidth punctuation. */
-const CJK_RE = /[\u3000-\u303F\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\uFF00-\uFFEF]/;
-
-/** One source line that still carries Japanese text outside of a comment. */
-export interface JapaneseLine {
-  /** 1-based line number in the original source. */
-  readonly line: number;
-  /** The line with comments blanked out, trimmed — what a report quotes. */
-  readonly text: string;
-}
 
 /** Every non-declaration, non-test `.ts` file under `dir`, recursively. */
 export async function listSourceFiles(dir: string): Promise<string[]> {
@@ -114,7 +98,7 @@ function regexAllowedAfter(previous: ts.SyntaxKind | undefined): boolean {
  * intact, so a failure report points at the line the offending string is
  * really on.
  */
-export function stripComments(source: string, stripRegexLiterals = false): string {
+export function stripComments(source: string): string {
   const scanner = ts.createScanner(ts.ScriptTarget.Latest, /* skipTrivia */ false);
   scanner.setText(source);
   const chars = source.split("");
@@ -144,8 +128,7 @@ export function stripComments(source: string, stripRegexLiterals = false): strin
       braceDepth -= 1;
     } else if (
       token === ts.SyntaxKind.SingleLineCommentTrivia ||
-      token === ts.SyntaxKind.MultiLineCommentTrivia ||
-      (stripRegexLiterals && token === ts.SyntaxKind.RegularExpressionLiteral)
+      token === ts.SyntaxKind.MultiLineCommentTrivia
     ) {
       for (let index = scanner.getTokenStart(); index < scanner.getTokenEnd(); index += 1) {
         if (chars[index] !== "\n" && chars[index] !== "\r") {
@@ -161,42 +144,7 @@ export function stripComments(source: string, stripRegexLiterals = false): strin
   return chars.join("");
 }
 
-/** Every line of `text` carrying Japanese, numbered from 1, in file order. */
-function scanLines(text: string): JapaneseLine[] {
-  return text
-    .split(/\r?\n/)
-    .flatMap((line, index) => (CJK_RE.test(line) ? [{ line: index + 1, text: line.trim() }] : []));
-}
-
-/** Every code line of `source` that carries Japanese text, in file order. */
-export function findJapaneseLines(source: string): JapaneseLine[] {
-  // Blanking comments can only remove Japanese, so a file without any at all
-  // needs no lexing — which is most of `src/**`.
-  if (!CJK_RE.test(source)) {
-    return [];
-  }
-  // A regular expression may accept Japanese input without emitting Japanese text.
-  return scanLines(stripComments(source, true));
-}
-
-/**
- * Every line of a plain-text document that carries Japanese, in file order.
- *
- * No comment handling, because a document has no code to tell prose apart
- * from: every line is content a reader sees. That is also why nothing here
- * needs the TypeScript scanner, and why the numbers stay absolute — a report
- * points at the line of the file, not of some extracted region.
- */
-export function findJapaneseTextLines(text: string): JapaneseLine[] {
-  return scanLines(text);
-}
-
 /** `file` relative to `from`, with POSIX separators on every platform. */
 export function relativeToPosix(from: string, file: string): string {
   return path.relative(from, file).split(path.sep).join("/");
-}
-
-/** `path:line: text` — the form used in failure reports. */
-export function formatJapaneseLine(relPath: string, found: JapaneseLine): string {
-  return `${relPath}:${found.line}: ${found.text}`;
 }
