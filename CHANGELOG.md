@@ -45,6 +45,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   check makes `status` `FAIL`; a pending one does not stop `verify-commit`,
   because the pull request is where the check runs. Fixes #2996.
 
+- **The `DESIGN.md` authoring step checks the finished file against the
+  generated-design pattern list.** A token that prescribes a listed pattern the
+  recorded brand direction does not ask for fails the gate, and the finding names
+  the pattern (#2619).
 - **`qfai-run` has guidance for a change that needs a person's action outside
   the repository.** When a change depends on something only the user can do,
   such as a hosted dashboard setting or a token issued in a web console, the
@@ -352,6 +356,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   over. The plan is now `edit`, `note`, `verify`, and the contract rule and the
   example that state it say the same.
 
+- **The shipped rules state their points directly.** Figurative phrasing in the
+  user-questions, grilling, interface-clarity, api-budget, ai-readable-markdown
+  and untrusted-content rules and in the stage-cost rule is replaced by plain
+  statements of the same requirement (#2568).
 - **A mutation proof belongs to one example** (#2409). The `qfai-implement`
   oracle-strength reference now says what to do when one mutation fails tests
   annotated with different examples: record each failing assertion and the

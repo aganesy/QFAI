@@ -167,7 +167,7 @@ would have carried: the label, the description of what each choice means, the
 recommendation **where one is permitted**, and **how many options may be
 chosen**.
 
-The qualifier is not a loophole; it is the one case § 3 creates. A question
+The qualifier is not an exemption; it is the one case § 3 creates. A question
 asking for a fact carries no recommendation at all, and a fact with listable
 candidates arrives here precisely because the host demanded one. Carrying the
 list without a recommendation is the compliant answer; inventing one to fill the
@@ -175,8 +175,8 @@ slot is the failure the whole clause exists to prevent.
 
 Where the answer is open — no listable set of candidates — it is a plain request
 for the value, naming what depends on it. Inventing two options so an open
-answer fits a numbered list is the guess § 3 refuses, wearing the fallback's
-shape.
+answer fits a numbered list is the guess § 3 refuses, written in the
+fallback's shape.
 
 The selection constraint is the part most easily lost and the one that changes
 the answer. "Pick one" and "pick all that apply" are different questions, and a
@@ -249,8 +249,8 @@ Either way it prints one message from `.agents/rules/reminders.json`. A missing
 or unreadable file prints nothing, so it cannot fail the session it is attached
 to.
 
-What it carries is where this rule lives, the line an agent reaches past when it
-would rather not ask, and the turn that waits on the user. The rest is here.
+What it carries is where this rule lives, the obligation an agent is most likely
+to skip when it would rather not ask, and the turn that waits on the user. The rest is here.
 
 ## Related
 

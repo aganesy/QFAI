@@ -33,6 +33,9 @@ for it.
   `.qfai/assistant/skill/qfai-sdd/references/design-md-brand-catalog.md`.
 - The starting sample:
   `.qfai/assistant/skill/qfai-prototyping/templates/DESIGN.md.sample`.
+- The patterns that mark a design as generated, and their displacement table:
+  `.qfai/assistant/skill/qfai-sdd/references/design-anti-patterns.md`. Read it
+  for § Author and validate step 5.
 
 ## Author and validate
 
@@ -51,6 +54,12 @@ for it.
 4. **Parse and validate.** `parseDesignMd(text)` must succeed; pass its `data`
    to `validateDesignMd` and halt on any issue. Both are exported from the
    `qfai` package entry.
+5. **Check the finished file against the pattern list.** Review root
+   `DESIGN.md` against every aspect of
+   `.qfai/assistant/skill/qfai-sdd/references/design-anti-patterns.md` and its
+   Displacement section. A token that prescribes a listed pattern fails unless
+   `01_Context.md#Design Direction` asks for it. Name the pattern in the
+   finding, replace the value, and check the file again.
 
 The retired per-aspect brand contracts are not regenerated; their content lives
 in `DESIGN.md`
@@ -77,7 +86,8 @@ it, edit it; the next iteration is built from it.
 Read first: the flow's classified surface set and root `DESIGN.md`. The step
 passes when the flow is not on a visual prototyping surface, or when root
 `DESIGN.md` exists, is not the unreplaced sample, and parses and validates with
-no issue. The pass names the surface set and the validation result.
+no issue and shows no listed pattern that the recorded direction does not ask
+for. The pass names the surface set and the validation result.
 
 ## Writes
 
@@ -87,5 +97,7 @@ no issue. The pass names the surface set and the validation result.
 
 ## Gate
 
-`DESIGN.md` parses and validates with no issue, and no value was written that
-the recorded direction or the named theme does not supply.
+`DESIGN.md` parses and validates with no issue, no value was written that
+the recorded direction or the named theme does not supply, and no token
+prescribes a pattern from `design-anti-patterns.md` that the recorded direction
+does not ask for. A reviewer fails the gate by naming the pattern.

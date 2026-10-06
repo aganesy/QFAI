@@ -1510,7 +1510,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /opening\s+and\s+a\s+closing\s+tag\s+carrying\s+that\s+id/,
         /Say\s+in\s+the\s+system\s+prompt\s+what\s+the\s+tags\s+mean/,
         // What the marks are not.
-        /one\s+guardrail\s+among\s+several,\s+not\s+a\s+complete\s+defence/,
+        /one\s+safeguard\s+among\s+several,\s+not\s+a\s+complete\s+defence/,
       ]) {
         expect(text).toMatch(clause);
       }
@@ -1582,6 +1582,19 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       ]) {
         expect(text).toMatch(clause);
       }
+    });
+
+    it.each(["AGENTS.md", "packages/qfai/assets/init/root/AGENTS.md"])(
+      "%s stays at or under 500 lines",
+      async (rel) => {
+        const text = await readFile(path.join(ROOT, rel), "utf-8");
+        expect(text.split(/\r?\n/).length).toBeLessThanOrEqual(500);
+      },
+    );
+
+    it("AGENTS.md points at the work scenarios with a read condition", async () => {
+      const text = await readFile(path.join(ROOT, "AGENTS.md"), "utf-8");
+      expect(text).toMatch(/Read `\.instruction\/01_specialties\/work-scenarios\.md` when/);
     });
 
     it("ships to adopters", async () => {
