@@ -182,6 +182,14 @@ describe("generated-design anti-patterns", () => {
     expect(reviewer).not.toContain("design-anti-patterns.md");
   });
 
+  it("closes DESIGN.md authoring with a check against the list", async () => {
+    const step = await readStep("common-design-md");
+    expect(step).toContain("**Check the finished file against the pattern list.**");
+    expect(step).toContain(antiPatternsInstallPath);
+    expect(step).toContain("Displacement section");
+    expect(step).toContain("A reviewer fails the gate by naming the pattern.");
+  });
+
   it("offers typeface candidates that are not a default or its substitute", async () => {
     const catalog = await read("qfai-sdd/references/design-md-brand-catalog.md");
     const archetypeCandidates = catalog
