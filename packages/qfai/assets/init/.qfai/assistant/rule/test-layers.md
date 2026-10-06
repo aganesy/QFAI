@@ -110,6 +110,29 @@ has its test. This section sizes that coverage. It never removes any.
 
 These are review signals, not gates. No validator reads them.
 
+## End-to-end test cost
+
+An end-to-end test is the slowest test a project runs, and a failing one costs
+the most. A test that cannot find an element waits for its whole timeout, and
+waits again for every retry. One failure costs the timeout times the attempts,
+and a red suite with no limit runs until the job is killed. The number of
+failures sets the bill more than the number of tests does.
+
+- **Set a failure limit.** Stop the run after a small number of failures.
+- **Set a job time limit** well below the CI platform's default.
+- **Lower the test timeout** to what a passing test needs. Allow at most one
+  retry in CI.
+- **Do not share one database across parallel workers.** Concurrent tests
+  change each other's data, so one commit gives different results and a
+  failure cannot be told from noise. Give each worker its own data, or run one
+  worker.
+- **Record traces only on a retry in CI,** not on every test.
+- **Hold a count ceiling that only moves down.** Count end-to-end tests per
+  business flow, not per story or example. Prove an acceptance criterion or an
+  example in a lower layer.
+
+These are review signals, not gates. No validator reads them.
+
 ## Test stub detection
 
 A test is incomplete if its body contains a placeholder, skips the
