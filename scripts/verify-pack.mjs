@@ -132,7 +132,7 @@ if (!existsSync(templateDir)) {
   throw new Error("assets/init/.qfai is missing from the packed artifact.");
 }
 // .gitignore files removed from subdirectories; entries now live in root .gitignore
-// (see ensureRootGitignoreEntries in init.ts)
+// (see ensureRootGitignoreEntries in core/init/rootGitignore.ts)
 const rootAssetsDir = path.join(assetsDir, "root");
 if (!existsSync(rootAssetsDir)) {
   throw new Error("assets/init/root is missing from the packed artifact.");
