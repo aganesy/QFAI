@@ -703,8 +703,8 @@ A suite skipped for a missing database therefore passes CI, and so does a suite
 whose database failed to start. Only the test runner knows what was skipped in a
 given run. Have it write a JSON report, and fail the job when a file skips more
 tests than a list of named, allowed skips permits. Jest and Vitest write the same
-shape: `jest --json --outputFile=tmp/test-report.json`, or
-`vitest run --reporter=json --outputFile=tmp/test-report.json`. Add the flags to
+shape: `jest --json --outputFile=test-report.json`, or
+`vitest run --reporter=json --outputFile=test-report.json`. Add the flags to
 your `test:<layer>` script, save this script as `scripts/check-skipped-tests.mjs`,
 and run it in a step of `qfai-tests.yml` after the step that runs the tests:
 
@@ -713,7 +713,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 const allowed = JSON.parse(readFileSync("allowed-skips.json", "utf8"));
-const report = JSON.parse(readFileSync("tmp/test-report.json", "utf8"));
+const report = JSON.parse(readFileSync("test-report.json", "utf8"));
 let failed = false;
 for (const file of report.testResults) {
   const name = path.relative(process.cwd(), file.name).split(path.sep).join("/");
@@ -729,7 +729,7 @@ process.exit(failed ? 1 : 0);
 ```
 
 `allowed-skips.json` maps a test file to the number of tests it may skip, such as
-`{ "tests/db/orders.test.ts": 2 }`. Start from the count you measure today. The
+`{ "orders.test.ts": 2 }`. Start from the count you measure today. The
 list should only ever shrink: a pull request may remove an entry or lower a count,
 and raising one is a decision a reviewer makes on purpose.
 
