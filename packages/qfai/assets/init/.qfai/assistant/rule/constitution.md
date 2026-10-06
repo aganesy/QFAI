@@ -429,7 +429,8 @@ This article survives context compaction because `.qfai/assistant/rule/constitut
 
 Scratch files an agent creates for its own convenience — working notes, one-off
 scripts, captured command output, downloaded samples, intermediate data —
-must be placed under the repository‑root `tmp/` directory.
+go in the scratch directory the host names for the session, and under the
+repository-root `tmp/` directory where the host names none.
 
 Scope: this article is about files written **into the working tree**. Two kinds
 of output are outside it:
@@ -445,7 +446,7 @@ of output are outside it:
 Rules:
 
 1. **Never** create a scratch file in the repository root, `src/`, `.qfai/spec/`, or any other production/artifact directory.
-2. Use `tmp/` (repository root) as the sole staging area. Create subdirectories as needed (e.g., `tmp/notes/`, `tmp/capture/`).
+2. When the host names a scratch directory for the session, use it. Otherwise use `tmp/` (repository root) as the sole staging area, with subdirectories as needed (e.g., `tmp/notes/`, `tmp/capture/`). A file the repository's own tooling must read from the working tree goes under `tmp/` whichever the host names.
 3. `tmp/` MUST be listed in `.gitignore` so temporary files are never committed.
-4. Clean up `tmp/` contents when the task that created them is complete.
+4. Clean up `tmp/` contents when the task that created them is complete. The host's own scratch directory is the host's to clean.
 5. If a scratch file is found outside `tmp/` **in the working tree**, treat it as a defect and move or delete it immediately. A test's `mkdtemp` sandbox and configured toolchain output are not scratch files — see Scope above.
