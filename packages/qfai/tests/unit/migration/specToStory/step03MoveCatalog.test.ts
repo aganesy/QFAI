@@ -469,6 +469,32 @@ describe("migration catalog move", () => {
     );
   });
 
+  // QFAI:EX-0004-0006-29
+  it("says a layer's row was dropped for holding a path when another layer depends on it", async () => {
+    const context = await fixture();
+    await put(
+      context.root,
+      ".qfai/assistant/catalog/structure.md",
+      [
+        "# Structure",
+        "",
+        "## Architecture",
+        "",
+        "| Layer | Responsibility | Depends on |",
+        "| --- | --- | --- |",
+        "| CLI | Parses arguments | Core |",
+        "| Core | Lives in src/core/index.ts | - |",
+        "",
+      ].join("\n"),
+    );
+    const result = await run(context);
+    expect(result.code).toBe(3);
+    const source = ".qfai/assistant/catalog/structure.md";
+    expect(result.output).toContain(
+      `.qfai/spec/03_contract/tech.md ## Architecture: order the layers of "## Architecture" in ${source} from the uppermost down by hand, since the layer CLI depends on Core, whose row was dropped for holding a path`,
+    );
+  });
+
   // QFAI:EX-0004-0006-11
   it("declares no UI surface when the structure catalog names none", async () => {
     const context = await fixture();
