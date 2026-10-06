@@ -11,7 +11,7 @@
  * @returns {string | null}
  */
 export function explainNpmInstallFailure(stderr) {
-  if (/ENOENT[^\n]*_cacache/.test(stderr)) {
+  if (/ENOENT/.test(stderr) && /_cacache/.test(stderr)) {
     return (
       "npm failed because its cache is damaged: a file under _cacache is missing. " +
       "Run `npm cache verify` and run again."
