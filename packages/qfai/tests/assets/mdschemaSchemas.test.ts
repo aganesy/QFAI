@@ -527,6 +527,11 @@ describe("the technology document holds only its three sections, each in its sha
       "[forbidden-text]",
     ],
     [
+      "two slash-joined segments that start with a source root in a layer row",
+      (text) => text.replace(LAYER_ROW, "| Core | Lives in src/core | - |"),
+      "[forbidden-text]",
+    ],
+    [
       "a directory ending in a slash in a layer row",
       (text) => text.replace(LAYER_ROW, "| Core | Lives in src/ today | - |"),
       "[forbidden-text]",
@@ -567,7 +572,7 @@ describe("the technology document holds only its three sections, each in its sha
       .replace(/^\| <upper layer> .*\n/m, "")
       .replace(
         LAYER_ROW,
-        "| CLI | Parses arguments and composes Core | Core, Shared |\n| Core | Validates the tree and/or reports on it | Shared |\n| Shared | I/O, UI/UX and HTTP/gRPC helpers | - |",
+        "| CLI | Parses arguments and composes Core | Core, Shared |\n| Core | Validates the tree and/or reports on it | Shared |\n| Shared | I/O, UI/UX, read/write and HTTP/gRPC helpers | - |",
       );
     const result = check(template);
     expect(result.output).toContain("No violations");
