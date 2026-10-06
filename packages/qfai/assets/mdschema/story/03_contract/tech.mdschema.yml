@@ -81,9 +81,11 @@ structure:
           - pattern: '(?m)^[ \t]*\|[^\n]*[`\\]'
             regex: true
           # A path in a table line: one that starts with /, ./ or ../; a
-          # slash-joined name that ends in a file extension; or three or more
-          # slash-joined lowercase segments, or one ending in a slash. A single
-          # slash between words, as in I/O or and/or, is prose.
+          # slash-joined name that ends in a file extension; three or more
+          # slash-joined lowercase segments, or one ending in a slash; or two
+          # segments whose first is a common source root (src, lib, app, apps,
+          # packages, pkg, internal, cmd, test, tests or scripts). A single
+          # slash between other words, as in I/O or and/or, is prose.
           - pattern: '(?m)^[ \t]*\|[^\n]*[\s|(]\.{0,2}/\w'
             regex: true
           - pattern: '(?m)^[ \t]*\|[^\n]*\w/[\w./-]*\.[A-Za-z][A-Za-z0-9]{0,4}\b'
@@ -91,6 +93,8 @@ structure:
           - pattern: '(?m)^[ \t]*\|[^\n]*[a-z0-9_-]/[a-z0-9_-]+/'
             regex: true
           - pattern: '(?m)^[ \t]*\|[^\n]*[a-z0-9_-]/(?:[\s|]|$)'
+            regex: true
+          - pattern: '(?m)^[ \t]*\|[^\n]*[\s|(](?:src|lib|app|apps|packages|pkg|internal|cmd|tests?|scripts)/[a-z0-9_-]'
             regex: true
       - heading:
           pattern: "^## Dependencies$"
