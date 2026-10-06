@@ -32,7 +32,7 @@ describe("normalizeNewlines", () => {
     expect(normalizeNewlines("")).toBe("");
   });
 
-  it("is idempotent, so digesting normalized text twice is the same basis", () => {
+  it("is idempotent, so normalizing twice gives the same text", () => {
     const once = normalizeNewlines("a\r\nb\rc\n");
     expect(normalizeNewlines(once)).toBe(once);
   });

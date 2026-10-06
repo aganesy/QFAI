@@ -57,7 +57,7 @@ export type QfaiValidationConfig = {
   /**
    * Terms the specs must no longer state, such as an option a decision rejected.
    * `qfai validate` warns on each line of a spec document that still holds one
-   * (QFAI-STORY-015). Unset means no term is checked.
+   * (QFAI-STORY-016). Unset means no term is checked.
    */
   staleTerms?: string[];
   testStrategy: {

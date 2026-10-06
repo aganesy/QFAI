@@ -82,6 +82,25 @@ Every pull request lists, in its description, what the change made unnecessary,
 and says why anything on the list was kept. An empty list is a complete answer:
 it is written as "nothing", not left out.
 
+## Merging a pull request
+
+A pull request is merged, with a merge commit, when all of these hold on its
+current head:
+
+1. Every CI check succeeded or was skipped.
+2. No review thread is unresolved.
+3. The Codex review of that head is complete and holds no P0 or P1 finding.
+
+Do not turn on GitHub auto-merge for a pull request under this rule. Auto-merge
+merges as soon as the required checks pass, which can be before the Codex review
+of the head finishes, and no required check reads that review. Merge by hand
+once the three conditions hold.
+
+Where Codex has posted no review of the head, an independent read-only reviewer
+reviews it instead, and the pull request merges when that review holds no P0 or
+P1 finding. Dependency updates that Renovate merges follow
+`.github/renovate.json5`.
+
 ## Severity Prefixes
 
 Use the following severity prefixes on every comment:

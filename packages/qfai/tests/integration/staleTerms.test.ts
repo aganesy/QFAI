@@ -35,7 +35,7 @@ async function staleFindings(staleTerms: string[]) {
     { config, issues: [], configPath: path.join(root, "qfai.config.yaml") },
     { profile: "sdd" },
   );
-  return result.issues.filter((item) => item.code === "QFAI-STORY-015");
+  return result.issues.filter((item) => item.code === "QFAI-STORY-016");
 }
 
 describe("a spec document that states a term the project lists as stale", () => {

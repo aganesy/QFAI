@@ -46,7 +46,7 @@ Feature: Decision and open-question table validation
   Scenario: A document that states a term the project lists as stale is reported
     Given the story tree, and `validation.staleTerms` in `qfai.config.yaml` listing a term that a document under `paths.specsDir` or `paths.contractsDir` states
     When `qfai validate --profile sdd` runs
-    Then `QFAI-STORY-015` is raised at warning naming the file, the line and the term
+    Then `QFAI-STORY-016` is raised at warning naming the file, the line and the term
     And `decisions.md` and `open-questions.md` are not read
     And with no term listed, nothing is checked
 ```

@@ -6,7 +6,7 @@ import { collectFiles } from "../fs.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
-const STALE_TERM_CODE = "QFAI-STORY-015";
+const STALE_TERM_CODE = "QFAI-STORY-016";
 
 /** The registers that name a rejected option on purpose; they are not read. */
 const RECORD_FILES = new Set(["decisions.md", "open-questions.md"]);

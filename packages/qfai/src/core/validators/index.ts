@@ -19,6 +19,7 @@ export {
   validateStoryTreeStructureModel,
   validateTechArchitecture,
 } from "./storyTreeStructure.js";
+export { validateExternalReferences } from "./externalReferences.js";
 export { validateStoryTreeDrift } from "./upstreamSsotGuard.js";
 export { validateDocumentSchema } from "./documentSchema.js";
 export { validateStaleTerms } from "./staleTerms.js";
