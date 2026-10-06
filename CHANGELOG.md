@@ -61,6 +61,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   changed too. A new row and a table that was only re-padded raise nothing. The
   warning asks the owner to recheck the test; it does not prove the test asserts
   the new row (#2748).
+- **`qfai validate` warns when a spec states a term the project lists as
+  stale.** List the terms in `validation.staleTerms` in `qfai.config.yaml`, for
+  example an option a decision rejected. Each line of a document under
+  `paths.specsDir` or `paths.contractsDir` that states one, as a whole word in
+  any case, raises `QFAI-STORY-015` at warning naming the file, the line and the
+  term. `decisions.md` and `open-questions.md` are not read, because they name a
+  rejected option on purpose. With no term listed nothing is checked (#3003).
 
 ### Fixed
 
