@@ -152,4 +152,16 @@ describe("capitalised emphasis in the shipped assistant tree and root rules", ()
   it("reads a lowercase must as plain wording", () => {
     expect(checkFile("sample.md", "You must write it.\n", []).uncovered).toEqual([]);
   });
+
+  it("reads the marker every skill carries as plain wording at a path no entry names", () => {
+    // The marker is required of every skill by the runtime validator, so a
+    // skill at a new path must pass this guard without an entry of its own.
+    const verdict = checkFile(
+      ".qfai/assistant/skill/qfai-new/SKILL.md",
+      "## qfai-new\n\n[DRIFT-PROTOCOL:REQUIRED]\n",
+      [],
+    );
+
+    expect(verdict.uncovered).toEqual([]);
+  });
 });

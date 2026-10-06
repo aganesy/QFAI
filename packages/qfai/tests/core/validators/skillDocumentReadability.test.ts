@@ -49,7 +49,7 @@ async function writeSkillFixture(root: string): Promise<string> {
     [
       "# demo-skill",
       "",
-      "[DRIFT-PROTOCOL:MANDATORY]",
+      "[DRIFT-PROTOCOL:REQUIRED]",
       "",
       `Follow \`references/${UNREADABLE_BASENAME}\`.`,
       "",
@@ -65,7 +65,7 @@ async function writeUnreadableSkillFixture(root: string): Promise<string> {
   const skillDir = path.join(root, ".qfai", "assistant", "skill", UNREADABLE_SKILL_DIR);
   await mkdir(skillDir, { recursive: true });
   const skillFile = path.join(skillDir, "SKILL.md");
-  await writeFile(skillFile, "# unreadable-skill\n\n[DRIFT-PROTOCOL:MANDATORY]\n", "utf-8");
+  await writeFile(skillFile, "# unreadable-skill\n\n[DRIFT-PROTOCOL:REQUIRED]\n", "utf-8");
   return skillFile;
 }
 

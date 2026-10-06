@@ -31,7 +31,7 @@ mode: execution-focused
 
 ## /qfai-triage - Requests that end without a change
 
-[DRIFT-PROTOCOL:MANDATORY]
+[DRIFT-PROTOCOL:REQUIRED]
 
 Run the entry check of
 `.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`

@@ -32,7 +32,7 @@ describe.each(trees)("%s open-question routing", (tree) => {
     expect(drift).toContain("## Reviewer-originated obligations");
     for (const name of ["qfai-implement"]) {
       const skill = await read(tree, `assistant/skill/${name}/SKILL.md`);
-      expect(skill).toContain("[DRIFT-PROTOCOL:MANDATORY]");
+      expect(skill).toContain("[DRIFT-PROTOCOL:REQUIRED]");
       expect(skill).toContain("rule/shared-skill-delegation-baseline.md");
     }
     const baseline = await read(tree, "assistant/rule/shared-skill-delegation-baseline.md");

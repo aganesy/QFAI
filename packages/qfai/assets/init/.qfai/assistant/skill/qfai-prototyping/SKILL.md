@@ -19,7 +19,7 @@ mode: execution-focused
 
 ## /qfai-prototyping
 
-[DRIFT-PROTOCOL:MANDATORY]
+[DRIFT-PROTOCOL:REQUIRED]
 
 Run the entry check of
 `.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`

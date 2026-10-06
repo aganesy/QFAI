@@ -23,11 +23,6 @@ export interface KeptEmphasis {
   readonly readBy: string;
 }
 
-const DRIFT_MARKER: KeptEmphasis = {
-  phrase: "[DRIFT-PROTOCOL:MANDATORY]",
-  readBy: "src/core/validators/assistantAssets.ts",
-};
-
 const DELEGATION_HEADING: KeptEmphasis = {
   phrase: "## Sub-agent Delegation (MANDATORY)",
   readBy: "tests/assets/skillDelegationTool.test.ts",
@@ -77,32 +72,24 @@ export const KEPT_EMPHASIS: Readonly<Record<string, readonly KeptEmphasis[]>> = 
     },
   ],
   ".qfai/assistant/rule/workflow.md": [ABSOLUTE_RULE],
-  ".qfai/assistant/skill/qfai-configure/SKILL.md": [DRIFT_MARKER, DELEGATION_HEADING],
+  ".qfai/assistant/skill/qfai-configure/SKILL.md": [DELEGATION_HEADING],
   ".qfai/assistant/skill/qfai-discussion/SKILL.md": [
-    DRIFT_MARKER,
     {
       phrase: "## Completion Message & Next Actions (MUST)",
       readBy: "tests/assets/assets.test.ts",
     },
   ],
-  ".qfai/assistant/skill/qfai-grill/SKILL.md": [DRIFT_MARKER, DELEGATION_HEADING],
-  ".qfai/assistant/skill/qfai-grilling/SKILL.md": [DRIFT_MARKER, DELEGATION_HEADING],
-  ".qfai/assistant/skill/qfai-implement/SKILL.md": [DRIFT_MARKER],
-  ".qfai/assistant/skill/qfai-maintain/SKILL.md": [DRIFT_MARKER],
-  ".qfai/assistant/skill/qfai-migration-v1-to-v2/SKILL.md": [DRIFT_MARKER],
-  ".qfai/assistant/skill/qfai-prototyping/SKILL.md": [DRIFT_MARKER],
-  ".qfai/assistant/skill/qfai-run/SKILL.md": [DRIFT_MARKER, DELEGATION_HEADING],
-  ".qfai/assistant/skill/qfai-sdd/SKILL.md": [DRIFT_MARKER],
+  ".qfai/assistant/skill/qfai-grill/SKILL.md": [DELEGATION_HEADING],
+  ".qfai/assistant/skill/qfai-grilling/SKILL.md": [DELEGATION_HEADING],
+  ".qfai/assistant/skill/qfai-run/SKILL.md": [DELEGATION_HEADING],
   ".qfai/assistant/skill/qfai-sdd/references/ui-design-contract-normalization.md": [
     { phrase: "MUST NOT be generated", readBy: "tests/integration/sddUiTemplate.test.ts" },
   ],
-  ".qfai/assistant/skill/qfai-triage/SKILL.md": [DRIFT_MARKER],
-  ".qfai/assistant/skill/qfai-verify/SKILL.md": [DRIFT_MARKER],
   ".qfai/assistant/skill/qfai-verify/references/verify-output-contract.md": [
     {
       phrase: "`/qfai-verify` MUST write `.qfai/report/verify.json`",
       readBy: "tests/assets/verifyJsonWritePath.test.ts",
     },
   ],
-  ".qfai/assistant/skill/web-research/SKILL.md": [DRIFT_MARKER, DELEGATION_HEADING],
+  ".qfai/assistant/skill/web-research/SKILL.md": [DELEGATION_HEADING],
 };

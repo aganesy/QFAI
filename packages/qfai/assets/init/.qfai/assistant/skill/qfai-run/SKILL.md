@@ -12,7 +12,7 @@ mode: execution-focused
 
 ## /qfai-run - Change request entry
 
-[DRIFT-PROTOCOL:MANDATORY]
+[DRIFT-PROTOCOL:REQUIRED]
 
 The user states a change once. This skill reads the request into facts, asks
 `npx qfai workflow plan` for the plan they give, and runs its steps in order.
