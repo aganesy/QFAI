@@ -338,6 +338,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   over. The plan is now `edit`, `note`, `verify`, and the contract rule and the
   example that state it say the same.
 
+- **The shipped rules state their points directly.** Figurative phrasing in the
+  user-questions, grilling, interface-clarity, api-budget, ai-readable-markdown
+  and untrusted-content rules and in the stage-cost rule is replaced by plain
+  statements of the same requirement (#2568).
 - **A mutation proof belongs to one example** (#2409). The `qfai-implement`
   oracle-strength reference now says what to do when one mutation fails tests
   annotated with different examples: record each failing assertion and the
