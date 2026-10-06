@@ -114,6 +114,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the type it returns. A file that fails is refused with `null` and a logged
   error, as a missing key already was. Fixes #2862.
 
+- **Migration keeps an approved but unapplied change request in progress**
+  (#2425). Step 2 of `qfai-migration-v1-to-v2` gave every `approved` change
+  request the Status DONE, recording a change as made when only its approval
+  was. A request whose `Applied at` is empty or `-` now becomes WIP.
+
 - **The `qfai-run` entry reminder stays silent on a turn the host starts
   (#2989).** The Claude Code `UserPromptSubmit` hook that sends a request to
   `qfai-run` printed on every notification, so an agent could start a run from
@@ -123,6 +128,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   input it cannot read, still get the reminder. `qfai init` replaces an unedited
   copy of either earlier group.
 
+- **The minimal-implementation reminder stops repeating on files it does not
+  concern.** After a write or edit it now prints only for product source: not
+  for a test, a file under `tmp/`, a document, a configuration file or a file
+  outside the project. This holds in `.claude/settings.json` and
+  `.codex/hooks.json`; a project that kept an earlier group unedited gets the
+  new one on the next `qfai init` (#2993).
 - **The free-text entry reminder points a worktree session at its own copy of
   `qfai-run`.** The host can load the skill from the main checkout, which may
   lag the worktree, so the reminder now tells the agent to read
@@ -175,6 +186,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `timings: over budget` on a repository with a handful of mock blocks. The load
   now happens before the parse clock starts and is left out of the group's
   measurement. Fixes #2997.
+
+- **The verify gate can pass in a project that records a backlog.**
+  `verify-qfai-gate` now runs the project's `Validate` entry, and a project
+  whose entry runs a pinned ratchet passes while every error stays within its
+  pin. `verify-repo-gate` accepts that result. A project with no such entry
+  still fails on any `error`. This repository's `Validate` entry runs
+  `scripts/check-dogfood-backlog.mjs --profile full`. Fixes #2970.
 
 - **A rewritten decision row no longer authorizes a protected file.** A
   `Change request:` row the base already holds could have its Content changed

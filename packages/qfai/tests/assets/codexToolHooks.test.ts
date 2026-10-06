@@ -295,19 +295,43 @@ describe("the Codex tool-time reminders", () => {
     const grilling = await codexEntry("PreToolUse", "grilling-design-artifact");
     await withProject(async (cwd) => {
       const cases = [
-        ["*** Add File: docs/a.md", "PostToolUse", null],
-        ["*** Update File: README.md", null, "PostToolUse"],
-        ["*** Update File: src/a.ts", null, null],
-        ["*** Add File: docs/a.mdx", null, null],
+        ["*** Add File: docs/a.md", "PostToolUse", null, null],
+        ["*** Update File: README.md", null, "PostToolUse", null],
+        ["*** Update File: src/a.ts", null, null, "PostToolUse"],
+        ["*** Add File: docs/a.mdx", null, null, null],
       ] as const;
-      for (const [header, writeFires, editFires] of cases) {
+      for (const [header, writeFires, editFires, minimalFires] of cases) {
         const post = codexInput("PostToolUse", "apply_patch", patch(header));
         expect(await firedEvent(write, cwd, post), header).toBe(writeFires);
         expect(await firedEvent(edit, cwd, post), header).toBe(editFires);
-        expect(await firedEvent(minimal, cwd, post), header).toBe("PostToolUse");
+        expect(await firedEvent(minimal, cwd, post), header).toBe(minimalFires);
         const pre = codexInput("PreToolUse", "apply_patch", patch(header));
         expect(await firedEvent(grilling, cwd, pre), header).toBe("PreToolUse");
       }
+    });
+  });
+
+  // QFAI:EX-0001-0196-53
+  it("remind about implementation only for a patch that touches product source", async () => {
+    const minimal = await codexEntry("PostToolUse", "minimal-implementation");
+    await withProject(async (cwd) => {
+      for (const [header, fires] of [
+        ["*** Update File: src/a.ts", true],
+        ["*** Add File: docs/a.md\n*** Update File: src/a.ts", true],
+        ["*** Update File: src/a.ts\n*** Move to: tmp/a.ts", true],
+        ["*** Update File: tmp/x.py", false],
+        ["*** Update File: tests/a.ts", false],
+        ["*** Update File: src/a.test.ts", false],
+        ["*** Add File: README.md\n*** Update File: package.json", false],
+        ["*** Add File: .env.example", false],
+        ["*** Update File: ../../../../outside.ts", false],
+      ] as const) {
+        const input = codexInput("PostToolUse", "apply_patch", patch(header));
+        expect(await firedEvent(minimal, cwd, input), header).toBe(fires ? "PostToolUse" : null);
+      }
+      // A call that names no file is not a reason to stay silent.
+      const none = codexInput("PostToolUse", "apply_patch", "*** Begin Patch\n*** End Patch\n");
+      expect(await firedEvent(minimal, cwd, none)).toBe("PostToolUse");
     });
   });
 });
