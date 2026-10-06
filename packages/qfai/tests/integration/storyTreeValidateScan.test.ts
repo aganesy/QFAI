@@ -35,6 +35,37 @@ describe("story-tree test scan", () => {
     }
   });
 
+  it("names a test file relative to the project in its findings", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-story-relative-"));
+    try {
+      await mkdir(path.join(root, "tests", "unit"), { recursive: true });
+      await writeFile(
+        path.join(root, "tests", "unit", "a.test.ts"),
+        `// ${["QFAI", "BF-0001"].join(":")}\n`,
+        "utf8",
+      );
+      const config = {
+        ...defaultConfig,
+        validation: {
+          ...defaultConfig.validation,
+          traceability: {
+            ...defaultConfig.validation.traceability,
+            testFileGlobs: ["tests/**/*.test.ts"],
+          },
+        },
+      };
+      const model = buildStoryTreeModel(new Map());
+      const findings = await validateStoryTreeObligations(root, config, "atdd", model);
+      const misplaced = findings.filter((finding) => finding.code === "QFAI-STORY-007");
+
+      expect(misplaced).toHaveLength(1);
+      expect(misplaced[0]?.file).toBe("tests/unit/a.test.ts");
+      expect(findings.map((finding) => finding.message).join("\n")).not.toContain(root);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   describe("configured test globs with boundary whitespace", () => {
     async function selectedFiles(
       testFileGlobs: string[],

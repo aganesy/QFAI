@@ -49,4 +49,11 @@ Feature: Story-tree layout and ID validation
     When `qfai validate --profile sdd` runs
     Then an error names `tech.md` and each disagreement
     And an architecture whose rows run from the uppermost layer down, and whose diagram draws exactly its layers and dependencies, raises no such error
+
+  # AC-0001-0051-08
+  Scenario: A path outside .qfai is counted for each tree
+    Given the story tree, and Markdown documents that name a file by a repository path that does not start with `.qfai/`
+    When `qfai validate --profile sdd` runs
+    Then one warning for each of the policy, business-flow, contract, and decision and open-question trees counts its lines and its files
+    And a path under `.qfai`, a URL, and a discussion pack raise nothing
 ```

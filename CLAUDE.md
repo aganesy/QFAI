@@ -107,7 +107,7 @@ Quality-First AI (QFAI) — a verification framework and CLI for specification-d
 
 ## Code Review
 
-- See `REVIEW.md` for review policy.
+- See `REVIEW.md` for review policy and for when a pull request merges: no auto-merge where the Codex review of the head gates it.
 - All review findings, including minor and nit-level, should be posted as inline PR comments.
 - Do not suppress low-confidence findings.
 

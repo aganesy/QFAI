@@ -54,6 +54,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reference says such a request keeps the repository change's intent with the
   `env` flag (#2999).
 
+- **`scripts/pr-threads.mjs` reads and answers a pull request's review threads.**
+  `list <pr>` prints the unresolved threads and the Codex review comments of
+  one pull request from one GraphQL query and one REST call. `reply` answers a
+  thread with the text of a file, and `resolve` resolves the threads it is
+  given. It sits beside `scripts/gh-budget.mjs` and keeps that command's
+  reserve (#2962).
+
 - **`qfai validate` warns when an example changes and no test annotating it
   does.** In the `tdd` and `drift` profiles, an example row whose cells changed
   since the base raises `QFAI-DRIFT-002` at warning, naming the example ID and
@@ -61,6 +68,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   changed too. A new row and a table that was only re-padded raise nothing. The
   warning asks the owner to recheck the test; it does not prove the test asserts
   the new row (#2748).
+
+- **`qfai validate` counts the paths outside `.qfai` that spec documents name.**
+  In `sdd`, one `QFAI-STORY-015` warning for each of the policy, business-flow,
+  contract, and decision and open-question trees gives the lines and files that
+  name a file outside `.qfai` in a code span or link, so a project that keeps
+  its specifications self-contained can bring the count down. Discussion packs
+  are not read, and no option changes the severity (#3006).
 
 ### Fixed
 
@@ -99,6 +113,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `cli/` is the QFAI repository's own. The `QFAI-DB-001` row of the SQL findings
   table, which rendered outside the table, now sits beside the other rows.
   Fixes #2860.
+
+- **Story-tree findings name a test file relative to the project.** A
+  `QFAI-STORY-007` or `QFAI-STORY-008` finding printed the absolute path of the
+  checkout in its message and target, which differs on every machine. It now
+  prints the path from the project root (#3012).
 
 - **`qfai init --force` reports only the paths it changed.** The `written` count
   and list included every distributed file, including those already identical to
