@@ -304,6 +304,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   in the same file no longer passes at the same count. A pin still written as a
   bare count is refused with the command that re-pins it. Fixes #2355.
 
+- **The documentation-clarity rule allows the names the reader sees in the
+  product** (#3008). A screen label, a button name, an item name in a sheet the
+  document tells the reader to fill in and a product term met on screen may
+  appear in a document written for that reader. A term the reader cannot already
+  know is defined once at its first use.
+
 - **Five doctor criteria now name the tests that prove them.** Existing
   integration tests carry standalone `QFAI:AC-...` comments, and
   `AC-0003-0004-01` gains a deprecated `paths.promptsDir` warning case.
