@@ -299,7 +299,7 @@ describe("lint-shipping fixture — detection rules", () => {
       [
         "The SSOT lives at `packages/qfai/src/core/validators/taskFidelityKeywords.ts`.",
         "The review contract lives in `core/prototyping/evaluatorReview.ts`.",
-        "The classifier (`src/core/sddTriage.ts::classifyTriage`) appends first.",
+        "The encoder (`src/core/specPackParsers.ts::escapeTableCell`) runs first.",
         "- `cli`: commands implemented under `packages/qfai/src/cli/commands/`.",
         "",
       ].join("\n"),

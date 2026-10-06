@@ -524,11 +524,9 @@ export function escapeTableCell(value: string): string {
  * - Adding any new decode rule here (e.g. `<br>` → `\n`, or `\n` →
  *   `\n` if multi-line cells become supported) MUST be matched by a
  *   corresponding encode rule in `escapeTableCell`, AND the round-trip
- *   identity tests in `tests/core/sddTriage.test.ts` (under
+ *   identity tests in `tests/core/specPackParsers.test.ts` (under
  *   `describe("escapeTableCell ↔ splitMarkdownRow round-trip identity")`)
- *   MUST be extended with the new character class. The contract is
- *   also declared at the spec level for the SDD skill (Stage 1
- *   Triage business rules).
+ *   MUST be extended with the new character class.
  */
 export function splitMarkdownRow(line: string): string[] {
   const trimmed = line.trim();
