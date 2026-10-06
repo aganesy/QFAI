@@ -330,19 +330,19 @@ describe("generate-emitted-rule-codes.mjs", () => {
     expect(errorOnly).not.toContain('"QFAI-EXAMPLE-081"');
   });
 
-  // `tddList.ts` raises one code and narrows each finding with a per-defect
+  // `waivers.ts` raises one code and narrows each finding with a per-defect
   // `rule`. A waiver may name either spelling, so the ids that never appear as
   // a `code` have to be published — as aliases, not as codes.
   it("collects a rule-id alias no code literal yields", async () => {
     const dir = await newTempDir();
     const output = path.join(dir, "emittedRuleCodes.ts");
     await writeFile(
-      path.join(dir, "tddList.ts"),
+      path.join(dir, "waivers.ts"),
       [
         'const UNRESOLVED_DR_RULE_ID = "EXAMPLELIST-003";',
         'issue("QFAI-EXAMPLE-090", "msg", "warning", file, UNRESOLVED_DR_RULE_ID);',
         // A dotted validator path is what this argument usually carries.
-        'issue("QFAI-EXAMPLE-091", "msg", "warning", file, "tddList.evidence");',
+        'issue("QFAI-EXAMPLE-091", "msg", "warning", file, "waivers.evidence");',
       ].join("\n"),
       "utf-8",
     );
@@ -358,7 +358,7 @@ describe("generate-emitted-rule-codes.mjs", () => {
     // code it was carried by must not join the aliases.
     expect(codes).not.toContain('"EXAMPLELIST-003"');
     expect(aliases).not.toContain('"QFAI-EXAMPLE-090"');
-    expect(written).not.toContain("tddList.evidence");
+    expect(written).not.toContain("waivers.evidence");
   });
 
   // `cli/` pushes its findings on after `core/validate.ts` has run

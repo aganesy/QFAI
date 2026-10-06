@@ -113,6 +113,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `package.json#packageManager` names before the first `pnpm` call, retrying up
   to four times, so one network reset no longer fails a job. The hard-coded
   `9.12.3` in both places is gone.
+- **The shipped delegation baseline no longer points at a removed validator.**
+  The `record:unchecked` clause named `validateTddList`, which does not exist;
+  it now states only that the class never substitutes for the repair.
+  `docs/finding-codes.md` and two test comments no longer use the retired TDD
+  ledger codes as examples (#2607).
 - **The dogfooding backlog guard names every command a re-pin takes** (#2415).
   `scripts/dogfood-backlog.json` is a pinned guard input, so re-pinning it
   moves its digest. When a pin is behind the tree or a file is over its pin,
