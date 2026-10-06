@@ -370,6 +370,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   over. The plan is now `edit`, `note`, `verify`, and the contract rule and the
   example that state it say the same.
 
+- **`workflow plan` says which way a rejected extraction field is wrong.** Each
+  `schema` reason now carries a `cause`: `missing` for a required field that is
+  absent, `unknown` for a key the extraction does not take, `wrong-type` or
+  `wrong-value` with the expected and received values, and `invalid` for the
+  `alternatives` and `confidence` rule (#3104).
 - **The shipped rules state their points directly.** Figurative phrasing in the
   user-questions, grilling, interface-clarity, api-budget, ai-readable-markdown
   and untrusted-content rules and in the stage-cost rule is replaced by plain
