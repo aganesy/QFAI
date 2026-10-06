@@ -1027,6 +1027,29 @@ describe("uiux validators", () => {
     expect(byCode.get("QFAI-MOCK-009")?.severity).toBe("error");
   });
 
+  it("finds mocks under a discussion directory spelled with a backslash", async () => {
+    const root = await newTempDir();
+    const discussionDir = path.join(root, ".qfai", "discussion");
+    await mkdir(discussionDir, { recursive: true });
+
+    const md = [
+      "## Screen Mock (HTML+CSS)",
+      "",
+      "```html",
+      '<button style="width: 20px; height: 20px">Tap</button>',
+      "```",
+      "",
+    ].join("\n");
+    await writeFile(path.join(discussionDir, "mock.md"), md, "utf-8");
+
+    const issues = await validateHtmlMock(root, "mobile-ios", {
+      ...defaultConfig,
+      paths: { ...defaultConfig.paths, discussionDir: ".qfai\\discussion" },
+    });
+
+    expect(issues.some((item) => item.code === "QFAI-MOCK-009")).toBe(true);
+  });
+
   it("validates inline HTML mock blocks in visual mock sections", async () => {
     const root = await newTempDir();
     const discussionDir = path.join(root, ".qfai", "discussion");

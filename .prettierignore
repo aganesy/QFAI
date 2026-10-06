@@ -15,6 +15,11 @@ node_modules
 # The migrated decision ledger preserves archived table cells and provenance.
 # Prettier expands its long cells into a multi-megabyte padded table.
 .qfai/spec/decisions.md
+# A contract keeps its business rules in one long table. Prettier pads every
+# row to the widest cell, so editing one rule rewrites the whole table and
+# conflicts with every concurrent edit. Tables here use the compact style
+# (one space around each cell), which `lint:md` accepts.
+.qfai/spec/03_contract/**
 # An archived pack is a frozen record, so reformatting one is churn on a
 # document nobody is editing — and `check-pack-locations` reads the changed
 # paths, so that churn reports the archive directory as a misplaced pack. The

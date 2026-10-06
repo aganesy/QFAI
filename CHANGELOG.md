@@ -148,7 +148,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Migration step 3 says the row of a layer was dropped for holding a path when
   another layer depends on it, and the `tech.md` template and the authoring
   guide draw layer labels in double quotes. Part of #2666.
-
+- **A configured spec path names one directory for every reader (#2632).**
+  The document-schema lane now decodes a double-quoted `paths.specsDir` or
+  `paths.contractsDir` the way the configuration loader does, so
+  `"docs\tree"` is no longer read as `docs/tree`. The HTML mock checks read
+  a backslash in `paths.discussionDir` as a separator in their file glob.
 - **The `qfai-run` entry reminder stays silent on a turn the host starts
   (#2989).** The Claude Code `UserPromptSubmit` hook that sends a request to
   `qfai-run` printed on every notification, so an agent could start a run from

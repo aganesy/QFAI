@@ -165,6 +165,8 @@ async function main(root) {
     );
     return 1;
   }
+  const { checkInstalled } = await import("./lib/require-installed.mjs");
+  if (checkInstalled() !== 0) return 1;
   const { LIFECYCLE_MANIFESTS_REL, lifecycleProjection } =
     await import("./check-lifecycle-manifests.mjs");
   const { writeFormattedJson } = await import("./lib/write-declaration.mjs");
@@ -240,7 +242,9 @@ async function main(root) {
     stdout.write(`${digest}  ${rel} (pinned in ${WORKFLOW_REL})\n`);
   }
   writeFileSync(workflowPath, workflow, "utf-8");
-  stdout.write("now run `node scripts/pin-verification-bodies.mjs`\n");
+  stdout.write(
+    "now run `node scripts/pin-verification-bodies.mjs`, which needs the dependencies installed (`pnpm install`)\n",
+  );
   return 0;
 }
 
