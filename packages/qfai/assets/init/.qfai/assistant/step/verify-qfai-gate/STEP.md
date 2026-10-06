@@ -31,8 +31,10 @@ signals; this one decides. It records failures and repairs none of them:
 ## Procedure
 
 1. Run the validation of the scope through `common-gate-run`:
-   - `full`: `npx qfai validate --profile verify --fail-on error`, or the
-     default `npx qfai validate --fail-on error`;
+   - `full`: the project's `Validate` entry, where it has one (see
+     `## A recorded backlog`); otherwise
+     `npx qfai validate --profile verify --fail-on error`, or the default
+     `npx qfai validate --fail-on error`;
    - `prototyping`: `npx qfai validate --profile prototyping --fail-on error`.
 2. Run `npx qfai report` when the repository uses it.
 3. Report each result in the stage report.
@@ -47,6 +49,20 @@ use one as their own gate, those runs are legitimate under `CI=true`, and
 blocking them. The prototyping profile is the prototyping stage's own gate:
 CI runs its checks inside the full scan, and no CI lane runs the profile on
 its own.
+
+## A recorded backlog
+
+A project may carry findings it has recorded and accepted, and hold them with a
+ratchet that its `Validate` entry in
+`.qfai/spec/03_contract/tech.md#standard-commands-copy-paste` runs: each file
+named in a committed pin may report no more errors than its pinned count, and a
+file the pin does not name may report none. The ratchet passes only within the
+pin, so a new finding fails it.
+
+- The entry's result is the gate's result. Record the pinned count beside it.
+- The ratchet is not a waiver: the findings stay reported, and the pin may only
+  fall.
+- A project with no such entry runs the command above, where any `error` fails.
 
 ## Findings
 
@@ -72,4 +88,5 @@ scan cannot prove coverage; a missing layer is never a passing scan.
 The step is done when:
 
 - validation ran in the profile the scope names, and its result is recorded;
-- `error=0` for a pass, or the failing findings are recorded for the fix loop.
+- `error=0` for a pass, or the errors are all within the project's recorded
+  backlog, or the failing findings are recorded for the fix loop.

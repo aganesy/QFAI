@@ -23,5 +23,6 @@ Feature: Run `/qfai-sdd` as a scoped stage
     Given an sdd stage
     When the stage has a proposal for the story-tree and contract files it would change
     Then it shows the user the files and the proposal, and changes nothing until the user answers
+    And a request from the user in the session that names the change and its effect is that answer: the stage lists the files in its announcement and asks no second question
     And on approval it writes the change and one Change request row naming every protected file it changed, with who approved it, when and the option chosen
 ```

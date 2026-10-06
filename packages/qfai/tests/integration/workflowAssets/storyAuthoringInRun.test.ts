@@ -90,11 +90,15 @@ describe("qfai-sdd changes the story tree", () => {
 
   // QFAI:AC-0001-0207-06
   // QFAI:EX-0001-0207-06
+  // QFAI:EX-0001-0207-07
   it("changes the story tree only on the user's approval, recording who approved it, when and what", async () => {
     const text = await section(TRIAGE, "### A change to the story tree");
     expect(text).toMatch(/changes only on the user's approval/i);
     expect(text).toMatch(
       /show the user the files the stage would change and the proposed change, and change nothing until the user answers/i,
+    );
+    expect(text).toMatch(
+      /a request from the user in the session that names the change and its effect is that answer: the stage lists the files in its announcement, asks no second question, and records the request as the option chosen/i,
     );
     expect(text).toMatch(
       /on approval, write the change and append one `decisions\.md` row whose Content opens `Change request:`/i,
