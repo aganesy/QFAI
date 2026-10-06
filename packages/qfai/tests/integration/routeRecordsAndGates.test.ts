@@ -13,8 +13,7 @@ import { readRule } from "../helpers/ruleWithReferences.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const assistant = path.join(repoRoot, "packages/qfai/assets/init/.qfai/assistant");
-const read = (relative: string): Promise<string> =>
-  readRule(path.join(assistant, relative));
+const read = (relative: string): Promise<string> => readRule(path.join(assistant, relative));
 const flat = (text: string): string => text.replace(/\s+/g, " ");
 
 async function stepNames(): Promise<string[]> {
