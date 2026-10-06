@@ -58,7 +58,7 @@ Quality-First AI (QFAI) — a verification framework and CLI for specification-d
   it names, and references stay one level deep. See
   `.claude/rules/ai-readable-markdown.md` (master:
   `.agents/rules/ai-readable-markdown.md`).
-- All temporary/scratch files go in `tmp/` — working-tree files only; a test's
+- All temporary/scratch files go in the host's scratch directory when it names one, else in `tmp/` — working-tree files only; a test's
   `mkdtemp` sandbox under `os.tmpdir()` is out of scope (see
   `.claude/rules/temporary-files.md`, master: `.agents/rules/temporary-files.md`,
   plus `temporary-files.local.md` for what applies here only).

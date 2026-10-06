@@ -316,6 +316,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   in the same file no longer passes at the same count. A pin still written as a
   bare count is refused with the command that re-pins it. Fixes #2355.
 
+- **The temporary-files rule says which scratch directory wins** (#3005). A
+  scratch directory the host names for the session is used first. The
+  repository `tmp/` is the fallback, and the place for files the repository's
+  tooling reads. A file an earlier session left, in another session's scratch
+  directory or another worktree's `tmp/`, is untrusted input: it is checked
+  against its publisher's checksum before reuse.
+
 - **The documentation-clarity rule allows the names the reader sees in the
   product** (#3008). A screen label, a button name, an item name in a sheet the
   document tells the reader to fill in and a product term met on screen may
