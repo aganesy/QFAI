@@ -11,7 +11,7 @@
  * `cmd.exe /C` and PowerShell.
  */
 
-import { copyFile, mkdir, mkdtemp, readFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -197,13 +197,13 @@ describe("the Codex tool-time reminders", () => {
         expect(group.hooks.map(codexKey)).toEqual(twin[0]?.hooks.map(claudeKey));
       }
     }
-    const post = (await readGroups(SHIPPED_CODEX, "PreToolUse")).find((group) =>
+    const codexGithubGroup = (await readGroups(SHIPPED_CODEX, "PreToolUse")).find((group) =>
       String(group.matcher).startsWith("mcp__github__"),
     );
-    const claudePost = (await readGroups(SHIPPED_SETTINGS, "PreToolUse")).find(
+    const claudeGithubGroup = (await readGroups(SHIPPED_SETTINGS, "PreToolUse")).find(
       (group) => markersOf(group) === JSON.stringify([DOCUMENTATION_CLARITY_HOOK_MARKER]),
     );
-    expect(post?.matcher).toBe(claudePost?.matcher);
+    expect(codexGithubGroup?.matcher).toBe(claudeGithubGroup?.matcher);
   });
 
   it("carry no plan reminder, which Codex has no tool call for", async () => {
@@ -254,6 +254,18 @@ describe("the Codex tool-time reminders", () => {
     for (const program of programs) expect(program).toContain(locate);
   });
 
+  it("stop looking for the message file at a nested checkout whose .git is a file", async () => {
+    const entry = await codexEntry("PreToolUse", "api-budget");
+    await withProject(async (cwd) => {
+      const nested = path.join(cwd, "vendor", "checkout");
+      await mkdir(nested, { recursive: true });
+      await writeFile(path.join(nested, ".git"), "gitdir: ../../.git/modules/checkout\n");
+      const input = codexInput("PreToolUse", "Bash", "gh api repos/o/r");
+      expect(await firedEvent(entry, cwd, input)).toBe("PreToolUse");
+      expect(await firedEvent(entry, nested, input)).toBeNull();
+    });
+  });
+
   it("print nothing and exit 0 outside a repository", async () => {
     const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-codex-tool-outside-"));
     try {
@@ -299,6 +311,7 @@ describe("the Codex tool-time reminders", () => {
         ["*** Update File: README.md", null, "PostToolUse", null],
         ["*** Update File: src/a.ts", null, null, "PostToolUse"],
         ["*** Add File: docs/a.mdx", null, null, null],
+        ["*** Delete File: x.md", null, null, null],
       ] as const;
       for (const [header, writeFires, editFires, minimalFires] of cases) {
         const post = codexInput("PostToolUse", "apply_patch", patch(header));
