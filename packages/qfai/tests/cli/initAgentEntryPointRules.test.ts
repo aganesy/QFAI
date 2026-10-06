@@ -147,7 +147,7 @@ async function plantEntryPoints(
   const originals = templates.map(({ name, text, mode }) => ({
     name,
     mode,
-    text: `﻿${text.replace(REVIEW_POINTER, source)}${PROJECT_TEXT}`.replace(/\n/g, end),
+    text: `\uFEFF${text.replace(REVIEW_POINTER, source)}${PROJECT_TEXT}`.replace(/\n/g, end),
   }));
   for (const { name, text } of originals) await writeFile(path.join(root, name), text, "utf-8");
   return originals;
@@ -1294,7 +1294,7 @@ describe("optional review directive detection", () => {
           root,
           originals,
           force,
-          (text) => (source.hidden ? `﻿${REVIEW_POINTER}${end}${end}${text.slice(1)}` : text),
+          (text) => (source.hidden ? `\uFEFF${REVIEW_POINTER}${end}${end}${text.slice(1)}` : text),
           2,
         );
       });
@@ -1322,7 +1322,7 @@ describe("optional review directive detection", () => {
           root,
           originals,
           force,
-          (text) => (source.hidden ? `﻿${REVIEW_POINTER}${end}${end}${text.slice(1)}` : text),
+          (text) => (source.hidden ? `\uFEFF${REVIEW_POINTER}${end}${end}${text.slice(1)}` : text),
           2,
         );
       });
@@ -1734,7 +1734,7 @@ describe("optional review directive detection", () => {
           root,
           originals,
           force,
-          (text) => `﻿${REVIEW_POINTER}\r\n\r\n${text.slice(1)}`,
+          (text) => `\uFEFF${REVIEW_POINTER}\r\n\r\n${text.slice(1)}`,
           1,
         );
       });
