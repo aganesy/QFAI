@@ -84,7 +84,7 @@ export const SPEC_ITEM_ID_KINDS = [
 
 /**
  * A fresh matcher for item IDs in free text, including the composite
- * `BR-0001-0002` form that `extractIdsByKind` would report as bare `BR-0001`.
+ * `BR-0006-0002` form that `extractIdsByKind` would report as bare `BR-0001`.
  *
  * The digit run is `\d+`, matching `STRICT_ID_PATTERNS` above: canonical IDs
  * are 4-digit, but `BR-1` and `TC-12345` are accepted as valid IDs elsewhere,

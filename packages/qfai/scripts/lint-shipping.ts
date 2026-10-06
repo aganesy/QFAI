@@ -15,6 +15,8 @@ import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { declaredSampleBandPattern } from "./lib/declared-sample-band-ids.mjs";
+
 export type LintViolation = {
   file: string;
   line: number;
@@ -396,7 +398,11 @@ function classifyTarget(absolutePath: string, pkgRoot: string): Target | null {
   return null;
 }
 
-async function lintFile(absolutePath: string, pkgRoot: string): Promise<LintViolation[]> {
+async function lintFile(
+  absolutePath: string,
+  pkgRoot: string,
+  rules: ReadonlyArray<PatternRule>,
+): Promise<LintViolation[]> {
   const violations: LintViolation[] = [];
   const targetCategory = classifyTarget(absolutePath, pkgRoot);
   if (targetCategory === null) return violations;
@@ -410,14 +416,12 @@ async function lintFile(absolutePath: string, pkgRoot: string): Promise<LintViol
   const isTs = absolutePath.endsWith(".ts");
   const lines = body.split(/\r?\n/);
   const relPath = path.relative(pkgRoot, absolutePath).replace(/\\/g, "/");
-  const applicableRules = PATTERNS.filter((rule) => rule.appliesTo.includes(targetCategory));
+  const applicableRules = rules.filter((rule) => rule.appliesTo.includes(targetCategory));
   // src/*.ts files get a SECOND set of rules that run ON comment lines
   // (the inverse of the comment-skip below). These catch JSDoc leakage
   // into dist/*.d.ts.
   const srcCommentRules =
-    targetCategory === "src"
-      ? PATTERNS.filter((rule) => rule.appliesTo.includes("src-comment"))
-      : [];
+    targetCategory === "src" ? rules.filter((rule) => rule.appliesTo.includes("src-comment")) : [];
 
   if (relPath.startsWith("assets/init/.qfai/spec/")) {
     violations.push({
@@ -499,6 +503,25 @@ async function lintFile(absolutePath: string, pkgRoot: string): Promise<LintViol
   return violations;
 }
 
+/**
+ * The ID shapes inside the sample band that this repository declares, as a rule
+ * for source comments. The set comes from the spec tree beside the package, so
+ * a package checked out alone has none.
+ */
+function declaredSampleBandRules(pkgRoot: string): PatternRule[] {
+  const pattern = declaredSampleBandPattern(path.resolve(pkgRoot, "..", ".."));
+  if (pattern === null) return [];
+  return [
+    {
+      name: "declared-sample-band-id",
+      re: new RegExp(pattern),
+      suggestion:
+        "An ID inside the sample band that this repository declares names a document readers of the published package cannot open. Use an ID the repository does not declare, or describe the rule in words.",
+      appliesTo: ["src-comment"],
+    },
+  ];
+}
+
 export async function runLintShipping(
   pkgRoot: string,
 ): Promise<{ violations: LintViolation[]; scannedFileCount: number }> {
@@ -508,10 +531,11 @@ export async function runLintShipping(
     allFiles.push(...(await listFiles(absolute)));
   }
   const targetFiles = allFiles.filter((f) => isTargetFile(f, pkgRoot));
+  const rules = [...PATTERNS, ...declaredSampleBandRules(pkgRoot)];
 
   const violations: LintViolation[] = [];
   for (const file of targetFiles) {
-    violations.push(...(await lintFile(file, pkgRoot)));
+    violations.push(...(await lintFile(file, pkgRoot, rules)));
   }
 
   return { violations, scannedFileCount: targetFiles.length };
