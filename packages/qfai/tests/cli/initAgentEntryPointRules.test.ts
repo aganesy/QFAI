@@ -118,6 +118,74 @@ async function initCapturingStderr(root: string): Promise<string> {
   return chunks.join("");
 }
 
+type EntryTemplate = { name: string; text: string; mode: number };
+
+/** A project initialised once, with each entry point it wrote read back as a template. */
+async function withInitialisedProject(
+  task: (root: string, templates: EntryTemplate[]) => Promise<void>,
+): Promise<void> {
+  await withProject(async (root) => {
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+    const templates = await Promise.all(
+      AGENT_ENTRY_POINT_FILES.map(async (name) => ({
+        name,
+        text: await readEntryPoint(root, name),
+        mode: (await stat(path.join(root, name))).mode,
+      })),
+    );
+    await task(root, templates);
+  });
+}
+
+/** Writes every entry point with the review directive replaced by `source`, line ends as `end`. */
+async function plantEntryPoints(
+  root: string,
+  templates: EntryTemplate[],
+  source: string,
+  end: string,
+): Promise<EntryTemplate[]> {
+  const originals = templates.map(({ name, text, mode }) => ({
+    name,
+    mode,
+    text: `\uFEFF${text.replace(REVIEW_POINTER, source)}${PROJECT_TEXT}`.replace(/\n/g, end),
+  }));
+  for (const { name, text } of originals) await writeFile(path.join(root, name), text, "utf-8");
+  return originals;
+}
+
+/** Runs init `runs` times; after each, every entry point reads `expected(its original text)`. */
+async function expectInitWrites(
+  root: string,
+  originals: EntryTemplate[],
+  force: boolean,
+  expected: (text: string) => string,
+  runs: number,
+): Promise<void> {
+  for (let run = 0; run < runs; run += 1) {
+    await runInit({ dir: root, force, dryRun: false, yes: true });
+    for (const { name, text, mode } of originals) {
+      expect(await readEntryPoint(root, name)).toBe(expected(text));
+      expect((await stat(path.join(root, name))).mode).toBe(mode);
+    }
+  }
+}
+
+/**
+ * One case per force value, source and line ending. Each case is its own test, so it has its
+ * own timeout and a project initialised for it alone, where one test running every case in
+ * sequence repeated a full init dozens of times.
+ */
+function initCases<T>(
+  sources: readonly T[],
+  lineEnds: readonly string[] = ["\n", "\r\n"],
+): { force: boolean; index: number; source: T; end: string; endName: string }[] {
+  return [false, true].flatMap((force) =>
+    sources.flatMap((source, index) =>
+      lineEnds.map((end) => ({ force, index, source, end, endName: JSON.stringify(end) })),
+    ),
+  );
+}
+
 // QFAI:EX-0001-0021-03
 // QFAI:EX-0001-0021-04
 // QFAI:EX-0001-0021-05
@@ -1202,186 +1270,101 @@ describe("optional review directive detection", () => {
     },
   );
 
-  it.each([false, true])(
-    "keeps review boundary repairs byte-preserving with force=%s",
-    async (force) => {
-      await withProject(async (root) => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
-        const templates = await Promise.all(
-          AGENT_ENTRY_POINT_FILES.map(async (name) => ({
-            name,
-            text: await readEntryPoint(root, name),
-            mode: (await stat(path.join(root, name))).mode,
-          })),
+  const BOUNDARY_LABEL = `${"a".repeat(997)}\nok`;
+  const BOUNDARY_SOURCES = [
+    { text: `![\n${REVIEW_POINTER}\n][image]\n\n- > [image]: /image.png`, hidden: true },
+    { text: `[^1]: Hidden note\n    ${REVIEW_POINTER}`, hidden: true },
+    { text: `[^1]: Hidden note\n${REVIEW_POINTER}`, hidden: true },
+    { text: `- [^1]: Hidden\n  ${REVIEW_POINTER}`, hidden: true },
+    { text: `\`unclosed | head\n--- | ---\n${REVIEW_POINTER}`, hidden: false },
+    { text: `- - ${REVIEW_POINTER}`, hidden: false },
+    {
+      text: `![\n${REVIEW_POINTER}\n][${BOUNDARY_LABEL}]\n\n[${BOUNDARY_LABEL}]: /image.png`,
+      hidden: true,
+    },
+    { text: `\`\`Unclosed\n# Heading\n${REVIEW_POINTER}\nClosing\`\``, hidden: false },
+  ];
+
+  it.each(initCases(BOUNDARY_SOURCES))(
+    "keeps review boundary repairs byte-preserving with force=$force, source $index, line end $endName",
+    async ({ force, source, end }) => {
+      await withInitialisedProject(async (root, templates) => {
+        const originals = await plantEntryPoints(root, templates, source.text, end);
+        await expectInitWrites(
+          root,
+          originals,
+          force,
+          (text) => (source.hidden ? `\uFEFF${REVIEW_POINTER}${end}${end}${text.slice(1)}` : text),
+          2,
         );
-        const label = `${"a".repeat(997)}\nok`;
-        for (const source of [
-          { text: `![\n${REVIEW_POINTER}\n][image]\n\n- > [image]: /image.png`, hidden: true },
-          { text: `[^1]: Hidden note\n    ${REVIEW_POINTER}`, hidden: true },
-          { text: `[^1]: Hidden note\n${REVIEW_POINTER}`, hidden: true },
-          { text: `- [^1]: Hidden\n  ${REVIEW_POINTER}`, hidden: true },
-          { text: `\`unclosed | head\n--- | ---\n${REVIEW_POINTER}`, hidden: false },
-          { text: `- - ${REVIEW_POINTER}`, hidden: false },
-          { text: `![\n${REVIEW_POINTER}\n][${label}]\n\n[${label}]: /image.png`, hidden: true },
-          { text: `\`\`Unclosed\n# Heading\n${REVIEW_POINTER}\nClosing\`\``, hidden: false },
-        ]) {
-          for (const end of ["\n", "\r\n"]) {
-            const originals = templates.map(({ name, text, mode }) => ({
-              name,
-              mode,
-              text: `\uFEFF${text.replace(REVIEW_POINTER, source.text)}${PROJECT_TEXT}`.replace(
-                /\n/g,
-                end,
-              ),
-            }));
-            for (const { name, text } of originals)
-              await writeFile(path.join(root, name), text, "utf-8");
-            for (let run = 0; run < 2; run += 1) {
-              await runInit({ dir: root, force, dryRun: false, yes: true });
-              for (const { name, text, mode } of originals) {
-                expect(await readEntryPoint(root, name)).toBe(
-                  source.hidden ? `\uFEFF${REVIEW_POINTER}${end}${end}${text.slice(1)}` : text,
-                );
-                expect((await stat(path.join(root, name))).mode).toBe(mode);
-              }
-            }
-          }
-        }
       });
     },
   );
 
-  it.each([false, true])(
-    "keeps inline review repairs byte-preserving with force=%s",
-    async (force) => {
-      await withProject(async (root) => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
-        const templates = await Promise.all(
-          AGENT_ENTRY_POINT_FILES.map(async (name) => ({
-            name,
-            text: await readEntryPoint(root, name),
-            mode: (await stat(path.join(root, name))).mode,
-          })),
+  const INLINE_REVIEW_SOURCES = [
+    { text: `![\n${REVIEW_POINTER}\n[caption]\n](/image.png)`, hidden: true },
+    {
+      text: `![\n${REVIEW_POINTER}\n[caption]\n][image]\n\n[image]: /image.png`,
+      hidden: true,
+    },
+    { text: `- - ~~~md\n    ${REVIEW_POINTER}\n    ~~~`, hidden: true },
+    { text: `<span title=" | head\n--- | ---\n${REVIEW_POINTER}\n">`, hidden: false },
+    { text: `\\\`\n${REVIEW_POINTER}\n\``, hidden: false },
+    { text: `\\<!--\n${REVIEW_POINTER}\n-->`, hidden: false },
+  ];
+
+  it.each(initCases(INLINE_REVIEW_SOURCES))(
+    "keeps inline review repairs byte-preserving with force=$force, source $index, line end $endName",
+    async ({ force, source, end }) => {
+      await withInitialisedProject(async (root, templates) => {
+        const originals = await plantEntryPoints(root, templates, source.text, end);
+        await expectInitWrites(
+          root,
+          originals,
+          force,
+          (text) => (source.hidden ? `\uFEFF${REVIEW_POINTER}${end}${end}${text.slice(1)}` : text),
+          2,
         );
-        for (const source of [
-          { text: `![\n${REVIEW_POINTER}\n[caption]\n](/image.png)`, hidden: true },
-          {
-            text: `![\n${REVIEW_POINTER}\n[caption]\n][image]\n\n[image]: /image.png`,
-            hidden: true,
-          },
-          { text: `- - ~~~md\n    ${REVIEW_POINTER}\n    ~~~`, hidden: true },
-          { text: `<span title=" | head\n--- | ---\n${REVIEW_POINTER}\n">`, hidden: false },
-          { text: `\\\`\n${REVIEW_POINTER}\n\``, hidden: false },
-          { text: `\\<!--\n${REVIEW_POINTER}\n-->`, hidden: false },
-        ]) {
-          for (const end of ["\n", "\r\n"]) {
-            const originals = templates.map(({ name, text, mode }) => ({
-              name,
-              mode,
-              text: `\uFEFF${text.replace(REVIEW_POINTER, source.text)}${PROJECT_TEXT}`.replace(
-                /\n/g,
-                end,
-              ),
-            }));
-            for (const { name, text } of originals)
-              await writeFile(path.join(root, name), text, "utf-8");
-            for (let run = 0; run < 2; run += 1) {
-              await runInit({ dir: root, force, dryRun: false, yes: true });
-              for (const { name, text, mode } of originals) {
-                expect(await readEntryPoint(root, name)).toBe(
-                  source.hidden ? `\uFEFF${REVIEW_POINTER}${end}${end}${text.slice(1)}` : text,
-                );
-                expect((await stat(path.join(root, name))).mode).toBe(mode);
-              }
-            }
-          }
-        }
       });
     },
   );
 
-  it.each([false, true])(
-    "keeps inline precedence repairs byte-preserving with force=%s",
-    async (force) => {
-      await withProject(async (root) => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
-        const templates = await Promise.all(
-          AGENT_ENTRY_POINT_FILES.map(async (name) => ({
-            name,
-            text: await readEntryPoint(root, name),
-            mode: (await stat(path.join(root, name))).mode,
-          })),
-        );
-        for (const source of [
-          `![prefix [nested] | head\n--- | ---\n${REVIEW_POINTER}\n](/image.png) |`,
-          `![prefix [nested]\n${REVIEW_POINTER}\n<span title="](/image.png)">`,
-          `![prefix [nested]\n${REVIEW_POINTER}\n<https://example.com/](/image.png)>`,
-          `![prefix [nested]\n${REVIEW_POINTER}\nlater <!-- ](/image.png) -->`,
-          `Paragraph\n2. - ~~~\n     ${REVIEW_POINTER}\n     ~~~`,
-          `![prefix [nested]\n${REVIEW_POINTER}\nfoo | bar\n--- | ---\n](/image.png)`,
-        ]) {
-          for (const end of ["\n", "\r\n"]) {
-            const originals = templates.map(({ name, text, mode }) => ({
-              name,
-              mode,
-              text: `\uFEFF${text.replace(REVIEW_POINTER, source)}${PROJECT_TEXT}`.replace(
-                /\n/g,
-                end,
-              ),
-            }));
-            for (const { name, text } of originals)
-              await writeFile(path.join(root, name), text, "utf-8");
-            for (let run = 0; run < 2; run += 1) {
-              await runInit({ dir: root, force, dryRun: false, yes: true });
-              for (const { name, text, mode } of originals) {
-                expect(await readEntryPoint(root, name)).toBe(text);
-                expect((await stat(path.join(root, name))).mode).toBe(mode);
-              }
-            }
-          }
-        }
+  const INLINE_PRECEDENCE_SOURCES = [
+    `![prefix [nested] | head\n--- | ---\n${REVIEW_POINTER}\n](/image.png) |`,
+    `![prefix [nested]\n${REVIEW_POINTER}\n<span title="](/image.png)">`,
+    `![prefix [nested]\n${REVIEW_POINTER}\n<https://example.com/](/image.png)>`,
+    `![prefix [nested]\n${REVIEW_POINTER}\nlater <!-- ](/image.png) -->`,
+    `Paragraph\n2. - ~~~\n     ${REVIEW_POINTER}\n     ~~~`,
+    `![prefix [nested]\n${REVIEW_POINTER}\nfoo | bar\n--- | ---\n](/image.png)`,
+  ];
+
+  it.each(initCases(INLINE_PRECEDENCE_SOURCES))(
+    "keeps inline precedence repairs byte-preserving with force=$force, source $index, line end $endName",
+    async ({ force, source, end }) => {
+      await withInitialisedProject(async (root, templates) => {
+        const originals = await plantEntryPoints(root, templates, source, end);
+        await expectInitWrites(root, originals, force, (text) => text, 2);
       });
     },
   );
 
-  it.each([false, true])(
-    "keeps failed HTML scan repairs byte-preserving with force=%s",
-    async (force) => {
-      await withProject(async (root) => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
-        const templates = await Promise.all(
-          AGENT_ENTRY_POINT_FILES.map(async (name) => ({
-            name,
-            text: await readEntryPoint(root, name),
-            mode: (await stat(path.join(root, name))).mode,
-          })),
-        );
-        for (const [opener, closer] of [
-          ["<?aaaa", "?>"],
-          ["<![CDATA[aaaa", "]]>"],
-          ["<!DOCTYPE aaaa ", ">"],
-        ] as const) {
-          const source = `prefix ${opener.repeat(256)}\n\nprefix ${opener.repeat(256)}\nhead | detail\n--- | ---\nprefix ${opener}closed${closer}\n${REVIEW_POINTER}`;
-          for (const end of ["\n", "\r\n"]) {
-            const originals = templates.map(({ name, text, mode }) => ({
-              name,
-              mode,
-              text: `\uFEFF${text.replace(REVIEW_POINTER, source)}${PROJECT_TEXT}`.replace(
-                /\n/g,
-                end,
-              ),
-            }));
-            for (const { name, text } of originals)
-              await writeFile(path.join(root, name), text, "utf-8");
-            for (let run = 0; run < 2; run += 1) {
-              await runInit({ dir: root, force, dryRun: false, yes: true });
-              for (const { name, text, mode } of originals) {
-                expect(await readEntryPoint(root, name)).toBe(text);
-                expect((await stat(path.join(root, name))).mode).toBe(mode);
-              }
-            }
-          }
-        }
+  const FAILED_HTML_SCAN_SOURCES = (
+    [
+      ["<?aaaa", "?>"],
+      ["<![CDATA[aaaa", "]]>"],
+      ["<!DOCTYPE aaaa ", ">"],
+    ] as const
+  ).map(
+    ([opener, closer]) =>
+      `prefix ${opener.repeat(256)}\n\nprefix ${opener.repeat(256)}\nhead | detail\n--- | ---\nprefix ${opener}closed${closer}\n${REVIEW_POINTER}`,
+  );
+
+  it.each(initCases(FAILED_HTML_SCAN_SOURCES))(
+    "keeps failed HTML scan repairs byte-preserving with force=$force, source $index, line end $endName",
+    async ({ force, source, end }) => {
+      await withInitialisedProject(async (root, templates) => {
+        const originals = await plantEntryPoints(root, templates, source, end);
+        await expectInitWrites(root, originals, force, (text) => text, 2);
       });
     },
   );
@@ -1719,59 +1702,41 @@ describe("optional review directive detection", () => {
     },
   );
 
-  it.each([false, true])(
-    "preserves project bytes when adding guidance outside an example with force=%s",
-    async (force) => {
-      await withProject(async (root) => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
-        const templates = await Promise.all(
-          AGENT_ENTRY_POINT_FILES.map(async (name) => ({
-            name,
-            text: await readEntryPoint(root, name),
-            mode: (await stat(path.join(root, name))).mode,
-          })),
+  const EXAMPLE_SOURCES = [
+    `    - ${REVIEW_POINTER}`,
+    `<pre>\n${REVIEW_POINTER}\n</pre>`,
+    `- Project rules\n\n      ${REVIEW_POINTER}`,
+    `10. Project rules\n\n        ${REVIEW_POINTER}`,
+    `- <pre>\n  ${REVIEW_POINTER}\n  </pre>`,
+    `[](https://example.com "\n${REVIEW_POINTER}\n")`,
+    `> Quoted example\n${REVIEW_POINTER}`,
+    `> > Quoted example\n${REVIEW_POINTER}`,
+    `<span\ntitle="\n${REVIEW_POINTER}\n">Example</span>`,
+    `<span\ntitle='\n${REVIEW_POINTER}\n'>Example</span>`,
+    `<span title="\n<![cdata[\n${REVIEW_POINTER}\n">Example</span>`,
+    `> [example]: /url\n${REVIEW_POINTER}`,
+    `![\n${REVIEW_POINTER}\n](/image.png)`,
+    `![\n${REVIEW_POINTER}\n][image]\n\n[image]: /image.png`,
+    `![\n${REVIEW_POINTER}\n][]\n\n[\n${REVIEW_POINTER}\n]: /image.png`,
+    `![\n${REVIEW_POINTER}\n]\n\n[\n${REVIEW_POINTER}\n]: /image.png`,
+    `[example]: /url "\n${REVIEW_POINTER}\n"`,
+    `[example]: /url '\n${REVIEW_POINTER}\n'`,
+    `[example]: /url (\n${REVIEW_POINTER}\n)`,
+    `[\n${REVIEW_POINTER}\n]: /url`,
+  ];
+
+  it.each(initCases(EXAMPLE_SOURCES, ["\r\n"]))(
+    "preserves project bytes when adding guidance outside an example with force=$force, example $index",
+    async ({ force, source, end }) => {
+      await withInitialisedProject(async (root, templates) => {
+        const originals = await plantEntryPoints(root, templates, source, end);
+        await expectInitWrites(
+          root,
+          originals,
+          force,
+          (text) => `\uFEFF${REVIEW_POINTER}\r\n\r\n${text.slice(1)}`,
+          1,
         );
-        for (const example of [
-          `    - ${REVIEW_POINTER}`,
-          `<pre>\n${REVIEW_POINTER}\n</pre>`,
-          `- Project rules\n\n      ${REVIEW_POINTER}`,
-          `10. Project rules\n\n        ${REVIEW_POINTER}`,
-          `- <pre>\n  ${REVIEW_POINTER}\n  </pre>`,
-          `[](https://example.com "\n${REVIEW_POINTER}\n")`,
-          `> Quoted example\n${REVIEW_POINTER}`,
-          `> > Quoted example\n${REVIEW_POINTER}`,
-          `<span\ntitle="\n${REVIEW_POINTER}\n">Example</span>`,
-          `<span\ntitle='\n${REVIEW_POINTER}\n'>Example</span>`,
-          `<span title="\n<![cdata[\n${REVIEW_POINTER}\n">Example</span>`,
-          `> [example]: /url\n${REVIEW_POINTER}`,
-          `![\n${REVIEW_POINTER}\n](/image.png)`,
-          `![\n${REVIEW_POINTER}\n][image]\n\n[image]: /image.png`,
-          `![\n${REVIEW_POINTER}\n][]\n\n[\n${REVIEW_POINTER}\n]: /image.png`,
-          `![\n${REVIEW_POINTER}\n]\n\n[\n${REVIEW_POINTER}\n]: /image.png`,
-          `[example]: /url "\n${REVIEW_POINTER}\n"`,
-          `[example]: /url '\n${REVIEW_POINTER}\n'`,
-          `[example]: /url (\n${REVIEW_POINTER}\n)`,
-          `[\n${REVIEW_POINTER}\n]: /url`,
-        ]) {
-          const originals = templates.map(({ name, text, mode }) => ({
-            name,
-            mode,
-            text: `\uFEFF${text.replace(REVIEW_POINTER, example)}${PROJECT_TEXT}`.replace(
-              /\n/g,
-              "\r\n",
-            ),
-          }));
-          for (const { name, text } of originals) {
-            await writeFile(path.join(root, name), text, "utf-8");
-          }
-          await runInit({ dir: root, force, dryRun: false, yes: true });
-          for (const { name, text, mode } of originals) {
-            expect(await readEntryPoint(root, name)).toBe(
-              `\uFEFF${REVIEW_POINTER}\r\n\r\n${text.slice(1)}`,
-            );
-            expect((await stat(path.join(root, name))).mode).toBe(mode);
-          }
-        }
       });
     },
   );

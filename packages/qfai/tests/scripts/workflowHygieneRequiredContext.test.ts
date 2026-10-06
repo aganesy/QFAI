@@ -1863,7 +1863,17 @@ describe("the pre-flight is run against planted trees, not read", () => {
       },
     );
   });
-  it("refuses a package declaring any hook the package manager runs at install time", () => {
+  it.each([
+    "preinstall",
+    "install",
+    "postinstall",
+    "preprepare",
+    "prepare",
+    "postprepare",
+    "prepublish",
+    "prepack",
+    "postpack",
+  ])("refuses a package declaring the %s hook", (hook) => {
     // pnpm 10.28.1 runs `preprepare` and `postprepare`, alongside `preinstall` / `install` /
     // `postinstall` / `prepare` — a list stopping short of those would read a package declaring
     // only one of them as hookless and pass it, letting its hook append to the environment file
@@ -1872,29 +1882,17 @@ describe("the pre-flight is run against planted trees, not read", () => {
     // Every hook is exercised rather than assumed: a list is the kind of thing
     // that loses a member in an edit, and a row naming only the hooks already known would not
     // notice.
-    for (const hook of [
-      "preinstall",
-      "install",
-      "postinstall",
-      "preprepare",
-      "prepare",
-      "postprepare",
-      "prepublish",
-      "prepack",
-      "postpack",
-    ]) {
-      withTree(
-        (dir) =>
-          manifest(dir, `{"name":"planted","private":true,"scripts":{"${hook}":"echo planted"}}`),
-        (dir) => {
-          const run = runPreflight(dir);
-          expect
-            .soft(run.status, `a package declaring ${hook} must be refused:\n${run.output}`)
-            .toBe(1);
-          expect.soft(run.output, `and ${hook} named in the finding`).toContain(hook);
-        },
-      );
-    }
+    withTree(
+      (dir) =>
+        manifest(dir, `{"name":"planted","private":true,"scripts":{"${hook}":"echo planted"}}`),
+      (dir) => {
+        const run = runPreflight(dir);
+        expect
+          .soft(run.status, `a package declaring ${hook} must be refused:\n${run.output}`)
+          .toBe(1);
+        expect.soft(run.output, `and ${hook} named in the finding`).toContain(hook);
+      },
+    );
   });
 
   it("refuses an allow-listed manifest whose hook body changed", () => {
