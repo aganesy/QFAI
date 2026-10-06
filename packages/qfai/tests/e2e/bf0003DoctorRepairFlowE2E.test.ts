@@ -7,9 +7,11 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { assertBuiltCliFresh } from "../helpers/builtCli.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const CLI = path.resolve(__dirname, "../../dist/cli/index.mjs");
+assertBuiltCliFresh(CLI);
 const roots: string[] = [];
 
 type CliResult = { status: number | null; stdout: string; stderr: string };

@@ -213,14 +213,13 @@ describe("glob overlap is decided from both patterns, not from one instance of o
   //
   // The case this test pins: `!.qfai/evidence/coverage-depth-*.md` instantiates as
   // `coverage-depth-sample.md`, and a project line `.qfai/evidence/coverage-depth-spec-*.md`
-  // does not match it — while the file that actually exists, `coverage-depth-spec-0017.md`, is
-  // matched by both. Missing that overlap would leave the managed block where it was and the
-  // Coverage Depth Matrix — a governance record this repository requires in version control —
+  // does not match it — while a file such as `coverage-depth-spec-0017.md` is matched by both.
+  // Missing that overlap would leave the managed block where it was and a negated file
   // silently absent from every clone.
   //
   // The two directions of error are not symmetric, which is what makes over-reporting the right
   // bias: a false conflict only re-appends a negation that was already last, while a missed one
-  // leaves a required file outside version control with nothing to notice it afterwards.
+  // leaves a negated file outside version control with nothing to notice it afterwards.
 
   const MANAGED = "!.qfai/evidence/coverage-depth-*.md";
 

@@ -63,14 +63,9 @@ async function writeSkillFixture(root: string): Promise<string> {
   await mkdir(referencesDir, { recursive: true });
   await writeFile(
     path.join(skillDir, "SKILL.md"),
-    [
-      "# demo-skill",
-      "",
-      "[DRIFT-PROTOCOL:MANDATORY]",
-      "",
-      "Follow `references/cited.md`.",
-      "",
-    ].join("\n"),
+    ["# demo-skill", "", "[DRIFT-PROTOCOL:REQUIRED]", "", "Follow `references/cited.md`.", ""].join(
+      "\n",
+    ),
     "utf-8",
   );
   await writeFile(
@@ -96,7 +91,7 @@ async function writeNamesakeSkillFixture(root: string): Promise<string> {
   await mkdir(referencesDir, { recursive: true });
   await writeFile(
     path.join(skillDir, "SKILL.md"),
-    ["# other-skill", "", "[DRIFT-PROTOCOL:MANDATORY]", "", "Nothing else to read.", ""].join("\n"),
+    ["# other-skill", "", "[DRIFT-PROTOCOL:REQUIRED]", "", "Nothing else to read.", ""].join("\n"),
     "utf-8",
   );
   await writeFile(path.join(referencesDir, "cited.md"), "# Namesake\n", "utf-8");
@@ -119,7 +114,7 @@ async function writeCharsetSkillFixture(root: string): Promise<string> {
     [
       "# charset-skill",
       "",
-      "[DRIFT-PROTOCOL:MANDATORY]",
+      "[DRIFT-PROTOCOL:REQUIRED]",
       "",
       "Read `references/" +
         DESIGN_STEM +
@@ -149,7 +144,7 @@ async function writeSpacedNameSkillFixture(root: string): Promise<string> {
     [
       "# spaced-skill",
       "",
-      "[DRIFT-PROTOCOL:MANDATORY]",
+      "[DRIFT-PROTOCOL:REQUIRED]",
       "",
       "Read `references/My Guide.md` first.",
       "",
@@ -180,7 +175,7 @@ async function writePercentEncodedSkillFixture(root: string): Promise<string> {
     [
       "# encoded-skill",
       "",
-      "[DRIFT-PROTOCOL:MANDATORY]",
+      "[DRIFT-PROTOCOL:REQUIRED]",
       "",
       "First, read [design](references/%E8%A8%AD%E8%A8%88.md).",
       "",
@@ -208,7 +203,7 @@ async function writeReservedCharSkillFixture(root: string): Promise<string> {
     [
       "# reserved-skill",
       "",
-      "[DRIFT-PROTOCOL:MANDATORY]",
+      "[DRIFT-PROTOCOL:REQUIRED]",
       "",
       "Read [the guide](references/Guide(1)%232.md) first.",
       "",
@@ -234,7 +229,7 @@ async function writeTemplateRootSkillFixture(root: string): Promise<string> {
   await mkdir(templateDir, { recursive: true });
   await writeFile(
     path.join(skillDir, "SKILL.md"),
-    ["# template-skill", "", "[DRIFT-PROTOCOL:MANDATORY]", "", "Nothing else to read.", ""].join(
+    ["# template-skill", "", "[DRIFT-PROTOCOL:REQUIRED]", "", "Nothing else to read.", ""].join(
       "\n",
     ),
     "utf-8",
@@ -258,7 +253,7 @@ async function writeWindowsPathSkillFixture(root: string): Promise<string> {
     [
       "# windows-skill",
       "",
-      "[DRIFT-PROTOCOL:MANDATORY]",
+      "[DRIFT-PROTOCOL:REQUIRED]",
       "",
       "Read `references\\guide.md` before starting.",
       "",
@@ -290,7 +285,7 @@ async function writeExternalSkillsDirFixture(root: string, skillsDir: string): P
     [
       "# demo-skill",
       "",
-      "[DRIFT-PROTOCOL:MANDATORY]",
+      "[DRIFT-PROTOCOL:REQUIRED]",
       "",
       `Read \`${path.join(referencesDir, "guide.md")}\` before starting.`,
       "",
@@ -317,7 +312,7 @@ async function writeRelocatedSkillFixture(root: string): Promise<string> {
     [
       "# demo-skill",
       "",
-      "[DRIFT-PROTOCOL:MANDATORY]",
+      "[DRIFT-PROTOCOL:REQUIRED]",
       "",
       "Read `.custom/skills/demo-skill/references/guide.md` before starting.",
       "",
@@ -709,7 +704,7 @@ describe("skill reference reachability", () => {
         [
           "# demo-skill",
           "",
-          "[DRIFT-PROTOCOL:MANDATORY]",
+          "[DRIFT-PROTOCOL:REQUIRED]",
           "",
           // Absolute, through the tilde. The target's own project-relative
           // spelling is clean, so the by-path pass never runs for it.
@@ -750,7 +745,7 @@ describe("skill reference reachability", () => {
         [
           "# demo-skill",
           "",
-          "[DRIFT-PROTOCOL:MANDATORY]",
+          "[DRIFT-PROTOCOL:REQUIRED]",
           "",
           "Follow `references/notes~1.md`.",
           "",

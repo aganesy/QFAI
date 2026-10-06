@@ -8,7 +8,7 @@ mode: interactive-by-default
 
 ## qfai-grilling - interrogate a design before it is fixed
 
-[DRIFT-PROTOCOL:MANDATORY]
+[DRIFT-PROTOCOL:REQUIRED]
 
 The one implementation of the interview method. A skill that needs a design
 interrogated invokes this rather than writing rounds of its own, so there is one

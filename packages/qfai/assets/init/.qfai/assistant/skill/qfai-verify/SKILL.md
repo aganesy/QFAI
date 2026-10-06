@@ -32,7 +32,7 @@ mode: evidence-focused
 
 ## /qfai-verify — Quality Gates and Evidence
 
-[DRIFT-PROTOCOL:MANDATORY]
+[DRIFT-PROTOCOL:REQUIRED]
 
 Run the entry check of
 `.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`

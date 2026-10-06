@@ -485,7 +485,7 @@ describe("assets guardrails", () => {
       "SKILL.md",
     );
     // Drift protocol marker (anti-improvisation guardrail) survives v2.0.
-    expect(await readFile(skillPath, "utf-8")).toContain("[DRIFT-PROTOCOL:MANDATORY]");
+    expect(await readFile(skillPath, "utf-8")).toContain("[DRIFT-PROTOCOL:REQUIRED]");
 
     // The 4 v2.0 references must all be cited by the steps that use them.
     const content = await readPrototypingProcedure();

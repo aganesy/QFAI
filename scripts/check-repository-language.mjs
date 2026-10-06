@@ -48,8 +48,15 @@ const FORBIDDEN_CLASSES = [
   ["Devanagari", /\p{Script=Devanagari}/u],
 ];
 
-/** The script or block name of a forbidden character, or `null` when it is allowed. */
+/**
+ * The script or block name of a forbidden character, or `null` when it is allowed.
+ *
+ * Latin-1 holds no letter of a forbidden script, but a few of its punctuation
+ * marks, such as the middle dot, carry a script extension that includes Han.
+ * Everything below U+0100 is therefore allowed without asking the patterns.
+ */
 function classify(character) {
+  if (character.codePointAt(0) < 0x100) return null;
   for (const [name, pattern] of FORBIDDEN_CLASSES) {
     if (pattern.test(character)) return name;
   }

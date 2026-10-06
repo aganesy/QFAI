@@ -10,7 +10,7 @@ mode: interactive-by-default
 
 ## qfai-grill - the session a user asks for
 
-[DRIFT-PROTOCOL:MANDATORY]
+[DRIFT-PROTOCOL:REQUIRED]
 
 Run a grilling session on whatever the argument names. This skill holds no
 method of its own: it directs the run to `qfai-grilling`, which is the one

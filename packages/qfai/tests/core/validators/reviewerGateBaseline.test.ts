@@ -51,7 +51,7 @@ async function project(baseline: string | null): Promise<{ root: string; baselin
   await mkdir(path.join(assistant, "skill", "qfai-example"), { recursive: true });
   await writeFile(
     path.join(assistant, "skill", "qfai-example", "SKILL.md"),
-    ["---", "name: qfai-example", "---", "", "[DRIFT-PROTOCOL:MANDATORY]", ""].join("\n"),
+    ["---", "name: qfai-example", "---", "", "[DRIFT-PROTOCOL:REQUIRED]", ""].join("\n"),
     "utf-8",
   );
   const baselinePath = path.join(assistant, "rule", "shared-skill-delegation-baseline.md");

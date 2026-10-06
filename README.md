@@ -754,8 +754,8 @@ Each hook runs `node` directly, with no shell and no network, and prints one
 message from `.agents/rules/reminders.json`. A missing or unreadable message
 file prints nothing. `qfai init` refreshes that file wherever the project has
 not edited it, so a new release's wording reaches an existing project without
-changing `.claude/settings.json`. Remove the entries to turn the reminder off;
-the rule still applies.
+changing `.claude/settings.json`. Remove the entries from that file and from
+`.codex/hooks.json` to turn the reminder off; the rule still applies.
 
 Codex gets the same reminders from `.codex/hooks.json` once you trust the
 project's hooks with `/hooks`. Each is one command line that runs the same under

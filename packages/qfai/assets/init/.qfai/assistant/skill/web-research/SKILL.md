@@ -16,7 +16,7 @@ QFAI Skill Body (SSOT)
 
 ## /web-research — Web Research Pipeline
 
-[DRIFT-PROTOCOL:MANDATORY]
+[DRIFT-PROTOCOL:REQUIRED]
 
 ## User Questions (AskUserQuestion Protocol)
 

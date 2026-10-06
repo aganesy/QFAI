@@ -200,7 +200,7 @@ async function lstatOrUndefined(target: string) {
 }
 
 /** The first entry between `root` and `target` that is a symbolic link or not a directory, if any. */
-async function blockedAncestor(root: string, target: string): Promise<string | undefined> {
+export async function blockedAncestor(root: string, target: string): Promise<string | undefined> {
   let current = root;
   for (const segment of path.relative(root, path.dirname(target)).split(path.sep)) {
     if (segment === "") continue;
