@@ -89,6 +89,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Migration step 3 and the `## Architecture` check of `tech.md` agree with
+  what they report.** Step 3 names a renumbered constraint ID only when it
+  writes `constraint.md`, so it no longer says an ID changed in a file it left
+  alone. A layer row of `## Architecture` that names two slash-joined segments
+  starting with a common source root, such as `src/core`, is now refused as a
+  path, in `qfai validate` and in the migration (#2656).
 - **The init skill-link test compares where each link resolves.** It matched
   the trailing text of the raw link target, so a dangling link, or one into a
   copy outside the project, passed. It now compares the resolved path of each
@@ -340,6 +346,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `disable-model-invocation: true` to a "Use when" sentence, the third person,
   1,024 characters, and a name without "anthropic" or "claude".
 
+- **The README no longer carries a maintainer section.** The note on keeping the two
+  README files aligned is dropped from both. The alignment check is unchanged (#2690).
 - **The `qfai-run` entry skill has room for another step** (#2966). The text
   for a release, decision or branch point moves into a new reference,
   `references/stage-points.md`, which the skill points to at each step. The

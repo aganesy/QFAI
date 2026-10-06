@@ -1584,6 +1584,19 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       }
     });
 
+    it.each(["AGENTS.md", "packages/qfai/assets/init/root/AGENTS.md"])(
+      "%s stays at or under 500 lines",
+      async (rel) => {
+        const text = await readFile(path.join(ROOT, rel), "utf-8");
+        expect(text.split(/\r?\n/).length).toBeLessThanOrEqual(500);
+      },
+    );
+
+    it("AGENTS.md points at the work scenarios with a read condition", async () => {
+      const text = await readFile(path.join(ROOT, "AGENTS.md"), "utf-8");
+      expect(text).toMatch(/Read `\.instruction\/01_specialties\/work-scenarios\.md` when/);
+    });
+
     it("ships to adopters", async () => {
       const shipped = path.join(
         ROOT,
