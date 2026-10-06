@@ -78,7 +78,10 @@ function narrowerScopes(
   const closing = stages.slice(Math.max(closingVerifyStart(stages), end + 1));
   const gates = closing.filter((stage) => stage.steps.every((step) => GATE_STEPS.has(step.name)));
   if (!kept.some((stage) => WRITES_CODE.has(stage.kind))) {
-    return { narrow: ids(kept), medium: ids([...kept, ...gates]) };
+    const medium = ids([...kept, ...gates]);
+    // Work that writes only documentation is never handed over unchecked.
+    const onlyDocs = kept.every((stage) => stage.kind === "maintenance");
+    return { narrow: onlyDocs ? medium : ids(kept), medium };
   }
   // Work that writes code takes the gates. The other closing checks verify the fix, so they come
   // only once the route's last code-writing stage is in the run.
