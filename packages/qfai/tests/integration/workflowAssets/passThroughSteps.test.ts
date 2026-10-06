@@ -76,6 +76,19 @@ describe("a step that may pass with evidence", () => {
   });
 
   // QFAI:AC-0001-0216-04
+  // QFAI:EX-0001-0216-10
+  it("lets verify-change-note pass on a compatibility route only when no user has anything to migrate", async () => {
+    const text = await passesWhen("verify-change-note");
+    expect(text).toMatch(
+      /the route changes compatibility and no user has anything to migrate: nothing a user must change to keep working, and nothing that breaks/i,
+    );
+    expect(text).toMatch(/where one has, the step does not pass/i);
+    expect(text).toMatch(
+      /the migration steps and the breaking change are what that route owes. Where that project keeps no changelog, write them where its user documentation describes the changed behaviour/i,
+    );
+  });
+
+  // QFAI:AC-0001-0216-04
   // QFAI:EX-0001-0216-07
   it("lets sdd-story pass in an sdd stage when the change stays in the documents that own the truth", async () => {
     const text = await passesWhen("sdd-story");
