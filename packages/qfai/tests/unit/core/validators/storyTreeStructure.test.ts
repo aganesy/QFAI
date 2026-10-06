@@ -369,7 +369,6 @@ describe("story-tree structure", () => {
     expect(declared).toEqual([]);
   });
 
-  // QFAI:AC-0001-0053-08
   // QFAI:EX-0001-0053-09
   // QFAI:EX-0001-0053-10
   // QFAI:EX-0001-0053-11
