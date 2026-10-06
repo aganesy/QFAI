@@ -17,6 +17,7 @@ import { resolveStoryTreeRoots, STORY_FILES } from "../storyTree/layout.js";
 import { classifyRecordRow } from "../storyTree/tables.js";
 import { readStoryTreeModel, type StoryTreeIndex, type StoryTreeModel } from "../storyTree/tree.js";
 import type { Issue } from "../types.js";
+import { validateExternalReferences } from "./externalReferences.js";
 import { issue } from "./utils.js";
 
 function finding(code: string, message: string, file: string, refs: string[] = []): Issue {
@@ -387,6 +388,7 @@ export async function validateStoryTreeStructure(
     ...validateStoryTreeStructureModel(tree),
     ...(await validateConstraintIds(roots.specsDir)),
     ...(await validateTechArchitecture(roots.contractsDir)),
+    ...(await validateExternalReferences(root, config)),
   ];
 }
 
