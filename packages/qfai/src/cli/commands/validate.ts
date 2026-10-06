@@ -429,6 +429,7 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-STORY-012",
     "QFAI-STORY-013",
     "QFAI-STORY-015",
+    "QFAI-STORY-016",
     "QFAI-SPACK-102",
   ],
   "story-contract-index": ["QFAI-CONTRACT-034"],
@@ -1153,6 +1154,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "A test file records its trace only as `QFAI:BF-`, `QFAI:AC-` or `QFAI:EX-` annotations, the shapes a check reads.",
   "QFAI-STORY-015":
     "Story-tree documents name no file outside `.qfai` by a repository path, so a spec does not depend on a file that changes without a spec review.",
+  "QFAI-STORY-016":
+    "No spec document states a term `validation.staleTerms` lists, apart from the decision and open-question registers.",
   "QFAI-DOCSCHEMA-001":
     "Exactly one shipped schema covers each story-tree Markdown file, and the file has the sections, order and content that schema declares and carries no opt-out marker.",
   "QFAI-DOCSCHEMA-002": "The document-schema check runs over the story tree.",
@@ -1348,6 +1351,8 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
     "Replace the named mark with the `QFAI:BF-`, `QFAI:AC-` or `QFAI:EX-` annotation the test proves, or delete it.",
   "QFAI-STORY-015":
     "State the fact in the document in words, or cite a document under `.qfai` instead of the outside file.",
+  "QFAI-STORY-016":
+    "Rewrite the named line to match the decision that replaced the term, or remove the term from `validation.staleTerms` if the line is right.",
   "QFAI-DOCSCHEMA-001":
     "Rewrite the named section in the shape its qfai-sdd template shows, and remove the opt-out marker if the finding names it. Move a document no schema covers out of the spec tree.",
   "QFAI-DOCSCHEMA-002":

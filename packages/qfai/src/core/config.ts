@@ -54,6 +54,12 @@ export type QfaiPaths = {
 
 export type QfaiValidationConfig = {
   failOn: FailOn;
+  /**
+   * Terms the specs must no longer state, such as an option a decision rejected.
+   * `qfai validate` warns on each line of a spec document that still holds one
+   * (QFAI-STORY-016). Unset means no term is checked.
+   */
+  staleTerms?: string[];
   testStrategy: {
     /**
      * When true (default), `qfai validate` reports the silent-placeholder
@@ -585,8 +591,17 @@ function normalizeValidation(
 
   reportRetiredTraceabilityKeys(traceabilityRaw, configPath, issues);
 
+  const staleTerms = readStringArray(
+    raw.staleTerms,
+    [],
+    "validation.staleTerms",
+    configPath,
+    issues,
+  );
+
   return {
     failOn: readFailOn(raw.failOn, base.failOn, "validation.failOn", configPath, issues),
+    ...(staleTerms.length > 0 ? { staleTerms } : {}),
     testStrategy: {
       forbidTestTodoStubs: readBoolean(
         testStrategyRaw?.forbidTestTodoStubs,

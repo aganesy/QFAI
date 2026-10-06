@@ -42,4 +42,11 @@ Feature: Decision and open-question table validation
     Given the story tree, and a contract rule whose statement cites a `DEC-NNNN` or `OQ-NNNN` that no row declares, or a `decisions.md` row at `SUPERSEDED (by DEC-NNNN)` whose successor no row declares
     When `qfai validate --profile sdd` runs
     Then `QFAI-STORY-003` is raised at error naming the file, the citing rule or row, and the missing ID
+  # AC-0001-0053-07
+  Scenario: A document that states a term the project lists as stale is reported
+    Given the story tree, and `validation.staleTerms` in `qfai.config.yaml` listing a term that a document under `paths.specsDir` or `paths.contractsDir` states
+    When `qfai validate --profile sdd` runs
+    Then `QFAI-STORY-016` is raised at warning naming the file, the line and the term
+    And `decisions.md` and `open-questions.md` are not read
+    And with no term listed, nothing is checked
 ```
