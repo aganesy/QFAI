@@ -62,6 +62,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   warning asks the owner to recheck the test; it does not prove the test asserts
   the new row (#2748).
 
+- **`qfai validate` counts the paths outside `.qfai` that spec documents name.**
+  In `sdd`, one `QFAI-STORY-015` warning for each of the policy, business-flow,
+  contract, and decision and open-question trees gives the lines and files that
+  name a file outside `.qfai` in a code span or link, so a project that keeps
+  its specifications self-contained can bring the count down. Discussion packs
+  are not read, and no option changes the severity (#3006).
+
 ### Fixed
 
 - **The init skill-link test compares where each link resolves.** It matched

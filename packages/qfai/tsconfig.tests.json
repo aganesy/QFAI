@@ -322,6 +322,7 @@
     "tests/unit/suppressWorkflowCommands.test.ts",
     "tests/unit/symlinkFixture.test.ts",
     "tests/integration/storyTreeValidateScan.test.ts",
+    "tests/unit/core/validators/externalReferences.test.ts",
     "tests/unit/core/validators/markdownTableArity.test.ts",
     "tests/validators/configReferenceIntegrity.test.ts",
     "tests/validators/dbContractApplyOrder.test.ts",
