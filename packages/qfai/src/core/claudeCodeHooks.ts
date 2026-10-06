@@ -187,6 +187,10 @@ const SUPERSEDED_HOOK_GROUPS: ReadonlySet<string> = new Set([
   "fd357165036f1d8546c6052160738ec64536e8063fa9e20427104a605d4953ce",
   "871cd5dc08d66d273b1ce1be9325da13b53999269b5cd72831d5cf8d501c2b72",
   "cd1490ce2ef9062619617277eb4d684d6b1d934f9b1ed2df2751660d6c72e650",
+  // minimal implementation in `.claude/settings.json` and `.codex/hooks.json`, before it skipped
+  // files that are not product source
+  "7b5ba83e524a9c5a8f94f320cc0ac18b216b2c1e7b27497ccd8bb3e443f2b5c9",
+  "2ae0c735ac2c72fffd652a2cb3b818c8f2dbefd0493998a86d46c6160d99734b",
 ]);
 
 export type HookMergeResult =

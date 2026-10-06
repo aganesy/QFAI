@@ -110,6 +110,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `timestamp` and `iteration`, and checks each field and nested list against
   the type it returns. A file that fails is refused with `null` and a logged
   error, as a missing key already was. Fixes #2862.
+- **Migration keeps an approved but unapplied change request in progress**
+  (#2425). Step 2 of `qfai-migration-v1-to-v2` gave every `approved` change
+  request the Status DONE, recording a change as made when only its approval
+  was. A request whose `Applied at` is empty or `-` now becomes WIP.
 - **The `qfai-run` entry reminder stays silent on a turn the host starts
   (#2989).** The Claude Code `UserPromptSubmit` hook that sends a request to
   `qfai-run` printed on every notification, so an agent could start a run from
@@ -119,6 +123,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   input it cannot read, still get the reminder. `qfai init` replaces an unedited
   copy of either earlier group.
 
+- **The minimal-implementation reminder stops repeating on files it does not
+  concern.** After a write or edit it now prints only for product source: not
+  for a test, a file under `tmp/`, a document, a configuration file or a file
+  outside the project. This holds in `.claude/settings.json` and
+  `.codex/hooks.json`; a project that kept an earlier group unedited gets the
+  new one on the next `qfai init` (#2993).
 - **The free-text entry reminder points a worktree session at its own copy of
   `qfai-run`.** The host can load the skill from the main checkout, which may
   lag the worktree, so the reminder now tells the agent to read
@@ -129,6 +139,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `Change request:` row that the base branch holds at DONE authorised edits to
   its paths again once a branch set it back to WIP. It now authorises nothing at
   any status, so a later change needs a new approved request.
+- **A request whose artifacts no stage of the route writes no longer runs every
+  stage unasked.** `npx qfai workflow plan --in` listed only the `broad` scope
+  there, so no scope question was put. It now refuses with `artifact-unserved`
+  and names each artifact, and the session stops before the first stage. A
+  route that writes nothing is not refused (#2964).
 - **The changelog guard no longer fails the commit a release is tagged at.**
   The guard refuses an entry added to a section whose tag exists. The merge
   that folds `## [Unreleased]` into the release is the commit the tag is pushed
