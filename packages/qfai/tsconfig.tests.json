@@ -295,6 +295,7 @@
     "tests/scripts/sliceSurfaceAlignment.test.ts",
     "tests/scripts/testTypeCheckEnumeration.test.ts",
     "tests/scripts/typeCheckEnumeration.allowlist.ts",
+    "tests/scripts/npmInstallFailure.test.ts",
     "tests/scripts/verifyPackSeededRevision.test.ts",
     "tests/scripts/vitestWorkspaceKnobs.test.ts",
     "tests/scripts/workflowHygiene.test.ts",
