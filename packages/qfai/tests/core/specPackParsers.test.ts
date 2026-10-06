@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  escapeTableCell,
   maskNonSpecRegions,
   parseFirstMarkdownTable,
   splitMarkdownRow,
@@ -29,6 +30,42 @@ describe("splitMarkdownRow", () => {
 
   it("handles escaped pipes", () => {
     expect(splitMarkdownRow("| A \\| B | C |")).toEqual(["A | B", "C"]);
+  });
+});
+
+// escapeTableCell and splitMarkdownRow must agree on what a cell can contain.
+// The parser only un-escapes `\|` to `|`, so a literal `\` must be written
+// as-is and never doubled; otherwise Windows paths and regex literals change
+// silently on a round trip.
+describe("escapeTableCell ↔ splitMarkdownRow round-trip identity", () => {
+  function roundTrip(...values: string[]): string[] {
+    return splitMarkdownRow(`| ${values.map(escapeTableCell).join(" | ")} |`);
+  }
+
+  it("plain text round-trips unchanged", () => {
+    expect(roundTrip("hello world", "see related discussion")).toEqual([
+      "hello world",
+      "see related discussion",
+    ]);
+  });
+
+  it("backslashes round-trip unchanged", () => {
+    expect(roundTrip("C:\\Users\\spec.md", "matches \\d+ pattern")).toEqual([
+      "C:\\Users\\spec.md",
+      "matches \\d+ pattern",
+    ]);
+  });
+
+  it("a backslash before a pipe round-trips unchanged", () => {
+    expect(roundTrip("a\\|b", "regex (?:foo|\\bar)")).toEqual(["a\\|b", "regex (?:foo|\\bar)"]);
+  });
+
+  it("a backslash pair before a pipe round-trips unchanged", () => {
+    expect(roundTrip("path\\\\|file")).toEqual(["path\\\\|file"]);
+  });
+
+  it("CRLF and CR line breaks collapse to a single space", () => {
+    expect(roundTrip("line1\r\nline2", "line1\rline2")).toEqual(["line1 line2", "line1 line2"]);
   });
 });
 
