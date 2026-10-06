@@ -346,6 +346,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `disable-model-invocation: true` to a "Use when" sentence, the third person,
   1,024 characters, and a name without "anthropic" or "claude".
 
+- **The README no longer carries a maintainer section.** The note on keeping the two
+  README files aligned is dropped from both. The alignment check is unchanged (#2690).
 - **The `qfai-run` entry skill has room for another step** (#2966). The text
   for a release, decision or branch point moves into a new reference,
   `references/stage-points.md`, which the skill points to at each step. The
