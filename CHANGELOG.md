@@ -108,6 +108,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `EACCES` and `EIO`, into "absent" or an empty string, so a file the validator
   could not read passed as one that was not there. Only `ENOENT` and `ENOTDIR`
   now mean absent; any other error propagates unchanged. Fixes #2906.
+- **CI retries the pnpm download and reads its version from `packageManager`**
+  (#2816, #2773). The toolchain setup and the release job fetch the pnpm that
+  `package.json#packageManager` names before the first `pnpm` call, retrying up
+  to four times, so one network reset no longer fails a job. The hard-coded
+  `9.12.3` in both places is gone.
 - **The dogfooding backlog guard names every command a re-pin takes** (#2415).
   `scripts/dogfood-backlog.json` is a pinned guard input, so re-pinning it
   moves its digest. When a pin is behind the tree or a file is over its pin,
