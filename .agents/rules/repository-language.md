@@ -49,13 +49,9 @@ Devanagari scripts, the CJK Symbols and Punctuation block, and the Halfwidth
 and Fullwidth Forms block. Latin letters with diacritics, Greek, arrows,
 box-drawing characters and dashes are allowed.
 
-Two narrower checks hold the same rule for a single surface.
-
-| Surface                                           | Held by                                               |
-| ------------------------------------------------- | ----------------------------------------------------- |
-| Every tracked text file                           | `scripts/check-repository-language.mjs`               |
-| Operator-facing strings in `packages/qfai/src/**` | `packages/qfai/tests/unit/cliMessageLanguage.test.ts` |
-| `CHANGELOG.md`, every section                     | `packages/qfai/tests/unit/changelogLanguage.test.ts`  |
+`scripts/check-repository-language.mjs` is the one check. It covers operator-facing
+strings, source comments and every section of `CHANGELOG.md` with the same
+rule, so no narrower check repeats it.
 
 The repository-wide guard skips symlinks, files holding a NUL byte and files
 that are not valid UTF-8. It runs in the `ci:lint:scans` lane.
