@@ -304,6 +304,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   in the same file no longer passes at the same count. A pin still written as a
   bare count is refused with the command that re-pins it. Fixes #2355.
 
+- **The temporary-files rule says which scratch directory wins** (#3005). A
+  scratch directory the host names for the session is used first. The
+  repository `tmp/` is the fallback, and the place for files the repository's
+  tooling reads. A file an earlier session left, in another session's scratch
+  directory or another worktree's `tmp/`, is untrusted input: it is checked
+  against its publisher's checksum before reuse.
+
 - **Five doctor criteria now name the tests that prove them.** Existing
   integration tests carry standalone `QFAI:AC-...` comments, and
   `AC-0003-0004-01` gains a deprecated `paths.promptsDir` warning case.

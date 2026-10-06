@@ -99,7 +99,7 @@ The masters under `.agents/rules/` are the single source of truth for the rules 
 - `distributed-surface.local.md` (the surface, the forbidden identifier shapes, and the four guards)
 - `root-additions-policy.md` (adding anything new to the repo root needs confirmation)
 - `root-additions-policy.local.md` (two file shapes that turn up at this root, and where each belongs)
-- `temporary-files.md` (temporary files go only under `tmp/`)
+- `temporary-files.md` (temporary files go in the host's scratch directory, else under `tmp/`)
 - `temporary-files.local.md` (a test's `mkdtemp` sandbox is outside the rule)
 - `document-schema.md` (every spec-tree document conforms to its closed schema
   in `packages/qfai/assets/mdschema/**`; `qfai validate` and the docs lane
