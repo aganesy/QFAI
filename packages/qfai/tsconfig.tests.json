@@ -279,6 +279,7 @@
     "tests/scripts/checkTscCompiler.test.ts",
     "tests/scripts/eslintSuppressionCensus.test.ts",
     "tests/scripts/ghBudget.test.ts",
+    "tests/scripts/prThreads.test.ts",
     "tests/scripts/storyIds.test.ts",
     "tests/scripts/freshInitFindings.test.ts",
     "tests/scripts/lintParallel.test.ts",
