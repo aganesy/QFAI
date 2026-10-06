@@ -300,6 +300,36 @@ describe("migration catalog move", () => {
     expect(await validateConstraintIds(context.specsDir)).toEqual([]);
   });
 
+  // QFAI:EX-0004-0006-28
+  it("names no renumbered constraint ID when constraint.md already exists and is not written", async () => {
+    const context = await fixture();
+    const existing = "# Constraints\n\nWritten by the project.\n";
+    await put(context.root, ".qfai/spec/01_policy/constraint.md", existing);
+    await put(
+      context.root,
+      ".qfai/spec/_policies/07_Constraints.md",
+      [
+        "# 07 Constraints",
+        "",
+        "## Constraints",
+        "",
+        "| ID | Constraint | Rationale |",
+        "| --- | --- | --- |",
+        "| TC-05 | Runs on Windows | Adopters |",
+        "",
+      ].join("\n"),
+    );
+    const result = await run(context);
+    expect(result.code).toBe(3);
+    expect(forAPerson(result.output)).toContain(
+      ".qfai/spec/01_policy/constraint.md: the file already exists, so step 3 did not write it; carry what its sources state by hand",
+    );
+    expect(result.output).not.toContain("is now");
+    expect(
+      await readFile(path.join(context.specsDir, "01_policy", "constraint.md"), "utf8"),
+    ).toBe(existing);
+  });
+
   // QFAI:EX-0004-0006-27
   it("drops the Impact column and sends a constraint that is not in plain words to a person", async () => {
     const context = await fixture();
@@ -371,6 +401,7 @@ describe("migration catalog move", () => {
         "| Shared | Small helpers | - |",
         "| CLI | Parses arguments and/or reads I/O | Shared |",
         "| Core | Lives in src/core/index.ts | - |",
+        "| Data | Lives in src/data | - |",
         "",
         "## Architecture constraints",
         "",
@@ -422,6 +453,9 @@ describe("migration catalog move", () => {
     );
     expect(result.output).toContain(
       `.qfai/spec/03_contract/tech.md ## Architecture: rewrite the layer Core of "## Architecture" in ${source} without a path or file name by hand`,
+    );
+    expect(result.output).toContain(
+      `.qfai/spec/03_contract/tech.md ## Architecture: rewrite the layer Data of "## Architecture" in ${source} without a path or file name by hand`,
     );
     expect(result.output).toContain(
       `.qfai/spec/03_contract/tech.md ## Architecture: rewrite "## Architecture constraints" of ${source} by hand`,
