@@ -63,11 +63,17 @@ export const KEPT_EMPHASIS: Readonly<Record<string, readonly KeptEmphasis[]>> = 
     { phrase: "### Capability Probe (MUST)", readBy: DELEGATION_SPEC },
     { phrase: "### Delegation Failure Taxonomy (MUST)", readBy: DELEGATION_SPEC },
     {
+      phrase: "### What a reviewer may demand more of (MUST)",
+      readBy: "tests/assets/reviewerDemandBound.test.ts",
+    },
+  ],
+  ".qfai/assistant/rule/references/reviewer-findings.md": [
+    {
       phrase: "`record:*` and `none` MUST be recorded as `advisory`",
       readBy: "tests/integration/reviewerFindingProvenance.test.ts",
     },
     {
-      phrase: "### What a reviewer may demand more of (MUST)",
+      phrase: "## What a reviewer may demand more of (MUST)",
       readBy: "tests/assets/reviewerDemandBound.test.ts",
     },
   ],

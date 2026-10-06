@@ -114,60 +114,7 @@ has to do, and the class is `unavailable` or
 
 ### Host backstops above the declared shape
 
-The dispatch limits in this baseline and in each skill's own policy are read by
-the agent doing the dispatch. A run that has lost its way is the one least likely
-to apply them, so nothing here bounds a run that spawns more workers than it
-declared, nests delegation deeper than the stage intended, or keeps spending.
-
-Some hosts refuse delegation outside their limits. Each control below states
-what it covers.
-QFAI sets none of them, so the host defaults stand.
-
-**A backstop sits above the declared shape, never at it.** Leave room for other
-permitted agents sharing the host limit. The policy decides the ordinary case.
-
-Claude Code 2.1.217 or later:
-
-| Control                                                                              | Default                      | What it bounds                                             |
-| ------------------------------------------------------------------------------------ | ---------------------------- | ---------------------------------------------------------- |
-| `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH`                                               | 3 (1 in 2.1.217 and 2.1.218) | How deep delegation nests. `1` turns nesting off           |
-| `CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS`                                               | 20                           | When new Agent tool spawns are refused                     |
-| `--max-budget-usd` in print mode; `maxBudgetUsd` / `max_budget_usd` in the Agent SDK | none                         | What one run may spend, in US dollars, sub-agents included |
-
-The spawn limit has exceptions for ultracode, `/subtask` forks, and resuming an
-exited agent.
-
-Codex:
-
-| Control                                                                                   | Default                    | What it bounds                                                        |
-| ----------------------------------------------------------------------------------------- | -------------------------- | --------------------------------------------------------------------- |
-| `agents.max_concurrent_threads_per_session` in `config.toml` (alias `agents.max_threads`) | chosen by Codex when unset | How many spawned-agent threads are open at once, the primary excluded |
-
-No equivalent was confirmed for nesting depth or for a spend cap.
-
-GitHub Copilot CLI:
-
-| Control                            | Documented default                   | What it bounds                           |
-| ---------------------------------- | ------------------------------------ | ---------------------------------------- |
-| `subagents.maxDepth` setting       | 6 in the limits table                | How deep sub-agents nest                 |
-| `COPILOT_SUBAGENT_MAX_DEPTH`       | 4 in the environment-variable table  | How deep sub-agents nest                 |
-| `subagents.maxConcurrency` setting | set by the Copilot plan, 2 to 32     | How many sub-agents run at once          |
-| `COPILOT_SUBAGENT_MAX_CONCURRENT`  | 32 in the environment-variable table | How many sub-agents run at once          |
-| `--max-ai-credits`                 | unset                                | AI credits per response, as a soft limit |
-
-The two settings take effect only on usage-based billing plans.
-
-The depth defaults disagree across the CLI documentation. Which control takes
-precedence was not confirmed.
-
-VS Code Local harness (`runSubagent`):
-
-| Control                                        | Default | What it bounds                                                        |
-| ---------------------------------------------- | ------- | --------------------------------------------------------------------- |
-| `chat.subagents.allowInvocationsFromSubagents` | `false` | Whether a sub-agent may start sub-agents. Nesting stops at depth five |
-
-No equivalent was confirmed for concurrent sub-agents or for a spend cap. None
-was confirmed for any of the three in the Copilot cloud agent.
+Read `.qfai/assistant/rule/references/host-backstops.md` when you set or read a host limit on agents, or a run stops at one. It holds the backstops each host applies above the declared shape and how to leave room for them. Not needed when no host limit is involved.
 
 ## Work Orders Summary
 
@@ -212,26 +159,6 @@ use subagents to verify your own work" does not apply to this gate. The
 definition above already excludes an agent reviewing its own output. The author
 cannot accept its own output.
 
-#### A griller's recommendations, and what they disqualify
-
-A grilling session puts a recommended answer beside each question (`.agents/rules/grilling.md`). Who settled the decision decides what happens next.
-
-| The decision was settled                              | What follows                                                                      |
-| ----------------------------------------------------- | --------------------------------------------------------------------------------- |
-| By the user, from the recommendation among the inputs | The decision is theirs. The griller may review the artifact                       |
-| Agent to agent, not critical                          | The decision stands. The griller that recommended it does not review the artifact |
-| Agent to agent, critical, with no user adjudication   | The artifact is wrong, and no reviewer can clear it                               |
-
-**The second row is how a delegated session is meant to end** (`.agents/rules/grilling.md`), not a finding. The reviewer checks that the decision is in the final report and is not critical. A reviewer that doubts its merit raises that as an ordinary finding against the artifact, under its own remit, as it would for any other content.
-
-**The third row is not a routing problem.** A critical decision is the user's in every session, and a run that could not ask records it as an open question rather than adopting it. An agent-adopted critical decision is therefore an artifact carrying something nobody with the standing decided, and handing it to a different reviewer would launder it.
-The reviewer must return `REVISE` and name the decision: it is reopened and put to the user, or recorded open where no question can be asked.
-
-The first row needs a reason, because the intuitive one is wrong. A sub-agent starting with a reset context cannot defer to something it does not remember, so deference is not the risk. **Correlation** is: a fresh instance of the same agent, on the same model, over the same evidence, re-derives the preference that produced the recommendation and finds it good on the merits. Resetting the
-context removes the memory, not the disposition — which is why role name alone never establishes independence either. Where the user chose, that disposition is one input among several and the decision is not the griller's to re-derive.
-
-**The stage's final report is the record.** It lists every decision the agents adopted and the agent that recommended it, so a reviewer with a reset context reads the third row off the report rather than off recollection.
-
 - Reviewers must verify Drift Protocol enforcement
   (`.qfai/assistant/rule/drift-protocol.md`).
 - Reviewers must verify test-layer policy enforcement when relevant
@@ -242,79 +169,25 @@ context removes the memory, not the disposition — which is why role name alone
 - An in-scope blocking finding from a routed reviewer prevents DONE until it is fixed or answered; no reviewer is rerun.
 - Every reviewer returning `REVISE` must include a concrete fix proposal.
 
+#### A griller's recommendations, and what they disqualify
+
+Read `.qfai/assistant/rule/references/griller-recommendations.md` when a griller's recommendation is offered as evidence for a decision, or when you check whether a griller may review the work it interviewed. Not needed otherwise.
+
 ### Review convergence
 
 A stage is reviewed once, and the author fixes or answers every finding with no re-review: `.qfai/assistant/rule/review-convergence.md`.
 
 ### Reviewer remit (in scope per stage)
 
-A finding outside the reviewing stage's remit is recorded and deferred, never blocking:
-
-| Stage                      | In scope                                                                                                                                                                                                                                               | Out of scope (record and defer)                                                                                      |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
-| `/qfai-discussion`         | Requirement clarity, scope boundary, decision traceability                                                                                                                                                                                             | Spec structure, runtime behavior                                                                                     |
-| `/qfai-sdd`                | Spec / contract consistency, testability, traceability edges, each document in its template's shape                                                                                                                                                    | Runtime enforcement correctness, code quality                                                                        |
-| `/qfai-implement`          | Code quality, spec alignment of the item, RED/GREEN evidence, silent failure and type design across the whole of every file the change touches, and security across the same files and along every input the change adds or alters to where it is used | Upstream spec content, contract design, and a finding on code in a touched file that the change did not add or alter |
-| `/qfai-prototyping`        | The prototype against its UI contracts and the root `DESIGN.md`, loop evidence, the handoff                                                                                                                                                            | Spec and contract content, downstream implementation code                                                            |
-| `/qfai-migration-v1-to-v2` | Migration plan and report fidelity, ID mapping, every deletion listed in the reports, each written document in its template's shape                                                                                                                    | New story content and downstream implementation quality                                                              |
-| `/qfai-configure`          | Config / manifest validity and the surfaces the run generated                                                                                                                                                                                          | Spec content, implementation structure                                                                               |
-| `/qfai-verify`             | Gate execution, evidence completeness, report / artifact fidelity                                                                                                                                                                                      | Authoring quality of the artifacts it verifies                                                                       |
-| `/web-research`            | Source authority and freshness, citation accuracy, claim support                                                                                                                                                                                       | Spec content, implementation structure                                                                               |
-| `/qfai-grilling`           | Decisions asked rather than assumed, facts naming where they were read, the session's end condition                                                                                                                                                    | The merit of what the user decided, and the artifacts the invoking stage writes from it                              |
-| `/qfai-grill`              | The same, reported to the user rather than to a stage                                                                                                                                                                                                  | The merit of what the user decided; there is no artifact to review                                                   |
-| `/qfai-maintain`           | That the diff changes no behaviour, and the checks run over it                                                                                                                                                                                         | Whether the new wording is the better one                                                                            |
-| `/qfai-triage`             | That no tracked file changed, the recorded outcome, each follow-up, and the sources an answer cites                                                                                                                                                    | The work a follow-up request describes                                                                               |
-| `/qfai-run`                | The artifacts the session writes, in the specification or code review the plan names after a stage                                                                                                                                                     | Whether the route the decision rules chose was the right one                                                         |
-
-Article VII excess in the reviewing stage's own artifacts is in scope;
-quality of downstream implementation code is deferred at upstream stages.
-
-Apply this route only where the installed Article VII governs the artifact.
-A retained constitution does not gain newer authority from refreshed cards.
-Report an unsupported Article VII route as advisory and follow the installed constitution.
-
-A step's remit is its owner's row. A `common-*` step's work is reviewed under
-the row of the skill whose stage ran it.
-
-**Fallback for any stage not listed.** A stage that references this baseline without a row above has, as its remit, the artifacts that stage itself produces; everything upstream of them is out of scope, recorded and deferred. Add the row when a new stage starts routing blocking reviewers, so the in/out split is not re-derived per run.
+Read `.qfai/assistant/rule/references/reviewer-remit.md` when you brief a reviewer or judge whether a finding is in scope for the stage under review. It holds what each stage's reviewer may and may not examine. Not needed when no review runs.
 
 ### Finding provenance
 
-- Every finding must declare a severity (`blocking` or `advisory`) and a `Traces to:` value.
-- `Traces to:` names what the finding enforces. Legal values:
-  - an upstream obligation — a `BF-*`, `AC-*`, `EX-*`, `BR-*` or contract ID, or a named shared rule **that governs the product's behaviour**;
-  - `defect:correctness`, `defect:security`, or `defect:code-quality` — a defect demonstrable from the changed artifacts themselves, cited with the evidence that demonstrates it (see `.qfai/assistant/rule/drift-protocol.md#defect-or-new-scope-decide-this-first`). A reviewer who can show the deliverable is wrong on its own terms does not need an `AC-*` to say so;
-  - `record:<CODE>` — a defect in the run's own record rather than in the product: an evidence section, a round block, an anchor, or provenance prose. `<CODE>` names the record rule;
-  - `none` — reviewer-originated scope, i.e. a new product obligation upstream never asked for.
-- `record:*` and `none` MUST be recorded as `advisory`; neither can be `blocking` or gate `DONE`. A `record:*` finding never re-runs the row: the orchestrator files it in the record-defect queue the reviewing stage's own completion contract names, and that contract is what drains it (`.qfai/assistant/rule/drift-protocol.md#the-record-defect-queue`). **The class needs a drain:
-  only a stage whose completion conditions require that queue drained may use it — today `/qfai-implement` alone, so `/qfai-sdd`, `/qfai-configure`, `/qfai-verify`, `/qfai-discussion` and `/web-research` reviewers must not, and there the finding keeps the class it would otherwise have had.** An entry closes only on a repaired record;
-  `record:unchecked` is never a substitute for the repair — a record rule worth a round is worth a validator code.
-- **Integrity is not record class.** Evidence copied from another round or a sibling row, an anchor resolving to a run other than the one it names, and a reviewer that authored what it reviews all claim work that was not done or independence that is missing. A `PASS` built on them is refused,
-  so they stay `blocking` as `defect:code-quality` and are never filed as `record:*` — which covers an honestly produced record that is merely wrong.
-- A `none` advisory takes the Change Request / Open Question path (`.qfai/assistant/rule/drift-protocol.md#reviewer-originated-obligations`); a `record:*` advisory takes the queue above. Neither goes to the implementer.
-- Only `blocking` findings force `REVISE`, and only a finding citing a behaviour-governing obligation or a defect class may be one. **The trace class bounds which findings may block; the severity is declared, and it settles whether one does.** Read as "an obligation trace is blocking", the same item was a discussion-blocking defect to one reviewer and carried advice to the next.
-- An obligation-traced finding is recorded `advisory` where a named section places the work outside the reviewed stage. The discussion review's implementation precision is that section
-  (`.qfai/assistant/rule/review-convergence.md#discussion-review-precision`): the obligation is agreed, and what the advice is about is how a later stage implements it, so the finding is carried to that stage rather than demanded here. Nothing else lowers a behaviour-governing finding to `advisory`.
+Read `.qfai/assistant/rule/references/reviewer-findings.md` when you write or judge a reviewer finding: where it comes from, and what a reviewer may demand more of. Not needed when no review runs.
 
 ### What a reviewer may demand more of (MUST)
 
-A finding that asks for more work — another item, more detail, a wider set — is admissible only on
-the concrete artifacts.
-
-| Admissible on                                                           | Inadmissible on                                                                   |
-| ----------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| business flows, user stories, acceptance criteria, examples, test cases | business rules, non-functional requirements, policies and decisions, architecture |
-
-Two demands stay admissible on any artifact:
-
-- that an abstract item already recorded carry its mandatory pair, such as a quality floor naming
-  its verification method;
-- that a safety-floor item be met: security, accessibility, data-loss handling, or validation at a
-  trust boundary (`.agents/rules/minimal-implementation.md` § 2).
-
-This bounds what a reviewer may require, never what a reviewer may report. A demand the table does
-not admit, such as one for another business rule, is recorded as `advisory` and cannot force
-`REVISE`.
+What a reviewer may demand is in `.qfai/assistant/rule/references/reviewer-findings.md`, read under the condition above.
 
 ### Reviewer budget exhausted
 

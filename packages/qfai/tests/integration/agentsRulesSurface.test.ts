@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
+import { readRule } from "../helpers/ruleWithReferences.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "../../../..");
@@ -131,9 +132,8 @@ describe("the implementation reviewer reads silent failure and type design", () 
       ]) {
         expect(flat).toContain(check);
       }
-      const baseline = await readFile(
+      const baseline = await readRule(
         path.join(ROOT, tree, "assistant/rule/shared-skill-delegation-baseline.md"),
-        "utf-8",
       );
       const rows = baseline.split(/\r?\n/).filter((line) => line.startsWith("| `/qfai-implement`"));
       expect(rows).toHaveLength(1);
