@@ -136,6 +136,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `timestamp` and `iteration`, and checks each field and nested list against
   the type it returns. A file that fails is refused with `null` and a logged
   error, as a missing key already was. Fixes #2862.
+- **`qfai init` carries on past a dangling `.github` link and names every skip relative to the project.**
+  A `.github` that was a dangling link, or a file, stopped the run with
+  `mkdir failed with ENOTDIR` while the review instruction files were written.
+  Init now skips those two files, says why, and writes the rest. The skip lines
+  for the instruction files and for Codex agent profiles printed the absolute
+  path; they now print the path relative to the project. The `QFAI-LINK-001`
+  fix text for a linked integration directory says to replace it with a real
+  directory before rerunning `qfai init`, since init leaves such a directory
+  alone. Fixes #2678.
+
 - **Migration keeps an approved but unapplied change request in progress**
   (#2425). Step 2 of `qfai-migration-v1-to-v2` gave every `approved` change
   request the Status DONE, recording a change as made when only its approval
