@@ -21,7 +21,7 @@ import { issue } from "./utils.js";
 /** `TODO`, `FIXME`, `XXX`, `TBD`, `<placeholder>`, or whitespace only. */
 const TODO_PLACEHOLDER_RE = /^(?:\s*(?:TODO|FIXME|XXX|TBD|<placeholder>)\s*|\s*)$/i;
 
-const DRIFT_PROTOCOL_MARKER = "[DRIFT-PROTOCOL:MANDATORY]";
+const DRIFT_PROTOCOL_MARKER = "[DRIFT-PROTOCOL:REQUIRED]";
 const REVIEWER_GATE_BASELINE_HEADING_PATTERN = /^##\s+Reviewer Gate Baseline\s*$/m;
 const ANY_MARKDOWN_HEADING_PATTERN = /^\s*#{1,6}\s+/m;
 
@@ -245,7 +245,7 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
       issues.push(
         issue(
           "QFAI-SKILLS-010",
-          "SKILL.md is missing the required marker [DRIFT-PROTOCOL:MANDATORY].",
+          "SKILL.md is missing the required marker [DRIFT-PROTOCOL:REQUIRED].",
           "error",
           skillFile,
           "skills.driftProtocolMarker",

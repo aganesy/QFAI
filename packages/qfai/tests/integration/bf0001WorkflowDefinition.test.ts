@@ -203,7 +203,7 @@ describe("BF-0001 workflow definition", () => {
       "utf8",
     );
     expect(drift).toContain("# Drift Protocol");
-    expect(implement).toContain("[DRIFT-PROTOCOL:MANDATORY]");
+    expect(implement).toContain("[DRIFT-PROTOCOL:REQUIRED]");
     expect(credentials.length).toBeGreaterThan(0);
   });
 });

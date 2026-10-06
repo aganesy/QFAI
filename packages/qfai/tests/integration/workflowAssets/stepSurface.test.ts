@@ -139,7 +139,7 @@ describe("the skills a workflow run's steps belong to", () => {
       const at = body.indexOf(runFirst);
       expect(at, skill).toBeGreaterThan(-1);
       expect(
-        body.indexOf("## ", body.indexOf("[DRIFT-PROTOCOL:MANDATORY]")),
+        body.indexOf("## ", body.indexOf("[DRIFT-PROTOCOL:REQUIRED]")),
         skill,
       ).toBeGreaterThan(at);
     }

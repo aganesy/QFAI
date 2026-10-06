@@ -25,7 +25,7 @@ QFAI Skill Body (SSOT)
 
 ## /qfai-configure - Configure QFAI for this repository
 
-[DRIFT-PROTOCOL:MANDATORY]
+[DRIFT-PROTOCOL:REQUIRED]
 
 ## User Questions (AskUserQuestion Protocol)
 

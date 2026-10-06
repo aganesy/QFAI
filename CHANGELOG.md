@@ -383,6 +383,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   token, HTML mock, research, skill, waiver, autopilot-policy and prototyping
   findings now say what a passing tree looks like (#2660).
 
+- **The marker every skill carries is `[DRIFT-PROTOCOL:REQUIRED]`** (#2796).
+  `qfai validate` still reports `QFAI-SKILLS-010` for a `SKILL.md` without the
+  marker, and now looks for the new spelling. The old one holds a capitalised
+  emphasis word that the shipped-text guard allows only at named paths, so a
+  skill at a new path could not satisfy both checks. Each shipped skill is
+  updated, and the guard's allowlist loses the thirteen entries that named the
+  marker.
+
 - **The temporary-files rule says which scratch directory wins** (#3005). A
   scratch directory the host names for the session is used first. The
   repository `tmp/` is the fallback, and the place for files the repository's

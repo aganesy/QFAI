@@ -59,7 +59,7 @@ async function projectWithSkill(frontMatter: readonly string[]): Promise<string>
       "",
       "## qfai-example",
       "",
-      "[DRIFT-PROTOCOL:MANDATORY]",
+      "[DRIFT-PROTOCOL:REQUIRED]",
       "",
       "### Reviewer Gate (MUST)",
       "",
@@ -533,6 +533,12 @@ describe("the gate reads a skill as the host does", () => {
     expect(finding?.message).toContain("front matter a host cannot read");
     expect(finding?.suggested_action).toContain("rename the skill's directory");
     expect(finding?.suggested_action).not.toContain("`name:` is `My Skill`");
+  });
+
+  it("reports a skill that lacks the drift-protocol marker", async () => {
+    const root = await projectWithSkillDocument("# qfai-example\n\nNo marker here.\n");
+    const codes = (await validateAssistantAssets(root, defaultConfig)).map((item) => item.code);
+    expect(codes).toContain("QFAI-SKILLS-010");
   });
 
   it("leaves a SKILL.md in a skill's vendored tree out of the marker checks", async () => {

@@ -1396,7 +1396,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-RESEARCH-009": "Every reflection entry has an `action` of apply, reject or defer.",
   "QFAI-RESEARCH-010": "Every reflection entry has a non-empty `reason`.",
   "QFAI-RESEARCH-011": "A Research Summary has a non-empty `reflection` list.",
-  "QFAI-SKILLS-010": "Every SKILL.md carries the `[DRIFT-PROTOCOL:MANDATORY]` marker.",
+  "QFAI-SKILLS-010": "Every SKILL.md carries the `[DRIFT-PROTOCOL:REQUIRED]` marker.",
   "QFAI-SKILLS-011":
     "The shared delegation baseline has a `## Reviewer Gate Baseline` section, so every skill inherits a reviewer gate.",
   "QFAI-SKILLS-012": "The Reviewer Gate Baseline states every obligation a skill inherits.",

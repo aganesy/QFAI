@@ -16,7 +16,7 @@ routing-profile: architecture-heavy
 
 ## /qfai-migration-v1-to-v2
 
-[DRIFT-PROTOCOL:MANDATORY]
+[DRIFT-PROTOCOL:REQUIRED]
 
 ## User Questions (AskUserQuestion Protocol)
 
