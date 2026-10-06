@@ -34,6 +34,7 @@ import { parse, stringify } from "yaml";
 
 import { ensureRootGitignoreEntries } from "../../src/core/init/rootGitignore.js";
 import { atLocation } from "../helpers/reportLocation.js";
+import { assertBuiltCliFresh } from "../helpers/builtCli.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");
@@ -47,6 +48,7 @@ const SKILL_SCRIPTS = path.join(
   "assets/init/.qfai/assistant/skill/qfai-migration-v1-to-v2/scripts",
 );
 const CLI = path.join(PACKAGE_ROOT, "dist/cli/index.mjs");
+assertBuiltCliFresh(CLI);
 const RESOLUTION = path.join(
   PACKAGE_ROOT,
   "tests/fixtures/migration-spec-to-story/resolutions/case-only-rule.json",
