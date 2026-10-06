@@ -133,6 +133,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   table, which rendered outside the table, now sits beside the other rows.
   Fixes #2860.
 
+- **`qfai sdd preflight` stops when the running copy is not the declared one.**
+  `qfai validate` already reports this as `QFAI-TOOL-002`, but preflight went on to
+  judge the discussion pack and write `preflight_summary.md` with the wrong copy.
+  It now prints the same code and the running copy's path, writes nothing and
+  exits 1 (0 with `--fail-on never`) (#2518).
 - **Story-tree findings name a test file relative to the project.** A
   `QFAI-STORY-007` or `QFAI-STORY-008` finding printed the absolute path of the
   checkout in its message and target, which differs on every machine. It now

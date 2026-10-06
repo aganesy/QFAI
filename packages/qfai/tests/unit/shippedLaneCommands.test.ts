@@ -541,8 +541,7 @@ describe("the shipped-lane allowlist", () => {
     // **Every entry below is a claim about bash, and the obligation is to have RUN it.** Round 19
     // found the reason this matters: a wrong `inert` entry passes precisely when the mask is also
     // wrong, so a misfiled row would have this test certifying an escape rather than catching one.
-    // `.qfai/evidence/atdd-spec-0017.md` records the marker output for each. Do not add a row here
-    // from reading; add it from a run.
+    // Do not add a row here from reading; add it from a run.
     const BUILD = BUILD_DECORATION;
     const live = LIVE_DECORATIONS;
     const inert = INERT_DECORATIONS;

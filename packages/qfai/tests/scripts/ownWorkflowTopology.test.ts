@@ -615,8 +615,7 @@ describe("TC-0017-0029 (TDD-0029): the shared definition keeps its four-step ord
 // full validate profile. A `todo` row with no test is also simply the honest
 // state.
 //
-// The oracle is written down in `.qfai/evidence/implement-spec-0017.md` under
-// change 4, ready to paste back when the CR resolves: read each own workflow's
+// The oracle, ready to restore when the CR resolves: read each own workflow's
 // top-level `env` block from the PARSED document (not by grepping text, so
 // "workflow-level" is decided by YAML structure), and assert that no key
 // matching /node/i holds a value starting with a digit.
