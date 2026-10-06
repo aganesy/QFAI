@@ -18,11 +18,13 @@ import path from "node:path";
 import { promisify } from "node:util";
 
 import { afterEach, beforeEach, describe, it, expect } from "vitest";
+import { assertBuiltCliFresh } from "../helpers/builtCli.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const execFileP = promisify(execFile);
 
 const CLI_PATH = path.resolve(__dirname, "..", "..", "dist", "cli", "index.cjs");
+assertBuiltCliFresh(CLI_PATH);
 
 async function runCli(
   args: string[],

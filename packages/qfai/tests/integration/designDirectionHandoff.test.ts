@@ -15,10 +15,12 @@ import { fileURLToPath } from "node:url";
 
 import { afterAll, beforeAll, expect, it } from "vitest";
 
+import { assertBuiltCliFresh } from "../helpers/builtCli.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const CLI = path.join(PACKAGE_ROOT, "dist", "cli", "index.mjs");
+assertBuiltCliFresh(CLI);
 const SKILLS = ".qfai/assistant/skill";
 
 let root = "";

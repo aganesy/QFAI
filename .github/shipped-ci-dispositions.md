@@ -51,3 +51,5 @@ the next one against.
   Because: `ci:lint` stops writing the hygiene findings to a reviewer-report directory that only this repository read, and the shipped workflows never wrote it.
 - SHIPPED-CI: not-applicable for package.json
   Because: the two guards this change removes checked a scanner and a prompt only this repository had, and the shipped templates ran neither.
+- SHIPPED-CI: not-applicable for package.json
+  Because: the lane this entry adds holds this repository's own `CHANGELOG.md` entries against the base, and an adopter's changelog is not one QFAI writes or releases.
