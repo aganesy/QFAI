@@ -325,9 +325,9 @@ describe("migration catalog move", () => {
       ".qfai/spec/01_policy/constraint.md: the file already exists, so step 3 did not write it; carry what its sources state by hand",
     );
     expect(result.output).not.toContain("is now");
-    expect(
-      await readFile(path.join(context.specsDir, "01_policy", "constraint.md"), "utf8"),
-    ).toBe(existing);
+    expect(await readFile(path.join(context.specsDir, "01_policy", "constraint.md"), "utf8")).toBe(
+      existing,
+    );
   });
 
   // QFAI:EX-0004-0006-27
