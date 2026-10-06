@@ -8,7 +8,11 @@ import type { QfaiConfig } from "../config.js";
 import { parseDesignToken } from "../parse/designToken.js";
 import type { Issue } from "../types.js";
 import { collectVarUsages } from "../uiux/htmlMockParser.js";
-import { collectHtmlMockBlocks, collectScreenMockLabels } from "./htmlMockBlocks.js";
+import {
+  collectHtmlMockBlocks,
+  collectScreenMockLabels,
+  mockMarkdownGlobs,
+} from "./htmlMockBlocks.js";
 import { issue } from "./utils.js";
 
 export async function validateUiDefinitionConsistency(
@@ -72,11 +76,7 @@ export async function validateUiDefinitionConsistency(
   }
 
   // Load HTML Mock blocks
-  const mdPatterns = [
-    path.posix.join(root.replace(/\\/g, "/"), config.paths.discussionDir, "**/*.md"),
-    path.posix.join(root.replace(/\\/g, "/"), config.paths.specsDir, "**/*.md"),
-  ];
-  const mdFiles = await fg(mdPatterns, { absolute: true });
+  const mdFiles = await fg(mockMarkdownGlobs(root, config), { absolute: true });
   const mockScreenIds = new Set<string>();
 
   for (const mdFile of mdFiles) {

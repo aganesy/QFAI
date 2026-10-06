@@ -47,6 +47,8 @@ describe("the spec paths under POSIX path rules", () => {
     ["forward slashes", ".qfai/specs", ".qfai/contracts"],
     ["a leading ./ and a trailing /", "./.qfai/specs", "./.qfai/contracts/"],
     ["backslashes", ".qfai\\specs", ".qfai\\contracts\\"],
+    ["single quotes", "'.qfai\\specs'", "'.qfai\\contracts'"],
+    ["escaped backslashes in double quotes", '".qfai\\\\specs"', '".qfai\\\\contracts"'],
   ])("resolve %s to one directory for the lane and qfai validate", async (_, specs, contracts) => {
     const root = await treeWith(specs, contracts);
 
@@ -58,5 +60,16 @@ describe("the spec paths under POSIX path rules", () => {
       specsDir: path.relative(root, resolvePath(root, config, "specsDir")),
       contractsDir: path.relative(root, resolvePath(root, config, "contractsDir")),
     }).toEqual(lane);
+  });
+
+  // QFAI:EX-0001-0011-16
+  it("decodes a double-quoted escape for the lane as the YAML parser does", async () => {
+    const root = await treeWith('"docs\\tree"', ".qfai/contracts");
+
+    const { config } = await loadConfig(root);
+    const lane = configuredPaths(root);
+
+    expect(lane.specsDir).toBe("docs\tree");
+    expect(path.relative(root, resolvePath(root, config, "specsDir"))).toBe(lane.specsDir);
   });
 });
