@@ -155,6 +155,23 @@ describe("story-tree layout dispatch", () => {
     expect(ordered.issues.some((item) => item.code === "QFAI-STORY-013")).toBe(false);
   });
 
+  // QFAI:AC-0001-0051-08
+  // QFAI:EX-0001-0051-10
+  it("counts the paths outside .qfai that a document names, for each tree", async () => {
+    await put(
+      `${specs}/01_policy/principle.md`,
+      "Read `docs/guide.md` and https://example.com/a.md\n",
+    );
+    await put(`${specs}/decisions.md`, "| DEC-0001 | See `.qfai/spec/decisions.md` | - | DONE |\n");
+    await put(".qfai/discussion/discussion-x/notes.md", "Cites `src/b.ts`.\n");
+
+    const counted = await validateProject(root, configured(), { profile: "sdd" });
+    const reported = counted.issues.filter((item) => item.code === "QFAI-STORY-015");
+    expect(reported.map((item) => [item.severity, item.message])).toEqual([
+      ["warning", "The policy tree has 1 line in 1 file naming a path outside .qfai"],
+    ]);
+  });
+
   // QFAI:AC-0001-0053-06
   // QFAI:EX-0001-0053-07
   it("reports a cited decision and a superseding decision that no row declares", async () => {
