@@ -495,6 +495,7 @@ describe("the form of a finding code", () => {
     );
     expect(outside.filter((code) => !PREDATING.has(code))).toEqual([]);
     expect([...PREDATING].filter((code) => FORM.test(code))).toEqual([]);
+    expect([...PREDATING].filter((code) => !EMITTED_RULE_CODES.includes(code))).toEqual([]);
     expect("QFAI-STORY-012").toMatch(FORM);
     expect(ISSUE_EXPECTED_BY_CODE).toHaveProperty(["QFAI-STORY-012"]);
   });
