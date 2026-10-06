@@ -1510,7 +1510,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /opening\s+and\s+a\s+closing\s+tag\s+carrying\s+that\s+id/,
         /Say\s+in\s+the\s+system\s+prompt\s+what\s+the\s+tags\s+mean/,
         // What the marks are not.
-        /one\s+guardrail\s+among\s+several,\s+not\s+a\s+complete\s+defence/,
+        /one\s+safeguard\s+among\s+several,\s+not\s+a\s+complete\s+defence/,
       ]) {
         expect(text).toMatch(clause);
       }
