@@ -1300,8 +1300,7 @@ export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
  * into an adopter's `git add .`. The added line is the whole delta — `*.qfai-state.tmp`, one entry
  * after `.qfai/state.json` — and re-pinning it here is what makes that one line reviewed content
  * rather than drift. It moved a second time when the workflow's run state arrived: `.qfai/run/`
- * joined the ignore lines and `!.qfai/evidence/workflow/` the governance negations, and those two
- * lines are the whole delta.
+ * joined the ignore lines, and that line is the whole delta.
  *
  * `AGENTS.md` and `CLAUDE.md` are the entry points Codex and Claude Code load, seeded create-only so
  * that the `.agents/rules/` masters this run writes are cited by something. They belong here for the
