@@ -377,6 +377,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   in the same file no longer passes at the same count. A pin still written as a
   bare count is refused with the command that re-pins it. Fixes #2355.
 
+- **`qfai validate` prints an expected state for 128 more finding codes.**
+  Each of them used to print the generic "Rule compliance" as what was
+  expected. The retired-path, assistant-layout, agent-routing, contract, design
+  token, HTML mock, research, skill, waiver, autopilot-policy and prototyping
+  findings now say what a passing tree looks like (#2660).
+
 - **The temporary-files rule says which scratch directory wins** (#3005). A
   scratch directory the host names for the session is used first. The
   repository `tmp/` is the fallback, and the place for files the repository's

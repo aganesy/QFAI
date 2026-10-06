@@ -172,10 +172,11 @@ describe("issue code uniqueness", () => {
 //
 // `qfai validate` prints an `expected:` and a `fix:` line for every error
 // finding. Both resolve from a per-code catalog in validate.ts, and a code with
-// no entry degrades to a generic string that tells the reader nothing. The two
-// sets below record the codes that are still generic today. They may only
-// shrink: the tests keep a newly added code from shipping without a decision,
-// and fail when an entry is written but the code stays listed here.
+// no entry degrades to a generic string that tells the reader nothing. Every
+// error-capable code has an expected-state entry. The set below records the
+// codes whose remediation is still generic today. It may only shrink: the
+// tests keep a newly added code from shipping without a decision, and fail
+// when an entry is written but the code stays listed here.
 //
 // The census behind them counts every emission site, including `Issue` object
 // literals, codes named by a module-level constant rather than a string
@@ -184,108 +185,6 @@ describe("issue code uniqueness", () => {
 // `suggested_action` is passed on only some of their call sites — every one of
 // those was invisible to an earlier cut of the helper, so the lists were
 // re-baselined each time to name the codes that hole had been hiding.
-
-const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
-  "D-DEPRECATED-PATH",
-  "QFAI-AGENT-005",
-  "QFAI-AGENT-007",
-  "QFAI-AGENT-008",
-  "QFAI-AGENT-009",
-  "QFAI-AGENT-010",
-  "QFAI-AGENT-011",
-  "QFAI-AGENT-012",
-  "QFAI-AGENT-013",
-  "QFAI-ASSETS-001",
-  "QFAI-ASSETS-002",
-  "QFAI-CONTRACT-010",
-  "QFAI-CONTRACT-011",
-  "QFAI-CONTRACT-012",
-  "QFAI-CONTRACT-013",
-  "QFAI-CONTRACT-014",
-  "QFAI-CONTRACT-020",
-  "QFAI-CONTRACT-021",
-  "QFAI-DB-002",
-  "QFAI-DT-001",
-  "QFAI-DT-002",
-  "QFAI-DT-004",
-  "QFAI-DT-007",
-  "QFAI-DT-008",
-  "QFAI-DT-009",
-  "QFAI-DT-010",
-  "QFAI-MOCK-001",
-  "QFAI-MOCK-002",
-  "QFAI-MOCK-003",
-  "QFAI-MOCK-004",
-  "QFAI-MOCK-009",
-  "QFAI-MOCK-010",
-  "QFAI-MOCK-011",
-  "QFAI-MOCK-012",
-  "QFAI-RESEARCH-001",
-  "QFAI-RESEARCH-003",
-  "QFAI-RESEARCH-004",
-  "QFAI-RESEARCH-005",
-  "QFAI-RESEARCH-006",
-  "QFAI-RESEARCH-007",
-  "QFAI-RESEARCH-008",
-  "QFAI-RESEARCH-009",
-  "QFAI-RESEARCH-010",
-  "QFAI-RESEARCH-011",
-  "QFAI-SKILLS-010",
-  "QFAI-SKILLS-011",
-  "QFAI-TRACE-118",
-  "QFAI-TRACE-119",
-  "QFAI-TRACE-120",
-  "QFAI-TRACE-121",
-  "QFAI-TRACE-122",
-  "QFAI-TRACE-123",
-  "QFAI-WAIVER-001",
-  "QFAI-WAIVER-002",
-  "QFAI_CONFIG_INVALID",
-  "R-AUTOPILOT-POLICY-MISSING",
-  "R-HANDOFF-SCHEMA-DRIFT",
-  "R-MOCK-HREF-DRIFT",
-  "R-SKILL-MANIFEST-DRIFT",
-  // The `core/uiux/**` validators route every finding through a file-local
-  // `Issue` factory rather than calling `issue(...)` directly, so none of these
-  // codes reached the census until factory call sites were counted. They are
-  // recorded as pending rather than catalogued in bulk: each still needs an
-  // expected-state sentence written by someone who knows the rule.
-  "UIX-VAL-3LAYER-FORBIDDEN-FILE",
-  "UIX-VAL-3LAYER-INCOMPLETE-FAMILY",
-  "UIX-VAL-3LAYER-LEGACY-FORMAT",
-  "UIX-VAL-3LAYER-MIXED-FORMAT",
-  "UIX-VAL-CLASSIFICATION-CONTRADICTION",
-  "UIX-VAL-CLASSIFICATION-DUPLICATE-SECONDARY-SURFACE",
-  "UIX-VAL-CLASSIFICATION-INVALID-BOOLEAN",
-  "UIX-VAL-CLASSIFICATION-INVALID-SECONDARY-SURFACE",
-  "UIX-VAL-CLASSIFICATION-INVALID-SURFACE",
-  "UIX-VAL-CLASSIFICATION-MISSING",
-  "UIX-VAL-CLASSIFICATION-RATIONALE-PLACEHOLDER",
-  "UIX-VAL-CLASSIFICATION-REQUIRED-FIELD",
-  "UIX-VAL-CLASSIFICATION-SECONDARY-ARRAY",
-  "UIX-VAL-CLASSIFICATION-SECONDARY-DUPLICATE",
-  "UIX-VAL-OQ-OPEN-CRITICAL",
-  "UIX-VAL-SCREEN-CONTRACT-DUPLICATE-ID",
-  "UIX-VAL-SCREEN-CONTRACT-LEGACY-FORMAT",
-  "UIX-VAL-SCREEN-CONTRACT-SCHEMA-INCOMPLETE",
-  "UIX-VAL-SCREEN-CONTRACT-STATE-COVERAGE",
-  "UIX-VAL-SIDECAR-MISSING",
-  "UIX-VAL-SKILL-ASPIRATIONAL",
-  "UIX-VAL-SKILL-BANNED-PHRASE",
-  "UIX-VAL-SKILL-CANONICAL-SURFACE",
-  "UIX-VAL-SKILL-CLI-SURFACE",
-  "UIX-VAL-SKILL-DELEGATION",
-  "UIX-VAL-SKILL-ENV-PRECONDITIONS",
-  "UIX-VAL-SKILL-PLAYWRIGHT-FALLBACK",
-  "UIX-VAL-SKILL-PREFLIGHT",
-  "UIX-VAL-SKILL-SECTION-MISSING",
-  "UIX-VAL-SKILL-STATIC-FIRST",
-  "UIX-VAL-SKILL-UI-BEARING-FALSE",
-  "UIX-VAL-TREND-CATEGORY-MISSING",
-  "UIX-VAL-TREND-ENTRY-MISSING",
-  "UIX-VAL-TREND-FIELD-MISSING",
-  "UIX-VAL-TREND-SCAN-MISSING",
-]);
 
 const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "D-DEPRECATED-PATH",
@@ -467,12 +366,9 @@ describe("issue report metadata", () => {
     expect(usage.get("C-UNRESOLVABLE")?.errorCapable).toBe(true);
   });
 
-  it("every error-capable issue code has an expected-state catalog entry or is pending", async () => {
+  it("every error-capable issue code has an expected-state catalog entry", async () => {
     const usage = await collectErrorCapableUsage();
-    const missing = [...usage.keys()]
-      .filter((code) => !(code in ISSUE_EXPECTED_BY_CODE))
-      .filter((code) => !PENDING_EXPECTED_CATALOG_CODES.has(code))
-      .sort();
+    const missing = [...usage.keys()].filter((code) => !(code in ISSUE_EXPECTED_BY_CODE)).sort();
     expect(missing).toEqual([]);
   });
 
@@ -488,11 +384,8 @@ describe("issue report metadata", () => {
     expect(missing).toEqual([]);
   });
 
-  it("keeps no stale entries on either pending list", async () => {
+  it("keeps no stale entries on the pending remediation list", async () => {
     const usage = await collectErrorCapableUsage();
-    const staleExpected = [...PENDING_EXPECTED_CATALOG_CODES]
-      .filter((code) => !usage.has(code) || code in ISSUE_EXPECTED_BY_CODE)
-      .sort();
     const staleFix = [...PENDING_FIX_CATALOG_CODES]
       .filter(
         (code) =>
@@ -501,7 +394,7 @@ describe("issue report metadata", () => {
           (usage.get(code)?.everyErrorSiteHasSuggestedAction ?? false),
       )
       .sort();
-    expect({ staleExpected, staleFix }).toEqual({ staleExpected: [], staleFix: [] });
+    expect(staleFix).toEqual([]);
   });
 
   it("reports an uncatalogued code honestly instead of printing its internal rule token", () => {
@@ -537,8 +430,9 @@ describe("the form of a finding code", () => {
   const FORM = /^[A-Z]+(?:-[A-Z]+)*-\d{3}$/;
 
   /**
-   * The codes emitted before a new code had to take the form and an expected
-   * state. A code may leave this set when it is fixed or retired; none may join it.
+   * The codes emitted before a new code had to take the form, none of which
+   * does. A code leaves this set when it is renamed into the form or retired;
+   * none may join it.
    */
   const PREDATING: ReadonlySet<string> = new Set([
     "D-DEPRECATED-PATH",
@@ -546,79 +440,6 @@ describe("the form of a finding code", () => {
     "D-SAAS-PACKAGE-HANDOFF-SCHEMA",
     "D-SAAS-PACKAGE-VERIFY-SKIPPED",
     "I-ASSISTANT-LAYER-UNSEEDED",
-    "QFAI-AGENT-005",
-    "QFAI-AGENT-007",
-    "QFAI-AGENT-008",
-    "QFAI-AGENT-009",
-    "QFAI-AGENT-010",
-    "QFAI-AGENT-011",
-    "QFAI-AGENT-012",
-    "QFAI-AGENT-013",
-    "QFAI-ASSETS-001",
-    "QFAI-ASSETS-002",
-    "QFAI-AUD-001",
-    "QFAI-AUD-004",
-    "QFAI-AUD-020",
-    "QFAI-AUD-021",
-    "QFAI-CONSISTENCY-001",
-    "QFAI-CONSISTENCY-002",
-    "QFAI-CONTRACT-000",
-    "QFAI-CONTRACT-010",
-    "QFAI-CONTRACT-011",
-    "QFAI-CONTRACT-012",
-    "QFAI-CONTRACT-013",
-    "QFAI-CONTRACT-014",
-    "QFAI-CONTRACT-020",
-    "QFAI-CONTRACT-021",
-    "QFAI-DB-001",
-    "QFAI-DB-002",
-    "QFAI-DT-001",
-    "QFAI-DT-002",
-    "QFAI-DT-003",
-    "QFAI-DT-004",
-    "QFAI-DT-005",
-    "QFAI-DT-006",
-    "QFAI-DT-007",
-    "QFAI-DT-008",
-    "QFAI-DT-009",
-    "QFAI-DT-010",
-    "QFAI-FLOW-001",
-    "QFAI-FLOW-002",
-    "QFAI-FLOW-004",
-    "QFAI-MOCK-001",
-    "QFAI-MOCK-002",
-    "QFAI-MOCK-003",
-    "QFAI-MOCK-004",
-    "QFAI-MOCK-005",
-    "QFAI-MOCK-006",
-    "QFAI-MOCK-007",
-    "QFAI-MOCK-008",
-    "QFAI-MOCK-009",
-    "QFAI-MOCK-010",
-    "QFAI-MOCK-011",
-    "QFAI-MOCK-012",
-    "QFAI-PLATFORM-001",
-    "QFAI-PLATFORM-002",
-    "QFAI-RESEARCH-001",
-    "QFAI-RESEARCH-002",
-    "QFAI-RESEARCH-003",
-    "QFAI-RESEARCH-004",
-    "QFAI-RESEARCH-005",
-    "QFAI-RESEARCH-006",
-    "QFAI-RESEARCH-007",
-    "QFAI-RESEARCH-008",
-    "QFAI-RESEARCH-009",
-    "QFAI-RESEARCH-010",
-    "QFAI-RESEARCH-011",
-    "QFAI-SKILLS-010",
-    "QFAI-SKILLS-011",
-    "QFAI-SKILLS-012",
-    "QFAI-TEST-002",
-    "QFAI-VALIDATE-017",
-    "QFAI-WAIVER-001",
-    "QFAI-WAIVER-002",
-    "QFAI-WAIVER-003",
-    "QFAI-WAIVER-004",
     "QFAI_CONFIG_INVALID",
     "R-AUTOPILOT-POLICY-MISSING",
     "R-AUTOPILOT-POLICY-WIDENED",
@@ -673,6 +494,7 @@ describe("the form of a finding code", () => {
       (code) => !FORM.test(code) || !(code in ISSUE_EXPECTED_BY_CODE),
     );
     expect(outside.filter((code) => !PREDATING.has(code))).toEqual([]);
+    expect([...PREDATING].filter((code) => FORM.test(code))).toEqual([]);
     expect("QFAI-STORY-012").toMatch(FORM);
     expect(ISSUE_EXPECTED_BY_CODE).toHaveProperty(["QFAI-STORY-012"]);
   });
