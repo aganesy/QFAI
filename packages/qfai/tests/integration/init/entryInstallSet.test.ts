@@ -274,6 +274,14 @@ describe("a host directory reached through a link", () => {
   });
 });
 
+/** The lines of a report that announce a skipped path. */
+function skipLines(output: string): string {
+  return output
+    .split(/\r?\n/)
+    .filter((line) => /^\s*skipped?:/.test(line))
+    .join(" | ");
+}
+
 // QFAI:EX-0001-0196-33
 describe("a skip line names the path relative to the project", () => {
   it("An instructions entry that is a directory is named without the project root", async () => {
@@ -288,7 +296,8 @@ describe("a skip line names the path relative to the project", () => {
       expect(output).toContain(
         "skipped: .github/instructions/code-review.instructions.md is a directory",
       );
-      expect(output).not.toContain(root);
+      // The report header names the destination; no skip line may.
+      expect(skipLines(output)).not.toContain(root);
     });
   });
 
@@ -304,7 +313,8 @@ describe("a skip line names the path relative to the project", () => {
       expect(output).toContain(
         "skip: .codex/agents/qa-gatekeeper.toml (a directory is in the way, so nothing can be generated here)",
       );
-      expect(output).not.toContain(root);
+      // The report header names the destination; no skip line may.
+      expect(skipLines(output)).not.toContain(root);
     });
   });
 });

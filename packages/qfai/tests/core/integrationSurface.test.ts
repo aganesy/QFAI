@@ -699,7 +699,7 @@ describe("a type collision is reported wherever it sits on the path", () => {
 
       const found = await finding(root);
       expect(found?.message).toContain("the integration directory is a file");
-      expect(found?.suggested_action).toContain("A broken integration directory itself");
+      expect(found?.suggested_action).toContain("A linked or broken integration directory itself");
     });
   });
 
