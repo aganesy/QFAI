@@ -29,6 +29,7 @@
     "means adding it here."
   ],
   "include": [
+    "tests/integration/storyTreeExampleDrift.test.ts",
     "vitest.config.ts",
     "vitest.knobs.ts",
     "vitest.workspace.ts",
@@ -54,6 +55,7 @@
     "tests/assets/constitutionFrontMatter.test.ts",
     "tests/assets/contractTemplateRules.test.ts",
     "tests/assets/decisionRecordIdGrammar.test.ts",
+    "tests/assets/delegatedGate.test.ts",
     "tests/assets/delegationHostBackstops.test.ts",
     "tests/assets/deltaTemplateParses.test.ts",
     "tests/assets/designDirectionInterview.test.ts",
