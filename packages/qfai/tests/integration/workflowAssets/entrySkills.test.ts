@@ -352,6 +352,7 @@ describe("qfai-run", () => {
   // QFAI:AC-0001-0211-05
   // QFAI:EX-0001-0211-40
   // QFAI:EX-0001-0211-41
+  // QFAI:EX-0001-0211-44
   it("marks a behaviour change as a prototype request only when it asks to change the prototype", async () => {
     const reference = await readShipped(EXTRACTION);
     expect(rowOf(sectionOf(reference, "## Qualifiers"), "| `prototype-requested`")).toMatch(
@@ -359,6 +360,9 @@ describe("qfai-run", () => {
     );
     expect(rowOf(sectionOf(reference, "## Entry flags"), "| `decision`")).toMatch(
       /on a `behaviour-change` that explicitly asks to change the prototype, only when a choice is left open/i,
+    );
+    expect(flat(sectionOf(reference, "## Entry flags"))).toMatch(
+      /acceptance is shown when .* the user asks for the change in the session and names it and its effect/i,
     );
   });
 

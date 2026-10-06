@@ -82,7 +82,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Now only a missing path counts as absent, and any other failure, such as
   `EACCES` or `EIO`, reaches the caller with its code, path and message
   (#2915).
-
 - **A validator no longer reads an unreadable file as a missing one.** The
   shared `exists` and `readSafe` helpers turned every failure, including
   `EACCES` and `EIO`, into "absent" or an empty string, so a file the validator
@@ -94,7 +93,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the guard now lists `node scripts/pin-guard-bytes.mjs` and then
   `node scripts/pin-verification-bodies.mjs` after the `--pin` command.
   Following the old message alone failed the lint lane on the stale digest.
-
 - **The contract guide states one scope for contract kinds.** It named only
   `api/`, `db/` and `ui/` as contract directories in one place and `cli/` in
   another. It now says a project's contracts are the three directories and that
@@ -106,19 +104,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and list included every distributed file, including those already identical to
   the shipped copy. Rule files, the Copilot and Codex files and the agent and
   skill links that need no change are now counted as skipped (#2986).
-
 - **The handoff reader refuses an artifact whose fields have the wrong type.**
   `HandoffReader.read` checked only that the five top-level keys were present
   and then returned the file as a `HandoffArtifact`. It now also requires
   `timestamp` and `iteration`, and checks each field and nested list against
   the type it returns. A file that fails is refused with `null` and a logged
   error, as a missing key already was. Fixes #2862.
-
 - **Migration keeps an approved but unapplied change request in progress**
   (#2425). Step 2 of `qfai-migration-v1-to-v2` gave every `approved` change
   request the Status DONE, recording a change as made when only its approval
   was. A request whose `Applied at` is empty or `-` now becomes WIP.
-
 - **The `qfai-run` entry reminder stays silent on a turn the host starts
   (#2989).** The Claude Code `UserPromptSubmit` hook that sends a request to
   `qfai-run` printed on every notification, so an agent could start a run from
@@ -140,12 +135,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `.claude/skills/qfai-run/SKILL.md` under the current directory. The reminder
   is read from the session's own checkout. Fixes #2972.
 
+- **A completed change request can no longer be reopened (#2897).** A
+  `Change request:` row that the base branch holds at DONE authorised edits to
+  its paths again once a branch set it back to WIP. It now authorises nothing at
+  any status, so a later change needs a new approved request.
 - **A request whose artifacts no stage of the route writes no longer runs every
   stage unasked.** `npx qfai workflow plan --in` listed only the `broad` scope
   there, so no scope question was put. It now refuses with `artifact-unserved`
   and names each artifact, and the session stops before the first stage. A
   route that writes nothing is not refused (#2964).
-
 - **The changelog guard no longer fails the commit a release is tagged at.**
   The guard refuses an entry added to a section whose tag exists. The merge
   that folds `## [Unreleased]` into the release is the commit the tag is pushed
@@ -186,6 +184,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `timings: over budget` on a repository with a handful of mock blocks. The load
   now happens before the parse clock starts and is left out of the group's
   measurement. Fixes #2997.
+
+- **The verify gate can pass in a project that records a backlog.**
+  `verify-qfai-gate` now runs the project's `Validate` entry, and a project
+  whose entry runs a pinned ratchet passes while every error stays within its
+  pin. `verify-repo-gate` accepts that result. A project with no such entry
+  still fails on any `error`. This repository's `Validate` entry runs
+  `scripts/check-dogfood-backlog.mjs --profile full`. Fixes #2970.
 
 - **A rewritten decision row no longer authorizes a protected file.** A
   `Change request:` row the base already holds could have its Content changed
@@ -298,11 +303,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   review asks point at the checks that already own them: the coverage gate, and
   the proof per example in the oracle strength reference.
 
+- **A request that names the exact change is the approval** (#2991). When
+  the user asks in the session for a change to a story-tree or contract file and
+  names the change and its effect, `sdd-triage` lists the files in its
+  announcement and asks no second question, and records the request as the
+  option chosen. The same request shows acceptance, so `qfai-run` does not set
+  the `decision` flag for it.
+
 - **The repository's dogfooding ratchet pins each finding, not each file's
   count.** `scripts/check-dogfood-backlog.mjs` keys an error by its code and the
   IDs it names, so a change that clears one untested example and adds another
   in the same file no longer passes at the same count. A pin still written as a
   bare count is refused with the command that re-pins it. Fixes #2355.
+
+- **The documentation-clarity rule allows the names the reader sees in the
+  product** (#3008). A screen label, a button name, an item name in a sheet the
+  document tells the reader to fill in and a product term met on screen may
+  appear in a document written for that reader. A term the reader cannot already
+  know is defined once at its first use.
 
 - **Five doctor criteria now name the tests that prove them.** Existing
   integration tests carry standalone `QFAI:AC-...` comments, and

@@ -49,8 +49,9 @@ Both classes use the same approval and owner-rerun path.
 
    When the user cannot be asked, write no row to either table: report the proposed change as the decision still
    needed and keep the affected items stopped. A WIP Change request: row is the in-force authorization that the drift gate reads.
-   TODO is not authorization. A DONE row authorizes only on the branch that appended it or moved it from WIP. A DONE
-   row the base already holds records a change already applied, so a later edit to the same path needs a row of its own.
+   TODO is not authorization. A DONE row authorizes only on the branch that appended it or moved it from WIP. A row
+   the base already holds at DONE records a change already applied and authorizes nothing at any Status, so setting it back to WIP
+   reopens nothing and a later edit to the same path needs a row of its own.
 
 4. Rerun the owner skill against the affected artifact. The owner names the approved decision row, the input revision, and whether it is confirming existing content or changing it.
    A contract with a contract ID, such as `API-0002`, is selected by its full ID; a contract without one is selected by its repository-relative path.
