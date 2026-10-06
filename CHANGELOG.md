@@ -54,6 +54,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reference says such a request keeps the repository change's intent with the
   `env` flag (#2999).
 
+- **`qfai validate` warns when an example changes and no test annotating it
+  does.** In the `tdd` and `drift` profiles, an example row whose cells changed
+  since the base raises `QFAI-DRIFT-002` at warning, naming the example ID and
+  its `03_Example.md`, unless a selected non-E2E test annotating that example
+  changed too. A new row and a table that was only re-padded raise nothing. The
+  warning asks the owner to recheck the test; it does not prove the test asserts
+  the new row (#2748).
+
 ### Fixed
 
 - **The init skill-link test compares where each link resolves.** It matched
