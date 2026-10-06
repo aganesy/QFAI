@@ -81,31 +81,35 @@ export async function locateToolAgainstProject(
 ): Promise<{ packageDir: string; outside: boolean; declaredElsewhere: boolean } | null> {
   const packageDir = await resolveToolPackageDir();
   if (packageDir === null) return null;
+  // `npx` walks the directory as typed, which on Windows can pass through a
+  // junction, so the walks start there. Containment is judged on real paths.
+  const walkFrom = path.resolve(root);
   const [realRoot, realPackageDir] = await Promise.all([
-    toRealPath(path.resolve(root)),
+    toRealPath(walkFrom),
     toRealPath(packageDir),
   ]);
   // The walks for a link run only for the one layout they can change: a package
   // outside the root and outside every `node_modules`.
   const needsLink = isOutside(realRoot, realPackageDir) && !isInsideNodeModules(realPackageDir);
   const linkingNodeModules = needsLink
-    ? await findLinkingNodeModules(realRoot, realPackageDir)
+    ? await findLinkingNodeModules(walkFrom, realPackageDir)
     : null;
   const classified = classifyToolLocation(
     realRoot,
     realPackageDir,
     linkingNodeModules === null
       ? null
-      : { nodeModules: linkingNodeModules, declaringDir: await findDeclaringDir(realRoot) },
+      : { nodeModules: linkingNodeModules, declaringDir: await findDeclaringDir(walkFrom) },
   );
-  const outside = classified && !(await reachedThroughLinkedNodeModules(realRoot, realPackageDir));
+  const outside =
+    classified && !(await reachedThroughLinkedNodeModules(realRoot, realPackageDir, walkFrom));
   return {
     packageDir,
     outside,
     // Only asked when the answer can matter. A copy resolved from inside the
     // project is the declared one by construction, and reading a manifest to
     // confirm that would be work on every clean run.
-    declaredElsewhere: outside ? await resolvesAgainstDeclaration(realRoot, realPackageDir) : false,
+    declaredElsewhere: outside ? await resolvesAgainstDeclaration(walkFrom, realPackageDir) : false,
   };
 }
 
@@ -129,8 +133,8 @@ export async function locateToolAgainstProject(
  * version comparison: the version a lockfile pins is not readable from the
  * running process, and the directory is.
  */
-async function resolvesAgainstDeclaration(root: string, packageDir: string): Promise<boolean> {
-  const declaringDir = await findDeclaringDir(root);
+async function resolvesAgainstDeclaration(walkFrom: string, packageDir: string): Promise<boolean> {
+  const declaringDir = await findDeclaringDir(walkFrom);
   return (
     declaringDir !== null &&
     classifyAgainstDeclaration(declaringDir, packageDir) &&
@@ -148,9 +152,10 @@ async function resolvesAgainstDeclaration(root: string, packageDir: string): Pro
 export async function reachedThroughLinkedNodeModules(
   root: string,
   packageDir: string,
+  walkFrom: string = root,
 ): Promise<boolean> {
   if (await resolvesThroughOwnNodeModules(root, packageDir)) return true;
-  const declaringDir = await findDeclaringDir(root);
+  const declaringDir = await findDeclaringDir(walkFrom);
   return declaringDir !== null && (await resolvesThroughOwnNodeModules(declaringDir, packageDir));
 }
 
@@ -201,7 +206,8 @@ function isOutside(base: string, target: string): boolean {
 
 /**
  * The nearest directory at or above `root` whose `package.json` declares
- * `qfai`, or `null` when none does.
+ * `qfai`, or `null` when none does. The walk follows `root` as given, and the
+ * directory returned is a real path.
  *
  * Every dependency field counts. A tool named in `devDependencies` is as
  * declared as one in `dependencies` — the project said which copy it wants
@@ -213,7 +219,7 @@ export async function findDeclaringDir(root: string): Promise<string | null> {
   for (let depth = 0; depth < 16; depth += 1) {
     try {
       const raw = await readFile(path.join(dir, "package.json"), "utf-8");
-      if (declaresQfai(JSON.parse(raw))) return dir;
+      if (declaresQfai(JSON.parse(raw))) return await toRealPath(dir);
     } catch {
       // Absent, unreadable, or not JSON: keep walking. A manifest that does not
       // declare the tool is not a stopping point either — a workspace package
@@ -284,8 +290,9 @@ export function classifyToolLocation(
  * and Node reports the link's target. Only the nearest entry counts, because it
  * is the one `npx` runs; a farther link to the same checkout means the checkout
  * was run by its path. The `node_modules` directory's own real path is returned
- * because it can be a link as well, to another checkout's. Both operands must
- * already be real paths.
+ * because it can be a link as well, to another checkout's. `root` is walked as
+ * given, so a junction on the way up is followed the way `npx` follows it;
+ * `packageDir` must already be a real path.
  */
 export async function findLinkingNodeModules(
   root: string,

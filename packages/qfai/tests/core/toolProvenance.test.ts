@@ -545,6 +545,29 @@ describe("locateToolAgainstProject", () => {
   });
 
   // QFAI:EX-0001-0039-14
+  it("follows the directory as typed when it passes through a junction", async (ctx) => {
+    // `npx` walks the working directory as typed. The project really lies under
+    // `elsewhere`, where no `node_modules` links to the package, but it is
+    // reached through `work`, whose `node_modules` does.
+    await withTempDir(async (dir) => {
+      const packageDir = String(await resolveToolPackageDir());
+      const work = path.join(dir, "work");
+      const real = path.join(dir, "elsewhere", "project");
+      await mkdir(path.join(work, "node_modules"), { recursive: true });
+      await mkdir(real, { recursive: true });
+      const typed = path.join(work, "project");
+      const linked =
+        (await tryLink(packageDir, path.join(work, "node_modules", "qfai"))) &&
+        (await tryLink(real, typed));
+      if (!linked) ctx.skip();
+
+      const located = await locateToolAgainstProject(typed);
+      expect(located?.outside).toBe(true);
+      expect(located?.declaredElsewhere).toBe(false);
+    });
+  });
+
+  // QFAI:EX-0001-0039-14
   it("stays quiet when a nearer copy is what npx would run", async (ctx) => {
     // The checkout was run by its path against a project with its own install;
     // the link farther up is not how it was reached.

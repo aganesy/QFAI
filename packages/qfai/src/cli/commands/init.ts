@@ -22,6 +22,7 @@ import { exec as execCb } from "node:child_process";
 import { promisify } from "node:util";
 
 import {
+  blockedAncestor,
   collectTemplateFiles,
   copyTemplatePaths,
   copyTemplateTree,
@@ -75,6 +76,7 @@ import {
   legacyAssistantTreeSunsetLabel,
 } from "../../core/paths/assistantPaths.js";
 import {
+  PENDING_CITATIONS_BASENAME,
   type PendingCitations,
   readPendingCitations,
   writePendingCitations,
@@ -1090,7 +1092,12 @@ async function ensureAgentEntryPointRules(
   // A master an earlier run wrote and could not cite is owed alongside the ones
   // this run wrote. A master the project has since removed is owed nothing.
   const rulesDir = path.join(destRoot, ".agents", "rules");
-  const pending = await readPendingCitations(rulesDir);
+  // The record is read and written only where the rules directory is a real one:
+  // a linked `.agents` or `.agents/rules` would send both to the link's target.
+  const recordWritable =
+    (await blockedAncestor(destRoot, path.join(rulesDir, PENDING_CITATIONS_BASENAME))) ===
+    undefined;
+  const pending: PendingCitations = recordWritable ? await readPendingCitations(rulesDir) : {};
   const owed = async (entryPoint: string): Promise<string[]> => {
     const recorded = await Promise.all(
       (pending[entryPoint] ?? []).map(async (master) =>
@@ -1283,7 +1290,7 @@ async function ensureAgentEntryPointRules(
   }
 
   // A dry run records nothing: every change above is to this run's copy alone.
-  if (!dryRun) await writePendingCitations(rulesDir, pending);
+  if (!dryRun && recordWritable) await writePendingCitations(rulesDir, pending);
   return { copied, skipped };
 }
 
