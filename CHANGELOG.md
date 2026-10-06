@@ -334,6 +334,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `AC-0003-0004-01` gains a deprecated `paths.promptsDir` warning case.
   The BF-0003 full pin keeps only `AC-0003-0006-01` and `AC-0003-0006-03`.
   Refs #2367.
+- **A document-schema finding says what the section holds** (#3011). A
+  forbidden-text finding printed the regular expression that matched. It now
+  gives the section's description from the schema, and patterns that fail at one
+  position of a document are reported once. `--show-patterns` on the shipped
+  `check-mdschema.mjs` prints the expressions again, for a schema author.
 - **Configure and web research follow the shared delegation rules alone**
   (#2857). Both skills carried empty override stanzas, and configure restated
   the failure handling. A failed delegation is now classified and handled only

@@ -42,6 +42,8 @@ import {
   checkDocuments,
   parseViolations,
   patternToRegExp,
+  explainForbiddenText,
+  sectionDescriptions,
   rootHeadingPattern,
 } from "../../assets/scripts/check-mdschema.mjs";
 
@@ -1147,5 +1149,119 @@ describe("reading mdschema's output", () => {
     const parsed = parseViolations(`${output}\nsomething new the tool printed`, [file], root);
 
     expect(parsed.unattributed).toEqual(["something new the tool printed"]);
+  });
+});
+
+describe("a forbidden-text finding", () => {
+  const TECH_SCHEMA = readFileSync(
+    path.join(REPO_ROOT, "packages/qfai/assets/mdschema/story/03_contract/tech.mdschema.yml"),
+    "utf-8",
+  );
+  const TECH_TEMPLATE = readFileSync(
+    path.join(
+      REPO_ROOT,
+      "packages/qfai/assets/init/.qfai/assistant/skill/qfai-sdd/templates/spec/03_contract/tech.md",
+    ),
+    "utf-8",
+  ).replace(/\r\n/g, "\n");
+  const PROSE_DEPENDENCIES = TECH_TEMPLATE.replace(
+    /^- `<package>`\n {2}- `<what the project uses it for>`\n/m,
+    "- some prose\n",
+  );
+  const DESCRIPTION =
+    "Each runtime dependency with the reason for it on a nested item, or `- None.`";
+  const first = "(?m)^- [^`N]";
+  const second = String.raw`(?m)^- N(?:[^o\n]|o[^n\n])`;
+  const lineOf = (pattern: string): string =>
+    `  ✗ 43:4 [forbidden-text] Forbidden text '${pattern}' found in section 'Dependencies'`;
+
+  async function writeTech(root: string, body: string): Promise<string> {
+    const dir = path.join(root, ".qfai", "contracts");
+    await mkdir(dir, { recursive: true });
+    await writeFile(path.join(dir, "tech.md"), body, "utf-8");
+    return ".qfai/contracts/tech.md";
+  }
+
+  it("reads the description of each heading, however the schema writes it", () => {
+    const entries = sectionDescriptions(TECH_SCHEMA);
+
+    expect(entries.find((entry) => entry.pattern === "^## Dependencies$")?.description).toBe(
+      DESCRIPTION,
+    );
+    const architecture = entries.find((entry) => entry.pattern === "^## Architecture$");
+    expect(architecture?.description.startsWith("The layers the code is divided into.")).toBe(true);
+    expect(architecture?.description).not.toContain("\n");
+  });
+
+  it("states what the section holds in place of the pattern", () => {
+    const explained = explainForbiddenText(lineOf(first), TECH_SCHEMA);
+
+    expect(explained).toBe(
+      `  ✗ 43:4 [forbidden-text] Section 'Dependencies' does not hold what the schema requires: ${DESCRIPTION}`,
+    );
+    expect(explained).not.toContain("(?m)");
+  });
+
+  it("is one finding for the patterns that fail at one position, and the tally follows", () => {
+    const output = [
+      "C:\tree\tech.md",
+      lineOf(first),
+      lineOf(second),
+      '  ✗ 50:1 [structure] Required element "^## Stack$" not found within "Technology"',
+      "",
+      "✗ Found 3 violation(s) in 1 file(s)",
+    ].join("\n");
+
+    const lines = explainForbiddenText(output, TECH_SCHEMA).split("\n");
+
+    expect(lines.filter((line) => line.includes("[forbidden-text]"))).toHaveLength(1);
+    expect(lines.at(-1)).toBe("✗ Found 2 violation(s) in 1 file(s)");
+  });
+
+  it("keeps two documents' findings at the same position apart", () => {
+    const output = ["a.md", lineOf(first), "b.md", lineOf(first)].join("\n");
+
+    expect(
+      explainForbiddenText(output, TECH_SCHEMA)
+        .split("\n")
+        .filter((line) => line.includes("[forbidden-text]")),
+    ).toHaveLength(2);
+  });
+
+  it("keeps the pattern where the schema gives the section no description", () => {
+    const output = lineOf(first).replace("'Dependencies'", "'Unknown section'");
+
+    expect(explainForbiddenText(output, TECH_SCHEMA)).toBe(output);
+  });
+
+  it("is reported by the lane as the rule, and as the pattern behind --show-patterns", async () => {
+    const root = await newTempDir();
+    const file = await writeTech(root, PROSE_DEPENDENCIES);
+
+    const explained = runDriver(["--root", root, "--scope", "files", file]);
+    const raw = runDriver(["--root", root, "--scope", "files", "--show-patterns", file]);
+
+    expect(explained.status).toBe(1);
+    expect(explained.stderr).toContain(`does not hold what the schema requires: ${DESCRIPTION}`);
+    expect(explained.stderr).not.toContain("Forbidden text");
+    expect(raw.stderr).toContain("Forbidden text '(?m)^- [^`N]'");
+    expect(raw.stderr).not.toContain("does not hold what the schema requires");
+  });
+
+  it("is returned to a caller as the rule", async () => {
+    const root = await newTempDir();
+    await writeTech(root, PROSE_DEPENDENCIES);
+
+    const result = checkDocuments(root, {
+      specsDir: ".qfai/specs",
+      contractsDir: ".qfai/contracts",
+    });
+
+    const messages: string[] = result.violations
+      .filter((v: { rule: string }) => v.rule === "forbidden-text")
+      .map((v: { message: string }) => v.message);
+    expect(messages).toEqual([
+      `Section 'Dependencies' does not hold what the schema requires: ${DESCRIPTION}`,
+    ]);
   });
 });

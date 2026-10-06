@@ -85,6 +85,7 @@
  *   node scripts/check-mdschema.mjs --scope all --summary
  *   node scripts/check-mdschema.mjs --base <ref>         # ratchet against <ref>
  *   node scripts/check-mdschema.mjs --scope files a.md b.md
+ *   node scripts/check-mdschema.mjs --scope all --show-patterns  # the pattern behind each forbidden-text finding
  *   node scripts/check-mdschema.mjs --root <dir> --scope all   # another tree
  *   node scripts/check-mdschema.mjs --tools <dir> --scope all  # mdschema installed under <dir>
  *
@@ -726,10 +727,11 @@ function runMdschema(mdschema, schemaPath, files, root) {
       output: result.error instanceof Error ? result.error.message : "mdschema did not run",
     };
   }
+  const output = `${result.stdout ?? ""}${result.stderr ?? ""}`.trimEnd();
   return {
     ok: result.status === 0,
     spawnFailed: false,
-    output: `${result.stdout ?? ""}${result.stderr ?? ""}`.trimEnd(),
+    output: showPatterns ? output : explainForbiddenText(output, readFileSync(schemaPath, "utf-8")),
   };
 }
 
@@ -875,6 +877,143 @@ function documentUniverse(root, paths) {
       }),
     ),
   ];
+}
+
+/**
+ * Whether a finding names the pattern that failed, as `mdschema` prints it,
+ * rather than the rule the pattern enforces. Set by `--show-patterns`, for the
+ * author of a schema.
+ */
+let showPatterns = false;
+
+/** A forbidden-text finding: the pattern that matched and the section it matched in. */
+const FORBIDDEN_TEXT_MESSAGE = /^Forbidden text '.*' found in section '([^']*)'$/u;
+
+/**
+ * The heading entries of a schema with the description each declares.
+ *
+ * Read with a line scanner, for the reason {@link rootHeadingPattern} is: the
+ * schemas are fixed shapes authored here, and this script runs before anything
+ * beyond the root devDependencies is installed. A description is a plain value
+ * or a folded or literal block.
+ *
+ * @param {string} schemaText
+ * @returns {{ pattern: string, regex: boolean, description: string }[]}
+ */
+export function sectionDescriptions(schemaText) {
+  const lines = schemaText.split(/\r?\n/);
+  const entries = [];
+  let current = null;
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i];
+    if (/^\s*-\s+heading:\s*$/.test(raw)) {
+      current = { pattern: "", regex: false, description: "" };
+      entries.push(current);
+      continue;
+    }
+    if (current === null) continue;
+    const pattern = /^\s+pattern:\s*(?:"([^"]*)"|'([^']*)'|(\S+))\s*$/.exec(raw);
+    if (pattern !== null && current.pattern === "") {
+      current.pattern = pattern[1] ?? pattern[2] ?? pattern[3] ?? "";
+      current.regex = /^\s+regex:\s*true\s*$/.test(lines[i + 1] ?? "");
+      continue;
+    }
+    const description = /^(\s*)description:\s*(.*?)\s*$/.exec(raw);
+    if (description === null || current.description !== "") continue;
+    const value = description[2];
+    if (/^[>|][+-]?$/.test(value)) {
+      const indent = description[1].length;
+      const block = [];
+      for (let j = i + 1; j < lines.length; j++) {
+        const next = lines[j];
+        if (next.trim() !== "" && next.length - next.trimStart().length <= indent) break;
+        block.push(next.trim());
+      }
+      current.description = block.join(" ").trim();
+    } else {
+      current.description = value.replace(/^(["'])(.*)\1$/u, "$2");
+    }
+  }
+  return entries;
+}
+
+/**
+ * What the schema says the section named `name` holds, or `null`.
+ *
+ * @param {{ pattern: string, regex: boolean, description: string }[]} entries
+ * @param {string} name the heading text, without its `#` marks
+ * @returns {string | null}
+ */
+function sectionDescription(entries, name) {
+  for (const entry of entries) {
+    if (entry.description === "") continue;
+    for (let level = 1; level <= 6; level++) {
+      const heading = `${"#".repeat(level)} ${name}`;
+      let matches;
+      try {
+        matches = entry.regex
+          ? new RegExp(entry.pattern, "u").test(heading)
+          : entry.pattern === heading;
+      } catch {
+        matches = false;
+      }
+      if (matches) return entry.description;
+    }
+  }
+  return null;
+}
+
+/**
+ * Rewrites the forbidden-text findings in one batch of `mdschema check` output
+ * so each says what its section holds, in the schema's own words, instead of
+ * the pattern that failed.
+ *
+ * Patterns that fail at one position of one document are one finding: the
+ * reader fixes a line, not a pattern. A finding in a section whose schema gives
+ * no description keeps the pattern, because it is all there is to say. The
+ * closing tally follows the findings that remain.
+ *
+ * @param {string} output
+ * @param {string} schemaText
+ * @returns {string}
+ */
+export function explainForbiddenText(output, schemaText) {
+  const entries = sectionDescriptions(schemaText);
+  const lines = [];
+  let seen = new Set();
+  let merged = 0;
+  for (const line of output.split(/\r?\n/)) {
+    if (/^\S/.test(line)) seen = new Set();
+    const found = VIOLATION_LINE.exec(line);
+    const forbidden =
+      found !== null && found[3] === "forbidden-text"
+        ? FORBIDDEN_TEXT_MESSAGE.exec(found[4])
+        : null;
+    const description = forbidden === null ? null : sectionDescription(entries, forbidden[1]);
+    if (found === null || forbidden === null || description === null) {
+      lines.push(line);
+      continue;
+    }
+    const key = `${found[1]}:${found[2]}:${forbidden[1]}`;
+    if (seen.has(key)) {
+      merged++;
+      continue;
+    }
+    seen.add(key);
+    lines.push(
+      `  ✗ ${found[1]}:${found[2]} [forbidden-text] Section '${forbidden[1]}' does not hold what the schema requires: ${description}`,
+    );
+  }
+  return lines
+    .map((line) =>
+      merged === 0
+        ? line
+        : line.replace(
+            /^(\S+\s+Found )(\d+)( violation)/u,
+            (_all, head, count, tail) => `${head}${Number(count) - merged}${tail}`,
+          ),
+    )
+    .join("\n");
 }
 
 /** One violation line of `mdschema check` output: `  ✗ 3:4 [rule] message`. */
@@ -1054,6 +1193,10 @@ function parseArgs(argv) {
     }
     if (arg === "--summary") {
       summary = true;
+      continue;
+    }
+    if (arg === "--show-patterns") {
+      showPatterns = true;
       continue;
     }
     if (arg.startsWith("-")) {
