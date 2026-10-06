@@ -310,7 +310,7 @@ describe("assets guardrails", () => {
       "rule",
       "shared-skill-operating-baseline.md",
     );
-    const baseline = await readFile(baselinePath, "utf-8");
+    const baseline = await readRule(baselinePath);
     const requiredPhrases = [
       "## Gate Failure Autorepair Protocol",
       "validate, doctor, test, lint, typecheck, build, capture, or report gates fail",

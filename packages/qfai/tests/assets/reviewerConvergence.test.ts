@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
+import { readRule } from "../helpers/ruleWithReferences.js";
 
 // Anchored to this file, not to `process.cwd()`. A runner launched from the
 // repo root resolves `../..` to the directory ABOVE the repo, and every read
@@ -20,7 +21,7 @@ const read = (tree: string, rel: string): Promise<string> => {
   const key = `${tree}::${rel}`;
   let pending = cache.get(key);
   if (!pending) {
-    pending = readFile(path.join(repoRoot, tree, rel), "utf-8");
+    pending = readRule(path.join(repoRoot, tree, rel));
     cache.set(key, pending);
   }
   return pending;

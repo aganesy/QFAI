@@ -1,12 +1,12 @@
-import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { readRule } from "../helpers/ruleWithReferences.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const trees = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const read = (tree: string, file: string): Promise<string> =>
-  readFile(path.join(root, tree, file), "utf-8");
+  readRule(path.join(root, tree, file));
 
 describe("completion placeholder scan respects recorded unknowns", () => {
   for (const tree of trees) {

@@ -1,8 +1,8 @@
-import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
+import { readRule } from "../helpers/ruleWithReferences.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const trees = ["packages/qfai/assets/init/.qfai", ".qfai"];
@@ -10,7 +10,7 @@ const baselinePath = "assistant/rule/shared-skill-delegation-baseline.md";
 const policyPath = "assistant/skill/qfai-implement/references/parallelization-policy.md";
 
 const read = (tree: string, relative: string): Promise<string> =>
-  readFile(path.join(repoRoot, tree, relative), "utf-8");
+  readRule(path.join(repoRoot, tree, relative));
 
 /** The text from `heading` up to the next heading at `stop`, with wrapping undone. */
 function section(content: string, heading: string, stop: string): string {

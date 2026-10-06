@@ -2,18 +2,19 @@
  * What a route records and runs outside the discussion stage: no grilling
  * record, the gates once in verify, and the reviews its plan names.
  */
-import { readdir, readFile } from "node:fs/promises";
+import { readdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
 import { defaultRoutingEntries } from "../helpers/shippedAssistant.js";
+import { readRule } from "../helpers/ruleWithReferences.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const assistant = path.join(repoRoot, "packages/qfai/assets/init/.qfai/assistant");
 const read = (relative: string): Promise<string> =>
-  readFile(path.join(assistant, relative), "utf-8");
+  readRule(path.join(assistant, relative));
 const flat = (text: string): string => text.replace(/\s+/g, " ");
 
 async function stepNames(): Promise<string[]> {
