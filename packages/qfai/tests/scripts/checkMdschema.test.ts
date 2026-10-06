@@ -1171,7 +1171,7 @@ describe("a forbidden-text finding", () => {
   const DESCRIPTION =
     "Each runtime dependency with the reason for it on a nested item, or `- None.`";
   const first = "(?m)^- [^`N]";
-  const second = "(?m)^- N(?:[^o\n]|o[^n\n]|on[^e\n]|one[^.\n]|one\.[^\n]|o?n?e?$)";
+  const second = String.raw`(?m)^- N(?:[^o\n]|o[^n\n])`;
   const lineOf = (pattern: string): string =>
     `  ✗ 43:4 [forbidden-text] Forbidden text '${pattern}' found in section 'Dependencies'`;
 
