@@ -321,7 +321,7 @@ function validateRecordCitations(model: StoryTreeModel): Issue[] {
   return issues;
 }
 
-// SIMPLIFIED: rows up to DEC-2097 are not read, because they were written before the form
+// SIMPLIFIED: rows up to this number are not read, because they were written before the form
 // was checked.
 // Lift when: those rows are rewritten in the form; then delete this constant.
 const APPROACH_CHECKED_AFTER = 2097;
@@ -342,7 +342,7 @@ function approachProblems(approach: string): string[] {
   const problems: string[] = [];
   for (const [index, mark] of marks.entries()) {
     const label = mark[1] ?? "";
-    const start = (mark.index ?? 0) + mark[0].length;
+    const start = mark.index + mark[0].length;
     const text = approach.slice(start, marks[index + 1]?.index ?? approach.length).trim();
     if (text === "") {
       problems.push(`has an empty ${label} item`);
