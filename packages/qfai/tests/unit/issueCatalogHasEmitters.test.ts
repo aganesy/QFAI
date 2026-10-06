@@ -38,8 +38,11 @@ const SRC_ROOT = path.resolve(__dirname, "../../src");
 const VALIDATE_TS = path.resolve(SRC_ROOT, "cli/commands/validate.ts");
 const CATALOG_NAME = "ISSUE_EXPECTED_BY_CODE";
 
-/** Parameter / property names that carry an `Issue.code` value. */
-const CODE_PARAM_NAMES: ReadonlySet<string> = new Set(["code", "issueCode"]);
+/**
+ * Parameter / property names that carry an `Issue.code` value. `ruleId` is
+ * the name a design-audit finding gives its code before it becomes an `Issue`.
+ */
+const CODE_PARAM_NAMES: ReadonlySet<string> = new Set(["code", "issueCode", "ruleId"]);
 /** Naming convention for a code rendered into report text instead of emitted. */
 const SIGNAL_CONST_SUFFIX = "_SIGNAL_CODE";
 

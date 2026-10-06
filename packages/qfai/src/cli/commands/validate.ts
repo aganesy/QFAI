@@ -1304,6 +1304,195 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "No required Research Summary value is still the shipped `[...]` template placeholder.",
   "QFAI-AUTOPILOT-001":
     "Every `qfai-*` SKILL.md keeps its hard-required bucket to the common entries plus the ones it declares for itself, and names no retired entry. A skill may carry fewer — one it never reads costs a prompt and buys nothing — and never more.",
+  "D-DEPRECATED-PATH":
+    "No retired path is in use: `output.validateJsonPath` does not name the old `.qfai/output/validate.json` report path, no file is left there, and the retired `.qfai/assistant/instructions/` layer is absent.",
+  "W-ASSISTANT-LAYOUT": "Every directory under `.qfai/assistant/` is one of the canonical layers.",
+  "W-SKILL-PROJECT-MEMORY":
+    "A `project_memory:` block in a SKILL.md is the last thing in the file.",
+  "W-STALE-REFERENCE":
+    "No skill document still names a token that its implementation has since replaced.",
+  "I-ASSISTANT-LAYER-UNSEEDED": "Every canonical `.qfai/assistant/` layer directory is seeded.",
+  QFAI_CONFIG_INVALID: "Every value in qfai.config.yaml has the type and range its key declares.",
+  "QFAI-AGENT-005": "Every agent definition file has each required section heading.",
+  "QFAI-AGENT-007":
+    "The agent routing manifest and its defaults file can be read and parse to the shape the routing check expects.",
+  "QFAI-AGENT-008": "Every agent a routing phase names is a defined agent.",
+  "QFAI-AGENT-009":
+    "`review-profiles.yml` can be parsed, is an object holding a `profiles` object, and each profile field is a list of reviewer ids.",
+  "QFAI-AGENT-010":
+    "Every id a review profile lists in its `_required` fields is a reviewer agent.",
+  "QFAI-AGENT-011": "Every agent definition file carries front matter that parses.",
+  "QFAI-AGENT-012": "An agent definition's front-matter `name` equals its file's agent id.",
+  "QFAI-AGENT-013":
+    "Every routing phase declares an `iteration`, `rerun_policy`, `review_profile` and agent fields drawn from the values the routing check allows.",
+  "QFAI-ASSETS-001": "The drift-protocol rule file exists under the assistant tree.",
+  "QFAI-ASSETS-002": "The test-layers rule file exists under the assistant tree.",
+  "QFAI-AUD-001": "Every screen in a UI contract lists at least one `primary_tasks` entry.",
+  "QFAI-AUD-004":
+    "Source files use design tokens, with raw color literals no more numerous than the configured threshold.",
+  "QFAI-AUD-020": "No screen lists more primary tasks than the recommended maximum.",
+  "QFAI-AUD-021":
+    "Every `primary_tasks` entry has exactly the `id`, `label` and `acceptance` keys.",
+  "QFAI-CONSISTENCY-001":
+    "A fallback value written beside a design-token reference equals the value the token resolves to.",
+  "QFAI-CONSISTENCY-002":
+    "Every screen a UI contract defines has an HTML mock; a missing one is optional supplemental evidence.",
+  "QFAI-CONTRACT-000":
+    "Each of the UI, API and DB contract directories holds at least one contract file.",
+  "QFAI-CONTRACT-010": "Every contract file declares a `QFAI-CONTRACT-ID`.",
+  "QFAI-CONTRACT-011": "Every contract file declares exactly one `QFAI-CONTRACT-ID`.",
+  "QFAI-CONTRACT-012":
+    "A contract file's ID starts with the prefix of the kind directory the file sits in.",
+  "QFAI-CONTRACT-013": "No two contract files declare the same contract ID.",
+  "QFAI-CONTRACT-014":
+    "Every contract ID a file lists as a dependency is declared by some contract file.",
+  "QFAI-CONTRACT-020": "An API contract file defines an OpenAPI document.",
+  "QFAI-CONTRACT-021": "Every UI, API and DB contract file parses.",
+  "QFAI-DB-001":
+    "No DB contract file holds a destructive SQL operation such as dropping or truncating a table.",
+  "QFAI-DB-002":
+    "Each table, view or index appears once per DB contract file, so the file reads the same as it is applied.",
+  "QFAI-DT-001": "Every design-token file can be read.",
+  "QFAI-DT-002": "Every design-token file parses as YAML.",
+  "QFAI-DT-003":
+    "A design-token file holds at least one token layer: primitive, semantic or component.",
+  "QFAI-DT-004": "No design token has an empty value.",
+  "QFAI-DT-005": "Every design token has a `$type` the token format defines.",
+  "QFAI-DT-006": "Every `platform` a design-token file or token names is a known platform.",
+  "QFAI-DT-007": "A design-token file's root is a YAML object.",
+  "QFAI-DT-008": "A design-token file's root has a non-empty `version`.",
+  "QFAI-DT-009": "A design-token file's root has a non-empty `platform`.",
+  "QFAI-DT-010": "A design-token file's root has a non-empty `primitive` object.",
+  "QFAI-FLOW-001": "Every Mermaid state diagram in the story tree is declared `stateDiagram-v2`.",
+  "QFAI-FLOW-002": "Every transition in a Mermaid state diagram carries a label.",
+  "QFAI-FLOW-004": "Every Mermaid flowchart declares its direction: TD, LR, TB, RL or BT.",
+  "QFAI-MOCK-001": "An HTML mock is well-formed HTML.",
+  "QFAI-MOCK-002": "An HTML mock loads nothing from an external URL.",
+  "QFAI-MOCK-003": "An HTML mock holds no script tag.",
+  "QFAI-MOCK-004": "Every CSS `var()` in an HTML mock has a fallback value.",
+  "QFAI-MOCK-005":
+    "An HTML mock that uses CSS custom properties annotates them with token comments.",
+  "QFAI-MOCK-006": "An HTML mock that shows state variants includes the default state.",
+  "QFAI-MOCK-007": "An HTML mock that shows state variants includes the error state.",
+  "QFAI-MOCK-008": "Text and background colors in an HTML mock meet the WCAG AA contrast ratio.",
+  "QFAI-MOCK-009": "Touch targets in an HTML mock meet the minimum size for mobile.",
+  "QFAI-MOCK-010": "An HTML mock references no local file.",
+  "QFAI-MOCK-011": "Every URL in an HTML mock uses a safe scheme.",
+  "QFAI-MOCK-012": "An HTML mock has no inline event handler attribute.",
+  "QFAI-PLATFORM-001":
+    "The platform named on the command line or in qfai.config.yaml is one the platform rules know, so the platform-specific rules apply.",
+  "QFAI-PLATFORM-002":
+    "A project is detected as a single platform; a cross-platform one such as Electron gets the cross-platform rules.",
+  "QFAI-RESEARCH-001": "A Research Summary lists at least one source.",
+  "QFAI-RESEARCH-002":
+    "At least 80% of a Research Summary's sources are no more than two years old.",
+  "QFAI-RESEARCH-003":
+    "A Research Summary with reflection entries has at least one entry whose action is `apply`.",
+  "QFAI-RESEARCH-004": "Every Research Summary source has a `title`.",
+  "QFAI-RESEARCH-005": "Every Research Summary source has a `url`.",
+  "QFAI-RESEARCH-006": "Every Research Summary source has a `published` date written YYYY-MM-DD.",
+  "QFAI-RESEARCH-007": "A Research Summary has a non-empty `best_practices` list.",
+  "QFAI-RESEARCH-008": "A Research Summary has a non-empty `anti_patterns` list.",
+  "QFAI-RESEARCH-009": "Every reflection entry has an `action` of apply, reject or defer.",
+  "QFAI-RESEARCH-010": "Every reflection entry has a non-empty `reason`.",
+  "QFAI-RESEARCH-011": "A Research Summary has a non-empty `reflection` list.",
+  "QFAI-SKILLS-010": "Every SKILL.md carries the `[DRIFT-PROTOCOL:MANDATORY]` marker.",
+  "QFAI-SKILLS-011":
+    "The shared delegation baseline has a `## Reviewer Gate Baseline` section, so every skill inherits a reviewer gate.",
+  "QFAI-SKILLS-012": "The Reviewer Gate Baseline states every obligation a skill inherits.",
+  "QFAI-TEST-002":
+    "The stub scan reads every test file the configured globs select, so a clean result shows that no stub exists.",
+  "QFAI-TRACE-118": "The scenario document in a spec's examples parses.",
+  "QFAI-TRACE-119": "A spec's examples feature carries exactly one `@SPEC` tag, naming the spec.",
+  "QFAI-TRACE-120": "Every scenario's `@SPEC` tag names the spec.",
+  "QFAI-TRACE-121": "Every scenario has exactly one `@SC-XXXX-YYYY` tag.",
+  "QFAI-TRACE-122": "A scenario's SC ID uses the namespace of its spec number.",
+  "QFAI-TRACE-123": "Every scenario names the AC it covers in a comment.",
+  "QFAI-VALIDATE-017":
+    "A CI run uses a full-scan profile before it declares completion; a stage-gate profile is valid but proves no completion.",
+  "QFAI-WAIVER-001":
+    "`.qfai/waivers.yml` can be read and parses, and every waiver in it is a well-formed record.",
+  "QFAI-WAIVER-002": "No waiver targets a finding that is an error.",
+  "QFAI-WAIVER-003": "No waiver in `.qfai/waivers.yml` has passed its `expires` date.",
+  "QFAI-WAIVER-004":
+    "Every waiver's `rule` names a finding code this run emits and a waiver can suppress.",
+  "R-AUTOPILOT-POLICY-MISSING":
+    "The shared autopilot policy has its three buckets (auto-decide, ask-user, hard-required), and each skill's own policy lists the hard-required inputs declared for it.",
+  "R-AUTOPILOT-POLICY-WIDENED":
+    "No skill's auto-decide bucket lists an entry outside the shared allowed set.",
+  "R-HANDOFF-SCHEMA-DRIFT":
+    "The handoff schema's field list and each file that writes a handoff name the same fields.",
+  "R-MOCK-HREF-DRIFT":
+    "The HTML mock template and the validator rule for mock links agree on which hrefs are allowed.",
+  "R-SKILL-MANIFEST-DRIFT":
+    "The skill manifest schema and the probe that reads it name the same tokens.",
+  "UIX-VAL-3LAYER-FORBIDDEN-FILE": "The `uiux/` directory holds none of the retired sidecar files.",
+  "UIX-VAL-3LAYER-INCOMPLETE-FAMILY":
+    "The `uiux/` directory holds every file of the canonical sidecar family.",
+  "UIX-VAL-3LAYER-LEGACY-FORMAT": "No sidecar file uses the retired evaluation headings.",
+  "UIX-VAL-3LAYER-MIXED-FORMAT":
+    "A sidecar file uses either the exploration-first headings or the retired evaluation headings, never both.",
+  "UIX-VAL-CLASSIFICATION-CONTRADICTION":
+    "The `ui_bearing`, `primary_surface` and `secondary_surfaces` fields of a classification agree with each other.",
+  "UIX-VAL-CLASSIFICATION-DUPLICATE-SECONDARY-SURFACE":
+    "`secondary_surfaces` lists no surface twice.",
+  "UIX-VAL-CLASSIFICATION-INVALID-BOOLEAN": "`ui_bearing` is `true` or `false`.",
+  "UIX-VAL-CLASSIFICATION-INVALID-SECONDARY-SURFACE":
+    "Every `secondary_surfaces` value is a surface the classification accepts.",
+  "UIX-VAL-CLASSIFICATION-INVALID-SURFACE":
+    "`primary_surface` is a surface the classification accepts.",
+  "UIX-VAL-CLASSIFICATION-MISSING": "`01_Context.md` has the UI-bearing classification block.",
+  "UIX-VAL-CLASSIFICATION-RATIONALE-PLACEHOLDER":
+    "`classification_rationale` holds project-specific reasoning, not placeholder text.",
+  "UIX-VAL-CLASSIFICATION-REQUIRED-FIELD":
+    "The classification block has `ui_bearing`, `primary_surface`, `secondary_surfaces` and `classification_rationale`.",
+  "UIX-VAL-CLASSIFICATION-SECONDARY-ARRAY":
+    "`secondary_surfaces` is present, as a list or an explicit empty list.",
+  "UIX-VAL-CLASSIFICATION-SECONDARY-DUPLICATE":
+    "`secondary_surfaces` does not repeat the `primary_surface`.",
+  "UIX-VAL-DIRECTION-HISTORY-MISSING":
+    "`50_review_input_bundle.md` states that the latest iteration is the accepted one and no earlier iteration is restored.",
+  "UIX-VAL-OQ-OPEN-CRITICAL": "No critical open question remains open in the OQ register.",
+  "UIX-VAL-SCREEN-CONTRACT-DUPLICATE-ID":
+    "Every screen in the screen contract has a unique `screen_id`.",
+  "UIX-VAL-SCREEN-CONTRACT-LEGACY-FORMAT":
+    "Every screen in the screen contract writes its nested fields as nested canonical bullets.",
+  "UIX-VAL-SCREEN-CONTRACT-SCHEMA-INCOMPLETE":
+    "Every screen in the screen contract has all the required fields.",
+  "UIX-VAL-SCREEN-CONTRACT-STATE-COVERAGE":
+    "Every screen's `required_states` includes the mandatory states.",
+  "UIX-VAL-SIDECAR-MISSING": "A spec that is UI-bearing has a `uiux/` sidecar directory.",
+  "UIX-VAL-SKILL-ASPIRATIONAL":
+    "The prototyping skill claims no capability that is not implemented.",
+  "UIX-VAL-SKILL-BANNED-PHRASE":
+    "The prototyping skill uses none of the banned runtime-heavy default wording.",
+  "UIX-VAL-SKILL-CANONICAL-SURFACE":
+    "The prototyping skill documents the supported UI surfaces: web, mobile, desktop and mixed.",
+  "UIX-VAL-SKILL-CLI-SURFACE":
+    "The prototyping skill states that the cli surface is rejected from prototyping execution.",
+  "UIX-VAL-SKILL-DELEGATION":
+    "The prototyping skill has the delegation scope table for the generation, evaluation and build roles.",
+  "UIX-VAL-SKILL-ENV-PRECONDITIONS":
+    "The prototyping skill separates contract preconditions from environment preconditions.",
+  "UIX-VAL-SKILL-PLAYWRIGHT-FALLBACK":
+    "The prototyping skill documents a Playwright invocation that installs nothing, such as `npx --no-install playwright`.",
+  "UIX-VAL-SKILL-PREFLIGHT":
+    "The prototyping skill documents `qfai doctor --profile prototyping` as its preflight.",
+  "UIX-VAL-SKILL-SECTION-MISSING": "The prototyping skill has every required section.",
+  "UIX-VAL-SKILL-STATIC-FIRST":
+    "The prototyping skill states the static-first, file-based default.",
+  "UIX-VAL-SKILL-UI-BEARING-FALSE":
+    "The prototyping skill limits execution to UI contracts that have a full UI ID and a non-empty `screens[]`.",
+  "UIX-VAL-T05":
+    "A UI-bearing pack's `04_Sources.md` has at least one concrete `design_guideline_research` entry before trend-derived axes are fixed.",
+  "UIX-VAL-TREND-CATEGORY-MISSING": "The `## Trend Scan` section has every required category.",
+  "UIX-VAL-TREND-ENTRY-MISSING": "Every trend-scan category has at least one complete entry.",
+  "UIX-VAL-TREND-FIELD-MISSING":
+    "Every trend-scan entry fills each required field with project-specific content.",
+  "UIX-VAL-TREND-SCAN-MISSING":
+    "A UI-bearing pack has `04_Sources.md` with a `## Trend Scan` section.",
+  "D-SAAS-PACKAGE-VERIFY-SKIPPED":
+    "Every gate the SaaS-package profile skips is named, so a pass on that profile is not read as a full DONE.",
 };
 
 /**
