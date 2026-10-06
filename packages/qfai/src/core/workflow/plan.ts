@@ -12,10 +12,11 @@ import {
 } from "./plans.js";
 import { routingOutcome } from "./routeDecision.js";
 import { isWorkflowRoute, type WorkflowRoute } from "./routes.js";
-import { scopesOf, type PlanScope } from "./scopes.js";
+import { scopesOf, unservedArtifacts, type PlanScope } from "./scopes.js";
 import { stepPath } from "./steps.js";
 
-export type PlanReason = "invalid-input" | "schema" | "unknown-route" | "plan-invalid" | "io-error";
+export type PlanReason =
+  "invalid-input" | "schema" | "unknown-route" | "plan-invalid" | "artifact-unserved" | "io-error";
 
 export interface PlanReasonEntry {
   reason: PlanReason;
@@ -129,6 +130,16 @@ async function loaded(root: string, route: WorkflowRoute): Promise<Loaded> {
   return load.ok ? load : { ok: false, document: planInvalid(load.refusals) };
 }
 
+// The refusal for a request whose artifacts no stage of the route writes.
+function unservedRefusal(unserved: readonly Artifact[]): PlanDocument {
+  const message =
+    "No stage of the route writes an artifact the request names, so the work stops before the first stage: ask for work the route does.";
+  return refusal(
+    message,
+    unserved.map((subject) => ({ reason: "artifact-unserved" as const, subject })),
+  );
+}
+
 async function candidatesOf(
   root: string,
   choices: readonly RouteChoice[],
@@ -140,6 +151,8 @@ async function candidatesOf(
     const load = await loaded(root, choice.route);
     if (!load.ok) return load.document;
     const { family, stages } = load.plan;
+    // A candidate that cannot serve the request is not an option.
+    if (unservedArtifacts(stages, artifacts).length > 0) continue;
     const summary = `${FAMILY_SUMMARIES[family] ?? "Run this plan."} Stages: ${stages.map((stage) => stage.id).join(", ")}.`;
     candidates.push({
       route: choice.route,
@@ -150,7 +163,16 @@ async function candidatesOf(
       scopes: scopesOf(stages, artifacts),
     });
   }
-  return { ok: true, candidates };
+  if (candidates.length === 0) return unservedRefusal(artifacts);
+  // The recommended candidate may have been left out: the first one left is then recommended.
+  const first = !candidates.some((candidate) => candidate.recommended);
+  return {
+    ok: true,
+    candidates: candidates.map((candidate, index) => ({
+      ...candidate,
+      recommended: first ? index === 0 : candidate.recommended,
+    })),
+  };
 }
 
 async function planOfExtraction(root: string, extraction: unknown): Promise<PlanDocument> {
@@ -170,6 +192,8 @@ async function planOfExtraction(root: string, extraction: unknown): Promise<Plan
   }
   const load = await loaded(root, outcome.taken.route);
   if (!load.ok) return load.document;
+  const unserved = unservedArtifacts(load.plan.stages, artifacts);
+  if (unserved.length > 0) return unservedRefusal(unserved);
   return planned(load.plan, outcome.taken.rule, scopesOf(load.plan.stages, artifacts));
 }
 

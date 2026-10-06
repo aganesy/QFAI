@@ -129,6 +129,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `.claude/skills/qfai-run/SKILL.md` under the current directory. The reminder
   is read from the session's own checkout. Fixes #2972.
 
+- **A request whose artifacts no stage of the route writes no longer runs every
+  stage unasked.** `npx qfai workflow plan --in` listed only the `broad` scope
+  there, so no scope question was put. It now refuses with `artifact-unserved`
+  and names each artifact, and the session stops before the first stage. A
+  route that writes nothing is not refused (#2964).
+
 - **The changelog guard no longer fails the commit a release is tagged at.**
   The guard refuses an entry added to a section whose tag exists. The merge
   that folds `## [Unreleased]` into the release is the commit the tag is pushed
