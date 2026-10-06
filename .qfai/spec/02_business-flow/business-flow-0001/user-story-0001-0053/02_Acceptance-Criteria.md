@@ -49,4 +49,10 @@ Feature: Decision and open-question table validation
     Then `QFAI-STORY-016` is raised at warning naming the file, the line and the term
     And `decisions.md` and `open-questions.md` are not read
     And with no term listed, nothing is checked
+  # AC-0001-0053-08
+  Scenario: A decision row whose Approach cell breaks the four-item form is reported
+    Given the story tree, and a `decisions.md` row above `DEC-2097` whose Approach cell lacks, empties or reorders `Evidence:`, `Grounds:`, `Residual risk:` or `Rollback:`, takes `none — <reason>` outside the last two, or holds an Evidence entry that is neither `file:` nor `command:`
+    When `qfai validate --profile sdd` runs
+    Then `QFAI-STORY-017` is raised at error naming the file, the row ID and the breach
+    And a row up to `DEC-2097` is not read
 ```

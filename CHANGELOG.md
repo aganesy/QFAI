@@ -24,6 +24,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Example narratives are not read, since they quote hypothetical IDs on
   purpose. Fixes #2410.
 
+- **`qfai validate` checks the Approach cell of each new decision row.** A
+  `decisions.md` row with an ID above `DEC-2097` must hold the items
+  `Evidence:`, `Grounds:`, `Residual risk:` and `Rollback:`, in that order, none
+  empty. Every Evidence entry opens with `file:` or `command:`, and
+  `none — <reason>` is accepted only in Residual risk and Rollback. A row that
+  breaks one of these raises `QFAI-STORY-017` at error in `sdd`, naming the
+  file, the row ID and the breach. Earlier rows are not read (#2537).
 - **`qfai validate` warns about trace marks no check reads.** In the `tdd`
   profile, a comment line in a selected test file that carries a `QFAI:US-`,
   `QFAI:TC-`, `QFAI:SC-` or `QFAI:SPEC-` mark raises `QFAI-STORY-014` at
