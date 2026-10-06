@@ -13,9 +13,7 @@ production or test change implements behavior described by a UI contract, or a c
 surface path. Follow imports, component use, and contract references to check a changed path. A change to a shared
 component is UI affecting when a rendered surface consumes it.
 
-Match declared paths after normalizing separators to forward slashes. A pattern with two stars spans zero or more path
-segments; one star stays in one segment; a question mark matches one character. Matching is case-sensitive, including
-dot-prefixed segments. If `uiux.surfacePaths` is absent or the path relationship is uncertain, use the observed
+If `uiux.surfacePaths` is absent or the path relationship is uncertain, use the observed
 behavior and UI contracts; route an unresolved case as UI affecting and record the uncertainty for
 product-surface-reviewer. Do not infer that a change has no UI effect from its directory name alone.
 

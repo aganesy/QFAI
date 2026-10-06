@@ -261,25 +261,27 @@ describe("TC-0013-0027: QFAI-AUD-001 aligned lane passes when primary_tasks is n
     });
   });
 
-  // 2-stage emission: legacy UI contracts that pre-date the primary_tasks
-  // slot (key-absent) emit QFAI-AUD-001 at severity=info under a one-minor
-  // release deprecation window (sunset: qfai 1.10.0). Key-empty (slot
-  // authored but `primary_tasks: []`) remains severity=error.
+  // A screen with no primary_tasks key emits QFAI-AUD-001 at severity=error;
+  // key-empty (slot authored but `primary_tasks: []`) is also severity=error.
   // QFAI:EX-0001-0153-03
-  it("legacy slot-less contracts emit QFAI-AUD-001 at severity=error (past sunset)", async () => {
+  it("a screen with no primary_tasks key emits QFAI-AUD-001 at severity=error", async () => {
     await withWorkspace({ uiContract: uiContractWithoutPrimaryTasksKey() }, async (root) => {
       const issues = await validateDesignAudit(root, defaultConfig);
       const audit001 = issues.filter((issue) => issue.code === "QFAI-AUD-001");
       expect(audit001.length).toBeGreaterThan(0);
 
-      // Key-absent blocks, which is what the message promised all along.
+      // Key-absent is an error, never info.
       expect(audit001.filter((issue) => issue.severity === "info")).toEqual([]);
 
       const blocked = audit001.find((issue) => issue.severity === "error");
-      expect(blocked, "expected severity=error QFAI-AUD-001 for legacy contract").toBeDefined();
+      expect(
+        blocked,
+        "expected severity=error QFAI-AUD-001 for a screen with no primary_tasks",
+      ).toBeDefined();
       const message = blocked?.message ?? "";
-      expect(message).toMatch(/legacy/i);
-      expect(message).toMatch(/1\.10\.0/);
+      expect(message).toContain("has no primary_tasks");
+      expect(message).toContain("{id, label, acceptance}");
+      expect(message).not.toMatch(/legacy|sunset|1\.10\.0/i);
     });
   });
 

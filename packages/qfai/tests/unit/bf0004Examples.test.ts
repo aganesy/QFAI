@@ -164,6 +164,10 @@ describe("BF-0004 migration examples", () => {
       'import { ensureRootGitignoreEntries } from "../../core/init/rootGitignore.js"',
     );
     expect(ignore).toContain("await ensureRootGitignoreEntries(context.root, false");
+    const init = await readFile(path.resolve(source, "../../cli/commands/init.ts"), "utf8");
+    expect(init).toContain(
+      'import { ensureRootGitignoreEntries } from "../../core/init/rootGitignore.js"',
+    );
     expect(links).not.toMatch(/\b(?:symlink|unlink|rm|writeFile)\s*\(/);
     expect(ignore).not.toMatch(/\b(?:writeFile|appendFile|rename)\s*\(/);
   });

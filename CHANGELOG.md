@@ -354,6 +354,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   skill keeps its 150-line limit, at 135 lines instead of 150, and its
   behaviour is unchanged.
 
+- **`QFAI-AUD-001` no longer describes a legacy form or a sunset.** For a screen
+  with no `primary_tasks`, the message now says the screen has no `primary_tasks`
+  and that `primary_tasks` must be declared as `{id, label, acceptance}`
+  mappings. The rule code and the error severity are unchanged (#2638).
 - **The `change-tooling` route starts at `edit`** (#2995). A change to CI, a
   workflow or a build script has no business flow, story or example, so the
   `implement-diagnose` stage it began with had nothing to record and was passed
@@ -372,6 +376,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   shared predicate may fail several tests whose assertions each prove their own
   example.
 
+- **The implement skill no longer cites a waiver that does not exist, or a path-matching
+  rule with nothing behind it.** The default policy drops the retired accepted-risk
+  waiver from the list of things `/qfai-implement` asks about, and the UI-affecting
+  reference drops its paragraph on how `uiux.surfacePaths` patterns are matched (#2612).
 - **The orchestrator keeps working while a delegation runs** (#2244). The
   shared delegation baseline now says the orchestrator is not required to wait
   for a sub-agent. Where the host starts a delegation and returns at once,
