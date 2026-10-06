@@ -105,7 +105,7 @@ export async function validateDesignContractReadiness(
  * DCON-030 and DCON-033 are content-agnostic: they verify that DESIGN.md
  * exists and parses — never that it was authored by this project. So an
  * unreplaced sample satisfies both of them, and a prototyping loop would
- * record its hash and enforce a fictional identity.
+ * run against a fictional identity.
  *
  * A project holds the sample because someone put it there: copied from
  * `.qfai/assistant/skill/qfai-prototyping/templates/DESIGN.md.sample` as a
