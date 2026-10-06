@@ -38,6 +38,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   at that Status stays in force. The story-tree authoring rules also say that a
   project counting the IDs of its open pull requests may take a next ID above
   the tree's own highest plus one (#2969).
+- **The test-layer rule states what an end-to-end test costs.** A new section
+  explains that one failing test costs its timeout times its attempts, and asks
+  for a failure limit, a job time limit, a lower timeout with at most one retry,
+  no database shared across parallel workers, and traces only on a retry. It
+  also asks for a count ceiling that only moves down, counted per business flow
+  (#2787).
 - **A gate the project runs in CI only is recorded as delegated, not as a pass or a
   failure.** A Standard commands entry written `CI only: <check name>` makes
   `verify-repo-gate` record the gate `DELEGATED` with that check, and
