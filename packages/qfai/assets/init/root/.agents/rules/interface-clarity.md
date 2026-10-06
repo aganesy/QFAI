@@ -30,9 +30,9 @@ takes its label from the user's word for the thing, never from the parameter it
 fills.
 
 Out: internal identifiers, model and table names, request shapes, retry counts,
-flags, and every knob a library underneath exposes because it exposes it.
+flags, and every setting a library underneath exposes because it exposes it.
 
-A setting earns a control when someone needs to change it, not when it exists.
+A setting gets a control when someone needs to change it, not when it exists.
 
 ## 2. Do not explain the interface
 
@@ -73,8 +73,8 @@ the user is worse off. If not, it goes.
 - The pattern the platform already has, in the place users look for it.
 - One word per concept — the user's word — everywhere it appears.
 
-A novel interaction has to beat the familiar one by enough to pay for being
-learned. Most do not.
+A novel interaction has to beat the familiar one by more than the cost of
+learning it. Most do not.
 
 ## 5. Show the structure
 
@@ -97,7 +97,7 @@ Cutting stops here. None of these is excess at any size.
 
 - **The label.** WCAG 3.3.2 requires a label for every form input, and a
   placeholder standing in for one is a documented failure. The label names the
-  control; an explanation apologises for it. This rule deletes the second and
+  control; an explanation makes up for a control that does not say so. This rule deletes the second and
   protects the first.
 - Accessible names, roles and states, and a focus order that follows the reading
   order.

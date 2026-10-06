@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { maskFencedCodeBlocks } from "../../src/core/ids.js";
+
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const repoRoot = path.resolve(packageRoot, "..", "..");
 const assetRoot = path.join(packageRoot, "assets/init/.qfai/assistant");
@@ -11,6 +13,19 @@ const rootMirror = path.join(repoRoot, ".qfai/assistant");
 const ruleName = "rule/test-layers.md";
 const removedMap = "catalog/test-layers-ci-lanes.md";
 const read = (file: string): string => readFileSync(file, "utf8");
+
+/** Every layer token outside a fenced block, read whole so an extended token is its own token. */
+function layerTokens(rule: string): string[] {
+  const text = maskFencedCodeBlocks(rule);
+  return [...new Set([...text.matchAll(/layer-[\w-]+/gi)].map((match) => match[0]))].sort();
+}
+
+/** Every subheading of the layer definitions section outside a fenced block, coded or not. */
+function layerDefinitionHeadings(rule: string): string[] {
+  const text = maskFencedCodeBlocks(rule);
+  const section = (text.split("## Layer definitions\n")[1] ?? "").split("\n## ")[0] ?? "";
+  return [...section.matchAll(/^ {0,3}#{3,6}\s*\S.*$/gm)].map((match) => match[0]);
+}
 
 describe("the layer to CI lane map is part of the layer rule", () => {
   // QFAI:EX-0002-0021-02
@@ -41,22 +56,34 @@ describe("the layer to CI lane map is part of the layer rule", () => {
     expect(section).not.toMatch(/layer-[a-z]+/);
     expect(section).not.toMatch(/`QFAI:TC-[^`]+`/);
 
-    const tokens = new Set([...rule.matchAll(/layer-[a-z0-9-]+/gi)].map((match) => match[0]));
-    expect([...tokens].sort()).toEqual([
+    expect(layerTokens(rule)).toEqual([
       "layer-api",
       "layer-component",
       "layer-e2e",
       "layer-integration",
       "layer-unit",
     ]);
-    const headings = [...rule.matchAll(/^ {0,3}#{1,6}\s*L\d+\b.*$/gm)].map((match) => match[0]);
-    expect(headings).toEqual([
+    expect(layerDefinitionHeadings(rule)).toEqual([
       "### L1 Unit",
       "### L2 Component",
       "### L3 Integration",
       "### L4 API",
       "### L5 E2E",
     ]);
+  });
+
+  // QFAI:EX-0002-0021-01
+  it("reads an extended token and an uncoded heading, and skips a fenced block", () => {
+    expect(layerTokens("`layer-unit_extra` and `layer-unit`")).toEqual([
+      "layer-unit",
+      "layer-unit_extra",
+    ]);
+    expect(
+      layerDefinitionHeadings("## Layer definitions\n\n### L1 Unit\n\n### Security\n"),
+    ).toEqual(["### L1 Unit", "### Security"]);
+    const fenced = "## Layer definitions\n\n```md\n### L6 Security\n`layer-security`\n```\n";
+    expect(layerTokens(fenced)).toEqual([]);
+    expect(layerDefinitionHeadings(fenced)).toEqual([]);
   });
 
   // QFAI:EX-0002-0021-05

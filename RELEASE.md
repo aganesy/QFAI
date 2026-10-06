@@ -29,6 +29,11 @@ matches the current version.
 
 - The version in `packages/qfai/package.json` and `CHANGELOG.md` are already updated
 - You have npm publish permission, and `npm whoami` succeeds
+- If an earlier pull request already bumped the manifest version, Prepare release
+  refuses that version, and Tag release does not run for a pull request that
+  changes only `CHANGELOG.md`. Write the release pull request by hand (rename
+  `## [Unreleased]` to `## [X.Y.Z] - <date>` and reopen an empty one), then push
+  the tag by hand after it merges (step 4 below)
 - Before moving to the next major version, reconcile things with patch releases
   and proceed step by step
 
