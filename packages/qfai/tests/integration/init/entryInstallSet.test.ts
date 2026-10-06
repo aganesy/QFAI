@@ -242,4 +242,69 @@ describe("a host directory reached through a link", () => {
       await rm(githubOutside, { recursive: true, force: true });
     }
   });
+
+  it("A dangling `.github` is skipped, and the run completes", async (ctx) => {
+    await withEmptyRepo(async (root) => {
+      const missing = path.join(root, "no-such-directory");
+      if (!(await linkOutside(missing, path.join(root, ".github")))) ctx.skip();
+
+      const output = await initQuietly(root);
+
+      expect(output).toContain(
+        "skip: .github/instructions is under .github, which is a symlink, so nothing is written there",
+      );
+      expect(existsSync(missing)).toBe(false);
+      expect(await readdir(path.join(root, ".claude", "skills"))).toEqual(
+        expect.arrayContaining(ENTRY_SKILLS),
+      );
+    });
+  });
+
+  it("A `.github` file is skipped, and the run completes", async () => {
+    await withEmptyRepo(async (root) => {
+      await writeFile(path.join(root, ".github"), "kept\n", "utf-8");
+
+      const output = await initQuietly(root);
+
+      expect(await readFile(path.join(root, ".github"), "utf-8")).toBe("kept\n");
+      expect(output).toContain(
+        "skip: .github/instructions is under .github, which is not a directory, so nothing is written there",
+      );
+    });
+  });
+});
+
+// QFAI:EX-0001-0196-33
+describe("a skip line names the path relative to the project", () => {
+  it("An instructions entry that is a directory is named without the project root", async () => {
+    await withEmptyRepo(async (root) => {
+      await initQuietly(root);
+      const entry = path.join(root, ".github", "instructions", "code-review.instructions.md");
+      await rm(entry, { force: true });
+      await mkdir(entry);
+
+      const output = await initQuietly(root, true);
+
+      expect(output).toContain(
+        "skipped: .github/instructions/code-review.instructions.md is a directory",
+      );
+      expect(output).not.toContain(root);
+    });
+  });
+
+  it("A Codex profile that is a directory is named without the project root", async () => {
+    await withEmptyRepo(async (root) => {
+      await initQuietly(root);
+      const profile = path.join(root, ".codex", "agents", "qa-gatekeeper.toml");
+      await rm(profile, { force: true });
+      await mkdir(profile);
+
+      const output = await initQuietly(root, true);
+
+      expect(output).toContain(
+        "skip: .codex/agents/qa-gatekeeper.toml (a directory is in the way, so nothing can be generated here)",
+      );
+      expect(output).not.toContain(root);
+    });
+  });
 });

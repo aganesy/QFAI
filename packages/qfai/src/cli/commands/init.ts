@@ -97,6 +97,7 @@ import {
   describeError,
   exists,
   findUnsafeHostFileComponent,
+  findUnreachableHostDirComponent,
   findUnsafeWrapperComponent,
   firstLinkedComponent,
   readPinnedRegularFile,
@@ -1298,6 +1299,9 @@ const COPILOT_INSTRUCTIONS_MAX_BYTES = 512 * 1024;
 /** The Copilot instruction file, as the record of owed citations names it. */
 const COPILOT_INSTRUCTIONS_ENTRY = ".github/copilot-instructions.md";
 
+/** The directory the review instruction files are written into. */
+const INSTRUCTIONS_DIR_ENTRY = ".github/instructions";
+
 /**
  * Keeps the rule list in an existing `.github/copilot-instructions.md` current.
  *
@@ -2108,13 +2112,24 @@ async function syncIntegrationWrappers(
   // crash skips `replaceWithRegularFile`'s `finally`, and every run stages under
   // a fresh name, so without this the orphans only accumulate in a tracked
   // directory. Not under `--dry-run`, which promises to change nothing.
-  const instructionsDir = path.join(destRoot, ".github", "instructions");
-  if (!options.dryRun) {
+  const instructionsDir = path.join(destRoot, ...INSTRUCTIONS_DIR_ENTRY.split("/"));
+  // A dangling link above the directory fails `mkdir` and would end the whole run.
+  const instructionsBlocked = await findUnreachableHostDirComponent(
+    destRoot,
+    INSTRUCTIONS_DIR_ENTRY,
+  );
+  if (instructionsBlocked !== undefined) {
+    info(describeSkippedPath(INSTRUCTIONS_DIR_ENTRY, instructionsBlocked));
+  } else if (!options.dryRun) {
     await sweepStagedFiles(destRoot, instructionsDir);
   }
 
   for (const fileName of instructionsFiles) {
     const dest = path.join(instructionsDir, fileName);
+    if (instructionsBlocked !== undefined) {
+      skipped.push(dest);
+      continue;
+    }
     const alreadyExists = await pathExists(dest);
     // An overwrite is only ours to perform when the entry it lands on lives
     // inside the project. `pathExists` is lstat-based, so a leaf symlink is
@@ -2147,17 +2162,17 @@ async function syncIntegrationWrappers(
     if (alreadyExists && (!options.force || refuseOverwrite)) {
       if (escapesProject) {
         info(
-          `  skipped: ${dest} resolves outside the project (not overwritten, even with --force). ` +
+          `  skipped: ${shownPath(destRoot, dest)} resolves outside the project (not overwritten, even with --force). ` +
             `Edit it at the link target to update it.`,
         );
       } else if (existingKind?.isDirectory() === true) {
         info(
-          `  skipped: ${dest} is a directory (not deleted, even with --force). ` +
+          `  skipped: ${shownPath(destRoot, dest)} is a directory (not deleted, even with --force). ` +
             `Move its contents aside, delete the directory, then re-run.`,
         );
       } else if (!isReplaceableEntry) {
         info(
-          `  skipped: ${dest} is neither a regular file nor a symlink ` +
+          `  skipped: ${shownPath(destRoot, dest)} is neither a regular file nor a symlink ` +
             `(not replaced, even with --force). Move that entry aside, then re-run.`,
         );
       }
@@ -2301,6 +2316,11 @@ async function skipsLinkedHostDir(destRoot: string, relativeDir: string): Promis
   return true;
 }
 
+/** A path as a report line names it: relative to the project, one separator everywhere. */
+function shownPath(destRoot: string, absolute: string): string {
+  return formatReportPath(toRelativePath(destRoot, absolute));
+}
+
 /**
  * The report line for a path init skipped. It says only what this step left
  * alone, because another step may still write elsewhere under the same link.
@@ -2355,14 +2375,14 @@ async function createCodexAgentTomls(
     }
     const occupant = describeUnwritableDestination(destinationStats);
     if (occupant !== undefined) {
-      info(`  skip: ${destination} (${occupant})`);
+      info(`  skip: ${shownPath(destRoot, destination)} (${occupant})`);
       skipped.push(destination);
       continue;
     }
 
     const plan = await planCodexAgentProfile(assistantAssetsDir, destRoot, agentName, options);
     if (plan.status === "unavailable") {
-      info(`  skip: ${destination} (${plan.reason})`);
+      info(`  skip: ${shownPath(destRoot, destination)} (${plan.reason})`);
       // `--force` means "make the wrappers match the canonical agents". A
       // profile we cannot regenerate is no evidence the old one is still
       // right: a stale `worker` TOML keeps exactly the write access the
@@ -2397,7 +2417,7 @@ async function createCodexAgentTomls(
       if (!(await writeGeneratedProfile(destination, plan.toml))) {
         // The `lstat` above already refused everything that is not a regular
         // file; this is the same refusal for an entry that arrived after it.
-        info(`  skip: ${destination} (${NON_REGULAR_DESTINATION})`);
+        info(`  skip: ${shownPath(destRoot, destination)} (${NON_REGULAR_DESTINATION})`);
         skipped.push(destination);
         continue;
       }

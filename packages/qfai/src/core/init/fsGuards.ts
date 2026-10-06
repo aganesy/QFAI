@@ -1,6 +1,6 @@
 import { constants } from "node:fs";
 import type { Stats } from "node:fs";
-import { access, lstat, open, readFile } from "node:fs/promises";
+import { access, lstat, open, readFile, stat } from "node:fs/promises";
 import type { FileHandle } from "node:fs/promises";
 import path from "node:path";
 
@@ -203,6 +203,14 @@ export async function safeLstat(target: string): Promise<Stats | undefined> {
   }
 }
 
+async function safeStat(target: string): Promise<Stats | undefined> {
+  try {
+    return await stat(target);
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * A path component init must not write through, relative to the project, and
  * whether it is a symlink (a junction included) or not a directory.
@@ -245,6 +253,36 @@ export async function findUnsafeWrapperComponent(
       return { relativePath, symlink: true };
     }
     if (!stats.isDirectory()) {
+      return { relativePath, symlink: false };
+    }
+  }
+  return undefined;
+}
+
+/**
+ * The first component of `relativeDir` under `destRoot` that `mkdir` cannot
+ * pass: a symbolic link whose target is missing or is not a directory, or an
+ * entry that is not a directory. A link to a directory that exists is passed,
+ * because the instruction files are written through a shared directory on
+ * purpose. `undefined` when the directory can be created or already exists.
+ */
+export async function findUnreachableHostDirComponent(
+  destRoot: string,
+  relativeDir: string,
+): Promise<UnsafeComponent | undefined> {
+  const segments = relativeDir.split("/");
+  for (let depth = 1; depth <= segments.length; depth += 1) {
+    const relativePath = segments.slice(0, depth).join("/");
+    const absolute = path.join(destRoot, ...segments.slice(0, depth));
+    const stats = await safeLstat(absolute);
+    if (stats === undefined) {
+      return undefined;
+    }
+    if (stats.isSymbolicLink()) {
+      if ((await safeStat(absolute))?.isDirectory() !== true) {
+        return { relativePath, symlink: true };
+      }
+    } else if (!stats.isDirectory()) {
       return { relativePath, symlink: false };
     }
   }

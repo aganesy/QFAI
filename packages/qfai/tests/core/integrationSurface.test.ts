@@ -771,6 +771,11 @@ describe("an integration directory that is a symlink is not a directory", () => 
 
       const found = await finding(root);
       expect(found?.message).toContain("the integration directory is a symlink");
+      // Init leaves a linked directory alone, so the remedy is to replace it first.
+      expect(found?.suggested_action).toContain(
+        "is not fixed by rerunning init.** Init writes nothing in a directory that is a symlink",
+      );
+      expect(found?.suggested_action).toContain("with a real directory, then run `qfai init`");
     });
   });
 });
