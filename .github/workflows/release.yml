@@ -918,7 +918,25 @@ jobs:
           sparse-checkout: .github/actions
           sparse-checkout-cone-mode: false
       - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
-        run: corepack enable
+        # Fetch the pnpm that `package.json#packageManager` names now, with retries, so the first
+        # `pnpm` call (setup-node's cache lookup) finds it already downloaded. This job cannot be
+        # re-run while the rest of the workflow run is still in progress, so a failed download
+        # would otherwise hold the release.
+        #
+        # SHIPPED-CI: not-applicable
+        # Because: the shipped templates have no release workflow.
+        run: |
+          corepack enable
+          attempt=1
+          until corepack prepare --activate; do
+            if [ "${attempt}" -ge 4 ]; then
+              echo "::error::corepack could not fetch the pnpm that package.json#packageManager names, after ${attempt} attempts."
+              exit 1
+            fi
+            echo "corepack could not fetch pnpm (attempt ${attempt} of 4); trying again"
+            sleep $((attempt * 5))
+            attempt=$((attempt + 1))
+          done
         shell: bash
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -930,7 +948,10 @@ jobs:
           # to ENEEDAUTH, because npm then has no registry config to act on.
           registry-url: "https://registry.npmjs.org"
       - name: Re-shim pnpm against toolcache Node
-        run: corepack prepare pnpm@9.12.3 --activate
+        # The version comes from the checked-out tag's `package.json#packageManager`, which every
+        # published tag carries, so a re-publish of an older tag installs the pnpm it was built with.
+        # The step above has already fetched it, so this finds it downloaded.
+        run: corepack prepare --activate
         shell: bash
       # `--ignore-scripts` for the reason the toolchain action carries it: a dependency's
       # manifest is not in this tree, it arrives inside a tarball, and its `postinstall` would
