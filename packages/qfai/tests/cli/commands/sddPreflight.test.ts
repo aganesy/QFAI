@@ -8,7 +8,7 @@
  * agreement that keeps the shipped form from drifting away from the writer.
  */
 
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -16,6 +16,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { runSddPreflightCommand } from "../../../src/cli/commands/sddPreflight.js";
 import { writeDiscussionCurrentId } from "../../../src/core/state.js";
+import { resolveToolPackageDir } from "../../../src/core/version.js";
 
 const DISCUSSION_PACK_FILES = [
   "01_Context.md",
@@ -371,6 +372,42 @@ describe("qfai sdd preflight", () => {
 
     const emitted = new Set([...headings(blocked), ...headings(ready)]);
     expect([...headings(template)].sort()).toEqual([...emitted].sort());
+  });
+
+  it("stops without writing when the running copy is not the one the project declares", async (ctx) => {
+    // The project's `node_modules` is a link to another checkout's, whose `qfai`
+    // is the running package: the case `qfai validate` reports as QFAI-TOOL-002.
+    const root = await newTempRoot();
+    const packageDir = String(await resolveToolPackageDir());
+    const otherModules = path.join(root, "other", "node_modules");
+    const project = path.join(root, "project");
+    await mkdir(otherModules, { recursive: true });
+    await mkdir(project, { recursive: true });
+    try {
+      await symlink(packageDir, path.join(otherModules, "qfai"), "junction");
+      await symlink(otherModules, path.join(project, "node_modules"), "junction");
+    } catch {
+      // A host without link permission cannot exercise this case.
+      ctx.skip();
+    }
+    await writeFile(
+      path.join(project, "package.json"),
+      JSON.stringify({ name: "p", devDependencies: { qfai: "workspace:*" } }),
+      "utf-8",
+    );
+    const sinks = newSinks();
+
+    const exitCode = await runSddPreflightCommand({
+      root: project,
+      write: sinks.write,
+      writeErr: sinks.writeErr,
+    });
+
+    expect(exitCode).toBe(1);
+    expect(sinks.err.join("\n")).toContain("QFAI-TOOL-002");
+    await expect(
+      stat(path.join(project, ".qfai", "report", "preflight_summary.md")),
+    ).rejects.toThrow();
   });
 });
 
