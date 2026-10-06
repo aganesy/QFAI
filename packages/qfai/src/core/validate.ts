@@ -16,6 +16,7 @@ import {
 import { readStoryTreeModel, type StoryTreeModel } from "./storyTree/tree.js";
 import { validateStoryTreeStructure } from "./validators/storyTreeStructure.js";
 import { validateDocumentSchema } from "./validators/documentSchema.js";
+import { validateStaleTerms } from "./validators/staleTerms.js";
 import { validateStoryTreeObligations } from "./validators/storyTreeObligations.js";
 import { validateStoryTreeContractReferences } from "./validators/contractReferences.js";
 import { validateStoryPolicyPlaceholders } from "./validators/assistantAssets.js";
@@ -485,6 +486,7 @@ async function runStoryProfileValidators(
   const sdd = async (includePolicy = true): Promise<Issue[]> => [
     ...(await validateStoryTreeStructure(root, config, model)),
     ...(await validateDocumentSchema(root, config)),
+    ...(await validateStaleTerms(root, config)),
     ...(await validateStoryTreeContractReferences(root, config, model)),
     ...(includePolicy ? await validateStoryPolicyPlaceholders(root, config) : []),
     ...(await validateContracts(root, config)),
