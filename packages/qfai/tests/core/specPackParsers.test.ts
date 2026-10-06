@@ -50,18 +50,18 @@ describe("escapeTableCell ↔ splitMarkdownRow round-trip identity", () => {
   });
 
   it("backslashes round-trip unchanged", () => {
-    expect(roundTrip("C:\Users\spec.md", "matches \d+ pattern")).toEqual([
-      "C:\Users\spec.md",
-      "matches \d+ pattern",
+    expect(roundTrip("C:\\Users\\spec.md", "matches \\d+ pattern")).toEqual([
+      "C:\\Users\\spec.md",
+      "matches \\d+ pattern",
     ]);
   });
 
   it("a backslash before a pipe round-trips unchanged", () => {
-    expect(roundTrip("a\|b", "regex (?:foo|\bar)")).toEqual(["a\|b", "regex (?:foo|\bar)"]);
+    expect(roundTrip("a\\|b", "regex (?:foo|\\bar)")).toEqual(["a\\|b", "regex (?:foo|\\bar)"]);
   });
 
   it("a backslash pair before a pipe round-trips unchanged", () => {
-    expect(roundTrip("path\\|file")).toEqual(["path\\|file"]);
+    expect(roundTrip("path\\\\|file")).toEqual(["path\\\\|file"]);
   });
 
   it("CRLF and CR line breaks collapse to a single space", () => {
