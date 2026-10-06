@@ -22,6 +22,7 @@ import process from "node:process";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { deleteE2eCaseAnnotation } from "../helpers/migrationE2eAnnotation.js";
+import { expectLinkToCanonicalSkill } from "../helpers/skillLink.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");
@@ -258,8 +259,9 @@ describe("BF-0004: the migration from a 1.x project, and again on a migrated one
       lf(await textOrNull(path.join(PACKAGE_ROOT, "assets/init"), skill)),
     );
     for (const dir of HOST_SKILL_DIRS) {
-      expect((await readlink(path.join(root, dir, "qfai-run"))).replace(/\\/g, "/")).toContain(
-        "assistant/skill/qfai-run",
+      await expectLinkToCanonicalSkill(
+        path.join(root, dir, "qfai-run"),
+        path.join(root, ".qfai/assistant/skill/qfai-run"),
       );
     }
     expect((await textOrNull(root, "AGENTS.md")) ?? "").not.toContain("`qfai-run`");
