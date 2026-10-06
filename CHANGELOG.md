@@ -135,6 +135,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and list included every distributed file, including those already identical to
   the shipped copy. Rule files, the Copilot and Codex files and the agent and
   skill links that need no change are now counted as skipped (#2986).
+- **The README names both hook files and the Codex hook tests cover more cases.**
+  The sentence on turning the reminder off named only the Claude Code file, and
+  now names both. The Codex tool-time tests name the groups they read for the
+  event they hold, expect nothing for a patch that deletes a Markdown file, and
+  check that the search for the message file stops at a nested checkout whose
+  `.git` is a file (#2679).
 - **The handoff reader refuses an artifact whose fields have the wrong type.**
   `HandoffReader.read` checked only that the five top-level keys were present
   and then returned the file as a `HandoffArtifact`. It now also requires
