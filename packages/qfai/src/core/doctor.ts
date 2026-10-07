@@ -54,7 +54,6 @@ import { checkDocsLane } from "./doctor/docsLane.js";
 import { checkMutationProofs } from "./doctor/mutationProofs.js";
 import { checkMdschemaBinary } from "./doctor/mdschemaBinary.js";
 import { checkWorkflowPreconditions } from "./doctor/workflowPreconditions.js";
-import { findLeftovers, leftoverLines } from "./leftovers.js";
 
 export type DoctorSeverity = "ok" | "info" | "warning" | "error";
 export type DoctorProfile = "prototyping";
@@ -345,18 +344,6 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
       path: toRelativePath(root, deprecatedPromptsDir),
       configured: deprecatedPromptsConfigured,
     },
-  });
-
-  const leftovers = await findLeftovers(root, resolvePath(root, config, "discussionDir"));
-  addCheck(checks, {
-    id: "paths.leftovers",
-    severity: leftovers.paths.length > 0 ? "info" : "ok",
-    title: "Paths an earlier release left",
-    message:
-      leftovers.paths.length > 0
-        ? leftoverLines(leftovers).join("\n")
-        : "No path an earlier release left is present",
-    details: { paths: leftovers.paths },
   });
 
   if (options.profile === "prototyping") {

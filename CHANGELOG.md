@@ -346,6 +346,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`qfai init` and `qfai doctor` no longer list leftover files** (#3126). The
+  `paths.leftovers` check is gone from `qfai doctor`, and the `qfai init`
+  summary prints no line for files an earlier release left behind. Neither
+  command deleted any of them, and neither does now.
+
 - **The documentation-clarity rule says where spec-tree IDs may appear** (#3002).
   IDs the project's own spec tree defines stay in spec-tree documents and in code
   or test comments that point at a contract or example. Operator-facing guides

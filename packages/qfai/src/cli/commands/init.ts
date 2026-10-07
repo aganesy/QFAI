@@ -27,7 +27,6 @@ import {
   copyTemplatePaths,
   copyTemplateTree,
 } from "../../core/fs/templateCopy.js";
-import { findLeftovers, leftoverLines } from "../../core/leftovers.js";
 import { getInitAssetsDir } from "../lib/assets.js";
 import { error, info, warn } from "../../core/logger.js";
 import { hasErrnoCode, isEnoent } from "../../core/fs/errno.js";
@@ -569,12 +568,6 @@ export async function runInit(
     ...upgradeResult.preservedNotes,
     ...retiredSkillNotes,
     ...(workflowsDirIsOwn ? await retiredWorkflowLines(destRoot) : []),
-    ...leftoverLines(
-      await findLeftovers(
-        destRoot,
-        resolvePath(destRoot, (await loadConfig(destRoot)).config, "discussionDir"),
-      ),
-    ),
   ]) {
     info(note);
   }
