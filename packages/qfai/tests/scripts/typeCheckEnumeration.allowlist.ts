@@ -149,8 +149,6 @@ export const TYPE_CHECK_UNENUMERATED: readonly string[] = [
   "tests/integration/cli/commands/doctorAutoremediate.fixes.test.ts",
   "tests/integration/cli/commands/doctorSkillProfile.probe.test.ts",
   "tests/integration/cli/commands/prototypingIterate.browserTool.test.ts",
-  "tests/integration/cli/commands/validate.legacyPathEvidenceGate.test.ts",
-  "tests/integration/cli/commands/validate.legacyValidateJsonConfig.test.ts",
   "tests/integration/cli/commands/validateSaasPackage.passes.test.ts",
   "tests/integration/codexAgentWrappers.test.ts",
   "tests/integration/completionContract.test.ts",

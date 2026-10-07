@@ -351,6 +351,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`qfai validate` and `qfai report --run-validate` no longer check for the old `validate.json` location** (#3125).
+  A file at `.qfai/output/validate.json`, or an `output.validateJsonPath` that names
+  that path, no longer raises `D-DEPRECATED-PATH`, and the report is written to the
+  configured path as for any other value. `D-DEPRECATED-PATH` is still reported for
+  the old `.qfai/assistant/instructions/` layout.
+
 - **`qfai init` and `qfai doctor` no longer list leftover files** (#3126). The
   `paths.leftovers` check is gone from `qfai doctor`, and the `qfai init`
   summary prints no line for files an earlier release left behind. Neither
