@@ -6,6 +6,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **The prompt-time reminder names the reply language.** The message the
+  `UserPromptSubmit` hook prints on every turn now also tells the agent to reply
+  in the user's working language, as `communication.md` sets, however much of
+  what it read that turn is in another language. Replies had drifted into
+  English during long sessions full of English tool output. Fixes #2963.
+
 - **The decisions template says a row may cite an earlier approval.** A
   `decisions.md` row that records a spec change following from an earlier
   approval may name that decision's ID in `Grounds:` in place of a new answer
