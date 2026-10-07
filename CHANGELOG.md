@@ -105,6 +105,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **The released-section changelog check reads local tags first.** It asks the
   remote for a release tag only when no local tag exists, so a clone that holds
   the tags passes the lint lane offline (#2961).
+
+- **A retired wrapper's remedy opens with the steps that clear it.**
+  The remedy of the broken-link finding opened with a rerun of `qfai init`,
+  which changes nothing for a wrapper this version no longer ships. When the
+  finding names a retired wrapper, the remedy now opens with `qfai init --force`
+  and the manual deletion of the retired canonical directory, which init never
+  deletes.
 - **A repaired title no longer reads as a new changelog entry.**
   The released-section guard compares entry titles ignoring whitespace, so
   restoring a missing space in a published entry's title line is accepted.
