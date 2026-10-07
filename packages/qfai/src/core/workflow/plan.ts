@@ -3,7 +3,7 @@
 
 import type { RouteChoice } from "./decisionRules.js";
 import type { Artifact } from "./extraction.js";
-import { extractionFaults, isExtraction } from "./extractionShape.js";
+import { extractionFaultsOf, isExtraction } from "./extractionShape.js";
 import {
   loadInstalledPlan,
   type PlanBranchPoint,
@@ -21,7 +21,8 @@ export type PlanReason =
 export interface PlanReasonEntry {
   reason: PlanReason;
   subject: string;
-  // For `plan-invalid`: the plan file and why it does not load.
+  // For `plan-invalid`: the plan file and why it does not load. For `schema`: how the field
+  // departs from the extraction's shape.
   file?: string;
   cause?: string;
 }
@@ -177,12 +178,15 @@ async function candidatesOf(
 
 async function planOfExtraction(root: string, extraction: unknown): Promise<PlanDocument> {
   if (!isExtraction(extraction)) {
-    const subjects = extractionFaults(extraction);
     const message =
-      "The extraction does not match its schema, so fix each named field that is missing, unknown or holds a value it does not take.";
+      "The extraction does not match its schema, so fix each named field as its cause says.";
     return refusal(
       message,
-      subjects.map((subject) => ({ reason: "schema", subject })),
+      extractionFaultsOf(extraction).map(({ subject, cause }) => ({
+        reason: "schema",
+        subject,
+        cause,
+      })),
     );
   }
   const outcome = routingOutcome(extraction);
