@@ -132,6 +132,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The released-section changelog check reads local tags first.** It asks the
+  remote for a release tag only when no local tag exists, so a clone that holds
+  the tags passes the lint lane offline (#2961).
+
 - **An EX annotation is read from real comments, and by the same declaration
   rules as the ATDD scan** (#3018). Text inside a string literal or a template
   literal is no longer an annotation, and a test call inside a block comment or
