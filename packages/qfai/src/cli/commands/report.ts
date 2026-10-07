@@ -286,7 +286,7 @@ export async function runReport(options: ReportOptions): Promise<number> {
  *
  * The post-processing is shared, not re-implemented: `report --run-validate`
  * is documented as the single-step CI usage, so a finding `validate` raises
- * (here the legacy-path `D-DEPRECATED-PATH` migration gate) must reach this
+ * (here the legacy-path `QFAI-DEPRECATED-001` migration gate) must reach this
  * exit code too, and a write `validate` refuses must be refused here as well.
  * Otherwise a project whose `output.validateJsonPath` still names the legacy
  * SSOT sees `qfai validate` exit 1 and refuse the write while `qfai report

@@ -72,7 +72,7 @@ them consistently with each other
 
 `/qfai-implement` and the reviewers read it as a CLI-HANDOFF record in the
 same checkout. `npx qfai validate --profile saas-package` requires it to be present
-and to conform, and reports `D-SAAS-PACKAGE-HANDOFF-SCHEMA` naming the file
+and to conform, and reports `QFAI-SAAS-002` naming the file
 otherwise; no other command reads it.
 
 ## Checking an implementation's tokens

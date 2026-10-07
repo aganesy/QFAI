@@ -580,7 +580,7 @@ export async function runInit(
   }
 
   // A legacy instructions/ tree is reported as a
-  // D-DEPRECATED-PATH error on stderr. Emitted AFTER the report summary so
+  // QFAI-DEPRECATED-001 error on stderr. Emitted AFTER the report summary so
   // it stays at the bottom of the terminal output and is not buried by the
   // skipped-paths list.
   // Skip when the user is currently running
@@ -1050,7 +1050,7 @@ async function emitLegacyAssistantTreeSunset(destRoot: string): Promise<void> {
   // outright. The version stays in the message as the operator's only pointer
   // to when it started applying.
   error(
-    `  D-DEPRECATED-PATH: .qfai/assistant/instructions/ past the announced sunset (v${sunset}). Run \`qfai init --upgrade-assistant-tree\` to migrate.`,
+    `  QFAI-DEPRECATED-001: .qfai/assistant/instructions/ past the announced sunset (v${sunset}). Run \`qfai init --upgrade-assistant-tree\` to migrate.`,
   );
 }
 
@@ -3875,7 +3875,7 @@ function buildCopilotInstructions(): string {
     "  - Agents: `.qfai/assistant/agent/`",
     "  - Prompts: `.qfai/assistant/prompt/`",
     "- The legacy `.qfai/assistant/instructions/` layout is past its compatibility window.",
-    "  `qfai init` reports it on stderr as a `D-DEPRECATED-PATH` error.",
+    "  `qfai init` reports it on stderr as a `QFAI-DEPRECATED-001` error.",
     "  Run `qfai init --upgrade-assistant-tree` to migrate it.",
     "- When asked to perform QFAI workflow tasks, prefer using the QFAI skill symlinks in `.github/skills/`.",
     "  - These symlinks resolve to `.qfai/assistant/skill/<skill-name>/`.",

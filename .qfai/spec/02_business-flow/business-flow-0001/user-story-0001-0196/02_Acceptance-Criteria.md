@@ -47,7 +47,7 @@ Feature: Install or upgrade and get the free-text entry
   Scenario: An invalid `workflow.mode` is a configuration issue
     Given `qfai.config.yaml` whose `workflow.mode` is a value other than `active`, `shadow` or `off`
     When `qfai validate` runs
-    Then it reports `QFAI_CONFIG_INVALID` at severity error, with an English message naming the key and the three values
+    Then it reports `QFAI-CFG-002` at severity error, with an English message naming the key and the three values
     And an absent key, or one of the three values, raises no such issue
 
   # AC-0001-0196-06

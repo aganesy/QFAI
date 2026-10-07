@@ -35,7 +35,7 @@ export async function validateAssistantTreeMigration(
       dirEntries = [];
     }
     const EXTRA_DIRS = new Set(["skill.local"]);
-    // instructions/ is a pre-recut layer that gets its own D-DEPRECATED-PATH below.
+    // instructions/ is a pre-recut layer that gets its own QFAI-DEPRECATED-001 below.
     const PRE_RECUT_DEPRECATED_DIRS = new Set(["instructions"]);
     for (const entry of dirEntries) {
       if (!entry.isDirectory()) continue;
@@ -44,7 +44,7 @@ export async function validateAssistantTreeMigration(
       if (PRE_RECUT_DEPRECATED_DIRS.has(entry.name)) continue;
       issues.push(
         issue(
-          "W-ASSISTANT-LAYOUT",
+          "QFAI-ASSISTANT-001",
           `.qfai/assistant/${entry.name}/ is not in the canonical layer set (${ASSISTANT_LAYERS.join(", ")}).`,
           "warning",
           `.qfai/assistant/${entry.name}/`,
@@ -54,14 +54,14 @@ export async function validateAssistantTreeMigration(
     }
   }
 
-  // 2. D-DEPRECATED-PATH — the pre-recut .qfai/assistant/instructions/ layer is retired.
+  // 2. QFAI-DEPRECATED-001 — the pre-recut .qfai/assistant/instructions/ layer is retired.
   if (await exists(joinLegacyAssistantInstructions(root))) {
     const sunset = legacyAssistantTreeSunsetLabel();
     const label = `${LEGACY_ASSISTANT_INSTRUCTIONS_DIR}/`;
     const severity = "error" as const;
     issues.push(
       issue(
-        "D-DEPRECATED-PATH",
+        "QFAI-DEPRECATED-001",
         `${label} is past the announced sunset (v${sunset}). sunset: v${sunset}. Run \`qfai init --upgrade-assistant-tree\` to migrate.`,
         severity,
         label,
@@ -82,7 +82,7 @@ export async function validateAssistantTreeMigration(
       // contract. This is purely a layer-not-yet-seeded notification.
       issues.push(
         issue(
-          "I-ASSISTANT-LAYER-UNSEEDED",
+          "QFAI-ASSISTANT-002",
           `.qfai/assistant/${layer}/ is not seeded yet. Run \`qfai init\` to seed the assistant tree.`,
           "info",
           `.qfai/assistant/${layer}/`,

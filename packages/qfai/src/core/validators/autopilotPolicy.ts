@@ -1,5 +1,5 @@
 /**
- * Reviewer-Gate finding `R-AUTOPILOT-POLICY-MISSING` (severity error).
+ * Reviewer-Gate finding `QFAI-POLICY-001` (severity error).
  *
  * Every qfai-* skill works under the prototype policy that
  * `rule/shared-skill-operating-baseline.md` states in its
@@ -17,7 +17,7 @@
  * A skill's own section lists only what it adds to the prototype, and MUST
  * NOT widen a bucket. Only auto-decide widening is machine-detectable (the
  * canonical entry set is closed); it surfaces a warning-level
- * `R-AUTOPILOT-POLICY-WIDENED` flag. Hard-required entries are checked
+ * `QFAI-POLICY-002` flag. Hard-required entries are checked
  * against what each skill declares.
  *
  * Scoping: only `qfai-*` skills under `.qfai/assistant/skill/` are
@@ -599,25 +599,19 @@ async function baselineIssues(root: string, baselinePath: string): Promise<Issue
   const relPath = path.relative(root, baselinePath).replace(/\\/g, "/");
   const message =
     missing === null
-      ? `R-AUTOPILOT-POLICY-MISSING: ${relPath} does not carry the ` +
+      ? `QFAI-POLICY-001: ${relPath} does not carry the ` +
         `"## Default Autopilot Policy (Shared)" section that every qfai-* skill ` +
         `works under. Restore it with its three named buckets ` +
         `(auto-decide / ask-user / hard-required); \`qfai init --force\` ` +
         `regenerates the shipped wording. ` +
         `Justification: file=${relPath}, missing=## Default Autopilot Policy (Shared).`
-      : `R-AUTOPILOT-POLICY-MISSING: ${relPath} "## Default Autopilot Policy (Shared)" ` +
+      : `QFAI-POLICY-001: ${relPath} "## Default Autopilot Policy (Shared)" ` +
         `section is missing required bucket(s): [${missing.join(", ")}]. ` +
         `Every qfai-* skill works under all three named buckets ` +
         `(auto-decide / ask-user / hard-required). ` +
         `Justification: file=${relPath}, missingBuckets=[${missing.join(", ")}].`;
   return [
-    issue(
-      "R-AUTOPILOT-POLICY-MISSING",
-      message,
-      "error",
-      relPath,
-      "reviewerGate.autopilotPolicyMissing",
-    ),
+    issue("QFAI-POLICY-001", message, "error", relPath, "reviewerGate.autopilotPolicyMissing"),
   ];
 }
 
@@ -630,37 +624,25 @@ function skillPolicyIssues(
   const issues: Issue[] = [];
   if (result.hardRequiredMissing.length > 0) {
     const message =
-      `R-AUTOPILOT-POLICY-MISSING: ${relPath} does not name the hard-required ` +
+      `QFAI-POLICY-001: ${relPath} does not name the hard-required ` +
       `input(s) declared for ${skillId} ([${result.hardRequiredMissing.join(" | ")}]). ` +
       `The shared baseline states every other entry; an input only this skill ` +
       `consumes is listed under hard-required in its own ` +
       `"## Default Autopilot Policy" section. ` +
       `Justification: file=${relPath}, missingEntries=[${result.hardRequiredMissing.join(", ")}].`;
     issues.push(
-      issue(
-        "R-AUTOPILOT-POLICY-MISSING",
-        message,
-        "error",
-        relPath,
-        "reviewerGate.autopilotPolicyMissing",
-      ),
+      issue("QFAI-POLICY-001", message, "error", relPath, "reviewerGate.autopilotPolicyMissing"),
     );
   }
   if (result.widenedTokens.length > 0) {
     const message =
-      `R-AUTOPILOT-POLICY-WIDENED: ${relPath} auto-decide bucket lists ` +
+      `QFAI-POLICY-002: ${relPath} auto-decide bucket lists ` +
       `entries outside the canonical allowed set ` +
       `([${result.widenedTokens.join(" | ")}]). Narrowing is permitted; ` +
       `widening MUST go through ask-user. ` +
       `Justification: file=${relPath}, widened=[${result.widenedTokens.join(", ")}].`;
     issues.push(
-      issue(
-        "R-AUTOPILOT-POLICY-WIDENED",
-        message,
-        "warning",
-        relPath,
-        "reviewerGate.autopilotPolicyWidened",
-      ),
+      issue("QFAI-POLICY-002", message, "warning", relPath, "reviewerGate.autopilotPolicyWidened"),
     );
   }
   // The bucket's CONTENT, not just its header. Checking only the header let
@@ -701,16 +683,16 @@ function skillPolicyIssues(
 /**
  * Check the shared baseline once, then every `qfai-*` SKILL.md under the
  * skills root against what it adds to that baseline. Emits
- * `R-AUTOPILOT-POLICY-MISSING` (error) when the baseline section or one of its
+ * `QFAI-POLICY-001` (error) when the baseline section or one of its
  * buckets is gone, or when a skill drops a hard-required input declared for
- * it; `R-AUTOPILOT-POLICY-WIDENED` (warning) when a skill's auto-decide bucket
+ * it; `QFAI-POLICY-002` (warning) when a skill's auto-decide bucket
  * contains entries outside the canonical allowed set; and `QFAI-AUTOPILOT-001`
  * (error) for a hard-required entry the skill may not carry.
  *
  * A skill with no section of its own and no declared input works under the
  * baseline alone and raises nothing.
  *
- * `R-AUTOPILOT-POLICY-WIDENED` is distinct from MISSING: its remedy is to
+ * `QFAI-POLICY-002` is distinct from MISSING: its remedy is to
  * narrow the auto-decide bucket back to the canonical set, not to restore
  * the policy, so it stays a warning.
  */

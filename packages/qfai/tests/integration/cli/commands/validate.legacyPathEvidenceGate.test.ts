@@ -32,7 +32,7 @@ async function withProject(task: (root: string) => Promise<void>): Promise<void>
   }
 }
 
-describe("D-DEPRECATED-PATH requires evidence the legacy path is in use", () => {
+describe("QFAI-DEPRECATED-001 requires evidence the legacy path is in use", () => {
   it("post-sunset, a stale legacy file on disk is evidence and the write has stopped", async () => {
     await withProject(async (root) => {
       await mkdir(path.join(root, ".qfai", "output"), { recursive: true });
@@ -42,7 +42,7 @@ describe("D-DEPRECATED-PATH requires evidence the legacy path is in use", () => 
       await runValidate({ root, strict: false, toolVersionOverride: "1.10.0" });
 
       const finding = (await readFindings(root)).find(
-        (entry) => entry.code === "D-DEPRECATED-PATH",
+        (entry) => entry.code === "QFAI-DEPRECATED-001",
       );
       expect(finding?.severity).toBe("error");
       expect(finding?.message).toContain("no longer written but");

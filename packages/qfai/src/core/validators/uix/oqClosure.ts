@@ -59,7 +59,7 @@ export async function validateOqClosure(root: string, _config: QfaiConfig): Prom
     if (isOpen && isCritical) {
       issues.push(
         canonicalIssue(
-          "UIX-VAL-OQ-OPEN-CRITICAL",
+          "QFAI-OQ-001",
           `Open critical OQ found: ${oqId}. Must be resolved before proceeding.`,
           "error",
           relPath,
@@ -84,7 +84,7 @@ export async function validateOqClosure(root: string, _config: QfaiConfig): Prom
       if (/critical|blocking/i.test(fullRow)) {
         issues.push(
           canonicalIssue(
-            "UIX-VAL-OQ-OPEN-CRITICAL",
+            "QFAI-OQ-001",
             `Open critical OQ found: ${oqId}. Must be resolved before proceeding.`,
             "error",
             relPath,

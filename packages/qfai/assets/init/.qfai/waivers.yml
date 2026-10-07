@@ -2,7 +2,7 @@ version: 1
 waivers: []
 # Write `rule:` exactly as the finding's `code` appears in
 # `.qfai/report/validate.json` and in the CLI output — `QFAI-DT-006`,
-# `QFAI-CFG-LINK-002`, `W-ASSISTANT-LAYOUT`. Do not strip the `QFAI-` prefix;
+# `QFAI-CFG-LINK-002`, `QFAI-ASSISTANT-001`. Do not strip the `QFAI-` prefix;
 # the stripped form is kept working only for older waiver files.
 #
 # Waivers apply to `warning` and `info` findings only. A waiver aimed at an

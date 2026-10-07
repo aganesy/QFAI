@@ -2,7 +2,7 @@
 // canonical manifest field name AND the manifest schema reference does
 // likewise, the pair is symmetric and no finding fires. If one side
 // drops the canonical token while the other retains it, the asymmetric
-// state surfaces as `R-SKILL-MANIFEST-DRIFT` (severity error).
+// state surfaces as `QFAI-MANIFEST-001` (severity error).
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -57,7 +57,7 @@ describe("detectSkillManifestDrift — SSOT-sync Pair III", () => {
     expect(issues).toEqual([]);
   });
 
-  it("probe references token but schema does NOT → asymmetric → R-SKILL-MANIFEST-DRIFT", async () => {
+  it("probe references token but schema does NOT → asymmetric → QFAI-MANIFEST-001", async () => {
     const root = await newTempDir("probe-only");
     const pair = SKILL_MANIFEST_PAIRS[0];
     if (!pair) throw new Error("expected at least one pair");
@@ -69,14 +69,14 @@ describe("detectSkillManifestDrift — SSOT-sync Pair III", () => {
     await writePackageFile(root, pair.schemaRel, `// no token here\nexport const y = 1;\n`);
     const issues = await detectSkillManifestDrift(root);
     expect(issues.length).toBeGreaterThan(0);
-    const finding = issues.find((iss) => iss.code === "R-SKILL-MANIFEST-DRIFT");
+    const finding = issues.find((iss) => iss.code === "QFAI-MANIFEST-001");
     expect(finding).toBeDefined();
     expect(finding?.severity).toBe("error");
-    expect(finding?.message).toMatch(/R-SKILL-MANIFEST-DRIFT/u);
+    expect(finding?.message).toMatch(/QFAI-MANIFEST-001/u);
     expect(finding?.message.length).toBeGreaterThan(20);
   });
 
-  it("schema declares token but probe drops it → asymmetric → R-SKILL-MANIFEST-DRIFT", async () => {
+  it("schema declares token but probe drops it → asymmetric → QFAI-MANIFEST-001", async () => {
     const root = await newTempDir("schema-only");
     const pair = SKILL_MANIFEST_PAIRS[0];
     if (!pair) throw new Error("expected at least one pair");
@@ -87,7 +87,7 @@ describe("detectSkillManifestDrift — SSOT-sync Pair III", () => {
       `// declares ${pair.schemaToken}\nexport const y = 1;\n`,
     );
     const issues = await detectSkillManifestDrift(root);
-    expect(issues.find((iss) => iss.code === "R-SKILL-MANIFEST-DRIFT")).toBeDefined();
+    expect(issues.find((iss) => iss.code === "QFAI-MANIFEST-001")).toBeDefined();
   });
 
   it("symmetric absence (neither side has the token) → no findings", async () => {

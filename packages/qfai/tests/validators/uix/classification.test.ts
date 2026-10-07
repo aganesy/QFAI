@@ -55,9 +55,7 @@ describe("validateClassification", () => {
     );
 
     const issues = await validateClassification(root, defaultConfig);
-    expect(issues.some((issue) => issue.code === "UIX-VAL-CLASSIFICATION-REQUIRED-FIELD")).toBe(
-      true,
-    );
+    expect(issues.some((issue) => issue.code === "QFAI-CLASSIFICATION-008")).toBe(true);
   });
 
   it("rejects ui_bearing=true with non-ui surface", async () => {
@@ -69,9 +67,7 @@ describe("validateClassification", () => {
     );
 
     const issues = await validateClassification(root, defaultConfig);
-    expect(issues.some((issue) => issue.code === "UIX-VAL-CLASSIFICATION-CONTRADICTION")).toBe(
-      true,
-    );
+    expect(issues.some((issue) => issue.code === "QFAI-CLASSIFICATION-001")).toBe(true);
   });
 
   it("rejects empty classification_rationale", async () => {
@@ -86,9 +82,7 @@ describe("validateClassification", () => {
     );
 
     const issues = await validateClassification(root, defaultConfig);
-    expect(
-      issues.some((issue) => issue.code === "UIX-VAL-CLASSIFICATION-RATIONALE-PLACEHOLDER"),
-    ).toBe(true);
+    expect(issues.some((issue) => issue.code === "QFAI-CLASSIFICATION-007")).toBe(true);
   });
 
   it("requires secondary_surfaces field presence", async () => {
@@ -100,9 +94,7 @@ describe("validateClassification", () => {
     );
 
     const issues = await validateClassification(root, defaultConfig);
-    expect(issues.some((issue) => issue.code === "UIX-VAL-CLASSIFICATION-REQUIRED-FIELD")).toBe(
-      true,
-    );
+    expect(issues.some((issue) => issue.code === "QFAI-CLASSIFICATION-008")).toBe(true);
   });
 
   it("rejects invalid secondary_surfaces values", async () => {
@@ -114,9 +106,7 @@ describe("validateClassification", () => {
     );
 
     const issues = await validateClassification(root, defaultConfig);
-    expect(
-      issues.some((issue) => issue.code === "UIX-VAL-CLASSIFICATION-INVALID-SECONDARY-SURFACE"),
-    ).toBe(true);
+    expect(issues.some((issue) => issue.code === "QFAI-CLASSIFICATION-004")).toBe(true);
   });
 
   it("rejects duplicate secondary_surfaces values", async () => {
@@ -128,9 +118,7 @@ describe("validateClassification", () => {
     );
 
     const issues = await validateClassification(root, defaultConfig);
-    expect(
-      issues.some((issue) => issue.code === "UIX-VAL-CLASSIFICATION-DUPLICATE-SECONDARY-SURFACE"),
-    ).toBe(true);
+    expect(issues.some((issue) => issue.code === "QFAI-CLASSIFICATION-002")).toBe(true);
   });
 
   it("rejects secondary_surfaces when ui_bearing is false", async () => {
@@ -152,9 +140,7 @@ describe("validateClassification", () => {
     );
 
     const issues = await validateClassification(root, defaultConfig);
-    expect(issues.some((issue) => issue.code === "UIX-VAL-CLASSIFICATION-CONTRADICTION")).toBe(
-      true,
-    );
+    expect(issues.some((issue) => issue.code === "QFAI-CLASSIFICATION-001")).toBe(true);
   });
 
   it("rejects non-ui in secondary_surfaces when ui_bearing is true", async () => {
@@ -166,8 +152,6 @@ describe("validateClassification", () => {
     );
 
     const issues = await validateClassification(root, defaultConfig);
-    expect(issues.some((issue) => issue.code === "UIX-VAL-CLASSIFICATION-CONTRADICTION")).toBe(
-      true,
-    );
+    expect(issues.some((issue) => issue.code === "QFAI-CLASSIFICATION-001")).toBe(true);
   });
 });

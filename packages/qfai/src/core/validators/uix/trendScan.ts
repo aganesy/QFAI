@@ -154,7 +154,7 @@ export async function validateTrendScan(root: string, _config: QfaiConfig): Prom
   if (!content) {
     return [
       trendIssue(
-        "UIX-VAL-TREND-SCAN-MISSING",
+        "QFAI-TREND-004",
         "04_Sources.md is required for UI-bearing packs.",
         "error",
         "Add 04_Sources.md with a '## Trend Scan' section containing all required categories.",
@@ -166,7 +166,7 @@ export async function validateTrendScan(root: string, _config: QfaiConfig): Prom
   if (!trendSection) {
     return [
       trendIssue(
-        "UIX-VAL-TREND-SCAN-MISSING",
+        "QFAI-TREND-004",
         "04_Sources.md must contain a '## Trend Scan' section for UI-bearing packs.",
         "error",
         "Add '## Trend Scan' section to 04_Sources.md with all required categories.",
@@ -180,7 +180,7 @@ export async function validateTrendScan(root: string, _config: QfaiConfig): Prom
     if (!categoryBody) {
       issues.push(
         trendIssue(
-          "UIX-VAL-TREND-CATEGORY-MISSING",
+          "QFAI-TREND-001",
           `Trend scan is missing required category '${category}'.`,
           "error",
           `Add '### ${category}' under '## Trend Scan' with at least one complete entry.`,
@@ -193,7 +193,7 @@ export async function validateTrendScan(root: string, _config: QfaiConfig): Prom
     if (entries.length === 0) {
       issues.push(
         trendIssue(
-          "UIX-VAL-TREND-ENTRY-MISSING",
+          "QFAI-TREND-002",
           `Category '${category}' must contain at least one complete entry.`,
           "error",
           `Add at least one '#### Entry' block under '### ${category}'.`,
@@ -208,7 +208,7 @@ export async function validateTrendScan(root: string, _config: QfaiConfig): Prom
         if (isPlaceholder(value)) {
           issues.push(
             trendIssue(
-              "UIX-VAL-TREND-FIELD-MISSING",
+              "QFAI-TREND-003",
               `Trend entry in '${category}' is missing '${field}' or uses placeholder content.`,
               "error",
               `Populate '${field}' in '${category}' with project-specific content.`,
@@ -228,7 +228,7 @@ export async function validateTrendScan(root: string, _config: QfaiConfig): Prom
   if (!hasConcreteGuidelineEntry) {
     issues.push(
       trendIssue(
-        "UIX-VAL-T05",
+        "QFAI-TREND-005",
         "UI-bearing packs should include at least one concrete design_guideline_research entry in 04_Sources.md before finalizing trend-derived axes.",
         "warning",
         "Add a design_guideline_research entry with guideline_name, rule_refs, and local_translation grounded in an applicable platform or library guideline.",

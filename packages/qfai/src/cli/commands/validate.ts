@@ -97,7 +97,7 @@ export function configTargetsLegacyValidateJsonPath(configuredPath: string): boo
 
 /**
  * Outcome of the legacy `validate.json` migration gate: the
- * `D-DEPRECATED-PATH` finding a run must carry (if any) plus the writer
+ * `QFAI-DEPRECATED-001` finding a run must carry (if any) plus the writer
  * decisions derived from the same signals.
  */
 export type LegacyValidateJsonGate = {
@@ -370,7 +370,7 @@ export function profileSuffixedReportPath(configured: string, profile: string): 
 }
 
 /**
- * Build the `D-DEPRECATED-PATH` finding for the legacy validate output SSOT.
+ * Build the `QFAI-DEPRECATED-001` finding for the legacy validate output SSOT.
  *
  * Two states reach this function, both of them `error`: the legacy path is
  * retired, so nothing writes it and a project still naming it has a migration
@@ -393,7 +393,7 @@ function buildDeprecationIssue(args: { configTargetsLegacyPath: boolean }): Issu
       `still exists on disk. Update consumers to read .qfai/report/validate.json or ` +
       `.qfai/report/validate-<profile>.json and delete the stale legacy file.`;
   return {
-    code: "D-DEPRECATED-PATH",
+    code: "QFAI-DEPRECATED-001",
     severity: "error",
     category: "canonical",
     message,
@@ -410,14 +410,13 @@ export const GATE_GROUP_FAMILIES = {
   discussion: ["QFAI-DPACK-*", "QFAI-VIS-*"],
   "research-summary": ["QFAI-RESEARCH-*"],
   "canonical-uix": [
-    "UIX-VAL-3LAYER-*",
-    "UIX-VAL-CLASSIFICATION-*",
-    "UIX-VAL-DIRECTION-*",
-    "UIX-VAL-OQ-*",
-    "UIX-VAL-SCREEN-*",
-    "UIX-VAL-SIDECAR-*",
-    "UIX-VAL-T05",
-    "UIX-VAL-TREND-*",
+    "QFAI-THREELAYER-*",
+    "QFAI-CLASSIFICATION-*",
+    "QFAI-DIRECTION-*",
+    "QFAI-OQ-*",
+    "QFAI-SCREEN-*",
+    "QFAI-SIDECAR-*",
+    "QFAI-TREND-*",
   ],
   "story-structure": [
     "QFAI-STORY-001",
@@ -443,15 +442,9 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-STORY-014",
   ],
   "story-test-scan": ["QFAI-SCAN-002"],
-  sdd: [
-    "QFAI-AUTOPILOT-*",
-    "W-ASSISTANT-LAYOUT",
-    "W-SKILL-PROJECT-MEMORY",
-    "W-STALE-REFERENCE",
-    "I-ASSISTANT-LAYER-UNSEEDED",
-  ],
-  "reviewer-gate-sdd": ["R-AUTOPILOT-POLICY-*"],
-  "reviewer-gate-shared": ["R-MOCK-HREF-DRIFT"],
+  sdd: ["QFAI-AUTOPILOT-*", "QFAI-ASSISTANT-*", "QFAI-SKILLDOC-*", "QFAI-STALE-*"],
+  "reviewer-gate-sdd": ["QFAI-POLICY-*"],
+  "reviewer-gate-shared": ["QFAI-MOCKHREF-*"],
   contracts: [
     "QFAI-CONTRACT-000",
     "QFAI-CONTRACT-010",
@@ -485,7 +478,7 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-PLATFORM-*",
     "QFAI-CFG-LINK-*",
   ],
-  "prototyping-skill": ["UIX-VAL-SKILL-*"],
+  "prototyping-skill": ["QFAI-PROTOSKILL-*"],
   "test-stubs": ["QFAI-TEST-*"],
   drift: ["QFAI-DRIFT-*", "QFAI-STORY-010"],
   "saas-package-profile": [ATTESTATION_MISSING_CODE, HANDOFF_SCHEMA_CODE],
@@ -1281,9 +1274,9 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every skill carries both fields a host registers it by: a `name:` that is its own directory, in lowercase letters, digits and single hyphens to 64 characters, and a `description:` with text in it, to 1024 characters and with no `<` or `>` — a skill that should not be offered to the model declares `disable-model-invocation: true` and keeps the description, rather than dropping the field and losing the registration with it.",
   "QFAI-SKILLS-016":
     "The step layer holds only `STEP.md` steps named after their directories; each is owned by `common` or by a skill whose `steps:` lists it, `requires:` names only installed `common-*` steps, every step a skill or a workflow plan names is installed and used, and a skill that lists steps declares `orchestrator` and every role those steps declare.",
-  "D-SAAS-PACKAGE-ATTESTATION-MISSING":
+  "QFAI-SAAS-001":
     "The saas-package profile finds a design-system attestation at its configured path.",
-  "D-SAAS-PACKAGE-HANDOFF-SCHEMA":
+  "QFAI-SAAS-002":
     "A cross-skill handoff, when present, parses as an object and conforms to the handoff schema.",
   "QFAI-DRIFT-001":
     "Upstream SSOT files are unchanged relative to the base branch, or the change carries an approved Change Request.",
@@ -1307,15 +1300,14 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "No required Research Summary value is still the shipped `[...]` template placeholder.",
   "QFAI-AUTOPILOT-001":
     "Every `qfai-*` SKILL.md keeps its hard-required bucket to the common entries plus the ones it declares for itself, and names no retired entry. A skill may carry fewer — one it never reads costs a prompt and buys nothing — and never more.",
-  "D-DEPRECATED-PATH":
+  "QFAI-DEPRECATED-001":
     "No retired path is in use: `output.validateJsonPath` does not name the old `.qfai/output/validate.json` report path, no file is left there, and the retired `.qfai/assistant/instructions/` layer is absent.",
-  "W-ASSISTANT-LAYOUT": "Every directory under `.qfai/assistant/` is one of the canonical layers.",
-  "W-SKILL-PROJECT-MEMORY":
-    "A `project_memory:` block in a SKILL.md is the last thing in the file.",
-  "W-STALE-REFERENCE":
+  "QFAI-ASSISTANT-001": "Every directory under `.qfai/assistant/` is one of the canonical layers.",
+  "QFAI-SKILLDOC-001": "A `project_memory:` block in a SKILL.md is the last thing in the file.",
+  "QFAI-STALE-001":
     "No skill document still names a token that its implementation has since replaced.",
-  "I-ASSISTANT-LAYER-UNSEEDED": "Every canonical `.qfai/assistant/` layer directory is seeded.",
-  QFAI_CONFIG_INVALID: "Every value in qfai.config.yaml has the type and range its key declares.",
+  "QFAI-ASSISTANT-002": "Every canonical `.qfai/assistant/` layer directory is seeded.",
+  "QFAI-CFG-002": "Every value in qfai.config.yaml has the type and range its key declares.",
   "QFAI-AGENT-005": "Every agent definition file has each required section heading.",
   "QFAI-AGENT-007":
     "The agent routing manifest and its defaults file can be read and parse to the shape the routing check expects.",
@@ -1419,82 +1411,71 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-WAIVER-003": "No waiver in `.qfai/waivers.yml` has passed its `expires` date.",
   "QFAI-WAIVER-004":
     "Every waiver's `rule` names a finding code this run emits and a waiver can suppress.",
-  "R-AUTOPILOT-POLICY-MISSING":
+  "QFAI-POLICY-001":
     "The shared autopilot policy has its three buckets (auto-decide, ask-user, hard-required), and each skill's own policy lists the hard-required inputs declared for it.",
-  "R-AUTOPILOT-POLICY-WIDENED":
-    "No skill's auto-decide bucket lists an entry outside the shared allowed set.",
-  "R-HANDOFF-SCHEMA-DRIFT":
+  "QFAI-POLICY-002": "No skill's auto-decide bucket lists an entry outside the shared allowed set.",
+  "QFAI-HANDOFF-001":
     "The handoff schema's field list and each file that writes a handoff name the same fields.",
-  "R-MOCK-HREF-DRIFT":
+  "QFAI-MOCKHREF-001":
     "The HTML mock template and the validator rule for mock links agree on which hrefs are allowed.",
-  "R-SKILL-MANIFEST-DRIFT":
+  "QFAI-MANIFEST-001":
     "The skill manifest schema and the probe that reads it name the same tokens.",
-  "UIX-VAL-3LAYER-FORBIDDEN-FILE": "The `uiux/` directory holds none of the retired sidecar files.",
-  "UIX-VAL-3LAYER-INCOMPLETE-FAMILY":
-    "The `uiux/` directory holds every file of the canonical sidecar family.",
-  "UIX-VAL-3LAYER-LEGACY-FORMAT": "No sidecar file uses the retired evaluation headings.",
-  "UIX-VAL-3LAYER-MIXED-FORMAT":
+  "QFAI-THREELAYER-001": "The `uiux/` directory holds none of the retired sidecar files.",
+  "QFAI-THREELAYER-002": "The `uiux/` directory holds every file of the canonical sidecar family.",
+  "QFAI-THREELAYER-003": "No sidecar file uses the retired evaluation headings.",
+  "QFAI-THREELAYER-004":
     "A sidecar file uses either the exploration-first headings or the retired evaluation headings, never both.",
-  "UIX-VAL-CLASSIFICATION-CONTRADICTION":
+  "QFAI-CLASSIFICATION-001":
     "The `ui_bearing`, `primary_surface` and `secondary_surfaces` fields of a classification agree with each other.",
-  "UIX-VAL-CLASSIFICATION-DUPLICATE-SECONDARY-SURFACE":
-    "`secondary_surfaces` lists no surface twice.",
-  "UIX-VAL-CLASSIFICATION-INVALID-BOOLEAN": "`ui_bearing` is `true` or `false`.",
-  "UIX-VAL-CLASSIFICATION-INVALID-SECONDARY-SURFACE":
+  "QFAI-CLASSIFICATION-002": "`secondary_surfaces` lists no surface twice.",
+  "QFAI-CLASSIFICATION-003": "`ui_bearing` is `true` or `false`.",
+  "QFAI-CLASSIFICATION-004":
     "Every `secondary_surfaces` value is a surface the classification accepts.",
-  "UIX-VAL-CLASSIFICATION-INVALID-SURFACE":
-    "`primary_surface` is a surface the classification accepts.",
-  "UIX-VAL-CLASSIFICATION-MISSING": "`01_Context.md` has the UI-bearing classification block.",
-  "UIX-VAL-CLASSIFICATION-RATIONALE-PLACEHOLDER":
+  "QFAI-CLASSIFICATION-005": "`primary_surface` is a surface the classification accepts.",
+  "QFAI-CLASSIFICATION-006": "`01_Context.md` has the UI-bearing classification block.",
+  "QFAI-CLASSIFICATION-007":
     "`classification_rationale` holds project-specific reasoning, not placeholder text.",
-  "UIX-VAL-CLASSIFICATION-REQUIRED-FIELD":
+  "QFAI-CLASSIFICATION-008":
     "The classification block has `ui_bearing`, `primary_surface`, `secondary_surfaces` and `classification_rationale`.",
-  "UIX-VAL-CLASSIFICATION-SECONDARY-ARRAY":
+  "QFAI-CLASSIFICATION-009":
     "`secondary_surfaces` is present, as a list or an explicit empty list.",
-  "UIX-VAL-CLASSIFICATION-SECONDARY-DUPLICATE":
-    "`secondary_surfaces` does not repeat the `primary_surface`.",
-  "UIX-VAL-DIRECTION-HISTORY-MISSING":
+  "QFAI-CLASSIFICATION-010": "`secondary_surfaces` does not repeat the `primary_surface`.",
+  "QFAI-DIRECTION-001":
     "`50_review_input_bundle.md` states that the latest iteration is the accepted one and no earlier iteration is restored.",
-  "UIX-VAL-OQ-OPEN-CRITICAL": "No critical open question remains open in the OQ register.",
-  "UIX-VAL-SCREEN-CONTRACT-DUPLICATE-ID":
-    "Every screen in the screen contract has a unique `screen_id`.",
-  "UIX-VAL-SCREEN-CONTRACT-LEGACY-FORMAT":
+  "QFAI-OQ-001": "No critical open question remains open in the OQ register.",
+  "QFAI-SCREEN-001": "Every screen in the screen contract has a unique `screen_id`.",
+  "QFAI-SCREEN-002":
     "Every screen in the screen contract writes its nested fields as nested canonical bullets.",
-  "UIX-VAL-SCREEN-CONTRACT-SCHEMA-INCOMPLETE":
-    "Every screen in the screen contract has all the required fields.",
-  "UIX-VAL-SCREEN-CONTRACT-STATE-COVERAGE":
-    "Every screen's `required_states` includes the mandatory states.",
-  "UIX-VAL-SIDECAR-MISSING": "A spec that is UI-bearing has a `uiux/` sidecar directory.",
-  "UIX-VAL-SKILL-ASPIRATIONAL":
-    "The prototyping skill claims no capability that is not implemented.",
-  "UIX-VAL-SKILL-BANNED-PHRASE":
+  "QFAI-SCREEN-003": "Every screen in the screen contract has all the required fields.",
+  "QFAI-SCREEN-004": "Every screen's `required_states` includes the mandatory states.",
+  "QFAI-SIDECAR-001": "A spec that is UI-bearing has a `uiux/` sidecar directory.",
+  "QFAI-PROTOSKILL-001": "The prototyping skill claims no capability that is not implemented.",
+  "QFAI-PROTOSKILL-002":
     "The prototyping skill uses none of the banned runtime-heavy default wording.",
-  "UIX-VAL-SKILL-CANONICAL-SURFACE":
+  "QFAI-PROTOSKILL-003":
     "The prototyping skill documents the supported UI surfaces: web, mobile, desktop and mixed.",
-  "UIX-VAL-SKILL-CLI-SURFACE":
+  "QFAI-PROTOSKILL-004":
     "The prototyping skill states that the cli surface is rejected from prototyping execution.",
-  "UIX-VAL-SKILL-DELEGATION":
+  "QFAI-PROTOSKILL-005":
     "The prototyping skill has the delegation scope table for the generation, evaluation and build roles.",
-  "UIX-VAL-SKILL-ENV-PRECONDITIONS":
+  "QFAI-PROTOSKILL-006":
     "The prototyping skill separates contract preconditions from environment preconditions.",
-  "UIX-VAL-SKILL-PLAYWRIGHT-FALLBACK":
+  "QFAI-PROTOSKILL-007":
     "The prototyping skill documents a Playwright invocation that installs nothing, such as `npx --no-install playwright`.",
-  "UIX-VAL-SKILL-PREFLIGHT":
+  "QFAI-PROTOSKILL-008":
     "The prototyping skill documents `qfai doctor --profile prototyping` as its preflight.",
-  "UIX-VAL-SKILL-SECTION-MISSING": "The prototyping skill has every required section.",
-  "UIX-VAL-SKILL-STATIC-FIRST":
-    "The prototyping skill states the static-first, file-based default.",
-  "UIX-VAL-SKILL-UI-BEARING-FALSE":
+  "QFAI-PROTOSKILL-009": "The prototyping skill has every required section.",
+  "QFAI-PROTOSKILL-010": "The prototyping skill states the static-first, file-based default.",
+  "QFAI-PROTOSKILL-011":
     "The prototyping skill limits execution to UI contracts that have a full UI ID and a non-empty `screens[]`.",
-  "UIX-VAL-T05":
+  "QFAI-TREND-005":
     "A UI-bearing pack's `04_Sources.md` has at least one concrete `design_guideline_research` entry before trend-derived axes are fixed.",
-  "UIX-VAL-TREND-CATEGORY-MISSING": "The `## Trend Scan` section has every required category.",
-  "UIX-VAL-TREND-ENTRY-MISSING": "Every trend-scan category has at least one complete entry.",
-  "UIX-VAL-TREND-FIELD-MISSING":
+  "QFAI-TREND-001": "The `## Trend Scan` section has every required category.",
+  "QFAI-TREND-002": "Every trend-scan category has at least one complete entry.",
+  "QFAI-TREND-003":
     "Every trend-scan entry fills each required field with project-specific content.",
-  "UIX-VAL-TREND-SCAN-MISSING":
-    "A UI-bearing pack has `04_Sources.md` with a `## Trend Scan` section.",
-  "D-SAAS-PACKAGE-VERIFY-SKIPPED":
+  "QFAI-TREND-004": "A UI-bearing pack has `04_Sources.md` with a `## Trend Scan` section.",
+  "QFAI-SAAS-003":
     "Every gate the SaaS-package profile skips is named, so a pass on that profile is not read as a full DONE.",
 };
 

@@ -52,18 +52,10 @@ convention fails loudly instead of quietly shrinking the scanned surface.
 
 The frozen families, none of which may take a new member:
 
-| family     | shape                        | example                        |
-| ---------- | ---------------------------- | ------------------------------ |
-| `QFAI-`    | non-conforming `QFAI-` codes | `QFAI-CFG-LINK-001`            |
-| `QFAI_`    | underscore-separated         | `QFAI_CONFIG_INVALID`          |
-| `R-`       | rule/report drift            | `R-SKILL-MANIFEST-DRIFT`       |
-| `E_`       | spec-layer errors            | `E_TC_ORPHAN`                  |
-| `D-`       | deprecation / degradation    | `D-DEPRECATED-PATH`            |
-| `W-`       | warnings                     | `W-ASSISTANT-LAYOUT`           |
-| `UIX-`     | prototyping UI checks        | `UIX-VAL-OQ-OPEN-CRITICAL`     |
-| `HANDOFF-` | handoff schema               | `HANDOFF-SCHEMA-NOT-OBJECT`    |
-| `TRACE_`   | traceability scope           | `TRACE_SHARED_SCOPE_VIOLATION` |
-| `I-`       | informational                | `I-ASSISTANT-LAYER-UNSEEDED`   |
+| family     | shape                        | example                     |
+| ---------- | ---------------------------- | --------------------------- |
+| `QFAI-`    | non-conforming `QFAI-` codes | `QFAI-CFG-LINK-001`         |
+| `HANDOFF-` | handoff schema               | `HANDOFF-SCHEMA-NOT-OBJECT` |
 
 ## Adding a code
 
@@ -98,8 +90,8 @@ the branch renames.
    `resolveRuleKeys` would derive, as well as for the code itself.
 4. **The strip is narrow.** It reads `code`, and matches `QFAI-<AREA>-<NNN>`
    with a single all-letter area — so `QFAI-CFG-LINK-001` strips to nothing,
-   and an underscore-separated code (`QFAI_CONFIG_INVALID`) does not match at
-   all, so no alias is derived from it. Renaming one of these needs an explicit
+   and a code with no `QFAI-` prefix (`HANDOFF-SCHEMA-NOT-OBJECT`) does not match
+   at all, so no alias is derived from it. Renaming one of these needs an explicit
    alias — the work `## Not covered here` defers.
 5. **Check whether the code already exists.** A family several branches reached
    for at once tends to have been settled by whichever landed first:
@@ -122,6 +114,6 @@ old one stops appearing in.
 
 Renaming a legacy code whose shape is **not** `<AREA>-<NNN>` needs an alias
 table with a deprecation window, because the prefix strip above gives it
-nothing: a `.qfai/waivers.yml` entry written against `R-SKILL-MANIFEST-DRIFT`
+nothing: a `.qfai/waivers.yml` entry written against `HANDOFF-SCHEMA-NOT-OBJECT`
 resolves through neither spelling once the code moves. That migration, and
 publishing the inventory as a build artifact, are separate work.

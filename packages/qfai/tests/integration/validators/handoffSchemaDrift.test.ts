@@ -1,10 +1,10 @@
 /**
- * Integration: R-HANDOFF-SCHEMA-DRIFT emission (Pair IV).
+ * Integration: QFAI-HANDOFF-001 emission (Pair IV).
  *
  * - TC-0015-0024 (error): a non-conforming handoff write OR an
  *   asymmetric SSOT-sync Pair IV edit (schema-side adds the canonical
  *   field set but writer-side does NOT reference it) makes the
- *   detector emit R-HANDOFF-SCHEMA-DRIFT at severity error with a
+ *   detector emit QFAI-HANDOFF-001 at severity error with a
  *   non-empty 3-part justification.
  *
  * Detection: a static substring-token scan between
@@ -49,7 +49,7 @@ async function writeAt(rel: string, body: string): Promise<void> {
 describe("TC-0015-0024: detectHandoffSchemaDrift fires on asymmetric Pair IV edits", () => {
   it("does NOT fire when neither source file exists (consumer install)", async () => {
     const issues = await detectHandoffSchemaDrift(root);
-    expect(issues.filter((i) => i.code === "R-HANDOFF-SCHEMA-DRIFT")).toEqual([]);
+    expect(issues.filter((i) => i.code === "QFAI-HANDOFF-001")).toEqual([]);
   });
 
   it("does NOT fire when schema has fields and every writer references its token", async () => {
@@ -61,7 +61,7 @@ describe("TC-0015-0024: detectHandoffSchemaDrift fires on asymmetric Pair IV edi
       );
     }
     const issues = await detectHandoffSchemaDrift(root);
-    expect(issues.filter((i) => i.code === "R-HANDOFF-SCHEMA-DRIFT")).toEqual([]);
+    expect(issues.filter((i) => i.code === "QFAI-HANDOFF-001")).toEqual([]);
   });
 
   it("fires (error) when schema has fields but a registered writer omits its token", async () => {
@@ -74,7 +74,7 @@ describe("TC-0015-0024: detectHandoffSchemaDrift fires on asymmetric Pair IV edi
       );
     }
     const issues = await detectHandoffSchemaDrift(root);
-    const findings = issues.filter((i) => i.code === "R-HANDOFF-SCHEMA-DRIFT");
+    const findings = issues.filter((i) => i.code === "QFAI-HANDOFF-001");
     expect(findings.length).toBeGreaterThanOrEqual(1);
     const f = findings[0];
     expect(f?.severity).toBe("error");
@@ -99,7 +99,7 @@ describe("TC-0015-0024: detectHandoffSchemaDrift fires on asymmetric Pair IV edi
       await writeAt(pair.writerRel, body);
     }
     const findings = (await detectHandoffSchemaDrift(root)).filter(
-      (i) => i.code === "R-HANDOFF-SCHEMA-DRIFT",
+      (i) => i.code === "QFAI-HANDOFF-001",
     );
     expect(findings.map((f) => f.file)).toEqual([PROTOTYPING_HANDOFF_REL]);
   });
@@ -116,7 +116,7 @@ describe("TC-0015-0024: detectHandoffSchemaDrift fires on asymmetric Pair IV edi
       await writeAt(pair.writerRel, body);
     }
     const findings = (await detectHandoffSchemaDrift(root)).filter(
-      (i) => i.code === "R-HANDOFF-SCHEMA-DRIFT",
+      (i) => i.code === "QFAI-HANDOFF-001",
     );
     expect(findings.map((f) => f.file)).toEqual([PROTOTYPING_HANDOFF_REL]);
     expect(findings[0]?.message).toContain("primaryUiContract");
@@ -129,6 +129,6 @@ describe("TC-0015-0024: detectHandoffSchemaDrift fires on asymmetric Pair IV edi
       await writeAt(pair.writerRel, `// writer file, no token yet\nexport const X = 1;\n`);
     }
     const issues = await detectHandoffSchemaDrift(root);
-    expect(issues.filter((i) => i.code === "R-HANDOFF-SCHEMA-DRIFT")).toEqual([]);
+    expect(issues.filter((i) => i.code === "QFAI-HANDOFF-001")).toEqual([]);
   });
 });

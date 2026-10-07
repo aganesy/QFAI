@@ -353,10 +353,10 @@ const describeCodes = (codes: Map<string, readonly string[]>): string[] =>
 describe("validate rule codes are owned by exactly one module", () => {
   it("resolves codes passed through a module-level constant, not only literals", async () => {
     const { owners } = await scanIssueSources();
-    expect(sorted(owners.get("R-SKILL-MANIFEST-DRIFT") ?? [])).toEqual([
+    expect(sorted(owners.get("QFAI-MANIFEST-001") ?? [])).toEqual([
       "validators/skillManifestDrift.ts",
     ]);
-    expect(sorted(owners.get("R-HANDOFF-SCHEMA-DRIFT") ?? [])).toEqual([
+    expect(sorted(owners.get("QFAI-HANDOFF-001") ?? [])).toEqual([
       "validators/handoffSchemaDrift.ts",
     ]);
   });
@@ -377,9 +377,7 @@ describe("validate rule codes are owned by exactly one module", () => {
     // `applyWaivers` and `runSaasPackageProfile` findings reach the same result
     // array, so their codes live in the same namespace.
     expect(sorted(owners.get("QFAI-WAIVER-001") ?? [])).toEqual(["waivers.ts"]);
-    expect(sorted(owners.get("D-SAAS-PACKAGE-VERIFY-SKIPPED") ?? [])).toEqual([
-      "saasPackage/profile.ts",
-    ]);
+    expect(sorted(owners.get("QFAI-SAAS-003") ?? [])).toEqual(["saasPackage/profile.ts"]);
   });
 
   it("resolves a `ruleId` declaration to the module that owns it", async () => {

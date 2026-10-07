@@ -7,7 +7,7 @@
  *   parse, the saas-package profile MUST fail and the failure message
  *   MUST name the attestation.
  * - When the attestation parses, the saas-package profile emits
- *   the standard `D-SAAS-PACKAGE-VERIFY-SKIPPED` info findings and
+ *   the standard `QFAI-SAAS-003` info findings and
  *   does NOT contribute an attestation-missing error.
  *
  * Exercises `runSaasPackageProfile` directly (unit-level) without
@@ -122,7 +122,7 @@ describe("TC-0004-0068: saas-package profile rejects a missing design-system att
     const errors = issues.filter((i) => i.severity === "error");
     expect(errors.map((i) => [i.code, i.file, i.message])).toEqual([
       [
-        "D-SAAS-PACKAGE-ATTESTATION-MISSING",
+        "QFAI-SAAS-001",
         "DESIGN.md",
         "Design-system attestation DESIGN.md is absent. The saas-package profile requires this attestation to PASS.",
       ],
@@ -133,7 +133,7 @@ describe("TC-0004-0068: saas-package profile rejects a missing design-system att
   it("fails when root DESIGN.md does not parse", async () => {
     await writeFile(path.join(root, "DESIGN.md"), "no front matter here\n", "utf-8");
     const issues = await runSaasPackageProfile(root, []);
-    const attestationError = issues.find((i) => i.code === "D-SAAS-PACKAGE-ATTESTATION-MISSING");
+    const attestationError = issues.find((i) => i.code === "QFAI-SAAS-001");
     expect(attestationError?.severity).toBe("error");
     expect(attestationError?.message).toContain("DESIGN.md does not parse as DESIGN.md");
   });
@@ -145,10 +145,10 @@ describe("TC-0004-0068: saas-package profile rejects a missing design-system att
     expect(issues.filter((i) => i.severity === "error")).toEqual([]);
   });
 
-  it("always surfaces one D-SAAS-PACKAGE-VERIFY-SKIPPED (info) finding per skipped gate", async () => {
+  it("always surfaces one QFAI-SAAS-003 (info) finding per skipped gate", async () => {
     await seedAttestation();
     const issues = await runSaasPackageProfile(root, []);
-    const skips = issues.filter((i) => i.code === "D-SAAS-PACKAGE-VERIFY-SKIPPED");
+    const skips = issues.filter((i) => i.code === "QFAI-SAAS-003");
     expect(skips.length).toBe(SAAS_PACKAGE_SKIPPED_GATES.length);
     expect(skips.every((i) => i.severity === "info")).toBe(true);
     // Each skipped gate name surfaces in exactly one finding.
@@ -197,7 +197,7 @@ describe("TC-0004-0068: saas-package profile rejects a missing design-system att
     expect(issues).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          code: "D-SAAS-PACKAGE-HANDOFF-SCHEMA",
+          code: "QFAI-SAAS-002",
           severity: "error",
           file: ".qfai/prototype/final/handoff.json",
         }),
@@ -210,7 +210,7 @@ describe("TC-0004-0068: saas-package profile rejects a missing design-system att
     await seedAttestation();
     await seedHandoff("finalArtifact: .qfai/prototype/final/index.html\n");
     const issues = await runSaasPackageProfile(root, []);
-    const rejected = issues.find((i) => i.code === "D-SAAS-PACKAGE-HANDOFF-SCHEMA");
+    const rejected = issues.find((i) => i.code === "QFAI-SAAS-002");
     expect(rejected?.severity).toBe("error");
     expect(rejected?.file).toBe(".qfai/prototype/final/handoff.json");
   });
@@ -219,7 +219,7 @@ describe("TC-0004-0068: saas-package profile rejects a missing design-system att
   it("does not pass without the prototyping handoff record, and names the file", async () => {
     await seedAttestation();
     const issues = await runSaasPackageProfile(root, []);
-    const missing = issues.find((i) => i.code === "D-SAAS-PACKAGE-HANDOFF-SCHEMA");
+    const missing = issues.find((i) => i.code === "QFAI-SAAS-002");
     expect(missing?.severity).toBe("error");
     expect(missing?.file).toBe(".qfai/prototype/final/handoff.json");
   });
@@ -229,6 +229,6 @@ describe("TC-0004-0068: saas-package profile rejects a missing design-system att
     await seedHandoff(CONFORMING_HANDOFF);
     await writeFile(path.join(root, ".qfai", "handoff.yaml"), "just a string\n", "utf-8");
     const issues = await runSaasPackageProfile(root, []);
-    expect(issues.filter((i) => i.code === "D-SAAS-PACKAGE-HANDOFF-SCHEMA")).toEqual([]);
+    expect(issues.filter((i) => i.code === "QFAI-SAAS-002")).toEqual([]);
   });
 });

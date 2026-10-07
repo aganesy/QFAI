@@ -83,7 +83,7 @@ describe("legacy validate path lookup", () => {
       configuredValidateJsonPath: CURRENT_CONFIG_PATH,
     });
 
-    expect(gate.issue?.code).toBe("D-DEPRECATED-PATH");
+    expect(gate.issue?.code).toBe("QFAI-DEPRECATED-001");
     expect(gate.refuseConfiguredLegacyWrite).toBe(false);
   });
 

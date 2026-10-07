@@ -449,6 +449,69 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   token, HTML mock, research, skill, waiver, autopilot-policy and prototyping
   findings now say what a passing tree looks like (#2660).
 
+- **Breaking: every finding code now has the `QFAI-<AREA>-<NNN>` form** (#2660). 51 codes
+  were spelled with a one-letter prefix (`D-`, `I-`, `R-`, `W-`), an underscore or a
+  `UIX-VAL-` prefix, and carried no number. Each is now `QFAI-`, an area in capital
+  letters, a hyphen and three digits, and has an expected state. The text report,
+  `validate.json`, the GitHub annotations and the message `qfai init` prints on
+  stderr show the new spelling. A script or an alert that matches an old spelling
+  stops matching. A `.qfai/waivers.yml` entry that names one is reported as naming
+  an unknown rule (`QFAI-WAIVER-004`); rewrite its `rule:` to the new code.
+
+  | Old code                                             | New code                  |
+  | ---------------------------------------------------- | ------------------------- |
+  | `D-DEPRECATED-PATH`                                  | `QFAI-DEPRECATED-001`     |
+  | `QFAI_CONFIG_INVALID`                                | `QFAI-CFG-002`            |
+  | `W-ASSISTANT-LAYOUT`                                 | `QFAI-ASSISTANT-001`      |
+  | `I-ASSISTANT-LAYER-UNSEEDED`                         | `QFAI-ASSISTANT-002`      |
+  | `W-SKILL-PROJECT-MEMORY`                             | `QFAI-SKILLDOC-001`       |
+  | `W-STALE-REFERENCE`                                  | `QFAI-STALE-001`          |
+  | `D-SAAS-PACKAGE-ATTESTATION-MISSING`                 | `QFAI-SAAS-001`           |
+  | `D-SAAS-PACKAGE-HANDOFF-SCHEMA`                      | `QFAI-SAAS-002`           |
+  | `D-SAAS-PACKAGE-VERIFY-SKIPPED`                      | `QFAI-SAAS-003`           |
+  | `R-AUTOPILOT-POLICY-MISSING`                         | `QFAI-POLICY-001`         |
+  | `R-AUTOPILOT-POLICY-WIDENED`                         | `QFAI-POLICY-002`         |
+  | `R-HANDOFF-SCHEMA-DRIFT`                             | `QFAI-HANDOFF-001`        |
+  | `R-MOCK-HREF-DRIFT`                                  | `QFAI-MOCKHREF-001`       |
+  | `R-SKILL-MANIFEST-DRIFT`                             | `QFAI-MANIFEST-001`       |
+  | `UIX-VAL-3LAYER-FORBIDDEN-FILE`                      | `QFAI-THREELAYER-001`     |
+  | `UIX-VAL-3LAYER-INCOMPLETE-FAMILY`                   | `QFAI-THREELAYER-002`     |
+  | `UIX-VAL-3LAYER-LEGACY-FORMAT`                       | `QFAI-THREELAYER-003`     |
+  | `UIX-VAL-3LAYER-MIXED-FORMAT`                        | `QFAI-THREELAYER-004`     |
+  | `UIX-VAL-CLASSIFICATION-CONTRADICTION`               | `QFAI-CLASSIFICATION-001` |
+  | `UIX-VAL-CLASSIFICATION-DUPLICATE-SECONDARY-SURFACE` | `QFAI-CLASSIFICATION-002` |
+  | `UIX-VAL-CLASSIFICATION-INVALID-BOOLEAN`             | `QFAI-CLASSIFICATION-003` |
+  | `UIX-VAL-CLASSIFICATION-INVALID-SECONDARY-SURFACE`   | `QFAI-CLASSIFICATION-004` |
+  | `UIX-VAL-CLASSIFICATION-INVALID-SURFACE`             | `QFAI-CLASSIFICATION-005` |
+  | `UIX-VAL-CLASSIFICATION-MISSING`                     | `QFAI-CLASSIFICATION-006` |
+  | `UIX-VAL-CLASSIFICATION-RATIONALE-PLACEHOLDER`       | `QFAI-CLASSIFICATION-007` |
+  | `UIX-VAL-CLASSIFICATION-REQUIRED-FIELD`              | `QFAI-CLASSIFICATION-008` |
+  | `UIX-VAL-CLASSIFICATION-SECONDARY-ARRAY`             | `QFAI-CLASSIFICATION-009` |
+  | `UIX-VAL-CLASSIFICATION-SECONDARY-DUPLICATE`         | `QFAI-CLASSIFICATION-010` |
+  | `UIX-VAL-DIRECTION-HISTORY-MISSING`                  | `QFAI-DIRECTION-001`      |
+  | `UIX-VAL-OQ-OPEN-CRITICAL`                           | `QFAI-OQ-001`             |
+  | `UIX-VAL-SIDECAR-MISSING`                            | `QFAI-SIDECAR-001`        |
+  | `UIX-VAL-SCREEN-CONTRACT-DUPLICATE-ID`               | `QFAI-SCREEN-001`         |
+  | `UIX-VAL-SCREEN-CONTRACT-LEGACY-FORMAT`              | `QFAI-SCREEN-002`         |
+  | `UIX-VAL-SCREEN-CONTRACT-SCHEMA-INCOMPLETE`          | `QFAI-SCREEN-003`         |
+  | `UIX-VAL-SCREEN-CONTRACT-STATE-COVERAGE`             | `QFAI-SCREEN-004`         |
+  | `UIX-VAL-TREND-CATEGORY-MISSING`                     | `QFAI-TREND-001`          |
+  | `UIX-VAL-TREND-ENTRY-MISSING`                        | `QFAI-TREND-002`          |
+  | `UIX-VAL-TREND-FIELD-MISSING`                        | `QFAI-TREND-003`          |
+  | `UIX-VAL-TREND-SCAN-MISSING`                         | `QFAI-TREND-004`          |
+  | `UIX-VAL-T05`                                        | `QFAI-TREND-005`          |
+  | `UIX-VAL-SKILL-ASPIRATIONAL`                         | `QFAI-PROTOSKILL-001`     |
+  | `UIX-VAL-SKILL-BANNED-PHRASE`                        | `QFAI-PROTOSKILL-002`     |
+  | `UIX-VAL-SKILL-CANONICAL-SURFACE`                    | `QFAI-PROTOSKILL-003`     |
+  | `UIX-VAL-SKILL-CLI-SURFACE`                          | `QFAI-PROTOSKILL-004`     |
+  | `UIX-VAL-SKILL-DELEGATION`                           | `QFAI-PROTOSKILL-005`     |
+  | `UIX-VAL-SKILL-ENV-PRECONDITIONS`                    | `QFAI-PROTOSKILL-006`     |
+  | `UIX-VAL-SKILL-PLAYWRIGHT-FALLBACK`                  | `QFAI-PROTOSKILL-007`     |
+  | `UIX-VAL-SKILL-PREFLIGHT`                            | `QFAI-PROTOSKILL-008`     |
+  | `UIX-VAL-SKILL-SECTION-MISSING`                      | `QFAI-PROTOSKILL-009`     |
+  | `UIX-VAL-SKILL-STATIC-FIRST`                         | `QFAI-PROTOSKILL-010`     |
+  | `UIX-VAL-SKILL-UI-BEARING-FALSE`                     | `QFAI-PROTOSKILL-011`     |
+
 - **The marker every skill carries is `[DRIFT-PROTOCOL:REQUIRED]`** (#2796).
   `qfai validate` still reports `QFAI-SKILLS-010` for a `SKILL.md` without the
   marker, and now looks for the new spelling. The old one holds a capitalised

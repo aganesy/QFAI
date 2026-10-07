@@ -8,14 +8,14 @@ import { expect, it } from "vitest";
 
 import { validateProject } from "../../../src/core/validate.js";
 
-// The `QFAI_CONFIG_INVALID` issues `qfai validate` reports for `workflow.mode` under `config`.
+// The `QFAI-CFG-002` issues `qfai validate` reports for `workflow.mode` under `config`.
 async function modeIssues(config: string) {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-workflow-mode-"));
   try {
     await writeFile(path.join(root, "qfai.config.yaml"), config, "utf-8");
     const { issues } = await validateProject(root);
     return issues
-      .filter((issue) => issue.code === "QFAI_CONFIG_INVALID")
+      .filter((issue) => issue.code === "QFAI-CFG-002")
       .filter((issue) => issue.message.includes("workflow.mode"))
       .map(({ severity, message }) => ({ severity, message }));
   } finally {

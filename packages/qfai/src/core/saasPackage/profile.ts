@@ -10,7 +10,7 @@
  *
  * ATDD / implement-class gates are intentionally skipped — a
  * SaaS-tenant package does not exercise those phases. Each skipped
- * gate is surfaced as a `D-SAAS-PACKAGE-VERIFY-SKIPPED` (severity
+ * gate is surfaced as a `QFAI-SAAS-003` (severity
  * info) finding naming the gate, so the consumer can see exactly
  * which surfaces were not exercised in this profile.
  */
@@ -28,9 +28,9 @@ import { SAAS_PACKAGE_SKIPPED_GATES } from "./skippedGates.js";
 const DESIGN_ATTESTATION_REL = "DESIGN.md";
 const HANDOFF_REL = ".qfai/prototype/final/handoff.json";
 
-const VERIFY_SKIPPED_CODE = "D-SAAS-PACKAGE-VERIFY-SKIPPED";
-const ATTESTATION_MISSING_CODE = "D-SAAS-PACKAGE-ATTESTATION-MISSING";
-const HANDOFF_SCHEMA_CODE = "D-SAAS-PACKAGE-HANDOFF-SCHEMA";
+const VERIFY_SKIPPED_CODE = "QFAI-SAAS-003";
+const ATTESTATION_MISSING_CODE = "QFAI-SAAS-001";
+const HANDOFF_SCHEMA_CODE = "QFAI-SAAS-002";
 
 async function readTextOrNull(p: string): Promise<string | null> {
   try {

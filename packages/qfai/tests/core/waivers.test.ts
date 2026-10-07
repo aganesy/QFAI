@@ -588,7 +588,7 @@ describe("applyWaivers", () => {
   it.each([
     ["QFAI-STORY-006", "storyTree.testObligation"],
     ["QFAI-STORY-007", "storyTree.misplacedAnnotation"],
-    ["D-DEPRECATED-PATH", "config.deprecatedPath"],
+    ["QFAI-DEPRECATED-001", "config.deprecatedPath"],
     ["QFAI-CFG-LINK-001", "config.link"],
     ["QFAI-STORY-008", "storyTree.undeclaredAnnotation"],
     ["QFAI-STORY-009", "storyTree.testException"],
@@ -757,7 +757,7 @@ describe("applyWaivers", () => {
   it.each([
     ["QFAI-DPACK-011", "a code the emitter names through a constant"],
     ["DPACK-011", "the back-compat stripped alias"],
-    ["W-STALE-REFERENCE", "a single-segment prefixed code"],
+    ["QFAI-STALE-001", "a code with a single-word area"],
   ])("keeps a waiver for the quiet rule %s active (%s)", async (rule) => {
     const root = await createRoot();
     try {
@@ -953,7 +953,7 @@ describe("applyWaivers", () => {
     }
   });
 
-  // The other half of the post-waiver check: `D-DEPRECATED-PATH` is *also*
+  // The other half of the post-waiver check: `QFAI-DEPRECATED-001` is *also*
   // emitted by `validators/assistantTreeMigration.ts`, which runs inside the
   // waiver pass. A blanket "the CLI emits it, so drop it" would have taken a
   // rule that is genuinely waivable with it.
@@ -966,7 +966,7 @@ describe("applyWaivers", () => {
           "version: 1",
           "waivers:",
           "  - id: WVR-20260208-19",
-          "    rule: D-DEPRECATED-PATH",
+          "    rule: QFAI-DEPRECATED-001",
           "    scope:",
           '      paths: [".qfai/assistant/**"]',
           '    reason: "migration scheduled for the next minor"',

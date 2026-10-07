@@ -94,7 +94,7 @@ describe("TC-0004-0056: always-latest validate.json#profile reflects most-recent
 });
 
 describe("TC-0004-0058: legacy path escalates to error at tool version 1.10.0 when consumer evidence exists", () => {
-  it("D-DEPRECATED-PATH escalates to error and validate does NOT write the legacy file (but a pre-existing legacy file from a prior consumer remains)", async () => {
+  it("QFAI-DEPRECATED-001 escalates to error and validate does NOT write the legacy file (but a pre-existing legacy file from a prior consumer remains)", async () => {
     // Seed a stale legacy file (simulating a prior pre-sunset write or a
     // consumer-managed file). This is the on-disk evidence the new
     // post-sunset emission gate keys off.
@@ -122,12 +122,12 @@ describe("TC-0004-0058: legacy path escalates to error at tool version 1.10.0 wh
     const body = JSON.parse(await readFile(latest, "utf-8")) as {
       issues: Array<{ code: string; severity: string; message: string }>;
     };
-    const dep = body.issues.find((i) => i.code === "D-DEPRECATED-PATH");
+    const dep = body.issues.find((i) => i.code === "QFAI-DEPRECATED-001");
     expect(dep).toBeDefined();
     expect(dep?.severity).toBe("error");
   });
 
-  it("D-DEPRECATED-PATH is SUPPRESSED at tool version 1.10.0 when no legacy file is on disk (no consumer evidence)", async () => {
+  it("QFAI-DEPRECATED-001 is SUPPRESSED at tool version 1.10.0 when no legacy file is on disk (no consumer evidence)", async () => {
     // No pre-seed: clean project never used the legacy path.
     const legacy = path.join(root, ".qfai/output/validate.json");
     expect(await pathExists(legacy)).toBe(false);
@@ -142,13 +142,13 @@ describe("TC-0004-0058: legacy path escalates to error at tool version 1.10.0 wh
     // Legacy file still absent — validate did not create it.
     expect(await pathExists(legacy)).toBe(false);
 
-    // D-DEPRECATED-PATH must NOT be emitted: there is no consumer
+    // QFAI-DEPRECATED-001 must NOT be emitted: there is no consumer
     // evidence and the user never touched the legacy path.
     const latest = path.join(root, ".qfai/report/validate.json");
     const body = JSON.parse(await readFile(latest, "utf-8")) as {
       issues: Array<{ code: string; severity: string; message: string }>;
     };
-    const dep = body.issues.find((i) => i.code === "D-DEPRECATED-PATH");
+    const dep = body.issues.find((i) => i.code === "QFAI-DEPRECATED-001");
     expect(dep).toBeUndefined();
   });
 });
@@ -156,7 +156,7 @@ describe("TC-0004-0058: legacy path escalates to error at tool version 1.10.0 wh
 // QFAI:AC-0001-0047-02
 // QFAI:EX-0001-0047-02
 describe("legacy validate path becomes an error after the sunset", () => {
-  it("consumer pointed at legacy path under tool 1.10.0+ surfaces D-DEPRECATED-PATH at error severity", async () => {
+  it("consumer pointed at legacy path under tool 1.10.0+ surfaces QFAI-DEPRECATED-001 at error severity", async () => {
     // "Consumer pointed at legacy path" = the legacy file exists on disk
     // (from a prior pre-sunset run OR a manually-managed consumer write).
     // The post-sunset gate keys off this evidence to avoid noise on
@@ -174,12 +174,12 @@ describe("legacy validate path becomes an error after the sunset", () => {
     // The escalated finding appears in the always-latest report; the legacy
     // path is no longer being written by validate post-sunset, so a
     // consumer reading the legacy path will be blocked and the
-    // operator-facing escalated D-DEPRECATED-PATH names the cutoff.
+    // operator-facing escalated QFAI-DEPRECATED-001 names the cutoff.
     const latest = path.join(root, ".qfai/report/validate.json");
     const body = JSON.parse(await readFile(latest, "utf-8")) as {
       issues: Array<{ code: string; severity: string; message: string }>;
     };
-    const dep = body.issues.find((i) => i.code === "D-DEPRECATED-PATH");
+    const dep = body.issues.find((i) => i.code === "QFAI-DEPRECATED-001");
     expect(dep).toBeDefined();
     expect(dep?.severity).toBe("error");
     expect(dep?.message).toContain("1.10.0");

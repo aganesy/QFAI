@@ -1,9 +1,9 @@
 /**
  * E2E acceptance for spec-0015 CHG-006 user stories US-0015-0009..0015:
  *   - US-0015-0009: SKILL.md `## Default Autopilot Policy` section /
- *     R-AUTOPILOT-POLICY-MISSING.
+ *     QFAI-POLICY-001.
  *   - US-0015-0011: canonical cross-skill handoff schema /
- *     R-HANDOFF-SCHEMA-DRIFT.
+ *     QFAI-HANDOFF-001.
  *   - US-0015-0015: cross-skill documentation realignment / zero stale
  *     references.
  *
@@ -69,23 +69,23 @@ async function writeBaseline(body: string): Promise<void> {
 }
 
 describe("spec-0015 US-0015-0009 autopilot policy (E2E, deterministic temp-fixture)", () => {
-  it("QFAI:BF-0001 — error: a baseline missing the shared section emits R-AUTOPILOT-POLICY-MISSING", async () => {
+  it("QFAI:BF-0001 — error: a baseline missing the shared section emits QFAI-POLICY-001", async () => {
     await writeBaseline("# Shared Skill Operating Baseline\n\nNo policy section.\n");
     await writeSkill("qfai-x", "# qfai-x\n\nNo policy section.\n");
     const issues = await validateAutopilotPolicy(root);
-    expect(issues.some((i) => i.code === "R-AUTOPILOT-POLICY-MISSING")).toBe(true);
+    expect(issues.some((i) => i.code === "QFAI-POLICY-001")).toBe(true);
   });
 
-  it("QFAI:BF-0001 — normal: a skill under a 3-bucket baseline passes without R-AUTOPILOT-POLICY-MISSING", async () => {
+  it("QFAI:BF-0001 — normal: a skill under a 3-bucket baseline passes without QFAI-POLICY-001", async () => {
     await writeBaseline(BASELINE);
     await writeSkill("qfai-x", "# qfai-x\n\nNo policy section of its own.\n");
     const issues = await validateAutopilotPolicy(root);
-    expect(issues.find((i) => i.code === "R-AUTOPILOT-POLICY-MISSING")).toBeUndefined();
+    expect(issues.find((i) => i.code === "QFAI-POLICY-001")).toBeUndefined();
   });
 });
 
 describe("spec-0015 US-0015-0011 handoff schema (E2E, deterministic temp-fixture)", () => {
-  it("QFAI:BF-0001 — error: asymmetric Pair IV edit emits R-HANDOFF-SCHEMA-DRIFT", async () => {
+  it("QFAI:BF-0001 — error: asymmetric Pair IV edit emits QFAI-HANDOFF-001", async () => {
     // Schema declares the canonical token; writer omits its expected token.
     await mkdir(path.dirname(path.join(root, HANDOFF_SCHEMA_REL)), { recursive: true });
     await writeFile(
@@ -103,10 +103,10 @@ describe("spec-0015 US-0015-0011 handoff schema (E2E, deterministic temp-fixture
       );
     }
     const issues = await detectHandoffSchemaDrift(root);
-    expect(issues.some((i) => i.code === "R-HANDOFF-SCHEMA-DRIFT")).toBe(true);
+    expect(issues.some((i) => i.code === "QFAI-HANDOFF-001")).toBe(true);
   });
 
-  it("QFAI:BF-0001 — normal: a symmetric pair passes without R-HANDOFF-SCHEMA-DRIFT", async () => {
+  it("QFAI:BF-0001 — normal: a symmetric pair passes without QFAI-HANDOFF-001", async () => {
     await mkdir(path.dirname(path.join(root, HANDOFF_SCHEMA_REL)), { recursive: true });
     await writeFile(
       path.join(root, HANDOFF_SCHEMA_REL),
@@ -123,7 +123,7 @@ describe("spec-0015 US-0015-0011 handoff schema (E2E, deterministic temp-fixture
       );
     }
     const issues = await detectHandoffSchemaDrift(root);
-    expect(issues.find((i) => i.code === "R-HANDOFF-SCHEMA-DRIFT")).toBeUndefined();
+    expect(issues.find((i) => i.code === "QFAI-HANDOFF-001")).toBeUndefined();
   });
 });
 
@@ -133,7 +133,7 @@ describe("spec-0015 US-0015-0015 doc realignment (E2E, deterministic temp-fixtur
     await mkdir(dir, { recursive: true });
     await writeFile(path.join(dir, "handoff.md"), "# Handoff\nUses handoff.yaml.\n", "utf-8");
     const issues = await validateStaleReferences(root);
-    expect(issues.filter((i) => i.code === "W-STALE-REFERENCE")).toEqual([]);
+    expect(issues.filter((i) => i.code === "QFAI-STALE-001")).toEqual([]);
   });
 
   it("QFAI:BF-0001 — error: a stale reference at HEAD is reported", async () => {
@@ -145,7 +145,7 @@ describe("spec-0015 US-0015-0015 doc realignment (E2E, deterministic temp-fixtur
       "utf-8",
     );
     const issues = await validateStaleReferences(root);
-    const findings = issues.filter((i) => i.code === "W-STALE-REFERENCE");
+    const findings = issues.filter((i) => i.code === "QFAI-STALE-001");
     expect(findings.length).toBeGreaterThanOrEqual(1);
     expect(findings[0]?.severity).toBe("warning");
   });

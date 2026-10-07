@@ -24,7 +24,7 @@ export async function validateSkillDocReferences(
   // OR absolute) is still scanned. Pre-fix the validator hardcoded
   // `.qfai/assistant/skill` and silently SKIPped every qfai-* SKILL
   // file under the actual configured location — letting
-  // W-SKILL-PROJECT-MEMORY drift go
+  // QFAI-SKILLDOC-001 drift go
   // unreported. The fix mirrors the sister validators
   // `staleReferences.ts` and `autopilotPolicy.ts`.
   const skillsDir = resolvePath(root, config, "skillsDir");
@@ -128,7 +128,7 @@ export async function validateSkillDocReferences(
       if (lastDeclIdx !== -1 && !isTrailing) {
         issues.push(
           issue(
-            "W-SKILL-PROJECT-MEMORY",
+            "QFAI-SKILLDOC-001",
             `${skillId}/SKILL.md declares a project_memory: block that is not the last thing in the file. Move the block to the end, or remove it if the skill has nothing to remember.`,
             "warning",
             skillDocRelPath,

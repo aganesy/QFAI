@@ -98,11 +98,11 @@ describe("prototyping skill validator", () => {
 
     expect(hasUiContractScope(retired)).toBe(false);
     expect(validatePrototypingSkillContent(retired).issues.map((item) => item.code)).toContain(
-      "UIX-VAL-SKILL-UI-BEARING-FALSE",
+      "QFAI-PROTOSKILL-011",
     );
     expect(
       validatePrototypingSkillContent(VALID_SKILL_CONTENT).issues.map((item) => item.code),
-    ).not.toContain("UIX-VAL-SKILL-UI-BEARING-FALSE");
+    ).not.toContain("QFAI-PROTOSKILL-011");
   });
 
   it("documents static-first semantics", () => {

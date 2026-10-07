@@ -110,7 +110,7 @@ describe("validateTrendScan", () => {
     await createUiBearingPack(root);
 
     const issues = await validateTrendScan(root, defaultConfig);
-    expect(issues.some((issue) => issue.code === "UIX-VAL-TREND-SCAN-MISSING")).toBe(true);
+    expect(issues.some((issue) => issue.code === "QFAI-TREND-004")).toBe(true);
   });
 
   it("fails when a required category is missing", async () => {
@@ -126,7 +126,7 @@ describe("validateTrendScan", () => {
     );
 
     const issues = await validateTrendScan(root, defaultConfig);
-    expect(issues.some((issue) => issue.code === "UIX-VAL-TREND-CATEGORY-MISSING")).toBe(true);
+    expect(issues.some((issue) => issue.code === "QFAI-TREND-001")).toBe(true);
   });
 
   it("fails when decision_connection is missing", async () => {
@@ -142,7 +142,7 @@ describe("validateTrendScan", () => {
     );
 
     const issues = await validateTrendScan(root, defaultConfig);
-    expect(issues.some((issue) => issue.code === "UIX-VAL-TREND-FIELD-MISSING")).toBe(true);
+    expect(issues.some((issue) => issue.code === "QFAI-TREND-003")).toBe(true);
   });
 
   it("non-UI skip", async () => {
@@ -159,7 +159,7 @@ describe("validateTrendScan", () => {
     await writeFile(path.join(root, "uiux", "20_trend_scan.md"), "# Old Trend Scan", "utf-8");
 
     const issues = await validateTrendScan(root, defaultConfig);
-    expect(issues.some((issue) => issue.code === "UIX-VAL-TREND-SCAN-MISSING")).toBe(true);
+    expect(issues.some((issue) => issue.code === "QFAI-TREND-004")).toBe(true);
   });
 });
 
@@ -263,7 +263,7 @@ describe("validateTrendScan guideline coverage", () => {
     await writeFile(path.join(root, "04_Sources.md"), buildSources(false, false), "utf-8");
 
     const issues = await validateTrendScan(root, defaultConfig);
-    const warnings = issues.filter((issue) => issue.code === "UIX-VAL-T05");
+    const warnings = issues.filter((issue) => issue.code === "QFAI-TREND-005");
 
     expect(warnings).toHaveLength(1);
     expect(warnings[0]?.severity).toBe("warning");
@@ -276,7 +276,7 @@ describe("validateTrendScan guideline coverage", () => {
     await writeFile(path.join(root, "04_Sources.md"), buildSources(true, true), "utf-8");
 
     const issues = await validateTrendScan(root, defaultConfig);
-    expect(issues.filter((issue) => issue.code === "UIX-VAL-T05")).toHaveLength(0);
+    expect(issues.filter((issue) => issue.code === "QFAI-TREND-005")).toHaveLength(0);
   });
 
   it("stays silent on a non-UI pack that carries a complete classification block", async () => {
@@ -295,13 +295,13 @@ describe("validateTrendScan against the shipped 04_Sources.md template", () => {
     await writeFile(path.join(root, "04_Sources.md"), template, "utf-8");
 
     const issues = await validateTrendScan(root, defaultConfig);
-    const fieldMissing = issues.filter((issue) => issue.code === "UIX-VAL-TREND-FIELD-MISSING");
+    const fieldMissing = issues.filter((issue) => issue.code === "QFAI-TREND-003");
 
     // 4 required categories x 5 required fields, all seeded with `[...]`.
     expect(fieldMissing).toHaveLength(20);
     // The template's `rule_refs` list item is bracketed too, so the guideline
     // entry does not count as concrete.
-    expect(issues.some((issue) => issue.code === "UIX-VAL-T05")).toBe(true);
+    expect(issues.some((issue) => issue.code === "QFAI-TREND-005")).toBe(true);
   });
 
   it("reads a template-shaped multi-line rule_refs list as a concrete value", async () => {
@@ -325,7 +325,7 @@ describe("validateTrendScan against the shipped 04_Sources.md template", () => {
     await writeFile(path.join(root, "04_Sources.md"), sources, "utf-8");
 
     const issues = await validateTrendScan(root, defaultConfig);
-    expect(issues.filter((issue) => issue.code === "UIX-VAL-T05")).toHaveLength(0);
+    expect(issues.filter((issue) => issue.code === "QFAI-TREND-005")).toHaveLength(0);
   });
 
   it("still warns when the multi-line rule_refs list holds only template brackets", async () => {
@@ -347,6 +347,6 @@ describe("validateTrendScan against the shipped 04_Sources.md template", () => {
     await writeFile(path.join(root, "04_Sources.md"), sources, "utf-8");
 
     const issues = await validateTrendScan(root, defaultConfig);
-    expect(issues.filter((issue) => issue.code === "UIX-VAL-T05")).toHaveLength(1);
+    expect(issues.filter((issue) => issue.code === "QFAI-TREND-005")).toHaveLength(1);
   });
 });

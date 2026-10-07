@@ -9,16 +9,16 @@
  * still pointing at the legacy literal would:
  *   - pre-sunset: write the legacy file (correct, with warning)
  *   - post-sunset: STILL write the legacy file, AND not emit
- *     `D-DEPRECATED-PATH` (the existing emission logic only checked
+ *     `QFAI-DEPRECATED-001` (the existing emission logic only checked
  *     the on-disk legacy file, not the configured writer target).
  *
  * The migration gate fix wires the config-targets-legacy-path signal
  * into both the writer and the emission logic:
  *   - pre-sunset + config points at legacy literal:
- *       write proceeds, `D-DEPRECATED-PATH` warning fires with
+ *       write proceeds, `QFAI-DEPRECATED-001` warning fires with
  *       config-aware message text.
  *   - post-sunset + config points at legacy literal:
- *       write is REFUSED, `D-DEPRECATED-PATH` ERROR fires directing
+ *       write is REFUSED, `QFAI-DEPRECATED-001` ERROR fires directing
  *       the operator to update `output.validateJsonPath` to
  *       `.qfai/report/validate.json`.
  *   - config points elsewhere (default `.qfai/report/validate.json`):
@@ -75,10 +75,10 @@ afterEach(async () => {
 });
 
 describe("config validateJsonPath = legacy literal — post-sunset", () => {
-  it("AT sunset (1.10.0): writer REFUSES the legacy write AND D-DEPRECATED-PATH error fires with actionable migration text on stdout", async () => {
+  it("AT sunset (1.10.0): writer REFUSES the legacy write AND QFAI-DEPRECATED-001 error fires with actionable migration text on stdout", async () => {
     await seedLegacyConfig(root);
 
-    // Capture text-format stdout so we can inspect the D-DEPRECATED-PATH
+    // Capture text-format stdout so we can inspect the QFAI-DEPRECATED-001
     // finding — when the writer refuses to write the configured legacy
     // path, the JSON report cannot be on disk at that location, so the
     // operator's discoverability surface is the text/github output.
@@ -94,7 +94,7 @@ describe("config validateJsonPath = legacy literal — post-sunset", () => {
         root,
         strict: false,
         profile: "prototyping",
-        // failOn defaults to "error"; severity=error from D-DEPRECATED-PATH
+        // failOn defaults to "error"; severity=error from QFAI-DEPRECATED-001
         // is expected to fail the run, which proves the migration gate
         // actually gates.
         toolVersionOverride: "1.10.0",
@@ -113,7 +113,7 @@ describe("config validateJsonPath = legacy literal — post-sunset", () => {
     // target was the legacy literal, and the writer respects that target
     // (refused). The finding surfaces on the text output channel.
     const stdout = stdoutChunks.join("");
-    expect(stdout).toMatch(/\[error\] D-DEPRECATED-PATH/);
+    expect(stdout).toMatch(/\[error\] QFAI-DEPRECATED-001/);
     expect(stdout).toContain("REFUSED");
     expect(stdout).toContain("output.validateJsonPath");
     expect(stdout).toContain(".qfai/report/validate.json");
@@ -145,7 +145,7 @@ describe("config validateJsonPath = legacy literal — post-sunset", () => {
 });
 
 describe("config validateJsonPath = canonical (non-legacy)", () => {
-  it("POST-sunset + non-legacy config + no stale legacy file: write proceeds, no D-DEPRECATED-PATH emission", async () => {
+  it("POST-sunset + non-legacy config + no stale legacy file: write proceeds, no QFAI-DEPRECATED-001 emission", async () => {
     // No config file at all — falls back to default
     // `.qfai/report/validate.json`. Clean project, no legacy on disk.
     const exit = await runValidate({
@@ -164,10 +164,10 @@ describe("config validateJsonPath = canonical (non-legacy)", () => {
     const body = JSON.parse(await readFile(canonical, "utf-8")) as {
       issues: Array<{ code: string }>;
     };
-    expect(body.issues.find((i) => i.code === "D-DEPRECATED-PATH")).toBeUndefined();
+    expect(body.issues.find((i) => i.code === "QFAI-DEPRECATED-001")).toBeUndefined();
   });
 
-  it("POST-sunset + non-legacy config + STALE legacy file on disk: write proceeds, D-DEPRECATED-PATH error fires (existing behavior preserved)", async () => {
+  it("POST-sunset + non-legacy config + STALE legacy file on disk: write proceeds, QFAI-DEPRECATED-001 error fires (existing behavior preserved)", async () => {
     // Pre-seed a stale legacy file — proves the legacy-on-disk emission
     // path still fires and is not regressed by the new config-aware path.
     const legacy = path.join(root, ".qfai/output/validate.json");
@@ -188,7 +188,7 @@ describe("config validateJsonPath = canonical (non-legacy)", () => {
     const body = JSON.parse(await readFile(canonical, "utf-8")) as {
       issues: Array<{ code: string; severity: string; message: string }>;
     };
-    const dep = body.issues.find((i) => i.code === "D-DEPRECATED-PATH");
+    const dep = body.issues.find((i) => i.code === "QFAI-DEPRECATED-001");
     expect(dep).toBeDefined();
     expect(dep?.severity).toBe("error");
     // On-disk stale message, NOT the config-refused message.

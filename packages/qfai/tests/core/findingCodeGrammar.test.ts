@@ -57,68 +57,15 @@ const KNOWN_LOCAL_FACTORIES: readonly string[] = [
 ];
 
 /**
- * Codes that predate the grammar. Frozen: the guards below fail both when a
+ * Codes outside the canonical grammar. Frozen: the guards below fail both when a
  * new non-conforming code appears and when a registered one stops existing, so
- * this list can only shrink. It has: the `UIX-VAL-STRATEGY-*`, `UIX-VAL-TASTE-*`
- * and `QFAI-DOC-*` entries left with the validators that raised them, which is
- * the shrink the guard is here to make visible.
+ * this list can only shrink.
  */
 const LEGACY_FINDING_CODES: readonly string[] = [
-  "D-DEPRECATED-PATH",
-  "D-SAAS-PACKAGE-ATTESTATION-MISSING",
-  "D-SAAS-PACKAGE-HANDOFF-SCHEMA",
-  "D-SAAS-PACKAGE-VERIFY-SKIPPED",
   "HANDOFF-SCHEMA-FIELD-TYPE",
   "HANDOFF-SCHEMA-NOT-OBJECT",
-  "I-ASSISTANT-LAYER-UNSEEDED",
   "QFAI-CFG-LINK-001",
   "QFAI-CFG-LINK-002",
-  "QFAI_CONFIG_INVALID",
-  "R-AUTOPILOT-POLICY-MISSING",
-  "R-AUTOPILOT-POLICY-WIDENED",
-  "R-HANDOFF-SCHEMA-DRIFT",
-  "R-MOCK-HREF-DRIFT",
-  "R-SKILL-MANIFEST-DRIFT",
-  "UIX-VAL-3LAYER-FORBIDDEN-FILE",
-  "UIX-VAL-3LAYER-INCOMPLETE-FAMILY",
-  "UIX-VAL-3LAYER-LEGACY-FORMAT",
-  "UIX-VAL-3LAYER-MIXED-FORMAT",
-  "UIX-VAL-CLASSIFICATION-CONTRADICTION",
-  "UIX-VAL-CLASSIFICATION-DUPLICATE-SECONDARY-SURFACE",
-  "UIX-VAL-CLASSIFICATION-INVALID-BOOLEAN",
-  "UIX-VAL-CLASSIFICATION-INVALID-SECONDARY-SURFACE",
-  "UIX-VAL-CLASSIFICATION-INVALID-SURFACE",
-  "UIX-VAL-CLASSIFICATION-MISSING",
-  "UIX-VAL-CLASSIFICATION-RATIONALE-PLACEHOLDER",
-  "UIX-VAL-CLASSIFICATION-REQUIRED-FIELD",
-  "UIX-VAL-CLASSIFICATION-SECONDARY-ARRAY",
-  "UIX-VAL-CLASSIFICATION-SECONDARY-DUPLICATE",
-  "UIX-VAL-DIRECTION-HISTORY-MISSING",
-  "UIX-VAL-OQ-OPEN-CRITICAL",
-  "UIX-VAL-SCREEN-CONTRACT-DUPLICATE-ID",
-  "UIX-VAL-SCREEN-CONTRACT-LEGACY-FORMAT",
-  "UIX-VAL-SCREEN-CONTRACT-SCHEMA-INCOMPLETE",
-  "UIX-VAL-SCREEN-CONTRACT-STATE-COVERAGE",
-  "UIX-VAL-SIDECAR-MISSING",
-  "UIX-VAL-SKILL-ASPIRATIONAL",
-  "UIX-VAL-SKILL-BANNED-PHRASE",
-  "UIX-VAL-SKILL-CANONICAL-SURFACE",
-  "UIX-VAL-SKILL-CLI-SURFACE",
-  "UIX-VAL-SKILL-DELEGATION",
-  "UIX-VAL-SKILL-ENV-PRECONDITIONS",
-  "UIX-VAL-SKILL-PLAYWRIGHT-FALLBACK",
-  "UIX-VAL-SKILL-PREFLIGHT",
-  "UIX-VAL-SKILL-SECTION-MISSING",
-  "UIX-VAL-SKILL-STATIC-FIRST",
-  "UIX-VAL-SKILL-UI-BEARING-FALSE",
-  "UIX-VAL-T05",
-  "UIX-VAL-TREND-CATEGORY-MISSING",
-  "UIX-VAL-TREND-ENTRY-MISSING",
-  "UIX-VAL-TREND-FIELD-MISSING",
-  "UIX-VAL-TREND-SCAN-MISSING",
-  "W-ASSISTANT-LAYOUT",
-  "W-SKILL-PROJECT-MEMORY",
-  "W-STALE-REFERENCE",
 ];
 
 async function collectTsFiles(dir: string): Promise<string[]> {
@@ -138,7 +85,7 @@ async function collectTsFiles(dir: string): Promise<string[]> {
 /**
  * The value an `as const` / parenthesis wrapper is hiding.
  *
- * `const HANDOFF_SCHEMA_DRIFT_CODE = "R-HANDOFF-SCHEMA-DRIFT" as const` is how
+ * `const HANDOFF_SCHEMA_DRIFT_CODE = "QFAI-HANDOFF-001" as const` is how
  * several code constants are written, and reading the declaration's initializer
  * without unwrapping sees an `AsExpression`, not a literal.
  */
@@ -157,8 +104,8 @@ function unwrapExpression(node: ts.Expression | undefined): ts.Expression | unde
  * Every function that turns a code into an `Issue`.
  *
  * A regex over `issue("…")` saw only the shared helper: `\bissue\(` does not
- * match `classificationIssue(`, so the 57 `UIX-VAL-*` codes raised through the
- * nine local factories reached no guard at all — the legacy registry was
+ * match `classificationIssue(`, so the codes raised through the nine
+ * local factories reached no guard at all — the legacy registry was
  * missing them, and a new non-conforming code added through the same call
  * passed silently, which is the bypass this file exists to close.
  *
@@ -474,12 +421,12 @@ describe("finding code grammar", () => {
     expect(re.exec("QFAI-WAIVER-001")?.[1]).toBe("WAIVER-001");
     // And the two shapes it says get none.
     expect(re.test("QFAI-CFG-LINK-001")).toBe(false);
-    expect(re.test("QFAI_CONFIG_INVALID")).toBe(false);
+    expect(re.test("HANDOFF-SCHEMA-NOT-OBJECT")).toBe(false);
 
     const doc = flat(await readFile(DOC_PATH, "utf-8"));
     expect(doc).toContain("`QFAI-CFG-LINK-001` strips to nothing");
     expect(doc).toContain(
-      "an underscore-separated code (`QFAI_CONFIG_INVALID`) does not match at all",
+      "a code with no `QFAI-` prefix (`HANDOFF-SCHEMA-NOT-OBJECT`) does not match at all",
     );
   });
 

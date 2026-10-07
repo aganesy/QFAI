@@ -1,5 +1,5 @@
 /**
- * Reviewer-Gate finding `R-SKILL-MANIFEST-DRIFT` (severity error).
+ * Reviewer-Gate finding `QFAI-MANIFEST-001` (severity error).
  *
  * SSOT-sync pair scan (Pair III): each registered pair lists a
  * probe-implementation source file and a manifest-schema source file
@@ -22,7 +22,7 @@ import { SKILL_MANIFEST_PAIRS } from "./skillManifestPairs.js";
 export { SKILL_MANIFEST_PAIRS } from "./skillManifestPairs.js";
 export type { SkillManifestPair } from "./skillManifestPairs.js";
 
-const FINDING_CODE = "R-SKILL-MANIFEST-DRIFT";
+const FINDING_CODE = "QFAI-MANIFEST-001";
 
 async function readSafe(abs: string): Promise<string | null> {
   if (!(await exists(abs))) {

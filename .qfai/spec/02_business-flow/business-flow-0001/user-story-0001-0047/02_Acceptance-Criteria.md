@@ -14,6 +14,6 @@ Feature: Profile-specific validation reports
   Scenario: The legacy output path is deprecated, then retired
     Given a downstream project that still reads from the legacy `.qfai/output/validate.json` path
     When `qfai validate` runs during the deprecation window (current minor)
-    Then the legacy path continues to receive a copy of the latest validate JSON and `D-DEPRECATED-PATH` is emitted at severity warning naming the sunset version `1.10.0` (literal string in the message body)
+    Then the legacy path continues to receive a copy of the latest validate JSON and `QFAI-DEPRECATED-001` is emitted at severity warning naming the sunset version `1.10.0` (literal string in the message body)
     And at sunset (when the running tool reaches the named version), the same condition escalates to severity error and the legacy path is no longer written
 ```

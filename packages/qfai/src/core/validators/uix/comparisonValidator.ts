@@ -41,7 +41,7 @@ export async function validateExplorationArtifacts(
   if (reviewBundleContent && !/best-of-history/i.test(reviewBundleContent)) {
     issues.push(
       canonicalIssue(
-        "UIX-VAL-DIRECTION-HISTORY-MISSING",
+        "QFAI-DIRECTION-001",
         "50_review_input_bundle.md must state its one-lineage handling (latest iteration accepted, no best-of-history).",
         "warning",
         "uiux/50_review_input_bundle.md",

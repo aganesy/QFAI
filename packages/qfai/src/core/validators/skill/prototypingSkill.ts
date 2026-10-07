@@ -243,7 +243,7 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
   if (bannedPhraseMatches.length > 0) {
     issues.push(
       skillIssue(
-        "UIX-VAL-SKILL-BANNED-PHRASE",
+        "QFAI-PROTOSKILL-002",
         `Prototyping skill contains banned phrases: ${bannedPhraseMatches.join(", ")}`,
         "error",
         "Remove the runtime-heavy default wording and replace it with mode-aware obligations.",
@@ -254,7 +254,7 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
   if (aspirationalClaims.length > 0) {
     issues.push(
       skillIssue(
-        "UIX-VAL-SKILL-ASPIRATIONAL",
+        "QFAI-PROTOSKILL-001",
         `Prototyping skill contains aspirational claims: ${aspirationalClaims.join(", ")}`,
         "error",
         "Remove the assertions about capabilities that are not implemented.",
@@ -265,7 +265,7 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
   if (requiredSectionsMissing.length > 0) {
     issues.push(
       skillIssue(
-        "UIX-VAL-SKILL-SECTION-MISSING",
+        "QFAI-PROTOSKILL-009",
         `Prototyping skill missing required sections: ${requiredSectionsMissing.join(", ")}`,
         "error",
         `Add the required sections: ${requiredSectionsMissing.join(", ")}`,
@@ -276,7 +276,7 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
   if (!canonicalSurfaces) {
     issues.push(
       skillIssue(
-        "UIX-VAL-SKILL-CANONICAL-SURFACE",
+        "QFAI-PROTOSKILL-003",
         "Prototyping skill must document supported UI prototyping surfaces: web, mobile, desktop, mixed.",
         "error",
         "State the supported UI surfaces (web, mobile, desktop, mixed) explicitly.",
@@ -287,7 +287,7 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
   if (!cliSurface) {
     issues.push(
       skillIssue(
-        "UIX-VAL-SKILL-CLI-SURFACE",
+        "QFAI-PROTOSKILL-004",
         "Prototyping skill must document that cli surface is rejected from prototyping execution.",
         "error",
         "State explicitly that the cli surface is out of scope for prototyping execution.",
@@ -298,7 +298,7 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
   if (!uiContractScope) {
     issues.push(
       skillIssue(
-        "UIX-VAL-SKILL-UI-BEARING-FALSE",
+        "QFAI-PROTOSKILL-011",
         "Prototyping skill must limit execution to UI contracts with a full UI-NNNN ID and non-empty screens[].",
         "error",
         "State that only UI contracts with a full UI-NNNN ID and non-empty screens[] are eligible.",
@@ -309,7 +309,7 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
   if (!staticFirst) {
     issues.push(
       skillIssue(
-        "UIX-VAL-SKILL-STATIC-FIRST",
+        "QFAI-PROTOSKILL-010",
         "Prototyping skill is missing static-first wording.",
         "error",
         "State the static-first / file-based default explicitly.",
@@ -320,7 +320,7 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
   if (!delegationScopeTable) {
     issues.push(
       skillIssue(
-        "UIX-VAL-SKILL-DELEGATION",
+        "QFAI-PROTOSKILL-005",
         "Prototyping skill is missing the delegation scope table for the generation, evaluation and build roles.",
         "error",
         "Add the delegation scope table.",
@@ -331,7 +331,7 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
   if (!environmentPreconditions) {
     issues.push(
       skillIssue(
-        "UIX-VAL-SKILL-ENV-PRECONDITIONS",
+        "QFAI-PROTOSKILL-006",
         "Prototyping skill must separate contract preconditions and environment preconditions.",
         "error",
         "Separate the contract and environment preconditions in Step 2-A / Step 2-B.",
@@ -342,7 +342,7 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
   if (!preflightGuidance) {
     issues.push(
       skillIssue(
-        "UIX-VAL-SKILL-PREFLIGHT",
+        "QFAI-PROTOSKILL-008",
         "Prototyping skill must document qfai doctor --profile prototyping guidance.",
         "error",
         "State the preflight entry point explicitly (qfai doctor --profile prototyping).",
@@ -353,7 +353,7 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
   if (!playwrightCliFallback) {
     issues.push(
       skillIssue(
-        "UIX-VAL-SKILL-PLAYWRIGHT-FALLBACK",
+        "QFAI-PROTOSKILL-007",
         "Prototyping skill must document a safe Playwright invocation path such as npx --no-install playwright.",
         "error",
         "State the npx --no-install playwright or node_modules/.bin/playwright route explicitly.",
