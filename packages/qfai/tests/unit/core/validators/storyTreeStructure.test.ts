@@ -369,6 +369,79 @@ describe("story-tree structure", () => {
     expect(declared).toEqual([]);
   });
 
+  // QFAI:EX-0001-0053-09
+  // QFAI:EX-0001-0053-10
+  // QFAI:EX-0001-0053-11
+  // QFAI:EX-0001-0053-12
+  it("checks the Approach items of a decision row above DEC-2097", () => {
+    const approach = (...items: string[]) => items.map((item) => `- ${item}`).join(" ");
+    const row = (id: string, cell: string) => `| ${id} | Decide | ${cell} | DONE |`;
+    const findings = (...rows: string[]) =>
+      validateStoryTreeStructureModel(
+        model({
+          [`${specs}/decisions.md`]: `| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n${rows.join("\n")}`,
+        }),
+      ).filter((item) => item.code === "QFAI-STORY-017");
+    const whole = approach(
+      "Evidence: file:a.ts; command:pnpm build → passes.",
+      "Grounds: a.ts shows it.",
+      "Residual risk: none — read-only.",
+      "Rollback: none — nothing to undo.",
+    );
+    expect(findings(row("DEC-2098", whole))).toEqual([]);
+    expect(findings(row("DEC-0008", "Kept"), row("DEC-2097", "Kept"))).toEqual([]);
+
+    const labels = findings(
+      row("DEC-2098", approach("Evidence: file:a.ts", "Residual risk: x", "Rollback: y")),
+      row(
+        "DEC-2099",
+        approach("Evidence: file:a.ts", "Grounds: g", "Rollback: y", "Residual risk: x"),
+      ),
+      row(
+        "DEC-2100",
+        approach("Evidence: file:a.ts", "Grounds: g", "Residual risk: x", "Rollback:"),
+      ),
+    );
+    expect(labels.map((item) => [item.refs, item.severity])).toEqual([
+      [["DEC-2098"], "error"],
+      [["DEC-2099"], "error"],
+      [["DEC-2100"], "error"],
+    ]);
+    expect(labels.map((item) => item.message)).toEqual([
+      expect.stringContaining("lacks the item Grounds"),
+      expect.stringContaining("out of order"),
+      expect.stringContaining("empty Rollback item"),
+    ]);
+
+    expect(
+      findings(
+        row(
+          "DEC-2098",
+          approach(
+            "Evidence: file:a.ts",
+            "Grounds: none — obvious",
+            "Residual risk: x",
+            "Rollback: y",
+          ),
+        ),
+      ).map((item) => item.message),
+    ).toEqual([expect.stringContaining('"none —" in its Grounds item')]);
+
+    expect(
+      findings(
+        row(
+          "DEC-2098",
+          approach(
+            "Evidence: file:a.ts; looked at the code",
+            "Grounds: g",
+            "Residual risk: x",
+            "Rollback: y",
+          ),
+        ),
+      ).map((item) => item.message),
+    ).toEqual([expect.stringContaining("neither file: nor command: (looked at the code)")]);
+  });
+
   it("checks flow and story index membership against declarations", () => {
     const findings = validateStoryTreeStructureModel(
       model({

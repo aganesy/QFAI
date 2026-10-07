@@ -58,6 +58,8 @@ async function selectableSkills(): Promise<SelectableSkill[]> {
   return found;
 }
 
+// QFAI:AC-0001-0195-09
+// QFAI:EX-0001-0195-13
 describe("shipped skill descriptions say when to select the skill", () => {
   it("reads at least one skill the agent may select", async () => {
     // An empty read passes every case below without checking anything.
