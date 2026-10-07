@@ -78,6 +78,18 @@ describe("maskJsNonCode", () => {
     expect(maskJsNonCode(source)).toBe(blanked(source, template));
   });
 
+  it("blanks a template nested in a substitution as part of the outer one", () => {
+    const template = "`a ${ok ? `b ${c}` : '}'} e`";
+    const source = `const t = ${template};\n// after\nrun();\n`;
+    expect(maskJsNonCode(source, { comments: false })).toBe(blanked(source, template));
+  });
+
+  it("reads an unclosed substitution as text and ends at the backtick", () => {
+    const template = "`a ${ b`";
+    const source = `const t = ${template};\nrun();\n`;
+    expect(maskJsNonCode(source)).toBe(blanked(source, template));
+  });
+
   it("blanks a regex literal but leaves a division alone", () => {
     const literal = `/it${SKIP}(pending)/`;
     const source = lines(`const re = ${literal};`, "const half = total / 2 / rest;", "");

@@ -168,7 +168,8 @@ async function examplesWithoutTestChange(
   for (const test of scan.files) {
     if (!countsForExample(test) || !changed.has(normalizeRepoPath(path.relative(root, test.file))))
       continue;
-    for (const id of parseCountedExampleAnnotations(test.content)) changedExamples.add(id);
+    for (const id of parseCountedExampleAnnotations(test.content, test.file))
+      changedExamples.add(id);
   }
   return rewritten
     .filter(({ id }) => !changedExamples.has(id))

@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   codexFindings,
+  deferredEntry,
   formatThread,
   run,
   unresolvedThreads,
@@ -120,8 +121,46 @@ describe("one thread as output", () => {
   });
 });
 
+describe("the entry a deferred finding leaves in the follow-up issue", () => {
+  const node = (overrides: Record<string, unknown>): unknown => ({
+    data: {
+      node: {
+        path: "src/a.ts",
+        line: 7,
+        comments: {
+          nodes: [
+            { url: "https://example.test/c/1", author: { login: "reviewer" }, body: " Cover it. " },
+          ],
+        },
+        ...overrides,
+      },
+    },
+  });
+
+  it("names the pull request, the location, the author and the thread, then the finding", () => {
+    expect(deferredEntry("12", node({}))).toBe(
+      "Deferred from pull request 12: src/a.ts:7, by @reviewer.\nThread: https://example.test/c/1\n\nCover it.",
+    );
+  });
+
+  it("names the file alone for a thread with no line", () => {
+    expect(
+      deferredEntry("12", node({ line: null }))?.startsWith(
+        "Deferred from pull request 12: src/a.ts,",
+      ),
+    ).toBe(true);
+  });
+
+  it("is undefined for an id that names no thread", () => {
+    expect(deferredEntry("12", { data: { node: null } })).toBeUndefined();
+  });
+});
+
 describe("the arguments", () => {
   it.each([
+    [["defer", "1", "T1"]],
+    [["defer", "x", "T1", "2"]],
+    [["defer", "1", "T1", "two"]],
     [[]],
     [["merge"]],
     [["list"]],

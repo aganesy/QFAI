@@ -2,6 +2,16 @@
 
 What the user sees while a request is worked, and how a question reaches them.
 
+## Contents
+
+- Every screen
+- The scope question
+- The announcement
+- Questions
+- A step only a person can take
+- Halt notice
+- Final report
+
 ## Every screen
 
 - Relay it in the user's working language. The CLI's strings are English.

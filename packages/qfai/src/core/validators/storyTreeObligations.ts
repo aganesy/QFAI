@@ -102,7 +102,7 @@ export function validateStoryTreeObligationsModel(
       if (file.selectedForExample && (file.kind === "integration" || file.kind === "api"))
         covered.AC.add(id);
     }
-    const counted = new Set(parseCountedExampleAnnotations(file.content));
+    const counted = new Set(parseCountedExampleAnnotations(file.content, file.file));
     for (const id of annotations.EX) {
       if (!known.EX.has(id)) {
         issues.push(

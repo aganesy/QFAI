@@ -6,6 +6,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **The decisions template says a row may cite an earlier approval.** A
+  `decisions.md` row that records a spec change following from an earlier
+  approval may name that decision's ID in `Grounds:` in place of a new answer
+  from the user. `qfai validate` is unchanged. Fixes #2960.
+
 - **`QFAI-STORY-013` reports a layer drawn as two nodes and an edge written
   twice.** In the architecture diagram of `tech.md`, two node IDs that name one
   layer, as in `A["CLI"] --> B["Core"]` with `C["CLI"]`, and an edge repeated on
@@ -22,6 +27,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   (#2246). Markdown stays within 500 lines and a `SKILL.md` body within 20,000
   characters. Pointers say when to read the file they name, references stay one
   level deep, and long references open with their contents.
+
+- **The shipped Markdown is held to the AI-readable limits** (#3034). A test
+  over every Markdown file `qfai init` can write checks that a file stays
+  within 500 lines, a `SKILL.md` body within 20,000 characters, a reference
+  over 100 lines opens with a `## Contents` list of its headings, and a
+  reference names no other reference. The `qfai-grilling` and
+  `qfai-configure` bodies now point to references for the rules of a
+  delegated session, the session record and the working principles, and the 21
+  long references that lacked one gained a contents list. The migration guide
+  (over 500 lines) and the 22 references that name another reference are
+  recorded in the test as a backlog that can only shrink.
 
 - **`qfai validate` resolves the decisions and open questions a contract
   cites.** A `DEC-NNNN` or `OQ-NNNN` in a contract rule's statement, and the
@@ -119,6 +135,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **The released-section changelog check reads local tags first.** It asks the
   remote for a release tag only when no local tag exists, so a clone that holds
   the tags passes the lint lane offline (#2961).
+
+- **An EX annotation is read from real comments, and by the same declaration
+  rules as the ATDD scan** (#3018). Text inside a string literal or a template
+  literal is no longer an annotation, and a test call inside a block comment or
+  a literal no longer ends an annotation's search. `Deno.test(...)` and
+  `QUnit.test(...)` now count as declarations. `@pytest.mark.*` does not, since
+  it may decorate a helper no runner collects; a Python annotation goes directly
+  above `def test...`. A Go `Example` function counts only when the file holds
+  an `// Output:` comment. The declaration forms are read per file extension
+  from one table shared with the ATDD scan.
+  A template literal nested inside another one is now read as part of it, so
+  a comment after it is no longer lost. `class Test...`, a paren-less RSpec
+  block and a Gherkin `Feature:` line still count as places an annotation may
+  sit.
 
 - **A retired wrapper's remedy opens with the steps that clear it.**
   The remedy of the broken-link finding opened with a rerun of `qfai init`,
@@ -385,6 +415,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   each earlier group.
 
 ### Changed
+
+- **The web-research sandbox template no longer allows `.qfai/evidence/`.**
+  Nothing writes web-research results there, so the allowance is gone; the
+  cache directory stays. Artifact references also stop treating the retired
+  prototyping state file location as a special case. Part of #2805.
 
 - **The delegation baseline keeps parallel agents and reviewers off each
   other's files.** A read-only agent no longer checks out in a worktree it

@@ -247,7 +247,7 @@
         "scripts/pin-guard-bytes.mjs": "357c153b237745c3273382c0e993de076a5c66b032bae01d88b88cc27b37acbd",
         "scripts/pin-shipped-workflow-cost.mjs": "a33c2be8e176c175e7d539d1031d551c3ec42d5e61dbb3d5e4b78629a8b87ea4",
         "scripts/pin-verification-bodies.mjs": "66b19968747ef95c0ce262beee96fa31063d0cb92fded7a4c897c73f64ec8d1c",
-        "scripts/pr-threads.mjs": "d2dfb91a0a25aa1a612adeb5e78e5d67afddb752158ef1caf4bac1f13e488231",
+        "scripts/pr-threads.mjs": "e475122cce7a7a61af8a53eadb06ba2d269ad280d2317f4db7ef50fc5de581a1",
         "scripts/run-lint-checks.sh": "0787f074946fe50f273391c734bdb288e625e100ccf470a1045d50a346c54f43",
         "scripts/shipped-workflow-cost.mjs": "c40a588abcfb495f102e0dc8f7dd6e231af48b21089d26f0cfc370ab014d93b3",
         "scripts/smoke-qfai-cli.mjs": "7c223309c1791d97caf516d3218a845ca64e62dfe3fb1bb67e37470da688d4c2",
@@ -401,7 +401,7 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "e995414dcbc61032",
-        "Verify the toolchain action before running it": "d3af711bcfe4231a",
+        "Verify the toolchain action before running it": "22d23c40dd9e6581",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "a9e48843fd69e79c",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "5b9cb61d789d7eda",

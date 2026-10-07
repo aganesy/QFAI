@@ -3,6 +3,21 @@
 Write UI contracts under `<paths.contractsDir>/ui/**/*.{yaml,yml}`, each named `ui-NNNN-<slug>.yaml` after its ID. A UI-bearing contract declares exactly one full `# QFAI-CONTRACT-ID: UI-NNNN` and a nonempty `screens[]` list. Add its row to `<paths.contractsDir>/contracts.md` in the same change.
 The flows a UI contract serves are the flows whose examples its rules cite; the file name does not select them.
 
+## Contents
+
+- `screens[].primary_tasks` shape
+- Recommended ceiling: at most 7
+- `elements[].id` naming policy
+- `elements[].label` is inspection-target text
+- `data-qfai` marker convention
+- Prototype metadata
+- Screen contract rules
+- Template
+- Typical failures
+- Prototyping coverage
+- Root DESIGN.md
+- Review checklist
+
 ## `screens[].primary_tasks` shape
 
 Each entry in `screens[]` must carry a `primary_tasks:` slot. Each

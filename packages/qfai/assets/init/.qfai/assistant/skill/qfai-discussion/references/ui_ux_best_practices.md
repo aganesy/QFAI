@@ -5,6 +5,17 @@ This file is the compact, durable core for `qfai-discussion`.
 It is intentionally not an encyclopedia. Keep this file short, decision-oriented, and stable.
 Move volatile or bulky detail into the `ui_ux/` sidecar references and research current material at run time.
 
+## Contents
+
+- Why This File Is Compact
+- How To Use This Reference
+- Core Decision Rules
+- QFAI-Specific Authoring Guidance
+- Compact Review Checklist
+- When To Open The Appendices
+- Anti-Bloat Rules For Future Edits
+- Appendix Index
+
 ## Why This File Is Compact
 
 - OpenAI recommends versioned prompts, variables, concise examples, and eval-backed iteration rather than piling all guidance into one prompt.

@@ -5,6 +5,15 @@ wrote against the examples they generalize. A rule can imply a case no example
 states, and an example can hold a case no rule explains. The cycle finds both
 while the author of the rule is still in the invocation.
 
+## Contents
+
+- When a cycle runs
+- The finder
+- Deciding a finding
+- Applying an adopted finding
+- Two cycles at most
+- A decided finding is not raised again
+
 ## When a cycle runs
 
 A cycle runs when Stage 4 of this invocation wrote or changed the Statement or

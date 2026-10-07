@@ -13,6 +13,10 @@ No item is empty, and only the last two may take `none — <reason>`. What a
 kind of row must state in its Approach, such as a change request's proposed
 correction, goes inside these items. Write a `|` inside a cell as `\|`.
 
+A row that records a spec change following from an earlier approval may name
+that earlier decision by its ID in `Grounds:`, in place of a new answer from
+the user. Its `Evidence:` still lists what supports the change.
+
 A stage that does not own this file records its decisions in its own final
 report, with the same four items under the same rules.
 -->

@@ -9,6 +9,24 @@ default, not because the brand direction the discussion pack recorded asks for
 it. An instruction to avoid "a generic look" only swaps one default for another;
 naming the pattern is what works.
 
+## Contents
+
+- Using the list
+- Where the list stops
+- Color and background
+- Typography
+- Iconography and imagery
+- Surfaces
+- Components
+- Layout and composition
+- Placement
+- Motion and transitions
+- Copy in the UI
+- Information architecture and flow
+- States and accessibility
+- Implementation defaults
+- Displacement
+
 ## Using the list
 
 - **Writing root `DESIGN.md`.** Read the list before choosing a value. A value

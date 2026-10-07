@@ -11,6 +11,9 @@
  *   review, which arrives as a comment with no thread.
  * - `reply` answers one thread with the text of a file.
  * - `resolve` resolves the threads it is given.
+ * - `defer` records one thread's finding in a follow-up issue, replies to the
+ *   thread with that issue's number and resolves it, in that order, so a
+ *   resolved thread always has its finding in the issue.
  *
  * A reply takes its body from a file because a body typed into a shell argument
  * has its backticks and `$(...)` run by the shell before this sees it.
@@ -19,6 +22,7 @@
  *   node scripts/pr-threads.mjs list <pr>
  *   node scripts/pr-threads.mjs reply <thread-id> <body-file>
  *   node scripts/pr-threads.mjs resolve <thread-id>...
+ *   node scripts/pr-threads.mjs defer <pr> <thread-id> <follow-up-issue>
  *
  * Exit codes: 0 answered, 1 the remaining budget is below the reserve, 2 the
  * arguments, `git` or `gh` could not be read.
@@ -59,6 +63,15 @@ const REPLY_MUTATION = `mutation($id:ID!,$body:String!){
 
 const RESOLVE_MUTATION = `mutation($id:ID!){
   resolveReviewThread(input:{threadId:$id}){ thread{ id isResolved } }
+}`;
+
+const THREAD_QUERY = `query($id:ID!){
+  node(id:$id){
+    ... on PullRequestReviewThread {
+      path line
+      comments(first:1){ nodes{ url author{login} body } }
+    }
+  }
 }`;
 
 /** The text cut to `EXCERPT_LENGTH`, with line breaks kept. */
@@ -109,6 +122,27 @@ export function formatThread(thread) {
   const where = thread.line === undefined ? thread.path : `${thread.path}:${String(thread.line)}`;
   const outdated = thread.outdated ? ", outdated" : "";
   return `- ${thread.id}  ${where}  @${thread.author}${outdated}\n${excerpt(thread.body)}`;
+}
+
+/**
+ * The follow-up issue comment that records one deferred finding, in full.
+ *
+ * A response without the thread gives `undefined`, so a thread id that names
+ * something else is not recorded as an empty finding.
+ */
+export function deferredEntry(pr, response) {
+  const thread = response?.data?.node;
+  const first = thread?.comments?.nodes?.[0];
+  if (typeof first?.body !== "string") return undefined;
+  const path = typeof thread.path === "string" ? thread.path : "?";
+  const where = Number.isInteger(thread.line) ? `${path}:${String(thread.line)}` : path;
+  const author = typeof first.author?.login === "string" ? first.author.login : "unknown";
+  return [
+    `Deferred from pull request ${pr}: ${where}, by @${author}.`,
+    `Thread: ${String(first.url ?? "")}`,
+    "",
+    first.body.trim(),
+  ].join("\n");
 }
 
 function gh(args) {
@@ -185,11 +219,37 @@ function resolveCommand(threadIds) {
   return 0;
 }
 
+function deferCommand(slug, pr, threadId, issue) {
+  const entry = deferredEntry(
+    pr,
+    JSON.parse(gh(["api", "graphql", "-f", `query=${THREAD_QUERY}`, "-F", `id=${threadId}`])),
+  );
+  if (entry === undefined) {
+    console.error("GitHub's answer holds no review thread with that id.");
+    return 2;
+  }
+  gh(["api", `repos/${slug}/issues/${issue}/comments`, "-f", `body=${entry}`]);
+  gh([
+    "api",
+    "graphql",
+    "-f",
+    `query=${REPLY_MUTATION}`,
+    "-F",
+    `id=${threadId}`,
+    "-f",
+    `body=Deferred to #${issue}.`,
+  ]);
+  gh(["api", "graphql", "-f", `query=${RESOLVE_MUTATION}`, "-F", `id=${threadId}`]);
+  console.log(`deferred ${threadId} to #${issue}`);
+  return 0;
+}
+
 const USAGE = [
   "Usage:",
   "  node scripts/pr-threads.mjs list <pr>",
   "  node scripts/pr-threads.mjs reply <thread-id> <body-file>",
   "  node scripts/pr-threads.mjs resolve <thread-id>...",
+  "  node scripts/pr-threads.mjs defer <pr> <thread-id> <follow-up-issue>",
 ].join("\n");
 
 export function run(argv) {
@@ -197,7 +257,8 @@ export function run(argv) {
   const valid =
     (command === "list" && args.length === 1 && /^\d+$/.test(args[0])) ||
     (command === "reply" && args.length === 2) ||
-    (command === "resolve" && args.length >= 1);
+    (command === "resolve" && args.length >= 1) ||
+    (command === "defer" && args.length === 3 && /^\d+$/.test(args[0]) && /^\d+$/.test(args[2]));
   if (!valid) {
     console.error(USAGE);
     return 2;
@@ -210,6 +271,7 @@ export function run(argv) {
   }
   if (command === "list") return listCommand(slug, args[0]);
   if (command === "reply") return replyCommand(args[0], args[1]);
+  if (command === "defer") return deferCommand(slug, args[0], args[1], args[2]);
   return resolveCommand(args);
 }
 

@@ -2,6 +2,17 @@
 
 Use this file when the core checklist is not enough.
 
+## Contents
+
+- Heuristic Review Pass
+- Layout And Information Architecture
+- Forms And Actions
+- Screen States
+- Accessibility Audit
+- Anti-Pattern Red Flags
+- Documentation Expectations For QFAI
+- Recommended Audit Order
+
 ## Heuristic Review Pass
 
 Review the design direction against these durable heuristics:

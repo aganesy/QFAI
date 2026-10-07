@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import { PROTOTYPING_JSON_LEGACY_REL, PROTOTYPING_JSON_REL } from "../prototyping/paths.js";
+import { PROTOTYPING_JSON_REL } from "../prototyping/paths.js";
 
 const ALLOWED_ARTIFACT_EXTENSIONS = new Set([".md", ".json", ".png", ".html"]);
 
@@ -128,7 +128,7 @@ export function normalizeConcreteArtifactRef(ref: string): string {
   if (!ALLOWED_ARTIFACT_EXTENSIONS.has(extension)) {
     throw new Error(`Artifact ref extension is not allowed: ${trimmed}`);
   }
-  if (normalizedPath === PROTOTYPING_JSON_LEGACY_REL || normalizedPath === PROTOTYPING_JSON_REL) {
+  if (normalizedPath === PROTOTYPING_JSON_REL) {
     throw new Error(`Self-ref is not allowed: ${trimmed}`);
   }
 
