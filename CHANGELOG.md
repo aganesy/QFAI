@@ -346,6 +346,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`qfai validate` and `qfai report --run-validate` no longer check for the old `validate.json` location** (#3125).
+  A file at `.qfai/output/validate.json`, or an `output.validateJsonPath` that names
+  that path, no longer raises `D-DEPRECATED-PATH`, and the report is written to the
+  configured path as for any other value. `D-DEPRECATED-PATH` is still reported for
+  the old `.qfai/assistant/instructions/` layout.
+
 - **The documentation-clarity rule says where spec-tree IDs may appear** (#3002).
   IDs the project's own spec tree defines stay in spec-tree documents and in code
   or test comments that point at a contract or example. Operator-facing guides
