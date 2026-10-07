@@ -249,6 +249,7 @@ export function validateStoryTreeStructureModel(model: StoryTreeModel): Issue[] 
   }
   issues.push(...validateRuleContractNumbers(model));
   issues.push(...validateRecordCitations(model));
+  issues.push(...validateDecisionApproaches(model));
   return issues;
 }
 
@@ -316,6 +317,70 @@ function validateRecordCitations(model: StoryTreeModel): Issue[] {
         [row.id, successor],
       ),
     );
+  }
+  return issues;
+}
+
+// SIMPLIFIED: rows up to this number are not read, because they were written before the form
+// was checked.
+// Lift when: those rows are rewritten in the form; then delete this constant.
+const APPROACH_CHECKED_AFTER = 2097;
+const APPROACH_LABELS = ["Evidence", "Grounds", "Residual risk", "Rollback"];
+const APPROACH_LABEL = /(?:^|\s)- (Evidence|Grounds|Residual risk|Rollback):/g;
+const EVIDENCE_ENTRY = /^(?:file:\S|command:\s*\S)/;
+const NONE_WITH_REASON = /^none\s+—/;
+
+/** What is wrong with the four labelled items of one Approach cell. */
+function approachProblems(approach: string): string[] {
+  const marks = [...approach.matchAll(APPROACH_LABEL)];
+  const labels = marks.map(([, label = ""]) => label);
+  const missing = APPROACH_LABELS.filter((label) => !labels.includes(label));
+  if (missing.length > 0) return [`lacks the item ${missing.join(", ")}`];
+  if (labels.join() !== APPROACH_LABELS.join()) {
+    return ["holds its items out of order or more than once"];
+  }
+  const problems: string[] = [];
+  for (const [index, mark] of marks.entries()) {
+    const label = mark[1] ?? "";
+    const start = mark.index + mark[0].length;
+    const text = approach.slice(start, marks[index + 1]?.index ?? approach.length).trim();
+    if (text === "") {
+      problems.push(`has an empty ${label} item`);
+      continue;
+    }
+    const mayBeNone = label === "Residual risk" || label === "Rollback";
+    if (!mayBeNone && NONE_WITH_REASON.test(text)) {
+      problems.push(
+        `has "none —" in its ${label} item, which only Residual risk and Rollback take`,
+      );
+    }
+    if (label !== "Evidence") continue;
+    for (const entry of text.split("; ")) {
+      if (!EVIDENCE_ENTRY.test(entry.trim())) {
+        problems.push(
+          `has an Evidence entry that is neither file: nor command: (${entry.trim().slice(0, 40)})`,
+        );
+      }
+    }
+  }
+  return problems;
+}
+
+/**
+ * A `decisions.md` row above the checked ID holds, in its Approach cell, the items
+ * Evidence, Grounds, Residual risk and Rollback in that order, none empty, with every
+ * Evidence entry a `file:` or `command:` item.
+ */
+function validateDecisionApproaches(model: StoryTreeModel): Issue[] {
+  const file = model.decisionFile ?? "";
+  const issues: Issue[] = [];
+  for (const row of model.decisions?.rows ?? []) {
+    if (!(Number(row.id.slice("DEC-".length)) > APPROACH_CHECKED_AFTER)) continue;
+    for (const problem of approachProblems(row.approach)) {
+      issues.push(
+        finding("QFAI-STORY-017", `${file}: ${row.id} Approach ${problem}`, file, [row.id]),
+      );
+    }
   }
   return issues;
 }

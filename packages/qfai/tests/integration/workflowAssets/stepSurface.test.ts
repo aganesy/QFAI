@@ -78,6 +78,22 @@ describe("the skills a workflow run's steps belong to", () => {
     }
   });
 
+  // QFAI:AC-0001-0195-08
+  // QFAI:EX-0001-0195-12
+  it("gives every owner's description a subject no other owner's states", async () => {
+    const trigger = /^Use when invoked by name or handed a QFAI work order\b\.?/;
+    const subjects = new Map<string, string>();
+    for (const skill of PLAN_STEP_OWNERS) {
+      const description = frontMatterOf(await readShipped(`skill/${skill}/SKILL.md`)).description;
+      const subject = String(description).replace(trigger, "").trim();
+      expect(subject, `${skill} states a subject after the trigger`).not.toBe("");
+      expect([...subjects.values()], `${skill} repeats another owner's subject`).not.toContain(
+        subject,
+      );
+      subjects.set(skill, subject);
+    }
+  });
+
   // QFAI:AC-0001-0195-05
   // QFAI:EX-0001-0195-08
   it("lists each owner's steps in order, with no review profile of its own", async () => {
