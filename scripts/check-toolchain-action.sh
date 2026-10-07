@@ -125,7 +125,7 @@ if [ -n "${conflicted}" ]; then
 fi
 
 if ! (cd "${root}" && sha256sum -c --quiet "${digests_file}"); then
-  echo "::error::A pinned file does not match its digest in .github/pinned-bytes.txt. These are the local composite actions and the guard programs — they run before every verification in this job, and one of them decides whether this lane reports anything at all. An edit is refused here rather than executed; if it is intended, reseal with \`node scripts/pin-guard-bytes.mjs\` and land the new digests in the same commit."
+  echo "::error::A pinned file does not match its digest in .github/pinned-bytes.txt. These are the local composite actions and the guard programs — they run before every verification in this job, and one of them decides whether this lane reports anything at all. An edit is refused here rather than executed; if it is intended, reseal with \`pnpm pins:reseal\` (it runs \`node scripts/pin-guard-bytes.mjs\`, then \`node scripts/pin-verification-bodies.mjs\`) and land the new digests in the same commit."
   exit 1
 fi
 

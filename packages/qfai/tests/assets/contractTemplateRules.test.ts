@@ -50,7 +50,7 @@ describe("shipped contract templates", () => {
     );
     const scan = parseContractRules(file, await readFile(file, "utf-8"));
     expect(scan.rules.map(({ id, examples }) => ({ id, examples }))).toEqual([
-      { id: "BR-0001-0001", examples: ["EX-0001-0001-01"] },
+      { id: "BR-0006-0001", examples: ["EX-0001-0001-01"] },
     ]);
   });
 });

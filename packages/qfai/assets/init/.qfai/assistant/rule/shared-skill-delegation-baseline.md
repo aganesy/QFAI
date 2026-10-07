@@ -37,6 +37,11 @@ classified by the taxonomy below before any response.
 - A review is done by an agent that did not author what it reviews. The
   orchestrator never reviews its own work and never approves it for
   convenience.
+- A read-only agent never runs `git checkout` or `git switch` in a worktree it
+  shares; it reads other revisions with `git show <rev>:<path>`. Each agent
+  writes scratch files only under a path of its own.
+- Commit the change, or give each reviewer a fixed commit, before a review
+  starts, and leave the working tree alone until every review returns.
 
 ### Capability Probe (MUST)
 
@@ -106,10 +111,8 @@ has to do, and the class is `unavailable` or
 ### Commit Scoping
 
 - A delegated agent stages only the paths it declared as deliverables in its work order: `git add <path> …`.
-- `git add -A`, `git add .` and `git commit -a` are forbidden for delegated agents, in both isolation modes. In degraded / shared-index mode the concurrent agents share one index, so a sweeping stage command commits a sibling agent's in-flight files and misattributes work in the audit trail. Under worktree separation there is no shared index and no sibling file to sweep, but the command
-  still stages everything else loose in that agent's own worktree, so the commit still stops matching its declared deliverables.
-- When the agent's deliverable paths are not known up front, it hands back an unstaged diff and the orchestrator commits — under the same rule. The orchestrator commits one handed-back diff at a time, stages that agent's declared paths only, and is equally forbidden from `git add -A` / `git add .` / `git commit -a` while a parallel stage is in flight. Being the committer does not exempt
-  it; in degraded mode it is the only committer, so a sweeping stage there mixes every sibling's work into one commit.
+- `git add -A`, `git add .` and `git commit -a` are forbidden for delegated agents, in both isolation modes. In degraded / shared-index mode the concurrent agents share one index, so a sweeping stage command commits a sibling agent's in-flight files and misattributes work in the audit trail. Under worktree separation the command still stages whatever else is loose in that agent's own worktree.
+- When the agent's deliverable paths are not known up front, it hands back an unstaged diff and the orchestrator commits — under the same rule. The orchestrator commits one handed-back diff at a time, stages that agent's declared paths only, and is equally forbidden from `git add -A` / `git add .` / `git commit -a` while a parallel stage is in flight. Being the committer does not exempt it.
 - Isolation requirements for concurrent stages are defined once in `.qfai/assistant/rule/workflow.md#concurrency-stage-independent-mandatory`.
 
 ### Host backstops above the declared shape

@@ -61,6 +61,11 @@ the identifier does not belong in it.
   name, counts only where no letter, digit, `_` or `-` precedes it, so a
   `CON-UI-NNNN` ID is not read as `UI-NNNN`; it is matched whole, as the
   retired contract ID.
+- A business-rule ID or a contract file name inside the sample band is rejected
+  when this repository's spec tree declares it, because it then names a
+  document that exists here. `packages/qfai/scripts/lib/declared-sample-band-ids.mjs`
+  reads the declared set from `.qfai/spec/03_contract`, and all three guards
+  import it, so they cannot disagree.
 
 No shipped file uses a retired shape, apart from the sample-band IDs the
 migration guide shows as its input. The guards still refuse the retired shapes,

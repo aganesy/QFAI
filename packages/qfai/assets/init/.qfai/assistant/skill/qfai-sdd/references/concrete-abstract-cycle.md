@@ -112,7 +112,7 @@ Within a session, the finder does not raise a finding again when either holds:
   it. A declined change request is the user deciding that finding, and its
   REJECTED row in `decisions.md` bars the finding it answers.
 
-Matching never goes by wording. A declined change for `BR-0003-0001` and
+Matching never goes by wording. A declined change for `BR-0006-0001` and
 `EX-0002-0003-02` whose case is "an order of 20 000 in euros" also bars "an order
 of 20 000 in any currency other than the default", however either is worded. It
 does not bar a finding on the same IDs for an order of exactly 10 000.
