@@ -1143,12 +1143,11 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every `qfai-*` SKILL.md keeps its hard-required bucket to the common entries plus the ones it declares for itself, and names no retired entry. A skill may carry fewer — one it never reads costs a prompt and buys nothing — and never more.",
   "QFAI-DEPRECATED-001": "The retired `.qfai/assistant/instructions/` layer is absent.",
   "QFAI-ASSISTANT-001": "Every directory under `.qfai/assistant/` is one of the canonical layers.",
-  "QFAI-SKILLDOC-001":
-    "A `project_memory:` block in a SKILL.md is the last thing in the file.",
+  "QFAI-SKILLDOC-001": "A `project_memory:` block in a SKILL.md is the last thing in the file.",
   "QFAI-STALE-001":
     "No skill document still names a token that its implementation has since replaced.",
   "QFAI-ASSISTANT-002": "Every canonical `.qfai/assistant/` layer directory is seeded.",
-  QFAI-CFG-002: "Every value in qfai.config.yaml has the type and range its key declares.",
+  "QFAI-CFG-002": "Every value in qfai.config.yaml has the type and range its key declares.",
   "QFAI-AGENT-005": "Every agent definition file has each required section heading.",
   "QFAI-AGENT-007":
     "The agent routing manifest and its defaults file can be read and parse to the shape the routing check expects.",
@@ -1254,8 +1253,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every waiver's `rule` names a finding code this run emits and a waiver can suppress.",
   "QFAI-POLICY-001":
     "The shared autopilot policy has its three buckets (auto-decide, ask-user, hard-required), and each skill's own policy lists the hard-required inputs declared for it.",
-  "QFAI-POLICY-002":
-    "No skill's auto-decide bucket lists an entry outside the shared allowed set.",
+  "QFAI-POLICY-002": "No skill's auto-decide bucket lists an entry outside the shared allowed set.",
   "QFAI-HANDOFF-001":
     "The handoff schema's field list and each file that writes a handoff name the same fields.",
   "QFAI-MOCKHREF-001":
@@ -1263,20 +1261,17 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-MANIFEST-001":
     "The skill manifest schema and the probe that reads it name the same tokens.",
   "QFAI-THREELAYER-001": "The `uiux/` directory holds none of the retired sidecar files.",
-  "QFAI-THREELAYER-002":
-    "The `uiux/` directory holds every file of the canonical sidecar family.",
+  "QFAI-THREELAYER-002": "The `uiux/` directory holds every file of the canonical sidecar family.",
   "QFAI-THREELAYER-003": "No sidecar file uses the retired evaluation headings.",
   "QFAI-THREELAYER-004":
     "A sidecar file uses either the exploration-first headings or the retired evaluation headings, never both.",
   "QFAI-CLASSIFICATION-001":
     "The `ui_bearing`, `primary_surface` and `secondary_surfaces` fields of a classification agree with each other.",
-  "QFAI-CLASSIFICATION-002":
-    "`secondary_surfaces` lists no surface twice.",
+  "QFAI-CLASSIFICATION-002": "`secondary_surfaces` lists no surface twice.",
   "QFAI-CLASSIFICATION-003": "`ui_bearing` is `true` or `false`.",
   "QFAI-CLASSIFICATION-004":
     "Every `secondary_surfaces` value is a surface the classification accepts.",
-  "QFAI-CLASSIFICATION-005":
-    "`primary_surface` is a surface the classification accepts.",
+  "QFAI-CLASSIFICATION-005": "`primary_surface` is a surface the classification accepts.",
   "QFAI-CLASSIFICATION-006": "`01_Context.md` has the UI-bearing classification block.",
   "QFAI-CLASSIFICATION-007":
     "`classification_rationale` holds project-specific reasoning, not placeholder text.",
@@ -1284,22 +1279,17 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "The classification block has `ui_bearing`, `primary_surface`, `secondary_surfaces` and `classification_rationale`.",
   "QFAI-CLASSIFICATION-009":
     "`secondary_surfaces` is present, as a list or an explicit empty list.",
-  "QFAI-CLASSIFICATION-010":
-    "`secondary_surfaces` does not repeat the `primary_surface`.",
+  "QFAI-CLASSIFICATION-010": "`secondary_surfaces` does not repeat the `primary_surface`.",
   "QFAI-DIRECTION-001":
     "`50_review_input_bundle.md` states that the latest iteration is the accepted one and no earlier iteration is restored.",
   "QFAI-OQ-001": "No critical open question remains open in the OQ register.",
-  "QFAI-SCREEN-001":
-    "Every screen in the screen contract has a unique `screen_id`.",
+  "QFAI-SCREEN-001": "Every screen in the screen contract has a unique `screen_id`.",
   "QFAI-SCREEN-002":
     "Every screen in the screen contract writes its nested fields as nested canonical bullets.",
-  "QFAI-SCREEN-003":
-    "Every screen in the screen contract has all the required fields.",
-  "QFAI-SCREEN-004":
-    "Every screen's `required_states` includes the mandatory states.",
+  "QFAI-SCREEN-003": "Every screen in the screen contract has all the required fields.",
+  "QFAI-SCREEN-004": "Every screen's `required_states` includes the mandatory states.",
   "QFAI-SIDECAR-001": "A spec that is UI-bearing has a `uiux/` sidecar directory.",
-  "QFAI-PROTOSKILL-001":
-    "The prototyping skill claims no capability that is not implemented.",
+  "QFAI-PROTOSKILL-001": "The prototyping skill claims no capability that is not implemented.",
   "QFAI-PROTOSKILL-002":
     "The prototyping skill uses none of the banned runtime-heavy default wording.",
   "QFAI-PROTOSKILL-003":
@@ -1315,8 +1305,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROTOSKILL-008":
     "The prototyping skill documents `qfai doctor --profile prototyping` as its preflight.",
   "QFAI-PROTOSKILL-009": "The prototyping skill has every required section.",
-  "QFAI-PROTOSKILL-010":
-    "The prototyping skill states the static-first, file-based default.",
+  "QFAI-PROTOSKILL-010": "The prototyping skill states the static-first, file-based default.",
   "QFAI-PROTOSKILL-011":
     "The prototyping skill limits execution to UI contracts that have a full UI ID and a non-empty `screens[]`.",
   "QFAI-TREND-005":
@@ -1325,8 +1314,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-TREND-002": "Every trend-scan category has at least one complete entry.",
   "QFAI-TREND-003":
     "Every trend-scan entry fills each required field with project-specific content.",
-  "QFAI-TREND-004":
-    "A UI-bearing pack has `04_Sources.md` with a `## Trend Scan` section.",
+  "QFAI-TREND-004": "A UI-bearing pack has `04_Sources.md` with a `## Trend Scan` section.",
   "QFAI-SAAS-003":
     "Every gate the SaaS-package profile skips is named, so a pass on that profile is not read as a full DONE.",
 };
