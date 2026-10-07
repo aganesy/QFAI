@@ -6,6 +6,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`user-questions.md` says what to do when a question is accepted but not shown.**
+  A structured question that the host accepted is not a question the user saw or
+  answered. The rule now keeps accepted, shown and answered apart, sends the
+  same question in plain text after a tool error, a lost connection or a report
+  that it never appeared, and ends a turn or a resolved notice without recording
+  a decision. A late or repeated answer is not applied twice, and an unanswered
+  question carries over. Fixes #2987.
+
 - **The prompt-time reminder names the reply language.** The message the
   `UserPromptSubmit` hook prints on every turn now also tells the agent to reply
   in the user's working language, as `communication.md` sets, however much of
