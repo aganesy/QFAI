@@ -441,7 +441,7 @@ describe("validate --format text matches the validate contract's text output gra
     const guideline = await readGuideline();
     const grammar = extractGrammar(guideline);
     const tail = extractGroupTail(guideline);
-    expect(guideline).toContain("at most five issues");
+    expect(guideline).toContain("At most five issues");
 
     const group = manyOfOneCode("QFAI-TEST-010", "error", 7);
     const other = manyOfOneCode("QFAI-TEST-011", "error", 1)[0];
