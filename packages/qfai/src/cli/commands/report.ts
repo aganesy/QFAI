@@ -15,13 +15,7 @@ import type { ValidationProfile, ValidationResult } from "../../core/types.js";
 import { countIssues, validateProject } from "../../core/validate.js";
 import { shouldFail } from "../lib/failOn.js";
 import { error, info, warn } from "../../core/logger.js";
-import type { LegacyValidateJsonGate } from "./validate.js";
-import {
-  appendIssue,
-  evaluateLegacyValidateJsonGate,
-  profileSuffixedReportPath,
-  scopedReportPath,
-} from "./validate.js";
+import { appendIssue, profileSuffixedReportPath, scopedReportPath } from "./validate.js";
 
 export type ReportOptions = {
   root: string;
@@ -169,34 +163,7 @@ export async function runReport(options: ReportOptions): Promise<number> {
     if (options.inputPath) {
       warn("report: --in is ignored because --run-validate was given.");
     }
-    // Same migration gate `runValidate` enforces, evaluated once and handed to
-    // the run below. Post-sunset, a config still pointing at
-    // `.qfai/output/validate.json` gets no write — least of all a brand-new
-    // `validate.flow-<ids>.json` inside the directory the sunset exists to
-    // retire, which would read as "still fine to write here".
-    const legacyGate = await evaluateLegacyValidateJsonGate({
-      root,
-      configuredValidateJsonPath: configResult.config.output.validateJsonPath,
-    });
-    if (legacyGate.refuseConfiguredLegacyWrite) {
-      // Said on stderr as well as carried as a finding: the finding tells the
-      // gate what to exit on, and this tells the operator which setting to
-      // change. The run itself proceeds, the same way `validate` proceeds —
-      // only the write to the retired path is dropped.
-      error(
-        [
-          `qfai report: qfai.config.yaml#output.validateJsonPath points at the sunset legacy SSOT (${configResult.config.output.validateJsonPath}).`,
-          "Refused to write the validate result. Update output.validateJsonPath to .qfai/report/validate.json and run again.",
-        ].join("\n"),
-      );
-    }
-    const ran = await runValidateForReport(
-      root,
-      configResult,
-      options,
-      paths.validateJsonPath,
-      legacyGate,
-    );
+    const ran = await runValidateForReport(root, configResult, options, paths.validateJsonPath);
     ranNarrowProfileInCi = ran.ranNarrowProfileInCi;
     validation = ran.validation;
   } else {
@@ -284,23 +251,16 @@ export async function runReport(options: ReportOptions): Promise<number> {
  * `--run-validate`: run the same validators `qfai validate` runs, apply the
  * same post-processing, and write the same (scope-resolved) validate result.
  *
- * The post-processing is shared, not re-implemented: `report --run-validate`
- * is documented as the single-step CI usage, so a finding `validate` raises
- * (here the legacy-path `QFAI-DEPRECATED-001` migration gate) must reach this
- * exit code too, and a write `validate` refuses must be refused here as well.
- * Otherwise a project whose `output.validateJsonPath` still names the legacy
- * SSOT sees `qfai validate` exit 1 and refuse the write while `qfai report
- * --run-validate` re-creates the deprecated file and exits 0.
+ * `report --run-validate` is documented as the single-step CI usage, so a
+ * finding `validate` raises must reach this exit code too.
  *
- * `writeTo` is the scope-resolved target, so a refusal also covers the
- * corresponding `validate.flow-<ids>.json` path.
+ * `writeTo` is the scope-resolved target.
  */
 async function runValidateForReport(
   root: string,
   configResult: ConfigLoadResult,
   options: ReportOptions,
   writeTo: string,
-  legacyGate: LegacyValidateJsonGate,
 ): Promise<{ validation: ValidationResult; ranNarrowProfileInCi: boolean }> {
   const flowIds = options.flowIds ?? [];
   const ciProfileIssue = buildCiProfileIssue(options.profile);
@@ -309,12 +269,9 @@ async function runValidateForReport(
     ...(flowIds.length > 0 ? { flowIds } : {}),
   });
   const withCiIssue = ciProfileIssue ? appendIssue(validated, ciProfileIssue) : validated;
-  const gated = legacyGate.issue ? appendIssue(withCiIssue, legacyGate.issue) : withCiIssue;
-  const normalized = normalizeValidationResult(root, gated);
+  const normalized = normalizeValidationResult(root, withCiIssue);
   // Profile suffixes compose with the flow-scoped path.
-  if (!legacyGate.refuseConfiguredLegacyWrite) {
-    await writeValidationResults(root, writeTo, normalized, options.profile);
-  }
+  await writeValidationResults(root, writeTo, normalized, options.profile);
   return { validation: normalized, ranNarrowProfileInCi: ciProfileIssue !== null };
 }
 

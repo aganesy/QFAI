@@ -1,9 +1,8 @@
-import { mkdir, stat, writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { FailOn, OutputFormat } from "../../core/config.js";
 import { loadConfig } from "../../core/config.js";
-import { isEnoent } from "../../core/fs/errno.js";
 import { normalizeValidationResult } from "../../core/normalize.js";
 import { isStoryTreeId } from "../../core/storyTree/ids.js";
 import { buildCiProfileIssue } from "../../core/phasePolicy.js";
@@ -45,113 +44,6 @@ export type ValidateOptions = {
   toolVersionOverride?: string;
 };
 
-/**
- * The release that retired the legacy `.qfai/output/validate.json` write path.
- *
- * Nothing compares against it: the path is not written and the finding is an
- * `error`. It appears in the message so an operator meeting the finding knows
- * which release stopped writing the file they are still reading.
- */
-const LEGACY_VALIDATE_JSON_SUNSET = "1.10.0";
-const LEGACY_VALIDATE_JSON_REL = ".qfai/output/validate.json";
-
-async function pathExists(p: string): Promise<boolean> {
-  try {
-    await stat(p);
-    return true;
-  } catch (error: unknown) {
-    // Only a missing path is absence. An unreadable one (EACCES, EIO, ...) is not
-    // evidence the file is missing, so it reaches the caller unchanged.
-    if (isEnoent(error)) return false;
-    throw error;
-  }
-}
-
-/**
- * Normalize a configured path for comparison against the legacy
- * literal. Lowercased, posix-slashed, leading `./` stripped, repeated
- * slashes collapsed. Comparison is case-insensitive only on the textual
- * normalization step (no filesystem casing inspection) so the rule
- * fires identically on Windows + macOS + Linux configs.
- */
-function normalizeForLegacyMatch(p: string): string {
-  return p.replace(/\\/g, "/").replace(/\/+/g, "/").replace(/^\.\//, "").toLowerCase();
-}
-
-/**
- * True when the configured validate JSON path is the legacy
- * `.qfai/output/validate.json` SSOT (the canonical path has since
- * moved to `.qfai/report/validate.json`). Absolute paths are never
- * treated as legacy — the legacy SSOT is the relative repo-rooted
- * literal only; operators who deliberately point at an absolute path
- * have explicitly opted out of the canonical SSOT.
- *
- * Exported so `report --run-validate` gates on the same predicate. That command
- * writes a validate result too, and a private copy of the rule here meant the
- * report path bypassed the migration gate the validate path enforces.
- */
-export function configTargetsLegacyValidateJsonPath(configuredPath: string): boolean {
-  if (path.isAbsolute(configuredPath)) return false;
-  return normalizeForLegacyMatch(configuredPath) === LEGACY_VALIDATE_JSON_REL;
-}
-
-/**
- * Outcome of the legacy `validate.json` migration gate: the
- * `QFAI-DEPRECATED-001` finding a run must carry (if any) plus the writer
- * decisions derived from the same signals.
- */
-export type LegacyValidateJsonGate = {
-  /** Finding to append to the run's result, or `null` when none is due. */
-  issue: Issue | null;
-  /** True when `output.validateJsonPath` still names the legacy SSOT. */
-  configTargetsLegacyPath: boolean;
-  /** True when the writer must refuse the configured (legacy) target. */
-  refuseConfiguredLegacyWrite: boolean;
-};
-
-/**
- * Evaluate the legacy `.qfai/output/validate.json` migration gate.
- *
- * Shared by `qfai validate` and `qfai report --run-validate`: both run
- * `validateProject` and then write `output.validateJsonPath`, so both owe the
- * operator the same finding and the same post-sunset write refusal. When only
- * `validate` applied it, `report --run-validate` — the documented single-step
- * CI usage — re-created the legacy path and exited 0 on a project `validate`
- * rejects with exit 1.
- */
-export async function evaluateLegacyValidateJsonGate(args: {
-  root: string;
-  configuredValidateJsonPath: string;
-}): Promise<LegacyValidateJsonGate> {
-  // Detect whether the operator's project config still aims the writer
-  // at the legacy SSOT. This is a stronger signal than "the legacy file
-  // exists on disk" — even a clean filesystem will trigger the gate if
-  // the config points there, because the writer is about to recreate
-  // the stale path on this very run.
-  const configTargetsLegacyPath = configTargetsLegacyValidateJsonPath(
-    args.configuredValidateJsonPath,
-  );
-  // The finding is due only where there is observable evidence — the config or
-  // a file on disk — that a consumer still depends on the legacy path.
-  // Otherwise every clean run would carry an unactionable error for a path the
-  // project never used. A `--flow` scope may not suppress it: the evidence is
-  // of a dependency this project has, and suppressing it would let a scoped run
-  // walk past the migration gate with exit 0.
-  const legacyOnDisk = await pathExists(path.join(args.root, LEGACY_VALIDATE_JSON_REL));
-  const emitDeprecationIssue = legacyOnDisk || configTargetsLegacyPath;
-  return {
-    issue: emitDeprecationIssue
-      ? buildDeprecationIssue({
-          configTargetsLegacyPath,
-        })
-      : null,
-    configTargetsLegacyPath,
-    // The legacy SSOT is dead: a config that still names it is refused, which
-    // is the migration gate.
-    refuseConfiguredLegacyWrite: configTargetsLegacyPath,
-  };
-}
-
 export async function runValidate(options: ValidateOptions): Promise<number> {
   const startedAt = new Date();
   const root = path.resolve(options.root);
@@ -192,21 +84,12 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
       }
     : validated;
   // Test callers override; production reads the same package.json#version the
-  // rest of the toolchain uses (so the source-of-truth is single). Resolved
-  // once here and handed to the gate, which would otherwise read it again.
+  // rest of the toolchain uses (so the source-of-truth is single).
   const effectiveToolVersion = options.toolVersionOverride ?? (await resolveToolVersion());
   await emitProvenance(effectiveToolVersion);
   const configuredValidateJsonPath = configResult.config.output.validateJsonPath;
   const scopedFlowIds = options.flowIds ?? [];
-  const legacyGate = await evaluateLegacyValidateJsonGate({
-    root,
-    configuredValidateJsonPath,
-  });
-  const { refuseConfiguredLegacyWrite } = legacyGate;
-  const result: ValidationResult = legacyGate.issue
-    ? appendIssue(rawResult, legacyGate.issue)
-    : rawResult;
-  const normalized = normalizeValidationResult(root, result);
+  const normalized = normalizeValidationResult(root, rawResult);
   // `!== false` rather than a truth test: a result that carries no claim (one
   // not produced by `validateProject`) keeps the ordinary per-profile wording.
   const partialProfileNotice = normalized.issues.some((item) => item.code === "QFAI-LAYOUT-001")
@@ -274,38 +157,21 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   }
   if (scopedFlowIds.length > 0) {
     // Writing a scoped result to the shared `validate.json` /
-    // `validate-<profile>.json` / legacy path would let parallel Slice workers
+    // `validate-<profile>.json` would let parallel Slice workers
     // race on the same files, leaving the last finisher's single flow looking
     // like a repo-wide PASS to every downstream reader.
-    //
-    // The migration gate applies here too. `scopedReportPath` derives its
-    // directory from `output.validateJsonPath`, so a config still pointing at
-    // the legacy SSOT would put `validate.flow-0003.json` inside the
-    // deprecated directory — new files appearing under a path the gate exists
-    // to retire, which reads as "still fine to write here".
     if (
       scopedReportRel !== null &&
-      !refuseConfiguredLegacyWrite &&
       !normalized.issues.some((issue) => issue.code === "QFAI-FLOW-005")
     ) {
       await emitJson(normalized, root, scopedReportRel);
     }
   } else {
     // Always-latest report + profile-suffixed report.
-    // Post-sunset, refuse to write to the configured legacy path: the
-    // migration gate must direct the operator to update their config
-    // instead of silently producing a stale-named file. The accompanying
-    // deprecation issue (severity=error) already carries the actionable
-    // text; here we just skip the physical write.
-    if (!refuseConfiguredLegacyWrite) {
-      await emitJson(normalized, root, configuredValidateJsonPath);
-      const profileLabel = normalized.profile ?? options.profile ?? "full";
-      const profileSuffixedRel = profileSuffixedReportPath(
-        configuredValidateJsonPath,
-        profileLabel,
-      );
-      await emitJson(normalized, root, profileSuffixedRel);
-    }
+    await emitJson(normalized, root, configuredValidateJsonPath);
+    const profileLabel = normalized.profile ?? options.profile ?? "full";
+    const profileSuffixedRel = profileSuffixedReportPath(configuredValidateJsonPath, profileLabel);
+    await emitJson(normalized, root, profileSuffixedRel);
   }
 
   return willFail ? 1 : 0;
@@ -369,39 +235,6 @@ export function profileSuffixedReportPath(configured: string, profile: string): 
   return path.posix.join(dir, `${stem}-${profile}${ext}`);
 }
 
-/**
- * Build the `QFAI-DEPRECATED-001` finding for the legacy validate output SSOT.
- *
- * Two states reach this function, both of them `error`: the legacy path is
- * retired, so nothing writes it and a project still naming it has a migration
- * to make.
- *
- *   1. `configTargetsLegacyPath` — the config points at the legacy path, so
- *      the writer refused and the message directs the operator to update it.
- *   2. Otherwise — a stale file left on disk, so the message asks for it to be
- *      deleted.
- */
-function buildDeprecationIssue(args: { configTargetsLegacyPath: boolean }): Issue {
-  const message = args.configTargetsLegacyPath
-    ? `qfai.config.yaml#output.validateJsonPath points at the legacy SSOT ` +
-      `${LEGACY_VALIDATE_JSON_REL}, which is past the announced sunset ` +
-      `(${LEGACY_VALIDATE_JSON_SUNSET}). The validate writer REFUSED this ` +
-      `write to enforce the migration gate. Update output.validateJsonPath ` +
-      `to .qfai/report/validate.json (canonical) and rerun validate.`
-    : `Legacy validate output path ${LEGACY_VALIDATE_JSON_REL} is past the announced ` +
-      `sunset (${LEGACY_VALIDATE_JSON_SUNSET}); the legacy file is no longer written but ` +
-      `still exists on disk. Update consumers to read .qfai/report/validate.json or ` +
-      `.qfai/report/validate-<profile>.json and delete the stale legacy file.`;
-  return {
-    code: "QFAI-DEPRECATED-001",
-    severity: "error",
-    category: "canonical",
-    message,
-    file: LEGACY_VALIDATE_JSON_REL,
-    rule: "validate.legacyOutputDeprecated",
-  };
-}
-
 /** Finding families grouped by the validators the current profiles run. */
 export const GATE_GROUP_FAMILIES = {
   hygiene: ["QFAI-HYG-*"],
@@ -410,13 +243,14 @@ export const GATE_GROUP_FAMILIES = {
   discussion: ["QFAI-DPACK-*", "QFAI-VIS-*"],
   "research-summary": ["QFAI-RESEARCH-*"],
   "canonical-uix": [
-    "QFAI-THREELAYER-*",
-    "QFAI-CLASSIFICATION-*",
-    "QFAI-DIRECTION-*",
-    "QFAI-OQ-*",
-    "QFAI-SCREEN-*",
-    "QFAI-SIDECAR-*",
-    "QFAI-TREND-*",
+    "UIX-VAL-3LAYER-*",
+    "UIX-VAL-CLASSIFICATION-*",
+    "UIX-VAL-DIRECTION-*",
+    "UIX-VAL-OQ-*",
+    "UIX-VAL-SCREEN-*",
+    "UIX-VAL-SIDECAR-*",
+    "QFAI-TREND-005",
+    "UIX-VAL-TREND-*",
   ],
   "story-structure": [
     "QFAI-STORY-001",
@@ -442,9 +276,16 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-STORY-014",
   ],
   "story-test-scan": ["QFAI-SCAN-002"],
-  sdd: ["QFAI-AUTOPILOT-*", "QFAI-ASSISTANT-*", "QFAI-SKILLDOC-*", "QFAI-STALE-*"],
-  "reviewer-gate-sdd": ["QFAI-POLICY-*"],
-  "reviewer-gate-shared": ["QFAI-MOCKHREF-*"],
+  sdd: [
+    "QFAI-AUTOPILOT-*",
+    "QFAI-ASSISTANT-001",
+    "QFAI-SKILLDOC-001",
+    "QFAI-STALE-001",
+    "QFAI-ASSISTANT-002",
+    "QFAI-DEPRECATED-001",
+  ],
+  "reviewer-gate-sdd": ["R-AUTOPILOT-POLICY-*"],
+  "reviewer-gate-shared": ["QFAI-MOCKHREF-001"],
   contracts: [
     "QFAI-CONTRACT-000",
     "QFAI-CONTRACT-010",
@@ -478,7 +319,7 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-PLATFORM-*",
     "QFAI-CFG-LINK-*",
   ],
-  "prototyping-skill": ["QFAI-PROTOSKILL-*"],
+  "prototyping-skill": ["UIX-VAL-SKILL-*"],
   "test-stubs": ["QFAI-TEST-*"],
   drift: ["QFAI-DRIFT-*", "QFAI-STORY-010"],
   "saas-package-profile": [ATTESTATION_MISSING_CODE, HANDOFF_SCHEMA_CODE],
@@ -1300,14 +1141,14 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "No required Research Summary value is still the shipped `[...]` template placeholder.",
   "QFAI-AUTOPILOT-001":
     "Every `qfai-*` SKILL.md keeps its hard-required bucket to the common entries plus the ones it declares for itself, and names no retired entry. A skill may carry fewer — one it never reads costs a prompt and buys nothing — and never more.",
-  "QFAI-DEPRECATED-001":
-    "No retired path is in use: `output.validateJsonPath` does not name the old `.qfai/output/validate.json` report path, no file is left there, and the retired `.qfai/assistant/instructions/` layer is absent.",
+  "QFAI-DEPRECATED-001": "The retired `.qfai/assistant/instructions/` layer is absent.",
   "QFAI-ASSISTANT-001": "Every directory under `.qfai/assistant/` is one of the canonical layers.",
-  "QFAI-SKILLDOC-001": "A `project_memory:` block in a SKILL.md is the last thing in the file.",
+  "QFAI-SKILLDOC-001":
+    "A `project_memory:` block in a SKILL.md is the last thing in the file.",
   "QFAI-STALE-001":
     "No skill document still names a token that its implementation has since replaced.",
   "QFAI-ASSISTANT-002": "Every canonical `.qfai/assistant/` layer directory is seeded.",
-  "QFAI-CFG-002": "Every value in qfai.config.yaml has the type and range its key declares.",
+  QFAI-CFG-002: "Every value in qfai.config.yaml has the type and range its key declares.",
   "QFAI-AGENT-005": "Every agent definition file has each required section heading.",
   "QFAI-AGENT-007":
     "The agent routing manifest and its defaults file can be read and parse to the shape the routing check expects.",
@@ -1413,7 +1254,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every waiver's `rule` names a finding code this run emits and a waiver can suppress.",
   "QFAI-POLICY-001":
     "The shared autopilot policy has its three buckets (auto-decide, ask-user, hard-required), and each skill's own policy lists the hard-required inputs declared for it.",
-  "QFAI-POLICY-002": "No skill's auto-decide bucket lists an entry outside the shared allowed set.",
+  "QFAI-POLICY-002":
+    "No skill's auto-decide bucket lists an entry outside the shared allowed set.",
   "QFAI-HANDOFF-001":
     "The handoff schema's field list and each file that writes a handoff name the same fields.",
   "QFAI-MOCKHREF-001":
@@ -1421,17 +1263,20 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-MANIFEST-001":
     "The skill manifest schema and the probe that reads it name the same tokens.",
   "QFAI-THREELAYER-001": "The `uiux/` directory holds none of the retired sidecar files.",
-  "QFAI-THREELAYER-002": "The `uiux/` directory holds every file of the canonical sidecar family.",
+  "QFAI-THREELAYER-002":
+    "The `uiux/` directory holds every file of the canonical sidecar family.",
   "QFAI-THREELAYER-003": "No sidecar file uses the retired evaluation headings.",
   "QFAI-THREELAYER-004":
     "A sidecar file uses either the exploration-first headings or the retired evaluation headings, never both.",
   "QFAI-CLASSIFICATION-001":
     "The `ui_bearing`, `primary_surface` and `secondary_surfaces` fields of a classification agree with each other.",
-  "QFAI-CLASSIFICATION-002": "`secondary_surfaces` lists no surface twice.",
+  "QFAI-CLASSIFICATION-002":
+    "`secondary_surfaces` lists no surface twice.",
   "QFAI-CLASSIFICATION-003": "`ui_bearing` is `true` or `false`.",
   "QFAI-CLASSIFICATION-004":
     "Every `secondary_surfaces` value is a surface the classification accepts.",
-  "QFAI-CLASSIFICATION-005": "`primary_surface` is a surface the classification accepts.",
+  "QFAI-CLASSIFICATION-005":
+    "`primary_surface` is a surface the classification accepts.",
   "QFAI-CLASSIFICATION-006": "`01_Context.md` has the UI-bearing classification block.",
   "QFAI-CLASSIFICATION-007":
     "`classification_rationale` holds project-specific reasoning, not placeholder text.",
@@ -1439,17 +1284,22 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "The classification block has `ui_bearing`, `primary_surface`, `secondary_surfaces` and `classification_rationale`.",
   "QFAI-CLASSIFICATION-009":
     "`secondary_surfaces` is present, as a list or an explicit empty list.",
-  "QFAI-CLASSIFICATION-010": "`secondary_surfaces` does not repeat the `primary_surface`.",
+  "QFAI-CLASSIFICATION-010":
+    "`secondary_surfaces` does not repeat the `primary_surface`.",
   "QFAI-DIRECTION-001":
     "`50_review_input_bundle.md` states that the latest iteration is the accepted one and no earlier iteration is restored.",
   "QFAI-OQ-001": "No critical open question remains open in the OQ register.",
-  "QFAI-SCREEN-001": "Every screen in the screen contract has a unique `screen_id`.",
+  "QFAI-SCREEN-001":
+    "Every screen in the screen contract has a unique `screen_id`.",
   "QFAI-SCREEN-002":
     "Every screen in the screen contract writes its nested fields as nested canonical bullets.",
-  "QFAI-SCREEN-003": "Every screen in the screen contract has all the required fields.",
-  "QFAI-SCREEN-004": "Every screen's `required_states` includes the mandatory states.",
+  "QFAI-SCREEN-003":
+    "Every screen in the screen contract has all the required fields.",
+  "QFAI-SCREEN-004":
+    "Every screen's `required_states` includes the mandatory states.",
   "QFAI-SIDECAR-001": "A spec that is UI-bearing has a `uiux/` sidecar directory.",
-  "QFAI-PROTOSKILL-001": "The prototyping skill claims no capability that is not implemented.",
+  "QFAI-PROTOSKILL-001":
+    "The prototyping skill claims no capability that is not implemented.",
   "QFAI-PROTOSKILL-002":
     "The prototyping skill uses none of the banned runtime-heavy default wording.",
   "QFAI-PROTOSKILL-003":
@@ -1465,7 +1315,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROTOSKILL-008":
     "The prototyping skill documents `qfai doctor --profile prototyping` as its preflight.",
   "QFAI-PROTOSKILL-009": "The prototyping skill has every required section.",
-  "QFAI-PROTOSKILL-010": "The prototyping skill states the static-first, file-based default.",
+  "QFAI-PROTOSKILL-010":
+    "The prototyping skill states the static-first, file-based default.",
   "QFAI-PROTOSKILL-011":
     "The prototyping skill limits execution to UI contracts that have a full UI ID and a non-empty `screens[]`.",
   "QFAI-TREND-005":
@@ -1474,7 +1325,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-TREND-002": "Every trend-scan category has at least one complete entry.",
   "QFAI-TREND-003":
     "Every trend-scan entry fills each required field with project-specific content.",
-  "QFAI-TREND-004": "A UI-bearing pack has `04_Sources.md` with a `## Trend Scan` section.",
+  "QFAI-TREND-004":
+    "A UI-bearing pack has `04_Sources.md` with a `## Trend Scan` section.",
   "QFAI-SAAS-003":
     "Every gate the SaaS-package profile skips is named, so a pass on that profile is not read as a full DONE.",
 };

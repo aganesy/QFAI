@@ -1587,7 +1587,16 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // reads the paths of the patch. It is still one `node -e "<program>" <key>` line that holds no
   // character a hook shell expands, and the walk that finds the message file is unchanged.
   // Derived the same way.
-  [".codex/hooks.json", "9a562721076d38aec60601d514db0b69d4acc7bd651e4213570fe1e154f5dd78"],
+  //
+  // Re-pinned for the same change as `.claude/settings.json` that limited the tool-time reminders:
+  // the grilling entries before a write and a delegation, the API-budget entry, the
+  // documentation-clarity entries after a Markdown write or edit, and the minimal-implementation
+  // entry now print on a session's first call and on every twentieth after it, counted per
+  // `session_id`, and on every call when the input names no session. Each is still one
+  // `node -e "<program>" <key>` line with no character a hook shell expands. Events, matchers,
+  // markers and message keys are unchanged; the previous groups are listed as superseded so the
+  // merge refreshes them. Derived the same way.
+  [".codex/hooks.json", "4eb4c36dcf31ae9196b26444b56867a32164ee1d875e192527f196da90463832"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`

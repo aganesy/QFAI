@@ -437,6 +437,40 @@ describe("the Codex tool-time group an earlier release wrote", () => {
   });
 });
 
+describe("the Codex tool-time groups that printed on every call", () => {
+  const CODEX_TEMPLATE = readFileSync(
+    path.join(packageRoot, "assets/init/.codex/hooks.json"),
+    "utf-8",
+  );
+  const CODEX_UNSCHEDULED = readFileSync(
+    path.join(packageRoot, "tests/fixtures/codex-hooks/earlier-unscheduled-tool-groups.json"),
+    "utf-8",
+  );
+
+  it("are each replaced where they stand, and a second run changes nothing", () => {
+    const result = mergeDocumentationClarityHooks(CODEX_UNSCHEDULED, CODEX_TEMPLATE);
+    expect(result.outcome).toBe("merged");
+    if (result.outcome !== "merged") return;
+    expect(result.edited).toEqual([]);
+    const shipped: Record<string, unknown> = JSON.parse(CODEX_TEMPLATE);
+    const earlier: Record<string, unknown> = JSON.parse(CODEX_UNSCHEDULED);
+    for (const event of ["PreToolUse", "PostToolUse"]) {
+      const groups = groupsFor(earlier, event);
+      expect(groups.length, event).toBeGreaterThan(0);
+      groups.forEach((group, index) => {
+        expect(groupsFor(result.settings, event)[index], `${event} ${markersOf(group)}`).toEqual(
+          groupsFor(shipped, event).find((candidate) => markersOf(candidate) === markersOf(group)),
+        );
+      });
+    }
+    const again = mergeDocumentationClarityHooks(
+      serializeClaudeSettings(result.settings),
+      CODEX_TEMPLATE,
+    );
+    expect(again).toEqual({ outcome: "already-present", edited: [] });
+  });
+});
+
 // QFAI:EX-0001-0196-47
 // QFAI:EX-0001-0196-48
 describe("the permission entries the template declares", () => {
