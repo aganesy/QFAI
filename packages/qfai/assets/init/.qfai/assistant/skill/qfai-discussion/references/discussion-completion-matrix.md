@@ -2,6 +2,14 @@
 
 Use this file for the full completion logic behind `/qfai-discussion`.
 
+## Contents
+
+- All Packs
+- UI-bearing Packs
+- CLI Packs
+- Non-UI Packs
+- Notes
+
 ## All Packs
 
 Blocking for every pack, UI-bearing or not:

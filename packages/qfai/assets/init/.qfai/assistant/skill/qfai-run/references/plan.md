@@ -3,6 +3,15 @@
 The one command `qfai-run` calls, what it reads and what it prints. Field names
 are exact: an unknown key is refused.
 
+## Contents
+
+- Calls
+- Extraction
+- Plan
+- Candidates
+- Scopes
+- Refusal
+
 ## Calls
 
 | Call                                     | When                                            |

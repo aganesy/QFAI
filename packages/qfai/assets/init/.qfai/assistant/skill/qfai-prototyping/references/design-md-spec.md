@@ -10,6 +10,16 @@ every color, font, radius or shadow an iteration uses outside this file.
 A reference copy is shipped in this skill at
 `templates/DESIGN.md.sample`.
 
+## Contents
+
+- File shape
+- Front-matter schema
+- `brand.archetype` allowed values
+- `brand.theme`
+- `accessibility` allowed keys
+- Validation rules
+- Issue shape
+
 ## File shape
 
 ```markdown

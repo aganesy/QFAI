@@ -101,32 +101,111 @@ describe("story-tree test obligations", () => {
 
   // QFAI:EX-0001-0056-14
   it.each([
-    ["a vitest call", "// {tag}\nit('pays', () => {});", true],
-    ["a modified vitest call", "// {tag}\ntest.each([1])('%s', () => {});", true],
-    ["a block comment line", "/* {tag} */\ndescribe.skip('pays', () => {});", true],
-    ["an RSpec block", "# {tag}\nit 'pays' do\nend", true],
-    ["a Python test function", "# {tag}\ndef test_pays():\n    pass", true],
-    ["a Go test function", "// {tag}\nfunc TestPays(t *testing.T) {}", true],
-    ["a Gherkin scenario", "# {tag}\nScenario: pays", true],
-    ["a Rust test attribute", "// {tag}\n#[test]\nfn pays() {}", true],
-    ["a C# test attribute", "// {tag}\n[Fact]\npublic void Pays() {}", true],
+    ["a vitest call", "a.test.ts", "// {tag}\nit('pays', () => {});", true],
+    ["a modified vitest call", "a.test.ts", "// {tag}\ntest.each([1])('%s', () => {});", true],
+    ["a block comment line", "a.test.ts", "/* {tag} */\ndescribe.skip('pays', () => {});", true],
+    [
+      "a vitest call with type arguments",
+      "a.test.ts",
+      "// {tag}\nit.each<[string, (n: number) => void]>([])('%s', () => {});",
+      true,
+    ],
+    ["a JSDoc line", "a.test.ts", "/**\n * {tag}\n */\nit('pays', () => {});", true],
+    ["a Deno test call", "a.test.ts", "// {tag}\nDeno.test('pays', () => {});", true],
+    [
+      "a modified Deno test call",
+      "a.test.ts",
+      "// {tag}\nDeno.test.ignore('pays', () => {});",
+      true,
+    ],
+    ["a QUnit test call", "a.test.js", "// {tag}\nQUnit.test('pays', () => {});", true],
+    ["an RSpec block", "a_spec.rb", "# {tag}\nit('pays') do\nend", true],
+    ["a Python test function", "test_a.py", "# {tag}\ndef test_pays():\n    pass", true],
+    ["a Go test function", "a_test.go", "// {tag}\nfunc TestPays(t *testing.T) {}", true],
+    [
+      "a Go example with an output comment",
+      "a_test.go",
+      "// {tag}\nfunc ExamplePays() {\n\t// Output: paid\n}",
+      true,
+    ],
+    ["a Gherkin scenario", "a.feature", "# {tag}\nScenario: pays", true],
+    ["a Rust test attribute", "a.rs", "// {tag}\n#[test]\nfn pays() {}", true],
+    ["a C# test attribute", "A.cs", "// {tag}\n[Fact]\npublic void Pays() {}", true],
+    ["a JUnit test annotation", "A.java", "// {tag}\n@Test\nvoid pays() {}", true],
     [
       "a statement between the annotation and the test",
+      "a.test.ts",
       "// {tag}\nsetup();\nit('pays', () => {});",
       false,
     ],
     [
       "code after a block comment on the same line",
+      "a.test.ts",
       "/* {tag} */ setup();\nit('pays', () => {});",
       false,
     ],
-    ["a decrement that starts with two dashes", "--{tag};\nit('pays', () => {});", false],
-    ["a Go example, which no runner executes", "// {tag}\nfunc ExamplePays() {}", false],
-    ["no declaration after the annotation", "// {tag}\nconst value = 1;", false],
-  ] as const)("reads an annotation before %s", (_name, template, counted) => {
+    [
+      "a decrement that starts with two dashes",
+      "a.test.ts",
+      "--{tag};\nit('pays', () => {});",
+      false,
+    ],
+    [
+      "a Go example with no output comment, which no runner executes",
+      "a_test.go",
+      "// {tag}\nfunc ExamplePays() {}",
+      false,
+    ],
+    ["no declaration after the annotation", "a.test.ts", "// {tag}\nconst value = 1;", false],
+    [
+      "a pytest marker that may decorate a helper",
+      "test_a.py",
+      "# {tag}\n@pytest.mark.slow\ndef helper():\n    pass",
+      false,
+    ],
+    [
+      "an annotation and a declaration inside a template literal",
+      "a.test.ts",
+      "const sample = `\n// {tag}\ntest('pays', () => {});\n`;\nconst value = 1;",
+      false,
+    ],
+    [
+      "an annotation inside a template literal above a real declaration",
+      "a.test.ts",
+      "const sample = `\n// {tag}\n`;\nit('pays', () => {});",
+      false,
+    ],
+    [
+      "an annotation and a declaration inside a block comment",
+      "a.test.ts",
+      "/*\n// {tag}\nit('pays', () => {});\n*/\nconst value = 1;",
+      false,
+    ],
+    [
+      "an annotation inside a Python docstring",
+      "test_a.py",
+      '"""\n# {tag}\n"""\ndef test_pays():\n    pass',
+      false,
+    ],
+    [
+      "a string literal naming the annotation",
+      "a.test.ts",
+      "const note = '// {tag}';\nit('pays', () => {});",
+      false,
+    ],
+    [
+      "a test written after a template literal nested in a template literal",
+      "a.test.ts",
+      "const text = `a ${ok ? `b ${c}` : 'd'} e`;\n\n// {tag}\nit('pays', () => {});",
+      true,
+    ],
+    ["a test class in a TypeScript file", "a.test.ts", "// {tag}\nclass TestOrder {}", true],
+    ["a paren-less RSpec block", "a_spec.rb", "# {tag}\nit 'pays' do\nend", true],
+    ["a Gherkin feature", "a.feature", "# {tag}\nFeature: Checkout", true],
+  ] as const)("reads an annotation before %s", (_name, file, template, counted) => {
     const id = "EX-0001-0001-01";
     const tag = ["QFAI", id].join(":");
-    expect(parseCountedExampleAnnotations(template.replaceAll("{tag}", tag))).toEqual(
+    expect(parseCountedExampleAnnotations(template.replaceAll("{tag}", tag), file)).toEqual(
       counted ? [id] : [],
     );
   });
