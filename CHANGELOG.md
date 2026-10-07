@@ -6,6 +6,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **The decisions template says a row may cite an earlier approval.** A
+  `decisions.md` row that records a spec change following from an earlier
+  approval may name that decision's ID in `Grounds:` in place of a new answer
+  from the user. `qfai validate` is unchanged. Fixes #2960.
+
 - **`QFAI-STORY-013` reports a layer drawn as two nodes and an edge written
   twice.** In the architecture diagram of `tech.md`, two node IDs that name one
   layer, as in `A["CLI"] --> B["Core"]` with `C["CLI"]`, and an edge repeated on
