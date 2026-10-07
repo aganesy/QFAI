@@ -377,6 +377,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   skill keeps its 150-line limit, at 135 lines instead of 150, and its
   behaviour is unchanged.
 
+- **The `implement-scaffold` step names where its flow comes from.** It took the
+  flow from a workflow run's work order, which `qfai workflow` no longer produces.
+  The step now reads the flow from the invocation's BF argument or the request
+  (#3033).
 - **`QFAI-AUD-001` no longer describes a legacy form or a sunset.** For a screen
   with no `primary_tasks`, the message now says the screen has no `primary_tasks`
   and that `primary_tasks` must be declared as `{id, label, acceptance}`
