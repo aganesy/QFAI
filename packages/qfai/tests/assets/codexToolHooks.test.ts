@@ -428,7 +428,7 @@ describe("the Codex tool-time reminders that repeat", () => {
         }
       }
     });
-  }, 60_000);
+  });
 
   it("print again on the call after a full period, and not before it", async () => {
     const entry = await codexEntry("PostToolUse", "minimal-implementation");
@@ -443,7 +443,7 @@ describe("the Codex tool-time reminders that repeat", () => {
       }
       expect(printed).toEqual([1, PERIOD + 1]);
     });
-  }, 60_000);
+  });
 
   it("print on every call when the input names no session", async () => {
     await withProject(async (cwd) => {
