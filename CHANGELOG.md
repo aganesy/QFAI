@@ -382,6 +382,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The web-research sandbox template no longer allows `.qfai/evidence/`.**
+  Nothing writes web-research results there, so the allowance is gone; the
+  cache directory stays. Artifact references also stop treating the retired
+  prototyping state file location as a special case. Part of #2805.
+
 - **The delegation baseline keeps parallel agents and reviewers off each
   other's files.** A read-only agent no longer checks out in a worktree it
   shares and reads other revisions with `git show`, and every agent writes

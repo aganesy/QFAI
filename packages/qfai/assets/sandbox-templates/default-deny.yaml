@@ -12,8 +12,6 @@ sandbox:
     allow:
       - path: ".qfai/cache/web-research/**"
         permissions: [read, write]
-      - path: ".qfai/evidence/web-research/**"
-        permissions: [read, write]
     restrict:
       - path: "**"
         permissions: [read, write, execute]
