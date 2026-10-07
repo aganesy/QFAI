@@ -37,11 +37,13 @@
  *
  * ## The tag
  *
- * `git ls-remote --tags origin refs/tags/v<version>` answers whether a section
- * is released, and works in a shallow checkout. A tag on HEAD itself is the
- * release being cut and does not count, so the push that merges a release
- * passes. A lookup that fails refuses the section as released and prints a
- * note: an unknown answer does not open a released section.
+ * The local tags answer first, so a clone that holds the tag needs no network.
+ * Only when no local tag exists does `git ls-remote --tags origin
+ * refs/tags/v<version>` answer, which works in a shallow checkout. A tag on
+ * HEAD itself is the release being cut and does not count, so the push that
+ * merges a release passes. A remote lookup that fails refuses the section as
+ * released and prints a note: an unknown answer does not open a released
+ * section.
  *
  * ## The base
  *
@@ -129,15 +131,44 @@ export function taggedBefore(listing, head) {
   return commit !== head;
 }
 
-/** Whether `v<version>` is a tag on origin: true, false, or null when the lookup failed. */
-export function tagOnOrigin(version) {
+/** The commit the local tag `v<version>` names, or null when there is no such local tag. */
+function localTagCommit(version) {
+  const result = spawnSync(
+    "git",
+    ["rev-parse", "--verify", "--quiet", `refs/tags/v${version}^{commit}`],
+    {
+      encoding: "utf-8",
+    },
+  );
+  return result.status === 0 ? result.stdout.trim() : null;
+}
+
+/** The `ls-remote` listing of the tag `v<version>` on origin, or null when the lookup failed. */
+function remoteTagListing(version) {
   const ref = `refs/tags/v${version}`;
   const result = spawnSync("git", ["ls-remote", "--tags", "origin", ref, `${ref}^{}`], {
     encoding: "utf-8",
   });
-  if (result.status !== 0) return null;
-  const head = spawnSync("git", ["rev-parse", "HEAD"], { encoding: "utf-8" });
-  return taggedBefore(result.stdout, head.status === 0 ? head.stdout.trim() : "");
+  return result.status === 0 ? result.stdout : null;
+}
+
+function headCommit() {
+  const result = spawnSync("git", ["rev-parse", "HEAD"], { encoding: "utf-8" });
+  return result.status === 0 ? result.stdout.trim() : "";
+}
+
+const defaultLookups = { local: localTagCommit, remote: remoteTagListing };
+
+/**
+ * Whether `v<version>` names a release built before `head`: true, false, or
+ * null when the answer needs the remote and the lookup failed. The local tag
+ * answers first; the remote is asked only when no local tag exists.
+ */
+export function tagOnOrigin(version, head = headCommit(), lookups = defaultLookups) {
+  const local = lookups.local(version);
+  if (local !== null) return local !== head;
+  const listing = lookups.remote(version);
+  return listing === null ? null : taggedBefore(listing, head);
 }
 
 /**

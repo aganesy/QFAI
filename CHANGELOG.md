@@ -102,6 +102,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The released-section changelog check reads local tags first.** It asks the
+  remote for a release tag only when no local tag exists, so a clone that holds
+  the tags passes the lint lane offline (#2961).
 - **A repaired title no longer reads as a new changelog entry.**
   The released-section guard compares entry titles ignoring whitespace, so
   restoring a missing space in a published entry's title line is accepted.
