@@ -1318,7 +1318,7 @@ function normalizeRenderEvidence(
 
 function configIssue(file: string, message: string): Issue {
   return {
-    code: "QFAI_CONFIG_INVALID",
+    code: "QFAI-CFG-002",
     severity: "error",
     category: "canonical",
     message,

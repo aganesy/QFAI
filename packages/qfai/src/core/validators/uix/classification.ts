@@ -48,7 +48,7 @@ export async function validateClassification(root: string, _config: QfaiConfig):
   if (!classification) {
     return [
       classificationIssue(
-        "UIX-VAL-CLASSIFICATION-MISSING",
+        "QFAI-CLASSIFICATION-006",
         "01_Context.md must contain the explicit UI-bearing Classification block.",
         "error",
         "01_Context.md",
@@ -61,7 +61,7 @@ export async function validateClassification(root: string, _config: QfaiConfig):
   for (const field of classification.missingFields) {
     issues.push(
       classificationIssue(
-        "UIX-VAL-CLASSIFICATION-REQUIRED-FIELD",
+        "QFAI-CLASSIFICATION-008",
         `UI-bearing Classification is missing required field '${field}'.`,
         "error",
         "01_Context.md",
@@ -73,7 +73,7 @@ export async function validateClassification(root: string, _config: QfaiConfig):
   if (classification.uiBearing === undefined) {
     issues.push(
       classificationIssue(
-        "UIX-VAL-CLASSIFICATION-INVALID-BOOLEAN",
+        "QFAI-CLASSIFICATION-003",
         "ui_bearing must be true or false.",
         "error",
         "01_Context.md",
@@ -89,7 +89,7 @@ export async function validateClassification(root: string, _config: QfaiConfig):
   ) {
     issues.push(
       classificationIssue(
-        "UIX-VAL-CLASSIFICATION-INVALID-SURFACE",
+        "QFAI-CLASSIFICATION-005",
         `primary_surface '${classification.primarySurfaceRaw}' is invalid. Valid values: ${VALID_PRIMARY_SURFACES.join(", ")}`,
         "error",
         "01_Context.md",
@@ -103,7 +103,7 @@ export async function validateClassification(root: string, _config: QfaiConfig):
   if (classification.invalidSecondarySurfaces.length > 0) {
     issues.push(
       classificationIssue(
-        "UIX-VAL-CLASSIFICATION-INVALID-SECONDARY-SURFACE",
+        "QFAI-CLASSIFICATION-004",
         `secondary_surfaces contains invalid value(s): ${classification.invalidSecondarySurfaces.join(", ")}. Valid values: ${VALID_PRIMARY_SURFACES.join(", ")}`,
         "error",
         "01_Context.md",
@@ -115,7 +115,7 @@ export async function validateClassification(root: string, _config: QfaiConfig):
   if (classification.duplicateSecondarySurfaces.length > 0) {
     issues.push(
       classificationIssue(
-        "UIX-VAL-CLASSIFICATION-DUPLICATE-SECONDARY-SURFACE",
+        "QFAI-CLASSIFICATION-002",
         `secondary_surfaces contains duplicate value(s): ${classification.duplicateSecondarySurfaces.join(", ")}`,
         "error",
         "01_Context.md",
@@ -127,7 +127,7 @@ export async function validateClassification(root: string, _config: QfaiConfig):
   if (uiBearing === true && primarySurface && DISCUSSION_NON_UI_SURFACES.has(primarySurface)) {
     issues.push(
       classificationIssue(
-        "UIX-VAL-CLASSIFICATION-CONTRADICTION",
+        "QFAI-CLASSIFICATION-001",
         `ui_bearing is true but primary_surface is '${primarySurface}'. ui_bearing=true requires a discussion UI-bearing surface (${[...DISCUSSION_UI_BEARING_SURFACES].join(", ")}).`,
         "error",
         "01_Context.md",
@@ -139,7 +139,7 @@ export async function validateClassification(root: string, _config: QfaiConfig):
   if (uiBearing === false && primarySurface && DISCUSSION_UI_BEARING_SURFACES.has(primarySurface)) {
     issues.push(
       classificationIssue(
-        "UIX-VAL-CLASSIFICATION-CONTRADICTION",
+        "QFAI-CLASSIFICATION-001",
         `ui_bearing is false but primary_surface is '${primarySurface}'. ui_bearing=false requires primary_surface 'non-ui'.`,
         "error",
         "01_Context.md",
@@ -151,7 +151,7 @@ export async function validateClassification(root: string, _config: QfaiConfig):
   if (primarySurface && classification.secondarySurfaces.includes(primarySurface)) {
     issues.push(
       classificationIssue(
-        "UIX-VAL-CLASSIFICATION-SECONDARY-DUPLICATE",
+        "QFAI-CLASSIFICATION-010",
         `secondary_surfaces contains the primary_surface '${primarySurface}'.`,
         "error",
         "01_Context.md",
@@ -163,7 +163,7 @@ export async function validateClassification(root: string, _config: QfaiConfig):
   if (uiBearing === false && primarySurface && !DISCUSSION_NON_UI_SURFACES.has(primarySurface)) {
     issues.push(
       classificationIssue(
-        "UIX-VAL-CLASSIFICATION-CONTRADICTION",
+        "QFAI-CLASSIFICATION-001",
         `ui_bearing is false but primary_surface is '${primarySurface}'. primary_surface must be 'non-ui' when ui_bearing=false.`,
         "error",
         "01_Context.md",
@@ -175,7 +175,7 @@ export async function validateClassification(root: string, _config: QfaiConfig):
   if (uiBearing === false && classification.secondarySurfacesRawEntries.length > 0) {
     issues.push(
       classificationIssue(
-        "UIX-VAL-CLASSIFICATION-CONTRADICTION",
+        "QFAI-CLASSIFICATION-001",
         `ui_bearing is false but secondary_surfaces is not empty: ${classification.secondarySurfacesRawEntries.join(", ")}`,
         "error",
         "01_Context.md",
@@ -187,7 +187,7 @@ export async function validateClassification(root: string, _config: QfaiConfig):
   if (uiBearing === true && primarySurface === "non-ui") {
     issues.push(
       classificationIssue(
-        "UIX-VAL-CLASSIFICATION-CONTRADICTION",
+        "QFAI-CLASSIFICATION-001",
         "ui_bearing is true but primary_surface is 'non-ui'.",
         "error",
         "01_Context.md",
@@ -199,7 +199,7 @@ export async function validateClassification(root: string, _config: QfaiConfig):
   if (uiBearing === true && classification.secondarySurfaces.includes("non-ui")) {
     issues.push(
       classificationIssue(
-        "UIX-VAL-CLASSIFICATION-CONTRADICTION",
+        "QFAI-CLASSIFICATION-001",
         "ui_bearing is true but secondary_surfaces contains 'non-ui'.",
         "error",
         "01_Context.md",
@@ -211,7 +211,7 @@ export async function validateClassification(root: string, _config: QfaiConfig):
   if (classification.secondarySurfacesRaw === undefined) {
     issues.push(
       classificationIssue(
-        "UIX-VAL-CLASSIFICATION-SECONDARY-ARRAY",
+        "QFAI-CLASSIFICATION-009",
         "secondary_surfaces is required and must be present even when empty.",
         "error",
         "01_Context.md",
@@ -227,7 +227,7 @@ export async function validateClassification(root: string, _config: QfaiConfig):
   ) {
     issues.push(
       classificationIssue(
-        "UIX-VAL-CLASSIFICATION-RATIONALE-PLACEHOLDER",
+        "QFAI-CLASSIFICATION-007",
         "classification_rationale must contain substantive project-specific reasoning.",
         "error",
         "01_Context.md",

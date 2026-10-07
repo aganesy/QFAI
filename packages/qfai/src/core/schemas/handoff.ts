@@ -50,7 +50,7 @@ export type HandoffValidationIssue = {
  * Schema-drift code emitted by the SSOT-sync Pair IV reviewer-gate
  * detector. See `handoffSchemaDrift.ts`.
  */
-export const HANDOFF_SCHEMA_DRIFT_CODE = "R-HANDOFF-SCHEMA-DRIFT" as const;
+export const HANDOFF_SCHEMA_DRIFT_CODE = "QFAI-HANDOFF-001" as const;
 
 /**
  * Validate a handoff payload against the canonical schema. Returns an

@@ -31,7 +31,7 @@ In this order, and stop at the first that answers.
 
 Most questions can be answered on more than one of these, which is why the order
 matters. Reaching for the convenient command rather than the cheap one is how an
-allowance goes: several of the forge's own subcommands take the GraphQL path
+allowance runs out: several of the forge's own subcommands take the GraphQL path
 where an equivalent REST path exists.
 
 ## 2. One call for the set, not one per member

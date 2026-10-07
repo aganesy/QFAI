@@ -8,6 +8,7 @@ import { afterEach, expect, it } from "vitest";
 
 import { decideRoute } from "../../../src/core/workflow/decisionRules.js";
 import {
+  CONFIDENCES,
   ENTRY_FLAGS,
   INTENTS,
   QUALIFIERS,
@@ -74,10 +75,55 @@ it("An extraction value outside its vocabulary is refused, naming the field", as
     await refused({ confidence: 0.9 }),
     await refused({ alternatives: [reading] }),
   ]).toEqual([
-    [{ reason: "schema", subject: "intent" }],
-    [{ reason: "schema", subject: "entryFlags[0]" }],
-    [{ reason: "schema", subject: "confidence" }],
-    [{ reason: "schema", subject: "alternatives" }],
+    [
+      {
+        reason: "schema",
+        subject: "intent",
+        cause: `wrong-value: expected one of ${[...INTENTS, null].map(String).join(", ")}, received "bug"`,
+      },
+    ],
+    [
+      {
+        reason: "schema",
+        subject: "entryFlags[0]",
+        cause: `wrong-value: expected one of ${ENTRY_FLAGS.join(", ")}, received "urgent"`,
+      },
+    ],
+    [
+      {
+        reason: "schema",
+        subject: "confidence",
+        cause: `wrong-value: expected one of ${CONFIDENCES.join(", ")}, received 0.9`,
+      },
+    ],
+    [{ reason: "schema", subject: "alternatives", cause: expect.stringMatching(/^invalid: /) }],
+  ]);
+});
+
+// QFAI:EX-0001-0211-03
+it("A schema refusal says whether a field is missing, unknown or of the wrong type", async () => {
+  const root = await minimalProject();
+  const refused = async (document: Record<string, unknown>) => {
+    const result = await planOf(root, { extraction: document });
+    return result.ok ? [] : result.reasons;
+  };
+
+  expect([
+    await refused({ ...extraction(), risks: undefined }),
+    await refused({ ...extraction(), request: "text" }),
+    await refused({ ...extraction(), risks: "security" }),
+    await refused({ ...extraction(), entryFlags: ["repro", 3] }),
+  ]).toEqual([
+    [{ reason: "schema", subject: "risks", cause: "missing: risks is required" }],
+    [{ reason: "schema", subject: "request", cause: "unknown: request is not a field here" }],
+    [{ reason: "schema", subject: "risks", cause: "wrong-type: expected array, received string" }],
+    [
+      {
+        reason: "schema",
+        subject: "entryFlags[1]",
+        cause: `wrong-value: expected one of ${ENTRY_FLAGS.join(", ")}, received 3`,
+      },
+    ],
   ]);
 });
 

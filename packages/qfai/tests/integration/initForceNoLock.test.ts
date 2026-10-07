@@ -1,8 +1,7 @@
 /**
  * Integration: `qfai init --force` overwrites what it regenerates whether or not
  * the project edited it, keeps no record of what it wrote, and leaves the
- * project's own files alone; `qfai init` lists what an earlier release left and
- * deletes none of it.
+ * project's own files alone.
  */
 import { access, link, lstat, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -185,67 +184,5 @@ describe("plain init leaves the rule masters create-only", () => {
       await readFile(shippedMaster("user-questions.md"), "utf-8"),
     );
     expect(await exists(path.join(rules, ".qfai-rules.lock.json"))).toBe(false);
-  });
-});
-
-describe("init lists what an earlier release left and deletes none of it", () => {
-  const LEFT = [
-    ".qfai/evidence/",
-    ".qfai/review/",
-    ".qfai/assistant/.assets.lock.json",
-    ".qfai/install-provenance.json",
-    ".qfai/run/",
-  ];
-  const PACK = ["12_OQ-Resolution-Log.md", "13_Deferred.md", "14_Review-Request.md", "99_delta.md"];
-
-  async function seed(dir: string, relative: string): Promise<void> {
-    const target = path.join(dir, ...relative.split("/"));
-    if (relative.endsWith("/")) {
-      await mkdir(target, { recursive: true });
-    } else {
-      await mkdir(path.dirname(target), { recursive: true });
-      await writeFile(target, "{}\n", "utf-8");
-    }
-  }
-
-  // QFAI:AC-0001-0227-01
-  // QFAI:EX-0001-0227-01
-  // QFAI:EX-0001-0227-02
-  it("lists the leftover paths and the retired discussion-pack files, and keeps them", async () => {
-    const dir = await newTempDir();
-    const pack = ".qfai/discussion/discussion-20260101000000000";
-    const files = [...LEFT, ...PACK.map((name) => `${pack}/${name}`)];
-    for (const relative of files) await seed(dir, relative);
-
-    const output = await init(dir);
-
-    for (const relative of files) {
-      expect(output, relative).toContain(`  ${relative}\n`);
-      expect(await exists(path.join(dir, ...relative.split("/"))), relative).toBe(true);
-    }
-  });
-
-  // QFAI:AC-0001-0227-02
-  // QFAI:EX-0001-0227-03
-  it("names the migration archive on its own line and keeps it", async () => {
-    const dir = await newTempDir();
-    const archive = ".qfai/evidence/migration-spec-to-story/";
-    await seed(dir, archive);
-
-    const output = await init(dir);
-
-    const line = output.split("\n").find((entry) => entry.startsWith(archive));
-    expect(line).toContain("may hold the only copy of content the 1.x migration retired");
-    expect(line).toContain("you decide whether to delete it");
-    expect(await exists(path.join(dir, ...archive.split("/")))).toBe(true);
-  });
-
-  // QFAI:AC-0001-0227-03
-  // QFAI:EX-0001-0227-04
-  it("prints no leftover line when none is present", async () => {
-    const output = await init(await newTempDir());
-
-    expect(output).not.toContain("Left by an earlier release");
-    expect(output).not.toContain("migration-spec-to-story");
   });
 });

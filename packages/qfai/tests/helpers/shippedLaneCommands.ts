@@ -1357,7 +1357,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // it wrote; dropping that one bullet reproduces `7f4f473a…` byte for byte.
     //
     // Re-pinned for the legacy-layout item, which says the `instructions/` layout is past its
-    // compatibility window and that `qfai init` reports it on stderr as a `D-DEPRECATED-PATH`
+    // compatibility window and that `qfai init` reports it on stderr as a `QFAI-DEPRECATED-001`
     // error naming `--upgrade-assistant-tree`. Derived by running `qfai init` into a temp root;
     // naming the second retired layout in that item again reproduces `5ebaa61d…` byte for byte.
     //
@@ -1373,10 +1373,14 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // ends with a question listing the next actions. Derived by running `qfai init` into a temp
     // root; restoring the old wording reproduces `0a58ab20…` byte for byte.
     //
+    // Re-pinned for the legacy-layout item, which now names the finding code `QFAI-DEPRECATED-001`.
+    // Derived by hashing the builder's strings joined by newlines; restoring the old code name
+    // reproduces `8c687f2f…` byte for byte.
+    //
     // The generated rule list cites action-reversibility, untrusted-content and ai-readable-markdown.
     // This digest covers the bytes produced by the builder strings.
     ".github/copilot-instructions.md",
-    "8c687f2f36e48e6ab56d0fb1fa48aefc676e177b37b5a972c7539f90701f9bd6",
+    "71a6afcc55863d5b9b7f5784597f7f1d2fc10d17ccc845564701d0468bdfe873",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1583,7 +1587,16 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // reads the paths of the patch. It is still one `node -e "<program>" <key>` line that holds no
   // character a hook shell expands, and the walk that finds the message file is unchanged.
   // Derived the same way.
-  [".codex/hooks.json", "9a562721076d38aec60601d514db0b69d4acc7bd651e4213570fe1e154f5dd78"],
+  //
+  // Re-pinned for the same change as `.claude/settings.json` that limited the tool-time reminders:
+  // the grilling entries before a write and a delegation, the API-budget entry, the
+  // documentation-clarity entries after a Markdown write or edit, and the minimal-implementation
+  // entry now print on a session's first call and on every twentieth after it, counted per
+  // `session_id`, and on every call when the input names no session. Each is still one
+  // `node -e "<program>" <key>` line with no character a hook shell expands. Events, matchers,
+  // markers and message keys are unchanged; the previous groups are listed as superseded so the
+  // merge refreshes them. Derived the same way.
+  [".codex/hooks.json", "4eb4c36dcf31ae9196b26444b56867a32164ee1d875e192527f196da90463832"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`

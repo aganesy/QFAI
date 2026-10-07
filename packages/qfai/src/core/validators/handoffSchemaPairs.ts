@@ -10,7 +10,7 @@
  * in `HANDOFF_MINIMUM_FIELDS`, every registered writer file must also
  * mention field X verbatim (substring containment, no regex). Asymmetric
  * edits — schema-side add without writer update, or writer-side write
- * of a field NOT in the schema — fire `R-HANDOFF-SCHEMA-DRIFT`.
+ * of a field NOT in the schema — fire `QFAI-HANDOFF-001`.
  *
  * Tokens are short, stable substrings so the check stays deterministic.
  */

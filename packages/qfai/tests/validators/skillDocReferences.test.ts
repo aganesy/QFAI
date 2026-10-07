@@ -87,7 +87,7 @@ describe("skillDocReferences validator", () => {
       const issues = await validateSkillDocReferences(root, await getConfig(root));
       const projMem = issues.filter((i) => i.rule === "skillDocReferences.projectMemory");
       expect(projMem.length).toBe(1);
-      expect(projMem[0]?.code).toBe("W-SKILL-PROJECT-MEMORY");
+      expect(projMem[0]?.code).toBe("QFAI-SKILLDOC-001");
       expect(projMem[0]?.severity).toBe("warning");
       expect(projMem[0]?.message).toContain("qfai-implement");
     } finally {

@@ -98,7 +98,7 @@ describe("screen contract validator", () => {
 
     const issues = await validateScreenContractSchema(root, defaultConfig);
 
-    const stateIssue = issues.find((i) => i.code === "UIX-VAL-SCREEN-CONTRACT-STATE-COVERAGE");
+    const stateIssue = issues.find((i) => i.code === "QFAI-SCREEN-004");
     expect(stateIssue).toBeDefined();
     expect(stateIssue?.message).toContain("empty");
     expect(stateIssue?.message).toContain("error");
@@ -128,7 +128,7 @@ describe("screen contract validator", () => {
 
     const issues = await validateScreenContractSchema(root, defaultConfig);
 
-    expect(issues.some((i) => i.code === "UIX-VAL-SCREEN-CONTRACT-LEGACY-FORMAT")).toBe(true);
+    expect(issues.some((i) => i.code === "QFAI-SCREEN-002")).toBe(true);
   });
 
   it("nested bullet incomplete (missing transitions)", async () => {
@@ -143,9 +143,7 @@ describe("screen contract validator", () => {
 
     const issues = await validateScreenContractSchema(root, defaultConfig);
 
-    const incompleteIssue = issues.find(
-      (i) => i.code === "UIX-VAL-SCREEN-CONTRACT-SCHEMA-INCOMPLETE",
-    );
+    const incompleteIssue = issues.find((i) => i.code === "QFAI-SCREEN-003");
     expect(incompleteIssue).toBeDefined();
     expect(incompleteIssue?.message).toContain("transitions");
   });
@@ -180,7 +178,7 @@ describe("screen contract validator", () => {
     const issues = await validateScreenContractSchema(root, defaultConfig);
 
     expect(issues.length).toBeGreaterThan(0);
-    expect(issues[0]?.code).toBe("UIX-VAL-SCREEN-CONTRACT-SCHEMA-INCOMPLETE");
+    expect(issues[0]?.code).toBe("QFAI-SCREEN-003");
   });
 
   it("non-UI skip", async () => {
@@ -206,7 +204,7 @@ describe("screen contract validator", () => {
 
     const issues = await validateScreenContractSchema(root, defaultConfig);
 
-    const dupIssue = issues.find((i) => i.code === "UIX-VAL-SCREEN-CONTRACT-DUPLICATE-ID");
+    const dupIssue = issues.find((i) => i.code === "QFAI-SCREEN-001");
     expect(dupIssue).toBeDefined();
     expect(dupIssue?.severity).toBe("error");
   });
@@ -224,7 +222,7 @@ describe("screen contract validator", () => {
 
     const issues = await validateScreenContractSchema(root, defaultConfig);
 
-    const stateIssue = issues.find((i) => i.code === "UIX-VAL-SCREEN-CONTRACT-STATE-COVERAGE");
+    const stateIssue = issues.find((i) => i.code === "QFAI-SCREEN-004");
     expect(stateIssue).toBeDefined();
     expect(stateIssue?.severity).toBe("error");
     expect(stateIssue?.message).toContain("empty");
@@ -292,9 +290,7 @@ describe("a screen that does one thing", () => {
         .split("\n")
         .filter((line) => line !== `- ${key}:`)
         .join("\n");
-      const incomplete = (await issuesFor(content)).find(
-        (i) => i.code === "UIX-VAL-SCREEN-CONTRACT-SCHEMA-INCOMPLETE",
-      );
+      const incomplete = (await issuesFor(content)).find((i) => i.code === "QFAI-SCREEN-003");
       expect(incomplete?.message).toContain(key);
     },
   );
@@ -309,9 +305,7 @@ describe("a screen that does one thing", () => {
       const start = lines.indexOf(`- ${key}:`);
       const end = lines.findIndex((line, i) => i > start && line.startsWith("- "));
       const content = [...lines.slice(0, start + 1), ...lines.slice(end)].join("\n");
-      const incomplete = (await issuesFor(content)).find(
-        (i) => i.code === "UIX-VAL-SCREEN-CONTRACT-SCHEMA-INCOMPLETE",
-      );
+      const incomplete = (await issuesFor(content)).find((i) => i.code === "QFAI-SCREEN-003");
       expect(incomplete?.message).toContain(key);
     },
   );

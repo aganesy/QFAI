@@ -63,7 +63,7 @@ describe("TC-0014-0009: stale sidecar migration guidance", () => {
     );
 
     const issues = await runCanonicalUixValidators(root, defaultConfig);
-    const legacyIssue = issues.find((issue) => issue.code === "UIX-VAL-3LAYER-FORBIDDEN-FILE");
+    const legacyIssue = issues.find((issue) => issue.code === "QFAI-THREELAYER-001");
 
     expect(legacyIssue).toBeDefined();
     expect(legacyIssue?.severity).toBe("error");
@@ -113,7 +113,7 @@ describe("TC-0014-0018: canonical UIX in verify path", () => {
     expect(
       result.issues.map((issue) => issue.code),
       "the verify profile must carry the canonical UIX group's findings",
-    ).toContain("UIX-VAL-3LAYER-FORBIDDEN-FILE");
+    ).toContain("QFAI-THREELAYER-001");
   });
 
   it("runCanonicalUixValidators reaches the latest pack from a repo root", async () => {
@@ -143,7 +143,7 @@ describe("TC-0014-0018: canonical UIX in verify path", () => {
     // to be `toEqual([])`: it pinned the inertness of all eight validators
     // rather than the rule they exist to enforce.
     const issues = await runCanonicalUixValidators(root, defaultConfig);
-    expect(issues.find((issue) => issue.code === "UIX-VAL-3LAYER-FORBIDDEN-FILE")).toBeDefined();
+    expect(issues.find((issue) => issue.code === "QFAI-THREELAYER-001")).toBeDefined();
   });
 });
 
@@ -161,7 +161,7 @@ describe("UI-bearing discussion sidecars in project validation", () => {
     expect(result.issues).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          code: "UIX-VAL-3LAYER-INCOMPLETE-FAMILY",
+          code: "QFAI-THREELAYER-002",
           file: "uiux/40_screen_contracts.md",
         }),
       ]),
@@ -185,7 +185,7 @@ describe("UI-bearing discussion sidecars in project validation", () => {
     expect(result.issues).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          code: "UIX-VAL-3LAYER-INCOMPLETE-FAMILY",
+          code: "QFAI-THREELAYER-002",
           file: "uiux/50_review_input_bundle.md",
         }),
       ]),
@@ -210,7 +210,7 @@ describe("UI-bearing discussion sidecars in project validation", () => {
     expect(result.issues).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          code: "UIX-VAL-3LAYER-LEGACY-FORMAT",
+          code: "QFAI-THREELAYER-003",
           file: "uiux/40_screen_contracts.md",
         }),
       ]),
@@ -270,7 +270,7 @@ describe("TC-0014-0009: stale sidecar migration errors", () => {
     );
 
     const issues = await runCanonicalUixValidators(root, defaultConfig);
-    const legacyIssue = issues.find((issue) => issue.code === "UIX-VAL-3LAYER-LEGACY-FORMAT");
+    const legacyIssue = issues.find((issue) => issue.code === "QFAI-THREELAYER-003");
 
     expect(legacyIssue).toBeDefined();
     expect(legacyIssue?.severity).toBe("error");

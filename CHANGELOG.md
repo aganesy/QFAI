@@ -24,6 +24,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Example narratives are not read, since they quote hypothetical IDs on
   purpose. Fixes #2410.
 
+- **`qfai validate` checks the Approach cell of each new decision row.** A
+  `decisions.md` row with an ID above `DEC-2097` must hold the items
+  `Evidence:`, `Grounds:`, `Residual risk:` and `Rollback:`, in that order, none
+  empty. Every Evidence entry opens with `file:` or `command:`, and
+  `none — <reason>` is accepted only in Residual risk and Rollback. A row that
+  breaks one of these raises `QFAI-STORY-017` at error in `sdd`, naming the
+  file, the row ID and the breach. Earlier rows are not read (#2537).
 - **`qfai validate` warns about trace marks no check reads.** In the `tdd`
   profile, a comment line in a selected test file that carries a `QFAI:US-`,
   `QFAI:TC-`, `QFAI:SC-` or `QFAI:SPEC-` mark raises `QFAI-STORY-014` at
@@ -38,6 +45,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   at that Status stays in force. The story-tree authoring rules also say that a
   project counting the IDs of its open pull requests may take a next ID above
   the tree's own highest plus one (#2969).
+- **The test-layer rule states what an end-to-end test costs.** A new section
+  explains that one failing test costs its timeout times its attempts, and asks
+  for a failure limit, a job time limit, a lower timeout with at most one retry,
+  no database shared across parallel workers, and traces only on a retry. It
+  also asks for a count ceiling that only moves down, counted per business flow
+  (#2787).
 - **A gate the project runs in CI only is recorded as delegated, not as a pass or a
   failure.** A Standard commands entry written `CI only: <check name>` makes
   `verify-repo-gate` record the gate `DELEGATED` with that check, and
@@ -45,6 +58,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   check makes `status` `FAIL`; a pending one does not stop `verify-commit`,
   because the pull request is where the check runs. Fixes #2996.
 
+- **The `DESIGN.md` authoring step checks the finished file against the
+  generated-design pattern list.** A token that prescribes a listed pattern the
+  recorded brand direction does not ask for fails the gate, and the finding names
+  the pattern (#2619).
 - **`qfai-run` has guidance for a change that needs a person's action outside
   the repository.** When a change depends on something only the user can do,
   such as a hosted dashboard setting or a token issued in a web console, the
@@ -85,6 +102,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A repaired title no longer reads as a new changelog entry.**
+  The released-section guard compares entry titles ignoring whitespace, so
+  restoring a missing space in a published entry's title line is accepted.
+  The spacing of two published entries, in 1.10.1 and 1.10.2, is restored with
+  the inline code unchanged (#3031).
+- **Migration step 3 and the `## Architecture` check of `tech.md` agree with
+  what they report.** Step 3 names a renumbered constraint ID only when it
+  writes `constraint.md`, so it no longer says an ID changed in a file it left
+  alone. A layer row of `## Architecture` that names two slash-joined segments
+  starting with a common source root, such as `src/core`, is now refused as a
+  path, in `qfai validate` and in the migration (#2656).
 - **The init skill-link test compares where each link resolves.** It matched
   the trailing text of the raw link target, so a dangling link, or one into a
   copy outside the project, passed. It now compares the resolved path of each
@@ -321,7 +349,36 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   before leaving plan mode print on every call as before. `qfai init` replaces
   an unedited copy of each earlier group. The Codex hooks are unchanged.
 
+- **The Codex tool-time reminders no longer repeat on every call (#3048,
+  #3060).** The grilling reminders before a patch and a delegation, the
+  API-budget reminder, the documentation-clarity reminders after a Markdown
+  patch, and the minimal-implementation reminder printed after each matching
+  call in `.codex/hooks.json`. Each now prints on a session's first matching
+  call and on every twentieth after it, counted for each `session_id` in the
+  hook input, and prints on every call when the input names none. A call an
+  entry stays silent for is not counted. Each entry stays one line that runs
+  alike under every shell Codex uses. `qfai init` replaces an unedited copy of
+  each earlier group.
+
 ### Changed
+
+- **`qfai validate --format text` groups the issues of one code.** Issues of one
+  code and severity print together, at most five of them, and a larger group
+  ends with a line `[error] <CODE> and <n> more`. Each group prints its `fix`
+  once, in place of the `error_code`, `target`, `expected` and `current` lines
+  after every issue. `counts:` still counts every issue, and the JSON report
+  still holds every issue. `--format github` is unchanged (#3012).
+
+- **`qfai validate` and `qfai report --run-validate` no longer check for the old `validate.json` location** (#3125).
+  A file at `.qfai/output/validate.json`, or an `output.validateJsonPath` that names
+  that path, no longer raises `D-DEPRECATED-PATH`, and the report is written to the
+  configured path as for any other value. `D-DEPRECATED-PATH` is still reported for
+  the old `.qfai/assistant/instructions/` layout.
+
+- **`qfai init` and `qfai doctor` no longer list leftover files** (#3126). The
+  `paths.leftovers` check is gone from `qfai doctor`, and the `qfai init`
+  summary prints no line for files an earlier release left behind. Neither
+  command deleted any of them, and neither does now.
 
 - **The documentation-clarity rule says where spec-tree IDs may appear** (#3002).
   IDs the project's own spec tree defines stay in spec-tree documents and in code
@@ -336,18 +393,37 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `disable-model-invocation: true` to a "Use when" sentence, the third person,
   1,024 characters, and a name without "anthropic" or "claude".
 
+- **The README no longer carries a maintainer section.** The note on keeping the two
+  README files aligned is dropped from both. The alignment check is unchanged (#2690).
 - **The `qfai-run` entry skill has room for another step** (#2966). The text
   for a release, decision or branch point moves into a new reference,
   `references/stage-points.md`, which the skill points to at each step. The
   skill keeps its 150-line limit, at 135 lines instead of 150, and its
   behaviour is unchanged.
 
+- **The `implement-scaffold` step names where its flow comes from.** It took the
+  flow from a workflow run's work order, which `qfai workflow` no longer produces.
+  The step now reads the flow from the invocation's BF argument or the request
+  (#3033).
+- **`QFAI-AUD-001` no longer describes a legacy form or a sunset.** For a screen
+  with no `primary_tasks`, the message now says the screen has no `primary_tasks`
+  and that `primary_tasks` must be declared as `{id, label, acceptance}`
+  mappings. The rule code and the error severity are unchanged (#2638).
 - **The `change-tooling` route starts at `edit`** (#2995). A change to CI, a
   workflow or a build script has no business flow, story or example, so the
   `implement-diagnose` stage it began with had nothing to record and was passed
   over. The plan is now `edit`, `note`, `verify`, and the contract rule and the
   example that state it say the same.
 
+- **`workflow plan` says which way a rejected extraction field is wrong.** Each
+  `schema` reason now carries a `cause`: `missing` for a required field that is
+  absent, `unknown` for a key the extraction does not take, `wrong-type` or
+  `wrong-value` with the expected and received values, and `invalid` for the
+  `alternatives` and `confidence` rule (#3104).
+- **The shipped rules state their points directly.** Figurative phrasing in the
+  user-questions, grilling, interface-clarity, api-budget, ai-readable-markdown
+  and untrusted-content rules and in the stage-cost rule is replaced by plain
+  statements of the same requirement (#2568).
 - **A mutation proof belongs to one example** (#2409). The `qfai-implement`
   oracle-strength reference now says what to do when one mutation fails tests
   annotated with different examples: record each failing assertion and the
@@ -356,6 +432,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   shared predicate may fail several tests whose assertions each prove their own
   example.
 
+- **The implement skill no longer cites a waiver that does not exist, or a path-matching
+  rule with nothing behind it.** The default policy drops the retired accepted-risk
+  waiver from the list of things `/qfai-implement` asks about, and the UI-affecting
+  reference drops its paragraph on how `uiux.surfacePaths` patterns are matched (#2612).
 - **The orchestrator keeps working while a delegation runs** (#2244). The
   shared delegation baseline now says the orchestrator is not required to wait
   for a sub-agent. Where the host starts a delegation and returns at once,
@@ -392,6 +472,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   review asks point at the checks that already own them: the coverage gate, and
   the proof per example in the oracle strength reference.
 
+- **The two shared skill baselines carry only what every run needs.** Sections that
+  apply to one situation moved to files under `rule/references/`: asset authoring,
+  gate failure repair, context summaries, the placeholder scan, host limits and the
+  reviewer remit, findings and griller rules. Each baseline keeps its headings and
+  a pointer that says when to read the moved text. A test sets a per-skill budget
+  for what a skill loads at start (#2636).
 - **A request that names the exact change is the approval** (#2991). When
   the user asks in the session for a change to a story-tree or contract file and
   names the change and its effect, `sdd-triage` lists the files in its
@@ -399,6 +485,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   option chosen. The same request shows acceptance, so `qfai-run` does not set
   the `decision` flag for it.
 
+- **The README's "Continuous integration" section covers cost, required checks and skipped tests.**
+  It states that `QFAI_CI_PUSH_POLICY=protected` is safe only when the branch must be up to date before
+  merging, and describes a light post-merge job as the middle option. It lists what the test stub gate
+  reports (`QFAI-TEST-001` for a todo, `QFAI-TEST-003` for a skip) and what it cannot see, and gives a
+  recipe that reads the test runner's JSON report and bounds skipped tests against an allowed list that
+  only shrinks. It explains how the shipped workflows are billed, with the jobs each one starts per pull
+  request event and the `ubuntu-slim` option for `QFAI_CI_LIGHT_RUNNER`. It names the three stable
+  required checks and why a skipped job satisfies one while a workflow `paths` filter does not. It also
+  adds rules for writing a change-scope gate and a method for measuring Actions minutes without admin
+  rights (#2785, #2786, #2789, #2790).
 - **The repository's dogfooding ratchet pins each finding, not each file's
   count.** `scripts/check-dogfood-backlog.mjs` keys an error by its code and the
   IDs it names, so a change that clears one untested example and adds another
@@ -410,6 +506,69 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   expected. The retired-path, assistant-layout, agent-routing, contract, design
   token, HTML mock, research, skill, waiver, autopilot-policy and prototyping
   findings now say what a passing tree looks like (#2660).
+
+- **Breaking: every finding code now has the `QFAI-<AREA>-<NNN>` form** (#2660). 51 codes
+  were spelled with a one-letter prefix (`D-`, `I-`, `R-`, `W-`), an underscore or a
+  `UIX-VAL-` prefix, and carried no number. Each is now `QFAI-`, an area in capital
+  letters, a hyphen and three digits, and has an expected state. The text report,
+  `validate.json`, the GitHub annotations and the message `qfai init` prints on
+  stderr show the new spelling. A script or an alert that matches an old spelling
+  stops matching. A `.qfai/waivers.yml` entry that names one is reported as naming
+  an unknown rule (`QFAI-WAIVER-004`); rewrite its `rule:` to the new code.
+
+  | Old code                                             | New code                  |
+  | ---------------------------------------------------- | ------------------------- |
+  | `D-DEPRECATED-PATH`                                  | `QFAI-DEPRECATED-001`     |
+  | `QFAI_CONFIG_INVALID`                                | `QFAI-CFG-002`            |
+  | `W-ASSISTANT-LAYOUT`                                 | `QFAI-ASSISTANT-001`      |
+  | `I-ASSISTANT-LAYER-UNSEEDED`                         | `QFAI-ASSISTANT-002`      |
+  | `W-SKILL-PROJECT-MEMORY`                             | `QFAI-SKILLDOC-001`       |
+  | `W-STALE-REFERENCE`                                  | `QFAI-STALE-001`          |
+  | `D-SAAS-PACKAGE-ATTESTATION-MISSING`                 | `QFAI-SAAS-001`           |
+  | `D-SAAS-PACKAGE-HANDOFF-SCHEMA`                      | `QFAI-SAAS-002`           |
+  | `D-SAAS-PACKAGE-VERIFY-SKIPPED`                      | `QFAI-SAAS-003`           |
+  | `R-AUTOPILOT-POLICY-MISSING`                         | `QFAI-POLICY-001`         |
+  | `R-AUTOPILOT-POLICY-WIDENED`                         | `QFAI-POLICY-002`         |
+  | `R-HANDOFF-SCHEMA-DRIFT`                             | `QFAI-HANDOFF-001`        |
+  | `R-MOCK-HREF-DRIFT`                                  | `QFAI-MOCKHREF-001`       |
+  | `R-SKILL-MANIFEST-DRIFT`                             | `QFAI-MANIFEST-001`       |
+  | `UIX-VAL-3LAYER-FORBIDDEN-FILE`                      | `QFAI-THREELAYER-001`     |
+  | `UIX-VAL-3LAYER-INCOMPLETE-FAMILY`                   | `QFAI-THREELAYER-002`     |
+  | `UIX-VAL-3LAYER-LEGACY-FORMAT`                       | `QFAI-THREELAYER-003`     |
+  | `UIX-VAL-3LAYER-MIXED-FORMAT`                        | `QFAI-THREELAYER-004`     |
+  | `UIX-VAL-CLASSIFICATION-CONTRADICTION`               | `QFAI-CLASSIFICATION-001` |
+  | `UIX-VAL-CLASSIFICATION-DUPLICATE-SECONDARY-SURFACE` | `QFAI-CLASSIFICATION-002` |
+  | `UIX-VAL-CLASSIFICATION-INVALID-BOOLEAN`             | `QFAI-CLASSIFICATION-003` |
+  | `UIX-VAL-CLASSIFICATION-INVALID-SECONDARY-SURFACE`   | `QFAI-CLASSIFICATION-004` |
+  | `UIX-VAL-CLASSIFICATION-INVALID-SURFACE`             | `QFAI-CLASSIFICATION-005` |
+  | `UIX-VAL-CLASSIFICATION-MISSING`                     | `QFAI-CLASSIFICATION-006` |
+  | `UIX-VAL-CLASSIFICATION-RATIONALE-PLACEHOLDER`       | `QFAI-CLASSIFICATION-007` |
+  | `UIX-VAL-CLASSIFICATION-REQUIRED-FIELD`              | `QFAI-CLASSIFICATION-008` |
+  | `UIX-VAL-CLASSIFICATION-SECONDARY-ARRAY`             | `QFAI-CLASSIFICATION-009` |
+  | `UIX-VAL-CLASSIFICATION-SECONDARY-DUPLICATE`         | `QFAI-CLASSIFICATION-010` |
+  | `UIX-VAL-DIRECTION-HISTORY-MISSING`                  | `QFAI-DIRECTION-001`      |
+  | `UIX-VAL-OQ-OPEN-CRITICAL`                           | `QFAI-OQ-001`             |
+  | `UIX-VAL-SIDECAR-MISSING`                            | `QFAI-SIDECAR-001`        |
+  | `UIX-VAL-SCREEN-CONTRACT-DUPLICATE-ID`               | `QFAI-SCREEN-001`         |
+  | `UIX-VAL-SCREEN-CONTRACT-LEGACY-FORMAT`              | `QFAI-SCREEN-002`         |
+  | `UIX-VAL-SCREEN-CONTRACT-SCHEMA-INCOMPLETE`          | `QFAI-SCREEN-003`         |
+  | `UIX-VAL-SCREEN-CONTRACT-STATE-COVERAGE`             | `QFAI-SCREEN-004`         |
+  | `UIX-VAL-TREND-CATEGORY-MISSING`                     | `QFAI-TREND-001`          |
+  | `UIX-VAL-TREND-ENTRY-MISSING`                        | `QFAI-TREND-002`          |
+  | `UIX-VAL-TREND-FIELD-MISSING`                        | `QFAI-TREND-003`          |
+  | `UIX-VAL-TREND-SCAN-MISSING`                         | `QFAI-TREND-004`          |
+  | `UIX-VAL-T05`                                        | `QFAI-TREND-005`          |
+  | `UIX-VAL-SKILL-ASPIRATIONAL`                         | `QFAI-PROTOSKILL-001`     |
+  | `UIX-VAL-SKILL-BANNED-PHRASE`                        | `QFAI-PROTOSKILL-002`     |
+  | `UIX-VAL-SKILL-CANONICAL-SURFACE`                    | `QFAI-PROTOSKILL-003`     |
+  | `UIX-VAL-SKILL-CLI-SURFACE`                          | `QFAI-PROTOSKILL-004`     |
+  | `UIX-VAL-SKILL-DELEGATION`                           | `QFAI-PROTOSKILL-005`     |
+  | `UIX-VAL-SKILL-ENV-PRECONDITIONS`                    | `QFAI-PROTOSKILL-006`     |
+  | `UIX-VAL-SKILL-PLAYWRIGHT-FALLBACK`                  | `QFAI-PROTOSKILL-007`     |
+  | `UIX-VAL-SKILL-PREFLIGHT`                            | `QFAI-PROTOSKILL-008`     |
+  | `UIX-VAL-SKILL-SECTION-MISSING`                      | `QFAI-PROTOSKILL-009`     |
+  | `UIX-VAL-SKILL-STATIC-FIRST`                         | `QFAI-PROTOSKILL-010`     |
+  | `UIX-VAL-SKILL-UI-BEARING-FALSE`                     | `QFAI-PROTOSKILL-011`     |
 
 - **The marker every skill carries is `[DRIFT-PROTOCOL:REQUIRED]`** (#2796).
   `qfai validate` still reports `QFAI-SKILLS-010` for a `SKILL.md` without the
@@ -13512,7 +13671,7 @@ advanced` asked for RED/GREEN commands, output and the falsifiability result
   annotation as coverage, and the generated `it.skip(...)` is not the `*.todo`
   form `QFAI-TEST-001` matches. Both directories are scanned, and the
   remediation says to write the real test rather than move the skeleton.
-- **An L1/L2 annotation in `tests/integration/**`is not a violation.** The
+- **An L1/L2 annotation in `tests/integration/**` is not a violation.** The
   Reviewer Gate and `project_memory` said `QFAI-ATDD-123` rejects it, but
   `resolveTcHomeKind` returns `null` for those levels and the scan continues
   before the forbidden-placement check — the validator neither counts it nor

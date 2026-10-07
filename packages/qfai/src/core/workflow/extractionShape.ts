@@ -22,11 +22,21 @@ type Shape =
       kind: "object";
       fields: Record<string, Shape>;
       required: readonly string[];
-      // A rule over the whole object that the field shapes cannot state, and the field a
-      // failure names.
+      // A rule over the whole object that the field shapes cannot state, the field a failure
+      // names, and what the failure says.
       holds?: (value: Record<string, unknown>) => boolean;
       holdsField?: string;
+      holdsCause?: string;
     };
+
+// A place that departs from the shape. The cause starts with how: `missing` for a required field
+// that is absent, `unknown` for a key the shape does not declare, `wrong-type` for a value of
+// another type, `wrong-value` for a value outside its vocabulary and `invalid` for a rule over
+// the whole object.
+export interface ShapeFault {
+  subject: string;
+  cause: string;
+}
 
 const list = (items: Shape): Shape => ({ kind: "array", items });
 const oneOf = (...values: (string | null)[]): Shape => ({ kind: "enum", values });
@@ -57,24 +67,50 @@ const EXTRACTION: Shape = {
   required: [...Object.keys(READING_FIELDS), "risks", "artifacts", "confidence"],
   holds: (value) => alternativesFit(value.confidence, value.alternatives),
   holdsField: "alternatives",
+  holdsCause:
+    "alternatives are required at confidence low, allowed at medium and refused at high, and hold one or two readings",
 };
 
-// The fields of `value` that depart from the extraction's shape, none for an extraction.
-export function extractionFaults(value: unknown): string[] {
+// Each place `value` departs from the extraction's shape, none for an extraction.
+export function extractionFaultsOf(value: unknown): ShapeFault[] {
   return shapeFaults(value, EXTRACTION, "");
 }
 
-export function isExtraction(value: unknown): value is WorkflowExtraction {
-  return extractionFaults(value).length === 0;
+// The subject of each of those places.
+export function extractionFaults(value: unknown): string[] {
+  return extractionFaultsOf(value).map((fault) => fault.subject);
 }
 
-// The subject of each place `value` departs from `shape`, as a dotted path from `at`.
-function shapeFaults(value: unknown, shape: Shape, at: string): string[] {
+export function isExtraction(value: unknown): value is WorkflowExtraction {
+  return extractionFaultsOf(value).length === 0;
+}
+
+function typeOf(value: unknown): string {
+  if (value === null) return "null";
+  return Array.isArray(value) ? "array" : typeof value;
+}
+
+// The received side of a `wrong-value` cause: a string or a number as written, any other value
+// by its type.
+function receivedOf(value: unknown): string {
+  return typeof value === "string" || typeof value === "number"
+    ? JSON.stringify(value)
+    : typeOf(value);
+}
+
+// Each place `value` departs from `shape`, its subject a dotted path from `at`.
+function shapeFaults(value: unknown, shape: Shape, at: string): ShapeFault[] {
   switch (shape.kind) {
-    case "enum":
-      return shape.values.some((allowed) => allowed === value) ? [] : [at];
+    case "enum": {
+      if (shape.values.some((allowed) => allowed === value)) return [];
+      const expected = shape.values.map(String).join(", ");
+      const cause = `wrong-value: expected one of ${expected}, received ${receivedOf(value)}`;
+      return [{ subject: at, cause }];
+    }
     case "array":
-      if (!Array.isArray(value)) return [at];
+      if (!Array.isArray(value)) {
+        return [{ subject: at, cause: `wrong-type: expected array, received ${typeOf(value)}` }];
+      }
       return value.flatMap((item: unknown, index) =>
         shapeFaults(item, shape.items, `${at}[${index}]`),
       );
@@ -87,18 +123,29 @@ function objectFaults(
   value: unknown,
   shape: Extract<Shape, { kind: "object" }>,
   at: string,
-): string[] {
-  if (!isRecord(value)) return [at || "extraction"];
+): ShapeFault[] {
+  if (!isRecord(value)) {
+    const cause = `wrong-type: expected object, received ${typeOf(value)}`;
+    return [{ subject: at || "extraction", cause }];
+  }
   const within = (name: string) => (at ? `${at}.${name}` : name || 'extraction[""]');
-  const broken = shape.holds && !shape.holds(value);
-  const rule = broken ? [shape.holdsField ? within(shape.holdsField) : at] : [];
-  const missing = shape.required.filter((name) => value[name] === undefined).map(within);
+  const missing = shape.required
+    .filter((name) => value[name] === undefined)
+    .map((name) => ({ subject: within(name), cause: `missing: ${name} is required` }));
   const unknown = Object.keys(value)
     .filter((name) => !Object.hasOwn(shape.fields, name))
-    .map(within);
+    .map((name) => ({ subject: within(name), cause: `unknown: ${name} is not a field here` }));
   const wrong = Object.entries(value).flatMap(([name, field]) => {
     const fieldShape = shape.fields[name];
     return fieldShape && field !== undefined ? shapeFaults(field, fieldShape, within(name)) : [];
   });
-  return [...new Set([...rule, ...missing, ...unknown, ...wrong])];
+  // A field already refused for its own shape gets no second fault for the rule over it.
+  const ruleSubject = shape.holdsField ? within(shape.holdsField) : at;
+  const ruleCause = `invalid: ${shape.holdsCause ?? "the rule over the object does not hold"}`;
+  const broken = shape.holds && !shape.holds(value);
+  const rule =
+    broken && !wrong.some((fault) => fault.subject === ruleSubject)
+      ? [{ subject: ruleSubject, cause: ruleCause }]
+      : [];
+  return [...rule, ...missing, ...unknown, ...wrong];
 }

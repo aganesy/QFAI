@@ -1,11 +1,11 @@
 /**
- * Integration: R-MOCK-HREF-DRIFT emission (Pair V).
+ * Integration: QFAI-MOCKHREF-001 emission (Pair V).
  *
  * SSOT-sync pair: the discussion mock template (anchor-form default)
  * ↔ the QFAI-MOCK-010 validator (strict; `/path/` rejected). When one
  * side is edited without the matching update to the other — e.g. the
  * template is switched to same-origin absolute `/path/` form while the
- * validator stays strict — the finding R-MOCK-HREF-DRIFT (severity
+ * validator stays strict — the finding QFAI-MOCKHREF-001 (severity
  * error) fires naming the asymmetric edit with a 3-part justification
  * (modified file, un-paired counterpart, clause).
  *
@@ -90,24 +90,24 @@ afterEach(async () => {
 });
 
 // QFAI:EX-0001-0089-03
-describe("TC-0010-0011: detectMockHrefDrift emits R-MOCK-HREF-DRIFT on template↔validator asymmetry", () => {
+describe("TC-0010-0011: detectMockHrefDrift emits QFAI-MOCKHREF-001 on template↔validator asymmetry", () => {
   // QFAI:EX-0001-0089-05
   it("does NOT fire when template is anchor-form and validator is strict (symmetric)", async () => {
     await seedPair(root, { template: TEMPLATE_ANCHOR, validator: VALIDATOR_STRICT });
     const issues = await detectMockHrefDrift(root);
-    expect(issues.filter((i) => i.code === "R-MOCK-HREF-DRIFT")).toEqual([]);
+    expect(issues.filter((i) => i.code === "QFAI-MOCKHREF-001")).toEqual([]);
   });
 
   it("does NOT fire when template uses /path/ and validator accepts /path/ (symmetric)", async () => {
     await seedPair(root, { template: TEMPLATE_PATH_FORM, validator: VALIDATOR_ACCEPTS_PATH });
     const issues = await detectMockHrefDrift(root);
-    expect(issues.filter((i) => i.code === "R-MOCK-HREF-DRIFT")).toEqual([]);
+    expect(issues.filter((i) => i.code === "QFAI-MOCKHREF-001")).toEqual([]);
   });
 
   it("fires at severity error when template switches to /path/ while validator stays strict (asymmetric)", async () => {
     await seedPair(root, { template: TEMPLATE_PATH_FORM, validator: VALIDATOR_STRICT });
     const issues = await detectMockHrefDrift(root);
-    const findings = issues.filter((i) => i.code === "R-MOCK-HREF-DRIFT");
+    const findings = issues.filter((i) => i.code === "QFAI-MOCKHREF-001");
     expect(findings.length).toBeGreaterThanOrEqual(1);
     const f = findings[0];
     expect(f?.severity).toBe("error");
@@ -127,7 +127,7 @@ describe("TC-0010-0011: detectMockHrefDrift emits R-MOCK-HREF-DRIFT on template�
     await writeFile(legacyTemplate, TEMPLATE_ANCHOR, "utf-8");
 
     const issues = await detectMockHrefDrift(root);
-    const findings = issues.filter((i) => i.code === "R-MOCK-HREF-DRIFT");
+    const findings = issues.filter((i) => i.code === "QFAI-MOCKHREF-001");
     expect(findings).toHaveLength(1);
     expect(findings[0]?.message).toContain(MOCK_HREF_TEMPLATE_REL);
     expect(findings[0]?.message).not.toContain("assistant/skills/");
@@ -139,15 +139,15 @@ describe("TC-0010-0011: detectMockHrefDrift emits R-MOCK-HREF-DRIFT on template�
     await mkdir(path.dirname(templateAbs), { recursive: true });
     await writeFile(templateAbs, TEMPLATE_PATH_FORM, "utf-8");
     const issues = await detectMockHrefDrift(root);
-    expect(issues.filter((i) => i.code === "R-MOCK-HREF-DRIFT")).toEqual([]);
+    expect(issues.filter((i) => i.code === "QFAI-MOCKHREF-001")).toEqual([]);
   });
 });
 
-describe("TC-0010-0011: the prototyping profile surfaces R-MOCK-HREF-DRIFT exactly once (full does not double-fire)", () => {
+describe("TC-0010-0011: the prototyping profile surfaces QFAI-MOCKHREF-001 exactly once (full does not double-fire)", () => {
   it("prototyping profile emits the asymmetric drift finding (user-facing contract)", async () => {
     await seedPair(root, { template: TEMPLATE_PATH_FORM, validator: VALIDATOR_STRICT });
     const result = await validateProject(root, undefined, { profile: "prototyping" });
-    const findings = result.issues.filter((i) => i.code === "R-MOCK-HREF-DRIFT");
+    const findings = result.issues.filter((i) => i.code === "QFAI-MOCKHREF-001");
     expect(findings.length).toBe(1);
     expect(findings[0]?.severity).toBe("error");
   });
@@ -155,13 +155,13 @@ describe("TC-0010-0011: the prototyping profile surfaces R-MOCK-HREF-DRIFT exact
   it("full profile emits the drift finding exactly once (no sdd+prototyping double-fire)", async () => {
     await seedPair(root, { template: TEMPLATE_PATH_FORM, validator: VALIDATOR_STRICT });
     const result = await validateProject(root, undefined, { profile: "full" });
-    const findings = result.issues.filter((i) => i.code === "R-MOCK-HREF-DRIFT");
+    const findings = result.issues.filter((i) => i.code === "QFAI-MOCKHREF-001");
     expect(findings.length).toBe(1);
   });
 
   it("sdd profile no longer emits the drift finding (moved to prototyping surface)", async () => {
     await seedPair(root, { template: TEMPLATE_PATH_FORM, validator: VALIDATOR_STRICT });
     const result = await validateProject(root, undefined, { profile: "sdd" });
-    expect(result.issues.filter((i) => i.code === "R-MOCK-HREF-DRIFT")).toEqual([]);
+    expect(result.issues.filter((i) => i.code === "QFAI-MOCKHREF-001")).toEqual([]);
   });
 });

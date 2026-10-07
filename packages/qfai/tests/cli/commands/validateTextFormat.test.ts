@@ -36,7 +36,8 @@ const OPTIONAL_SLOTS = {
   suppressed: "[ suppressed=true]",
 } as const;
 
-const DETAIL_LABELS = ["error_code", "target", "expected", "current", "fix"] as const;
+/** The labels the old per-issue detail block printed; none of them is printed any more. */
+const DROPPED_LABELS = /^ {2}(error_code|target|expected|current): /m;
 
 // QFAI:EX-0001-0039-02
 // QFAI:EX-0001-0039-03
@@ -54,7 +55,7 @@ async function readGuideline(): Promise<string> {
   const content = await readFile(CONTRACT_PATH, "utf-8");
   const statements = parseContractRules(CONTRACT_PATH, content)
     .rules.map((rule) => rule.statement)
-    .filter((statement) => /text output|--format text|detail block/.test(statement));
+    .filter((statement) => /text output|--format text|`fix: /.test(statement));
   if (statements.length === 0) {
     throw new Error("cli-0014-qfai-validate.md no longer states the text output grammar");
   }
@@ -75,13 +76,22 @@ function extractGrammar(guideline: string): string {
   return grammar;
 }
 
-/** Labels of the indented detail block the rules document, in order. */
-function extractDetailLabels(guideline: string): string[] {
-  const block = /detail block of the lines (.*?), and a block/.exec(guideline)?.[1];
-  if (block === undefined) {
-    throw new Error("the text output grammar no longer documents the detail block's lines");
+/** Extracts the line that closes a group the rules state as a code span. */
+function extractGroupTail(guideline: string): string {
+  const tail = /`(\[<severity>\] <CODE> and <n> more)`/.exec(guideline)?.[1];
+  if (tail === undefined) {
+    throw new Error("the text output grammar no longer documents the line that closes a group");
   }
-  return [...block.matchAll(/`([a-z_]+): [^`]*`/g)].map((match) => match[1] ?? "");
+  return tail;
+}
+
+/** The label of the one remedy line the rules document. */
+function extractRemedyLabel(guideline: string): string {
+  const label = /`([a-z_]+): <suggested action>`/.exec(guideline)?.[1];
+  if (label === undefined) {
+    throw new Error("the text output grammar no longer documents the remedy line");
+  }
+  return label;
 }
 
 /**
@@ -133,8 +143,8 @@ type LineKind =
   | "fail-on"
   | "timings"
   | "run-log"
-  | "detail"
-  | "detail-continuation"
+  | "fix"
+  | "fix-continuation"
   | "message-continuation";
 
 /**
@@ -144,14 +154,14 @@ type LineKind =
  * order on paper would still leave `counts:` swallowed by a multi-line message.
  *
  * Rule 6 keys on the run's `--fail-on` threshold, not on `error` alone: the
- * emitter prints a detail block for every severity that can fail the run, so a
- * `--fail-on warning` run puts one under its warnings too and a classifier
- * pinned to `error` would read that block as more message text.
+ * emitter prints `fix` lines for every severity that can fail the run, so a
+ * `--fail-on warning` run puts them under its warnings too and a classifier
+ * pinned to `error` would read them as more message text.
  */
 function classifyByGuideline(lines: string[], failOn: FailOn): { kind: LineKind; line: string }[] {
-  const carriesDetail = (value: string | undefined): boolean =>
+  const carriesFix = (value: string | undefined): boolean =>
     value === "error" || (failOn === "warning" && value === "warning");
-  let section: "none" | "message" | "detail" = "none";
+  let section: "none" | "message" | "fix" = "none";
   let severity: string | undefined;
   return lines.map((line) => {
     const header = /^\[(info|warning|error)\] /.exec(line);
@@ -180,15 +190,12 @@ function classifyByGuideline(lines: string[], failOn: FailOn): { kind: LineKind;
       severity = undefined;
       return { kind: "run-log" as const, line };
     }
-    if (carriesDetail(severity) && section === "message" && line.startsWith("  error_code: ")) {
-      section = "detail";
-      return { kind: "detail" as const, line };
+    if (carriesFix(severity) && section !== "none" && line.startsWith("  fix: ")) {
+      section = "fix";
+      return { kind: "fix" as const, line };
     }
-    if (section === "detail") {
-      return {
-        kind: /^ {2}\S+: /.test(line) ? ("detail" as const) : ("detail-continuation" as const),
-        line,
-      };
+    if (section === "fix") {
+      return { kind: "fix-continuation" as const, line };
     }
     return { kind: "message-continuation" as const, line };
   });
@@ -217,8 +224,8 @@ const MULTILINE_FIX = [
 /**
  * The `--fail-on` threshold a plain `qfai validate` runs at
  * (`validation.failOn: "error"` in `core/config.ts`). `emitText` takes it to
- * decide which issues get the detail block, so the synthetic renders below have
- * to use the same threshold the real run this guideline documents does.
+ * decide which issues get their `fix` lines, so the synthetic renders below
+ * have to use the same threshold the real run this guideline documents does.
  */
 const DEFAULT_FAIL_ON: FailOn = "error";
 
@@ -266,6 +273,25 @@ const SYNTHETIC_ISSUES: Issue[] = [
     rule: "test.multiline",
   },
 ];
+
+/** `count` issues of one code and severity, each in its own file and with the same fix. */
+function manyOfOneCode(
+  code: string,
+  severity: Issue["severity"],
+  count: number,
+  suppressed = false,
+): Issue[] {
+  return Array.from({ length: count }, (_, index) => ({
+    code,
+    severity,
+    category: "canonical" as const,
+    message: `finding ${index + 1}`,
+    file: `docs/file-${index + 1}.md`,
+    suggested_action: `repair ${code}`,
+    rule: "test.group",
+    ...(suppressed ? { suppressed: true } : {}),
+  }));
+}
 
 describe("validate --format text matches the validate contract's text output grammar", () => {
   it("emits every issue in the documented grammar", async () => {
@@ -315,15 +341,15 @@ describe("validate --format text matches the validate contract's text output gra
     }
   });
 
-  it("renders a multi-line detail field as the documented continuation lines", async () => {
+  it("renders a multi-line fix as the documented continuation lines", async () => {
     const guideline = await readGuideline();
-    const labels = extractDetailLabels(guideline);
-    expect(labels).toEqual([...DETAIL_LABELS]);
+    const label = extractRemedyLabel(guideline);
+    expect(label).toBe("fix");
 
-    const indent = documentedContinuationIndent(guideline, "fix");
+    const indent = documentedContinuationIndent(guideline, label);
     // The documented rule: `2 + <label> + 2`, i.e. the continuation aligns
     // under the first character of the value.
-    expect(indent).toBe(2 + "fix".length + 2);
+    expect(indent).toBe(2 + label.length + 2);
 
     const multiline = SYNTHETIC_ISSUES.find((issue) => issue.code === "QFAI-TEST-005");
     expect(multiline).toBeDefined();
@@ -337,21 +363,21 @@ describe("validate --format text matches the validate contract's text output gra
     const headerIndex = lines.findIndex((line) => line.startsWith(`[error] ${multiline.code} `));
     expect(headerIndex).toBeGreaterThanOrEqual(0);
 
-    const detail = lines.slice(headerIndex + 1, headerIndex + labels.length + MULTILINE_FIX.length);
-    expect(
-      detail.filter((line) => /^ {2}\S+: /.test(line)).map((line) => line.trim().split(":")[0]),
-    ).toEqual(labels);
-    expect(detail.at(-2)).toBe(`  fix: ${MULTILINE_FIX[0]}`);
-    expect(detail.at(-1)).toBe(`${" ".repeat(indent)}${MULTILINE_FIX[1]}`);
+    expect(lines.slice(headerIndex + 1, headerIndex + 3)).toEqual([
+      `  fix: ${MULTILINE_FIX[0]}`,
+      `${" ".repeat(indent)}${MULTILINE_FIX[1]}`,
+    ]);
+    // The lines the old detail block repeated from the issue's own line are gone.
+    expect(output).not.toMatch(DROPPED_LABELS);
   });
 
   /**
-   * The detail block follows the run's `--fail-on` threshold, not the literal
+   * The `fix` lines follow the run's `--fail-on` threshold, not the literal
    * severity `error`: under `--fail-on warning` a warning is what fails the
-   * run, so it gets the same block. The guideline says so in both places it
-   * describes the block, and this is what holds the two together.
+   * run, so it gets the same lines. The guideline says so in both places it
+   * describes them, and this is what holds the two together.
    */
-  it("gives warnings the detail block under --fail-on warning, as documented", async () => {
+  it("gives warnings their fix line under --fail-on warning, as documented", async () => {
     const guideline = await readGuideline();
     expect(guideline).toContain("`--fail-on warning`");
 
@@ -364,25 +390,25 @@ describe("validate --format text matches the validate contract's text output gra
       return Promise.resolve();
     });
     expect(classifyByGuideline(atThreshold.trimEnd().split("\n"), "warning")).toContainEqual({
-      kind: "detail",
-      line: `  error_code: ${warning.code}`,
+      kind: "fix",
+      line: `  fix: ${resolveIssueFix(warning)}`,
     });
 
     const belowThreshold = await captureStdout(() => {
       emitText(resultOf([warning]), DEFAULT_FAIL_ON);
       return Promise.resolve();
     });
-    expect(belowThreshold).not.toContain("  error_code: ");
+    expect(belowThreshold).not.toContain("  fix: ");
   });
 
   /**
    * `--fail-on never` fails on nothing, and the guide used to describe the
-   * detail block as belonging to "issues at a severity that can fail this run"
-   * — which reads as "no detail blocks at all" in that mode. `emitText` keeps
+   * remedy as belonging to "issues at a severity that can fail this run" —
+   * which reads as "no fix lines at all" in that mode. `emitText` keeps
    * emitting them for every `error`, so a parser built on the old wording read
-   * `  error_code: …` and the four lines under it as more message text.
+   * `  fix: …` as more message text.
    */
-  it("keeps the error detail block under --fail-on never, as documented", async () => {
+  it("keeps the error fix line under --fail-on never, as documented", async () => {
     const guideline = await readGuideline();
     expect(guideline).toContain("`--fail-on never`");
 
@@ -395,7 +421,7 @@ describe("validate --format text matches the validate contract's text output gra
       return Promise.resolve();
     });
     const classified = classifyByGuideline(output.trimEnd().split("\n"), "never");
-    expect(classified).toContainEqual({ kind: "detail", line: `  error_code: ${error.code}` });
+    expect(classified).toContainEqual({ kind: "fix", line: `  fix: ${MULTILINE_FIX[0]}` });
     // …and the structural lines are still structural, not swallowed as message.
     expect(classified.filter((entry) => entry.kind === "message-continuation")).toEqual([]);
 
@@ -407,7 +433,86 @@ describe("validate --format text matches the validate contract's text output gra
       emitText(resultOf([warning]), "never");
       return Promise.resolve();
     });
-    expect(warningOutput).not.toContain("  error_code: ");
+    expect(warningOutput).not.toContain("  fix: ");
+  });
+
+  // QFAI:EX-0001-0039-15
+  it("prints at most five issues of one code and counts the rest, as documented", async () => {
+    const guideline = await readGuideline();
+    const grammar = extractGrammar(guideline);
+    const tail = extractGroupTail(guideline);
+    expect(guideline).toContain("At most five issues");
+
+    const group = manyOfOneCode("QFAI-TEST-010", "error", 7);
+    const other = manyOfOneCode("QFAI-TEST-011", "error", 1)[0];
+    expect(other).toBeDefined();
+    if (other === undefined) return;
+    // The other code sits between the second and third issue of the group.
+    const issues = [...group.slice(0, 2), other, ...group.slice(2)];
+
+    const output = await captureStdout(() => {
+      emitText(resultOf(issues), DEFAULT_FAIL_ON);
+      return Promise.resolve();
+    });
+    const lines = output.split("\n");
+
+    expect(lines.slice(0, 5)).toEqual(group.slice(0, 5).map((i) => renderFromGrammar(grammar, i)));
+    expect(lines[5]).toBe(
+      tail
+        .replace("[<severity>]", "[error]")
+        .replace("<CODE>", "QFAI-TEST-010")
+        .replace("<n>", "2"),
+    );
+    expect(lines[6]).toBe("  fix: repair QFAI-TEST-010");
+    expect(lines[7]).toBe(renderFromGrammar(grammar, other));
+    expect(lines[8]).toBe("  fix: repair QFAI-TEST-011");
+    expect(output).not.toMatch(DROPPED_LABELS);
+    // The counts line still counts every issue, printed or not.
+    expect(output).toContain("counts: info=0 warning=0 error=8\n");
+  });
+
+  // QFAI:EX-0001-0039-15
+  it("prints a group of exactly five without a line counting the rest", async () => {
+    const output = await captureStdout(() => {
+      emitText(resultOf(manyOfOneCode("QFAI-TEST-012", "warning", 5)), "warning");
+      return Promise.resolve();
+    });
+    expect(output.split("\n").filter((line) => line.startsWith("[warning] "))).toHaveLength(5);
+    expect(output).not.toContain(" more");
+  });
+
+  // QFAI:EX-0001-0039-15
+  it("keeps suppressed and unsuppressed issues of one code in separate groups", async () => {
+    const suppressed = manyOfOneCode("QFAI-TEST-013", "warning", 6, true);
+    const live = manyOfOneCode("QFAI-TEST-013", "warning", 1);
+
+    const output = await captureStdout(() => {
+      emitText(resultOf([...suppressed, ...live]), DEFAULT_FAIL_ON);
+      return Promise.resolve();
+    });
+    const lines = output.split("\n");
+
+    expect(lines).toContain("[warning] QFAI-TEST-013 and 1 more suppressed=true");
+    expect(lines.filter((line) => line.includes(" suppressed=true"))).toHaveLength(6);
+    expect(lines).toContain("[warning] QFAI-TEST-013 finding 1 (docs/file-1.md)");
+    // Only the unsuppressed warning is counted.
+    expect(output).toContain("counts: info=0 warning=1 error=0\n");
+  });
+
+  // QFAI:EX-0001-0039-15
+  it("prints each distinct fix of a group once, in the order they first appear", async () => {
+    const issues = manyOfOneCode("QFAI-TEST-014", "error", 4).map((issue, index) => ({
+      ...issue,
+      suggested_action: index === 1 ? "second repair" : "first repair",
+    }));
+
+    const output = await captureStdout(() => {
+      emitText(resultOf(issues), DEFAULT_FAIL_ON);
+      return Promise.resolve();
+    });
+    const fixes = output.split("\n").filter((line) => line.startsWith("  fix: "));
+
+    expect(fixes).toEqual(["  fix: first repair", "  fix: second repair"]);
   });
 
   it("closes the text output with the documented counts line", async () => {
@@ -510,24 +615,20 @@ describe("validate --format text matches the validate contract's text output gra
    * "Anything that does not start with `[<severity>] ` continues the previous
    * message" is only safe once the structural lines are matched first. This
    * runs the documented precedence over one real run that carries all of them
-   * at once: a multi-line `QFAI-DT-002` message, an
-   * error detail block, `counts:` and `run-log:`.
+   * at once: a multi-line `QFAI-DT-002` message, an error's `fix` line,
+   * `counts:` and `run-log:`.
    */
   it("classifies every structural line ahead of the message-continuation fallback", async () => {
     const guideline = await readGuideline();
     const rules = extractPrecedenceRules(guideline);
     expect(rules).toHaveLength(7);
-    const anchors = [
-      "`[info]`",
-      "`counts:`",
-      "`fail-on:`",
-      "`timings:`",
-      "`run-log:`",
-      "error_code:",
-    ];
+    const anchors = ["`[info]`", "`counts:`", "`fail-on:`", "`timings:`", "`run-log:`", "`fix:`"];
     for (const [index, anchor] of anchors.entries()) {
       expect(rules[index], `precedence rule ${index + 1} must key on ${anchor}`).toContain(anchor);
     }
+    expect(rules[0], "the first precedence rule must name the line that closes a group").toContain(
+      "and <n> more",
+    );
     expect(rules[6], "the last precedence rule must be the message-continuation fallback").toBe(
       "anything else continues the previous issue's message",
     );
@@ -552,13 +653,11 @@ describe("validate --format text matches the validate contract's text output gra
           entry.kind === "header" && entry.line.startsWith("[error] QFAI-DT-002 YAML parse error"),
       );
       expect(header, "the fixture must produce a real YAML parse error").toBeGreaterThanOrEqual(0);
-      // The parser message spans physical lines, and the detail block that
+      // The parser message spans physical lines, and the `fix` line that
       // follows is recognised as structure rather than more message.
       expect(classified[header + 1]?.kind).toBe("message-continuation");
-      const detail = classified.findIndex(
-        (entry, index) => index > header && entry.kind === "detail",
-      );
-      expect(classified[detail]?.line.startsWith("  error_code: QFAI-DT-002")).toBe(true);
+      const fix = classified.findIndex((entry, index) => index > header && entry.kind === "fix");
+      expect(classified[fix]?.line.startsWith("  fix: ")).toBe(true);
 
       for (const entry of classified.filter((item) => item.kind === "message-continuation")) {
         expect(entry.line.startsWith("counts: "), `structural line absorbed: ${entry.line}`).toBe(
@@ -573,10 +672,9 @@ describe("validate --format text matches the validate contract's text output gra
         expect(entry.line.startsWith("run-log: "), `structural line absorbed: ${entry.line}`).toBe(
           false,
         );
-        expect(
-          entry.line.startsWith("  error_code: "),
-          `structural line absorbed: ${entry.line}`,
-        ).toBe(false);
+        expect(entry.line.startsWith("  fix: "), `structural line absorbed: ${entry.line}`).toBe(
+          false,
+        );
       }
     } finally {
       await rm(root, { recursive: true, force: true });

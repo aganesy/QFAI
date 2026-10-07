@@ -46,7 +46,7 @@ export async function validateSidecarMissing(root: string, _config: QfaiConfig):
     if (isEnoent(err)) {
       return [
         canonicalIssue(
-          "UIX-VAL-SIDECAR-MISSING",
+          "QFAI-SIDECAR-001",
           "UI-bearing spec detected but uiux/ sidecar directory is missing.",
           "error",
           "uiux/",

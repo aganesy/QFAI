@@ -37,7 +37,13 @@ it("An extraction carrying the request text is refused, and nothing it holds run
     pwned: [...(await listTree(root)), ...(await readdir(process.cwd()))].some((name) =>
       name.endsWith("pwned"),
     ),
-  }).toEqual({ status: 2, reasons: [{ reason: "schema", subject: "request" }], pwned: false });
+  }).toEqual({
+    status: 2,
+    reasons: [
+      { reason: "schema", subject: "request", cause: "unknown: request is not a field here" },
+    ],
+    pwned: false,
+  });
 });
 
 it("Scan the sources under core/workflow/ and the workflow command", async () => {

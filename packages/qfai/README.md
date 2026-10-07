@@ -325,7 +325,7 @@ flowchart LR
     | `--help`, `-h`             | Print the CLI usage banner and exit without writing anything. Accepted by every command, `init` included, and handled before the command runs.                                                                                                                                                                                                                                                         |
     | `--version`, `-V`          | Print the installed QFAI version to stdout and exit 0. Accepted by every command, `init` included, and handled before the command runs, so it works outside a project too.                                                                                                                                                                                                                             |
 
-  - `D-DEPRECATED-PATH` means the legacy assistant layout remains past its
+  - `QFAI-DEPRECATED-001` means the legacy assistant layout remains past its
     supported window. Run `npx qfai init --upgrade-assistant-tree` to copy
     recognized files into the current tree without deleting their sources.
 
@@ -484,9 +484,10 @@ names, for example `[qfai-tests.yml]`, and delete the file.
   holding a `pnpm-lock.yaml` with no such field fails the job with an
   annotation naming the field rather than reporting a validation it never ran.
   Declare `"packageManager": "pnpm@X.Y.Z"` so CI matches the version you
-  develop against. The `full` profile includes the `QFAI-TEST-001` test-todo
-  stub gate, so the job can fail your default branch on findings your existing
-  CI never checked.
+  develop against. The `full` profile includes the test stub gate
+  (`QFAI-TEST-001` for a todo, `QFAI-TEST-003` for a skip), so the job can fail
+  your default branch on findings your existing CI never checked. See
+  "Skipped and todo tests" below for what the gate reports and what it cannot see.
 - `qfai-tests.yml` declares one lane per test layer (unit, component,
   integration, api, e2e) and runs none of them until you opt in: a lane runs
   only when your `package.json` declares the matching `test:<layer>` script
@@ -514,6 +515,29 @@ default, because nothing in the files can tell whether that commit passed a pull
 request first. If your branch protection requires these checks before every merge,
 set the repository variable `QFAI_CI_PUSH_POLICY` to `protected`: the push then runs
 neither, and `qfai validate` still runs as the post-merge check.
+
+`protected` is safe only when GitHub requires the branch to be up to date before
+a pull request can merge: the branch protection option "Require branches to be up
+to date before merging", called `strict` in the API. Without it, two pull requests
+can each pass on their own and break the branch once both are merged. One that
+changes a function signature and one that starts calling the old signature is the
+usual case. The default branch is then red while every pull request was green.
+
+Requiring up-to-date branches makes every parallel pull request update and rerun
+after each merge. If that costs too much, there is a middle option between running
+the full lanes again and running nothing: keep `QFAI_CI_PUSH_POLICY` at
+`protected`, and add a small post-merge job of your own to a workflow you
+maintain.
+
+- It runs only what can break when two pull requests combine: the type check, and
+  the schema or contract consistency checks. The shipped `qfai-validate.yml`
+  already runs the validator on every push, so the job does not repeat it.
+- It installs dependencies once, and uses one concurrency group with
+  `cancel-in-progress: true`, so a newer push cancels an older run. The newest
+  commit contains the older ones, so nothing goes unchecked.
+- It leaves out the test suites. A break that only they would catch shows up on
+  the next pull request, which fails on code it did not change. In one project the
+  job took about two billed minutes where the full lanes took about 29.
 
 All three files are copied create-only — `qfai init` writes a workflow only
 where no file of that name exists, and never overwrites one, not even with
@@ -583,6 +607,188 @@ Typical customizations.
 
 - Add a `doctor` step before validate if you want to fail fast on path/glob/config issues.
 - Publish `.qfai/report/validate.json`, `report.md`, and relevant `.qfai/report/run-*/` logs as CI artifacts.
+
+### What a run costs
+
+On a private repository with GitHub-hosted runners, cost follows the number of
+jobs, not how long they run. Each job rounds up to a whole minute, a skipped job
+costs nothing, and a workflow that starts several quick jobs on every event costs
+more than one slow job. A closed pull request starts a run too, but every job in
+it declines, so nothing is billed.
+
+Jobs the shipped workflows start on each `opened`, `synchronize` and `reopened`
+event of a pull request:
+
+| Workflow            | Nothing to run                      | Lane runs                                 |
+| ------------------- | ----------------------------------- | ----------------------------------------- |
+| `qfai-validate.yml` | 3: `full`, `drift` and `summary`    | 3                                         |
+| `qfai-tests.yml`    | 2: `change detection` and `verdict` | 2, plus one per selected lane (at most 5) |
+| `qfai-docs.yml`     | 2: `change scope` and `docs`        | 4: adds the `shape` and `mermaid` checks  |
+
+When no lane runs, one pull request event starts 7 jobs in all, and the most it
+can start is 14. On a push to the default branch,
+`qfai-validate.yml` starts 2 jobs because the `drift` profile runs on pull requests
+only, and `QFAI_CI_PUSH_POLICY=protected` brings the other two workflows down to
+their idle counts.
+
+Five of those jobs install nothing and run no test: `change detection`, `verdict`,
+`change scope`, `docs` and `summary`. They take seconds, so each bills one minute.
+They read `vars.QFAI_CI_LIGHT_RUNNER`, so the price of that minute is a choice.
+On a private repository with GitHub-hosted runners, set it to `ubuntu-slim`:
+
+```bash
+gh variable set QFAI_CI_LIGHT_RUNNER --body ubuntu-slim
+```
+
+`ubuntu-slim` has 1 CPU and 5 GB of memory, runs unprivileged, limits a job to 15
+minutes, and bills at a lower per-minute rate than `ubuntu-latest`; GitHub's
+pricing page has the current figure. The light jobs run only Bash, Git and Node, all
+of which it carries, and the workflows keep `ubuntu-latest` as the default, so this
+is your variable to set. Do not point `QFAI_CI_RUNNER` at it: the jobs that install
+dependencies, need Docker or can run past 15 minutes do not belong on it. A label
+GitHub does not offer to your account leaves a job queued rather than failing it.
+
+### Required checks and branch protection
+
+Require these three checks, by exactly these names:
+
+- From `qfai-tests.yml`: `verdict`
+- From `qfai-docs.yml`: `qfai docs (document shape and Mermaid syntax)`
+- From `qfai-validate.yml`: `qfai validate (full profile, fail on error)`
+
+Each one runs even when the jobs behind it are skipped, always reports, and fails
+when a job it depends on fails. The jobs behind them are named by their matrix
+value, such as `qfai tests (unit)`, and a skipped matrix job is reported under its
+unexpanded name, so a required check cannot name them.
+
+A check name is what branch protection matches. When you rename a job, or change
+what it covers, change the required check in the same step. While the two differ
+the required check is never reported, and every pull request is blocked. The
+validate check above is the one to watch: on a pull request it covers the `full`
+and `drift` profiles, and if you change the profiles you run, its name keeps
+saying "full profile".
+
+A job that an `if:` condition skips is reported as skipped, and that satisfies a
+required check. A workflow that a workflow-level `paths` or `paths-ignore` filter
+keeps from starting reports nothing, so its required check stays pending and the
+pull request cannot merge. Put the decision in a job, and skip jobs. The shipped
+`change detection` and `change scope` jobs do that. Do not put a `paths` filter on
+a workflow with a required check.
+
+### Skipped and todo tests
+
+The stub gate is a static scan of the files that
+`validation.traceability.testFileGlobs` selects. It blanks comments and string
+literals first, then matches text patterns. The shipped workflow runs
+`--fail-on error`, and every finding below is an error.
+
+| What the scan finds                                                                                      | Finding         |
+| -------------------------------------------------------------------------------------------------------- | --------------- |
+| `it.todo`, `test.todo`, `describe.todo`                                                                  | `QFAI-TEST-001` |
+| `it.skip`, `test.skip`, `describe.skip`, with a modifier before or after (`.skip.each`, `.concurrent`)   | `QFAI-TEST-003` |
+| The other stacks' placeholders: `pytest.skip`, `t.Skip`, `@Disabled`, `@Ignore`, `#[ignore]`, `[Ignore]` | `QFAI-TEST-001` |
+
+It cannot see a skip that is not a text pattern, and none of these is reported:
+
+- a conditional skip: `describe.skipIf(...)`, `it.skipIf(...)` and `it.runIf(...)`
+- a form that selects the skip at run time, such as
+  `const suite = enabled ? describe : describe.skip`
+- a skip called inside a running test, such as `ctx.skip()`
+- a suite that returns early when the environment is missing, such as an unset
+  database URL
+- a test file that the globs do not select; with no globs set the scan reports
+  `QFAI-TEST-002` and reads nothing
+
+A suite skipped for a missing database therefore passes CI, and so does a suite
+whose database failed to start. Only the test runner knows what was skipped in a
+given run. Have it write a JSON report, and fail the job when a file skips more
+tests than a list of named, allowed skips permits. Jest and Vitest write the same
+shape: `jest --json --outputFile=test-report.json`, or
+`vitest run --reporter=json --outputFile=test-report.json`. Add the flags to
+your `test:<layer>` script, save this script as `scripts/check-skipped-tests.mjs`,
+and run it in a step of `qfai-tests.yml` after the step that runs the tests:
+
+```js
+import { readFileSync } from "node:fs";
+import path from "node:path";
+
+const allowed = JSON.parse(readFileSync("allowed-skips.json", "utf8"));
+const report = JSON.parse(readFileSync("test-report.json", "utf8"));
+let failed = false;
+for (const file of report.testResults) {
+  const name = path.relative(process.cwd(), file.name).split(path.sep).join("/");
+  const skipped = file.assertionResults.filter(
+    (test) => test.status !== "passed" && test.status !== "failed",
+  ).length;
+  if (skipped > (allowed[name] ?? 0)) {
+    console.error(`${name}: ${skipped} tests did not run, ${allowed[name] ?? 0} allowed`);
+    failed = true;
+  }
+}
+process.exit(failed ? 1 : 0);
+```
+
+`allowed-skips.json` maps a test file to the number of tests it may skip, such as
+`{ "orders.test.ts": 2 }`. Start from the count you measure today. The
+list should only ever shrink: a pull request may remove an entry or lower a count,
+and raising one is a decision a reviewer makes on purpose.
+
+### Writing a change-scope gate for your own workflows
+
+If you write a gate that skips your own heavy jobs on a small change, copy the
+shape of the shipped `change detection` job: it falls back to running every lane
+when the base commit is missing, the clone is shallow, the base is unreachable, the
+diff fails, or a changed path is outside the set it knows. The rules that keep a
+gate from skipping what it should have run:
+
+- Decide from what the runners and tests read, not from directory names.
+- Fail open. When the input is unknown, run everything: a skipped check claims the
+  change is fine, and a check that runs costs only its minutes.
+- Run the gate's own table of cases, sample paths with the decision each must
+  get, before the gate. A pull request that changes the gate runs the checks that
+  cover the gate.
+- Keep job names fixed, so required checks stay satisfied.
+- Decide in a job and skip jobs with `if:`. Never use a workflow-level `paths`
+  filter, as the section above explains.
+
+Three mistakes this prevents:
+
+- **Excluding a directory the runner reads.** A gate treated all of
+  `tests/integration/` as irrelevant to end-to-end tests, but the browser runner's
+  configuration runs the `*.browser.spec.ts` files in it. A pull request that fixed
+  one of them ran no end-to-end job and passed. Exclude only the files the runner
+  does not read.
+- **Trusting a general plan over the repository.** "A change to tests only can
+  skip the production build" is wrong where the build type-checks the tests
+  through the compiler's `include`. Read the configuration before you write the
+  rule.
+- **A gate that skips its own tests.** See the third rule above.
+
+### Measuring Actions minutes
+
+Cost on a private repository is hard to read from the outside. The billing
+endpoint for an organization needs an admin scope and may answer with an error,
+the timing endpoint for a single run reports `billable` as zero, and the detailed
+usage report needs an admin. This method needs only read access to the repository:
+
+1. List the runs of one pull request, by its head commit:
+   `gh api "repos/OWNER/REPO/actions/runs?head_sha=SHA" --jq '.workflow_runs[].id'`
+2. For each run, list its jobs:
+   `gh api "repos/OWNER/REPO/actions/runs/RUN_ID/jobs?per_page=100" --jq '.jobs[] | [.name, .conclusion, .started_at, .completed_at] | @tsv'`
+3. A job bills `max(1, ceil(seconds / 60))` minutes, where the seconds run from
+   `started_at` to `completed_at`. A skipped job bills zero.
+4. Compare pull requests by the same author and of the same kind of change, and
+   compare jobs and runs as well as minutes. Pull requests that only changed CI
+   settings are the case a change helps most, so they overstate the saving.
+   Compare pull requests that changed source and tests.
+5. Count the runs of a day with
+   `gh api "repos/OWNER/REPO/actions/runs?created=YYYY-MM-DD&per_page=1" --jq .total_count`.
+   It is one cheap call per day, and it shows days that stand out. It also follows
+   the amount of development, so it cannot prove a reduction by itself.
+
+A job that never started looks different from a job that failed: it has no steps,
+an empty runner name and a duration of about two seconds. Its logs are not found,
+which is not the logs having expired.
 
 ### Keeping QFAI itself up to date
 
@@ -770,15 +976,6 @@ this release's group on the next `qfai init`. A group the project edited is
 kept, and the run names it. To update one by hand, run
 `npx qfai init --dir <scratch-dir>` in an unused scratch directory and compare
 its `.claude/settings.json` with your project's file, group by group.
-
-## Contributing (for QFAI maintainers)
-
-This repository is a monorepo, and the distributable package is under `packages/qfai`.
-The repository root `README.md` and `packages/qfai/README.md` are kept aligned by
-`scripts/check-readme-alignment.mjs`, which CI runs as part of `pnpm ci:lint`: every line
-outside a `readme-align:ignore-start` / `readme-align:ignore-end` HTML-comment block must be
-identical in both files. When you change documentation, apply the edit to both READMEs, or
-wrap the intentionally file-specific part in those markers.
 
 ## License
 

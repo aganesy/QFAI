@@ -4,8 +4,8 @@ import path from "node:path";
 import process from "node:process";
 
 /*
- * Enforces the alignment claim made in the "Contributing" section of both
- * READMEs: every line of `README.md` and `packages/qfai/README.md` must be
+ * Enforces the alignment claim made in the policy that both
+ * READMEs stay aligned: every line of `README.md` and `packages/qfai/README.md` must be
  * identical, except for lines inside an HTML-comment block delimited by
  * `readme-align:ignore-start` / `readme-align:ignore-end`. A block also
  * absorbs the blank line(s) directly above it, because Prettier always

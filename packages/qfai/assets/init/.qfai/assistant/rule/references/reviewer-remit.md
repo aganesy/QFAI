@@ -1,0 +1,35 @@
+# Reviewer Remit
+
+Read when a reviewer is briefed.
+
+## Reviewer remit (in scope per stage)
+
+A finding outside the reviewing stage's remit is recorded and deferred, never blocking:
+
+| Stage                      | In scope                                                                                                                                                                                                                                               | Out of scope (record and defer)                                                                                      |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| `/qfai-discussion`         | Requirement clarity, scope boundary, decision traceability                                                                                                                                                                                             | Spec structure, runtime behavior                                                                                     |
+| `/qfai-sdd`                | Spec / contract consistency, testability, traceability edges, each document in its template's shape                                                                                                                                                    | Runtime enforcement correctness, code quality                                                                        |
+| `/qfai-implement`          | Code quality, spec alignment of the item, RED/GREEN evidence, silent failure and type design across the whole of every file the change touches, and security across the same files and along every input the change adds or alters to where it is used | Upstream spec content, contract design, and a finding on code in a touched file that the change did not add or alter |
+| `/qfai-prototyping`        | The prototype against its UI contracts and the root `DESIGN.md`, loop evidence, the handoff                                                                                                                                                            | Spec and contract content, downstream implementation code                                                            |
+| `/qfai-migration-v1-to-v2` | Migration plan and report fidelity, ID mapping, every deletion listed in the reports, each written document in its template's shape                                                                                                                    | New story content and downstream implementation quality                                                              |
+| `/qfai-configure`          | Config / manifest validity and the surfaces the run generated                                                                                                                                                                                          | Spec content, implementation structure                                                                               |
+| `/qfai-verify`             | Gate execution, evidence completeness, report / artifact fidelity                                                                                                                                                                                      | Authoring quality of the artifacts it verifies                                                                       |
+| `/web-research`            | Source authority and freshness, citation accuracy, claim support                                                                                                                                                                                       | Spec content, implementation structure                                                                               |
+| `/qfai-grilling`           | Decisions asked rather than assumed, facts naming where they were read, the session's end condition                                                                                                                                                    | The merit of what the user decided, and the artifacts the invoking stage writes from it                              |
+| `/qfai-grill`              | The same, reported to the user rather than to a stage                                                                                                                                                                                                  | The merit of what the user decided; there is no artifact to review                                                   |
+| `/qfai-maintain`           | That the diff changes no behaviour, and the checks run over it                                                                                                                                                                                         | Whether the new wording is the better one                                                                            |
+| `/qfai-triage`             | That no tracked file changed, the recorded outcome, each follow-up, and the sources an answer cites                                                                                                                                                    | The work a follow-up request describes                                                                               |
+| `/qfai-run`                | The artifacts the session writes, in the specification or code review the plan names after a stage                                                                                                                                                     | Whether the route the decision rules chose was the right one                                                         |
+
+Article VII excess in the reviewing stage's own artifacts is in scope;
+quality of downstream implementation code is deferred at upstream stages.
+
+Apply this route only where the installed Article VII governs the artifact.
+A retained constitution does not gain newer authority from refreshed cards.
+Report an unsupported Article VII route as advisory and follow the installed constitution.
+
+A step's remit is its owner's row. A `common-*` step's work is reviewed under
+the row of the skill whose stage ran it.
+
+**Fallback for any stage not listed.** A stage that references this baseline without a row above has, as its remit, the artifacts that stage itself produces; everything upstream of them is out of scope, recorded and deferred. Add the row when a new stage starts routing blocking reviewers, so the in/out split is not re-derived per run.

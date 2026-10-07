@@ -88,23 +88,9 @@ const PROFILE_INDEPENDENT_CODES: ReadonlyMap<string, Exemption> = new Map([
     "QFAI-TOOL-001": "which copy of qfai is running — a property of the invocation, not of a gate",
     "QFAI-TOOL-002": "as QFAI-TOOL-001",
   }),
-  // The legacy-output deprecation notice, decided from `qfai.config.yaml` and
-  // the file on disk.
-  //
-  // The one entry here that is not clear-cut: `validators/assistantTreeMigration.ts`
-  // also emits this code, and that half runs in `sdd` only. Exempt because the
-  // CLI half runs in every profile, so naming a family would tell a `tdd` run
-  // the code went unevaluated when part of it had just been evaluated. The
-  // opposite reading — that `sdd`'s half is silently unreported outside `sdd` —
-  // is equally defensible, and choosing between them is a question about what
-  // the notice should say for a code with emitters on both sides of the
-  // dispatch. Filed rather than settled here.
-  ...raisedBy("src/cli/commands/validate.ts", {
-    "D-DEPRECATED-PATH": "the legacy validate.json path, reported wherever the run reads one",
-  }),
   ...raisedBy("src/core/config.ts", {
     "QFAI-CFG-001": "the `qfai.config.yaml` read, which every profile needs first",
-    QFAI_CONFIG_INVALID: "config parse failure: nothing downstream runs, so no group owns it",
+    "QFAI-CFG-002": "config parse failure: nothing downstream runs, so no group owns it",
   }),
   ...raisedBy("src/core/waivers.ts", {
     "QFAI-WAIVER-001": "the waiver engine, applied to the findings of whatever profile ran",
@@ -117,7 +103,7 @@ const PROFILE_INDEPENDENT_CODES: ReadonlyMap<string, Exemption> = new Map([
       "the CI-profile advisory, decided from the environment rather than a gate, via `buildCiProfileIssue`",
   }),
   ...raisedBy("src/core/saasPackage/profile.ts", {
-    "D-SAAS-PACKAGE-VERIFY-SKIPPED":
+    "QFAI-SAAS-003":
       "the `saas-package` runner's own skip notice; its skip-set is SAAS_PACKAGE_SKIPPED_GATE_FAMILIES",
   }),
 ]);
@@ -152,8 +138,8 @@ describe("QFAI-PROFILE-001's skip-set accounts for every code that can be emitte
     // needs a profile that runs the narrow group WITHOUT the wildcard one.
     //
     // No profile does today. `canonical-uix` holds an enumeration rather
-    // than `["UIX-VAL-*"]`, so it no longer swallows the twelve
-    // `UIX-VAL-SKILL-*` codes that `prototyping-skill` owns — and even a
+    // than `["QFAI-*"]`, so it no longer swallows the twelve
+    // `QFAI-PROTOSKILL-*` codes that `prototyping-skill` owns — and even a
     // wildcard there would not misreport, since `prototyping-skill` is
     // reachable only from `runFullValidators`, which runs `canonical-uix`
     // too. This case is asserted for the divergence that has not happened
@@ -263,8 +249,7 @@ describe("QFAI-PROFILE-001's skip-set accounts for every code that can be emitte
  * narrower group the notice denies a gate the run just evaluated.
  *
  * A cross-dispatch code resolves by sitting in a group that both dispatching
- * profiles list. The one below has an emitter that runs in every profile,
- * which puts it outside that rule by construction — its entry says how.
+ * profiles list.
  */
 interface DualEmitter {
   /** Every module with an emit site, package-relative and sorted. */
@@ -277,21 +262,7 @@ interface DualEmitter {
   readonly treatment: string;
 }
 
-const DUAL_EMITTED_CODES: ReadonlyMap<string, DualEmitter> = new Map([
-  [
-    "D-DEPRECATED-PATH",
-    {
-      modules: ["src/cli/commands/validate.ts", "src/core/validators/assistantTreeMigration.ts"],
-      treatment:
-        "One emitter is the CLI's legacy-path notice, which runs in EVERY profile - so 'a " +
-        "group every emitting profile lists' would be a group every profile lists, and that " +
-        "can never appear in `full groups - profile groups`. Exempt in " +
-        "PROFILE_INDEPENDENT_CODES instead, which reaches the same outcome by a different " +
-        "route: that list reads as 'no group owns it' where the accurate statement is 'every " +
-        "profile evaluates it'.",
-    },
-  ],
-]);
+const DUAL_EMITTED_CODES: ReadonlyMap<string, DualEmitter> = new Map<string, DualEmitter>();
 
 function toPosixPath(value: string): string {
   return value.split(path.sep).join("/");

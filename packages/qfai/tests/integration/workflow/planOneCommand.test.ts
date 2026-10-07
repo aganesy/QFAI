@@ -123,7 +123,13 @@ it("An extraction carrying a key it does not declare is refused, naming the key"
   }).toEqual({
     status: 2,
     ok: false,
-    reasons: [{ reason: "schema", subject: "candidateRoute" }],
+    reasons: [
+      {
+        reason: "schema",
+        subject: "candidateRoute",
+        cause: "unknown: candidateRoute is not a field here",
+      },
+    ],
     unchanged: true,
   });
 });

@@ -41,7 +41,7 @@ describe("TC-0015-0032: validateStaleReferences emits zero issues when refs are 
       "# Handoff\nCanonical schema lives in core/schemas/handoff.ts.\n",
     );
     const issues = await validateStaleReferences(root);
-    expect(issues.filter((i) => i.code === "W-STALE-REFERENCE")).toEqual([]);
+    expect(issues.filter((i) => i.code === "QFAI-STALE-001")).toEqual([]);
   });
 
   it("returns an empty list when the skills directory is absent (fresh project)", async () => {

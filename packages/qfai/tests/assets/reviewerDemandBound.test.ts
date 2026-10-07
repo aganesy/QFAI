@@ -1,8 +1,8 @@
-import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
+import { readRule } from "../helpers/ruleWithReferences.js";
 
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
@@ -22,7 +22,7 @@ const REVIEWER_CARDS = [
 const unwrap = (markdown: string): string => markdown.replace(/\s*\n\s*/g, " ");
 
 const read = async (tree: string, rel: string): Promise<string> =>
-  unwrap(await readFile(path.join(repoRoot, tree, rel), "utf-8"));
+  unwrap(await readRule(path.join(repoRoot, tree, rel)));
 
 describe("a reviewer's demand for more work is bounded by the artifact", () => {
   for (const tree of QFAI_TREES) {

@@ -4,7 +4,7 @@
  * The `saas-package` validate profile deliberately skips the gates
  * that require ATDD / implement-class artifacts. A SaaS-tenant
  * package ships without exercising those phases by design, so each
- * skip surfaces as a `D-SAAS-PACKAGE-VERIFY-SKIPPED` info finding
+ * skip surfaces as a `QFAI-SAAS-003` info finding
  * rather than failing the run.
  *
  * Keep the list small and intentional. The certify-side counterpart
@@ -24,7 +24,7 @@ export type SaasPackageSkippedGate = (typeof SAAS_PACKAGE_SKIPPED_GATES)[number]
  * Finding-code families each skipped gate would have produced.
  *
  * `SAAS_PACKAGE_SKIPPED_GATES` names validator functions, which is the right
- * granularity for the `D-SAAS-PACKAGE-VERIFY-SKIPPED` findings, but the
+ * granularity for the `QFAI-SAAS-003` findings, but the
  * partial-profile notice in `validate.json` speaks in code families.
  *
  * Keyed by `SaasPackageSkippedGate`, not `string`, so the two lists cannot

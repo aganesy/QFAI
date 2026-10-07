@@ -39,6 +39,7 @@ import {
 } from "../helpers/skillBudget.js";
 import { readDiscussionSkill } from "../helpers/discussionSteps.js";
 import { readDefaultRoutingText } from "../helpers/shippedAssistant.js";
+import { readRule } from "../helpers/ruleWithReferences.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 const templateRoot = path.join(repoRoot, "packages", "qfai", "assets", "init");
@@ -310,7 +311,7 @@ describe("assets guardrails", () => {
       "rule",
       "shared-skill-operating-baseline.md",
     );
-    const baseline = await readFile(baselinePath, "utf-8");
+    const baseline = await readRule(baselinePath);
     const requiredPhrases = [
       "## Gate Failure Autorepair Protocol",
       "validate, doctor, test, lint, typecheck, build, capture, or report gates fail",
@@ -853,7 +854,7 @@ describe("assets guardrails", () => {
   });
 
   // .npmignore files removed — gitignore entries now live in root .gitignore
-  // (see ensureRootGitignoreEntries in init.ts)
+  // (see ensureRootGitignoreEntries in core/init/rootGitignore.ts)
 
   it("does not ship review_archive gitignore in init template", () => {
     const reviewArchiveIgnorePath = path.join(templateQfaiDir, "review_archive", ".gitignore");
@@ -888,7 +889,7 @@ describe("assets guardrails", () => {
   });
 
   // review .gitignore removed — entries now in root .gitignore managed block
-  // (see ensureRootGitignoreEntries in init.ts)
+  // (see ensureRootGitignoreEntries in core/init/rootGitignore.ts)
 
   it("keeps init template docs free of hard-coded versions", async () => {
     const markdownFiles = await fg(["**/*.md"], {
@@ -1733,9 +1734,8 @@ describe("assets guardrails", () => {
     // so the constant could move while the baseline went on telling authors a
     // different number - and for a project that has only the published package
     // that prose is the only copy of the rule it can read.
-    const baseline = await readFile(
+    const baseline = await readRule(
       path.join(templateQfaiDir, "assistant", "rule", "shared-skill-operating-baseline.md"),
-      "utf-8",
     );
     expect(baseline).toContain(`**${SKILL_MD_MAX_LINES} lines per assistant asset file**`);
     // The width ceiling ships the same way and for the same reason: for a

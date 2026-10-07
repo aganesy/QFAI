@@ -1,9 +1,8 @@
 /**
  * Spawn-based tests for `scripts/check-readme-alignment.mjs`.
  *
- * The guard backs the claim both READMEs make in their "Contributing"
- * section: the repository root `README.md` and the published
- * `packages/qfai/README.md` stay aligned. Its contract:
+ * The guard backs the claim that the repository root `README.md` and the
+ * published `packages/qfai/README.md` stay aligned. Its contract:
  *   - every line outside an ignore block identical -> exit 0
  *   - any line differs, or one file is longer      -> exit 1
  *   - malformed ignore markers                     -> exit 1

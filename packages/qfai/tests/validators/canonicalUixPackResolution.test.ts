@@ -47,7 +47,7 @@ describe("runCanonicalUixValidators pack resolution", () => {
 
     const issues = await runCanonicalUixValidators(root, defaultConfig);
 
-    expect(issues.map((issue) => issue.code)).toContain("UIX-VAL-3LAYER-FORBIDDEN-FILE");
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-THREELAYER-001");
   });
 
   it("runs against the newest pack when several exist", async () => {
@@ -68,7 +68,7 @@ describe("runCanonicalUixValidators pack resolution", () => {
 
     const issues = await runCanonicalUixValidators(root, defaultConfig);
 
-    expect(issues.map((issue) => issue.code)).toContain("UIX-VAL-3LAYER-FORBIDDEN-FILE");
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-THREELAYER-001");
   });
 
   it("accepts a pack root directly", async () => {
@@ -77,7 +77,7 @@ describe("runCanonicalUixValidators pack resolution", () => {
 
     const issues = await runCanonicalUixValidators(packRoot, defaultConfig);
 
-    expect(issues.map((issue) => issue.code)).toContain("UIX-VAL-3LAYER-FORBIDDEN-FILE");
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-THREELAYER-001");
   });
 
   it("stays silent when no pack can be resolved", async () => {

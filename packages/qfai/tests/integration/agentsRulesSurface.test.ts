@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
+import { readRule } from "../helpers/ruleWithReferences.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "../../../..");
@@ -131,9 +132,8 @@ describe("the implementation reviewer reads silent failure and type design", () 
       ]) {
         expect(flat).toContain(check);
       }
-      const baseline = await readFile(
+      const baseline = await readRule(
         path.join(ROOT, tree, "assistant/rule/shared-skill-delegation-baseline.md"),
-        "utf-8",
       );
       const rows = baseline.split(/\r?\n/).filter((line) => line.startsWith("| `/qfai-implement`"));
       expect(rows).toHaveLength(1);
@@ -1510,7 +1510,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /opening\s+and\s+a\s+closing\s+tag\s+carrying\s+that\s+id/,
         /Say\s+in\s+the\s+system\s+prompt\s+what\s+the\s+tags\s+mean/,
         // What the marks are not.
-        /one\s+guardrail\s+among\s+several,\s+not\s+a\s+complete\s+defence/,
+        /one\s+safeguard\s+among\s+several,\s+not\s+a\s+complete\s+defence/,
       ]) {
         expect(text).toMatch(clause);
       }
@@ -1582,6 +1582,19 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       ]) {
         expect(text).toMatch(clause);
       }
+    });
+
+    it.each(["AGENTS.md", "packages/qfai/assets/init/root/AGENTS.md"])(
+      "%s stays at or under 500 lines",
+      async (rel) => {
+        const text = await readFile(path.join(ROOT, rel), "utf-8");
+        expect(text.split(/\r?\n/).length).toBeLessThanOrEqual(500);
+      },
+    );
+
+    it("AGENTS.md points at the work scenarios with a read condition", async () => {
+      const text = await readFile(path.join(ROOT, "AGENTS.md"), "utf-8");
+      expect(text).toMatch(/Read `\.instruction\/01_specialties\/work-scenarios\.md` when/);
     });
 
     it("ships to adopters", async () => {

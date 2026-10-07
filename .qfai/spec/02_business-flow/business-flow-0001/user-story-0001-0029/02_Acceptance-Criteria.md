@@ -20,6 +20,6 @@ Feature: Copilot instructions generation
   Scenario: The generated Copilot instructions state the closed legacy window
     Given an empty project directory
     When `qfai init` runs
-    Then the `.github/copilot-instructions.md` it writes says the legacy `.qfai/assistant/instructions/` layout is past its compatibility window and that `qfai init` reports it on stderr as a `D-DEPRECATED-PATH` error, and names `qfai init --upgrade-assistant-tree`
+    Then the `.github/copilot-instructions.md` it writes says the legacy `.qfai/assistant/instructions/` layout is past its compatibility window and that `qfai init` reports it on stderr as a `QFAI-DEPRECATED-001` error, and names `qfai init --upgrade-assistant-tree`
     And it neither calls the legacy layout read-compatible nor calls the finding a warning
 ```

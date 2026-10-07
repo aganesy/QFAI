@@ -244,7 +244,7 @@ export async function validateScreenContractSchema(
       if (seenIds.has(screenId)) {
         issues.push(
           contractIssue(
-            "UIX-VAL-SCREEN-CONTRACT-DUPLICATE-ID",
+            "QFAI-SCREEN-001",
             `Duplicate screen_id '${screenId}' detected.`,
             "error",
             `Ensure each screen has a unique screen_id in ${RELPATH}.`,
@@ -262,7 +262,7 @@ export async function validateScreenContractSchema(
     if (screen.invalidInlineNestedFields.length > 0) {
       issues.push(
         contractIssue(
-          "UIX-VAL-SCREEN-CONTRACT-LEGACY-FORMAT",
+          "QFAI-SCREEN-002",
           `Screen '${screenId}' uses legacy flat nested fields: ${screen.invalidInlineNestedFields.join(", ")}. Use nested canonical bullets only.`,
           "error",
           `Rewrite ${screen.invalidInlineNestedFields.join(", ")} as nested canonical bullets in ${RELPATH}.`,
@@ -289,7 +289,7 @@ export async function validateScreenContractSchema(
     if (missing.length > 0) {
       issues.push(
         contractIssue(
-          "UIX-VAL-SCREEN-CONTRACT-SCHEMA-INCOMPLETE",
+          "QFAI-SCREEN-003",
           `Screen '${screenId}' is missing fields: ${missing.join(", ")}`,
           "error",
           `Add the missing fields to screen '${screenId}' in ${RELPATH}.`,
@@ -304,7 +304,7 @@ export async function validateScreenContractSchema(
       if (missingStates.length > 0) {
         issues.push(
           contractIssue(
-            "UIX-VAL-SCREEN-CONTRACT-STATE-COVERAGE",
+            "QFAI-SCREEN-004",
             `Screen '${screenId}' required_states missing mandatory states: ${missingStates.join(", ")}`,
             "error",
             `Add missing states (${missingStates.join(", ")}) to required_states for screen '${screenId}'.`,

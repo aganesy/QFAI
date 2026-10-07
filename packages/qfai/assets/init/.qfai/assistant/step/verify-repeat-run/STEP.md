@@ -39,7 +39,7 @@ run.
    diagnosis exposed the failure.
 3. Record every run in order. Reporting only the runs that passed is selective
    reporting, as
-   `.qfai/assistant/rule/shared-skill-operating-baseline.md#nondeterministic-gates`
+   `.qfai/assistant/rule/references/gate-failure-autorepair.md#nondeterministic-gates`
    says.
 4. One failure ends the step. Inside a run, return `needs_repair` with the
    failure in `debts`, owned by the skill that owns the failing test's layer or

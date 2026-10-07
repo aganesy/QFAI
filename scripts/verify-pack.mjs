@@ -26,6 +26,7 @@ import {
   readBaseline,
   writeBaseline,
 } from "./fresh-init-findings.mjs";
+import { explainNpmInstallFailure } from "./lib/npm-failure.mjs";
 import { assertPackagedGithubTopology } from "./lib/pack-github-topology.mjs";
 
 function toPosix(p) {
@@ -132,7 +133,7 @@ if (!existsSync(templateDir)) {
   throw new Error("assets/init/.qfai is missing from the packed artifact.");
 }
 // .gitignore files removed from subdirectories; entries now live in root .gitignore
-// (see ensureRootGitignoreEntries in init.ts)
+// (see ensureRootGitignoreEntries in core/init/rootGitignore.ts)
 const rootAssetsDir = path.join(assetsDir, "root");
 if (!existsSync(rootAssetsDir)) {
   throw new Error("assets/init/root is missing from the packed artifact.");
@@ -194,10 +195,19 @@ assertPackagedGithubTopology(rootGithubDir);
 removePackTree(sandboxDir);
 mkdirSync(sandboxDir, { recursive: true });
 runNpm(["init", "-y"], { cwd: sandboxDir, stdio: "inherit" });
-runNpm(["install", tarballPath], {
-  cwd: sandboxDir,
-  stdio: "inherit",
-});
+try {
+  runNpm(["install", tarballPath], {
+    cwd: sandboxDir,
+    stdio: ["ignore", "inherit", "pipe"],
+    encoding: "utf8",
+  });
+} catch (error) {
+  const stderr = typeof error?.stderr === "string" ? error.stderr : "";
+  process.stderr.write(stderr);
+  const cause = explainNpmInstallFailure(stderr);
+  if (cause !== null) console.error(cause);
+  throw error;
+}
 
 rmSync(tarballPath, { force: true });
 removePackTree(outputDir);

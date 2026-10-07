@@ -16,9 +16,9 @@ the system's shape has settled.
 
 ## Reads
 
-- The active flow, one `BF-NNNN`. Inside a workflow run the work order's
-  `target` names it. A flow that cannot be resolved stops this step: report
-  the missing source.
+- The active flow, one `BF-NNNN`, which the invocation's BF argument or the
+  request names. A flow that cannot be resolved stops this step: report the
+  missing source.
 - The flow's stories and acceptance criteria under `paths.specsDir`. The
   default tree is `.qfai/spec/`.
 - `.qfai/assistant/rule/test-layers.md` for the layer each ID maps to.

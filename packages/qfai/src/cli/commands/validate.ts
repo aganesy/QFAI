@@ -1,9 +1,8 @@
-import { mkdir, stat, writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { FailOn, OutputFormat } from "../../core/config.js";
 import { loadConfig } from "../../core/config.js";
-import { isEnoent } from "../../core/fs/errno.js";
 import { normalizeValidationResult } from "../../core/normalize.js";
 import { isStoryTreeId } from "../../core/storyTree/ids.js";
 import { buildCiProfileIssue } from "../../core/phasePolicy.js";
@@ -45,113 +44,6 @@ export type ValidateOptions = {
   toolVersionOverride?: string;
 };
 
-/**
- * The release that retired the legacy `.qfai/output/validate.json` write path.
- *
- * Nothing compares against it: the path is not written and the finding is an
- * `error`. It appears in the message so an operator meeting the finding knows
- * which release stopped writing the file they are still reading.
- */
-const LEGACY_VALIDATE_JSON_SUNSET = "1.10.0";
-const LEGACY_VALIDATE_JSON_REL = ".qfai/output/validate.json";
-
-async function pathExists(p: string): Promise<boolean> {
-  try {
-    await stat(p);
-    return true;
-  } catch (error: unknown) {
-    // Only a missing path is absence. An unreadable one (EACCES, EIO, ...) is not
-    // evidence the file is missing, so it reaches the caller unchanged.
-    if (isEnoent(error)) return false;
-    throw error;
-  }
-}
-
-/**
- * Normalize a configured path for comparison against the legacy
- * literal. Lowercased, posix-slashed, leading `./` stripped, repeated
- * slashes collapsed. Comparison is case-insensitive only on the textual
- * normalization step (no filesystem casing inspection) so the rule
- * fires identically on Windows + macOS + Linux configs.
- */
-function normalizeForLegacyMatch(p: string): string {
-  return p.replace(/\\/g, "/").replace(/\/+/g, "/").replace(/^\.\//, "").toLowerCase();
-}
-
-/**
- * True when the configured validate JSON path is the legacy
- * `.qfai/output/validate.json` SSOT (the canonical path has since
- * moved to `.qfai/report/validate.json`). Absolute paths are never
- * treated as legacy — the legacy SSOT is the relative repo-rooted
- * literal only; operators who deliberately point at an absolute path
- * have explicitly opted out of the canonical SSOT.
- *
- * Exported so `report --run-validate` gates on the same predicate. That command
- * writes a validate result too, and a private copy of the rule here meant the
- * report path bypassed the migration gate the validate path enforces.
- */
-export function configTargetsLegacyValidateJsonPath(configuredPath: string): boolean {
-  if (path.isAbsolute(configuredPath)) return false;
-  return normalizeForLegacyMatch(configuredPath) === LEGACY_VALIDATE_JSON_REL;
-}
-
-/**
- * Outcome of the legacy `validate.json` migration gate: the
- * `D-DEPRECATED-PATH` finding a run must carry (if any) plus the writer
- * decisions derived from the same signals.
- */
-export type LegacyValidateJsonGate = {
-  /** Finding to append to the run's result, or `null` when none is due. */
-  issue: Issue | null;
-  /** True when `output.validateJsonPath` still names the legacy SSOT. */
-  configTargetsLegacyPath: boolean;
-  /** True when the writer must refuse the configured (legacy) target. */
-  refuseConfiguredLegacyWrite: boolean;
-};
-
-/**
- * Evaluate the legacy `.qfai/output/validate.json` migration gate.
- *
- * Shared by `qfai validate` and `qfai report --run-validate`: both run
- * `validateProject` and then write `output.validateJsonPath`, so both owe the
- * operator the same finding and the same post-sunset write refusal. When only
- * `validate` applied it, `report --run-validate` — the documented single-step
- * CI usage — re-created the legacy path and exited 0 on a project `validate`
- * rejects with exit 1.
- */
-export async function evaluateLegacyValidateJsonGate(args: {
-  root: string;
-  configuredValidateJsonPath: string;
-}): Promise<LegacyValidateJsonGate> {
-  // Detect whether the operator's project config still aims the writer
-  // at the legacy SSOT. This is a stronger signal than "the legacy file
-  // exists on disk" — even a clean filesystem will trigger the gate if
-  // the config points there, because the writer is about to recreate
-  // the stale path on this very run.
-  const configTargetsLegacyPath = configTargetsLegacyValidateJsonPath(
-    args.configuredValidateJsonPath,
-  );
-  // The finding is due only where there is observable evidence — the config or
-  // a file on disk — that a consumer still depends on the legacy path.
-  // Otherwise every clean run would carry an unactionable error for a path the
-  // project never used. A `--flow` scope may not suppress it: the evidence is
-  // of a dependency this project has, and suppressing it would let a scoped run
-  // walk past the migration gate with exit 0.
-  const legacyOnDisk = await pathExists(path.join(args.root, LEGACY_VALIDATE_JSON_REL));
-  const emitDeprecationIssue = legacyOnDisk || configTargetsLegacyPath;
-  return {
-    issue: emitDeprecationIssue
-      ? buildDeprecationIssue({
-          configTargetsLegacyPath,
-        })
-      : null,
-    configTargetsLegacyPath,
-    // The legacy SSOT is dead: a config that still names it is refused, which
-    // is the migration gate.
-    refuseConfiguredLegacyWrite: configTargetsLegacyPath,
-  };
-}
-
 export async function runValidate(options: ValidateOptions): Promise<number> {
   const startedAt = new Date();
   const root = path.resolve(options.root);
@@ -192,21 +84,12 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
       }
     : validated;
   // Test callers override; production reads the same package.json#version the
-  // rest of the toolchain uses (so the source-of-truth is single). Resolved
-  // once here and handed to the gate, which would otherwise read it again.
+  // rest of the toolchain uses (so the source-of-truth is single).
   const effectiveToolVersion = options.toolVersionOverride ?? (await resolveToolVersion());
   await emitProvenance(effectiveToolVersion);
   const configuredValidateJsonPath = configResult.config.output.validateJsonPath;
   const scopedFlowIds = options.flowIds ?? [];
-  const legacyGate = await evaluateLegacyValidateJsonGate({
-    root,
-    configuredValidateJsonPath,
-  });
-  const { refuseConfiguredLegacyWrite } = legacyGate;
-  const result: ValidationResult = legacyGate.issue
-    ? appendIssue(rawResult, legacyGate.issue)
-    : rawResult;
-  const normalized = normalizeValidationResult(root, result);
+  const normalized = normalizeValidationResult(root, rawResult);
   // `!== false` rather than a truth test: a result that carries no claim (one
   // not produced by `validateProject`) keeps the ordinary per-profile wording.
   const partialProfileNotice = normalized.issues.some((item) => item.code === "QFAI-LAYOUT-001")
@@ -274,38 +157,21 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   }
   if (scopedFlowIds.length > 0) {
     // Writing a scoped result to the shared `validate.json` /
-    // `validate-<profile>.json` / legacy path would let parallel Slice workers
+    // `validate-<profile>.json` would let parallel Slice workers
     // race on the same files, leaving the last finisher's single flow looking
     // like a repo-wide PASS to every downstream reader.
-    //
-    // The migration gate applies here too. `scopedReportPath` derives its
-    // directory from `output.validateJsonPath`, so a config still pointing at
-    // the legacy SSOT would put `validate.flow-0003.json` inside the
-    // deprecated directory — new files appearing under a path the gate exists
-    // to retire, which reads as "still fine to write here".
     if (
       scopedReportRel !== null &&
-      !refuseConfiguredLegacyWrite &&
       !normalized.issues.some((issue) => issue.code === "QFAI-FLOW-005")
     ) {
       await emitJson(normalized, root, scopedReportRel);
     }
   } else {
     // Always-latest report + profile-suffixed report.
-    // Post-sunset, refuse to write to the configured legacy path: the
-    // migration gate must direct the operator to update their config
-    // instead of silently producing a stale-named file. The accompanying
-    // deprecation issue (severity=error) already carries the actionable
-    // text; here we just skip the physical write.
-    if (!refuseConfiguredLegacyWrite) {
-      await emitJson(normalized, root, configuredValidateJsonPath);
-      const profileLabel = normalized.profile ?? options.profile ?? "full";
-      const profileSuffixedRel = profileSuffixedReportPath(
-        configuredValidateJsonPath,
-        profileLabel,
-      );
-      await emitJson(normalized, root, profileSuffixedRel);
-    }
+    await emitJson(normalized, root, configuredValidateJsonPath);
+    const profileLabel = normalized.profile ?? options.profile ?? "full";
+    const profileSuffixedRel = profileSuffixedReportPath(configuredValidateJsonPath, profileLabel);
+    await emitJson(normalized, root, profileSuffixedRel);
   }
 
   return willFail ? 1 : 0;
@@ -369,39 +235,6 @@ export function profileSuffixedReportPath(configured: string, profile: string): 
   return path.posix.join(dir, `${stem}-${profile}${ext}`);
 }
 
-/**
- * Build the `D-DEPRECATED-PATH` finding for the legacy validate output SSOT.
- *
- * Two states reach this function, both of them `error`: the legacy path is
- * retired, so nothing writes it and a project still naming it has a migration
- * to make.
- *
- *   1. `configTargetsLegacyPath` — the config points at the legacy path, so
- *      the writer refused and the message directs the operator to update it.
- *   2. Otherwise — a stale file left on disk, so the message asks for it to be
- *      deleted.
- */
-function buildDeprecationIssue(args: { configTargetsLegacyPath: boolean }): Issue {
-  const message = args.configTargetsLegacyPath
-    ? `qfai.config.yaml#output.validateJsonPath points at the legacy SSOT ` +
-      `${LEGACY_VALIDATE_JSON_REL}, which is past the announced sunset ` +
-      `(${LEGACY_VALIDATE_JSON_SUNSET}). The validate writer REFUSED this ` +
-      `write to enforce the migration gate. Update output.validateJsonPath ` +
-      `to .qfai/report/validate.json (canonical) and rerun validate.`
-    : `Legacy validate output path ${LEGACY_VALIDATE_JSON_REL} is past the announced ` +
-      `sunset (${LEGACY_VALIDATE_JSON_SUNSET}); the legacy file is no longer written but ` +
-      `still exists on disk. Update consumers to read .qfai/report/validate.json or ` +
-      `.qfai/report/validate-<profile>.json and delete the stale legacy file.`;
-  return {
-    code: "D-DEPRECATED-PATH",
-    severity: "error",
-    category: "canonical",
-    message,
-    file: LEGACY_VALIDATE_JSON_REL,
-    rule: "validate.legacyOutputDeprecated",
-  };
-}
-
 /** Finding families grouped by the validators the current profiles run. */
 export const GATE_GROUP_FAMILIES = {
   hygiene: ["QFAI-HYG-*"],
@@ -410,14 +243,13 @@ export const GATE_GROUP_FAMILIES = {
   discussion: ["QFAI-DPACK-*", "QFAI-VIS-*"],
   "research-summary": ["QFAI-RESEARCH-*"],
   "canonical-uix": [
-    "UIX-VAL-3LAYER-*",
-    "UIX-VAL-CLASSIFICATION-*",
-    "UIX-VAL-DIRECTION-*",
-    "UIX-VAL-OQ-*",
-    "UIX-VAL-SCREEN-*",
-    "UIX-VAL-SIDECAR-*",
-    "UIX-VAL-T05",
-    "UIX-VAL-TREND-*",
+    "QFAI-THREELAYER-*",
+    "QFAI-CLASSIFICATION-*",
+    "QFAI-DIRECTION-*",
+    "QFAI-OQ-*",
+    "QFAI-SCREEN-*",
+    "QFAI-SIDECAR-*",
+    "QFAI-TREND-*",
   ],
   "story-structure": [
     "QFAI-STORY-001",
@@ -430,6 +262,7 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-STORY-013",
     "QFAI-STORY-015",
     "QFAI-STORY-016",
+    "QFAI-STORY-017",
     "QFAI-SPACK-102",
   ],
   "story-contract-index": ["QFAI-CONTRACT-034"],
@@ -444,13 +277,14 @@ export const GATE_GROUP_FAMILIES = {
   "story-test-scan": ["QFAI-SCAN-002"],
   sdd: [
     "QFAI-AUTOPILOT-*",
-    "W-ASSISTANT-LAYOUT",
-    "W-SKILL-PROJECT-MEMORY",
-    "W-STALE-REFERENCE",
-    "I-ASSISTANT-LAYER-UNSEEDED",
+    "QFAI-ASSISTANT-001",
+    "QFAI-SKILLDOC-001",
+    "QFAI-STALE-001",
+    "QFAI-ASSISTANT-002",
+    "QFAI-DEPRECATED-001",
   ],
-  "reviewer-gate-sdd": ["R-AUTOPILOT-POLICY-*"],
-  "reviewer-gate-shared": ["R-MOCK-HREF-DRIFT"],
+  "reviewer-gate-sdd": ["QFAI-POLICY-*"],
+  "reviewer-gate-shared": ["QFAI-MOCKHREF-001"],
   contracts: [
     "QFAI-CONTRACT-000",
     "QFAI-CONTRACT-010",
@@ -484,7 +318,7 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-PLATFORM-*",
     "QFAI-CFG-LINK-*",
   ],
-  "prototyping-skill": ["UIX-VAL-SKILL-*"],
+  "prototyping-skill": ["QFAI-PROTOSKILL-*"],
   "test-stubs": ["QFAI-TEST-*"],
   drift: ["QFAI-DRIFT-*", "QFAI-STORY-010"],
   "saas-package-profile": [ATTESTATION_MISSING_CODE, HANDOFF_SCHEMA_CODE],
@@ -763,6 +597,40 @@ function emitStrictSupersededNotice(failOn: FailOn): void {
   );
 }
 
+/** The most issues of one code that `--format text` prints before it counts the rest. */
+const TEXT_ISSUES_PER_GROUP = 5;
+
+interface TextIssueGroup {
+  head: Issue;
+  items: Issue[];
+}
+
+/**
+ * Issues of one code, severity and suppression state, in the order the first of
+ * each group appeared. A rule that fails in a hundred places is one group, not
+ * a hundred records.
+ */
+function groupIssues(issues: readonly Issue[]): TextIssueGroup[] {
+  const groups = new Map<string, TextIssueGroup>();
+  for (const item of issues) {
+    const key = `${item.severity}|${item.code}|${item.suppressed === true}`;
+    const group = groups.get(key);
+    if (group) {
+      group.items.push(item);
+    } else {
+      groups.set(key, { head: item, items: [item] });
+    }
+  }
+  return [...groups.values()];
+}
+
+function formatTextIssueLine(item: Issue): string {
+  const location = item.file ? ` (${item.file})` : "";
+  const refs = item.refs && item.refs.length > 0 ? ` refs=${item.refs.join(",")}` : "";
+  const suppressed = item.suppressed ? " suppressed=true" : "";
+  return `[${item.severity}] ${item.code} ${item.message}${location}${refs}${suppressed}`;
+}
+
 /**
  * Renders the default `--format text` output.
  *
@@ -770,19 +638,22 @@ function emitStrictSupersededNotice(failOn: FailOn): void {
  * both must be changed together.
  */
 export function emitText(result: ValidationResult, failOn: FailOn): void {
-  for (const item of result.issues) {
-    const location = item.file ? ` (${item.file})` : "";
-    const refs = item.refs && item.refs.length > 0 ? ` refs=${item.refs.join(",")}` : "";
-    const suppressed = item.suppressed ? " suppressed=true" : "";
-    process.stdout.write(
-      `[${item.severity}] ${item.code} ${item.message}${location}${refs}${suppressed}\n`,
-    );
-    if (shouldEmitIssueDetail(item, failOn)) {
-      emitTextField("error_code", item.code);
-      emitTextField("target", resolveIssueTarget(item));
-      emitTextField("expected", resolveIssueExpected(item));
-      emitTextField("current", item.message);
-      emitTextField("fix", resolveIssueFix(item));
+  for (const group of groupIssues(result.issues)) {
+    const shown = group.items.slice(0, TEXT_ISSUES_PER_GROUP);
+    for (const item of shown) {
+      process.stdout.write(`${formatTextIssueLine(item)}\n`);
+    }
+    const hidden = group.items.length - shown.length;
+    if (hidden > 0) {
+      const suppressed = group.head.suppressed ? " suppressed=true" : "";
+      process.stdout.write(
+        `[${group.head.severity}] ${group.head.code} and ${hidden} more${suppressed}\n`,
+      );
+    }
+    if (shouldEmitIssueDetail(group.head, failOn)) {
+      for (const fix of new Set(shown.map(resolveIssueFix))) {
+        emitTextField("fix", fix);
+      }
     }
   }
   process.stdout.write(
@@ -946,11 +817,10 @@ export function capPerLevel(issues: Issue[]): { emitted: Issue[]; levels: LevelT
 }
 
 /**
- * Whether an issue prints its `expected` / `fix` detail: every error, and a
- * warning when warnings fail the run. Tied to `severity === "error"` alone, the
- * rule-description catalogue would be unreachable for every warning-severity
- * code, although under `--strict` / `--fail-on warning` the warning is exactly
- * what fails the run.
+ * Whether a group of issues prints its `fix` lines: every error, and a warning
+ * when warnings fail the run. Tied to `severity === "error"` alone, the
+ * remedy of every warning-severity code would be unreachable, although under
+ * `--strict` / `--fail-on warning` the warning is exactly what fails the run.
  */
 function shouldEmitIssueDetail(issue: Issue, failOn: FailOn): boolean {
   if (issue.severity === "error") {
@@ -1156,6 +1026,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Story-tree documents name no file outside `.qfai` by a repository path, so a spec does not depend on a file that changes without a spec review.",
   "QFAI-STORY-016":
     "No spec document states a term `validation.staleTerms` lists, apart from the decision and open-question registers.",
+  "QFAI-STORY-017":
+    "A decisions.md row recorded after the Approach form began to be checked holds Evidence, Grounds, Residual risk and Rollback in that order, none empty, with every Evidence entry a file: or command: item.",
   "QFAI-DOCSCHEMA-001":
     "Exactly one shipped schema covers each story-tree Markdown file, and the file has the sections, order and content that schema declares and carries no opt-out marker.",
   "QFAI-DOCSCHEMA-002": "The document-schema check runs over the story tree.",
@@ -1278,9 +1150,9 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every skill carries both fields a host registers it by: a `name:` that is its own directory, in lowercase letters, digits and single hyphens to 64 characters, and a `description:` with text in it, to 1024 characters and with no `<` or `>` — a skill that should not be offered to the model declares `disable-model-invocation: true` and keeps the description, rather than dropping the field and losing the registration with it.",
   "QFAI-SKILLS-016":
     "The step layer holds only `STEP.md` steps named after their directories; each is owned by `common` or by a skill whose `steps:` lists it, `requires:` names only installed `common-*` steps, every step a skill or a workflow plan names is installed and used, and a skill that lists steps declares `orchestrator` and every role those steps declare.",
-  "D-SAAS-PACKAGE-ATTESTATION-MISSING":
+  "QFAI-SAAS-001":
     "The saas-package profile finds a design-system attestation at its configured path.",
-  "D-SAAS-PACKAGE-HANDOFF-SCHEMA":
+  "QFAI-SAAS-002":
     "A cross-skill handoff, when present, parses as an object and conforms to the handoff schema.",
   "QFAI-DRIFT-001":
     "Upstream SSOT files are unchanged relative to the base branch, or the change carries an approved Change Request.",
@@ -1304,15 +1176,13 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "No required Research Summary value is still the shipped `[...]` template placeholder.",
   "QFAI-AUTOPILOT-001":
     "Every `qfai-*` SKILL.md keeps its hard-required bucket to the common entries plus the ones it declares for itself, and names no retired entry. A skill may carry fewer — one it never reads costs a prompt and buys nothing — and never more.",
-  "D-DEPRECATED-PATH":
-    "No retired path is in use: `output.validateJsonPath` does not name the old `.qfai/output/validate.json` report path, no file is left there, and the retired `.qfai/assistant/instructions/` layer is absent.",
-  "W-ASSISTANT-LAYOUT": "Every directory under `.qfai/assistant/` is one of the canonical layers.",
-  "W-SKILL-PROJECT-MEMORY":
-    "A `project_memory:` block in a SKILL.md is the last thing in the file.",
-  "W-STALE-REFERENCE":
+  "QFAI-DEPRECATED-001": "The retired `.qfai/assistant/instructions/` layer is absent.",
+  "QFAI-ASSISTANT-001": "Every directory under `.qfai/assistant/` is one of the canonical layers.",
+  "QFAI-SKILLDOC-001": "A `project_memory:` block in a SKILL.md is the last thing in the file.",
+  "QFAI-STALE-001":
     "No skill document still names a token that its implementation has since replaced.",
-  "I-ASSISTANT-LAYER-UNSEEDED": "Every canonical `.qfai/assistant/` layer directory is seeded.",
-  QFAI_CONFIG_INVALID: "Every value in qfai.config.yaml has the type and range its key declares.",
+  "QFAI-ASSISTANT-002": "Every canonical `.qfai/assistant/` layer directory is seeded.",
+  "QFAI-CFG-002": "Every value in qfai.config.yaml has the type and range its key declares.",
   "QFAI-AGENT-005": "Every agent definition file has each required section heading.",
   "QFAI-AGENT-007":
     "The agent routing manifest and its defaults file can be read and parse to the shape the routing check expects.",
@@ -1416,82 +1286,71 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-WAIVER-003": "No waiver in `.qfai/waivers.yml` has passed its `expires` date.",
   "QFAI-WAIVER-004":
     "Every waiver's `rule` names a finding code this run emits and a waiver can suppress.",
-  "R-AUTOPILOT-POLICY-MISSING":
+  "QFAI-POLICY-001":
     "The shared autopilot policy has its three buckets (auto-decide, ask-user, hard-required), and each skill's own policy lists the hard-required inputs declared for it.",
-  "R-AUTOPILOT-POLICY-WIDENED":
-    "No skill's auto-decide bucket lists an entry outside the shared allowed set.",
-  "R-HANDOFF-SCHEMA-DRIFT":
+  "QFAI-POLICY-002": "No skill's auto-decide bucket lists an entry outside the shared allowed set.",
+  "QFAI-HANDOFF-001":
     "The handoff schema's field list and each file that writes a handoff name the same fields.",
-  "R-MOCK-HREF-DRIFT":
+  "QFAI-MOCKHREF-001":
     "The HTML mock template and the validator rule for mock links agree on which hrefs are allowed.",
-  "R-SKILL-MANIFEST-DRIFT":
+  "QFAI-MANIFEST-001":
     "The skill manifest schema and the probe that reads it name the same tokens.",
-  "UIX-VAL-3LAYER-FORBIDDEN-FILE": "The `uiux/` directory holds none of the retired sidecar files.",
-  "UIX-VAL-3LAYER-INCOMPLETE-FAMILY":
-    "The `uiux/` directory holds every file of the canonical sidecar family.",
-  "UIX-VAL-3LAYER-LEGACY-FORMAT": "No sidecar file uses the retired evaluation headings.",
-  "UIX-VAL-3LAYER-MIXED-FORMAT":
+  "QFAI-THREELAYER-001": "The `uiux/` directory holds none of the retired sidecar files.",
+  "QFAI-THREELAYER-002": "The `uiux/` directory holds every file of the canonical sidecar family.",
+  "QFAI-THREELAYER-003": "No sidecar file uses the retired evaluation headings.",
+  "QFAI-THREELAYER-004":
     "A sidecar file uses either the exploration-first headings or the retired evaluation headings, never both.",
-  "UIX-VAL-CLASSIFICATION-CONTRADICTION":
+  "QFAI-CLASSIFICATION-001":
     "The `ui_bearing`, `primary_surface` and `secondary_surfaces` fields of a classification agree with each other.",
-  "UIX-VAL-CLASSIFICATION-DUPLICATE-SECONDARY-SURFACE":
-    "`secondary_surfaces` lists no surface twice.",
-  "UIX-VAL-CLASSIFICATION-INVALID-BOOLEAN": "`ui_bearing` is `true` or `false`.",
-  "UIX-VAL-CLASSIFICATION-INVALID-SECONDARY-SURFACE":
+  "QFAI-CLASSIFICATION-002": "`secondary_surfaces` lists no surface twice.",
+  "QFAI-CLASSIFICATION-003": "`ui_bearing` is `true` or `false`.",
+  "QFAI-CLASSIFICATION-004":
     "Every `secondary_surfaces` value is a surface the classification accepts.",
-  "UIX-VAL-CLASSIFICATION-INVALID-SURFACE":
-    "`primary_surface` is a surface the classification accepts.",
-  "UIX-VAL-CLASSIFICATION-MISSING": "`01_Context.md` has the UI-bearing classification block.",
-  "UIX-VAL-CLASSIFICATION-RATIONALE-PLACEHOLDER":
+  "QFAI-CLASSIFICATION-005": "`primary_surface` is a surface the classification accepts.",
+  "QFAI-CLASSIFICATION-006": "`01_Context.md` has the UI-bearing classification block.",
+  "QFAI-CLASSIFICATION-007":
     "`classification_rationale` holds project-specific reasoning, not placeholder text.",
-  "UIX-VAL-CLASSIFICATION-REQUIRED-FIELD":
+  "QFAI-CLASSIFICATION-008":
     "The classification block has `ui_bearing`, `primary_surface`, `secondary_surfaces` and `classification_rationale`.",
-  "UIX-VAL-CLASSIFICATION-SECONDARY-ARRAY":
+  "QFAI-CLASSIFICATION-009":
     "`secondary_surfaces` is present, as a list or an explicit empty list.",
-  "UIX-VAL-CLASSIFICATION-SECONDARY-DUPLICATE":
-    "`secondary_surfaces` does not repeat the `primary_surface`.",
-  "UIX-VAL-DIRECTION-HISTORY-MISSING":
+  "QFAI-CLASSIFICATION-010": "`secondary_surfaces` does not repeat the `primary_surface`.",
+  "QFAI-DIRECTION-001":
     "`50_review_input_bundle.md` states that the latest iteration is the accepted one and no earlier iteration is restored.",
-  "UIX-VAL-OQ-OPEN-CRITICAL": "No critical open question remains open in the OQ register.",
-  "UIX-VAL-SCREEN-CONTRACT-DUPLICATE-ID":
-    "Every screen in the screen contract has a unique `screen_id`.",
-  "UIX-VAL-SCREEN-CONTRACT-LEGACY-FORMAT":
+  "QFAI-OQ-001": "No critical open question remains open in the OQ register.",
+  "QFAI-SCREEN-001": "Every screen in the screen contract has a unique `screen_id`.",
+  "QFAI-SCREEN-002":
     "Every screen in the screen contract writes its nested fields as nested canonical bullets.",
-  "UIX-VAL-SCREEN-CONTRACT-SCHEMA-INCOMPLETE":
-    "Every screen in the screen contract has all the required fields.",
-  "UIX-VAL-SCREEN-CONTRACT-STATE-COVERAGE":
-    "Every screen's `required_states` includes the mandatory states.",
-  "UIX-VAL-SIDECAR-MISSING": "A spec that is UI-bearing has a `uiux/` sidecar directory.",
-  "UIX-VAL-SKILL-ASPIRATIONAL":
-    "The prototyping skill claims no capability that is not implemented.",
-  "UIX-VAL-SKILL-BANNED-PHRASE":
+  "QFAI-SCREEN-003": "Every screen in the screen contract has all the required fields.",
+  "QFAI-SCREEN-004": "Every screen's `required_states` includes the mandatory states.",
+  "QFAI-SIDECAR-001": "A spec that is UI-bearing has a `uiux/` sidecar directory.",
+  "QFAI-PROTOSKILL-001": "The prototyping skill claims no capability that is not implemented.",
+  "QFAI-PROTOSKILL-002":
     "The prototyping skill uses none of the banned runtime-heavy default wording.",
-  "UIX-VAL-SKILL-CANONICAL-SURFACE":
+  "QFAI-PROTOSKILL-003":
     "The prototyping skill documents the supported UI surfaces: web, mobile, desktop and mixed.",
-  "UIX-VAL-SKILL-CLI-SURFACE":
+  "QFAI-PROTOSKILL-004":
     "The prototyping skill states that the cli surface is rejected from prototyping execution.",
-  "UIX-VAL-SKILL-DELEGATION":
+  "QFAI-PROTOSKILL-005":
     "The prototyping skill has the delegation scope table for the generation, evaluation and build roles.",
-  "UIX-VAL-SKILL-ENV-PRECONDITIONS":
+  "QFAI-PROTOSKILL-006":
     "The prototyping skill separates contract preconditions from environment preconditions.",
-  "UIX-VAL-SKILL-PLAYWRIGHT-FALLBACK":
+  "QFAI-PROTOSKILL-007":
     "The prototyping skill documents a Playwright invocation that installs nothing, such as `npx --no-install playwright`.",
-  "UIX-VAL-SKILL-PREFLIGHT":
+  "QFAI-PROTOSKILL-008":
     "The prototyping skill documents `qfai doctor --profile prototyping` as its preflight.",
-  "UIX-VAL-SKILL-SECTION-MISSING": "The prototyping skill has every required section.",
-  "UIX-VAL-SKILL-STATIC-FIRST":
-    "The prototyping skill states the static-first, file-based default.",
-  "UIX-VAL-SKILL-UI-BEARING-FALSE":
+  "QFAI-PROTOSKILL-009": "The prototyping skill has every required section.",
+  "QFAI-PROTOSKILL-010": "The prototyping skill states the static-first, file-based default.",
+  "QFAI-PROTOSKILL-011":
     "The prototyping skill limits execution to UI contracts that have a full UI ID and a non-empty `screens[]`.",
-  "UIX-VAL-T05":
+  "QFAI-TREND-005":
     "A UI-bearing pack's `04_Sources.md` has at least one concrete `design_guideline_research` entry before trend-derived axes are fixed.",
-  "UIX-VAL-TREND-CATEGORY-MISSING": "The `## Trend Scan` section has every required category.",
-  "UIX-VAL-TREND-ENTRY-MISSING": "Every trend-scan category has at least one complete entry.",
-  "UIX-VAL-TREND-FIELD-MISSING":
+  "QFAI-TREND-001": "The `## Trend Scan` section has every required category.",
+  "QFAI-TREND-002": "Every trend-scan category has at least one complete entry.",
+  "QFAI-TREND-003":
     "Every trend-scan entry fills each required field with project-specific content.",
-  "UIX-VAL-TREND-SCAN-MISSING":
-    "A UI-bearing pack has `04_Sources.md` with a `## Trend Scan` section.",
-  "D-SAAS-PACKAGE-VERIFY-SKIPPED":
+  "QFAI-TREND-004": "A UI-bearing pack has `04_Sources.md` with a `## Trend Scan` section.",
+  "QFAI-SAAS-003":
     "Every gate the SaaS-package profile skips is named, so a pass on that profile is not read as a full DONE.",
 };
 
@@ -1542,6 +1401,8 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
     "State the fact in the document in words, or cite a document under `.qfai` instead of the outside file.",
   "QFAI-STORY-016":
     "Rewrite the named line to match the decision that replaced the term, or remove the term from `validation.staleTerms` if the line is right.",
+  "QFAI-STORY-017":
+    "Rewrite the named row's Approach cell in the form the qfai-sdd decisions template shows.",
   "QFAI-DOCSCHEMA-001":
     "Rewrite the named section in the shape its qfai-sdd template shows, and remove the opt-out marker if the finding names it. Move a document no schema covers out of the spec tree.",
   "QFAI-DOCSCHEMA-002":
@@ -1603,19 +1464,6 @@ export const UNCATALOGUED_EXPECTED = "Rule compliance";
 
 /** Printed as `fix` when a code has neither a `suggested_action` nor a catalog entry. */
 export const UNCATALOGUED_FIX = "Follow the expected rule and rerun validate.";
-
-function resolveIssueTarget(issue: Issue): string {
-  if (issue.file && issue.refs && issue.refs.length > 0) {
-    return `${issue.file} [${issue.refs.join(", ")}]`;
-  }
-  if (issue.file) {
-    return issue.file;
-  }
-  if (issue.refs && issue.refs.length > 0) {
-    return issue.refs.join(", ");
-  }
-  return "(project)";
-}
 
 /**
  * Human-readable "expected state" a report prints for an issue code. Exported so

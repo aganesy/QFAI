@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import { collectHeadingSlugs } from "../../src/core/validators/assistantAnchorReferences.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
+import { readRule } from "../helpers/ruleWithReferences.js";
 
 const assistantDir = path.join(getInitAssetsDir(), ".qfai", "assistant");
 const driftPath = path.join(assistantDir, "rule", "drift-protocol.md");
@@ -23,7 +24,7 @@ describe("reviewer finding provenance", () => {
   it("keeps demonstrable deliverable defects blocking without an AC ID", async () => {
     const [drift, baseline] = await Promise.all([
       readFile(driftPath, "utf-8"),
-      readFile(baselinePath, "utf-8"),
+      readRule(baselinePath),
     ]);
     expect(drift).toMatch(
       /A defect is demonstrable from the deliverable or an existing obligation/,
@@ -40,7 +41,7 @@ describe("reviewer finding provenance", () => {
     const [drift, card, baseline] = await Promise.all([
       readFile(driftPath, "utf-8").then(flatten),
       readFile(reviewerCardPath, "utf-8").then(flatten),
-      readFile(baselinePath, "utf-8"),
+      readRule(baselinePath),
     ]);
     expect(drift).toContain(
       "No repository gate scans for a security or data-integrity defect. Review is that class's detector: `.qfai/assistant/agent/implementation-reviewer.md` checks each change",
@@ -112,7 +113,7 @@ describe("reviewer finding provenance", () => {
   it("makes record defects advisory only where a queue and drain exist", async () => {
     const [drift, baseline, skill] = await Promise.all([
       readFile(driftPath, "utf-8"),
-      readFile(baselinePath, "utf-8"),
+      readRule(baselinePath),
       readFile(skillPath, "utf-8"),
     ]);
     expect(drift).toMatch(
@@ -138,7 +139,7 @@ describe("reviewer finding provenance", () => {
   it("treats false execution or independence claims as blocking evidence defects", async () => {
     const [drift, baseline] = await Promise.all([
       readFile(driftPath, "utf-8"),
-      readFile(baselinePath, "utf-8"),
+      readRule(baselinePath),
     ]);
     expect(drift).toMatch(
       /A false claim that work ran, or that a reviewer independently checked it, is an evidence defect and\s+remains blocking/,
@@ -154,7 +155,7 @@ describe("reviewer finding provenance", () => {
 
   it("only blocking findings force REVISE and stage out-of-scope advice stays advisory", async () => {
     const [baseline, classification] = await Promise.all([
-      readFile(baselinePath, "utf-8"),
+      readRule(baselinePath),
       readFile(classificationPath, "utf-8"),
     ]);
     expect(baseline).toMatch(/Only .blocking. findings force .REVISE./);
@@ -172,7 +173,7 @@ describe("reviewer finding provenance", () => {
   it("resolves cross-document rule anchors", async () => {
     const [drift, baseline, skill, classification] = await Promise.all([
       readFile(driftPath, "utf-8"),
-      readFile(baselinePath, "utf-8"),
+      readRule(baselinePath),
       readFile(skillPath, "utf-8"),
       readFile(classificationPath, "utf-8"),
     ]);

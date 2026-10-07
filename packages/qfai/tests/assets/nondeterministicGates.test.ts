@@ -14,11 +14,11 @@
  * post-parallel rollback — then fires on the false signal, discarding correct
  * work.
  */
-import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
+import { readRule } from "../helpers/ruleWithReferences.js";
 
 // tests/assets/<this file> -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
@@ -28,7 +28,7 @@ const BASELINE = "assistant/rule/shared-skill-operating-baseline.md";
 const SKILL = "assistant/step/implement-tdd/STEP.md";
 
 const read = (tree: string, rel: string): Promise<string> =>
-  readFile(path.join(repoRoot, tree, rel), "utf-8");
+  readRule(path.join(repoRoot, tree, rel));
 
 /** Wrap-tolerant containment: the sentence is the rule, its wrap column is not. */
 const flat = (s: string): string => s.replace(/\s*\n\s*/g, " ");

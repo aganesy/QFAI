@@ -1,8 +1,8 @@
 /**
  * Package self-governance gate group.
  *
- * Pair III (`R-SKILL-MANIFEST-DRIFT`) and Pair IV
- * (`R-HANDOFF-SCHEMA-DRIFT`) both resolve every input they read under
+ * Pair III (`QFAI-MANIFEST-001`) and Pair IV
+ * (`QFAI-HANDOFF-001`) both resolve every input they read under
  * qfai's own monorepo source tree, against the *validated* repo's root.
  * A project produced by `qfai init` never contains that tree, so in a
  * consuming repo both detectors return `[]` structurally — not because
@@ -101,12 +101,12 @@ async function skillManifestDriftEvaluable(root: string): Promise<boolean> {
 
 const SELF_GOVERNANCE_GATES: readonly SelfGovernanceGate[] = [
   {
-    family: "R-HANDOFF-SCHEMA-DRIFT",
+    family: "QFAI-HANDOFF-001",
     evaluable: handoffSchemaDriftEvaluable,
     run: detectHandoffSchemaDrift,
   },
   {
-    family: "R-SKILL-MANIFEST-DRIFT",
+    family: "QFAI-MANIFEST-001",
     evaluable: skillManifestDriftEvaluable,
     run: detectSkillManifestDrift,
   },

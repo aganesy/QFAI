@@ -187,7 +187,6 @@ describe("issue code uniqueness", () => {
 // re-baselined each time to name the codes that hole had been hiding.
 
 const PENDING_FIX_CATALOG_CODES = new Set<string>([
-  "D-DEPRECATED-PATH",
   "QFAI-AGENT-005",
   "QFAI-AGENT-007",
   "QFAI-AGENT-008",
@@ -198,12 +197,14 @@ const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "QFAI-AGENT-013",
   "QFAI-ASSETS-001",
   "QFAI-ASSETS-002",
+  "QFAI-CFG-002",
   "QFAI-CONTRACT-010",
   "QFAI-CONTRACT-011",
   "QFAI-CONTRACT-012",
   "QFAI-CONTRACT-013",
   "QFAI-CONTRACT-020",
   "QFAI-CONTRACT-021",
+  "QFAI-DEPRECATED-001",
   "QFAI-DT-001",
   "QFAI-DT-002",
   "QFAI-DT-004",
@@ -211,6 +212,8 @@ const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "QFAI-DT-008",
   "QFAI-DT-009",
   "QFAI-DT-010",
+  "QFAI-HANDOFF-001",
+  "QFAI-MANIFEST-001",
   "QFAI-MOCK-001",
   "QFAI-MOCK-002",
   "QFAI-MOCK-003",
@@ -219,6 +222,8 @@ const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "QFAI-MOCK-010",
   "QFAI-MOCK-011",
   "QFAI-MOCK-012",
+  "QFAI-MOCKHREF-001",
+  "QFAI-POLICY-001",
   "QFAI-PROT-251",
   "QFAI-PROT-252",
   "QFAI-PROT-253",
@@ -241,11 +246,6 @@ const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "QFAI-TRACE-122",
   "QFAI-TRACE-123",
   "QFAI-WAIVER-001",
-  "QFAI_CONFIG_INVALID",
-  "R-AUTOPILOT-POLICY-MISSING",
-  "R-HANDOFF-SCHEMA-DRIFT",
-  "R-MOCK-HREF-DRIFT",
-  "R-SKILL-MANIFEST-DRIFT",
 ]);
 
 async function collectErrorCapableUsage(): Promise<Map<string, IssueCodeUsage>> {
@@ -276,22 +276,22 @@ describe("issue report metadata", () => {
     // `core/saasPackage/profile.ts` passes a `const CODE = "..."` binding, and
     // `core/browserQa/index.ts` passes a member of a `const` code table. Neither
     // is a literal at the call site, so both used to slip past the ratchet.
-    expect(usage.has("D-SAAS-PACKAGE-ATTESTATION-MISSING")).toBe(true);
-    expect(usage.has("D-SAAS-PACKAGE-HANDOFF-SCHEMA")).toBe(true);
+    expect(usage.has("QFAI-SAAS-001")).toBe(true);
+    expect(usage.has("QFAI-SAAS-002")).toBe(true);
     expect(usage.has("QFAI-PROT-273")).toBe(true);
     // A code emitted only below `error` stays out of the error census even when
     // its constant now resolves. `VERIFY_SKIPPED_CODE` is the exemplar because it
     // sits in the same file, behind the same kind of `const` binding, as the two
     // error-capable codes asserted above — so the contrast is the severity and
     // nothing else. (`QFAI-TABLE-001` held this role until it was raised to error.)
-    expect(usage.has("D-SAAS-PACKAGE-VERIFY-SKIPPED")).toBe(false);
+    expect(usage.has("QFAI-SAAS-003")).toBe(false);
   });
 
   it("counts codes forwarded through a validator's own Issue factory", async () => {
     const usage = await collectErrorCapableUsage();
     // `validators/skill/prototypingSkill.ts` never calls `issue(...)`: every
     // finding goes through its local `skillIssue(code, message, severity, fix)`.
-    expect(usage.get("UIX-VAL-SKILL-BANNED-PHRASE")).toEqual({
+    expect(usage.get("QFAI-PROTOSKILL-002")).toEqual({
       errorCapable: true,
       // The factory forwards its 4th argument as `suggested_action`, and every
       // call site fills it in.
@@ -429,72 +429,12 @@ describe("the form of a finding code", () => {
   /** Capital letters in hyphen-separated words, then three digits. */
   const FORM = /^[A-Z]+(?:-[A-Z]+)*-\d{3}$/;
 
-  /**
-   * The codes emitted before a new code had to take the form, none of which
-   * does. A code leaves this set when it is renamed into the form or retired;
-   * none may join it.
-   */
-  const PREDATING: ReadonlySet<string> = new Set([
-    "D-DEPRECATED-PATH",
-    "D-SAAS-PACKAGE-ATTESTATION-MISSING",
-    "D-SAAS-PACKAGE-HANDOFF-SCHEMA",
-    "D-SAAS-PACKAGE-VERIFY-SKIPPED",
-    "I-ASSISTANT-LAYER-UNSEEDED",
-    "QFAI_CONFIG_INVALID",
-    "R-AUTOPILOT-POLICY-MISSING",
-    "R-AUTOPILOT-POLICY-WIDENED",
-    "R-HANDOFF-SCHEMA-DRIFT",
-    "R-MOCK-HREF-DRIFT",
-    "R-SKILL-MANIFEST-DRIFT",
-    "UIX-VAL-3LAYER-FORBIDDEN-FILE",
-    "UIX-VAL-3LAYER-INCOMPLETE-FAMILY",
-    "UIX-VAL-3LAYER-LEGACY-FORMAT",
-    "UIX-VAL-3LAYER-MIXED-FORMAT",
-    "UIX-VAL-CLASSIFICATION-CONTRADICTION",
-    "UIX-VAL-CLASSIFICATION-DUPLICATE-SECONDARY-SURFACE",
-    "UIX-VAL-CLASSIFICATION-INVALID-BOOLEAN",
-    "UIX-VAL-CLASSIFICATION-INVALID-SECONDARY-SURFACE",
-    "UIX-VAL-CLASSIFICATION-INVALID-SURFACE",
-    "UIX-VAL-CLASSIFICATION-MISSING",
-    "UIX-VAL-CLASSIFICATION-RATIONALE-PLACEHOLDER",
-    "UIX-VAL-CLASSIFICATION-REQUIRED-FIELD",
-    "UIX-VAL-CLASSIFICATION-SECONDARY-ARRAY",
-    "UIX-VAL-CLASSIFICATION-SECONDARY-DUPLICATE",
-    "UIX-VAL-DIRECTION-HISTORY-MISSING",
-    "UIX-VAL-OQ-OPEN-CRITICAL",
-    "UIX-VAL-SCREEN-CONTRACT-DUPLICATE-ID",
-    "UIX-VAL-SCREEN-CONTRACT-LEGACY-FORMAT",
-    "UIX-VAL-SCREEN-CONTRACT-SCHEMA-INCOMPLETE",
-    "UIX-VAL-SCREEN-CONTRACT-STATE-COVERAGE",
-    "UIX-VAL-SIDECAR-MISSING",
-    "UIX-VAL-SKILL-ASPIRATIONAL",
-    "UIX-VAL-SKILL-BANNED-PHRASE",
-    "UIX-VAL-SKILL-CANONICAL-SURFACE",
-    "UIX-VAL-SKILL-CLI-SURFACE",
-    "UIX-VAL-SKILL-DELEGATION",
-    "UIX-VAL-SKILL-ENV-PRECONDITIONS",
-    "UIX-VAL-SKILL-PLAYWRIGHT-FALLBACK",
-    "UIX-VAL-SKILL-PREFLIGHT",
-    "UIX-VAL-SKILL-SECTION-MISSING",
-    "UIX-VAL-SKILL-STATIC-FIRST",
-    "UIX-VAL-SKILL-UI-BEARING-FALSE",
-    "UIX-VAL-T05",
-    "UIX-VAL-TREND-CATEGORY-MISSING",
-    "UIX-VAL-TREND-ENTRY-MISSING",
-    "UIX-VAL-TREND-FIELD-MISSING",
-    "UIX-VAL-TREND-SCAN-MISSING",
-    "W-ASSISTANT-LAYOUT",
-    "W-SKILL-PROJECT-MEMORY",
-    "W-STALE-REFERENCE",
-  ]);
-
   // QFAI:EX-0001-0039-13
-  it("gives every new code a letter prefix, three digits and an expected state", () => {
+  it("gives every code a letter prefix, three digits and an expected state", () => {
     const outside = EMITTED_RULE_CODES.filter(
       (code) => !FORM.test(code) || !(code in ISSUE_EXPECTED_BY_CODE),
     );
-    expect(outside.filter((code) => !PREDATING.has(code))).toEqual([]);
-    expect([...PREDATING].filter((code) => FORM.test(code))).toEqual([]);
+    expect(outside).toEqual([]);
     expect("QFAI-STORY-012").toMatch(FORM);
     expect(ISSUE_EXPECTED_BY_CODE).toHaveProperty(["QFAI-STORY-012"]);
   });
