@@ -101,6 +101,9 @@ describe("the structured-question reminder", () => {
     expect(payload).toContain("No question is light enough to skip it");
     // The fallback, so a host without the tool is not read as an exemption.
     expect(payload).toContain("through that rule's fallback where it is not");
+    // The reply language, which drifts toward the language of the tool output in a long session.
+    expect(payload).toContain("Reply in the user's working language");
+    expect(payload).toContain(".qfai/assistant/rule/communication.md");
     // The turn that waits on the user, which otherwise ends on a report and
     // leaves the session idle with nothing saying it waits.
     expect(payload).toContain(

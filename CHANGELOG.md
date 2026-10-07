@@ -13,6 +13,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `implement-dep-bump` step points at that procedure when the dependency is
   `qfai`, so an upgrade request runs as an ordinary dependency update (#3016).
 
+- **The prompt-time reminder names the reply language.** The message the
+  `UserPromptSubmit` hook prints on every turn now also tells the agent to reply
+  in the user's working language, as `communication.md` sets, however much of
+  what it read that turn is in another language. Replies had drifted into
+  English during long sessions full of English tool output. Fixes #2963.
+
 - **The decisions template says a row may cite an earlier approval.** A
   `decisions.md` row that records a spec change following from an earlier
   approval may name that decision's ID in `Grounds:` in place of a new answer
@@ -138,6 +144,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   that cannot start is still an `error`.
 
 ### Fixed
+
+- **The released-section changelog check reads local tags first.** It asks the
+  remote for a release tag only when no local tag exists, so a clone that holds
+  the tags passes the lint lane offline (#2961).
 
 - **An EX annotation is read from real comments, and by the same declaration
   rules as the ATDD scan** (#3018). Text inside a string literal or a template
