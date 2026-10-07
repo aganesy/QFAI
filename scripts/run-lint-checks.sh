@@ -38,6 +38,23 @@ set -euo pipefail
 # body no digest covers.
 profile="${1:-lint}"
 
+# SHIPPED-CI: not-applicable
+# Because: the shipped templates run no lint aggregate, so this lookup has no counterpart there.
+#
+# A machine with Node.js and corepack but no standalone pnpm still runs every lane.
+# Corepack writes its shims into a directory of its own, so the `pnpm` that a lane's
+# script spawns resolves as well. The lane lines below stay literal `pnpm <script>`.
+if ! command -v pnpm >/dev/null 2>&1; then
+  if ! command -v corepack >/dev/null 2>&1; then
+    printf 'run-lint-checks: neither pnpm nor corepack is on PATH. Install pnpm, or Node.js with corepack.\n' >&2
+    exit 2
+  fi
+  shim_dir="$(mktemp -d)"
+  trap 'rm -rf "${shim_dir}"' EXIT
+  corepack enable --install-directory "${shim_dir}" pnpm
+  PATH="${shim_dir}:${PATH}"
+fi
+
 pids=()
 case "${profile}" in
   lint)

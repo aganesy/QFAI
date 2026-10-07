@@ -45,6 +45,29 @@ workspace (`"qfai": "workspace:*"`).
   repository alone is a real file in that directory.
 - Adding a new directory or file directly under the repository root requires the user's confirmation in advance (editing existing root files is exempt). Details: `.agents/rules/root-additions-policy.md`.
 
+### Local development and pinned files
+
+- A new git worktree has no `node_modules`. Run `pnpm install --frozen-lockfile` in it
+  before `scripts/story-ids.mjs`, `scripts/check-route-catalog.mjs`, the pin scripts or
+  vitest.
+- A worktree stays on the commit it was made from and loads that commit's skills and
+  rules. Merge `origin/main` into it before relying on them.
+- `jq` must be on `PATH` to run the association-gate cases of
+  `packages/qfai/tests/scripts/ownWorkflowTopology.test.ts`. Without it the case stops
+  and names the missing tool.
+- `scripts/run-lint-checks.sh`, which `pnpm ci:lint` runs, falls back to `corepack pnpm`
+  when `pnpm` is not on `PATH`, and stops with a message when neither is installed.
+- Editing a pinned file (the guard programs, the local actions, `scripts/dogfood-backlog.json`
+  and the other paths in `.github/pinned-bytes.txt`) changes digests recorded in
+  `.github/pinned-bytes.txt`, `.github/required-status-contexts.json` and
+  `.github/workflows/ci.yml`. Run `pnpm pins:reseal` afterwards and commit the files it
+  rewrites in the same change. It runs
+  `node scripts/pin-guard-bytes.mjs` and then `node scripts/pin-verification-bodies.mjs`,
+  which must run second and needs the dependencies installed. When the dogfood findings
+  changed, run `node scripts/check-dogfood-backlog.mjs --profile <profile> --pin` first.
+  `pnpm ci:lint` starts with `node ./scripts/check-workflow-hygiene.mjs`, which reports a
+  stale pin and names that command.
+
 ### `.qfai/spec/03_contract/cli/`
 
 `api/`, `db/` and `ui/` hold a project's own contracts, and the
