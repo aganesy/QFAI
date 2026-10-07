@@ -349,6 +349,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   before leaving plan mode print on every call as before. `qfai init` replaces
   an unedited copy of each earlier group. The Codex hooks are unchanged.
 
+- **The Codex tool-time reminders no longer repeat on every call (#3048,
+  #3060).** The grilling reminders before a patch and a delegation, the
+  API-budget reminder, the documentation-clarity reminders after a Markdown
+  patch, and the minimal-implementation reminder printed after each matching
+  call in `.codex/hooks.json`. Each now prints on a session's first matching
+  call and on every twentieth after it, counted for each `session_id` in the
+  hook input, and prints on every call when the input names none. A call an
+  entry stays silent for is not counted. Each entry stays one line that runs
+  alike under every shell Codex uses. `qfai init` replaces an unedited copy of
+  each earlier group.
+
 ### Changed
 
 - **`qfai validate --format text` groups the issues of one code.** Issues of one
@@ -357,6 +368,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   once, in place of the `error_code`, `target`, `expected` and `current` lines
   after every issue. `counts:` still counts every issue, and the JSON report
   still holds every issue. `--format github` is unchanged (#3012).
+
+- **`qfai validate` and `qfai report --run-validate` no longer check for the old `validate.json` location** (#3125).
+  A file at `.qfai/output/validate.json`, or an `output.validateJsonPath` that names
+  that path, no longer raises `D-DEPRECATED-PATH`, and the report is written to the
+  configured path as for any other value. `D-DEPRECATED-PATH` is still reported for
+  the old `.qfai/assistant/instructions/` layout.
 
 - **`qfai init` and `qfai doctor` no longer list leftover files** (#3126). The
   `paths.leftovers` check is gone from `qfai doctor`, and the `qfai init`

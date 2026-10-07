@@ -11,12 +11,13 @@
  * `cmd.exe /C` and PowerShell.
  */
 
-import { copyFile, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { copyFile, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 
 import {
   API_BUDGET_HOOK_MARKER,
@@ -26,8 +27,8 @@ import {
   GRILLING_PLAN_HOOK_MARKER,
   MINIMAL_IMPLEMENTATION_HOOK_MARKER,
 } from "../../src/core/claudeCodeHooks.js";
-import { runOnEveryShell } from "../helpers/codexHookShells.js";
-import { EXIT_ZERO, spawnCaptured } from "../helpers/spawnCaptured.js";
+import { CODEX_SHELLS, type CodexShell, runCodexLine } from "../helpers/codexHookShells.js";
+import { EXIT_ZERO, type Spawned, spawnCaptured } from "../helpers/spawnCaptured.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
@@ -138,25 +139,68 @@ async function withProject(run: (cwd: string) => Promise<void>): Promise<void> {
   }
 }
 
-/**
- * The event named in what the entry prints, or `null` when it prints nothing.
- *
- * Every shell this platform has must exit 0 and print the same thing.
- */
-async function firedEvent(entry: Entry, cwd: string, input: string): Promise<string | null> {
-  const outputs = new Set<string>();
-  for (const { shell, result } of await runOnEveryShell(entry, cwd, input)) {
-    expect(result.outcome, `${shell}: ${result.stderr}`).toBe(EXIT_ZERO);
-    expect(result.stderr, shell).toBe("");
-    outputs.add(result.stdout);
-  }
-  expect(outputs.size).toBe(1);
-  const stdout = [...outputs][0] ?? "";
-  if (stdout.trim() === "") return null;
-  const payload = asRecord(JSON.parse(stdout), "the output");
+/** Session ids this file made, so the counters they left in the temp directory can go. */
+const sessions: string[] = [];
+
+function newSession(): string {
+  const id = `codex-${randomUUID()}`;
+  sessions.push(id);
+  return id;
+}
+
+afterAll(async () => {
+  const names = await readdir(os.tmpdir());
+  await Promise.all(
+    names
+      .filter((name) => sessions.some((id) => name.startsWith(`qfai-reminder-${id}-`)))
+      .map((name) => rm(path.join(os.tmpdir(), name), { force: true })),
+  );
+});
+
+/** The input with `session_id` set to `session`, or removed when `session` is `null`. */
+function inSession(input: string, session: string | null): string {
+  const record = asRecord(JSON.parse(input), "the input");
+  delete record.session_id;
+  if (session !== null) record.session_id = session;
+  return JSON.stringify(record);
+}
+
+/** The event named in what one shell's run printed, or `null` when it printed nothing. */
+function eventOf(shell: string, result: Spawned): string | null {
+  expect(result.outcome, `${shell}: ${result.stderr}`).toBe(EXIT_ZERO);
+  expect(result.stderr, shell).toBe("");
+  if (result.stdout.trim() === "") return null;
+  const payload = asRecord(JSON.parse(result.stdout), "the output");
   const output = asRecord(payload.hookSpecificOutput, "hookSpecificOutput");
   expect(typeof output.additionalContext).toBe("string");
   return String(output.hookEventName);
+}
+
+/**
+ * The event named in what the entry prints on a session's first call, or `null` when it
+ * prints nothing.
+ *
+ * Every shell this platform has runs it in a session of its own, and must exit 0 and
+ * print the same thing.
+ */
+async function firedEvent(entry: Entry, cwd: string, input: string): Promise<string | null> {
+  const events = await Promise.all(
+    CODEX_SHELLS.map(async (shell) =>
+      eventOf(shell, await runCodexLine(entry, shell, cwd, inSession(input, newSession()))),
+    ),
+  );
+  expect(new Set(events).size).toBe(1);
+  return events[0] ?? null;
+}
+
+/** What one shell prints for `input` exactly as given, so the session is the caller's. */
+async function firedEventIn(
+  entry: Entry,
+  shell: CodexShell,
+  cwd: string,
+  input: string,
+): Promise<string | null> {
+  return eventOf(shell, await runCodexLine(entry, shell, cwd, input));
 }
 
 function patch(header: string): string {
@@ -345,6 +389,89 @@ describe("the Codex tool-time reminders", () => {
       // A call that names no file is not a reason to stay silent.
       const none = codexInput("PostToolUse", "apply_patch", "*** Begin Patch\n*** End Patch\n");
       expect(await firedEvent(minimal, cwd, none)).toBe("PostToolUse");
+    });
+  });
+});
+
+/** Calls between two prints of one reminder, after the first. */
+const PERIOD = 20;
+
+/** The six limited entries, each with a call it prints for. */
+const LIMITED = [
+  ["PreToolUse", "grilling-design-artifact", "apply_patch", patch("*** Update File: src/a.ts")],
+  ["PreToolUse", "grilling-delegation", "spawn_agent", "delegate"],
+  ["PreToolUse", "api-budget", "Bash", "gh api repos/o/r"],
+  ["PostToolUse", "documentation-clarity-after-write", "apply_patch", patch("*** Add File: a.md")],
+  [
+    "PostToolUse",
+    "documentation-clarity-after-edit",
+    "apply_patch",
+    patch("*** Update File: a.md"),
+  ],
+  ["PostToolUse", "minimal-implementation", "apply_patch", patch("*** Update File: src/a.ts")],
+] as const;
+
+// QFAI:EX-0001-0196-40
+describe("the Codex tool-time reminders that repeat", () => {
+  it("print on a session's first call and not on its second, under every shell", async () => {
+    await withProject(async (cwd) => {
+      for (const [event, key, tool, command] of LIMITED) {
+        const entry = await codexEntry(event, key);
+        for (const shell of CODEX_SHELLS) {
+          const input = inSession(codexInput(event, tool, command), newSession());
+          expect(await firedEventIn(entry, shell, cwd, input), `${key}, ${shell}, first`).toBe(
+            event,
+          );
+          expect(await firedEventIn(entry, shell, cwd, input), `${key}, ${shell}, second`).toBe(
+            null,
+          );
+        }
+      }
+    });
+  });
+
+  it("print again on the call after a full period, and not before it", async () => {
+    const entry = await codexEntry("PostToolUse", "minimal-implementation");
+    await withProject(async (cwd) => {
+      const input = inSession(
+        codexInput("PostToolUse", "apply_patch", patch("*** Update File: src/a.ts")),
+        newSession(),
+      );
+      const printed: number[] = [];
+      for (let call = 1; call <= PERIOD + 1; call += 1) {
+        if ((await firedEventIn(entry, "sh", cwd, input)) !== null) printed.push(call);
+      }
+      expect(printed).toEqual([1, PERIOD + 1]);
+    });
+  });
+
+  it("print on every call when the input names no session", async () => {
+    await withProject(async (cwd) => {
+      for (const [event, key, tool, command] of LIMITED) {
+        const entry = await codexEntry(event, key);
+        const input = inSession(codexInput(event, tool, command), null);
+        expect(await firedEventIn(entry, "sh", cwd, input), `${key}, first`).toBe(event);
+        expect(await firedEventIn(entry, "sh", cwd, input), `${key}, second`).toBe(event);
+      }
+    });
+  });
+
+  it("count only the calls they would print for", async () => {
+    await withProject(async (cwd) => {
+      const cases = [
+        ["PostToolUse", "minimal-implementation", patch("*** Update File: tmp/x.py"), "src/a.ts"],
+        ["PreToolUse", "api-budget", "git status", "gh api repos/o/r"],
+      ] as const;
+      for (const [event, key, silent, loud] of cases) {
+        const entry = await codexEntry(event, key);
+        const tool = key === "api-budget" ? "Bash" : "apply_patch";
+        const session = newSession();
+        const call = (command: string) =>
+          firedEventIn(entry, "sh", cwd, inSession(codexInput(event, tool, command), session));
+        for (let n = 0; n < 3; n += 1) expect(await call(silent), `${key}, silent`).toBeNull();
+        const first = key === "api-budget" ? loud : patch(`*** Update File: ${loud}`);
+        expect(await call(first), `${key}, first loud call`).toBe(event);
+      }
     });
   });
 });

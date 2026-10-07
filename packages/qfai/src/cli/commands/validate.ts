@@ -1,9 +1,8 @@
-import { mkdir, stat, writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { FailOn, OutputFormat } from "../../core/config.js";
 import { loadConfig } from "../../core/config.js";
-import { isEnoent } from "../../core/fs/errno.js";
 import { normalizeValidationResult } from "../../core/normalize.js";
 import { isStoryTreeId } from "../../core/storyTree/ids.js";
 import { buildCiProfileIssue } from "../../core/phasePolicy.js";
@@ -45,113 +44,6 @@ export type ValidateOptions = {
   toolVersionOverride?: string;
 };
 
-/**
- * The release that retired the legacy `.qfai/output/validate.json` write path.
- *
- * Nothing compares against it: the path is not written and the finding is an
- * `error`. It appears in the message so an operator meeting the finding knows
- * which release stopped writing the file they are still reading.
- */
-const LEGACY_VALIDATE_JSON_SUNSET = "1.10.0";
-const LEGACY_VALIDATE_JSON_REL = ".qfai/output/validate.json";
-
-async function pathExists(p: string): Promise<boolean> {
-  try {
-    await stat(p);
-    return true;
-  } catch (error: unknown) {
-    // Only a missing path is absence. An unreadable one (EACCES, EIO, ...) is not
-    // evidence the file is missing, so it reaches the caller unchanged.
-    if (isEnoent(error)) return false;
-    throw error;
-  }
-}
-
-/**
- * Normalize a configured path for comparison against the legacy
- * literal. Lowercased, posix-slashed, leading `./` stripped, repeated
- * slashes collapsed. Comparison is case-insensitive only on the textual
- * normalization step (no filesystem casing inspection) so the rule
- * fires identically on Windows + macOS + Linux configs.
- */
-function normalizeForLegacyMatch(p: string): string {
-  return p.replace(/\\/g, "/").replace(/\/+/g, "/").replace(/^\.\//, "").toLowerCase();
-}
-
-/**
- * True when the configured validate JSON path is the legacy
- * `.qfai/output/validate.json` SSOT (the canonical path has since
- * moved to `.qfai/report/validate.json`). Absolute paths are never
- * treated as legacy — the legacy SSOT is the relative repo-rooted
- * literal only; operators who deliberately point at an absolute path
- * have explicitly opted out of the canonical SSOT.
- *
- * Exported so `report --run-validate` gates on the same predicate. That command
- * writes a validate result too, and a private copy of the rule here meant the
- * report path bypassed the migration gate the validate path enforces.
- */
-export function configTargetsLegacyValidateJsonPath(configuredPath: string): boolean {
-  if (path.isAbsolute(configuredPath)) return false;
-  return normalizeForLegacyMatch(configuredPath) === LEGACY_VALIDATE_JSON_REL;
-}
-
-/**
- * Outcome of the legacy `validate.json` migration gate: the
- * `D-DEPRECATED-PATH` finding a run must carry (if any) plus the writer
- * decisions derived from the same signals.
- */
-export type LegacyValidateJsonGate = {
-  /** Finding to append to the run's result, or `null` when none is due. */
-  issue: Issue | null;
-  /** True when `output.validateJsonPath` still names the legacy SSOT. */
-  configTargetsLegacyPath: boolean;
-  /** True when the writer must refuse the configured (legacy) target. */
-  refuseConfiguredLegacyWrite: boolean;
-};
-
-/**
- * Evaluate the legacy `.qfai/output/validate.json` migration gate.
- *
- * Shared by `qfai validate` and `qfai report --run-validate`: both run
- * `validateProject` and then write `output.validateJsonPath`, so both owe the
- * operator the same finding and the same post-sunset write refusal. When only
- * `validate` applied it, `report --run-validate` — the documented single-step
- * CI usage — re-created the legacy path and exited 0 on a project `validate`
- * rejects with exit 1.
- */
-export async function evaluateLegacyValidateJsonGate(args: {
-  root: string;
-  configuredValidateJsonPath: string;
-}): Promise<LegacyValidateJsonGate> {
-  // Detect whether the operator's project config still aims the writer
-  // at the legacy SSOT. This is a stronger signal than "the legacy file
-  // exists on disk" — even a clean filesystem will trigger the gate if
-  // the config points there, because the writer is about to recreate
-  // the stale path on this very run.
-  const configTargetsLegacyPath = configTargetsLegacyValidateJsonPath(
-    args.configuredValidateJsonPath,
-  );
-  // The finding is due only where there is observable evidence — the config or
-  // a file on disk — that a consumer still depends on the legacy path.
-  // Otherwise every clean run would carry an unactionable error for a path the
-  // project never used. A `--flow` scope may not suppress it: the evidence is
-  // of a dependency this project has, and suppressing it would let a scoped run
-  // walk past the migration gate with exit 0.
-  const legacyOnDisk = await pathExists(path.join(args.root, LEGACY_VALIDATE_JSON_REL));
-  const emitDeprecationIssue = legacyOnDisk || configTargetsLegacyPath;
-  return {
-    issue: emitDeprecationIssue
-      ? buildDeprecationIssue({
-          configTargetsLegacyPath,
-        })
-      : null,
-    configTargetsLegacyPath,
-    // The legacy SSOT is dead: a config that still names it is refused, which
-    // is the migration gate.
-    refuseConfiguredLegacyWrite: configTargetsLegacyPath,
-  };
-}
-
 export async function runValidate(options: ValidateOptions): Promise<number> {
   const startedAt = new Date();
   const root = path.resolve(options.root);
@@ -192,21 +84,12 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
       }
     : validated;
   // Test callers override; production reads the same package.json#version the
-  // rest of the toolchain uses (so the source-of-truth is single). Resolved
-  // once here and handed to the gate, which would otherwise read it again.
+  // rest of the toolchain uses (so the source-of-truth is single).
   const effectiveToolVersion = options.toolVersionOverride ?? (await resolveToolVersion());
   await emitProvenance(effectiveToolVersion);
   const configuredValidateJsonPath = configResult.config.output.validateJsonPath;
   const scopedFlowIds = options.flowIds ?? [];
-  const legacyGate = await evaluateLegacyValidateJsonGate({
-    root,
-    configuredValidateJsonPath,
-  });
-  const { refuseConfiguredLegacyWrite } = legacyGate;
-  const result: ValidationResult = legacyGate.issue
-    ? appendIssue(rawResult, legacyGate.issue)
-    : rawResult;
-  const normalized = normalizeValidationResult(root, result);
+  const normalized = normalizeValidationResult(root, rawResult);
   // `!== false` rather than a truth test: a result that carries no claim (one
   // not produced by `validateProject`) keeps the ordinary per-profile wording.
   const partialProfileNotice = normalized.issues.some((item) => item.code === "QFAI-LAYOUT-001")
@@ -274,38 +157,21 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   }
   if (scopedFlowIds.length > 0) {
     // Writing a scoped result to the shared `validate.json` /
-    // `validate-<profile>.json` / legacy path would let parallel Slice workers
+    // `validate-<profile>.json` would let parallel Slice workers
     // race on the same files, leaving the last finisher's single flow looking
     // like a repo-wide PASS to every downstream reader.
-    //
-    // The migration gate applies here too. `scopedReportPath` derives its
-    // directory from `output.validateJsonPath`, so a config still pointing at
-    // the legacy SSOT would put `validate.flow-0003.json` inside the
-    // deprecated directory — new files appearing under a path the gate exists
-    // to retire, which reads as "still fine to write here".
     if (
       scopedReportRel !== null &&
-      !refuseConfiguredLegacyWrite &&
       !normalized.issues.some((issue) => issue.code === "QFAI-FLOW-005")
     ) {
       await emitJson(normalized, root, scopedReportRel);
     }
   } else {
     // Always-latest report + profile-suffixed report.
-    // Post-sunset, refuse to write to the configured legacy path: the
-    // migration gate must direct the operator to update their config
-    // instead of silently producing a stale-named file. The accompanying
-    // deprecation issue (severity=error) already carries the actionable
-    // text; here we just skip the physical write.
-    if (!refuseConfiguredLegacyWrite) {
-      await emitJson(normalized, root, configuredValidateJsonPath);
-      const profileLabel = normalized.profile ?? options.profile ?? "full";
-      const profileSuffixedRel = profileSuffixedReportPath(
-        configuredValidateJsonPath,
-        profileLabel,
-      );
-      await emitJson(normalized, root, profileSuffixedRel);
-    }
+    await emitJson(normalized, root, configuredValidateJsonPath);
+    const profileLabel = normalized.profile ?? options.profile ?? "full";
+    const profileSuffixedRel = profileSuffixedReportPath(configuredValidateJsonPath, profileLabel);
+    await emitJson(normalized, root, profileSuffixedRel);
   }
 
   return willFail ? 1 : 0;
@@ -369,39 +235,6 @@ export function profileSuffixedReportPath(configured: string, profile: string): 
   return path.posix.join(dir, `${stem}-${profile}${ext}`);
 }
 
-/**
- * Build the `D-DEPRECATED-PATH` finding for the legacy validate output SSOT.
- *
- * Two states reach this function, both of them `error`: the legacy path is
- * retired, so nothing writes it and a project still naming it has a migration
- * to make.
- *
- *   1. `configTargetsLegacyPath` — the config points at the legacy path, so
- *      the writer refused and the message directs the operator to update it.
- *   2. Otherwise — a stale file left on disk, so the message asks for it to be
- *      deleted.
- */
-function buildDeprecationIssue(args: { configTargetsLegacyPath: boolean }): Issue {
-  const message = args.configTargetsLegacyPath
-    ? `qfai.config.yaml#output.validateJsonPath points at the legacy SSOT ` +
-      `${LEGACY_VALIDATE_JSON_REL}, which is past the announced sunset ` +
-      `(${LEGACY_VALIDATE_JSON_SUNSET}). The validate writer REFUSED this ` +
-      `write to enforce the migration gate. Update output.validateJsonPath ` +
-      `to .qfai/report/validate.json (canonical) and rerun validate.`
-    : `Legacy validate output path ${LEGACY_VALIDATE_JSON_REL} is past the announced ` +
-      `sunset (${LEGACY_VALIDATE_JSON_SUNSET}); the legacy file is no longer written but ` +
-      `still exists on disk. Update consumers to read .qfai/report/validate.json or ` +
-      `.qfai/report/validate-<profile>.json and delete the stale legacy file.`;
-  return {
-    code: "D-DEPRECATED-PATH",
-    severity: "error",
-    category: "canonical",
-    message,
-    file: LEGACY_VALIDATE_JSON_REL,
-    rule: "validate.legacyOutputDeprecated",
-  };
-}
-
 /** Finding families grouped by the validators the current profiles run. */
 export const GATE_GROUP_FAMILIES = {
   hygiene: ["QFAI-HYG-*"],
@@ -449,6 +282,7 @@ export const GATE_GROUP_FAMILIES = {
     "W-SKILL-PROJECT-MEMORY",
     "W-STALE-REFERENCE",
     "I-ASSISTANT-LAYER-UNSEEDED",
+    "D-DEPRECATED-PATH",
   ],
   "reviewer-gate-sdd": ["R-AUTOPILOT-POLICY-*"],
   "reviewer-gate-shared": ["R-MOCK-HREF-DRIFT"],
@@ -1343,8 +1177,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "No required Research Summary value is still the shipped `[...]` template placeholder.",
   "QFAI-AUTOPILOT-001":
     "Every `qfai-*` SKILL.md keeps its hard-required bucket to the common entries plus the ones it declares for itself, and names no retired entry. A skill may carry fewer — one it never reads costs a prompt and buys nothing — and never more.",
-  "D-DEPRECATED-PATH":
-    "No retired path is in use: `output.validateJsonPath` does not name the old `.qfai/output/validate.json` report path, no file is left there, and the retired `.qfai/assistant/instructions/` layer is absent.",
+  "D-DEPRECATED-PATH": "The retired `.qfai/assistant/instructions/` layer is absent.",
   "W-ASSISTANT-LAYOUT": "Every directory under `.qfai/assistant/` is one of the canonical layers.",
   "W-SKILL-PROJECT-MEMORY":
     "A `project_memory:` block in a SKILL.md is the last thing in the file.",
