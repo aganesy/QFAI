@@ -2,6 +2,16 @@
 
 Triage selects the smallest story-tree change that answers each incoming requirement. The source may be the discussion pack selected by preflight, an imported specification, or the user's explicit requirement. Treat the pack as reference material and resolve a conflict in an SDD-owned artifact.
 
+## Contents
+
+- Inputs
+- Operation choice
+- Decision and question rows
+- Approval and no-question mode
+- Retiring an EX, AC or BR
+- ID allocation
+- Completion of triage
+
 ## Inputs
 
 - The selected source and its requirement IDs, if present.

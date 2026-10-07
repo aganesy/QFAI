@@ -8,6 +8,19 @@ route, stage or step.
 Every vocabulary here is closed. `plan` refuses a value this file does not
 define.
 
+## Contents
+
+- Procedure
+- Not the request
+- Intent
+- Entry flags
+- Qualifiers
+- Signals
+- Artifacts
+- Risks
+- Confidence and alternatives
+- Examples
+
 ## Procedure
 
 1. Separate the request from the text it quotes: see

@@ -2,6 +2,16 @@
 
 Use this file when `/qfai-sdd` creates or updates `<paths.contractsDir>/**`. Write the concrete EX before its enforcing BR.
 
+## Contents
+
+- Purpose
+- Rules
+- What validation checks in a `.sql` contract
+- Cross-contract Reconciliation
+- Executability
+- Obligation realizability
+- Review checklist
+
 ## Purpose
 
 Contracts are version-managed downstream execution truth and inputs:

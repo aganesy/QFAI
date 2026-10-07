@@ -18,6 +18,19 @@ put to the user. Explain observable defects and corrective actions in prose. A f
 score never hides a blocking finding. Do not use numeric AC-pass or
 transition-pass percentages as a substitute for the qualitative review.
 
+## Contents
+
+- Inputs
+- Outputs — two files, two schemas
+- Per-iteration summary (`iter-NN/review.json`)
+- The four ordinal UX axes
+- Diagnostic criteria
+- Applying the four axes
+- What blocks
+- Layout anti-pattern matching (`lap-*`)
+- pivotDirective rules
+- Prose critique format (at most 500 English words, or 2500 Japanese/Chinese characters)
+
 ## Inputs
 
 - The live prototype URL and declared `screens[]` routes from the UI contract.

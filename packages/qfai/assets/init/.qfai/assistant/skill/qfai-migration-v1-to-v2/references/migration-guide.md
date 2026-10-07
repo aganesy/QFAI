@@ -5,6 +5,20 @@ QFAI 2.x does not read the old spec-pack layout. A project that keeps spec packs
 must stay on a pinned 1.x release. To upgrade, migrate the project before using
 the 2.x validation and authoring workflow.
 
+## Contents
+
+- Prepare
+- Place stories and rules
+- Retired configuration keys
+- Contract IDs
+- Business rules
+- Documents in their template's shape
+- Run the bundled steps
+- Write boundary
+- Resolve the reports
+- Install and check the free-text entry
+- Former migration memos
+
 ## Prepare
 
 1. Commit the current project state. The migration deletes every 1.x file

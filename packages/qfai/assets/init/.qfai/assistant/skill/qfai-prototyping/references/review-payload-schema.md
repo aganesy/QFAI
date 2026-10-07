@@ -10,6 +10,14 @@ reviewer again for one that does not conform before the prototype is put to
 the user. A near-miss (extra key, misspelled field, legacy flat key) fails the
 whole file.
 
+## Contents
+
+- Path
+- Shape (11 required top-level fields)
+- Field rules
+- Not accepted
+- `sessionStatus` and the retry policy
+
 ## Path
 
 ```text
