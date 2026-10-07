@@ -349,6 +349,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   before leaving plan mode print on every call as before. `qfai init` replaces
   an unedited copy of each earlier group. The Codex hooks are unchanged.
 
+- **The Codex tool-time reminders no longer repeat on every call (#3048,
+  #3060).** The grilling reminders before a patch and a delegation, the
+  API-budget reminder, the documentation-clarity reminders after a Markdown
+  patch, and the minimal-implementation reminder printed after each matching
+  call in `.codex/hooks.json`. Each now prints on a session's first matching
+  call and on every twentieth after it, counted for each `session_id` in the
+  hook input, and prints on every call when the input names none. A call an
+  entry stays silent for is not counted. Each entry stays one line that runs
+  alike under every shell Codex uses. `qfai init` replaces an unedited copy of
+  each earlier group.
+
 ### Changed
 
 - **`qfai validate` and `qfai report --run-validate` no longer check for the old `validate.json` location** (#3125).
