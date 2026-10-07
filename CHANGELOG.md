@@ -6,6 +6,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`QFAI-STORY-013` reports a layer drawn as two nodes and an edge written
+  twice.** In the architecture diagram of `tech.md`, two node IDs that name one
+  layer, as in `A["CLI"] --> B["Core"]` with `C["CLI"]`, and an edge repeated on
+  two lines now each raise the error, naming the layer or the edge. Both passed
+  before, although the authoring guide asks for one node per layer and one edge
+  per dependency. Fixes #3081.
+
 - **The seeded `.gitattributes` uses Git union merging for the two registers**
   (#2265). A new file sets `merge=union` on `decisions.md` and
   `open-questions.md` to keep both branches' appended lines. Validation still
