@@ -250,7 +250,9 @@ or unreadable file prints nothing, so it cannot fail the session it is attached
 to.
 
 What it carries is where this rule lives, the obligation an agent is most likely
-to skip when it would rather not ask, and the turn that waits on the user. The rest is here.
+to skip when it would rather not ask, the turn that waits on the user, and the language to
+reply in, which `.qfai/assistant/rule/communication.md` sets. A long session of tool output in
+another language is where replies drift out of the user's. The rest is here.
 
 ## Related
 
