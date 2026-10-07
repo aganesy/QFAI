@@ -74,6 +74,21 @@ describe("what a released section may gain", () => {
     expect(addedEntries(RELEASED, after)).toEqual([]);
   });
 
+  it("says nothing about a title whose spacing was repaired", () => {
+    // A space restored after a code span edits the title line, and that line is
+    // how an entry is told apart; the entry is still the same one.
+    const before = RELEASED.replace(
+      "- **The first thing the release carried.**",
+      "- **The first `thing`the release carried.**",
+    );
+    const after = RELEASED.replace(
+      "- **The first thing the release carried.**",
+      "- **The first `thing` the release carried.**",
+    );
+
+    expect(addedEntries(before, after)).toEqual([]);
+  });
+
   it("says nothing about an entry a released section lost", () => {
     // Removing one is a correction to what the release said, not a claim it
     // never made. Only the direction that leaves a reader told less is refused.

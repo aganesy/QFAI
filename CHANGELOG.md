@@ -102,6 +102,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A repaired title no longer reads as a new changelog entry.**
+  The released-section guard compares entry titles ignoring whitespace, so
+  restoring a missing space in a published entry's title line is accepted.
+  The spacing of two published entries, in 1.10.1 and 1.10.2, is restored with
+  the inline code unchanged (#3031).
 - **Migration step 3 and the `## Architecture` check of `tech.md` agree with
   what they report.** Step 3 names a renumbered constraint ID only when it
   writes `constraint.md`, so it no longer says an ID changed in a file it left
@@ -346,6 +351,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`qfai init` and `qfai doctor` no longer list leftover files** (#3126). The
+  `paths.leftovers` check is gone from `qfai doctor`, and the `qfai init`
+  summary prints no line for files an earlier release left behind. Neither
+  command deleted any of them, and neither does now.
+
 - **The documentation-clarity rule says where spec-tree IDs may appear** (#3002).
   IDs the project's own spec tree defines stay in spec-tree documents and in code
   or test comments that point at a contract or example. Operator-facing guides
@@ -367,6 +377,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   skill keeps its 150-line limit, at 135 lines instead of 150, and its
   behaviour is unchanged.
 
+- **The `implement-scaffold` step names where its flow comes from.** It took the
+  flow from a workflow run's work order, which `qfai workflow` no longer produces.
+  The step now reads the flow from the invocation's BF argument or the request
+  (#3033).
 - **`QFAI-AUD-001` no longer describes a legacy form or a sunset.** For a screen
   with no `primary_tasks`, the message now says the screen has no `primary_tasks`
   and that `primary_tasks` must be declared as `{id, label, acceptance}`
@@ -377,6 +391,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   over. The plan is now `edit`, `note`, `verify`, and the contract rule and the
   example that state it say the same.
 
+- **`workflow plan` says which way a rejected extraction field is wrong.** Each
+  `schema` reason now carries a `cause`: `missing` for a required field that is
+  absent, `unknown` for a key the extraction does not take, `wrong-type` or
+  `wrong-value` with the expected and received values, and `invalid` for the
+  `alternatives` and `confidence` rule (#3104).
 - **The shipped rules state their points directly.** Figurative phrasing in the
   user-questions, grilling, interface-clarity, api-budget, ai-readable-markdown
   and untrusted-content rules and in the stage-cost rule is replaced by plain
@@ -437,6 +456,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   option chosen. The same request shows acceptance, so `qfai-run` does not set
   the `decision` flag for it.
 
+- **The README's "Continuous integration" section covers cost, required checks and skipped tests.**
+  It states that `QFAI_CI_PUSH_POLICY=protected` is safe only when the branch must be up to date before
+  merging, and describes a light post-merge job as the middle option. It lists what the test stub gate
+  reports (`QFAI-TEST-001` for a todo, `QFAI-TEST-003` for a skip) and what it cannot see, and gives a
+  recipe that reads the test runner's JSON report and bounds skipped tests against an allowed list that
+  only shrinks. It explains how the shipped workflows are billed, with the jobs each one starts per pull
+  request event and the `ubuntu-slim` option for `QFAI_CI_LIGHT_RUNNER`. It names the three stable
+  required checks and why a skipped job satisfies one while a workflow `paths` filter does not. It also
+  adds rules for writing a change-scope gate and a method for measuring Actions minutes without admin
+  rights (#2785, #2786, #2789, #2790).
 - **The repository's dogfooding ratchet pins each finding, not each file's
   count.** `scripts/check-dogfood-backlog.mjs` keys an error by its code and the
   IDs it names, so a change that clears one untested example and adds another
@@ -13613,7 +13642,7 @@ advanced` asked for RED/GREEN commands, output and the falsifiability result
   annotation as coverage, and the generated `it.skip(...)` is not the `*.todo`
   form `QFAI-TEST-001` matches. Both directories are scanned, and the
   remediation says to write the real test rather than move the skeleton.
-- **An L1/L2 annotation in `tests/integration/**`is not a violation.** The
+- **An L1/L2 annotation in `tests/integration/**` is not a violation.** The
   Reviewer Gate and `project_memory` said `QFAI-ATDD-123` rejects it, but
   `resolveTcHomeKind` returns `null` for those levels and the scan continues
   before the forbidden-placement check — the validator neither counts it nor

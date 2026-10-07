@@ -162,6 +162,9 @@ describe("the free-text entry reminder", () => {
     const skill = await readFile(path.join(repoRoot, SHIPPED_RUN_SKILL), "utf-8");
     const description = /^description: "(.*)"$/m.exec(skill)?.[1];
     expect(description).toContain(FREE_TEXT_CASES);
+    expect(description).toMatch(
+      /^Use when the user asks for .* in plain words and names no stage skill/,
+    );
   });
 
   it("says a question one command answers needs no run", async () => {
