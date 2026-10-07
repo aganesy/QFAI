@@ -125,6 +125,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   above `def test...`. A Go `Example` function counts only when the file holds
   an `// Output:` comment. The declaration forms are read per file extension
   from one table shared with the ATDD scan.
+  A template literal nested inside another one is now read as part of it, so
+  a comment after it is no longer lost. `class Test...`, a paren-less RSpec
+  block and a Gherkin `Feature:` line still count as places an annotation may
+  sit.
 
 - **A retired wrapper's remedy opens with the steps that clear it.**
   The remedy of the broken-link finding opened with a rerun of `qfai init`,

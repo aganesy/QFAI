@@ -193,6 +193,15 @@ describe("story-tree test obligations", () => {
       "const note = '// {tag}';\nit('pays', () => {});",
       false,
     ],
+    [
+      "a test written after a template literal nested in a template literal",
+      "a.test.ts",
+      "const text = `a ${ok ? `b ${c}` : 'd'} e`;\n\n// {tag}\nit('pays', () => {});",
+      true,
+    ],
+    ["a test class in a TypeScript file", "a.test.ts", "// {tag}\nclass TestOrder {}", true],
+    ["a paren-less RSpec block", "a_spec.rb", "# {tag}\nit 'pays' do\nend", true],
+    ["a Gherkin feature", "a.feature", "# {tag}\nFeature: Checkout", true],
   ] as const)("reads an annotation before %s", (_name, file, template, counted) => {
     const id = "EX-0001-0001-01";
     const tag = ["QFAI", id].join(":");

@@ -2,6 +2,7 @@ import path from "node:path";
 
 import { parseTestFlowRefs } from "../businessFlow.js";
 import {
+  ANNOTATION_ANCHOR_PATTERNS,
   DECLARATION_MASK,
   declarationPatterns,
   LOCALISED_GHERKIN_RE,
@@ -122,8 +123,8 @@ export function nextId(
  * literal — names no test, so it covers nothing.
  *
  * Comments and literals are told apart by the lexer the ATDD scan uses, and a
- * declaration by the same per-language rules, read off the extension of `file`.
- * A declaration written inside a block comment or a literal is not code, so it
+ * declaration by the same per-language rules, read off the extension of `file`,
+ * together with the containers an annotation may also sit above. A declaration written inside a block comment or a literal is not code, so it
  * ends no annotation's search.
  */
 export function parseCountedExampleAnnotations(text: string, file: string): string[] {
@@ -131,24 +132,34 @@ export function parseCountedExampleAnnotations(text: string, file: string): stri
   const lines = (source: string) => source.split(/\r?\n/);
   const commentsKept = lines(maskJsNonCode(text, { ...DECLARATION_MASK, comments: false }));
   const code = lines(maskJsNonCode(text, DECLARATION_MASK)).map((line) => line.trim());
+  const raw = lines(text).map((line) => line.trim());
   const patterns = declarationPatterns(extension, text);
   const anyLineDeclares = extension === "feature" && LOCALISED_GHERKIN_RE.test(text);
+  // A declaration is read off the masked line, which has no literal in it; an anchor is read off
+  // the raw line, and only where that line opens with code rather than with a literal.
+  const declaresAt = (line: number): boolean => {
+    const masked = code[line] ?? "";
+    const original = raw[line] ?? "";
+    return (
+      anyLineDeclares ||
+      patterns.some((pattern) => pattern.exec(masked)?.index === 0) ||
+      (original.startsWith(masked.slice(0, 1)) &&
+        ANNOTATION_ANCHOR_PATTERNS.some((pattern) => pattern.test(original)))
+    );
+  };
   const counted = new Set<string>();
   // For each line, the first later line that holds code.
-  let next: string | undefined;
-  const nextCode: Array<string | undefined> = [];
+  let next: number | undefined;
+  const nextCode: Array<number | undefined> = [];
   for (let index = code.length - 1; index >= 0; index -= 1) {
     nextCode[index] = next;
-    if (code[index] !== "") next = code[index];
+    if (code[index] !== "") next = index;
   }
   for (const [index, line] of commentsKept.entries()) {
     if (code[index] !== "") continue;
     const ids = [...line.matchAll(STORY_TEST_ANNOTATIONS.EX)].map((match) => match[1] ?? "");
     const declaration = nextCode[index];
-    if (ids.length === 0 || declaration === undefined) continue;
-    if (!anyLineDeclares && !patterns.some((pattern) => pattern.exec(declaration)?.index === 0)) {
-      continue;
-    }
+    if (ids.length === 0 || declaration === undefined || !declaresAt(declaration)) continue;
     for (const id of ids) if (id) counted.add(id);
   }
   return [...counted].sort();

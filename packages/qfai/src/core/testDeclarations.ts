@@ -235,3 +235,32 @@ export function declarationPatterns(extension: string, text: string): readonly R
     ? GHERKIN_STRUCTURE_PATTERNS
     : runnableTestPatterns(extension, text);
 }
+
+/**
+ * Lines an EX annotation may sit above although a whole-file scan cannot take
+ * them as proof that a runner collects the file.
+ *
+ * Each is read off the raw line, where the literal that makes it recognisable
+ * is still there: the masked line has blanked it. A container such as
+ * `class Test...` or a Gherkin `Feature:` declares no case on its own, which is
+ * why {@link declarationPatterns} leaves them out; an annotation above one is
+ * still written for the tests it holds.
+ *
+ * SIMPLIFIED: the forms are matched on the line start in every language rather
+ * than per extension.
+ * Lift when: the ATDD scan reads one of these as a declaration, and the form
+ * moves into the table above.
+ */
+export const ANNOTATION_ANCHOR_PATTERNS: readonly RegExp[] = [
+  // A test class, as pytest and xUnit-style suites write it in any language.
+  /^class\s+Test/,
+  // RSpec and minitest blocks, which take a name with no parentheses.
+  /^(?:it|specify|describe|context|test)\s+["']/,
+  // A Gherkin feature and its rules hold the scenarios beneath them.
+  /^(?:Feature|Rule):/,
+  // A table written as a tagged template, and a benchmark call.
+  new RegExp(
+    `^(?:it|test|describe|suite|context|specify)(?:\\s*\\.\\s*(?:${TEST_MODIFIER_SEGMENT}))*\\s*\``,
+  ),
+  new RegExp(`^bench(?:\\s*\\.\\s*(?:${TEST_MODIFIER_SEGMENT}))*\\s*[(\`<]`),
+];

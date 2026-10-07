@@ -127,8 +127,10 @@ function endOfQuoted(source: string, start: number, quote: string, multiline = f
 /**
  * End of a template literal, treated as opaque.
  *
- * A `${…}` substitution is blanked with the rest of it. Nothing declares a
- * test inside one, so resolving the nesting would buy this validator nothing.
+ * A `${…}` substitution is blanked with the rest of it, but its extent is read:
+ * a template nested inside one holds backticks of its own, and ending at the
+ * first of them leaves the rest of the outer literal to be read as code and the
+ * code after it as a literal, which hides every comment in between.
  */
 function endOfTemplate(source: string, start: number): number {
   for (let i = start + 1; i < source.length; i += 1) {
@@ -140,8 +142,38 @@ function endOfTemplate(source: string, start: number): number {
     if (ch === "`") {
       return i + 1;
     }
+    if (ch === "$" && source[i + 1] === "{") {
+      const end = endOfSubstitution(source, i + 2);
+      if (end !== -1) i = end - 1;
+    }
   }
   return source.length;
+}
+
+/**
+ * The index after the `}` that closes a `${` whose body begins at `start`, or
+ * `-1` when none does, in which case the caller reads the `${` as text.
+ *
+ * Quoted strings and nested templates are skipped whole, so a brace or a
+ * backtick inside one does not count. A comment or a regex holding an unpaired
+ * brace is not read: the span is then taken to end later than it does.
+ */
+function endOfSubstitution(source: string, start: number): number {
+  let depth = 1;
+  for (let i = start; i < source.length; i += 1) {
+    const ch = source[i] ?? "";
+    if (ch === "`") {
+      i = endOfTemplate(source, i) - 1;
+    } else if (ch === "'" || ch === '"') {
+      i = endOfQuoted(source, i, ch) - 1;
+    } else if (ch === "{") {
+      depth += 1;
+    } else if (ch === "}") {
+      depth -= 1;
+      if (depth === 0) return i + 1;
+    }
+  }
+  return -1;
 }
 
 /** End of a regex literal — `[…]` may hold an unescaped `/`; a newline cannot. */
