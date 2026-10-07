@@ -1,4 +1,6 @@
 import { spawnSync } from "node:child_process";
+import { realpathSync } from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -16,7 +18,7 @@ const PROBE_TIMEOUT_MS = 15_000;
 
 export type MdschemaBinaryCheck = {
   id: typeof CHECK_ID;
-  severity: "ok" | "error";
+  severity: "ok" | "warning" | "error";
   title: string;
   message: string;
   details: { reason?: string };
@@ -98,13 +100,54 @@ const INSTALL_FIX =
   "Where the platform package is missing, the package's install script downloads the binary instead: " +
   "approve it with `npm approve-scripts` for npm 11.16 or later, or list @jackchuka/mdschema under `onlyBuiltDependencies` for pnpm.";
 
+const DOWNLOAD_REASON = "the platform package is absent and the binary is the downloaded copy";
+
+const DOWNLOAD_ONLY_MESSAGE =
+  "the mdschema binary runs, but only from a copy the package's install script downloaded, because the platform package is not installed. " +
+  "Install without omitting optional dependencies, so the platform package supplies the binary and the download is not needed.";
+
+/**
+ * Whether @jackchuka/mdschema resolves its binary to the copy under its own
+ * `bin/` directory, which is where its install script downloads one, rather
+ * than to the platform package. `entry` is the package's command file.
+ *
+ * The package's own `lib/platform.js` answers, so the result is the binary its
+ * command file starts. A package without that file, or one whose file does not
+ * answer, gives no finding: the binary has already run.
+ */
+function runsFromDownload(entry: string): boolean {
+  try {
+    const platformFile = realpathSync(
+      path.join(path.dirname(path.dirname(entry)), "lib", "platform.js"),
+    );
+    const platform: unknown = createRequire(platformFile)(platformFile);
+    if (
+      typeof platform !== "object" ||
+      platform === null ||
+      !("getBinaryPath" in platform) ||
+      typeof platform.getBinaryPath !== "function"
+    ) {
+      return false;
+    }
+    const binary: unknown = Reflect.apply(platform.getBinaryPath, undefined, []);
+    return (
+      typeof binary === "string" &&
+      path.dirname(path.resolve(binary)) === path.resolve(path.dirname(platformFile), "..", "bin")
+    );
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Whether the document-schema checker's binary resolves and runs.
  *
  * `qfai validate` runs `mdschema`. A present workflow file says nothing about
  * whether the program behind it can start, so this runs `mdschema --help`,
  * which reads no document and changes nothing. The installation checked is the
- * one found from the QFAI package, not from the inspected project's root.
+ * one found from the QFAI package, not from the inspected project's root. A
+ * binary that runs only from the copy the package's install script downloaded
+ * is a warning.
  */
 export async function checkMdschemaBinary(
   timeoutMs: number = PROBE_TIMEOUT_MS,
@@ -125,6 +168,16 @@ export async function checkMdschemaBinary(
   });
   if (result.error !== undefined || result.status !== 0) {
     return failure(failureReason(result), INSTALL_FIX);
+  }
+  const entry = command.args[0];
+  if (entry !== undefined && runsFromDownload(entry)) {
+    return {
+      id: CHECK_ID,
+      severity: "warning",
+      title: TITLE,
+      message: DOWNLOAD_ONLY_MESSAGE,
+      details: { reason: DOWNLOAD_REASON },
+    };
   }
   return {
     id: CHECK_ID,

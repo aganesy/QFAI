@@ -100,6 +100,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   its specifications self-contained can bring the count down. Discussion packs
   are not read, and no option changes the severity (#3006).
 
+- **`qfai doctor` warns when the `@jackchuka/mdschema` binary runs only from a
+  download.** When the platform package for the machine is absent and the
+  package's install script downloaded the binary into its own `bin/` directory,
+  `workflows.mdschemaBinary` is a `warning` that says so and asks for an install
+  that keeps optional dependencies, where it was `ok` before (#3015). A binary
+  that cannot start is still an `error`.
+
 ### Fixed
 
 - **A repaired title no longer reads as a new changelog entry.**
