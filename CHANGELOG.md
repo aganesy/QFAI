@@ -368,6 +368,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The delegation baseline keeps parallel agents and reviewers off each
+  other's files.** A read-only agent no longer checks out in a worktree it
+  shares and reads other revisions with `git show`, and every agent writes
+  scratch files under a path of its own. A change is committed, or each
+  reviewer gets a fixed commit, before a review starts, and the working tree
+  stays as it is until the reviews return (#2959, #2976).
 - **`qfai validate --format text` groups the issues of one code.** Issues of one
   code and severity print together, at most five of them, and a larger group
   ends with a line `[error] <CODE> and <n> more`. Each group prints its `fix`
