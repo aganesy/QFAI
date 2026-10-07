@@ -4,70 +4,11 @@ Use this document to keep SKILL bodies compact. Skill files should reference thi
 
 ## Asset Authoring Shape (Mandatory)
 
-A `SKILL.md` states the contract and points at the file that carries the detail. It is not where the detail lives.
-
-- **Keep in `SKILL.md`**: what the skill is for, its non-goals, its hard constraints, the phase/step order, and the gate conditions. Enough for an agent to know what it must do and when it is done.
-- **Move out**: command sets, table schemas, field-by-field contracts, worked procedures, checklists and rationale. These go under the owning tree's own directory:
-  - `references/` — normative detail the body cites (`references/<topic>.md`)
-  - `templates/` — artifacts the file produces, as fillable skeletons
-  - `examples/` — worked instances that illustrate, and bind, nothing
-- **One topic per file.** Do not replace an oversized `SKILL.md` with an oversized `references/everything.md`; that is the same problem one directory down. Split by topic and keep each file readable on its own — a reader who followed one pointer should not have to scan past three unrelated subjects to reach the one they came for.
-- **Every pointer resolves.** A line that moves detail out must name the file (and anchor, when the file covers more than one topic) so the reader is never left guessing where the rule went.
-
-A hard line ceiling backs this up: **800 lines per assistant asset file**, for every `.qfai/assistant/**/*.{md,yml,yaml}` file, counted as `content.split(/\r?\n/).length` — blank lines included. `npx qfai doctor` measures it and reports every file over the ceiling as `assets.lineBudget`. The ceiling is a backstop, not the rule: a file approaching it is a signal to move a section out, not
-to raise the number.
-
-It was raised from 500 once, and on measurement rather than on the "this file is long" claim the number exists to refuse: three skill bodies had converged on that ceiling, and the changes in flight against one of them added 161 lines to a body already at 498 — eleven of them crossing the ceiling on their own. The detail those bodies carry is required to sit in the body rather than behind
-a pointer, so splitting could not absorb it. Converging on the limit was itself the signal — a body at the ceiling stops shedding topics and starts packing them into longer lines, and a line count cannot see that. Raise it again only against evidence of that kind.
-
-**A width ceiling makes the count honest: 400 characters per line.** A count of lines bounds reading cost only while a line is a roughly constant unit of reading, and packing broke that — one line in the shipped tree ran 9,104 characters against a median of 118, and cost the budget one unit. The two are read together, because each permits what the other refuses: width alone allows a thin
-file of a thousand short lines, and the count alone allows a packed one.
-
-Two shapes are not measured, and for the same reason — the author cannot make them narrower:
-
-| not measured   | why                                                       |
-| -------------- | --------------------------------------------------------- |
-| a table row    | markdown gives it no continuation, so it cannot wrap      |
-| a fenced block | its content is a command, a diagram or a sample, verbatim |
-
-A table is found by its delimiter row, not by a leading pipe: that pipe is optional, so a table written without one is still a table, and a paragraph that opens with one is still a paragraph. Rows a blank line has cut off from their delimiter are prose, because that is how they render.
-
-Some shipped files predate the ceiling and carry a recorded width of their own. It is the width each arrives with, so `npx qfai doctor` does not report a fresh tree for content you received rather than wrote. That record belongs to the package and shrinks there; it is not a per-project allowance, and it never loosens the ceiling on an asset you write. **Everything you author is held
-at 400.**
-
-The exemption from the line ceiling does not carry here. Its reason is about a file's length, not about how wide one line may be.
-
-No shipped prose asset has a line-ceiling exemption. Agent definitions are
-individual cards under `assistant/agent/`, so their count does not lengthen
-one roster file.
-
-### The owning tree is the one the file sits in
-
-The ceiling applies to **every** shipped assistant prose asset, including
-rules and cards. A rule at the ceiling moves topic detail to
-`rule/references/<topic>.md`; a skill uses its own `references/` directory.
-The tree that owns the file owns its detail.
-
-For a prose asset, raising the ceiling or claiming an exemption is not the remedy. An exemption claims no split is possible, and a Markdown file whose tree has a `references/` home available cannot make that claim.
-
-### Machine-readable assets split in their own format, or say why they cannot
-
-The ceiling is measured over YAML assets too — package routing and review-profile defaults and the shipped contract templates. The split above is not open to them: a validator parses those files as structured data, or a skill copies one whole into a project, so an entry moved into a Markdown sibling under `references/` leaves the parsed document and stops meaning anything. Prose about the
-file may move there; the file's own items may not.
-
-So for a machine-readable asset at the ceiling the remedy is, in order:
-
-1. **Split it in its own format** — a sibling of the same kind that the loader or schema already reads, so every item stays parsed.
-2. **Record an exemption** where the document has to stay whole — a file generated from another asset, one the schema admits only as a single document — naming what makes the split impossible. "This file is long" is not that reason, and a prose asset may not use this step.
+Read `.qfai/assistant/rule/references/asset-authoring.md` when you write or change a file under `.qfai/assistant/**` or another shipped asset, including its citation paths. It holds the shape every asset takes, which tree owns a file, how machine-readable assets split, and the form of a citation path. Not needed for a run that only reads assets or edits project files.
 
 ## Citation Path Form (Mandatory)
 
-A pointer only resolves if the reader knows what base to resolve it against. There is one base, and it is the project root.
-
-- **Cite a shared rule by its full path from the project root.** Write the path from the project root, with `#anchor` appended when one applies: `.qfai/assistant/rule/drift-protocol.md`. Not the bare filename, not a relative climb. That form resolves from every directory in the tree,
-  and the only one that still resolves when read with the cwd at the project root — which is where an agent's cwd is.
-- **The same holds when a rule cites another one**, including a sibling in its own directory. A bare name works there only by accident of where the citing file sits; it stops working the moment the text is quoted elsewhere.
-- **Within a skill's own directory, keep pointers relative to that directory**: `references/<topic>.md`, `templates/<name>.md`. Those name the skill's own parts, not a shared document, and the surrounding text already establishes which skill is meant.
+The form of a citation path is in `.qfai/assistant/rule/references/asset-authoring.md`, read under the same condition as the section above.
 
 ## User Questions (AskUserQuestion Protocol)
 
@@ -351,69 +292,11 @@ can resolve stops at preflight.
 
 ## Gate Failure Autorepair Protocol
 
-Follow this protocol when any of the validate, doctor, test, lint, typecheck, build, capture, or report gates fail. A reviewer's `REVISE` is not a gate failure and is not rerun: the author fixes or answers each finding once, as `.qfai/assistant/rule/review-convergence.md` sets out.
-
-- inspect exit code, logs, `validate.json`, and cited files before reporting — in `validate.json`, read `counts` for the verdict and `issues[].code` for each finding; the array is `issues`, not `findings` (keys: `.qfai/assistant/skill/qfai-verify/references/validate-json-schema.md`);
-- classify each finding as skill-owned artifact, upstream spec/contract, code/test defect, environment/tooling, or user decision;
-- fix skill-owned artifacts and code/test defects autonomously when the fix is local and non-destructive;
-- **upstream spec/contract findings: never repair.** STOP and follow `.qfai/assistant/rule/drift-protocol.md` (Change Request + owner-skill rerun) — **even when the fix looks local and non-destructive, and even when it is one token and obviously correct**. "Local and non-destructive" is a permission for the two classes above it; it is not a test that upstream artifacts can pass.
-  Ownership, not size, decides;
-- environment/tooling findings: repair the environment when it is yours to repair (install a missing dev dependency, regenerate a lockfile, create a scratch directory). Stop for anything needing credentials, network access you do not have, or a change to CI configuration or the host machine;
-- user decision findings: never decide by default. Record the question, state the option you would take and why, and stop — a decision taken silently to keep a gate green is the same failure as repairing upstream, one layer up;
-- rerun the same failing gate after each fix batch, **and once with no intervening change** when the failure looks nondeterministic — see `#nondeterministic-gates` below. The confirmation rerun is bounded at one: after it the finding is classified, not re-rolled;
-- do not weaken profiles, lower `--fail-on`, waive errors, invent evidence, or skip required reviewers;
-- stop for destructive changes, **any upstream spec/contract finding**, ambiguous product/spec decisions, missing permissions/tools, or repeated no-progress failures — the stop list is closed over the classification above, so every class the agent is told to use has a defined next action;
-
-When stopping, report: cause, attempted fixes, remaining blocker, user action, retry gate, and **the work counts — how many items are complete, how many are blocked, and by which finding**.
-
-The counts are not decoration. Restating the ownership rule does not change the incentive that breaks it: an agent facing "repair five upstream defects or report most of the batch as blocked" reaches for the repair because the alternative reads as failure. `26 items: 21 complete, 5 blocked on DB-0007` is a report of work done, and it is what makes STOP a credible answer rather than a
-surrender. Blocked is a status, not a verdict on the run.
-
-### Nondeterministic gates
-
-A gate whose answer varies on identical inputs is a finding in its own right, not a run to discard. The protocol classifies it as `environment/tooling`; what follows is what that class obliges.
-
-**When a gate fails and a rerun with no intervening change passes**, all of the following are REQUIRED. A clean rerun on its own is not evidence for that gate.
-
-- **Record it as an `environment/tooling` finding.** Not as a pass, and not as a code/test defect — nothing was fixed between the two runs.
-- **Disclose every run.** Report the results of all runs of that gate, in order, with their commands. Reporting only the run that passed is [selective reporting](#selective-reporting-is-invented-evidence) and is forbidden: the evidence rules are satisfied by a clean run's command and output, so nothing else stops it.
-- **Re-run the failing selectors in isolation** and report that result too. A selector that passes alone and fails in the suite is the signature of shared state, not of a defect in that test.
-- **Name the suspected cause**, concretely: a contended port, a shared database or schema, an `os.tmpdir()` path, an un-namespaced cache or queue, ordering between workers. "Flaky" is not a cause.
-
-Do not fix the flake by rerunning until green, and do not fix it by weakening the test. Either the shared resource is isolated per worker or the run is serialised — both are real changes with a real cost, which is the point.
-
-A gate reported this way has **not passed**. It is a blocker with a named cause, and it goes in the stop report like any other.
-
-#### Selective reporting is invented evidence
-
-Reporting the clean run and omitting the red ones satisfies every existing evidence rule — a real command, a real result, freshly obtained — and still misrepresents what happened. Which of N runs is reported is itself part of the evidence, so omitting runs of the same gate is on the same footing as inventing one.
+Read `.qfai/assistant/rule/references/gate-failure-autorepair.md` when a gate command fails or its result cannot be trusted. It holds the repair loop (inspect, classify, fix, rerun), the findings that are never repaired, when to stop and what to report, and how a gate that does not give the same answer twice is handled. Not needed while every gate passes.
 
 ## Context Summary Contract
 
-When context is summarized, preserve the requests, decisions and stage state
-needed to continue.
-
-Every summary that replaces earlier context keeps these six:
-
-1. Difficulties that came up, and how each was resolved.
-2. Options raised, tried or set aside, and why.
-3. Everything asked for, decided, agreed, ruled out or established as a constraint — in the exact words.
-4. Where things stand: what is covered, settled or complete.
-5. What is still open, promised or expected next.
-6. Details that are hard to reconstruct: names, numbers, dates, exact wording, references.
-
-It also keeps the stage state. None of it can be recovered from the code, and a summary that keeps the six and drops it still misleads the next window.
-
-| Stage state                                                                               | What goes wrong when it is dropped                                                                                   |
-| ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| The execution ledger and the row in progress                                              | Finished rows are worked again, or a row in `red` is taken for untouched                                             |
-| Every open question, with its ID and status                                               | A question stays open with nobody tracking it, or is answered twice                                                  |
-| The clarification budget spent in this invocation, and the questions it was spent on      | The next window asks what the user already answered, or asks past the cap                                            |
-| Every assumption recorded under `--auto` or after the budget ran out, with its label      | A labelled assumption is read back as a decision someone took                                                        |
-| Whether the stage's review has run, and each finding's fix or answer                      | The review runs a second time, or an answered finding is raised again (`.qfai/assistant/rule/review-convergence.md`) |
-| A grilling session's decision tree, its current frontier, and the answers already settled | An answered question is asked again, or a question is put before the one it depends on (`.agents/rules/grilling.md`) |
-
-Keep what the user said close to their own words. Your own reasoning may be condensed to what it concluded, as long as nothing listed above is dropped. Be complete on these items even when that makes the summary longer.
+Read `.qfai/assistant/rule/references/context-summary.md` when you hand work to a sub-agent or summarize a context for the next stage. It holds what a summary that replaces earlier context must keep. Not needed when no summary is written.
 
 ## Completion Contract (Shared)
 
@@ -433,22 +316,8 @@ report instead of the completion claim.
 
 ### What the placeholder scan does not flag
 
-**`OQ` and `OPEN QUESTION` are exempt only as tracking structure.** Exempt: the `Open Questions` heading, a register
-table header, and a question row containing the fields required by its register. Story-tree `open-questions.md` uses
-`ID | Content | Approach | Status`; an empty register contains the heading and table header without a question row.
-Discussion registers use their own template fields. A register row's Status is structure too: `TODO` in the Status cell of a
-`decisions.md` or `open-questions.md` row is the row's state, not a placeholder. Article II and `.qfai/assistant/rule/workflow.md` both end an
-unverifiable fact by recording an Open Question, so the tracked record they prescribe must never be reported as an
-unresolved placeholder. Everywhere else the two strings are still scanned: a bare `OQ` or `OPEN QUESTION` left as a
-value in generated spec prose or a contract field, or a row missing a required field, is a hit like any other token.
-
-**A documented `TBD` is a compliant record.** `.qfai/assistant/rule/constitution.md` Article II and `.qfai/assistant/rule/thinking.md` require writing `TBD` together with a note of what evidence is missing, and `.qfai/assistant/rule/thinking.md` requires raising the matching Open Question for the same fact. Both halves together are the finished form, not an
-unfinished one; do not report it and do not delete it — deleting it destroys the record of the missing evidence, which is the whole point of the marker. A `TBD` missing either half — no note, or no Open Question — is a hit.
+Read `.qfai/assistant/rule/references/placeholder-scan.md` when the placeholder scan reports a hit or you decide a hit is not a defect. It lists what the scan does not flag and what a surviving hit obligates. Not needed while the scan reports nothing.
 
 ### What a surviving hit obligates
 
-A hit is **reported, not silently cleared**, and **cleared by a re-scan, not by assertion**. Fix what you can, then run the scan again over the same artifacts: _resolved_ is the verdict for a hit the re-run no longer reports, and that re-run is its evidence. It is not available for a hit still present at that file and line — a token still readable there is unresolved whatever the report
-calls it. List every hit the re-scan still finds alongside the completion claim — file, line, token — and state for each one whether it is deferred with rationale or recorded as an Open Question. A completion claim that omits a surviving hit is invalid evidence under the rules above. Completion is blocked while a surviving hit is neither of the two.
-
-**Severity floor on the verdict.** _Deferred with rationale_ and _recorded as an Open Question_ are NOT available for a hit that stands in for a concrete security defect, data loss or corruption, or a correctness defect that would break a released contract. Such a hit is cleared only by a named fix or by dropping the item from scope; recording it and declaring completion anyway is
-prohibited, exactly as `.qfai/assistant/rule/shared-skill-delegation-baseline.md` withholds that same exit for that same class. While neither of the two remaining verdicts applies, completion stays blocked.
+The obligation a surviving hit carries is in `.qfai/assistant/rule/references/placeholder-scan.md`, read under the condition above.

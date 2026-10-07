@@ -1,14 +1,14 @@
-import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
+import { readRule } from "../helpers/ruleWithReferences.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const assistant = path.join(repoRoot, "packages/qfai/assets/init/.qfai/assistant");
 
 async function read(relative: string): Promise<string> {
-  return await readFile(path.join(assistant, relative), "utf8");
+  return await readRule(path.join(assistant, relative));
 }
 
 describe("story-tree acceptance and implementation assets", () => {

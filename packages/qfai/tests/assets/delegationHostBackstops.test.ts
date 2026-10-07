@@ -1,16 +1,21 @@
-import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
+import { readRule } from "../helpers/ruleWithReferences.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const trees = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const baselinePath = "assistant/rule/shared-skill-delegation-baseline.md";
+const backstopsPath = "assistant/rule/references/host-backstops.md";
 const policyPath = "assistant/skill/qfai-implement/references/parallelization-policy.md";
 
 const read = (tree: string, relative: string): Promise<string> =>
-  readFile(path.join(repoRoot, tree, relative), "utf-8");
+  readRule(path.join(repoRoot, tree, relative));
+
+/** The host backstops reference, closed by the heading the old section ended at. */
+const readBackstops = async (tree: string): Promise<string> =>
+  `${await read(tree, backstopsPath)}\n## Work Orders Summary\n`;
 
 /** The text from `heading` up to the next heading at `stop`, with wrapping undone. */
 function section(content: string, heading: string, stop: string): string {
@@ -24,8 +29,8 @@ function section(content: string, heading: string, stop: string): string {
 describe.each(trees)("%s — host backstops in the delegation baseline", (tree) => {
   it("states the rule and that QFAI sets no value", async () => {
     const backstops = section(
-      await read(tree, baselinePath),
-      "### Host backstops above the declared shape",
+      await readBackstops(tree),
+      "## Host backstops above the declared shape",
       "\n## Work Orders Summary",
     );
     expect(backstops).toContain("**A backstop sits above the declared shape, never at it.**");
@@ -36,7 +41,7 @@ describe.each(trees)("%s — host backstops in the delegation baseline", (tree) 
 
   it("lists the Claude Code controls with their defaults and version", async () => {
     const backstops = section(
-      await read(tree, baselinePath),
+      await readBackstops(tree),
       "Claude Code 2.1.217 or later:",
       "\nCodex:",
     );
@@ -54,7 +59,7 @@ describe.each(trees)("%s — host backstops in the delegation baseline", (tree) 
   });
 
   it("names the other hosts' controls and says where none was confirmed", async () => {
-    const baseline = await read(tree, baselinePath);
+    const baseline = await readBackstops(tree);
     const codex = section(baseline, "\nCodex:", "\nGitHub Copilot CLI:");
     expect(codex).toContain(
       "| `agents.max_concurrent_threads_per_session` in `config.toml` (alias `agents.max_threads`) | chosen by Codex when unset | How many spawned-agent threads are open at once, the primary excluded |",

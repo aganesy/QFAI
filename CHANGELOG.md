@@ -24,6 +24,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Example narratives are not read, since they quote hypothetical IDs on
   purpose. Fixes #2410.
 
+- **`qfai validate` checks the Approach cell of each new decision row.** A
+  `decisions.md` row with an ID above `DEC-2097` must hold the items
+  `Evidence:`, `Grounds:`, `Residual risk:` and `Rollback:`, in that order, none
+  empty. Every Evidence entry opens with `file:` or `command:`, and
+  `none — <reason>` is accepted only in Residual risk and Rollback. A row that
+  breaks one of these raises `QFAI-STORY-017` at error in `sdd`, naming the
+  file, the row ID and the breach. Earlier rows are not read (#2537).
 - **`qfai validate` warns about trace marks no check reads.** In the `tdd`
   profile, a comment line in a selected test file that carries a `QFAI:US-`,
   `QFAI:TC-`, `QFAI:SC-` or `QFAI:SPEC-` mark raises `QFAI-STORY-014` at
@@ -38,6 +45,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   at that Status stays in force. The story-tree authoring rules also say that a
   project counting the IDs of its open pull requests may take a next ID above
   the tree's own highest plus one (#2969).
+- **The test-layer rule states what an end-to-end test costs.** A new section
+  explains that one failing test costs its timeout times its attempts, and asks
+  for a failure limit, a job time limit, a lower timeout with at most one retry,
+  no database shared across parallel workers, and traces only on a retry. It
+  also asks for a count ceiling that only moves down, counted per business flow
+  (#2787).
 - **A gate the project runs in CI only is recorded as delegated, not as a pass or a
   failure.** A Standard commands entry written `CI only: <check name>` makes
   `verify-repo-gate` record the gate `DELEGATED` with that check, and
@@ -411,6 +424,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   review asks point at the checks that already own them: the coverage gate, and
   the proof per example in the oracle strength reference.
 
+- **The two shared skill baselines carry only what every run needs.** Sections that
+  apply to one situation moved to files under `rule/references/`: asset authoring,
+  gate failure repair, context summaries, the placeholder scan, host limits and the
+  reviewer remit, findings and griller rules. Each baseline keeps its headings and
+  a pointer that says when to read the moved text. A test sets a per-skill budget
+  for what a skill loads at start (#2636).
 - **A request that names the exact change is the approval** (#2991). When
   the user asks in the session for a change to a story-tree or contract file and
   names the change and its effect, `sdd-triage` lists the files in its
