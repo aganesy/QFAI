@@ -474,6 +474,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The check reads the whole of every touched file and follows each input the
   change adds or alters to where it is used, across files the change did not
   touch. Only a finding on what the change added or altered blocks.
+- **The shipped samples no longer use business-rule IDs this repository declares.**
+  The distributed-surface guards now also reject, inside the sample band, a
+  business-rule ID or a contract file name that the repository's own spec tree
+  declares. The contract template, the DB contract sample and the guidance that
+  showed such IDs now show IDs the repository does not declare (#2659).
 - **`qa-gatekeeper` asks whether a reviewed test would survive a refactor**
   (#2253). A test that asserts on what the contract does not name, such as a
   private function, an internal call order or a mock of the code's own
