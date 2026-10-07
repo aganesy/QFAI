@@ -23,6 +23,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   characters. Pointers say when to read the file they name, references stay one
   level deep, and long references open with their contents.
 
+- **The shipped Markdown is held to the AI-readable limits** (#3034). A test
+  over every Markdown file `qfai init` can write checks that a file stays
+  within 500 lines, a `SKILL.md` body within 20,000 characters, a reference
+  over 100 lines opens with a `## Contents` list of its headings, and a
+  reference names no other reference. The `qfai-grilling` and
+  `qfai-configure` bodies now point to references for the rules of a
+  delegated session, the session record and the working principles, and the 21
+  long references that lacked one gained a contents list. The migration guide
+  (over 500 lines) and the 22 references that name another reference are
+  recorded in the test as a backlog that can only shrink.
+
 - **`qfai validate` resolves the decisions and open questions a contract
   cites.** A `DEC-NNNN` or `OQ-NNNN` in a contract rule's statement, and the
   successor a `SUPERSEDED (by DEC-NNNN)` status names, must now be declared by a

@@ -296,57 +296,13 @@ orchestrator holds both. That is a different answerer, not a delegated question:
 nothing hands the asking to a third agent, and the orchestrator still answers
 nothing itself.
 
-A round between agents may have several authors, because one frontier can hold
-decisions belonging to different drafting roles.
+### Rounds between agents
 
-- The round goes to **every author whose decisions it contains**, each seeing
-  the whole round. A decision reads differently beside the ones next to it, and
-  an author shown only its own share cannot say so.
-- **Every answer is collected before the frontier is recomputed.** Recomputing
-  on the first reply settles the rest against a tree that moved under them.
-- **Two authors answering one question differently is itself a decision**, and
-  it joins the frontier rather than being averaged. If the budget ends with it
-  open, it takes the griller's recommendation like any other non-critical
-  decision, with both positions recorded.
-- **An addition an author proposes is asked what part of the request needs
-  it.** One nobody can point to is dropped, not adopted.
-- **A fact only the user holds goes to the user, not to an author.** No author
-  can answer an unpublished constraint or an intention nobody wrote down, and
-  the convergence rules escalate decisions rather than facts — so without this
-  the fact sits on the frontier until the budget ends, taking every decision
-  waiting on it with it. It escalates immediately, as a request for the value
-  rather than a choice. Under a no-question mode it reaches nobody, and what
-  follows depends on the fact rather than on its kind: where the consuming
-  document declares the value undefaultable the run stops and names it
-  (`.qfai/assistant/rule/constitution.md` Article X, rule 4), and where
-  the document has a default that default is recorded as a labelled assumption
-  beside the open question, which is the ordinary no-question path. Stopping on
-  every user-held fact would block a run over a defaultable date.
-
-### Orchestrator Protocol
-
-- The orchestrator computes the frontier and reads the answers. It does not
-  decide a frontier question on anyone's behalf.
-- **Who puts the round depends on the mode, and exactly one role does.** With a
-  user, the orchestrator puts it. Between agents, the griller puts it and the
-  orchestrator does not — a session where both do is one where an author is
-  asked twice and the two answers have no tie-break.
-- It must not record an answer **as the user's** that the user did not give, and
-  must not self-approve the session's end condition. An author's answer in an
-  agent-to-agent round is recorded as that author's position, with whose it is:
-  the round cannot be recomputed, a disagreement cannot be kept, and an
-  escalation cannot carry the positions to the user unless the answers are
-  held.
-- **In a delegated session the griller's recommendation settles a decision that
-  is not critical.** Where the authors and the griller land on one answer, or
-  the budget ends first, the recommendation is taken and the stage records it as
-  `agents`, with the reason and every disagreeing position. The stage's final
-  report lists it; nothing waits for the user to read it.
-
-  A critical decision is the exception: agreement closes its node for the
-  round, and only the user's answer settles it. Recording an agreed critical
-  decision as settled is how a choice nobody with the standing made reaches a
-  draft.
+Read `references/delegated-session.md` when a griller puts the round to authors
+instead of a user. It holds how a round with several authors is held, which
+role puts the round, why a fact only the user holds goes to the user, and when
+the griller's recommendation settles a decision. A session with a user does not
+need it.
 
 ### Capability Probe
 
@@ -367,45 +323,17 @@ decisions belonging to different drafting roles.
 
 ## Work Orders Summary
 
-A session that dispatched any lookup must record a `## Work Orders Summary`
-table in the artifact its invoking stage writes. Use the shared schema from
-`.qfai/assistant/rule/shared-skill-delegation-baseline.md`, including
-the `Agent instance` column.
-
-| Step | Role (sub-agent) | Agent instance  | Task title                      | Input (refs)                    | Output (refs)                   | Status (PASS/REVISE/PENDING) |
-| ---- | ---------------- | --------------- | ------------------------------- | ------------------------------- | ------------------------------- | ---------------------------- |
-| 1    | Reviewer         | `<instance id>` | Read the facts a round waits on | Decision and what it depends on | The fact, and where it was read | PASS/REVISE                  |
+A session that dispatched any lookup records a `## Work Orders Summary` table
+in the artifact its invoking stage writes. Read `references/session-record.md`
+for the table. It also lists what the invoking stage's reviewer confirms about
+the session, so read it when reviewing one.
 
 ### Reviewer Gate
 
 This skill produces no artifact, so the gate that covers a session is the
-invoking stage's. What it confirms about the session is:
-
-- no decision was recorded as the user's that the user did not answer, no
-  critical decision was adopted without them, and none was assumed that the
-  assumption path excludes;
-- every adopted decision has its `agents` row, and none of them adds what the
-  request did not need;
-- a fact taken as settled names where it was read;
-- the session ended on its own condition or on the user's word, in one of the
-  five endings `.agents/rules/grilling.md` names. Between agents a round budget
-  bounds the rounds (`.qfai/assistant/rule/review-convergence.md`), and
-  a session recorded as ended while a critical decision it escalated is still
-  unanswered is the finding.
-
-- Reviewer independence is defined normatively in
-  `.qfai/assistant/rule/shared-skill-delegation-baseline.md#definition-independent-reviewer-normative`.
-  An agent that answered a lookup in this session is disqualified from reviewing
-  the facts it supplied.
-- Reviewer checks the Drift Protocol, verifies alignment with `test-layers.md`,
-  and treats ratios as signals, not gates.
-- Reviewer returns only `PASS` or `REVISE`, with a concrete fix proposal on
-  `REVISE`. A gate that could not be run at all is recorded as `PENDING`, which
-  never counts as `PASS`.
-
-A session run from the user-invoked entry point has no invoking stage. There the
-gate is the user reading the record, which is why that entry point writes no
-files.
+invoking stage's. A session run from the user-invoked entry point has no
+invoking stage. There the gate is the user reading the record, which is why that
+entry point writes no files.
 
 ## Default Autopilot Policy
 

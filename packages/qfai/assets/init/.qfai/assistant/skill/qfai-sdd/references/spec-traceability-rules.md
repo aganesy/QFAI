@@ -2,6 +2,18 @@
 
 The story tree makes business intent concrete before a rule is attached to an enforcing contract. The required chain is BF → US → AC → EX ← BR. A policy, index, or decision row cites an ID; it does not declare a second copy of the item.
 
+## Contents
+
+- Layout and ownership
+- Document shapes
+- Architecture
+- Identifier scopes
+- Edge rules
+- Contract forms and index
+- Test-layer handoff
+- Decision provenance and drift
+- Gate
+
 ## Layout and ownership
 
 - <paths.specsDir>/01_policy/ owns objective, initiative, principles, constraints, and glossary.

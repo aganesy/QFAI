@@ -7,6 +7,20 @@ required `brand.archetype` field of the root `DESIGN.md`; each archetype supplie
 
 ---
 
+## Contents
+
+- Archetype: Minimal
+- Archetype: Bold
+- Archetype: Corporate
+- Archetype: Playful
+- Archetype: Organic
+- Archetype: Tech
+- Archetype: Elegant
+- Archetype: Casual
+- Patterns to avoid
+- Typeface candidates
+- Selection Guide
+
 ## Archetype: Minimal
 
 - representative_brand: Apple, Notion, Linear

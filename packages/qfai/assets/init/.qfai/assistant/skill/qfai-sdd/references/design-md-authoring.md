@@ -6,6 +6,13 @@ Applies only to a UI-bearing target — one whose classified surface set names
 `web`, `mobile`, `desktop` or `mixed`. A cli-only target has no root
 `DESIGN.md`.
 
+## Contents
+
+- Where the answers come from
+- Output mapping
+- Taking the values from the theme
+- When the file already exists
+
 ## Where the answers come from
 
 The interview is `/qfai-discussion`'s, and its record is the discussion pack
