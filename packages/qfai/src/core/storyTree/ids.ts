@@ -1,4 +1,12 @@
+import path from "node:path";
+
 import { parseTestFlowRefs } from "../businessFlow.js";
+import {
+  DECLARATION_MASK,
+  declarationPatterns,
+  LOCALISED_GHERKIN_RE,
+} from "../testDeclarations.js";
+import { maskJsNonCode } from "../validators/jsSourceMask.js";
 
 export type StoryTreeIdKind = "BF" | "US" | "AC" | "EX" | "BR" | "DEC" | "OQ";
 
@@ -106,45 +114,41 @@ export function nextId(
   return `${prefix}${String(highest + 1).padStart(width, "0")}`;
 }
 
-// A line that is only a comment: code after a closing `*/` or `-->` makes it a code line.
-const COMMENT_LINE =
-  /^(?:\/\/|\*|#(?!\[)|--(?:\s|$)|\/\*(?:(?!\*\/).)*(?:\*\/)?$|<!--(?:(?!-->).)*(?:-->)?$)/;
-const TEST_DECLARATION = [
-  // vitest, jest, mocha, Playwright, node:test, with chained modifiers and type arguments.
-  /^(?:it|test|describe|suite|context|specify|bench)(?:\.\w+)*\s*[(`<]/,
-  // RSpec and minitest blocks.
-  /^(?:it|specify|describe|context|test)\s+["']/,
-  /^(?:async\s+)?def\s+test/,
-  /^class\s+Test/,
-  /^func\s+(?:Test|Fuzz|Benchmark)/,
-  /^(?:Feature|Rule|Scenario(?: Outline)?|Example):/,
-  // A test attribute or decorator opens the declaration it marks.
-  /^(?:@\w*Test\b|@pytest\.mark\.|#\[(?:\w+::)*test\b|\[(?:Fact|Theory|Test|TestMethod|TestCase)\b)/,
-] as const;
-
 /**
  * The EX IDs whose annotation sits directly before a test declaration: only
  * blank lines and other comment lines come between the annotation and the
  * `it(`, `test(` or `describe(` it marks. An annotation anywhere else — a file
- * header above the imports, or a comment beside a helper — names no test, so
- * it covers nothing.
+ * header above the imports, a comment beside a helper, or text inside a string
+ * literal — names no test, so it covers nothing.
+ *
+ * Comments and literals are told apart by the lexer the ATDD scan uses, and a
+ * declaration by the same per-language rules, read off the extension of `file`.
+ * A declaration written inside a block comment or a literal is not code, so it
+ * ends no annotation's search.
  */
-export function parseCountedExampleAnnotations(text: string): string[] {
-  const lines = text.split(/\r?\n/).map((line) => line.trim());
+export function parseCountedExampleAnnotations(text: string, file: string): string[] {
+  const extension = path.extname(file).slice(1).toLowerCase();
+  const lines = (source: string) => source.split(/\r?\n/);
+  const commentsKept = lines(maskJsNonCode(text, { ...DECLARATION_MASK, comments: false }));
+  const code = lines(maskJsNonCode(text, DECLARATION_MASK)).map((line) => line.trim());
+  const patterns = declarationPatterns(extension, text);
+  const anyLineDeclares = extension === "feature" && LOCALISED_GHERKIN_RE.test(text);
   const counted = new Set<string>();
-  // For each line, the first later line that is neither blank nor a comment.
+  // For each line, the first later line that holds code.
+  let next: string | undefined;
   const nextCode: Array<string | undefined> = [];
-  let upcoming: string | undefined;
-  for (let index = lines.length - 1; index >= 0; index -= 1) {
-    nextCode[index] = upcoming;
-    const line = lines[index] ?? "";
-    if (line !== "" && !COMMENT_LINE.test(line)) upcoming = line;
+  for (let index = code.length - 1; index >= 0; index -= 1) {
+    nextCode[index] = next;
+    if (code[index] !== "") next = code[index];
   }
-  for (const [index, line] of lines.entries()) {
+  for (const [index, line] of commentsKept.entries()) {
+    if (code[index] !== "") continue;
     const ids = [...line.matchAll(STORY_TEST_ANNOTATIONS.EX)].map((match) => match[1] ?? "");
-    if (ids.length === 0 || !COMMENT_LINE.test(line)) continue;
-    const next = nextCode[index];
-    if (next === undefined || !TEST_DECLARATION.some((pattern) => pattern.test(next))) continue;
+    const declaration = nextCode[index];
+    if (ids.length === 0 || declaration === undefined) continue;
+    if (!anyLineDeclares && !patterns.some((pattern) => pattern.exec(declaration)?.index === 0)) {
+      continue;
+    }
     for (const id of ids) if (id) counted.add(id);
   }
   return [...counted].sort();

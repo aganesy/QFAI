@@ -102,6 +102,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **An EX annotation is read from real comments, and by the same declaration
+  rules as the ATDD scan** (#3018). Text inside a string literal or a template
+  literal is no longer an annotation, and a test call inside a block comment or
+  a literal no longer ends an annotation's search. `Deno.test(...)` and
+  `QUnit.test(...)` now count as declarations. `@pytest.mark.*` does not, since
+  it may decorate a helper no runner collects; a Python annotation goes directly
+  above `def test...`. A Go `Example` function counts only when the file holds
+  an `// Output:` comment. The declaration forms are read per file extension
+  from one table shared with the ATDD scan.
 - **A repaired title no longer reads as a new changelog entry.**
   The released-section guard compares entry titles ignoring whitespace, so
   restoring a missing space in a published entry's title line is accepted.
