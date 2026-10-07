@@ -112,7 +112,35 @@ type Broken = {
    * all present.
    */
   canonicalReachable?: boolean | undefined;
+  /**
+   * The wrapper still resolves into the canonical tree, but names a document
+   * this version does not ship. A plain init does not repair it, so its
+   * remedy differs from every other kind of damage here.
+   */
+  retired?: boolean | undefined;
 };
+
+/**
+ * What the operator is told first about a retired wrapper: a plain init
+ * changes nothing for it, and init never deletes the retired canonical side.
+ */
+const RETIRED_WRAPPER_LEAD =
+  "A plain `qfai init` changes nothing for a retired wrapper. Run `qfai init --force` to remove it (the limits are below), then delete the retired canonical directory under `.qfai/assistant/` by hand: init never deletes it.";
+
+const RETIRED_WRAPPER_REMEDY =
+  "**`which this version does not ship` marks a retired wrapper.** The wrapper of a skill or agent that an upgrade deleted or renamed is still there and still resolves, so the assistant keeps loading the old instructions. `qfai init --force` deletes only **agent wrappers whose target is directly under `.qfai/assistant/agent/` (`.claude/agents/` / `.github/agents/`) and skill wrappers whose names start with `qfai-`** (a rerun without `--force` does not remove them). Wrappers of skills with no such prefix, such as `web-research`, and agent wrappers that point into a subdirectory such as `.qfai/assistant/agent/<sub>/…` or at `.qfai/assistant/skill/…`, are outside the prune, so delete the reported paths by hand. **init never deletes the canonical side (`.qfai/assistant/skill/…` / `.qfai/assistant/agent/…`):** it cannot tell a retired canonical from one the project added itself, so delete a retired canonical by hand. A wrapper linked by hand to a project's own canonical has the same shape; it is outside qfai's management too, so decide whether to keep it on purpose. (`--force` deletes an agent wrapper only when its target is directly under `.qfai/assistant/agent/` and is not in the current roster.)";
+
+/**
+ * The remedy for broken wrappers. A retired wrapper is repaired by neither the
+ * generic opening line nor the rest of the generic remedy, so its steps come
+ * first, and stand alone when every broken wrapper is a retired one.
+ */
+function unreachableRemedy(entries: readonly Broken[], general: readonly string[]): string {
+  if (!entries.some((entry) => entry.retired === true)) return general.join("\n");
+  const retired = [RETIRED_WRAPPER_LEAD, RETIRED_WRAPPER_REMEDY];
+  const allRetired = entries.every((entry) => entry.retired === true);
+  return (allRetired ? retired : [...retired, ...general]).join("\n");
+}
 
 const toPosix = (value: string): string => value.split(path.sep).join("/");
 
@@ -621,6 +649,7 @@ async function retiredWrappers(
       found.push({
         relative: `${dir}/${entry.name}`,
         detail: `resolves into the canonical tree but names ${toPosix(path.relative(root, resolved))}, which this version does not ship — the assistant still loads it`,
+        retired: true,
       });
     }
   }
@@ -1650,17 +1679,16 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
         "integrationSurface.links",
         unreachable.map((entry) => entry.relative),
         "change",
-        [
+        unreachableRemedy(unreachable, [
           "Rerun `qfai init`: the qfai-owned paths are relinked as symlinks (`--force` is not needed). A regular file whose content differs from the link target is preserved, so check its contents and move it aside first.",
           "**A linked or broken integration directory itself (`the integration directory is …`) is not fixed by rerunning init.** Init writes nothing in a directory that is a symlink, a junction or not a directory, so a rerun changes nothing. Replace the affected path (for example `.claude/skills`) with a real directory, then run `qfai init`.",
           "**The same applies when an ancestor of the integration directory is a symlink (`an ancestor is a symlink`).** Init writes nothing below it either, and the wrappers inside use relative targets that resolve against wherever the ancestor points. Replace the ancestor (`.claude`, `.github`, and so on) with a real directory, then run `qfai init`.",
           "**A wrapper that is not a symlink (`directory, not a symlink` / `FIFO` / `socket` / `device`) is not fixed by init either.** `ensureSymlink` leaves these as `skipped`. Move a directory aside after checking its contents, then run `qfai init`; delete a special file, then run `qfai init`. `--force` deletes without confirmation, so do not use it until you know whether the contents are needed.",
           "**`unreadable` is a permissions problem, and init does not fix it.** The wrapper's target string is correct, so `ensureSymlink` skips it, and canonical assets are create-only, so they are not overwritten either. Restore read permission on the file (POSIX: `chmod u+r <path>`, Windows: `icacls <path> /grant <user>:R`). If this appears in CI, check the umask / ACL settings of the job that created the file.",
           "**A broken canonical side (`resolves to a …, but …` / `its SKILL.md is …` / `symlink cycle`) is not fixed by init.** Canonical assets are create-only, so existing paths are skipped, and even `--force` fails in `copyFile` / `mkdir` on the type conflict. Move the affected `.qfai/assistant/**` path aside (or delete it), then run `qfai init` — the contents are lost, so check them first.",
-          "**`which this version does not ship` marks a retired wrapper.** The wrapper of a skill or agent that an upgrade deleted or renamed is still there and still resolves, so the assistant keeps loading the old instructions. `qfai init --force` deletes only **agent wrappers whose target is directly under `.qfai/assistant/agent/` (`.claude/agents/` / `.github/agents/`) and skill wrappers whose names start with `qfai-`** (a rerun without `--force` does not remove them). Wrappers of skills with no such prefix, such as `web-research`, and agent wrappers that point into a subdirectory such as `.qfai/assistant/agent/<sub>/…` or at `.qfai/assistant/skill/…`, are outside the prune, so delete the reported paths by hand. **init never deletes the canonical side (`.qfai/assistant/skill/…` / `.qfai/assistant/agent/…`):** it cannot tell a retired canonical from one the project added itself, so delete a retired canonical by hand. A wrapper linked by hand to a project's own canonical has the same shape; it is outside qfai's management too, so decide whether to keep it on purpose. (`--force` deletes an agent wrapper only when its target is directly under `.qfai/assistant/agent/` and is not in the current roster.)",
           "If the root cause is flattening at clone time, first set `git config --global core.symlinks true`. A repo-local setting is not carried into a clone, so without this the next clone ends up in the same state.",
           "On Windows, Developer Mode may need to be enabled.",
-        ].join("\n"),
+        ]),
         { relatedFiles: unreachable.slice(1).map((entry) => entry.relative) },
       ),
     );

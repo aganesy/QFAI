@@ -68,6 +68,54 @@ async function packagedChecker(source: string, found?: string): Promise<void> {
   packagedAssets.dir = path.join(base, "assets", "init");
 }
 
+/**
+ * A stand-in `lib/platform.js` that resolves the binary the way the real one
+ * does: to a platform package when that resolves, else to `bin/mdschema` under
+ * the package itself.
+ */
+const PLATFORM_FILE = [
+  '"use strict";',
+  'const path = require("node:path");',
+  "function getBinaryPath() {",
+  "  try {",
+  '    return require.resolve("fake-platform-package/bin/mdschema");',
+  "  } catch {",
+  '    return path.join(__dirname, "..", "bin", "mdschema");',
+  "  }",
+  "}",
+  "module.exports = { getBinaryPath };",
+  "",
+].join("\n");
+
+/**
+ * A packaged-assets stand-in whose checker finds a stand-in @jackchuka/mdschema
+ * package whose command file exits 0. With `platform` "installed" the
+ * platform package resolves from it; with "absent" only the package's own
+ * `bin/` copy is left. `platformFile` replaces the source of `lib/platform.js`.
+ */
+async function packagedMdschema(options: {
+  platform: "installed" | "absent";
+  platformFile?: string;
+}): Promise<void> {
+  const base = await tempDir();
+  const packageDir = path.join(base, "node_modules", "@jackchuka", "mdschema");
+  const command = path.join(packageDir, "bin", "cli.js");
+  await mkdir(path.dirname(command), { recursive: true });
+  await mkdir(path.join(packageDir, "lib"), { recursive: true });
+  await writeFile(command, "", "utf-8");
+  await writeFile(
+    path.join(packageDir, "lib", "platform.js"),
+    options.platformFile ?? PLATFORM_FILE,
+    "utf-8",
+  );
+  if (options.platform === "installed") {
+    const platformBin = path.join(packageDir, "node_modules", "fake-platform-package", "bin");
+    await mkdir(platformBin, { recursive: true });
+    await writeFile(path.join(platformBin, "mdschema"), "", "utf-8");
+  }
+  await packagedChecker("", `{ command: process.execPath, args: [${JSON.stringify(command)}] }`);
+}
+
 describe("qfai doctor reports whether the mdschema binary runs", () => {
   // QFAI:EX-0003-0011-22
   it("is ok when the binary answers --help, and starts it with that and nothing else", async () => {
@@ -81,6 +129,41 @@ describe("qfai doctor reports whether the mdschema binary runs", () => {
 
     expect(check.severity).toBe("ok");
     expect(await readFile(log, "utf-8")).toBe("--help");
+  });
+
+  // QFAI:EX-0003-0011-22
+  it("is ok when the platform package supplies the binary", async () => {
+    // QFAI:AC-0003-0011-10
+    await packagedMdschema({ platform: "installed" });
+
+    const check = await checkMdschemaBinary();
+
+    expect(check.severity).toBe("ok");
+  });
+
+  // QFAI:EX-0003-0011-22
+  it("is ok when the package's platform file does not name a binary", async () => {
+    // QFAI:AC-0003-0011-10
+    await packagedMdschema({ platform: "absent", platformFile: "module.exports = {};\n" });
+
+    const check = await checkMdschemaBinary();
+
+    expect(check.severity).toBe("ok");
+  });
+
+  // QFAI:EX-0003-0011-24
+  it("is a warning when the binary is the copy the install script downloaded", async () => {
+    // QFAI:AC-0003-0011-10
+    await packagedMdschema({ platform: "absent" });
+
+    const check = await checkMdschemaBinary();
+
+    expect(check.severity).toBe("warning");
+    expect(check.message).toContain("only from a copy");
+    expect(check.message).toContain("optional dependenc");
+    expect(check.details["reason"]).toBe(
+      "the platform package is absent and the binary is the downloaded copy",
+    );
   });
 
   // QFAI:EX-0003-0011-23

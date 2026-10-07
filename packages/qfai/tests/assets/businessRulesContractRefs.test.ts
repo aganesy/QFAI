@@ -27,7 +27,7 @@ describe("business rules are owned by enforcing contracts and cite examples", ()
         tree,
         "assistant/skill/qfai-sdd/templates/spec/03_contract/cli/cli-NNNN-title.md",
       );
-      expect(template).toContain("| BR-0001-0001 |");
+      expect(template).toContain("| BR-0006-0001 |");
       expect(template).toContain("EX-0001-0001-01");
     });
   }
