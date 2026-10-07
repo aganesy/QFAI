@@ -1046,6 +1046,29 @@ describe("what init wrote is still checked after the roster moves on", () => {
     });
   });
 
+  it("opens the remedy with the retired-wrapper steps, not with a plain init", async () => {
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-implement"], []);
+      await wireAll(root, ["qfai-implement"], []);
+      const retiredCanonical = path.join(root, ".qfai", "assistant", "skill", "qfai-retired");
+      await mkdir(retiredCanonical, { recursive: true });
+      await writeFile(path.join(retiredCanonical, "SKILL.md"), "# retired\n", "utf-8");
+      const claudeSkills = path.join(root, ".claude", "skills");
+      await symlink(
+        skillTarget(".claude/skills", "qfai-retired"),
+        path.join(claudeSkills, "qfai-retired"),
+        "dir",
+      );
+
+      const found = await finding(root);
+      const opening = found?.suggested_action?.split("\n")[0];
+      expect(opening).toContain("`qfai init --force`");
+      expect(opening).toContain("retired canonical directory");
+      expect(found?.suggested_action).not.toContain("Rerun `qfai init`");
+    });
+  });
+
   // POSIX only, and not as root: `chmod` is what makes the directory
   // searchable but not listable, and root ignores it.
   it.skipIf(process.platform === "win32" || process.geteuid?.() === 0)(
