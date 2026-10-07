@@ -346,6 +346,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`qfai validate --format text` groups the issues of one code.** Issues of one
+  code and severity print together, at most five of them, and a larger group
+  ends with a line `[error] <CODE> and <n> more`. Each group prints its `fix`
+  once, in place of the `error_code`, `target`, `expected` and `current` lines
+  after every issue. `counts:` still counts every issue, and the JSON report
+  still holds every issue. `--format github` is unchanged (#3012).
+
 - **The documentation-clarity rule says where spec-tree IDs may appear** (#3002).
   IDs the project's own spec tree defines stay in spec-tree documents and in code
   or test comments that point at a contract or example. Operator-facing guides
