@@ -6,6 +6,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **The README states how to upgrade qfai.** The section "Keeping QFAI
+  itself up to date" now lists the steps: install, move local edits to the
+  overlay directories, `npx qfai init --force`, delete the retired files the
+  release notes list, then `npx qfai doctor` and `npx qfai validate`. The
+  `implement-dep-bump` step points at that procedure when the dependency is
+  `qfai`, so an upgrade request runs as an ordinary dependency update (#3016).
+
 - **The decisions template says a row may cite an earlier approval.** A
   `decisions.md` row that records a spec change following from an earlier
   approval may name that decision's ID in `Grounds:` in place of a new answer

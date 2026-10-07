@@ -113,6 +113,8 @@ describe("the steps the routes add to qfai-implement", () => {
     const bump = flat(await stepText("implement-dep-bump"));
     expect(bump).toMatch(/such as the `engines` field/i);
     expect(bump).toMatch(/never edit a lockfile by hand/i);
+    expect(bump).toMatch(/when the dependency is `qfai` itself/i);
+    expect(bump).toMatch(/`init --force`, the retired files the release notes list/i);
 
     const tooling = flat(await stepText("implement-tooling"));
     expect(tooling).toMatch(/where the project ships CI to others, record one disposition/i);
