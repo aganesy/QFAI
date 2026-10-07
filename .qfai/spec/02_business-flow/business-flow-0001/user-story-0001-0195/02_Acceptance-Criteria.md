@@ -24,7 +24,7 @@ Feature: A stage skill picked up by free text hands over
   Scenario: Each stage-skill description opens with its trigger condition
     Given the `description:` of every skill that owns a step a built-in plan names
     When it is read
-    Then it opens with when to use the skill: invoked by name, or when a route's plan names its step
+    Then it opens with when to use the skill: invoked by name, or handed a QFAI work order
     And it does not walk through the skill's steps
     And it stays within 1024 characters and holds no `<` or `>`
 
@@ -52,4 +52,19 @@ Feature: A stage skill picked up by free text hands over
     And it reads each step's `STEP.md` only when that step starts
     And after its last step it runs one review: the specification review for qfai-sdd and qfai-discussion, the code review for a skill that changed code, tests or a change note, and none for qfai-triage or for a qfai-verify run that wrote nothing
     And no review runs between two of its steps
+
+  # AC-0001-0195-08
+  Scenario: Each stage-skill description names its own subject
+    Given the `description:` of every skill that owns a step a built-in plan names
+    When the text after its trigger condition is read
+    Then it states the skill's subject
+    And no two of those descriptions state the same subject
+
+  # AC-0001-0195-09
+  Scenario: A description the host may select says when to select the skill
+    Given every shipped skill whose frontmatter does not declare `disable-model-invocation: true`
+    When its `name` and `description:` are read
+    Then the description carries a sentence beginning `Use when`, is in the third person and stays within 1024 characters
+    And the name holds neither `anthropic` nor `claude`
+    And a skill that declares `disable-model-invocation: true` is outside the criterion
 ```
