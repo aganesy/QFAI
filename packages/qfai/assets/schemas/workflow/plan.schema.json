@@ -362,7 +362,7 @@
                 "minLength": 1
               },
               "cause": {
-                "description": "For `plan-invalid`: why the plan does not load.",
+                "description": "For `plan-invalid`: why the plan does not load. For `schema`: how the field departs from the extraction, as `missing`, `unknown`, `wrong-type`, `wrong-value` or `invalid` and the detail.",
                 "type": "string",
                 "minLength": 1
               }

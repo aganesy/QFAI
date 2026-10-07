@@ -158,12 +158,23 @@ keeps its scopes: `--route` returns none.
 {
   "ok": false,
   "message": "The extraction has a field this command does not take. Fix it and try again.",
-  "reasons": [{ "reason": "schema", "subject": "candidateRoute" }]
+  "reasons": [
+    {
+      "reason": "schema",
+      "subject": "candidateRoute",
+      "cause": "unknown: candidateRoute is not a field here"
+    }
+  ]
 }
 ```
 
 `reason` is `invalid-input` for the command line or an input that is not JSON,
-`schema` for an extraction field, `unknown-route` for a route the catalog does
+`schema` for an extraction field, naming its `cause`: `missing` for a required
+field that is absent, `unknown` for a key the extraction does not take,
+`wrong-type` for a value of another type, `wrong-value` for a value outside the
+field's vocabulary, and `invalid` for the rule that ties `alternatives` to
+`confidence`; each cause states what was expected and received, or the field
+name. `unknown-route` for a route the catalog does
 not name, `plan-invalid` for a plan that does not load, naming its `file` and
 `cause`, `artifact-unserved` for an artifact the extraction names when no stage
 of the route writes any artifact it names, so the work stops before the first
