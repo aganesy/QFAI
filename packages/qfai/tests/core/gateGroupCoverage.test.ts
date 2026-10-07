@@ -138,8 +138,8 @@ describe("QFAI-PROFILE-001's skip-set accounts for every code that can be emitte
     // needs a profile that runs the narrow group WITHOUT the wildcard one.
     //
     // No profile does today. `canonical-uix` holds an enumeration rather
-    // than `["UIX-VAL-*"]`, so it no longer swallows the twelve
-    // `UIX-VAL-SKILL-*` codes that `prototyping-skill` owns — and even a
+    // than `["QFAI-*"]`, so it no longer swallows the twelve
+    // `QFAI-PROTOSKILL-*` codes that `prototyping-skill` owns — and even a
     // wildcard there would not misreport, since `prototyping-skill` is
     // reachable only from `runFullValidators`, which runs `canonical-uix`
     // too. This case is asserted for the divergence that has not happened

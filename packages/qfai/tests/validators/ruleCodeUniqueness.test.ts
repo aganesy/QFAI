@@ -18,7 +18,7 @@ const coreRoot = path.join(packageRoot, "src", "core");
  *
  * - `config.ts` — the `configIssues` prepended to the findings list;
  * - `validators/**` — the profile validators;
- * - `saasPackage/**` — `runSaasPackageProfile`'s `D-SAAS-PACKAGE-*` findings;
+ * - `saasPackage/**` — `runSaasPackageProfile`'s `QFAI-SAAS-*` findings;
  * - `waivers.ts` — `applyWaivers`' `QFAI-WAIVER-*` findings.
  *
  * A scan limited to `validators/` passes while a validator and one of the
