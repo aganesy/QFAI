@@ -597,6 +597,40 @@ function emitStrictSupersededNotice(failOn: FailOn): void {
   );
 }
 
+/** The most issues of one code that `--format text` prints before it counts the rest. */
+const TEXT_ISSUES_PER_GROUP = 5;
+
+interface TextIssueGroup {
+  head: Issue;
+  items: Issue[];
+}
+
+/**
+ * Issues of one code, severity and suppression state, in the order the first of
+ * each group appeared. A rule that fails in a hundred places is one group, not
+ * a hundred records.
+ */
+function groupIssues(issues: readonly Issue[]): TextIssueGroup[] {
+  const groups = new Map<string, TextIssueGroup>();
+  for (const item of issues) {
+    const key = `${item.severity}|${item.code}|${item.suppressed === true}`;
+    const group = groups.get(key);
+    if (group) {
+      group.items.push(item);
+    } else {
+      groups.set(key, { head: item, items: [item] });
+    }
+  }
+  return [...groups.values()];
+}
+
+function formatTextIssueLine(item: Issue): string {
+  const location = item.file ? ` (${item.file})` : "";
+  const refs = item.refs && item.refs.length > 0 ? ` refs=${item.refs.join(",")}` : "";
+  const suppressed = item.suppressed ? " suppressed=true" : "";
+  return `[${item.severity}] ${item.code} ${item.message}${location}${refs}${suppressed}`;
+}
+
 /**
  * Renders the default `--format text` output.
  *
@@ -604,19 +638,22 @@ function emitStrictSupersededNotice(failOn: FailOn): void {
  * both must be changed together.
  */
 export function emitText(result: ValidationResult, failOn: FailOn): void {
-  for (const item of result.issues) {
-    const location = item.file ? ` (${item.file})` : "";
-    const refs = item.refs && item.refs.length > 0 ? ` refs=${item.refs.join(",")}` : "";
-    const suppressed = item.suppressed ? " suppressed=true" : "";
-    process.stdout.write(
-      `[${item.severity}] ${item.code} ${item.message}${location}${refs}${suppressed}\n`,
-    );
-    if (shouldEmitIssueDetail(item, failOn)) {
-      emitTextField("error_code", item.code);
-      emitTextField("target", resolveIssueTarget(item));
-      emitTextField("expected", resolveIssueExpected(item));
-      emitTextField("current", item.message);
-      emitTextField("fix", resolveIssueFix(item));
+  for (const group of groupIssues(result.issues)) {
+    const shown = group.items.slice(0, TEXT_ISSUES_PER_GROUP);
+    for (const item of shown) {
+      process.stdout.write(`${formatTextIssueLine(item)}\n`);
+    }
+    const hidden = group.items.length - shown.length;
+    if (hidden > 0) {
+      const suppressed = group.head.suppressed ? " suppressed=true" : "";
+      process.stdout.write(
+        `[${group.head.severity}] ${group.head.code} and ${hidden} more${suppressed}\n`,
+      );
+    }
+    if (shouldEmitIssueDetail(group.head, failOn)) {
+      for (const fix of new Set(shown.map(resolveIssueFix))) {
+        emitTextField("fix", fix);
+      }
     }
   }
   process.stdout.write(
@@ -780,11 +817,10 @@ export function capPerLevel(issues: Issue[]): { emitted: Issue[]; levels: LevelT
 }
 
 /**
- * Whether an issue prints its `expected` / `fix` detail: every error, and a
- * warning when warnings fail the run. Tied to `severity === "error"` alone, the
- * rule-description catalogue would be unreachable for every warning-severity
- * code, although under `--strict` / `--fail-on warning` the warning is exactly
- * what fails the run.
+ * Whether a group of issues prints its `fix` lines: every error, and a warning
+ * when warnings fail the run. Tied to `severity === "error"` alone, the
+ * remedy of every warning-severity code would be unreachable, although under
+ * `--strict` / `--fail-on warning` the warning is exactly what fails the run.
  */
 function shouldEmitIssueDetail(issue: Issue, failOn: FailOn): boolean {
   if (issue.severity === "error") {
@@ -1428,19 +1464,6 @@ export const UNCATALOGUED_EXPECTED = "Rule compliance";
 
 /** Printed as `fix` when a code has neither a `suggested_action` nor a catalog entry. */
 export const UNCATALOGUED_FIX = "Follow the expected rule and rerun validate.";
-
-function resolveIssueTarget(issue: Issue): string {
-  if (issue.file && issue.refs && issue.refs.length > 0) {
-    return `${issue.file} [${issue.refs.join(", ")}]`;
-  }
-  if (issue.file) {
-    return issue.file;
-  }
-  if (issue.refs && issue.refs.length > 0) {
-    return issue.refs.join(", ");
-  }
-  return "(project)";
-}
 
 /**
  * Human-readable "expected state" a report prints for an issue code. Exported so

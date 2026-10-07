@@ -362,6 +362,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`qfai validate --format text` groups the issues of one code.** Issues of one
+  code and severity print together, at most five of them, and a larger group
+  ends with a line `[error] <CODE> and <n> more`. Each group prints its `fix`
+  once, in place of the `error_code`, `target`, `expected` and `current` lines
+  after every issue. `counts:` still counts every issue, and the JSON report
+  still holds every issue. `--format github` is unchanged (#3012).
+
 - **`qfai validate` and `qfai report --run-validate` no longer check for the old `validate.json` location** (#3125).
   A file at `.qfai/output/validate.json`, or an `output.validateJsonPath` that names
   that path, no longer raises `D-DEPRECATED-PATH`, and the report is written to the
