@@ -58,7 +58,7 @@ Discussion UI/UX files are **non-normative** discovery / reference artifacts —
   `api/`, `db/` or `ui/` is not a contract, whatever its H1 says:
   `QFAI-CONTRACT-034` reports it, and no other check counts it.
 - **Rules are numbered after their contract.** A business rule's ID is
-  `BR-<contract number>-NNNN`: `BR-0002-0001` is the first rule of `API-0002`.
+  `BR-<contract number>-NNNN`: `BR-0006-0001` is the first rule of `API-0006`.
   Only that contract declares it: under `x-qfai-rules` in YAML or JSON, on
   `-- Rule` and `-- Examples:` lines in SQL, and in the `## Business rules`
   table (`BR-ID`, `Statement`, `Examples`) of a Markdown contract.

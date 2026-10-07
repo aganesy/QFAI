@@ -238,6 +238,7 @@ describe("story-tree structure", () => {
     });
 
     // QFAI:EX-0001-0051-09
+    // QFAI:EX-0001-0051-13
     it("reads a quoted label, CRLF line ends, and a section missing its diagram or table", () => {
       const rows = "| Layer | Responsibility | Depends on |\n| --- | --- | --- |\n";
       const fence = "```";
@@ -258,9 +259,51 @@ describe("story-tree structure", () => {
     });
 
     // QFAI:EX-0001-0051-08
+    // QFAI:EX-0001-0051-13
     it("reports a layer that has two rows", async () => {
       const twice = [...LAYERS, "| Shared | Another row | - |"];
       expect(await problems(DIAGRAM, twice)).toEqual(["the layer Shared has more than one row"]);
+    });
+
+    // QFAI:EX-0001-0051-11
+    it("reports a layer drawn as two nodes", async () => {
+      const table = [
+        "| Layer | Responsibility | Depends on |",
+        "| --- | --- | --- |",
+        "| CLI | Parses | Core |",
+        "| Core | Validates | - |",
+      ];
+      const header = ["flowchart TD", '  A["CLI"] --> B["Core"]'];
+      expect(await problems([...header, '  C["CLI"]'], table)).toEqual([
+        "the diagram draws the layer CLI as 2 nodes",
+      ]);
+      expect(await problems(["flowchart TD", "  CLI --> Core", '  X["CLI"]'], table)).toEqual([
+        "the diagram draws the layer CLI as 2 nodes",
+      ]);
+      expect(await problems([...header, '  A["CLI"]'], table)).toEqual([]);
+    });
+
+    // QFAI:EX-0001-0051-12
+    it("reports an edge written twice", async () => {
+      const table = [
+        "| Layer | Responsibility | Depends on |",
+        "| --- | --- | --- |",
+        "| CLI | Parses | Core |",
+        "| Core | Validates | - |",
+      ];
+      const once = ["flowchart TD", "  CLI --> Core"];
+      expect(await problems([...once, "  CLI --> Core"], table)).toEqual([
+        "the diagram draws CLI --> Core more than once",
+      ]);
+      expect(await problems([...once, "  CLI --> Core", "  CLI --> Core;"], table)).toEqual([
+        "the diagram draws CLI --> Core more than once",
+      ]);
+      const sameEdge = ["flowchart TD", '  A["CLI"] --> B["Core"]', '  C["CLI"] --> B'];
+      expect(await problems(sameEdge, table)).toEqual([
+        "the diagram draws the layer CLI as 2 nodes",
+        "the diagram draws CLI --> Core more than once",
+      ]);
+      expect(await problems(once, table)).toEqual([]);
     });
 
     it("reads nothing when the tree has no tech.md", async () => {

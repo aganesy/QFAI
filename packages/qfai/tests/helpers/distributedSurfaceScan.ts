@@ -1,6 +1,11 @@
 import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
+import {
+  declaredSampleBandPattern,
+  repoRootFromHere,
+} from "../../scripts/lib/declared-sample-band-ids.mjs";
+
 interface SurfaceHit {
   file: string;
   line: number;
@@ -24,8 +29,8 @@ export const STORY_ID_BOUNDARIES: ReadonlyArray<[string, string]> = [
   ["AC-0001-0001-01", "AC-0001-0001-00"],
   ["EX-0001-0001-01", "EX-0010-0001-01"],
   ["EX-0001-0001-01", "EX-0001-0001-00"],
-  ["BR-0009-0009", "BR-0010-0001"],
-  ["BR-0001-0001", "BR-0001-0010"],
+  ["BR-0006-0009", "BR-0010-0001"],
+  ["BR-0006-0001", "BR-0006-0010"],
   ["CLI-0009", "CLI-0010"],
   ["API-0001", "API-0100"],
   ["DB-0009", "DB-0000"],
@@ -48,7 +53,7 @@ export const STORY_ID_TRAILING_HYPHEN_BOUNDARIES: ReadonlyArray<[string, string]
   ["cli-0009-", "cli-0010-"],
 ];
 
-const PATTERNS: ReadonlyArray<{ name: string; re: RegExp }> = [
+const BASE_PATTERNS: ReadonlyArray<{ name: string; re: RegExp }> = [
   // Ten and above is a numeric property. Preserve the case-insensitive
   // spelling that the post-build guard applies to paths and content.
   { name: "internal spec id (spec-0010+)", re: /spec-0*[1-9][0-9]+/gi },
@@ -63,6 +68,17 @@ const PATTERNS: ReadonlyArray<{ name: string; re: RegExp }> = [
   },
   { name: "schemaVersion field", re: /"schemaVersion"|schemaVersion\s*:/g },
 ];
+
+// The sample-band IDs this repository declares, read from its spec tree by the
+// same module the other two guards use.
+const DECLARED_PATTERN = declaredSampleBandPattern(repoRootFromHere());
+const PATTERNS: ReadonlyArray<{ name: string; re: RegExp }> =
+  DECLARED_PATTERN === null
+    ? BASE_PATTERNS
+    : [
+        ...BASE_PATTERNS,
+        { name: "declared sample band id", re: new RegExp(DECLARED_PATTERN, "g") },
+      ];
 
 // The shell guard scans every packed byte. The smoke scan reads known text
 // formats and extensionless init files; names of every entry are scanned.
