@@ -116,6 +116,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **An EX annotation is read from real comments, and by the same declaration
+  rules as the ATDD scan** (#3018). Text inside a string literal or a template
+  literal is no longer an annotation, and a test call inside a block comment or
+  a literal no longer ends an annotation's search. `Deno.test(...)` and
+  `QUnit.test(...)` now count as declarations. `@pytest.mark.*` does not, since
+  it may decorate a helper no runner collects; a Python annotation goes directly
+  above `def test...`. A Go `Example` function counts only when the file holds
+  an `// Output:` comment. The declaration forms are read per file extension
+  from one table shared with the ATDD scan.
+  A template literal nested inside another one is now read as part of it, so
+  a comment after it is no longer lost. `class Test...`, a paren-less RSpec
+  block and a Gherkin `Feature:` line still count as places an annotation may
+  sit.
+
 - **A retired wrapper's remedy opens with the steps that clear it.**
   The remedy of the broken-link finding opened with a rerun of `qfai init`,
   which changes nothing for a wrapper this version no longer ships. When the
