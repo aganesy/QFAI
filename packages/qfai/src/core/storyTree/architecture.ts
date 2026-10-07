@@ -81,7 +81,8 @@ const edgeKey = (upper: string, lower: string): string => `${upper} --> ${lower}
 
 /**
  * The layers and dependencies a diagram draws, each node named by its label where it has
- * one and by its ID otherwise.
+ * one and by its ID otherwise. A layer named by more than one ID, and an edge written more
+ * than once, are problems.
  */
 function readDiagram(source: string): Diagram {
   const lines = source
@@ -114,13 +115,23 @@ function readDiagram(source: string): Diagram {
     statements.push(lower === undefined ? [upper] : [upper, lower]);
   }
   const name = (id: string): string => labels.get(id) ?? id;
-  const nodes = new Set(statements.flat().map(name));
-  const edges = new Set(
-    statements.flatMap(([upper, lower]) =>
-      upper !== undefined && lower !== undefined ? [edgeKey(name(upper), name(lower))] : [],
-    ),
+  const idsOfName = new Map<string, Set<string>>();
+  for (const id of statements.flat()) {
+    idsOfName.set(name(id), (idsOfName.get(name(id)) ?? new Set<string>()).add(id));
+  }
+  for (const [layer, ids] of idsOfName) {
+    if (ids.size > 1) problems.push(`the diagram draws the layer ${layer} as ${ids.size} nodes`);
+  }
+  const edgeList = statements.flatMap(([upper, lower]) =>
+    upper !== undefined && lower !== undefined ? [edgeKey(name(upper), name(lower))] : [],
   );
-  return { nodes, edges, problems };
+  const edges = new Set(edgeList);
+  for (const edge of edges) {
+    if (edgeList.indexOf(edge) !== edgeList.lastIndexOf(edge)) {
+      problems.push(`the diagram draws ${edge} more than once`);
+    }
+  }
+  return { nodes: new Set(idsOfName.keys()), edges, problems };
 }
 
 /** Where a Depends on name breaks the rule that a row depends only on rows below it. */
