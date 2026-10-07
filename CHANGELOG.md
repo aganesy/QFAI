@@ -362,6 +362,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The web-research sandbox template no longer allows `.qfai/evidence/`.**
+  Nothing writes web-research results there, so the allowance is gone; the
+  cache directory stays. Artifact references also stop treating the retired
+  prototyping state file location as a special case. Part of #2805.
+
 - **`qfai validate --format text` groups the issues of one code.** Issues of one
   code and severity print together, at most five of them, and a larger group
   ends with a line `[error] <CODE> and <n> more`. Each group prints its `fix`

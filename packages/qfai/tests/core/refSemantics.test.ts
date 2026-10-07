@@ -43,7 +43,7 @@ describe("isSpecDeclarationRef (rev11 canonical grammar)", () => {
   });
 
   it("rejects refs outside .qfai/specs", () => {
-    expect(isSpecDeclarationRef(".qfai/evidence/prototyping.json#/specCoverage")).toBe(false);
+    expect(isSpecDeclarationRef(".qfai/report/validate.json#/specCoverage")).toBe(false);
   });
 
   it("rejects nested sub-directory paths", () => {
