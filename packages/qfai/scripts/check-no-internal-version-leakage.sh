@@ -93,6 +93,12 @@ STORY_ID_RE="$STORY_ID_RE|\bBR-($OUTSIDE_FOUR-[0-9]{4}|[0-9]{4}-$OUTSIDE_FOUR)\b
 # of a contract file name.
 STORY_ID_RE="$STORY_ID_RE|(^|[^A-Za-z0-9_-])(CLI|API|DB|UI|DESIGN|cli|api|db|ui)-$OUTSIDE_FOUR\b$SINGLE_ID_END"
 STORY_ID_RE="$STORY_ID_RE|\bCON-(CLI|API|DB|UI|DESIGN)-$OUTSIDE_FOUR\b$SINGLE_ID_END"
+# The sample-band IDs this repository declares as real business rules and
+# contracts. The pre-build lint and the smoke test read the same module.
+DECLARED_SAMPLE_BAND_RE=$(node "$(dirname "${BASH_SOURCE[0]}")/lib/declared-sample-band-ids.mjs")
+if [ -n "$DECLARED_SAMPLE_BAND_RE" ]; then
+  STORY_ID_RE="$STORY_ID_RE|$DECLARED_SAMPLE_BAND_RE"
+fi
 
 # Schema version field (any literal "schemaVersion") in distributed
 # surfaces. Generated artifact schemas do not carry this field.

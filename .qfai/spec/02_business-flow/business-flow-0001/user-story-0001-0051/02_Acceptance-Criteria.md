@@ -45,7 +45,7 @@ Feature: Story-tree layout and ID validation
 
   # AC-0001-0051-07
   Scenario: An architecture whose diagram and table disagree is reported
-    Given the story tree, and a `tech.md` whose Architecture table has a Depends on entry that is not a layer in a row below its own, or whose diagram draws a layer or an edge the table does not give, or leaves one out
+    Given the story tree, and a `tech.md` whose Architecture table has a Depends on entry that is not a layer in a row below its own, or whose diagram draws a layer or an edge the table does not give, leaves one out, draws a layer as two nodes, or writes an edge twice
     When `qfai validate --profile sdd` runs
     Then an error names `tech.md` and each disagreement
     And an architecture whose rows run from the uppermost layer down, and whose diagram draws exactly its layers and dependencies, raises no such error

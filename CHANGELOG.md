@@ -6,6 +6,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`QFAI-STORY-013` reports a layer drawn as two nodes and an edge written
+  twice.** In the architecture diagram of `tech.md`, two node IDs that name one
+  layer, as in `A["CLI"] --> B["Core"]` with `C["CLI"]`, and an edge repeated on
+  two lines now each raise the error, naming the layer or the edge. Both passed
+  before, although the authoring guide asks for one node per layer and one edge
+  per dependency. Fixes #3081.
+
 - **The seeded `.gitattributes` uses Git union merging for the two registers**
   (#2265). A new file sets `merge=union` on `decisions.md` and
   `open-questions.md` to keep both branches' appended lines. Validation still
@@ -100,8 +107,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   its specifications self-contained can bring the count down. Discussion packs
   are not read, and no option changes the severity (#3006).
 
+- **`qfai doctor` warns when the `@jackchuka/mdschema` binary runs only from a
+  download.** When the platform package for the machine is absent and the
+  package's install script downloaded the binary into its own `bin/` directory,
+  `workflows.mdschemaBinary` is a `warning` that says so and asks for an install
+  that keeps optional dependencies, where it was `ok` before (#3015). A binary
+  that cannot start is still an `error`.
+
 ### Fixed
 
+- **A retired wrapper's remedy opens with the steps that clear it.**
+  The remedy of the broken-link finding opened with a rerun of `qfai init`,
+  which changes nothing for a wrapper this version no longer ships. When the
+  finding names a retired wrapper, the remedy now opens with `qfai init --force`
+  and the manual deletion of the retired canonical directory, which init never
+  deletes.
 - **A repaired title no longer reads as a new changelog entry.**
   The released-section guard compares entry titles ignoring whitespace, so
   restoring a missing space in a published entry's title line is accepted.
@@ -367,6 +387,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   cache directory stays. Artifact references also stop treating the retired
   prototyping state file location as a special case. Part of #2805.
 
+- **The delegation baseline keeps parallel agents and reviewers off each
+  other's files.** A read-only agent no longer checks out in a worktree it
+  shares and reads other revisions with `git show`, and every agent writes
+  scratch files under a path of its own. A change is committed, or each
+  reviewer gets a fixed commit, before a review starts, and the working tree
+  stays as it is until the reviews return (#2959, #2976).
 - **`qfai validate --format text` groups the issues of one code.** Issues of one
   code and severity print together, at most five of them, and a larger group
   ends with a line `[error] <CODE> and <n> more`. Each group prints its `fix`
@@ -460,6 +486,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The check reads the whole of every touched file and follows each input the
   change adds or alters to where it is used, across files the change did not
   touch. Only a finding on what the change added or altered blocks.
+- **The shipped samples no longer use business-rule IDs this repository declares.**
+  The distributed-surface guards now also reject, inside the sample band, a
+  business-rule ID or a contract file name that the repository's own spec tree
+  declares. The contract template, the DB contract sample and the guidance that
+  showed such IDs now show IDs the repository does not declare (#2659).
 - **`qa-gatekeeper` asks whether a reviewed test would survive a refactor**
   (#2253). A test that asserts on what the contract does not name, such as a
   private function, an internal call order or a mock of the code's own

@@ -44,7 +44,7 @@ contract kinds. The old and new IDs and paths are recorded in
 `tmp/qfai-migration/contract-map.json` and then in the ID
 map. Later steps rewrite the old IDs in dependency declarations, rule
 statements and test annotations, and number each contract's rules from its own
-number, such as `BR-0002-0001`. A Markdown contract takes its rules as rows of
+number, such as `BR-0006-0001`. A Markdown contract takes its rules as rows of
 a `## Business rules` table. `contracts.md` becomes one index table.
 
 Two kinds of 1.x file are not 2.0.0 contracts. Step 3 gives them no ID and
