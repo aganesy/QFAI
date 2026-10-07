@@ -30,9 +30,10 @@ Feature: Shipped workflow checks
     And a project where every fact is met gets no such line
 
   # AC-0003-0011-10
-  Scenario: A document-schema checker binary that does not run is reported
-    Given an installed QFAI package whose `@jackchuka/mdschema` binary starts, and one whose binary cannot start
+  Scenario: A document-schema checker binary that does not run, or runs only from a download, is reported
+    Given an installed QFAI package whose `@jackchuka/mdschema` binary starts from the platform package, one whose binary starts only from the copy its install script downloaded, and one whose binary cannot start
     When `qfai doctor` runs
-    Then the `workflows.mdschemaBinary` check is `ok` when `mdschema --help` exits 0, and no binary found from the inspected project's root is started
+    Then the `workflows.mdschemaBinary` check is `ok` when `mdschema --help` exits 0 from the platform package, and no binary found from the inspected project's root is started
+    And it is a warning naming the reason when the binary exits 0 only from the downloaded copy
     And it is an error naming the reason and the fix when the binary cannot start
 ```

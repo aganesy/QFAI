@@ -1,4 +1,4 @@
-# CLI-0001: Example command
+# CLI-0006: Example command
 
 ## Ownership boundary
 
@@ -8,4 +8,4 @@
 
 | BR-ID        | Statement    | Examples        |
 | ------------ | ------------ | --------------- |
-| BR-0001-0001 | Example rule | EX-0001-0001-01 |
+| BR-0006-0001 | Example rule | EX-0001-0001-01 |

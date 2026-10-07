@@ -96,11 +96,11 @@ examples:
   - id: EX-0001-0002
     criterion: AC-0001-0001
 rules:
-  - id: BR-0001-0001
+  - id: BR-0006-0001
     contract: api/orders.yaml
-  - id: BR-0001-0002
+  - id: BR-0006-0002
     binds: none
-  - id: BR-0001-0003
+  - id: BR-0006-0003
     retire: The payment provider enforces this limit.
 ```
 
@@ -214,14 +214,14 @@ the 2.x skills declare.
 ## Business rules
 
 Rules are numbered per contract, `BR-<contract number>-NNNN` from `0001` in plan
-order: the first rule step 4 places in API-0002 is BR-0002-0001. Step 7 writes
+order: the first rule step 4 places in API-0006 is BR-0006-0001. Step 7 writes
 each rule into its contract in the form the contract's format takes:
 
 | Contract format | Where the rule goes                                                     |
 | --------------- | ----------------------------------------------------------------------- |
 | Markdown        | A row of the `## Business rules` table: BR-ID, Statement and Examples   |
 | YAML or JSON    | An entry `{ id, statement, examples }` of the top-level `x-qfai-rules:` |
-| SQL             | A `-- Rule BR-0002-0001: <statement>` line, then an `-- Examples:` line |
+| SQL             | A `-- Rule BR-0006-0001: <statement>` line, then an `-- Examples:` line |
 
 A Markdown contract without a `## Business rules` section gets one as its last
 section. A rule's examples are the new IDs of the examples that cited it. A

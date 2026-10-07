@@ -240,8 +240,8 @@ export function lifecycleFindings(root) {
         `the lifecycle hooks of ${rel} are not the ones ${LIFECYCLE_MANIFESTS_REL} pins. ` +
           `Declared: ${projection.keys.length === 0 ? "(none)" : projection.keys.join(", ")}. ` +
           "Being on the allow-list permits a manifest to run code at install time; it does not " +
-          "permit that code to change without a reviewer seeing it. Reseal with `node " +
-          "scripts/pin-guard-bytes.mjs` in the same commit as the edit.",
+          "permit that code to change without a reviewer seeing it. Reseal with `pnpm " +
+          "pins:reseal` in the same commit as the edit.",
       );
     }
   }
