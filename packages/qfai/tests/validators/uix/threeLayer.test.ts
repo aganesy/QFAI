@@ -95,7 +95,7 @@ describe("3-layer validator", () => {
     const issues = await validateThreeLayerModel(root, defaultConfig);
 
     expect(issues.length).toBeGreaterThan(0);
-    expect(issues[0]?.code).toBe("UIX-VAL-3LAYER-LEGACY-FORMAT");
+    expect(issues[0]?.code).toBe("QFAI-THREELAYER-003");
     expect(issues[0]?.severity).toBe("error");
   });
 
@@ -118,7 +118,7 @@ describe("3-layer validator", () => {
     const issues = await validateThreeLayerModel(root, defaultConfig);
 
     expect(issues.length).toBeGreaterThan(0);
-    expect(issues[0]?.code).toBe("UIX-VAL-3LAYER-MIXED-FORMAT");
+    expect(issues[0]?.code).toBe("QFAI-THREELAYER-004");
     expect(issues[0]?.severity).toBe("error");
   });
 
@@ -130,7 +130,7 @@ describe("3-layer validator", () => {
 
     const issues = await validateForbiddenLegacyFiles(root, defaultConfig);
     const codes = issues.map((i) => i.code);
-    expect(codes).toContain("UIX-VAL-3LAYER-FORBIDDEN-FILE");
+    expect(codes).toContain("QFAI-THREELAYER-001");
     const files = issues.map((i) => i.file);
     expect(files).toContain("uiux/33_exploration_rubric.md");
     expect(files).toContain("uiux/34_evaluator_calibration.md");
@@ -178,7 +178,7 @@ describe("canonical sidecar family completeness", () => {
     const issues = await validateThreeLayerFamilyCompleteness(root, defaultConfig);
 
     expect(issues).toHaveLength(1);
-    expect(issues[0]?.code).toBe("UIX-VAL-3LAYER-INCOMPLETE-FAMILY");
+    expect(issues[0]?.code).toBe("QFAI-THREELAYER-002");
     expect(issues[0]?.severity).toBe("error");
     expect(issues[0]?.file).toBe("uiux/00_index.md");
   });

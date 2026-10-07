@@ -83,7 +83,13 @@ describe("validate reads no stage evidence", () => {
         .flat()
         .filter(
           (item) =>
-            (item.code.startsWith("QFAI-DCON-") || item.code.startsWith("R-")) &&
+            [
+              "QFAI-DCON-",
+              "QFAI-POLICY-",
+              "QFAI-HANDOFF-",
+              "QFAI-MANIFEST-",
+              "QFAI-MOCKHREF-",
+            ].some((prefix) => item.code.startsWith(prefix)) &&
             /prototyping\.json|prototyping evidence/.test(item.message),
         );
 

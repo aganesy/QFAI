@@ -133,11 +133,11 @@ async function scanFileForStaleRefs(root: string, file: string, issues: Issue[])
   for (const entry of STALE_REFERENCES) {
     if (!body.includes(entry.beforeToken)) continue;
     const message =
-      `W-STALE-REFERENCE (${entry.clause}): ${relPath} still references ` +
+      `QFAI-STALE-001 (${entry.clause}): ${relPath} still references ` +
       `"${entry.beforeToken}". Rewrite to match the chosen implementation: ` +
       `${entry.replacement}.`;
     issues.push(
-      issue("W-STALE-REFERENCE", message, "warning", relPath, "staleReferences.preImplementation"),
+      issue("QFAI-STALE-001", message, "warning", relPath, "staleReferences.preImplementation"),
     );
   }
 }

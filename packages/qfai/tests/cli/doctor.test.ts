@@ -764,7 +764,7 @@ async function readDoctorData(
   return JSON.parse(raw) as DoctorData;
 }
 
-// Appends a value the config loader rejects (`QFAI_CONFIG_INVALID`,
+// Appends a value the config loader rejects (`QFAI-CFG-002`,
 // severity `error`), which `createDoctorData` promotes onto the
 // `config.load` check. The shipped template has no `uiux:` key, so the
 // appended block cannot collide with an existing one.

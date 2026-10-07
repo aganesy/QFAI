@@ -128,7 +128,7 @@ describe("Old 4-axis format is error", () => {
     await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), legacyContent, "utf-8");
 
     const issues = await validateThreeLayerModel(root, defaultConfig);
-    const legacyIssue = issues.find((i) => i.code === "UIX-VAL-3LAYER-LEGACY-FORMAT");
+    const legacyIssue = issues.find((i) => i.code === "QFAI-THREELAYER-003");
     expect(legacyIssue).toBeDefined();
     expect(legacyIssue?.severity).toBe("error");
   });
@@ -144,7 +144,7 @@ describe("a non-UI pack raises no UIX finding from threeLayer", () => {
     await createNonUiPack(root);
 
     const issues = await validateThreeLayerModel(root, defaultConfig);
-    expect(issues.filter((i) => i.code.startsWith("UIX-VAL-"))).toHaveLength(0);
+    expect(issues.filter((i) => i.code.startsWith("QFAI-THREELAYER-"))).toHaveLength(0);
   });
 });
 

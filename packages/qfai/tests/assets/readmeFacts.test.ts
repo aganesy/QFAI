@@ -82,7 +82,7 @@ describe("README facts", () => {
 
     for (const readme of readmes) {
       // The remedy the deprecation finding prints at operators.
-      expect(readme).toContain("D-DEPRECATED-PATH");
+      expect(readme).toContain("QFAI-DEPRECATED-001");
     }
 
     // SSOT drift guard: the documented set is DERIVED from the actual flag

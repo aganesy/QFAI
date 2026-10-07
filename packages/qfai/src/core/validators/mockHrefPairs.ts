@@ -6,7 +6,7 @@
  *   - the shipped discussion mock template (anchor-form default), and
  *   - the QFAI-MOCK-010 validator (strict; `/path/` rejected).
  *
- * Drift between the two is caught by R-MOCK-HREF-DRIFT.
+ * Drift between the two is caught by QFAI-MOCKHREF-001.
  *
  * The pair is modeled by two token sets that detect the *drift form*
  * on each side:

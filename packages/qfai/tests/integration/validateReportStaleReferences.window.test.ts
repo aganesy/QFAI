@@ -55,7 +55,7 @@ async function severitiesOn(dayIso: string): Promise<string[]> {
   try {
     const { config } = await loadConfig(root);
     const issues = await validateStaleReferences(root, { config });
-    return issues.filter((i) => i.code === "W-STALE-REFERENCE").map((i) => i.severity);
+    return issues.filter((i) => i.code === "QFAI-STALE-001").map((i) => i.severity);
   } finally {
     vi.useRealTimers();
   }
@@ -63,13 +63,13 @@ async function severitiesOn(dayIso: string): Promise<string[]> {
 
 // QFAI:EX-0001-0174-01
 describe("TC-0015-0033: the severity a stale reference reports", () => {
-  it("emits W-STALE-REFERENCE at warning", async () => {
+  it("emits QFAI-STALE-001 at warning", async () => {
     await seedStaleRef();
 
     const { config } = await loadConfig(root);
     const issues = await validateStaleReferences(root, { config });
 
-    const findings = issues.filter((i) => i.code === "W-STALE-REFERENCE");
+    const findings = issues.filter((i) => i.code === "QFAI-STALE-001");
     expect(findings.length).toBeGreaterThanOrEqual(1);
     expect(findings[0]?.severity).toBe("warning");
     expect(findings[0]?.message).toMatch(/session-handoff\.yaml/);

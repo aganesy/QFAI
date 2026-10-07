@@ -10,7 +10,7 @@ import {
 
 /**
  * Detect drift across the discussion mock template ↔ QFAI-MOCK-010
- * validator SSOT-sync pair (Pair V). Fires R-MOCK-HREF-DRIFT (error)
+ * validator SSOT-sync pair (Pair V). Fires QFAI-MOCKHREF-001 (error)
  * when one side adopts the same-origin absolute `/path/` form without
  * the matching change on the other side.
  *
@@ -48,12 +48,12 @@ export async function detectMockHrefDrift(root: string): Promise<Issue[]> {
     const missingTokens = templateDrifted ? pair.validatorAcceptTokens : pair.templateDriftTokens;
 
     const message =
-      `R-MOCK-HREF-DRIFT: SSOT-sync pair for clause "${pair.clause}" is asymmetric ` +
+      `QFAI-MOCKHREF-001: SSOT-sync pair for clause "${pair.clause}" is asymmetric ` +
       `(justification: modified=${modifiedFile}, un-paired=${unpaired}, ` +
       `clause=${pair.clause} — missing tokens [${missingTokens.join(", ")}]).`;
 
     issues.push(
-      issue("R-MOCK-HREF-DRIFT", message, "error", modifiedFile, "reviewerGate.mockHrefDrift"),
+      issue("QFAI-MOCKHREF-001", message, "error", modifiedFile, "reviewerGate.mockHrefDrift"),
     );
   }
 

@@ -7,7 +7,7 @@
  *   is present and parses, and a conformant prototyping handoff record
  *   exists at `.qfai/prototype/final/handoff.json`, the saas-package profile
  *   PASSes (no error severities, exit 0).
- * - The validation result emits ONE `D-SAAS-PACKAGE-VERIFY-SKIPPED`
+ * - The validation result emits ONE `QFAI-SAAS-003`
  *   (severity info) finding per skipped ATDD / implement-class gate
  *   naming each gate.
  *
@@ -111,7 +111,7 @@ afterEach(async () => {
 
 // QFAI:EX-0001-0049-01
 describe("TC-0004-0067: validate --profile saas-package PASSes + emits skip-set (normal)", () => {
-  it("PASSes (exit 0) and writes a profile-suffixed report containing D-SAAS-PACKAGE-VERIFY-SKIPPED info findings", async () => {
+  it("PASSes (exit 0) and writes a profile-suffixed report containing QFAI-SAAS-003 info findings", async () => {
     await seedDesignSystemAttestation();
     await seedHandoff();
 
@@ -132,7 +132,7 @@ describe("TC-0004-0067: validate --profile saas-package PASSes + emits skip-set 
     expect(body.profile).toBe("saas-package");
     expect(body.counts.error).toBe(0);
 
-    const skips = body.issues.filter((i) => i.code === "D-SAAS-PACKAGE-VERIFY-SKIPPED");
+    const skips = body.issues.filter((i) => i.code === "QFAI-SAAS-003");
     expect(skips.length).toBe(SAAS_PACKAGE_SKIPPED_GATES.length);
     expect(skips.every((i) => i.severity === "info")).toBe(true);
     for (const gate of SAAS_PACKAGE_SKIPPED_GATES) {
@@ -159,7 +159,7 @@ describe("TC-0004-0067: validate --profile saas-package PASSes + emits skip-set 
       issues: Array<{ code: string; severity: string; message: string }>;
     };
     const attestation = body.issues.find(
-      (i) => i.severity === "error" && i.code === "D-SAAS-PACKAGE-ATTESTATION-MISSING",
+      (i) => i.severity === "error" && i.code === "QFAI-SAAS-001",
     );
     expect(attestation?.message).toContain("DESIGN.md is absent");
   });

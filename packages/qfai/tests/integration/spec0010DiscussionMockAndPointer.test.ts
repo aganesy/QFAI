@@ -1,7 +1,7 @@
 /**
  * Integration: spec-0010 CHG-006 — mock anchor-form href validation
  * (QFAI-MOCK-010 anchor/external PASS, same-origin /path/ FAIL,
- * template↔validator asymmetry R-MOCK-HREF-DRIFT) and the discussion
+ * template↔validator asymmetry QFAI-MOCKHREF-001) and the discussion
  * active-session pointer (currentId round-trip + ambiguous/absent recovery
  * error). Deterministic: each case builds a temp fixture and exercises the
  * production functions directly (no reliance on repo live state or a
@@ -51,7 +51,7 @@ describe("spec-0010 mock anchor-form hrefs CHG-006", () => {
     expect(result.localRefs).toContain("/orders/");
   });
 
-  it("TC-0010-0011 — template edited to /path/ form while validator stays strict fires R-MOCK-HREF-DRIFT at error severity under the prototyping profile (error)", async () => {
+  it("TC-0010-0011 — template edited to /path/ form while validator stays strict fires QFAI-MOCKHREF-001 at error severity under the prototyping profile (error)", async () => {
     const templateAbs = path.join(root, MOCK_HREF_TEMPLATE_REL);
     const validatorAbs = path.join(root, MOCK_HREF_VALIDATOR_REL);
     await mkdir(path.dirname(templateAbs), { recursive: true });
@@ -61,9 +61,9 @@ describe("spec-0010 mock anchor-form hrefs CHG-006", () => {
     await writeFile(validatorAbs, "result.localRefs.push(rawUrl);\n", "utf-8");
 
     // Exercise the user-facing prototyping-profile contract: `qfai validate
-    // --profile prototyping` must surface R-MOCK-HREF-DRIFT.
+    // --profile prototyping` must surface QFAI-MOCKHREF-001.
     const result = await validateProject(root, undefined, { profile: "prototyping" });
-    const drift = result.issues.find((i) => i.code === "R-MOCK-HREF-DRIFT");
+    const drift = result.issues.find((i) => i.code === "QFAI-MOCKHREF-001");
     expect(drift?.severity).toBe("error");
   });
 

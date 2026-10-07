@@ -1,7 +1,7 @@
 /**
  * Validator: assistantTreeMigration (.qfai/assistant/{rule,skill,agent,prompt}/).
  *
- * Covers TC-0004-0015 (4-layer enum guard), TC-0004-0022 (D-DEPRECATED-PATH
+ * Covers TC-0004-0015 (4-layer enum guard), TC-0004-0022 (QFAI-DEPRECATED-001
  * sunset literal), TC-0004-0025 (W-USER-EDIT-PRESERVED info pass-through).
  */
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
@@ -36,7 +36,7 @@ describe("assistantTreeMigration validator", () => {
     const root = await newRoot("treemig-absent");
     try {
       const issues = await validateAssistantTreeMigration(root, await getConfig(root));
-      expect(issues.filter((i) => i.code !== "I-ASSISTANT-LAYER-UNSEEDED").length).toBe(0);
+      expect(issues.filter((i) => i.code !== "QFAI-ASSISTANT-002").length).toBe(0);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -53,7 +53,7 @@ describe("assistantTreeMigration validator", () => {
       await writeFile(path.join(off, ".gitkeep"), "", "utf-8");
       const issues = await validateAssistantTreeMigration(root, await getConfig(root));
       const enumIssues = issues.filter(
-        (i) => i.code === "W-ASSISTANT-LAYOUT" && i.rule === "assistantTreeMigration.enumGuard",
+        (i) => i.code === "QFAI-ASSISTANT-001" && i.rule === "assistantTreeMigration.enumGuard",
       );
       expect(enumIssues.length).toBe(1);
       expect(enumIssues[0]?.message).toContain("extras");
@@ -63,9 +63,9 @@ describe("assistantTreeMigration validator", () => {
     }
   });
 
-  // TC-0004-0022: a legacy instructions/ layer is reported as D-DEPRECATED-PATH at error
+  // TC-0004-0022: a legacy instructions/ layer is reported as QFAI-DEPRECATED-001 at error
   // QFAI:EX-0001-0043-01
-  it("TC-0004-0022 (severity): D-DEPRECATED-PATH reports at error", async () => {
+  it("TC-0004-0022 (severity): QFAI-DEPRECATED-001 reports at error", async () => {
     const mod = await import("../../src/core/validators/assistantTreeMigration.js");
     const root = await newRoot("treemig-severity");
     try {
@@ -75,7 +75,7 @@ describe("assistantTreeMigration validator", () => {
       await writeFile(path.join(legacy, "test-layers.md"), "old\n", "utf-8");
 
       const issues = await mod.validateAssistantTreeMigration(root, await getConfig(root));
-      const sunsetIssues = issues.filter((i) => i.code === "D-DEPRECATED-PATH");
+      const sunsetIssues = issues.filter((i) => i.code === "QFAI-DEPRECATED-001");
       expect(sunsetIssues.length).toBe(1);
       expect(sunsetIssues[0]?.severity).toBe("error");
       expect(sunsetIssues[0]?.message).toMatch(/past the announced sunset/);
@@ -96,7 +96,7 @@ describe("assistantTreeMigration validator", () => {
         await writeFile(path.join(dir, ".gitkeep"), "", "utf-8");
       }
       const issues = await validateAssistantTreeMigration(root, await getConfig(root));
-      const infoIssues = issues.filter((i) => i.code === "I-ASSISTANT-LAYER-UNSEEDED");
+      const infoIssues = issues.filter((i) => i.code === "QFAI-ASSISTANT-002");
       expect(infoIssues.length).toBeGreaterThanOrEqual(1);
       // prompt/ should be the named offender.
       expect(infoIssues.some((i) => i.message.includes("prompt"))).toBe(true);
@@ -119,7 +119,7 @@ describe("assistantTreeMigration validator", () => {
       await mkdir(path.join(assistant, "skills"));
       const changed = await validateAssistantTreeMigration(root, await getConfig(root));
       expect(
-        changed.filter((found) => found.code === "W-ASSISTANT-LAYOUT").map((found) => found.file),
+        changed.filter((found) => found.code === "QFAI-ASSISTANT-001").map((found) => found.file),
       ).toEqual([".qfai/assistant/catalog/", ".qfai/assistant/skills/"]);
       const catalogIssue = changed.find((found) => found.file === ".qfai/assistant/catalog/");
       expect(catalogIssue?.severity).toBe("warning");

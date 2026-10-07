@@ -64,7 +64,7 @@ describe("autopilot policy in the story-tree assistant layout", () => {
 
     expect(await validateAutopilotPolicy(root)).toEqual([
       expect.objectContaining({
-        code: "R-AUTOPILOT-POLICY-MISSING",
+        code: "QFAI-POLICY-001",
         severity: "error",
         file: ".qfai/assistant/rule/shared-skill-operating-baseline.md",
       }),
@@ -77,7 +77,7 @@ describe("autopilot policy in the story-tree assistant layout", () => {
     const issues = await validateAutopilotPolicy(root);
 
     expect(issues.map((issue) => [issue.code, issue.file])).toEqual([
-      ["R-AUTOPILOT-POLICY-MISSING", ".qfai/assistant/rule/shared-skill-operating-baseline.md"],
+      ["QFAI-POLICY-001", ".qfai/assistant/rule/shared-skill-operating-baseline.md"],
     ]);
   });
 
@@ -87,7 +87,7 @@ describe("autopilot policy in the story-tree assistant layout", () => {
 
     const [finding] = await validateAutopilotPolicy(root);
 
-    expect(finding?.code).toBe("R-AUTOPILOT-POLICY-MISSING");
+    expect(finding?.code).toBe("QFAI-POLICY-001");
     expect(finding?.message).toContain("missingBuckets=[ask-user]");
   });
 
@@ -109,7 +109,7 @@ describe("autopilot policy in the story-tree assistant layout", () => {
 
     expect(issues).toEqual([
       expect.objectContaining({
-        code: "R-AUTOPILOT-POLICY-MISSING",
+        code: "QFAI-POLICY-001",
         severity: "error",
         file: ".qfai/assistant/skill/qfai-sdd/SKILL.md",
       }),
@@ -123,7 +123,7 @@ describe("autopilot policy in the story-tree assistant layout", () => {
 
     const [finding] = await validateAutopilotPolicy(root);
 
-    expect(finding?.code).toBe("R-AUTOPILOT-POLICY-MISSING");
+    expect(finding?.code).toBe("QFAI-POLICY-001");
     expect(finding?.message).toContain("missingEntries=[edit target]");
   });
 
@@ -173,7 +173,7 @@ describe("autopilot policy in the story-tree assistant layout", () => {
     const retired = await validateAutopilotPolicy(root);
 
     expect(retired.map((issue) => [issue.code, issue.severity])).toEqual([
-      ["R-AUTOPILOT-POLICY-MISSING", "error"],
+      ["QFAI-POLICY-001", "error"],
       ["QFAI-AUTOPILOT-001", "error"],
     ]);
     expect(retired[1]?.message).toContain("does not declare ([a full `CON-UI-NNNN` when");

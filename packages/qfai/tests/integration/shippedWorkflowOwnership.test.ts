@@ -267,7 +267,7 @@ describe("a shipped workflow the project lists under workflow.skipShipped is not
       const { issues } = await loadConfig(dir);
       const named = issues.filter((issue) => issue.message.includes("workflow.skipShipped"));
       expect(named, value).toHaveLength(1);
-      expect(named[0]?.code, value).toBe("QFAI_CONFIG_INVALID");
+      expect(named[0]?.code, value).toBe("QFAI-CFG-002");
     }
   });
 

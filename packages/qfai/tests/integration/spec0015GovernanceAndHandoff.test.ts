@@ -81,17 +81,17 @@ const SKILL_OWN_POLICY = `# qfai-fixture
 `;
 
 describe("spec-0015 autopilot policy CHG-006", () => {
-  it("QFAI:EX-0001-0169-01 — error: a baseline without the shared section emits R-AUTOPILOT-POLICY-MISSING", async () => {
+  it("QFAI:EX-0001-0169-01 — error: a baseline without the shared section emits QFAI-POLICY-001", async () => {
     await writeBaseline("# Shared Skill Operating Baseline\n");
     await writeSkillMd("qfai-x", "# qfai-x\nNo policy.\n");
     const issues = await validateAutopilotPolicy(root);
-    const f = issues.find((i) => i.code === "R-AUTOPILOT-POLICY-MISSING");
+    const f = issues.find((i) => i.code === "QFAI-POLICY-001");
     expect(f?.severity).toBe("error");
     expect(f?.file).toBe(".qfai/assistant/rule/shared-skill-operating-baseline.md");
     expect(f?.message).toMatch(/justification/i);
   });
 
-  it("QFAI:EX-0001-0169-01 — error: a shared section missing buckets emits R-AUTOPILOT-POLICY-MISSING naming the missing bucket(s)", async () => {
+  it("QFAI:EX-0001-0169-01 — error: a shared section missing buckets emits QFAI-POLICY-001 naming the missing bucket(s)", async () => {
     // Heading present, buckets gone: every skill loses the prototype at once,
     // so the finding names each missing bucket against the baseline.
     await writeBaseline(
@@ -99,7 +99,7 @@ describe("spec-0015 autopilot policy CHG-006", () => {
     );
     await writeSkillMd("qfai-x", "# qfai-x\nNo policy.\n");
     const issues = await validateAutopilotPolicy(root);
-    const f = issues.find((i) => i.code === "R-AUTOPILOT-POLICY-MISSING");
+    const f = issues.find((i) => i.code === "QFAI-POLICY-001");
     expect(f?.severity).toBe("error");
     expect(f?.message).toContain("missingBuckets=[auto-decide, ask-user, hard-required]");
   });
@@ -108,19 +108,19 @@ describe("spec-0015 autopilot policy CHG-006", () => {
     await writeBaseline(BASELINE_3_BUCKET.replace(/^\| `ask-user`.*\n/m, ""));
     await writeSkillMd("qfai-x", "# qfai-x\nNo policy.\n");
     const issues = await validateAutopilotPolicy(root);
-    const f = issues.find((i) => i.code === "R-AUTOPILOT-POLICY-MISSING");
+    const f = issues.find((i) => i.code === "QFAI-POLICY-001");
     expect(f?.severity).toBe("error");
     expect(f?.message).toContain("missingBuckets=[ask-user]");
   });
 
-  it("QFAI:EX-0001-0169-01 — error: a skill whose section drops a declared input emits R-AUTOPILOT-POLICY-MISSING naming it", async () => {
+  it("QFAI:EX-0001-0169-01 — error: a skill whose section drops a declared input emits QFAI-POLICY-001 naming it", async () => {
     await writeBaseline(BASELINE_3_BUCKET);
     await writeSkillMd(
       "qfai-sdd",
       SKILL_OWN_POLICY.replace("  - brand intent", "  - an identifiable affected flow"),
     );
     const issues = await validateAutopilotPolicy(root);
-    const f = issues.find((i) => i.code === "R-AUTOPILOT-POLICY-MISSING");
+    const f = issues.find((i) => i.code === "QFAI-POLICY-001");
     expect(f?.file).toBe(".qfai/assistant/skill/qfai-sdd/SKILL.md");
     expect(f?.message).toContain("requirement source");
   });
@@ -140,13 +140,13 @@ describe("spec-0015 autopilot policy CHG-006", () => {
     );
     await writeSkillMd("qfai-y", widened);
     const issues2 = await validateAutopilotPolicy(root);
-    expect(issues2.find((i) => i.code === "R-AUTOPILOT-POLICY-MISSING")).toBeUndefined();
-    expect(issues2.find((i) => i.code === "R-AUTOPILOT-POLICY-WIDENED")?.severity).toBe("warning");
+    expect(issues2.find((i) => i.code === "QFAI-POLICY-001")).toBeUndefined();
+    expect(issues2.find((i) => i.code === "QFAI-POLICY-002")?.severity).toBe("warning");
   });
 });
 
 describe("spec-0015 handoff schema CHG-006", () => {
-  it("QFAI:EX-0001-0171-01 — error: asymmetric Pair IV emits R-HANDOFF-SCHEMA-DRIFT", async () => {
+  it("QFAI:EX-0001-0171-01 — error: asymmetric Pair IV emits QFAI-HANDOFF-001", async () => {
     await mkdir(path.dirname(path.join(root, HANDOFF_SCHEMA_REL)), { recursive: true });
     await writeFile(
       path.join(root, HANDOFF_SCHEMA_REL),
@@ -163,7 +163,7 @@ describe("spec-0015 handoff schema CHG-006", () => {
       );
     }
     const issues = await detectHandoffSchemaDrift(root);
-    const f = issues.find((i) => i.code === "R-HANDOFF-SCHEMA-DRIFT");
+    const f = issues.find((i) => i.code === "QFAI-HANDOFF-001");
     expect(f?.severity).toBe("error");
     expect(f?.message).toMatch(/justification/i);
   });
@@ -184,7 +184,7 @@ describe("spec-0015 stale-ref report CHG-006", () => {
     await mkdir(dir, { recursive: true });
     await writeFile(path.join(dir, "handoff.md"), "# Handoff\nUses handoff.yaml.\n", "utf-8");
     const issues = await validateStaleReferences(root, { config: (await loadConfig(root)).config });
-    expect(issues.filter((i) => i.code === "W-STALE-REFERENCE")).toEqual([]);
+    expect(issues.filter((i) => i.code === "QFAI-STALE-001")).toEqual([]);
   });
 
   it("QFAI:EX-0001-0174-01 — error: a stale ref at HEAD reports warning", async () => {
@@ -197,7 +197,7 @@ describe("spec-0015 stale-ref report CHG-006", () => {
     );
     const findings = (
       await validateStaleReferences(root, { config: (await loadConfig(root)).config })
-    ).filter((i) => i.code === "W-STALE-REFERENCE");
+    ).filter((i) => i.code === "QFAI-STALE-001");
     expect(findings.length).toBeGreaterThanOrEqual(1);
     expect(findings[0]?.severity).toBe("warning");
   });

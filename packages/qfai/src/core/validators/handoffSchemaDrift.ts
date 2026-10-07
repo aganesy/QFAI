@@ -1,5 +1,5 @@
 /**
- * Reviewer-Gate finding `R-HANDOFF-SCHEMA-DRIFT` (severity error).
+ * Reviewer-Gate finding `QFAI-HANDOFF-001` (severity error).
  *
  * SSOT-sync pair (Pair IV): every registered handoff writer MUST
  * reference the canonical schema (either by importing
@@ -20,7 +20,7 @@ import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
 import { HANDOFF_SCHEMA_REL, HANDOFF_WRITER_PAIRS } from "./handoffSchemaPairs.js";
 
-const FINDING_CODE = "R-HANDOFF-SCHEMA-DRIFT";
+const FINDING_CODE = "QFAI-HANDOFF-001";
 /** Stable token whose presence in the schema source proves the canonical field set is exported. */
 const SCHEMA_TOKEN = "HANDOFF_MINIMUM_FIELDS";
 
@@ -36,7 +36,7 @@ function schemaFields(schemaText: string): string[] {
  * For each registered writer pair:
  *   - When the schema source contains `SCHEMA_TOKEN` and the writer
  *     source exists but does NOT contain the writer's expected token,
- *     fire `R-HANDOFF-SCHEMA-DRIFT` naming the writer file as the
+ *     fire `QFAI-HANDOFF-001` naming the writer file as the
  *     un-paired counterpart.
  *   - When the pair names the schema fields, the same finding fires for
  *     every field the schema lists that the writer does not name.

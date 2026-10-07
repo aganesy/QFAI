@@ -401,10 +401,16 @@ describe("cli-0014-qfai-validate.md documents only finding codes the source can 
     const scan = parseContractRules(contractPath, await readFile(contractPath, "utf-8"));
     expect(scan.errors).toEqual([]);
 
+    // Codes that had a one-letter prefix before they took the `QFAI-<AREA>-<NNN>` form are
+    // read by their areas.
     const codes = [
       ...new Set(
         scan.rules.flatMap((rule) =>
-          [...rule.statement.matchAll(/`([A-Z]-[A-Z0-9-]+)`/g)].map((match) => match[1] ?? ""),
+          [
+            ...rule.statement.matchAll(
+              /`((?:[A-Z]|QFAI-(?:DEPRECATED|SAAS|ASSISTANT|SKILLDOC))-[A-Z0-9-]+)`/g,
+            ),
+          ].map((match) => match[1] ?? ""),
         ),
       ),
     ].filter((code) => code.length > 0 && !LANE_CODES.has(code));
@@ -501,10 +507,8 @@ describe("cli-0014-qfai-validate.md documents only finding codes the source can 
     expect(emitsThroughGate(deadTable, "R-WORKLOG-DRIFT", factories)).toBe("gate-set");
 
     // And the shapes that must keep passing.
-    const real = probe('issue("W-SKILL-PROJECT-MEMORY", "msg", "warning");');
-    expect(emitsDirectly(real, "W-SKILL-PROJECT-MEMORY", factories, new Map())).toBe(
-      "issue-argument",
-    );
+    const real = probe('issue("QFAI-SKILLDOC-001", "msg", "warning");');
+    expect(emitsDirectly(real, "QFAI-SKILLDOC-001", factories, new Map())).toBe("issue-argument");
     const shaped = probe('const f = { code: "W-WORKLOG-STALE", severity: "warning" };\nvoid f;\n');
     expect(emitsDirectly(shaped, "W-WORKLOG-STALE", factories, new Map())).toBe("issue-literal");
   });

@@ -17,13 +17,13 @@ it("accepts the four assistant layers and names an added catalog without parsing
       await mkdir(path.join(assistant, layer), { recursive: true });
     }
     const valid = await validateAssistantTreeMigration(root, defaultConfig);
-    expect(valid.some((finding) => finding.code === "W-ASSISTANT-LAYOUT")).toBe(false);
+    expect(valid.some((finding) => finding.code === "QFAI-ASSISTANT-001")).toBe(false);
 
     const catalog = path.join(assistant, "catalog");
     await mkdir(catalog);
     await writeFile(path.join(catalog, "unreadable.md"), Buffer.from([0xff, 0xfe]));
     const invalid = await validateAssistantTreeMigration(root, defaultConfig);
-    expect(invalid.filter((finding) => finding.code === "W-ASSISTANT-LAYOUT")).toEqual([
+    expect(invalid.filter((finding) => finding.code === "QFAI-ASSISTANT-001")).toEqual([
       expect.objectContaining({ file: ".qfai/assistant/catalog/" }),
     ]);
   } finally {

@@ -90,7 +90,7 @@ const PROFILE_INDEPENDENT_CODES: ReadonlyMap<string, Exemption> = new Map([
   }),
   ...raisedBy("src/core/config.ts", {
     "QFAI-CFG-001": "the `qfai.config.yaml` read, which every profile needs first",
-    QFAI_CONFIG_INVALID: "config parse failure: nothing downstream runs, so no group owns it",
+    "QFAI-CFG-002": "config parse failure: nothing downstream runs, so no group owns it",
   }),
   ...raisedBy("src/core/waivers.ts", {
     "QFAI-WAIVER-001": "the waiver engine, applied to the findings of whatever profile ran",
@@ -103,7 +103,7 @@ const PROFILE_INDEPENDENT_CODES: ReadonlyMap<string, Exemption> = new Map([
       "the CI-profile advisory, decided from the environment rather than a gate, via `buildCiProfileIssue`",
   }),
   ...raisedBy("src/core/saasPackage/profile.ts", {
-    "D-SAAS-PACKAGE-VERIFY-SKIPPED":
+    "QFAI-SAAS-003":
       "the `saas-package` runner's own skip notice; its skip-set is SAAS_PACKAGE_SKIPPED_GATE_FAMILIES",
   }),
 ]);
@@ -138,8 +138,8 @@ describe("QFAI-PROFILE-001's skip-set accounts for every code that can be emitte
     // needs a profile that runs the narrow group WITHOUT the wildcard one.
     //
     // No profile does today. `canonical-uix` holds an enumeration rather
-    // than `["UIX-VAL-*"]`, so it no longer swallows the twelve
-    // `UIX-VAL-SKILL-*` codes that `prototyping-skill` owns — and even a
+    // than `["QFAI-*"]`, so it no longer swallows the twelve
+    // `QFAI-PROTOSKILL-*` codes that `prototyping-skill` owns — and even a
     // wildcard there would not misreport, since `prototyping-skill` is
     // reachable only from `runFullValidators`, which runs `canonical-uix`
     // too. This case is asserted for the divergence that has not happened

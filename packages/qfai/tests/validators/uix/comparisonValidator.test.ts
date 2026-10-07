@@ -57,7 +57,7 @@ describe("comparisonValidator", () => {
     // Same fixture as the `pass:` test above, which already establishes
     // that the spec is detected as UI-bearing. The bundle is present
     // but lacks the best-of-history wording → the validator MUST emit
-    // exactly the UIX-VAL-DIRECTION-HISTORY-MISSING issue. An
+    // exactly the QFAI-DIRECTION-001 issue. An
     // unconditional assertion is required here because a vacuous
     // green-pass (silent return → 0 issues) is the regression class
     // this test exists to catch (the deleted Direction-Rubric /
@@ -74,7 +74,7 @@ describe("comparisonValidator", () => {
     const issues = await validateOptionComparison(root, defaultConfig);
 
     expect(issues.length).toBeGreaterThan(0);
-    expect(issues.every((i) => i.code === "UIX-VAL-DIRECTION-HISTORY-MISSING")).toBe(true);
+    expect(issues.every((i) => i.code === "QFAI-DIRECTION-001")).toBe(true);
   });
 
   it("non-ui: returns empty array for non-ui specs", async () => {

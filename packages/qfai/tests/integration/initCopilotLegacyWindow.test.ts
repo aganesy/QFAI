@@ -30,7 +30,7 @@ describe("generated Copilot instructions state the closed legacy window", () => 
     legacyItem =
       text
         .split(/\n(?=- )/)
-        .find((item) => item.includes("D-DEPRECATED-PATH"))
+        .find((item) => item.includes("QFAI-DEPRECATED-001"))
         ?.replace(/\s+/g, " ") ?? "";
   });
 
@@ -43,8 +43,10 @@ describe("generated Copilot instructions state the closed legacy window", () => 
     expect(legacyItem).toContain("past its compatibility window");
   });
 
-  it("says qfai init reports the layout on stderr as a D-DEPRECATED-PATH error", () => {
-    expect(legacyItem).toContain("`qfai init` reports it on stderr as a `D-DEPRECATED-PATH` error");
+  it("says qfai init reports the layout on stderr as a QFAI-DEPRECATED-001 error", () => {
+    expect(legacyItem).toContain(
+      "`qfai init` reports it on stderr as a `QFAI-DEPRECATED-001` error",
+    );
   });
 
   it("names the migration command", () => {

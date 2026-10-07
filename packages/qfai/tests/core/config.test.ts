@@ -99,10 +99,7 @@ describe("assistant routing overrides", () => {
         "utf-8",
       );
       const { config, issues } = await loadConfig(root);
-      expect(issues.map((issue) => issue.code)).toEqual([
-        "QFAI_CONFIG_INVALID",
-        "QFAI_CONFIG_INVALID",
-      ]);
+      expect(issues.map((issue) => issue.code)).toEqual(["QFAI-CFG-002", "QFAI-CFG-002"]);
       expect(config.routing).toEqual([{ skill: "qfai-sdd" }]);
       expect(config.reviewProfiles).toEqual({});
     } finally {
@@ -172,7 +169,7 @@ describe("baseBranch config", () => {
 
       const { config, issues } = await loadConfig(root);
       expect(issues.length).toBe(1);
-      expect(issues[0]?.code).toBe("QFAI_CONFIG_INVALID");
+      expect(issues[0]?.code).toBe("QFAI-CFG-002");
       expect(issues[0]?.message).toContain("baseBranch");
       expect(config.baseBranch).toBeUndefined();
     } finally {
@@ -551,7 +548,7 @@ describe("retired validation.traceability keys", () => {
       }
       // The retired keys must not be rejected outright: an existing config still loads,
       // and the key that is actually wired keeps its effect.
-      expect(issues.some((issue) => issue.code === "QFAI_CONFIG_INVALID")).toBe(false);
+      expect(issues.some((issue) => issue.code === "QFAI-CFG-002")).toBe(false);
       expect(config.validation.traceability.testFileGlobs).toEqual(["tests/**/*.test.ts"]);
     } finally {
       await rm(root, { recursive: true, force: true });

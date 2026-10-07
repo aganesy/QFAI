@@ -13,8 +13,8 @@ Feature: Mock template emits anchor-form hrefs by default
     And the template emits no same-origin absolute href (`/path/`)
 
   # AC-0001-0089-02
-  Scenario: A template edit without the matching validator edit raises `R-MOCK-HREF-DRIFT`
+  Scenario: A template edit without the matching validator edit raises `QFAI-MOCKHREF-001`
     Given the mock template and the `QFAI-MOCK-010` validator, which are kept in sync as one pair
     When one side is edited without the matching update to the other
-    Then the reviewer-gate finding `R-MOCK-HREF-DRIFT` (severity error) is raised, naming the asymmetric edit
+    Then the reviewer-gate finding `QFAI-MOCKHREF-001` (severity error) is raised, naming the asymmetric edit
 ```

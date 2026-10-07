@@ -3,7 +3,7 @@
  *
  * - TC-0015-0021: a SKILL.md whose `## Default Autopilot Policy` lists
  *   all three named buckets (auto-decide / ask-user / hard-required)
- *   passes without `R-AUTOPILOT-POLICY-MISSING`; widening the
+ *   passes without `QFAI-POLICY-001`; widening the
  *   auto-decide bucket beyond the DR-0269 set is flagged.
  *
  * The pure-function bucket parser is the unit-level surface; the

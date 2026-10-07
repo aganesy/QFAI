@@ -122,7 +122,7 @@ export async function validateThreeLayerModel(root: string, _config: QfaiConfig)
     if (hasExplorationStructure && legacySections.length > 0) {
       issues.push(
         threeLayerIssue(
-          "UIX-VAL-3LAYER-MIXED-FORMAT",
+          "QFAI-THREELAYER-004",
           `Inconsistent exploration-first sidecar: mixed exploration headings and legacy evaluation headings found in ${relPath}.`,
           "error",
           relPath,
@@ -135,7 +135,7 @@ export async function validateThreeLayerModel(root: string, _config: QfaiConfig)
     if (legacySections.length > 0) {
       issues.push(
         threeLayerIssue(
-          "UIX-VAL-3LAYER-LEGACY-FORMAT",
+          "QFAI-THREELAYER-003",
           `Legacy evaluation headings are not allowed in ${relPath}; use exploration brief, rubric, calibration, and screen contracts instead.`,
           "error",
           relPath,
@@ -165,7 +165,7 @@ export async function validateForbiddenLegacyFiles(
     .filter((entry) => FORBIDDEN_LEGACY_PATTERNS.some((pattern) => pattern.test(entry)))
     .map((entry) =>
       threeLayerIssue(
-        "UIX-VAL-3LAYER-FORBIDDEN-FILE",
+        "QFAI-THREELAYER-001",
         `Forbidden legacy file detected: uiux/${entry}. This file is no longer part of the exploration-first canonical family.`,
         "error",
         `uiux/${entry}`,
@@ -191,7 +191,7 @@ export async function validateThreeLayerFamilyCompleteness(
     if (!content) {
       issues.push(
         threeLayerIssue(
-          "UIX-VAL-3LAYER-INCOMPLETE-FAMILY",
+          "QFAI-THREELAYER-002",
           `Required canonical sidecar file missing: uiux/${required}.`,
           "error",
           `uiux/${required}`,
