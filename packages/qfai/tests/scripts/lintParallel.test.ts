@@ -446,7 +446,65 @@ describe("the lane profile", () => {
   });
 });
 
+describe("a machine without pnpm", () => {
+  /** Makes `command -v` report each named tool as absent, and leaves everything else alone. */
+  const hideTools = (names: readonly string[]): string => `
+command() {
+  if [ "$1" = "-v" ]; then
+    case " ${names.join(" ")} " in
+      *" $2 "*) return 1 ;;
+    esac
+  fi
+  builtin command "$@"
+}
+`;
+
+  const runWithout = (stub: string): { status: number | null; output: string; calls: string } => {
+    const temp = mkdtempSync(path.join(os.tmpdir(), "qfai-lint-no-pnpm-"));
+    try {
+      const body = readFileSync(helper, "utf-8");
+      const result = spawnSync("bash", ["-c", `${stub}\n${body}`, "run-lint-checks", "lint"], {
+        cwd: temp,
+        encoding: "utf-8",
+        timeout: 30_000,
+      });
+      expect(result.error).toBeUndefined();
+      let calls = "";
+      try {
+        calls = readFileSync(path.join(temp, "calls.txt"), "utf-8");
+      } catch {
+        // No stub wrote one.
+      }
+      return { status: result.status, output: `${result.stdout}\n${result.stderr}`, calls };
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+    }
+  };
+
+  it("stops with a message when neither pnpm nor corepack is installed", () => {
+    const run = runWithout(hideTools(["pnpm", "corepack"]));
+    expect(run.status, run.output).toBe(2);
+    expect(run.output).toContain("neither pnpm nor corepack");
+  });
+
+  it("lets corepack provide pnpm, so every lane still runs", () => {
+    const stub = `${hideTools(["pnpm"])}
+pnpm() { return 0; }
+corepack() { printf '%s\\n' "$*" >> calls.txt; }
+`;
+    const run = runWithout(stub);
+    expect(run.status, run.output).toBe(0);
+    expect(run.calls).toMatch(/^enable --install-directory \S+ pnpm$/m);
+  });
+});
+
 describe("script resolution through the helper", () => {
+  it("reseals the guard bytes before the verification bodies in one command", () => {
+    expect(rootScripts()["pins:reseal"]).toBe(
+      "node ./scripts/pin-guard-bytes.mjs && node ./scripts/pin-verification-bodies.mjs",
+    );
+  });
+
   it("keeps workflow hygiene ahead of every independent lane", () => {
     expect(rootScripts()["ci:lint"]).toBe(
       "node ./scripts/check-workflow-hygiene.mjs && bash ./scripts/run-lint-checks.sh",

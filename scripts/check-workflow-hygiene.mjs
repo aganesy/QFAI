@@ -2473,7 +2473,7 @@ function checkRequiredContexts(root, jobs) {
             rule: "required-context",
             file: rel,
             job: String(jobKey),
-            detail: `performs ${JSON.stringify(item)} with a body digest of ${digest} where ${DECLARATION_REL} pins ${pinned} — recompute with \`node scripts/pin-verification-bodies.mjs\` and land it in the same change`,
+            detail: `performs ${JSON.stringify(item)} with a body digest of ${digest} where ${DECLARATION_REL} pins ${pinned} — reseal with \`pnpm pins:reseal\`, which runs \`node scripts/pin-guard-bytes.mjs\` and then \`node scripts/pin-verification-bodies.mjs\`, and land it in the same change`,
           });
         }
       }
@@ -2616,7 +2616,7 @@ function checkRequiredContexts(root, jobs) {
             rule: "required-context",
             file: rel_,
             job: declaredJob,
-            detail: `hashes to ${actual} where ${DECLARATION_REL} pins ${String(digest)} — a local action runs before every verification in every job that uses it, so an edit arrives with its digest or not at all`,
+            detail: `hashes to ${actual} where ${DECLARATION_REL} pins ${String(digest)} — a local action runs before every verification in every job that uses it, so an edit arrives with its digest or not at all — reseal with \`pnpm pins:reseal\` and land the new digests in the same change`,
           });
         }
       }
