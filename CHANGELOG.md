@@ -102,6 +102,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A repaired title no longer reads as a new changelog entry.**
+  The released-section guard compares entry titles ignoring whitespace, so
+  restoring a missing space in a published entry's title line is accepted.
+  The spacing of two published entries, in 1.10.1 and 1.10.2, is restored with
+  the inline code unchanged (#3031).
 - **Migration step 3 and the `## Architecture` check of `tech.md` agree with
   what they report.** Step 3 names a renumbered constraint ID only when it
   writes `constraint.md`, so it no longer says an ID changed in a file it left
@@ -13555,7 +13560,7 @@ advanced` asked for RED/GREEN commands, output and the falsifiability result
   annotation as coverage, and the generated `it.skip(...)` is not the `*.todo`
   form `QFAI-TEST-001` matches. Both directories are scanned, and the
   remediation says to write the real test rather than move the skeleton.
-- **An L1/L2 annotation in `tests/integration/**`is not a violation.** The
+- **An L1/L2 annotation in `tests/integration/**` is not a violation.** The
   Reviewer Gate and `project_memory` said `QFAI-ATDD-123` rejects it, but
   `resolveTcHomeKind` returns `null` for those levels and the scan continues
   before the forbidden-placement check — the validator neither counts it nor

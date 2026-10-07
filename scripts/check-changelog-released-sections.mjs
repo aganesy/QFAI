@@ -32,7 +32,8 @@
  * every entry the unreleased one held, and none of them is new.
  *
  * Only additions are refused. An entry removed, or a section's prose reworded,
- * is a correction to what the release said and not a claim it never made.
+ * is a correction to what the release said and not a claim it never made. A
+ * title that differs only in whitespace is the same entry.
  *
  * ## The tag
  *
@@ -84,6 +85,11 @@ export function sectionEntries(changelog) {
   return entries;
 }
 
+/** An entry title with every whitespace character removed. */
+function titleKey(title) {
+  return title.replace(/\s+/gu, "");
+}
+
 /** Each released section the head added an entry to, with the entries it added. */
 export function addedEntries(baseChangelog, headChangelog) {
   const before = sectionEntries(baseChangelog);
@@ -93,7 +99,10 @@ export function addedEntries(baseChangelog, headChangelog) {
     // A section the base does not carry is the release commit's own, and every
     // entry in it came from `## [Unreleased]` rather than from this change.
     if (had === undefined) continue;
-    const gained = [...titles].filter((title) => !had.has(title));
+    // Compared without whitespace: restoring a missing or doubled space in a
+    // title is a correction to how it reads, not a new entry.
+    const hadKeys = new Set([...had].map(titleKey));
+    const gained = [...titles].filter((title) => !hadKeys.has(titleKey(title)));
     if (gained.length > 0) added.push({ version, gained });
   }
   return added;
