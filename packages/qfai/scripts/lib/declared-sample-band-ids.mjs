@@ -1,4 +1,4 @@
-/* global console, process */
+/* global process */
 /**
  * The IDs this repository declares that also fall inside the sample band.
  *
@@ -89,5 +89,5 @@ export function declaredSampleBandPattern(repoRoot) {
 
 if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const pattern = declaredSampleBandPattern(repoRootFromHere());
-  if (pattern !== null) console.log(pattern);
+  if (pattern !== null) process.stdout.write(pattern);
 }
