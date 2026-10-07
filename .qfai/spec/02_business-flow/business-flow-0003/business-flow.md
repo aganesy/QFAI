@@ -3,8 +3,7 @@
 ## Purpose
 
 Give a project operator a repeatable way to identify configuration, layout,
-contract and shipped-workflow problems and the paths an earlier release left
-behind, then verify a targeted repair.
+contract and shipped-workflow problems, then verify a targeted repair.
 
 ## Flow
 
