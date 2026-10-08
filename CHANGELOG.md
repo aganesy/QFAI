@@ -6,6 +6,32 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A screen in a UI contract states the text it shows.** Each screen now carries
+  `supplements`: every displayed text beyond its `title`, group headings and
+  labels, each with the reason the user needs it, or `supplements: []` when the
+  screen shows none. An optional `structure` lists the groups the screen is read
+  in, the primary tasks each serves, the elements and actions it holds and the
+  heading it shows. Both shapes are closed. Implementation reads them before
+  adding any text, and surface review compares the rendered screen with them in
+  both directions, so a necessary condition, cost, destination, result or
+  recovery text cannot be dropped in a tidy-up and an undeclared sentence is
+  excess. `qfai validate` reports an absent or malformed key as
+  `QFAI-CONTRACT-043` and an id the screen does not declare as
+  `QFAI-CONTRACT-044`, both errors in the `sdd`, `tdd`, `prototyping` and
+  `full` profiles, and a group heading or supplement that repeats the title, a
+  heading or the label beside it as `QFAI-CONTRACT-045`, a warning. Only exact
+  wording is compared; whether a sentence is needed is for the reviewer. The UI
+  contract guide, the template, the design anti-patterns (a new section on copy
+  that adds no meaning, apart from the brand sections), the SDD, implementation
+  and review instructions, and the prototype reviewer carry the same rule. Fixes
+  #2988.
+
+  **Upgrading:** a UI contract written before this has no `supplements`, so
+  `qfai validate` reports `QFAI-CONTRACT-043` for each of its screens until you add
+  `supplements: []` or list the texts. `structure` can stay out until a heading
+  beyond the title is wanted. Run `qfai init --force` to refresh the installed
+  template, guide and instructions.
+
 - **`qfai doctor` reports how many jobs the shipped workflows start per pull
   request event.** For each of `qfai-validate.yml`, `qfai-tests.yml` and
   `qfai-docs.yml` installed under `.github/workflows/`, an `info` finding

@@ -168,7 +168,7 @@ count can support a finding, but cannot replace the live assessment.
 | 5   | No catalogued anti-pattern is present                                 | `lap-*`, below                           |
 | 6   | Conformant, procured, restrained and consistent                       | below                                    |
 | 7   | Every declared `primary_task` walks                                   | below                                    |
-| 8   | No text on the screen explains the interface                          | `.agents/rules/interface-clarity.md`     |
+| 8   | No text explains the interface, and the text shown is the contract's  | `.agents/rules/interface-clarity.md`     |
 
 Criteria 1 to 4 are the procurement ladder read as questions, so a screen
 cannot pass by a standard it was not built to.
@@ -213,6 +213,22 @@ displaces signal.
 Hint text survives only where a need was demonstrated, the control was
 improved first and the need remained, and it is one sentence at most. Longer
 means the question needs clarifying or splitting.
+
+Compare the rendered text with the screen's UI contract in both directions. The
+screen shows its `title`, the group headings of its `structure`, its labels and
+the `supplements` it declares. A text shown that none of them declares is excess,
+and a declared supplement that is not shown is an unmet need. The finding names
+the screen, the task or state, the meaning that is duplicated or the need that is
+unmet, and the text to remove or the control or structure to repair. Apply the
+patterns of the section on copy that adds no meaning, which the loop step names; the
+rest of the design anti-patterns list stays with the direction review.
+
+A repair keeps what the task needs: a condition, cost, storage or transmission
+destination, result, recovery step, the consequence of an action that cannot be
+undone, and every label, accessible name, role and state. Moving that into a
+tooltip or a placeholder is not a repair. After a repair, walk the task again at
+the declared narrow and desktop widths, in the normal, empty, error, loading and
+success states the screen has.
 
 The counts are contract-relative. A screen declaring one primary task and
 carrying forty controls is wrong; the same forty elsewhere may be right. The

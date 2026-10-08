@@ -53,6 +53,7 @@ Discussion UI/UX files are **non-normative** discovery / reference artifacts —
   not only where the attribute is written out — a framework that builds the
   attribute from a variable still writes the marker somewhere.
 - **Every entry under `screens` is a screen, once.** Each UI-bearing contract declares one full `UI-NNNN` ID and a nonempty `screens[]` list. Each screen has an ID and route, unique within its contract. The prototyping cycle covers all declared UI-bearing contract IDs; filenames do not select a legacy spec tier. `QFAI-CONTRACT-042` names malformed screen entries.
+- **Every screen states the text it shows.** A screen declares `supplements` (`[]` when it shows none) and may declare `structure`. `QFAI-CONTRACT-043` names a key that is absent or malformed, `QFAI-CONTRACT-044` an id the screen does not declare, and `QFAI-CONTRACT-045` a text shown twice.
 - **A contract's ID comes from its directory.** `api/` holds `API` contracts,
   `db/` `DB` and `ui/` `UI`; the QFAI repository's own `cli/` holds `CLI`
   contracts. The ID is `<KIND>-NNNN`.

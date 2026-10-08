@@ -11,6 +11,7 @@ The flows a UI contract serves are the flows whose examples its rules cite; the 
 - `elements[].label` is inspection-target text
 - `data-qfai` marker convention
 - Prototype metadata
+- Purposeful copy: `supplements` and `structure`
 - Screen contract rules
 - Template
 - Typical failures
@@ -143,6 +144,110 @@ evidence records nothing against it — an entry is a note between the contract'
 author and whoever reviews the prototype. Follow the shape
 `templates/contracts/ui-contract.sample.yaml` shows.
 
+## Purposeful copy: `supplements` and `structure`
+
+A screen states the words it shows, so that implementation adds none the contract
+did not ask for and review can compare the rendered screen with what was agreed.
+The words are the screen `title` (its one heading), the labels of `elements` and
+`actions`, the group headings, and the supplements below. Two keys carry them,
+beside `primary_tasks`, `elements` and `actions`, which stay as they are.
+
+### `supplements` (required)
+
+Every text the screen shows beyond its `title`, group headings and labels: a
+sentence under a field, a notice, an empty-state message, a disclosure, the result
+of a save or a send, the instruction after a failure, the consequence of an action
+that cannot be undone. Each is an entry with exactly these keys, all non-empty:
+
+| Key    | Holds                                                                                     |
+| ------ | ----------------------------------------------------------------------------------------- |
+| `id`   | stable key, unique in the screen                                                          |
+| `near` | the `id` of the element, action or structure group the text sits with                     |
+| `when` | the state it shows in: `default`, `empty`, `loading`, `error` or `success`                |
+| `text` | the words as displayed                                                                    |
+| `why`  | what the user could not know or do without it, and why a label or structure is not enough |
+
+`supplements: []` says the screen shows none. Most screens need few, and a screen
+need not have any. Two kinds of text are not supplements: the message of a field
+rule is owned by the `validations` of its element, and data the product shows or
+the user types is not copy the contract authors. A field message that says more
+than its rule does is a supplement with `when: error`.
+
+The list is the whole inventory in both directions. Text the screen shows that is
+not listed is excess. A listed text the screen does not show is an unmet need, so
+a necessary condition, cost, destination, result, recovery step or consequence
+that is written here cannot be dropped by a later tidy-up; removing it is a
+change to the contract, which goes back to `/qfai-sdd`.
+
+Write `why` for the point of decision. "Explains the Save button" is a reason to
+delete the text. "After the click the user cannot see where the draft went" is a
+reason to keep it.
+
+### `structure` (optional)
+
+The groups the screen is read in, in reading order. Each is an entry with exactly
+`id`, `tasks`, `members` and, when the group shows a heading, `heading`:
+
+| Key       | Holds                                                              |
+| --------- | ------------------------------------------------------------------ |
+| `id`      | stable key, unique in the screen                                   |
+| `tasks`   | the `primary_tasks[].id` values the group serves, at least one     |
+| `members` | the `elements[].id` and `actions[].id` values it holds, in order   |
+| `heading` | the displayed heading; leave the key out when the group shows none |
+
+An id belongs to one group, and an element or action may be left out of every
+group. Without `structure` the screen shows no heading beyond its `title`, so a
+heading that appears on the rendered screen has a group here. A group heading is
+not the screen title: a second heading above or beside the real one repeats it.
+A group that serves no task does not belong on the screen; name the task it
+enables, or leave the heading and the group out.
+
+### A worked example
+
+The sample at `templates/contracts/ui-contract.sample.yaml` shows a complete
+screen. Its draft action reads "Save draft", and no paragraph says what Save draft
+does. What the label cannot say is declared instead: `Saved to Drafts` after the
+click, and `Not saved. Your entries are still here. Try again.` after a failure.
+The user learns where the draft went and what a failure means, and nothing is
+written twice.
+
+### What a necessary text looks like
+
+Subtraction removes text that adds no meaning. It never removes:
+
+- a condition, cost, storage or transmission destination, or the result of an
+  action that is not visible otherwise (a demo-data notice that is true and
+  shown where the user decides is one of these);
+- error recovery, and the consequence of an action that cannot be undone;
+- labels, accessible names, roles and states.
+
+Moving such text into a tooltip or a placeholder does not keep it. A word or
+character count never approves or rejects a screen; a count is an observation
+a finding may cite.
+
+### What validate checks
+
+`QFAI-CONTRACT-043` reports `supplements` absent, a key that is not a list, an
+entry that is not a mapping, a missing, empty or extra key, a `when` outside the
+five states, and a repeated `id`; the same for `structure` when it is written.
+`QFAI-CONTRACT-044` reports a `members`, `tasks` or `near` that names an id
+the screen does not declare, and an element or action in two groups.
+`QFAI-CONTRACT-045` warns when a group heading is the screen title, or a
+supplement's text is the title, a group heading, the label of what it sits near, or
+another supplement's text near the same target in the same state; case, spacing and
+closing punctuation do not make a text different. Whether a sentence is needed is
+judged against the task by the reviewer; validate compares ids and exact wording
+only.
+
+A contract written before these keys was valid without them. Add
+`supplements` to each screen: `supplements: []` is the answer for a screen that
+shows nothing beyond its title and labels. Keep `structure` out until a group
+heading is wanted.
+
+Two contracts that state the same screen `id` each hold their own `supplements`
+and `structure`; the project-wide screen list compares `title`, `route` and
+`primary_tasks` only.
+
 ## Screen contract rules
 
 `screens[].elements[]` are the display fields:
@@ -185,6 +290,13 @@ Render the element with that marker, or remove the marker from the contract.
 **A label does not match.** Update the contract label, then the rendered text or
 marker mapping. Updating one side leaves the two out of step.
 
+**`QFAI-CONTRACT-043` names a screen with no `supplements`.** Add `supplements: []`
+if the screen shows no text beyond its title, group headings and labels, or list each
+text with its `near`, `when`, `text` and `why`.
+
+**`QFAI-CONTRACT-045` warns that a supplement repeats a label.** Delete the supplement,
+or word it so it tells the user something the label does not.
+
 **The discussion pack already has screen contracts, so this looks redundant.**
 It is not. A discussion pack is discovery output and is non-normative; the
 downstream skills and every validate lane read `<paths.contractsDir>/ui/*.yaml`.
@@ -207,4 +319,6 @@ For a UI-bearing visual flow, the root `DESIGN.md` is authored and validated by 
 - [ ] Every UI-bearing contract has one full declared ID, at least one screen, and a matching `contracts.md` row.
 - [ ] Screen IDs, routes, primary tasks, labels, markers, and actions are stable and testable.
 - [ ] Every declared action has an observable effect, including relevant failure states.
+- [ ] Every screen declares `supplements` (`[]` when none), each with the reason the text is needed, and its `structure` names every heading beyond the title.
+- [ ] No supplement restates a label, heading or action the screen already shows, and none is development commentary.
 - [ ] Prototyping coverage uses full contract IDs and the current cycle-0 fields.
