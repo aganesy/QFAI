@@ -6,6 +6,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`qfai validate` prints only the repairs that apply to a broken assistant
+  link.** The suggested action of `QFAI-LINK-001` listed every repair for every
+  kind of damage, about 3 KB for a single deleted wrapper. It now lists the
+  repairs for the kinds of damage the finding names: the `qfai init` rerun for a
+  missing, mis-pointed or flattened wrapper, the replacement of a linked
+  directory, the move-aside step for a directory or special file in a wrapper's
+  place, the permission step for an unreadable document, and the step for a
+  damaged canonical side. Damage of a kind the check does not recognise still
+  gets every repair (#3012).
+
 - **`qfai validate` names the offending column of `decisions.md` and
   `open-questions.md`.** A table with a column other than ID, Content, Approach
   and Status now reports `has the unexpected column <name>` for each extra
