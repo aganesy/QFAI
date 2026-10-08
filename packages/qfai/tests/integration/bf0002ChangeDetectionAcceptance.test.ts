@@ -279,7 +279,7 @@ describe("BF-0002 change detection acceptance", () => {
     expect(aggregate).toContain("pnpm format:check");
 
     const hosts = Object.keys(ciJobs()).filter((id) =>
-      commands(id).includes("lint:mirror-surface"),
+      commands(id).includes("pnpm -C packages/qfai lint:mirror-surface"),
     );
     expect(hosts).toEqual(["mirror-surface"]);
     const context = declaredContext();
