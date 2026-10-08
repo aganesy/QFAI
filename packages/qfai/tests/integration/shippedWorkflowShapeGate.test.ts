@@ -521,6 +521,7 @@ describe("TC-0003-0049 (TDD-0049): planted profile and threshold divergence make
   // would be invisible to it.
   //   QFAI:EX-0002-0008-01
 
+  // QFAI:AC-0002-0008-01
   it("planted profile and threshold divergence is reported as shape drift with the drifted and expected values, and the gate's verdict assertion fails (exit 1)", async () => {
     // Differential baseline: a rejection is only evidence when the unplanted
     // operand is accepted. Deliberate overlap with it2, which owns the bullet.
@@ -576,6 +577,7 @@ describe("TC-0003-0049 (TDD-0049): planted profile and threshold divergence make
     );
   });
 
+  // QFAI:AC-0002-0008-01
   it("the clean shipped tree and a clean copy of it are both accepted (exit 0), and an emptied tree is not", async () => {
     // The packaged tree is the shipped set the TC's clean half speaks about.
     const shipped = await diffShippedWorkflowShape(shippedRootDir());
@@ -932,6 +934,7 @@ describe("TC-0003-0050 (TDD-0050): gate is wired into the lint aggregate and not
   // tree beside this file and needs no build step.
   //   QFAI:EX-0002-0008-02
 
+  // QFAI:AC-0002-0008-01
   it("the gate's invocation path appears in pnpm ci:lint, in the form the existing vitest lane already uses", async () => {
     const rootScripts = await readScripts(path.join(repoRoot, "package.json"));
     const ciLint = rootScripts["ci:lint"] ?? "";
@@ -961,6 +964,7 @@ describe("TC-0003-0050 (TDD-0050): gate is wired into the lint aggregate and not
     expect(packageScripts[PRECEDENT_PACKAGE_SCRIPT] ?? "").toContain("vitest run");
   });
 
+  // QFAI:AC-0002-0008-01
   it("the gate's invocation path does not appear in pnpm ci:gate, which only the release workflow runs", async () => {
     const rootScripts = await readScripts(path.join(repoRoot, "package.json"));
     const ciGate = rootScripts["ci:gate"] ?? "";
