@@ -1183,7 +1183,7 @@ const DIMENSIONS: ReadonlyArray<{
   { id: 9, title: "No shipped file references another shipped file", pins: crossReferencePins },
   {
     id: 10,
-    title: "Per job carrying an external check name: the name adopter branch protection names",
+    title: "Per job that carries an external check name: the name adopter branch protection names",
     pins: checkNamePins,
   },
 ];
