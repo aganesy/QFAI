@@ -164,3 +164,87 @@ describe("TC-0004-0067: validate --profile saas-package PASSes + emits skip-set 
     expect(attestation?.message).toContain("DESIGN.md is absent");
   });
 });
+
+// QFAI:AC-0001-0049-01
+describe("saas-package gate conditions beyond the passing repo", () => {
+  type Report = { issues: Array<{ code: string; severity: string; message: string }> };
+
+  async function saasPackage(): Promise<{ exit: number; report: Report }> {
+    const exit = await runValidate({
+      root,
+      strict: false,
+      profile: "saas-package",
+      failOn: "error",
+    });
+    const reportPath = path.join(root, ".qfai", "report", "validate-saas-package.json");
+    return { exit, report: JSON.parse(await readFile(reportPath, "utf-8")) as Report };
+  }
+
+  it("does not pass when root DESIGN.md does not parse, and names that file", async () => {
+    await seedHandoff();
+    await writeFile(path.join(root, "DESIGN.md"), "no front matter here\n", "utf-8");
+
+    const { exit, report } = await saasPackage();
+
+    expect(exit).not.toBe(0);
+    const attestation = report.issues.find(
+      (i) => i.severity === "error" && i.code === "QFAI-SAAS-001",
+    );
+    expect(attestation?.message).toContain("DESIGN.md does not parse as DESIGN.md");
+  });
+
+  it("does not pass without a handoff record, and names the file", async () => {
+    await seedDesignSystemAttestation();
+
+    const { exit, report } = await saasPackage();
+
+    expect(exit).not.toBe(0);
+    const handoff = report.issues.filter((i) => i.code === "QFAI-SAAS-002");
+    expect(handoff.map((i) => i.severity)).toEqual(["error"]);
+    expect(handoff[0]?.message).toContain(".qfai/prototype/final/handoff.json");
+  });
+
+  it("does not pass with a handoff record that is not a JSON object, and names the file", async () => {
+    await seedDesignSystemAttestation();
+    await mkdir(path.join(root, ".qfai", "prototype", "final"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai", "prototype", "final", "handoff.json"),
+      "[1, 2]",
+      "utf-8",
+    );
+
+    const { exit, report } = await saasPackage();
+
+    expect(exit).not.toBe(0);
+    const handoff = report.issues.filter((i) => i.code === "QFAI-SAAS-002");
+    expect(handoff.map((i) => i.severity)).toEqual(["error"]);
+    expect(handoff[0]?.message).toContain(".qfai/prototype/final/handoff.json");
+  });
+
+  it("does not pass when the prototyping findings hold an error, though DESIGN.md and the handoff are sound", async () => {
+    await seedDesignSystemAttestation();
+    await seedHandoff();
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      "uiux:\n  audit:\n    enabled: true\n",
+      "utf-8",
+    );
+    const uiDir = path.join(root, ".qfai", "spec", "03_contract", "ui");
+    await mkdir(uiDir, { recursive: true });
+    await writeFile(
+      path.join(uiDir, "ui-0001.yaml"),
+      "# QFAI-CONTRACT-ID: UI-0001\nscreens:\n  - id: home\n    title: Home\n    route: /\n    primary_tasks: []\n",
+      "utf-8",
+    );
+
+    const { exit, report } = await saasPackage();
+
+    expect(exit).not.toBe(0);
+    expect(report.issues.some((i) => i.severity === "error" && i.code === "QFAI-AUD-001")).toBe(
+      true,
+    );
+    expect(
+      report.issues.some((i) => i.code === "QFAI-SAAS-001" || i.code === "QFAI-SAAS-002"),
+    ).toBe(false);
+  });
+});
