@@ -535,7 +535,7 @@ describe("story-tree structure", () => {
       }),
     );
     expect(issues.some((item) => item.code === "QFAI-SPACK-102")).toBe(true);
-    expect(issues.some((item) => item.message.includes("Content, Approach and Status"))).toBe(true);
+    expect(issues.some((item) => item.message.includes("unexpected column Date"))).toBe(true);
     const closed = validateStoryTreeStructureModel(
       model({
         [`${specs}/open-questions.md`]:
