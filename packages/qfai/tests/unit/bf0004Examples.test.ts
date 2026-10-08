@@ -845,6 +845,16 @@ describe("BF-0004 migration examples", () => {
     );
     expect(guide).toContain("## Resolve the reports");
     expect(guide).toContain("Resolve each `## For a person` row");
-    expect(guide).not.toMatch(/(?:BF|US|AC|EX|BR)-00(?:1\d|[2-9]\d)/);
+    for (const part of ["migration-guide.md", "migration-placement.md"]) {
+      const text = await readFile(
+        path.join(
+          getInitAssetsDir(),
+          ".qfai/assistant/skill/qfai-migration-v1-to-v2/references",
+          part,
+        ),
+        "utf8",
+      );
+      expect(text, part).not.toMatch(/(?:BF|US|AC|EX|BR)-00(?:1\d|[2-9]\d)/);
+    }
   });
 });
