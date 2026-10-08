@@ -6,6 +6,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The migration guide is split in two, and every shipped Markdown file is
+  within 500 lines.** `references/migration-guide.md` keeps the preparation, the
+  twelve steps, the write boundary, how to resolve the reports and the free-text
+  entry. The plan format, the retired configuration keys, the contract numbers,
+  the business rules and what each document keeps moved to
+  `references/migration-placement.md`, which the skill names with the moments to
+  read it. The guard test no longer lists a file over the limit. Part of #3141.
+
 - **`qfai validate` prints only the repairs that apply to a broken assistant
   link.** The suggested action of `QFAI-LINK-001` listed every repair for every
   kind of damage, about 3 KB for a single deleted wrapper. It now lists the

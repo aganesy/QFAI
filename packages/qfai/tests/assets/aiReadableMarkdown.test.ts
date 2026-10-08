@@ -14,9 +14,10 @@
  * What a pointer says about when to read its file is a judgement of wording and
  * stays with review.
  *
- * Two backlogs record what the tree does not yet meet. Each entry is the exact
- * state the file ships with, so a file may leave a backlog and may not join one
- * or move inside it: widening or narrowing without updating the entry fails.
+ * Two backlogs record what the tree does not yet meet; the one for line counts
+ * is empty. Each entry is the exact state the file ships with, so a file may
+ * leave a backlog and may not join one or move inside it: widening or
+ * narrowing without updating the entry fails.
  */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -41,16 +42,11 @@ const MAX_SKILL_BODY_CHARS = 20_000;
 const CONTENTS_FROM_LINES = 100;
 
 /**
- * Files over {@link MAX_LINES}, with the line count each ships with.
- *
- * SIMPLIFIED: the migration guide stays one file, because the migration tests
- * read it by its path and pin its wording section by section.
- * Lift when: the guide is split and those tests read the text where it now
- * lives. The entry is then removed.
+ * Files over {@link MAX_LINES}, with the line count each ships with. No shipped
+ * file is over the limit, so the backlog is empty and stays closed to new
+ * entries.
  */
-const LINE_BACKLOG: ReadonlyMap<string, number> = new Map([
-  ["skill/qfai-migration-v1-to-v2/references/migration-guide.md", 615],
-]);
+const LINE_BACKLOG: ReadonlyMap<string, number> = new Map<string, number>();
 
 /**
  * References that name another reference, as the files each one names.

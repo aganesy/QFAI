@@ -41,6 +41,20 @@ const scriptRoot = path.join(
   packageRoot,
   "assets/init/.qfai/assistant/skill/qfai-migration-v1-to-v2/scripts",
 );
+const referenceRoot = path.join(
+  packageRoot,
+  "assets/init/.qfai/assistant/skill/qfai-migration-v1-to-v2/references",
+);
+/** The files that together hold the text the migration skill teaches. */
+const guideParts = ["migration-guide.md", "migration-placement.md"] as const;
+
+/** The text of every part of the guide, each part separated from the next by a blank line. */
+async function readGuideParts(): Promise<string> {
+  const parts = await Promise.all(
+    guideParts.map((part) => readFile(path.join(referenceRoot, part), "utf8")),
+  );
+  return parts.join("\n\n");
+}
 const scriptNames = [
   "01-rename-directories.mjs",
   "02-merge-tables.mjs",
@@ -2538,13 +2552,7 @@ describe("BF-0004 acceptance criteria", () => {
 
   // QFAI:AC-0004-0012-03
   it("teaches the retired config keys, the printed report and how to finish what a step leaves", async () => {
-    const guide = await readFile(
-      path.join(
-        packageRoot,
-        "assets/init/.qfai/assistant/skill/qfai-migration-v1-to-v2/references/migration-guide.md",
-      ),
-      "utf8",
-    );
+    const guide = await readGuideParts();
     const prose = guide.replace(/\s+/g, " ");
     const sentences = prose.split(/(?<=[.!?]) (?=[A-Z`*|-])/);
     const sentenceWith = (...parts: readonly (string | RegExp)[]): boolean =>
@@ -2599,13 +2607,7 @@ describe("BF-0004 acceptance criteria", () => {
 
   // QFAI:AC-0004-0012-03
   it("teaches the routing entries, the E2E annotation, the outline and shared-criterion items and an unfinished test", async () => {
-    const guide = await readFile(
-      path.join(
-        packageRoot,
-        "assets/init/.qfai/assistant/skill/qfai-migration-v1-to-v2/references/migration-guide.md",
-      ),
-      "utf8",
-    );
+    const guide = await readGuideParts();
     const sentences = sentencesOf(guide);
     const sentenceWith = (...parts: readonly (string | RegExp)[]): boolean =>
       sentences.some((sentence) =>
@@ -2666,6 +2668,24 @@ describe("BF-0004 acceptance criteria", () => {
     ];
     // Every missing marker is named at once.
     expect(markers.filter(([, found]) => !found).map(([label]) => label)).toEqual([]);
+  });
+
+  // QFAI:AC-0004-0012-03
+  it("names every part of the guide in SKILL.md and says when to read the placement part", async () => {
+    const skill = await readFile(
+      path.join(packageRoot, "assets/init/.qfai/assistant/skill/qfai-migration-v1-to-v2/SKILL.md"),
+      "utf8",
+    );
+    for (const part of guideParts) {
+      expect(skill, `SKILL.md names references/${part}`).toContain(`references/${part}`);
+    }
+    expectSentence(
+      skill,
+      "SKILL.md says when to read the placement part",
+      /Read `references\/migration-placement\.md` when/,
+      /`plan\.yaml`/,
+      /retired configuration key/,
+    );
   });
 
   // QFAI:AC-0004-0012-01
