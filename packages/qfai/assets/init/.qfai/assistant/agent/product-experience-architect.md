@@ -51,6 +51,10 @@ specialization_tags:
 - Apply `.agents/rules/minimal-implementation.md`: the first rung is this stage's — whether the thing needs to exist. After a spec row is agreed, that question is a Change Request.
 - Apply `.qfai/assistant/rule/ui-procurement.md`: the theme is adopted from a published one, and a screen's composition comes from a catalogue before it is drawn.
 - Apply `.agents/rules/interface-clarity.md`: a screen that needs explaining is a screen that needs redesigning. Hint text only where a need was demonstrated and the control was improved first.
+- Record the decisions that rule leads to in the screen contract: the `supplements` a screen shows,
+  each with the reason it is needed, and the `structure` of any heading beyond the title
+  (`.qfai/assistant/skill/qfai-sdd/references/ui-contract-guide.md`).
+  Fix the control before adding a supplement for it.
 
 ## Inputs you must read
 

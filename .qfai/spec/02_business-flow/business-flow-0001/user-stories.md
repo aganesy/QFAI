@@ -170,3 +170,4 @@
 | US-0001-0226 | Write the bodies of empty acceptance tests in a quality phase                          | `user-story-0001-0226/` |
 | US-0001-0228 | Finish prototyping when I confirm the prototype                                        | `user-story-0001-0228/` |
 | US-0001-0229 | Choose how far the work on a request goes before it starts                             | `user-story-0001-0229/` |
+| US-0001-0230 | Purposeful copy in a screen's UI contract                                              | `user-story-0001-0230/` |

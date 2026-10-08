@@ -19,6 +19,8 @@ prototype:
       purpose: customer id field on the order create form
 screens:
   - id: order_create
+    # The one heading of the screen. A heading beyond it is a group heading
+    # under `structure`.
     title: Create Order
     route: /orders/new
     # primary_tasks: at least one entry required per screen (QFAI-AUD-001).
@@ -36,6 +38,9 @@ screens:
         label: Correct a rejected field
         acceptance: the field-level error clears and submit re-enables
       - id: t3
+        label: Keep the order for later
+        acceptance: the order appears under /orders/drafts and the form keeps what was entered
+      - id: t4
         label: Abandon the draft
         acceptance: navigating away discards the draft and returns to /orders
     elements:
@@ -51,13 +56,55 @@ screens:
         required: true
         validations:
           - must be non-empty
-      - id: submit_button
-        label: Submit
-        type: button
-        required: true
-        validations: []
     actions:
       - id: submit_order
         label: Submit order
         kind: submit
         effect: navigates to /orders and shows the created row
+      - id: save_draft
+        label: Save draft
+        kind: submit
+        effect: stores the order under /orders/drafts, stays on the form and keeps what was entered
+      - id: discard_draft
+        label: Discard draft
+        kind: navigate
+        effect: navigates to /orders without storing the order
+    # structure (optional): the groups the screen is read in, in reading order.
+    # `tasks` are primary_tasks ids, `members` are elements/actions ids, and
+    # `heading` is the displayed heading of the group; leave it out for a group
+    # that shows none. Without `structure` the screen shows no heading beyond
+    # its title. An id belongs to one group.
+    structure:
+      - id: g_customer
+        heading: Customer
+        tasks: [t1, t2]
+        members: [customer_id_input]
+      - id: g_items
+        heading: Items
+        tasks: [t1, t2]
+        members: [item_code_input]
+      - id: g_commit
+        tasks: [t1, t3, t4]
+        members: [submit_order, save_draft, discard_draft]
+    # supplements (required): every text the screen shows beyond its title,
+    # group headings and labels. Field validation messages are the exception;
+    # they belong to the element's `validations`. `[]` says the screen shows
+    # none. `near` is an elements/actions/structure id, `when` is one of
+    # default, empty, loading, error, success, and `why` says what the user
+    # could not know or do without the text, and why a label or the structure
+    # cannot carry it.
+    #
+    # There is no supplement that restates what "Save draft" does: the label
+    # says it. What the label cannot say is where the draft went and what a
+    # failed save means, so those two are declared.
+    supplements:
+      - id: sp_draft_saved
+        near: save_draft
+        when: success
+        text: Saved to Drafts
+        why: After the click the user cannot see where the order went; the label names the action, not the place its result is kept.
+      - id: sp_draft_not_saved
+        near: save_draft
+        when: error
+        text: Not saved. Your entries are still here. Try again.
+        why: A failed save leaves the user unsure whether work was lost and what to do; the label says nothing about failure.
