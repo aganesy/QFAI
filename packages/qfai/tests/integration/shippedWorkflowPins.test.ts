@@ -250,6 +250,8 @@ describe("TC-0003-0031 (TDD-0031): readable version lives in the step name witho
   });
 });
 
+// QFAI:AC-0002-0002-02
+// QFAI:EX-0002-0002-03
 describe("TC-0003-0033 (TDD-0033): leakage guard exits 1 on a planted conventional pin trailer, guard diff is empty", () => {
   // Realizes BR-0018-0007 (the guard's breadth is invariant, NFR-C0005). Bullet mapping:
   //   - Verify bullet 1 ("planted exit 1, clean exit 0") is the first two
