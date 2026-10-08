@@ -4,6 +4,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The release workflow's publish job no longer warns that `NODE_AUTH_TOKEN` is
+  unset.** `setup-node` writes an auth-token entry that reads that variable
+  into the job's `.npmrc`, and the job authenticates through the OIDC exchange,
+  so the variable is never set. The step that removes the entry ran after
+  `pnpm install` and `pnpm rebuild`, and each of them printed a warning. It now
+  runs right after `setup-node`. Publishing itself was not affected.
+
 ## [2.1.1] - 2026-10-08
 
 ### Added
