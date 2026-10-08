@@ -28,6 +28,8 @@
 # | Fail-open behaviour           | no `.nvmrc` / `.node-version` in your tree: warning annotation, Node 20, and the lane continues          |
 # | Node support floor            | the package declares `engines: ">=20.19.0"`; the fall-open Node 20 satisfies it                          |
 # | Dependency install            | follows your lockfile: pnpm / yarn Berry / yarn Classic / npm, else `npm install`                        |
+# | Jobs per pull request event   | idle: 1 (validate); lane runs: 1 (validate)                                                              |
+# | Required check                | validate, named "qfai validate (full profile, fail on error)"                                            |
 #
 # `.nvmrc` wins over `.node-version`; both are read before the fall-open.
 #
@@ -43,6 +45,16 @@
 # the check name above to a second job that needs the first and runs under
 # `always()`. Each profile then installs your dependencies again, and GitHub
 # bills a second job.
+#
+# That name is the check to require in branch protection. Rename the job and
+# the required check in the same step: while the two differ, the required check
+# is never reported and every pull request is blocked. The name keeps saying
+# "full profile" if you change the profiles the job runs. Do not add a
+# workflow-level `paths` or `paths-ignore` filter to this file: a workflow such
+# a filter keeps from starting reports nothing, so its required check stays
+# pending and the pull request cannot merge. Put any narrowing in a job
+# condition, because a job skipped by an `if:` is reported as skipped and
+# GitHub treats that as satisfying a required check.
 #
 # A push to the default branch runs this workflow by default, as the post-merge
 # check. If you run `qfai validate` in a post-merge job of your own, set the

@@ -34,6 +34,8 @@
 # | Node version                  | your `.nvmrc` / `.node-version` wins; with neither, a warning annotation, Node 20, and the lane continues |
 # | Dependency install            | follows your lockfile: pnpm / yarn Berry / yarn Classic / npm, else `npm install`                        |
 # | Default-branch push           | runs the lanes the push selects; with `vars.QFAI_CI_PUSH_POLICY` set to `protected` or `none`, runs none  |
+# | Jobs per pull request event   | idle: 1 (detection); lane runs: up to 7 (detection, tests x5, verdict)                                    |
+# | Required check                | verdict                                                                                                   |
 #
 # Every lane is inert until you opt in: with no `test:<layer>` script in your
 # package.json the matrix is empty and the job is skipped. Only change
@@ -43,6 +45,16 @@
 # lane passed. A lane that does run executes your script exactly once,
 # through your own package manager, and appends no argument to it - the script
 # is yours and its runner is unknown here.
+#
+# The verdict is the check to require in branch protection. The lane jobs behind
+# it are named by their matrix value, and a skipped matrix job is reported under
+# its unexpanded name, so a required check cannot name them. Rename the verdict
+# and the required check in the same step: while the two differ, the required
+# check is never reported and every pull request is blocked. Do not add a
+# workflow-level `paths` or `paths-ignore` filter to this file: a workflow such a
+# filter keeps from starting reports nothing, so its required check stays
+# pending and the pull request cannot merge. Put any narrowing in a job
+# condition instead.
 #
 # The jobs that read `vars.QFAI_CI_LIGHT_RUNNER` run only Bash, Git and Node. On
 # a private repository with GitHub-hosted runners, set it to `ubuntu-slim`,
