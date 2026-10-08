@@ -29,6 +29,7 @@ import { parse } from "yaml";
 import {
   collectJobSteps,
   collectWorkflowJobs,
+  evaluateCondition,
   findWorkflowJob,
   firstRunBody,
   isRecord,
@@ -39,6 +40,9 @@ import {
 
 /** The orchestrator file that owns detection, lanes and verdict. */
 const ORCHESTRATOR = "qfai-tests.yml";
+
+/** The validation workflow, whose one job also carries the check name. */
+const VALIDATE_FILE = "qfai-validate.yml";
 
 /** The full lane superset (value SSOT in the suite per BR-0018-0023). */
 const FULL_LANES: readonly string[] = ["unit", "component", "integration", "api", "e2e"];
@@ -587,13 +591,17 @@ describe("TC-0003-0040 (TDD-0040): verdict exits 0 on an empty matrix and carrie
 // QFAI:EX-0002-0004-04
 describe("a default-branch push declared covered by its pull request runs nothing it already ran", () => {
   // `QFAI_CI_PUSH_POLICY=protected` is the adopter's statement that every merge passed these
-  // checks on a pull request first. Only that exact value on a push may skip, because a skip
-  // anywhere else would be a claim nothing established.
+  // checks on a pull request first, and `none` that no shipped workflow runs on a push. Only those
+  // exact values on a push may skip, because a skip anywhere else would be a claim nothing
+  // established.
   const CASES: ReadonlyArray<{ event: string; policy: string; skips: boolean }> = [
     { event: "push", policy: "protected", skips: true },
+    { event: "push", policy: "none", skips: true },
     { event: "push", policy: "", skips: false },
     { event: "push", policy: "Protected", skips: false },
+    { event: "push", policy: "None", skips: false },
     { event: "pull_request", policy: "protected", skips: false },
+    { event: "pull_request", policy: "none", skips: false },
   ];
 
   /** The first `run:` body of one job in one shipped file. */
@@ -640,6 +648,140 @@ describe("a default-branch push declared covered by its pull request runs nothin
       });
       expect(run.status).toBe(0);
       expect(run.outputs["run"]).toBe(skips ? "false" : "true");
+    },
+  );
+});
+
+/** The `run:` body of the step with this id, in one job of one shipped file. */
+async function stepBodyById(file: string, jobId: string, stepId: string): Promise<string> {
+  const doc: unknown = parse(await readFile(shippedWorkflowPath(file), "utf-8"));
+  const job = findWorkflowJob(doc, jobId);
+  const body = job === undefined ? undefined : collectJobSteps(job).find((s) => s["id"] === stepId);
+  const run = body?.["run"];
+  if (typeof run !== "string") {
+    throw new Error(`${file} declares no ${jobId} step ${stepId} with a run: body`);
+  }
+  return run;
+}
+
+/** The `if:` of one job of one shipped file. */
+async function jobCondition(file: string, jobId: string): Promise<unknown> {
+  const doc: unknown = parse(await readFile(shippedWorkflowPath(file), "utf-8"));
+  const job = findWorkflowJob(doc, jobId);
+  if (job === undefined) {
+    throw new Error(`${file} declares no ${jobId} job`);
+  }
+  return job["if"];
+}
+
+// QFAI:AC-0002-0004-02
+// QFAI:EX-0002-0004-05
+describe("an event with nothing for the test lanes to run starts one job", () => {
+  // A skipped job satisfies a required check, so the verdict does not start when the selection
+  // is explicitly empty. Detection is then the only job, and it says why in a notice annotation.
+
+  const starts = async (action: string, selected: string): Promise<boolean> =>
+    evaluateCondition(await jobCondition(ORCHESTRATOR, "verdict"), {
+      "github.event.action": action,
+      "needs.detection.outputs.selected": selected,
+    });
+
+  it("starts the verdict only for a selection that is not explicitly empty", async () => {
+    expect(await starts("synchronize", "[]"), "an empty selection").toBe(false);
+    expect(await starts("", "[]"), "an empty selection on a push").toBe(false);
+    expect(await starts("synchronize", '["unit"]'), "a selected lane").toBe(true);
+    // Detection that failed publishes no selection. The verdict then runs and is red, so a
+    // detection that never answered cannot pass as an idle one.
+    expect(await starts("synchronize", ""), "no selection at all").toBe(true);
+    expect(await starts("closed", '["unit"]'), "a closed pull request").toBe(false);
+  });
+
+  it("turns a verdict that does start red when detection failed and no lane ran", async () => {
+    const verdict = findWorkflowJob(await orchestratorDoc(), "verdict");
+    const body = verdict === undefined ? undefined : firstRunBody(verdict);
+    expect(body, "the verdict job has no run: step").toBeTypeOf("string");
+    if (typeof body !== "string") {
+      throw new Error("unreachable: asserted above");
+    }
+    const stage = await newTempDir();
+    const run = await runShell(body, stage, { QFAI_TESTS_RESULT: "skipped", QFAI_SELECTED: "" });
+    expect(run.status).toBe(1);
+  });
+
+  it("says in a notice annotation why no lane ran, and says nothing when one is selected", async () => {
+    const body = await stepBodyById(ORCHESTRATOR, "detection", "selected");
+    const stage = await newTempDir();
+    const select = async (scripts: string, lanes: string): Promise<ShellRun> =>
+      runShell(body, stage, { QFAI_SCRIPTS: scripts, QFAI_LANES: lanes });
+
+    const noScript = await select("[]", '["unit","e2e"]');
+    expect(noScript.status).toBe(0);
+    expect(noScript.outputs["selected"]).toBe("[]");
+    expect(noScript.stdout).toMatch(/::notice::.*declares no layer-named test script/);
+
+    const noneSelected = await select('["unit"]', "[]");
+    expect(noneSelected.status).toBe(0);
+    expect(noneSelected.outputs["selected"]).toBe("[]");
+    expect(noneSelected.stdout).toMatch(/::notice::.*none of the declared layers/);
+
+    const selected = await select('["unit"]', '["unit","e2e"]');
+    expect(selected.status).toBe(0);
+    expect(selected.outputs["selected"]).toBe('["unit"]');
+    expect(selected.stdout).not.toContain("::notice::");
+  });
+});
+
+// QFAI:EX-0002-0004-06
+describe("an event with nothing for the document checks to read starts one job", () => {
+  const starts = async (action: string, run: string): Promise<boolean> =>
+    evaluateCondition(await jobCondition("qfai-docs.yml", "docs"), {
+      "github.event.action": action,
+      "needs.scope.outputs.run": run,
+    });
+
+  it("starts the document aggregate unless the scope answered false", async () => {
+    expect(await starts("synchronize", "false"), "the scope found nothing to check").toBe(false);
+    expect(await starts("synchronize", "true"), "the scope found a change to check").toBe(true);
+    // A scope that failed publishes no answer. The aggregate then runs and is red.
+    expect(await starts("synchronize", ""), "no scope answer at all").toBe(true);
+    expect(await starts("closed", "true"), "a closed pull request").toBe(false);
+  });
+
+  it("says in a notice annotation that the checks were skipped, and why", async () => {
+    const { dir, baseSha } = await makeRepo();
+    await commitChange(dir, "src/index.ts", "export const marker = 1;\n");
+    const body = await stepBodyById("qfai-docs.yml", "scope", "diff");
+    const run = await runShell(body, dir, {
+      QFAI_BASE_REF: baseSha,
+      QFAI_EVENT_NAME: "pull_request",
+      QFAI_PUSH_POLICY: "",
+    });
+    expect(run.status).toBe(0);
+    expect(run.outputs["run"]).toBe("false");
+    expect(run.stdout).toMatch(/::notice::.*no document check reads/);
+  });
+});
+
+// QFAI:EX-0002-0004-07
+describe("the validation job declines a default-branch push only under the none push policy", () => {
+  const starts = async (action: string, event: string, policy: string): Promise<boolean> =>
+    evaluateCondition(await jobCondition(VALIDATE_FILE, "validate"), {
+      "github.event.action": action,
+      "github.event_name": event,
+      "vars.QFAI_CI_PUSH_POLICY": policy,
+    });
+
+  it.each([
+    { action: "", event: "push", policy: "", starts: true },
+    { action: "", event: "push", policy: "protected", starts: true },
+    { action: "", event: "push", policy: "none", starts: false },
+    { action: "synchronize", event: "pull_request", policy: "none", starts: true },
+    { action: "synchronize", event: "pull_request", policy: "", starts: true },
+    { action: "closed", event: "pull_request", policy: "", starts: false },
+  ])(
+    "$event ($action) with policy '$policy' starts=$starts",
+    async ({ action, event, policy, starts: expected }) => {
+      expect(await starts(action, event, policy)).toBe(expected);
     },
   );
 });

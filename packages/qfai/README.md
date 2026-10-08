@@ -472,9 +472,11 @@ writing one, set `workflow.skipShipped` in `qfai.config.yaml` to a list of file
 names, for example `[qfai-tests.yml]`, and delete the file.
 
 - `qfai-validate.yml` runs `npx qfai validate --profile full --fail-on error`,
-  and on a pull request also `npx qfai validate --profile drift --fail-on error`.
-  The `full` profile evaluates every gate group except drift, so without the
-  second run nothing there could fail on a downstream edit to upstream SSOT.
+  and on a pull request also `npx qfai validate --profile drift --fail-on error`,
+  as a second step of the same job. The `full` profile evaluates every gate group
+  except drift, so without the second run nothing there could fail on a downstream
+  edit to upstream SSOT. The second step runs after a failing first one, so one run
+  reports both profiles, and the dependencies are installed once.
   It installs dependencies from whichever lockfile the repository has (pnpm /
   yarn / npm) and falls back to `npm install` when there is none, and it takes
   the Node version from your `.nvmrc` or `.node-version`, warning and
@@ -514,7 +516,9 @@ A push to `main` or `master` runs the test lanes and the document checks again b
 default, because nothing in the files can tell whether that commit passed a pull
 request first. If your branch protection requires these checks before every merge,
 set the repository variable `QFAI_CI_PUSH_POLICY` to `protected`: the push then runs
-neither, and `qfai validate` still runs as the post-merge check.
+neither, and `qfai validate` still runs as the post-merge check. If you run
+`qfai validate` in a post-merge job of your own, set it to `none` instead: the
+push then starts no job of the validate workflow either.
 
 `protected` is safe only when GitHub requires the branch to be up to date before
 a pull request can merge: the branch protection option "Require branches to be up
@@ -619,20 +623,22 @@ it declines, so nothing is billed.
 Jobs the shipped workflows start on each `opened`, `synchronize` and `reopened`
 event of a pull request:
 
-| Workflow            | Nothing to run                      | Lane runs                                 |
-| ------------------- | ----------------------------------- | ----------------------------------------- |
-| `qfai-validate.yml` | 3: `full`, `drift` and `summary`    | 3                                         |
-| `qfai-tests.yml`    | 2: `change detection` and `verdict` | 2, plus one per selected lane (at most 5) |
-| `qfai-docs.yml`     | 2: `change scope` and `docs`        | 4: adds the `shape` and `mermaid` checks  |
+| Workflow            | Nothing to run                    | Lane runs                                           |
+| ------------------- | --------------------------------- | --------------------------------------------------- |
+| `qfai-validate.yml` | 1: `qfai validate`, both profiles | 1                                                   |
+| `qfai-tests.yml`    | 1: `change detection`             | 2, plus one per selected lane (at most 5)           |
+| `qfai-docs.yml`     | 1: `change scope`                 | 4: adds the `shape` and `mermaid` checks and `docs` |
 
-When no lane runs, one pull request event starts 7 jobs in all, and the most it
-can start is 14. On a push to the default branch,
-`qfai-validate.yml` starts 2 jobs because the `drift` profile runs on pull requests
-only, and `QFAI_CI_PUSH_POLICY=protected` brings the other two workflows down to
-their idle counts.
+When nothing is selected, `verdict` is skipped, and when nothing a document check
+reads changed, `docs` is skipped. Each workflow then starts one job, and the
+detection and scope jobs say in a notice annotation why. One pull request event
+starts 3 jobs in all, and the most it can start is 12. On a push to the default
+branch, `qfai-validate.yml` starts 1 job, `QFAI_CI_PUSH_POLICY=protected` brings the
+other two workflows down to their idle counts, and `none` also skips the validate
+job, which leaves `change detection` and `change scope`.
 
-Five of those jobs install nothing and run no test: `change detection`, `verdict`,
-`change scope`, `docs` and `summary`. They take seconds, so each bills one minute.
+Four of those jobs install nothing and run no test: `change detection`, `verdict`,
+`change scope` and `docs`. They take seconds, so each bills one minute.
 They read `vars.QFAI_CI_LIGHT_RUNNER`, so the price of that minute is a choice.
 On a private repository with GitHub-hosted runners, set it to `ubuntu-slim`:
 
@@ -656,10 +662,12 @@ Require these three checks, by exactly these names:
 - From `qfai-docs.yml`: `qfai docs (document shape and Mermaid syntax)`
 - From `qfai-validate.yml`: `qfai validate (full profile, fail on error)`
 
-Each one runs even when the jobs behind it are skipped, always reports, and fails
-when a job it depends on fails. The jobs behind them are named by their matrix
-value, such as `qfai tests (unit)`, and a skipped matrix job is reported under its
-unexpanded name, so a required check cannot name them.
+Each one fails when the work behind it fails. `verdict` and the `qfai docs` check
+are skipped when nothing was selected or nothing a document check reads changed,
+and GitHub counts a skipped job as satisfying a required check. The jobs behind
+them are named by their matrix value, such as `qfai tests (unit)`, and a skipped
+matrix job is reported under its unexpanded name, so a required check cannot name
+them.
 
 A check name is what branch protection matches. When you rename a job, or change
 what it covers, change the required check in the same step. While the two differ

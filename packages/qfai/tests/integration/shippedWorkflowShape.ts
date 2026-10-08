@@ -135,10 +135,27 @@ type LaneInertness =
    * answer to this dimension, not a gap — the validate lane's header says
    * exactly this, so a shape demanding a gate from every lane would read the
    * shipped set as violating its own contract.
+   *
+   * `pushPolicy` marks a lane that also declines a default-branch push when the
+   * adopter has turned that push run off. It is the adopter's choice about an
+   * event and not an opt-in to the lane, so the lane stays one whose opt-out is
+   * deletion.
    */
-  | { readonly jobId: string; readonly kind: "never-inert" }
-  /** The result aggregate must run even when a declared dependency fails. */
-  | { readonly jobId: string; readonly kind: "aggregate"; readonly needs: readonly string[] };
+  | { readonly jobId: string; readonly kind: "never-inert"; readonly pushPolicy?: true }
+  /**
+   * The result aggregate must run even when a declared dependency fails.
+   *
+   * `startsWhen` is the one further clause an aggregate may carry: it declines to
+   * start when the job it reads has said, explicitly, that nothing was to run. A
+   * skipped job satisfies a required check, so an idle event starts one job, and an
+   * answer that is missing starts the aggregate, which then fails.
+   */
+  | {
+      readonly jobId: string;
+      readonly kind: "aggregate";
+      readonly needs: readonly string[];
+      readonly startsWhen?: string;
+    };
 
 interface FileExpectation {
   readonly name: string;
@@ -154,7 +171,7 @@ interface FileExpectation {
     readonly values: string;
   }[];
   /**
-   * Dimension 10, one entry per aggregate. The string an adopter's branch
+   * Dimension 10, one entry per job that carries an external check name. The string an adopter's branch
    * protection names, which is the job's `name:` and not its id.
    */
   readonly checkNames: readonly { readonly jobId: string; readonly name: string }[];
@@ -196,37 +213,38 @@ const SHIPPED_FILE_EXPECTATIONS: readonly FileExpectation[] = [
     ],
     checkNames: [{ jobId: "verdict", name: "verdict" }],
     invocations: [],
-    lanes: [{ jobId: "tests", kind: "opt-in-axis", reads: "needs.detection.outputs.selected" }],
+    lanes: [
+      { jobId: "tests", kind: "opt-in-axis", reads: "needs.detection.outputs.selected" },
+      {
+        jobId: "verdict",
+        kind: "aggregate",
+        needs: ["detection", "tests"],
+        startsWhen: "needs.detection.outputs.selected != '[]'",
+      },
+    ],
   },
   {
     name: "qfai-validate.yml",
-    // Independent full and drift profiles. Full excludes drift; the PR-only
-    // drift profile checks downstream edits to upstream SSOT.
-    matrices: [
-      {
-        jobId: "validate",
-        axis: "profile",
-        values:
-          '"${{ fromJSON(github.event_name == \'pull_request\' && \'[\\"full\\",\\"drift\\"]\' || \'[\\"full\\"]\') }}"',
-      },
-    ],
-    checkNames: [{ jobId: "summary", name: "qfai validate (full profile, fail on error)" }],
+    // The full and drift profiles are two steps of one job, which also carries
+    // the check name. Full excludes drift; the PR-only drift profile checks
+    // downstream edits to upstream SSOT, and runs after a failing full profile
+    // so one run reports both. No job declares a matrix.
+    matrices: [],
+    checkNames: [{ jobId: "validate", name: "qfai validate (full profile, fail on error)" }],
     invocations: [
       {
         jobId: "validate",
         invocation: "qfai validate --profile full --fail-on error",
-        selector: "matrix.profile == 'full'",
+        selector: "",
       },
       {
         jobId: "validate",
         invocation: "qfai validate --profile drift --fail-on error",
-        selector: "matrix.profile == 'drift' && github.event_name == 'pull_request'",
+        selector:
+          "${{ (success() || steps.full.outcome == 'failure') && github.event_name == 'pull_request' }}",
       },
     ],
-    lanes: [
-      { jobId: "validate", kind: "never-inert" },
-      { jobId: "summary", kind: "aggregate", needs: ["validate"] },
-    ],
+    lanes: [{ jobId: "validate", kind: "never-inert", pushPolicy: true }],
   },
   {
     // The document-shape and Mermaid lane. It invokes no QFAI subcommand — the
@@ -239,7 +257,12 @@ const SHIPPED_FILE_EXPECTATIONS: readonly FileExpectation[] = [
     invocations: [],
     lanes: [
       { jobId: "checks", kind: "change-scoped", reads: "needs.scope.outputs.run" },
-      { jobId: "docs", kind: "aggregate", needs: ["scope", "checks"] },
+      {
+        jobId: "docs",
+        kind: "aggregate",
+        needs: ["scope", "checks"],
+        startsWhen: "needs.scope.outputs.run != 'false'",
+      },
     ],
   },
 ];
@@ -621,7 +644,7 @@ function matrixPins(): ShapePin[] {
 }
 
 /**
- * Dimension 10: the external check name each aggregate carries.
+ * Dimension 10: the external check name each such job carries.
  *
  * An adopter's branch protection names the string GitHub shows, which is the
  * job's `name:`. Renaming it leaves every other dimension satisfied and makes
@@ -845,6 +868,13 @@ function laneInvocationPins(): ShapePin[] {
  */
 const CLOSE_GATE = "github.event.action != 'closed'";
 
+/**
+ * The clause a lane may carry beside the close gate when the adopter can turn the
+ * default-branch push run off. A job that has started is billed, so the decision
+ * is the job's own condition and not a step in it.
+ */
+const PUSH_POLICY_GATE = "(github.event_name != 'push' || vars.QFAI_CI_PUSH_POLICY != 'none')";
+
 /** A condition with its `${{ … }}` wrapper removed, so it can be compared. */
 function conditionText(condition: unknown): string {
   return String(condition ?? "")
@@ -860,7 +890,10 @@ function laneInertnessPins(): ShapePin[] {
     const axisGated = file.lanes.filter((lane) => lane.kind === "opt-in-axis");
     const scoped = file.lanes.filter((lane) => lane.kind === "change-scoped");
     const always = file.lanes
-      .filter((lane) => lane.kind === "never-inert")
+      .filter((lane) => lane.kind === "never-inert" && lane.pushPolicy !== true)
+      .map((lane) => lane.jobId);
+    const alwaysUnlessPushOff = file.lanes
+      .filter((lane) => lane.kind === "never-inert" && lane.pushPolicy === true)
       .map((lane) => lane.jobId);
     const clauses: string[] = [];
     if (gated.length > 0) {
@@ -887,10 +920,19 @@ function laneInertnessPins(): ShapePin[] {
         } no gating if: beyond the close gate`,
       );
     }
+    if (alwaysUnlessPushOff.length > 0) {
+      clauses.push(
+        `never inert, deletion is the opt-out: ${alwaysUnlessPushOff.join(", ")} ${
+          alwaysUnlessPushOff.length === 1 ? "declares" : "declare"
+        } no gating if: beyond the close gate and the clause that declines a push the adopter turned off`,
+      );
+    }
     for (const lane of file.lanes) {
       if (lane.kind === "aggregate") {
         clauses.push(
-          `${lane.jobId}: always(), optionally with the close gate, and needs: ${lane.needs.join(", ")}`,
+          lane.startsWhen === undefined
+            ? `${lane.jobId}: always(), optionally with the close gate, and needs: ${lane.needs.join(", ")}`
+            : `${lane.jobId}: always() with the close gate, starting only when ${lane.startsWhen}, and needs: ${lane.needs.join(", ")}`,
         );
       }
     }
@@ -943,8 +985,16 @@ function laneInertnessViolations(file: FileExpectation, found: WorkflowFile): st
     }
     if (lane.kind === "aggregate") {
       const normalized = conditionText(condition);
-      if (normalized !== "always()" && normalized !== `always() && ${CLOSE_GATE}`) {
-        problems.push(`${lane.jobId}: aggregate does not declare always()`);
+      const accepted =
+        lane.startsWhen === undefined
+          ? ["always()", `always() && ${CLOSE_GATE}`]
+          : [`always() && ${CLOSE_GATE} && ${lane.startsWhen}`];
+      if (!accepted.includes(normalized)) {
+        problems.push(
+          lane.startsWhen === undefined
+            ? `${lane.jobId}: aggregate does not declare always()`
+            : `${lane.jobId}: aggregate does not declare always() with the close gate and ${lane.startsWhen}`,
+        );
       }
       const needs = job["needs"];
       const declared = typeof needs === "string" ? [needs] : Array.isArray(needs) ? needs : [];
@@ -953,7 +1003,11 @@ function laneInertnessViolations(file: FileExpectation, found: WorkflowFile): st
       }
       continue;
     }
-    if (condition !== undefined && conditionText(condition) !== CLOSE_GATE) {
+    const allowed = lane.pushPolicy === true ? `${CLOSE_GATE} && ${PUSH_POLICY_GATE}` : CLOSE_GATE;
+    if (
+      (condition !== undefined || lane.pushPolicy === true) &&
+      conditionText(condition) !== allowed
+    ) {
       problems.push(`${lane.jobId}: gated on if: ${String(condition)}`);
     }
   }
@@ -1129,7 +1183,7 @@ const DIMENSIONS: ReadonlyArray<{
   { id: 9, title: "No shipped file references another shipped file", pins: crossReferencePins },
   {
     id: 10,
-    title: "Per aggregate: the external check name adopter branch protection names",
+    title: "Per job that carries an external check name: the name adopter branch protection names",
     pins: checkNamePins,
   },
 ];

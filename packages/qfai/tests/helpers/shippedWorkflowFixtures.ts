@@ -270,3 +270,94 @@ export function useTempDirPool(prefix: string): () => Promise<string> {
     return dir;
   };
 }
+
+/** What a job or step condition reads: context paths and status functions, each as a string. */
+export type ConditionContext = Readonly<Record<string, string>>;
+
+/**
+ * Evaluates the subset of GitHub's expression grammar the shipped conditions use: string literals,
+ * context paths, status functions, `==`, `!=`, `!`, `&&`, `||` and parentheses.
+ *
+ * `always()` is true unless the context says otherwise. Any other reference or function must be
+ * given by the context, and one that is not throws, so a condition grown beyond what this reads
+ * fails the test instead of scoring as true. Comparisons ignore case, as GitHub's do.
+ */
+export function evaluateCondition(condition: unknown, context: ConditionContext): boolean {
+  if (typeof condition !== "string") {
+    throw new Error("a condition is evaluated from its string form");
+  }
+  const wrapped = /^\$\{\{([\s\S]*)\}\}$/.exec(condition.trim());
+  const source = (wrapped?.[1] ?? condition).trim();
+  const tokens =
+    source.match(/'[^']*'|&&|\|\||!=|==|[()!]|[A-Za-z_][A-Za-z0-9_.-]*(?:\(\))?/g) ?? [];
+  if (tokens.join("").length !== source.replace(/\s+/g, "").length) {
+    throw new Error(`condition has text this evaluator does not read: ${source}`);
+  }
+  let position = 0;
+  const peek = (): string | undefined => tokens[position];
+  const take = (): string => {
+    const token = tokens[position];
+    position += 1;
+    if (token === undefined) {
+      throw new Error(`condition ends early: ${source}`);
+    }
+    return token;
+  };
+  const text = (token: string): string => {
+    if (token.startsWith("'")) {
+      return token.slice(1, -1);
+    }
+    if (token === "always()" && context["always()"] === undefined) {
+      return "true";
+    }
+    const value = context[token];
+    if (value === undefined) {
+      throw new Error(`condition reads ${token}, which the context does not give`);
+    }
+    return value;
+  };
+  const primary = (): boolean => {
+    const token = take();
+    if (token === "(") {
+      const inner = disjunction();
+      if (take() !== ")") {
+        throw new Error(`condition has an unclosed parenthesis: ${source}`);
+      }
+      return inner;
+    }
+    if (token === "!") {
+      return !primary();
+    }
+    const left = text(token);
+    const operator = peek();
+    if (operator === "==" || operator === "!=") {
+      take();
+      const equal = left.toLowerCase() === text(take()).toLowerCase();
+      return operator === "==" ? equal : !equal;
+    }
+    return left === "true";
+  };
+  const conjunction = (): boolean => {
+    let result = primary();
+    while (peek() === "&&") {
+      take();
+      const next = primary();
+      result = result && next;
+    }
+    return result;
+  };
+  const disjunction = (): boolean => {
+    let result = conjunction();
+    while (peek() === "||") {
+      take();
+      const next = conjunction();
+      result = result || next;
+    }
+    return result;
+  };
+  const result = disjunction();
+  if (position !== tokens.length) {
+    throw new Error(`condition has trailing text: ${source}`);
+  }
+  return result;
+}

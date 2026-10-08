@@ -2,11 +2,13 @@
  * Integration: the delivered document and validation lanes run their checks independently and
  * require a complete result (spec-0003)
  *
- * `TC-0003-0056` covers `qfai-docs.yml` and `TC-0003-0057` covers `qfai-validate.yml`. For each,
- * the checks run as native matrix jobs that neither fail fast nor tolerate a failure, the external
- * check name stays on an aggregate that always runs, and that aggregate, executed under bash, is
- * green only on a complete result. Both cases declare `Level: integration`, so their tests live
- * under `<testsDir>/integration/**` (`catalog/test-layers.md`, `QFAI-ATDD-112`).
+ * `TC-0003-0056` covers `qfai-docs.yml` and `TC-0003-0057` covers `qfai-validate.yml`. The
+ * document checks run as native matrix jobs that neither fail fast nor tolerate a failure, the
+ * external check name stays on an aggregate that always runs unless the scope found nothing to
+ * check, and that aggregate, executed under bash, is green only on a complete result. The two
+ * validation profiles are steps of one job, which carries the external check name itself. Both
+ * cases declare `Level: integration`, so their tests live under `<testsDir>/integration/**`
+ * (`catalog/test-layers.md`, `QFAI-ATDD-112`).
  *
  * Every assertion reads the tree `runInit` writes into a temporary directory, never
  * `assets/init/**`: the copy between the two can drop or alter a file, and a test of the packaged
@@ -21,7 +23,11 @@ import { afterAll, describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 
 import { runInit } from "../../src/cli/commands/init.js";
-import { collectJobSteps, isRecord } from "../helpers/shippedWorkflowFixtures.js";
+import {
+  collectJobSteps,
+  evaluateCondition,
+  isRecord,
+} from "../helpers/shippedWorkflowFixtures.js";
 import { captureStdout } from "../helpers/stdout.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
@@ -118,16 +124,26 @@ async function runStep(body: string, cwd: string, env: NodeJS.ProcessEnv = {}): 
 }
 
 /**
- * The condition a shipped lane carries that is not about the adopter's opt-in.
- *
- * A closed pull request starts a run in the same concurrency group as the one
- * its last push left running, which cancels it; every lane that costs a runner
- * then declines the work, so the close allocates a queued run and no minutes.
+ * What the document aggregate declares: `always()` outlives the cancellation, so it declines a
+ * closed pull request, and it declines to start when the scope said, explicitly, that nothing a
+ * document check reads changed. A skipped job satisfies a required check.
  */
-const CLOSE_GATE = "${{ github.event.action != 'closed' }}";
+const DOCS_AGGREGATE_CONDITION =
+  "${{ always() && github.event.action != 'closed' && needs.scope.outputs.run != 'false' }}";
 
-/** What an aggregate declares: `always()` outlives the cancellation, so it declines too. */
-const ALWAYS_UNLESS_CLOSED = "${{ always() && github.event.action != 'closed' }}";
+/**
+ * What the validation job declares: the close gate, and a default-branch push the adopter turned
+ * off. The decision is the job's own condition because a job that has started is billed.
+ */
+const VALIDATE_JOB_CONDITION =
+  "${{ github.event.action != 'closed' && (github.event_name != 'push' || vars.QFAI_CI_PUSH_POLICY != 'none') }}";
+
+/**
+ * What the drift step declares: it runs after a failing full profile so one run reports both, and
+ * not after a setup failure, where nothing is installed for it to run on.
+ */
+const DRIFT_STEP_CONDITION =
+  "${{ (success() || steps.full.outcome == 'failure') && github.event_name == 'pull_request' }}";
 
 // QFAI:AC-0002-0003-03
 describe("delivered document checks run independently and require a complete result", () => {
@@ -192,7 +208,7 @@ describe("delivered document checks run independently and require a complete res
     const docs = (await jobsOf(DOCS))[`${DOCS}#docs`];
     expect(docs?.["name"]).toBe("qfai docs (document shape and Mermaid syntax)");
     expect(docs?.["needs"]).toEqual(["scope", "checks"]);
-    expect(docs?.["if"]).toBe(ALWAYS_UNLESS_CLOSED);
+    expect(docs?.["if"]).toBe(DOCS_AGGREGATE_CONDITION);
     expect(docs?.["permissions"]).toEqual({});
     expect(docs?.["continue-on-error"]).toBeUndefined();
     expect(collectJobSteps(docs ?? {}).some((step) => step["uses"] !== undefined)).toBe(false);
@@ -248,31 +264,21 @@ describe("delivered document checks run independently and require a complete res
 });
 
 // QFAI:AC-0002-0003-03
-describe("delivered validation profiles run independently and require a complete result", () => {
+describe("delivered validation profiles run as two steps of one job that carries the check name", () => {
   // QFAI:EX-0002-0003-05
-  it("TC-0003-0057 (TDD-0060): delivers full validation and PR-only drift in isolated native matrix jobs", async () => {
-    const validate = (await jobsOf(VALIDATE))[`${VALIDATE}#validate`];
-    expect(validate?.["name"]).toBe("qfai validate check (${{ matrix.profile }})");
+  it("TC-0003-0057 (TDD-0060): delivers full validation and PR-only drift as two steps of one job", async () => {
+    const jobs = await jobsOf(VALIDATE);
+    // One job. A second one bills another minute, and a matrix of two installs the project's
+    // dependencies twice.
+    expect(Object.keys(jobs)).toEqual([`${VALIDATE}#validate`]);
+    const validate = jobs[`${VALIDATE}#validate`];
     expect(validate?.["needs"]).toBeUndefined();
-    // The close gate, and nothing else. It gates on the event rather than on
-    // an opt-in, so the lane is still one whose opt-out is deletion — a
-    // closed pull request starts a run only to cancel the one its last push
-    // left going, and this job declines to spend a runner on it.
-    expect(validate?.["if"]).toBe(CLOSE_GATE);
+    expect(validate?.["strategy"]).toBeUndefined();
     expect(validate?.["continue-on-error"]).toBeUndefined();
-    const strategy = validate?.["strategy"];
-    if (!isRecord(strategy))
-      throw new Error("the delivered validation workflow has no profile matrix");
-    expect(strategy["fail-fast"]).toBe(false);
-    expect(strategy["max-parallel"]).toBeUndefined();
-    expect(strategy["matrix"]).toEqual({
-      profile:
-        "${{ fromJSON(github.event_name == 'pull_request' && '[\"full\",\"drift\"]' || '[\"full\"]') }}",
-    });
-    const profiles = collectJobSteps(validate ?? {}).filter((step) =>
+    const steps = collectJobSteps(validate ?? {});
+    const profiles = steps.filter((step) =>
       String(step["run"] ?? "").startsWith("npx qfai validate "),
     );
-    expect(profiles).toHaveLength(2);
     expect(
       profiles.map((step) => ({
         tokens: String(step["run"]).split(" "),
@@ -281,43 +287,53 @@ describe("delivered validation profiles run independently and require a complete
     ).toEqual([
       {
         tokens: ["npx", "qfai", "validate", "--profile", "full", "--fail-on", "error"],
-        if: "matrix.profile == 'full'",
+        if: undefined,
       },
       {
         tokens: ["npx", "qfai", "validate", "--profile", "drift", "--fail-on", "error"],
-        if: "matrix.profile == 'drift' && github.event_name == 'pull_request'",
+        if: DRIFT_STEP_CONDITION,
       },
     ]);
     for (const step of profiles) expect(step["continue-on-error"]).toBeUndefined();
+    const installs = steps.filter((step) =>
+      /\b(?:pnpm|yarn|npm)\s+(?:install|ci)\b/.test(String(step["run"] ?? "")),
+    );
+    expect(installs, "both profiles share one dependency install").toHaveLength(1);
   });
 
   // QFAI:EX-0002-0003-05
-  // QFAI:EX-0002-0003-06
-  it("TC-0003-0057 (TDD-0061): keeps the existing external validation check as an always-run complete verdict", async () => {
-    const verdict = (await jobsOf(VALIDATE))[`${VALIDATE}#summary`];
-    expect(verdict?.["name"]).toBe("qfai validate (full profile, fail on error)");
-    expect(verdict?.["needs"]).toBe("validate");
-    expect(verdict?.["if"]).toBe(ALWAYS_UNLESS_CLOSED);
-    expect(verdict?.["permissions"]).toEqual({});
-    expect(verdict?.["continue-on-error"]).toBeUndefined();
-    expect(collectJobSteps(verdict ?? {}).some((step) => step["uses"] !== undefined)).toBe(false);
+  it.each([
+    { label: "every earlier step passed", success: true, full: "success", event: "pull_request" },
+    { label: "the full profile failed", success: false, full: "failure", event: "pull_request" },
+    {
+      label: "setup failed before the full profile",
+      success: false,
+      full: "skipped",
+      event: "pull_request",
+    },
+    { label: "the job was cancelled", success: false, full: "cancelled", event: "pull_request" },
+    { label: "every earlier step passed on a push", success: true, full: "success", event: "push" },
+  ])("runs the drift step only when it can report: $label", async ({ success, full, event }) => {
+    const validate = (await jobsOf(VALIDATE))[`${VALIDATE}#validate`];
+    const drift = collectJobSteps(validate ?? {}).find((step) =>
+      String(step["run"] ?? "").includes("--profile drift"),
+    );
+    const runs = evaluateCondition(drift?.["if"], {
+      "success()": String(success),
+      "steps.full.outcome": full,
+      "github.event_name": event,
+    });
+    // After a failing full profile so one run reports both; never after a setup failure, where
+    // nothing is installed; and on a pull request only.
+    expect(runs).toBe(event === "pull_request" && (success || full === "failure"));
   });
 
   // QFAI:EX-0002-0003-06
-  it.each(["success", "failure", "cancelled", "timed_out", "skipped", "unknown", ""])(
-    "executes the delivered validation verdict for profile result %j",
-    async (result) => {
-      const verdict = (await jobsOf(VALIDATE))[`${VALIDATE}#summary`];
-      const step = collectJobSteps(verdict ?? {}).find((entry) =>
-        String(entry["run"] ?? "").includes("PROFILE_RESULT"),
-      );
-      expect(step, "the delivered validation workflow has no executable aggregate").toBeDefined();
-      expect(step?.["env"]).toEqual({ PROFILE_RESULT: "${{ needs.validate.result }}" });
-      const executed = await runStep(String(step?.["run"] ?? ""), await project(), {
-        PROFILE_RESULT: result,
-      });
-      expect(executed.skipped, "bash must execute the delivered validation aggregate").toBe(false);
-      expect(executed.status).toBe(result === "success" ? 0 : 1);
-    },
-  );
+  it("TC-0003-0057 (TDD-0061): puts the existing external validation check name on the job that runs the profiles", async () => {
+    const validate = (await jobsOf(VALIDATE))[`${VALIDATE}#validate`];
+    expect(validate?.["name"]).toBe("qfai validate (full profile, fail on error)");
+    expect(validate?.["if"]).toBe(VALIDATE_JOB_CONDITION);
+    expect(validate?.["permissions"]).toEqual({ contents: "read" });
+    expect(validate?.["continue-on-error"]).toBeUndefined();
+  });
 });
