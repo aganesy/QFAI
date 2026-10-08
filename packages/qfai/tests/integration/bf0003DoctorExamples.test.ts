@@ -3,7 +3,7 @@
  * asserts — configuration discovery and loading, output routing, the Playwright
  * npx fallback and the advisory grouping.
  */
-import { chmod, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -459,12 +459,9 @@ describe("BF-0003 advisory grouping", () => {
 async function treeWithOneError(): Promise<string> {
   const dir = await pool.seedAdopterTree();
   await quietUnrelatedWarnings(dir);
-  const agentDir = path.join(dir, ".qfai", "assistant", "agent");
-  const agents = (await readdir(agentDir)).filter(
-    (name) => name.endsWith(".md") && name !== "README.md",
-  );
+  // The package does not ship this file, so the break is not also a drift warning.
   await writeFile(
-    path.join(agentDir, agents[0] ?? "missing.md"),
+    path.join(dir, ".qfai", "assistant", "agent", "broken-agent.md"),
     "---\nname: [unterminated\ndescription: broken\n---\n\nbody\n",
     "utf-8",
   );

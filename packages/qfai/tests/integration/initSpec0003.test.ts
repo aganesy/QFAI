@@ -295,11 +295,11 @@ describe("TC-0003-0021: singular assistant-tree seed", () => {
     expect(content).toContain("assistantPaths");
     expect(content).toContain("ASSISTANT_DIR");
     expect(content).toContain("joinAssistantLayer");
-    expect(content).toContain('"assistant/skill"');
-    expect(content).toContain('"assistant/agent"');
-    expect(content).toContain('"assistant/step"');
-    const { ASSISTANT_LAYERS } = await import("../../src/core/paths/assistantPaths.js");
+    expect(content).toContain("REFRESHED_ASSISTANT_LAYERS");
+    const { ASSISTANT_LAYERS, REFRESHED_ASSISTANT_LAYERS } =
+      await import("../../src/core/paths/assistantPaths.js");
     expect(ASSISTANT_LAYERS).toEqual(["rule", "skill", "step", "agent", "prompt"]);
+    expect([...REFRESHED_ASSISTANT_LAYERS].sort()).toEqual(["agent", "rule", "skill", "step"]);
   });
 });
 

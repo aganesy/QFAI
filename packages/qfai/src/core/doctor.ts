@@ -50,6 +50,7 @@ import {
   type OversizedAssistantAsset,
   type WideLineAssistantAsset,
 } from "./doctor/assetLineBudget.js";
+import { checkAssistantDrift } from "./doctor/assistantDrift.js";
 import { checkDocsLane } from "./doctor/docsLane.js";
 import { checkMutationProofs } from "./doctor/mutationProofs.js";
 import { checkMdschemaBinary } from "./doctor/mdschemaBinary.js";
@@ -310,6 +311,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
 
   addCheck(checks, await checkDocsLane(root));
   for (const check of await checkWorkflowDrift(root)) addCheck(checks, check);
+  for (const check of await checkAssistantDrift(root)) addCheck(checks, check);
   const mutationProofs = await checkMutationProofs(root, config);
   if (mutationProofs)
     addCheck(checks, { ...mutationProofs, message: escapeForMessage(mutationProofs.message) });

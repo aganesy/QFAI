@@ -955,6 +955,27 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toMatch(/always\s+put,\s+except\s+under\s+a\s+no-question\s+mode/);
     });
 
+    // A tool that returns only an acceptance has told the agent the host took the
+    // question, not that the user saw or answered it. One token per clause: the
+    // three states, the plain-text form on a failure to show, resends bound by a
+    // host reason with late and duplicate answers handled, a turn's end and a
+    // resolved notice are not answers, and recovery carries the open question.
+    it.each(MASTERS)("%s does not take an accepted question for an answered one", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/A\s+question\s+is\s+accepted,\s+shown\s+or\s+answered/);
+      expect(text).toMatch(/unconfirmed\s+and\s+still\s+open/);
+      expect(text).toMatch(/sends\s+the\s+same\s+question\s+to\s+the\s+plain-text\s+form/);
+      expect(text).toMatch(/Resend\s+only\s+for\s+a\s+reason\s+the\s+host\s+reports/);
+      expect(text).toMatch(/is\s+not\s+applied\s+again/);
+      expect(text).toMatch(
+        /The\s+end\s+of\s+a\s+turn\s+and\s+a\s+notice\s+that\s+a\s+request\s+was\s+resolved\s+are\s+not\s+answers/,
+      );
+      expect(text).toMatch(/The\s+open\s+question\s+carries\s+over/);
+      expect(text).toMatch(
+        /none\s+of\s+it\s+permits\s+a\s+question\s+under\s+a\s+no-question\s+mode/,
+      );
+    });
+
     // The form and the count are independent. Without this the rule reads as a
     // licence to ask more, and a well-shaped question that should not be asked
     // is still one that should not be asked.
