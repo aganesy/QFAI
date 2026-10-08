@@ -3,7 +3,8 @@
 Reference catalog of 8 canonical brand archetypes. The SDD design stage picks one to fill the
 required `brand.archetype` field of the root `DESIGN.md`; each archetype supplies
 `aesthetic_properties` that become the starting tokens, and
-`design-md-authoring.md#output-mapping` defines where each value is written.
+the `Output mapping` section of the DESIGN.md authoring reference defines where
+each value is written.
 
 ---
 
@@ -105,7 +106,7 @@ required `brand.archetype` field of the root `DESIGN.md`; each archetype supplie
 
 ## Patterns to avoid
 
-`design-anti-patterns.md` lists the patterns that mark a design as generated,
+The design anti-patterns reference lists the patterns that mark a design as generated,
 by aspect, and the substitutes a model falls back to once one is banned. Read it
 before turning an archetype's defaults into `DESIGN.md` values. A value that
 produces a listed pattern stays only where the recorded brand direction asks for

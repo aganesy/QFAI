@@ -27,6 +27,8 @@ for it.
   lists it: `01_Context.md#Design Direction`, the reference registries in
   `04_Sources.md`, and the `uiux/` sidecars. For an imported tree, the surface
   the import source names, or the user's answer.
+- The questions behind those answers:
+  `.qfai/assistant/skill/qfai-discussion/references/design-dna-intake.md`.
 - The schema and validation rules:
   `.qfai/assistant/skill/qfai-prototyping/references/design-md-spec.md`.
 - The archetype catalog:

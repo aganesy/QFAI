@@ -52,8 +52,7 @@ naming the pattern is what works.
   are the rules. The entry is the form a breach of them takes on a generated
   screen.
 - The reviewer inside the prototyping loop does not apply this list. Root
-  `DESIGN.md` locks the brand values that reviewer sees
-  (`.qfai/assistant/skill/qfai-prototyping/references/reviewer-prompt.md`), so
+  `DESIGN.md` locks the brand values that reviewer sees, so
   a pattern is caught where the design direction is reviewed and where
   `DESIGN.md` is written. No entry here is a `lap-*` detection, and none blocks
   the loop.

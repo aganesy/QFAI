@@ -36,7 +36,7 @@ transition-pass percentages as a substitute for the qualitative review.
 - The live prototype URL and declared `screens[]` routes from the UI contract.
   Open each route in your own Playwright session and exercise its declared
   primary tasks. Record `sessionStatus` and `retryCount` in the per-screen
-  payload according to `references/review-payload-schema.md`.
+  payload according to the closed per-screen payload schema.
 - A screenshot or HTML snapshot, only when one was taken. Name any mandatory
   input you did not receive in a finding.
 - The layout anti-pattern registry the package ships.
@@ -68,7 +68,7 @@ below and are relative to the project root.
    per-UI-contract subdirectory is mandatory for every run that declares UI
    screens, including a run with one contract. Its schema is closed
    (11 required top-level fields, unknown keys rejected) and lives in
-   `references/review-payload-schema.md`. Build it from that
+   the payload schema reference. Build it from that
    reference, not from the block below.
 2. **Per-iteration summary** —
    `.qfai/prototype/iter-NN/review.json`, one per iteration. Its shape is
@@ -127,7 +127,7 @@ type Review = {
 
 Fill `designMdViolations` yourself: one entry per distinct value the
 prototype uses that root `DESIGN.md` does not declare, in the categories
-`generator-prompt.md` lists.
+the generator prompt lists.
 
 ## The four ordinal UX axes
 

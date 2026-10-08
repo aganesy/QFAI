@@ -2,7 +2,7 @@
 
 ## User Story
 
-As an adopter, I want `qfai doctor` to report a missing document-schema lane, the repository facts the shipped workflows rely on and a document-schema checker that does not run, so that the shipped CI works in my repository.
+As an adopter, I want `qfai doctor` to report a missing document-schema lane, a shipped workflow that differs from the shipped text, the repository facts the shipped workflows rely on and a document-schema checker that does not run, so that the shipped CI works in my repository.
 
 ## Non-goals
 

@@ -25,8 +25,7 @@ contracts. A project's contracts live in those three directories. `cli/` holds
 the command-surface contracts of the QFAI repository itself and is not a kind a
 project adds. No other directory under `<paths.contractsDir>` holds a contract,
 and `QFAI-CONTRACT-034` reports a file in one. Evaluator axes are not a contract
-either: the review validation the QFAI CLI applies fixes them (restated in
-`.qfai/assistant/skill/qfai-prototyping/references/reviewer-prompt.md`).
+either: the review validation the QFAI CLI applies fixes them.
 
 Discussion UI/UX files are **non-normative** discovery / reference artifacts — not upstream SSOT (`.qfai/assistant/rule/drift-protocol.md#core-rule`). `/qfai-sdd` normalizes approved decisions into `<paths.contractsDir>/**`; downstream skills read contracts, not discussion UI/UX files. A contradiction between a pack and a contract is resolved in the contract, not by amending the pack.
 
