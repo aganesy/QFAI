@@ -435,6 +435,7 @@
     "tests/integration/bf0001DiscussionReadiness.test.ts",
     "tests/integration/bf0001EarlyExamples.test.ts",
     "tests/integration/bf0001InitAcceptance.test.ts",
+    "tests/integration/bf0001InitTreeAcceptance.test.ts",
     "tests/integration/bf0001PlannerFirstContract.test.ts",
     "tests/integration/bf0001WorkflowDefinition.test.ts",
     "tests/integration/designDirectionHandoff.test.ts",
