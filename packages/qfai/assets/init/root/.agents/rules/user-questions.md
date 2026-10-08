@@ -186,6 +186,30 @@ Say why the tool was not callable. Otherwise the fallback reads as a choice the
 agent made about how to ask, and the next reader cannot tell a limitation from a
 preference.
 
+### A question the host accepted, with no confirmation it was shown
+
+A tool that returns only an acceptance, or runs asynchronously, says the host
+took the question. It does not say the user saw it or answered it.
+
+- A question is accepted, shown or answered. Report the state the host has
+  confirmed. Where the host does not confirm display, say the question is
+  unconfirmed and still open.
+- A tool error, a lost connection or the user saying the question never
+  appeared sends the same question to the plain-text form above, with every part
+  the tool would have carried and the reason in one line.
+- Resend only for a reason the host reports, never on a timer. A late answer to
+  an earlier send of the same question answers that question. An answer to a
+  question already answered is not applied again.
+- The end of a turn and a notice that a request was resolved are not answers.
+  A decision is recorded from what the user answered. Until then the question
+  stays open and nothing that needs the answer starts.
+- Where recovery needs the user to act, such as choosing another model or
+  trying again, say what to do and how the work resumes. The open question
+  carries over.
+
+None of this changes what an answer means, and none of it permits a question
+under a no-question mode.
+
 ## 6. A turn that waits on the user
 
 A turn that leaves the next step to the user ends with a question listing the
