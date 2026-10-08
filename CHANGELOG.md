@@ -16,6 +16,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   damaged canonical side. Damage of a kind the check does not recognise still
   gets every repair (#3012).
 
+- **`qfai validate` names the offending column of `decisions.md` and
+  `open-questions.md`.** A table with a column other than ID, Content, Approach
+  and Status now reports `has the unexpected column <name>` for each extra
+  column and `is missing the column <name>` for each absent one. Four correct
+  columns in a different order report that the columns must be in the order ID,
+  Content, Approach and Status. The finding was one message for all three
+  cases. Refs #2951.
+
 ## [2.1.1] - 2026-10-08
 
 ### Added

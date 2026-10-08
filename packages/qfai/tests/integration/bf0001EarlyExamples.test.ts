@@ -20,8 +20,19 @@ describe("BF-0001 project records", () => {
   it("rejects an added Date column in open questions", () => {
     const text = "| ID | Content | Approach | Status | Date |\n| --- | --- | --- | --- | --- |\n";
     expect(parseRecordTable(text, "open-questions").errors).toContain(
-      "open-questions requires ID, Content, Approach and Status columns",
+      "open-questions has the unexpected column Date",
     );
+  });
+
+  it("names a missing column and a column order that differs", () => {
+    const missing = "| ID | Content | Status |\n| --- | --- | --- |\n";
+    expect(parseRecordTable(missing, "decisions").errors).toEqual([
+      "decisions is missing the column Approach",
+    ]);
+    const reordered = "| ID | Content | Status | Approach |\n| --- | --- | --- | --- |\n";
+    expect(parseRecordTable(reordered, "decisions").errors).toEqual([
+      "decisions columns must be ID, Content, Approach and Status, in that order",
+    ]);
   });
 
   // QFAI:EX-0001-0007-03
