@@ -131,15 +131,75 @@ const RETIRED_WRAPPER_REMEDY =
   "**`which this version does not ship` marks a retired wrapper.** The wrapper of a skill or agent that an upgrade deleted or renamed is still there and still resolves, so the assistant keeps loading the old instructions. `qfai init --force` deletes only **agent wrappers whose target is directly under `.qfai/assistant/agent/` (`.claude/agents/` / `.github/agents/`) and skill wrappers whose names start with `qfai-`** (a rerun without `--force` does not remove them). Wrappers of skills with no such prefix, such as `web-research`, and agent wrappers that point into a subdirectory such as `.qfai/assistant/agent/<sub>/…` or at `.qfai/assistant/skill/…`, are outside the prune, so delete the reported paths by hand. **init never deletes the canonical side (`.qfai/assistant/skill/…` / `.qfai/assistant/agent/…`):** it cannot tell a retired canonical from one the project added itself, so delete a retired canonical by hand. A wrapper linked by hand to a project's own canonical has the same shape; it is outside qfai's management too, so decide whether to keep it on purpose. (`--force` deletes an agent wrapper only when its target is directly under `.qfai/assistant/agent/` and is not in the current roster.)";
 
 /**
- * The remedy for broken wrappers. A retired wrapper is repaired by neither the
- * generic opening line nor the rest of the generic remedy, so its steps come
- * first, and stand alone when every broken wrapper is a retired one.
+ * The repairs for damage that is not a retired wrapper, one per kind of damage.
+ * A finding prints only the repairs for the kinds it lists: each of these is
+ * wrong for the other kinds, and all of them together run to about 3 KB.
  */
-function unreachableRemedy(entries: readonly Broken[], general: readonly string[]): string {
-  if (!entries.some((entry) => entry.retired === true)) return general.join("\n");
-  const retired = [RETIRED_WRAPPER_LEAD, RETIRED_WRAPPER_REMEDY];
-  const allRetired = entries.every((entry) => entry.retired === true);
-  return (allRetired ? retired : [...retired, ...general]).join("\n");
+const REMEDY_BRANCHES = {
+  relink:
+    "Rerun `qfai init`: the qfai-owned paths are relinked as symlinks (`--force` is not needed).",
+  directory:
+    "**A linked or broken integration directory itself (`the integration directory is …`) is not fixed by rerunning init.** Init writes nothing in a directory that is a symlink, a junction or not a directory, so a rerun changes nothing. Replace the affected path (for example `.claude/skills`) with a real directory, then run `qfai init`.",
+  ancestor:
+    "**The same applies when an ancestor of the integration directory is a symlink (`an ancestor is a symlink`).** Init writes nothing below it either, and the wrappers inside use relative targets that resolve against wherever the ancestor points. Replace the ancestor (`.claude`, `.github`, and so on) with a real directory, then run `qfai init`.",
+  notSymlink:
+    "**A wrapper that is not a symlink (`directory, not a symlink` / `FIFO` / `socket` / `device`) is not fixed by init either.** `ensureSymlink` leaves these as `skipped`. Move a directory aside after checking its contents, then run `qfai init`; delete a special file, then run `qfai init`. `--force` deletes without confirmation, so do not use it until you know whether the contents are needed.",
+  unreadable:
+    "**`unreadable` is a permissions problem, and init does not fix it.** The wrapper's target string is correct, so `ensureSymlink` skips it, and canonical assets are create-only, so they are not overwritten either. Restore read permission on the file (POSIX: `chmod u+r <path>`, Windows: `icacls <path> /grant <user>:R`). If this appears in CI, check the umask / ACL settings of the job that created the file.",
+  canonical:
+    "**A broken canonical side (`resolves to a …, but …` / `its SKILL.md is …` / `symlink cycle`) is not fixed by init.** Canonical assets are create-only, so existing paths are skipped, and even `--force` fails in `copyFile` / `mkdir` on the type conflict. Move the affected `.qfai/assistant/**` path aside (or delete it), then run `qfai init` — the contents are lost, so check them first.",
+  flattened:
+    "A regular file whose content differs from the link target is preserved, so check its contents and move it aside first. If the root cause is flattening at clone time, first set `git config --global core.symlinks true`. A repo-local setting is not carried into a clone, so without this the next clone ends up in the same state. On Windows, Developer Mode may need to be enabled.",
+} as const;
+
+type RemedyBranch = keyof typeof REMEDY_BRANCHES;
+
+const REMEDY_ORDER = Object.keys(REMEDY_BRANCHES) as RemedyBranch[];
+
+/**
+ * The repairs that apply to one kind of damage, read from the wording its
+ * detail already carries. Damage this does not recognise gets every repair, so
+ * a new shape loses nothing it needs.
+ */
+function remedyBranches(detail: string): readonly RemedyBranch[] {
+  if (detail.startsWith("the integration directory ")) return ["directory"];
+  if (detail.startsWith("an ancestor ")) return ["ancestor"];
+  if (detail.startsWith("regular file (")) return ["relink", "flattened"];
+  if (detail.endsWith(", not a symlink")) return ["notSymlink"];
+  if (detail.endsWith("unreadable")) return ["unreadable"];
+  if (detail.startsWith("resolves through a symlink the OS will not follow")) {
+    return ["relink", "flattened", "canonical"];
+  }
+  if (/^(missing |points at |dangling -> |integration surface missing)/.test(detail)) {
+    return ["relink"];
+  }
+  if (detail.includes("outside the project canonical")) return ["ancestor", "canonical"];
+  if (
+    /^((a|the) )?canonical /.test(detail) ||
+    /^(a path component|resolves through a symlink cycle|resolves to a |resolves, but )/.test(
+      detail,
+    )
+  ) {
+    return ["canonical"];
+  }
+  return REMEDY_ORDER;
+}
+
+/**
+ * The remedy for broken wrappers. A retired wrapper is repaired by none of the
+ * other repairs, so its steps come first, and stand alone when every broken
+ * wrapper is a retired one.
+ */
+export function brokenWrapperRemedy(
+  entries: readonly { detail: string; retired?: boolean | undefined }[],
+): string {
+  const others = entries.filter((entry) => entry.retired !== true);
+  const applicable = new Set(others.flatMap((entry) => remedyBranches(entry.detail)));
+  const general = REMEDY_ORDER.filter((branch) => applicable.has(branch)).map(
+    (branch) => REMEDY_BRANCHES[branch],
+  );
+  if (others.length === entries.length) return general.join("\n");
+  return [RETIRED_WRAPPER_LEAD, RETIRED_WRAPPER_REMEDY, ...general].join("\n");
 }
 
 const toPosix = (value: string): string => value.split(path.sep).join("/");
@@ -1679,16 +1739,7 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
         "integrationSurface.links",
         unreachable.map((entry) => entry.relative),
         "change",
-        unreachableRemedy(unreachable, [
-          "Rerun `qfai init`: the qfai-owned paths are relinked as symlinks (`--force` is not needed). A regular file whose content differs from the link target is preserved, so check its contents and move it aside first.",
-          "**A linked or broken integration directory itself (`the integration directory is …`) is not fixed by rerunning init.** Init writes nothing in a directory that is a symlink, a junction or not a directory, so a rerun changes nothing. Replace the affected path (for example `.claude/skills`) with a real directory, then run `qfai init`.",
-          "**The same applies when an ancestor of the integration directory is a symlink (`an ancestor is a symlink`).** Init writes nothing below it either, and the wrappers inside use relative targets that resolve against wherever the ancestor points. Replace the ancestor (`.claude`, `.github`, and so on) with a real directory, then run `qfai init`.",
-          "**A wrapper that is not a symlink (`directory, not a symlink` / `FIFO` / `socket` / `device`) is not fixed by init either.** `ensureSymlink` leaves these as `skipped`. Move a directory aside after checking its contents, then run `qfai init`; delete a special file, then run `qfai init`. `--force` deletes without confirmation, so do not use it until you know whether the contents are needed.",
-          "**`unreadable` is a permissions problem, and init does not fix it.** The wrapper's target string is correct, so `ensureSymlink` skips it, and canonical assets are create-only, so they are not overwritten either. Restore read permission on the file (POSIX: `chmod u+r <path>`, Windows: `icacls <path> /grant <user>:R`). If this appears in CI, check the umask / ACL settings of the job that created the file.",
-          "**A broken canonical side (`resolves to a …, but …` / `its SKILL.md is …` / `symlink cycle`) is not fixed by init.** Canonical assets are create-only, so existing paths are skipped, and even `--force` fails in `copyFile` / `mkdir` on the type conflict. Move the affected `.qfai/assistant/**` path aside (or delete it), then run `qfai init` — the contents are lost, so check them first.",
-          "If the root cause is flattening at clone time, first set `git config --global core.symlinks true`. A repo-local setting is not carried into a clone, so without this the next clone ends up in the same state.",
-          "On Windows, Developer Mode may need to be enabled.",
-        ]),
+        brokenWrapperRemedy(unreachable),
         { relatedFiles: unreachable.slice(1).map((entry) => entry.relative) },
       ),
     );
