@@ -375,6 +375,7 @@
     "tests/integration/storyTreeContractIndex.test.ts",
     "tests/integration/storyTreeDrift.test.ts",
     "tests/integration/storyTreePolicy.test.ts",
+    "tests/integration/storyTreeValidateAcceptance.test.ts",
     "tests/integration/storyTreeValidateLayout.test.ts",
     "tests/integration/storyTreeCiRelease.test.ts",
     "tests/integration/storyTreeMigration.test.ts",
