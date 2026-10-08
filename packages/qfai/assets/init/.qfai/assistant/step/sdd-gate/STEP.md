@@ -15,6 +15,10 @@ The per-flow gate of the story tree, and the per-flow report the review reads.
 - `.qfai/assistant/skill/qfai-sdd/references/sdd-quality-gate.md`: what the
   gate checks.
 - `.qfai/assistant/skill/qfai-sdd/references/sdd-phase-checklists.md#validation-and-review`.
+- `.qfai/assistant/skill/qfai-sdd/references/spec-traceability-rules.md#document-shapes`,
+  for what a template cannot show, and
+  `.qfai/assistant/skill/qfai-sdd/references/contract-artifact-rules.md`, for the
+  executable checks of a changed DB contract.
 
 ## Which flows
 

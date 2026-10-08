@@ -429,6 +429,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Shipped references no longer point at one another, with one exception.** The
+  step that reads a reference now names every reference the task needs, and a
+  reference describes its neighbour in words. The `ui_ux/` appendices of the
+  discussion skill are named by the `discussion-uiux` step. The guard test
+  keeps one pointer, in the concrete-abstract cycle reference. Part of #3141.
+
 - **The web-research sandbox template no longer allows `.qfai/evidence/`.**
   Nothing writes web-research results there, so the allowance is gone; the
   cache directory stays. Artifact references also stop treating the retired
