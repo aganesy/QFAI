@@ -7,6 +7,7 @@ import type { BrowserQaScreenContractRef } from "../browserQa/types.js";
 import type { RenderCaptureTarget } from "../evidence/types.js";
 import { DEFAULT_RENDER_VIEWPORTS } from "../uiux/renderEvidenceTypes.js";
 import { readSafe } from "../validators/utils.js";
+import { analyzeScreenCopy, isMapping, type ScreenCopyFinding } from "./screenCopy.js";
 
 export type CanonicalScreenContract = {
   name: string;
@@ -339,6 +340,48 @@ export async function findUnreadUiScreenEntries(
   }
   return unread;
 }
+
+export type UiScreenCopyFinding = ScreenCopyFinding & {
+  /** The contract file, repository-relative. */
+  file: string;
+  /** The entry's index in that file's `screens` list, from 0. */
+  index: number;
+  screenId: string;
+};
+
+/**
+ * What each screen of every UI contract states wrongly about its `supplements`
+ * and `structure`.
+ *
+ * It covers the entries the screen reader reads: those with an `id` and a
+ * `route`, and the first entry for an `id` in its contract scope. The others
+ * are reported once, by `findUnreadUiScreenEntries`, and not again here.
+ */
+export async function findUiScreenCopyFindings(
+  root: string,
+  contractsDirRelative = ".qfai/contracts",
+): Promise<UiScreenCopyFinding[]> {
+  const uiDir = path.resolve(root, contractsDirRelative, "ui");
+  const found: UiScreenCopyFinding[] = [];
+  const seen = new Set<string>();
+  for (const { relativePath, parsed } of await readUiContractDocuments(uiDir, root)) {
+    if (!isMapping(parsed) || !Array.isArray(parsed.screens)) continue;
+    const scope = specScopeOf(toPosix(path.relative(uiDir, path.resolve(root, relativePath))));
+    parsed.screens.forEach((entry: unknown, index) => {
+      if (!isMapping(entry)) return;
+      const screenId = typeof entry.id === "string" ? entry.id.trim() : "";
+      const route = typeof entry.route === "string" ? entry.route.trim() : "";
+      const key = JSON.stringify([scope, screenId]);
+      if (!screenId || !route || seen.has(key)) return;
+      seen.add(key);
+      for (const finding of analyzeScreenCopy(entry)) {
+        found.push({ ...finding, file: relativePath, index, screenId });
+      }
+    });
+  }
+  return found;
+}
+
 export function parseCanonicalScreenContracts(content: string): CanonicalScreenContract[] {
   const screens: CanonicalScreenContract[] = [];
   const lines = content.split(/\r?\n/);

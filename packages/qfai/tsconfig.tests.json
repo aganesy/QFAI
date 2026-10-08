@@ -29,6 +29,10 @@
     "means adding it here."
   ],
   "include": [
+    "tests/core/contracts/screenCopy.test.ts",
+    "tests/e2e/uiScreenCopyAdopterE2E.test.ts",
+    "tests/integration/uiScreenCopy.test.ts",
+    "tests/integration/uiScreenCopyAssets.test.ts",
     "tests/integration/storyTreeExampleDrift.test.ts",
     "vitest.config.ts",
     "vitest.knobs.ts",
@@ -375,6 +379,7 @@
     "tests/integration/storyTreeContractIndex.test.ts",
     "tests/integration/storyTreeDrift.test.ts",
     "tests/integration/storyTreePolicy.test.ts",
+    "tests/integration/storyTreeValidateAcceptance.test.ts",
     "tests/integration/storyTreeValidateLayout.test.ts",
     "tests/integration/storyTreeCiRelease.test.ts",
     "tests/integration/storyTreeMigration.test.ts",
