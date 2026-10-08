@@ -20,6 +20,7 @@ import {
   addedEntries,
   releasedAdditions,
   sectionEntries,
+  tagOnOrigin,
   taggedBefore,
 } from "../../../../scripts/check-changelog-released-sections.mjs";
 
@@ -154,6 +155,38 @@ describe("which tag makes a section released", () => {
 
   it("does not count a tag that does not exist", () => {
     expect(taggedBefore("", head)).toBe(false);
+  });
+});
+
+describe("where the tag is looked up", () => {
+  const earlier = "a".repeat(40);
+  const head = "b".repeat(40);
+
+  it("answers from a local tag without asking the remote", () => {
+    const lookups = {
+      local: () => earlier,
+      remote: () => {
+        throw new Error("the remote must not be asked");
+      },
+    };
+
+    expect(tagOnOrigin("1.2.0", head, lookups)).toBe(true);
+    expect(tagOnOrigin("1.2.0", earlier, lookups)).toBe(false);
+  });
+
+  it("asks the remote when there is no local tag", () => {
+    const lookups = {
+      local: () => null,
+      remote: () => [earlier, "refs/tags/v1.2.0"].join(String.fromCharCode(9)),
+    };
+
+    expect(tagOnOrigin("1.2.0", head, lookups)).toBe(true);
+  });
+
+  it("reports an unknown answer when neither a local tag nor the remote answers", () => {
+    const lookups = { local: () => null, remote: () => null };
+
+    expect(tagOnOrigin("1.2.0", head, lookups)).toBeNull();
   });
 });
 

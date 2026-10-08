@@ -38,6 +38,13 @@ advisory to clear.
    publishes to its own users as wide as the new version allows.
 6. Run the relevant suite.
 
+When the dependency is `qfai` itself, the package also wrote assistant files
+into the repository, so steps 5 and 6 are replaced by the upgrade procedure in
+the section "Keeping QFAI itself up to date" of `node_modules/qfai/README.md`:
+`init --force`, the retired files the release notes list, then `doctor` and
+`validate`. `init --force` replaces the skills and steps in use, so read the
+next step from disk after it runs.
+
 ## What it writes
 
 - The manifest, the lockfile and any adapted call, listed in `changedFiles`.
