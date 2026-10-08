@@ -109,6 +109,7 @@ afterEach(async () => {
   }
 });
 
+// QFAI:AC-0001-0025-02
 // QFAI:EX-0001-0025-03
 // The defect: nothing shipped a `.codex/agents/` tree and `init` generated no
 // TOML, so a project that installed qfai got Claude and GitHub agent wrappers

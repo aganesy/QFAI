@@ -54,7 +54,9 @@ import { checkAssistantDrift } from "./doctor/assistantDrift.js";
 import { checkDocsLane } from "./doctor/docsLane.js";
 import { checkMutationProofs } from "./doctor/mutationProofs.js";
 import { checkMdschemaBinary } from "./doctor/mdschemaBinary.js";
+import { checkWorkflowCost } from "./doctor/workflowCost.js";
 import { checkWorkflowDrift } from "./doctor/workflowDrift.js";
+import { checkWorkflowParse } from "./doctor/workflowParse.js";
 import { checkWorkflowPreconditions } from "./doctor/workflowPreconditions.js";
 
 export type DoctorSeverity = "ok" | "info" | "warning" | "error";
@@ -311,6 +313,9 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
 
   addCheck(checks, await checkDocsLane(root));
   for (const check of await checkWorkflowDrift(root)) addCheck(checks, check);
+  for (const check of await checkWorkflowParse(root)) addCheck(checks, check);
+  const workflowCost = await checkWorkflowCost(root);
+  if (workflowCost) addCheck(checks, workflowCost);
   for (const check of await checkAssistantDrift(root)) addCheck(checks, check);
   const mutationProofs = await checkMutationProofs(root, config);
   if (mutationProofs)
