@@ -56,6 +56,9 @@ and are no longer authored as sidecar files.
 ## Normalization Rules
 
 - Preserve source IDs where available.
+- Normalize the sidecar's notes on displayed text into the screen's `supplements`
+  and `structure`, as the UI contract guide shapes them. Notes for the author or
+  the reviewer are not displayed text and are not copied into either key.
 - Convert prose into machine-readable arrays or objects.
 - Reject placeholder text instead of copying it into contracts.
 - Frame negative references in `audience.do_not_look_like` as

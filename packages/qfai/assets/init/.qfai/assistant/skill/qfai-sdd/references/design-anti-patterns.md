@@ -22,6 +22,7 @@ naming the pattern is what works.
 - Placement
 - Motion and transitions
 - Copy in the UI
+- Copy that adds no meaning
 - Information architecture and flow
 - States and accessibility
 - Implementation defaults
@@ -51,11 +52,13 @@ naming the pattern is what works.
   flow_ and _States and accessibility_ do, `interface-clarity.md` and the spec
   are the rules. The entry is the form a breach of them takes on a generated
   screen.
-- The reviewer inside the prototyping loop does not apply this list. Root
-  `DESIGN.md` locks the brand values that reviewer sees, so
-  a pattern is caught where the design direction is reviewed and where
-  `DESIGN.md` is written. No entry here is a `lap-*` detection, and none blocks
-  the loop.
+- The reviewer inside the prototyping loop does not apply the sections about
+  identity. Root `DESIGN.md` locks the brand values that reviewer sees, so a
+  pattern there is caught where the design direction is reviewed and where
+  `DESIGN.md` is written. That reviewer does apply _Copy that adds no meaning_,
+  through the criterion on explanatory text, because those patterns are about
+  what the text tells the user, not about a brand. No entry here is a `lap-*`
+  detection.
 
 ## Color and background
 
@@ -268,6 +271,21 @@ naming the pattern is what works.
 - Button labels mix two languages.
 - The screen shows technical detail nobody asked for, such as GPU status or
   average generation time.
+
+## Copy that adds no meaning
+
+These patterns are judged against the screen's tasks and the `supplements` its UI
+contract declares, in SDD, in implementation and in every surface review. A chosen
+visual direction does not exempt them. A disclosure about demo data, cost, storage
+or transmission that is true and shown where the user decides is not one of them:
+judge where it sits and what it lets the user do, not the word.
+
+- A second heading or a sentence repeats the main heading, an action label, a
+  state, or the content beside it.
+- A condition the user already knows is explained again where it adds nothing to
+  the decision being made.
+- Production copy carries a development instruction, implementation commentary,
+  or a demo note repeated on screen after screen.
 
 ## Information architecture and flow
 
