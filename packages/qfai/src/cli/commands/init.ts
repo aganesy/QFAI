@@ -73,6 +73,7 @@ import {
   joinAssistantReadme,
   joinLegacyAssistantInstructions,
   legacyAssistantTreeSunsetLabel,
+  REFRESHED_ASSISTANT_LAYERS,
 } from "../../core/paths/assistantPaths.js";
 import {
   PENDING_CITATIONS_BASENAME,
@@ -133,12 +134,9 @@ const execAsync = promisify(execCb);
  * Steps are copied like skills and never linked into a host's skill directory: a host
  * would offer each one as a skill of its own.
  */
-const STANDARD_ASSET_PATHS: readonly string[] = [
-  "assistant/skill",
-  "assistant/step",
-  "assistant/agent",
-  "assistant/rule",
-];
+const STANDARD_ASSET_PATHS: readonly string[] = REFRESHED_ASSISTANT_LAYERS.map(
+  (layer) => `assistant/${layer}`,
+);
 
 const STORY_SEED_PATHS = [
   "decisions.md",

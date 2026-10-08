@@ -13,6 +13,14 @@ export const ASSISTANT_LAYERS = ["rule", "skill", "step", "agent", "prompt"] as 
 
 export type AssistantLayer = (typeof ASSISTANT_LAYERS)[number];
 
+/** The layers `qfai init --force` overwrites from the package. */
+export const REFRESHED_ASSISTANT_LAYERS = [
+  "skill",
+  "step",
+  "agent",
+  "rule",
+] as const satisfies readonly AssistantLayer[];
+
 /**
  * The release that retired the legacy `.qfai/assistant/instructions/` layout.
  *
