@@ -21,13 +21,13 @@ import {
 // below pins one place that keeps recognising Japanese input. The Japanese text
 // is written as \uXXXX escapes, with a comment beside each saying what it is.
 
-// ： is the full-width colon.
+// U+FF1A is the full-width colon.
 const FULL_WIDTH_COLON = "：";
-// 画面 is the Japanese word for "screen".
+// U+753B U+9762 is the Japanese word for "screen".
 const SCREEN_WORD = "画面";
-// 画面モック is the Japanese phrase for "screen mock".
+// The screen word followed by the katakana for "mock" is the Japanese phrase for "screen mock".
 const SCREEN_MOCK_PHRASE = "画面モック";
-// モック is the Japanese word for "mock", used here after "HTML/CSS" and "HTML+CSS".
+// U+30E2 U+30C3 U+30AF is the Japanese word for "mock", used here after "HTML/CSS" and "HTML+CSS".
 const MOCK_WORD = "モック";
 
 describe("a discussion pack written in Japanese is still checked for its mock fallback", () => {
