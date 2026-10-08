@@ -4,6 +4,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+## [2.1.1] - 2026-10-08
+
 ### Added
 
 - **`qfai doctor` reports how many jobs the shipped workflows start per pull
