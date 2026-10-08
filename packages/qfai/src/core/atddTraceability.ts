@@ -2185,7 +2185,9 @@ const ORDERED_MARKER = "\\d{1,9}[.)]";
  * declared, owed and undeferrable.
  *
  * Group 1 is the prefix (indent, marker, and the whitespace after it), whose
- * width is the item's content column; group 2 is the id.
+ * width is the item's content column; group 2 is the id. The colon after the id
+ * may be ASCII or full-width (U+FF1A), because a catalog may be written in
+ * Japanese.
  */
 const US_LIST_ITEM_RE = new RegExp(
   `^([ \\t]*(?:${BULLET_MARKER}|${ORDERED_MARKER})[ \\t]+)(US-\\d{4}(?:-\\d{4})?)[ \\t]*[:\\uFF1A]?`,
