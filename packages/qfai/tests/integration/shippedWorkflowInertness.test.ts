@@ -395,7 +395,7 @@ describe("TC-0003-0036 (TDD-0036): no declared layer script means zero executing
 
 // QFAI:AC-0002-0003-02
 // QFAI:EX-0002-0003-04
-describe("TC-0003-0037 (TDD-0037): three installing job declarations, nine and eight executing instances, zero secret references", () => {
+describe("TC-0003-0037 (TDD-0037): three installing job declarations, eight executing instances on a pull request and on a push, zero secret references", () => {
   // Setup is TC-0003-0036's init output tree (the scriptless adopter);
   // every count below is taken over EVERY workflow file init wrote.
   // Scope notes, disclosed:
@@ -414,25 +414,19 @@ describe("TC-0003-0037 (TDD-0037): three installing job declarations, nine and e
   const INSTALL_RUN_RE = /\b(?:pnpm|yarn|npm)\s+(?:install|ci)\b/;
 
   /**
-   * How many values one matrix axis takes for `event`.
+   * How many values one matrix axis takes.
    *
-   * Two shapes are interpreted, and they are the two the shipped set uses: a
-   * literal list, and the `fromJSON(github.event_name == '<event>' && '<json>'
-   * || '<json>')` selection the validation profiles are chosen by. Anything
-   * else throws rather than scoring 1 — a matrix this cannot read must fail the
-   * count, not quietly shrink it.
+   * Two shapes are interpreted, and they are the two the shipped set uses: a literal list, and the
+   * test orchestrator's `fromJSON` over its detection job's output. Anything else throws rather than
+   * scoring 1 — a matrix this cannot read must fail the count, not quietly shrink it.
    */
-  function matrixAxisLength(key: string, value: unknown, event: string): number {
+  function matrixAxisLength(key: string, value: unknown): number {
     if (Array.isArray(value)) {
       return value.length;
     }
     if (typeof value !== "string") {
       throw new Error(`matrix axis "${key}" is neither a list nor an expression`);
     }
-    const selection =
-      /^\$\{\{\s*fromJSON\(\s*github\.event_name\s*==\s*'([^']+)'\s*&&\s*'(.+?)'\s*\|\|\s*'(.+?)'\s*\)\s*\}\}$/.exec(
-        value.trim(),
-      );
     // The test orchestrator's axis reads a list its own detection job built from the adopter's
     // manifest, so the file alone does not fix its width. What the file DOES fix is the bound:
     // the probe that fills it looks for five layer-named scripts and nothing else. Counting the
@@ -441,19 +435,11 @@ describe("TC-0003-0037 (TDD-0037): three installing job declarations, nine and e
     if (/^\$\{\{\s*fromJSON\(needs\.detection\.outputs\.selected\)\s*\}\}$/.test(value.trim())) {
       return LANE_LAYERS.length;
     }
-    if (selection === null) {
-      throw new Error(`matrix axis "${key}" uses an expression this count cannot read: ${value}`);
-    }
-    const chosen = (event === selection[1] ? selection[2] : selection[3]) ?? "";
-    const parsed: unknown = JSON.parse(chosen);
-    if (!Array.isArray(parsed)) {
-      throw new Error(`matrix axis "${key}" selects a non-list for ${event}`);
-    }
-    return parsed.length;
+    throw new Error(`matrix axis "${key}" uses an expression this count cannot read: ${value}`);
   }
 
-  /** How many instances one job declaration expands to for `event`. */
-  function matrixInstances(job: Record<string, unknown>, event: string): number {
+  /** How many instances one job declaration expands to. */
+  function matrixInstances(job: Record<string, unknown>): number {
     const strategy = job["strategy"];
     if (!isRecord(strategy)) {
       return 1;
@@ -467,7 +453,7 @@ describe("TC-0003-0037 (TDD-0037): three installing job declarations, nine and e
     }
     let instances = 1;
     for (const [key, value] of Object.entries(matrix)) {
-      instances *= matrixAxisLength(key, value, event);
+      instances *= matrixAxisLength(key, value);
     }
     return instances;
   }
@@ -504,7 +490,7 @@ describe("TC-0003-0037 (TDD-0037): three installing job declarations, nine and e
     return count;
   }
 
-  it("the init-written jobs that install dependencies are exactly the docs, test and validate lanes, nine instances on a pull request and eight on a push", async () => {
+  it("the init-written jobs that install dependencies are exactly the docs, test and validate lanes, eight instances on a pull request and eight on a push", async () => {
     const files = await initWorkflowSet();
     // Non-vacuity: the whole multi-file set is what is being counted.
     expect(files.length, "the init-written set must have two or more files").toBeGreaterThanOrEqual(
@@ -540,18 +526,15 @@ describe("TC-0003-0037 (TDD-0037): three installing job declarations, nine and e
       { file: "qfai-validate.yml", jobId: "validate" },
     ]);
 
-    // The declaration count is not the run count. Matrix expansion and
-    // event-selected validation profiles determine the executing instances.
-    // A declaration count alone would miss a leg that stopped expanding.
-    const instances = (event: string): number =>
-      installing.reduce((total, entry) => total + matrixInstances(entry.job, event), 0);
-    // Nine and eight rather than four and three: the test lane's axis is
-    // bounded by the five layer-named scripts its probe looks for, and this
-    // count reads that bound. An adopter declaring none of them starts none
-    // of those five, which is what the condition above the matrix decides and
-    // this count deliberately does not.
-    expect(instances("pull_request"), "a pull request does not expand to nine installs").toBe(9);
-    expect(instances("push"), "a push does not expand to eight installs").toBe(8);
+    // The declaration count is not the run count. Matrix expansion determines the executing
+    // instances, and a declaration count alone would miss a leg that stopped expanding.
+    const instances = installing.reduce((total, entry) => total + matrixInstances(entry.job), 0);
+    // Eight rather than three: the test lane's axis is bounded by the five layer-named scripts
+    // its probe looks for, and this count reads that bound. The two profiles of validation are
+    // steps of one job and install once, so an event no longer changes the count. An adopter
+    // declaring no layer-named script starts none of those five, which is what the condition
+    // above the matrix decides and this count deliberately does not.
+    expect(instances, "the shipped set does not expand to eight installs").toBe(8);
   });
 
   it("zero secret declarations, secret-context references and secrets: inherit across the set", async () => {

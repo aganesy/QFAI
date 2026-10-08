@@ -23,7 +23,9 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 
+import { invocationsOf } from "../helpers/shippedLaneCommands.js";
 import {
+  collectJobSteps,
   collectWorkflowJobs,
   HEADER_PLACEHOLDER_VALUE_RE,
   headerComment,
@@ -610,5 +612,130 @@ describe("TC-0003-0042 (TDD-0042): each shipped header table is complete and cla
     // And a prose claim naming the declared floor is not a violation, so the
     // oracle judges the CLAIM against engines rather than banning numbers.
     expect(collectFloorClaims(`# Requires Node ${floor} or newer.`)).toEqual([floor]);
+  });
+});
+
+/**
+ * The programs a shipped light job may run, as the runner image report for `ubuntu-slim` lists them:
+ * Bash, Git and Node. The shell's own commands and the coreutils the jobs call come with Bash.
+ *
+ * The recommended value of the light variable is only safe while this holds, so a light job that
+ * grows a command outside the set fails here, and the choice is made again on purpose: add the
+ * program to the set after checking the image report, or keep the job off the light class.
+ */
+const UBUNTU_SLIM_PROGRAMS: ReadonlySet<string> = new Set([
+  "[",
+  "cut",
+  "echo",
+  "exit",
+  "git",
+  "node",
+  "printf",
+  "read",
+  "tr",
+]);
+
+/** The longest a job may run on `ubuntu-slim`, in minutes. */
+const UBUNTU_SLIM_TIMEOUT_MINUTES = 15;
+
+/** Every job of the shipped set that reads the light runner variable, as `file#job`. */
+function lightJobsOf(files: readonly ShippedFile[]): Array<{
+  site: string;
+  job: Record<string, unknown>;
+}> {
+  return files.flatMap(([file, body]) =>
+    collectWorkflowJobs(parse(body))
+      .filter(({ job }) => job["runs-on"] === LIGHT_SELECTOR)
+      .map(({ jobId, job }) => ({ site: `${file}#${jobId}`, job })),
+  );
+}
+
+/** What keeps a job off `ubuntu-slim`: a program it lacks, a container, or a long run. */
+function ubuntuSlimViolations(site: string, job: Record<string, unknown>): string[] {
+  const violations: string[] = [];
+  for (const step of collectJobSteps(job)) {
+    const run = step["run"];
+    if (typeof run === "string") {
+      for (const invocation of invocationsOf(run)) {
+        const program = invocation.split(" ")[0] ?? "";
+        if (!UBUNTU_SLIM_PROGRAMS.has(program)) {
+          violations.push(`${site}: runs ${program}, which is not in the ubuntu-slim tool set`);
+        }
+      }
+    }
+    const uses = step["uses"];
+    if (typeof uses === "string" && uses.startsWith("docker://")) {
+      violations.push(`${site}: uses a container image, and ubuntu-slim runs unprivileged`);
+    }
+  }
+  for (const key of ["container", "services"]) {
+    if (job[key] !== undefined) {
+      violations.push(`${site}: declares ${key}, and ubuntu-slim runs unprivileged`);
+    }
+  }
+  const timeout = job["timeout-minutes"];
+  if (typeof timeout !== "number" || timeout > UBUNTU_SLIM_TIMEOUT_MINUTES) {
+    violations.push(
+      `${site}: timeout-minutes is not within the ${UBUNTU_SLIM_TIMEOUT_MINUTES} minute limit`,
+    );
+  }
+  return violations;
+}
+
+// QFAI:AC-0002-0005-02
+// QFAI:EX-0002-0005-03
+describe("the light jobs run only what the recommended ubuntu-slim runner carries", () => {
+  it("every command, container and timeout of a light job fits ubuntu-slim", async () => {
+    const jobs = lightJobsOf(await loadShippedWorkflows());
+    // Non-vacuity: the light class has subjects, and installing jobs are not among them.
+    expect(jobs.length).toBeGreaterThanOrEqual(1);
+    expect(jobs.map(({ site }) => site)).not.toContain("qfai-validate.yml#validate");
+    expect(jobs.flatMap(({ site, job }) => ubuntuSlimViolations(site, job))).toEqual([]);
+  });
+
+  it("refuses a light job that installs dependencies, runs Docker or runs past the limit", () => {
+    // Controls for the zero above: the check fires on each reason a job does not belong on the
+    // light class, so the zero is a fact about the shipped jobs and not about the check.
+    const refused = (job: Record<string, unknown>): string[] => ubuntuSlimViolations("x#y", job);
+    expect(
+      refused({ "timeout-minutes": 5, steps: [{ run: "npm ci" }] }).join(),
+      "an install",
+    ).toContain("npm");
+    expect(
+      refused({ "timeout-minutes": 5, steps: [{ run: "docker build ." }] }).join(),
+      "docker",
+    ).toContain("docker");
+    expect(
+      refused({ "timeout-minutes": 5, container: "node:20", steps: [] }).join(),
+      "a container",
+    ).toContain("container");
+    expect(refused({ "timeout-minutes": 30, steps: [] }).join(), "a long run").toContain("timeout");
+    expect(refused({ "timeout-minutes": 5, steps: [{ run: "git diff --name-only" }] })).toEqual([]);
+  });
+
+  it("each header that has a light job recommends ubuntu-slim and names what stays off it", async () => {
+    const files = await loadShippedWorkflows();
+    const withLightJobs = new Set(lightJobsOf(files).map(({ site }) => site.split("#")[0]));
+    expect(
+      withLightJobs.size,
+      "the light class has subjects in more than one file",
+    ).toBeGreaterThan(1);
+    const violations: string[] = [];
+    for (const [name, body] of files) {
+      if (!withLightJobs.has(name)) continue;
+      const header = headerComment(body).replace(/^# ?/gm, "").replace(/\s+/g, " ");
+      for (const needed of [
+        `set it to \`ubuntu-slim\``,
+        "default stays `ubuntu-latest`",
+        "installs dependencies",
+        "Docker",
+        "15 minutes",
+      ]) {
+        if (!header.includes(needed)) {
+          violations.push(`${name}: header does not say "${needed}"`);
+        }
+      }
+    }
+    expect(violations).toEqual([]);
   });
 });

@@ -8,7 +8,7 @@
 # (you can opt out via `validation.testStrategy.forbidTestTodoStubs: false`
 # in qfai.config.yaml).
 #
-# `full` evaluates every gate group except drift, so an independent job runs
+# `full` evaluates every gate group except drift, so a second step runs
 # `qfai validate --profile drift --fail-on error` on pull requests. Without it
 # nothing here could fail on a downstream edit to upstream SSOT.
 #
@@ -19,26 +19,37 @@
 # | ----------------------------- | -------------------------------------------------------------------------------------------------------- |
 # | Covered layer                 | specification and repository validation (`qfai validate`); it runs none of your own tests                |
 # | Runner selector               | `vars.QFAI_CI_RUNNER`, default `ubuntu-latest`                                                           |
-# | Light runner selector         | `vars.QFAI_CI_LIGHT_RUNNER`, falling back to `vars.QFAI_CI_RUNNER`, default `ubuntu-latest`              |
-# | What reads the light one      | the jobs that install nothing and run no test - change detection and the aggregates                      |
+# | Light runner selector         | `vars.QFAI_CI_LIGHT_RUNNER`, which no job here reads: the one job installs your dependencies            |
+# | What reads the light one      | the jobs that install nothing and run no test, in the other shipped workflows                            |
 # | Wrong runner value            | GitHub does not fail fast: an unknown label leaves the job queued indefinitely, never red                |
 # | `packageManager` precondition | a `pnpm-lock.yaml` needs `"packageManager": "pnpm@<version>"` in package.json, or this lane stops CLOSED |
 # | Inert when                    | never inert; to opt out, list it under `workflow.skipShipped` in qfai.config.yaml and delete the file    |
+# | Default-branch push           | runs, as the post-merge check; with `vars.QFAI_CI_PUSH_POLICY` set to `none`, does not run              |
 # | Fail-open behaviour           | no `.nvmrc` / `.node-version` in your tree: warning annotation, Node 20, and the lane continues          |
 # | Node support floor            | the package declares `engines: ">=20.19.0"`; the fall-open Node 20 satisfies it                          |
 # | Dependency install            | follows your lockfile: pnpm / yarn Berry / yarn Classic / npm, else `npm install`                        |
 #
 # `.nvmrc` wins over `.node-version`; both are read before the fall-open.
 #
-# On a pull request the two profiles run as separate jobs, and each installs
-# your dependencies before it runs. That is the cost of the split: a second
-# install and a second job, which GitHub bills at a minute however short it
-# is. The validator itself takes seconds even on a large tree, so the split
-# buys almost no speed. What it buys is isolation: each profile reports on its
-# own, and neither can stop or cancel the other. If the second install costs
-# you more than that is worth, run both profiles as two steps of one job, and
-# give the second the condition `!cancelled()` so a failing first profile
-# still lets it report.
+# Both profiles run as two steps of one job. Your dependencies are installed
+# once and GitHub bills one job, which it rounds up to a whole minute however
+# short it is. The second step also runs after the first one fails, so one run
+# reports both profiles; it does not run when setup failed, because nothing is
+# installed then. The job carries the check name
+# `qfai validate (full profile, fail on error)`.
+#
+# To have each profile report on its own, make `profile` a matrix axis of the
+# job with `fail-fast: false`, select each step with `matrix.profile`, and give
+# the check name above to a second job that needs the first and runs under
+# `always()`. Each profile then installs your dependencies again, and GitHub
+# bills a second job.
+#
+# A push to the default branch runs this workflow by default, as the post-merge
+# check. If you run `qfai validate` in a post-merge job of your own, set the
+# repository variable `QFAI_CI_PUSH_POLICY` to `none`: the push then starts no
+# job here, and the other shipped workflows skip their push run too. Any other
+# value, or an unset variable, keeps the default. The value `protected` leaves
+# this workflow running; the other shipped workflows say what it skips.
 
 name: qfai validate
 
@@ -64,18 +75,17 @@ concurrency:
 
 jobs:
   validate:
-    name: qfai validate check (${{ matrix.profile }})
-    if: ${{ github.event.action != 'closed' }}
+    name: qfai validate (full profile, fail on error)
+    # Declines a closed pull request, and a push under the `none` push policy.
+    # The decision is the job's own condition because a job that has started is
+    # billed, so a step could not skip it for free.
+    if: ${{ github.event.action != 'closed' && (github.event_name != 'push' || vars.QFAI_CI_PUSH_POLICY != 'none') }}
     runs-on: ${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}
     # Least privilege: the job only checks out the repository and runs the
     # validator; it writes nothing back to GitHub.
     permissions:
       contents: read
-    timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        profile: ${{ fromJSON(github.event_name == 'pull_request' && '["full","drift"]' || '["full"]') }}
+    timeout-minutes: 15
     steps:
       - name: Checkout via actions/checkout 7.0.1
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -419,29 +429,14 @@ jobs:
             npm install --no-audit --no-fund
           fi
       - name: qfai validate
-        if: matrix.profile == 'full'
+        id: full
         run: npx qfai validate --profile full --fail-on error
-      # Full validation excludes drift. Its independent PR-only profile checks
+      # Full validation excludes drift. This pull-request-only profile checks
       # downstream edits to upstream SSOT against the configured base branch.
+      # It runs after a failing full profile too, so one run reports both, and
+      # the job still fails when either step does. It is skipped when an earlier
+      # step failed before the full profile ran: a lane that stopped on setup
+      # must not report a result nothing computed.
       - name: qfai validate (drift protocol)
-        if: matrix.profile == 'drift' && github.event_name == 'pull_request'
+        if: ${{ (success() || steps.full.outcome == 'failure') && github.event_name == 'pull_request' }}
         run: npx qfai validate --profile drift --fail-on error
-
-  summary:
-    name: qfai validate (full profile, fail on error)
-    needs: validate
-    if: ${{ always() && github.event.action != 'closed' }}
-    runs-on: ${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}
-    permissions: {}
-    timeout-minutes: 5
-    steps:
-      - name: Require every validation profile to succeed
-        shell: bash
-        env:
-          PROFILE_RESULT: ${{ needs.validate.result }}
-        run: |
-          if [ "${PROFILE_RESULT}" != "success" ]; then
-            echo "::error::qfai validate: validation profiles concluded ${PROFILE_RESULT:-missing}"
-            exit 1
-          fi
-          echo "qfai validate: all validation profiles passed"

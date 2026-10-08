@@ -1199,7 +1199,7 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
   ],
   [
     "qfai-docs.yml#docs",
-    '{"name":"qfai docs (document shape and Mermaid syntax)","needs":["scope","checks"],"if":"${{ always() && github.event.action != \'closed\' }}","runs-on":"${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{},"timeout-minutes":5}',
+    '{"name":"qfai docs (document shape and Mermaid syntax)","needs":["scope","checks"],"if":"${{ always() && github.event.action != \'closed\' && needs.scope.outputs.run != \'false\' }}","runs-on":"${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{},"timeout-minutes":5}',
   ],
   [
     "qfai-tests.yml#detection",
@@ -1211,15 +1211,11 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
   ],
   [
     "qfai-tests.yml#verdict",
-    '{"name":"verdict","needs":["detection","tests"],"if":"${{ always() && github.event.action != \'closed\' }}","runs-on":"${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{},"timeout-minutes":5}',
+    '{"name":"verdict","needs":["detection","tests"],"if":"${{ always() && github.event.action != \'closed\' && needs.detection.outputs.selected != \'[]\' }}","runs-on":"${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{},"timeout-minutes":5}',
   ],
   [
     "qfai-validate.yml#validate",
-    '{"name":"qfai validate check (${{ matrix.profile }})","if":"${{ github.event.action != \'closed\' }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":10,"strategy":{"fail-fast":false,"matrix":{"profile":"${{ fromJSON(github.event_name == \'pull_request\' && \'[\\"full\\",\\"drift\\"]\' || \'[\\"full\\"]\') }}"}}}',
-  ],
-  [
-    "qfai-validate.yml#summary",
-    '{"name":"qfai validate (full profile, fail on error)","needs":"validate","if":"${{ always() && github.event.action != \'closed\' }}","runs-on":"${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{},"timeout-minutes":5}',
+    '{"name":"qfai validate (full profile, fail on error)","if":"${{ github.event.action != \'closed\' && (github.event_name != \'push\' || vars.QFAI_CI_PUSH_POLICY != \'none\') }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":15}',
   ],
 ]);
 
@@ -1243,9 +1239,9 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
-  ["qfai-docs.yml", "749f4c8dde256a5627ee20906289172ab778cadb143ffcec8ac7961d8d8d3f83"],
-  ["qfai-tests.yml", "badee93be913cb473acf30a6f63d5fb780a1c9be70a0ee6bec8e2d9e262871e6"],
-  ["qfai-validate.yml", "9ed17cf765af243fffe54f4185904f2daa4d9a695eb05405aa9b908bd95604da"],
+  ["qfai-docs.yml", "62ee48407e43282c1ef994d6ae919d27744008e39582b1e179fd522df1bf1210"],
+  ["qfai-tests.yml", "0de90f09058f5258bbeb53b8f305b5a195e5b8a40da01266c4d0dde375d6e524"],
+  ["qfai-validate.yml", "1825fe267c83a53ebdc00a74f77baa34ebb0fbebcdad09df618547a5c8614ae3"],
 ]);
 
 /** The bytes of a shipped file. Nothing is normalized, and the parameter is a Buffer for that reason. */
@@ -2061,7 +2057,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-docs.yml#scope",
-    '{"name":"Decide whether the change can reach a document check","id":"diff","env":{"QFAI_BASE_REF":"${{ github.event.pull_request.base.sha || github.event.before }}","QFAI_EVENT_NAME":"${{ github.event_name }}","QFAI_PUSH_POLICY":"${{ vars.QFAI_CI_PUSH_POLICY }}"},"shell":"bash","run":"<body d6005f8be5423dcbd8bf3c49a0ecf92aad7745989a85b0f983e1fa6cec3dc2c6>"}',
+    '{"name":"Decide whether the change can reach a document check","id":"diff","env":{"QFAI_BASE_REF":"${{ github.event.pull_request.base.sha || github.event.before }}","QFAI_EVENT_NAME":"${{ github.event_name }}","QFAI_PUSH_POLICY":"${{ vars.QFAI_CI_PUSH_POLICY }}"},"shell":"bash","run":"<body a22b637a3d25b6210d7789ea12ecc74dfb2045339b41ce3ac00d70c3bf053971>"}',
   ],
   [
     "qfai-docs.yml#checks",
@@ -2113,7 +2109,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-tests.yml#detection",
-    '{"name":"Select lanes from the name-only diff","id":"diff","env":{"QFAI_BASE_REF":"${{ github.event.pull_request.base.sha || github.event.before }}","QFAI_EVENT_NAME":"${{ github.event_name }}","QFAI_PUSH_POLICY":"${{ vars.QFAI_CI_PUSH_POLICY }}"},"shell":"bash","run":"<body b9c9a4f8853d7ee1dbedd57b9e7d2fe52921f1428b1763889582cdd271b89748>"}',
+    '{"name":"Select lanes from the name-only diff","id":"diff","env":{"QFAI_BASE_REF":"${{ github.event.pull_request.base.sha || github.event.before }}","QFAI_EVENT_NAME":"${{ github.event_name }}","QFAI_PUSH_POLICY":"${{ vars.QFAI_CI_PUSH_POLICY }}"},"shell":"bash","run":"<body a5a7b4c2c8ffd97a200da11b17e69a8a1a3224cf120ce3d00594cc8f1cc0258d>"}',
   ],
   [
     "qfai-tests.yml#detection",
@@ -2121,7 +2117,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-tests.yml#detection",
-    '{"name":"Intersect the selected lanes with the declared scripts","id":"selected","shell":"bash","env":{"QFAI_LANES":"${{ steps.diff.outputs.lanes }}","QFAI_SCRIPTS":"${{ steps.scripts.outputs.scripts }}"},"run":"<body 29613a742aaa8d4100a81736c15168aa1a93806b50f351d53b45e13e542da665>"}',
+    '{"name":"Intersect the selected lanes with the declared scripts","id":"selected","shell":"bash","env":{"QFAI_LANES":"${{ steps.diff.outputs.lanes }}","QFAI_SCRIPTS":"${{ steps.scripts.outputs.scripts }}"},"run":"<body 2fed6c8d2d3199dfb460266ae7b92e05bd6eea86f4aafe935b222d0cd1f7e9fa>"}',
   ],
   [
     "qfai-tests.yml#tests",
@@ -2189,15 +2185,11 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-validate.yml#validate",
-    '{"name":"qfai validate","if":"matrix.profile == \'full\'","run":"<body cafa0558d597d81a2b477a24bf245ceb02e38e714767bde76bf0ff0918dd31d9>"}',
+    '{"name":"qfai validate","id":"full","run":"<body cafa0558d597d81a2b477a24bf245ceb02e38e714767bde76bf0ff0918dd31d9>"}',
   ],
   [
     "qfai-validate.yml#validate",
-    '{"name":"qfai validate (drift protocol)","if":"matrix.profile == \'drift\' && github.event_name == \'pull_request\'","run":"<body 995eb7509a0aa6e91297702f51ec1bdd4f4f5b3cfac4c354edcfa9b28b2303cc>"}',
-  ],
-  [
-    "qfai-validate.yml#summary",
-    '{"name":"Require every validation profile to succeed","shell":"bash","env":{"PROFILE_RESULT":"${{ needs.validate.result }}"},"run":"<body b00785d5001b9e242eb84c75e9e2dc866ead1b1adafe804c8a752ee379347043>"}',
+    '{"name":"qfai validate (drift protocol)","if":"${{ (success() || steps.full.outcome == \'failure\') && github.event_name == \'pull_request\' }}","run":"<body 995eb7509a0aa6e91297702f51ec1bdd4f4f5b3cfac4c354edcfa9b28b2303cc>"}',
   ],
 ];
 
@@ -2478,7 +2470,6 @@ export const ALLOWED_STEP_ENV: ReadonlyMap<string, string> = new Map([
   // needs it to tell a skip it asked for from a skip it did not, and its value is one of two
   // literals the scope body writes.
   ["DOCS_SCOPE", "${{ needs.scope.outputs.run }}"],
-  ["PROFILE_RESULT", "${{ needs.validate.result }}"],
   ["QFAI_BASE_REF", "${{ github.event.pull_request.base.sha || github.event.before }}"],
   // Which event started the run, so the detection body can take a two-dot diff on a push and a
   // three-dot one on a pull request. Its value comes from `github.event_name`, a closed set

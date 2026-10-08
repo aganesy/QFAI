@@ -33,20 +33,32 @@
 # | Fail-open behaviour           | degraded detection (unreachable base, shallow clone, failed diff, unknown path): warning, then every lane |
 # | Node version                  | your `.nvmrc` / `.node-version` wins; with neither, a warning annotation, Node 20, and the lane continues |
 # | Dependency install            | follows your lockfile: pnpm / yarn Berry / yarn Classic / npm, else `npm install`                        |
-# | Default-branch push           | runs the lanes the push selects; with `vars.QFAI_CI_PUSH_POLICY` set to `protected`, runs none            |
+# | Default-branch push           | runs the lanes the push selects; with `vars.QFAI_CI_PUSH_POLICY` set to `protected` or `none`, runs none  |
 #
 # Every lane is inert until you opt in: with no `test:<layer>` script in your
-# package.json the matrix is empty, the job is skipped and the verdict is
-# green over nothing. A lane that does run executes your script exactly once,
+# package.json the matrix is empty and the job is skipped. Only change
+# detection runs then, and it says so in a notice annotation. The verdict is
+# skipped too, and GitHub treats a skipped job as satisfying a required check.
+# When a lane is selected the verdict runs, and it is red unless every selected
+# lane passed. A lane that does run executes your script exactly once,
 # through your own package manager, and appends no argument to it - the script
 # is yours and its runner is unknown here.
+#
+# The jobs that read `vars.QFAI_CI_LIGHT_RUNNER` run only Bash, Git and Node. On
+# a private repository with GitHub-hosted runners, set it to `ubuntu-slim`,
+# which bills at a lower rate than `ubuntu-latest`. The default stays
+# `ubuntu-latest`; the variable is yours to set. Keep `ubuntu-slim` off any job
+# that installs dependencies, needs Docker or can run longer than 15 minutes:
+# do not set `vars.QFAI_CI_RUNNER` to it.
 #
 # A push to the default branch runs the lanes again by default, because nothing
 # here can tell whether that commit passed a pull request first. If your branch
 # protection requires this workflow's checks before every merge, set the
 # repository variable `QFAI_CI_PUSH_POLICY` to `protected`: the push then runs
 # no lane, since the pull request already ran them, and `qfai validate` still
-# runs as the post-merge check. Any other value, or none, keeps the default.
+# runs as the post-merge check. If you run that check in a job of your own, set
+# it to `none`: the push then runs none of the shipped workflows. Any other
+# value, or an unset variable, keeps the default.
 #
 # This file is self-contained: it does not reference any other workflow file
 # QFAI ships.
@@ -109,7 +121,8 @@ jobs:
           # lanes, skip every test and accept a default branch that lost a source file.
           QFAI_EVENT_NAME: ${{ github.event_name }}
           # `protected` declares that every merge passed these checks on a pull
-          # request first; see the header.
+          # request first, and `none` that no shipped workflow runs on a push;
+          # see the header.
           QFAI_PUSH_POLICY: ${{ vars.QFAI_CI_PUSH_POLICY }}
         shell: bash
         run: |
@@ -127,11 +140,15 @@ jobs:
             emit "$FULL_LANES"
             exit 0
           }
-          # Only the exact value skips, so a typo keeps the safe default.
-          if [ "${QFAI_EVENT_NAME:-}" = "push" ] && [ "${QFAI_PUSH_POLICY:-}" = "protected" ]; then
-            echo "qfai tests change detection: default-branch push under the protected push policy - the pull request ran the lanes"
-            emit "[]"
-            exit 0
+          # Only the exact values skip, so a typo keeps the safe default.
+          if [ "${QFAI_EVENT_NAME:-}" = "push" ]; then
+            case "${QFAI_PUSH_POLICY:-}" in
+              protected|none)
+                echo "qfai tests change detection: default-branch push under the ${QFAI_PUSH_POLICY} push policy - the pull request ran the lanes"
+                emit "[]"
+                exit 0
+                ;;
+            esac
           fi
           if [ -z "${QFAI_BASE_REF:-}" ]; then
             fail_open "no base reference available"
@@ -289,6 +306,15 @@ jobs:
           fi
           echo "selected=${selected}" >> "$GITHUB_OUTPUT"
           echo "qfai tests: lanes to run ${selected}"
+          # An empty selection starts no lane and no verdict, so this is the
+          # only place the pull request page can say why nothing ran.
+          if [ "$selected" = "[]" ]; then
+            if [ "${QFAI_SCRIPTS:-}" = "[]" ]; then
+              echo "::notice::qfai tests: no test lane ran - package.json declares no layer-named test script"
+            else
+              echo "::notice::qfai tests: no test lane ran - none of the declared layers was selected for this run"
+            fi
+          fi
   tests:
     name: qfai tests (${{ matrix.layer }})
     needs: detection
@@ -663,8 +689,12 @@ jobs:
     name: verdict
     needs: [detection, tests]
     # Always-run: the verdict has to report whatever the lane concluded,
-    # including a conclusion that would skip an ordinary dependent.
-    if: ${{ always() && github.event.action != 'closed' }}
+    # including a conclusion that would skip an ordinary dependent. It starts
+    # unless the selection is explicitly empty, which is the adopter declaring
+    # no layer-named script or the change selecting none: detection has said so
+    # in a notice, and a skipped job satisfies a required check. A detection
+    # that failed publishes no selection, so the verdict runs and is red.
+    if: ${{ always() && github.event.action != 'closed' && needs.detection.outputs.selected != '[]' }}
     runs-on: ${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}
     # The verdict only aggregates results GitHub already computed; it
     # needs no repository access at all.

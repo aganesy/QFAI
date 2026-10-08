@@ -458,6 +458,34 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The shipped workflows start fewer billed jobs on an event with nothing to
+  run.** A pull request that touches code only, in a project declaring no
+  `test:<layer>` script, used to start seven jobs and now starts three:
+  `change detection`, `change scope` and `qfai validate`. `verdict` is skipped
+  when no lane is selected, `qfai docs (document shape and Mermaid syntax)` is
+  skipped when nothing a document check reads changed, and a notice annotation
+  says why. GitHub counts a skipped job as satisfying a required check, so the
+  check names are unchanged, and either check still fails when the work behind
+  it does or when its detection or scope job fails. `qfai-validate.yml` runs the
+  `full` and `drift` profiles as two steps of one job, and that job keeps the
+  existing check name. The dependencies are installed once, the `drift` step
+  runs after a failing `full` step and not after a failed setup, and the
+  `qfai validate check (full)` and `(drift)` jobs and the `summary` job are gone.
+  The headers of the three workflows say that a workflow-level `paths` filter
+  must not be put on a required check, and that `ubuntu-slim` is the
+  recommended value of `QFAI_CI_LIGHT_RUNNER` on a private repository with
+  GitHub-hosted runners; the default stays `ubuntu-latest`. A test holds every
+  light job to the commands that runner carries. `qfai init` leaves an installed
+  workflow unchanged: copy the packaged files over any workflow you have not
+  edited to take the change, and `qfai doctor` names the files that differ.
+  Fixes #2777, fixes #2778, fixes #2779 and fixes #2780.
+
+- **`QFAI_CI_PUSH_POLICY=none` turns off the push run of all three shipped
+  workflows.** `protected` still skips the test lanes and the document checks on
+  a push to the default branch and keeps `qfai validate` as the post-merge check.
+  `none` also skips the validate job, for a project that runs the validator in a
+  post-merge job of its own. Fixes #2781.
+
 - **Shipped references no longer point at one another, with one exception.** The
   step that reads a reference now names every reference the task needs, and a
   reference describes its neighbour in words. The `ui_ux/` appendices of the

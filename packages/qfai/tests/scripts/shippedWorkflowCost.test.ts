@@ -185,3 +185,65 @@ describe("what the cost reader refuses", () => {
     expect(jobRuns(selected, plain)).toBe(true);
   });
 });
+
+describe("what the cost reader makes of the conditions that decline an idle event", () => {
+  const closeGate = "github.event.action != 'closed'";
+  const scopeAggregate = {
+    if: `\${{ always() && ${closeGate} && needs.scope.outputs.run != 'false' }}`,
+  };
+  const scoped = {
+    if: `\${{ needs.scope.outputs.run == 'true' && ${closeGate} }}`,
+  };
+  const verdict = {
+    if: `\${{ always() && ${closeGate} && needs.detection.outputs.selected != '[]' }}`,
+  };
+  const selected = {
+    if: "${{ needs.detection.outputs.selected != '[]' && needs.detection.outputs.selected != '' }}",
+  };
+  const validation = {
+    if: `\${{ ${closeGate} && (github.event_name != 'push' || vars.QFAI_CI_PUSH_POLICY != 'none') }}`,
+  };
+
+  it("starts each aggregate on exactly the paths where the lane it reports on runs", () => {
+    // An aggregate that starts when its lane does not would be costed as a job nobody pays for,
+    // and one that does not start when its lane does would hide a job that is billed.
+    for (const spec of COST_PATHS) {
+      expect(jobRuns(scopeAggregate, spec), `${spec.id}: document aggregate`).toBe(
+        jobRuns(scoped, spec),
+      );
+      expect(jobRuns(verdict, spec), `${spec.id}: test verdict`).toBe(jobRuns(selected, spec));
+    }
+  });
+
+  it("reads the none push policy as the one thing that declines the validation job on a push", () => {
+    const pathFor = (policy: string | undefined) =>
+      COST_PATHS.find((entry) => entry.event === "push" && entry.pushPolicy === policy);
+    const plain = pathFor(undefined);
+    const covered = pathFor("protected");
+    const none = pathFor("none");
+    expect(plain, "a default-policy push path is declared").toBeDefined();
+    expect(covered, "a protected-policy push path is declared").toBeDefined();
+    expect(none, "a none-policy push path is declared").toBeDefined();
+    if (plain === undefined || covered === undefined || none === undefined) return;
+
+    expect(jobRuns(validation, plain)).toBe(true);
+    expect(jobRuns(validation, covered), "protected leaves the post-merge check").toBe(true);
+    expect(jobRuns(validation, none)).toBe(false);
+    // The none policy also answers "run nothing" in the scope and detection jobs.
+    expect(jobRuns(scoped, none)).toBe(false);
+    expect(jobRuns(selected, none)).toBe(false);
+  });
+
+  it("costs an idle code change at one job per workflow", () => {
+    // A pull request that touches code only, in a project declaring no test script, starts the
+    // document scope, the test detection and the validation job, and nothing else.
+    const fresh = allShippedCostFigures(repoRoot);
+    for (const id of ["code-pull-request", "no-test-scripts"]) {
+      expect(fresh.find((entry) => entry.path === id)?.jobs, id).toEqual([
+        "qfai-docs.yml#scope",
+        "qfai-tests.yml#detection",
+        "qfai-validate.yml#validate",
+      ]);
+    }
+  });
+});

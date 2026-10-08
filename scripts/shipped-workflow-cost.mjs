@@ -20,7 +20,7 @@
  * the per-job floor costs before any work happens. That last figure is the one the adopter's
  * evidence turned on — a job that runs for four seconds is billed as a minute.
  *
- * ## The seven paths
+ * ## The eight paths
  *
  * Each names the facts that decide which jobs run. They are declared rather than inferred,
  * because a path is a claim about an adopter's repository — whether their `package.json`
@@ -59,7 +59,8 @@ export const BILLABLE_JOB_FLOOR_MINUTES = 1;
  * lane's scope reads — and `testScripts` which `test:<layer>` scripts the adopter's manifest
  * declares, the opt-in the test lanes read through the detection job's outputs. `pushPolicy` is the
  * adopter's `QFAI_CI_PUSH_POLICY`: `protected` declares that every merge passed a pull request's
- * checks first, so a push runs no lane and no document check.
+ * checks first, so a push runs no lane and no document check, and `none` also declines the
+ * validation job.
  */
 export const COST_PATHS = [
   {
@@ -122,6 +123,15 @@ export const COST_PATHS = [
     documentsTouched: true,
     testScripts: ["unit", "component", "integration", "api", "e2e"],
   },
+  {
+    id: "none-default-branch-push",
+    what: "a push to the default branch where the adopter declares the none push policy",
+    event: "push",
+    pushPolicy: "none",
+    documentsOnly: false,
+    documentsTouched: true,
+    testScripts: ["unit", "component", "integration", "api", "e2e"],
+  },
 ];
 
 const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
@@ -150,6 +160,17 @@ const SELECTED_GATE =
   "needs.detection.outputs.selected != '[]' && needs.detection.outputs.selected != ''";
 
 /**
+ * The aggregates that decline to start when the job they read said, explicitly, that nothing was to
+ * run. The document aggregate reads the scope's answer and the test verdict reads the selection, so
+ * each starts on exactly the paths where the lane it reports on runs.
+ */
+const SCOPE_AGGREGATE = `always() && ${CLOSE_GATE} && needs.scope.outputs.run != 'false'`;
+const SELECTED_AGGREGATE = `always() && ${CLOSE_GATE} && needs.detection.outputs.selected != '[]'`;
+
+/** The validation job: the close gate, and a push the adopter turned off. */
+const PUSH_POLICY_GATE = `${CLOSE_GATE} && (github.event_name != 'push' || vars.QFAI_CI_PUSH_POLICY != 'none')`;
+
+/**
  * Whether a job allocates a runner on this path.
  *
  * Throws on a condition it does not recognise: an unread condition would be counted as running,
@@ -158,12 +179,25 @@ const SELECTED_GATE =
 export function jobRuns(job, pathSpec) {
   const closed = pathSpec.action === "closed";
   // The scope and detection bodies answer "run nothing" for this push before they read the diff.
-  const coveredPush = pathSpec.event === "push" && pathSpec.pushPolicy === "protected";
+  const coveredPush =
+    pathSpec.event === "push" &&
+    (pathSpec.pushPolicy === "protected" || pathSpec.pushPolicy === "none");
   const text = conditionText(isRecord(job) ? job["if"] : undefined);
   if (text === "") return true;
   if (text === CLOSE_GATE) return !closed;
   if (text === `always() && ${CLOSE_GATE}`) return !closed;
   if (text === "always()") return true;
+  if (text === PUSH_POLICY_GATE) {
+    return !closed && !(pathSpec.event === "push" && pathSpec.pushPolicy === "none");
+  }
+  if (text === SCOPE_AGGREGATE) {
+    // Starts exactly when the scope did not answer false, which is when the checks run.
+    return !closed && !coveredPush && pathSpec.documentsTouched === true;
+  }
+  if (text === SELECTED_AGGREGATE) {
+    // Starts exactly when the selection is not empty, which is when the test lane runs.
+    return !closed && !coveredPush && !pathSpec.documentsOnly && pathSpec.testScripts.length > 0;
+  }
   if (text === SCOPE_GATE) {
     // The document lane runs when its scope found a change a document check reads.
     return !closed && !coveredPush && pathSpec.documentsTouched === true;
@@ -187,9 +221,9 @@ export function jobRuns(job, pathSpec) {
 /**
  * How many runners a job allocates. A matrix job is billed per leg.
  *
- * The one matrix whose width depends on the event is the validate profile list, which the
- * template writes as a `fromJSON` over the event name; it is read here rather than evaluated,
- * because the expression's two branches are the whole of what it can produce.
+ * The one matrix whose width depends on the path is the test lane's layer list, which the
+ * template writes as a `fromJSON` over the detection job's output; it is read here rather than
+ * evaluated.
  */
 export function instancesOf(job, pathSpec) {
   const strategy = isRecord(job) ? job.strategy : undefined;
@@ -206,11 +240,6 @@ export function instancesOf(job, pathSpec) {
       // One leg per layer the path declares a script for. `jobRuns` has already refused the path
       // where that list is empty, so the axis here is never zero-width.
       widest = Math.max(widest, pathSpec.testScripts.length);
-      continue;
-    }
-    if (text.includes("github.event_name == 'pull_request'")) {
-      // `'["full","drift"]'` on a pull request, `'["full"]'` otherwise.
-      widest = Math.max(widest, pathSpec.event === "pull_request" ? 2 : 1);
       continue;
     }
     throw new Error(`unrecognised matrix axis, refusing to cost it: ${text}`);
