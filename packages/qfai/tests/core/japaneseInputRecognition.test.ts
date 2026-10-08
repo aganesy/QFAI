@@ -22,13 +22,13 @@ import {
 // is written as \uXXXX escapes, with a comment beside each saying what it is.
 
 // U+FF1A is the full-width colon.
-const FULL_WIDTH_COLON = "：";
+const FULL_WIDTH_COLON = "\uFF1A";
 // U+753B U+9762 is the Japanese word for "screen".
-const SCREEN_WORD = "画面";
+const SCREEN_WORD = "\u753B\u9762";
 // The screen word followed by the katakana for "mock" is the Japanese phrase for "screen mock".
-const SCREEN_MOCK_PHRASE = "画面モック";
+const SCREEN_MOCK_PHRASE = "\u753B\u9762\u30E2\u30C3\u30AF";
 // U+30E2 U+30C3 U+30AF is the Japanese word for "mock", used here after "HTML/CSS" and "HTML+CSS".
-const MOCK_WORD = "モック";
+const MOCK_WORD = "\u30E2\u30C3\u30AF";
 
 describe("a discussion pack written in Japanese is still checked for its mock fallback", () => {
   async function storyWorkshopIssues(storyText: string) {
