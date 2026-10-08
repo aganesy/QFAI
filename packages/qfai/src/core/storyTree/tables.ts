@@ -38,11 +38,16 @@ export function parseRecordTable(text: string, kind: RecordTableKind): ParsedRec
   }
   const table = tables[0];
   if (!table) return { rows: [], errors };
+  const unexpected = table.headers.filter((header) => !HEADERS.includes(header));
+  const missing = HEADERS.filter((header) => !table.headers.includes(header));
+  for (const header of unexpected) errors.push(`${kind} has the unexpected column ${header}`);
+  for (const header of missing) errors.push(`${kind} is missing the column ${header}`);
   if (
-    table.headers.length !== HEADERS.length ||
+    unexpected.length === 0 &&
+    missing.length === 0 &&
     table.headers.some((header, index) => header !== HEADERS[index])
   ) {
-    errors.push(`${kind} requires ID, Content, Approach and Status columns`);
+    errors.push(`${kind} columns must be ID, Content, Approach and Status, in that order`);
   }
   const rows = table.rows.map((cells) => ({
     id: cells[0] ?? "",
