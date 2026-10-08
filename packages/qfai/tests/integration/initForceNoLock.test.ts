@@ -43,11 +43,15 @@ const shippedMaster = (name: string): string =>
   path.join(getInitAssetsDir(), "root", ".agents", "rules", name);
 
 describe("init --force overwrites the regenerated assets", () => {
+  // QFAI:AC-0001-0022-01
   // QFAI:EX-0001-0022-02
   // QFAI:EX-0001-0038-04
   it("restores an edited rule and skill, writes no lock and leaves the project's files alone", async () => {
     const dir = await newTempDir();
     await init(dir);
+    const localSkill = path.join(dir, ".qfai", "assistant", "skill.local", "my-skill", "SKILL.md");
+    await mkdir(path.dirname(localSkill), { recursive: true });
+    await writeFile(localSkill, "# My skill\n", "utf-8");
     const rule = "rule/constitution.md";
     const skill = "skill/qfai-sdd/SKILL.md";
     for (const relative of [rule, skill]) {
@@ -74,6 +78,7 @@ describe("init --force overwrites the regenerated assets", () => {
         relative,
       ).toBe(await readFile(shippedAssistant(relative), "utf-8"));
     }
+    expect(await readFile(localSkill, "utf-8")).toBe("# My skill\n");
     expect(await exists(path.join(dir, ".qfai", "assistant", ".assets.lock.json"))).toBe(false);
     for (const [file, text] of kept) {
       expect(await readFile(path.join(dir, ...file.split("/")), "utf-8"), file).toBe(text);
