@@ -54,6 +54,19 @@ describe("README facts", () => {
     }
   });
 
+  it("states the upgrade procedure in both READMEs", async () => {
+    for (const readmePath of READMES) {
+      const readme = await readFile(readmePath, "utf-8");
+      const start = readme.indexOf("### Keeping QFAI itself up to date");
+      expect(start, readmePath).toBeGreaterThanOrEqual(0);
+      const section = readme.slice(start, readme.indexOf("\n## ", start));
+      expect(section, readmePath).toContain("To upgrade by hand:");
+      expect(section, readmePath).toContain("npx qfai init --force");
+      expect(section, readmePath).toContain("npx qfai doctor");
+      expect(section, readmePath).toContain("npx qfai validate");
+    }
+  });
+
   it("keeps npm README onboarding consistent", async () => {
     const readmePath = path.join(repoRoot, "packages", "qfai", "README.md");
     const readme = await readFile(readmePath, "utf-8");

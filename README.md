@@ -803,6 +803,23 @@ Moving a project from the spec-pack layout to the story tree also requires
 `/qfai-migration-v1-to-v2`. `init --force` refreshes shipped assets; the
 migration skill moves project content and reports items that need a person.
 
+To upgrade by hand:
+
+1. Install the new version with your package manager, for example
+   `npm i -D qfai@<version>`.
+2. Move every edit you made to a shipped skill, step, agent or rule into
+   `.qfai/assistant/skill.local/` or a rule overlay. The next step overwrites
+   the shipped copies.
+3. Run `npx qfai init --force`. It replaces the skills and steps an agent may
+   be reading, so an agent upgrading the project reads them again from disk
+   afterwards.
+4. Delete the files the release notes of the new version list as retired, once
+   nothing you keep reads them.
+5. Run `npx qfai doctor` and `npx qfai validate`, and fix what they report.
+6. Commit the result in one change.
+
+An agent asked to upgrade `qfai` follows these steps as a dependency update.
+
 Merging the bump on its own leaves the repository claiming a version whose
 skills it does not have. If you use Renovate, QFAI publishes a preset that keeps
 the two together:

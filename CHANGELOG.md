@@ -14,6 +14,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   a decision. A late or repeated answer is not applied twice, and an unanswered
   question carries over. Fixes #2987.
 
+- **The README states how to upgrade qfai.** The section "Keeping QFAI
+  itself up to date" now lists the steps: install, move local edits to the
+  overlay directories, `npx qfai init --force`, delete the retired files the
+  release notes list, then `npx qfai doctor` and `npx qfai validate`. The
+  `implement-dep-bump` step points at that procedure when the dependency is
+  `qfai`, so an upgrade request runs as an ordinary dependency update (#3016).
+
 - **The prompt-time reminder names the reply language.** The message the
   `UserPromptSubmit` hook prints on every turn now also tells the agent to reply
   in the user's working language, as `communication.md` sets, however much of
