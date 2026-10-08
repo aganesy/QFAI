@@ -6,6 +6,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`user-questions.md` says what to do when a question is accepted but not shown.**
+  A structured question that the host accepted is not a question the user saw or
+  answered. The rule now keeps accepted, shown and answered apart, sends the
+  same question in plain text after a tool error, a lost connection or a report
+  that it never appeared, and ends a turn or a resolved notice without recording
+  a decision. A late or repeated answer is not applied twice, and an unanswered
+  question carries over. Fixes #2987.
+
 - **`qfai doctor` warns when an installed shipped workflow differs from the
   shipped text.** For each of `qfai-validate.yml`, `qfai-tests.yml` and
   `qfai-docs.yml` under `.github/workflows/`, a file whose text differs from the
@@ -15,6 +23,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   installed workflow unchanged and says nothing about it, so after upgrading
   qfai, run `qfai doctor` and copy the packaged file over any workflow you have
   not edited. Fixes #3013.
+
+- **`qfai doctor` warns when an installed shipped assistant file differs from
+  the shipped text.** For each file of the package's `skill`, `step`, `agent`
+  and `rule` assistant trees that is installed under `.qfai/assistant/`, a file
+  whose text differs from the packaged copy, line endings aside, raises an
+  `assistant.drift.<path>` warning that names the installed file and the
+  packaged copy. Doctor changes nothing: `npx qfai init --force` takes the
+  shipped text and overwrites those files, so keep local changes in
+  `rule/*.local.md` and `skill.local/`, which doctor never compares. After an
+  upgrade, a clean run of `qfai doctor` shows the installed assistant files
+  match the installed qfai. Fixes #3016.
 
 - **The README states how to upgrade qfai.** The section "Keeping QFAI
   itself up to date" now lists the steps: install, move local edits to the

@@ -14,7 +14,7 @@ export type WorkflowDriftCheck = {
   details: { path: string; packagedCopy: string };
 };
 
-async function readText(target: string): Promise<string | undefined> {
+export async function readText(target: string): Promise<string | undefined> {
   try {
     return await readFile(target, "utf-8");
   } catch {
@@ -23,7 +23,7 @@ async function readText(target: string): Promise<string | undefined> {
 }
 
 /** Line endings are not an edit: a checkout may convert them. */
-function withLf(text: string): string {
+export function withLf(text: string): string {
   return text.replace(/\r\n?/g, "\n");
 }
 

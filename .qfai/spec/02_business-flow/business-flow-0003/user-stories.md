@@ -17,3 +17,4 @@
 | US-0003-0011 | Shipped workflow checks                      | `user-story-0003-0011/` |
 | US-0003-0012 | Doctor failure threshold                     | `user-story-0003-0012/` |
 | US-0003-0030 | Mutation proofs that still replay            | `user-story-0003-0030/` |
+| US-0003-0031 | Shipped assistant file checks                | `user-story-0003-0031/` |
