@@ -16,6 +16,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   qfai, run `qfai doctor` and copy the packaged file over any workflow you have
   not edited. Fixes #3013.
 
+- **`qfai doctor` warns when an installed shipped assistant file differs from
+  the shipped text.** For each file of the package's `skill`, `step`, `agent`
+  and `rule` assistant trees that is installed under `.qfai/assistant/`, a file
+  whose text differs from the packaged copy, line endings aside, raises an
+  `assistant.drift.<path>` warning that names the installed file and the
+  packaged copy. Doctor changes nothing: `npx qfai init --force` takes the
+  shipped text and overwrites those files, so keep local changes in
+  `rule/*.local.md` and `skill.local/`, which doctor never compares. After an
+  upgrade, a clean run of `qfai doctor` shows the installed assistant files
+  match the installed qfai. Fixes #3016.
+
 - **The README states how to upgrade qfai.** The section "Keeping QFAI
   itself up to date" now lists the steps: install, move local edits to the
   overlay directories, `npx qfai init --force`, delete the retired files the

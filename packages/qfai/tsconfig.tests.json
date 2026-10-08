@@ -206,6 +206,7 @@
     "tests/integration/contractDeferralNotes.test.ts",
     "tests/integration/contractIdScheme.test.ts",
     "tests/integration/designAuditTokenDrift.test.ts",
+    "tests/integration/doctorAssistantDrift.test.ts",
     "tests/integration/doctorDocsLane.test.ts",
     "tests/integration/doctorMdschemaBinary.test.ts",
     "tests/integration/doctorMutationProofs.test.ts",
