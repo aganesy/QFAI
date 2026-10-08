@@ -27,7 +27,7 @@ are exact: an unknown key is refused.
 
 ## Extraction
 
-The facts `references/extraction.md` defines, and nothing else. It names no
+The facts the extraction reference defines, and nothing else. It names no
 route, stage or step.
 
 ```json

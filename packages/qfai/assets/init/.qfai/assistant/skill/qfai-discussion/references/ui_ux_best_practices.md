@@ -12,9 +12,7 @@ Move volatile or bulky detail into the `ui_ux/` sidecar references and research 
 - Core Decision Rules
 - QFAI-Specific Authoring Guidance
 - Compact Review Checklist
-- When To Open The Appendices
 - Anti-Bloat Rules For Future Edits
-- Appendix Index
 
 ## Why This File Is Compact
 
@@ -29,10 +27,7 @@ Move volatile or bulky detail into the `ui_ux/` sidecar references and research 
 ## How To Use This Reference
 
 1. Read this file first for durable decision rules.
-2. Open only the appendix you need:
-   - `ui_ux/platform_baselines.md`
-   - `ui_ux/review_audit_playbook.md`
-   - `ui_ux/trend_scan_playbook.md`
+2. Open only the appendix the `discussion-uiux` step names for the current task.
 3. For trends, platform release details, or fast-moving conventions, do web research during the current discussion run and cite sources in `04_Sources.md`.
 
 ## Core Decision Rules
@@ -118,9 +113,8 @@ resolves through:
 
 Those three are the entire canonical sidecar family. Evaluation axes are global constants
 (4-step ordinal: weak / acceptable / strong / exceptional) fixed by the review validation the
-QFAI CLI applies — not by any file in this tree. The shipped
-`.qfai/assistant/skill/qfai-prototyping/references/reviewer-prompt.md` restates that axis set
-for the reviewer prompt; editing it does not change the set the CLI accepts. Axes are not
+QFAI CLI applies — not by any file in this tree. The reviewer prompt that
+`/qfai-prototyping` ships restates that axis set; editing it does not change the set the CLI accepts. Axes are not
 authored as discussion sidecars. Discussion is planner-first: it carries exploration directions
 unranked and does not select a single visual winner, so there is no strategy, taste-interview, scoring,
 override, option-comparison or selected-anchor sidecar. Do NOT create
@@ -186,29 +180,6 @@ Use this as the first-pass gate before deeper review.
 - Are comparisons and rejections traceable?
 - Can prototyping and SDD proceed without guessing the intended UX?
 
-## When To Open The Appendices
-
-Open `ui_ux/platform_baselines.md` when you need:
-
-- touch target sizes
-- breakpoint heuristics
-- platform navigation baselines
-- dark mode and cross-platform adaptation notes
-
-Open `ui_ux/review_audit_playbook.md` when you need:
-
-- heuristic review structure
-- anti-pattern checklists
-- screen-spec documentation rules
-- audit/testing guidance
-
-Open `ui_ux/trend_scan_playbook.md` when you need:
-
-- trend-scan category coverage
-- freshness and citation rules
-- how to translate references into local decisions
-- how to keep trends from overwhelming product-specific needs
-
 ## Anti-Bloat Rules For Future Edits
 
 - Do not add long font-scale tables, full platform encyclopedias, or year-stamped trend lists to this file.
@@ -216,9 +187,3 @@ Open `ui_ux/trend_scan_playbook.md` when you need:
 - Do not repeat the same concept across multiple theoretical frameworks unless the duplication changes an actual QFAI decision.
 - Prefer one sharp rule plus a short verification cue over paragraph-heavy explanation.
 - If a section is mostly lookup material, move it to an appendix.
-
-## Appendix Index
-
-- [Platform Baselines](ui_ux/platform_baselines.md)
-- [Review Audit Playbook](ui_ux/review_audit_playbook.md)
-- [Trend Scan Playbook](ui_ux/trend_scan_playbook.md)

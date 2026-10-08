@@ -19,6 +19,8 @@ Stage 2 of the story tree: policy and business flows.
   `.qfai/assistant/skill/qfai-sdd/templates/spec/01_policy/`,
   `.qfai/assistant/skill/qfai-sdd/templates/spec/02_business-flow/` and
   `.qfai/assistant/skill/qfai-sdd/templates/spec/03_contract/tech.md`.
+- `.qfai/assistant/skill/qfai-sdd/references/spec-traceability-rules.md#document-shapes`,
+  for what a template cannot show.
 - `.qfai/assistant/skill/qfai-sdd/references/sdd-phase-checklists.md#policy-and-business-flow`
   when editing.
 

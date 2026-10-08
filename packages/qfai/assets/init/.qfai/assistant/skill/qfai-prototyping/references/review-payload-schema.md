@@ -31,8 +31,8 @@ per-(UI contract × screen) artifact written for a review — no `.html`, no
 `.png`, no `.interaction.json`.
 
 The Reviewer's other result is the per-iteration summary
-`iter-NN/review.json` (one per iteration, a different shape — see
-`references/reviewer-prompt.md`). It is not a per-screen artifact and
+`iter-NN/review.json` (one per iteration, a different shape, set by
+the reviewer prompt). It is not a per-screen artifact and
 is never read against this schema.
 
 ## Shape (11 required top-level fields)

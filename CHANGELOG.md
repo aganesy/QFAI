@@ -6,6 +6,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`qfai doctor` warns when an installed shipped workflow differs from the
+  shipped text.** For each of `qfai-validate.yml`, `qfai-tests.yml` and
+  `qfai-docs.yml` under `.github/workflows/`, a file whose text differs from the
+  copy in the package, line endings aside, raises a `workflows.drift.<name>`
+  warning that names the packaged file to copy from. Doctor changes nothing, and
+  a workflow that is not installed raises no finding. `qfai init` still leaves an
+  installed workflow unchanged and says nothing about it, so after upgrading
+  qfai, run `qfai doctor` and copy the packaged file over any workflow you have
+  not edited. Fixes #3013.
+
 - **The README states how to upgrade qfai.** The section "Keeping QFAI
   itself up to date" now lists the steps: install, move local edits to the
   overlay directories, `npx qfai init --force`, delete the retired files the
@@ -428,6 +438,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   each earlier group.
 
 ### Changed
+
+- **Shipped references no longer point at one another, with one exception.** The
+  step that reads a reference now names every reference the task needs, and a
+  reference describes its neighbour in words. The `ui_ux/` appendices of the
+  discussion skill are named by the `discussion-uiux` step. The guard test
+  keeps one pointer, in the concrete-abstract cycle reference. Part of #3141.
 
 - **The web-research sandbox template no longer allows `.qfai/evidence/`.**
   Nothing writes web-research results there, so the allowance is gone; the

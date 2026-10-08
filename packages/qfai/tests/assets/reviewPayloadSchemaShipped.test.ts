@@ -62,7 +62,6 @@ describe("shipped reviewer payload schema", () => {
   // two outputs each schema belongs to.
   it("keeps the reviewer prompt from pointing the per-screen payload at the summary shape", async () => {
     for (const prompt of await readShipped(PROMPT_REL)) {
-      expect(prompt).toContain(SCHEMA_REL.slice("skill/qfai-prototyping/".length));
       expect(prompt).toContain("<screen>.review.json");
       expect(prompt).toContain("Per-iteration summary (`iter-NN/review.json`)");
       expect(prompt).not.toContain("## Output (`iter-NN/review.json`)");
@@ -75,6 +74,7 @@ describe("shipped reviewer payload schema", () => {
       expect(procedure, "the loop step has no Procedure section").toBeDefined();
       expect(procedure).toContain("iter-NN/<ui-contract-id>/<screen>.review.json");
       expect(procedure).toContain("iter-NN/review.json");
+      expect(step).toContain(`.qfai/assistant/${SCHEMA_REL}`);
     }
   });
 });
