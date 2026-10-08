@@ -55,135 +55,17 @@ const LINE_BACKLOG: ReadonlyMap<string, number> = new Map([
 /**
  * References that name another reference, as the files each one names.
  *
- * SIMPLIFIED: these pointers stay, because each reference is read together with
- * the one it names and moving the text means rewriting both and the tests that
- * pin them.
- * Lift when: the entry file names every reference itself and the pointer is
- * dropped from the reference. The entry is then removed.
+ * SIMPLIFIED: the concrete-abstract cycle reference keeps its citation of the
+ * triage reference's section on changing the story tree, because the
+ * acceptance test for applying an adopted finding requires that citation to
+ * resolve.
+ * Lift when: that test reads the citation from the cycle step instead, and the
+ * pointer is dropped from the reference. The entry is then removed.
  */
 const REFERENCE_POINTERS: ReadonlyMap<string, readonly string[]> = new Map([
   [
-    "rule/references/gate-failure-autorepair.md",
-    ["skill/qfai-verify/references/validate-json-schema.md"],
-  ],
-  [
-    "skill/qfai-discussion/references/discussion-completion-matrix.md",
-    ["skill/qfai-discussion/references/ui-bearing-playbook.md"],
-  ],
-  [
-    "skill/qfai-discussion/references/ui_ux_best_practices.md",
-    [
-      "skill/qfai-discussion/references/ui_ux/platform_baselines.md",
-      "skill/qfai-discussion/references/ui_ux/review_audit_playbook.md",
-      "skill/qfai-discussion/references/ui_ux/trend_scan_playbook.md",
-      "skill/qfai-prototyping/references/reviewer-prompt.md",
-    ],
-  ],
-  [
-    "skill/qfai-implement/references/oracle-strength.md",
-    ["skill/qfai-implement/references/red-not-observable.md"],
-  ],
-  [
-    "skill/qfai-implement/references/red-admissibility.md",
-    ["skill/qfai-implement/references/red-not-observable.md"],
-  ],
-  [
-    "skill/qfai-prototyping/references/design-md-spec.md",
-    ["skill/qfai-sdd/references/design-md-brand-catalog.md"],
-  ],
-  [
-    "skill/qfai-prototyping/references/iteration-loop.md",
-    [
-      "skill/qfai-prototyping/references/handoff.md",
-      "skill/qfai-prototyping/references/review-payload-schema.md",
-      "skill/qfai-prototyping/references/reviewer-prompt.md",
-    ],
-  ],
-  [
-    "skill/qfai-prototyping/references/review-payload-schema.md",
-    ["skill/qfai-prototyping/references/reviewer-prompt.md"],
-  ],
-  [
-    "skill/qfai-prototyping/references/reviewer-prompt.md",
-    [
-      "skill/qfai-prototyping/references/generator-prompt.md",
-      "skill/qfai-prototyping/references/review-payload-schema.md",
-    ],
-  ],
-  ["skill/qfai-run/references/plan.md", ["skill/qfai-run/references/extraction.md"]],
-  [
     "skill/qfai-sdd/references/concrete-abstract-cycle.md",
     ["skill/qfai-sdd/references/sdd-triage.md"],
-  ],
-  [
-    "skill/qfai-sdd/references/contract-artifact-rules.md",
-    ["skill/qfai-prototyping/references/reviewer-prompt.md"],
-  ],
-  [
-    "skill/qfai-sdd/references/design-anti-patterns.md",
-    ["skill/qfai-prototyping/references/reviewer-prompt.md"],
-  ],
-  [
-    "skill/qfai-sdd/references/design-md-authoring.md",
-    [
-      "skill/qfai-discussion/references/design-dna-intake.md",
-      "skill/qfai-prototyping/references/design-md-spec.md",
-      "skill/qfai-sdd/references/design-md-brand-catalog.md",
-    ],
-  ],
-  [
-    "skill/qfai-sdd/references/design-md-brand-catalog.md",
-    [
-      "skill/qfai-sdd/references/design-anti-patterns.md",
-      "skill/qfai-sdd/references/design-md-authoring.md",
-    ],
-  ],
-  [
-    "skill/qfai-sdd/references/requirements-decomposition.md",
-    [
-      "skill/qfai-sdd/references/sdd-triage.md",
-      "skill/qfai-sdd/references/spec-traceability-rules.md",
-    ],
-  ],
-  [
-    "skill/qfai-sdd/references/sdd-execution-playbook.md",
-    [
-      "skill/qfai-sdd/references/concrete-abstract-cycle.md",
-      "skill/qfai-sdd/references/contract-artifact-rules.md",
-      "skill/qfai-sdd/references/sdd-triage.md",
-      "skill/qfai-sdd/references/spec-traceability-rules.md",
-    ],
-  ],
-  [
-    "skill/qfai-sdd/references/sdd-phase-checklists.md",
-    [
-      "skill/qfai-sdd/references/concrete-abstract-cycle.md",
-      "skill/qfai-sdd/references/contract-artifact-rules.md",
-      "skill/qfai-sdd/references/sdd-execution-playbook.md",
-      "skill/qfai-sdd/references/spec-traceability-rules.md",
-    ],
-  ],
-  [
-    "skill/qfai-sdd/references/sdd-quality-gate.md",
-    [
-      "skill/qfai-sdd/references/contract-artifact-rules.md",
-      "skill/qfai-sdd/references/spec-traceability-rules.md",
-    ],
-  ],
-  [
-    "skill/qfai-sdd/references/spec-traceability-rules.md",
-    [
-      "skill/qfai-sdd/references/contract-artifact-rules.md",
-      "skill/qfai-sdd/references/requirements-decomposition.md",
-    ],
-  ],
-  [
-    "skill/qfai-sdd/references/ui-contract-guide.md",
-    ["skill/qfai-sdd/references/ui-design-contract-normalization.md"],
-  ],
-  [
-    "skill/qfai-sdd/references/ui-design-contract-normalization.md",
-    ["skill/qfai-prototyping/references/reviewer-prompt.md"],
   ],
 ]);
 
