@@ -27,6 +27,8 @@ A downstream skill reads the UI definition in this order.
    - primary tasks
    - states
    - actions
+   - supplements (the text shown beyond title, group headings and labels, each with
+     its reason) and, when written, structure (the groups and headings, in order)
 
 3. **Brand SSOT**
    - root `DESIGN.md` (front-matter + `# Brand Philosophy` body), the only
@@ -35,6 +37,10 @@ A downstream skill reads the UI definition in this order.
 4. **Prototype handoff** (`.qfai/prototype/final/handoff.json`, when a
    prototyping loop ran): the final prototype, procurement and implementation
    notes
+
+The supplements and structure are required input: implementation adds no text the
+contract does not declare, and surface review compares the rendered text with them.
+A screen that lacks them is returned to `/qfai-sdd`.
 
 The paths that render a user-visible surface are declared by `uiux.surfacePaths`
 in `qfai.config.yaml`, and nowhere else.

@@ -4,6 +4,34 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **The migration guide is split in two, and every shipped Markdown file is
+  within 500 lines.** `references/migration-guide.md` keeps the preparation, the
+  twelve steps, the write boundary, how to resolve the reports and the free-text
+  entry. The plan format, the retired configuration keys, the contract numbers,
+  the business rules and what each document keeps moved to
+  `references/migration-placement.md`, which the skill names with the moments to
+  read it. The guard test no longer lists a file over the limit. Part of #3141.
+
+- **`qfai validate` prints only the repairs that apply to a broken assistant
+  link.** The suggested action of `QFAI-LINK-001` listed every repair for every
+  kind of damage, about 3 KB for a single deleted wrapper. It now lists the
+  repairs for the kinds of damage the finding names: the `qfai init` rerun for a
+  missing, mis-pointed or flattened wrapper, the replacement of a linked
+  directory, the move-aside step for a directory or special file in a wrapper's
+  place, the permission step for an unreadable document, and the step for a
+  damaged canonical side. Damage of a kind the check does not recognise still
+  gets every repair (#3012).
+
+- **`qfai validate` names the offending column of `decisions.md` and
+  `open-questions.md`.** A table with a column other than ID, Content, Approach
+  and Status now reports `has the unexpected column <name>` for each extra
+  column and `is missing the column <name>` for each absent one. Four correct
+  columns in a different order report that the columns must be in the order ID,
+  Content, Approach and Status. The finding was one message for all three
+  cases. Refs #2951.
+
 ### Fixed
 
 - **The release workflow's publish job no longer warns that `NODE_AUTH_TOKEN` is
@@ -16,6 +44,32 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 ## [2.1.1] - 2026-10-08
 
 ### Added
+
+- **A screen in a UI contract states the text it shows.** Each screen now carries
+  `supplements`: every displayed text beyond its `title`, group headings and
+  labels, each with the reason the user needs it, or `supplements: []` when the
+  screen shows none. An optional `structure` lists the groups the screen is read
+  in, the primary tasks each serves, the elements and actions it holds and the
+  heading it shows. Both shapes are closed. Implementation reads them before
+  adding any text, and surface review compares the rendered screen with them in
+  both directions, so a necessary condition, cost, destination, result or
+  recovery text cannot be dropped in a tidy-up and an undeclared sentence is
+  excess. `qfai validate` reports an absent or malformed key as
+  `QFAI-CONTRACT-043` and an id the screen does not declare as
+  `QFAI-CONTRACT-044`, both errors in the `sdd`, `tdd`, `prototyping` and
+  `full` profiles, and a group heading or supplement that repeats the title, a
+  heading or the label beside it as `QFAI-CONTRACT-045`, a warning. Only exact
+  wording is compared; whether a sentence is needed is for the reviewer. The UI
+  contract guide, the template, the design anti-patterns (a new section on copy
+  that adds no meaning, apart from the brand sections), the SDD, implementation
+  and review instructions, and the prototype reviewer carry the same rule. Fixes
+  #2988.
+
+  **Upgrading:** a UI contract written before this has no `supplements`, so
+  `qfai validate` reports `QFAI-CONTRACT-043` for each of its screens until you add
+  `supplements: []` or list the texts. `structure` can stay out until a heading
+  beyond the title is wanted. Run `qfai init --force` to refresh the installed
+  template, guide and instructions.
 
 - **`qfai doctor` reports how many jobs the shipped workflows start per pull
   request event.** For each of `qfai-validate.yml`, `qfai-tests.yml` and

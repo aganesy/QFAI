@@ -203,6 +203,33 @@ describe("story-tree layout dispatch", () => {
     expect(closed.issues.some((item) => item.code === "QFAI-STORY-003")).toBe(false);
   });
 
+  // QFAI:AC-0001-0053-01
+  // QFAI:EX-0001-0053-01
+  it("names the extra column of decisions.md and the missing column of open-questions.md", async () => {
+    await put(
+      `${specs}/decisions.md`,
+      "| ID | Content | Approach | Status | Date |\n| --- | --- | --- | --- | --- |\n",
+    );
+    await put(`${specs}/open-questions.md`, "| ID | Content | Status |\n| --- | --- | --- |\n");
+
+    const result = await validateProject(root, configured(), { profile: "sdd" });
+    const reported = result.issues
+      .filter((item) => item.code === "QFAI-STORY-003")
+      .map((item) => [
+        item.severity,
+        path.relative(root, item.file ?? "").replaceAll("\\", "/"),
+        item.message,
+      ]);
+    expect(reported).toEqual([
+      ["error", `${specs}/decisions.md`, expect.stringContaining("unexpected column Date")],
+      [
+        "error",
+        `${specs}/open-questions.md`,
+        expect.stringContaining("missing the column Approach"),
+      ],
+    ]);
+  });
+
   it("writes only the migration finding to validate.json for an old layout", async () => {
     await mkdir(path.join(root, specs, "spec-0001"), { recursive: true });
 

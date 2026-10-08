@@ -26,6 +26,7 @@ import { validateContractConsistency } from "./contractConsistency.js";
 import { validateDbContractApplyOrder } from "./dbContractApplyOrder.js";
 import { validateUiMarkerPresence } from "./uiMarkerPresence.js";
 import { validateUiPrototypeMode } from "./uiPrototypeMode.js";
+import { validateUiScreenCopy } from "./uiScreenCopy.js";
 import { validateUiScreenEntries } from "./uiScreenEntries.js";
 import { issue } from "./utils.js";
 
@@ -117,6 +118,9 @@ export async function validateContracts(root: string, config: QfaiConfig): Promi
   // The entries every consumer reads past: a screen with no `id` or `route`, and
   // the second entry for an `id`.
   issues.push(...(await validateUiScreenEntries(root, config)));
+  // The words each of those screens says it shows: the supplements it declares,
+  // and the groups it is read in.
+  issues.push(...(await validateUiScreenCopy(root, config)));
 
   return issues;
 }

@@ -84,6 +84,7 @@ describe("generated-design anti-patterns", () => {
       "Placement",
       "Motion and transitions",
       "Copy in the UI",
+      "Copy that adds no meaning",
       "Information architecture and flow",
       "States and accessibility",
       "Implementation defaults",
@@ -107,6 +108,7 @@ describe("generated-design anti-patterns", () => {
       ["Placement", /A row of three cards sits directly beneath the hero/],
       ["Motion and transitions", /same fade-in or fade-and-slide-up/],
       ["Copy in the UI", /^- Copy leans on hollow buzzwords/m],
+      ["Copy that adds no meaning", /^- A second heading or a sentence repeats the main heading/m],
       ["Information architecture and flow", /Sections follow the stock order/],
       ["States and accessibility", /contrast below WCAG AA/],
       ["Implementation defaults", /default palette ships unchanged/],
@@ -115,7 +117,7 @@ describe("generated-design anti-patterns", () => {
       expect(sectionOf(doc, aspect), aspect).toMatch(pattern);
     }
 
-    const expectedCounts = [14, 14, 13, 11, 15, 14, 6, 9, 20, 8, 6, 4];
+    const expectedCounts = [14, 14, 13, 11, 15, 14, 6, 9, 20, 3, 8, 6, 4];
     const patterns = representatives.flatMap(([aspect], index) => {
       const entries = sectionOf(doc, aspect)
         .split(/\n(?=- )/)
@@ -125,7 +127,7 @@ describe("generated-design anti-patterns", () => {
       expect(new Set(entries).size, aspect).toBe(entries.length);
       return entries;
     });
-    expect(patterns).toHaveLength(134);
+    expect(patterns).toHaveLength(137);
 
     // The shipped list carries no citation counts, source numbers or links.
     expect(doc).not.toMatch(/https?:\/\//);
@@ -175,7 +177,8 @@ describe("generated-design anti-patterns", () => {
     expect(comparison).not.toMatch(/anti-slop pattern list/i);
 
     // The prototyping loop's reviewer keeps its lock on brand values and does
-    // not apply the list.
+    // not apply the list. The one section it applies, on copy that adds no
+    // meaning, reaches it through the loop step.
     const reviewerPrompt = await read("qfai-prototyping/references/reviewer-prompt.md");
     const reviewer = reviewerPrompt.replace(/\s+/g, " ");
     expect(reviewer).toContain("Do not comment on brand colors, typefaces, radii, or shadows");

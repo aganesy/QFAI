@@ -24,10 +24,16 @@ Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#user-questions-a
 for every user question. With `--auto`, ask nothing and record
 explicit assumptions in the migration report.
 
-Read `references/migration-guide.md` before changing the project. Run this
-skill from the project root, where `qfai.config.yaml` and a locally installed
-`qfai` package are available. The twelve scripts use the installed package.
-They do not add a `qfai` subcommand or make network calls.
+Read `references/migration-guide.md` before changing the project.
+
+Read `references/migration-placement.md` when you write `plan.yaml`, when a
+step reports a retired configuration key, and when a step lists a document that
+does not fit its template's shape. It holds the plan format, the retired keys,
+the contract numbers, the business rules and what each document keeps.
+
+Run this skill from the project root, where `qfai.config.yaml` and a locally
+installed `qfai` package are available. The twelve scripts use the installed
+package. They do not add a `qfai` subcommand or make network calls.
 
 The skill serves two runs, and the steps tell them apart from the project
 itself:
@@ -81,7 +87,7 @@ keep authors separate from reviewers.
    each old business rule's destination contract. Name that contract by its
    current path under `cli/`, `api/`, `db/`, `ui/` or `design/` of the
    contracts directory: step 3 gives every contract a new ID and file name,
-   and later steps find it from that path. Use the format in the guide. The plan
+   and later steps find it from that path. Use the format in `references/migration-placement.md`. The plan
    may be written before step 1, from the old contract paths.
 2. Before the first real run, tell the person that the migration deletes
    every 1.x file that has no destination and replaces every customised
@@ -112,7 +118,7 @@ keep authors separate from reviewers.
 5. Resolve every reported item with the person responsible for the content.
    Preserve any item the scripts could not place. Before step 4 writes
    `id-map.json`, settle an example that cites several criteria and a rule that
-   binds no contract through the plan keys the guide names. After it, do not
+   binds no contract through the plan keys `references/migration-placement.md` names. After it, do not
    change `plan.yaml` to move a mapped item. Place remaining content in the new
    tree through `/qfai-sdd`, and finish each listed item as the guide's
    "Resolve the reports" section says.

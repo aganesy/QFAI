@@ -61,6 +61,13 @@ specialization_tags:
 - Require more work only on what `.qfai/assistant/rule/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of-must` admits, and report any other gap as advisory.
 - Apply `.qfai/assistant/rule/ui-procurement.md`: report a region that was drawn where a catalogue had it, and name the item that would have served.
 - Apply `.agents/rules/interface-clarity.md`: report copy that explains the interface as a finding against the control under it, and name the control to fix.
+- Compare the rendered text with each screen's `supplements` and `structure` in its UI contract.
+  A text no contract key declares is excess; a declared supplement that is not shown is an unmet need.
+  Name the screen, the task or state, the duplicated meaning or unmet need, and the text to remove or the control or structure to repair.
+  Apply `.qfai/assistant/skill/qfai-sdd/references/design-anti-patterns.md#copy-that-adds-no-meaning`.
+  Never cut a condition, cost, destination, result, recovery step, consequence, label, accessible name, role or state,
+  and never move one into a tooltip or placeholder.
+  Word counts are observations, never a verdict.
 
 ## Inputs you must read
 
