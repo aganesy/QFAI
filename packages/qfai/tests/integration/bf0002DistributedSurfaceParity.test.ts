@@ -1,14 +1,19 @@
 import { spawnSync } from "node:child_process";
-import { cp, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import {
+  declaredSampleBandIds,
+  repoRootFromHere,
+} from "../../scripts/lib/declared-sample-band-ids.mjs";
 import { runLintShipping } from "../../scripts/lint-shipping.js";
 import { runInit } from "../../src/cli/commands/init.js";
 import { captureStdout } from "../helpers/stdout.js";
+import { isRecord } from "../helpers/shippedWorkflowFixtures.js";
 import { STORY_ID_BOUNDARIES, scanDistributedSurface } from "../helpers/distributedSurfaceScan.js";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -56,6 +61,101 @@ async function observe(
       .map((violation) => violation.pattern),
     guard: runPostBuildGuard(fixture.packRoot),
   };
+}
+
+/** One ID of each story-tree shape with a numeric segment outside the sample band. */
+const OUTSIDE_BAND_IDS = [
+  "DEC-0010",
+  "OQ-0010",
+  "BF-0010",
+  "US-0001-0010",
+  "AC-0001-0001-10",
+  "EX-0001-0010-01",
+  "BR-0010",
+  "CLI-0010",
+  "API-0100",
+  "DB-0010",
+  "UI-1000",
+  "cli-0010",
+  "api-0100",
+  "db-0010",
+  "ui-1000",
+];
+
+/** The same shapes with every numeric segment inside the sample band. */
+const INSIDE_BAND_IDS = [
+  "DEC-0009",
+  "OQ-0009",
+  "BF-0009",
+  "US-0009-0009",
+  "AC-0009-0009-09",
+  "EX-0009-0009-09",
+  "BR-0009",
+  "CLI-0009",
+  "API-0001",
+  "DB-0009",
+  "UI-0009",
+  "cli-0009",
+  "api-0001",
+  "db-0009",
+  "ui-0009",
+];
+
+/**
+ * Plants one ID per file in every scanned tree and one comment line per ID in the
+ * source file, so a single pass of each guard reports on the whole set.
+ */
+async function observeBatch(
+  fixture: Fixture,
+  ids: readonly string[],
+): Promise<{
+  smokeClasses: Map<string, string[]>;
+  lintLines: number[];
+  guard: { status: number | null; output: string };
+  names: string[];
+}> {
+  const names = ids.map((_, index) => `batch-${String(index)}.md`);
+  // A single-ID probe left by an earlier case would be read as one of this set.
+  await Promise.all([
+    rm(path.join(fixture.initRoot, "probe.md"), { force: true }),
+    rm(path.join(fixture.packRoot, "assets", "probe.md"), { force: true }),
+  ]);
+  await Promise.all(
+    ids.flatMap((id, index) => [
+      writeFile(path.join(fixture.initRoot, names[index] ?? ""), `${id}\n`, "utf-8"),
+      writeFile(path.join(fixture.packRoot, "assets", names[index] ?? ""), `${id}\n`, "utf-8"),
+    ]),
+  );
+  const comments = ids.map((id) => `// ${id}`).join("\n");
+  await writeFile(
+    path.join(fixture.packRoot, "src/guard.ts"),
+    `${comments}\nexport const guard = true;\n`,
+    "utf-8",
+  );
+  try {
+    const smoke = await scanDistributedSurface(fixture.initRoot);
+    const lint = await runLintShipping(fixture.packRoot);
+    const smokeClasses = new Map<string, string[]>();
+    for (const hit of smoke.hits) {
+      smokeClasses.set(hit.file, [...(smokeClasses.get(hit.file) ?? []), hit.className]);
+    }
+    return {
+      smokeClasses,
+      lintLines: lint.violations
+        .filter((violation) => violation.file === "src/guard.ts")
+        .map((violation) => violation.line)
+        .sort((a, b) => a - b),
+      guard: runPostBuildGuard(fixture.packRoot),
+      names,
+    };
+  } finally {
+    await Promise.all(
+      names.flatMap((name) => [
+        rm(path.join(fixture.initRoot, name), { force: true }),
+        rm(path.join(fixture.packRoot, "assets", name), { force: true }),
+      ]),
+    );
+  }
 }
 
 describe("BF-0002 distributed-surface guard parity", () => {
@@ -148,5 +248,97 @@ describe("BF-0002 distributed-surface guard parity", () => {
     expect(observed.lintPatterns).toEqual([legacyPattern]);
     expect(observed.guard.status, observed.guard.output).toBe(1);
     expect(observed.guard.output).toContain("probe.md");
+  });
+
+  // QFAI:AC-0002-0009-01
+  it("rejects every story-tree shape outside the sample band in the smoke scan, the lint and the post-build guard, naming each file", async () => {
+    const observed = await observeBatch(fixture, OUTSIDE_BAND_IDS);
+    for (const name of observed.names) {
+      expect(observed.smokeClasses.get(name), name).toEqual(["internal story id"]);
+      expect(observed.guard.output, name).toContain(name);
+    }
+    expect(observed.lintLines).toEqual(OUTSIDE_BAND_IDS.map((_, index) => index + 1));
+    expect(observed.guard.status, observed.guard.output).toBe(1);
+  });
+
+  // QFAI:AC-0002-0009-01
+  it("passes the clean surface and every story-tree shape inside the sample band in all three guards", async () => {
+    const observed = await observeBatch(fixture, INSIDE_BAND_IDS);
+    expect([...observed.smokeClasses.keys()]).toEqual([]);
+    expect(observed.lintLines).toEqual([]);
+    expect(observed.guard.status, observed.guard.output).toBe(0);
+  });
+
+  // QFAI:AC-0002-0009-01
+  it("rejects an in-band ID the spec tree declares, and the three guards read declared IDs from one module", async () => {
+    const { businessRules, contractNames } = declaredSampleBandIds(repoRootFromHere());
+    const declared = [
+      ...businessRules.slice(0, 1),
+      ...contractNames.slice(0, 1).map((name) => `${name}.md`),
+    ];
+    expect(declared).toHaveLength(2);
+    const observed = await observeBatch(fixture, declared);
+    for (const name of observed.names) {
+      expect(observed.smokeClasses.get(name), name).toContain("declared sample band id");
+      expect(observed.guard.output, name).toContain(name);
+    }
+    expect(observed.guard.status, observed.guard.output).toBe(1);
+
+    for (const reader of [
+      "scripts/lint-shipping.ts",
+      "scripts/check-no-internal-version-leakage.sh",
+      "tests/helpers/distributedSurfaceScan.ts",
+    ]) {
+      expect(await readFile(path.join(packageRoot, reader), "utf-8"), reader).toContain(
+        "declared-sample-band-ids",
+      );
+    }
+  });
+
+  // QFAI:AC-0002-0012-01
+  it("reports a story-tree ID outside the sample band in a source comment at its line, and leaves in-band and composite IDs to their own classes", async () => {
+    const outside = [
+      ["DEC-0010", "dec"],
+      ["OQ-0010", "oq"],
+      ["BF-0010", "bf"],
+      ["US-0001-0010", "us"],
+      ["AC-0001-0001-10", "ac"],
+      ["EX-0001-0010-01", "ex"],
+      ["BR-0001-0010", "br"],
+    ] as const;
+    const inside = ["DEC-0009", "OQ-0009", "BF-0009", "US-0009-0009", "AC-0009-0009-09"];
+    const lines = [
+      ...outside.map(([id]) => `// ${id}`),
+      ...inside.map((id) => `// ${id}`),
+      "// DEC-0001-0042",
+      "export const guard = true;",
+    ];
+    await writeFile(path.join(fixture.packRoot, "src/guard.ts"), `${lines.join("\n")}\n`, "utf-8");
+
+    const { violations } = await runLintShipping(fixture.packRoot);
+    expect(
+      violations
+        .filter((violation) => violation.file === "src/guard.ts")
+        .map(({ line, pattern, matched }) => ({ line, pattern, matched })),
+    ).toEqual([
+      ...outside.map(([id, kind], index) => ({
+        line: index + 1,
+        pattern: `internal-story-${kind}-id-jsdoc-leak`,
+        matched: id,
+      })),
+      {
+        line: outside.length + inside.length + 1,
+        pattern: "internal-dec-id-jsdoc-leak",
+        matched: "DEC-0001-0042",
+      },
+    ]);
+
+    const manifest: unknown = JSON.parse(
+      await readFile(path.resolve(packageRoot, "../../package.json"), "utf-8"),
+    );
+    const scripts = isRecord(manifest) ? manifest["scripts"] : undefined;
+    if (!isRecord(scripts)) throw new Error("the root manifest declares no scripts");
+    expect(scripts["ci:lint"]).toContain("run-lint-checks.sh");
+    expect(scripts["ci:lint:structure"]).toContain("lint:shipping");
   });
 });

@@ -286,6 +286,7 @@ const PRIVATE_LABEL_PLANTS: readonly SelectorPlant[] = [
   },
 ];
 
+// QFAI:AC-0002-0005-01
 // QFAI:EX-0002-0005-01
 describe("TC-0003-0041 (TDD-0041): planted organization-private label literal is rejected", () => {
   // One it() per TC-0003-0041 verify bullet. Scope notes, disclosed:
@@ -522,6 +523,7 @@ async function declaredNodeFloor(): Promise<string> {
   return floor;
 }
 
+// QFAI:AC-0002-0005-01
 // QFAI:EX-0002-0005-02
 describe("TC-0003-0042 (TDD-0042): each shipped header table is complete and claims no undeclared Node floor", () => {
   // One it() per TC-0003-0042 verify bullet. Scope notes, disclosed:
@@ -580,6 +582,7 @@ describe("TC-0003-0042 (TDD-0042): each shipped header table is complete and cla
     expect(violations).toEqual([]);
   });
 
+  // QFAI:AC-0002-0001-02
   // QFAI:EX-0002-0001-03
   it("no shipped header claims a Node support floor the package's engines field does not declare", async () => {
     const floor = await declaredNodeFloor();
