@@ -4,6 +4,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **The migration guide is split in two, and every shipped Markdown file is
+  within 500 lines.** `references/migration-guide.md` keeps the preparation, the
+  twelve steps, the write boundary, how to resolve the reports and the free-text
+  entry. The plan format, the retired configuration keys, the contract numbers,
+  the business rules and what each document keeps moved to
+  `references/migration-placement.md`, which the skill names with the moments to
+  read it. The guard test no longer lists a file over the limit. Part of #3141.
+
 ## [2.1.1] - 2026-10-08
 
 ### Added
@@ -522,14 +532,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reference describes its neighbour in words. The `ui_ux/` appendices of the
   discussion skill are named by the `discussion-uiux` step. The guard test
   keeps one pointer, in the concrete-abstract cycle reference. Part of #3141.
-
-- **The migration guide is split in two, and every shipped Markdown file is
-  within 500 lines.** `references/migration-guide.md` keeps the preparation, the
-  twelve steps, the write boundary, how to resolve the reports and the free-text
-  entry. The plan format, the retired configuration keys, the contract numbers,
-  the business rules and what each document keeps moved to
-  `references/migration-placement.md`, which the skill names with the moments to
-  read it. The guard test no longer lists a file over the limit. Part of #3141.
 
 - **The web-research sandbox template no longer allows `.qfai/evidence/`.**
   Nothing writes web-research results there, so the allowance is gone; the
