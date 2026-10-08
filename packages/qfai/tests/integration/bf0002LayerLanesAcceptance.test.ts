@@ -189,12 +189,17 @@ describe("BF-0002 layer-separated lanes", () => {
           .map((line) => line.trim()),
       );
       expect(commands, id).not.toContain("pnpm ci:gate:build");
-      expect(
-        commands.filter((line) =>
-          line.startsWith("bash packages/qfai/scripts/check-no-internal-version-leakage"),
-        ),
-        id,
-      ).toEqual([]);
+      // Only publication scans again, and it scans the unpacked tarball it is about to upload.
+      const scans = commands.flatMap((line, index) =>
+        line.startsWith("bash packages/qfai/scripts/check-no-internal-version-leakage")
+          ? [commands[index - 1] ?? ""]
+          : [],
+      );
+      if (id === "publish") {
+        expect(scans.map((before) => before.startsWith("QFAI_LEAKAGE_SCAN_ROOT="))).toEqual([true]);
+      } else {
+        expect(scans, id).toEqual([]);
+      }
     }
 
     const rootScripts: unknown = JSON.parse(currentRoot());
