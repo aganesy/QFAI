@@ -64,6 +64,14 @@ specialization_tags:
   `/qfai-prototyping` at the validate lane, under `QFAI-AUD-001`. The shipped
   `ui-contract.sample.yaml` carries filled entries; replace them with the
   screen's own rather than emptying the list.
+- For UI-bearing surfaces: every screen also declares `supplements` (`[]` when it
+  shows no text beyond its title, group headings and labels), and `structure` when
+  it shows a heading beyond its title. Check each proposed text element against the
+  screen's tasks and the information the user needs there, and write the ones that
+  stay into the contract with the reason. A text that only repeats a heading, an
+  action or a condition the user already has is left out. Discussion sidecars
+  inform these keys; they do not replace them. See
+  `.qfai/assistant/skill/qfai-sdd/references/ui-contract-guide.md`.
 
 ## Stop conditions
 

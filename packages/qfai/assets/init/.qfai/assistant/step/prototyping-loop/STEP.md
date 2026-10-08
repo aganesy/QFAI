@@ -37,6 +37,10 @@ answer. No command, score or check decides that the loop is done.
 - `.qfai/assistant/skill/qfai-prototyping/references/reviewer-prompt.md` —
   reviewer schema, the four UX axes, layout anti-patterns,
   `designMdViolations`, pivot rules
+- `.qfai/assistant/skill/qfai-sdd/references/design-anti-patterns.md#copy-that-adds-no-meaning`
+  — the three patterns the reviewer applies under its criterion on explanatory
+  text. Pass this section to the reviewer; the rest of that list is read where
+  the design direction is reviewed.
 - `.qfai/assistant/skill/qfai-prototyping/references/review-payload-schema.md`
   — the closed per-screen payload
 
