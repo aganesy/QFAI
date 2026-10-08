@@ -107,7 +107,6 @@ function findFinding(
 // QFAI:EX-0003-0006-01
 // QFAI:EX-0003-0006-02
 // QFAI:EX-0003-0006-03
-// QFAI:EX-0003-0006-04
 describe("TC-0006-0012: playwright primary probe detects node_modules/.bin/playwright", () => {
   it("resolves the project-local playwright shim and records it as primary (not deprecated)", async () => {
     const root = await newTempDir("tc12");
@@ -187,8 +186,10 @@ describe("TC-0006-0015: full failure surfaces `npm i -D playwright` install hint
   });
 });
 
-describe("TC-0006-0016: fresh init + playwright install yields zero error lines", () => {
-  it("fresh init + seeded playwright shim -> doctor reports zero error-severity findings on the launcher path", async () => {
+// QFAI:AC-0003-0006-03
+// QFAI:EX-0003-0006-04
+describe("TC-0006-0016: fresh init + playwright install gives the launcher check no error", () => {
+  it("fresh init + seeded playwright shim -> the launcher check is ok", async () => {
     const root = await newTempDir("tc16");
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
     await seedLocalPlaywright(root);

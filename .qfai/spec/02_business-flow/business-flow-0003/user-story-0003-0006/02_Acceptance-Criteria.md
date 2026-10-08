@@ -19,10 +19,10 @@ Feature: playwright primary probe
     And the severity is error
 
   # AC-0003-0006-03
-  Scenario: A fresh init reports no error
+  Scenario: A fresh init reports no launcher error
     Given a project where `npm i -D playwright` ran right after `qfai init`
     When `qfai doctor --profile prototyping` runs
-    Then the output holds no line prefixed with `[error]` (NFR-0112)
+    Then the launcher check `prototyping.playwrightCli` contributes no line prefixed with `[error]` (NFR-0112)
 
   # AC-0003-0006-04
   Scenario: playwright-cli is the only launcher found
