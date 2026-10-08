@@ -45,7 +45,11 @@ specialization_tags:
   a deliberate shortcut with its ceiling and the condition that lifts it.
 - Apply `.qfai/assistant/rule/ui-procurement.md`: install a component before writing one, and for anything the prototype does not show, take the adopted system's default rather than inventing one.
 - Apply `.agents/rules/interface-clarity.md`: label a control in the user's words, never the parameter's. The label stays; the sentence explaining it goes.
-- Read each screen's `supplements` and `structure` in its UI contract before adding any text. Show the title, the group headings, the labels and the declared supplements, and no other text. A text the screen needs that the contract lacks, or a declared one the screen should not show, is a change to the contract and goes back to `/qfai-sdd`; element ids stay the same when only wording changes.
+- Read each screen's `supplements` and `structure` in its UI contract before adding any text.
+  Show the title, the group headings, the labels and the declared supplements, and no other text.
+  A text the screen needs that the contract lacks, or a declared one the screen should not show,
+  is a change to the contract and goes back to `/qfai-sdd`.
+  Element ids stay the same when only wording changes.
 
 ## Inputs you must read
 

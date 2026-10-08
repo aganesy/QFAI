@@ -20,7 +20,8 @@ describe("normalizeCopy", () => {
   });
 
   it("treats full-width forms as their plain counterparts", () => {
-    expect(normalizeCopy("ＳＡＶＥ")).toBe("save");
+    // Full-width SAVE, written as escapes so the file holds no full-width character.
+    expect(normalizeCopy("\uFF33\uFF21\uFF36\uFF25")).toBe("save");
   });
 });
 
