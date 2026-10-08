@@ -33,6 +33,7 @@ import type {
 import { locateToolAgainstProject, resolveToolVersion } from "./version.js";
 import { applyWaivers } from "./waivers.js";
 import { validateContracts, validateUiContractParse } from "./validators/contracts.js";
+import { validateUiScreenCopy } from "./validators/uiScreenCopy.js";
 import { validateUiScreenEntries } from "./validators/uiScreenEntries.js";
 import { validateDesignDirectionProposal } from "./validators/designDirectionProposal.js";
 import { validateDesignContractReadiness } from "./validators/designContractReadiness.js";
@@ -623,6 +624,7 @@ async function runPrototypingProfileValidators(
     // contract that does not parse. Kept out of `runPrototypingValidators`:
     // `full` also runs `validateContracts`, which reports both already.
     ...(await validateUiScreenEntries(root, config)),
+    ...(await validateUiScreenCopy(root, config)),
     ...(await validateUiContractParse(root, config)),
   ];
 }
