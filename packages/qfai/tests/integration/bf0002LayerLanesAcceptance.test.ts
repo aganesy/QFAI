@@ -182,9 +182,19 @@ describe("BF-0002 layer-separated lanes", () => {
     ]);
     for (const [id, job] of Object.entries(jobs)) {
       if (id === "gate") continue;
-      const bodies = steps(job).map(runBody).join("\n");
-      expect(bodies, id).not.toContain("ci:gate:build");
-      expect(bodies, id).not.toContain("check-no-internal-version-leakage");
+      // Commands, not mentions: the verify job names the build script as data in its classifier.
+      const commands = steps(job).flatMap((step) =>
+        runBody(step)
+          .split("\n")
+          .map((line) => line.trim()),
+      );
+      expect(commands, id).not.toContain("pnpm ci:gate:build");
+      expect(
+        commands.filter((line) =>
+          line.startsWith("bash packages/qfai/scripts/check-no-internal-version-leakage"),
+        ),
+        id,
+      ).toEqual([]);
     }
 
     const rootScripts: unknown = JSON.parse(currentRoot());
