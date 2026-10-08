@@ -35,8 +35,10 @@ function storyTreeConfig() {
 }
 
 describe("story-tree contract index", () => {
+  // QFAI:AC-0001-0052-01
   // QFAI:EX-0001-0006-03
   // QFAI:EX-0001-0006-04
+  // QFAI:EX-0001-0052-01
   it("keys an unlisted declared contract by ID and an unlisted CLI file by path", async () => {
     const config = storyTreeConfig();
     const base = config.paths.contractsDir;
@@ -45,11 +47,26 @@ describe("story-tree contract index", () => {
     await put(`${base}/cli/new-command.md`, "# New command\n");
     const model = await readStoryTreeModel(root, config);
     const findings = await validateStoryTreeContractReferences(root, config, model);
-    expect(findings.filter((item) => item.code === "QFAI-CONTRACT-034")).toHaveLength(2);
+    const unlisted = findings.filter((item) => item.code === "QFAI-CONTRACT-034");
+    expect(unlisted).toHaveLength(2);
+    expect(unlisted.map((item) => item.severity)).toEqual(["error", "error"]);
     expect(findings.some((item) => item.refs?.includes("API-0001"))).toBe(true);
     expect(
       findings.some((item) => item.refs?.some((ref) => ref.endsWith("cli/new-command.md"))),
     ).toBe(true);
+
+    await put(
+      `${base}/contracts.md`,
+      `${INDEX_HEADER}| API-0001 | Orders | api/api-0001-orders.yaml | - | - | Orders |\n`,
+    );
+    const apiListed = await validateStoryTreeContractReferences(
+      root,
+      config,
+      await readStoryTreeModel(root, config),
+    );
+    const stillUnlisted = apiListed.filter((item) => item.code === "QFAI-CONTRACT-034");
+    expect(stillUnlisted).toHaveLength(1);
+    expect(stillUnlisted[0]?.refs?.some((ref) => ref.endsWith("cli/new-command.md"))).toBe(true);
 
     await unlink(path.join(root, base, "cli/new-command.md"));
     await put(`${base}/cli/cli-0002-new-command.md`, "# CLI-0002: New command\n");

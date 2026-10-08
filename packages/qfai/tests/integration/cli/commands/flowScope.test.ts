@@ -1,4 +1,4 @@
-import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -7,7 +7,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { runReport } from "../../../../src/cli/commands/report.js";
 import { runValidate, scopedReportPath } from "../../../../src/cli/commands/validate.js";
 import { parseArgs } from "../../../../src/cli/lib/args.js";
+import { run } from "../../../../src/cli/main.js";
 import { validateProject } from "../../../../src/core/validate.js";
+import { captureStderr } from "../../../helpers/stderr.js";
+import { captureStdout } from "../../../helpers/stdout.js";
 
 const roots: string[] = [];
 
@@ -44,6 +47,17 @@ async function exists(file: string): Promise<boolean> {
     return true;
   } catch {
     return false;
+  }
+}
+
+/** The scoped validate results under the report directory, whatever flow they name. */
+async function scopedResults(root: string): Promise<string[]> {
+  try {
+    const entries = await readdir(path.join(root, ".qfai/report"));
+    return entries.filter((name) => name.startsWith("validate.flow-"));
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return [];
+    throw error;
   }
 }
 
@@ -145,6 +159,48 @@ describe("story-tree CLI flow scope", () => {
     expect(parsed.invalidReason).toContain("--flow BF-NNNN");
     expect(await exists(path.join(root, ".qfai/report/validate.spec-0001.json"))).toBe(false);
   });
+
+  // QFAI:AC-0001-0057-02
+  // QFAI:EX-0001-0057-02
+  it("exits 2 and names --flow BF-NNNN when validate is given --spec", async () => {
+    const root = await storyRoot();
+    const previous = process.exitCode;
+    try {
+      process.exitCode = undefined;
+      const stderr = await captureStderr(async () => {
+        await captureStdout(() => run(["validate", "--spec", "spec-0001"], root));
+      });
+
+      expect(process.exitCode).toBe(2);
+      expect(stderr).toContain("--spec is no longer supported");
+      expect(stderr).toContain("--flow BF-NNNN");
+      expect(await scopedResults(root)).toEqual([]);
+    } finally {
+      process.exitCode = previous;
+    }
+  });
+
+  // QFAI:AC-0001-0057-03
+  // QFAI:EX-0001-0057-03
+  it.each(["flow-1", "BF-0009"])(
+    "names %s in an error finding and writes no scoped result",
+    async (value) => {
+      const root = await storyRoot();
+
+      const result = await validateProject(root, undefined, { profile: "sdd", flowIds: [value] });
+      const named = result.issues.filter(
+        (finding) => finding.code === "QFAI-FLOW-005" && finding.severity === "error",
+      );
+      expect(named).toHaveLength(1);
+      expect(named[0]?.refs).toEqual([value]);
+      expect(named[0]?.message).toContain(value);
+
+      await captureStdout(() =>
+        runValidate({ root, strict: false, failOn: "never", flowIds: [value] }).then(() => {}),
+      );
+      expect(await scopedResults(root)).toEqual([]);
+    },
+  );
 
   it.each(["md", "json"] as const)(
     "TC-0005-0015: reads the scoped validate result and writes a scoped %s report",
