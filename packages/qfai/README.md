@@ -654,6 +654,12 @@ is your variable to set. Do not point `QFAI_CI_RUNNER` at it: the jobs that inst
 dependencies, need Docker or can run past 15 minutes do not belong on it. A label
 GitHub does not offer to your account leaves a job queued rather than failing it.
 
+Each workflow file states its own counts in a "Jobs per pull request event" row of
+its header table. `npx qfai doctor` reports the same counts for the workflows
+installed in your repository, with the runner each job asks for. It is an `info`
+finding and reads the files only. It reads none of your repository variables, so it
+shows the variables a job falls back through and not the label they resolve to.
+
 ### Required checks and branch protection
 
 Require these three checks, by exactly these names:
@@ -682,6 +688,23 @@ keeps from starting reports nothing, so its required check stays pending and the
 pull request cannot merge. Put the decision in a job, and skip jobs. The shipped
 `change detection` and `change scope` jobs do that. Do not put a `paths` filter on
 a workflow with a required check.
+
+The "Required check" row of each workflow's header table names the job to require.
+
+### Checking workflow files
+
+GitHub starts no job from a workflow file it cannot parse. The run shows as failed
+with no jobs, on every push to every branch, and a change to the file does not show
+up in its own pull request's checks, because the broken workflow never starts. A key
+that appears twice in one mapping is enough, such as `env:` twice in one step after a
+scripted edit, and many YAML loaders accept it without a word.
+
+`npx qfai doctor` parses each `.yml` and `.yaml` file under `.github/workflows/` and
+`.github/actions/` and warns with the file and the line. Run `actionlint` as well, and
+run it after any scripted edit to a workflow. It also reports duplicate keys with line
+numbers, and it checks expressions and job references that a YAML parser cannot. It
+can be one step of a job you already run, such as a change-detection job, so it adds
+no job.
 
 ### Skipped and todo tests
 

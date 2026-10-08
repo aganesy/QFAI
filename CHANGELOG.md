@@ -6,6 +6,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`qfai doctor` reports how many jobs the shipped workflows start per pull
+  request event.** For each of `qfai-validate.yml`, `qfai-tests.yml` and
+  `qfai-docs.yml` installed under `.github/workflows/`, an `info` finding
+  `workflows.cost` gives the jobs a pull request event starts when nothing is to
+  run and the most it starts when the lane runs, with the runner selector of each
+  job. GitHub bills each job as at least a minute, so the count is what your
+  runner variables and your choice of workflows cost. Doctor reads the installed
+  files only and no repository variable, so it shows the variables a job falls
+  back through and not the label they resolve to. A workflow it cannot read is
+  named instead of guessed. Fixes #2783.
+
+- **`qfai doctor` warns when a workflow file cannot be parsed.** Each `.yml` and
+  `.yaml` file under `.github/workflows/` and `.github/actions/` is parsed, and a
+  file that fails, such as one with `env:` twice in a step, raises a
+  `workflows.parse.<path>` warning naming the file and the line. GitHub starts no
+  job from such a file, so its checks never report. The README recommends running
+  `actionlint` as well, after any scripted edit to a workflow. Fixes #2788.
+
 - **`user-questions.md` says what to do when a question is accepted but not shown.**
   A structured question that the host accepted is not a question the user saw or
   answered. The rule now keeps accepted, shown and answered apart, sends the
@@ -457,6 +475,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   each earlier group.
 
 ### Changed
+
+- **The header of each shipped workflow states the jobs a pull request event
+  starts and the check to require.** A "Jobs per pull request event" row gives the
+  count and the job list when nothing is to run and when the lane runs, and a test
+  keeps it equal to the jobs the file declares. A "Required check" row names the
+  aggregate job, and the header says that renaming it means changing the branch
+  protection in the same step, and why a workflow-level `paths` filter leaves a
+  required check unreported while a skipped job satisfies it. `qfai init` leaves an
+  installed workflow unchanged: copy the packaged files over any workflow you have
+  not edited. The README section on cost points to the doctor counts. Fixes #2782
+  and #2784.
 
 - **The shipped workflows start fewer billed jobs on an event with nothing to
   run.** A pull request that touches code only, in a project declaring no

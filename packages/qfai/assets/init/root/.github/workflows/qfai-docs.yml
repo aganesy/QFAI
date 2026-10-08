@@ -37,6 +37,8 @@
 # | Fail-open behaviour           | no `.nvmrc` / `.node-version` in your tree: warning annotation, Node 20, and the lane continues          |
 # | Node support floor            | the package declares `engines: ">=20.19.0"`; the fall-open Node 20 satisfies it                          |
 # | Dependency install            | follows your lockfile: pnpm / yarn Berry / yarn Classic / npm, else `npm install`                        |
+# | Jobs per pull request event   | idle: 1 (scope); lane runs: 4 (scope, checks x2, docs)                                                   |
+# | Required check                | docs, named "qfai docs (document shape and Mermaid syntax)"                                              |
 #
 # The checks run only when the change could have moved what they read. A change
 # whose every path is code no document check reads - a `.ts` file, a stylesheet,
@@ -55,7 +57,10 @@
 # and when nothing a document check reads changed it is the only job that runs:
 # the final job, `qfai docs (document shape and Mermaid syntax)`, is skipped,
 # and GitHub treats a skipped job as satisfying a required check. Put any
-# narrowing you add in a job condition the same way.
+# narrowing you add in a job condition the same way. That final job is the check
+# to require in branch protection: rename it and the required check in the same
+# step, because while the two differ the required check is never reported and
+# every pull request is blocked.
 #
 # The jobs that read `vars.QFAI_CI_LIGHT_RUNNER` run only Bash, Git and Node. On
 # a private repository with GitHub-hosted runners, set it to `ubuntu-slim`,

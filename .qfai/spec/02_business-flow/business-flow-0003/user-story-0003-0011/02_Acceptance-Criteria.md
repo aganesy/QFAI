@@ -44,4 +44,21 @@ Feature: Shipped workflow checks
     Then each differing workflow is a `warning` and never an `error`, naming the installed file and the packaged file to copy from
     And a matching workflow, one that differs only in line endings and an absent one raise no finding
     And doctor writes no workflow file
+
+  # AC-0003-0011-12
+  Scenario: Doctor reports the jobs the installed shipped workflows start per pull request event
+    Given a project holding some or all of the shipped workflows, one whose job condition the shipped templates do not use, and one with none
+    When `qfai doctor` runs
+    Then the `workflows.cost` check is `info` and never a warning or an error
+    And its message gives, for each installed shipped workflow, the jobs a pull request event starts when nothing is to run and the most it starts when its lane runs, and the runner selector of each job
+    And a workflow it cannot read is named as not counted, and a project with no shipped workflow gets no check
+    And doctor reads no repository variable and writes no file
+
+  # AC-0003-0011-13
+  Scenario: A workflow file that cannot be parsed is reported
+    Given a project whose `.github/workflows/` and `.github/actions/` hold a file with a key twice in one mapping, a file that is valid YAML, and files with another extension or outside those directories
+    When `qfai doctor` runs
+    Then each file that cannot be parsed is a `warning` and never an `error`, naming the file, the line of the first error and its reason
+    And a valid file, a file with another extension and a file outside those directories raise no finding
+    And doctor writes no file
 ```
