@@ -32,6 +32,7 @@ const SHIPPED_SKILL_DIR = path.resolve(
 );
 
 // TC-0003-0001: Empty directory initialization
+// QFAI:AC-0001-0020-01
 // QFAI:EX-0001-0020-01
 describe("TC-0003-0001: Empty directory initialization", () => {
   const ARTIFACT_DIRS = ["specs", "contracts", "discussion", "evidence", "review", "report"];
