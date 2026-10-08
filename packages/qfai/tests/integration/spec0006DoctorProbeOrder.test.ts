@@ -108,6 +108,7 @@ function findFinding(
 // QFAI:EX-0003-0006-02
 // QFAI:EX-0003-0006-03
 // QFAI:EX-0003-0006-04
+// QFAI:AC-0003-0006-01
 describe("TC-0006-0012: playwright primary probe detects node_modules/.bin/playwright", () => {
   it("resolves the project-local playwright shim and records it as primary (not deprecated)", async () => {
     const root = await newTempDir("tc12");

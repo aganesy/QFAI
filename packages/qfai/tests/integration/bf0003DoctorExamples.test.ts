@@ -309,8 +309,79 @@ async function seedShim(dir: string, name: string): Promise<void> {
   await chmod(target, 0o755);
 }
 
+/** Writes an executable that exits non-zero: a `.cmd` shim on Windows, a shell script elsewhere. */
+async function seedFailingShim(dir: string, name: string): Promise<void> {
+  await mkdir(dir, { recursive: true });
+  if (isWin) {
+    await writeFile(path.join(dir, `${name}.cmd`), "@echo off\r\nexit /b 1\r\n", "utf-8");
+    return;
+  }
+  const target = path.join(dir, name);
+  await writeFile(target, "#!/bin/sh\nexit 1\n", "utf-8");
+  await chmod(target, 0o755);
+}
+
+/** Runs the prototyping doctor with `binDir` as the whole PATH and returns the launcher findings. */
+async function launcherFindings(
+  root: string,
+  binDir: string,
+): Promise<{
+  launcher: DoctorData["checks"][number] | undefined;
+  deprecated: DoctorData["checks"][number] | undefined;
+}> {
+  const data = await withPath(binDir, async () => {
+    const outPath = path.join(root, ".qfai", "report", "doctor.json");
+    await runDoctor({ root, rootExplicit: true, format: "json", outPath, profile: "prototyping" });
+    return JSON.parse(await readFile(outPath, "utf-8")) as DoctorData;
+  });
+  return {
+    launcher: check(data, "prototyping.playwrightCli"),
+    deprecated: check(data, "D-DEPRECATED-PROBE"),
+  };
+}
+
+describe("BF-0003 Playwright launcher stage order", () => {
+  // QFAI:AC-0003-0006-01
+  it("reports the project-local playwright when every stage could resolve", async () => {
+    const root = await newTempDir("stage-primary");
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+    const localBin = path.join(root, "node_modules", ".bin");
+    await seedShim(localBin, "playwright");
+    await seedShim(localBin, "playwright-cli");
+    const binDir = await newTempDir("stage-primary-bin");
+    await seedShim(binDir, "npx");
+
+    const { launcher, deprecated } = await launcherFindings(root, binDir);
+    expect(launcher?.severity).toBe("ok");
+    const details = launcher?.details as
+      { resolvedStage?: string; executable?: string } | undefined;
+    expect(details?.resolvedStage).toBe("primary");
+    expect(String(details?.executable ?? "")).toMatch(/playwright(\.cmd)?$/u);
+    expect(deprecated).toBeUndefined();
+  });
+
+  // QFAI:AC-0003-0006-01
+  it("falls through to npx when the project-local playwright does not run", async () => {
+    const root = await newTempDir("stage-fallthrough");
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+    const localBin = path.join(root, "node_modules", ".bin");
+    await seedFailingShim(localBin, "playwright");
+    await seedShim(localBin, "playwright-cli");
+    const binDir = await newTempDir("stage-fallthrough-bin");
+    await seedShim(binDir, "npx");
+
+    const { launcher, deprecated } = await launcherFindings(root, binDir);
+    expect(launcher?.severity).toBe("ok");
+    expect((launcher?.details as { resolvedStage?: string } | undefined)?.resolvedStage).toBe(
+      "npx-fallback",
+    );
+    expect(deprecated).toBeUndefined();
+  });
+});
+
 describe("BF-0003 Playwright npx fallback", () => {
   // QFAI:EX-0003-0006-05
+  // QFAI:AC-0003-0006-01
   it("resolves playwright through npx when no local launcher exists", async () => {
     const root = await newTempDir("npx");
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
