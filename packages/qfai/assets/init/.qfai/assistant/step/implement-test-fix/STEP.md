@@ -30,6 +30,8 @@ pass while the diagnosis names a defective test is refused.
 - The BF, AC or EX the test annotates, and its owning contracts.
 - `.qfai/assistant/skill/qfai-implement/references/oracle-strength.md`, for
   what a sound assertion is.
+- `.qfai/assistant/skill/qfai-implement/references/red-not-observable.md`, for
+  the falsifiability run a mutation can reuse.
 - The commands of `common-gate-run`.
 
 ## Procedure

@@ -26,7 +26,17 @@ The same as `discussion-pack`: this run's stage report holds the
 - `.qfai/assistant/skill/qfai-discussion/references/design-dna-intake.md`.
 - `.qfai/assistant/skill/qfai-discussion/references/ui_ux_best_practices.md`
   for the durable decision rules. Open only the `ui_ux/` appendix the current
-  task needs.
+  task needs:
+  - `.qfai/assistant/skill/qfai-discussion/references/ui_ux/platform_baselines.md`
+    for touch target sizes, breakpoint heuristics, platform navigation baselines,
+    and dark mode and cross-platform adaptation notes;
+  - `.qfai/assistant/skill/qfai-discussion/references/ui_ux/review_audit_playbook.md`
+    for heuristic review structure, anti-pattern checklists, screen-spec
+    documentation rules and audit guidance;
+  - `.qfai/assistant/skill/qfai-discussion/references/ui_ux/trend_scan_playbook.md`
+    for trend-scan category coverage, freshness and citation rules, and turning
+    references into local decisions without letting trends overwhelm
+    product-specific needs.
 - The templates under `.qfai/assistant/skill/qfai-discussion/templates/uiux/`.
 
 ## Writes

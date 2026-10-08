@@ -96,8 +96,7 @@ so conditions 1 and 5 above do not apply to it:
 - Conditions 2, 3, 4, 6 and 7 apply unchanged: all three canonical `uiux/` sidecars, the
   full screen-contract schema, unranked exploration directions, no forbidden legacy
   sidecar, and zero open OQs.
-- `route:` on a `cli` screen contract names the command invocation, not a web path (see
-  `ui-bearing-playbook.md#visual-prototyping-surfaces-vs-cli`).
+- `route:` on a `cli` screen contract names the command invocation, not a web path, as the `cli` section of the UI-bearing playbook sets out.
 - No `prototyping.yaml`: `cli` is not a valid prototyping execution surface.
 - `primary_surface: cli` with a visual `secondary_surfaces` entry is NOT a cli-only pack —
   conditions 1 and 2 stay blocking for it.

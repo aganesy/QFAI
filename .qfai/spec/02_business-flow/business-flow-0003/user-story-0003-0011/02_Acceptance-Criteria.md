@@ -36,4 +36,12 @@ Feature: Shipped workflow checks
     Then the `workflows.mdschemaBinary` check is `ok` when `mdschema --help` exits 0 from the platform package, and no binary found from the inspected project's root is started
     And it is a warning naming the reason when the binary exits 0 only from the downloaded copy
     And it is an error naming the reason and the fix when the binary cannot start
+
+  # AC-0003-0011-11
+  Scenario: A shipped workflow that differs from the shipped text is reported
+    Given a project whose `.github/workflows/` holds a shipped workflow whose text differs from the copy in the package, one that matches it, one that matches it apart from line endings, and a shipped workflow that is not installed
+    When `qfai doctor` runs
+    Then each differing workflow is a `warning` and never an `error`, naming the installed file and the packaged file to copy from
+    And a matching workflow, one that differs only in line endings and an absent one raise no finding
+    And doctor writes no workflow file
 ```

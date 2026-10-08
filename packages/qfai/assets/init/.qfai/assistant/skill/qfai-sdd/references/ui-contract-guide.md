@@ -200,7 +200,7 @@ A malformed UI contract or an empty screen list is an authoring failure. Fix the
 
 ## Root DESIGN.md
 
-For a UI-bearing visual flow, the root `DESIGN.md` is authored and validated by `.qfai/assistant/step/common-design-md/STEP.md`. Normalize approved screen decisions with `ui-design-contract-normalization.md`. A CLI-only flow without a visual secondary surface does not need one.
+For a UI-bearing visual flow, the root `DESIGN.md` is authored and validated by `.qfai/assistant/step/common-design-md/STEP.md`. Normalize approved screen decisions with the UI design contract normalization reference. A CLI-only flow without a visual secondary surface does not need one.
 
 ## Review checklist
 

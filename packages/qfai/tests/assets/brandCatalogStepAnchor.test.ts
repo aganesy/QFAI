@@ -156,7 +156,7 @@ describe("generated-design anti-patterns", () => {
 
   it("is what the catalog, the review bundle and the comparison review point at", async () => {
     const catalog = await read("qfai-sdd/references/design-md-brand-catalog.md");
-    expect(sectionOf(catalog, "Patterns to avoid")).toContain("`design-anti-patterns.md`");
+    expect(sectionOf(catalog, "Patterns to avoid")).toContain("design anti-patterns reference");
 
     const bundle = await read("qfai-discussion/templates/uiux/50_review_input_bundle.md");
     expect(bundle).not.toMatch(/AI slop/i);

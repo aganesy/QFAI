@@ -18,9 +18,8 @@
 ```
 
 The orchestrator writes the reviewer's payload for each `(UI contract, screen)` pair beside the
-per-iteration `review.json` summary, from the first iteration on (schema:
-`references/review-payload-schema.md`, aggregation rule:
-`references/reviewer-prompt.md`). That holds for a single-contract run as much
+per-iteration `review.json` summary, from the first iteration on (the payload schema and the aggregation rule are
+in the reviewer references the loop step names). That holds for a single-contract run as much
 as for a multi-contract one.
 
 The reviewer operates Playwright live. A screenshot or HTML snapshot is an
@@ -55,7 +54,7 @@ prototype. It is neutral with respect to AI behavior.
 ## Produced after the loop
 
 - `.qfai/prototype/final/index.html` and `.qfai/prototype/final/handoff.json`.
-  See `handoff.md`.
+  The `prototyping-handoff` step defines its fields.
 
 ## Brand identity
 
