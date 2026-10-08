@@ -419,6 +419,7 @@
     "tests/integration/designDirectionHandoff.test.ts",
     "tests/integration/bf0002Acceptance.test.ts",
     "tests/integration/bf0002DistributedSurfaceParity.test.ts",
+    "tests/integration/bf0002GateAcceptance.test.ts",
     "tests/integration/bf0002PackBoundary.test.ts",
     "tests/integration/bf0003Acceptance.test.ts",
     "tests/integration/bf0003DoctorExamples.test.ts",
