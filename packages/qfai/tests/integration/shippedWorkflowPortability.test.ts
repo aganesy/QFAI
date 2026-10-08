@@ -253,6 +253,7 @@ async function aggregateFailureViolations(
   return violations;
 }
 
+// QFAI:AC-0002-0003-03
 describe("TC-0003-0058: aggregate failure protection", () => {
   async function documentAggregate(): Promise<ShippedJob> {
     const job = (await shippedJobs()).find(
@@ -332,6 +333,7 @@ describe("TC-0003-0058: aggregate failure protection", () => {
   );
 });
 
+// QFAI:AC-0002-0006-02
 // QFAI:EX-0002-0006-02
 describe("TC-0003-0043 (TDD-0043): absent Node version file falls open to the documented literal", () => {
   // One it() per TC-0003-0043 verify bullet. Scope notes, disclosed:
@@ -470,6 +472,7 @@ describe("TC-0003-0043 (TDD-0043): absent Node version file falls open to the do
   });
 });
 
+// QFAI:AC-0002-0006-02
 // QFAI:EX-0002-0006-03
 describe("TC-0003-0044 (TDD-0044): absent packageManager field fails closed with an actionable annotation", () => {
   // One it() per TC-0003-0044 verify bullet. This is the OPPOSITE degrade

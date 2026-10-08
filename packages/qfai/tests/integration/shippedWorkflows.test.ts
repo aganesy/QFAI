@@ -56,6 +56,7 @@ function collectSteps(job: Record<string, unknown>): Array<Record<string, unknow
   return steps.filter(isRecord);
 }
 
+// QFAI:AC-0002-0001-01
 // QFAI:EX-0002-0001-01
 describe("TC-0003-0027 (TDD-0027): every shipped job declares a reachable permissions block, a timeout and a cancelling concurrency group", () => {
   // One it() per TC-0003-0027 verify bullet, plus the carried advisory-27
@@ -202,6 +203,7 @@ describe("TC-0003-0027 (TDD-0027): every shipped job declares a reachable permis
   });
 });
 
+// QFAI:AC-0002-0001-01
 describe("TC-0003-0028 (TDD-0055): every shipped checkout refuses to persist credentials and full history stays job-scoped", () => {
   // The STATIC half of this TC (BR-0018-0002): checkout
   // credential hygiene asserted directly against the shipped tree. The
@@ -293,6 +295,7 @@ describe("TC-0003-0028 (TDD-0055): every shipped checkout refuses to persist cre
   });
 });
 
+// QFAI:AC-0002-0006-01
 // QFAI:EX-0002-0006-01
 describe("TC-0003-0029 (TDD-0029): four lockfile branches plus the no-lockfile branch survive hardening", () => {
   // Realizes this TC (BR-0018-0003: every new shipped file carries the same

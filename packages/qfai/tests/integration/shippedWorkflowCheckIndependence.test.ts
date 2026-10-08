@@ -129,6 +129,7 @@ const CLOSE_GATE = "${{ github.event.action != 'closed' }}";
 /** What an aggregate declares: `always()` outlives the cancellation, so it declines too. */
 const ALWAYS_UNLESS_CLOSED = "${{ always() && github.event.action != 'closed' }}";
 
+// QFAI:AC-0002-0003-03
 describe("delivered document checks run independently and require a complete result", () => {
   // QFAI:EX-0002-0003-05
   it("TC-0003-0056 (TDD-0058): delivers both isolated native matrix units without changing checker commands", async () => {
@@ -246,6 +247,7 @@ describe("delivered document checks run independently and require a complete res
   );
 });
 
+// QFAI:AC-0002-0003-03
 describe("delivered validation profiles run independently and require a complete result", () => {
   // QFAI:EX-0002-0003-05
   it("TC-0003-0057 (TDD-0060): delivers full validation and PR-only drift in isolated native matrix jobs", async () => {
