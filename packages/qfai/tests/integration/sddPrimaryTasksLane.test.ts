@@ -184,6 +184,7 @@ function uiContractWithoutPrimaryTasksKey(): string {
   ].join("\n");
 }
 
+// QFAI:AC-0001-0153-02
 // QFAI:EX-0001-0153-02
 describe("TC-0013-0026: QFAI-AUD-001 aligned lane fails when primary_tasks is empty", () => {
   it("returns a severity=error finding naming file path, screen id, and rule token", async () => {

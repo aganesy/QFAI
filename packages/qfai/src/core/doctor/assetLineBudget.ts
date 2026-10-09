@@ -5,42 +5,48 @@ import path from "node:path";
 import { ASSISTANT_DIR } from "../paths/assistantPaths.js";
 
 /**
- * Line ceiling for a single assistant asset file.
+ * Line ceiling for a single Markdown assistant asset file.
  *
- * One number for every file, owned at runtime rather than by a test constant:
- * the ceiling is stated in the shipped operating baseline, so a project that
- * only has the published package must still be able to check it. The framework's
- * own asset test imports this constant instead of redeclaring it.
+ * The limit `ai-readable-markdown.md` sets for any Markdown file an agent
+ * reads: an agent follows fewer instructions as its context grows, and follows
+ * those in the middle of a long file worst. It is owned at runtime rather than
+ * by a test constant because the rule ships in the operating baseline, so a
+ * project that only has the published package must still be able to check it.
+ * The framework's own asset tests import this constant instead of redeclaring
+ * it.
  *
  * The ceiling is a backstop, not the design rule. The design rule is that a
  * skill body stays thin: it states the contract and points at the topic file
  * that carries the detail, under the skill's own `references/`, `templates/` or
- * `examples/` directory.
- *
- * Raised from 500 once, on measurement rather than on the "this file is long"
- * claim this number exists to refuse. Three skill bodies had converged on the
- * old ceiling at 498 / 498 / 500 lines, with 33 / 22 / 16 open changes in
- * flight against them. Two of the three are net neutral, but the middle one is
- * not: eleven of its open changes each carry it past the old ceiling on their
- * own, the widest to 549, and their intended edits together add 161 lines to a
- * body that starts at 498.
- *
- * Splitting does not absorb that. What those bodies still carry is held there
- * by asset tests that require an agent to read a rule where the rule acts, so
- * the movable residue is a few dozen lines. Nor is a net-neutral queue safe at
- * zero headroom: changes land one at a time, and a body at 498 fails on the
- * first one that adds four lines whether or not a later one takes them back.
- *
- * Converging on the limit was itself the signal: a body at the ceiling stops
- * shedding topics and starts packing them into longer lines, and by then the
- * widest line in one of those files ran 6192 characters — so the count had
- * stopped bounding what an agent must read. A line ceiling cannot see that;
- * only a reader can.
- *
- * A file approaching this number is still a signal to move a section out.
- * Raise it again only against evidence of the same kind.
+ * `examples/` directory. A file approaching this number is a signal to move a
+ * section out. A body at the ceiling tends to stop shedding topics and start
+ * packing them into longer lines, which a line count cannot see; the width
+ * ceiling below is what catches that.
  */
-export const ASSISTANT_ASSET_MAX_LINES = 800;
+export const ASSISTANT_MARKDOWN_MAX_LINES = 500;
+
+/**
+ * Line ceiling for every other assistant asset file: the YAML ones.
+ *
+ * The Markdown remedy of moving a topic into a `references/` sibling is not open
+ * to them. A validator parses these files as structured data, or a skill copies
+ * one whole into a project, so an entry moved into a Markdown sibling leaves the
+ * parsed document and stops meaning anything. They split in their own format or
+ * record an exemption, which is why their ceiling is higher.
+ */
+export const ASSISTANT_DATA_MAX_LINES = 800;
+
+/**
+ * The line ceiling that applies to one asset file, chosen by its extension.
+ *
+ * Markdown is held to {@link ASSISTANT_MARKDOWN_MAX_LINES}; any other asset,
+ * such as YAML or a JSON schema, to {@link ASSISTANT_DATA_MAX_LINES}.
+ */
+export function assistantLineCeiling(filePath: string): number {
+  return path.extname(filePath).toLowerCase() === ".md"
+    ? ASSISTANT_MARKDOWN_MAX_LINES
+    : ASSISTANT_DATA_MAX_LINES;
+}
 
 /**
  * Width ceiling for a single line, which is what makes the line ceiling honest.
@@ -54,10 +60,7 @@ export const ASSISTANT_ASSET_MAX_LINES = 800;
  *
  * 400 is read off the tree rather than chosen: the 90th percentile is 413, so
  * nine files in ten already comply, and the ones that do not are the ones the
- * packing produced. It is also the point below which the width cap would start
- * deciding a different question — reflowed to 300, the largest skill body
- * passes 800 lines and the line ceiling condemns it, which is a split decision
- * and not this one.
+ * packing produced.
  *
  * The two ceilings are read together on purpose. Width alone permits a thin
  * file of a thousand short lines; the count alone permits a packed one. A file
@@ -69,7 +72,7 @@ export const ASSISTANT_ASSET_MAX_LINE_CHARS = 400;
 export const ASSISTANT_ASSET_EXTENSIONS: readonly string[] = [".md", ".yml", ".yaml"];
 
 /**
- * Asset files exempt from {@link ASSISTANT_ASSET_MAX_LINES}, with the reason.
+ * Asset files exempt from the line ceiling, with the reason.
  *
  * Keys are POSIX paths relative to the project's `.qfai/` directory. Keep this
  * list short: an exemption claims no split is possible, and "this file is long"
@@ -504,7 +507,10 @@ export type AssistantAssetBudgetStatus =
 export type AssistantAssetBudgetReport = {
   status: AssistantAssetBudgetStatus;
   assistantDir: string;
-  maxLines: number;
+  /** Ceiling for a Markdown asset, in lines. */
+  maxMarkdownLines: number;
+  /** Ceiling for every other asset, in lines. */
+  maxDataLines: number;
   maxLineChars: number;
   /** Number of asset files measured (unreadable files excluded). */
   scanned: number;
@@ -671,7 +677,7 @@ function classifyAssistantProbe(error: unknown): "missing" | "unprobeable" {
 }
 
 /**
- * Measures every `.qfai/assistant/**` asset against {@link ASSISTANT_ASSET_MAX_LINES}.
+ * Measures every `.qfai/assistant/**` asset against {@link assistantLineCeiling}.
  *
  * Returns `skipped_missing_assistant` when the tree has not been created yet,
  * so a project that has not run init is not reported as a failure, and
@@ -684,7 +690,8 @@ export async function checkAssistantAssetLineBudget(
   const assistantDir = path.resolve(root, ASSISTANT_DIR);
   const empty = {
     assistantDir,
-    maxLines: ASSISTANT_ASSET_MAX_LINES,
+    maxMarkdownLines: ASSISTANT_MARKDOWN_MAX_LINES,
+    maxDataLines: ASSISTANT_DATA_MAX_LINES,
     maxLineChars: ASSISTANT_ASSET_MAX_LINE_CHARS,
     scanned: 0,
     oversized: [],
@@ -737,7 +744,7 @@ export async function checkAssistantAssetLineBudget(
     // roster's length tracks the number of agents, so there is no topic to move
     // out. Nothing in that reason is about how wide a line may be, and a file
     // excused from both would be the one place the width rule does not reach.
-    if (exemptReason === undefined && measured.lines > ASSISTANT_ASSET_MAX_LINES) {
+    if (exemptReason === undefined && measured.lines > assistantLineCeiling(relPath)) {
       oversized.push({ path: relPath, lines: measured.lines });
     }
     const allowed = WIDTH_BUDGET_BACKLOG.get(relPath) ?? ASSISTANT_ASSET_MAX_LINE_CHARS;
@@ -757,7 +764,8 @@ export async function checkAssistantAssetLineBudget(
   return {
     status,
     assistantDir,
-    maxLines: ASSISTANT_ASSET_MAX_LINES,
+    maxMarkdownLines: ASSISTANT_MARKDOWN_MAX_LINES,
+    maxDataLines: ASSISTANT_DATA_MAX_LINES,
     maxLineChars: ASSISTANT_ASSET_MAX_LINE_CHARS,
     scanned,
     oversized,

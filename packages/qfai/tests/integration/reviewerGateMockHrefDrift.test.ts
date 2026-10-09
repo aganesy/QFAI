@@ -89,6 +89,7 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
+// QFAI:AC-0001-0089-02
 // QFAI:EX-0001-0089-03
 describe("TC-0010-0011: detectMockHrefDrift emits QFAI-MOCKHREF-001 on template↔validator asymmetry", () => {
   // QFAI:EX-0001-0089-05

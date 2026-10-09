@@ -121,8 +121,10 @@ vi.mock("node:fs/promises", async (importOriginal) => {
 
 import { createDoctorData } from "../../../../src/core/doctor.js";
 import {
-  ASSISTANT_ASSET_MAX_LINES,
   ASSISTANT_ASSET_MAX_LINE_CHARS,
+  ASSISTANT_DATA_MAX_LINES,
+  ASSISTANT_MARKDOWN_MAX_LINES,
+  assistantLineCeiling,
   checkAssistantAssetLineBudget,
   countLines,
   widestMeasurableLine,
@@ -186,29 +188,57 @@ describe("countLines", () => {
 });
 
 describe("checkAssistantAssetLineBudget", () => {
-  it("exposes the ceiling as a runtime constant", () => {
-    expect(ASSISTANT_ASSET_MAX_LINES).toBe(800);
+  it("exposes the ceilings as runtime constants", () => {
+    expect(ASSISTANT_MARKDOWN_MAX_LINES).toBe(500);
+    expect(ASSISTANT_DATA_MAX_LINES).toBe(800);
+  });
+
+  it("holds Markdown to its ceiling and every other asset to the data ceiling", () => {
+    expect(assistantLineCeiling("rule/quality.md")).toBe(500);
+    expect(assistantLineCeiling("RULE/QUALITY.MD")).toBe(500);
+    expect(assistantLineCeiling("manifest/skills.yml")).toBe(800);
+    expect(assistantLineCeiling("manifest/skills.yaml")).toBe(800);
+    expect(assistantLineCeiling("schema/plan.schema.json")).toBe(800);
+  });
+
+  it("lets a YAML asset run past the Markdown ceiling up to its own", async () => {
+    await withTempRoot(async (root) => {
+      await writeAsset(root, "manifest/within.yml", ASSISTANT_MARKDOWN_MAX_LINES + 1);
+      await writeAsset(root, "manifest/at-ceiling.yaml", ASSISTANT_DATA_MAX_LINES);
+      await writeAsset(root, "manifest/over.yml", ASSISTANT_DATA_MAX_LINES + 1);
+      await writeAsset(root, "rule/over.md", ASSISTANT_MARKDOWN_MAX_LINES + 1);
+
+      const report = await checkAssistantAssetLineBudget(root);
+
+      expect(report.status).toBe("over_budget");
+      expect(report.maxMarkdownLines).toBe(ASSISTANT_MARKDOWN_MAX_LINES);
+      expect(report.maxDataLines).toBe(ASSISTANT_DATA_MAX_LINES);
+      expect(report.oversized).toEqual([
+        { path: "assistant/manifest/over.yml", lines: ASSISTANT_DATA_MAX_LINES + 1 },
+        { path: "assistant/rule/over.md", lines: ASSISTANT_MARKDOWN_MAX_LINES + 1 },
+      ]);
+    });
   });
 
   it("reports a file over the ceiling with its measured line count", async () => {
     await withTempRoot(async (root) => {
-      await writeAsset(root, "skill/qfai-demo/SKILL.md", ASSISTANT_ASSET_MAX_LINES + 3);
+      await writeAsset(root, "skill/qfai-demo/SKILL.md", ASSISTANT_MARKDOWN_MAX_LINES + 3);
       await writeAsset(root, "catalog/test-layers.md", 10);
 
       const report = await checkAssistantAssetLineBudget(root);
 
       expect(report.status).toBe("over_budget");
-      expect(report.maxLines).toBe(ASSISTANT_ASSET_MAX_LINES);
+      expect(report.maxMarkdownLines).toBe(ASSISTANT_MARKDOWN_MAX_LINES);
       expect(report.scanned).toBe(2);
       expect(report.oversized).toEqual([
-        { path: "assistant/skill/qfai-demo/SKILL.md", lines: ASSISTANT_ASSET_MAX_LINES + 3 },
+        { path: "assistant/skill/qfai-demo/SKILL.md", lines: ASSISTANT_MARKDOWN_MAX_LINES + 3 },
       ]);
     });
   });
 
   it("passes when every asset is at or under the ceiling", async () => {
     await withTempRoot(async (root) => {
-      await writeAsset(root, "constitution/baseline.md", ASSISTANT_ASSET_MAX_LINES);
+      await writeAsset(root, "constitution/baseline.md", ASSISTANT_MARKDOWN_MAX_LINES);
       await writeAsset(root, "manifest/skills.yml", 12);
 
       const report = await checkAssistantAssetLineBudget(root);
@@ -223,7 +253,7 @@ describe("checkAssistantAssetLineBudget", () => {
     await withTempRoot(async (root) => {
       const abs = path.join(root, ".qfai", "assistant", "catalog", "notes.txt");
       await mkdir(path.dirname(abs), { recursive: true });
-      await writeFile(abs, "x\n".repeat(ASSISTANT_ASSET_MAX_LINES + 50), "utf-8");
+      await writeFile(abs, "x\n".repeat(ASSISTANT_MARKDOWN_MAX_LINES + 50), "utf-8");
 
       const report = await checkAssistantAssetLineBudget(root);
 
@@ -251,7 +281,7 @@ describe("checkAssistantAssetLineBudget", () => {
       await writeAsset(
         root,
         "skill/qfai-demo/references/tmp/oversized.md",
-        ASSISTANT_ASSET_MAX_LINES + 2,
+        ASSISTANT_MARKDOWN_MAX_LINES + 2,
       );
 
       const report = await checkAssistantAssetLineBudget(root);
@@ -260,7 +290,7 @@ describe("checkAssistantAssetLineBudget", () => {
       expect(report.oversized).toEqual([
         {
           path: "assistant/skill/qfai-demo/references/tmp/oversized.md",
-          lines: ASSISTANT_ASSET_MAX_LINES + 2,
+          lines: ASSISTANT_MARKDOWN_MAX_LINES + 2,
         },
       ]);
     });
@@ -271,7 +301,7 @@ describe("checkAssistantAssetLineBudget", () => {
       // On a filesystem that answers DT_UNKNOWN, isFile()/isDirectory() are both
       // false for a plain directory and a plain file. Skipping those left whole
       // subtrees unmeasured while the report still said `ok`.
-      await writeAsset(root, "skill/qfai-demo/SKILL.md", ASSISTANT_ASSET_MAX_LINES + 4);
+      await writeAsset(root, "skill/qfai-demo/SKILL.md", ASSISTANT_MARKDOWN_MAX_LINES + 4);
       await writeAsset(root, "catalog/test-layers.md", 10);
 
       const report = await checkAssistantAssetLineBudget(root);
@@ -280,7 +310,7 @@ describe("checkAssistantAssetLineBudget", () => {
       expect(report.oversized).toEqual([
         {
           path: "assistant/skill/qfai-demo/SKILL.md",
-          lines: ASSISTANT_ASSET_MAX_LINES + 4,
+          lines: ASSISTANT_MARKDOWN_MAX_LINES + 4,
         },
       ]);
       expect(report.scanned).toBe(2);
@@ -349,14 +379,14 @@ describe("doctor assets.lineBudget check", () => {
   it("still reports assets.lineBudget when the skills tree cannot be listed", async () => {
     await withTempRoot(async (root) => {
       await writeAsset(root, `skill/${UNLISTABLE_SKILL_DIR}/SKILL.md`, 3);
-      await writeAsset(root, "constitution/long-rule.md", ASSISTANT_ASSET_MAX_LINES + 2);
+      await writeAsset(root, "constitution/long-rule.md", ASSISTANT_MARKDOWN_MAX_LINES + 2);
 
       const data = await createDoctorData({ startDir: root, rootExplicit: true });
 
       const budget = data.checks.find((entry) => entry.id === "assets.lineBudget");
       expect(budget?.severity).toBe("warning");
       expect(budget?.details?.["oversized"]).toEqual([
-        { path: "assistant/constitution/long-rule.md", lines: ASSISTANT_ASSET_MAX_LINES + 2 },
+        { path: "assistant/constitution/long-rule.md", lines: ASSISTANT_MARKDOWN_MAX_LINES + 2 },
       ]);
     });
   });
@@ -365,7 +395,7 @@ describe("doctor assets.lineBudget check", () => {
     const root = await mkdtemp(path.join(os.tmpdir(), UNLISTABLE_AGENTS_ROOT));
     try {
       await mkdir(path.join(root, ".qfai", "assistant", "agent"), { recursive: true });
-      await writeAsset(root, "constitution/long-rule.md", ASSISTANT_ASSET_MAX_LINES + 5);
+      await writeAsset(root, "constitution/long-rule.md", ASSISTANT_MARKDOWN_MAX_LINES + 5);
 
       const data = await createDoctorData({ startDir: root, rootExplicit: true });
 
@@ -376,7 +406,7 @@ describe("doctor assets.lineBudget check", () => {
       const budget = data.checks.find((entry) => entry.id === "assets.lineBudget");
       expect(budget?.severity).toBe("warning");
       expect(budget?.details?.["oversized"]).toEqual([
-        { path: "assistant/constitution/long-rule.md", lines: ASSISTANT_ASSET_MAX_LINES + 5 },
+        { path: "assistant/constitution/long-rule.md", lines: ASSISTANT_MARKDOWN_MAX_LINES + 5 },
       ]);
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -385,24 +415,28 @@ describe("doctor assets.lineBudget check", () => {
 
   it("warns with the ceiling and the offending files in details", async () => {
     await withTempRoot(async (root) => {
-      await writeAsset(root, "skill/qfai-demo/SKILL.md", ASSISTANT_ASSET_MAX_LINES + 1);
+      await writeAsset(root, "skill/qfai-demo/SKILL.md", ASSISTANT_MARKDOWN_MAX_LINES + 1);
 
       const data = await createDoctorData({ startDir: root, rootExplicit: true });
       const check = data.checks.find((entry) => entry.id === "assets.lineBudget");
 
       expect(check).toBeDefined();
       expect(check?.severity).toBe("warning");
-      expect(check?.message).toContain(String(ASSISTANT_ASSET_MAX_LINES));
+      expect(check?.message).toContain(
+        `${ASSISTANT_MARKDOWN_MAX_LINES} lines for Markdown, ${ASSISTANT_DATA_MAX_LINES} for YAML`,
+      );
+      expect(check?.details?.["maxMarkdownLines"]).toBe(ASSISTANT_MARKDOWN_MAX_LINES);
+      expect(check?.details?.["maxDataLines"]).toBe(ASSISTANT_DATA_MAX_LINES);
       expect(check?.details?.["oversized"]).toEqual([
-        { path: "assistant/skill/qfai-demo/SKILL.md", lines: ASSISTANT_ASSET_MAX_LINES + 1 },
+        { path: "assistant/skill/qfai-demo/SKILL.md", lines: ASSISTANT_MARKDOWN_MAX_LINES + 1 },
       ]);
     });
   });
 
   it("names each oversized file and its line count in the message itself", async () => {
     await withTempRoot(async (root) => {
-      await writeAsset(root, "skill/qfai-demo/SKILL.md", ASSISTANT_ASSET_MAX_LINES + 1);
-      await writeAsset(root, "constitution/long-rule.md", ASSISTANT_ASSET_MAX_LINES + 7);
+      await writeAsset(root, "skill/qfai-demo/SKILL.md", ASSISTANT_MARKDOWN_MAX_LINES + 1);
+      await writeAsset(root, "constitution/long-rule.md", ASSISTANT_MARKDOWN_MAX_LINES + 7);
 
       const data = await createDoctorData({ startDir: root, rootExplicit: true });
       const check = data.checks.find((entry) => entry.id === "assets.lineBudget");
@@ -412,10 +446,10 @@ describe("doctor assets.lineBudget check", () => {
       // `message`; `details` is JSON-only. Both files, their measured counts and
       // the repair guidance must therefore survive into the message.
       expect(message).toContain(
-        `assistant/skill/qfai-demo/SKILL.md (${ASSISTANT_ASSET_MAX_LINES + 1} lines)`,
+        `assistant/skill/qfai-demo/SKILL.md (${ASSISTANT_MARKDOWN_MAX_LINES + 1} lines)`,
       );
       expect(message).toContain(
-        `assistant/constitution/long-rule.md (${ASSISTANT_ASSET_MAX_LINES + 7} lines)`,
+        `assistant/constitution/long-rule.md (${ASSISTANT_MARKDOWN_MAX_LINES + 7} lines)`,
       );
       expect(message).toContain("references/");
       expect(message).toContain("within its own layer");
@@ -426,7 +460,7 @@ describe("doctor assets.lineBudget check", () => {
 
   it("keeps skill guidance off non-skill assets", async () => {
     await withTempRoot(async (root) => {
-      await writeAsset(root, "constitution/long-rule.md", ASSISTANT_ASSET_MAX_LINES + 1);
+      await writeAsset(root, "constitution/long-rule.md", ASSISTANT_MARKDOWN_MAX_LINES + 1);
 
       const data = await createDoctorData({ startDir: root, rootExplicit: true });
       const check = data.checks.find((entry) => entry.id === "assets.lineBudget");
@@ -468,7 +502,7 @@ describe("doctor assets.lineBudget check", () => {
         const hostileName = "over\n[ok] injected: not a real finding.md";
         await writeFile(
           path.join(assistantDir, hostileName),
-          "x\n".repeat(ASSISTANT_ASSET_MAX_LINES + 1),
+          "x\n".repeat(ASSISTANT_MARKDOWN_MAX_LINES + 1),
           "utf-8",
         );
 
@@ -484,7 +518,7 @@ describe("doctor assets.lineBudget check", () => {
         expect(check?.details?.["oversized"]).toEqual([
           {
             path: `assistant/skill/qfai-demo/${hostileName}`,
-            lines: ASSISTANT_ASSET_MAX_LINES + 2,
+            lines: ASSISTANT_MARKDOWN_MAX_LINES + 2,
           },
         ]);
       });
@@ -493,7 +527,7 @@ describe("doctor assets.lineBudget check", () => {
 
   it("is ok when the assistant tree is inside the ceiling", async () => {
     await withTempRoot(async (root) => {
-      await writeAsset(root, "skill/qfai-demo/SKILL.md", ASSISTANT_ASSET_MAX_LINES);
+      await writeAsset(root, "skill/qfai-demo/SKILL.md", ASSISTANT_MARKDOWN_MAX_LINES);
 
       const data = await createDoctorData({ startDir: root, rootExplicit: true });
       const check = data.checks.find((entry) => entry.id === "assets.lineBudget");

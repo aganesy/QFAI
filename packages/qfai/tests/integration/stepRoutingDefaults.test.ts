@@ -12,7 +12,7 @@ import { runInit } from "../../src/cli/commands/init.js";
 import { loadConfig, routingEntryName } from "../../src/core/config.js";
 import {
   ASSISTANT_ASSET_MAX_LINE_CHARS,
-  ASSISTANT_ASSET_MAX_LINES,
+  assistantLineCeiling,
   countLines,
   widestMeasurableLine,
 } from "../../src/core/doctor/assetLineBudget.js";
@@ -88,7 +88,7 @@ describe("routing keyed by step", () => {
       const lines = countLines(file.text);
       const widest = widestMeasurableLine(file.text);
       return [
-        ...(lines > ASSISTANT_ASSET_MAX_LINES ? [`${file.rel}: ${lines} lines`] : []),
+        ...(lines > assistantLineCeiling(file.rel) ? [`${file.rel}: ${lines} lines`] : []),
         ...(widest > ASSISTANT_ASSET_MAX_LINE_CHARS ? [`${file.rel}: ${widest} characters`] : []),
       ];
     });

@@ -40,6 +40,7 @@ async function makePack(id: string): Promise<void> {
   await mkdir(path.join(root, ".qfai", "discussion", id), { recursive: true });
 }
 
+// QFAI:AC-0001-0090-01
 // QFAI:EX-0001-0090-01
 // QFAI:EX-0001-0090-02
 describe("TC-0010-0012: discussion use writes pointer; list --active reads it", () => {
@@ -130,6 +131,7 @@ describe("TC-0010-0013: ambiguous/absent pointer recovery error", () => {
     expect(combined).toMatch(/qfai discussion use <id>/);
   });
 
+  // QFAI:AC-0001-0090-02
   // QFAI:EX-0001-0090-03
   it("exits non-zero when currentId resolves to a missing pack with multiple candidates", async () => {
     await makePack("discussion-20260101000000000");
