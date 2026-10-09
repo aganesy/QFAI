@@ -48,6 +48,7 @@ type ParsedScreens = {
   screens?: Array<Record<string, unknown>>;
 };
 
+// QFAI:AC-0001-0153-01
 // QFAI:EX-0001-0153-01
 describe("TC-0013-0025: shipped ui-contract.sample.yaml carries a primary_tasks list per screen", () => {
   it("template parses with every screens[] entry exposing a primary_tasks slot", async () => {

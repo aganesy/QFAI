@@ -336,6 +336,119 @@ describe("story-tree validation acceptance", () => {
     ]);
   });
 
+  // QFAI:AC-0001-0149-01
+  // QFAI:EX-0001-0149-01
+  it("gates a story of two criteria and three examples on the criterion each example names", async () => {
+    const files = (rows: Array<[string, string]>): Map<string, string> =>
+      changed({
+        [`${story}/02_Acceptance-Criteria.md`]: `${criterion("AC-0001-0001-01")}\n${criterion("AC-0001-0001-02")}`,
+        [`${story}/03_Example.md`]: examples(...rows),
+        [`${contract}/cli/cli-0001-check.md`]: rules([
+          "BR-0001-0001",
+          "EX-0001-0001-01, EX-0001-0001-02, EX-0001-0001-03",
+        ]),
+      });
+    const errors = (issues: Issue[]): Issue[] =>
+      issues.filter((found) => found.severity === "error" && found.code.startsWith("QFAI-STORY-"));
+
+    const passing = await validateTree(
+      files([
+        ["EX-0001-0001-01", "AC-0001-0001-01"],
+        ["EX-0001-0001-02", "AC-0001-0001-02"],
+        ["EX-0001-0001-03", "AC-0001-0001-01"],
+      ]),
+    );
+    expect(errors(passing.issues)).toEqual([]);
+
+    const empty = await validateTree(
+      files([
+        ["EX-0001-0001-01", ""],
+        ["EX-0001-0001-02", "AC-0001-0001-02"],
+        ["EX-0001-0001-03", "AC-0001-0001-01"],
+      ]),
+    );
+    const emptyReport = errorsNaming(empty.issues, "QFAI-STORY-004", "EX-0001-0001-01");
+    expect(emptyReport).toHaveLength(1);
+    expect(posix(emptyReport[0]?.file)).toBe(posix(path.join(empty.root, story, "03_Example.md")));
+
+    const both = await validateTree(
+      files([
+        ["EX-0001-0001-01", "AC-0001-0001-01, AC-0001-0001-02"],
+        ["EX-0001-0001-02", "AC-0001-0001-02"],
+        ["EX-0001-0001-03", "AC-0001-0001-01"],
+      ]),
+    );
+    expect(errorsNaming(both.issues, "QFAI-STORY-004", "EX-0001-0001-01")).toHaveLength(1);
+
+    const unnamed = await validateTree(
+      files([
+        ["EX-0001-0001-01", "AC-0001-0001-01"],
+        ["EX-0001-0001-02", "AC-0001-0001-01"],
+        ["EX-0001-0001-03", "AC-0001-0001-01"],
+      ]),
+    );
+    const unnamedReport = errorsNaming(unnamed.issues, "QFAI-STORY-004", "AC-0001-0001-02");
+    expect(unnamedReport).toHaveLength(1);
+    expect(posix(unnamedReport[0]?.file)).toBe(
+      posix(path.join(unnamed.root, story, "02_Acceptance-Criteria.md")),
+    );
+  });
+
+  // QFAI:EX-0001-0149-02
+  it("gates a contract of two rules on the examples each rule names", async () => {
+    const rows = [
+      ["EX-0001-0001-01", "AC-0001-0001-01"],
+      ["EX-0001-0001-02", "AC-0001-0001-01"],
+      ["EX-0001-0001-03", "AC-0001-0001-01"],
+    ] as Array<[string, string]>;
+    const files = (...contractRows: Array<[string, string]>): Map<string, string> =>
+      changed({
+        [`${story}/03_Example.md`]: examples(...rows),
+        [`${contract}/cli/cli-0001-check.md`]: rules(...contractRows),
+      });
+    const errors = (issues: Issue[]): Issue[] =>
+      issues.filter((found) => found.severity === "error" && found.code.startsWith("QFAI-STORY-"));
+
+    const passing = await validateTree(
+      files(
+        ["BR-0001-0001", "EX-0001-0001-01, EX-0001-0001-02"],
+        ["BR-0001-0002", "EX-0001-0001-02, EX-0001-0001-03"],
+      ),
+    );
+    expect(errors(passing.issues)).toEqual([]);
+
+    const noExamples = await validateTree(
+      files(
+        ["BR-0001-0001", "EX-0001-0001-01, EX-0001-0001-02, EX-0001-0001-03"],
+        ["BR-0001-0002", ""],
+      ),
+    );
+    const noExamplesReport = errorsNaming(noExamples.issues, "QFAI-STORY-005", "BR-0001-0002");
+    expect(noExamplesReport).toHaveLength(1);
+    expect(posix(noExamplesReport[0]?.file)).toBe(
+      posix(path.join(noExamples.root, contract, "cli/cli-0001-check.md")),
+    );
+
+    const uncited = await validateTree(
+      files(["BR-0001-0001", "EX-0001-0001-01"], ["BR-0001-0002", "EX-0001-0001-02"]),
+    );
+    const uncitedReport = errorsNaming(uncited.issues, "QFAI-STORY-005", "EX-0001-0001-03");
+    expect(uncitedReport).toHaveLength(1);
+    expect(posix(uncitedReport[0]?.file)).toBe(
+      posix(path.join(uncited.root, story, "03_Example.md")),
+    );
+
+    const unknown = await validateTree(
+      files(
+        ["BR-0001-0001", "EX-0001-0001-01, EX-0001-0001-02, EX-0001-0001-03"],
+        ["BR-0001-0002", "EX-0001-0001-99"],
+      ),
+    );
+    const unknownReport = errorsNaming(unknown.issues, "QFAI-STORY-005", "BR-0001-0002");
+    expect(unknownReport).toHaveLength(1);
+    expect(unknownReport[0]?.message).toContain("cites unknown EX-0001-0001-99");
+  });
+
   // QFAI:AC-0001-0055-01
   it("names an example whose criterion reference is empty, repeated, undefined or of another story", async () => {
     const other = `${flow}/user-story-0001-0002`;

@@ -47,6 +47,7 @@ async function makeUiContract(filename: string, content: string): Promise<void> 
 }
 
 describe("spec-0013 active-pack resolver CHG-006", () => {
+  // QFAI:AC-0001-0154-01
   // QFAI:EX-0001-0154-01
   it("QFAI:EX-0001-0154-01 — normal: the single helper returns the pack named in state.json#discussion.currentId", async () => {
     const expected = await makeDiscussionPack("discussion-20260527075558258");
@@ -56,6 +57,7 @@ describe("spec-0013 active-pack resolver CHG-006", () => {
     expect(resolved).toBe(expected);
   });
 
+  // QFAI:AC-0001-0154-02
   // QFAI:EX-0001-0154-03
   it("QFAI:EX-0001-0154-03 — a dangling currentId names candidate packs and the recovery command", async () => {
     await makeDiscussionPack("discussion-20260101000000000");
@@ -187,6 +189,7 @@ describe("spec-0013 primary_tasks ceiling + shape CHG-006", () => {
     }
   });
 
+  // QFAI:AC-0001-0155-02
   // QFAI:EX-0001-0155-02
   it("QFAI:EX-0001-0155-02 — normal: complete structured items are accepted and a string item is rejected", async () => {
     const issues = await withinBandIssues(

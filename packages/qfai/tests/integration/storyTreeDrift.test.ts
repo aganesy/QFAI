@@ -44,6 +44,7 @@ afterEach(async () => {
 });
 
 describe("story-tree drift", () => {
+  // QFAI:AC-0001-0054-03
   // QFAI:EX-0001-0002-04
   // QFAI:EX-0001-0054-04
   it("reports each protected story-tree edit and excludes evidence", async () => {
@@ -156,6 +157,7 @@ describe("story-tree drift", () => {
     expect(reported).not.toContain(flows);
   });
 
+  // QFAI:AC-0001-0054-04
   // QFAI:EX-0001-0054-06
   // QFAI:EX-0001-0002-06
   // QFAI:EX-0001-0054-07
@@ -309,6 +311,7 @@ describe("story-tree drift", () => {
     );
   });
 
+  // QFAI:AC-0001-0054-01
   // QFAI:EX-0001-0007-07
   // QFAI:EX-0001-0054-02
   it("reports a rewritten decision row in drift even when a change request names the file", async () => {
@@ -358,7 +361,9 @@ describe("story-tree drift", () => {
     expect(findings.some((item) => item.code === "QFAI-STORY-010")).toBe(false);
   });
 
+  // QFAI:AC-0001-0054-01
   // QFAI:EX-0001-0007-08
+  // QFAI:EX-0001-0054-01
   it("reports removal of an existing decision row", async () => {
     await put(decisions, `${table}| DEC-0001 | Choice A | Reason | TODO |\n`);
     git("add", ".");
@@ -369,7 +374,12 @@ describe("story-tree drift", () => {
     git("commit", "-m", "remove row");
     const findings = await validateStoryTreeDrift(root, config(), "drift");
     expect(
-      findings.some((item) => item.code === "QFAI-STORY-010" && item.message.includes("DEC-0001")),
+      findings.some(
+        (item) =>
+          item.code === "QFAI-STORY-010" &&
+          item.file === decisions &&
+          item.message.includes("DEC-0001"),
+      ),
     ).toBe(true);
   });
 
@@ -385,6 +395,37 @@ describe("story-tree drift", () => {
     expect(await validateStoryTreeDrift(root, config(), "drift")).toEqual([]);
   });
 
+  // QFAI:AC-0001-0054-05
+  // QFAI:EX-0001-0054-09
+  it("holds the tree to the base once a commit with a story tree is the base", async () => {
+    const contractFile = `${specs}/03_contract/cli/command.md`;
+    await put("README.md", "base\n");
+    git("add", ".");
+    git("commit", "-m", "base without a story tree");
+    git("checkout", "-b", "topic");
+    await put(decisions, `${table}| DEC-0001 | Choice A | Reason | TODO |\n`);
+    await put(glossary, "# Terms\n");
+    await put(contractFile, "# Command\n");
+    git("add", ".");
+    git("commit", "-m", "add the story tree");
+    for (const profile of ["tdd", "drift"] as const) {
+      expect(await validateStoryTreeDrift(root, config(), profile)).toEqual([]);
+    }
+
+    git("checkout", "main");
+    git("merge", "--ff-only", "topic");
+    git("checkout", "-b", "next");
+    await put(glossary, "# Terms\nUpdated\n");
+    git("add", ".");
+    git("commit", "-m", "edit the glossary");
+    for (const profile of ["tdd", "drift"] as const) {
+      const findings = await validateStoryTreeDrift(root, config(), profile);
+      expect(findings.map((item) => `${item.code} ${item.file}`)).toEqual([
+        `QFAI-DRIFT-001 ${glossary}`,
+      ]);
+    }
+  });
+
   it("does not report drift when the base ref or git repository is unavailable", async () => {
     await put(decisions, table);
     await put(glossary, "# Terms\n");
@@ -398,6 +439,33 @@ describe("story-tree drift", () => {
       await rm(outside, { recursive: true, force: true });
     }
   });
+
+  // QFAI:AC-0001-0054-02
+  // QFAI:EX-0001-0054-03
+  it.each(["tdd", "drift"] as const)(
+    "reports nothing in %s for a removed row and an edited policy file when the base cannot be resolved",
+    async (profile) => {
+      await put(decisions, `${table}| DEC-0001 | Choice A | Reason | TODO |\n`);
+      await put(glossary, "# Terms\n");
+      git("add", ".");
+      git("commit", "-m", "base");
+      git("checkout", "-b", "topic");
+      await put(decisions, table);
+      await put(glossary, "# Terms\nUpdated\n");
+      git("add", ".");
+      git("commit", "-m", "remove a row and edit the glossary");
+
+      expect(
+        (await validateStoryTreeDrift(root, config(), profile)).filter(
+          (item) => item.file === decisions || item.file === glossary,
+        ).length,
+      ).toBeGreaterThan(0);
+
+      const missing = config();
+      missing.baseBranch = "missing/base";
+      expect(await validateStoryTreeDrift(root, missing, profile)).toEqual([]);
+    },
+  );
 
   // QFAI:EX-0001-0054-04
   // QFAI:EX-0001-0054-05
