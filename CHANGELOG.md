@@ -6,6 +6,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`/qfai-configure` leaves `paths.specsDir` to the default, adds routing and
+  review-profile overrides only on request, and records each test layer's tool
+  in the `tech.md` Stack table.** The skill no longer tells a project to gain a
+  key the package already defaults: an absent `paths.specsDir` resolves to
+  `.qfai/spec` and a configured value stays. Step 4 adds `routing` or
+  `reviewProfiles` only when the user asks to change one. Step 3 asks for one
+  Stack row per test layer, naming the tool, the files it was observed in and why
+  it fits that layer. Part of #2951.
+
 - **`qfai init` no longer cleans up after earlier releases, and
   `qfai validate` no longer reports their wrappers.** `--force` removes
   nothing: it no longer deletes the command and prompt wrappers, the skill and
