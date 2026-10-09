@@ -46,7 +46,7 @@
 | US-0001-0042 | Prototyping skill validation                                                           | `user-story-0001-0042/` |
 | US-0001-0043 | Canonical assistant-tree layers                                                        | `user-story-0001-0043/` |
 | US-0001-0045 | Deprecated assistant paths and skill project memory                                    | `user-story-0001-0045/` |
-| US-0001-0046 | Migration notes pass through as informational                                          | `user-story-0001-0046/` |
+| US-0001-0046 | Unseeded assistant layer is informational                                              | `user-story-0001-0046/` |
 | US-0001-0047 | Profile-specific validation reports                                                    | `user-story-0001-0047/` |
 | US-0001-0049 | SaaS package validation profile                                                        | `user-story-0001-0049/` |
 | US-0001-0050 | Audit profile task forms                                                               | `user-story-0001-0050/` |
@@ -103,7 +103,7 @@
 | US-0001-0108 | Declared layout anti-pattern review                                                    | `user-story-0001-0108/` |
 | US-0001-0114 | Project-wide UI-contract resolution                                                    | `user-story-0001-0114/` |
 | US-0001-0116 | Qualitative screen impressions                                                         | `user-story-0001-0116/` |
-| US-0001-0129 | Browser tool migration window                                                          | `user-story-0001-0129/` |
+| US-0001-0129 | Browser tool setting                                                                   | `user-story-0001-0129/` |
 | US-0001-0134 | UI-contract terminology in prototyping                                                 | `user-story-0001-0134/` |
 | US-0001-0138 | Canonical primary UI-contract pin                                                      | `user-story-0001-0138/` |
 | US-0001-0147 | Unified SDD Workflow                                                                   | `user-story-0001-0147/` |

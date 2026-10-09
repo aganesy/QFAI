@@ -17,7 +17,7 @@ import { run } from "../../src/cli/main.js";
 import { loadConfig, resolvePath } from "../../src/core/config.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { pathExists } from "../helpers/pathExists.js";
-import { useTempDirPool } from "../helpers/shippedWorkflowFixtures.js";
+import { isRecord, useTempDirPool } from "../helpers/shippedWorkflowFixtures.js";
 import { captureStderr } from "../helpers/stderr.js";
 import { captureStdout } from "../helpers/stdout.js";
 
@@ -407,5 +407,46 @@ describe("BF-0001 story-tree seed", () => {
       expect(await pathExists(path.join(catalog, name)), name).toBe(false);
     }
     expect(await pathExists(catalog)).toBe(false);
+  });
+});
+
+describe("BF-0001 unseeded assistant layer", () => {
+  // QFAI:AC-0001-0046-02
+  // QFAI:EX-0001-0046-02
+  it("reports a layer that is not seeded as an info finding that fails no gate", async () => {
+    const dir = await newTempDir();
+    await init(dir);
+    await rm(path.join(dir, ".qfai", "assistant", "prompt"), { recursive: true, force: true });
+
+    const validated = await qfai(
+      dir,
+      "validate",
+      "--root",
+      dir,
+      "--profile",
+      "sdd",
+      "--fail-on",
+      "warning",
+    );
+
+    expect(validated.exitCode).toBe(0);
+    const report: unknown = JSON.parse(
+      await readFile(path.join(dir, ".qfai", "report", "validate.json"), "utf-8"),
+    );
+    if (!isRecord(report) || !isRecord(report.counts) || !Array.isArray(report.issues)) {
+      throw new Error("validate.json has no counts and issues");
+    }
+    const counts = report.counts;
+    expect(Number(counts.info)).toBeGreaterThanOrEqual(1);
+    expect(counts.warning).toBe(0);
+    expect(counts.error).toBe(0);
+    const unseeded = report.issues.filter(
+      (found) => isRecord(found) && found.code === "QFAI-ASSISTANT-002",
+    );
+    expect(unseeded).toHaveLength(1);
+    expect(unseeded[0]).toMatchObject({
+      severity: "info",
+      file: ".qfai/assistant/prompt/",
+    });
   });
 });

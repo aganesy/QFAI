@@ -3,10 +3,10 @@
 ## Criteria
 
 ```gherkin
-Feature: Migration notes pass through as informational
+Feature: Unseeded assistant layer is informational
   # AC-0001-0046-02
-  Scenario: Migration notes pass through as informational
-    Given a validate run on a project that just completed `qfai init --upgrade-assistant-tree`
-    When the migration emitted `W-USER-EDIT-PRESERVED` informational notes
-    Then the validator recognizes those notes as informational pass-throughs (`info` severity, not warning/error); they appear in the validate report under "Informational" without failing any gate
+  Scenario: Unseeded assistant layer is informational
+    Given a project whose `.qfai/assistant/` tree lacks one of its canonical layer directories
+    When `qfai validate` runs
+    Then the validator reports `QFAI-ASSISTANT-002` for that layer at `info` severity (not warning or error), counts it in `counts.info`, lists it in the validate report, and the run fails no gate on account of it
 ```

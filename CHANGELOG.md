@@ -6,6 +6,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The `qfai-sdd` normalization reference lists all six removed design
+  contracts.** The reference that tells the skill which contracts not to generate
+  named four. It now also names `exploration-brief.yaml`, `reference-pool.yaml`
+  and `brand-design.yaml`, so every contract the skill retired is listed beside
+  `DESIGN.md`, the only design contract. Part of #2951.
+
 - **`qfai doctor` holds a Markdown assistant asset to 500 lines.** The
   `assets.lineBudget` check allowed 800 lines for every `.md`, `.yml` and `.yaml`
   file under `.qfai/assistant`, so a Markdown file could pass it and still break
