@@ -947,10 +947,24 @@ jobs:
           # fix the token problem below; it just moves the failure from E404
           # to ENEEDAUTH, because npm then has no registry config to act on.
           registry-url: "https://registry.npmjs.org"
+      - name: Drop the placeholder auth line so npm reaches the OIDC exchange
+        # setup-node writes an auth-token entry for registry-url that reads `${NODE_AUTH_TOKEN}`,
+        # and this job sets none: the OIDC exchange authenticates. Remove the entry before the
+        # first pnpm call, so none of them warns that the variable is unset.
+        # SHIPPED-CI: not-applicable
+        # Because: the shipped workflows do not publish to npm, so they carry no such entry.
+        run: |
+          set -euo pipefail
+          npmrc="${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}"
+          if [ -f "$npmrc" ]; then
+            sed -i '/_authToken/d' "$npmrc"
+            echo "auth lines remaining: $(grep -c _authToken "$npmrc" || true)"
+          fi
+        shell: bash
       - name: Re-shim pnpm against toolcache Node
         # The version comes from the checked-out tag's `package.json#packageManager`, which every
         # published tag carries, so a re-publish of an older tag installs the pnpm it was built with.
-        # The step above has already fetched it, so this finds it downloaded.
+        # The corepack step before `setup-node` has already fetched it, so this finds it downloaded.
         run: corepack prepare --activate
         shell: bash
       # `--ignore-scripts` for the reason the toolchain action carries it: a dependency's
@@ -978,17 +992,6 @@ jobs:
             pnpm rebuild "${name}"
           done <"${list}"
           echo "rebuilt ${names} permitted dependency package(s)"
-        shell: bash
-      - name: Drop the placeholder auth line so npm reaches the OIDC exchange
-        # setup-node writes an auth-token entry for registry-url. Remove that
-        # entry before trusted publishing so npm uses the OIDC exchange.
-        run: |
-          set -euo pipefail
-          npmrc="${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}"
-          if [ -f "$npmrc" ]; then
-            sed -i '/_authToken/d' "$npmrc"
-            echo "auth lines remaining: $(grep -c _authToken "$npmrc" || true)"
-          fi
         shell: bash
       - name: Require an npm that can do trusted publishing
         # `actions/setup-node` ships whatever npm the Node build carries, which
