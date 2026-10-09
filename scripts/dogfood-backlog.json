@@ -47,9 +47,6 @@
         "QFAI-STORY-006 EX-0001-0091-06": 1,
         "QFAI-STORY-006 EX-0001-0091-07": 1
       },
-      ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0108/03_Example.md": {
-        "QFAI-STORY-006 EX-0001-0108-02": 1
-      },
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0147/03_Example.md": {
         "QFAI-STORY-006 EX-0001-0147-01": 1,
         "QFAI-STORY-006 EX-0001-0147-02": 1,
@@ -81,8 +78,7 @@
         "QFAI-STORY-006 EX-0001-0164-02": 1
       },
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0165/03_Example.md": {
-        "QFAI-STORY-006 EX-0001-0165-01": 1,
-        "QFAI-STORY-006 EX-0001-0165-02": 1
+        "QFAI-STORY-006 EX-0001-0165-01": 1
       },
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0166/03_Example.md": {
         "QFAI-STORY-006 EX-0001-0166-01": 1
@@ -215,12 +211,6 @@
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0096/02_Acceptance-Criteria.md": {
         "QFAI-STORY-006 AC-0001-0096-01": 1
       },
-      ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0108/02_Acceptance-Criteria.md": {
-        "QFAI-STORY-006 AC-0001-0108-02": 1
-      },
-      ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0108/03_Example.md": {
-        "QFAI-STORY-006 EX-0001-0108-02": 1
-      },
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0147/02_Acceptance-Criteria.md": {
         "QFAI-STORY-006 AC-0001-0147-01": 1,
         "QFAI-STORY-006 AC-0001-0147-02": 1,
@@ -285,12 +275,10 @@
         "QFAI-STORY-006 EX-0001-0164-02": 1
       },
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0165/02_Acceptance-Criteria.md": {
-        "QFAI-STORY-006 AC-0001-0165-01": 1,
-        "QFAI-STORY-006 AC-0001-0165-02": 1
+        "QFAI-STORY-006 AC-0001-0165-01": 1
       },
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0165/03_Example.md": {
-        "QFAI-STORY-006 EX-0001-0165-01": 1,
-        "QFAI-STORY-006 EX-0001-0165-02": 1
+        "QFAI-STORY-006 EX-0001-0165-01": 1
       },
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0166/02_Acceptance-Criteria.md": {
         "QFAI-STORY-006 AC-0001-0166-01": 1
