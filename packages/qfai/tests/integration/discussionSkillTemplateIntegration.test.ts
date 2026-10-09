@@ -112,6 +112,81 @@ describe("discussion skill template integration", () => {
     );
   });
 
+  // QFAI:AC-0001-0080-01
+  // QFAI:EX-0001-0080-01
+  it("records the four exploration inputs in 04_Sources.md and selects no visual winner", async () => {
+    const sources = await readFile(path.join(templateBase, "templates", "04_Sources.md"), "utf-8");
+    const section = sources.split(/^## /m).find((part) => part.startsWith("Exploration Direction"));
+    expect(section).toBeDefined();
+    for (const input of [
+      "Product intent",
+      "Must-keep interactions",
+      "Brand signals",
+      "Differentiation targets",
+    ]) {
+      expect(section, input).toMatch(
+        new RegExp(`^\\| ${input}\\s+\\|\\s*\\|\\s*\\|\\s*missing\\s*\\|$`, "m"),
+      );
+    }
+    const prose = (section ?? "").replace(/\s+/g, " ");
+    expect(prose).toContain(
+      "Record product intent and must-keep interactions for every UI-bearing pack. For a visual-prototyping surface, also record brand signals and differentiation targets.",
+    );
+    expect(prose).toContain(
+      "Do not invent a source, a brand trait, or a design choice to fill the table.",
+    );
+
+    const step = (await readDiscussionStep(assistantBase, "discussion-pack")).replace(/\s+/g, " ");
+    expect(step).toContain(
+      "In `04_Sources.md#Exploration Direction Inputs`, record product intent and must-keep interactions. On a visual-prototyping surface, also record brand signals and differentiation targets from the interview.",
+    );
+    expect(step).toContain(
+      "Discussion is planner-first: carry the screen explorations unranked and do not finalize the design system here.",
+    );
+    expect(step).toContain(
+      "the pack stayed planner-first and did not choose a single visual winner",
+    );
+  });
+
+  // QFAI:AC-0001-0081-01
+  // QFAI:EX-0001-0081-01
+  it("has every registered reference name what was adopted, what was rejected and how it was translated", async () => {
+    const sources = await readFile(path.join(templateBase, "templates", "04_Sources.md"), "utf-8");
+    const registries = ["Component Catalogue Registry", "Competitive Reference Registry"].map(
+      (heading) => {
+        const section = sources.split(/^## /m).find((part) => part.startsWith(heading));
+        expect(section, heading).toBeDefined();
+        return section ?? "";
+      },
+    );
+    for (const registry of registries) {
+      const blocks = registry.split(/^### Reference: /m).slice(1);
+      expect(blocks.length).toBeGreaterThan(0);
+      for (const block of blocks) {
+        for (const field of [
+          "reference",
+          "adopted_points",
+          "rejected_points",
+          "local_translation",
+        ]) {
+          expect(block, field).toMatch(new RegExp(`^- ${field}: \\[.+\\]$`, "m"));
+        }
+      }
+    }
+    const competitive = (registries[1] ?? "").replace(/\s+/g, " ");
+    expect(competitive).toContain(
+      "Use a competitor to identify what this product should differ from. State adopted and rejected signals separately and explain how any adopted point changes locally; do not copy a competitor's surface as a template.",
+    );
+    expect(competitive).toContain(
+      "Every bracketed value below is a placeholder and counts as unpopulated",
+    );
+
+    const step = (await readDiscussionStep(assistantBase, "discussion-pack")).replace(/\s+/g, " ");
+    expect(step).toContain(
+      "each entry naming what was adopted, what was rejected, and how it was translated. Competitor references are **deviate-from** inputs, not imitate-this; catalogue references are adopt-from.",
+    );
+  });
+
   // SKILL.md is the only file the skill is guaranteed to load; references are
   // opt-in. If its family list drops a member of
   // `threeLayer.ts#CANONICAL_REQUIRED_SIDECAR_FILES`, an operator builds a

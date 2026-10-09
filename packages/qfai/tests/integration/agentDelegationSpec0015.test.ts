@@ -3,7 +3,7 @@
  * and delegation behavior.
  */
 // QFAI:AC-0001-0161-01
-import { mkdtemp, readdir, readFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -12,6 +12,12 @@ import { parse as parseYaml } from "yaml";
 
 import { runInit } from "../../src/cli/commands/init.js";
 import { parseAgentFrontmatter } from "../../src/core/agentFrontmatter.js";
+import { CODEX_AGENT_WRAPPER_DIR, renderCodexAgentToml } from "../../src/core/codexAgentToml.js";
+import { loadConfig } from "../../src/core/config.js";
+import {
+  readEffectiveRouting,
+  validateAgentDefinition,
+} from "../../src/core/validators/agentDefinition.js";
 import { defaultRoutingEntries } from "../helpers/shippedAssistant.js";
 import { captureStdout } from "../helpers/stdout.js";
 import { removeTempTree } from "../helpers/tempTree.js";
@@ -145,6 +151,25 @@ describe("routing defaults are package data", () => {
     expect(mode?.bare_negation_invalid).toBe(true);
   });
 
+  // QFAI:AC-0001-0165-01
+  // QFAI:EX-0001-0165-01
+  it("defines pattern-doubler as an advisory mode that proposes concrete coverage with a rationale and no numeric target", async () => {
+    const profiles = asRecord(
+      parseYaml(await readAsset(path.join(DEFAULTS_DIR, "review-profiles.yml"))),
+    );
+    const mode = asRecord(asRecord(profiles.optional_modes)["pattern-doubler"]);
+    expect(mode.kind).toBe("advisory");
+    expect(mode.description).toBe(
+      "Propose missing concrete business-flow, story, acceptance-criterion, or example coverage with rationale; do not demand more abstract rules or numeric targets.",
+    );
+    expect(mode.rationale_required).toBe(true);
+    expect(Object.keys(mode).sort(), "the mode declares no growth target of any kind").toEqual([
+      "description",
+      "kind",
+      "rationale_required",
+    ]);
+  });
+
   it("routes the migration skill through the required three phases", async () => {
     const routing = { routing: await defaultRoutingEntries() } as {
       routing: Array<{
@@ -165,6 +190,344 @@ describe("routing defaults are package data", () => {
     expect(migration?.review_profile).toBe("architecture-heavy");
   });
 });
+/** Every card's text, by card name. */
+async function readCards(): Promise<Map<string, string>> {
+  const cards = new Map<string, string>();
+  for (const fileName of (await readdir(AGENTS_DIR)).filter((name) => name.endsWith(".md"))) {
+    cards.set(fileName.slice(0, -3), await readAsset(path.join(AGENTS_DIR, fileName)));
+  }
+  return cards;
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? Object.fromEntries(Object.entries(value))
+    : {};
+}
+
+/** The YAML mapping between a card's `---` lines. */
+function cardFrontmatter(card: string): Record<string, unknown> {
+  const block = /^---\r?\n([\s\S]*?)\r?\n---/.exec(card)?.[1] ?? "";
+  return asRecord(parseYaml(block));
+}
+
+async function initProject(): Promise<string> {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-agent-cards-"));
+  await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+  return root;
+}
+
+describe("the agent cards carry the whole definition of a role", () => {
+  // QFAI:EX-0001-0161-01
+  it("gives each card its metadata keys, leaves no catalog file, and generates the Codex profiles from the cards", async () => {
+    const cards = await readCards();
+    expect(cards.size).toBe(19);
+    const keys = [
+      "name",
+      "kind",
+      "domain",
+      "mission",
+      "replaces",
+      "owned_artifacts",
+      "tool_profile",
+      "permission_profile",
+      "specialization_tags",
+    ];
+    for (const [name, card] of cards) {
+      const frontmatter = cardFrontmatter(card);
+      for (const key of keys) {
+        expect(Object.hasOwn(frontmatter, key), `${name}: ${key}`).toBe(true);
+      }
+      expect(frontmatter.name, name).toBe(name);
+      expect(frontmatter.mission, `${name}: mission beside description`).not.toBe(
+        frontmatter.description,
+      );
+      expect(parseAgentFrontmatter(card).ok, name).toBe(true);
+    }
+
+    // A card with no mission key breaks the rule, and a mission read from the description does not
+    // stand in for it.
+    const solution = cards.get("solution-architect") ?? "";
+    const withoutMission = solution.replace(/^mission:[\s\S]*?(?=^replaces:)/m, "");
+    expect(withoutMission).not.toBe(solution);
+    expect(parseAgentFrontmatter(withoutMission).ok).toBe(false);
+
+    const root = await initProject();
+    try {
+      const everything = await readdir(root, { recursive: true });
+      expect(everything.filter((entry) => path.basename(entry) === "agent-catalog.yml")).toEqual(
+        [],
+      );
+      for (const [name, card] of cards) {
+        const kind = cardFrontmatter(card).kind;
+        expect(kind === "worker" || kind === "reviewer", `${name}: kind`).toBe(true);
+        const generated = renderCodexAgentToml(
+          card,
+          kind === "reviewer" ? "reviewer" : "worker",
+          name,
+        );
+        expect(generated.ok, name).toBe(true);
+        const written = await readFile(
+          path.join(root, ...CODEX_AGENT_WRAPPER_DIR.split("/"), `${name}.toml`),
+          "utf-8",
+        );
+        expect(written, `${name}: profile equals what the generator produces`).toBe(
+          generated.ok ? generated.toml : "",
+        );
+      }
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  // QFAI:AC-0001-0161-02
+  // QFAI:EX-0001-0161-05
+  it("keeps what each replaced role was responsible for in the card that replaced it", async () => {
+    const cards = await readCards();
+    const architect = cards.get("solution-architect") ?? "";
+    const frontmatter = cardFrontmatter(architect);
+    expect(frontmatter.replaces).toEqual(["architect", "contract-designer"]);
+    expect(frontmatter.owned_artifacts).toEqual([
+      "architecture-decisions",
+      "contracts",
+      "boundaries",
+    ]);
+    expect(String(frontmatter.mission).replace(/\s+/g, " ")).toBe(
+      "Choose system boundaries and contracts that satisfy specs and preserve rejected options.",
+    );
+    const architectBody = architect.replace(/\s+/g, " ");
+    expect(architectBody).toContain(
+      "Define architecture boundaries, non-goals, and major trade-offs.",
+    );
+    expect(architectBody).toContain(
+      "Design UI, API, and DB contracts that make requirements executable.",
+    );
+    expect(architectBody).toContain("Contract decisions and ownership boundaries");
+
+    // One responsibility of each role a card replaces, as the card words it.
+    const represented: Record<string, string[]> = {
+      "acceptance-test-engineer": [
+        "Implement one E2E test per BF and integration or API tests for each active AC obligation.",
+      ],
+      "delivery-planner": [
+        "Decompose work into phases, checkpoints, owners, dependencies and rerun gates.",
+      ],
+      "discovery-analyst": [
+        "Research domain context and external references when needed.",
+        "Design high-value questions that reduce ambiguity quickly.",
+        "Facilitate discussions, trade-off framing, and boundary clarification.",
+      ],
+      "implementation-reviewer": ["Review changed production code and tests"],
+      "product-experience-architect": [
+        "Define UX direction, user journeys, interaction patterns, and accessibility expectations.",
+        "Define visual design direction, tokens, typography, color, and layout hierarchy.",
+        "Design navigation structures, IA, and screen transition logic.",
+      ],
+      "product-surface-reviewer": [
+        "Audit frontend changes for correctness and user-facing risk.",
+        "Audit layout sanity, interaction usability, and accessibility guardrails.",
+        "Audit visual design, token alignment, and service-level UX coherence.",
+      ],
+      "qa-gatekeeper": [
+        "Block completion until validation, coverage, runtime, and prototype evidence",
+      ],
+      "qa-strategist": [
+        "Define QA priorities, risk posture, and evidence expectations.",
+        "Audit coverage, traceability, and failure handling from a strategy perspective.",
+      ],
+      "requirements-analyst": [
+        "Harvest undefined decisions and maintain the OQ backlog.",
+        "Produce multiple solution options with a recommendation.",
+      ],
+      "requirements-reviewer": [
+        "Audit option sets for missing alternatives and weak recommendation rationale.",
+        "Review OQ candidates for completeness, neutrality, and safe deferral.",
+      ],
+    };
+    for (const [name, responsibilities] of Object.entries(represented)) {
+      const card = cards.get(name) ?? "";
+      const replaces = cardFrontmatter(card).replaces;
+      expect(Array.isArray(replaces) && replaces.length > 0, `${name} replaces a role`).toBe(true);
+      const text = card.replace(/\s+/g, " ");
+      for (const responsibility of responsibilities) {
+        expect(text, name).toContain(responsibility);
+      }
+    }
+  });
+});
+
+describe("every agent card follows the standard contract", () => {
+  const SECTIONS = [
+    "Mission",
+    "Inputs you must read",
+    "Deliverables",
+    "Stop conditions",
+    "Sign-off",
+  ];
+
+  /** The lines under `## <heading>`, up to the next `## ` heading. */
+  function sectionLines(card: string, heading: string): string[] {
+    const part = card
+      .split(/^## /m)
+      .find((candidate) => candidate.split(/\r?\n/, 1)[0] === heading);
+    return (part ?? "").split(/\r?\n/).slice(1);
+  }
+
+  // QFAI:AC-0001-0162-01
+  // QFAI:EX-0001-0162-01
+  it("has Mission, Inputs you must read, Deliverables, Stop conditions and Sign-off, each with content, and reports a card missing one", async () => {
+    const cards = await readCards();
+    for (const [name, card] of cards) {
+      for (const heading of SECTIONS) {
+        const items = sectionLines(card, heading).filter((line) => line.trim().length > 0);
+        expect(items.length, `${name}: ${heading}`).toBeGreaterThan(0);
+      }
+    }
+
+    const architect = cards.get("solution-architect") ?? "";
+    expect(sectionLines(architect, "Mission")).toContain(
+      "- Define architecture and contract decisions aligned with specs, constraints, and rejected-option history.",
+    );
+    expect(sectionLines(architect, "Deliverables")).toContain(
+      "- Architecture decisions with trade-offs",
+    );
+    expect(sectionLines(architect, "Stop conditions")).toContain(
+      "- Governing specs, routing rules, or required source artifacts are missing.",
+    );
+    expect(sectionLines(architect, "Sign-off")).toContain("- [ ] Deliverables are complete");
+
+    const root = await initProject();
+    try {
+      const file = path.join(root, ".qfai", "assistant", "agent", "solution-architect.md");
+      await writeFile(file, architect.replace("## Stop conditions", "## Stop"), "utf-8");
+      const { config } = await loadConfig(root);
+      const findings = await validateAgentDefinition(root, config);
+      expect(
+        findings
+          .filter((finding) => finding.code === "QFAI-AGENT-005")
+          .map((finding) => finding.message),
+      ).toEqual([
+        'Missing required section "## Stop conditions" in .qfai/assistant/agent/solution-architect.md',
+      ]);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+});
+
+describe("a project overrides the built-in routing and review profiles whole", () => {
+  const override = {
+    step: "sdd-contract",
+    phases: [
+      {
+        id: "review",
+        mandatory_agents: ["implementation-reviewer"],
+        parallel_groups: [],
+        rerun_policy: "changed-scope-dependents",
+      },
+    ],
+    review_profile: "project-strict",
+  };
+  const agentsOf = (entry: { agents: Map<string, string> } | undefined): string[] =>
+    [...(entry?.agents.keys() ?? [])].sort();
+
+  // QFAI:EX-0001-0161-02
+  it("uses the package defaults when nothing is overridden, and the override entry alone when one is", async () => {
+    const root = await initProject();
+    try {
+      const everything = await readdir(root, { recursive: true });
+      expect(
+        everything.filter((entry) =>
+          ["agent-routing.yml", "review-profiles.yml"].includes(path.basename(entry)),
+        ),
+        "the project holds no routing file and no review-profile file",
+      ).toEqual([]);
+    } finally {
+      await removeTempTree(root);
+    }
+
+    const defaults = await readEffectiveRouting({});
+    expect(agentsOf(defaults.routing?.get("sdd-contract"))).toContain("solution-architect");
+    expect([...(defaults.profiles?.keys() ?? [])].sort()).toEqual([
+      "architecture-heavy",
+      "default",
+      "runtime-heavy",
+    ]);
+
+    const overridden = await readEffectiveRouting({
+      routing: [override],
+      reviewProfiles: {
+        "project-strict": {
+          always_required: ["implementation-reviewer"],
+          conditional_required: [],
+        },
+      },
+    });
+    expect(
+      agentsOf(overridden.routing?.get("sdd-contract")),
+      "none of the default entry's other phases are merged in",
+    ).toEqual(["implementation-reviewer"]);
+    expect(overridden.routing?.get("sdd-contract")?.phases).toBe(1);
+    expect(overridden.routing?.get("sdd-contract")?.reviewProfile).toBe("project-strict");
+    expect([...(overridden.profiles?.keys() ?? [])].sort()).toEqual([
+      "architecture-heavy",
+      "default",
+      "project-strict",
+      "runtime-heavy",
+    ]);
+  });
+
+  // QFAI:EX-0001-0161-03
+  it("rejects an override that names an agent with no card, and offers no key for an optional review mode", async () => {
+    const root = await initProject();
+    try {
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        [
+          "routing:",
+          "  - step: sdd-contract",
+          "    phases:",
+          "      - id: design",
+          "        mandatory_agents: [release-auditor]",
+          "    review_profile: default",
+          "reviewProfiles:",
+          "  project-strict:",
+          "    always_required: []",
+          "optional_modes:",
+          "  devils-advocate:",
+          "    kind: blocking",
+          "optionalModes:",
+          "  pattern-doubler:",
+          "    kind: blocking",
+          "reviewModes:",
+          "  devils-advocate: off",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      const { config } = await loadConfig(root);
+      expect(Object.keys(config).filter((key) => /mode/i.test(key))).toEqual([]);
+      expect(Object.keys(config.reviewProfiles ?? {})).toEqual(["project-strict"]);
+      expect(config.routing?.map((entry) => entry.step)).toEqual(["sdd-contract"]);
+
+      const findings = await validateAgentDefinition(root, config);
+      const unknown = findings.filter((finding) => finding.code === "QFAI-AGENT-008");
+      expect(unknown.length).toBeGreaterThan(0);
+      expect(unknown.every((finding) => finding.message.includes("release-auditor"))).toBe(true);
+    } finally {
+      await removeTempTree(root);
+    }
+
+    const profiles = asRecord(
+      parseYaml(await readAsset(path.join(DEFAULTS_DIR, "review-profiles.yml"))),
+    );
+    const modes = asRecord(profiles.optional_modes);
+    expect(Object.keys(modes)).toEqual(["devils-advocate", "pattern-doubler"]);
+    expect(asRecord(modes["devils-advocate"]).kind).toBe("advisory");
+    expect(asRecord(modes["pattern-doubler"]).kind).toBe("advisory");
+  });
+});
+
 /** The same section of the shipped baseline and of the repository's synced copy. */
 async function baselineSections(heading: string): Promise<string[]> {
   const [shipped, live] = await Promise.all([
