@@ -2,4 +2,4 @@
 
 ## User Story
 
-As a downstream project, I want `prototyping.execution.browserTool` to accept `"playwright"` and to refuse `"playwright-cli"`, so that a configuration naming a launcher qfai no longer supports is reported when it loads.
+As a downstream project, I want `prototyping.execution.browserTool` to accept `"playwright"`, so that the evaluator's browser tool is set in one place.

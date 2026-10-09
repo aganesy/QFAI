@@ -362,72 +362,17 @@ describe("finding code grammar", () => {
 
     expect(doc).toContain("## A branch that already emits a frozen-family code");
     expect(doc).toContain("**Rename to `QFAI-<AREA>-<NNN>`**");
-    expect(doc).toContain("**Keep the `<AREA>-<NNN>` suffix the old id had**");
-    expect(doc).toContain(
-      "**Check the stripped spelling for a collision, not only the full code.**",
-    );
     expect(doc).toContain("**Check whether the code already exists.**");
   });
 
-  it("says what the alias covers and what a shipped rename still breaks", async () => {
-    // The alias is about waivers. The code is also an operator-facing
-    // identifier in annotations and in `validate.json`, so a rename is a
-    // behaviour change for anyone reading those.
+  it("says what a shipped rename breaks", async () => {
+    // The code is an operator-facing identifier in annotations, in
+    // `validate.json` and in a waiver, so a rename is a behaviour change for
+    // anyone reading or naming it.
     const doc = flat(await readFile(DOC_PATH, "utf-8"));
 
     expect(doc).toContain("### Renaming a code that has shipped");
-    expect(doc).toContain("The alias above covers waivers and nothing else.");
     expect(doc).toContain("breaking for anyone identifying findings by code");
-    // And the deferred case stays the shapes the strip cannot reach.
-    expect(doc).toContain("Renaming a legacy code whose shape is **not** `<AREA>-<NNN>`");
-  });
-
-  it("keeps the documented strip in step with the one waivers.ts applies", async () => {
-    // Two statements of one rule is how the document would come to promise an
-    // alias the resolver does not give. The document states the shape in prose,
-    // so both are checked on the same boundary cases instead of by comparing
-    // the two spellings.
-    // The pattern is read off the AST, not matched as source text. A text match
-    // has to spell the whitespace, the semicolon and the escaping exactly as
-    // the file happens to be formatted, so a reflow that changes no behaviour
-    // fails it.
-    const waiversPath = path.resolve(SRC_ROOT, "core/waivers.ts");
-    const waivers = await readFile(waiversPath, "utf-8");
-    const source = ts.createSourceFile(waiversPath, waivers, ts.ScriptTarget.Latest, true);
-    let literal: string | undefined;
-    const visit = (node: ts.Node): void => {
-      if (
-        ts.isVariableDeclaration(node) &&
-        ts.isIdentifier(node.name) &&
-        node.name.text === "STRIPPED_CODE_RE"
-      ) {
-        const initializer = unwrapExpression(node.initializer);
-        if (initializer !== undefined && ts.isRegularExpressionLiteral(initializer)) {
-          literal = initializer.text;
-        }
-      }
-      ts.forEachChild(node, visit);
-    };
-    visit(source);
-    expect(literal, "STRIPPED_CODE_RE is not a regular expression literal in waivers.ts").toBe(
-      "/^QFAI-([A-Z]+-\\d{3})$/",
-    );
-
-    // The very pattern the implementation declares, evaluated on the cases the
-    // document names — so the two cannot promise different aliases.
-    const body = literal?.slice(1, literal.lastIndexOf("/")) ?? "";
-    const re = new RegExp(body);
-    // What the document promises an alias for.
-    expect(re.exec("QFAI-WAIVER-001")?.[1]).toBe("WAIVER-001");
-    // And the two shapes it says get none.
-    expect(re.test("QFAI-CFG-LINK-001")).toBe(false);
-    expect(re.test("HANDOFF-SCHEMA-NOT-OBJECT")).toBe(false);
-
-    const doc = flat(await readFile(DOC_PATH, "utf-8"));
-    expect(doc).toContain("`QFAI-CFG-LINK-001` strips to nothing");
-    expect(doc).toContain(
-      "a code with no `QFAI-` prefix (`HANDOFF-SCHEMA-NOT-OBJECT`) does not match at all",
-    );
   });
 
   it("documents every frozen family in docs/finding-codes.md", async () => {

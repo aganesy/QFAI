@@ -3,10 +3,9 @@
  *
  * `config.load` pinned every loader issue to `warning`, on the reasoning that
  * the config had been "normalized with defaults". That is true of a *warning* —
- * an unknown key, a value the loader can substitute — but not of an error. Once
- * `browserTool: "playwright-cli"` passed its sunset the loader started
- * reporting it at `error`, and `qfai doctor --fail-on error` still exited 0,
- * against `.qfai/spec/03_contract/cli/cli-0008-qfai-doctor.md`, which calls a current-minor
+ * an unknown key, a value the loader can substitute — but not of an error. A
+ * `browserTool` value the loader rejects is reported at `error`, and
+ * `qfai doctor --fail-on error` still exited 0, against `.qfai/spec/03_contract/cli/cli-0008-qfai-doctor.md`, which calls a current-minor
  * invalid value blocking.
  */
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -33,7 +32,7 @@ const findCheck = (data: Awaited<ReturnType<typeof createDoctorData>>, id: strin
 describe("doctor config.load severity", () => {
   it("reports error when the loader rejected a value", async () => {
     await withConfig(
-      ["prototyping:", "  execution:", "    browserTool: playwright-cli", ""].join("\n"),
+      ["prototyping:", "  execution:", "    browserTool: chromium", ""].join("\n"),
       async (root) => {
         const data = await createDoctorData({ startDir: root, rootExplicit: true });
         const check = findCheck(data, "config.load");
@@ -43,7 +42,6 @@ describe("doctor config.load severity", () => {
         // The message must say the issues need fixing, not that defaults were
         // applied — that phrasing is what made the fault look benign.
         expect(check?.message).toContain("must be fixed");
-        expect(JSON.stringify(check?.details ?? {})).toContain("1.10.0");
       },
     );
   });

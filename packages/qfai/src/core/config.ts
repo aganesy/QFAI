@@ -10,22 +10,6 @@ import { normalizeRenderViewports, type RenderEvidenceConfig } from "./uiux/rend
 
 export type FailOn = "never" | "warning" | "error";
 export type OutputFormat = "text" | "github";
-export type TraceabilitySeverity = "warning" | "error";
-/**
- * The value set of the retired orphanContractsPolicy. Compatibility fields
- * annotate their type with this one: referencing the public alias would trigger
- * `@typescript-eslint/no-deprecated` and force a lint-suppression comment. Delete
- * this internal type when the compatibility acceptance ends.
- */
-type RetiredOrphanContractsPolicy = "error" | "warning" | "allow";
-
-/**
- * @deprecated validation.traceability.orphanContractsPolicy is retired.
- * No check reads it, so setting it changes nothing. It stays for the
- * compatibility period only, so existing TypeScript consumers that import it
- * keep type-checking.
- */
-export type OrphanContractsPolicy = RetiredOrphanContractsPolicy;
 
 export type QfaiPaths = {
   contractsDir: string;
@@ -33,11 +17,6 @@ export type QfaiPaths = {
   discussionDir: string;
   outDir: string;
   skillsDir: string;
-  /**
-   * @deprecated Use paths.skillsDir.
-   * It is still read for compatibility and is not used on the main validation path.
-   */
-  promptsDir: string;
   srcDir: string;
   testsDir: string;
   /**
@@ -69,42 +48,10 @@ export type QfaiValidationConfig = {
      * Set to false to opt out while migrating an existing project.
      */
     forbidTestTodoStubs: boolean;
-    /**
-     * @deprecated A dead knob: no validation reads it, so setting it to true
-     * raises no diagnostic. It is already removed from the shipped
-     * `qfai.config.yaml` and will be removed from the type in the next major
-     * release. As with paths.promptsDir, the default and the parsing stay as
-     * they were until then (this is a public type, so existing TypeScript
-     * consumers can keep referring to it as a `boolean`).
-     */
-    requireLayerTags: boolean;
-    /**
-     * @deprecated Treated the same as `testStrategy.requireLayerTags`.
-     */
-    requireSizeTags: boolean;
   };
   traceability: {
     testFileGlobs: string[];
     testFileExcludeGlobs: string[];
-    /**
-     * @deprecated Retired. No check reads it, so setting it changes nothing,
-     * and loading it reports QFAI-CFG-001 as an error. It stays as an optional
-     * field for the compatibility period only, so existing config object
-     * literals keep type-checking.
-     */
-    brMustHaveSc?: boolean;
-    /**
-     * @deprecated Retired. The finding for a missing SC test reference has a
-     * fixed severity, so this value is not read. It stays as an optional field
-     * for the compatibility period only.
-     */
-    scNoTestSeverity?: TraceabilitySeverity;
-    /**
-     * @deprecated Retired. The orphan-contract finding no longer exists, so
-     * this value is not read. It stays as an optional field for the
-     * compatibility period only.
-     */
-    orphanContractsPolicy?: RetiredOrphanContractsPolicy;
   };
 };
 
@@ -156,13 +103,10 @@ export type QfaiUiuxConfig = {
 export type QfaiPrototypingExecutionConfig = {
   targetUrl?: string | null;
   /**
-   * Browser tool handed to the AI evaluator sub-agent.
-   *
-   * Only `"playwright"` is accepted. `"playwright-cli"` is retired:
-   * `normalizePrototypingExecution` rejects the value, and the doctor probe
-   * reports `D-DEPRECATED-PROBE` at `error`.
+   * Browser tool handed to the AI evaluator sub-agent. Only `"playwright"` is
+   * accepted.
    */
-  browserTool: "playwright" | "playwright-cli";
+  browserTool: "playwright";
 };
 
 export type QfaiPrototypingConfig = {
@@ -222,16 +166,6 @@ export type QfaiConfig = {
 };
 
 /**
- * Default for the two deprecated `testStrategy` compat knobs. Both are dead —
- * no validator reads either — so the default is a fixed `false` rather than a
- * behavioural choice. It lives here, once, so `defaultConfig` and the loader
- * cannot drift apart, and so the loader can state the fallback instead of
- * reading it back off a deprecated property (which would force a lint
- * suppression at each of the two call sites).
- */
-const DEPRECATED_TEST_STRATEGY_FLAG_DEFAULT = false;
-
-/**
  * The path keys `resolvePath` can resolve: the ones every config has.
  *
  * An optional key is excluded by its type rather than by a list, so a path
@@ -278,7 +212,6 @@ export const defaultConfig: QfaiConfig = {
     discussionDir: ".qfai/discussion",
     outDir: ".qfai/report",
     skillsDir: ".qfai/assistant/skill",
-    promptsDir: ".qfai/assistant/prompt",
     srcDir: "src",
     testsDir: "tests",
   },
@@ -286,8 +219,6 @@ export const defaultConfig: QfaiConfig = {
     failOn: "error",
     testStrategy: {
       forbidTestTodoStubs: true,
-      requireLayerTags: DEPRECATED_TEST_STRATEGY_FLAG_DEFAULT,
-      requireSizeTags: DEPRECATED_TEST_STRATEGY_FLAG_DEFAULT,
     },
     traceability: {
       testFileGlobs: [],
@@ -511,16 +442,6 @@ function normalizePaths(raw: unknown, configPath: string, issues: Issue[]): Qfai
     return base;
   }
 
-  const promptsDir = readString(
-    raw.promptsDir,
-    // eslint-disable-next-line @typescript-eslint/no-deprecated -- read deprecated promptsDir
-    base.promptsDir,
-    "paths.promptsDir",
-    configPath,
-    issues,
-  );
-  const usePromptsDirForSkills = raw.skillsDir === undefined && isNonEmptyString(raw.promptsDir);
-
   const migrationsDir = readOptionalString(
     raw.migrationsDir,
     "paths.migrationsDir",
@@ -546,10 +467,7 @@ function normalizePaths(raw: unknown, configPath: string, issues: Issue[]): Qfai
       issues,
     ),
     outDir: readDirString(raw.outDir, base.outDir, "paths.outDir", configPath, issues),
-    skillsDir: usePromptsDirForSkills
-      ? promptsDir
-      : readDirString(raw.skillsDir, base.skillsDir, "paths.skillsDir", configPath, issues),
-    promptsDir,
+    skillsDir: readDirString(raw.skillsDir, base.skillsDir, "paths.skillsDir", configPath, issues),
     srcDir: readDirString(raw.srcDir, base.srcDir, "paths.srcDir", configPath, issues),
     testsDir: readDirString(raw.testsDir, base.testsDir, "paths.testsDir", configPath, issues),
   };
@@ -607,26 +525,6 @@ function normalizeValidation(
         testStrategyRaw?.forbidTestTodoStubs,
         base.testStrategy.forbidTestTodoStubs,
         "validation.testStrategy.forbidTestTodoStubs",
-        configPath,
-        issues,
-      ),
-      // Deprecated compat shim: no validator reads either flag, but the type is
-      // public, so keep parsing them until the next major instead of handing a
-      // `undefined` back to a caller that used to get its configured value. The
-      // fallback is named rather than read off `base.testStrategy`, which is
-      // `defaultConfig.validation.testStrategy` and therefore the very same
-      // constant — reading it back would only re-enter the deprecated property.
-      requireLayerTags: readBoolean(
-        testStrategyRaw?.requireLayerTags,
-        DEPRECATED_TEST_STRATEGY_FLAG_DEFAULT,
-        "validation.testStrategy.requireLayerTags",
-        configPath,
-        issues,
-      ),
-      requireSizeTags: readBoolean(
-        testStrategyRaw?.requireSizeTags,
-        DEPRECATED_TEST_STRATEGY_FLAG_DEFAULT,
-        "validation.testStrategy.requireSizeTags",
         configPath,
         issues,
       ),
@@ -749,44 +647,18 @@ function normalizePrototypingExecution(
     return base ? { ...base } : undefined;
   }
 
-  // legacy keys are rejected, not silently aliased.
-  for (const legacyKey of ["browserProvider", "renderProvider"] as const) {
-    if (raw[legacyKey] !== undefined) {
-      issues.push(
-        configIssue(
-          configPath,
-          `prototyping.execution.${legacyKey} is retired.` +
-            ` Replace it with prototyping.execution.browserTool: playwright.`,
-        ),
-      );
-    }
-  }
-
   const browserToolRaw = raw.browserTool;
-  let browserTool: "playwright" | "playwright-cli" = "playwright";
-  if (browserToolRaw !== undefined) {
-    if (browserToolRaw !== "playwright" && browserToolRaw !== "playwright-cli") {
-      issues.push(
-        configIssue(
-          configPath,
-          `prototyping.execution.browserTool must be "playwright" or "playwright-cli".` +
-            ` Received: ${JSON.stringify(browserToolRaw)}`,
-        ),
-      );
-    } else if (browserToolRaw === "playwright-cli") {
-      // Only `playwright` is accepted. `browserTool` keeps its `playwright`
-      // default, so a run that ignores the issue proceeds against the
-      // supported launcher rather than a half-configured one.
-      issues.push(
-        configIssue(
-          configPath,
-          `prototyping.execution.browserTool: "playwright-cli" was retired in qfai 1.10.0.` +
-            ` Set "playwright" and install it with \`npm i -D playwright\`.`,
-        ),
-      );
-    } else {
-      browserTool = browserToolRaw;
-    }
+  const browserTool = "playwright";
+  if (browserToolRaw !== undefined && browserToolRaw !== browserTool) {
+    // `browserTool` keeps its `playwright` default, so a run that ignores the
+    // issue proceeds against the supported launcher.
+    issues.push(
+      configIssue(
+        configPath,
+        `prototyping.execution.browserTool must be "playwright".` +
+          ` Received: ${JSON.stringify(browserToolRaw)}`,
+      ),
+    );
   }
 
   return {
@@ -979,23 +851,11 @@ function readFailOn(
 }
 
 /**
- * `validation.traceability` keys that were declared, defaulted and parsed but
- * that no validator ever read. They are still accepted so an existing config
- * keeps loading, and each one that is still present is named in a finding: a
- * knob shaped like a gate control that changes nothing is worse than no knob,
- * because it also misreports the gate the code actually runs.
- *
- * The key is accepted rather than rejected, so an existing config still loads
- * and the one key that is wired keeps its effect. `QFAI-CFG-001` reports each
- * retired key that is still there, and deleting the key clears it.
+ * `validation.traceability` keys no validator reads. The migration from the
+ * spec-pack layout recognises the finding for each one that is still present,
+ * and `QFAI-CFG-001` reports it until the key is deleted.
  */
-const RETIRED_TRACEABILITY_KEYS = [
-  "brMustHaveSc",
-  "scNoTestSeverity",
-  "orphanContractsPolicy",
-  "scMustHaveTest",
-  "unknownContractIdSeverity",
-] as const;
+const RETIRED_TRACEABILITY_KEYS = ["scMustHaveTest", "unknownContractIdSeverity"] as const;
 
 function reportRetiredTraceabilityKeys(
   traceabilityRaw: Record<string, unknown> | undefined,

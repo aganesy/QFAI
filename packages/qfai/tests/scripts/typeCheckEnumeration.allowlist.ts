@@ -69,7 +69,6 @@ export const TYPE_CHECK_UNENUMERATED: readonly string[] = [
   "tests/core/browserQaProviderRegistry.test.ts",
   "tests/core/ciProfileGuard.test.ts",
   "tests/core/config.test.ts",
-  "tests/core/configCompatibility.test.ts",
   "tests/core/contractDependencies.test.ts",
   "tests/core/design/designMd.test.ts",
   "tests/core/detection/display.test.ts",

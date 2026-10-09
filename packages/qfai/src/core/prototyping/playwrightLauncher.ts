@@ -5,19 +5,14 @@ import path from "node:path";
 /**
  * Playwright launcher resolver.
  *
- * Probe order (from least surprising to most-deprecated):
+ * Probe order:
  *   1. `playwright` — project-local `node_modules/.bin/playwright`
  *      (Windows shims: `.cmd` / `.bat` / `.ps1`), then PATH.
  *   2. `npx --no-install playwright --version` — fallback when a partial
  *      node_modules tree is present but no direct shim exists.
- *   3. `playwright-cli` — retired probe. Resolving through this stage makes
- *      the doctor emit `D-DEPRECATED-PROBE` at `error`.
- *
- * The legacy export `resolvePlaywrightCliLauncher` is retained as a thin alias
- * so external callers keep compiling.
  */
 
-export type PlaywrightLauncherStage = "primary" | "npx-fallback" | "deprecated-cli";
+export type PlaywrightLauncherStage = "primary" | "npx-fallback";
 
 export type PlaywrightLauncherOrigin =
   "project-wrapper" | "node_modules/.bin" | "PATH" | "npx --no-install";
@@ -62,22 +57,16 @@ type ResolveOptions = {
 };
 
 const PRIMARY_NAME = "playwright";
-const DEPRECATED_NAME = "playwright-cli";
 const PROJECT_WRAPPER_CANDIDATES_PRIMARY = [
   "playwright",
   "playwright.cmd",
   "playwright.bat",
   "playwright.ps1",
 ] as const;
-const PROJECT_WRAPPER_CANDIDATES_DEPRECATED = [
-  "playwright-cli",
-  "playwright-cli.cmd",
-  "playwright-cli.bat",
-] as const;
 
 /** Canonical probe order used by doctor for documentation / observability. */
 export function getProbeOrder(): string[] {
-  return ["playwright", "npx fallback", "playwright-cli (deprecated)"];
+  return ["playwright", "npx fallback"];
 }
 
 export async function resolvePlaywrightLauncher(
@@ -128,26 +117,12 @@ export async function resolvePlaywrightLauncher(
   };
 }
 
-/**
- * Deprecated alias, retained so external callers keep compiling. New code MUST
- * use `resolvePlaywrightLauncher`.
- *
- * @deprecated Use `resolvePlaywrightLauncher` instead.
- */
-export async function resolvePlaywrightCliLauncher(
-  root: string,
-  options: ResolveOptions = {},
-): Promise<PlaywrightLauncherResolution> {
-  return resolvePlaywrightLauncher(root, options);
-}
-
 async function collectCandidates(root: string): Promise<PlaywrightLauncherCandidate[]> {
   const scriptsDir = path.join(root, "scripts");
   const localBinDir = path.join(root, "node_modules", ".bin");
   return [
     ...(await collectPrimaryCandidates(scriptsDir, localBinDir)),
     ...(await collectNpxCandidates()),
-    ...(await collectDeprecatedCandidates(scriptsDir, localBinDir)),
   ];
 }
 
@@ -204,54 +179,6 @@ async function collectNpxCandidates(): Promise<PlaywrightLauncherCandidate[]> {
   return candidates;
 }
 
-async function collectDeprecatedCandidates(
-  scriptsDir: string,
-  localBinDir: string,
-): Promise<PlaywrightLauncherCandidate[]> {
-  const candidates: PlaywrightLauncherCandidate[] = [];
-  for (const fileName of PROJECT_WRAPPER_CANDIDATES_DEPRECATED) {
-    const wrapperPath = path.join(scriptsDir, fileName);
-    if (await exists(wrapperPath)) {
-      candidates.push({
-        stage: "deprecated-cli",
-        origin: "project-wrapper",
-        executable: wrapperPath,
-        args: [],
-        path: wrapperPath,
-      });
-    }
-  }
-  const localDeprecated = await findCommandInDir(localBinDir, DEPRECATED_NAME);
-  if (localDeprecated) {
-    candidates.push({
-      stage: "deprecated-cli",
-      origin: "node_modules/.bin",
-      executable: localDeprecated,
-      args: [],
-      path: localDeprecated,
-    });
-  }
-  for (const pathCandidate of await findCommandsInPath(DEPRECATED_NAME)) {
-    candidates.push({
-      stage: "deprecated-cli",
-      origin: "PATH",
-      executable: pathCandidate,
-      args: [],
-      path: pathCandidate,
-    });
-  }
-  for (const npxCandidate of await findCommandsInPath("npx")) {
-    candidates.push({
-      stage: "deprecated-cli",
-      origin: "npx --no-install",
-      executable: npxCandidate,
-      args: ["--no-install", DEPRECATED_NAME],
-      path: npxCandidate,
-    });
-  }
-  return candidates;
-}
-
 async function probeCandidate(
   candidate: PlaywrightLauncherCandidate,
   timeoutMs: number,
@@ -262,8 +189,8 @@ async function probeCandidate(
 }
 
 function buildProbeArgs(candidate: PlaywrightLauncherCandidate): string[] {
-  // Primary/deprecated direct shims still accept `--help`; npx fallback already
-  // bakes `--version` into args.
+  // Primary direct shims accept `--help`; npx fallback already bakes
+  // `--version` into args.
   return candidate.stage === "npx-fallback" ? [...candidate.args] : [...candidate.args, "--help"];
 }
 

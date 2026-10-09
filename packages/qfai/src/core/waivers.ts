@@ -29,27 +29,12 @@ const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 /**
  * The shape a waiver's `rule:` may take.
  *
- * `/^[A-Z]+-\d{3}$/` accepts **none** of the identifiers `qfai validate`
- * publishes: an operator copying `QFAI-STORY-006` out of `validate.json` —
+ * It accepts every code shape the package emits, including `QFAI-STORY-006`
+ * and `QFAI-CFG-LINK-001`: an operator copies the code out of `validate.json`,
  * the only spelling the CLI, the JSON report and the GitHub annotations ever
- * print — would get a hard `QFAI-WAIVER-001`, since the form the engine
- * actually keys on (`STORY-006`, the capture group inside `resolveRuleKeys`)
- * appears in no shipped artifact.
- *
- * It accepts every code shape the package emits, including `QFAI-STORY-006`,
- * `QFAI-CFG-LINK-001`, and the stripped `STORY-006` spelling.
+ * print.
  */
 const RULE_ID_RE = /^[A-Z][A-Z0-9]*(?:[-_][A-Z0-9]+)*$/;
-
-/**
- * A `QFAI-`-prefixed code, with the back-compat stripped spelling as capture 1.
- *
- * Waiver files written before the grammar widened name the stripped form, so
- * both spellings have to resolve to the same rule — when matching a finding
- * ({@link resolveRuleKeys}) and when deciding whether a rule exists at all
- * ({@link buildKnownRuleIds}).
- */
-const STRIPPED_CODE_RE = /^QFAI-([A-Z]+-\d{3})$/;
 
 /**
  * `scope.paths` spellings that scope a waiver to the whole repository.
@@ -862,13 +847,8 @@ function normalizeRuleId(value: unknown): string {
  * Every key a waiver may use to name this finding, most canonical first.
  *
  * The primary key is `finding.code` verbatim — the only spelling an operator
- * ever sees. The `QFAI-`-stripped form stays as a back-compat alias so waiver
- * files written against the old grammar keep working, and a rule-shaped
- * `finding.rule` remains accepted for the validators that set one.
- *
- * Returning a list rather than one key is what makes both spellings work at
- * once; the previous single-key form had to pick, and it picked the one nothing
- * prints.
+ * ever sees. A rule-shaped `finding.rule` is accepted for the validators that
+ * set one.
  */
 function resolveRuleKeys(finding: Issue): string[] {
   const keys: string[] = [];
@@ -878,7 +858,6 @@ function resolveRuleKeys(finding: Issue): string[] {
     }
   };
   push(finding.code);
-  push(finding.code.match(STRIPPED_CODE_RE)?.[1]);
   push(normalizeRuleId(finding.rule));
   return keys;
 }
@@ -901,9 +880,9 @@ function isKnownRuleId(ruleId: string): boolean {
 }
 
 /**
- * Every id a waiver may name: the generated set of emitted codes, each with its
- * back-compat stripped spelling, plus the rule-id aliases — the spellings
- * that a finding carries as its `rule` and that no `code` literal would yield.
+ * Every id a waiver may name: the generated set of emitted codes, plus the
+ * rule-id aliases — the spellings that a finding carries as its `rule` and
+ * that no `code` literal would yield.
  *
  * The aliases come from the generator ({@link RULE_ID_ALIASES}) as well as the
  * static table, because the static table only lists the ids whose severity it
@@ -916,14 +895,14 @@ function isKnownRuleId(ruleId: string): boolean {
 function buildKnownRuleIds(): ReadonlySet<string> {
   const known = new Set<string>();
   for (const code of EMITTED_RULE_CODES) {
-    addRuleIdSpellings(known, code);
+    addRuleId(known, code);
   }
   for (const alias of RULE_ID_ALIASES) {
-    addRuleIdSpellings(known, alias, false);
+    addRuleId(known, alias);
   }
   for (const entry of STATIC_RULE_SEVERITY) {
     for (const key of entry.keys) {
-      addRuleIdSpellings(known, key, false);
+      addRuleId(known, key);
     }
   }
   return known;
@@ -951,32 +930,22 @@ function isErrorOnlyRuleId(ruleId: string): boolean {
 function buildErrorOnlyRuleIds(): ReadonlySet<string> {
   const errorOnly = new Set<string>();
   for (const code of ERROR_ONLY_RULE_CODES) {
-    addRuleIdSpellings(errorOnly, code);
+    addRuleId(errorOnly, code);
   }
   for (const entry of STATIC_RULE_SEVERITY) {
     if (entry.severity === "error") {
       for (const key of entry.keys) {
-        addRuleIdSpellings(errorOnly, key, false);
+        addRuleId(errorOnly, key);
       }
     }
   }
   return errorOnly;
 }
 
-/**
- * Add `value` to `target` under every spelling a waiver may write it as.
- *
- * @param withStripped whether to also register the back-compat form of a
- *   `QFAI-`-prefixed code. Static-table keys already list both spellings.
- */
-function addRuleIdSpellings(target: Set<string>, value: string, withStripped = true): void {
-  if (!RULE_ID_RE.test(value)) {
-    return;
-  }
-  target.add(value);
-  const stripped = withStripped ? value.match(STRIPPED_CODE_RE)?.[1] : undefined;
-  if (stripped && RULE_ID_RE.test(stripped)) {
-    target.add(stripped);
+/** Add `value` to `target` when it has the shape of a rule id. */
+function addRuleId(target: Set<string>, value: string): void {
+  if (RULE_ID_RE.test(value)) {
+    target.add(value);
   }
 }
 
@@ -1145,7 +1114,7 @@ const STATIC_RULE_SEVERITY: ReadonlyArray<{
   // error-severity target on the runs that emit it — two different answers to
   // one waiver file. `error` matches the emitter in
   // `validators/testTodoStubs.ts`, so the refusal is the same either way.
-  { keys: ["QFAI-TEST-003", "TEST-003"], severity: "error" },
+  { keys: ["QFAI-TEST-003"], severity: "error" },
   // The story-tree structure validator uses a local wrapper with a fixed error
   // severity. The generated scanner sees its code-first calls but cannot read
   // through the wrapper to prove that severity. Pin its error-only status so a
@@ -1160,7 +1129,7 @@ const STATIC_RULE_SEVERITY: ReadonlyArray<{
     "QFAI-STORY-012",
     "QFAI-STORY-013",
     "QFAI-SPACK-102",
-  ].map((code) => ({ keys: [code, code.slice("QFAI-".length)], severity: "error" as const })),
+  ].map((code) => ({ keys: [code], severity: "error" as const })),
   // This module's own findings, emitted on every run that parses a waiver file.
   { keys: ["QFAI-WAIVER-001", "WAIVER-001"], severity: "error" },
   { keys: ["QFAI-WAIVER-002", "WAIVER-002"], severity: "error" },

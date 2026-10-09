@@ -11,12 +11,6 @@
  * Twenty-four of these predate the census and are not endorsed by being listed. The list says
  * what is there, so that adding to it is an edit a reviewer approves; removing one needs no
  * permission at all and only makes this row happier.
- *
- * The one remaining `config.ts` entry is the `promptsDir` compat shim. The `validation.testStrategy`
- * shims read `defaultConfig.validation` directly instead — `base` in that function IS
- * `defaultConfig.validation`, so naming the fallback once
- * (`DEPRECATED_TEST_STRATEGY_FLAG_DEFAULT`) lets the loader state it without re-entering a
- * `@deprecated` property, and needs no suppression.
  */
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -83,9 +77,6 @@ function suppressions(): string[] {
 
 /** The current census. */
 const PINNED: readonly string[] = [
-  // The `paths.promptsDir` compat shim. The `validation.testStrategy`
-  // shims need no suppression (see the file header).
-  "packages/qfai/src/core/config.ts :: @typescript-eslint/no-deprecated",
   "packages/qfai/src/core/design/designMd.ts :: @typescript-eslint/no-unnecessary-condition */",
   "packages/qfai/src/core/design/designMd.ts :: @typescript-eslint/no-unnecessary-condition */",
   "packages/qfai/src/core/design/designMd.ts :: @typescript-eslint/no-unnecessary-condition */",
@@ -96,7 +87,6 @@ const PINNED: readonly string[] = [
   "packages/qfai/src/core/design/designMd.ts :: @typescript-eslint/no-unnecessary-condition */",
   "packages/qfai/src/core/design/designMd.ts :: @typescript-eslint/no-unnecessary-condition */",
   "packages/qfai/src/core/design/designMd.ts :: @typescript-eslint/no-unnecessary-condition */",
-  "packages/qfai/src/core/doctor.ts :: @typescript-eslint/no-deprecated",
   "packages/qfai/src/core/handoff/reader.ts :: no-console",
   "packages/qfai/src/core/handoff/reader.ts :: no-console",
   "packages/qfai/src/core/handoff/reader.ts :: no-console",

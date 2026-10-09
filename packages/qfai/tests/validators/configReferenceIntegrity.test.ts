@@ -39,15 +39,12 @@ function makeConfig(overrides: { primaryUiContract?: string } = {}): QfaiConfig 
       discussionDir: ".qfai/discussion",
       outDir: ".qfai/out",
       skillsDir: ".qfai/assistant/skill",
-      promptsDir: ".qfai/assistant/skill",
       srcDir: "src",
       testsDir: "tests",
     },
     validation: {
       failOn: "error",
       testStrategy: {
-        requireLayerTags: false,
-        requireSizeTags: false,
         forbidTestTodoStubs: true,
       },
       traceability: {

@@ -35,6 +35,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `qfai doctor --profile prototyping` no longer treats a `DESIGN.md` without
   the sample marker as the sample brand.
 
+- **`qfai.config.yaml` and `qfai doctor` drop the keys and probes of earlier
+  releases.** The loader no longer reads `paths.promptsDir` (it was a fallback for
+  `paths.skillsDir`), `validation.testStrategy.requireLayerTags` and
+  `requireSizeTags`, and it no longer reports `brMustHaveSc`, `scNoTestSeverity`,
+  `orphanContractsPolicy`, `prototyping.execution.browserProvider` or
+  `renderProvider`: a project that still sets one loads without a finding and
+  the key has no effect. `prototyping.execution.browserTool` accepts only
+  `playwright`, and `qfai doctor` no longer has a `playwright-cli` probe stage,
+  the `D-DEPRECATED-PROBE` finding or the `paths.promptsDirDeprecated` check.
+  A waiver names a rule by the full finding code: the `QFAI-`-stripped spelling
+  (`STORY-006`) no longer matches.
+
 - **`--spec` and `--phase` are unknown options.** `qfai validate`, `qfai report`
   and `qfai atdd scaffold` rejected them with a message of their own. They now
   reject them as they reject any option they do not define, and the help text no
