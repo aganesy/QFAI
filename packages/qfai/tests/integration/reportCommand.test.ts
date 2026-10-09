@@ -111,8 +111,17 @@ describe("qfai report", () => {
     expect(result.exit).toBe(0);
     const lines = await markdownLines(root);
     expect(lines[0]).toBe("# QFAI Report");
-    expect(lines).toContain("- Findings: info=1 warning=1 error=0");
-    expect(lines).toContain("## Findings");
+    expect(lines).toEqual(
+      expect.arrayContaining([
+        "- Business flows: 1",
+        "- User stories: 1",
+        "- Acceptance criteria: 1",
+        "- Examples: 1",
+        "- Findings: info=1 warning=1 error=0",
+      ]),
+    );
+    expect(lines.indexOf("## Business flows")).toBeGreaterThan(lines.indexOf("# QFAI Report"));
+    expect(lines.indexOf("## Findings")).toBeGreaterThan(lines.indexOf("## Business flows"));
     expect(lines.filter((line) => /^- (INFO|WARNING|ERROR) /.test(line))).toEqual([
       "- WARNING QFAI-TEST-001: fixture warning (.qfai/spec/decisions.md)",
       "- INFO QFAI-TEST-002: fixture note",
