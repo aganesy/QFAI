@@ -102,6 +102,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Content, Approach and Status. The finding was one message for all three
   cases. Refs #2951.
 
+- **The `web-research` skill states what its acceptance criteria require.** It
+  now says that a crash or a dropped connection of an MCP server is noticed
+  within 10 seconds, that the built-in tools take over, and that the user is told
+  the server is unavailable; the earlier text treated a runtime under 10 seconds
+  as a crash. The session log records the search queries, the content hash of
+  every fetched URL, the sanitization events and the verification results. A
+  high-risk conclusion is not applied to code until a person has reviewed its
+  diff and citations. When every fetch fails, the skill reports the reason for
+  each URL and runs no extract stage, and a blocked redirect logs its chain.
+  Refs #2951.
+
 ### Fixed
 
 - **The release workflow's publish job no longer warns that `NODE_AUTH_TOKEN` is
