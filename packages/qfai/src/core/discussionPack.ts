@@ -68,21 +68,6 @@ export const REQUIRED_DISCUSSION_PACK_SECTIONS: Partial<
 
 export const REQUIRED_DISCUSSION_PACK_SIDE_ARTIFACTS = [] as const;
 
-/**
- * Files a pack no longer holds whose content a required file now carries. A
- * pack that still has one keeps that content where no later stage reads it.
- */
-const RELOCATED_DISCUSSION_PACK_FILES = [
-  { legacy: "02_Inception-Deck.md", target: "01_Context.md" },
-  { legacy: "10_Policy.md", target: "09_Constraints.md" },
-  { legacy: "13_Deferred.md", target: "11_OQ-Register.md" },
-] as const;
-
-export type UnmigratedDiscussionPackFile = (typeof RELOCATED_DISCUSSION_PACK_FILES)[number];
-
-/** @deprecated Use REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES instead */
-export const REQUIRED_DISCUSSION_PACK_FILES = REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES;
-
 export type RequiredDiscussionPackMarkdownFile =
   (typeof REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES)[number];
 export type RequiredDiscussionPackSideArtifact =
@@ -97,14 +82,12 @@ export type DiscussionPackReadiness = {
   discussionRoot: string;
   latestPackDir: string | null;
   latestPackName: string | null;
-  legacyPackNames: string[];
   dangerousPackNames: string[];
   missingFiles: RequiredDiscussionPackMarkdownFile[];
   missingSideArtifacts: RequiredDiscussionPackSideArtifact[];
   incompleteFiles: RequiredDiscussionPackMarkdownFile[];
   blockingOqIds: string[];
   incompleteDeferredOqIds: string[];
-  unmigratedFiles: UnmigratedDiscussionPackFile[];
   prototypingRequired: boolean;
 };
 
@@ -123,8 +106,8 @@ export type InspectDiscussionPackOptions = {
    * `discussionRoot`. Callers that honor the runtime-state pointer
    * (`.qfai/state.json#discussion.currentId`) pass the pack it selects, so an
    * operator who pinned an older pack with `npx qfai discussion use <id>` is
-   * not silently judged against the newest one. Legacy / dangerous pack-name
-   * scanning still covers every pack under the root either way.
+   * not silently judged against the newest one. Dangerous pack-name scanning
+   * still covers every pack under the root either way.
    */
   selectedPackDir?: string;
 };
@@ -134,10 +117,6 @@ export async function inspectLatestDiscussionPack(
   options: InspectDiscussionPackOptions = {},
 ): Promise<DiscussionPackReadiness> {
   const packs = await findPacks(discussionRoot, "discussion");
-  const legacyPackNames = packs
-    .filter((pack) => pack.isLegacy)
-    .map((pack) => pack.name)
-    .sort((left, right) => left.localeCompare(right));
   const dangerousPackNames = packs
     .filter((pack) => pack.isDangerous)
     .map((pack) => pack.name)
@@ -155,14 +134,12 @@ export async function inspectLatestDiscussionPack(
       discussionRoot,
       latestPackDir: null,
       latestPackName,
-      legacyPackNames,
       dangerousPackNames,
       missingFiles: [...REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES],
       missingSideArtifacts: [],
       incompleteFiles: [],
       blockingOqIds: [],
       incompleteDeferredOqIds: [],
-      unmigratedFiles: [],
       prototypingRequired: false,
     };
   }
@@ -191,25 +168,16 @@ export async function inspectLatestDiscussionPack(
     }
   }
 
-  const unmigratedFiles: UnmigratedDiscussionPackFile[] = [];
-  for (const relocated of RELOCATED_DISCUSSION_PACK_FILES) {
-    if ((await readSafe(path.join(latestPackDir, relocated.legacy))) !== null) {
-      unmigratedFiles.push(relocated);
-    }
-  }
-
   return {
     discussionRoot,
     latestPackDir,
     latestPackName,
-    legacyPackNames,
     dangerousPackNames,
     missingFiles,
     missingSideArtifacts,
     incompleteFiles,
     blockingOqIds,
     incompleteDeferredOqIds,
-    unmigratedFiles,
     prototypingRequired,
   };
 }

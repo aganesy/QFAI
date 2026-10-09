@@ -5,7 +5,6 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { runReport } from "../../src/cli/commands/report.js";
-import { parseArgs } from "../../src/cli/lib/args.js";
 import type { Issue, ValidationResult } from "../../src/core/types.js";
 
 const roots: string[] = [];
@@ -101,17 +100,6 @@ describe("qfai report on a story tree", () => {
     expect(await exists(path.join(root, ".qfai/report/report.md"))).toBe(false);
   });
 
-  it("rejects a legacy validate result with SC traceability", async () => {
-    const root = await storyRoot();
-    const input = path.join(root, ".qfai/report/validate.json");
-    await writeValidation(root, []);
-    const parsed = JSON.parse(await readFile(input, "utf8")) as Record<string, unknown>;
-    parsed.traceability = { sc: { total: 0 } };
-    await writeFile(input, JSON.stringify(parsed), "utf8");
-    await expect(runReport({ root, format: "md" })).rejects.toThrow("invalid shape");
-    expect(await exists(path.join(root, ".qfai/report/report.md"))).toBe(false);
-  });
-
   it("rejects an invalid issue severity rather than dropping the gate", async () => {
     const root = await storyRoot();
     await writeValidation(root, [{ ...issue("error"), severity: "invalid" } as unknown as Issue]);
@@ -165,14 +153,6 @@ describe("qfai report on a story tree", () => {
     await writeValidation(root, [], "validate.flow-0001.json");
     expect(await runReport({ root, format: "md", flowIds: ["BF-0001"] })).toBe(0);
     expect(await exists(path.join(root, ".qfai/report/report.flow-0001.md"))).toBe(true);
-  });
-
-  it("refuses --spec with an actionable replacement", async () => {
-    const root = await storyRoot();
-    const parsed = parseArgs(["report", "--spec", "0001"], root);
-    expect(parsed.invalid).toBe(true);
-    expect(parsed.invalidReason).toContain("--flow BF-NNNN");
-    expect(await exists(path.join(root, ".qfai/report/report.spec-0001.md"))).toBe(false);
   });
 
   // QFAI:EX-0001-0062-02

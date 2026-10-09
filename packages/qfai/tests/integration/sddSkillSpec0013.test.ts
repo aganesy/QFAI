@@ -108,7 +108,6 @@ describe("shipped qfai-sdd story-tree contract", () => {
       "A worker's flow gate does not include a sibling flow still being edited",
     );
     expect(content).toContain("npx qfai validate --profile sdd --fail-on error --flow BF-NNNN");
-    expect(content).not.toMatch(/--spec\b/);
   });
 
   // QFAI:EX-0001-0150-03
@@ -134,7 +133,6 @@ describe("shipped qfai-sdd story-tree contract", () => {
       await reference("sdd-quality-gate.md"),
     ];
     for (const content of files) {
-      expect(content).not.toMatch(/--spec\b/);
       expect(content).not.toMatch(/04_Business-Rules\.md/);
       expect(content).not.toMatch(/\.qfai\/decisions\//);
       expect(content).not.toMatch(/tdd\/test-list\.md/);

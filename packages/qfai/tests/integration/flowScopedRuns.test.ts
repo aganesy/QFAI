@@ -166,19 +166,6 @@ describe("flow-scoped report", () => {
     expect(await exists(path.join(root, ".qfai/report/report.flow-0001.md"))).toBe(false);
   });
 
-  // QFAI:AC-0001-0066-02
-  // QFAI:EX-0001-0066-02
-  it("refuses --spec, exits 2 and names --flow BF-NNNN", async () => {
-    const root = await twoFlowRoot();
-    const before = await listing(root);
-
-    const result = await cli(root, ["report", "--spec", "spec-0001"]);
-
-    expect(result.exit).toBe(2);
-    expect(result.stderr).toContain("--flow BF-NNNN");
-    expect(await listing(root)).toEqual(before);
-  });
-
   // QFAI:AC-0001-0066-03
   // QFAI:EX-0001-0066-03
   it.each(["../../etc", "flow-1"])("exits 2 and writes no file for --flow %s", async (value) => {

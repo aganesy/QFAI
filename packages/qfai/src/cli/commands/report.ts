@@ -421,7 +421,6 @@ function isValidationResult(value: unknown): value is ValidationResult {
     return false;
   }
   const record = value as Record<string, unknown>;
-  if ("traceability" in record) return false;
   if (typeof record.toolVersion !== "string") {
     return false;
   }

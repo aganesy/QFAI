@@ -26,7 +26,6 @@ import {
   classifyHardRequiredEntries,
   collectHardRequiredEntries,
   HARD_REQUIRED_COMMON_ENTRIES,
-  RETIRED_HARD_REQUIRED_ENTRIES,
 } from "../../src/core/validators/autopilotPolicy.js";
 import {
   ASSISTANT_ASSET_MAX_LINE_CHARS,
@@ -1570,7 +1569,6 @@ describe("assets guardrails", () => {
     expect(skill).toContain("03_contract/");
     expect(skill).toContain("--flow BF-NNNN");
     expect(skill).not.toContain("No-argument batch delegation");
-    expect(skill).not.toContain("--spec <spec-id>");
     expect(workflow).not.toContain(".qfai/specs/_policies/03_Capabilities.md");
   });
 
@@ -2068,11 +2066,7 @@ describe("assets guardrails", () => {
       const entries = collectHardRequiredEntries(content);
       const skillId = path.basename(path.dirname(relativePath));
       const classified = classifyHardRequiredEntries(entries, skillId);
-      offenders.push(
-        ...[...classified.retired, ...classified.unknown].map(
-          (entry) => `${relativePath}: ${entry}`,
-        ),
-      );
+      offenders.push(...classified.unknown.map((entry) => `${relativePath}: ${entry}`));
     }
 
     expect(offenders, "hard-required entry with no consumer in the shipped tree").toEqual([]);
@@ -2122,17 +2116,17 @@ describe("assets guardrails", () => {
     ]);
   });
 
-  it("rejects a retired entry smuggled in beside a pinned one", () => {
-    // The hole the shared matcher closes. Each bullet writes the retired name
+  it("rejects a foreign entry smuggled in beside a pinned one", () => {
+    // The hole the shared matcher closes. Each bullet writes a foreign name
     // beside a live one, so an equality test sees neither; the word match
-    // inside the normalized bullet sees the retired one.
+    // inside the normalized bullet sees the foreign one.
     for (const smuggled of [
       "brand intent / companyName",
       "brand intent, companyName",
       "a usable requirement source + companyName",
     ]) {
       expect(
-        classifyHardRequiredEntries([smuggled, "brand intent"]).retired,
+        classifyHardRequiredEntries([smuggled, "brand intent"]).unknown,
         `a bullet naming two entries must be reported: ${smuggled}`,
       ).toContain(smuggled);
     }
@@ -2148,8 +2142,8 @@ describe("assets guardrails", () => {
         ],
         "qfai-sdd",
       ),
-    ).toEqual({ retired: [], unknown: [] });
-    expect(classifyHardRequiredEntries(["`primarySpecId`"], "qfai-prototyping").retired).toEqual([
+    ).toEqual({ unknown: [] });
+    expect(classifyHardRequiredEntries(["`primarySpecId`"], "qfai-prototyping").unknown).toEqual([
       "`primarySpecId`",
     ]);
     expect(classifyHardRequiredEntries(["primaryUiContract"], "qfai-prototyping").unknown).toEqual([
@@ -2157,7 +2151,7 @@ describe("assets guardrails", () => {
     ]);
 
     // A narrowed bucket is lawful and reports nothing.
-    expect(classifyHardRequiredEntries(["brand intent"])).toEqual({ retired: [], unknown: [] });
+    expect(classifyHardRequiredEntries(["brand intent"])).toEqual({ unknown: [] });
     // A skill-specific input is lawful for the skill that declares it, and for
     // no other — which is what makes it a declaration rather than a hole.
     const own = ["a `testFileGlobs` proposal that matches at least one real file"];
@@ -2167,7 +2161,7 @@ describe("assets guardrails", () => {
     expect(classifyHardRequiredEntries(["unreviewedSecret"], "qfai-configure").unknown).toEqual([
       "unreviewedSecret",
     ]);
-    // The same smuggling the retired search closes, one set over: another
+    // The same smuggling, one set over: another
     // skill's declared input written beside a common one. The allowed test
     // asks only whether *some* permitted name is in the bullet, so the first
     // half of each of these answers for the second.
@@ -2185,7 +2179,6 @@ describe("assets guardrails", () => {
       expect(classifyHardRequiredEntries([smuggled], "qfai-configure").unknown).toEqual([]);
     }
     expect(HARD_REQUIRED_COMMON_ENTRIES).toEqual(["brand intent"]);
-    expect(RETIRED_HARD_REQUIRED_ENTRIES).toEqual(["companyname", "primaryspecid"]);
   });
 });
 

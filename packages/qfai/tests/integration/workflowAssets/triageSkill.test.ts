@@ -96,7 +96,6 @@ describe("qfai-triage invoked by name", () => {
     const policy = parseAutopilotPolicy(skill, "qfai-triage");
     expect(policy.hardRequiredMissing).toEqual([]);
     expect(policy.hardRequiredUnknown).toEqual([]);
-    expect(policy.hardRequiredRetired).toEqual([]);
     expect(
       parseAutopilotPolicy("## Default Autopilot Policy\n", "qfai-triage").hardRequiredMissing,
     ).toEqual(["triage request"]);

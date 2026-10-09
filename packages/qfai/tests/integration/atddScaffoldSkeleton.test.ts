@@ -116,7 +116,7 @@ describe("atdd scaffold story-tree targets", () => {
 
   // QFAI:AC-0001-0073-04
   // QFAI:EX-0001-0073-03
-  it("rejects missing, mixed, malformed, undefined, and retired spec targets before writes", async () => {
+  it("rejects missing, mixed, malformed and undefined scaffold targets before writes", async () => {
     await seedStory();
     for (const options of [
       {},
@@ -124,7 +124,6 @@ describe("atdd scaffold story-tree targets", () => {
       { storyId: "US-8-7" },
       { flowId: "BF-9999" },
       { storyId: "US-0008-9999" },
-      { specId: "spec-0008" },
     ]) {
       const messages: string[] = [];
       expect(
@@ -136,10 +135,6 @@ describe("atdd scaffold story-tree targets", () => {
         }),
       ).toBe(2);
       expect(messages.length).toBeGreaterThan(0);
-      if ("specId" in options) {
-        expect(messages.join("\n")).toContain("--story");
-        expect(messages.join("\n")).toContain("--flow");
-      }
     }
     await expect(readdir(path.join(root, "tests"))).rejects.toMatchObject({ code: "ENOENT" });
   });

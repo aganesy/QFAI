@@ -3,14 +3,13 @@ import path from "node:path";
 
 export type PackKind = "discussion";
 
-export type PackNameStatus = "canonical" | "legacy" | "dangerous" | "other";
+export type PackNameStatus = "canonical" | "dangerous" | "other";
 
 export type PackNameValidation = {
   kind: PackKind;
   name: string;
   status: PackNameStatus;
   isCanonical: boolean;
-  isLegacy: boolean;
   isDangerous: boolean;
   isPrefixed: boolean;
   timestamp: string | null;
@@ -23,22 +22,17 @@ export type LocatedPack = {
   name: string;
   status: PackNameStatus;
   isCanonical: boolean;
-  isLegacy: boolean;
   isDangerous: boolean;
   timestamp: string | null;
 };
 
 type PackRule = {
   prefix: string;
-  legacyPattern: RegExp;
-  parkedLegacyPattern: RegExp;
 };
 
 const PACK_RULES: Record<PackKind, PackRule> = {
   discussion: {
     prefix: "discussion",
-    legacyPattern: /^discussion-\d{4}$/i,
-    parkedLegacyPattern: /^discussion-legacy-[a-z0-9][a-z0-9-]*$/i,
   },
 };
 
@@ -83,23 +77,14 @@ export function validatePackName(kind: PackKind, name: string): PackNameValidati
   const isPrefixed = name.toLowerCase().startsWith(normalizedPrefix);
   const timestamp = parsePackTimestamp(kind, name);
   const isCanonical = timestamp !== null;
-  const isLegacy = !isCanonical && rule.legacyPattern.test(name);
-  const isParkedLegacy = !isCanonical && rule.parkedLegacyPattern.test(name);
-  const isDangerous = isPrefixed && !isCanonical && !isLegacy && !isParkedLegacy;
-  const status: PackNameStatus = isCanonical
-    ? "canonical"
-    : isLegacy
-      ? "legacy"
-      : isDangerous
-        ? "dangerous"
-        : "other";
+  const isDangerous = isPrefixed && !isCanonical;
+  const status: PackNameStatus = isCanonical ? "canonical" : isDangerous ? "dangerous" : "other";
 
   return {
     kind,
     name,
     status,
     isCanonical,
-    isLegacy,
     isDangerous,
     isPrefixed,
     timestamp,
@@ -156,7 +141,6 @@ export async function findPacks(
       name: entry.name,
       status: validation.status,
       isCanonical: validation.isCanonical,
-      isLegacy: validation.isLegacy,
       isDangerous: validation.isDangerous,
       timestamp: validation.timestamp,
     });

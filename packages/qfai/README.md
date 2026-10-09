@@ -333,7 +333,7 @@ flowchart LR
   - Validates the story tree, contracts and test obligations, writes `.qfai/report/validate.json`,
     and appends run logs to `.qfai/report/run-*/`; use `--fail-on error` (or `--fail-on warning`) to turn it into a CI gate,
     and `--format github` to emit GitHub-friendly annotations.
-    Use `--flow BF-0001` to scope a run to one business flow. `--spec` is retired.
+    Use `--flow BF-0001` to scope a run to one business flow.
     Use `--profile discussion|sdd|prototyping|atdd|tdd|verify` for local skill-owned checks; CI should use default/full validation (or `verify` / `tdd` for the dedicated CI gates).
 - `npx qfai report`
   - Produces a human-readable report (`report.md` by default) or an internal JSON export (`report.json`) from `validate.json`; use `--base-url` to link file paths in Markdown to your repository viewer.

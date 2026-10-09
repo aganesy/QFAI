@@ -192,8 +192,8 @@ describe("the short-circuit is scoped to the profiles that walk the damage", () 
   it.skipIf(process.platform === "win32")(
     "stops `sdd`, whose own validators read the skills directory",
     async () => {
-      // `validateSkillDocReferences`, `validateAutopilotPolicy` and
-      // `validateStaleReferences` all `readdir` the configured skills directory,
+      // `validateSkillDocReferences` and `validateAutopilotPolicy` both
+      // `readdir` the configured skills directory,
       // so excluding `sdd` by name left one of them raising `ELOOP` and losing
       // the finding that names the path and the repair.
       await withDamagedCanonical(async (root) => {

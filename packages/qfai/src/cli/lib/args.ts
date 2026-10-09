@@ -80,8 +80,6 @@ export type ParsedArgs = {
     sddImport?: string;
     /** Subcommand for `qfai atdd <scaffold>`. */
     atddAction?: "scaffold";
-    /** Retired `--spec <id>` value, retained for `qfai atdd scaffold` migration errors. */
-    atddSpecId?: string;
     atddStoryId?: string;
     atddFlowId?: string;
     /** `--flow <BF-NNNN>` values for `qfai validate`. */
@@ -448,10 +446,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid(notValidHere("--strict"));
         }
         break;
-      case "--phase":
-        markInvalid(`${scope()}: --phase is not supported.`);
-        consumeOptionValue();
-        break;
       case "--profile": {
         const next = consumeOptionValue();
         if (next === null) {
@@ -656,21 +650,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       // (not-consumed-on-misuse) used opposite conventions for the
       // same goal; this contract block plus the unified shape below
       // resolves the asymmetry.
-      case "--spec": {
-        const next = consumeOptionValue();
-        if (next === null) {
-          markInvalid(missingValue("--spec"));
-          break;
-        }
-        if (command === "atdd") {
-          options.atddSpecId = next;
-        } else if (command === "validate" || command === "report") {
-          markInvalid(`${scope()}: --spec is no longer supported. Use --flow BF-NNNN.`);
-        } else {
-          markInvalid(notValidHere("--spec"));
-        }
-        break;
-      }
       case "--flow": {
         const next = consumeOptionValue();
         if (next === null) {

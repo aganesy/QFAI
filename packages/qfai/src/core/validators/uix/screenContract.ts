@@ -95,7 +95,7 @@ type ScreenBlock = {
    * lets the two be told apart.
    */
   declaredNestedFields: Set<string>;
-  /** Legacy flat nested fields that must now be rejected. */
+  /** Nested fields written with an inline value, which is rejected. */
   invalidInlineNestedFields: string[];
 };
 
@@ -263,12 +263,12 @@ export async function validateScreenContractSchema(
       issues.push(
         contractIssue(
           "QFAI-SCREEN-002",
-          `Screen '${screenId}' uses legacy flat nested fields: ${screen.invalidInlineNestedFields.join(", ")}. Use nested canonical bullets only.`,
+          `Screen '${screenId}' gives inline values to nested fields: ${screen.invalidInlineNestedFields.join(", ")}. Use nested canonical bullets only.`,
           "error",
           `Rewrite ${screen.invalidInlineNestedFields.join(", ")} as nested canonical bullets in ${RELPATH}.`,
         ),
       );
-      // Skip nested-field checks for legacy-format screens to avoid duplicate noise
+      // Skip nested-field checks for a screen with inline nested values to avoid duplicate noise
       continue;
     }
 

@@ -60,20 +60,18 @@ const DYNAMIC_CODE_SITES = new Map<string, ReadonlyMap<string, number>>([
 
 /**
  * Rule codes that were published, then retired together with the validator
- * that emitted them. Their modules are now `@deprecated` stubs returning `[]`
- * (`requirePack.ts` set the precedent), so the ownership scan finds no owner
- * for them and nothing else stops a future rule from taking a number back.
+ * that emitted them. The ownership scan finds no owner for them, so nothing
+ * else stops a future rule from taking a number back.
  *
  * Announced publicly before retirement, so re-using a number would make two
  * different checks share one public code across versions — the same failure
  * the collision guard below exists to prevent, only spread over time.
  */
 const RETIRED_CODES: readonly string[] = [
-  // validators/requireIndex.ts — the `02_requirement-index.md` input is gone.
+  // The `02_requirement-index.md` input is gone.
   "QFAI-REQINDEX-001",
   "QFAI-REQINDEX-002",
-  // validators/requirementsContext.ts — glossary / actors / business-flows /
-  // require.md inputs are gone.
+  // The glossary / actors / business-flows / require.md inputs are gone.
   "QFAI-REQCTX-000",
   "QFAI-REQCTX-001",
   "QFAI-REQCTX-002",

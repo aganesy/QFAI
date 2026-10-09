@@ -579,8 +579,7 @@ function validateAgentRefs(
           `routing references unknown agent "${entry}" in ${skill} phase ${phaseIndex} field ${field}`,
           "error",
           // Sourced from the caller's resolved routing path (manifestPathRel)
-          // so the file: argument always points at the actual location read
-          // (manifest/ canonical or a legacy fallback).
+          // so the file: argument always points at the actual location read.
           routingPathRel,
           "agentDefinition.unknownRoutingAgent",
         ),

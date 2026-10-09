@@ -107,21 +107,6 @@ export const HARD_REQUIRED_SKILL_ENTRIES: Readonly<Record<string, readonly strin
   "qfai-triage": ["triage request"],
 };
 
-/**
- * The hard-required entries that have been retired: an input no shipped file
- * reads, so the bucket paid a guaranteed prompt out of a 0-1 budget and read
- * nothing back. `companyName` is the one; it had no template slot, no artifact
- * section and no reference file.
- *
- * Kept beside the allowed sets rather than folded into them, because a retired
- * name is worth reporting by name: an operator reading "outside the allowed
- * set" about `companyName` has to work out that it used to be inside it.
- *
- * @internal Exported for direct unit-testing — not part of the package's
- * public surface.
- */
-export const RETIRED_HARD_REQUIRED_ENTRIES: readonly string[] = ["companyname", "primaryspecid"];
-
 const BUCKET_HEADERS = {
   autoDecide: /^\s*[-*]\s*auto-decide\s*:/im,
   askUser: /^\s*[-*]\s*ask-user\s*:/im,
@@ -144,8 +129,8 @@ const HARD_REQUIRED_HEADER_WITH_TAIL = /^\s*[-*]\s*hard-required\s*:(.*)$/i;
  * emphasis and repeated whitespace go, and every name the bullet writes stays,
  * including one in a trailing clause.
  *
- * That is what the retired-name search reads, because a retired name is
- * usually written in exactly such a clause.
+ * That is what the whole-bullet searches read, because a name is usually
+ * written in exactly such a clause.
  *
  * @internal Exported for direct unit-testing — not part of the package's
  * public surface.
@@ -177,8 +162,8 @@ export function decorationOnly(bullet: string): string {
  * into the result, so a bullet naming two entries does not equal either of
  * them.
  *
- * Not for the retired-name search: this drops a multi-word clause, and a
- * retired name written in one is exactly what that search is for. Use
+ * Not for the whole-bullet searches: this drops a multi-word clause, and a
+ * name written in one is exactly what those searches are for. Use
  * {@link decorationOnly} there.
  *
  * @internal Exported for direct unit-testing — not part of the package's
@@ -264,7 +249,7 @@ export function collectHardRequiredEntries(content: string): string[] {
     }
     // A wrapped bullet continues on an indented line that is not itself a
     // bullet. Ending the bucket there dropped the rest of that entry AND every
-    // entry after it, so a retired name written past a wrap was invisible to
+    // entry after it, so a name written past a wrap was invisible to
     // this collector.
     const continuation = /^\s+(\S.*)$/.exec(line);
     const carried = continuation?.[1]?.trim();
@@ -356,9 +341,8 @@ export function missingDeclaredEntries(entries: readonly string[], skillId: stri
 /**
  * Judge one hard-required bucket against what its skill may carry.
  *
- * `retired` holds bullets naming an entry that has been withdrawn; `unknown`
- * holds bullets naming anything else outside the allowed set. Both are returned
- * as written, for the operator to find.
+ * `unknown` holds bullets naming anything outside the allowed set. They are
+ * returned as written, for the operator to find.
  *
  * A bucket carrying **fewer** entries than the allowed set is not reported
  * here; {@link missingDeclaredEntries} answers for a declared input the bucket
@@ -366,7 +350,7 @@ export function missingDeclaredEntries(entries: readonly string[], skillId: stri
  *
  * Matching is by whole word inside the bullet rather than by equality, so a
  * bullet naming two entries answers for both: `- brand intent / companyName`
- * names a live entry and a withdrawn one, and only a word match sees the
+ * names an allowed entry and a foreign one, and only a word match sees the
  * second. For the same reason the allowed test reads each joined piece
  * separately (see {@link splitJoinedEntries}) — asked of the whole bullet it
  * passes on one half and admits whatever the other half names.
@@ -384,7 +368,6 @@ export function classifyHardRequiredEntries(
   entries: readonly string[],
   skillId?: string,
 ): {
-  retired: string[];
   unknown: string[];
 } {
   const allowed = [
@@ -402,17 +385,9 @@ export function classifyHardRequiredEntries(
     ...Object.values(HARD_REQUIRED_SKILL_ENTRIES).flat(),
   ].filter((name) => !allowed.includes(name));
 
-  const retired: string[] = [];
   const unknown: string[] = [];
   for (const entry of entries) {
     const normalized = normalizeHardRequiredEntry(entry);
-    // Both whole-bullet searches, for the same reason: a name written in a
-    // trailing clause — `brand intent — companyName` — is gone from the
-    // reduced form, and that clause is one of the places it gets written.
-    if (named(decorationOnly(entry), RETIRED_HARD_REQUIRED_ENTRIES)) {
-      retired.push(entry);
-      continue;
-    }
     // Every joined piece has to name something allowed. `pieces` is empty only
     // for a bullet that normalizes away entirely, which names nothing and is
     // reported for that.
@@ -425,7 +400,7 @@ export function classifyHardRequiredEntries(
       unknown.push(entry);
     }
   }
-  return { retired, unknown };
+  return { unknown };
 }
 
 export type AutopilotPolicyParseResult = {
@@ -439,8 +414,6 @@ export type AutopilotPolicyParseResult = {
   };
   /** Auto-decide entries that DON'T match an allowed token (widening). */
   widenedTokens: string[];
-  /** Hard-required bullets naming an entry this policy has retired. */
-  hardRequiredRetired: string[];
   /**
    * Hard-required bullets naming an entry that is neither common to every
    * skill nor declared for this one.
@@ -473,7 +446,6 @@ export function parseAutopilotPolicy(
       hasSection: false,
       buckets: { autoDecide: false, askUser: false, hardRequired: false },
       widenedTokens: [],
-      hardRequiredRetired: [],
       hardRequiredUnknown: [],
       hardRequiredMissing: skillId === undefined ? [] : missingDeclaredEntries([], skillId),
     };
@@ -492,13 +464,12 @@ export function parseAutopilotPolicy(
 
   const widenedTokens = autoDecide ? findWidenedAutoDecideTokens(block) : [];
   const hardRequiredEntries = hardRequired ? collectHardRequiredEntries(block) : [];
-  const { retired, unknown } = classifyHardRequiredEntries(hardRequiredEntries, skillId);
+  const { unknown } = classifyHardRequiredEntries(hardRequiredEntries, skillId);
 
   return {
     hasSection: true,
     buckets: { autoDecide, askUser, hardRequired },
     widenedTokens,
-    hardRequiredRetired: hardRequired ? retired : [],
     hardRequiredUnknown: hardRequired ? unknown : [],
     hardRequiredMissing:
       skillId === undefined ? [] : missingDeclaredEntries(hardRequiredEntries, skillId),
@@ -645,28 +616,17 @@ function skillPolicyIssues(
       issue("QFAI-POLICY-002", message, "warning", relPath, "reviewerGate.autopilotPolicyWidened"),
     );
   }
-  // The bucket's CONTENT, not just its header. Checking only the header let
-  // a project whose installed SKILL.md still lists a retired entry pass
-  // `qfai validate` indefinitely: installed skills are refreshed only by an
-  // explicit `qfai init --force`, so nothing else would ever surface it.
-  if (result.hardRequiredRetired.length > 0 || result.hardRequiredUnknown.length > 0) {
-    const parts: string[] = [];
-    if (result.hardRequiredRetired.length > 0) {
-      parts.push(`a retired entry ([${result.hardRequiredRetired.join(" | ")}])`);
-    }
-    if (result.hardRequiredUnknown.length > 0) {
-      parts.push(
-        `an entry this skill does not declare ([${result.hardRequiredUnknown.join(" | ")}])`,
-      );
-    }
+  // The bucket's CONTENT, not just its header: a SKILL.md whose bucket names an
+  // entry the skill does not declare would otherwise pass `qfai validate`.
+  if (result.hardRequiredUnknown.length > 0) {
     const message =
-      `QFAI-AUTOPILOT-001: ${relPath} hard-required bucket names ${parts.join(" and ")}. ` +
+      `QFAI-AUTOPILOT-001: ${relPath} hard-required bucket names ` +
+      `an entry this skill does not declare ([${result.hardRequiredUnknown.join(" | ")}]). ` +
       `Every entry costs a guaranteed prompt, so an input nothing reads buys nothing. ` +
       `A skill carries brand intent and the inputs declared for it, and nothing else: ` +
       `drop the entry, or declare it for this skill if the skill really consumes it — ` +
       `\`qfai init --force\` regenerates the shipped wording. ` +
-      `Justification: file=${relPath}, retired=[${result.hardRequiredRetired.join(", ")}], ` +
-      `unknown=[${result.hardRequiredUnknown.join(", ")}].`;
+      `Justification: file=${relPath}, unknown=[${result.hardRequiredUnknown.join(", ")}].`;
     issues.push(
       issue(
         "QFAI-AUTOPILOT-001",

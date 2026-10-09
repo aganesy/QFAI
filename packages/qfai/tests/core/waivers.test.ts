@@ -757,7 +757,7 @@ describe("applyWaivers", () => {
   it.each([
     ["QFAI-DPACK-011", "a code the emitter names through a constant"],
     ["DPACK-011", "the back-compat stripped alias"],
-    ["QFAI-STALE-001", "a code with a single-word area"],
+    ["QFAI-DIRECTION-001", "a code with a single-word area"],
   ])("keeps a waiver for the quiet rule %s active (%s)", async (rule) => {
     const root = await createRoot();
     try {

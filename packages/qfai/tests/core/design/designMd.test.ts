@@ -1192,37 +1192,6 @@ describe("isUnreplacedDesignMdSample", () => {
     expect(isUnreplacedDesignMdSample(text)).toBe(true);
   });
 
-  it("flags a marker-less legacy copy of the shipped sample", async () => {
-    // `qfai init` copies the root asset tree create-only — `--force`
-    // included — so the root `DESIGN.md` an older release seeded is kept
-    // whatever it holds, and a project initialized before the marker existed
-    // keeps that copy without one forever. Simulate that installed-base file
-    // by stripping the marker comment from the shipped sample.
-    const text = await readFile(SHIPPED_DESIGN_MD_SAMPLE, "utf-8");
-    const legacy = text.replace(/<!-- QFAI-SAMPLE-DESIGN-MD:[\s\S]*?-->\n\n/, "");
-    expect(legacy).not.toContain(DESIGN_MD_SAMPLE_MARKER);
-    expect(isUnreplacedDesignMdSample(legacy)).toBe(true);
-  });
-
-  it("does not flag a sample whose brand name was replaced", async () => {
-    const text = await readFile(SHIPPED_DESIGN_MD_SAMPLE, "utf-8");
-    const legacy = text
-      .replace(/<!-- QFAI-SAMPLE-DESIGN-MD:[\s\S]*?-->\n\n/, "")
-      .replace('name: "Acme Ledger"', 'name: "Northwind Freight"');
-    expect(isUnreplacedDesignMdSample(legacy)).toBe(false);
-  });
-
-  it("does not flag a sample whose brand-philosophy body was rewritten", async () => {
-    const text = await readFile(SHIPPED_DESIGN_MD_SAMPLE, "utf-8");
-    const legacy = text
-      .replace(/<!-- QFAI-SAMPLE-DESIGN-MD:[\s\S]*?-->\n\n/, "")
-      .replace(
-        "Acme Ledger is a calm, confident financial comparison surface.",
-        "Acme Ledger is our internal reconciliation console.",
-      );
-    expect(isUnreplacedDesignMdSample(legacy)).toBe(false);
-  });
-
   it("does not flag an unrelated authored DESIGN.md", () => {
     expect(isUnreplacedDesignMdSample(VALID_SAMPLE)).toBe(false);
   });
