@@ -6,6 +6,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The `qfai-sdd` normalization reference lists all six removed design
+  contracts.** The reference that tells the skill which contracts not to generate
+  named four. It now also names `exploration-brief.yaml`, `reference-pool.yaml`
+  and `brand-design.yaml`, so every contract the skill retired is listed beside
+  `DESIGN.md`, the only design contract. Part of #2951.
+
 - **`qfai validate` no longer reports old discussion sidecars.** For a UI-bearing
   pack it no longer raises `QFAI-THREELAYER-001` for a file under `uiux/` that an
   earlier release produced, nor `QFAI-THREELAYER-003` and `QFAI-THREELAYER-004`

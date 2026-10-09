@@ -30,9 +30,13 @@ Do not regenerate or reintroduce these files. Their content is subsumed by
 - color / typography / spacing / radius / shadow tokens →
   `DESIGN.md` `visual.*` token tree.
 
-The following contracts MUST NOT be generated (the corresponding
-concepts do not exist in the current prototyping skill):
+The following contracts MUST NOT be generated:
 
+- `exploration-brief.yaml` — the design direction is recorded in
+  `DESIGN.md`; no separate brief is authored.
+- `reference-pool.yaml` — reference material is not authored as a
+  contract; things to avoid live in `audience.do_not_look_like`.
+- `brand-design.yaml` — the brand is authored in `DESIGN.md`.
 - `evaluation-rubric.yaml` — evaluation axes are global constants; no
   per-project rubric.
 - `evaluator-calibration.yaml` — calibration is the ordinal scale plus
