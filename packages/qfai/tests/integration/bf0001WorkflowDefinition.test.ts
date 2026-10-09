@@ -124,6 +124,7 @@ describe("BF-0001 workflow definition", () => {
   });
 
   // QFAI:EX-0001-0003-01
+  // QFAI:AC-0001-0004-01
   // QFAI:EX-0001-0004-01
   it("defines an ordered, acyclic six-stage workflow with the optional stages", async () => {
     const workflow = await readFile(rule("workflow.md"), "utf8");
@@ -143,6 +144,7 @@ describe("BF-0001 workflow definition", () => {
     const configure = await readFile(skill("qfai-configure"), "utf8");
     expect(configure).toContain("Configure QFAI for this repository");
     expect(stages.every(({ label }) => !label.includes("Configure"))).toBe(true);
+    expect(stages.every(({ label }) => !/policy check/i.test(label))).toBe(true);
   });
 
   // QFAI:AC-0001-0004-05
