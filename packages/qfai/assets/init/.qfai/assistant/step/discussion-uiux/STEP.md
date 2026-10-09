@@ -73,6 +73,4 @@ The reviewer confirms:
 
 - the three sidecars exist, and every screen contract carries the full template
   schema;
-- exploration directions are carried unranked;
-- no forbidden legacy sidecar exists under `uiux/` (see
-  `.qfai/assistant/skill/qfai-discussion/templates/uiux/00_index.md#forbidden-legacy-files`).
+- exploration directions are carried unranked.

@@ -24,11 +24,10 @@ async function newTempDir(): Promise<string> {
   return dir;
 }
 
-/** Write a UI-bearing pack carrying one forbidden legacy sidecar. */
+/** Write a UI-bearing pack that holds none of the required sidecars. */
 async function writeOffendingPack(packRoot: string): Promise<void> {
   await mkdir(path.join(packRoot, "uiux"), { recursive: true });
   await writeFile(path.join(packRoot, "01_Context.md"), "# Context\n\n- surface: web\n", "utf-8");
-  await writeFile(path.join(packRoot, "uiux", "10_strategy.md"), "# Strategy\n", "utf-8");
 }
 
 afterEach(async () => {
@@ -47,7 +46,7 @@ describe("runCanonicalUixValidators pack resolution", () => {
 
     const issues = await runCanonicalUixValidators(root, defaultConfig);
 
-    expect(issues.map((issue) => issue.code)).toContain("QFAI-THREELAYER-001");
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-THREELAYER-002");
   });
 
   it("runs against the newest pack when several exist", async () => {
@@ -68,7 +67,7 @@ describe("runCanonicalUixValidators pack resolution", () => {
 
     const issues = await runCanonicalUixValidators(root, defaultConfig);
 
-    expect(issues.map((issue) => issue.code)).toContain("QFAI-THREELAYER-001");
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-THREELAYER-002");
   });
 
   it("accepts a pack root directly", async () => {
@@ -77,7 +76,7 @@ describe("runCanonicalUixValidators pack resolution", () => {
 
     const issues = await runCanonicalUixValidators(packRoot, defaultConfig);
 
-    expect(issues.map((issue) => issue.code)).toContain("QFAI-THREELAYER-001");
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-THREELAYER-002");
   });
 
   it("stays silent when no pack can be resolved", async () => {
@@ -91,7 +90,7 @@ describe("runCanonicalUixValidators pack resolution", () => {
     // treated as a pack: that would report every rule against the repo.
     const root = await newTempDir();
     await mkdir(path.join(root, "uiux"), { recursive: true });
-    await writeFile(path.join(root, "uiux", "10_strategy.md"), "# Strategy\n", "utf-8");
+    await writeFile(path.join(root, "uiux", "00_index.md"), "# Index\n", "utf-8");
 
     await expect(runCanonicalUixValidators(root, defaultConfig)).resolves.toEqual([]);
   });

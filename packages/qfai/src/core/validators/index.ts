@@ -48,11 +48,7 @@ export {
   validateRootDesignMdParse,
 } from "./designContractReadiness.js";
 export { isUiBearingSpec } from "./uixDetection.js";
-export {
-  validateThreeLayerModel,
-  validateForbiddenLegacyFiles,
-  validateThreeLayerFamilyCompleteness,
-} from "./uix/threeLayer.js";
+export { validateThreeLayerFamilyCompleteness } from "./uix/threeLayer.js";
 export { validateTrendScan } from "./uix/trendScan.js";
 export { validateScreenContractSchema } from "./uix/screenContract.js";
 export { runCanonicalUixValidators } from "./uix/canonical.js";

@@ -19,11 +19,7 @@ import { validateExplorationArtifacts } from "./comparisonValidator.js";
 import { validateOqClosure } from "./oqClosure.js";
 import { validateCompetitiveReferences } from "./competitiveRefs.js";
 
-import {
-  validateThreeLayerModel,
-  validateForbiddenLegacyFiles,
-  validateThreeLayerFamilyCompleteness,
-} from "./threeLayer.js";
+import { validateThreeLayerFamilyCompleteness } from "./threeLayer.js";
 import { validateScreenContractSchema } from "./screenContract.js";
 import { validateTrendScan } from "./trendScan.js";
 
@@ -34,19 +30,14 @@ type UixValidator = (root: string, config: QfaiConfig) => Promise<Issue[]>;
  * runs.
  *
  * Exported because the non-UI over-fire regression (`nonUiOverfire.ts`) has to
- * measure *this* list. Its own copy of the list drifted into naming modules
- * that had been unwired from here when the pre-`DESIGN.md` uiux sidecars were
- * retired, so the regression asserted zero fires from validators production
- * never executed.
+ * measure *this* list, not a copy of it.
  */
 export const CANONICAL_UIX_VALIDATORS: readonly UixValidator[] = [
   // Explicit UI-bearing classification (must run before sidecar checks)
   validateClassification,
   // Sidecar presence
   validateSidecarMissing,
-  // Exploration-first sidecar family
-  validateThreeLayerModel,
-  validateForbiddenLegacyFiles,
+  // Screen-level sidecar family
   validateThreeLayerFamilyCompleteness,
   // Strong screen contract schema
   validateScreenContractSchema,
@@ -56,8 +47,7 @@ export const CANONICAL_UIX_VALIDATORS: readonly UixValidator[] = [
   validateCompetitiveReferences,
   // OQ closure
   validateOqClosure,
-  // Trend scan — `04_Sources.md#Trend Scan` is live SSOT; only the
-  // `uiux/20_trend_scan.md` sidecar was retired.
+  // Trend scan — `04_Sources.md#Trend Scan` is the SSOT.
   validateTrendScan,
 ];
 

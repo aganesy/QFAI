@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../../src/core/config.js";
 import { validateOptionComparison } from "../../../src/core/validators/uix/comparisonValidator.js";
-import { validateThreeLayerModel } from "../../../src/core/validators/uix/threeLayer.js";
+import { validateThreeLayerFamilyCompleteness } from "../../../src/core/validators/uix/threeLayer.js";
 import { validateTrendScan } from "../../../src/core/validators/uix/trendScan.js";
 import { validateScreenContractSchema } from "../../../src/core/validators/uix/screenContract.js";
 
@@ -35,7 +35,7 @@ describe("non-UI safety", () => {
     await createNonUiPack(root);
 
     const validators = [
-      validateThreeLayerModel,
+      validateThreeLayerFamilyCompleteness,
       validateTrendScan,
       validateScreenContractSchema,
       validateOptionComparison,

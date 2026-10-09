@@ -1,6 +1,6 @@
 # UIX-REV: Comparison Review
 
-Review exploration artifacts as comparison inputs, not a fixed option-comparison artifact.
+Review exploration artifacts as comparison inputs.
 
 ## Comparison Quality
 

@@ -1,8 +1,8 @@
 /**
  * Integration tests for spec-0004: Validator Convergence
  *
- * Tests canonical UIX aggregator path, exploration-first sidecar expectations,
- * legacy heading rejection, non-UI pack UIX skip, and truthful evidence/browser QA.
+ * Tests canonical UIX aggregator path, screen-level sidecar expectations,
+ * non-UI pack UIX skip, and truthful evidence/browser QA.
  *
  * TC-0004-0023..0026 are backfill trace anchors only (no body tests in this
  * file). The actual tests live in:
@@ -26,7 +26,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
-import { validateThreeLayerModel } from "../../src/core/validators/uix/threeLayer.js";
+import { validateThreeLayerFamilyCompleteness } from "../../src/core/validators/uix/threeLayer.js";
 
 // ---------------------------------------------------------------------------
 // Temp dir management
@@ -89,47 +89,10 @@ describe("canonical sidecar family filename expectations", () => {
     );
     // Brand-level inputs (product intent / brand signals / anti-goals
     // / reference pool) live in root DESIGN.md; threeLayer asserts only
-    // screen-level sidecars + the legacy-format guards.
-    // The legacy 33_exploration_rubric.md / 34_evaluator_calibration.md
-    // sidecars were retired when DESIGN.md became the brand SSOT and the
-    // review contract moved to `evaluatorReview.ts`; they are no longer in
-    // the canonical family. The shipped init assets do not generate them.
+    // screen-level sidecars.
     expect(validatorSrc).toContain("00_index.md");
     expect(validatorSrc).toContain("40_screen_contracts.md");
     expect(validatorSrc).toContain("50_review_input_bundle.md");
-    // The sidecars are mentioned only in the historical comment; the
-    // canonical list itself must not list them.
-    const canonicalListBlock = validatorSrc.split(
-      "const CANONICAL_REQUIRED_SIDECAR_FILES",
-    )[1] as string;
-    const canonicalListBody = canonicalListBlock.split("] as const")[0] as string;
-    expect(canonicalListBody).not.toContain("33_exploration_rubric.md");
-    expect(canonicalListBody).not.toContain("34_evaluator_calibration.md");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Old 4-axis format is error
-// ---------------------------------------------------------------------------
-
-describe("Old 4-axis format is error", () => {
-  it("legacy 4-axis headings in exploration artifacts trigger legacy format error", async () => {
-    const root = await newTempDir();
-    await createUiBearingPack(root);
-
-    const legacyContent = ["# Exploration Rubric", "", "## craft", "", "Legacy content."].join(
-      "\n",
-    );
-    // 33_exploration_rubric.md is no longer in the canonical family;
-    // run the legacy-format check against 40_screen_contracts.md, which
-    // is. The validator iterates the canonical list, so any required
-    // sidecar with legacy 4-axis headings will produce the error.
-    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), legacyContent, "utf-8");
-
-    const issues = await validateThreeLayerModel(root, defaultConfig);
-    const legacyIssue = issues.find((i) => i.code === "QFAI-THREELAYER-003");
-    expect(legacyIssue).toBeDefined();
-    expect(legacyIssue?.severity).toBe("error");
   });
 });
 
@@ -137,12 +100,13 @@ describe("Old 4-axis format is error", () => {
 // A non-UI pack raises no UIX finding from the three-layer validator
 // ---------------------------------------------------------------------------
 
+// QFAI:EX-0001-0018-01
 describe("a non-UI pack raises no UIX finding from threeLayer", () => {
   it("non-UI pack produces zero UIX-VAL issues from threeLayer", async () => {
     const root = await newTempDir();
     await createNonUiPack(root);
 
-    const issues = await validateThreeLayerModel(root, defaultConfig);
+    const issues = await validateThreeLayerFamilyCompleteness(root, defaultConfig);
     expect(issues.filter((i) => i.code.startsWith("QFAI-THREELAYER-"))).toHaveLength(0);
   });
 });
@@ -156,18 +120,10 @@ describe("UIX-VAL determinism", () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
 
-    const legacyContent = ["# Exploration Rubric", "", "## craft", "", "Legacy content."].join(
-      "\n",
-    );
-    // 33_exploration_rubric.md is no longer in the canonical family;
-    // run the legacy-format check against 40_screen_contracts.md, which
-    // is. The validator iterates the canonical list, so any required
-    // sidecar with legacy 4-axis headings will produce the error.
-    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), legacyContent, "utf-8");
+    const first = await validateThreeLayerFamilyCompleteness(root, defaultConfig);
+    const second = await validateThreeLayerFamilyCompleteness(root, defaultConfig);
 
-    const first = await validateThreeLayerModel(root, defaultConfig);
-    const second = await validateThreeLayerModel(root, defaultConfig);
-
+    expect(first.length).toBeGreaterThan(0);
     expect(second).toEqual(first);
   });
 });
