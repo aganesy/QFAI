@@ -5,7 +5,7 @@
  * `prototyping.yaml` only to a pack with a visual surface.
  */
 
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -126,5 +126,92 @@ describe("discussion sidecar acceptance", () => {
       const text = (await readFile(document, "utf-8")).replace(/\s+/g, " ");
       expect(text, document).toContain(sentence);
     }
+  });
+});
+
+const SIDECAR_TEMPLATES = path.join(
+  getInitAssetsDir(),
+  ".qfai",
+  "assistant",
+  "skill",
+  "qfai-discussion",
+  "templates",
+  "uiux",
+);
+
+/** A UI-bearing pack carrying the three sidecars exactly as the package ships them. */
+async function packWithShippedSidecars(): Promise<string> {
+  const root = await newPack(UI_CONTEXT);
+  await mkdir(path.join(root, "uiux"), { recursive: true });
+  for (const name of ["00_index.md", "40_screen_contracts.md", "50_review_input_bundle.md"]) {
+    await copyFile(path.join(SIDECAR_TEMPLATES, name), path.join(root, "uiux", name));
+  }
+  return root;
+}
+
+describe("shipped UI sidecars", () => {
+  // QFAI:AC-0001-0085-01
+  it("ships a screen-contract sidecar that records screen-level contracts and satisfies the validators", async () => {
+    const root = await packWithShippedSidecars();
+    const sidecar = await readFile(path.join(root, "uiux", "40_screen_contracts.md"), "utf-8");
+    expect(sidecar).toMatch(/^### Screen: /m);
+    expect(sidecar).toMatch(/^- screen_id: /m);
+    expect(sidecar).toMatch(/^- route: /m);
+
+    const issues = await runCanonicalUixValidators(root, defaultConfig);
+    expect(issues.filter((found) => found.file === "uiux/40_screen_contracts.md")).toEqual([]);
+
+    await rm(path.join(root, "uiux", "40_screen_contracts.md"));
+    const without = await runCanonicalUixValidators(root, defaultConfig);
+    expect(
+      without.filter((found) => found.code === "QFAI-THREELAYER-002").map((found) => found.file),
+    ).toEqual(["uiux/40_screen_contracts.md"]);
+  });
+
+  // QFAI:AC-0001-0086-01
+  it("ships a review input bundle that documents best-of-history handling, and warns for one that does not", async () => {
+    const root = await packWithShippedSidecars();
+    const bundlePath = path.join(root, "uiux", "50_review_input_bundle.md");
+    expect(await readFile(bundlePath, "utf-8")).toMatch(/best-of-history/i);
+
+    const issues = await runCanonicalUixValidators(root, defaultConfig);
+    expect(issues.filter((found) => found.file === "uiux/50_review_input_bundle.md")).toEqual([]);
+
+    await writeFile(
+      bundlePath,
+      "# Review Input Bundle\n\nEvery sidecar is listed here.\n",
+      "utf-8",
+    );
+    const silent = await runCanonicalUixValidators(root, defaultConfig);
+    const direction = silent.filter((found) => found.code === "QFAI-DIRECTION-001");
+    expect(direction.map((found) => [found.file, found.severity])).toEqual([
+      ["uiux/50_review_input_bundle.md", "warning"],
+    ]);
+  });
+
+  // QFAI:EX-0001-0088-01
+  it("ships neither retired exploration sidecar and reports one that is produced again", async () => {
+    const shipped = await readdir(SIDECAR_TEMPLATES);
+    expect(shipped).not.toContain("33_exploration_rubric.md");
+    expect(shipped).not.toContain("34_evaluator_calibration.md");
+
+    const root = await packWithShippedSidecars();
+    expect(
+      (await runCanonicalUixValidators(root, defaultConfig)).filter(
+        (found) => found.code === "QFAI-THREELAYER-001",
+      ),
+    ).toEqual([]);
+
+    await writeFile(
+      path.join(root, "uiux", "33_exploration_rubric.md"),
+      "# Exploration Rubric\n",
+      "utf-8",
+    );
+    const regression = (await runCanonicalUixValidators(root, defaultConfig)).filter(
+      (found) => found.code === "QFAI-THREELAYER-001",
+    );
+    expect(regression.map((found) => [found.file, found.severity])).toEqual([
+      ["uiux/33_exploration_rubric.md", "error"],
+    ]);
   });
 });

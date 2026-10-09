@@ -65,6 +65,16 @@ describe("/qfai-prototyping public surface — single-spec alignment", () => {
     expect(hits).toEqual([]);
   });
 
+  // QFAI:AC-0001-0134-01
+  it("SKILL.md names the UI contract as its unit and selects no primary spec", async () => {
+    const content = await readFile(path.join(SKILL_ROOT, "SKILL.md"), "utf-8");
+    expect(content).toContain("UI-NNNN");
+    expect(content).toContain("screens[]");
+    expect(content).toContain("primaryUiContract");
+    expect(content).not.toContain("primarySpecId");
+    expect(content).not.toMatch(/select (?:a|the) primary spec/i);
+  });
+
   it("specResolution.ts still exports resolveSurfaceUnion for internal consumers", async () => {
     // The helper REMAINS for validators / show-spec. Removing it from
     // the public skill surface must not cascade into removing the core

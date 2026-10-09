@@ -106,6 +106,62 @@ describe("TC-0013-0034: structured primary_tasks accepted", () => {
   });
 });
 
+function screenWithTasks(id: string, tasks: string[]): string {
+  return [
+    "screens:",
+    `  - id: ${id}`,
+    `    title: ${id}`,
+    `    route: /${id}`,
+    "    primary_tasks:",
+    ...tasks,
+    "",
+  ].join("\n");
+}
+
+function structuredTasks(count: number): string[] {
+  return Array.from({ length: count }, (_, index) => [
+    `      - id: t${index + 1}`,
+    `        label: Task ${index + 1}`,
+    `        acceptance: Task ${index + 1} completes`,
+  ]).flat();
+}
+
+describe("audit profile task forms", () => {
+  // QFAI:AC-0001-0050-01
+  it("rejects each string-only item, accepts a sibling's structured items, and names the ceiling of seven", async () => {
+    const stringOnly = screenWithTasks("orders", [
+      "      - View orders",
+      "      - Refund an order",
+    ]);
+    await withWorkspace(stringOnly, async (root) => {
+      const uiDir = path.join(root, ".qfai", "spec", "03_contract", "ui");
+      await writeFile(
+        path.join(uiDir, "structured.yaml"),
+        screenWithTasks("billing", structuredTasks(1)),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(uiDir, "crowded.yaml"),
+        screenWithTasks("crowded", structuredTasks(9)),
+        "utf-8",
+      );
+
+      const issues = await validateDesignAudit(root, defaultConfig);
+      const named = (code: string, file: string) =>
+        issues.filter((issue) => issue.code === code && issue.file?.includes(file));
+
+      expect(named("QFAI-AUD-021", "sample.yaml").map((issue) => issue.severity)).toEqual([
+        "error",
+        "error",
+      ]);
+      expect(issues.filter((issue) => issue.file?.includes("structured.yaml"))).toEqual([]);
+      const ceiling = named("QFAI-AUD-020", "crowded.yaml");
+      expect(ceiling.map((issue) => issue.severity)).toEqual(["warning"]);
+      expect(ceiling[0]?.message).toMatch(/at most 7/);
+    });
+  });
+});
+
 describe("TC-0013-0035: incomplete / open structured primary_tasks rejected", () => {
   it("rejects a structured item missing 'acceptance'", async () => {
     const ui = [
