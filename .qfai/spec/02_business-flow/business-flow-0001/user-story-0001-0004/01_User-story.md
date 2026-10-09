@@ -2,7 +2,7 @@
 
 ## User Story
 
-As a maintainer, I want the current constitution (Articles I to XI) and workflow (Stages 0 to 7) defined as the design specification of the shipped assistant rules, so that every skill runs under one governance framework.
+As a maintainer, I want the current constitution (Articles I to XI) and workflow (six stages and a policy check) defined as the design specification of the shipped assistant rules, so that every skill runs under one governance framework.
 
 ## Non-goals
 

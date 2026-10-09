@@ -8,9 +8,9 @@ Feature: Policy and governance framework
   Scenario: The canonical workflow stages are defined
     Given the policy and governance specification
     When the canonical workflow stages are read
-    Then seven stages are defined, from Stage 0 (policy check) to Stage 6 (verify)
-    And Stage 0 runs once per run, at its start, and no later stage runs it again
-    And Stage 4 (prototyping) is optional
+    Then six stages are defined, from Stage 1 (discussion) to Stage 6 (verify)
+    And the policy check is not a stage: it runs once per run, at its start, before the first stage, and no stage runs it again
+    And Stage 1 (discussion) and Stage 4 (prototyping) are optional
     And Stage 5 (implementation) writes the acceptance tests with empty bodies and runs TDD for each EX
 
   # AC-0001-0004-04
