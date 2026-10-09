@@ -588,7 +588,7 @@ describe("applyWaivers", () => {
   it.each([
     ["QFAI-STORY-006", "storyTree.testObligation"],
     ["QFAI-STORY-007", "storyTree.misplacedAnnotation"],
-    ["QFAI-DEPRECATED-001", "config.deprecatedPath"],
+    ["QFAI-DT-006", "config.rule"],
     ["QFAI-CFG-LINK-001", "config.link"],
     ["QFAI-STORY-008", "storyTree.undeclaredAnnotation"],
     ["QFAI-STORY-009", "storyTree.testException"],
@@ -902,37 +902,6 @@ describe("applyWaivers", () => {
 
       expect(result.issues.some((item) => item.code === "QFAI-WAIVER-004")).toBe(true);
       expect(result.waivers.active).toHaveLength(0);
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  // The other half of the post-waiver check: `QFAI-DEPRECATED-001` is *also*
-  // emitted by `validators/assistantTreeMigration.ts`, which runs inside the
-  // waiver pass. A blanket "the CLI emits it, so drop it" would have taken a
-  // rule that is genuinely waivable with it.
-  it("recognises a rule the CLI re-emits but a validator raises too", async () => {
-    const root = await createRoot();
-    try {
-      await writeWaivers(
-        root,
-        [
-          "version: 1",
-          "waivers:",
-          "  - id: WVR-20260208-19",
-          "    rule: QFAI-DEPRECATED-001",
-          "    scope:",
-          '      paths: [".qfai/assistant/**"]',
-          '    reason: "migration scheduled for the next minor"',
-          '    expires: "2099-01-01"',
-          '    evidence: "delta.md#DL-20260208-01"',
-          "",
-        ].join("\n"),
-      );
-
-      const result = await applyWaivers(root, [buildIssue({ rule: "COMPAT-003" })]);
-
-      expect(result.issues.some((item) => item.code === "QFAI-WAIVER-004")).toBe(false);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

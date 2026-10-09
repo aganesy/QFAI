@@ -21,18 +21,6 @@ export const REFRESHED_ASSISTANT_LAYERS = [
   "rule",
 ] as const satisfies readonly AssistantLayer[];
 
-/**
- * The release that retired the legacy `.qfai/assistant/instructions/` layout.
- *
- * A literal, because nothing compares against it any more: no reader accepts
- * the old path, and the finding that reports one is an `error`
- * outright. It survives only as the version an operator's message names, so
- * they know which release moved the layout under them.
- */
-export function legacyAssistantTreeSunsetLabel(): string {
-  return "1.10.0";
-}
-
 export function isAssistantLayer(value: string): value is AssistantLayer {
   return (ASSISTANT_LAYERS as readonly string[]).includes(value);
 }
@@ -66,36 +54,4 @@ export function joinAssistantAssetLayer(
   ...rest: string[]
 ): string {
   return path.join(assistantAssetsRoot, layer, ...rest);
-}
-
-/**
- * Legacy pre-recut `.qfai/assistant/instructions/` surface — relocated
- * by `qfai init --upgrade-assistant-tree`. The helper keeps call sites from
- * embedding the literal segments.
- */
-export const LEGACY_ASSISTANT_INSTRUCTIONS_DIR = ".qfai/assistant/instructions" as const;
-
-export function joinLegacyAssistantInstructions(destRoot: string, ...rest: string[]): string {
-  return path.join(destRoot, LEGACY_ASSISTANT_INSTRUCTIONS_DIR, ...rest);
-}
-
-/**
- * The README at the root of the assistant tree, which earlier releases wrote
- * and this one removes.
- *
- * Artifact guidance belongs in the skill references and templates that ship
- * with each skill, which is where a reader looking for it goes: two shipped
- * skills say so outright, and every statement this README carried is in
- * `constitution/drift-protocol.md` in more detail. It also described how
- * `qfai validate` decided whether init had run — a job the records under
- * `validators/integrationSurface.ts#INIT_MARKERS` now do — so leaving it in
- * place would leave a description of behaviour the tool no longer has.
- *
- * Imported by init.ts, which removes the copy it wrote and leaves a project's
- * own file at that path alone.
- */
-export const ASSISTANT_README_SEGMENTS = [".qfai", "assistant", "README.md"] as const;
-
-export function joinAssistantReadme(destRoot: string): string {
-  return path.join(destRoot, ...ASSISTANT_README_SEGMENTS);
 }

@@ -17,10 +17,7 @@ import { runInit } from "../../src/cli/commands/init.js";
 import { loadConfig, readSkippedWorkflows } from "../../src/core/config.js";
 import { isEnoent } from "../../src/core/fs/errno.js";
 import { QFAI_GITIGNORE_BLOCK } from "../../src/core/gitignore.js";
-import {
-  RETIRED_WORKFLOW_NAMES,
-  SHIPPED_WORKFLOW_NAMES,
-} from "../../src/shared/shippedWorkflowNames.js";
+import { SHIPPED_WORKFLOW_NAMES } from "../../src/shared/shippedWorkflowNames.js";
 import { shippedWorkflowPath, useTempDirPool } from "../helpers/shippedWorkflowFixtures.js";
 import { captureStdout } from "../helpers/stdout.js";
 
@@ -154,13 +151,10 @@ describe("an absence check keeps a read failure apart from a missing directory",
     });
   }
 });
-describe("the write set is the shipped list and the listed set is the retired list", () => {
+describe("the write set is the shipped list", () => {
   // QFAI:AC-0002-0007-01
   // QFAI:EX-0002-0007-01
   it("writes exactly the shipped names and leaves a qfai-prefixed orphan untouched and unlisted", async () => {
-    expect([...SHIPPED_WORKFLOW_NAMES].filter((name) => RETIRED_WORKFLOW_NAMES.has(name))).toEqual(
-      [],
-    );
     const dir = await newTempDir();
     const orphan = "# the adopter's own workflow\nname: orphan\n";
     await mkdir(path.join(dir, ".github", "workflows"), { recursive: true });
@@ -285,10 +279,7 @@ describe("the workflow write path has no filesystem call of its own", () => {
   // QFAI:EX-0002-0007-04
   it("copies through the template helpers with a create-only literal and removes nothing", async () => {
     const source = await readInitSource();
-    for (const marker of [
-      "async function workflowAncestorsAreRealDirectories(",
-      "async function retiredWorkflowLines(",
-    ]) {
+    for (const marker of ["async function workflowAncestorsAreRealDirectories("]) {
       expect(functionBody(source, marker)).not.toMatch(/\b(?:copyFile|writeFile|rm|unlink)\s*\(/);
     }
     const run = functionBody(source, "export async function runInit(");
@@ -296,37 +287,5 @@ describe("the workflow write path has no filesystem call of its own", () => {
     expect(copy.slice(0, copy.indexOf(");"))).toContain(
       '{ force: false, dryRun: options.dryRun, conflictPolicy: "skip" }',
     );
-    for (const call of source.matchAll(/pruneMatchingEntries\(\s*([^,]+),/g)) {
-      expect(call[1], "no prune runs over the workflows directory").not.toContain("workflows");
-    }
-  });
-});
-
-describe("moving a file aside claims something nothing else can replace", () => {
-  // Races between processes, with no in-process seam a fixture can drive, so
-  // these are asserted on the source.
-
-  it("claims a directory, which mkdir refuses to create over", async () => {
-    const body = functionBody(await readInitSource(), "async function quarantineEntry(");
-    expect(body).toMatch(/await mkdir\(quarantineDir\)/);
-    expect(body).not.toMatch(/mkdir\(quarantineDir, \{[^}]*recursive/);
-    expect(body).not.toMatch(/open\(quarantinePath/);
-    expect(body).toMatch(/path\.join\(quarantineDir, base\)/);
-  });
-
-  it("restores by link only, so a name somebody else took is never overwritten", async () => {
-    const body = functionBody(await readInitSource(), "async function restoreQuarantined(");
-    expect(body).toMatch(/await link\(/);
-    expect(body).not.toMatch(/rename\(/);
-    expect(body).toMatch(/return false;/);
-  });
-
-  it("stops the run when a file could not be put back, naming where it is", async () => {
-    const body = functionBody(
-      await readInitSource(),
-      "export async function pruneMatchingEntries(",
-    );
-    expect(body).toMatch(/stranded\.push/);
-    expect(body).toMatch(/stranded\.length > 0/);
   });
 });

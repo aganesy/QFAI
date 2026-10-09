@@ -147,40 +147,6 @@ describe("qfai init run report", () => {
     }
   });
 
-  // `--upgrade-assistant-tree --dry-run` books the migration target into
-  // `copied` without writing it, so the template copy that follows finds the
-  // destination still missing and books the same path a second time. The
-  // preview has to match the write set a real run would produce, so the
-  // aggregated lists are de-duplicated before the count and the enumeration.
-  it("does not list a migrated path twice in a --upgrade-assistant-tree dry run", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-report-"));
-    try {
-      const legacy = path.join(root, ".qfai", "assistant", "instructions");
-      await mkdir(legacy, { recursive: true });
-      await writeFile(path.join(legacy, "quality.md"), "# legacy quality\n", "utf-8");
-
-      const output = await captureStdout(async () => {
-        await runInit({
-          dir: root,
-          force: false,
-          dryRun: true,
-          yes: true,
-          upgradeAssistantTree: true,
-        });
-      });
-
-      const listed = pathsUnder(output, "  would write paths:");
-      // POSIX-joined, because that is what the report writes. `path.join` here would
-      // build `\`-separated on Windows and never match a `/`-separated entry.
-      const migrated = ".qfai/assistant/rule/quality.md";
-      expect(listed.filter((entry) => entry === migrated)).toHaveLength(1);
-      expect(new Set(listed).size).toBe(listed.length);
-      expect(output).toContain(`  would write: ${listed.length}`);
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
   // `collectTemplateFiles()` accumulates `readdir()` results, whose order no
   // filesystem guarantees, so an unsorted list makes the preview undiffable
   // against another checkout and churns snapshots with no change in content.
@@ -215,42 +181,6 @@ describe("qfai init run report", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
-
-  // The migration accepts only known legacy file names. An unknown name with
-  // control characters remains in place and must not enter the run report.
-  // NTFS forbids these characters in a file name, so this fixture is Unix-only.
-  it.skipIf(process.platform === "win32")(
-    "does not migrate or report an unknown file with control characters in its name",
-    async () => {
-      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-report-"));
-      try {
-        const legacy = path.join(root, ".qfai", "assistant", "instructions");
-        await mkdir(legacy, { recursive: true });
-        const hostile = "spoof\n    - forged-entry.md\u001b[31m.md";
-        await writeFile(path.join(legacy, hostile), "# hostile\n", "utf-8");
-
-        const output = await captureStdout(async () => {
-          await runInit({
-            dir: root,
-            force: false,
-            dryRun: true,
-            yes: true,
-            upgradeAssistantTree: true,
-          });
-        });
-
-        // The unknown file is untouched and cannot forge a report entry.
-        expect(await readFile(path.join(legacy, hostile), "utf-8")).toBe("# hostile\n");
-        expect(output).not.toContain(hostile);
-        expect(output).not.toContain("\u001b[31m");
-        expect(output).not.toContain("\\x0a");
-        expect(output).not.toContain("\\x1b");
-        expect(pathsUnder(output, "  would write paths:")).not.toContain("forged-entry.md");
-      } finally {
-        await rm(root, { recursive: true, force: true });
-      }
-    },
-  );
 
   // The destination is operator-supplied through `--dir` and echoed in the
   // report's own header. Escaping only the listings left the one line above
@@ -289,50 +219,6 @@ describe("qfai init run report", () => {
       const listed = pathsUnder(output, "  would write paths:");
       expect(listed.length).toBeGreaterThan(0);
       expect(listed.filter((entry) => entry.startsWith('"'))).toEqual([]);
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  // A real `--upgrade-assistant-tree` run writes the migration target and books
-  // it into `copied`; the template copy that follows then finds the destination
-  // present and books the SAME path into `skipped`. De-duplicating each list on
-  // its own cannot see across the two, so the path was reported as both written
-  // and skipped and inflated the skip count. A path that was actually written is
-  // not a skip.
-  it("does not report a written path as skipped on a real --upgrade-assistant-tree run", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-report-"));
-    try {
-      const legacy = path.join(root, ".qfai", "assistant", "instructions");
-      await mkdir(legacy, { recursive: true });
-      await writeFile(path.join(legacy, "quality.md"), "# legacy quality\n", "utf-8");
-
-      const output = await captureStdout(async () => {
-        await runInit({
-          dir: root,
-          force: false,
-          dryRun: false,
-          yes: true,
-          upgradeAssistantTree: true,
-          verbose: true,
-        });
-      });
-
-      const written = pathsUnder(output, "  written paths:");
-      const skipped = pathsUnder(output, "  skipped paths:");
-      // POSIX-joined for the same reason as the row above: the report writes `/`.
-      const migrated = ".qfai/assistant/rule/quality.md";
-
-      // The migration really wrote the file — this is not a dry run.
-      await expect(readFile(path.join(root, migrated), "utf-8")).resolves.toContain(
-        "# legacy quality",
-      );
-      expect(written).toContain(migrated);
-      expect(skipped).not.toContain(migrated);
-      // No path may be reported under both categories.
-      expect(written.filter((entry) => skipped.includes(entry))).toEqual([]);
-      // The count has to match the list the operator is shown.
-      expect(reportedCount(output, "skipped")).toBe(skipped.length);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

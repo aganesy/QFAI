@@ -878,7 +878,7 @@ function isRetiredSpecPackEmission(srcDir, file, code) {
  * True for a file whose findings are appended after `applyWaivers` has run.
  *
  * `applyWaivers` is called inside `core/validate.ts`, so anything `src/cli/`
- * pushes onto the result — `QFAI-DEPRECATED-001`, `QFAI-PROFILE-001` — can never
+ * pushes onto the result — `QFAI-PROFILE-001` — can never
  * be suppressed by a waiver. Registering them as known let a waiver that
  * cannot possibly match be reported as `active`, which is the same lie
  * `QFAI-WAIVER-004` exists to prevent, pointing the other way.

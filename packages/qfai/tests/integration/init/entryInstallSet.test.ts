@@ -187,8 +187,8 @@ describe("a host directory reached through a link", () => {
   it("--force keeps the wrappers behind a linked `.claude` or `.github`", async (ctx) => {
     const claudeOutside = await mkdtemp(path.join(os.tmpdir(), "qfai-claude-outside-"));
     const githubOutside = await mkdtemp(path.join(os.tmpdir(), "qfai-github-outside-"));
-    // Each carries the delegation line an earlier release wrote, so a prune that enumerated the
-    // linked directory would read all three as its own and delete them.
+    // Each holds a file that qfai-shaped content would reach, so a write that followed the
+    // linked directory would change all three.
     const wrappers = new Map([
       [
         path.join(claudeOutside, "commands", "qfai-spec.md"),

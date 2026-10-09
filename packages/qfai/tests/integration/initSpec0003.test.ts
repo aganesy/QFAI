@@ -171,22 +171,6 @@ describe("TC-0003-0006: Agent file symlink generation", () => {
   });
 });
 
-// TC-0003-0007: Legacy 10_workflow.md removal
-describe("TC-0003-0007: Legacy 10_workflow.md removal", () => {
-  it("init handles legacy file removal", async () => {
-    const content = await readFile(INIT_CLI, "utf-8");
-    expect(content).toMatch(/legacy|prune|remove|obsolet/i);
-  });
-});
-
-// TC-0003-0008: Old commands/prompts prune
-describe("TC-0003-0008: Old commands/prompts prune", () => {
-  it("init prunes old command files", async () => {
-    const content = await readFile(INIT_CLI, "utf-8");
-    expect(content).toMatch(/prune|commands|prompts/i);
-  });
-});
-
 // TC-0003-0009: Git config core.symlinks auto-setting
 describe("TC-0003-0009: Git config core.symlinks auto-setting", () => {
   it("init configures git symlinks", async () => {
@@ -295,24 +279,11 @@ describe("TC-0003-0021: singular assistant-tree seed", () => {
     const content = await readFile(INIT_CLI, "utf-8");
     expect(content).toContain("assistantPaths");
     expect(content).toContain("ASSISTANT_DIR");
-    expect(content).toContain("joinAssistantLayer");
     expect(content).toContain("REFRESHED_ASSISTANT_LAYERS");
     const { ASSISTANT_LAYERS, REFRESHED_ASSISTANT_LAYERS } =
       await import("../../src/core/paths/assistantPaths.js");
     expect(ASSISTANT_LAYERS).toEqual(["rule", "skill", "step", "agent", "prompt"]);
     expect([...REFRESHED_ASSISTANT_LAYERS].sort()).toEqual(["agent", "rule", "skill", "step"]);
-  });
-});
-
-describe("TC-0003-0023: --upgrade-assistant-tree migration", () => {
-  it("init moves only named legacy assets while keeping existing destinations", async () => {
-    const content = await readFile(INIT_CLI, "utf-8");
-    expect(content).toContain("upgradeAssistantTree");
-    expect(content).toContain("runUpgradeAssistantTree");
-    expect(content).toContain("W-USER-EDIT-PRESERVED");
-    expect(content).toContain("UPGRADE_RULE_FILES");
-    expect(content).toContain('"qfai-sdd/references/requirements-decomposition.md"');
-    expect(content).toContain("if (target === null) continue");
   });
 });
 
@@ -324,17 +295,5 @@ describe("TC-0003-0025: assistantPaths.ts SSOT module", () => {
     expect(mod.joinAssistantLayer("project", "rule", "quality.md")).toBe(
       path.join("project", ".qfai", "assistant", "rule", "quality.md"),
     );
-  });
-});
-
-describe("TC-0003-0026: legacy backward-compat + sunset warning", () => {
-  it("init declares emitLegacyAssistantTreeSunset emitting QFAI-DEPRECATED-001 (sunset sourced from SSOT)", async () => {
-    const content = await readFile(INIT_CLI, "utf-8");
-    expect(content).toContain("QFAI-DEPRECATED-001");
-    expect(content).toContain("emitLegacyAssistantTreeSunset");
-    // The version in the message comes from legacyAssistantTreeSunsetLabel()
-    // rather than a literal here; the runtime assertion lives in
-    // tests/cli/init.test.ts.
-    expect(content).toMatch(/announced sunset \(v\$\{sunset\}\)/);
   });
 });

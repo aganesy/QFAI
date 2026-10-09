@@ -275,13 +275,7 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-STORY-014",
   ],
   "story-test-scan": ["QFAI-SCAN-002"],
-  sdd: [
-    "QFAI-AUTOPILOT-*",
-    "QFAI-ASSISTANT-001",
-    "QFAI-SKILLDOC-001",
-    "QFAI-ASSISTANT-002",
-    "QFAI-DEPRECATED-001",
-  ],
+  sdd: ["QFAI-AUTOPILOT-*", "QFAI-ASSISTANT-001", "QFAI-SKILLDOC-001", "QFAI-ASSISTANT-002"],
   "reviewer-gate-sdd": ["QFAI-POLICY-*"],
   "reviewer-gate-shared": ["QFAI-MOCKHREF-001"],
   contracts: [
@@ -1182,7 +1176,6 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "No required Research Summary value is still the shipped `[...]` template placeholder.",
   "QFAI-AUTOPILOT-001":
     "Every `qfai-*` SKILL.md keeps its hard-required bucket to the common entries plus the ones it declares for itself, and names no retired entry. A skill may carry fewer — one it never reads costs a prompt and buys nothing — and never more.",
-  "QFAI-DEPRECATED-001": "The retired `.qfai/assistant/instructions/` layer is absent.",
   "QFAI-ASSISTANT-001": "Every directory under `.qfai/assistant/` is one of the canonical layers.",
   "QFAI-SKILLDOC-001": "A `project_memory:` block in a SKILL.md is the last thing in the file.",
   "QFAI-ASSISTANT-002": "Every canonical `.qfai/assistant/` layer directory is seeded.",

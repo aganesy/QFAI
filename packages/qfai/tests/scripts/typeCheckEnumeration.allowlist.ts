@@ -57,7 +57,6 @@ export const TYPE_CHECK_UNENUMERATED: readonly string[] = [
   "tests/cli/initClaudeCodeHooks.test.ts",
   "tests/cli/initGitignoreMigration.test.ts",
   "tests/cli/initInstructionsStaging.test.ts",
-  "tests/cli/initMarkerRaces.test.ts",
   "tests/cli/initRepairRollback.test.ts",
   "tests/cli/initRepairsFlattenedLinks.test.ts",
   "tests/cli/main.test.ts",

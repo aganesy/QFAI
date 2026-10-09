@@ -101,57 +101,6 @@ describe("CLI contracts do not defer behaviour to a version number", () => {
   });
 });
 
-describe("cli-0009-qfai-init.md matches the additive assistant-tree upgrade", () => {
-  const contractPath = path.join(CONTRACTS_DIR, "cli", "cli-0009-qfai-init.md");
-  const initSourcePath = path.join(ROOT, "packages", "qfai", "src", "cli", "commands", "init.ts");
-
-  /** The business rule that states what `--upgrade-assistant-tree` copies. */
-  async function upgradeRule(): Promise<string> {
-    const scan = parseContractRules(contractPath, await readFile(contractPath, "utf-8"));
-    const rule = scan.rules.find((candidate) =>
-      candidate.statement.includes("`--upgrade-assistant-tree` copies each file"),
-    );
-    expect(rule, "the init contract states the upgrade copy as a business rule").toBeDefined();
-    return rule?.statement ?? "";
-  }
-
-  it("copies only named legacy instruction files", async () => {
-    const [rule, source] = await Promise.all([upgradeRule(), readFile(initSourcePath, "utf-8")]);
-    expect(rule).toMatch(/copies each file the relocation table names/);
-    expect(rule).toMatch(/A file the table does not recognise stays at its legacy path/);
-    expect(source).toMatch(/const legacyDir = joinLegacyAssistantInstructions\(destRoot\)/);
-    expect(source).toMatch(/if \(target === null\) continue/);
-  });
-
-  it("preserves adopter-owned spec files and unsupported legacy paths", async () => {
-    const [rule, source] = await Promise.all([upgradeRule(), readFile(initSourcePath, "utf-8")]);
-    for (const name of ["product.md", "manifest.md", "tech.md", "structure.md"]) {
-      expect(rule).toContain(name);
-    }
-    expect(rule).toMatch(/which migration step 3 merges into the spec tree/);
-    expect(source).toMatch(/Unknown files remain where the project put them/);
-  });
-
-  it("does not write the retired assistant directories or a migration memo", async () => {
-    const rule = await upgradeRule();
-    expect(rule).toMatch(
-      /writes nothing under `constitution\/`, `manifest\/`, `catalog\/` or `process\/`/,
-    );
-    expect(rule).toMatch(/writes no migration memo/);
-  });
-
-  it("keeps the copy additive and respects existing destinations", async () => {
-    const [contract, source] = await Promise.all([
-      upgradeRule(),
-      readFile(initSourcePath, "utf-8"),
-    ]);
-    expect(contract).toMatch(/no legacy path is deleted and no destination is overwritten/);
-    expect(source).toMatch(/if \(await pathExists\(newPath\)\)/);
-    expect(source).toMatch(/skipped\.push\(newPath\)/);
-    expect(source).toMatch(/if \(!dryRun\)/);
-    expect(source).toMatch(/await writeFile\(newPath, body, "utf-8"\)/);
-  });
-});
 /**
  * A finding code documented with no emitter is the same failure mode as a
  * version-pinned deferral: the contract promises behaviour, nothing produces

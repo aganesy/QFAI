@@ -112,26 +112,10 @@ type Broken = {
    * all present.
    */
   canonicalReachable?: boolean | undefined;
-  /**
-   * The wrapper still resolves into the canonical tree, but names a document
-   * this version does not ship. A plain init does not repair it, so its
-   * remedy differs from every other kind of damage here.
-   */
-  retired?: boolean | undefined;
 };
 
 /**
- * What the operator is told first about a retired wrapper: a plain init
- * changes nothing for it, and init never deletes the retired canonical side.
- */
-const RETIRED_WRAPPER_LEAD =
-  "A plain `qfai init` changes nothing for a retired wrapper. Run `qfai init --force` to remove it (the limits are below), then delete the retired canonical directory under `.qfai/assistant/` by hand: init never deletes it.";
-
-const RETIRED_WRAPPER_REMEDY =
-  "**`which this version does not ship` marks a retired wrapper.** The wrapper of a skill or agent that an upgrade deleted or renamed is still there and still resolves, so the assistant keeps loading the old instructions. `qfai init --force` deletes only **agent wrappers whose target is directly under `.qfai/assistant/agent/` (`.claude/agents/` / `.github/agents/`) and skill wrappers whose names start with `qfai-`** (a rerun without `--force` does not remove them). Wrappers of skills with no such prefix, such as `web-research`, and agent wrappers that point into a subdirectory such as `.qfai/assistant/agent/<sub>/…` or at `.qfai/assistant/skill/…`, are outside the prune, so delete the reported paths by hand. **init never deletes the canonical side (`.qfai/assistant/skill/…` / `.qfai/assistant/agent/…`):** it cannot tell a retired canonical from one the project added itself, so delete a retired canonical by hand. A wrapper linked by hand to a project's own canonical has the same shape; it is outside qfai's management too, so decide whether to keep it on purpose. (`--force` deletes an agent wrapper only when its target is directly under `.qfai/assistant/agent/` and is not in the current roster.)";
-
-/**
- * The repairs for damage that is not a retired wrapper, one per kind of damage.
+ * The repairs for broken wrappers, one per kind of damage.
  * A finding prints only the repairs for the kinds it lists: each of these is
  * wrong for the other kinds, and all of them together run to about 3 KB.
  */
@@ -143,7 +127,7 @@ const REMEDY_BRANCHES = {
   ancestor:
     "**The same applies when an ancestor of the integration directory is a symlink (`an ancestor is a symlink`).** Init writes nothing below it either, and the wrappers inside use relative targets that resolve against wherever the ancestor points. Replace the ancestor (`.claude`, `.github`, and so on) with a real directory, then run `qfai init`.",
   notSymlink:
-    "**A wrapper that is not a symlink (`directory, not a symlink` / `FIFO` / `socket` / `device`) is not fixed by init either.** `ensureSymlink` leaves these as `skipped`. Move a directory aside after checking its contents, then run `qfai init`; delete a special file, then run `qfai init`. `--force` deletes without confirmation, so do not use it until you know whether the contents are needed.",
+    "**A wrapper that is not a symlink (`directory, not a symlink` / `FIFO` / `socket` / `device`) is not fixed by init either.** `ensureSymlink` leaves these as `skipped`. Move a directory aside after checking its contents, then run `qfai init`; delete a special file, then run `qfai init`.",
   unreadable:
     "**`unreadable` is a permissions problem, and init does not fix it.** The wrapper's target string is correct, so `ensureSymlink` skips it, and canonical assets are create-only, so they are not overwritten either. Restore read permission on the file (POSIX: `chmod u+r <path>`, Windows: `icacls <path> /grant <user>:R`). If this appears in CI, check the umask / ACL settings of the job that created the file.",
   canonical:
@@ -185,35 +169,15 @@ function remedyBranches(detail: string): readonly RemedyBranch[] {
   return REMEDY_ORDER;
 }
 
-/**
- * The remedy for broken wrappers. A retired wrapper is repaired by none of the
- * other repairs, so its steps come first, and stand alone when every broken
- * wrapper is a retired one.
- */
-export function brokenWrapperRemedy(
-  entries: readonly { detail: string; retired?: boolean | undefined }[],
-): string {
-  const others = entries.filter((entry) => entry.retired !== true);
-  const applicable = new Set(others.flatMap((entry) => remedyBranches(entry.detail)));
-  const general = REMEDY_ORDER.filter((branch) => applicable.has(branch)).map(
-    (branch) => REMEDY_BRANCHES[branch],
-  );
-  if (others.length === entries.length) return general.join("\n");
-  return [RETIRED_WRAPPER_LEAD, RETIRED_WRAPPER_REMEDY, ...general].join("\n");
+/** The remedy for broken wrappers: the repairs for the kinds of damage the entries name. */
+export function brokenWrapperRemedy(entries: readonly { detail: string }[]): string {
+  const applicable = new Set(entries.flatMap((entry) => remedyBranches(entry.detail)));
+  return REMEDY_ORDER.filter((branch) => applicable.has(branch))
+    .map((branch) => REMEDY_BRANCHES[branch])
+    .join("\n");
 }
 
 const toPosix = (value: string): string => value.split(path.sep).join("/");
-
-/**
- * A sidecar `qfai init` leaves when a repair could not finish.
- *
- * Kept in step with the name the repair claims and the prune skips. Those two
- * and this rule have to agree about it: a sidecar holds the flattened target,
- * so it reads as a wrapper, and it exists precisely because a repair could not
- * finish — sometimes making it the only surviving copy of the original. The
- * remedy printed for a retired wrapper is "delete the path".
- */
-const SIDECAR_RE = /\.qfai-repair-\d+(?:-\d+)?$/;
 
 /**
  * Whether damage in this state stops a later `readdir` over the path.
@@ -269,9 +233,8 @@ function unwalkablePaths(broken: readonly Broken[]): string[] {
  * went one step too far: a shipped skill whose canonical `SKILL.md` was deleted
  * by mistake, wrapper still in place, dropped out of the roster and its dangling
  * wrapper passed every profile — which is precisely the state this rule exists
- * to report. The intersection was there to keep a retired skill out of scope,
- * and the shipped roster already does that (a retired skill is not shipped); a
- * skill this project has not taken yet is skipped by its wrapper being absent.
+ * to report. A skill this project has not taken yet is skipped by its wrapper
+ * being absent.
  *
  * Never a name prefix. A `qfai-` prefix test skipped `web-research` — a shipped
  * skill init wraps like any other — so a flattened `web-research` link passed
@@ -631,121 +594,6 @@ async function canonicalLinkProblem(
     if (renamed !== null) return `canonical SKILL.md is a symlink to ${renamed}`;
   }
   return null;
-}
-
-/**
- * Wrappers `qfai init` wrote for a skill or agent this package no longer ships.
- *
- * The roster is the **current** one, so a wrapper left by a shipped document
- * since removed or renamed is enumerated by nobody: it still resolves, and the
- * assistant goes on loading retired instructions while every profile reports a
- * clean surface. `pruneStaleQfaiWrappers` reaches only part of it: the agent
- * dirs are pruned under `--force` by resolved target, and only when that target
- * is a **direct child** of `.qfai/assistant/agent/`, while the skill dirs are
- * still matched by a `qfai-` prefix — and `web-research` is the standing proof
- * that a shipped name need not have one. This rule reports a target landing
- * anywhere under `.qfai/assistant/`, so a nested or cross-kind agent target is
- * reported and never pruned; the remedy names that gap rather than promising a
- * repair that will not happen.
- *
- * Identified by what init writes rather than by the name: an entry inside an
- * integration directory whose target lands under `.qfai/assistant/`. A wrapper
- * a project made by hand for a canonical of its own answers that description
- * too — init creates none for those, so it is unmanaged either way, and the
- * remedy says so rather than assuming which it is.
- */
-async function retiredWrappers(
-  root: string,
-  wrappers: readonly Wrapper[],
-  damagedDirs: ReadonlyMap<string, string>,
-): Promise<Broken[]> {
-  const expected = new Map<string, Set<string>>();
-  for (const wrapper of wrappers) {
-    // A directory already reported as damaged is not enumerated. When it is a
-    // symlink that resolves, `readdir` follows the redirect and lists somebody
-    // else s tree — and the remedy printed for a retired wrapper is delete the
-    // path, which through that redirect deletes a file outside the project.
-    if (damagedDirs.has(wrapper.dir)) continue;
-    const names = expected.get(wrapper.dir) ?? new Set<string>();
-    names.add(path.posix.basename(wrapper.relative));
-    expected.set(wrapper.dir, names);
-  }
-
-  const assistantRoot = path.join(root, ".qfai", "assistant");
-  const found: Broken[] = [];
-  for (const [dir, names] of expected) {
-    const dirAbsolute = path.join(root, ...dir.split("/"));
-    // A directory that is itself damaged raises `ELOOP` / `ENOTDIR` here, and
-    // that is already reported as damage of its own — listing what is inside it
-    // is not this rule's question, and propagating the error would lose every
-    // finding the run had produced. Absence is the same: nothing to enumerate.
-    //
-    // **Only those.** Swallowing every error let an `EACCES` — a POSIX
-    // execute-only directory, where the `lstat` on each known wrapper succeeds
-    // and the listing does not — pass validation with no retired wrapper
-    // examined at all, while the assistant went on loading them. An error that
-    // leaves the listing incomplete is not a clean answer and is re-thrown.
-    const entries = await readdir(dirAbsolute, { withFileTypes: true }).catch((error: unknown) => {
-      const code = (error as NodeJS.ErrnoException | null)?.code;
-      if (isMissing(error) || code === "ELOOP" || code === "ENOTDIR") return null;
-      throw error;
-    });
-    if (entries === null) continue;
-    for (const entry of entries) {
-      if (names.has(entry.name)) continue;
-      // A repair sidecar is not a wrapper. It holds the flattened target, so it
-      // reads as one — and it exists precisely because a repair could not
-      // finish, which sometimes makes it the only copy of the original left.
-      // The remedy printed here is "delete the path", so reporting it told the
-      // operator to destroy the content the sidecar was preserving. Same name
-      // test the prune uses, for the same reason.
-      if (SIDECAR_RE.test(entry.name)) continue;
-      const target = await wrapperTarget(path.join(dirAbsolute, entry.name), entry);
-      if (target === null) continue;
-      const resolved = path.resolve(dirAbsolute, target);
-      // The tree itself is not a wrapper target, and a path outside it is
-      // somebody else's link.
-      if (resolved === assistantRoot || !isInside(assistantRoot, resolved)) continue;
-      found.push({
-        relative: `${dir}/${entry.name}`,
-        detail: `resolves into the canonical tree but names ${toPosix(path.relative(root, resolved))}, which this version does not ship — the assistant still loads it`,
-        retired: true,
-      });
-    }
-  }
-  return found;
-}
-
-/**
- * The path a wrapper points at, whichever form the checkout left it in, or
- * `null` when the entry is not a wrapper at all.
- *
- * A flattened wrapper is a small regular file holding the target, so both forms
- * have to answer — reading only symlinks would have declared every wrapper on a
- * `core.symlinks false` checkout a non-wrapper, which is the one case this
- * whole rule exists for.
- */
-async function wrapperTarget(entryPath: string, entry: Dirent): Promise<string | null> {
-  // Only a race is a clean `null`. A transient `EIO`, or an ACL on this one
-  // entry, says the target could not be read — and answering "not a wrapper"
-  // let a retired wrapper the assistant still loads pass unexamined, which is
-  // the same hole the listing error had one level up.
-  const raceOrThrow = (error: unknown): null => {
-    if (isMissing(error)) return null;
-    throw error;
-  };
-  if (entry.isSymbolicLink()) {
-    return readlink(entryPath).catch(raceOrThrow);
-  }
-  if (!entry.isFile()) return null;
-  const content = await readPinnedFile(entryPath, 4096).catch(raceOrThrow);
-  if (content === null) return null;
-  // **Byte-exact**, the way the init-evidence check reads a flattened wrapper.
-  // Git writes the target for mode `120000` with no trailing newline, so
-  // trimming one off made a project's own one-line note — a path with a
-  // newline after it — indistinguishable from a wrapper, and the finding told
-  // the operator to delete it. No whitespace anywhere is the whole test.
-  return content.length > 0 && !/\s/.test(content) ? content : null;
 }
 
 /**
@@ -1694,13 +1542,6 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
         detail: "integration surface missing — `qfai init` created it and it is gone",
       });
     }
-  }
-
-  // Only once init has run: before that every entry in these directories is the
-  // project's own, and calling one of them retired is a finding it cannot act
-  // on and did not ask for.
-  if (initialised) {
-    broken.push(...(await retiredWrappers(root, wrappers, damagedDirs)));
   }
 
   if (broken.length === 0) {

@@ -224,10 +224,6 @@ const REVIEW_DIRECTIVE_PREFIX = "Read `REVIEW.md` before reviewing a pull reques
 
 /**
  * Prepend the template's review directive only when no operative copy exists.
- *
- * An operative line in an earlier wording of the directive is rewritten in
- * place instead. Left beside the current one, the two disagree on which branch
- * a reviewer reads `REVIEW.md` from.
  */
 export function addReviewPointer(existing: string, template: string | null): string {
   const pointer = template?.split(/\r?\n/).find((line) => line.startsWith(REVIEW_DIRECTIVE_PREFIX));
@@ -236,12 +232,9 @@ export function addReviewPointer(existing: string, template: string | null): str
 
 /**
  * `existing` with `pointer` on its first line, followed by a blank line, unless
- * an operative copy is already there. An operative line in an earlier wording
- * is replaced where it stands instead.
+ * an operative copy is already there.
  */
 function prependDirective(existing: string, pointer: string): string {
-  // Where the text of the first operative line in an earlier wording sits.
-  let earlier: { start: number; end: number } | null = null;
   // A code span the directive itself contains is part of its visible text; any
   // other span is opaque, so a copy quoted inside one is not operative.
   const pointerSpans = new Set(pointer.match(/`[^`]+`/g) ?? []);
@@ -900,27 +893,11 @@ function prependDirective(existing: string, pointer: string): string {
       const operative = visible
         .trim()
         .replace(/^(?:(?:[-*+]|\d{1,9}[.)])[ \t]{1,4}(?![ \t]))+/, "");
-      if (pass === 1 && container === "" && !lazyQuote) {
-        if (operative === pointer) return existing;
-        // Only a line that reads exactly as written, with no markup after the
-        // directive's own opening: rewriting one that carries markup would drop it.
-        const line = raw.replace(/\r$/, "");
-        const lead =
-          /^\uFEFF?[ \t]*(?:(?:[-*+]|\d{1,9}[.)])[ \t]{1,4}(?![ \t]))*/.exec(line)?.[0] ?? "";
-        if (
-          earlier === null &&
-          operative.startsWith(REVIEW_DIRECTIVE_PREFIX) &&
-          !/[*_~<>[\]`&\\!]/.test(operative.slice(REVIEW_DIRECTIVE_PREFIX.length)) &&
-          line.slice(lead.length).trimEnd() === operative
-        )
-          earlier = { start: offset + lead.length, end: offset + lead.length + operative.length };
-      }
+      if (pass === 1 && container === "" && !lazyQuote && operative === pointer) return existing;
       offset += raw.length + 1;
     }
   }
 
-  if (earlier !== null)
-    return `${existing.slice(0, earlier.start)}${pointer}${existing.slice(earlier.end)}`;
   const end = /\r\n|\n/.exec(existing)?.[0] ?? "\n";
   const bom = existing.startsWith("\uFEFF") ? 1 : 0;
   return `${existing.slice(0, bom)}${pointer}${end}${end}${existing.slice(bom)}`;
@@ -1112,94 +1089,6 @@ export function addRuleCitations(
 }
 
 /**
- * Every spelling of a rule bullet a release wrote and a later template rewords,
- * keyed by the master the bullet cites.
- *
- * The section is written once and left to the project, while the master it
- * summarises is refreshed wherever the project has not edited it. A reworded
- * summary would therefore reach fresh projects only, and an agent in any other
- * project would read a summary the refreshed rule contradicts. A line that is
- * exactly one of these is text a release wrote and nobody changed, so it takes
- * the template's wording; any other text in its place is the project's.
- *
- * A project can skip releases, so every spelling that shipped stays listed.
- */
-const SUPERSEDED_RULE_BULLETS: ReadonlyMap<string, readonly string[]> = new Map([
-  [
-    ".agents/rules/grilling.md",
-    [
-      "- `.agents/rules/grilling.md` — interview the decision tree in rounds before a design is fixed; a session ends on an empty frontier and the user's confirmation, never at a question count.",
-      "- `.agents/rules/grilling.md` — interview the decision tree in rounds before a design is fixed; a session ends in one of four named endings, never at a question count.",
-    ],
-  ],
-  [
-    ".agents/rules/user-questions.md",
-    [
-      "- `.agents/rules/user-questions.md` — every question arrives in the shape its answer has: a choice where the candidates can be listed, a plain request where they cannot; the fallback keeps the same parts.",
-    ],
-  ],
-]);
-
-/** A document after its superseded bullets are refreshed, and the masters they cite. */
-export type RefreshedRuleBullets = {
-  readonly text: string;
-  readonly refreshed: readonly string[];
-  /**
-   * Masters whose bullet is superseded and whose own file this run did not put
-   * at the release's text — the project edited it, or the update could not be
-   * read or applied. Their summaries are left as they are: a bullet describing
-   * a rule the local master does not carry is worse than a stale one, because a
-   * reader has no way to tell which of the two is the rule.
-   */
-  readonly withheld: readonly string[];
-};
-
-/**
- * `existing` with every superseded bullet inside its managed section replaced by
- * the template's bullet for the same master.
- *
- * Returns `existing` unchanged when the file has no complete marker pair: outside
- * the markers, a line matching a shipped bullet is still the project's.
- */
-export function refreshSupersededRuleBullets(
-  existing: string,
-  section: string,
-  installed?: ReadonlySet<string>,
-): RefreshedRuleBullets {
-  const { lines, open, begin, end } = managedSection(existing);
-  if (begin === -1 || end === -1) return { text: existing, refreshed: [], withheld: [] };
-  return replaceSupersededBullets(
-    existing,
-    lines,
-    open,
-    { from: begin + 1, to: end },
-    section,
-    installed,
-  );
-}
-
-/**
- * The same refresh for a file the run generates whole rather than delimits,
- * bounded to the rule list under `CROSS_AI_RULES_HEADING`.
- *
- * With no markers, that heading is what marks the list as qfai's. Anywhere else
- * in the file — a note the project wrote, a quote of an older rule — a line
- * matching a shipped bullet is the project's text, so a file without the heading
- * is returned unchanged.
- */
-export function refreshSupersededRuleBulletsInList(
-  existing: string,
-  section: string,
-  installed?: ReadonlySet<string>,
-): RefreshedRuleBullets {
-  const lines = existing.split("\n");
-  const open = outsideFences(lines);
-  const range = ruleListRange(lines, open);
-  if (range === null) return { text: existing, refreshed: [], withheld: [] };
-  return replaceSupersededBullets(existing, lines, open, range, section, installed);
-}
-
-/**
  * The bullet citing `master` in the rule list under `CROSS_AI_RULES_HEADING`,
  * with its continuation lines and without line terminators, or `undefined`
  * where the list has none.
@@ -1256,8 +1145,7 @@ function ruleListHeading(lines: readonly string[], open: readonly boolean[]): nu
  *
  * **A heading inside a blockquote ends nothing.** It belongs to the quote, not
  * to the document, and reading it as a peer closed the range early — so a bullet
- * below a quoted example kept wording the release had superseded, in the one
- * file this refresh exists to reach.
+ * below a quoted example left the bullets below it outside the list.
  */
 function ruleListRange(
   lines: readonly string[],
@@ -1305,7 +1193,7 @@ const LIST_ITEM_RE = /^ {0,3}(?:[-*+]|\d{1,9}[.)])(?:[ \t]|$)/;
  *
  * Under a list item, inside a blockquote or right after a heading, the same
  * `---` is a thematic break. Read as a heading there, it ended the managed rule
- * list at a horizontal rule and left a superseded bullet below it unrefreshed.
+ * list at a horizontal rule and left the bullets below it outside the list.
  */
 function underlinesDocumentParagraph(
   lines: readonly string[],
@@ -1319,53 +1207,4 @@ function underlinesDocumentParagraph(
     if (atxLevel(text) !== null) return false;
   }
   return true;
-}
-
-/**
- * Replaces, within `range`, each line whose own text is exactly a superseded
- * bullet.
- *
- * The comparison ignores a trailing CR and nothing else, and the line keeps its
- * terminator. A bullet the project reworded, indented or quoted therefore stays,
- * and so does a line in a fenced block: that is an example of a bullet, not one.
- */
-function replaceSupersededBullets(
-  existing: string,
-  lines: string[],
-  open: readonly boolean[],
-  range: { from: number; to: number },
-  section: string,
-  installed?: ReadonlySet<string>,
-): RefreshedRuleBullets {
-  const refreshed = new Set<string>();
-  const withheld = new Set<string>();
-  for (let index = range.from; index < range.to; index += 1) {
-    if (open[index] !== true) continue;
-    const line = lines[index] ?? "";
-    const own = line.replace(/\r$/, "");
-    const master = supersededMasterOf(own);
-    if (master === null) continue;
-    // Without a CR of its own, since the line keeps the terminator it has. A
-    // template that no longer summarises the master has nothing to put here.
-    const current = bulletFor(section, master)?.replace(/\r$/, "");
-    if (current === undefined || current === own) continue;
-    // The summary describes the master, so it moves only where the master did.
-    if (installed !== undefined && !installed.has(master)) {
-      withheld.add(master);
-      continue;
-    }
-    lines[index] = `${current}${terminatorOf(line)}`;
-    refreshed.add(master);
-  }
-  const held = [...withheld].sort();
-  if (refreshed.size === 0) return { text: existing, refreshed: [], withheld: held };
-  return { text: lines.join("\n"), refreshed: [...refreshed].sort(), withheld: held };
-}
-
-/** The master `line` is a superseded bullet for, or `null` when it is not one. */
-function supersededMasterOf(line: string): string | null {
-  for (const [master, spellings] of SUPERSEDED_RULE_BULLETS) {
-    if (spellings.includes(line)) return master;
-  }
-  return null;
 }

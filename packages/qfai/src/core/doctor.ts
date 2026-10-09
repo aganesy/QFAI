@@ -876,10 +876,7 @@ async function buildIntegrationLinksCheck(root: string): Promise<DoctorCheck> {
     severity,
     title,
     // Counts and paths, not a diagnosis. `QFAI-LINK-001` covers several shapes
-    // and they do not share one sentence: a flattened link is not loaded at
-    // all, while a wrapper left behind by a retired skill resolves perfectly
-    // and is loading instructions this release no longer ships. Asserting
-    // "not being loaded" over both hid the second, which is the worse one.
+    // and they do not share one sentence.
     message:
       `${String(paths.length || broken.length)} integration wrapper(s) need attention. ` +
       "`qfai validate` reports the same paths as QFAI-LINK-001, and its finding says which " +

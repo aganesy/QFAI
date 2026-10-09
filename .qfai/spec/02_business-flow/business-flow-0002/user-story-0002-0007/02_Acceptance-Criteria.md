@@ -8,7 +8,7 @@ Feature: Shipped workflow ownership contract
   Scenario: Ownership comes from the shipped name lists
     Given a fixture whose adopter workflows directory holds an adopter-created file whose name collides with a name QFAI ships, and a hand-edited file QFAI wrote earlier
     When the write-set resolution path is inspected against `.qfai/spec/03_contract/cli/cli-0018-shipped-workflows.md` and `qfai init` runs on the fixture
-    Then the `qfai-` prefix is a reservation notice and never a selector: the write set equals the in-binary `SHIPPED_WORKFLOW_NAMES` and the retired set the in-binary `RETIRED_WORKFLOW_NAMES`, and neither comes from a `qfai-*` glob over the adopter's disk
+    Then the `qfai-` prefix is a reservation notice and never a selector: the write set equals the in-binary `SHIPPED_WORKFLOW_NAMES` and does not come from a `qfai-*` glob over the adopter's disk
     And both files stay byte-for-byte unchanged
     And init writes no record of what it wrote
     And writing goes only through `copyTemplateTree` and `copyTemplatePaths`, and the path holds no `copyFile`, `writeFile`, `rm` or `unlink` call of its own
@@ -18,13 +18,6 @@ Feature: Shipped workflow ownership contract
     Given a shipped workflow the adopter deleted from `.github/workflows/`
     When `qfai init` runs
     Then the file is written again from the shipped template, as create-only writes any absent file
-
-  # AC-0002-0007-03
-  Scenario: A formerly shipped workflow is listed, not removed
-    Given a workflow whose name is in the retired set, on disk
-    When `qfai init` runs
-    Then init lists it as formerly shipped
-    And removes it in no case
 
   # AC-0002-0007-04
   Scenario: A shipped workflow the project lists is not written

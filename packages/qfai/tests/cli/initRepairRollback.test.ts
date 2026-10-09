@@ -320,7 +320,7 @@ describe("a sidecar left by an earlier failed repair is not overwritten", () => 
 
 describe("a claim that never took anything is released", () => {
   it("removes the empty sidecar when the rename fails", async () => {
-    // Prune deliberately leaves these alone and the next attempt sidesteps the
+    // Nothing removes these and the next attempt sidesteps the
     // name, so repeated failures would pile them up to the ceiling and refuse
     // every later repair.
     await withProject(async (root) => {
@@ -380,28 +380,7 @@ describe("a claim that never took anything is released", () => {
   });
 });
 
-describe("a sidecar survives the next run", () => {
-  it("is not pruned as a stale qfai- wrapper", async () => {
-    // It is named after the wrapper it holds, so it matches the prune prefix —
-    // and prune runs before the repair, so a `--force` re-run deleted the very
-    // file an earlier failed repair preserved.
-    await withProject(async (root) => {
-      await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
-
-      const linkPath = path.join(root, LINK);
-      const stranded = linkPath + ".qfai-repair-" + String(process.pid);
-      const strandedContent = "# preserved by an earlier run";
-      await rm(linkPath, { recursive: true, force: true });
-      await mkdir(path.dirname(linkPath), { recursive: true });
-      await writeFile(linkPath, FLATTENED, "utf-8");
-      await writeFile(stranded, strandedContent, "utf-8");
-
-      await captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true }));
-
-      expect(await readFile(stranded, "utf-8")).toBe(strandedContent);
-    });
-  });
-
+describe("a sidecar left by a repair", () => {
   it("does not turn a cleanup failure into a failed repair", async () => {
     // The symlink is in place, so removing the sidecar is cleanup. Inside the
     // rollback try it ran against a path the new symlink already occupies, so

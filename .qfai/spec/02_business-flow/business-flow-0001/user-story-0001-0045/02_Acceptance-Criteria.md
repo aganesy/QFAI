@@ -3,13 +3,7 @@
 ## Criteria
 
 ```gherkin
-Feature: Deprecated assistant paths and skill project memory
-  # AC-0001-0045-01
-  Scenario: The legacy instructions layout raises QFAI-DEPRECATED-001 naming the sunset
-    Given a project still carrying `.qfai/assistant/instructions/` after the v1.9.0 release
-    When `qfai validate` runs in v1.9.x
-    Then `QFAI-DEPRECATED-001` warning is emitted with the body string literally containing `sunset: v1.10.0`; in v1.10.0+ the same condition escalates to error per REQ-0008 (handled by spec-0003 sunset semantics + spec-0004 validator severity table)
-
+Feature: Skill project memory
   # AC-0001-0045-02
   Scenario: A project_memory block that is not trailing raises a warning
     Given a `qfai-*` skill whose SKILL.md declares a `project_memory:` YAML block followed by other content

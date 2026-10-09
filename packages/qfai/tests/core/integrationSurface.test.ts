@@ -88,20 +88,6 @@ async function wireAll(root: string, skills: string[], agents: string[]): Promis
   }
 }
 
-/** A README carrying the signature earlier releases wrote at a marker path. */
-const RETIRED_MARKER_README = [
-  "# QFAI Agents skills",
-  "",
-  "This directory provides Agents/Codex-compatible skill symlinks for QFAI.",
-  "",
-  "## Canonical entrypoint",
-  "",
-  "Skill symlinks point to QFAI's canonical skill documents under:",
-  "",
-  "- .qfai/assistant/skills/",
-  "",
-].join("\n");
-
 /** A file `qfai init` writes, which marks that it ran. */
 const INIT_RECORD = [".qfai", "waivers.yml"];
 
@@ -200,9 +186,8 @@ describe("the integration surface is checked for links that did not survive chec
 
   it("does not claim a wrapper whose canonical entry was removed", async () => {
     // Deleting a canonical skill takes it out of the roster, so its leftover
-    // wrapper is stale rather than broken — `pruneStaleQfaiWrappers` removes it
-    // under `--force`. Reporting it here would make every retired skill an
-    // `error` in every profile until someone re-ran init with a flag.
+    // wrapper is stale rather than broken. Reporting it here would make every
+    // removed skill an `error` in every profile.
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;
       await seedCanonical(root, ["qfai-implement"], []);
@@ -305,8 +290,7 @@ describe("the integration surface is checked for links that did not survive chec
       // The remediation must not send the operator to `--force`: `qfai init`
       // repairs a flattened link on its own, and preserves anything else.
       // Scoped to the opening line, which is the remedy for the damage this
-      // case reports — a later line covers the retired wrapper, where
-      // `--force` is what prunes it, and that is a different remedy.
+      // case reports.
       const opening = found?.suggested_action?.split("\n")[0];
       expect(opening).toContain("Rerun `qfai init`");
       expect(opening).not.toContain("qfai init --force");
@@ -592,7 +576,7 @@ describe("a canonical SKILL.md has to be a file", () => {
   });
 });
 
-describe("no README is a marker any more", () => {
+describe("a README is not a marker", () => {
   it("ignores a project's own README at a path init once wrote one", async () => {
     // `.agents/` and `.github/agents/` are conventional directories, and a
     // README in one is not evidence init ran. Taking mere existence as the
@@ -604,25 +588,6 @@ describe("no README is a marker any more", () => {
 
       await expect(validateIntegrationSurface(root)).resolves.toEqual([]);
     });
-  });
-
-  it("ignores a README carrying the signature earlier releases wrote", async () => {
-    // The strongest form of the retired marker: init's own title, section and
-    // canonical-tree mention, at the path init wrote it to. It is a document
-    // now, and a document is not evidence.
-    for (const rel of [
-      [".agents", "README.md"],
-      [".qfai", "assistant", "README.md"],
-    ]) {
-      await withProject(async (root) => {
-        await seedCanonical(root, ["qfai-implement"], []);
-        const dest = path.join(root, ...rel);
-        await mkdir(path.dirname(dest), { recursive: true });
-        await writeFile(dest, RETIRED_MARKER_README, "utf-8");
-
-        await expect(validateIntegrationSurface(root)).resolves.toEqual([]);
-      });
-    }
   });
 });
 
@@ -819,7 +784,6 @@ describe("a wrapper replaced by something other than a file", () => {
       const found = await finding(root);
       expect(found?.message).toContain("directory, not a symlink");
       expect(found?.suggested_action).toContain("A wrapper that is not a symlink");
-      expect(found?.suggested_action).toContain("--force");
     });
   });
 });
@@ -970,244 +934,6 @@ describe("an ancestor that is not a directory is named directly", () => {
 
       const found = await finding(root);
       expect(found?.message).toContain("an ancestor is a file, not a directory: .claude");
-    });
-  });
-});
-
-describe("what init wrote is still checked after the roster moves on", () => {
-  it("reports a wrapper for a skill this version no longer ships", async () => {
-    // Wrappers are enumerated from the current roster, so one left by a skill
-    // since removed or renamed is enumerated by nobody — it still resolves, and
-    // the assistant goes on loading retired instructions while every profile
-    // reports a clean surface. `pruneStaleQfaiWrappers` matches a `qfai-`
-    // prefix, and `web-research` shows a shipped name need not have one.
-    await withProject(async (root) => {
-      if (!(await canCreateSymlink(root))) return;
-      await seedCanonical(root, ["qfai-implement"], []);
-      await wireAll(root, ["qfai-implement"], []);
-      const retiredCanonical = path.join(root, ".qfai", "assistant", "skill", "legacy-research");
-      await mkdir(retiredCanonical, { recursive: true });
-      await writeFile(path.join(retiredCanonical, "SKILL.md"), "# retired\n", "utf-8");
-      const claudeSkills = path.join(root, ".claude", "skills");
-      await symlink(
-        skillTarget(".claude/skills", "legacy-research"),
-        path.join(claudeSkills, "legacy-research"),
-        "dir",
-      );
-
-      const found = await finding(root);
-      expect(found?.refs).toContain(".claude/skills/legacy-research");
-      expect(found?.message).toContain("which this version does not ship");
-      // The remedy names the command that repairs it, and says where the
-      // repair stops — twice over: `--force` prunes the wrapper and never the
-      // canonical document behind it, and on the skill side it reaches only
-      // the `qfai-` prefixed names. `legacy-research` is this very case, so a
-      // remedy that promised `--force` would clear it would be wrong here.
-      expect(found?.suggested_action).toContain("`qfai init --force`");
-      expect(found?.suggested_action).toContain("canonical side");
-      expect(found?.suggested_action).toContain("skill wrappers whose names start with `qfai-`");
-      expect(found?.suggested_action).toContain("delete the reported paths by hand");
-      // The agent half of that promise stops at a direct child of
-      // `.qfai/assistant/agent/`: this rule reports anything landing under
-      // `.qfai/assistant/`, so a nested or cross-kind agent target is reported
-      // and never pruned, and the remedy must not send the operator to
-      // `--force` for one.
-      expect(found?.suggested_action).toContain(
-        "agent wrappers whose target is directly under `.qfai/assistant/agent/`",
-      );
-      expect(found?.suggested_action).toContain("`.qfai/assistant/agent/<sub>/…`");
-    });
-  });
-
-  it("opens the remedy with the retired-wrapper steps, not with a plain init", async () => {
-    await withProject(async (root) => {
-      if (!(await canCreateSymlink(root))) return;
-      await seedCanonical(root, ["qfai-implement"], []);
-      await wireAll(root, ["qfai-implement"], []);
-      const retiredCanonical = path.join(root, ".qfai", "assistant", "skill", "qfai-retired");
-      await mkdir(retiredCanonical, { recursive: true });
-      await writeFile(path.join(retiredCanonical, "SKILL.md"), "# retired\n", "utf-8");
-      const claudeSkills = path.join(root, ".claude", "skills");
-      await symlink(
-        skillTarget(".claude/skills", "qfai-retired"),
-        path.join(claudeSkills, "qfai-retired"),
-        "dir",
-      );
-
-      const found = await finding(root);
-      const opening = found?.suggested_action?.split("\n")[0];
-      expect(opening).toContain("`qfai init --force`");
-      expect(opening).toContain("retired canonical directory");
-      expect(found?.suggested_action).not.toContain("Rerun `qfai init`");
-    });
-  });
-
-  // POSIX only, and not as root: `chmod` is what makes the directory
-  // searchable but not listable, and root ignores it.
-  it.skipIf(process.platform === "win32" || process.geteuid?.() === 0)(
-    "propagates a listing error instead of passing with nothing examined",
-    async () => {
-      // An execute-only directory answers every `lstat` on a known wrapper and
-      // refuses the listing, so swallowing the error passed validation with no
-      // retired wrapper examined at all — while the assistant went on loading
-      // them.
-      await withProject(async (root) => {
-        if (!(await canCreateSymlink(root))) return;
-        await seedCanonical(root, ["qfai-implement"], []);
-        await wireAll(root, ["qfai-implement"], []);
-        const claudeSkills = path.join(root, ".claude", "skills");
-        await chmod(claudeSkills, 0o111);
-        try {
-          await expect(validateIntegrationSurface(root)).rejects.toThrow();
-        } finally {
-          await chmod(claudeSkills, 0o755);
-        }
-      });
-    },
-  );
-
-  // POSIX only, and not as root: an entry-level ACL is what makes the listing
-  // succeed and this one read fail.
-  it.skipIf(process.platform === "win32" || process.geteuid?.() === 0)(
-    "propagates a per-entry read error rather than calling it not-a-wrapper",
-    async () => {
-      // Answering `null` on a transient `EIO`, or an ACL on this one entry,
-      // left a retired wrapper the assistant still loads unexamined — the same
-      // hole the listing error had one level up.
-      await withProject(async (root) => {
-        if (!(await canCreateSymlink(root))) return;
-        await seedCanonical(root, ["qfai-implement"], []);
-        await wireAll(root, ["qfai-implement"], []);
-        const unreadable = path.join(root, ".claude", "skills", "legacy-research");
-        await writeFile(unreadable, "../../.qfai/assistant/skill/legacy-research", "utf-8");
-        await chmod(unreadable, 0o000);
-        try {
-          await expect(validateIntegrationSurface(root)).rejects.toThrow();
-        } finally {
-          await chmod(unreadable, 0o644);
-        }
-      });
-    },
-  );
-
-  it("declines a retired-wrapper candidate that runs past the ceiling", async () => {
-    // A canonical-shaped target followed by content of its own is not a
-    // wrapper. The read is bounded to `maxBytes + 1` and confirms EOF, so the
-    // answer does not depend on the size measured a moment earlier — an append
-    // through an fd held from before the `fstat` would otherwise have left a
-    // matching prefix, and the finding tells the operator to delete the file.
-    await withProject(async (root) => {
-      if (!(await canCreateSymlink(root))) return;
-      await seedCanonical(root, ["qfai-implement"], []);
-      await wireAll(root, ["qfai-implement"], []);
-      await writeFile(
-        path.join(root, ".claude", "skills", "legacy-research"),
-        `../../.qfai/assistant/skill/legacy-research${"x".repeat(8192)}`,
-        "utf-8",
-      );
-
-      await expect(validateIntegrationSurface(root)).resolves.toEqual([]);
-    });
-  });
-
-  it("says nothing about a one-line file that is not byte-exactly a target", async () => {
-    // Git writes the target for mode `120000` with no trailing newline, so
-    // trimming one off made a project's own note indistinguishable from a
-    // wrapper — and the finding told the operator to delete it.
-    await withProject(async (root) => {
-      if (!(await canCreateSymlink(root))) return;
-      await seedCanonical(root, ["qfai-implement"], []);
-      await wireAll(root, ["qfai-implement"], []);
-      await writeFile(
-        path.join(root, ".claude", "skills", "note.txt"),
-        "../../.qfai/assistant/skill/legacy-research\n",
-        "utf-8",
-      );
-
-      await expect(validateIntegrationSurface(root)).resolves.toEqual([]);
-    });
-  });
-
-  it("does not enumerate an integration directory already reported as damaged", async () => {
-    // A resolvable redirect makes `readdir` list somebody else s tree, and the
-    // remedy printed for a retired wrapper is "delete the path" — which through
-    // that redirect deletes a file outside the project.
-    await withProject(async (root) => {
-      if (!(await canCreateSymlink(root))) return;
-      await seedCanonical(root, ["qfai-implement"], []);
-      await wireAll(root, ["qfai-implement"], []);
-      const outside = path.join(root, "outside");
-      await mkdir(outside, { recursive: true });
-      await writeFile(
-        path.join(outside, "legacy-research"),
-        "../../.qfai/assistant/skill/legacy-research",
-        "utf-8",
-      );
-      const claudeSkills = path.join(root, ".claude", "skills");
-      await rm(claudeSkills, { recursive: true, force: true });
-      await symlink(outside, claudeSkills, "dir");
-
-      const found = await finding(root);
-      // The directory itself is reported; what is inside the redirect is not.
-      expect(found?.message).toContain(".claude/skills");
-      expect(found?.message).not.toContain("legacy-research");
-    });
-  });
-
-  it("says nothing about a repair sidecar, which is not a wrapper", async () => {
-    // It holds the flattened target, so it reads as one — and it exists because
-    // a repair could not finish, which sometimes makes it the only surviving
-    // copy of the original. The remedy printed for a retired wrapper is "delete
-    // the path", so reporting it told the operator to destroy it.
-    await withProject(async (root) => {
-      if (!(await canCreateSymlink(root))) return;
-      await seedCanonical(root, ["qfai-implement"], []);
-      await wireAll(root, ["qfai-implement"], []);
-      await writeFile(
-        path.join(root, ".claude", "skills", "qfai-implement.qfai-repair-4321"),
-        "../../.qfai/assistant/skill/qfai-implement",
-        "utf-8",
-      );
-
-      await expect(validateIntegrationSurface(root)).resolves.toEqual([]);
-    });
-  });
-
-  it("says nothing about an entry that points outside the canonical tree", async () => {
-    // These directories are conventional, and a project's own link in one of
-    // them is not qfai's to report.
-    await withProject(async (root) => {
-      if (!(await canCreateSymlink(root))) return;
-      await seedCanonical(root, ["qfai-implement"], []);
-      await wireAll(root, ["qfai-implement"], []);
-      const mine = path.join(root, "my-own-skill");
-      await mkdir(mine, { recursive: true });
-      await symlink(
-        path.relative(path.join(root, ".claude", "skills"), mine),
-        path.join(root, ".claude", "skills", "my-own-skill"),
-        "dir",
-      );
-
-      await expect(validateIntegrationSurface(root)).resolves.toEqual([]);
-    });
-  });
-
-  it("recognises init by a record inside the tree it owns", async () => {
-    // The records are written unconditionally, inside a directory init
-    // creates. The READMEs that preceded them sat at conventional paths and
-    // were written only when the path was free, so a project that already had
-    // its own at all four ran init and got no marker — and deleting every
-    // wrapper then read as never initialised: nothing checked, every profile
-    // passing, the assistant loading nothing.
-    await withProject(async (root) => {
-      await seedCanonical(root, ["qfai-implement"], []);
-      await seedInitRecord(root);
-      for (const dir of INTEGRATION_SURFACE_DIRS) {
-        await mkdir(path.join(root, ...dir.split("/")), { recursive: true });
-      }
-
-      const found = await finding(root);
-      expect(found?.message).toContain("missing");
     });
   });
 });
