@@ -11,6 +11,7 @@ import { captureStdout } from "../helpers/stdout.js";
 const headings = "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
 
 describe("BF-0001 project records", () => {
+  // QFAI:AC-0001-0007-01
   // QFAI:EX-0001-0007-01
   it("accepts an empty decisions table with the four canonical columns", () => {
     expect(parseRecordTable(headings, "decisions").errors).toEqual([]);
@@ -35,6 +36,7 @@ describe("BF-0001 project records", () => {
     ]);
   });
 
+  // QFAI:AC-0001-0007-01
   // QFAI:EX-0001-0007-03
   it("accepts the declared decision and question statuses", () => {
     const decisions = ["TODO", "WIP", "DONE", "SUPERSEDED (by DEC-0005)", "REJECTED"]
@@ -80,6 +82,60 @@ describe("BF-0001 project records", () => {
       "open-questions",
     );
     expect(result.errors).toContain("open-questions row 1 has an invalid ID: DEC-0001");
+  });
+
+  // QFAI:AC-0001-0053-04
+  it("reads the references of a keyword row and holds the row by its Status alone", () => {
+    const classify = (kind: "decisions" | "open-questions", content: string, status: string) => {
+      const id = kind === "decisions" ? "DEC-0001" : "OQ-0001";
+      const parsed = parseRecordTable(
+        `${headings}| ${id} | ${content} | Reason | ${status} |\n`,
+        kind,
+      );
+      expect(parsed.errors).toEqual([]);
+      return parsed.rows.map((row) => classifyRecordRow(row));
+    };
+    const heldAt = (kind: "decisions" | "open-questions", content: string, statuses: string[]) =>
+      statuses.map((status) => classify(kind, content, status).map((row) => row.inForce));
+
+    const exception = classify(
+      "decisions",
+      "Test exception: EX-0001-0001-01, AC-0001-0001-01",
+      "DONE",
+    );
+    expect(exception.map((row) => [row.kind, row.refs])).toEqual([
+      ["test-exception", ["EX-0001-0001-01", "AC-0001-0001-01"]],
+    ]);
+    const request = classify(
+      "decisions",
+      "Change request: 01_policy/glossary.md, 01_policy/constraint.md",
+      "WIP",
+    );
+    expect(request.map((row) => [row.kind, row.refs])).toEqual([
+      ["change-request", ["01_policy/glossary.md", "01_policy/constraint.md"]],
+    ]);
+
+    const statuses = ["TODO", "WIP", "DONE", "REJECTED"];
+    expect(heldAt("decisions", "Test exception: EX-0001-0001-01", statuses)).toEqual([
+      [false],
+      [false],
+      [true],
+      [false],
+    ]);
+    expect(heldAt("decisions", "Change request: 01_policy/glossary.md", statuses)).toEqual([
+      [false],
+      [true],
+      [true],
+      [false],
+    ]);
+    expect(
+      heldAt("open-questions", "Unadjudicated: choose a layout", [
+        "TODO",
+        "WIP",
+        "DONE",
+        "DEFERRED",
+      ]),
+    ).toEqual([[true], [true], [false], [false]]);
   });
 });
 

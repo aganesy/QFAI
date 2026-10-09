@@ -30,6 +30,8 @@ const DECLARED_SUITES = [
   "tests/validators/assistantTreeMigration.test.ts",
   "tests/cli/doctor.test.ts",
   "tests/unit/cli/repairIntegrationWrappers.test.ts",
+  "tests/integration/migrationSpecToStory/steps10to12.test.ts",
+  "tests/e2e/bf0004MigrationRerunE2E.test.ts",
 ];
 
 function envOf(step: Record<string, unknown>): Record<string, unknown> {

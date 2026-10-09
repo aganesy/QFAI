@@ -311,6 +311,7 @@ describe("story-tree drift", () => {
     );
   });
 
+  // QFAI:AC-0001-0007-02
   // QFAI:AC-0001-0054-01
   // QFAI:EX-0001-0007-07
   // QFAI:EX-0001-0054-02
@@ -345,6 +346,7 @@ describe("story-tree drift", () => {
     expect(rewritten.some((item) => item.file === questions)).toBe(false);
   });
 
+  // QFAI:AC-0001-0007-02
   // QFAI:EX-0001-0007-06
   it("accepts a status advance with an appended decision", async () => {
     await put(decisions, `${table}| DEC-0001 | Choice A | Reason | TODO |\n`);
@@ -361,6 +363,7 @@ describe("story-tree drift", () => {
     expect(findings.some((item) => item.code === "QFAI-STORY-010")).toBe(false);
   });
 
+  // QFAI:AC-0001-0007-02
   // QFAI:AC-0001-0054-01
   // QFAI:EX-0001-0007-08
   // QFAI:EX-0001-0054-01

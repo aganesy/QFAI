@@ -18,6 +18,7 @@ async function exists(target: string): Promise<boolean> {
 }
 
 // QFAI:EX-0001-0026-01
+// QFAI:EX-0001-0070-01
 it("removes only retired workflow files from both assistant skill layouts on --force", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-force-"));
   try {
