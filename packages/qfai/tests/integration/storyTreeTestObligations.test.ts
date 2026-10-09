@@ -263,4 +263,60 @@ describe("layer-specific test obligations", () => {
       ),
     ).toBe(false);
   });
+
+  // QFAI:AC-0001-0071-05
+  it.each(["atdd", "tdd"] as const)(
+    "names an undeclared annotation with its file and says nothing of a declared one under %s",
+    async (profile) => {
+      const root = await project({
+        "tests/integration/undeclared.test.ts": testOf("AC-0001-0001-99"),
+        "tests/unit/declared.test.ts": testOf("EX-0001-0001-01"),
+      });
+      const undeclared = await findings(root, profile, "QFAI-STORY-008");
+      expect(undeclared.map((finding) => [finding.severity, finding.refs])).toEqual([
+        ["error", ["AC-0001-0001-99"]],
+      ]);
+      expect(undeclared[0]?.file).toContain("tests/integration/undeclared.test.ts");
+      expect(undeclared[0]?.message).toContain("AC-0001-0001-99");
+    },
+  );
+
+  // QFAI:AC-0001-0091-04
+  // QFAI:EX-0001-0091-04
+  it("selects an unannotated example again while the exception naming it is WIP or TODO", async () => {
+    const withStatuses = (first: string, second: string) =>
+      project({
+        [`${spec}/decisions.md`]: decisions(
+          `| DEC-0001 | Test exception: EX-0001-0001-01 | No test yet | ${first} |`,
+          `| DEC-0002 | Test exception: EX-0001-0001-02 | No test yet | ${second} |`,
+        ),
+      });
+
+    const mixed = await withStatuses("DONE", "WIP");
+    expect(await owed(mixed, "tdd")).toEqual(["EX-0001-0001-02"]);
+    expect((await findings(mixed, "tdd", "QFAI-STORY-009")).map((finding) => finding.refs)).toEqual(
+      [["EX-0001-0001-01", "DEC-0001"]],
+    );
+
+    const open = await withStatuses("TODO", "WIP");
+    expect(await owed(open, "tdd")).toEqual(["EX-0001-0001-01", "EX-0001-0001-02"]);
+    expect(await findings(open, "tdd", "QFAI-STORY-009")).toEqual([]);
+  });
+
+  // QFAI:EX-0001-0091-05
+  it("leaves the lowest unannotated example next once the one before it has a test", async () => {
+    const third = [
+      "| EX-ID | AC-Ref | Input | Expected |",
+      "| --- | --- | --- | --- |",
+      "| EX-0001-0001-01 | AC-0001-0001-01 | in | out |",
+      "| EX-0001-0001-02 | AC-0001-0001-01 | in | out |",
+      "| EX-0001-0001-03 | AC-0001-0001-02 | in | out |",
+      "",
+    ].join("\n");
+    const root = await project({
+      [examplesFile]: third,
+      "tests/unit/first.test.ts": testOf("EX-0001-0001-01"),
+    });
+    expect(await owed(root, "tdd")).toEqual(["EX-0001-0001-02", "EX-0001-0001-03"]);
+  });
 });

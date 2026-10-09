@@ -152,6 +152,7 @@ describe("story-tree validation acceptance", () => {
     expect(only(exact.issues, "QFAI-STORY-001")).toEqual([]);
   });
 
+  // QFAI:AC-0001-0008-01
   // QFAI:AC-0001-0051-03
   it("names an ID that does not have its shape, and the file that defines it", async () => {
     const { root, issues } = await validateTree(
@@ -183,6 +184,7 @@ describe("story-tree validation acceptance", () => {
     expect(example[0]?.message).toContain("EX-0001-0001-1");
   });
 
+  // QFAI:AC-0001-0008-01
   // QFAI:AC-0001-0051-04
   it("reports an ID declared in two places once, naming every file that declares it", async () => {
     const second = `${flow}/user-story-0001-0002`;
@@ -394,6 +396,7 @@ describe("story-tree validation acceptance", () => {
     );
   });
 
+  // QFAI:AC-0001-0009-02
   // QFAI:EX-0001-0149-02
   it("gates a contract of two rules on the examples each rule names", async () => {
     const rows = [
@@ -500,6 +503,7 @@ describe("story-tree validation acceptance", () => {
     expect(errorsNaming(issues, "QFAI-STORY-004", "AC-0001-0001-01")).toEqual([]);
   });
 
+  // QFAI:AC-0001-0009-03
   // QFAI:AC-0001-0055-03
   // QFAI:EX-0001-0055-04
   it("reads a rule alike in a Markdown, a YAML and a SQL contract", async () => {
@@ -576,5 +580,54 @@ describe("story-tree validation acceptance", () => {
     expect(reported).toHaveLength(1);
     expect(posix(reported[0]?.file)).toBe(posix(path.join(root, story, "03_Example.md")));
     expect(reported[0]?.message).toContain("is not cited");
+  });
+
+  // QFAI:AC-0001-0005-02
+  // QFAI:EX-0001-0005-03
+  it("holds the business-flow layer to its two indexes and a diagram in each flow", async () => {
+    const second = `${specs}/02_business-flow/business-flow-0002`;
+    const secondStory = `${flow}/user-story-0001-0002`;
+    const flowsTable = (...ids: string[]) =>
+      `| BF-ID | Title |\n| --- | --- |\n${ids.map((id) => `| ${id} | Flow |`).join("\n")}\n`;
+    const storiesTable = (...ids: string[]) =>
+      `| US-ID | Title |\n| --- | --- |\n${ids.map((id) => `| ${id} | Story |`).join("\n")}\n`;
+    const layer = (overrides: Record<string, string | null> = {}): Map<string, string> =>
+      changed({
+        [`${specs}/02_business-flow/business-flows.md`]: flowsTable("BF-0001", "BF-0002"),
+        [`${flow}/user-stories.md`]: storiesTable("US-0001-0001", "US-0001-0002"),
+        [`${secondStory}/01_User-story.md`]: "# US-0001-0002: Refund\n",
+        [`${secondStory}/02_Acceptance-Criteria.md`]: criterion("AC-0001-0002-01"),
+        [`${secondStory}/03_Example.md`]: examples(["EX-0001-0002-01", "AC-0001-0002-01"]),
+        [`${second}/business-flow.md`]:
+          "# BF-0002: Refund\n\n```mermaid\nflowchart LR\n  A --> B\n```\n",
+        [`${second}/user-stories.md`]: storiesTable(),
+        ...overrides,
+      });
+    const layerFindings = (issues: Issue[]): Issue[] =>
+      issues.filter((found) =>
+        ["QFAI-STORY-001", "QFAI-STORY-002", "QFAI-STORY-011"].includes(found.code),
+      );
+
+    const complete = await validateTree(layer());
+    expect(layerFindings(complete.issues)).toEqual([]);
+
+    const unlistedFlow = await validateTree(
+      layer({ [`${specs}/02_business-flow/business-flows.md`]: flowsTable("BF-0001") }),
+    );
+    expect(errorsNaming(unlistedFlow.issues, "QFAI-STORY-002", "BF-0002")[0]?.message).toContain(
+      "does not list BF-0002",
+    );
+
+    const unlistedStory = await validateTree(
+      layer({ [`${flow}/user-stories.md`]: storiesTable("US-0001-0001") }),
+    );
+    expect(
+      errorsNaming(unlistedStory.issues, "QFAI-STORY-002", "US-0001-0002")[0]?.message,
+    ).toContain("does not list US-0001-0002");
+
+    const prose = await validateTree(
+      layer({ [`${second}/business-flow.md`]: "# BF-0002: Refund\n\nA refund is paid back.\n" }),
+    );
+    expect(only(prose.issues, "QFAI-STORY-011").map((found) => found.severity)).toEqual(["error"]);
   });
 });
