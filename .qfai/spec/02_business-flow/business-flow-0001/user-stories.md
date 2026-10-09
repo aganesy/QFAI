@@ -61,7 +61,7 @@
 | US-0001-0063 | Output path control                                                                    | `user-story-0001-0063/` |
 | US-0001-0064 | Per-unit reports                                                                       | `user-story-0001-0064/` |
 | US-0001-0066 | Flow-scoped report                                                                     | `user-story-0001-0066/` |
-| US-0001-0067 | ATDD Test Volume Estimation                                                            | `user-story-0001-0067/` |
+| US-0001-0067 | ATDD Test Volume Follows Scope                                                         | `user-story-0001-0067/` |
 | US-0001-0068 | E2E Acceptance Test Implementation                                                     | `user-story-0001-0068/` |
 | US-0001-0069 | API Acceptance Test Implementation                                                     | `user-story-0001-0069/` |
 | US-0001-0070 | Integration Acceptance Test Implementation                                             | `user-story-0001-0070/` |
@@ -119,9 +119,9 @@
 | US-0001-0163 | Orchestrator Protocol                                                                  | `user-story-0001-0163/` |
 | US-0001-0164 | Devils-Advocate Reviewer                                                               | `user-story-0001-0164/` |
 | US-0001-0165 | Pattern-Doubler Reviewer                                                               | `user-story-0001-0165/` |
-| US-0001-0166 | All-Reviewer FAIL Obligation                                                           | `user-story-0001-0166/` |
+| US-0001-0166 | All-Reviewer REVISE Obligation                                                         | `user-story-0001-0166/` |
 | US-0001-0169 | SKILL.md `## Default Autopilot Policy` section                                         | `user-story-0001-0169/` |
-| US-0001-0171 | Cross-skill `handoff.yaml` schema                                                      | `user-story-0001-0171/` |
+| US-0001-0171 | Cross-skill handoff schema                                                             | `user-story-0001-0171/` |
 | US-0001-0176 | Standard Research Pipeline Execution                                                   | `user-story-0001-0176/` |
 | US-0001-0177 | MCP Server Integration for Web Research                                                | `user-story-0001-0177/` |
 | US-0001-0178 | Research Skill Packaging                                                               | `user-story-0001-0178/` |
