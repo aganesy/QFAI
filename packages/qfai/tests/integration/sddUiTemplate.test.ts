@@ -139,6 +139,7 @@ describe("shipped qfai-sdd design contracts", () => {
     expect(naming).toEqual([]);
   });
 
+  // QFAI:AC-0001-0152-01
   // QFAI:EX-0001-0152-01
   // QFAI:EX-0001-0152-02
   it("writes no legacy design contract and lists the removed ones", async () => {
@@ -148,11 +149,33 @@ describe("shipped qfai-sdd design contracts", () => {
       expect(names).not.toContain(legacy);
     }
 
-    const normalization = await readFile(
-      path.join(SDD_SKILL_DIR, "references", "ui-design-contract-normalization.md"),
-      "utf-8",
+    const normalizationPath = path.join(
+      SDD_SKILL_DIR,
+      "references",
+      "ui-design-contract-normalization.md",
     );
+    const normalization = await readFile(normalizationPath, "utf-8");
     expect(normalization).toContain("MUST NOT be generated");
+    for (const legacy of LEGACY_DESIGN_CONTRACTS) {
+      expect(normalization).toContain(`\`${legacy}\``);
+    }
+
+    // The reference is the one place the names appear; every other file of the
+    // skill and of its steps leaves them out.
+    const assistantDir = path.join(SDD_SKILL_DIR, "..", "..");
+    const readers = [SDD_SKILL_DIR, path.join(assistantDir, "step")];
+    for (const dir of readers) {
+      const entries = await readdir(dir, { recursive: true, withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isFile()) continue;
+        const file = path.join(entry.parentPath, entry.name);
+        if (file === normalizationPath) continue;
+        const body = await readFile(file, "utf-8");
+        for (const legacy of LEGACY_DESIGN_CONTRACTS) {
+          expect(body, `${file} names ${legacy}`).not.toContain(legacy);
+        }
+      }
+    }
     const designMd = await readFile(
       path.join(SDD_SKILL_DIR, "..", "..", "step", "common-design-md", "STEP.md"),
       "utf-8",

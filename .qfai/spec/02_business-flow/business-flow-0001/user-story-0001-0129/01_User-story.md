@@ -1,4 +1,4 @@
-# US-0001-0129: Browser tool
+# US-0001-0129: Browser tool setting
 
 ## User Story
 

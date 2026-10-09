@@ -1,16 +1,17 @@
 /**
  * The `prototyping.execution.browserTool` config field accepts `"playwright"`.
  *
- * Integration scope: config loader.
+ * Integration scope: config loader and the shipped default.
  */
 
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
 import { loadConfig } from "../../../../src/core/config.js";
+import { getInitAssetsDir } from "../../../../src/shared/assets.js";
 
 const tempDirs: string[] = [];
 
@@ -37,7 +38,6 @@ async function writeConfigWithBrowserTool(root: string, browserTool: string): Pr
       "  discussionDir: .qfai/discussion",
       "  outDir: .qfai/out",
       "  skillsDir: .qfai/assistant/skills",
-      "  promptsDir: .qfai/assistant/skills",
       "  srcDir: src",
       "  testsDir: tests",
       "validation:",
@@ -50,14 +50,23 @@ async function writeConfigWithBrowserTool(root: string, browserTool: string): Pr
   );
 }
 
+// QFAI:AC-0001-0129-01
 // QFAI:EX-0001-0129-01
-describe("browserTool config — `playwright` primary path", () => {
+describe("browserTool config — `playwright` path", () => {
   it("accepts browserTool: playwright with no issues raised", async () => {
     const root = await newTempDir();
     await writeConfigWithBrowserTool(root, "playwright");
     const { config, issues } = await loadConfig(root);
     expect(config.prototyping?.execution?.browserTool).toBe("playwright");
-    // Should not generate any config issue for the primary value.
+    // Should not generate any config issue for the supported value.
     expect(issues.filter((i) => /browserTool/.test(i.message))).toEqual([]);
+  });
+
+  it("ships playwright as the default", async () => {
+    const shipped = await readFile(
+      path.join(getInitAssetsDir(), "root", "qfai.config.yaml"),
+      "utf-8",
+    );
+    expect(shipped).toMatch(/^ {4}browserTool: playwright$/m);
   });
 });
