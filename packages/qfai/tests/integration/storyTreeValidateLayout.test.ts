@@ -35,6 +35,7 @@ function configured() {
 }
 
 describe("story-tree layout dispatch", () => {
+  // QFAI:AC-0001-0051-01
   // QFAI:EX-0001-0051-01
   it("runs story findings only when the configured spec root has no legacy pack", async () => {
     await put(
@@ -49,6 +50,7 @@ describe("story-tree layout dispatch", () => {
     );
     const storyResult = await validateProject(root, configured(), { profile: "sdd" });
     expect(storyResult.issues.some((item) => item.code === "QFAI-STORY-002")).toBe(true);
+    expect(storyResult.issues.filter((item) => item.code.startsWith("QFAI-SPACK-"))).toEqual([]);
 
     await mkdir(path.join(root, specs, "_policies"), { recursive: true });
     const legacyResult = await validateProject(root, configured(), { profile: "sdd" });

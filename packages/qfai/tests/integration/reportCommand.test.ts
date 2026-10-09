@@ -1,4 +1,4 @@
-import { access, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, readdir, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -264,5 +264,46 @@ describe("qfai report", () => {
     expect(result.exit).toBe(0);
     expect((await readFile(target, "utf8")).split("\n")[0]).toBe("# QFAI Report");
     expect(await exists(path.join(root, ".qfai/report/report.md"))).toBe(false);
+  });
+
+  // QFAI:EX-0001-0064-01
+  it("writes one report directory per business flow beside report.md", async () => {
+    const root = await storyRoot();
+    const flow = path.join(root, ".qfai/spec/02_business-flow/business-flow-0002");
+    const story = path.join(flow, "user-story-0002-0001");
+    await mkdir(story, { recursive: true });
+    await writeFile(path.join(flow, "business-flow.md"), "# BF-0002: Refund\n", "utf8");
+    await writeFile(path.join(story, "01_User-story.md"), "# US-0002-0001: Refund\n", "utf8");
+    await writeFile(
+      path.join(story, "02_Acceptance-Criteria.md"),
+      "```gherkin\n# AC-0002-0001-01\nScenario: Refund\n  Given a paid cart\n```\n",
+      "utf8",
+    );
+    await writeFile(
+      path.join(story, "03_Example.md"),
+      "| EX-ID | AC-Ref | Input | Expected |\n| --- | --- | --- | --- |\n| EX-0002-0001-01 | AC-0002-0001-01 | cart | refunded |\n",
+      "utf8",
+    );
+    await writeValidation(root, [warning]);
+
+    const result = await cli(root, ["report"]);
+
+    expect(result.exit).toBe(0);
+    const reportDir = path.join(root, ".qfai/report");
+    expect(await exists(path.join(reportDir, "report.md"))).toBe(true);
+    for (const flowDir of ["business-flow-0001", "business-flow-0002"]) {
+      expect((await readdir(path.join(reportDir, flowDir))).sort()).toEqual([
+        "coverage.md",
+        "traceability-graph.json",
+      ]);
+      const graph = JSON.parse(
+        await readFile(path.join(reportDir, flowDir, "traceability-graph.json"), "utf8"),
+      ) as { nodes: Array<{ type: string }> };
+      expect(graph.nodes.length).toBeGreaterThan(0);
+      for (const node of graph.nodes) {
+        expect(["BF", "US", "AC", "EX", "BR", "CON"]).toContain(node.type);
+      }
+    }
+    expect((await readdir(reportDir)).filter((entry) => entry.startsWith("spec-"))).toEqual([]);
   });
 });
