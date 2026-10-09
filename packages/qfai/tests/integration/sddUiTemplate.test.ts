@@ -105,6 +105,40 @@ describe("shipped primary_tasks ceiling", () => {
 });
 
 describe("shipped qfai-sdd design contracts", () => {
+  // QFAI:AC-0001-0152-02
+  it("names root DESIGN.md as the one design contract and keeps the handoff out of the contract layer", async () => {
+    const assistant = path.join(SDD_SKILL_DIR, "..", "..");
+    const normalization = (
+      await readFile(
+        path.join(SDD_SKILL_DIR, "references", "ui-design-contract-normalization.md"),
+        "utf-8",
+      )
+    ).replace(/\s+/g, " ");
+    expect(normalization).toContain("The brand SSOT is the root `DESIGN.md`");
+    expect(normalization).toContain("common-design-md/STEP.md#author-and-validate");
+    expect(normalization).toContain(
+      "`/qfai-prototyping` records its handoff in `.qfai/prototype/final/handoff.json`",
+    );
+    const prototyping = await readFile(
+      path.join(assistant, "skill", "qfai-prototyping", "SKILL.md"),
+      "utf-8",
+    );
+    expect(prototyping).toContain(".qfai/prototype/final/handoff.json");
+
+    const documents = (await readdir(assistant, { recursive: true })).filter((entry) =>
+      entry.endsWith(".md"),
+    );
+    expect(documents.length).toBeGreaterThan(0);
+    const designDirectory = /(?:contractsDir>?|03_contract|contracts)\/design\//;
+    const naming: string[] = [];
+    for (const entry of documents) {
+      if (designDirectory.test(await readFile(path.join(assistant, entry), "utf-8"))) {
+        naming.push(entry);
+      }
+    }
+    expect(naming).toEqual([]);
+  });
+
   // QFAI:EX-0001-0152-01
   // QFAI:EX-0001-0152-02
   it("writes no legacy design contract and lists the removed ones", async () => {

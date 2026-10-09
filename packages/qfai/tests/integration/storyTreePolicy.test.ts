@@ -24,6 +24,8 @@ async function put(file: string, content: string): Promise<void> {
 }
 
 describe("story-tree policy placeholders", () => {
+  // QFAI:AC-0001-0052-02
+  // QFAI:EX-0001-0052-02
   it("reads Standard commands in the contract layer and ignores the old catalog copy", async () => {
     const contracts = path.join(root, ".qfai", "spec", "03_contract");
     await put(".qfai/spec/03_contract/tech.md", "# Tech\n## Standard commands\n- Build: TBD\n");
