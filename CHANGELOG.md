@@ -6,6 +6,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`qfai validate` no longer reports old discussion sidecars.** For a UI-bearing
+  pack it no longer raises `QFAI-THREELAYER-001` for a file under `uiux/` that an
+  earlier release produced, nor `QFAI-THREELAYER-003` and `QFAI-THREELAYER-004`
+  for the old evaluation headings in a current sidecar. The missing-sidecar
+  check (`QFAI-THREELAYER-002`) is unchanged. The `qfai-discussion` templates
+  and references no longer list the old file names.
+
 - **`qfai doctor` holds a Markdown assistant asset to 500 lines.** The
   `assets.lineBudget` check allowed 800 lines for every `.md`, `.yml` and `.yaml`
   file under `.qfai/assistant`, so a Markdown file could pass it and still break

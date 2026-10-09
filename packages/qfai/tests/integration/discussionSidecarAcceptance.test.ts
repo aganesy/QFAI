@@ -5,7 +5,7 @@
  * `prototyping.yaml` only to a pack with a visual surface.
  */
 
-import { copyFile, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -81,27 +81,6 @@ describe("discussion sidecar acceptance", () => {
         severity: "error",
         message: `Required canonical sidecar file missing: uiux/${name}.`,
       })),
-    );
-  });
-
-  // QFAI:AC-0001-0019-01
-  it("reports a legacy evaluation heading in a current sidecar as a legacy-format error", async () => {
-    const root = await newPack(UI_CONTEXT);
-    await mkdir(path.join(root, "uiux"), { recursive: true });
-    await writeFile(
-      path.join(root, "uiux", "40_screen_contracts.md"),
-      ["# Screen Contracts", "", "## craft", "", "- Legacy axis content."].join("\n"),
-      "utf-8",
-    );
-
-    const issues = await runCanonicalUixValidators(root, defaultConfig);
-    const legacy = issues.filter((found) => found.code === "QFAI-THREELAYER-003");
-
-    expect(legacy).toHaveLength(1);
-    expect(legacy[0]?.file).toBe("uiux/40_screen_contracts.md");
-    expect(legacy[0]?.severity).toBe("error");
-    expect(legacy[0]?.message).toContain(
-      "Legacy evaluation headings are not allowed in uiux/40_screen_contracts.md",
     );
   });
 
@@ -186,32 +165,6 @@ describe("shipped UI sidecars", () => {
     const direction = silent.filter((found) => found.code === "QFAI-DIRECTION-001");
     expect(direction.map((found) => [found.file, found.severity])).toEqual([
       ["uiux/50_review_input_bundle.md", "warning"],
-    ]);
-  });
-
-  // QFAI:EX-0001-0088-01
-  it("ships neither retired exploration sidecar and reports one that is produced again", async () => {
-    const shipped = await readdir(SIDECAR_TEMPLATES);
-    expect(shipped).not.toContain("33_exploration_rubric.md");
-    expect(shipped).not.toContain("34_evaluator_calibration.md");
-
-    const root = await packWithShippedSidecars();
-    expect(
-      (await runCanonicalUixValidators(root, defaultConfig)).filter(
-        (found) => found.code === "QFAI-THREELAYER-001",
-      ),
-    ).toEqual([]);
-
-    await writeFile(
-      path.join(root, "uiux", "33_exploration_rubric.md"),
-      "# Exploration Rubric\n",
-      "utf-8",
-    );
-    const regression = (await runCanonicalUixValidators(root, defaultConfig)).filter(
-      (found) => found.code === "QFAI-THREELAYER-001",
-    );
-    expect(regression.map((found) => [found.file, found.severity])).toEqual([
-      ["uiux/33_exploration_rubric.md", "error"],
     ]);
   });
 });

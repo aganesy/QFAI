@@ -30,19 +30,3 @@ cli-only pack — `primary_surface: cli` with no visual surface in
 `secondary_surfaces` — never gets one: the `common-design-md` step writes none, and
 `/qfai-prototyping` does not run on `cli`. Do not report any pack as
 incomplete for a missing `DESIGN.md`.
-
-## Forbidden Legacy Files
-
-The following files are NOT part of the canonical family and must NOT be created in new packs:
-
-- `10_implementation_strategy.md` — discussion carries directions unranked, so it selects no strategy
-- `11_design_taste_interview.md` — brand signals are recorded in `04_Sources.md`
-- `12_design_system.md` — replaced by root `DESIGN.md`
-- the `20`–`24` design-evaluation family — the evaluator axes are fixed by the CLI, not authored here
-- `30_option_comparison.md` — replaced by root `DESIGN.md`
-- `31_selected_anchor_screen.md` — replaced by root `DESIGN.md`
-- `33_exploration_rubric.md` — replaced by the fixed evaluator axes (`.qfai/assistant/skill/qfai-prototyping/references/reviewer-prompt.md`)
-- `34_evaluator_calibration.md` — replaced by the fixed evaluator axes (`.qfai/assistant/skill/qfai-prototyping/references/reviewer-prompt.md`)
-- `40_contracts.md` — replaced by `40_screen_contracts.md`
-- `50_review_bundle.md` — replaced by `50_review_input_bundle.md`
-- `60_critique_loop.md` — removed (critique integrated into review bundle)

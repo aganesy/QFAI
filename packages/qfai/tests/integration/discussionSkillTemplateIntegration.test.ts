@@ -4,10 +4,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { VISUAL_BROWSER_SURFACES } from "../../src/core/detection/surfaceType.js";
-import {
-  CANONICAL_REQUIRED_SIDECAR_FILES,
-  FORBIDDEN_LEGACY_PATTERNS,
-} from "../../src/core/validators/uix/threeLayer.js";
+import { CANONICAL_REQUIRED_SIDECAR_FILES } from "../../src/core/validators/uix/threeLayer.js";
 import { readDiscussionSkill, readDiscussionStep } from "../helpers/discussionSteps.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -31,7 +28,6 @@ const assistantBase = path.join(
   ".qfai",
   "assistant",
 );
-const agentsDir = path.join(assistantBase, "agent");
 const skillPath = path.join(templateBase, "SKILL.md");
 const uiuxTemplateDir = path.join(templateBase, "templates", "uiux");
 const completionMatrixPath = path.join(
@@ -45,18 +41,6 @@ const uiBearingPlaybookPath = path.join(templateBase, "references", "ui-bearing-
 // matrix wraps the phrase across two lines, so match on whitespace not a space.
 const EXPLORATION_REFERENCE_PHRASE =
   /competitor references\s+framed as \*\*deviate-from\*\* inputs/i;
-
-// The retired completion conditions the matrix used to carry. The matrix body
-// still names these sidecars to declare them forbidden, so their presence is
-// only a regression when they come back as numbered completion conditions.
-const RETIRED_COMPLETION_CONDITIONS = [
-  /Strategy selected/i,
-  /taste interview/i,
-  /3-layer scoring/i,
-  /Dynamic overrides/i,
-  /Option comparison/i,
-  /Selected anchor/i,
-];
 
 /** Extract the ordered list that follows the first `1. ` line of a section. */
 function collectOrderedList(section: string): string {
@@ -75,50 +59,11 @@ function collectOrderedList(section: string): string {
   return collected.join("\n");
 }
 
-// `FORBIDDEN_LEGACY_PATTERNS` is a regex list, so it cannot be searched for in
-// prose; these are the concrete filenames that stand in for it. The coverage
-// case below fails if the validator grows a pattern with no representative
-// here, which is what would let the sweep fall behind the SSOT.
-const FORBIDDEN_SIDECAR_NAMES = [
-  "10_implementation_strategy.md",
-  "11_design_taste_interview.md",
-  "12_design_system.md",
-  "20_design_eval_invariant.md",
-  "30_option_comparison.md",
-  "31_selected_anchor_screen.md",
-  "33_exploration_rubric.md",
-  "34_evaluator_calibration.md",
-  "40_contracts.md",
-  "50_review_bundle.md",
-  "60_critique_loop.md",
-];
-
-// Prose shorthand the templates used to carry for the retired 20–24 family.
-// Not a filename, so it is deliberately outside the coverage check.
-const FORBIDDEN_RANGE_MENTIONS = ["uiux/20-24"];
-
-// The retired concepts themselves, matched by phrase. `FORBIDDEN_SIDECAR_NAMES`
-// only sees a filename, so an instruction that reasons against a retired
-// artifact without naming its file — "Include only when it materially clarifies
-// the selected anchor" — passes the name sweep untouched while still sending the
-// author after a pack the skill is forbidden to contain. A retired concept is a
-// live trap wherever it appears, so these run over the same tree.
-const RETIRED_CONCEPT_PATTERNS = [
-  /taste[ _-]interview/i,
-  /3-layer evaluation/i,
-  /option[ _-]comparison/i,
-  /selected[ _-]anchor/i,
-];
-
 describe("discussion skill template integration", () => {
   it("the uiux template directory has screen-level sidecars", async () => {
     const files = await readdir(uiuxTemplateDir);
     expect(files).toContain("40_screen_contracts.md");
     expect(files).toContain("50_review_input_bundle.md");
-    // Brand-level inputs moved to root DESIGN.md; rubric/calibration
-    // sidecars are removed.
-    expect(files).not.toContain("33_exploration_rubric.md");
-    expect(files).not.toContain("34_evaluator_calibration.md");
   });
 
   it("SKILL.md requires the brand SSOT for UI-bearing completion", async () => {
@@ -194,93 +139,6 @@ describe("discussion skill template integration", () => {
     for (const file of CANONICAL_REQUIRED_SIDECAR_FILES) {
       expect(memoryLine, `project_memory omits ${file}`).toContain(file);
     }
-  });
-
-  it("the list of forbidden sidecar names covers the validator SSOT", () => {
-    // Ties the list above to the validator: a pattern added to
-    // FORBIDDEN_LEGACY_PATTERNS without a representative filename here would
-    // otherwise leave the sweep below blind to that whole family.
-    for (const pattern of FORBIDDEN_LEGACY_PATTERNS) {
-      expect(
-        FORBIDDEN_SIDECAR_NAMES.some((name) => pattern.test(name)),
-        `no representative filename covers ${pattern}`,
-      ).toBe(true);
-    }
-  });
-
-  it("the forbidden-legacy manifest names every family the validator rejects", async () => {
-    // `ui_ux_best_practices.md` sends an author to `00_index.md#Forbidden Legacy
-    // Files` for the whole set, so a family the validator rejects and the
-    // manifest omits is a file an author creates in good faith and validation
-    // then refuses. The two lists above are already tied to the validator, so
-    // reading the manifest against them closes the last hop.
-    const index = await readFile(
-      path.join(templateBase, "templates", "uiux", "00_index.md"),
-      "utf-8",
-    );
-    const section = index.slice(index.indexOf("## Forbidden Legacy Files"));
-    const missing = FORBIDDEN_SIDECAR_NAMES.filter((name) => !section.includes(name));
-
-    // The `20`–`24` family is named as a range rather than one filename, the
-    // way the best-practices reference names it.
-    expect(missing).toEqual(["20_design_eval_invariant.md"]);
-    expect(section).toContain("`20`–`24`");
-  });
-
-  // The shipped skill must not tell an agent to produce a sidecar that
-  // `validators/uix/threeLayer.ts#FORBIDDEN_LEGACY_PATTERNS` rejects.
-  // Following such guidance creates the file and then fails validation,
-  // so a stale instruction anywhere in the tree is a live trap — the
-  // sweep therefore covers references/ and templates/, not just SKILL.md.
-  it("the shipped skill does not instruct generating forbidden legacy sidecars", async () => {
-    const forbiddenMentions = [...FORBIDDEN_SIDECAR_NAMES, ...FORBIDDEN_RANGE_MENTIONS];
-    // Four files name them on purpose: `00_index.md` is the
-    // forbidden-legacy manifest, `ui_ux_best_practices.md` carries the
-    // explicit "do NOT create" warning, `discussion-completion-matrix.md`
-    // declares the sidecars neither required nor permitted, and
-    // `ui-bearing-playbook.md` records the removal. Everywhere else a
-    // mention is an instruction to generate.
-    const allowNamingFiles = new Set([
-      "00_index.md",
-      "ui_ux_best_practices.md",
-      "ui-bearing-playbook.md",
-      "discussion-completion-matrix.md",
-    ]);
-    const offenders: string[] = [];
-    for (const file of await collectMarkdownFiles(templateBase)) {
-      if (allowNamingFiles.has(path.basename(file))) continue;
-      const content = await readFile(file, "utf-8");
-      const label = path.relative(templateBase, file).replace(/\\/g, "/");
-      for (const mention of forbiddenMentions) {
-        if (content.includes(mention)) {
-          offenders.push(`${label} → ${mention}`);
-        }
-      }
-      for (const pattern of RETIRED_CONCEPT_PATTERNS) {
-        if (pattern.test(content)) {
-          offenders.push(`${label} → ${pattern.source}`);
-        }
-      }
-    }
-    expect(offenders).toEqual([]);
-  });
-
-  // The same residue on a different shipped surface: an agent definition that
-  // tells a reviewer to reconcile a `selected anchor` sidecar sends it after an
-  // artifact `ui_ux_best_practices.md` forbids the pack from containing.
-  it("the shipped agent definitions do not reference retired discussion concepts", async () => {
-    const files = await collectMarkdownFiles(agentsDir);
-    const offenders: string[] = [];
-    for (const file of files) {
-      const content = await readFile(file, "utf-8");
-      const label = path.relative(assistantBase, file).replace(/\\/g, "/");
-      for (const pattern of RETIRED_CONCEPT_PATTERNS) {
-        if (pattern.test(content)) {
-          offenders.push(`${label} → ${pattern.source}`);
-        }
-      }
-    }
-    expect(offenders).toEqual([]);
   });
 
   // `cli` is discussion UI-bearing, but `/qfai-prototyping` rejects it, and the
@@ -482,8 +340,7 @@ describe("discussion skill template integration", () => {
     expect(content).toMatch(/accessibility/);
   });
 
-  // The completion matrix carries the current UI family and has not regrown
-  // any retired completion condition.
+  // The completion matrix carries the current UI family.
   it("the completion matrix requires the current UI family", async () => {
     const matrix = await readFile(completionMatrixPath, "utf-8");
     const uiBearingSection = matrix
@@ -492,30 +349,13 @@ describe("discussion skill template integration", () => {
     expect(uiBearingSection).toBeDefined();
     const matrixConditions = collectOrderedList(uiBearingSection ?? "");
     expect(matrixConditions).not.toBe("");
-    for (const pattern of RETIRED_COMPLETION_CONDITIONS) {
-      expect(matrixConditions).not.toMatch(pattern);
-    }
     expect(matrixConditions).toMatch(/DESIGN\.md/);
     expect(matrixConditions).toMatch(/40_screen_contracts\.md/);
     expect(matrixConditions).toMatch(/50_review_input_bundle\.md/);
     expect(matrixConditions).toMatch(/unranked/i);
-    expect(matrixConditions).toMatch(/forbidden legacy sidecar/i);
     expect(matrixConditions).toMatch(EXPLORATION_REFERENCE_PHRASE);
   });
 });
-
-async function collectMarkdownFiles(dir: string): Promise<string[]> {
-  const out: string[] = [];
-  for (const entry of await readdir(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      out.push(...(await collectMarkdownFiles(full)));
-    } else if (entry.name.endsWith(".md")) {
-      out.push(full);
-    }
-  }
-  return out;
-}
 
 describe("the screen-contract template names only the user's brand direction", () => {
   it("ranks no exploration, and every direction it names is the one in 01_Context.md", async () => {

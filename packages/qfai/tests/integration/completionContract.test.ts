@@ -57,24 +57,10 @@ describe("canonical templates ship with the UI-bearing family", () => {
 });
 
 describe("00_index.md references canonical family", () => {
-  it("canonical family referenced in 00_index.md, no legacy evaluation family refs", async () => {
+  it("canonical family referenced in 00_index.md", async () => {
     const indexPath = path.join(uiuxTemplateDir, "00_index.md");
     const content = await readFile(indexPath, "utf-8");
     expect(content).toMatch(/exploration brief|reference pool|exploration rubric/i);
-    expect(content).toMatch(/forbidden legacy files/i);
-  });
-});
-
-describe("old template deprecation marking", () => {
-  it("canonical templates use exploration-first naming, not deprecated evaluation-axis files", async () => {
-    const files = await readdir(uiuxTemplateDir);
-    expect(files).not.toContain("30_option_comparison.md");
-    expect(files).not.toContain("31_selected_anchor_screen.md");
-    expect(files).not.toContain("20_design_eval_invariant.md");
-    expect(files).not.toContain("23_design_eval_aggregate.md");
-    // v2.0: 33/34 also removed (replaced by global anti-slop in reviewer-prompt).
-    expect(files).not.toContain("33_exploration_rubric.md");
-    expect(files).not.toContain("34_evaluator_calibration.md");
   });
 });
 

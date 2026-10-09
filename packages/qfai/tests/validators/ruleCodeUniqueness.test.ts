@@ -96,9 +96,8 @@ const RETIRED_CODES: readonly string[] = [
   "QFAI-FID-009",
   "QFAI-FID-010",
   "QFAI-FID-011",
-  // validators/uix/designSystemPresence.ts — deleted rather than stubbed: it
-  // required a file the three-layer validator reports as a forbidden legacy
-  // sidecar, and nothing dispatched it.
+  // validators/uix/designSystemPresence.ts — deleted rather than stubbed:
+  // nothing dispatched it.
   "UIX-VAL-DS-READ-ERROR",
   "UIX-VAL-DS01",
   "UIX-VAL-DS02",

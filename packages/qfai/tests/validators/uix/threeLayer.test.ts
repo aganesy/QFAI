@@ -1,5 +1,5 @@
 /**
- * 3-layer evaluation model validator tests.
+ * Canonical sidecar family completeness validator tests.
  *
  * The file reads no shipped document, so the canonical-wording obligation it
  * used to claim is discharged elsewhere.
@@ -11,11 +11,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../../src/core/config.js";
-import {
-  validateForbiddenLegacyFiles,
-  validateThreeLayerFamilyCompleteness,
-  validateThreeLayerModel,
-} from "../../../src/core/validators/uix/threeLayer.js";
+import { validateThreeLayerFamilyCompleteness } from "../../../src/core/validators/uix/threeLayer.js";
 
 const tempDirs: string[] = [];
 
@@ -35,137 +31,6 @@ afterEach(async () => {
     const dir = tempDirs.pop();
     if (dir) await rm(dir, { recursive: true, force: true });
   }
-});
-
-// QFAI:EX-0001-0018-01
-describe("3-layer validator", () => {
-  it("new format pass", async () => {
-    const root = await newTempDir();
-    await createUiBearingPack(root);
-    const content = [
-      "# Screen Contracts",
-      "",
-      "## Information Architecture",
-      "",
-      "- hierarchy: priority and grouping are clear",
-      "",
-      "## Navigation Flow",
-      "",
-      "- back path: every screen names the way out",
-      "",
-      "## Usability",
-      "",
-      "- spacing: precise alignment and rhythm",
-      "",
-      "## Functionality",
-      "",
-      "- task_clarity: primary action remains obvious",
-    ].join("\n");
-    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), content, "utf-8");
-
-    const issues = await validateThreeLayerModel(root, defaultConfig);
-
-    expect(issues).toHaveLength(0);
-  });
-
-  it("legacy 4-axis format is error", async () => {
-    const root = await newTempDir();
-    await createUiBearingPack(root);
-    const content = [
-      "# Screen Contracts",
-      "",
-      "## craft",
-      "",
-      "- task_completion: Can users finish core tasks?",
-      "",
-      "## consistency",
-      "",
-      "- design_system: Adherence to design system",
-      "",
-      "## accessibility",
-      "",
-      "- wcag: WCAG 2.1 AA compliance",
-      "",
-      "## delight",
-      "",
-      "- satisfaction: User satisfaction score",
-    ].join("\n");
-    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), content, "utf-8");
-
-    const issues = await validateThreeLayerModel(root, defaultConfig);
-
-    expect(issues.length).toBeGreaterThan(0);
-    expect(issues[0]?.code).toBe("QFAI-THREELAYER-003");
-    expect(issues[0]?.severity).toBe("error");
-  });
-
-  it("mixed error", async () => {
-    const root = await newTempDir();
-    await createUiBearingPack(root);
-    const content = [
-      "# Screen Contracts",
-      "",
-      "## Information Architecture",
-      "",
-      "- hierarchy: priority is clear",
-      "",
-      "## delight",
-      "",
-      "- satisfaction: Old 4-axis format mixed in",
-    ].join("\n");
-    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), content, "utf-8");
-
-    const issues = await validateThreeLayerModel(root, defaultConfig);
-
-    expect(issues.length).toBeGreaterThan(0);
-    expect(issues[0]?.code).toBe("QFAI-THREELAYER-004");
-    expect(issues[0]?.severity).toBe("error");
-  });
-
-  it("retired sidecars 33_exploration_rubric.md / 34_evaluator_calibration.md are forbidden", async () => {
-    const root = await newTempDir();
-    await createUiBearingPack(root);
-    await writeFile(path.join(root, "uiux", "33_exploration_rubric.md"), "# stale\n", "utf-8");
-    await writeFile(path.join(root, "uiux", "34_evaluator_calibration.md"), "# stale\n", "utf-8");
-
-    const issues = await validateForbiddenLegacyFiles(root, defaultConfig);
-    const codes = issues.map((i) => i.code);
-    expect(codes).toContain("QFAI-THREELAYER-001");
-    const files = issues.map((i) => i.file);
-    expect(files).toContain("uiux/33_exploration_rubric.md");
-    expect(files).toContain("uiux/34_evaluator_calibration.md");
-  });
-
-  it("non-UI skip", async () => {
-    const root = await newTempDir();
-    await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: non-ui\n", "utf-8");
-
-    const issues = await validateThreeLayerModel(root, defaultConfig);
-
-    expect(issues).toHaveLength(0);
-  });
-
-  it("code alignment verification", async () => {
-    const root = await newTempDir();
-    await createUiBearingPack(root);
-    const content = [
-      "# Screen Contracts",
-      "",
-      "## Information Architecture",
-      "",
-      "- hierarchy: clear priority",
-      "",
-      "## Functionality",
-      "",
-      "- brand: Unique to product",
-    ].join("\n");
-    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), content, "utf-8");
-
-    const issues = await validateThreeLayerModel(root, defaultConfig);
-
-    // All axes reference 3-layer model only — passes
-    expect(issues).toHaveLength(0);
-  });
 });
 
 describe("canonical sidecar family completeness", () => {

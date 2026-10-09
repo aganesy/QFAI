@@ -29,54 +29,6 @@ describe("uiux sidecar templates", () => {
     return readFile(path.join(templateDir, filename), "utf-8");
   }
 
-  it("retired-sidecar references are absent from distributed assets (no `exploration brief|rubric` / `evaluator calibration`)", async () => {
-    // Guard against partial-fix regressions: any `assets/` doc that
-    // tells operators to author the retired sidecar files would lead
-    // them into the `^3[34]_.*\.md$` forbidden-pattern hard-fail in
-    // threeLayer.ts. The guard whitelists only `00_index.md`, where
-    // the names are mentioned as Forbidden Legacy Files (the
-    // documented anti-pattern), not as instructions to create.
-    const assetsRoot = path.resolve(repoRoot, "packages", "qfai", "assets");
-    const allMd = await fg(["**/*.md"], { cwd: assetsRoot, absolute: true });
-    const forbidden =
-      /(?:exploration\s+(?:brief|rubric)|evaluator\s+calibration|33_exploration_rubric|34_evaluator_calibration)/i;
-    const hits: Array<{ file: string; line: number; text: string }> = [];
-    for (const file of allMd) {
-      const text = await readFile(file, "utf-8");
-      const lines = text.split("\n");
-      for (let i = 0; i < lines.length; i += 1) {
-        const line = lines[i];
-        if (line === undefined) continue;
-        if (forbidden.test(line)) {
-          hits.push({ file, line: i + 1, text: line.trim() });
-        }
-      }
-    }
-    // Only the Forbidden Legacy Files list in 00_index.md may mention
-    // the retired sidecar names — that text is a warning, not an
-    // instruction. Allow exactly those two lines and reject everything
-    // else.
-    const indexFile = path.join(
-      assetsRoot,
-      "init",
-      ".qfai",
-      "assistant",
-      "skill",
-      "qfai-discussion",
-      "templates",
-      "uiux",
-      "00_index.md",
-    );
-    const allowedHits = hits.filter(
-      (h) =>
-        h.file === indexFile &&
-        (h.text.startsWith("- `33_exploration_rubric.md`") ||
-          h.text.startsWith("- `34_evaluator_calibration.md`")),
-    );
-    const unexpected = hits.filter((h) => !allowedHits.includes(h));
-    expect(unexpected).toEqual([]);
-  });
-
   // QFAI:EX-0001-0085-01
   it("ships the UI-bearing sidecar family (the brand SSOT is the root DESIGN.md)", async () => {
     const files = await fg(["*.md"], { cwd: uiuxDir, absolute: false });
@@ -84,8 +36,6 @@ describe("uiux sidecar templates", () => {
     // sidecars remain.
     expect(files).toContain("40_screen_contracts.md");
     expect(files).toContain("50_review_input_bundle.md");
-    expect(files).not.toContain("33_exploration_rubric.md");
-    expect(files).not.toContain("34_evaluator_calibration.md");
   });
 
   it("40_screen_contracts.md keeps the strong screen-contract schema", async () => {
