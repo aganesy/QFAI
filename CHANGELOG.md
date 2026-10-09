@@ -6,6 +6,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`qfai doctor` holds a Markdown assistant asset to 500 lines.** The
+  `assets.lineBudget` check allowed 800 lines for every `.md`, `.yml` and `.yaml`
+  file under `.qfai/assistant`, so a Markdown file could pass it and still break
+  the 500-line limit the AI-readable Markdown rule sets. Markdown is now held to
+  500 lines and YAML stays at 800, since a YAML asset is parsed as data and
+  cannot be split into a references file. The check's message names both
+  ceilings, and its details carry `maxMarkdownLines` and `maxDataLines` in
+  place of `maxLines`. Every shipped Markdown file is already within 500 lines.
+  Fixes #3141.
+
 - **The migration guide is split in two, and every shipped Markdown file is
   within 500 lines.** `references/migration-guide.md` keeps the preparation, the
   twelve steps, the write boundary, how to resolve the reports and the free-text

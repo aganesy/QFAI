@@ -13,8 +13,8 @@ import { parse } from "yaml";
 
 import { defaultConfig } from "../../../src/core/config.js";
 import {
-  ASSISTANT_ASSET_MAX_LINES,
   ASSISTANT_ASSET_MAX_LINE_CHARS,
+  assistantLineCeiling,
 } from "../../../src/core/doctor/assetLineBudget.js";
 import { validateAgentDefinition } from "../../../src/core/validators/agentDefinition.js";
 import { WORKFLOW_ROUTES } from "../../../src/core/workflow/routes.js";
@@ -620,7 +620,7 @@ describe("shipped text the workflow adds", () => {
     for (const file of files) {
       const rel = path.relative(path.dirname(PACKAGE_DEFAULTS), file);
       const lines = (await readFile(file, "utf-8")).split("\n");
-      expect(lines.length, rel).toBeLessThanOrEqual(ASSISTANT_ASSET_MAX_LINES);
+      expect(lines.length, rel).toBeLessThanOrEqual(assistantLineCeiling(file));
       const widest = Math.max(...lines.map((line) => line.length));
       expect(widest, rel).toBeLessThanOrEqual(ASSISTANT_ASSET_MAX_LINE_CHARS);
     }

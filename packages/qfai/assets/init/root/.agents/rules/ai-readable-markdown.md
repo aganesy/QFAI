@@ -84,8 +84,8 @@ them, and nothing says which.
 
 ## Held by
 
-Review, and any check a project adds for itself. `npx qfai doctor` reports an
-assistant asset over 800 lines, which is a second check above the limit in § 1.
+Review, and any check a project adds for itself. `npx qfai doctor` reports a
+Markdown assistant asset over the line limit in § 1.
 
 ## Related
 

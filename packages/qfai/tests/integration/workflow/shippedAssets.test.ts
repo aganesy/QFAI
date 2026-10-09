@@ -10,7 +10,9 @@ import { afterEach, expect, it } from "vitest";
 
 import {
   ASSISTANT_ASSET_MAX_LINE_CHARS,
-  ASSISTANT_ASSET_MAX_LINES,
+  ASSISTANT_DATA_MAX_LINES,
+  ASSISTANT_MARKDOWN_MAX_LINES,
+  assistantLineCeiling,
   countLines,
   widestMeasurableLine,
 } from "../../../src/core/doctor/assetLineBudget.js";
@@ -58,17 +60,21 @@ it("Run the asset line budget over qfai-run, qfai-maintain, the plans and the sc
   for (const file of files) {
     const text = await readFile(path.join(packageRoot, file), "utf8");
     const lines = countLines(text.replace(/\r?\n$/, ""));
-    if (lines > ASSISTANT_ASSET_MAX_LINES) over.push(`${file}: ${lines} lines`);
+    if (lines > assistantLineCeiling(file)) over.push(`${file}: ${lines} lines`);
     const widest = widestMeasurableLine(text);
     if (widest > ASSISTANT_ASSET_MAX_LINE_CHARS) over.push(`${file}: ${widest} characters`);
   }
 
   expect({
-    budget: [ASSISTANT_ASSET_MAX_LINES, ASSISTANT_ASSET_MAX_LINE_CHARS],
+    budget: [
+      ASSISTANT_MARKDOWN_MAX_LINES,
+      ASSISTANT_DATA_MAX_LINES,
+      ASSISTANT_ASSET_MAX_LINE_CHARS,
+    ],
     schemas: files.filter((file) => file.endsWith(".schema.json")).length,
     plans: files.filter((file) => file.endsWith(".yml")).length,
     over,
-  }).toEqual({ budget: [800, 400], schemas: 2, plans: WORKFLOW_ROUTES.length, over: [] });
+  }).toEqual({ budget: [500, 800, 400], schemas: 2, plans: WORKFLOW_ROUTES.length, over: [] });
 });
 
 // A bash that runs the guard. A process started from PowerShell has no `bash` on its PATH, so a
