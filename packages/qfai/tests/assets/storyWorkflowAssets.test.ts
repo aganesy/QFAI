@@ -73,6 +73,6 @@ describe("story-tree acceptance and implementation assets", () => {
 
   it("keeps the assistant file budget explicit", async () => {
     const baseline = await read("rule/shared-skill-operating-baseline.md");
-    expect(baseline).toContain("800 lines per assistant asset file");
+    expect(baseline).toContain("500 lines per Markdown assistant asset file");
   });
 });

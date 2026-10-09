@@ -30,6 +30,8 @@ import {
 } from "../../src/core/validators/autopilotPolicy.js";
 import {
   ASSISTANT_ASSET_MAX_LINE_CHARS,
+  ASSISTANT_DATA_MAX_LINES,
+  assistantLineCeiling,
   countLines,
   LINE_BUDGET_EXEMPT,
   SKILL_MD_MAX_LINES,
@@ -1595,16 +1597,17 @@ describe("assets guardrails", () => {
       }
       const content = await readFile(path.join(templateQfaiDir, relativePath), "utf-8");
       const lineCount = countLines(content);
-      if (lineCount > SKILL_MD_MAX_LINES) {
+      if (lineCount > assistantLineCeiling(relativePath)) {
         oversized.push(`${relativePath} (${lineCount})`);
       }
     }
 
     // Reported together: fixing them one failure at a time hides how much of
     // the surface is over budget.
-    expect(oversized, `over ${SKILL_MD_MAX_LINES} lines — move a topic into references/`).toEqual(
-      [],
-    );
+    expect(
+      oversized,
+      `over ${SKILL_MD_MAX_LINES} lines for Markdown or ${ASSISTANT_DATA_MAX_LINES} for YAML — move a topic into references/`,
+    ).toEqual([]);
   });
 
   it("keeps every shipped assistant asset inside the width ceiling it is held to", async () => {
@@ -1737,7 +1740,10 @@ describe("assets guardrails", () => {
     const baseline = await readRule(
       path.join(templateQfaiDir, "assistant", "rule", "shared-skill-operating-baseline.md"),
     );
-    expect(baseline).toContain(`**${SKILL_MD_MAX_LINES} lines per assistant asset file**`);
+    expect(baseline).toContain(`**${SKILL_MD_MAX_LINES} lines per Markdown assistant asset file**`);
+    expect(baseline).toContain(
+      `**${ASSISTANT_DATA_MAX_LINES} lines per YAML assistant asset file**`,
+    );
     // The width ceiling ships the same way and for the same reason: for a
     // project that has only the published package, this prose is the only copy
     // of the rule it can read.

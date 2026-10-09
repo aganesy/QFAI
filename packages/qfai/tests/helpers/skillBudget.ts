@@ -16,8 +16,10 @@
  * approaching this number is a signal to move a section out, not to raise it.
  */
 export {
-  ASSISTANT_ASSET_MAX_LINES as SKILL_MD_MAX_LINES,
+  ASSISTANT_DATA_MAX_LINES,
+  ASSISTANT_MARKDOWN_MAX_LINES as SKILL_MD_MAX_LINES,
   ASSISTANT_ASSET_MAX_LINE_CHARS,
+  assistantLineCeiling,
   LINE_BUDGET_EXEMPT,
   WIDTH_BUDGET_BACKLOG,
   WIDTH_BACKLOG_PATHS,

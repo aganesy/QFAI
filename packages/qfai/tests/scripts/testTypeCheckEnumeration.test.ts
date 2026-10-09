@@ -139,7 +139,7 @@ describe("the test tree's type-check enumeration", () => {
         const body = readFileSync(path.join(PACKAGE_ROOT, rel), "utf-8");
         // The two names the budget reaches a suite under: the shared helper,
         // and the constant it re-exports from the shipping module.
-        if (!/helpers\/skillBudget|ASSISTANT_ASSET_MAX_LINES|SKILL_MD_MAX_LINES/.test(body)) {
+        if (!/helpers\/skillBudget|ASSISTANT_MARKDOWN_MAX_LINES|SKILL_MD_MAX_LINES/.test(body)) {
           continue;
         }
         if (!enumeratedSet.has(rel)) unchecked.push(rel);

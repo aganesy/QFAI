@@ -19,7 +19,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   ASSISTANT_ASSET_MAX_LINE_CHARS,
-  ASSISTANT_ASSET_MAX_LINES,
+  ASSISTANT_MARKDOWN_MAX_LINES,
   countLines,
   widestMeasurableLine,
 } from "../../src/core/doctor/assetLineBudget.js";
@@ -212,9 +212,9 @@ describe("the shipped rule masters stay inside the assistant asset ceilings", ()
     const oversized: string[] = [];
     for (const name of names) {
       const content = await readFile(path.join(dir, name), "utf-8");
-      if (countLines(content) > ASSISTANT_ASSET_MAX_LINES) oversized.push(name);
+      if (countLines(content) > ASSISTANT_MARKDOWN_MAX_LINES) oversized.push(name);
     }
-    expect(oversized, `over ${ASSISTANT_ASSET_MAX_LINES} lines — split a topic out`).toEqual([]);
+    expect(oversized, `over ${ASSISTANT_MARKDOWN_MAX_LINES} lines — split a topic out`).toEqual([]);
   });
 
   it("no rule master carries a line over the width ceiling", async () => {
