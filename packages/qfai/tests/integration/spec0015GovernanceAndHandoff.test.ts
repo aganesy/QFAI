@@ -26,7 +26,8 @@ import {
   HANDOFF_SCHEMA_REL,
   HANDOFF_WRITER_PAIRS,
 } from "../../src/core/validators/handoffSchemaPairs.js";
-import { validateHandoff } from "../../src/core/schemas/handoff.js";
+import { HANDOFF_MINIMUM_FIELDS, validateHandoff } from "../../src/core/schemas/handoff.js";
+import { runSaasPackageProfile } from "../../src/core/saasPackage/profile.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 let root: string;
@@ -162,6 +163,28 @@ describe("spec-0015 handoff schema CHG-006", () => {
     const f = issues.find((i) => i.code === "QFAI-HANDOFF-001");
     expect(f?.severity).toBe("error");
     expect(f?.message).toMatch(/justification/i);
+  });
+
+  // QFAI:AC-0001-0171-01
+  it("lists the minimum field set and reads no handoff file but the prototyping record", async () => {
+    expect([...HANDOFF_MINIMUM_FIELDS]).toEqual([
+      "companyName",
+      "primaryUiContract",
+      "startDate",
+      "signature",
+      "entryPattern",
+      "productScope",
+    ]);
+    await mkdir(path.join(root, ".qfai"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai", "handoff.yaml"),
+      "companyName: Acme\nprimaryUiContract: UI-0012\n",
+      "utf-8",
+    );
+    const issues = await runSaasPackageProfile(root, []);
+    const missing = issues.find((i) => i.code === "QFAI-SAAS-002");
+    expect(missing?.severity).toBe("error");
+    expect(missing?.file).toBe(".qfai/prototype/final/handoff.json");
   });
 
   it("QFAI:EX-0001-0171-01 — normal: a handoff with extra keys passes validateHandoff (additionalProperties: true)", () => {
