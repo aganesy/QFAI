@@ -39,14 +39,6 @@ const initRootConfig = path.join(
 );
 const rootConfig = path.join(repoRoot, "qfai.config.yaml");
 
-/**
- * `validation.testStrategy` keys kept on the public type and on
- * `defaultConfig` only so existing TypeScript consumers keep compiling. No
- * validator reads them; they must never reappear in a shipped
- * `qfai.config.yaml`.
- */
-const DEPRECATED_TEST_STRATEGY_KEYS = new Set(["requireLayerTags", "requireSizeTags"]);
-
 /** Every file under `dir`, as paths relative to `dir`, with `/` separators. */
 async function collectFiles(dir: string, base: string = dir): Promise<string[]> {
   const collected: string[] = [];
@@ -139,44 +131,17 @@ describe("init assets root mirror", () => {
       const text = buffer.toString("utf-8");
       expect(text, `${label} qfai.config.yaml has no validation block`).toMatch(/^validation:/m);
       expect(text, `${label} qfai.config.yaml has no paths block`).toMatch(/^paths:/m);
-      // Retired `validation.traceability` knobs: parsed for backward
-      // compatibility but read by no validator, so shipping them advertises
-      // gates that never run. `qfai validate` now warns on each one still
-      // present — a seed that reintroduces them warns every fresh project.
-      for (const key of ["brMustHaveSc", "scNoTestSeverity", "orphanContractsPolicy"]) {
-        expect(text, `${label} qfai.config.yaml still ships retired key ${key}`).not.toMatch(
-          new RegExp(`^\\s*${key}:`, "m"),
-        );
-      }
     }
   });
 
-  // The shipped `testStrategy` block used to declare `requireLayerTags` and
-  // `requireSizeTags`, which nothing outside `config.ts` ever read, and to omit
-  // `forbidTestTodoStubs`, the one key a validator actually gates on. Hold the
-  // shipped surface equal to the LIVE surface the loader resolves, so every key
-  // an operator can see in the file is a key that can change an outcome. The
-  // two retired knobs stay on `defaultConfig` purely as a deprecated compat
-  // shim for TypeScript consumers of the public `QfaiValidationConfig` type
-  // (same treatment as `paths.promptsDir`, which is likewise unshipped), so
-  // they are excluded here rather than seeded back into a fresh project.
-  //
-  // The name is about the SHIPPED surface, not about what `loadConfig` returns:
-  // the loader resolves the two deprecated compat keys as well, and always has.
-  // What this case holds is narrower — the file an operator opens lists exactly
-  // the keys that can still change an outcome.
+  // Hold the shipped `testStrategy` block equal to the LIVE surface the loader
+  // resolves, so every key an operator can see in the file is a key that can
+  // change an outcome, `forbidTestTodoStubs` being the one a validator gates on.
   it("ships exactly the testStrategy keys that can change an outcome", async () => {
-    const liveKeys = Object.keys(defaultConfig.validation.testStrategy)
-      .filter((key) => !DEPRECATED_TEST_STRATEGY_KEYS.has(key))
-      .sort();
+    const liveKeys = Object.keys(defaultConfig.validation.testStrategy).sort();
     expect(liveKeys, "forbidTestTodoStubs is the live gate and must stay resolvable").toContain(
       "forbidTestTodoStubs",
     );
-    for (const key of DEPRECATED_TEST_STRATEGY_KEYS) {
-      expect(liveKeys, `${key} is deprecated and must not be advertised as live`).not.toContain(
-        key,
-      );
-    }
 
     for (const [label, filePath] of [
       ["init asset", initRootConfig],
@@ -198,7 +163,7 @@ describe("init assets root mirror", () => {
       }
       expect(
         Object.keys(testStrategy).sort(),
-        `${label} testStrategy keys drifted from the live, non-deprecated key set`,
+        `${label} testStrategy keys drifted from the live key set`,
       ).toEqual(liveKeys);
     }
   });

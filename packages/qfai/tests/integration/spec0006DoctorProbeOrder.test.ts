@@ -54,22 +54,6 @@ async function seedLocalPlaywright(root: string): Promise<void> {
   }
 }
 
-async function seedLocalPlaywrightCli(root: string): Promise<void> {
-  const binDir = path.join(root, "node_modules", ".bin");
-  await mkdir(binDir, { recursive: true });
-  if (isWin) {
-    await writeFile(
-      path.join(binDir, "playwright-cli.cmd"),
-      "@echo off\r\necho 1.52.0\r\n",
-      "utf-8",
-    );
-  } else {
-    const launcher = path.join(binDir, "playwright-cli");
-    await writeFile(launcher, "#!/bin/sh\necho 1.52.0\n", "utf-8");
-    await chmod(launcher, 0o755);
-  }
-}
-
 async function readDoctorJson(root: string): Promise<DoctorJson> {
   const outPath = path.join(root, ".qfai", "report", "doctor.json");
   await runDoctor({
@@ -97,19 +81,11 @@ function findCheck(data: DoctorJson, id: string): DoctorJson["checks"][number] |
   return data.checks.find((check) => check.id === id);
 }
 
-function findFinding(
-  data: DoctorJson,
-  matcher: (check: DoctorJson["checks"][number]) => boolean,
-): DoctorJson["checks"][number] | undefined {
-  return data.checks.find(matcher);
-}
-
 // QFAI:EX-0003-0006-01
-// QFAI:EX-0003-0006-02
 // QFAI:EX-0003-0006-03
 // QFAI:AC-0003-0006-01
 describe("TC-0006-0012: playwright primary probe detects node_modules/.bin/playwright", () => {
-  it("resolves the project-local playwright shim and records it as primary (not deprecated)", async () => {
+  it("resolves the project-local playwright shim and records it as primary", async () => {
     const root = await newTempDir("tc12");
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
     await seedLocalPlaywright(root);
@@ -119,13 +95,9 @@ describe("TC-0006-0012: playwright primary probe detects node_modules/.bin/playw
     expect(playwrightCheck).toBeDefined();
     expect(playwrightCheck?.severity).toBe("ok");
     const details = playwrightCheck?.details as
-      { resolvedStage?: string; executable?: string; deprecated?: boolean } | undefined;
+      { resolvedStage?: string; executable?: string } | undefined;
     expect(details?.resolvedStage).toBe("primary");
-    expect(details?.deprecated ?? false).toBe(false);
     expect(String(details?.executable ?? "")).toMatch(/playwright(\.cmd)?$/u);
-    expect(String(details?.executable ?? "")).not.toMatch(/playwright-cli/u);
-    // No D-DEPRECATED-PROBE finding when primary resolves.
-    expect(findFinding(data, (c) => c.id === "D-DEPRECATED-PROBE")).toBeUndefined();
   });
 });
 
@@ -134,35 +106,7 @@ describe("TC-0006-0013: playwright probe order documented and observable", () =>
     const mod = await import("../../src/core/prototyping/playwrightLauncher.js");
     expect(typeof mod.getProbeOrder).toBe("function");
     const order = mod.getProbeOrder();
-    expect(order).toEqual(["playwright", "npx fallback", "playwright-cli (deprecated)"]);
-  });
-});
-
-describe("TC-0006-0014: playwright-cli triggers D-DEPRECATED-PROBE with sunset 1.10.0", () => {
-  it("emits an error finding whose body literally contains `sunset: 1.10.0`", async () => {
-    // QFAI:AC-0003-0006-04
-    const root = await newTempDir("tc14");
-    await runInit({ dir: root, force: false, dryRun: false, yes: true });
-    await seedLocalPlaywrightCli(root);
-
-    // Clear PATH so the stage-2 npx fallback cannot resolve a developer-host
-    // playwright install; this forces the resolution to flow through stage 3
-    // (`playwright-cli`), which is the path that emits D-DEPRECATED-PROBE.
-    const originalPath = process.env.PATH;
-    process.env.PATH = "";
-    try {
-      const data = await readDoctorJson(root);
-      const deprecated = findFinding(data, (c) => c.id === "D-DEPRECATED-PROBE");
-      expect(deprecated, "expected D-DEPRECATED-PROBE finding").toBeDefined();
-      // `warning` inside the deprecation window, `error` from the sunset on.
-      // The literal `sunset: 1.10.0` substring stays part of the wire contract
-      // either way.
-      expect(deprecated?.severity).toBe("error");
-      const body = `${deprecated?.message ?? ""}\n${JSON.stringify(deprecated?.details ?? {})}`;
-      expect(body).toContain("sunset: 1.10.0");
-    } finally {
-      process.env.PATH = originalPath;
-    }
+    expect(order).toEqual(["playwright", "npx fallback"]);
   });
 });
 
@@ -172,7 +116,7 @@ describe("TC-0006-0015: full failure surfaces `npm i -D playwright` install hint
     const root = await newTempDir("tc15");
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
     // No seeding — node_modules empty; PATH cleared to suppress any system
-    // playwright/playwright-cli installed on the developer machine.
+    // playwright installed on the developer machine.
     const originalPath = process.env.PATH;
     process.env.PATH = "";
     try {

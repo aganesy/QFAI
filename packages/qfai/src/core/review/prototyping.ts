@@ -1,9 +1,4 @@
-/**
- * Prototyping surface helpers.
- *
- * Kept here: surface-type helpers and a `playwright-cli` constant used by
- * the capture wiring.
- */
+/** Prototyping surface helpers. */
 
 import {
   CANONICAL_PROTOTYPING_SURFACES,
@@ -14,7 +9,6 @@ import {
 export const PROTOTYPING_SUPPORTED_SURFACES = ["web", "mobile", "desktop", "mixed"] as const;
 
 export type PrototypingSurface = CanonicalPrototypingSurface;
-export type PrototypingBrowserTool = "playwright-cli";
 
 const VALID_SURFACE_SET = new Set<string>(CANONICAL_PROTOTYPING_SURFACES);
 const SUPPORTED_SURFACE_SET = new Set<string>(PROTOTYPING_SUPPORTED_SURFACES);

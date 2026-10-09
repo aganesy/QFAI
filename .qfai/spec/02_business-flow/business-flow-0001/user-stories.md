@@ -102,7 +102,7 @@
 | US-0001-0108 | Declared layout anti-pattern review                                                    | `user-story-0001-0108/` |
 | US-0001-0114 | Project-wide UI-contract resolution                                                    | `user-story-0001-0114/` |
 | US-0001-0116 | Qualitative screen impressions                                                         | `user-story-0001-0116/` |
-| US-0001-0129 | Browser tool migration window                                                          | `user-story-0001-0129/` |
+| US-0001-0129 | Browser tool                                                                           | `user-story-0001-0129/` |
 | US-0001-0134 | UI-contract terminology in prototyping                                                 | `user-story-0001-0134/` |
 | US-0001-0138 | Canonical primary UI-contract pin                                                      | `user-story-0001-0138/` |
 | US-0001-0147 | Unified SDD Workflow                                                                   | `user-story-0001-0147/` |

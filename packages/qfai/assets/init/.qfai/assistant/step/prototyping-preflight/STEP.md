@@ -48,9 +48,7 @@ Nothing. The CLI checks are read-only.
 - Canonical launcher: `npx --no-install playwright`, or
   `node_modules/.bin/playwright` when PATH reachability is uncertain. A bare
   `npx playwright` can install a package mid-run.
-- `browserTool: "playwright-cli"` is rejected by config load, and
-  `D-DEPRECATED-PROBE` reports `error`. Install `playwright`
-  (`npm i -D playwright`) instead.
+- Install `playwright` with `npm i -D playwright`.
 
 Follow
 `.qfai/assistant/rule/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol`

@@ -1,14 +1,7 @@
 /**
- * `browserTool` config accepts `"playwright"` + `"playwright-cli"`.
+ * The `prototyping.execution.browserTool` config field accepts `"playwright"`.
  *
- * Past its sunset the `prototyping.execution.browserTool` config field
- * accepts one value:
- *   - `"playwright"` (primary): loads, no `D-DEPRECATED-PROBE` finding.
- *   - `"playwright-cli"`: refused by the loader, which falls back to the
- *     `playwright` default; the doctor probe reports `D-DEPRECATED-PROBE`
- *     at `error` with the `sunset: 1.10.0` substring on its message.
- *
- * Integration scope: config loader + probe-order pin.
+ * Integration scope: config loader.
  */
 
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -66,19 +59,5 @@ describe("browserTool config — `playwright` primary path", () => {
     expect(config.prototyping?.execution?.browserTool).toBe("playwright");
     // Should not generate any config issue for the primary value.
     expect(issues.filter((i) => /browserTool/.test(i.message))).toEqual([]);
-  });
-});
-
-describe("browserTool config — `playwright-cli` deprecation-window path", () => {
-  it("refuses browserTool: playwright-cli past its sunset", async () => {
-    const root = await newTempDir();
-    await writeConfigWithBrowserTool(root, "playwright-cli");
-    const { config, issues } = await loadConfig(root);
-    // Refused past the sunset; the supported default stands in so a run that
-    // ignores the issue does not proceed against a launcher qfai dropped.
-    expect(config.prototyping?.execution?.browserTool).toBe("playwright");
-    const raised = issues.filter((i) => /browserTool/.test(i.message));
-    expect(raised).toHaveLength(1);
-    expect(raised[0]?.message).toContain("playwright-cli");
   });
 });

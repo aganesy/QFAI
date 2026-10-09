@@ -22,11 +22,10 @@ As a regular expression: `/^QFAI-[A-Z]+-\d{3}$/`.
 from, and a new prefix family is not a decision a single validator gets to make.
 
 Why this shape: it is already most of the surface, and the three-segment form is
-what every downstream consumer assumes — the prefix strip in
-`core/waivers.ts#resolveRuleKeys`, the `QFAI-<AREA>-*` globs in
-`core/saasPackage/skippedGates.ts`, and `GATE_GROUP_FAMILIES` in
-`cli/commands/validate.ts`. A code outside the shape silently gets no waiver
-alias and no partial-profile family entry.
+what every downstream consumer assumes — the `QFAI-<AREA>-*` globs in
+`core/saasPackage/skippedGates.ts` and `GATE_GROUP_FAMILIES` in
+`cli/commands/validate.ts`. A code outside the shape silently gets no
+partial-profile family entry.
 
 ## The legacy registry
 
@@ -76,44 +75,18 @@ the branch renames.
 
 1. **Rename to `QFAI-<AREA>-<NNN>`**, following "Adding a code". Reuse an
    `<AREA>` that fits before adding one.
-2. **Keep the `<AREA>-<NNN>` suffix the old id had**, when the code being
-   renamed has one. `resolveRuleKeys` in `src/core/waivers.ts` adds a stripped
-   spelling of the emitted code to the keys a waiver may match on, so a finding
-   coded `QFAI-WAIVER-001` also answers to `WAIVER-001` and an existing
-   `.qfai/waivers.yml` entry keeps matching. Change the number —
-   `QFAI-WAIVER-001` to `QFAI-WAIVER-011` — and the alias becomes
-   `WAIVER-011` rather than `WAIVER-001`, which is the spelling the entry
-   names.
-3. **Check the stripped spelling for a collision, not only the full code.**
-   A rule id that already carries the stripped spelling would let an existing
-   waiver suppress the new finding. Search every `Issue.rule` for the spelling
-   `resolveRuleKeys` would derive, as well as for the code itself.
-4. **The strip is narrow.** It reads `code`, and matches `QFAI-<AREA>-<NNN>`
-   with a single all-letter area — so `QFAI-CFG-LINK-001` strips to nothing,
-   and a code with no `QFAI-` prefix (`HANDOFF-SCHEMA-NOT-OBJECT`) does not match
-   at all, so no alias is derived from it. Renaming one of these needs an explicit
-   alias — the work `## Not covered here` defers.
-5. **Check whether the code already exists.** A family several branches reached
+2. **Check whether the code already exists.** A family several branches reached
    for at once tends to have been settled by whichever landed first:
    `QFAI-WAIVER-001` through `-004` are on the default branch already. Adopt
    the landed spelling rather than minting a parallel one.
 
 ### Renaming a code that has shipped
 
-The alias above covers waivers and nothing else. `issue.code` is written into
-the GitHub annotation each finding produces and into `validate.json`, so a
-consumer that greps a log, keys an alert on the code, or reads the JSON sees
-the new spelling and not the old one.
+`issue.code` is written into the GitHub annotation each finding produces, into
+`validate.json` and into the `rule:` of a `.qfai/waivers.yml` entry, so a
+consumer that greps a log, keys an alert on the code, reads the JSON or waives
+the rule sees the new spelling and not the old one.
 
-So a rename is source-compatible for waivers and **breaking for anyone
-identifying findings by code**. Treat it as a behaviour change: say so in the
-release notes, name both spellings there, and give consumers the release the
-old one stops appearing in.
-
-## Not covered here
-
-Renaming a legacy code whose shape is **not** `<AREA>-<NNN>` needs an alias
-table with a deprecation window, because the prefix strip above gives it
-nothing: a `.qfai/waivers.yml` entry written against `HANDOFF-SCHEMA-NOT-OBJECT`
-resolves through neither spelling once the code moves. That migration, and
-publishing the inventory as a build artifact, are separate work.
+So a rename is **breaking for anyone identifying findings by code**. Treat it
+as a behaviour change: say so in the release notes and name both spellings
+there.
