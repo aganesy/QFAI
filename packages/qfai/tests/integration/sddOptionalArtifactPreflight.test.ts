@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -76,6 +76,43 @@ describe("SDD preflight optional discussion side artifact", () => {
 
       expect(result.status).toBe("ready");
       expect(result.blockers).toHaveLength(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:AC-0001-0151-02
+  it("reads a pack with a blocking OQ and a malformed side artifact and leaves the pack as it was", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      const packDir = await seedDiscussionPack(root, "20260216010203014");
+      await writeFile(
+        path.join(packDir, "11_OQ-Register.md"),
+        [
+          "# 11 OQ Register",
+          "",
+          "### OQ-0009: architecture decision pending",
+          "- Disposition: open",
+          "- Gate: sdd",
+          "- Reason: database migration strategy is under discussion",
+        ].join("\n"),
+        "utf-8",
+      );
+      await writeFile(path.join(packDir, "prototyping.yaml"), "prototyping: [unclosed\n", "utf-8");
+      const snapshot = async () =>
+        Promise.all(
+          (await readdir(packDir))
+            .sort()
+            .map(async (name) => [name, await readFile(path.join(packDir, name), "utf-8")]),
+        );
+      const before = await snapshot();
+
+      const result = await runSddPreflight(root, defaultConfig);
+
+      expect(result.status).toBe("ready");
+      expect(result.blockers).toHaveLength(0);
+      expect(result.packGaps.some((gap) => gap.includes("OQ-0009"))).toBe(true);
+      expect(await snapshot()).toEqual(before);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

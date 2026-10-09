@@ -38,11 +38,16 @@ function hasMissing(id: string, files: StoryTestFile[], profile: "atdd" | "tdd")
 }
 
 describe("BF-0001 story annotation layers", () => {
+  // QFAI:AC-0001-0010-01
+  // QFAI:AC-0001-0068-01
   // QFAI:EX-0001-0010-01
+  // QFAI:EX-0001-0068-01
   it("counts a BF annotation in an E2E test", () => {
     expect(hasMissing(flow, [file("e2e", flow)], "atdd")).toBe(false);
   });
 
+  // QFAI:AC-0001-0069-01
+  // QFAI:AC-0001-0070-01
   // QFAI:EX-0001-0010-02
   // QFAI:EX-0001-0069-01
   it("counts an AC annotation in integration or API tests", () => {
@@ -86,6 +91,7 @@ describe("BF-0001 story annotation layers", () => {
     }
   });
 
+  // QFAI:AC-0001-0010-02
   // QFAI:EX-0001-0010-04
   // QFAI:EX-0001-0010-05
   it("ignores the retired SPEC and contract annotation forms", () => {

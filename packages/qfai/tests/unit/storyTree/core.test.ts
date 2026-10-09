@@ -222,6 +222,42 @@ describe("story-tree core", () => {
     );
   });
 
+  // QFAI:EX-0001-0147-06
+  it("lets only the Status cell move when a decision is superseded and a question deferred", () => {
+    const header = "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
+    const decisionBase = `${header}| DEC-0001 | Choice | Reason | DONE |\n`;
+    const decisionHead = `${header}| DEC-0001 | Choice | Reason | SUPERSEDED (by DEC-0002) |\n| DEC-0002 | Newer choice | Reason | DONE |\n`;
+    const decisions = diffRecordTables(decisionBase, decisionHead, "decisions");
+    expect(decisions.rewritten).toEqual([]);
+    expect(decisions.removed).toEqual([]);
+    expect(decisions.changed).toEqual([
+      { id: "DEC-0001", cell: "status", before: "DONE", after: "SUPERSEDED (by DEC-0002)" },
+    ]);
+    expect(decisions.appended.map((row) => row.id)).toEqual(["DEC-0002"]);
+    expect(parseRecordTable(decisionHead, "decisions").errors).toEqual([]);
+
+    const questionBase = `${header}| OQ-0001 | Which layout | Pending | TODO |\n`;
+    const questionHead = `${header}| OQ-0001 | Which layout | Pending | DEFERRED |\n`;
+    const questions = diffRecordTables(questionBase, questionHead, "open-questions");
+    expect(questions.rewritten).toEqual([]);
+    expect(questions.changed).toEqual([
+      { id: "OQ-0001", cell: "status", before: "TODO", after: "DEFERRED" },
+    ]);
+    expect(parseRecordTable(questionHead, "open-questions").errors).toEqual([]);
+  });
+
+  // QFAI:EX-0001-0147-08
+  it("allocates the highest number in a scope plus one, and starts an empty scope at one", () => {
+    const stories = ["US-0001-0001", "US-0001-0002", "US-0001-0003"];
+    expect(nextId("US", stories, "BF-0001")).toBe("US-0001-0004");
+    expect(nextId("AC", ["AC-0001-0001-01", "AC-0001-0001-02"], "US-0001-0001")).toBe(
+      "AC-0001-0001-03",
+    );
+    expect(nextId("BF", [])).toBe("BF-0001");
+    expect(nextId("AC", [], "US-0001-0001")).toBe("AC-0001-0001-01");
+    expect(nextId("EX", [], "US-0001-0001")).toBe("EX-0001-0001-01");
+  });
+
   it("checks table shape, status vocabulary, keyword force, and append-only diff", () => {
     const header = "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
     const base = `${header}| DEC-0001 | First | Keep | TODO |\n`;
