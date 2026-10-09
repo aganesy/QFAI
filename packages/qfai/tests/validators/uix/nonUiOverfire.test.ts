@@ -78,14 +78,8 @@ describe("non-UI regression", () => {
     const root = await newTempDir();
     await writeFile(path.join(root, "01_Context.md"), "# Context\n\n- surface: web\n", "utf-8");
     await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web\n", "utf-8");
+    // The required sidecars are absent, so the pack is guaranteed to produce fires.
     await mkdir(path.join(root, "uiux"), { recursive: true });
-    // A retired sidecar filename — `validateForbiddenLegacyFiles` is the live
-    // rule that reports it, so the pack is guaranteed to produce fires.
-    await writeFile(
-      path.join(root, "uiux", "11_design_taste_interview.md"),
-      "# Taste interview\n",
-      "utf-8",
-    );
 
     const counted = await countUiBearingFires(root, defaultConfig);
     const aggregate = await runCanonicalUixValidators(root, defaultConfig);

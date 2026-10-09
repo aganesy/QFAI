@@ -74,12 +74,9 @@ Completion is blocked until all are true:
    ordinary. This is the one visual decision made here, because no later stage asks the user for
    it: `/qfai-sdd`'s `common-design-md` step authors tokens from whatever is recorded. A direction taken without the
    user carries `chosen_by: assumption` and an open entry in `11_OQ-Register.md`.
-6. No forbidden legacy sidecar exists under `uiux/` (see
-   `templates/uiux/00_index.md#Forbidden Legacy Files`).
 
 Evaluation axes are global constants (4-step ordinal: weak / acceptable / strong /
-exceptional) and are NOT authored as discussion sidecars, so no scoring, override, strategy,
-taste-interview, option-comparison or selected-anchor sidecar is required or permitted.
+exceptional) and are NOT authored as discussion sidecars.
 
 ## CLI Packs
 
@@ -93,9 +90,8 @@ so conditions 1 and 5 above do not apply to it:
   `validators/designContractReadiness.ts` skips `QFAI-DCON-030`/`-033`/`-034` for it.
 - No design direction either: nothing downstream reads a theme for a surface that renders
   no tokens.
-- Conditions 2, 3, 4, 6 and 7 apply unchanged: all three canonical `uiux/` sidecars, the
-  full screen-contract schema, unranked exploration directions, no forbidden legacy
-  sidecar, and zero open OQs.
+- Conditions 2, 3, 4 and 7 apply unchanged: all three canonical `uiux/` sidecars, the
+  full screen-contract schema, unranked exploration directions, and zero open OQs.
 - `route:` on a `cli` screen contract names the command invocation, not a web path, as the `cli` section of the UI-bearing playbook sets out.
 - No `prototyping.yaml`: `cli` is not a valid prototyping execution surface.
 - `primary_surface: cli` with a visual `secondary_surfaces` entry is NOT a cli-only pack —

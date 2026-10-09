@@ -116,12 +116,7 @@ Those three are the entire canonical sidecar family. Evaluation axes are global 
 QFAI CLI applies — not by any file in this tree. The reviewer prompt that
 `/qfai-prototyping` ships restates that axis set; editing it does not change the set the CLI accepts. Axes are not
 authored as discussion sidecars. Discussion is planner-first: it carries exploration directions
-unranked and does not select a single visual winner, so there is no strategy, taste-interview, scoring,
-override, option-comparison or selected-anchor sidecar. Do NOT create
-`10_implementation_strategy.md`, `11_design_taste_interview.md`, the `20-24`
-design-evaluation family, `30_option_comparison.md`, or `31_selected_anchor_screen.md` —
-those filenames are forbidden, see `templates/uiux/00_index.md#Forbidden Legacy Files`, and
-creating them fails validation.
+unranked and does not select a single visual winner.
 
 ### What must be explicit in the discussion pack
 

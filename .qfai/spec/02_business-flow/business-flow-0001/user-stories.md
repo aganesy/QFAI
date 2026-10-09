@@ -86,7 +86,6 @@
 | US-0001-0085 | Screen Contracts                                                                       | `user-story-0001-0085/` |
 | US-0001-0086 | Review Input Bundle                                                                    | `user-story-0001-0086/` |
 | US-0001-0087 | Design Direction Handoff                                                               | `user-story-0001-0087/` |
-| US-0001-0088 | Legacy Sidecar Drop                                                                    | `user-story-0001-0088/` |
 | US-0001-0089 | Mock template emits anchor-form hrefs by default                                       | `user-story-0001-0089/` |
 | US-0001-0090 | Discussion writes the active session pointer                                           | `user-story-0001-0090/` |
 | US-0001-0091 | TDD Micro-Cycle Execution                                                              | `user-story-0001-0091/` |

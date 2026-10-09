@@ -1,4 +1,3 @@
-import { readdir } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../../config.js";
@@ -6,41 +5,10 @@ import type { Issue, IssueSeverity } from "../../types.js";
 import { isUiBearingSpec } from "../uixDetection.js";
 import { readSafe } from "../utils.js";
 
-const EXPLORATION_SECTIONS = [
-  "product_intent",
-  "product intent",
-  "brand_signals",
-  "brand signals",
-  "anti_goals",
-  "anti-goals",
-  "axes",
-  "information architecture",
-  "informationarchitecture",
-  "navigation flow",
-  "navigationflow",
-  "usability",
-  "functionality",
-  "good critique examples",
-  "good critique",
-] as const;
-
-const LEGACY_FOUR_AXIS_SECTIONS = [
-  "consistency",
-  "accessibility",
-  "delight",
-  "craft",
-  "originality",
-  "design quality",
-];
-
 // Brand-level inputs (product intent / brand signals / anti-goals / reference
-// pool) now live in root DESIGN.md and are validated separately via
-// designContractReadiness. The legacy `33_exploration_rubric.md` and
-// `34_evaluator_calibration.md` sidecars were removed when DESIGN.md
-// became the brand SSOT and the review contract moved to
-// the prototyping reviewer prompt; they are no
-// longer shipped by `qfai init`. Only screen-level UX sidecars remain
-// in the required family.
+// pool) live in root DESIGN.md and are validated separately via
+// designContractReadiness. The required family holds only the screen-level UX
+// sidecars.
 //
 // Exported so the shipped-template sweep in
 // `tests/integration/discussionSkillTemplateIntegration.test.ts` can check the
@@ -51,30 +19,6 @@ export const CANONICAL_REQUIRED_SIDECAR_FILES = [
   "40_screen_contracts.md",
   "50_review_input_bundle.md",
 ] as const;
-
-/**
- * Sidecar filenames `qfai validate` rejects under `uiux/`.
- *
- * Exported so the shipped-template sweep in
- * `tests/integration/discussionSkillTemplateIntegration.test.ts` can check its
- * representative filenames against this list rather than keeping a second,
- * hand-maintained copy that silently falls behind.
- */
-export const FORBIDDEN_LEGACY_PATTERNS = [
-  /^30_.*comparison.*\.md$/i,
-  /^31_.*anchor.*\.md$/i,
-  // 33_exploration_rubric.md / 34_evaluator_calibration.md were retired
-  // when DESIGN.md became the brand SSOT and the review contract
-  // moved to the prototyping reviewer prompt. They
-  // are no longer in the canonical family AND must not be created by
-  // operators following stale docs.
-  /^3[34]_.*\.md$/i,
-  /^1[0-2]_.*(?:strategy|taste|system).*\.md$/i,
-  /^2[0-4]_.*(?:eval|axis|aggregate|override).*\.md$/i,
-  /^40_contracts\.md$/i,
-  /^50_review_bundle\.md$/i,
-  /^60_critique_loop\.md$/i,
-];
 
 function threeLayerIssue(
   code: string,
@@ -91,87 +35,6 @@ function threeLayerIssue(
     file,
     suggested_action: suggestedAction,
   };
-}
-
-function extractHeadings(content: string): string[] {
-  return content
-    .split("\n")
-    .map((line) => /^##\s+(.+)$/.exec(line)?.[1]?.trim().toLowerCase() ?? "")
-    .filter(Boolean);
-}
-
-export async function validateThreeLayerModel(root: string, _config: QfaiConfig): Promise<Issue[]> {
-  if (!(await isUiBearingSpec(root))) return [];
-
-  const issues: Issue[] = [];
-  for (const sidecar of CANONICAL_REQUIRED_SIDECAR_FILES) {
-    const content = await readSafe(path.join(root, "uiux", sidecar));
-    if (!content) {
-      continue;
-    }
-
-    const headings = extractHeadings(content);
-    const hasExplorationStructure = headings.some((heading) =>
-      EXPLORATION_SECTIONS.some((section) => heading.includes(section)),
-    );
-    const legacySections = headings.filter((heading) =>
-      LEGACY_FOUR_AXIS_SECTIONS.includes(heading),
-    );
-    const relPath = `uiux/${sidecar}`;
-
-    if (hasExplorationStructure && legacySections.length > 0) {
-      issues.push(
-        threeLayerIssue(
-          "QFAI-THREELAYER-004",
-          `Inconsistent exploration-first sidecar: mixed exploration headings and legacy evaluation headings found in ${relPath}.`,
-          "error",
-          relPath,
-          "Remove legacy evaluation headings and keep exploration-first sections only.",
-        ),
-      );
-      continue;
-    }
-
-    if (legacySections.length > 0) {
-      issues.push(
-        threeLayerIssue(
-          "QFAI-THREELAYER-003",
-          `Legacy evaluation headings are not allowed in ${relPath}; use exploration brief, rubric, calibration, and screen contracts instead.`,
-          "error",
-          relPath,
-          "Replace legacy evaluation headings with exploration-first sidecar content.",
-        ),
-      );
-    }
-  }
-
-  return issues;
-}
-
-export async function validateForbiddenLegacyFiles(
-  root: string,
-  _config: QfaiConfig,
-): Promise<Issue[]> {
-  if (!(await isUiBearingSpec(root))) return [];
-
-  let entries: string[];
-  try {
-    entries = await readdir(path.join(root, "uiux"));
-  } catch {
-    return [];
-  }
-
-  return entries
-    .filter((entry) => FORBIDDEN_LEGACY_PATTERNS.some((pattern) => pattern.test(entry)))
-    .map((entry) =>
-      threeLayerIssue(
-        "QFAI-THREELAYER-001",
-        `Forbidden legacy file detected: uiux/${entry}. This file is no longer part of the exploration-first canonical family.`,
-        "error",
-        `uiux/${entry}`,
-        `Remove uiux/${entry} and migrate content into the exploration-first artifact family.`,
-      ),
-    );
 }
 
 export async function validateThreeLayerFamilyCompleteness(

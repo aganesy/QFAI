@@ -1306,11 +1306,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "The HTML mock template and the validator rule for mock links agree on which hrefs are allowed.",
   "QFAI-MANIFEST-001":
     "The skill manifest schema and the probe that reads it name the same tokens.",
-  "QFAI-THREELAYER-001": "The `uiux/` directory holds none of the retired sidecar files.",
   "QFAI-THREELAYER-002": "The `uiux/` directory holds every file of the canonical sidecar family.",
-  "QFAI-THREELAYER-003": "No sidecar file uses the retired evaluation headings.",
-  "QFAI-THREELAYER-004":
-    "A sidecar file uses either the exploration-first headings or the retired evaluation headings, never both.",
   "QFAI-CLASSIFICATION-001":
     "The `ui_bearing`, `primary_surface` and `secondary_surfaces` fields of a classification agree with each other.",
   "QFAI-CLASSIFICATION-002": "`secondary_surfaces` lists no surface twice.",

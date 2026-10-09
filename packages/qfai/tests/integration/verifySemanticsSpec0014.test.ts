@@ -19,14 +19,6 @@ async function newTempDir(): Promise<string> {
   return dir;
 }
 
-async function createUiBearingPack(root: string): Promise<void> {
-  // `01_Context.md` is the file a discussion pack actually has. The fixture
-  // used to write `01_Spec.md`, mirroring the admission probe's own mistake,
-  // so it agreed with the bug instead of exercising the behaviour.
-  await writeFile(path.join(root, "01_Context.md"), "# Context\n\n- surface: web\n", "utf-8");
-  await mkdir(path.join(root, "uiux"), { recursive: true });
-}
-
 afterEach(async () => {
   while (tempDirs.length > 0) {
     const dir = tempDirs.pop();
@@ -37,40 +29,6 @@ afterEach(async () => {
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 
 // QFAI:EX-0001-0157-01
-describe("TC-0014-0009: stale sidecar migration guidance", () => {
-  it("legacy strategy-style filename is rejected with exploration-first migration guidance", async () => {
-    const root = await newTempDir();
-    await createUiBearingPack(root);
-    await writeFile(
-      path.join(root, "uiux", "10_strategy.md"),
-      [
-        "# Strategy",
-        "",
-        "- surface: web",
-        "- selection_required: true",
-        "- decision: component-library",
-        "- candidate_options:",
-        "  - component-library",
-        "- chosen_option: component-library",
-        "- rationale:",
-        "  - Keep the canonical path.",
-        "- verification_expectations:",
-        "  - Verify on the anchor screen.",
-        "- notes_for_reviewer:",
-        "  - Confirm canonical naming.",
-      ].join("\n"),
-      "utf-8",
-    );
-
-    const issues = await runCanonicalUixValidators(root, defaultConfig);
-    const legacyIssue = issues.find((issue) => issue.code === "QFAI-THREELAYER-001");
-
-    expect(legacyIssue).toBeDefined();
-    expect(legacyIssue?.severity).toBe("error");
-    expect(legacyIssue?.suggested_action).toContain("exploration-first");
-  });
-});
-
 // QFAI:EX-0001-0156-03
 describe("TC-0014-0018: canonical UIX in verify path", () => {
   it("validate.ts imports the canonical group and no retired one", async () => {
@@ -99,21 +57,17 @@ describe("TC-0014-0018: canonical UIX in verify path", () => {
     const root = await newTempDir();
     const packDir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
     await mkdir(path.join(packDir, "uiux"), { recursive: true });
+    // The pack holds none of the required sidecars — the same input the
+    // direct-call case uses, so the two differ only in how the validator is
+    // reached.
     await writeFile(path.join(packDir, "01_Context.md"), "# Context\n\n- surface: web\n", "utf-8");
-    // A forbidden legacy sidecar — the same input the direct-call case uses, so
-    // the two differ only in how the validator is reached.
-    await writeFile(
-      path.join(packDir, "uiux", "12_design_system.md"),
-      "## Visual Theme\n\nReal content\n\n## Color Palette\n\nReal content\n\n## Do's and Don'ts\n\nReal content\n",
-      "utf-8",
-    );
 
     const result = await validateProject(root, undefined, { profile: "verify" });
 
     expect(
       result.issues.map((issue) => issue.code),
       "the verify profile must carry the canonical UIX group's findings",
-    ).toContain("QFAI-THREELAYER-001");
+    ).toContain("QFAI-THREELAYER-002");
   });
 
   it("runCanonicalUixValidators reaches the latest pack from a repo root", async () => {
@@ -126,24 +80,10 @@ describe("TC-0014-0018: canonical UIX in verify path", () => {
       "# Context\n\n- surface: web\n",
       "utf-8",
     );
-    await writeFile(
-      path.join(
-        root,
-        ".qfai",
-        "discussion",
-        "discussion-20260101000000000",
-        "uiux",
-        "12_design_system.md",
-      ),
-      "## Visual Theme\n\nReal content\n\n## Color Palette\n\nReal content\n\n## Do's and Don'ts\n\nReal content\n",
-      "utf-8",
-    );
 
-    // `12_design_system.md` is a forbidden legacy sidecar. This assertion used
-    // to be `toEqual([])`: it pinned the inertness of all eight validators
-    // rather than the rule they exist to enforce.
+    // The pack holds none of the required sidecars, so the group reports them.
     const issues = await runCanonicalUixValidators(root, defaultConfig);
-    expect(issues.find((issue) => issue.code === "QFAI-THREELAYER-001")).toBeDefined();
+    expect(issues.find((issue) => issue.code === "QFAI-THREELAYER-002")).toBeDefined();
   });
 });
 
@@ -191,31 +131,6 @@ describe("UI-bearing discussion sidecars in project validation", () => {
       ]),
     );
   });
-
-  // QFAI:EX-0001-0019-02
-  it("reports legacy evaluation headings inside screen contracts", async () => {
-    const root = await newTempDir();
-    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
-    await mkdir(path.join(packDir, "uiux"), { recursive: true });
-    await writeFile(path.join(packDir, "01_Context.md"), "# Context\n\n- surface: web\n", "utf-8");
-    await writeFile(path.join(packDir, "uiux", "00_index.md"), "# UI index\n", "utf-8");
-    await writeFile(path.join(packDir, "uiux", "50_review_input_bundle.md"), "# Review\n", "utf-8");
-    await writeFile(
-      path.join(packDir, "uiux", "40_screen_contracts.md"),
-      "# Screen Contracts\n\n## craft\n\n- task_completion: legacy axis\n",
-      "utf-8",
-    );
-
-    const result = await validateProject(root, undefined, { profile: "verify" });
-    expect(result.issues).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          code: "QFAI-THREELAYER-003",
-          file: "uiux/40_screen_contracts.md",
-        }),
-      ]),
-    );
-  });
 });
 
 // QFAI:EX-0001-0156-02
@@ -233,47 +148,5 @@ describe("TC-0014-0019: removed compatibility surface", () => {
     expect(validatorsIndexSrc).not.toContain("runLegacyUixCompatibilityValidators");
     expect(typesSrc).toMatch(/type\s+IssueCategory\s*=\s*"canonical"\s*\|\s*"change"/);
     expect(typesSrc).not.toContain('"compatibility"');
-  });
-});
-
-// QFAI:EX-0001-0157-01
-describe("TC-0014-0009: stale sidecar migration errors", () => {
-  it("legacy evaluation content is rejected with exploration-first migration guidance", async () => {
-    const root = await newTempDir();
-    await createUiBearingPack(root);
-    await writeFile(
-      // 33_exploration_rubric.md was retired from the canonical family
-      // when DESIGN.md became the brand SSOT; the legacy-format guard
-      // now applies to any required sidecar (40_screen_contracts.md
-      // is the load-bearing one for screen-level contracts).
-      path.join(root, "uiux", "40_screen_contracts.md"),
-      [
-        "# Exploration Rubric",
-        "",
-        "## craft",
-        "",
-        "- task_completion: legacy axis",
-        "",
-        "## consistency",
-        "",
-        "- design_system: legacy axis",
-        "",
-        "## accessibility",
-        "",
-        "- wcag: legacy axis",
-        "",
-        "## delight",
-        "",
-        "- satisfaction: legacy axis",
-      ].join("\n"),
-      "utf-8",
-    );
-
-    const issues = await runCanonicalUixValidators(root, defaultConfig);
-    const legacyIssue = issues.find((issue) => issue.code === "QFAI-THREELAYER-003");
-
-    expect(legacyIssue).toBeDefined();
-    expect(legacyIssue?.severity).toBe("error");
-    expect(legacyIssue?.suggested_action).toContain("exploration-first");
   });
 });
