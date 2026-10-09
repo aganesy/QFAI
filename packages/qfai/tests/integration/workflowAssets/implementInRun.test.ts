@@ -4,11 +4,17 @@
  * Reads the shipped `qfai-implement` steps a run names, and the shared rule every worker follows.
  * The workflow core's checks at `accept` are not this module's.
  */
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+
 import { describe, expect, it } from "vitest";
 
+import { defaultConfig } from "../../../src/core/config.js";
+import { getInitAssetsDir } from "../../../src/shared/assets.js";
 import { flat, readShipped, rowOf, sectionOf } from "../../helpers/shippedAssistant.js";
 
 const OPERATING = "rule/shared-skill-operating-baseline.md";
+const IMPLEMENT_SKILL = "skill/qfai-implement/SKILL.md";
 const TDD = "step/implement-tdd/STEP.md";
 const DIAGNOSE = "step/implement-diagnose/STEP.md";
 const REGRESSION_FIX = "step/implement-regression-fix/STEP.md";
@@ -106,6 +112,73 @@ describe("qfai-implement in a workflow run", () => {
     );
     expect(text).toContain("## Passes when");
     expect(text).toMatch(/A pass while the\s+diagnosis names a defective test is refused/i);
+  });
+});
+
+describe("the implement-tdd micro-cycle", () => {
+  // QFAI:AC-0001-0091-01
+  // QFAI:EX-0001-0091-01
+  it("takes an unannotated example through an observed Red, Green and Refactor and writes no ledger status", async () => {
+    const text = await step(TDD);
+    expect(text).toMatch(/the flow's EX IDs that no test annotates, in EX ID order/i);
+    expect(text).toMatch(/annotate it `QFAI:EX-NNNN-NNNN-NN` on the comment line directly before/i);
+    expect(text).toMatch(
+      /\*\*Red:\*\* Run the Test command from `tech\.md` for the selected test alone\. Observe the assertion fail/i,
+    );
+    expect(text).toMatch(
+      /\*\*Green:\*\* Write the minimum production code that makes this test pass/i,
+    );
+    expect(text).toMatch(/Run the same selector and record command and outcome/i);
+    expect(text).toMatch(
+      /\*\*Refactor:\*\* Improve the tested code without changing its behavior\. Re-run the selector and record the result/i,
+    );
+    expect(text).toMatch(
+      /done for an example when its RED, GREEN and Refactor results are observed/i,
+    );
+    expect(flat(await readShipped(IMPLEMENT_SKILL))).toMatch(/reads or writes no ledger status/i);
+  });
+
+  // QFAI:AC-0001-0091-02
+  // QFAI:EX-0001-0091-02
+  it("writes the least production code that passes the selected test and generalizes no further", async () => {
+    const text = await step(TDD);
+    expect(text).toMatch(
+      /Write the minimum production code that makes this test pass\. Do not generalize to an untested case/i,
+    );
+    expect(text).toMatch(
+      /Minimal is measured against the example's obligation, not the test's inputs: a value hard-coded to match the test meets neither/i,
+    );
+  });
+
+  // QFAI:AC-0001-0091-03
+  it("takes the Test command from the Standard commands section of tech.md and from no other file", async () => {
+    const text = await step(TDD);
+    expect(text).toMatch(
+      /Read the \*\*Standard commands\*\* section of `<paths\.contractsDir>\/tech\.md`/i,
+    );
+    expect(text).toMatch(/Obtain the Test command only from that section/i);
+    expect(text).toMatch(/Lint, Typecheck and Build run once, in the verify stage/i);
+    const commands = flat(sectionOf(await readShipped(OPERATING), "## Standard Commands"));
+    expect(commands).toMatch(/Read them there and nowhere else/i);
+    expect(commands).toMatch(
+      /Install, Format, Test, Lint, Typecheck, Build, Skeleton and Validate come from that section/i,
+    );
+    expect(commands).toMatch(/Do not infer one from the package manager/i);
+  });
+
+  // QFAI:EX-0001-0091-07
+  it("records an observation as an EX row under the configured specs directory, never as a test-case row", async () => {
+    const rule = flat(
+      await readFile(
+        path.join(getInitAssetsDir(), "root", ".agents", "rules", "minimal-implementation.md"),
+        "utf-8",
+      ),
+    );
+    expect(rule).toContain(
+      "An observed failure has an example in the owning story's `03_Example.md` and a test that annotates its EX ID. Resolve `paths.specsDir` from `qfai.config.yaml`",
+    );
+    expect(rule).toContain(`the default is \`${defaultConfig.paths.specsDir}\``);
+    expect(rule).not.toContain("06_Test-Cases");
   });
 });
 

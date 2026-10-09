@@ -39,6 +39,7 @@ describe("story-tree contract index", () => {
   // QFAI:EX-0001-0006-03
   // QFAI:EX-0001-0006-04
   // QFAI:EX-0001-0052-01
+  // QFAI:EX-0001-0147-04
   it("keys an unlisted declared contract by ID and an unlisted CLI file by path", async () => {
     const config = storyTreeConfig();
     const base = config.paths.contractsDir;

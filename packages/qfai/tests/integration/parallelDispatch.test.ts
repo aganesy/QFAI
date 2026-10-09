@@ -29,6 +29,19 @@ describe("parallel EX dispatch and integration", () => {
     expect(policy).toMatch(/If any dependency is uncertain, use serial execution/);
   });
 
+  // QFAI:AC-0001-0093-01
+  it("authorizes parallel items only when every allow condition holds and no deny condition does", async () => {
+    const policy = await readFile(policyPath, "utf-8");
+    expect(policy).toMatch(/Process one open EX at a time in ascending ID order/);
+    expect(policy).toMatch(
+      /Parallel item work requires explicit user approval and a delivery-planner PASS on concrete independence/,
+    );
+    expect(policy).toMatch(/Give each worker a separate worktree and an exact file ownership list/);
+    expect(policy).toMatch(/Deny parallel dispatch when two items write the same shared fixture/);
+    expect(policy).toMatch(/If any dependency is uncertain, use serial execution/);
+    expect(policy).toMatch(/A worker's isolated PASS is not an integrated PASS/);
+  });
+
   // QFAI:EX-0001-0093-01
   it("denies concurrent fixture writes while allowing a shared read-only fixture", async () => {
     const policy = await readFile(policyPath, "utf-8");

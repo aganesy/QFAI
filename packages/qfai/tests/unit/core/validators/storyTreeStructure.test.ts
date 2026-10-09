@@ -51,6 +51,7 @@ function model(overrides: Record<string, string> = {}) {
 }
 
 // QFAI:EX-0001-0051-06
+// QFAI:EX-0001-0147-03
 // QFAI:EX-0004-0001-01
 describe("story-tree structure", () => {
   it("requires a Mermaid flowchart or sequence diagram in each flow file", async () => {

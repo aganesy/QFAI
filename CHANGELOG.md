@@ -117,6 +117,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Content, Approach and Status. The finding was one message for all three
   cases. Refs #2951.
 
+- **The `qfai-verify` context step reads the configured directories.**
+  `references/context-load.md` named fixed `.qfai/spec` paths for the spec tree,
+  the contracts and `tech.md`. It now reads them from `paths.specsDir` and
+  `paths.contractsDir`, and reads `principle.md` with the other policy files.
+  Part of #2951.
+
+- **The minimal-implementation rule no longer lists an execution ledger.** Its
+  section on what the ladder never removes named an execution ledger, which the
+  story tree does not have. It names only the traceability links of the
+  constitution's Article V. Part of #2951.
+
 ### Fixed
 
 - **The release workflow's publish job no longer warns that `NODE_AUTH_TOKEN` is
