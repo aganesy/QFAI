@@ -29,8 +29,6 @@
 | US-0001-0023 | Dry run                                                                                | `user-story-0001-0023/` |
 | US-0001-0024 | Symlink-based skill integration                                                        | `user-story-0001-0024/` |
 | US-0001-0025 | Agent symlink integration                                                              | `user-story-0001-0025/` |
-| US-0001-0026 | Legacy file removal                                                                    | `user-story-0001-0026/` |
-| US-0001-0027 | Prune legacy wrappers                                                                  | `user-story-0001-0027/` |
 | US-0001-0028 | Git symlink setting and Windows support                                                | `user-story-0001-0028/` |
 | US-0001-0029 | Copilot instructions generation                                                        | `user-story-0001-0029/` |
 | US-0001-0030 | Copilot review instructions distribution                                               | `user-story-0001-0030/` |
@@ -38,14 +36,12 @@
 | US-0001-0032 | Instructions activation guidance                                                       | `user-story-0001-0032/` |
 | US-0001-0033 | Managed `.gitignore` block                                                             | `user-story-0001-0033/` |
 | US-0001-0034 | 4-layer asset-tree seeding                                                             | `user-story-0001-0034/` |
-| US-0001-0035 | --upgrade-assistant-tree migration helper                                              | `user-story-0001-0035/` |
 | US-0001-0036 | assistantPaths.ts SSOT module                                                          | `user-story-0001-0036/` |
-| US-0001-0037 | legacy layout past its sunset                                                          | `user-story-0001-0037/` |
 | US-0001-0038 | Story-tree seeding                                                                     | `user-story-0001-0038/` |
 | US-0001-0039 | Deterministic validation gate                                                          | `user-story-0001-0039/` |
 | US-0001-0042 | Prototyping skill validation                                                           | `user-story-0001-0042/` |
 | US-0001-0043 | Canonical assistant-tree layers                                                        | `user-story-0001-0043/` |
-| US-0001-0045 | Deprecated assistant paths and skill project memory                                    | `user-story-0001-0045/` |
+| US-0001-0045 | Skill project memory                                                                   | `user-story-0001-0045/` |
 | US-0001-0046 | Unseeded assistant layer is informational                                              | `user-story-0001-0046/` |
 | US-0001-0047 | Profile-specific validation reports                                                    | `user-story-0001-0047/` |
 | US-0001-0049 | SaaS package validation profile                                                        | `user-story-0001-0049/` |

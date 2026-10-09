@@ -24,9 +24,6 @@ import { captureStdout } from "../helpers/stdout.js";
 const newTempDir = useTempDirPool("qfai-bf1-init-tree-");
 const execFileAsync = promisify(execFile);
 
-const LEGACY_DIR = [".qfai", "assistant", "instructions"];
-const LAYERS = ["rule", "skill", "agent", "prompt"];
-const RETIRED_LAYERS = ["constitution", "manifest", "catalog", "process"];
 const SEEDS = [
   "decisions.md",
   "open-questions.md",
@@ -57,8 +54,6 @@ function init(dir: string, ...flags: string[]): Promise<CliResult> {
   return qfai(dir, "init", "--dir", dir, "--yes", ...flags);
 }
 
-const posix = (value: string): string => value.replace(/\\/g, "/");
-
 /** Every path under `root`, with `/` separators; a link is listed and not followed. */
 async function listPaths(root: string, relative = ""): Promise<string[]> {
   let entries: Dirent[];
@@ -74,15 +69,6 @@ async function listPaths(root: string, relative = ""): Promise<string[]> {
     if (entry.isDirectory()) found.push(...(await listPaths(root, child)));
   }
   return found.sort();
-}
-
-async function writeLegacy(dir: string, files: Record<string, string>): Promise<string> {
-  const legacy = path.join(dir, ...LEGACY_DIR);
-  await mkdir(legacy, { recursive: true });
-  for (const [name, text] of Object.entries(files)) {
-    await writeFile(path.join(legacy, name), text, "utf-8");
-  }
-  return legacy;
 }
 
 const rulePath = (dir: string, name: string): string =>
@@ -111,158 +97,6 @@ describe("BF-0001 assistant tree on init", () => {
       "project policy\r\nkept\n",
     );
     expect(await overlays()).toEqual(["drift-protocol.local.md"]);
-  });
-});
-
-describe("BF-0001 --upgrade-assistant-tree", () => {
-  // QFAI:AC-0001-0035-01
-  // QFAI:EX-0001-0035-01
-  it("copies each relocation-table file into the four layers and changes nothing else", async () => {
-    const dir = await newTempDir();
-    const legacyFiles = {
-      "constitution.md": "legacy constitution\n",
-      "quality.md": "legacy quality\n",
-      "requirements-decomposition.md": "legacy decomposition\n",
-    };
-    const legacy = await writeLegacy(dir, legacyFiles);
-
-    const upgraded = await init(dir, "--upgrade-assistant-tree");
-
-    expect(upgraded.exitCode).toBe(0);
-    expect(await readFile(rulePath(dir, "constitution.md"), "utf-8")).toBe("legacy constitution\n");
-    expect(await readFile(rulePath(dir, "quality.md"), "utf-8")).toBe("legacy quality\n");
-    const decomposition = path.join(
-      dir,
-      ...".qfai/assistant/skill/qfai-sdd/references/requirements-decomposition.md".split("/"),
-    );
-    expect(await readFile(decomposition, "utf-8")).toBe("legacy decomposition\n");
-    for (const [name, text] of Object.entries(legacyFiles)) {
-      expect(await readFile(path.join(legacy, name), "utf-8")).toBe(text);
-    }
-    for (const layer of LAYERS) {
-      expect((await lstat(path.join(dir, ".qfai", "assistant", layer))).isDirectory()).toBe(true);
-    }
-    for (const retired of RETIRED_LAYERS) {
-      expect(await pathExists(path.join(dir, ".qfai", "assistant", retired))).toBe(false);
-    }
-
-    const plain = await newTempDir();
-    await init(plain);
-    const written = (await listPaths(dir)).filter(
-      (entry) => !entry.startsWith(".qfai/assistant/instructions"),
-    );
-    expect(written).toEqual(await listPaths(plain));
-  });
-
-  // QFAI:AC-0001-0035-01
-  // QFAI:EX-0001-0035-02
-  it("copies neither the adopter-owned documents nor a file the table does not name", async () => {
-    const dir = await newTempDir();
-    const legacyFiles = {
-      "product.md": "legacy product\n",
-      "manifest.md": "legacy manifest\n",
-      "tech.md": "legacy tech\n",
-      "structure.md": "legacy structure\n",
-      "unrecognised.md": "legacy unrecognised\n",
-      "quality.md": "legacy quality\n",
-    };
-    const legacy = await writeLegacy(dir, legacyFiles);
-
-    const upgraded = await init(dir, "--upgrade-assistant-tree");
-
-    expect(upgraded.exitCode).toBe(0);
-    for (const [name, text] of Object.entries(legacyFiles)) {
-      expect(await readFile(path.join(legacy, name), "utf-8")).toBe(text);
-    }
-    const assistant = path.join(dir, ".qfai", "assistant");
-    const bodies = new Set(Object.values(legacyFiles));
-    const copies: string[] = [];
-    for (const entry of await listPaths(assistant)) {
-      if (entry.startsWith("instructions")) continue;
-      const target = path.join(assistant, ...entry.split("/"));
-      if (!(await lstat(target)).isFile()) continue;
-      if (bodies.has(await readFile(target, "utf-8"))) copies.push(entry);
-    }
-    expect(copies).toEqual(["rule/quality.md"]);
-    expect(upgraded.stdout).not.toContain("unrecognised.md");
-    expect(upgraded.stderr).not.toContain("unrecognised.md");
-  });
-
-  // QFAI:AC-0001-0035-01
-  // QFAI:EX-0001-0035-03
-  it("reports a project already on the four layers as preserved, not as an error", async () => {
-    const dir = await newTempDir();
-    await init(dir);
-    await writeFile(rulePath(dir, "quality.md"), "project quality\n", "utf-8");
-    const before = await listPaths(dir);
-
-    const upgraded = await init(dir, "--upgrade-assistant-tree");
-
-    expect(upgraded.exitCode).toBe(0);
-    expect(upgraded.stdout).toContain("W-USER-EDIT-PRESERVED");
-    expect(upgraded.stderr).toBe("");
-    expect(await readFile(rulePath(dir, "quality.md"), "utf-8")).toBe("project quality\n");
-    expect(await listPaths(dir)).toEqual(before);
-  });
-
-  // QFAI:AC-0001-0035-02
-  // QFAI:EX-0001-0035-04
-  it("keeps an edited destination, keeps the legacy file and names the destination", async () => {
-    const dir = await newTempDir();
-    await init(dir);
-    await writeFile(rulePath(dir, "quality.md"), "adopter edits\n", "utf-8");
-    const legacy = await writeLegacy(dir, { "quality.md": "legacy quality\n" });
-
-    const upgraded = await init(dir, "--upgrade-assistant-tree");
-
-    expect(upgraded.exitCode).toBe(0);
-    expect(await readFile(rulePath(dir, "quality.md"), "utf-8")).toBe("adopter edits\n");
-    expect(await readFile(path.join(legacy, "quality.md"), "utf-8")).toBe("legacy quality\n");
-    const notes = upgraded.stdout
-      .split("\n")
-      .filter((line) => line.includes("W-USER-EDIT-PRESERVED"));
-    expect(notes.map(posix).some((line) => line.includes(".qfai/assistant/rule/quality.md"))).toBe(
-      true,
-    );
-  });
-});
-
-describe("BF-0001 retired instructions layout", () => {
-  // QFAI:AC-0001-0037-01
-  // QFAI:EX-0001-0037-01
-  it("keeps the legacy files and reports an error on stderr without stopping init", async () => {
-    const dir = await newTempDir();
-    const legacy = await writeLegacy(dir, {
-      "quality.md": "legacy quality\n",
-      "unrecognised.md": "legacy unrecognised\n",
-    });
-
-    const result = await init(dir);
-
-    expect(result.exitCode).toBe(0);
-    expect(result.stderr).toContain("QFAI-DEPRECATED-001");
-    expect(result.stdout).not.toContain("QFAI-DEPRECATED-001");
-    expect(await readFile(path.join(legacy, "quality.md"), "utf-8")).toBe("legacy quality\n");
-    expect(await readFile(path.join(legacy, "unrecognised.md"), "utf-8")).toBe(
-      "legacy unrecognised\n",
-    );
-    expect((await readdir(legacy)).sort()).toEqual(["quality.md", "unrecognised.md"]);
-    expect(await pathExists(seedPath(dir, "decisions.md"))).toBe(true);
-    expect(result.stdout).toContain("qfai init: done");
-  });
-
-  // QFAI:AC-0001-0037-02
-  // QFAI:EX-0001-0037-02
-  it("names the sunset release and the migration command and no longer calls it read-compatible", async () => {
-    const dir = await newTempDir();
-    await writeLegacy(dir, { "quality.md": "legacy quality\n" });
-
-    const { stderr } = await init(dir);
-
-    const finding = stderr.split("\n").find((line) => line.includes("QFAI-DEPRECATED-001")) ?? "";
-    expect(finding).toContain("past the announced sunset (v1.10.0)");
-    expect(finding).toContain("`qfai init --upgrade-assistant-tree`");
-    expect(finding).not.toMatch(/read-compatible/i);
   });
 });
 

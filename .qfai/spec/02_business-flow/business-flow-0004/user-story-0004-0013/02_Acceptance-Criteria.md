@@ -49,10 +49,4 @@ Feature: A migrated project runs the free-text entry
     When an AI follows it past step 10
     Then it runs steps 11 and 12, resolves what step 12 lists, runs `npx qfai validate`
     And hands the first free-text change request to `qfai-run`
-
-  # AC-0004-0013-07
-  Scenario: The old skill name is retired
-    Given a project that installed the skill as `qfai-migration-spec-to-story`
-    When it upgrades and runs `qfai init --force`
-    Then no host link and no `qfai validate` finding names the old skill
 ```

@@ -51,25 +51,6 @@ describe("parseArgs", () => {
     });
   }
 
-  it("accepts --upgrade-assistant-tree on init", () => {
-    const parsed = parseArgs(
-      ["init", "--dir", "/tmp/out", "--upgrade-assistant-tree"],
-      process.cwd(),
-    );
-    expect(parsed.invalid).toBe(false);
-    expect(parsed.options.upgradeAssistantTree).toBe(true);
-  });
-
-  for (const command of ["validate", "report", "doctor"] as const) {
-    it(`rejects --upgrade-assistant-tree on ${command}`, () => {
-      // The same shape as --dir and worse in one way: accepted here it exited 0
-      // having upgraded nothing, so the operator went on reading an assistant
-      // tree they believed had been refreshed.
-      const parsed = parseArgs([command, "--upgrade-assistant-tree"], process.cwd());
-      expect(parsed.invalid).toBe(true);
-    });
-  }
-
   describe("shared flags reach only the commands that read them", () => {
     // The owner lists are derived from where `main.ts` reads each field. A flag
     // accepted where nothing reads it reaches nothing and the run proceeds as if

@@ -10,19 +10,10 @@ import {
 } from "./parse/spec.js";
 
 const SPEC_DIR_RE = /^spec-\d{4}$/i;
-// Canonical: catalog/ — registry artifacts (filename lists, lookup
-// tables) live in catalog, not manifest. Legacy fallback: manifest/
-// during the compatibility window so projects that haven't yet run
-// `qfai init --upgrade-assistant-tree` still resolve the filename
-// registry.
+// Registry artifacts (filename lists, lookup tables) live in catalog/.
 const SPEC_REQUIRED_FILES_CATALOG_PATH = path.join(
   "assistant",
   "catalog",
-  "spec_required_files.json",
-);
-const SPEC_REQUIRED_FILES_MANIFEST_PATH = path.join(
-  "assistant",
-  "manifest",
   "spec_required_files.json",
 );
 
@@ -731,16 +722,11 @@ async function resolveLayeredRequiredFileSets(specsRoot: string): Promise<Layere
 
   const qfaiRoot = path.dirname(specsRoot);
   const catalogPath = path.join(qfaiRoot, SPEC_REQUIRED_FILES_CATALOG_PATH);
-  const legacyManifestPath = path.join(qfaiRoot, SPEC_REQUIRED_FILES_MANIFEST_PATH);
   let parsed: unknown;
   try {
     parsed = JSON.parse(await readFile(catalogPath, "utf-8"));
   } catch {
-    try {
-      parsed = JSON.parse(await readFile(legacyManifestPath, "utf-8"));
-    } catch {
-      return defaults;
-    }
+    return defaults;
   }
 
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {

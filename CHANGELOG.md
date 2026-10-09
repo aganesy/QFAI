@@ -6,6 +6,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`qfai init` no longer cleans up after earlier releases, and
+  `qfai validate` no longer reports their wrappers.** `--force` removes
+  nothing: it no longer deletes the command and prompt wrappers, the skill and
+  agent links of skills and agents that are no longer shipped, `10_workflow.md`,
+  the assistant `README.md` or the Codex profile of an agent that left the
+  roster, and a wrapper left by a removed skill is no longer reported by
+  `QFAI-LINK-001`. `--upgrade-assistant-tree` and the notice about the end of the
+  earlier assistant tree are gone, together with `QFAI-DEPRECATED-001`.
+  An existing `AGENTS.md`, `CLAUDE.md` or Copilot instruction file keeps a rule
+  summary or review directive an earlier release wrote: init adds what is
+  missing and leaves the rest. The shipped
+  workflow list no longer has a retired set, and the spec-pack required-file
+  lookup no longer falls back to `assistant/manifest/`.
+
 - **The `qfai-sdd` normalization reference lists all six removed design
   contracts.** The reference that tells the skill which contracts not to generate
   named four. It now also names `exploration-brief.yaml`, `reference-pool.yaml`

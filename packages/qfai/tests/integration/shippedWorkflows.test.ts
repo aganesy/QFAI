@@ -6,10 +6,7 @@
  * (`.qfai/spec/03_contract/cli/cli-0018-shipped-workflows.md`, BR-0018-0030
  * and BR-0018-0001): every shipped job is bounded (reachable least-privilege
  * `permissions:` block, `timeout-minutes:`) and every shipped workflow
- * cancels superseded runs via a ref-scoped `concurrency:` group. The
- * shipped/retired name lists' disjointness invariant (the write/prune sets
- * can never claim the same name) is asserted here as well — its ruled home
- * per the shape-guard scope of this suite. The lockfile-aware install
+ * cancels superseded runs via a ref-scoped `concurrency:` group. The lockfile-aware install
  * path's survival through the hardening (five branches, nested cache
  * ternary, engines-backed header floor claims) is the third describe's
  * surface.
@@ -23,7 +20,6 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 
-import { RETIRED_WORKFLOW_NAMES, SHIPPED_WORKFLOW_NAMES } from "../../src/cli/commands/init.js";
 import { isRecord, loadShippedWorkflows } from "../helpers/shippedWorkflowFixtures.js";
 
 // tests/integration/<this file> -> tests -> packages/qfai
@@ -189,17 +185,6 @@ describe("TC-0003-0027 (TDD-0027): every shipped job declares a reachable permis
       }
     }
     expect(violations).toEqual([]);
-  });
-
-  // QFAI:EX-0002-0007-01
-  it("the shipped and retired workflow name lists are disjoint", () => {
-    // Carried obligation (advisory 27, ruled home): the contract's
-    // write/prune sets may never claim the same name — a name moves from
-    // shipped to retired in the change that stops shipping it, never
-    // holding membership in both.
-    expect([...SHIPPED_WORKFLOW_NAMES].filter((name) => RETIRED_WORKFLOW_NAMES.has(name))).toEqual(
-      [],
-    );
   });
 });
 

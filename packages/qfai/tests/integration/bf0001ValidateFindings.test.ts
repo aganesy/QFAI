@@ -82,31 +82,16 @@ describe("assistant tree findings", () => {
 
   // QFAI:AC-0001-0043-01
   it("names a directory outside the layers and lists the layers, leaving skill.local alone", async () => {
-    const root = await assistantTree("skill.local", "catalog", "extras", "instructions");
+    const root = await assistantTree("skill.local", "notes", "extras");
     const reported = await findings(root, "sdd", "QFAI-ASSISTANT-001");
 
     expect(reported.map((found) => `${found.severity} ${found.file}`).sort()).toEqual([
-      "warning .qfai/assistant/catalog/",
       "warning .qfai/assistant/extras/",
+      "warning .qfai/assistant/notes/",
     ]);
     for (const found of reported) {
       expect(found.message).toContain("(rule, skill, step, agent, prompt)");
     }
-
-    const retired = await findings(root, "sdd", "QFAI-DEPRECATED-001");
-    expect(retired.map((found) => [found.file, found.severity])).toEqual([
-      [".qfai/assistant/instructions/", "error"],
-    ]);
-  });
-
-  // QFAI:AC-0001-0045-01
-  it("raises QFAI-DEPRECATED-001 at error for the retired instructions layer, naming the sunset", async () => {
-    const root = await assistantTree("instructions");
-    const retired = await findings(root, "sdd", "QFAI-DEPRECATED-001");
-
-    expect(retired).toHaveLength(1);
-    expect(retired[0]?.severity).toBe("error");
-    expect(retired[0]?.message).toContain("sunset: v1.10.0");
   });
 
   // QFAI:AC-0001-0045-02

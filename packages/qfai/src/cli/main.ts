@@ -134,7 +134,6 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
         force: options.force,
         dryRun: options.dryRun,
         yes: options.yes,
-        upgradeAssistantTree: options.upgradeAssistantTree,
         verbose: options.verbose,
       });
       return;
@@ -349,17 +348,8 @@ Options:
   --dir <path>    init: output directory (init only; --dir wins when both are given)
   --force         init: overwrite .qfai/assistant/{skill,agent}/**, the published skills/agents, and the symlink-asset output under .agents/.claude/.github/.codex
                   (that output includes the qfai-provided .github/copilot-instructions.md and .github/instructions/**; the story tree, rule/*.local.md overlays and assistant/skill.local/** are never overwritten)
-                  It deletes as well as overwrites: the wrappers a past qfai placed in
-                  .claude/commands/ and .github/prompts/, and the wrappers qfai placed for skills
-                  that are no longer shipped (including the real directories from before they
-                  became symlinks). Ownership is decided by a file's content and not by its name,
-                  so your own command / prompt / skill files survive; a symlink has no content of
-                  its own, so one you published under a retired QFAI skill name is deleted (its
-                  target .qfai/assistant/skill/<id>/ stays, so you can re-link it).
   --yes           init: reserved flag (no behavioural difference today because init is non-interactive; auto-Yes once prompts are introduced)
   --yes           doctor --autoremediate: skip the interactive confirmation (no effect elsewhere)
-  --upgrade-assistant-tree   init: migrate an existing project to the 4-layer assistant tree
-                              (legacy .qfai/assistant/instructions/ -> rule/ skill/ agent/ prompt/)
   --dry-run       init / doctor: show what would change without writing anything
   --verbose       init: expand the run report's skipped-path list (counts only by default)
   --format <text|github>       validate: output format

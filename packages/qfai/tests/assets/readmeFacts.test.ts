@@ -93,11 +93,6 @@ describe("README facts", () => {
     const documentsFlag = (readme: string, flag: string): boolean =>
       readme.includes(`\`${flag}\``) || readme.includes(`\`${flag} `);
 
-    for (const readme of readmes) {
-      // The remedy the deprecation finding prints at operators.
-      expect(readme).toContain("QFAI-DEPRECATED-001");
-    }
-
     // SSOT drift guard: the documented set is DERIVED from the actual flag
     // registration, not hand-maintained. `main.ts` decides which parsed
     // options `runInit` receives, and `args.ts` decides which `--flag`
@@ -181,41 +176,6 @@ describe("README facts", () => {
     ).toBeGreaterThan(0);
     for (const flag of commonFlags) {
       expectDocumented(flag, "handled before the init dispatch");
-    }
-
-    // Drift guard: any `qfai init --<flag>` the tool prints at operators must
-    // be documented in both READMEs.
-    const sources = await Promise.all(
-      [
-        path.join(repoRoot, "packages", "qfai", "src", "cli", "commands", "init.ts"),
-        path.join(
-          repoRoot,
-          "packages",
-          "qfai",
-          "src",
-          "core",
-          "validators",
-          "assistantTreeMigration.ts",
-        ),
-      ].map((sourcePath) => readFile(sourcePath, "utf-8")),
-    );
-    const printedFlags = new Set<string>();
-    for (const source of sources) {
-      for (const match of source.matchAll(/qfai init (--[a-z][a-z-]+)/g)) {
-        const flag = match[1];
-        if (flag !== undefined) {
-          printedFlags.add(flag);
-        }
-      }
-    }
-    expect(printedFlags.size).toBeGreaterThan(0);
-    for (const flag of printedFlags) {
-      for (const readme of readmes) {
-        expect(
-          documentsFlag(readme, flag),
-          `README must document the init flag ${flag} that the CLI prints`,
-        ).toBe(true);
-      }
     }
   });
 

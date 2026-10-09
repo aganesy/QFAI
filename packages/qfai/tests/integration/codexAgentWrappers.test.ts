@@ -14,7 +14,6 @@ import {
   CODEX_AGENT_GENERATED_MARKER,
   buildCodexAgentToml,
   escapeTomlBasicString,
-  isGeneratedCodexAgentToml,
   parseAgentCardKind,
   renderCodexAgentToml,
 } from "../../src/core/codexAgentToml.js";
@@ -206,46 +205,11 @@ describe("qfai init generates the Codex agent profiles", () => {
     });
   });
 
-  // The generated profile is a self-contained snapshot, not a symlink that goes
-  // dangling with its referent, so an agent deleted from `assistant/agent/`
-  // kept working in Codex — and only in Codex.
-  it("--force prunes the profile of an agent that left the roster, keeping hand-written ones", async () => {
-    const root = await initProject();
-    await addProjectAgent(root, "worker");
-    await runInit({ dir: root, force: true, dryRun: false, yes: true });
-    expect(await readFile(codexAgentPath(root, PROJECT_AGENT_ID), "utf-8")).toContain(
-      PROJECT_AGENT_ID,
-    );
-
-    // `.codex/agents/` is not qfai's alone: a project may keep its own Codex
-    // profiles beside the generated ones. This one is written the way anybody
-    // would write a minimal worker — `name`, `description`,
-    // `developer_instructions`, three single-line basic strings — which is
-    // exactly the shape the generator emits, so shape alone could not tell them
-    // apart and `--force` deleted it.
-    const handWritten = codexAgentPath(root, "team-scribe");
-    await writeFile(
-      handWritten,
-      'name = "team-scribe"\ndescription = "ours"\ndeveloper_instructions = "Write it down."\n',
-      "utf-8",
-    );
-
-    await rm(path.join(root, ".qfai", "assistant", "agent", `${PROJECT_AGENT_ID}.md`), {
-      force: true,
-    });
-
-    await runInit({ dir: root, force: true, dryRun: false, yes: true });
-    await expect(readFile(codexAgentPath(root, PROJECT_AGENT_ID), "utf-8")).rejects.toMatchObject({
-      code: "ENOENT",
-    });
-    expect(await readFile(handWritten, "utf-8")).toContain('description = "ours"');
-  });
-
   // `.codex/agents` is a path the repository controls, and a directory
   // component of it can be a symlink out of the tree. `removeSymlinkAt` only
   // ever looked at the leaf `<name>.toml`, so `mkdir` and `writeFile` followed
   // the parent link and a plain run wrote every profile into somebody else's
-  // directory — with `--force` free to prune files there as well.
+  // directory.
   it("refuses to write through a symlinked wrapper directory", async () => {
     const root = await initProject();
     const wrapperDir = path.join(root, ...CODEX_AGENT_WRAPPER_DIR.split("/"));
@@ -531,9 +495,8 @@ describe("the TOML renderer", () => {
     expect(result.error).toContain("empty");
   });
 
-  // `foo.md` carrying `name: bar` produced `foo.toml` with `name = "bar"`:
-  // Codex reads that as a different agent, and `isGeneratedCodexAgentToml`
-  // stops recognising it, so the file could never be pruned either.
+  // `foo.md` carrying `name: bar` produced `foo.toml` with `name = "bar"`,
+  // which Codex reads as a different agent.
   it("refuses a document whose frontmatter name is not the filename", () => {
     const mismatched = [
       "---",
@@ -574,44 +537,14 @@ describe("the TOML renderer", () => {
     ).toBeNull();
   });
 
-  it("recognises its own output, and only its own", () => {
+  it("marks its output as generated", () => {
     const worker = buildCodexAgentToml({
       name: "demo",
       description: "d",
       body: "## Mission\n\n- Do it.",
       kind: "worker",
     });
-    const reviewer = buildCodexAgentToml({
-      name: "demo",
-      description: "d",
-      body: "## Mission\n\n- Read it.",
-      kind: "reviewer",
-    });
     expect(worker.startsWith(`${CODEX_AGENT_GENERATED_MARKER}\n`)).toBe(true);
-    expect(isGeneratedCodexAgentToml(worker, "demo")).toBe(true);
-    expect(isGeneratedCodexAgentToml(reviewer, "demo")).toBe(true);
-    // A profile whose name disagrees with its filename is not this generator's.
-    expect(isGeneratedCodexAgentToml(worker, "other")).toBe(false);
-    // The licence to delete is the marker, not the shape: a project's own
-    // minimal worker is the same three single-line basic strings.
-    expect(
-      isGeneratedCodexAgentToml(
-        'name = "demo"\ndescription = "d"\ndeveloper_instructions = "x"\n',
-        "demo",
-      ),
-    ).toBe(false);
-    expect(
-      isGeneratedCodexAgentToml(
-        `${CODEX_AGENT_GENERATED_MARKER}\nname = "demo"\nmodel = "o3"\ndescription = "d"\ndeveloper_instructions = "x"\n`,
-        "demo",
-      ),
-    ).toBe(false);
-    expect(
-      isGeneratedCodexAgentToml(
-        `${CODEX_AGENT_GENERATED_MARKER}\nname = "demo"\ndescription = "d"\ndeveloper_instructions = """\nx\n"""\n`,
-        "demo",
-      ),
-    ).toBe(false);
   });
 });
 

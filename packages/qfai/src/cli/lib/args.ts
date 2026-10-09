@@ -20,7 +20,6 @@ export type ParsedArgs = {
     force: boolean;
     yes: boolean;
     dryRun: boolean;
-    upgradeAssistantTree: boolean;
     /**
      * `qfai init --verbose`: expand the run report's `skipped` list. Off by
      * default so a no-op re-run reports its skip count instead of every
@@ -145,7 +144,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     force: false,
     yes: false,
     dryRun: false,
-    upgradeAssistantTree: false,
     verbose: false,
     reportFormat: "md",
     reportRunValidate: false,
@@ -220,13 +218,12 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
    * A flag accepted where nothing reads it reaches nothing, and the run
    * proceeds as if it had not been given. `--dir` produced a verdict about the
    * CURRENT tree and made `report` overwrite its `report.md`;
-   * `--upgrade-assistant-tree` exited 0 having upgraded nothing;
    * `--dry-run` let an operator believe a run was a rehearsal.
    *
    * The owner lists are derived from where `main.ts` reads each field, not
    * guessed:
    *
-   * - `dir`, `upgradeAssistantTree` — `init`
+   * - `dir` — `init`
    * - `yes` — `init`, `doctor`
    * - `force` — `init`
    * - `dryRun` — `init`, `doctor`
@@ -376,16 +373,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           options.dryRun = true;
         } else {
           markInvalid(notValidHere("--dry-run"));
-        }
-        break;
-      case "--upgrade-assistant-tree":
-        // Same shape as `--dir`, and worse in one way: accepted elsewhere it
-        // exited 0 having upgraded nothing, so the operator went on reading an
-        // assistant tree they believed had been refreshed.
-        if (ownedBy("init")) {
-          options.upgradeAssistantTree = true;
-        } else {
-          markInvalid(notValidHere("--upgrade-assistant-tree"));
         }
         break;
       case "--verbose":
