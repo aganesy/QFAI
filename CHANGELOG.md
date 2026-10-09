@@ -13,6 +13,27 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   check (`QFAI-THREELAYER-002`) is unchanged. The `qfai-discussion` templates
   and references no longer list the old file names.
 
+- **`qfai validate` no longer reports directories, files and names from earlier
+  releases.** It no longer raises `QFAI-HYG-001` for `.qfai/specs/`,
+  `.qfai/discussions/` and the other former directory names, `QFAI-DPACK-006`
+  and `QFAI-DPACK-010` for sequential discussion pack names, `QFAI-DPACK-003`
+  for a pack file whose content moved into another file, `QFAI-STALE-001` for
+  `session-handoff.yaml` in a skill document, or `QFAI-PROTOSKILL-002` for the
+  earlier prototyping wording. A `discussion-*` directory whose name is not the
+  canonical stamp, a sequential name and `discussion-legacy-*` included, is now
+  reported by `QFAI-DPACK-005` alone. `QFAI-TEST-001` no longer reads the
+  placeholder marker an earlier `qfai atdd scaffold` wrote, `QFAI-AUTOPILOT-001`
+  no longer names `companyName` and `primarySpecId` as retired entries (a skill
+  that lists either still fails it as an undeclared entry), `qfai report` no
+  longer rejects a `validate.json` for a `traceability` key, and
+  `qfai doctor --profile prototyping` no longer treats a `DESIGN.md` without
+  the sample marker as the sample brand.
+
+- **`--spec` and `--phase` are unknown options.** `qfai validate`, `qfai report`
+  and `qfai atdd scaffold` rejected them with a message of their own. They now
+  reject them as they reject any option they do not define, and the help text no
+  longer lists `--spec`.
+
 - **`qfai doctor` holds a Markdown assistant asset to 500 lines.** The
   `assets.lineBudget` check allowed 800 lines for every `.md`, `.yml` and `.yaml`
   file under `.qfai/assistant`, so a Markdown file could pass it and still break

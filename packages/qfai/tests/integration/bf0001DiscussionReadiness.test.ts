@@ -242,26 +242,6 @@ it("accepts a complete heading-form deferred entry", async () => {
   }
 });
 
-// QFAI:EX-0001-0013-01
-it.each([
-  ["02_Inception-Deck.md", "01_Context.md"],
-  ["10_Policy.md", "09_Constraints.md"],
-  ["13_Deferred.md", "11_OQ-Register.md"],
-])("reports %s left beside the nine files until its content moves", async (legacy, target) => {
-  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-bf1-discussion-"));
-  try {
-    const pack = await writeCompletePack(root);
-    await writeFile(path.join(pack, legacy), `# ${legacy}\n\n${filler}`, "utf8");
-    const findings = await validateDiscussionPackReadiness(root, defaultConfig);
-    const finding = findings.find(
-      (item) => item.code === "QFAI-DPACK-003" && item.refs?.includes(legacy),
-    );
-    expect(finding?.refs).toEqual([legacy, target]);
-  } finally {
-    await rm(root, { recursive: true, force: true });
-  }
-});
-
 // QFAI:EX-0001-0013-03
 it.each([
   ["01_Context.md", "## Inception Deck", "## Notes"],

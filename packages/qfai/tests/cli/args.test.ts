@@ -177,13 +177,6 @@ describe("parseArgs", () => {
     expect(parsed.options.help).toBe(true);
   });
 
-  it("marks removed --phase option as invalid", () => {
-    const cwd = process.cwd();
-    const parsed = parseArgs(["validate", "--phase", "atdd"], cwd);
-    expect(parsed.invalid).toBe(true);
-    expect(parsed.options.help).toBe(true);
-  });
-
   it("parses --verbose for init and defaults it off", () => {
     const cwd = process.cwd();
     const withFlag = parseArgs(["init", "--dir", ".", "--verbose"], cwd);
@@ -206,21 +199,6 @@ describe("parseArgs", () => {
       expect(parsed.invalid).toBe(true);
       expect(parsed.options.help).toBe(true);
       expect(parsed.options.verbose).toBe(false);
-    }
-  });
-
-  // Pin the unified value-taking-flag contract (see args.ts contract
-  // block): when --spec / --scope / --upgrade-scope / --operator /
-  // --clause are used on a subcommand that does NOT accept the flag,
-  // the parser MUST (1) consume the value token so it cannot leak
-  // into the positional stream, AND (2) call markInvalid() so the
-  describe("validate/report --spec", () => {
-    for (const command of ["validate", "report"] as const) {
-      it(`rejects the removed option on ${command} with a migration hint`, () => {
-        const parsed = parseArgs([command, "--spec", "0003"], process.cwd());
-        expect(parsed.invalid).toBe(true);
-        expect(parsed.invalidReason).toContain("--flow BF-NNNN");
-      });
     }
   });
 
@@ -278,24 +256,6 @@ describe("parseArgs", () => {
     });
   });
 
-  // misuse surfaces as a parse error. Pre-fix, --spec / --operator /
-  // --clause silently dropped on misuse, and --upgrade-scope did
-  // not consume its value. Per-flag assertions follow.
-  describe("misplaced-subcommand value-taking flags: markInvalid + consume value token", () => {
-    it("--spec on a non-atdd subcommand marks invalid AND consumes the value token", () => {
-      const cwd = process.cwd();
-      const parsed = parseArgs(
-        ["discussion", "list", "--spec", "spec-0006", "--format", "json"],
-        cwd,
-      );
-      expect(parsed.invalid).toBe(true);
-      // The "spec-0006" value must NOT have shifted into a positional;
-      // --format following it should still be honored.
-      expect(parsed.options.discussionFormat).toBe("json");
-      // No atdd spec id should have been recorded.
-      expect(parsed.options.atddSpecId).toBeUndefined();
-    });
-  });
   // The rejection reason (invalidReason) is the diagnostic main.ts writes to
   // stderr. Pin that the output names which token was rejected.
   describe("invalidReason", () => {
@@ -340,11 +300,9 @@ describe("parseArgs", () => {
     });
 
     it("reports a flag used on a command that does not accept it", () => {
-      // `init` uses the generic refusal; validate/report add a migration hint.
-      // now, so it is no longer an example of this class.
-      const parsed = parseArgs(["init", "--spec", "0003"], process.cwd());
+      const parsed = parseArgs(["init", "--flow", "BF-0001"], process.cwd());
       expect(parsed.invalid).toBe(true);
-      expect(parsed.invalidReason).toBe("qfai init: --spec is not valid for this command.");
+      expect(parsed.invalidReason).toBe("qfai init: --flow is not valid for this command.");
     });
 
     it("leaves invalidReason unset when the arguments parse", () => {

@@ -243,7 +243,6 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
           root: resolvedRoot,
           ...(options.atddStoryId !== undefined ? { storyId: options.atddStoryId } : {}),
           ...(options.atddFlowId !== undefined ? { flowId: options.atddFlowId } : {}),
-          ...(options.atddSpecId !== undefined ? { specId: options.atddSpecId } : {}),
         });
       }
       return;
@@ -385,7 +384,6 @@ Options:
   --assume <text>               sdd preflight: record a carried-over open question / assumption in the summary (repeatable)
   --story <US-ID>               atdd scaffold: target story (e.g. US-0001-0001)
   --flow <BF-ID>                atdd scaffold: target flow (e.g. BF-0001)
-  --spec <id>                   Legacy option; atdd scaffold, validate, and report reject it
   --flow <BF-NNNN>              validate/report: restrict to the given business flow (repeatable)
                                  report: reads validate.flow-<ids>.json and writes report.flow-<ids>.md by default
   -h, --help      Show this help

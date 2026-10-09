@@ -64,7 +64,6 @@ import {
   detectMockHrefDrift,
   validateAutopilotPolicy,
   runPackageSelfGovernanceValidators,
-  validateStaleReferences,
   stubSourceFilePattern,
 } from "./validators/index.js";
 import type { TestTodoStubOptions } from "./validators/testTodoStubs.js";
@@ -194,8 +193,8 @@ function isFindingInFlowScope(finding: Issue, scope: FlowScope | undefined): boo
 /**
  * The parts of the assistant tree a profile's own validators open.
  *
- * A profile allowlist was not enough: `sdd` runs `validateSkillDocReferences`,
- * `validateAutopilotPolicy` and `validateStaleReferences`, all of which
+ * A profile allowlist was not enough: `sdd` runs `validateSkillDocReferences`
+ * and `validateAutopilotPolicy`, both of which
  * `readdir` the configured skills directory — so excluding it by name meant a
  * non-directory or a cycle there raised `ENOTDIR` / `ELOOP` from one of them
  * and lost the `QFAI-LINK-001` that names the path and the repair.
@@ -496,7 +495,6 @@ async function runStoryProfileValidators(
     ...(await validateSkillDocReferences(root, config)),
     ...(await validateAutopilotPolicy(root, { config })),
     ...(await runPackageSelfGovernanceValidators(root)),
-    ...(await validateStaleReferences(root, { config })),
   ];
   const atdd = async (): Promise<Issue[]> => [
     ...(await validateStoryTreeObligations(root, config, "atdd", model)),

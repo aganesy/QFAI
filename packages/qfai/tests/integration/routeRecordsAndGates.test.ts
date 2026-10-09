@@ -101,12 +101,11 @@ describe("the reviews a route runs are the ones its plan names", () => {
 describe("implement invoked by name validates its flow once", () => {
   // QFAI:AC-0001-0094-04
   // QFAI:EX-0001-0094-05
-  it("runs the flow-scoped validate at completion and never --spec", async () => {
+  it("runs the flow-scoped validate at completion", async () => {
     const skill = flat(await read("skill/qfai-implement/SKILL.md"));
     expect(skill).toContain(
       "Invoked by name, it runs `npx qfai validate --profile tdd --fail-on error --flow BF-NNNN` once, at completion",
     );
     expect(skill).toContain("Inside a route it runs no validate: the verify stage does.");
-    expect(skill).not.toMatch(/qfai validate[^.]*--spec\b/);
   });
 });

@@ -1,18 +1,13 @@
 /**
- * The Change Type tag vocabulary has exactly one definition.
- *
- * `asTagArray` takes any string, `normalizeTag` returns `null` for an unknown
- * one and the report summary skips it, so a tag the prose offers and the code
- * does not know is accepted at write time and dropped at read time with no
- * diagnostic anywhere.
+ * The Change Type tag vocabulary has exactly one definition: the table in the
+ * change-classification rule. Every list of tags in the assistant tree offers
+ * only the tags that table defines.
  */
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
-
-import { CHANGE_TYPE_TAG_VALUES } from "../../src/core/deltaV1.js";
 
 // tests/assets/<this file> -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
@@ -64,19 +59,9 @@ describe("the Change Type tag list agrees with its SSOT", () => {
       expect(tagsInListLine(classification, "- Tags: list from")).toEqual(declared);
     });
 
-    it(`${tree}: the shipped tag list matches CHANGE_TYPE_TAG_VALUES`, async () => {
-      const classification = await read(tree, CLASSIFICATION);
-
-      // A tag the code cannot normalize is silently dropped from the report
-      // summary, so prose must never offer one the constant omits.
-      expect(tagsInListLine(classification, "- Tags: list from")).toEqual([
-        ...CHANGE_TYPE_TAG_VALUES,
-      ]);
-    });
-
     it(`${tree}: no undefined tag survives anywhere in the assistant tree`, async () => {
       const files = await markdownFilesUnder(path.join(repoRoot, tree, ASSISTANT));
-      const known = new Set<string>(CHANGE_TYPE_TAG_VALUES);
+      const known = new Set<string>(tagsInClassificationTable(await read(tree, CLASSIFICATION)));
       const offenders: string[] = [];
 
       for (const file of files) {

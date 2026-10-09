@@ -28,7 +28,7 @@ Feature: Scaffold acceptance tests in bulk
   Scenario: Invalid scaffold targets write nothing
     Given neither or both of `--story` and `--flow` are given, an ID is malformed, or an ID names nothing the tree defines
     When `qfai atdd scaffold` runs
-    Then the command exits 2 and writes nothing, and `--spec` exits 2 with a message naming `--story` and `--flow`.
+    Then the command exits 2 and writes nothing.
 
   # AC-0001-0073-05
   Scenario: An empty test raises no finding, and a skipped one does

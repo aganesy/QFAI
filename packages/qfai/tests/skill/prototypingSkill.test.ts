@@ -10,7 +10,6 @@ import {
   hasCliSurfaceDocumentation,
   hasUiContractScope,
   isStaticFirstAligned,
-  scanBannedPhrases,
   hasDelegationScopeTable,
   hasEnvironmentPreconditions,
   hasPreflightGuidance,
@@ -168,17 +167,6 @@ describe("prototyping skill validator", () => {
     // `playwright-cli` stays accepted: a project that has not migrated its
     // docs still documents a real, non-installing launcher.
     expect(hasPlaywrightCliFallback(`Run \`${form} --version\` first.`)).toBe(true);
-  });
-
-  // QFAI:EX-0001-0042-01
-  it("flags banned phrases when v1.x mode wording is reintroduced", () => {
-    // v2.0 (spec-0012 absorbed): mode (recommended_mode / low-cost / standard) and
-    // L1/L2 reviewer separation are removed. The banned-phrase scanner
-    // still flags re-introductions.
-    const invalid = `${VALID_SKILL_CONTENT}\nl1 and l2 must run runtime checks\nrecommended_mode: standard-tier`;
-    expect(scanBannedPhrases(invalid)).toEqual(
-      expect.arrayContaining(["must run runtime checks", "recommended_mode", "l1 and l2"]),
-    );
   });
 
   it("rejects content missing supported UI surface documentation", () => {

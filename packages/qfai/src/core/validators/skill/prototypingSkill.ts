@@ -1,17 +1,5 @@
 import type { Issue, IssueSeverity } from "../../types.js";
 
-const BANNED_PHRASES = [
-  "must run runtime checks",
-  "ui routes reachable",
-  "api non-404",
-  "db objects present",
-  "discussion recommendation",
-  "recommended_mode",
-  "allowed_modes",
-  "l1 and l2",
-  "weightedtotal",
-] as const;
-
 const REQUIRED_SECTIONS = [
   "## Required References",
   "## Required Process",
@@ -65,7 +53,6 @@ export type RoutingConsistencyResult = {
 };
 
 export type SkillValidationResult = {
-  bannedPhraseMatches: string[];
   aspirationalClaims: string[];
   requiredSectionsPresent: string[];
   requiredSectionsMissing: string[];
@@ -79,11 +66,6 @@ export type SkillValidationResult = {
   hasPlaywrightCliFallback: boolean;
   issues: Issue[];
 };
-
-export function scanBannedPhrases(content: string): string[] {
-  const lower = content.toLowerCase();
-  return BANNED_PHRASES.filter((phrase) => lower.includes(phrase));
-}
 
 export function checkRequiredSections(content: string): { present: string[]; missing: string[] } {
   const present: string[] = [];
@@ -226,7 +208,6 @@ export function checkRoutingConsistency(
 }
 
 export function validatePrototypingSkillContent(content: string): SkillValidationResult {
-  const bannedPhraseMatches = scanBannedPhrases(content);
   const aspirationalClaims = detectAspirationalClaims(content);
   const { present: requiredSectionsPresent, missing: requiredSectionsMissing } =
     checkRequiredSections(content);
@@ -239,17 +220,6 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
   const preflightGuidance = hasPreflightGuidance(content);
   const playwrightCliFallback = hasPlaywrightCliFallback(content);
   const issues: Issue[] = [];
-
-  if (bannedPhraseMatches.length > 0) {
-    issues.push(
-      skillIssue(
-        "QFAI-PROTOSKILL-002",
-        `Prototyping skill contains banned phrases: ${bannedPhraseMatches.join(", ")}`,
-        "error",
-        "Remove the runtime-heavy default wording and replace it with mode-aware obligations.",
-      ),
-    );
-  }
 
   if (aspirationalClaims.length > 0) {
     issues.push(
@@ -362,7 +332,6 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
   }
 
   return {
-    bannedPhraseMatches,
     aspirationalClaims,
     requiredSectionsPresent,
     requiredSectionsMissing,

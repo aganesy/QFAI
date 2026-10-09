@@ -32,7 +32,7 @@ describe("cli root discovery", () => {
           "utf8",
         ),
       ).toContain(["QFAI:", "AC-0008-0007-01"].join(""));
-      await run(["atdd", "scaffold", "--root", root, "--spec", "spec-0008"], root);
+      await run(["atdd", "scaffold", "--root", root], root);
       expect(process.exitCode).toBe(2);
       await run(["atdd", "scaffold", "--root", root, "--story", "US-8-7"], root);
       expect(process.exitCode).toBe(2);

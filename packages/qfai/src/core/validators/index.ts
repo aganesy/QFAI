@@ -83,7 +83,5 @@ export {
   unevaluatedPackageSelfGovernanceFamilies,
   runPackageSelfGovernanceValidators,
 } from "./packageSelfGovernance.js";
-export { STALE_REFERENCES, validateStaleReferences } from "./staleReferences.js";
-export type { StaleReferenceEntry } from "./staleReferences.js";
 export { HANDOFF_SCHEMA_REL, HANDOFF_WRITER_PAIRS } from "./handoffSchemaPairs.js";
 export type { HandoffWriterPair } from "./handoffSchemaPairs.js";

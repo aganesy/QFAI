@@ -160,31 +160,6 @@ describe("runSddPreflight", () => {
     },
   );
 
-  it.each([
-    ["02_Inception-Deck.md", "01_Context.md"],
-    ["10_Policy.md", "09_Constraints.md"],
-    ["13_Deferred.md", "11_OQ-Register.md"],
-  ])("lists %s left in the pack as a gap naming %s", async (legacy, target) => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
-    try {
-      await seedDiscussionPack(root, "20260216010102004");
-      await writeFile(
-        path.join(root, ".qfai", "discussion", "discussion-20260216010102004", legacy),
-        `# ${legacy}\n`,
-        "utf-8",
-      );
-
-      const result = await runSddPreflight(root, defaultConfig);
-
-      expect(result.status).toBe("ready");
-      expect(result.packGaps).toContain(
-        `Files whose content has moved and that the pack still holds: ${legacy} → ${target}`,
-      );
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
   it("keeps carry-over open questions in the summary a blocked run writes", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
     try {

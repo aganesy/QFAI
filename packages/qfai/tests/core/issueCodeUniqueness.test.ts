@@ -291,7 +291,7 @@ describe("issue report metadata", () => {
     const usage = await collectErrorCapableUsage();
     // `validators/skill/prototypingSkill.ts` never calls `issue(...)`: every
     // finding goes through its local `skillIssue(code, message, severity, fix)`.
-    expect(usage.get("QFAI-PROTOSKILL-002")).toEqual({
+    expect(usage.get("QFAI-PROTOSKILL-001")).toEqual({
       errorCapable: true,
       // The factory forwards its 4th argument as `suggested_action`, and every
       // call site fills it in.

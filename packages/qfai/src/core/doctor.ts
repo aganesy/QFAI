@@ -1211,19 +1211,13 @@ async function buildPrototypingDesignMdChecks(root: string): Promise<DoctorCheck
     // so "file exists and parses" cannot distinguish an authored brand
     // from an unauthored one. Report it here, before a prototyping loop
     // runs against it as the project's brand.
-    //
-    // Samples seeded by releases that predate the marker are detected by
-    // content fingerprint instead, so the remediation text must not tell
-    // those projects to delete a comment that is not there.
-    const markerPresent = designMdText.includes(DESIGN_MD_SAMPLE_MARKER);
     checks.push({
       id: "prototyping.designMdRoot",
       severity: "error",
       title: "Root DESIGN.md",
-      message: markerPresent
-        ? "root DESIGN.md is still the qfai sample brand — replace it with this product's brand SSOT and delete the sample marker before prototyping"
-        : "root DESIGN.md is still the qfai sample brand (seeded by a release older than the sample marker) — replace it with this product's brand SSOT before prototyping",
-      details: { path: designMdRel, marker: markerPresent ? DESIGN_MD_SAMPLE_MARKER : null },
+      message:
+        "root DESIGN.md is still the qfai sample brand — replace it with this product's brand SSOT and delete the sample marker before prototyping",
+      details: { path: designMdRel, marker: DESIGN_MD_SAMPLE_MARKER },
     });
   } else {
     const parsed = parseDesignMd(designMdText);

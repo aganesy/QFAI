@@ -58,33 +58,6 @@ describe("validateDiscussionMermaid", () => {
 
       expect(error?.severity).toBe("error");
       expect(error?.file).toBe(file);
-      expect(issues.some((entry) => entry.code === "QFAI-DPACK-010")).toBe(false);
-    });
-  });
-
-  it("falls back to legacy DISCUSSION-XXXX and emits deprecation warning", async () => {
-    await withTempRoot(async (root) => {
-      const discussRoot = path.join(root, ".qfai", "discussion");
-      await seedBusinessFlow(root, "DISCUSSION-0001", mermaidSequence);
-
-      const issues = await validateDiscussionMermaid(root);
-      const warning = issues.find((entry) => entry.code === "QFAI-DPACK-010");
-
-      expect(warning?.severity).toBe("warning");
-      expect(warning?.file).toBe(discussRoot);
-      expect(issues.some((entry) => entry.code === "QFAI-DPACK-009")).toBe(false);
-    });
-  });
-
-  it("does not emit legacy warning when discussion-* exists", async () => {
-    await withTempRoot(async (root) => {
-      await seedBusinessFlow(root, "DISCUSSION-0001", mermaidSequence);
-      await seedBusinessFlow(root, "discussion-20260215205220203", mermaidSequence);
-
-      const issues = await validateDiscussionMermaid(root);
-
-      expect(issues.some((entry) => entry.code === "QFAI-DPACK-009")).toBe(false);
-      expect(issues.some((entry) => entry.code === "QFAI-DPACK-010")).toBe(false);
     });
   });
 

@@ -1257,39 +1257,13 @@ function validateShadow(d: DesignMd, issues: ValidationIssue[]): void {
 export const DESIGN_MD_SAMPLE_MARKER = "QFAI-SAMPLE-DESIGN-MD";
 
 /**
- * Fingerprint of the sample brand as it shipped BEFORE
- * `DESIGN_MD_SAMPLE_MARKER` existed.
- *
- * A marker-only test cannot see the installed base this gate exists to
- * rescue: `qfai init` copies the whole root asset tree create-only — every
- * existing file there is skipped, `--force` included (see
- * `src/cli/commands/init.ts`) — so a project that initialized on an older
- * release keeps its marker-less copy of `assets/init/root/DESIGN.md` even
- * across `qfai init --force`. Those projects are exactly the ones at risk
- * of adopting an unauthored brand.
- *
- * BOTH signals are required — the front-matter brand name AND the opening
- * sentence of the shipped brand-philosophy body. Requiring both keeps the
- * migration test conservative: a project that adopted the sample as a
- * starting point and then authored its own identity (renamed `brand.name`
- * OR rewrote the philosophy body) is no longer "unreplaced" and is not
- * flagged. Only a copy that still carries both halves verbatim is.
- */
-const LEGACY_SAMPLE_BRAND_NAME_RE = /^\s{0,4}name:\s*["']?Acme Ledger["']?\s*$/m;
-const LEGACY_SAMPLE_BODY_PHRASE = "Acme Ledger is a calm, confident financial comparison surface";
-
-/**
  * True when `text` is still (or is derived from) a DESIGN.md the package
  * ships as a sample. Used to stop `/qfai-sdd` Phase 0 from adopting
  * an unauthored brand as the project's brand contract, and to surface the
  * same condition from `qfai validate` (QFAI-DCON-034).
  *
- * Two detectors, because the marker only covers samples seeded by releases
- * that carry it:
- *   1. `DESIGN_MD_SAMPLE_MARKER` — current samples, survives any edit that
- *      leaves the comment in place.
- *   2. Legacy content fingerprint — samples seeded before the marker
- *      existed, which `qfai init` will never overwrite.
+ * The test is `DESIGN_MD_SAMPLE_MARKER`, which survives any edit that leaves
+ * the comment in place.
  *
  * `text` is `unknown` rather than `string` because this is re-exported from
  * `core/index.ts` and so is reachable from untyped JavaScript, where a caller
@@ -1300,6 +1274,5 @@ const LEGACY_SAMPLE_BODY_PHRASE = "Acme Ledger is a calm, confident financial co
  */
 export function isUnreplacedDesignMdSample(text: unknown): boolean {
   if (typeof text !== "string") return false;
-  if (text.includes(DESIGN_MD_SAMPLE_MARKER)) return true;
-  return LEGACY_SAMPLE_BRAND_NAME_RE.test(text) && text.includes(LEGACY_SAMPLE_BODY_PHRASE);
+  return text.includes(DESIGN_MD_SAMPLE_MARKER);
 }

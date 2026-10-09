@@ -1,11 +1,9 @@
 /**
- * E2E acceptance for spec-0015 CHG-006 user stories US-0015-0009..0015:
+ * E2E acceptance for spec-0015 CHG-006 user stories US-0015-0009..0011:
  *   - US-0015-0009: SKILL.md `## Default Autopilot Policy` section /
  *     QFAI-POLICY-001.
  *   - US-0015-0011: canonical cross-skill handoff schema /
  *     QFAI-HANDOFF-001.
- *   - US-0015-0015: cross-skill documentation realignment / zero stale
- *     references.
  *
  * Deterministic temp-fixture form: each `it` seeds a `mkdtemp` root with
  * the minimum on-disk shape required to exercise the user story, then
@@ -31,7 +29,6 @@ import {
   HANDOFF_SCHEMA_REL,
   HANDOFF_WRITER_PAIRS,
 } from "../../src/core/validators/handoffSchemaPairs.js";
-import { validateStaleReferences } from "../../src/core/validators/staleReferences.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 let root: string;
@@ -124,29 +121,5 @@ describe("spec-0015 US-0015-0011 handoff schema (E2E, deterministic temp-fixture
     }
     const issues = await detectHandoffSchemaDrift(root);
     expect(issues.find((i) => i.code === "QFAI-HANDOFF-001")).toBeUndefined();
-  });
-});
-
-describe("spec-0015 US-0015-0015 doc realignment (E2E, deterministic temp-fixture)", () => {
-  it("QFAI:BF-0001 — normal: rewritten refs report zero stale references", async () => {
-    const dir = path.join(root, ".qfai", "assistant", "skills", "qfai-prototyping", "references");
-    await mkdir(dir, { recursive: true });
-    await writeFile(path.join(dir, "handoff.md"), "# Handoff\nUses handoff.yaml.\n", "utf-8");
-    const issues = await validateStaleReferences(root);
-    expect(issues.filter((i) => i.code === "QFAI-STALE-001")).toEqual([]);
-  });
-
-  it("QFAI:BF-0001 — error: a stale reference at HEAD is reported", async () => {
-    const dir = path.join(root, ".qfai", "assistant", "skills", "qfai-prototyping", "references");
-    await mkdir(dir, { recursive: true });
-    await writeFile(
-      path.join(dir, "handoff.md"),
-      "# Handoff\nUses session-handoff.yaml (legacy).\n",
-      "utf-8",
-    );
-    const issues = await validateStaleReferences(root);
-    const findings = issues.filter((i) => i.code === "QFAI-STALE-001");
-    expect(findings.length).toBeGreaterThanOrEqual(1);
-    expect(findings[0]?.severity).toBe("warning");
   });
 });

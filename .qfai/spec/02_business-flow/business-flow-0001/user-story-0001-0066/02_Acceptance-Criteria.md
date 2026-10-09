@@ -13,13 +13,6 @@ Feature: Flow-scoped report
     And only the named flows' reports under `<outDir>/business-flow-NNNN/` are written
     And report.md and report.json are left untouched
 
-  # AC-0001-0066-02
-  Scenario: --spec is refused on the story tree
-    Given the story tree
-    When `qfai report --spec <spec-id>` runs
-    Then it exits 2
-    And its message names `--flow BF-NNNN` as the option that scopes a report on the story tree
-
   # AC-0001-0066-03
   Scenario: A malformed --flow value writes no report
     Given the story tree

@@ -14,22 +14,8 @@ export async function validateDiscussionMermaid(root: string): Promise<Issue[]> 
   const discussionRootDir = path.join(root, ".qfai", "discussion");
   const discussionPacks = await findPacks(discussionRootDir, "discussion");
   const currentPack = latestPack(discussionPacks);
-  const hasLegacyPack = discussionPacks.some((pack) => pack.isLegacy);
 
   const issues: Issue[] = [];
-  if (!currentPack && hasLegacyPack) {
-    issues.push(
-      issue(
-        "QFAI-DPACK-010",
-        "The legacy discussion directory naming is deprecated. Use discussion-YYYYMMDDhhmmssSSS for new artifacts.",
-        "warning",
-        discussionRootDir,
-        "discussionMermaid.legacyNaming",
-        undefined,
-        "change",
-      ),
-    );
-  }
   if (!currentPack) {
     return issues;
   }
@@ -56,11 +42,6 @@ export async function validateDiscussionMermaid(root: string): Promise<Issue[]> 
   }
   return issues;
 }
-
-/**
- * @deprecated Use {@link validateDiscussionMermaid}.
- */
-export const validateDiscussMermaid = validateDiscussionMermaid;
 
 function containsMermaidFlowDiagram(text: string): boolean {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
