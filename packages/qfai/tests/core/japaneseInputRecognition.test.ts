@@ -4,12 +4,6 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import {
-  collectDeclaredTcIds,
-  collectDeclaredUsIds,
-  collectHeadingTcIdsFrom,
-  collectTcLevels,
-} from "../../src/core/atddTraceability.js";
 import { validateDiscussionVisuals } from "../../src/core/validators/discussionVisuals.js";
 import {
   collectHtmlMockBlocks,
@@ -96,41 +90,5 @@ describe("an HTML mock label written in Japanese is still collected", () => {
     expect(blocks.map((block) => block.html)).toEqual([
       '<section class="screen">Order form</section>',
     ]);
-  });
-});
-
-describe("a test case catalogue written with full-width colons is still read", () => {
-  it("declares a TC heading that follows its id with a full-width colon", () => {
-    const text = [`## TC-0001-0002${FULL_WIDTH_COLON} order is placed`, "", "- Level: L4", ""].join(
-      "\n",
-    );
-
-    expect(collectHeadingTcIdsFrom(text)).toEqual(["TC-0001-0002"]);
-    expect(collectDeclaredTcIds(text).has("TC-0001-0002")).toBe(true);
-  });
-
-  it("reads the Level meta line of a TC block when the colon is full-width", () => {
-    const text = [
-      `## TC-0001-0002${FULL_WIDTH_COLON} order is placed`,
-      "",
-      `- Level${FULL_WIDTH_COLON} L4`,
-      "",
-    ].join("\n");
-
-    expect(collectTcLevels(text).get("TC-0001-0002")).toBe("l4");
-  });
-});
-
-describe("a user story catalogue written with full-width colons is still read", () => {
-  it("declares a US heading that follows its id with a full-width colon", () => {
-    const text = `## US-0001-0002${FULL_WIDTH_COLON} place an order\n`;
-
-    expect(collectDeclaredUsIds(text).has("US-0001-0002")).toBe(true);
-  });
-
-  it("declares a catalogue list item that follows its id with a full-width colon", () => {
-    const text = `- US-0001-0003${FULL_WIDTH_COLON} cancel an order\n`;
-
-    expect(collectDeclaredUsIds(text).has("US-0001-0003")).toBe(true);
   });
 });

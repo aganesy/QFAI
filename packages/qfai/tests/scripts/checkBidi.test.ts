@@ -296,7 +296,7 @@ describe("check-bidi: the bidi and BOM scan covers the tracked tree", () => {
     // editing it to satisfy a guard would falsify the record.
     const dir = await newRepo({
       ".qfai/review/review-20260822180000000/R03.md": `saw ${BOM}#!/bin/sh here\n`,
-      ".qfai/review_archive/review-20260101000000000/R01.md": `and ${RIGHT_TO_LEFT_OVERRIDE} here\n`,
+      ".qfai/review/review-20260101000000000/R01.md": `and ${RIGHT_TO_LEFT_OVERRIDE} here\n`,
     });
 
     const result = runGuard(dir);

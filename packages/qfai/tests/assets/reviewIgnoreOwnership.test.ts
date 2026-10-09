@@ -32,7 +32,6 @@ const LOCAL_RECORD_DIRECTORIES: ReadonlyArray<readonly [directory: string, sampl
   ],
   [".qfai/report", ".qfai/report/validate.json"],
   [".qfai/review", ".qfai/review/review-20260101000000000/summary.json"],
-  [".qfai/review_archive", ".qfai/review_archive/review-20260101000000000/summary.json"],
 ];
 
 /** Repository-relative paths tracked under `directory`, POSIX-separated as git reports them. */

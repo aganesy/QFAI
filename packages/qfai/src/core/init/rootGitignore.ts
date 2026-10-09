@@ -6,10 +6,7 @@ import {
   ARTICLE_XI_TMP_SAMPLE_PATH,
   QFAI_GITIGNORE_BLOCK,
   QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
-  QFAI_GITIGNORE_LEGACY_LINES,
   QFAI_GITIGNORE_MARKER,
-  QFAI_RUN_STATE_IGNORE,
-  RETIRED_LINE_SUCCESSORS,
   effectivelyIgnores,
   negationsOutrankLaterIgnores,
 } from "../gitignore.js";
@@ -17,8 +14,17 @@ import { info } from "../logger.js";
 import { safeLstat } from "./fsGuards.js";
 
 /**
+ * Lines a caller wants out of an existing managed block. The value is the line that takes the
+ * place of a dropped one when the block does not already hold it, or `null` when the line is
+ * only dropped.
+ */
+export type BlockLineRewrites = ReadonlyMap<string, string | null>;
+
+const NO_REWRITES: BlockLineRewrites = new Map();
+
+/**
  * Rewrite the managed `.gitignore` block, adding any governance negation it is
- * missing.
+ * missing and applying `rewrites` to the lines the block already holds.
  */
 export async function ensureRootGitignoreEntries(
   destRoot: string,
@@ -27,6 +33,7 @@ export async function ensureRootGitignoreEntries(
   // caller emitting JSON there collects them instead, because a stray line
   // before the document makes it unparseable.
   report: (line: string) => void = info,
+  rewrites: BlockLineRewrites = NO_REWRITES,
 ): Promise<{
   copied: string[];
   skipped: string[];
@@ -65,28 +72,28 @@ export async function ensureRootGitignoreEntries(
   // Required entries are matched only against the managed block: a project that
   // deliberately removed, say, `.qfai/review/*` to track its review packs
   // must not have that choice silently undone by the next `qfai init`.
-  const managedBlock = extractManagedBlock(existing);
+  const knownLines = new Set([...QFAI_GITIGNORE_BLOCK.split("\n"), ...rewrites.keys()]);
+  const managedBlock = extractManagedBlock(existing, knownLines);
   const existingLines = existing.split("\n").map((line) => line.trimEnd());
   if (
     existing.includes(QFAI_GITIGNORE_MARKER) &&
-    gitignoreLines(managedBlock).includes(QFAI_RUN_STATE_IGNORE) &&
+    !gitignoreLines(managedBlock).some((line) => rewrites.has(line)) &&
     QFAI_GITIGNORE_GOVERNANCE_NEGATIONS.every((entry) => managedBlock.includes(entry)) &&
-    negationsOutrankLaterIgnores(existingLines, QFAI_GITIGNORE_GOVERNANCE_NEGATIONS) &&
-    QFAI_GITIGNORE_LEGACY_LINES.every((entry) => !existing.includes(entry))
+    negationsOutrankLaterIgnores(existingLines, QFAI_GITIGNORE_GOVERNANCE_NEGATIONS)
   ) {
     return { copied: [], skipped: [gitignorePath] };
   }
 
   // Strip existing managed QFAI block (known block lines only; stop at unknown lines; loop for duplicates)
   const { stripped, blockAt } = existing.includes(QFAI_GITIGNORE_MARKER)
-    ? removeManagedBlock(existing)
+    ? removeManagedBlock(existing, knownLines)
     : { stripped: existing, blockAt: -1 };
 
   const omitted =
     managedBlock.length === 0 ? linesTheProjectAlreadyHas(gitignoreLines(stripped)) : [];
   const placement = placeManagedBlock(
     stripped,
-    rebuildManagedBlock(managedBlock, omitted),
+    rebuildManagedBlock(managedBlock, omitted, rewrites),
     blockAt,
   );
   const omittedNote =
@@ -115,7 +122,9 @@ export async function ensureRootGitignoreEntries(
   // ignore line that re-ignores a governance record. Naming the loser is the
   // least that move owes an operator: the file the negation re-included
   // silently stops reaching `git add` and `git status`.
-  const demoted = placement.inPlace ? [] : demotedProjectNegations(existing, placement.content);
+  const demoted = placement.inPlace
+    ? []
+    : demotedProjectNegations(existing, placement.content, knownLines);
   for (const negation of demoted) {
     report(
       `  WARNING: .gitignore — \`${negation}\` no longer wins; the QFAI managed block now sits below it.`,
@@ -206,10 +215,13 @@ function insertManagedBlock(stripped: string, block: string, at: number): string
  * one's. What is left is the project's own re-inclusions, judged by the same
  * last-match rule against the whole file.
  */
-function demotedProjectNegations(before: string, after: string): string[] {
+function demotedProjectNegations(
+  before: string,
+  after: string,
+  managed: ReadonlySet<string>,
+): string[] {
   const beforeLines = gitignoreLines(before);
   const afterLines = gitignoreLines(after);
-  const managed = new Set([...QFAI_GITIGNORE_BLOCK.split("\n"), ...QFAI_GITIGNORE_LEGACY_LINES]);
   const candidates = new Set(
     beforeLines.filter((line) => line.startsWith("!") && !managed.has(line)),
   );
@@ -252,54 +264,43 @@ function linesTheProjectAlreadyHas(projectLines: readonly string[]): string[] {
  * pattern). A project with no managed block gets the canonical one, less the
  * lines named in `omit`.
  */
-function rebuildManagedBlock(existingBlock: string, omit: readonly string[]): string {
+function rebuildManagedBlock(
+  existingBlock: string,
+  omit: readonly string[],
+  rewrites: BlockLineRewrites,
+): string {
   if (existingBlock.length === 0) {
     return QFAI_GITIGNORE_BLOCK.split("\n")
       .filter((line) => !omit.includes(line))
       .join("\n");
   }
-  const legacy = new Set<string>(QFAI_GITIGNORE_LEGACY_LINES);
   const negations = new Set<string>(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS);
   const lines = existingBlock.split("\n").map((line) => line.trimEnd());
-  const present = new Set(lines);
 
-  // The retired lines are dropped and the governance negations appended, both
-  // unconditionally. What is *kept* is the project's own ignore set.
+  // The governance negations are appended unconditionally. What is *kept* is the
+  // project's own ignore set.
   //
-  // An earlier attempt migrated a legacy-shaped block wholesale, on the theory
-  // that a missing ignore there is age rather than a choice. That is not safe:
-  // a project can carry a retired line *and* have deleted `.qfai/review/*` to
-  // track its review packs, and the wholesale rewrite resurrects the deletion —
-  // the very regression this function exists to stop. Age and intent cannot be
-  // told apart from the file, so the conservative reading wins in both cases:
-  // never re-add an ignore line the block does not have.
+  // A project can have deleted `.qfai/review/*` to track its review packs, and a
+  // wholesale rewrite would resurrect the deletion — the very regression this
+  // function exists to stop. Age and intent cannot be told apart from the file,
+  // so the conservative reading wins: never re-add an ignore line the block does
+  // not have.
   //
   // The cost is that a project on an old block does not pick up a newly shipped
   // *recommended* ignore. The consequence is generated files showing in `git status` — noisy. Silently
   // re-hiding records the project chose to track is not noisy, which is
   // why it is the side to err on.
   const kept = lines.filter(
-    (line) => line !== QFAI_GITIGNORE_MARKER && !negations.has(line) && !legacy.has(line),
+    (line) => line !== QFAI_GITIGNORE_MARKER && !negations.has(line) && !rewrites.has(line),
   );
-  // The one exception: a retired line that was *renamed* rather than dropped.
-  // Stripping `.qfai/discussion/discussion-*/` without adding its successor
-  // would leave the project with no discussion ignore at all — a removal it
-  // never asked for, which is the same harm from the other direction.
-  const renamed = Object.entries(RETIRED_LINE_SUCCESSORS)
-    .filter(([retired, successor]) => present.has(retired) && !present.has(successor))
-    .map(([, successor]) => successor);
+  const present = new Set(lines);
+  const substitutes = Array.from(rewrites)
+    .filter(
+      ([line, substitute]) => substitute !== null && present.has(line) && !present.has(substitute),
+    )
+    .map(([, substitute]) => substitute ?? "");
 
-  // Run state is added against the rule above: it is never a record a project tracks,
-  // and a block without it would leave every run's journal for `git add .` to stage.
-  const runState = present.has(QFAI_RUN_STATE_IGNORE) ? [] : [QFAI_RUN_STATE_IGNORE];
-
-  return [
-    QFAI_GITIGNORE_MARKER,
-    ...kept,
-    ...renamed,
-    ...runState,
-    ...QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
-  ]
+  return [QFAI_GITIGNORE_MARKER, ...kept, ...substitutes, ...QFAI_GITIGNORE_GOVERNANCE_NEGATIONS]
     .filter((line, index, all) => line.length > 0 || all[index - 1]?.length !== 0)
     .join("\n");
 }
@@ -309,9 +310,9 @@ function rebuildManagedBlock(existingBlock: string, omit: readonly string[]): st
  *
  * ## Why the walk does not stop at the first unknown line
  *
- * A line inside the block that the current writer no longer emits, and that is not registered
- * as legacy — `.qfai/output/*`, which an older release wrote, is one — would end a walk that
- * stops at the first line it does not know. The consequences compound:
+ * A line inside the block that the current writer does not emit — a project's own ignore line
+ * written between two of ours — would end a walk that stops at the first line it does not know.
+ * The consequences compound:
  *
  *   - `extractManagedBlock` returns the marker plus one line, so the freshness check finds the
  *     governance negations "missing" and the early return never fires;
@@ -329,14 +330,14 @@ function rebuildManagedBlock(existingBlock: string, omit: readonly string[]): st
  * of the file — that is how it is written, and how a project's own section is separated from
  * it. Inside that region the block ends at its LAST known line.
  *
- * Both halves matter. Tolerating unknown lines between known ones is what stops a retired line
+ * Both halves matter. Tolerating unknown lines between known ones is what stops one
  * truncating the block. Ending at the last KNOWN line keeps a project's own lines out of it:
  * lines a project appended directly under the block, with no blank between, stay outside it, so
  * they keep their position relative to the negations and git's last-match verdict for them does
  * not change.
  *
  * An unknown line absorbed from between two known ones is not lost: `rebuildManagedBlock` keeps
- * every block line that is neither the marker, a governance negation, nor a retired line, which
+ * every block line that is neither the marker nor a governance negation, which
  * is exactly what "the project's own ignore set" means there.
  */
 function managedBlockEnd(
@@ -375,9 +376,8 @@ function managedBlockEnd(
  * what `negationsOutrankLaterIgnores` and the last-pattern-wins semantics
  * depend on) and any line only a later block carries is appended.
  */
-export function extractManagedBlock(content: string): string {
+function extractManagedBlock(content: string, knownLines: ReadonlySet<string>): string {
   const lines = content.split("\n");
-  const knownLines = new Set([...QFAI_GITIGNORE_BLOCK.split("\n"), ...QFAI_GITIGNORE_LEGACY_LINES]);
 
   const merged: string[] = [];
   const seen = new Set<string>();
@@ -408,12 +408,12 @@ export function extractManagedBlock(content: string): string {
  * goes back into, so the project's own lines keep the side of the block they
  * were written on. Duplicated blocks collapse onto the first one's position.
  */
-function removeManagedBlock(content: string): { stripped: string; blockAt: number } {
+function removeManagedBlock(
+  content: string,
+  knownLines: ReadonlySet<string>,
+): { stripped: string; blockAt: number } {
   const lines = content.split("\n");
   let blockAt = -1;
-
-  // Known lines: current block + legacy lines from previous versions
-  const knownLines = new Set([...QFAI_GITIGNORE_BLOCK.split("\n"), ...QFAI_GITIGNORE_LEGACY_LINES]);
 
   // Loop to handle multiple managed blocks (e.g. from past duplicates)
   while (true) {
@@ -423,8 +423,8 @@ function removeManagedBlock(content: string): { stripped: string; blockAt: numbe
       blockAt = startIdx;
     }
 
-    // Through the last known line, tolerating a retired line the writer no longer
-    // emits. See {@link managedBlockEnd}.
+    // Through the last known line, tolerating a line the writer does not emit.
+    // See {@link managedBlockEnd}.
     let endIdx = managedBlockEnd(lines, startIdx, knownLines);
 
     // Also remove one trailing blank line if present

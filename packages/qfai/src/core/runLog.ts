@@ -6,13 +6,6 @@ import { resolvePath } from "./config.js";
 import { findLatestPack } from "./packLocator.js";
 import { toRelativePath } from "./paths.js";
 import type { Issue, ValidationResult } from "./types.js";
-import {
-  buildLayeredTraceabilityGraph,
-  qualifyId,
-  specNumberForPath,
-  type TraceabilityGraph,
-  type TraceabilityGraphEdge,
-} from "./validators/traceability.js";
 
 type RunLogResultStatus = "pass" | "fail";
 
@@ -93,17 +86,7 @@ export async function writeValidateRunLog(input: {
     warnings,
   };
 
-  // The graph comes from the parsed spec pack, not from the issue list, so a clean run still
-  // produces real traceability evidence. A pack that cannot be walked degrades to the
-  // issue-derived nodes rather than failing the run log.
-  let graph: TraceabilityGraph = { nodes: [], edges: [] };
-  try {
-    graph = await buildLayeredTraceabilityGraph(root, input.config);
-  } catch {
-    // Keep the empty graph declared above and fall through to the
-    // issue-derived nodes. Reassigning it here said the same thing twice.
-  }
-  const traceabilityJson = buildTraceabilityJson(root, input.result.issues, graph);
+  const traceabilityJson = buildTraceabilityJson(root, input.result.issues);
   const summaryMd = buildSummaryMarkdown({
     runId,
     startedAt: input.startedAt.toISOString(),
@@ -296,37 +279,19 @@ const TRACEABILITY_ID_REGEX = /\b(OBJ|INIT|CAP|FLOW|US|AC|BR|EX|TC|SC|CASE)(?:-\
 function buildTraceabilityJson(
   root: string,
   issues: Issue[],
-  graph: TraceabilityGraph,
 ): {
   schema_version: number;
   nodes: TraceabilityNode[];
-  edges: TraceabilityGraphEdge[];
   stats: Record<string, number>;
 } {
   const idRegex = new RegExp(TRACEABILITY_ID_REGEX.source, TRACEABILITY_ID_REGEX.flags);
   const nodes = new Map<string, TraceabilityNode>();
 
-  // Spec-pack nodes first: they are the authoritative set and carry their defining file.
-  for (const node of graph.nodes) {
-    const entry: TraceabilityNode = { id: node.id, layer: node.layer };
-    if (node.path) {
-      entry.path = node.path;
-    }
-    nodes.set(node.id, entry);
-  }
-
-  // Findings can still contribute IDs the spec-pack walk did not reach (non-layered layouts,
-  // policy-level IDs such as OBJ / INIT / CAP / FLOW).
+  // The IDs findings cite, each with the file of the first finding that cites it.
   for (const issue of issues) {
     if (!issue.refs || issue.refs.length === 0) {
       continue;
     }
-    // The graph namespaces file-local short IDs as `spec-NNNN/AC-0001`, so a
-    // raw `AC-0001` from a finding lands beside — not on — the node the edges
-    // point at, and two specs' findings then merge onto one unqualified node.
-    // Repo-level findings (`_policies/**`, config) have no owning spec and stay
-    // unqualified, which is what the graph does for them too.
-    const specNumber = specNumberForPath(issue.file);
     for (const ref of issue.refs) {
       idRegex.lastIndex = 0;
       const match = idRegex.exec(ref);
@@ -335,25 +300,23 @@ function buildTraceabilityJson(
       if (!rawId || !layer) {
         continue;
       }
-      const id = specNumber === null ? rawId : qualifyId(specNumber, rawId);
-      if (nodes.has(id)) {
+      if (nodes.has(rawId)) {
         continue;
       }
       const node: TraceabilityNode = {
-        id,
+        id: rawId,
         layer,
       };
       if (issue.file) {
         node.path = toRelativePath(root, issue.file);
       }
-      nodes.set(id, node);
+      nodes.set(rawId, node);
     }
   }
 
   return {
     schema_version: 1,
     nodes: Array.from(nodes.values()).sort((a, b) => a.id.localeCompare(b.id)),
-    edges: graph.edges,
     stats: {
       downstream_violations: issues.filter((issue) => issue.code === "TRACE_DOWNSTREAM_REF").length,
       shared_scope_violations: issues.filter(

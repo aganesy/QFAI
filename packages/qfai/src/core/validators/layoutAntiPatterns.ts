@@ -133,8 +133,7 @@ export function loadLayoutAntiPatterns(jsonPath?: string): LayoutAntiPattern[] {
  * them — their regex (`(?!).*`) is a deliberate no-op.
  *
  * Each id is reported at most once even when its regex hits multiple
- * times (mirroring the legacy `seenRules` short-circuit in the slop
- * scanner).
+ * times.
  */
 export function findLayoutAntiPatterns(
   html: string,

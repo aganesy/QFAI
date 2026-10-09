@@ -43,8 +43,7 @@
  * are deliberately *not* read as severity evidence:
  *   - an object literal with no `severity:` field at all. `Issue.severity` is
  *     required, so such a literal is emission metadata on its way to a factory
- *     call (`{ code, rule, patterns, message }` in `layerCoverage`), not a
- *     finding; counting it as "severity unknown" would mask the `"error"` the
+ *     call (`{ code, rule, patterns, message }`), not a finding; counting it as "severity unknown" would mask the `"error"` the
  *     factory call right below it does spell.
  *   - a code that a post-emission rewrite can hand to `applyWaivers` at a
  *     lower severity. Prototyping's exploration mode downgrades its relaxable
@@ -404,9 +403,9 @@ function resolveValue(raw, literals, constants) {
  * resolves to every string that property is given in an object literal in the
  * same file. Several validators carry the code on a record and hand it to the
  * factory that way — `issue(finding.ruleId, …)` in `designAudit`,
- * `issue(input.missingCode, …)` in `orphanProhibition`, `issue(group.code, …)`
- * in `layerCoverage` — and each of them builds those records in the file that
- * passes them on, so the same file always holds the answer.
+ * `issue(input.missingCode, …)` in `orphanProhibition` — and each of them
+ * builds those records in the file that passes them on, so the same file always
+ * holds the answer.
  *
  * Same-file is also what keeps the resolution honest: widening it to the whole
  * tree would let any `code:` field anywhere — `HandoffValidationIssue`'s included —
@@ -862,12 +861,6 @@ async function activeValidateModules(srcDir) {
 /** Rule emissions retained for migration helpers but absent from validate. */
 function isRetiredSpecPackEmission(srcDir, file, code) {
   const relative = path.relative(srcDir, file).split(path.sep).join("/");
-  if (relative === "core/validators/layerCoverage.ts") {
-    return /^QFAI-(?:COV|PLAN)-/.test(code);
-  }
-  if (relative === "core/validators/traceability.ts") {
-    return /^QFAI-TRACE-/.test(code);
-  }
   if (relative === "core/validators/contractReferences.ts") {
     return /^QFAI-CONTRACT-(?:030|032|033|035|043)$/.test(code);
   }
@@ -1123,8 +1116,8 @@ function scanIssueObjectLiterals(source, constants, emissions) {
  * `undefined` — no evidence — when the literal has no `severity:` field at all.
  * `Issue.severity` is required, so such a literal is not a finding but the
  * metadata a factory call is about to turn into one (`{ code, rule, patterns,
- * message }` in `layerCoverage`, whose `issue(group.code, …, "error")` is the
- * real emission). Reading it as "severity unknown" would drop the code out of
+ * message }`, whose factory call is the real emission). Reading it as "severity
+ * unknown" would drop the code out of
  * the error-only list on the strength of a record that never reaches
  * `applyWaivers`.
  *

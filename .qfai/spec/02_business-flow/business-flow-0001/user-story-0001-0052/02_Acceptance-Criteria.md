@@ -30,7 +30,7 @@ Feature: Contract index and contract-layer validation
     Given the story tree, and a Markdown file under `api/`, `db/` or `ui/` of `paths.contractsDir` whose H1 declares an ID of that kind
     When `qfai validate --profile sdd` runs
     Then `QFAI-CONTRACT-034` is raised once at error naming the file and the form a contract of that directory takes
-    And no check counts the file as a contract: `QFAI-CONTRACT-000` is still raised for a directory with no other contract, and ATDD coverage does not list its ID
+    And no check counts the file as a contract: `QFAI-CONTRACT-000` is still raised for a directory with no other contract
 
   # AC-0001-0052-05
   Scenario: Only a db contract that declares one DB ID takes part in the apply-order check

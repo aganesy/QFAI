@@ -1396,7 +1396,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   //
   // To re-pin: run `qfai init` into a temp root and hash the `.gitignore` it
   // wrote — never copy a value out of a failure message.
-  [".gitignore", "76c6c855ae5c4bf4d04a8d3ed34018b26d17d1b3a02ca68d60d1e514028ffc2f"],
+  [".gitignore", "b3dfe9b2704c0ae54ef8347cd23ed2a714c5966f38050932611a6ad326b597c4"],
   // One bullet each, inside the managed cross-AI rules block: the
   // `documentation-clarity.md` master that the same run seeds beside them.
   // Removing that line from both files reproduces the previous digests
@@ -1424,9 +1424,10 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // of four named endings. Derived by running `qfai init` into a temp root; restoring the old
   // wording in both written files reproduces `d3d39ba4…` and `5b6487ba…` byte for byte.
   //
-  // Re-pinned for the sentence on later runs, which now says a run rewords a bullet still as an
-  // earlier release wrote it. Derived by running `qfai init` into a temp root; restoring the old
-  // sentence in both written files reproduces `04f04e43…` and `8da8af3f…` byte for byte.
+  // Re-pinned for the sentence on later runs, which names only what a run adds: a bullet for a
+  // rule shipped for the first time and the review directive. Derived by running `qfai init` into a
+  // temp root; restoring the old sentence in both written files reproduces `27d645ff…` and
+  // `39be7bca…` byte for byte.
   //
   // Re-pinned for the review directive the run now writes: a line pointing at the
   // project's own review policy, and the sentence in the managed section that says
@@ -1456,8 +1457,8 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   //
   // The entry files cite action-reversibility, untrusted-content and ai-readable-markdown.
   // These digests cover the shipped root templates, which init copies into a fresh project.
-  ["AGENTS.md", "27d645ff2cb93c3b5c3ee886de489952c726c3d120386a6bdfa0327f1c470a2a"],
-  ["CLAUDE.md", "39be7bca3d514d89e92879cd635a5edc75b9e407160decb4d68368fd8982e1d0"],
+  ["AGENTS.md", "29bc32d7406b9e0972dc276911a010a3e393b84fea0b2fe4846bc5e7e3722335"],
+  ["CLAUDE.md", "d7f71c44d619f42269802fd5d0068a2f74a93563fd2032ed3b5dc803e6755bf3"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
   // rule when a pull request, issue or review is posted through the GitHub tools

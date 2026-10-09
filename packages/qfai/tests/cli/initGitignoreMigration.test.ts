@@ -40,70 +40,6 @@ const NL = "\n";
 const readGitignore = (root: string): Promise<string> =>
   readFile(path.join(root, ".gitignore"), "utf-8");
 
-describe("re-init strips the evidence negations an earlier block carried", () => {
-  // QFAI:EX-0001-0033-04
-  it("leaves no line re-including the evidence directory, and ignores its records", async () => {
-    await withProject(async (root) => {
-      expect(spawnSync("git", ["init", "--quiet"], { cwd: root }).status).toBe(0);
-      // The whole managed block the preceding release wrote, with the plural
-      // decision lines an older one carried.
-      const previous = [
-        QFAI_GITIGNORE_MARKER,
-        ".qfai/report/*",
-        ".qfai/evidence/*",
-        ".qfai/discussion/*",
-        ".qfai/review/*",
-        ".qfai/review_archive/*",
-        ".qfai/state.json",
-        "*.qfai-state.tmp",
-        ".qfai/state.json.lock",
-        ".qfai/run/",
-        ".qfai/evidence/prototyping/*",
-        "/tmp/",
-        "!.qfai/",
-        "!.qfai/evidence/",
-        "!.qfai/evidence/decision/",
-        "!.qfai/evidence/decision/**",
-        "!.qfai/evidence/decisions/",
-        "!.qfai/evidence/decisions/**",
-        "!.qfai/evidence/prototyping/",
-        "!.qfai/evidence/prototyping/grilling.md",
-        "!.qfai/evidence/workflow/",
-        "!.qfai/evidence/change-request-*.md",
-        "!.qfai/evidence/decision-*.md",
-        "!.qfai/evidence/implement-*.md",
-        "!.qfai/evidence/sdd-*.md",
-        "!.qfai/evidence/atdd-*.md",
-        "!.qfai/evidence/import-lite.md",
-        "!.qfai/evidence/coverage-depth-*.md",
-        "!.qfai/evidence/skeleton.md",
-        "!.qfai/install-provenance.json",
-        "!.qfai/assistant/",
-        "!.qfai/assistant/**",
-        "!.qfai/assistant/.assets.lock.json",
-        "",
-      ].join(NL);
-      await writeFile(path.join(root, ".gitignore"), previous, "utf-8");
-
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-      const lines = (await readGitignore(root)).split(NL);
-      expect(lines.filter((line) => line.startsWith("!.qfai/evidence/"))).toEqual([]);
-      expect(lines).not.toContain("!.qfai/install-provenance.json");
-      expect(lines).not.toContain("!.qfai/assistant/.assets.lock.json");
-      expect(lines.filter((line) => line === QFAI_GITIGNORE_MARKER)).toHaveLength(1);
-      expect(lines.filter((line) => line === ".qfai/run/")).toHaveLength(1);
-      const record = ".qfai/evidence/sdd-BF-0001.md";
-      await mkdir(path.join(root, ".qfai", "evidence"), { recursive: true });
-      await writeFile(path.join(root, record), "# SDD\n", "utf-8");
-      const checked = spawnSync("git", ["check-ignore", "--quiet", "--no-index", record], {
-        cwd: root,
-      });
-      expect(checked.status, `${record} must be ignored`).toBe(0);
-    });
-  });
-});
-
 describe("re-init preserves what the project chose to track", () => {
   // QFAI:EX-0001-0033-09
   it("does not resurrect an ignore line the project removed from the block", async () => {
@@ -128,43 +64,6 @@ describe("re-init preserves what the project chose to track", () => {
     });
   });
 
-  it("strips retired lines from an old block without re-adding what it dropped", async () => {
-    // A legacy-shaped block can ALSO carry a deliberate removal, so the earlier
-    // "migrate it wholesale" rule resurrected the ignore for exactly those
-    // projects. Age and intent are indistinguishable from the file, so the
-    // conservative reading wins in both cases.
-    await withProject(async (root) => {
-      await writeFile(
-        path.join(root, ".gitignore"),
-        [
-          QFAI_GITIGNORE_MARKER,
-          ".qfai/report/*",
-          "!.qfai/report/README.md",
-          "!.qfai/decisions/",
-          "!.qfai/decisions/**",
-          ".qfai/discussion/discussion-*/",
-          "",
-        ].join("\n"),
-        "utf-8",
-      );
-
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-      const after = (await readGitignore(root)).split("\n");
-      // Retired lines go.
-      expect(after).not.toContain("!.qfai/report/README.md");
-      expect(after).not.toContain("!.qfai/decisions/");
-      expect(after).not.toContain("!.qfai/decisions/**");
-      expect(after).not.toContain(".qfai/discussion/discussion-*/");
-      // A renamed line keeps its successor — dropping it alone would remove an
-      // ignore the project never gave up.
-      expect(after).toContain(".qfai/discussion/*");
-      // But an ignore this block simply never had is NOT added.
-      expect(after).not.toContain(".qfai/evidence/*");
-      expect(after).toContain("!.qfai/assistant/");
-    });
-  });
-
   it("keeps every governance negation after the ignores it undoes", async () => {
     // Git applies the last matching pattern; a negation above its ignore is
     // inert, which is the failure `governanceNegationsEffective` exists for.
@@ -175,23 +74,6 @@ describe("re-init preserves what the project chose to track", () => {
       for (const negation of QFAI_GITIGNORE_GOVERNANCE_NEGATIONS) {
         expect(lines.indexOf(negation)).toBeGreaterThan(evidenceIgnore);
       }
-    });
-  });
-});
-
-describe("a legacy per-directory evidence ignore is left alone", () => {
-  it("does not re-include anything inside the legacy file", async () => {
-    // The evidence directory is a local work area, so a nested ignore file an
-    // earlier release wrote there hides nothing that has to reach a commit.
-    await withProject(async (root) => {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const legacy = path.join(root, ".qfai", "evidence", ".gitignore");
-      await mkdir(path.dirname(legacy), { recursive: true });
-      await writeFile(legacy, "*\n!.gitignore\n", "utf-8");
-
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-      expect(await readFile(legacy, "utf-8")).toBe("*\n!.gitignore\n");
     });
   });
 });
@@ -227,11 +109,9 @@ describe("--force regenerates the standard asset trees", () => {
   });
 });
 
-describe("a retired line inside the block does not truncate it", () => {
-  // Both block walks must not stop at the first line they do not recognise: a line
-  // an older release wrote — registered neither in the current block nor as legacy — would sit
-  // exactly there. This repository has one: `.qfai/output/*`, the legacy validate output dir,
-  // three lines into the block.
+describe("an unrecognised line inside the block does not truncate it", () => {
+  // Both block walks must not stop at the first line they do not recognise: a line a
+  // project wrote between two lines of the block would sit exactly there.
   //
   // What follows is not a cosmetic duplicate. The freshness check reads the block it extracted,
   // so it found the governance negations "missing" and never took the early return; the strip
@@ -239,17 +119,16 @@ describe("a retired line inside the block does not truncate it", () => {
   // ABOVE the twenty lines nobody had removed. Git applies the LAST matching pattern, so the
   // re-appended negations sit above the ignores that cancel them and do nothing at all — a
   // block of inert lines added on every single run.
-  const RETIRED_INSIDE_BLOCK = ".qfai/output/*";
+  const OWN_LINE_INSIDE_BLOCK = ".qfai/notes/*";
 
-  it("leaves a block carrying an unregistered line completely alone", async () => {
+  it("leaves a block carrying an unrecognised line completely alone", async () => {
     await withProject(async (root) => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      // Put the retired line where an older release wrote it: inside the block, between two
-      // lines the current writer still emits.
+      // Put the project's line inside the block, between two lines the writer emits.
       const seeded = (await readGitignore(root))
         .split(NL)
-        .flatMap((line) => (line === ".qfai/report/*" ? [line, RETIRED_INSIDE_BLOCK] : [line]))
+        .flatMap((line) => (line === ".qfai/report/*" ? [line, OWN_LINE_INSIDE_BLOCK] : [line]))
         .join(NL);
       await writeFile(path.join(root, ".gitignore"), seeded, "utf-8");
 
@@ -261,9 +140,8 @@ describe("a retired line inside the block does not truncate it", () => {
         "the file must be untouched: every negation was already present and already last",
       ).toBe(seeded);
       expect(
-        after.split(NL).filter((line) => line === RETIRED_INSIDE_BLOCK),
-        "and the project's own retired line is kept, not stripped — age and intent cannot be " +
-          "told apart from the file, so it is treated as the project's",
+        after.split(NL).filter((line) => line === OWN_LINE_INSIDE_BLOCK),
+        "and the project's own line is kept, not stripped",
       ).toHaveLength(1);
     });
   });
@@ -273,7 +151,7 @@ describe("a retired line inside the block does not truncate it", () => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
       const seeded = (await readGitignore(root))
         .split(NL)
-        .flatMap((line) => (line === ".qfai/report/*" ? [line, RETIRED_INSIDE_BLOCK] : [line]))
+        .flatMap((line) => (line === ".qfai/report/*" ? [line, OWN_LINE_INSIDE_BLOCK] : [line]))
         .join(NL);
       await writeFile(path.join(root, ".gitignore"), seeded, "utf-8");
 
@@ -360,19 +238,19 @@ describe("a duplicated managed block keeps every ignore line it carries", () => 
       const lines = first.split(NL);
       const start = lines.findIndex((line) => line.includes(QFAI_GITIGNORE_MARKER));
       const block = lines.slice(start).filter((line) => line.trim().length > 0);
-      // Block 1 is stale — it carries a retired line, so the freshness check
-      // fails and the file is rewritten — and it lacks `.qfai/state.json`.
-      // Block 2 carries it.
-      const stale = [
-        ...block.filter((line) => line !== ".qfai/state.json"),
-        ".qfai/discussion/discussion-*/",
-      ];
+      // Both blocks lack one governance negation, so the freshness check
+      // fails and the file is rewritten. Block 1 also lacks `.qfai/state.json`;
+      // block 2 carries it.
+      const withoutNegation = block.filter(
+        (line) => line !== QFAI_GITIGNORE_GOVERNANCE_NEGATIONS[1],
+      );
+      const stale = withoutNegation.filter((line) => line !== ".qfai/state.json");
       await writeFile(
         path.join(root, ".gitignore"),
         // A project line separates the two blocks. Without something unknown
         // between them the extractor runs straight through the blank line into
         // the second block and the bug does not appear.
-        [...stale, "", "node_modules/", "", ...block, ""].join(NL),
+        [...stale, "", "node_modules/", "", ...withoutNegation, ""].join(NL),
         "utf-8",
       );
 
@@ -535,18 +413,11 @@ describe("a project rule after the managed block keeps its place", () => {
 });
 
 describe("nothing under a review directory reaches a commit", () => {
-  /**
-   * What a review round writes, plus the two paths the managed block used to
-   * carve out of `.qfai/review/*`.
-   */
+  /** What a review round writes. */
   const REVIEW_PATHS: readonly string[] = [
     ".qfai/review/review-20260101000000000/summary.json",
     ".qfai/review/review-20260101000000000/review_request.md",
     ".qfai/review/review-20260101000000000/R01_implementation-reviewer.md",
-    ".qfai/review/.legacy-packs",
-    ".qfai/review/README.md",
-    ".qfai/review/_archive/review-20260101000000000/summary.json",
-    ".qfai/review_archive/review-20260101000000000/summary.json",
   ];
 
   /**
@@ -583,46 +454,6 @@ describe("nothing under a review directory reaches a commit", () => {
 
       const reachable = REVIEW_PATHS.filter((sample) => !ignoredByGit(root, sample));
       expect(reachable, "a review artifact must not be committable").toEqual([]);
-    });
-  });
-
-  it("strips the two carve-outs from an older block, and settles", async () => {
-    await withProject(async (root) => {
-      await gitProject(root);
-      // The block as it shipped while the leaf record was tracked. Written out
-      // rather than derived: what is under test is the migration of a file this
-      // version no longer produces, so deriving it from the current constants
-      // would leave nothing to migrate.
-      const older = [
-        QFAI_GITIGNORE_MARKER,
-        ".qfai/report/*",
-        ".qfai/evidence/*",
-        ".qfai/discussion/*",
-        ".qfai/review/*",
-        ".qfai/state.json",
-        "!.qfai/",
-        "!.qfai/review/",
-        "!.qfai/review/.legacy-packs",
-        "",
-      ].join(NL);
-      await writeFile(path.join(root, ".gitignore"), older, "utf-8");
-      expect(ignoredByGit(root, ".qfai/review/.legacy-packs")).toBe(false);
-
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-      const migrated = await readGitignore(root);
-      const lines = migrated.split(NL).map((l) => l.trimEnd());
-      expect(lines).not.toContain("!.qfai/review/");
-      expect(lines).not.toContain("!.qfai/review/.legacy-packs");
-      expect(lines.filter((l) => l === QFAI_GITIGNORE_MARKER)).toHaveLength(1);
-      expect(ignoredByGit(root, ".qfai/review/.legacy-packs")).toBe(true);
-
-      // And nothing is left for the freshness check to react to. Without this
-      // the migration would be correct and still rewrite identical bytes on
-      // every run, because the needle that finds a retired line is a substring
-      // of the lines around it.
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      expect(await readGitignore(root)).toBe(migrated);
     });
   });
 
@@ -708,22 +539,6 @@ describe("the managed block does not repeat a line the project already has", () 
 
       expect(output).toContain("left out of the QFAI entries: /tmp/");
       expect(await readGitignore(root)).toBe(`/tmp/${NL}`);
-    });
-  });
-
-  // QFAI:EX-0001-0033-10
-  it("keeps the run-state line in the block even when the project has it, and settles", async () => {
-    // The freshness check reads that line from the block, so leaving it out
-    // would rebuild the block on every run.
-    await withProject(async (root) => {
-      await writeFile(path.join(root, ".gitignore"), `.qfai/run/${NL}`, "utf-8");
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const first = await readGitignore(root);
-
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-      expect(first.split(NL).filter((line) => line === ".qfai/run/")).toHaveLength(2);
-      expect(await readGitignore(root)).toBe(first);
     });
   });
 

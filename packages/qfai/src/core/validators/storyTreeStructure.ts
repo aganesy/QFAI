@@ -275,8 +275,8 @@ function validateRuleContractNumbers(model: StoryTreeModel): Issue[] {
 }
 
 /**
- * A `DEC-NNNN` or `OQ-NNNN` standing on its own. The guards keep a legacy
- * `DEC-NNNN-NNNN` from being read as its leading segment.
+ * A `DEC-NNNN` or `OQ-NNNN` standing on its own. The guards keep a longer
+ * dashed token such as `DEC-NNNN-NNNN` from being read as its leading segment.
  */
 const CITED_RECORD_ID = /(?<![A-Za-z0-9_-])((?:DEC|OQ)-\d{4})(?![0-9-])/g;
 const SUPERSEDED_BY = /^(?:PARTLY )?SUPERSEDED \(by (DEC-\d{4})\)$/;

@@ -92,7 +92,7 @@ type CreateDoctorDataOptions = {
   profile?: DoctorProfile;
   /**
    * Per-skill profile name (e.g. "qfai-prototyping"). Distinct from
-   * the legacy `profile: "prototyping"` enum which gates the bundled
+   * the `profile: "prototyping"` value, which gates the bundled
    * prototyping checks. When a skill profile is supplied,
    * the manifest probe runs and contributes `skill.runtimeDependencies`
    * findings.
@@ -245,8 +245,8 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     });
   } else {
     // Pinning every config issue to `warning` made `doctor --fail-on error`
-    // exit 0 on a config the loader had rejected — a value past its sunset
-    // reads as "normalized with defaults" rather than as the blocking fault
+    // exit 0 on a config the loader had rejected — a rejected value
+    // read as "normalized with defaults" rather than as the blocking fault
     // the `qfai doctor` contract says it is. The check now carries the worst severity
     // the loader actually reported.
     const configHasError = issues.some((issue) => issue.severity === "error");

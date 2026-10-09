@@ -13,7 +13,6 @@ import { parseHeadings } from "../parse/markdown.js";
 import { joinAssistantLayer } from "../paths/assistantPaths.js";
 import { escapeRegExp } from "../regex.js";
 import { splitMarkdownRow } from "../specPackParsers.js";
-import { hasLegacySpecPackEntries } from "../storyTree/layout.js";
 import { isPristineStorySeed } from "../storyTree/pristineSeed.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
@@ -201,17 +200,7 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
     );
   }
 
-  const specsDir = resolvePath(root, config, "specsDir");
-  let specsEntries: string[] = [];
-  try {
-    specsEntries = await readdir(specsDir);
-  } catch (error) {
-    if (!isEnoent(error)) throw error;
-  }
-  // A project still on the spec-pack layout has no contract-layer tech.md yet.
-  if (!hasLegacySpecPackEntries(specsEntries)) {
-    issues.push(...(await validateStoryPolicyPlaceholders(root, config)));
-  }
+  issues.push(...(await validateStoryPolicyPlaceholders(root, config)));
 
   // The crawl reads the skill tree once, here, and every later check works from
   // the map it returns. A document is read a second time by nothing: the
