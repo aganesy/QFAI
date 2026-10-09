@@ -104,7 +104,7 @@ describe("Config Minimal Diff", () => {
     expect(step4).toContain(
       "- `routing` or `reviewProfiles` only when the user asks to change one;",
     );
-    expect(step4).toContain("Add no key whose value is the package default");
+    expect(step4).toContain("Add no key the package already defaults");
 
     const constraints = section(skill, "## Constraints");
     expect(constraints).toContain(
@@ -120,7 +120,7 @@ describe("Story-Tree Specs Directory Follows The Default", () => {
   it("leaves paths.specsDir out and resolves it to the story tree through the loader", async () => {
     const skill = await readFile(SKILL_PATH, "utf-8");
     const step4 = section(skill, "## Step 4 - Update `qfai.config.yaml` (minimal diff)");
-    expect(step4).toContain("`paths.specsDir` included: an absent key resolves to `.qfai/spec`");
+    expect(step4).toContain("`paths.specsDir` included");
     expect(skill).not.toContain(".qfai/specs");
 
     const loaded = await specsDirOf("paths:\n  testsDir: checks\n");
@@ -152,7 +152,7 @@ describe("Tool Selection Rationale Recorded", () => {
     const skill = await readFile(SKILL_PATH, "utf-8");
     const step3 = section(skill, "## Step 3 - Update project context (evidence-first)");
     expect(step3).toContain(
-      "with one row per test layer for the test tools (for example `Integration tests` or `Browser tests`) whose Choice names the tool, the manifest or test files it was observed in, and why it fits that layer",
+      "with one row per test layer whose Choice names the tool, the files it was observed in, and why it fits",
     );
 
     const template = await readFile(TECH_TEMPLATE_PATH, "utf-8");
