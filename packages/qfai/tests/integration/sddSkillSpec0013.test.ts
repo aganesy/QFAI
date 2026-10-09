@@ -183,6 +183,7 @@ describe("SDD preflight stops only when no usable source exists", () => {
     expect(result.packGaps.some((gap) => gap.includes("06_REQ.md"))).toBe(true);
   });
 
+  // QFAI:AC-0001-0151-01
   // QFAI:EX-0001-0151-01
   // QFAI:AC-0001-0148-01
   // QFAI:EX-0001-0148-03

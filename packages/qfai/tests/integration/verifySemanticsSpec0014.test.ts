@@ -7,9 +7,11 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { runValidate } from "../../src/cli/commands/validate.js";
 import { defaultConfig } from "../../src/core/config.js";
 import { validateProject } from "../../src/core/validate.js";
 import { runCanonicalUixValidators } from "../../src/core/validators/uix/canonical.js";
+import { captureStdout } from "../helpers/stdout.js";
 
 const tempDirs: string[] = [];
 
@@ -28,6 +30,7 @@ afterEach(async () => {
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 
+// QFAI:AC-0001-0156-03
 // QFAI:EX-0001-0157-01
 // QFAI:EX-0001-0156-03
 describe("TC-0014-0018: canonical UIX in verify path", () => {
@@ -68,6 +71,28 @@ describe("TC-0014-0018: canonical UIX in verify path", () => {
       result.issues.map((issue) => issue.code),
       "the verify profile must carry the canonical UIX group's findings",
     ).toContain("QFAI-THREELAYER-002");
+  });
+
+  // QFAI:AC-0001-0156-02
+  // QFAI:EX-0001-0156-01
+  it("a verify run that reports a canonical error does not pass", async () => {
+    const root = await newTempDir();
+    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
+    await mkdir(path.join(packDir, "uiux"), { recursive: true });
+    await writeFile(path.join(packDir, "01_Context.md"), "# Context\n\n- surface: web\n", "utf-8");
+
+    const result = await validateProject(root, undefined, { profile: "verify" });
+    const errors = result.issues.filter(
+      (issue) => issue.code === "QFAI-THREELAYER-002" && issue.severity === "error",
+    );
+    expect(errors.length).toBeGreaterThan(0);
+
+    let exit = -1;
+    const output = await captureStdout(async () => {
+      exit = await runValidate({ root, strict: false, failOn: "error", profile: "verify" });
+    });
+    expect(exit).toBe(1);
+    expect(output).toContain("QFAI-THREELAYER-002");
   });
 
   it("runCanonicalUixValidators reaches the latest pack from a repo root", async () => {
@@ -133,6 +158,7 @@ describe("UI-bearing discussion sidecars in project validation", () => {
   });
 });
 
+// QFAI:AC-0001-0156-03
 // QFAI:EX-0001-0156-02
 describe("TC-0014-0019: removed compatibility surface", () => {
   it("package surface exposes no legacy namespace or compatibility category", async () => {

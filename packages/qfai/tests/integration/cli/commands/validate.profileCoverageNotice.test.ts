@@ -28,3 +28,19 @@ it("describes the story obligation omitted by each partial profile", async () =>
     await rm(root, { recursive: true, force: true });
   }
 });
+
+// QFAI:AC-0001-0156-01
+it("evaluates the verify profile as a full scan, not a partial one", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-profile-verify-"));
+  try {
+    await runValidate({ root, strict: false, profile: "verify" });
+    const result = JSON.parse(
+      await readFile(path.join(root, ".qfai", "report", "validate.json"), "utf8"),
+    ) as Result;
+    const message = result.issues.find((issue) => issue.code === "QFAI-PROFILE-001")?.message;
+    expect(message).toContain("evaluated every gate a full scan covers");
+    expect(message).not.toContain("partial profile");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

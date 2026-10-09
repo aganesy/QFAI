@@ -80,6 +80,7 @@ const SKILL_OWN_POLICY = `# qfai-fixture
   - brand intent
 `;
 
+// QFAI:AC-0001-0169-01
 describe("spec-0015 autopilot policy CHG-006", () => {
   it("QFAI:EX-0001-0169-01 — error: a baseline without the shared section emits QFAI-POLICY-001", async () => {
     await writeBaseline("# Shared Skill Operating Baseline\n");
