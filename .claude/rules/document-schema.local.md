@@ -1,1 +1,0 @@
-../../.agents/rules/document-schema.local.md
