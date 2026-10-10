@@ -18,10 +18,11 @@
  * every ID a row of `decisions.md` names, so a retired ID is not handed out
  * again and an ID written only as an example in prose is not counted.
  *
- * Every invocation costs one REST listing and one `git fetch`, however many
+ * Reading the trees costs one REST listing and one `git fetch`, however many
  * pull requests are open and however many scopes are asked for. The listing goes
  * through `gh-budget.mjs`, which keeps its reserve and reports the remaining
- * allowance on stderr, so stdout holds only the answer.
+ * allowance on stderr, so stdout holds only the answer. A check during an unfinished
+ * merge stops before fetching or comparing branch-owned identifiers.
  *
  * Usage:
  *   node scripts/story-ids.mjs next <scope>...
@@ -35,7 +36,8 @@
  *
  * Exit codes: 0 answered; 1 a collision was found, or the listing left the
  * budget below the reserve (the answer is still printed); 2 the arguments,
- * the runtime, `git` or `gh` could not be used; 3 a scope has no number left.
+ * the runtime, `git` or `gh` could not be used, or `check` found an unfinished
+ * merge; 3 a scope has no number left.
  */
 /* global console, process */
 import { execFileSync } from "node:child_process";
@@ -319,6 +321,13 @@ function nextCommand(reader, scopes, pulls, allocate) {
 }
 
 function checkCommand(reader, pulls) {
+  try {
+    reader.git(["rev-parse", "--verify", "--quiet", "MERGE_HEAD"]);
+    console.error("Finish the merge before checking branch-owned identifiers.");
+    return 2;
+  } catch (cause) {
+    if (cause?.status !== 1) throw cause;
+  }
   const heads = fetchHeads(reader, pulls);
   const base = declared(reader.atCommit(reader.text(["merge-base", "HEAD", heads.main]).trim()));
   const mine = added(declared(reader.inWorkingTree()), base);
@@ -387,6 +396,7 @@ const USAGE = [
   "Usage:",
   "  node scripts/story-ids.mjs next <scope>...",
   "  node scripts/story-ids.mjs check",
+  "check: finish any pending merge first; an unfinished merge exits 2.",
   "Scopes: DEC, OQ, BF, US-<flow>, AC-<flow>-<story>, EX-<flow>-<story>, BR-<contract>",
 ].join("\n");
 
