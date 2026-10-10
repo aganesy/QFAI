@@ -348,6 +348,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the owner. Different or uncertain behaviour returns to specification work;
   the choice and its reason appear in the final report.
 
+- **Published branch-added decision records have a bounded form recovery.**
+  A separately approved prefix may restore missing evidence labels while keeping
+  the original decision bytes and authority intact. Unsafe or ambiguous records
+  stop before writing; inherited records require their own owning decision.
+
 - Verify steps reject validation errors even when a custom Validate wrapper succeeds.
 - Clarify that the research agent reads the cache TTL extension in the project config; the CLI does not parse it.
 
