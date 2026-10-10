@@ -1817,6 +1817,7 @@ describe("the optional Windows full-suite acceptance", () => {
           WORKFLOW_SHA: fixture.sha,
           RUNNER_TEMP: fixture.root,
           GITHUB_RUN_ID: "918",
+          GITHUB_STEP_SUMMARY: path.join(fixture.root, "summary.md"),
         },
       });
       expect(result.status, result.stdout + result.stderr).toBe(0);

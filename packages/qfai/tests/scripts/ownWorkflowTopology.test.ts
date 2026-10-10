@@ -4527,6 +4527,19 @@ describe("the optional Windows full-suite diagnostic", () => {
     );
     expect(mirrorIndex).toBeGreaterThan(setupIndex);
     expect(runnerIndex).toBeGreaterThan(mirrorIndex);
+    const tempEnv = {
+      TEMP: "${{ runner.temp }}\\qfai tmp",
+      TMP: "${{ runner.temp }}\\qfai tmp",
+    };
+    const temporaryIndex = steps.findIndex(
+      (step) => step["name"] === "Prepare checkout-volume temporary directory",
+    );
+    expect(temporaryIndex).toBeGreaterThan(setupIndex);
+    expect(mirrorIndex).toBeGreaterThan(temporaryIndex);
+    expect(steps[temporaryIndex]?.["env"]).toEqual(tempEnv);
+    expect(stepRun(steps[temporaryIndex] ?? {}).trim()).toBe('mkdir -p "$(cygpath -u "$TEMP")"');
+    expect(steps[mirrorIndex]?.["env"]).toEqual(tempEnv);
+    expect(steps[runnerIndex]?.["env"]).toEqual(tempEnv);
     const upload = steps.find((step) =>
       String(step["uses"]).startsWith("actions/upload-artifact@"),
     );

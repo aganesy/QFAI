@@ -92,11 +92,22 @@ jobs:
         run: |
           set -euo pipefail
           pnpm -C packages/qfai build 2>&1 | tee "$(cygpath -u "$RUNNER_TEMP")/windows-full-suite/build.log"
+      - name: Prepare checkout-volume temporary directory
+        env:
+          TEMP: ${{ runner.temp }}\qfai tmp
+          TMP: ${{ runner.temp }}\qfai tmp
+        run: mkdir -p "$(cygpath -u "$TEMP")"
       - name: Prepare repository assistant mirror
+        env:
+          TEMP: ${{ runner.temp }}\qfai tmp
+          TMP: ${{ runner.temp }}\qfai tmp
         run: |
           set -euo pipefail
           node scripts/link-assistant-tree.mjs 2>&1 | tee "$(cygpath -u "$RUNNER_TEMP")/windows-full-suite/mirror.log"
       - name: Execute and record the complete workspace
+        env:
+          TEMP: ${{ runner.temp }}\qfai tmp
+          TMP: ${{ runner.temp }}\qfai tmp
         run: |
           set -euo pipefail
           node --input-type=module <<'RUNNER' 2>&1 | tee "$(cygpath -u "$RUNNER_TEMP")/windows-full-suite/runner.log"
