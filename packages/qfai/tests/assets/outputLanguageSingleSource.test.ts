@@ -59,7 +59,7 @@ const ABSOLUTE_RULE =
  * is shipped, and none was swept, which is how the one that decided output
  * language for every session went unnoticed the longest.
  */
-const ROOT_ENTRY_POINTS = ["AGENTS.md", "CLAUDE.md", ".github/copilot-instructions.md"];
+const ROOT_ENTRY_POINTS = ["AGENTS.md", ".github/copilot-instructions.md"];
 
 const read = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
