@@ -37,6 +37,7 @@ const EXTRACTION = "skill/qfai-run/references/extraction.md";
 const STAGE_POINTS = "skill/qfai-run/references/stage-points.md";
 const MAINTAIN = "skill/qfai-maintain/SKILL.md";
 const MAINTAIN_EDIT = "step/maintain-edit/STEP.md";
+const SDD_TRIAGE = "skill/qfai-sdd/references/sdd-triage.md";
 
 const PROFILES = ["architecture-heavy", "default", "runtime-heavy"];
 
@@ -642,6 +643,76 @@ describe("qfai-run", () => {
     expect(text).toMatch(
       /relay it in the user's working language\. the cli's strings are english/i,
     );
+  });
+});
+
+describe("qfai-sdd pending test annotations", () => {
+  async function guidance(): Promise<string> {
+    const text = flat(sectionOf(await readShipped(SDD_TRIAGE), "## Decision and question rows"));
+    expect(text).not.toBe("");
+    return text;
+  }
+
+  it("permits an explicit pending annotation only with specification authority and approved test deferral", async () => {
+    const text = await guidance();
+    expect(text).toMatch(/annotations?.*pending|pending.*annotations?/i);
+    expect(text).toContain("Test exception:");
+    expect(text).toMatch(/exact AC\b/i);
+    expect(text).toMatch(/\bDONE\b/);
+    expect(text).toMatch(/(?:authority|permission|approval).*(?:change|edit).*spec/i);
+    expect(text).toMatch(
+      /(?:approval|authorization).*defer.*test|test deferral.*(?:approved|authorized)/i,
+    );
+  });
+
+  it("records the reason, untested scope, owner, next decision date and annotation restoration condition", async () => {
+    const text = await guidance();
+    for (const field of [
+      /reason/i,
+      /untested scope/i,
+      /owner/i,
+      /next decision date/i,
+      /restor.*annotation.*condition|condition.*restor.*annotation/i,
+    ])
+      expect(text).toMatch(field);
+  });
+
+  it("keeps DONE approval distinct from test completion and limits the exception to its exact AC", async () => {
+    const text = await guidance();
+    expect(text).toMatch(
+      /\bDONE\b.*(?:does not|never|not).*test.*(?:completion|complete|passed|done)/i,
+    );
+    expect(text).toMatch(/exact AC\b/i);
+    expect(text).toMatch(/(?:never|does not|no).*exempt.*descendant/i);
+    expect(text).toMatch(/(?:EX|examples).*BR|BR.*(?:EX|examples)/i);
+  });
+
+  it("opens an Unadjudicated record and halts dependent changes when specification permission is absent", async () => {
+    const text = await guidance();
+    expect(text).toMatch(
+      /spec.*(?:forbidden|not permitted|not authorized)|(?:no|missing).*permission.*spec/i,
+    );
+    expect(text).toContain("Unadjudicated:");
+    for (const field of [
+      /expected/i,
+      /actual/i,
+      /\bIDs\b/i,
+      /evidence/i,
+      /owner/i,
+      /required permission/i,
+    ])
+      expect(text).toMatch(field);
+    expect(text).toMatch(/(?:stop|halt).*dependent.*\bAC\b.*\bEX\b.*\bBR\b/i);
+    expect(text).toMatch(
+      /independent.*(?:authorized|permitted).*work.*(?:continue|proceed)|(?:authorized|permitted).*independent.*work.*(?:continue|proceed)/i,
+    );
+  });
+
+  it("uses the date for manual follow-up without promising automatic expiry or warnings", async () => {
+    const text = await guidance();
+    expect(text).toMatch(/date.*manual|manual.*date/i);
+    expect(text).toMatch(/(?:no|not|never|does not).*automatic.*expir/i);
+    expect(text).toMatch(/(?:no|not|never|does not).*automatic.*warning/i);
   });
 });
 
