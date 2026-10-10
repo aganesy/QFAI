@@ -67,8 +67,8 @@ understands. These may appear in a document written for that reader:
 Where the reader cannot already know a term, define it once at its first use.
 Use one spelling throughout.
 
-Pull request and issue bodies are outside this clause (see Scope). Numbers and links belong
-there, and in commit messages and the changelog.
+Pull request and issue bodies are outside this clause (see Scope). Numbers and
+links belong there, and in commit messages and the changelog.
 
 ## 2. No account of how the work went
 

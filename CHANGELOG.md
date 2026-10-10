@@ -6,6 +6,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- Synchronize the document schema checker copies from the package manifest after
+  a frozen dependency install, including the Renovate repin workflow.
+
+- Add a branch catch-up helper that merges the remote default branch, resolves
+  only proven digest conflicts and reseals generated pins without running tests.
+
 - **A workspace bootstrap command prepares this checkout's local launcher.**
   It runs frozen installs around the package build, stops at the first failed
   step and rejects shared dependency links. Fixes #3244.
@@ -35,6 +41,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   last message ends in a question, and nothing is filed under a no-question mode.
 
 ### Changed
+
+- **The release association gate uses Node.js to read pull request branches.**
+  Its two contributor cases require Node.js and Bash, without a jq dependency.
+
+- **Repeated edit reminders use short rule pointers.** The first relevant edit
+  receives the full rules; later edits retain concise guidance. Missing session
+  identity or unavailable counters keep the full reminder. Posting reminders
+  remain unchanged.
+
+- **Worker work orders state the permitted edit boundary.** They name the
+  assigned checkout, owned paths and edit method. A refused edit returns a
+  reviewable diff for coordinator integration without bypassing the refusal.
+
+- **Windows CI covers native assistant mirror links.** Its parity list includes
+  mirror link behavior and prepares owned root links before testing, using the
+  same temp directory as the suites. Healthy worktrees remain healthy cases.
 
 - **Windows link warnings describe the affected wrapper and its existing repair.**
   Guidance recommends ordinary init without deleting links and distinguishes
@@ -311,6 +333,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   constitution's Article V. Part of #2951.
 
 ### Fixed
+
+- Verify steps reject validation errors even when a custom Validate wrapper succeeds.
+- Clarify that the research agent reads the cache TTL extension in the project config; the CLI does not parse it.
+
+- Clarify that story ID candidates are snapshots and require a fresh collision
+  check of the committed changes before publishing the same branch head.
 
 - **Language errors offer an ASCII code-point construction for code samples.**
   The guard keeps Unicode escape guidance and explains the alternative when
