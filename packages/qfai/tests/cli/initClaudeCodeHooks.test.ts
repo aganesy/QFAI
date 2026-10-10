@@ -205,8 +205,160 @@ function earlierReaderGroup(reader: (typeof earlierReaders)[number]) {
   return claude ? { matcher: "*", hooks } : { hooks };
 }
 
+// Fixed periodic PostToolUse readers for the init upgrade path.
+const earlierPostToolGroups = [
+  {
+    file: ".claude/settings.json",
+    groups: [
+      {
+        matcher: "Write|Edit",
+        hooks: [
+          {
+            type: "command",
+            if: "Write(**/*.md)",
+            statusMessage: "QFAI documentation-clarity reminder",
+            command: "node",
+            args: [
+              "-e",
+              "try{const f=require('fs');let i={};try{i=JSON.parse(f.readFileSync(0,'utf8'))}catch{}let n=1;if(typeof i.session_id==='string'){try{const t=require('path').join(require('os').tmpdir(),['qfai-reminder',i.session_id,i.agent_id||'main',process.argv[2]].join('-').replace(/[^\\w.-]/g,'_'));f.appendFileSync(t,'.');n=f.statSync(t).size}catch{}}if((n-1)%20===0){const m=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}catch{}",
+              "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
+              "documentation-clarity-after-write",
+            ],
+          },
+          {
+            type: "command",
+            if: "Edit(**/*.md)",
+            statusMessage: "QFAI documentation-clarity reminder",
+            command: "node",
+            args: [
+              "-e",
+              "try{const f=require('fs');let i={};try{i=JSON.parse(f.readFileSync(0,'utf8'))}catch{}let n=1;if(typeof i.session_id==='string'){try{const t=require('path').join(require('os').tmpdir(),['qfai-reminder',i.session_id,i.agent_id||'main',process.argv[2]].join('-').replace(/[^\\w.-]/g,'_'));f.appendFileSync(t,'.');n=f.statSync(t).size}catch{}}if((n-1)%20===0){const m=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}catch{}",
+              "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
+              "documentation-clarity-after-edit",
+            ],
+          },
+        ],
+      },
+      {
+        matcher: "Write|Edit",
+        hooks: [
+          {
+            type: "command",
+            statusMessage: "QFAI minimal-implementation reminder",
+            command: "node",
+            args: [
+              "-e",
+              "try{const f=require('fs'),p=require('path'),R=p.dirname(p.dirname(p.dirname(process.argv[1])));let i={};try{i=JSON.parse(f.readFileSync(0,'utf8'))}catch{}const u=i.tool_input&&i.tool_input.file_path;let src=true;if(typeof u==='string'&&(x=>{const s=x.split(p.sep),b=s.pop();return p.isAbsolute(x)||s[0]==='..'||s.some(y=>['tmp','test','tests','__tests__','node_modules','.qfai','.agents'].includes(y))||b[0]==='.'||/\\.(test|spec)\\./.test(b)||['.md','.mdx','.markdown','.txt','.rst','.yml','.yaml','.json','.jsonc','.json5','.toml','.ini','.csv','.tsv','.lock','.svg','.png','.jpg','.jpeg','.gif'].includes(p.extname(b).toLowerCase())})(p.relative(R,p.resolve(R,u))))src=false;if(src){let n=1;if(typeof i.session_id==='string'){try{const t=require('path').join(require('os').tmpdir(),['qfai-reminder',i.session_id,i.agent_id||'main',process.argv[2]].join('-').replace(/[^\\w.-]/g,'_'));f.appendFileSync(t,'.');n=f.statSync(t).size}catch{}}if((n-1)%20===0){const m=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}}catch{}",
+              "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
+              "minimal-implementation",
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    file: ".codex/hooks.json",
+    groups: [
+      {
+        matcher: "apply_patch",
+        hooks: [
+          {
+            type: "command",
+            statusMessage: "QFAI documentation-clarity reminder",
+            command:
+              "node -e \"try{const j=JSON.parse(require('fs').readFileSync(0,'utf8')),i=j.tool_input.command;if(typeof i==='string'&&/^\\*\\*\\* Add File: .*\\.md\\r?\\n/m.test(i)){const f=require('fs'),p=require('path');let d=process.cwd(),r;for(;;){const c=p.join(d,'.agents','rules','reminders.json');if(r===undefined&&f.existsSync(c))r=c;if(f.existsSync(p.join(d,'.git')))break;const u=p.dirname(d);if(u===d){r=undefined;break}d=u}if(r){let n=1;if(typeof j.session_id==='string'){try{const t=p.join(require('os').tmpdir(),['qfai-reminder',j.session_id,j.agent_id||'main',process.argv[1]].join('-').replace(/[^\\w.-]/g,'_'));f.appendFileSync(t,'.');n=f.statSync(t).size}catch{}}if(Number.isInteger((n-1)/20)){const m=JSON.parse(f.readFileSync(r,'utf8'))[process.argv[1]];m===undefined||console.log(JSON.stringify(m))}}}}catch{}\" documentation-clarity-after-write",
+            timeout: 10,
+          },
+          {
+            type: "command",
+            statusMessage: "QFAI documentation-clarity reminder",
+            command:
+              "node -e \"try{const j=JSON.parse(require('fs').readFileSync(0,'utf8')),i=j.tool_input.command;if(typeof i==='string'&&/^\\*\\*\\* Update File: .*\\.md\\r?\\n/m.test(i)){const f=require('fs'),p=require('path');let d=process.cwd(),r;for(;;){const c=p.join(d,'.agents','rules','reminders.json');if(r===undefined&&f.existsSync(c))r=c;if(f.existsSync(p.join(d,'.git')))break;const u=p.dirname(d);if(u===d){r=undefined;break}d=u}if(r){let n=1;if(typeof j.session_id==='string'){try{const t=p.join(require('os').tmpdir(),['qfai-reminder',j.session_id,j.agent_id||'main',process.argv[1]].join('-').replace(/[^\\w.-]/g,'_'));f.appendFileSync(t,'.');n=f.statSync(t).size}catch{}}if(Number.isInteger((n-1)/20)){const m=JSON.parse(f.readFileSync(r,'utf8'))[process.argv[1]];m===undefined||console.log(JSON.stringify(m))}}}}catch{}\" documentation-clarity-after-edit",
+            timeout: 10,
+          },
+        ],
+      },
+      {
+        matcher: "apply_patch",
+        hooks: [
+          {
+            type: "command",
+            statusMessage: "QFAI minimal-implementation reminder",
+            command:
+              "node -e \"try{const f=require('fs'),p=require('path');let d=process.cwd(),r;for(;;){const c=p.join(d,'.agents','rules','reminders.json');if(r===undefined&&f.existsSync(c))r=c;if(f.existsSync(p.join(d,'.git')))break;const u=p.dirname(d);if(u===d){r=undefined;break}d=u}if(r){let go=true,j={};try{j=JSON.parse(f.readFileSync(0,'utf8'))}catch{}try{const R=p.dirname(p.dirname(p.dirname(r))),n=(x=>{const s=x.split(p.sep),b=s.pop();return p.isAbsolute(x)||s[0]==='..'||s.some(y=>['tmp','test','tests','__tests__','node_modules','.qfai','.agents'].includes(y))||b[0]==='.'||/\\.(test|spec)\\./.test(b)||['.md','.mdx','.markdown','.txt','.rst','.yml','.yaml','.json','.jsonc','.json5','.toml','.ini','.csv','.tsv','.lock','.svg','.png','.jpg','.jpeg','.gif'].includes(p.extname(b).toLowerCase())}),a=[...j.tool_input.command.matchAll(/^\\*\\*\\* (?:(?:Add|Update|Delete) File|Move to): (.+)/gm)].map(m=>p.relative(R,p.resolve(process.cwd(),m[1].trim())));if(a.length>0&&a.every(n))go=false}catch{}if(go){let n=1;if(typeof j.session_id==='string'){try{const t=p.join(require('os').tmpdir(),['qfai-reminder',j.session_id,j.agent_id||'main',process.argv[1]].join('-').replace(/[^\\w.-]/g,'_'));f.appendFileSync(t,'.');n=f.statSync(t).size}catch{}}if(Number.isInteger((n-1)/20)){const m=JSON.parse(f.readFileSync(r,'utf8'))[process.argv[1]];m===undefined||console.log(JSON.stringify(m))}}}}catch{}\" minimal-implementation",
+            timeout: 10,
+          },
+        ],
+      },
+    ],
+  },
+] as const;
+
 // QFAI:EX-0001-0021-09
 describe("qfai init and the reminder hooks", () => {
+  it.each(earlierPostToolGroups)(
+    "replaces periodic post-tool readers in place in $file",
+    async ({ file, groups: earlier }) => {
+      await withTempRoot(async (root) => {
+        const own = [
+          {
+            matcher: "OwnBefore",
+            customSetting: "before",
+            hooks: [{ type: "command", command: "./before.sh" }],
+          },
+          {
+            matcher: "OwnBetween",
+            customSetting: "between",
+            hooks: [{ type: "command", command: "./between.sh" }],
+          },
+          {
+            matcher: "OwnAfter",
+            customSetting: "after",
+            hooks: [{ type: "command", command: "./after.sh" }],
+          },
+        ] as const;
+        const custom = { model: "project-model", extra: { keep: true } };
+        await seedSettings(
+          root,
+          {
+            ...custom,
+            permissions: { allow: ["Bash(git status)"] },
+            hooks: { PostToolUse: [own[0], earlier[0], own[1], earlier[1], own[2]] },
+          },
+          file,
+        );
+        const template = readHookGroups(await readSettings(assetsRoot, file), "PostToolUse");
+        const shipped = earlier.map((group) => {
+          const matching = template.filter((candidate) =>
+            JSON.stringify(candidate).includes(group.hooks[0].statusMessage),
+          );
+          expect(matching).toHaveLength(1);
+          expect(matching[0]).not.toEqual(group);
+          expect(matching[0]).toMatchObject({ matcher: group.matcher });
+          return matching[0];
+        });
+
+        const stdout = await initReporting(root);
+        const settings = await readSettings(root, file);
+        expectOwnPermissionFirst(settings);
+        expect(settings).toMatchObject(custom);
+        expect(readHookGroups(settings, "PostToolUse")).toEqual([
+          own[0],
+          shipped[0],
+          own[1],
+          shipped[1],
+          own[2],
+        ]);
+        expect(stdout).toContain(`updated: ${file}`);
+        expect(stdout).not.toContain("(edited here)");
+        const updated = await readFile(path.join(root, file), "utf-8");
+        await initInto(root);
+        expect(await readFile(path.join(root, file), "utf-8")).toBe(updated);
+      });
+    },
+  );
+
   it.each(earlierReaders)("upgrades the full-only $key reader in $file", async (reader) => {
     await withTempRoot(async (root) => {
       const earlier = earlierReaderGroup(reader);
