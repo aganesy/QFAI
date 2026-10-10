@@ -10,6 +10,7 @@ What the user sees while a request is worked, and how a question reaches them.
 - The scope question
 - The announcement
 - Questions
+- Repair found by a question-only stage
 - A step only a person can take
 - Replies to a waiting step
 - Independent targets under one goal
@@ -107,6 +108,27 @@ Independent questions go in one round; a dependent one waits for its answer.
 - The user's `stop` ends the work at once, whether or not a question is open.
 - Under a no-question mode nothing is asked. `SKILL.md` says what is done
   instead.
+
+## Repair found by a question-only stage
+
+Read this section when a question-only request finds a defect and its move to
+tracked-file repair lacks explicit authority for the same target.
+
+Show the defect and its evidence, the proposed repair scope and the planned
+checks. Put one question through the structured question tool in the form
+`.agents/rules/user-questions.md` requires:
+
+- **Repair:** authorize the stated repair and checks for this target.
+- **Report and stop:** report the finding and stop this target without edits.
+
+Write nothing before the answer. Repair permission takes the destination's
+existing plan; add no stage or scope. The guards for a third branch move, a
+scope that leaves stages out and release approval still apply.
+
+Under a no-question mode, report the defect and required repair permission and
+stop that target. Write no tracked `open-questions.md` row for this choice;
+asking for no questions alone supplies no repair authority. Other authorized
+independent targets may continue.
 
 ## A step only a person can take
 
