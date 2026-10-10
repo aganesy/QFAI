@@ -154,13 +154,18 @@ pushBranch=$(git symbolic-ref --quiet --short HEAD) || exit 1
 [ "$pushBranch" != main ] || exit 1
 pushHead=$(git rev-parse --verify HEAD) || exit 1
 timeout --foreground 100s git ls-remote --refs origin "refs/heads/$pushBranch"
-timeout --foreground 100s git push origin "HEAD:refs/heads/$pushBranch"
+[ "$(git symbolic-ref --quiet --short HEAD)" = "$pushBranch" ] || exit 1
+[ "$(git rev-parse --verify HEAD)" = "$pushHead" ] || exit 1
+timeout --foreground 100s git push origin "$pushHead:refs/heads/$pushBranch"
 ```
 
 Run each command separately in the same Git Bash session and keep its result.
 Do not start the push if the lookup fails or times out. These commands target
 `origin` and the current topic branch; confirm that this is the intended
 destination.
+
+Immediately before either the initial push or a retry, repeat the two snapshot
+comparisons above. Keep the original `pushBranch` and `pushHead` values.
 
 A tool timeout may leave a running session. Poll that session instead of
 starting another push. GNU `timeout` also does not establish that every Windows
