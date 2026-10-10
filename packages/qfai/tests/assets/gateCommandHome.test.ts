@@ -29,14 +29,23 @@ describe("the story-tree contract owns quality-gate commands", () => {
       }
     });
 
-    it(`${tree}: the gate steps run the project's Validate entry and accept a recorded backlog`, async () => {
+    // QFAI:EX-0001-0156-01
+    // QFAI:EX-0001-0156-03
+    it(`${tree}: custom Validate commands keep the full scan and cannot pass validation errors`, async () => {
       const qfaiGate = await read(tree, "assistant/step/verify-qfai-gate/STEP.md");
       const repoGate = await read(tree, "assistant/step/verify-repo-gate/STEP.md");
       const flat = (text: string): string => text.replace(/\s+/g, " ");
       expect(flat(qfaiGate)).toContain("the project's `Validate` entry, where it has one");
-      expect(qfaiGate).toContain("## A recorded backlog");
-      expect(flat(qfaiGate)).toContain("The ratchet is not a waiver");
-      expect(flat(repoGate)).toContain("errors only within the project's recorded backlog");
+      expect(flat(qfaiGate)).toMatch(/full scan in the declared profile/i);
+      expect(flat(qfaiGate)).toMatch(/any validation error prevents a pass/i);
+      expect(flat(qfaiGate)).toMatch(/successful wrapper exit does not waive a validation error/i);
+      expect(flat(repoGate)).toMatch(/a PASS needs zero errors in the declared profile/i);
+      expect(flat(repoGate)).toMatch(
+        /wrapper does not waive validation errors or replace a full scan/i,
+      );
+      for (const step of [qfaiGate, repoGate]) {
+        expect(step).not.toMatch(/ratchet|recorded backlog/i);
+      }
     });
   }
 
