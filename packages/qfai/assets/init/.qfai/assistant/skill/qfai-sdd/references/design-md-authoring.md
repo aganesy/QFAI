@@ -117,6 +117,12 @@ to touch a colour has nothing to be consistent with.
 ## When the file already exists
 
 `npx qfai init` seeds the sample at the project root and never overwrites it,
-and a project may have authored its own. Write only when the file is missing.
-An existing file is validated as it stands, except that an unreplaced sample
-is refused.
+and a project may have authored its own. Write a missing file from the recorded
+direction. Repair an existing file only when SDD triage names its exact path
+and the requested change, and a new WIP change request authorizes both. Apply
+only the authorized change; preserve existing brand and tokens unless their
+change is authorized and supported by recorded direction or named theme
+values. Record the source of each changed value and leave unrelated content
+unchanged. Stop without writing a value neither source supplies. Without that
+authorization, validate the existing file without an overwrite; an inherited
+DONE row authorizes no new change. An unreplaced sample is refused.

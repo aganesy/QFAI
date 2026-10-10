@@ -76,8 +76,6 @@ it("/qfai-sdd authors root DESIGN.md from the recorded direction, and asks when 
 });
 
 // These assertions inspect installed authoring instructions, not agent file writes.
-// QFAI:EX-0001-0087-04
-// QFAI:EX-0001-0087-08
 it("The installed design step bounds an authorized repair and keeps the source of changed values", async () => {
   const step = await installed(".qfai/assistant/step/common-design-md/STEP.md");
   const authoring = await installed(`${SKILLS}/qfai-sdd/references/design-md-authoring.md`);
@@ -95,8 +93,6 @@ it("The installed design step bounds an authorized repair and keeps the source o
   expect(step).toMatch(/parseDesignMd\(text\)[^.]*validateDesignMd/);
 });
 
-// QFAI:EX-0001-0087-05
-// QFAI:EX-0001-0087-07
 it("The installed design step preserves an existing file without new authorization and refuses the sample", async () => {
   const step = await installed(".qfai/assistant/step/common-design-md/STEP.md");
 
@@ -107,7 +103,6 @@ it("The installed design step preserves an existing file without new authorizati
   expect(step).toMatch(/Once a prototyping loop has started, `DESIGN\.md` is read-only for it/i);
 });
 
-// QFAI:EX-0001-0087-06
 it("The installed design step leaves CLI-only files unchanged and stops on an unchosen brand", async () => {
   const step = await installed(".qfai/assistant/step/common-design-md/STEP.md");
 

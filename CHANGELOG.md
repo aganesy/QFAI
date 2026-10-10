@@ -336,6 +336,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- UI consistency repairs reach design authoring in the SDD stage. Existing
+  design files change only within a newly authorized request; unrelated brand
+  and tokens are preserved, and unsupported source values stop the repair.
+
 - **A diagnosed missing example reuses an existing rule for its obligation.**
   Equivalent rules use existing example coverage and stable rule IDs to settle
   the owner. Different or uncertain behaviour returns to specification work;
