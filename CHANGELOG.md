@@ -6,6 +6,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The shipped `qfai-docs.yml` installs `@jackchuka/mdschema` 0.15.5.** The
+  document-schema checker the docs lane runs moves from 0.15.4 to 0.15.5, the
+  version the package now depends on. The release changes only a dependency of
+  the checker.
+
 - **`/qfai-configure` leaves `paths.specsDir` to the default, adds routing and
   review-profile overrides only on request, and records each test layer's tool
   in the `tech.md` Stack table.** The skill no longer tells a project to gain a
