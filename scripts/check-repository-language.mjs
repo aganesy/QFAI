@@ -14,8 +14,8 @@
  *
  * Where behaviour needs a non-English literal, write it as `\uXXXX` escapes
  * beside an English comment saying what it is.
- * If an edit tool decodes escapes in JavaScript or TypeScript code, use
- * `String.fromCodePoint(0xFF1F)` with numeric code points and an English comment.
+ * If an edit tool decodes escapes in JavaScript or TypeScript code, use numeric
+ * code points, for example `String.fromCodePoint(0xFF1F)`, with an English comment.
  * This ASCII construction also supports astral characters. It is for code,
  * not YAML or Markdown literals.
  *
@@ -146,8 +146,8 @@ export function run(cwd = process.cwd()) {
     console.error(
       "This repository is written in English. Write it in English; where behaviour " +
         "needs the literal, write it as \\uXXXX escapes with an English comment. " +
-        "If an edit tool decodes escapes in JavaScript or TypeScript code, use " +
-        "String.fromCodePoint(0xFF1F) with numeric code points and an English comment. " +
+        "If an edit tool decodes escapes in JavaScript or TypeScript code, use numeric " +
+        "code points, for example String.fromCodePoint(0xFF1F), with an English comment. " +
         "This ASCII construction also supports astral characters. " +
         "It is for code, not YAML or Markdown literals.",
     );
