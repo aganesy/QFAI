@@ -72,7 +72,10 @@ Feature: Install or upgrade and get the free-text entry
     Then both hosts install the free-text entry reminder for a new request naming no skill
     And Claude Code skips prompts with a line opening with `<task-notification>`, `<wake>` or `[SYSTEM NOTIFICATION`, and prints the reminder for any other prompt or input it cannot read
     And Codex prints the free-text entry reminder on every prompt
-    And the reminder distinguishes replies to a run in progress from new requests
+    And eligible free-text entry and structured-question invocations print the full message first and a one-line reminder on later invocations of the same session, optional agent and message key
+    And Claude notification exclusions run before counting; skipped notifications do not consume the first full message
+    And missing session identity or counter-storage failure prints the full message and exits 0
+    And the full and brief free-text entry messages distinguish new requests that need planning from pending answers or requested operation results that resume the same step
     And Codex also runs the structured-question reminder on every prompt
     And its message allows an interim report without repeating a question only for an ongoing step awaiting the result of an external operation already requested, with no new decision or missing fact
     And that report states the expected result and what resumes the step
@@ -93,6 +96,10 @@ Feature: Install or upgrade and get the free-text entry
     And the documentation-clarity reminder after a write fires only for a patch that adds or changes a Markdown file
     And the minimal-implementation reminder after a write fires only for a file that is product source: not a test, a file under `tmp/`, a document, a configuration file or a file outside the project
     And the API-budget reminder fires only for a shell command that names the forge's CLI or its API host
+    And in each host that supports their event, the API-budget and three grilling keys print the full message on their first eligible invocation and a one-line reminder on every later invocation, using the existing counter for each session, optional agent and key
+    And command filters run before counting, so a skipped call consumes no first display
+    And a new session, agent or key starts its own sequence; missing session identity or counter-storage failure prints the full message and exits 0
+    And the other reminder schedules, hook envelopes and exit behavior stay unchanged, and the counters imply no active run, completion, approval or routing
     And the reminder before leaving plan mode has no Codex group, because Codex has no tool call that leaves plan mode
     And each runs under every shell as the prompt-time reminders do
     And an existing file gains the tool-time groups once, and a second run changes nothing
