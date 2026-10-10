@@ -43,6 +43,7 @@ import {
   projectDirOf,
   runReminderHook,
 } from "../helpers/reminderHooks.js";
+import { flat, sectionOf } from "../helpers/shippedAssistant.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 /** Where every entry reads its message, as the settings file names it. */
@@ -429,6 +430,149 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
         }
       }
     }
+  });
+});
+
+// QFAI:SPEC-REF: AC-0001-0196-12, EX-0001-0196-37
+// These guards cover the shared instruction payload, not an agent's judgment.
+describe("documentation clarity reminder scope", () => {
+  const keys = [
+    "documentation-clarity-before-post",
+    "documentation-clarity-after-write",
+    "documentation-clarity-after-edit",
+  ] as const;
+  let messages: ReadonlyMap<string, string>;
+  let master: string;
+
+  beforeAll(async () => {
+    const [messageText, ruleText] = await Promise.all([
+      readFile(path.join(repoRoot, SHIPPED_MESSAGES), "utf-8"),
+      readFile(
+        path.join(
+          repoRoot,
+          "packages/qfai/assets/init/root/.agents/rules/documentation-clarity.md",
+        ),
+        "utf-8",
+      ),
+    ]);
+    const parsed: unknown = JSON.parse(messageText);
+    if (typeof parsed !== "object" || parsed === null) throw new Error("no message table");
+    messages = new Map(
+      keys.map((key) => {
+        const value: unknown = Reflect.get(parsed, key);
+        if (typeof value !== "object" || value === null)
+          throw new Error(`${key} is not an envelope`);
+        const output: unknown = Reflect.get(value, "hookSpecificOutput");
+        if (typeof output !== "object" || output === null) {
+          throw new Error(`${key} has no hookSpecificOutput`);
+        }
+        const context: unknown = Reflect.get(output, "additionalContext");
+        if (typeof context !== "string") throw new Error(`${key} has no additionalContext`);
+        return [key, flat(context)];
+      }),
+    );
+    master = ruleText;
+  });
+
+  function clauses(text: string): string[] {
+    return flat(text).split(/[.;!?]\s+/);
+  }
+
+  function expectRequestedRecordScope(text: string): void {
+    const condition =
+      clauses(text).find(
+        (clause) =>
+          /\buser\b/i.test(clause) &&
+          /\brequest\w*\b/i.test(clause) &&
+          /\b(?:incident|event|work)\b/i.test(clause) &&
+          /\b(?:record|report|account)\w*\b/i.test(clause),
+      ) ?? "";
+    expect(condition, "the record exception needs an explicit user request").toMatch(
+      /\b(?:explicit\w*|express\w*|specifically)\b/i,
+    );
+    expect(condition, "the exception must be conditional").toMatch(
+      /\b(?:only|if|when|exception)\b/i,
+    );
+    expect(text).toMatch(/\b(?:necessary|needed|required)\b/i);
+    expect(
+      clauses(text).some(
+        (clause) =>
+          /\b(?:observed|factual)\b/i.test(clause) && /\b(?:events?|facts?)\b/i.test(clause),
+      ),
+      "the record names observed events",
+    ).toBe(true);
+    expect(text).toMatch(/\bevidence\b/i);
+    expect(text).toMatch(/\b(?:uncertainty|unverified|unknowns?)\b/i);
+    expect(text).toMatch(/\bcurrent\b[^.;]*\bimpact\b/i);
+    expect(text).toMatch(/\bnext\b[^.;]*\b(?:actions?|steps?)\b/i);
+  }
+
+  function expectOrdinaryHistoryExcluded(text: string): void {
+    expect(text).toMatch(/\b(?:specifications?|specs?)\b/i);
+    expect(text).toMatch(/\bchange\b/i);
+    const prohibition =
+      clauses(text).find(
+        (clause) =>
+          /\b(?:no|not|never|omit|exclude)\b/i.test(clause) &&
+          ((/\b(?:design|implementation)\b/i.test(clause) && /\bhistory\b/i.test(clause)) ||
+            /how (?:the )?work went/i.test(clause)),
+      ) ?? "";
+    expect(prohibition, "ordinary specifications and change descriptions exclude history").not.toBe(
+      "",
+    );
+  }
+
+  it("allows numbers and links in pull request and issue bodies before posting", () => {
+    const allowance =
+      clauses(messages.get(keys[0]) ?? "").find(
+        (clause) =>
+          /\b(?:PR|pull[ -]requests?)\b/i.test(clause) &&
+          /\bissues?\b/i.test(clause) &&
+          /\bbod(?:y|ies)\b/i.test(clause) &&
+          /\bnumbers?\b/i.test(clause) &&
+          /\blinks?\b/i.test(clause),
+      ) ?? "";
+    expect(allowance).toMatch(/\b(?:allow\w*|may|can|belong\w*|permitted)\b/i);
+    expect(allowance).not.toMatch(/\b(?:no|never|prohibit\w*)\b[^.;]*\bnumbers?\b/i);
+  });
+
+  it("keeps source and ordinary Markdown identifier restrictions and existing exceptions", () => {
+    for (const key of keys.slice(1)) {
+      const message = messages.get(key) ?? "";
+      expect(message).toMatch(/\bMarkdown\b/i);
+      expect(message).toMatch(
+        /\b(?:no|never|prohibit\w*)\b[^.;]*\b(?:issue|PR|pull[ -]request)\b[^.;]*\bnumbers?\b/i,
+      );
+    }
+    const identifiers = flat(sectionOf(master, "## 1."));
+    expect(identifiers).toMatch(/Never write[^.]*source code or Markdown files/i);
+    expect(identifiers).toMatch(/Pull request and issue bodies[^.]*outside this clause/i);
+    expect(identifiers).toMatch(/Numbers and links belong[^.]*commit messages and the changelog/i);
+    expect(identifiers).toContain("Spec-tree IDs");
+    expect(identifiers).toContain("Names the reader sees");
+  });
+
+  it("limits all three reminders to expressly requested records with necessary factual content", () => {
+    for (const key of keys) expectRequestedRecordScope(messages.get(key) ?? "");
+  });
+
+  it("keeps design history out of ordinary specifications and change descriptions in every reminder", () => {
+    for (const key of keys) expectOrdinaryHistoryExcluded(messages.get(key) ?? "");
+  });
+
+  it("gives clause two the same narrow record exception without weakening ordinary writing", () => {
+    const history = flat(sectionOf(master, "## 2."));
+    expectRequestedRecordScope(history);
+    expectOrdinaryHistoryExcluded(history);
+  });
+
+  it("makes the re-read check distinguish requested records from excluded design history", () => {
+    const reread = flat(sectionOf(master, "## 9."));
+    const historyCheck =
+      reread.split("|").find((cell) => /(?:how the work went|\bhistory\b)/i.test(cell)) ?? "";
+    expect(historyCheck).toMatch(/\b(?:request\w*|exception|clause 2)\b|§\s*2/i);
+    expect(reread).toMatch(/\b(?:explicit\w*|express\w*|specifically)\b/i);
+    expect(reread).toMatch(/\b(?:incident|event|work)\b[^.;]*\b(?:record|report|account)\w*\b/i);
   });
 });
 
