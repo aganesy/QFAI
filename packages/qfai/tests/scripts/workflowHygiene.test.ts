@@ -110,10 +110,13 @@ const ACTIONS_DIR = path.join(REPO_ROOT, ".github", "actions");
  * registers against the merge base with `origin/main`. At depth 1 that merge base resolves
  * to nothing, so the check returns without reporting — in a job whose result blocks a merge.
  */
+// The named diagnostic accepts any existing project test, including tests that compare
+// commits or use a merge base. Its supplied-SHA checkout keeps that history available.
 const FULL_HISTORY_JOBS = [
   "ci.yml::build",
   "ci.yml::detect",
   "ci.yml::lint",
+  "named-tests.yml::named-test",
   "release.yml::verify",
   "release.yml::gate",
 ];
@@ -329,7 +332,7 @@ describe("TC-0017-0021 (TDD-0021): full history is job-scoped, never a workflow 
     expect
       .soft(
         requesting,
-        "full history belongs to change detection, the lint lane's pair-changed diff and the release verification job, and to no other job",
+        "full history belongs only to the listed diff, verification and named diagnostic jobs",
       )
       .toEqual([...FULL_HISTORY_JOBS].sort());
 

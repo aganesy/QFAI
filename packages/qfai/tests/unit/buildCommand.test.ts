@@ -1994,6 +1994,7 @@ describe("the real workflow trees", () => {
         // the own tree has a THIRD lane that builds. `check-types` runs `tsc -b`, which emits into
         // `dist`, so the type-check lane and the build lane compile the same package twice.
         "build::ci.yml::pnpm check-types",
+        "build::named-tests.yml::pnpm -C packages/qfai build",
         // `release.yml`'s floor gate builds for the reason `node-floor` does: it runs the
         // package suite on the floor `packages/qfai/package.json#engines.node` promises, and
         // `dist/` is not committed. A tag re-published
