@@ -545,10 +545,8 @@ describe("qfai-run", () => {
   // QFAI:EX-0001-0224-02
   it("writes artifacts itself, delegates only parallel parts and reviews, and never reviews its own work", async () => {
     const work = flat(sectionOf(await readShipped(RUN), "## The work"));
-    expect(work).toMatch(/write any artifact yourself/i);
-    expect(work).toMatch(
-      /give a part to a sub-agent only to run independent parts in parallel, or for a review/i,
-    );
+    expect(work).toMatch(/write (?:any )?artifacts? yourself/i);
+    expect(work).toMatch(/delegate independent parallel work or review/i);
     expect(work).toMatch(/whose `review` is `spec`, `requirements-reviewer` reviews/);
     expect(work).toMatch(/no agent reviews its own work/i);
   });
@@ -570,7 +568,8 @@ describe("qfai-run", () => {
   it("handles each release, decision and branch point at its step, inside the step loop", async () => {
     const work = sectionOf(await readShipped(RUN), "## The work");
     const loop = flat(work.split("5. **Run the stages.**")[1]?.split("6. **Review.**")[0] ?? "");
-    expect(loop).toMatch(/at each step, handle the points the plan names for it/i);
+    expect(loop).toMatch(/at each step, follow its plan's points/i);
+    expect(loop).toContain("`references/stage-points.md`");
     for (const point of ["release point", "decision point", "branch point"]) {
       expect(loop.toLowerCase()).toContain(`**${point}.**`);
     }

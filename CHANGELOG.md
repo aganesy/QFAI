@@ -32,6 +32,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   An exact AC test exception needs both specification-change and test-deferral
   authority. Its review date is manual; uncovered changes remain open questions.
   Fixes #3233.
+- **One goal can advance independent targets through their own plans.** Guidance
+  keeps each target's scope, head-bound evidence and approval limits separate.
+  A clean checkout can move to authorized work during remote waits; writers,
+  local gates and reviewers using live files finish first. Fixes #3231.
+
 - **The stale-term example names its current warning code.** The expected
   diagnostic now agrees with the contract and validator. Runtime behavior is
   unchanged. Fixes #3353.
