@@ -50,9 +50,14 @@ only, never beyond its diff.
   in the pull request, the commit message and the changelog.
 - No account of how the work went. State the current behaviour and why it is
   that way; the history is already in the git log and the pull request.
-- Cut what is self-evident, repeated, or wordy.
+- Conclusion first: the title or opening says the result, with no preamble.
+- Cut what is self-evident, repeated, or wordy, and announcements, recaps and
+  empty intensifiers.
 - Ordinary vocabulary, one claim per sentence, lines short enough to scan.
+  Name who acts; software does not know or decide.
 - Bullet lists and tables for parallel items.
+- Mark what is unverified. A report opens with the outcome and separates
+  what was checked from what was not.
 - Re-read every changed line afterwards. Text that reads as a literal
   translation is a defect in any language pair — rewrite it the way someone
   writing natively in that language would.
