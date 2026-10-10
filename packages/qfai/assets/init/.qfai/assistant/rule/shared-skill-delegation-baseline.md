@@ -4,9 +4,9 @@ Skills cite this baseline and add only role, stage or gate overrides.
 
 ## Sub-agent Delegation (MANDATORY)
 
-This section binds every skill and every step as written. A skill or step
-restates none of it and writes no placeholder stanza for a subsection it does
-not change; it states only an override, under the subsection it overrides.
+This section binds every skill and step. A skill or step repeats none of it
+and adds no placeholder for a subsection it does not change. State only an
+override, under the subsection it overrides.
 
 Delegation is optional. The session agent, called the orchestrator below, may
 author any artifact itself. It uses a sub-agent only for work that runs in
