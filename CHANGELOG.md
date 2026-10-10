@@ -22,6 +22,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - **Selected hook reminders stay visible without repeating their full text.**
   Claude Code and Codex print the full reminder once per session, agent and
   message key, then a one-line rule or skill pointer on every relevant trigger.
@@ -797,6 +801,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - **The header of each shipped workflow states the jobs a pull request event
   starts and the check to require.** A "Jobs per pull request event" row gives the
   count and the job list when nothing is to run and when the lane runs, and a test
@@ -1440,6 +1448,10 @@ its code. Several commands, findings and files go with that.
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - **A question that one command answers needs no plan.** The free-text
   reminder and the `qfai-run` description say a question that one command or
   one file read answers is answered directly.
@@ -1717,6 +1729,10 @@ its code. Several commands, findings and files go with that.
   unmet. Fixes #2725.
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - **Every decision a stage records carries one fixed form** (#2236).
   The thinking rule now names where each decision is recorded.
@@ -2055,6 +2071,10 @@ its code. Several commands, findings and files go with that.
   the skill. Plain `npx qfai init` leaves an older skill copy as it is.
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - **A guard holds every tracked text file to English.**
   `scripts/check-repository-language.mjs` runs in `pnpm ci:lint` and fails on
@@ -2424,6 +2444,10 @@ its code. Several commands, findings and files go with that.
   - The shipped `/qfai-sdd` allocation still reads only the local tree.
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - **The repository is written in English throughout.** Every Japanese comment,
   message, test description, document and changelog entry is now English, and
@@ -3705,6 +3729,10 @@ its code. Several commands, findings and files go with that.
   into a job of its own is the remaining Plan step.
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - **The shipped validate workflow says what splitting its two profiles costs**
   (#2095). On a pull request the full and drift profiles run as separate jobs,
@@ -5033,6 +5061,10 @@ unadjudicated` on a visible line, and says a response omitting any of them
   not reported. The policy-row entry in `sdd-triage.md` says so.
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - **Grilling outside the discussion stage is delegated between agents.** A
   griller interviews the authors, and every decision the user does not have to
@@ -6921,6 +6953,10 @@ pack` name different paths or seals. The layout says a round after a REVISE
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - **A later `qfai init` cites a rule master it is shipping for the first time**
   (#1643). Create-only left an existing `AGENTS.md`, `CLAUDE.md` or
   `.github/copilot-instructions.md` alone, so a rule the same run wrote into
@@ -8433,6 +8469,10 @@ unadjudicated`, read off a Work Orders Summary row the session writes rather
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - **The dogfooding lanes run as a ratchet while this repository migrates**
   (#1436). The three `qfai validate` steps in CI ran `--fail-on error`, which
   passed while the ledger rules reported `warning`. They report `error` now,
@@ -8749,6 +8789,10 @@ unadjudicated`, read off a Work Orders Summary row the session writes rather
   started, not whether `git commit` starts it.
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - **`qfai init` writes no `README.md`, and `qfai validate` reads a record
   instead of one** (#1399). Six READMEs were written into every adopter tree —
@@ -9588,6 +9632,10 @@ unadjudicated`, read off a Work Orders Summary row the session writes rather
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - **Review artifacts are outside version control** (#1358). The `.gitignore`
   block `qfai init` writes ignored `.qfai/review/*` and then re-included two
   paths: the directory itself, and the record naming the packs that predate the
@@ -9664,6 +9712,10 @@ unadjudicated`, read off a Work Orders Summary row the session writes rather
   lane-command allowlist / provenance / init-path enumerations.
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - **`QFAI-CFG-001` is an error from this release.** Three
   `validation.traceability` keys were declared, defaulted and parsed while no
@@ -10949,6 +11001,10 @@ release` fails if `## [Unreleased]` explains nothing — not only when it is
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - **Every `## Default Autopilot Policy` bucket may now be narrowed, and each
   skill's policy is tailored to what that skill actually reaches.** The
   3-bucket policy shipped with a narrowing permission that covered
@@ -12025,6 +12081,10 @@ skipped** — in fact this caught a hole in the first draft: it expected only`ne
   that matched nothing, which is how the JS-only test glob survived a release.
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - **Reclassified the discussion pack for `/qfai-sdd` as non-normative
   reference material rather than an upstream SSOT.** Stage 0 hard-stopped when
@@ -14231,6 +14291,10 @@ advanced` asked for RED/GREEN commands, output and the falsifiability result
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - **`/qfai-atdd` now has RED discipline for the ledger rows it feeds.**
   `qfai-implement/SKILL.md` states the split — `Layer = E2E` and `Layer = API`
   rows are tracked in its ledger, their tests authored in `/qfai-atdd` — and its
@@ -14258,6 +14322,10 @@ advanced` asked for RED/GREEN commands, output and the falsifiability result
 ## [1.10.0] - 2026-08-03
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - **Correction to the 1.9.2 deprecation notice.** That release announced four
   deprecations escalating "from warning to error" at 1.10.0. An audit against the
@@ -14377,6 +14445,10 @@ advanced` asked for RED/GREEN commands, output and the falsifiability result
   `qfai-verify/SKILL.md` state which spelling to write.
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - The TDD coverage-level filter now recognizes the `L1`…`L5` codes the shipped
   `06_Test-Cases.md` template actually produces, not only the word spellings.
@@ -14681,6 +14753,10 @@ advanced` asked for RED/GREEN commands, output and the falsifiability result
   `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`.
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - `.codex/README.md` and `.github/copilot-instructions.md` now reference
   the cross-AI rules under `.agents/rules/` (closing pre-existing
@@ -17090,6 +17166,10 @@ branch-name version-pin guard, plus the distributed-surface
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - CI workflow runs the new leakage guard in both the lint job (assets +
   README) and the build job (post-build, including dist).
 
@@ -17175,6 +17255,10 @@ SDD boundaries harder to reason about.
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - **Canonical design workflow only**: downstream design execution now
   relies on normalized contracts and rejects retired selected-direction
   aliases instead of preserving compatibility paths.
@@ -17205,6 +17289,10 @@ and distributed agent metadata before runtime delegation starts.
   shell-redirection assumptions.
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - **Doctor / preflight / skill alignment**: `qfai doctor --profile
 prototyping`, `qfai prototyping preflight`, validators, and shipped
@@ -17319,6 +17407,10 @@ preventive mechanisms at every layer of the stack.
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - `report.md` aggregator scans the filesystem directly for round
   artifacts; `prototyping.json.rounds[]` is no longer authoritative
   for harvest / narrowDecision / absorptionPlan / reimplementation
@@ -17405,6 +17497,10 @@ for the recommended cleanup path.
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - spec-0012 absorbs the former spec-0017 (Playwright CLI harness) and spec-0018 (round/candidate/absorption harness) registries (REQ / AC / BR / DEC / TC). The standalone `spec-0017/` and `spec-0018/` directories are deleted.
 - prototyping skill / agent terminology unified to `round` / `absorption` (qfai-prototyping, qfai-sdd, qfai-implement, qfai-verify, qfai-discussion, qfai-atdd, qfai-configure).
 - `CandidateId` is now a nominal brand type (was the template-literal `c${number}` which over-accepted `c0` / `c-1` / `c1.5`); both `parseCandidateIds` and `isCandidateId` mint via `CANDIDATE_ID_PATTERN`.
@@ -17429,6 +17525,10 @@ for the recommended cleanup path.
 - None
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - Keep the full-harness helpers publicly exported for compatibility from the package root export (`qfai`)
 - restored: `loadHistory`, `appendIteration`, `computeTerminationReason`
@@ -17472,6 +17572,10 @@ for the recommended cleanup path.
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - **BREAKING**: full-harness is now measurement-driven; 1 CLI invocation = 1 iteration measurement, multiple iterations require real code changes between runs
 - **BREAKING**: `--reviewer <id>` is mandatory for full-harness mode; `config.prototyping.execution.reviewer` removed
 - **BREAKING**: `weightedTotal = min(l1.total, l2.total)` replaces generic weighted average
@@ -17510,6 +17614,10 @@ for the recommended cleanup path.
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - PrototypingSurface canonical names: web-ui/mobile-ui/desktop-ui → web/mobile/desktop, cli/mixed added
 - IssueCategory simplified: "compatibility" removed, "canonical" | "change" only
 - prototyping.yaml schema: namespaced-only (`prototyping:` block mandatory), legacy top-level keys hard-rejected
@@ -17544,6 +17652,10 @@ for the recommended cleanup path.
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - uiFidelity.mode=skeleton rejected in standard/full-harness for UI-bearing surfaces (truthfulization)
 - Calibration error codes relocated: QFAI-PROT-271/272 → QFAI-PROT-265/266
 - Review assets (scoring/comparison/strategy-review) aligned to canonical vocabulary and responsibility split
@@ -17570,6 +17682,10 @@ for the recommended cleanup path.
 - Added a version consistency check to the pr-fix skill
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - Renamed the evaluation axis templates to the canonical 3-layer names (20-23*eval_axis*\* → 20-23_design_eval\_\*)
 - SKILL.md: made the HTML/CSS mock optional
@@ -17614,12 +17730,20 @@ for the recommended cleanup path.
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - SKILL.md (prototyping/implement): added a Spec Auto-Discovery Protocol section
 - specDiffDetector/traceabilityIntegrity: `execSync` → `execFileSync` as a command-injection countermeasure
 
 ## [1.7.9] - 2026-03-30
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - browserQa: phase status vocabulary unified to `captured | skipped | failed`
 - detection: consolidated surface type detection to shared module with table format, Mermaid flow, screen contract support
@@ -17653,6 +17777,10 @@ for the recommended cleanup path.
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - package: updated the npm version to `1.7.8`
 - specs: updated the TDD execution ledgers of 4 specs so every item is `done`
 
@@ -17671,6 +17799,10 @@ for the recommended cleanup path.
 - evidence: added SDD preflight / evidence records for the v1.7.7 correction release
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - specs: unified the evaluation model description of the spec on the 3-layer canonical model
 - specs: updated the screen contract minimum of the spec to a screen-level obligation
@@ -17724,6 +17856,10 @@ for the recommended cleanup path.
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - docs: updated the README descriptions of `qfai-implement` / `qfai-verify` to the ledger-first / full-scan verify + evidence workflow
 - tdd: updated the ledger alignment of several specs
 - specs: corrected the BR/EX/TC reference alignment of the spec
@@ -17747,6 +17883,10 @@ for the recommended cleanup path.
 - tests: 26 new tests for uiux sidecar templates, Fallback heading extraction, DDS state coverage
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - templates: 03_Story-Workshop.md primary focus shifted from HTML mock to Behavior Obligations
 - templates: Screen Mock section demoted to secondary fallback (subordinate to Behavior Obligations)
@@ -17782,6 +17922,10 @@ for the recommended cleanup path.
 - discussion: v1.7.1 Render Evidence Automation discussion pack (discussion-20260325144633348)
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - validators: improved the interpretation by the layered ID / traceability validator
 - specs: updated the v1.7.1 status notation of the shared policy / steering
@@ -17821,6 +17965,10 @@ for the recommended cleanup path.
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - codex: max_threads 1→20 for sub-agent parallelism
 - templates: summary.json restored to placeholder enum with full 12-reviewer roster
 - templates: 05_Contracts.md ER diagram reverted to neutral placeholders
@@ -17838,6 +17986,10 @@ for the recommended cleanup path.
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - policies: added CAP-0018; updated the glossary, constraints and decision records
 - devDependencies: added smol-toml
 
@@ -17852,6 +18004,10 @@ for the recommended cleanup path.
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - policies: added CAP-0017; updated the glossary, constraints and decision records
 
 ## [1.6.2] - 2026-03-20
@@ -17864,6 +18020,10 @@ for the recommended cleanup path.
 - specs: SDD artifacts (discussion pack, spec pack, implementation plan, TDD ledger)
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - skills: `qfai-implement` Refactor phase now requires TDDSpecReviewer and TDDCodeQualityReviewer gates before `done`
 - skills: TDD-ID example corrected from 3-digit to 4-digit format (TDD-0001)
@@ -17886,6 +18046,10 @@ for the recommended cleanup path.
 - helpers: shared `tddHelpers.ts` module with `isCoverageTargetLevel`, `splitTcRefs`, `resolveParentTcId`
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - validators: unknown Level values in 06_Test-Cases.md are conservatively included as coverage targets (avoids silent false negatives)
 - validators: Level column fallback — when Level column is absent, all TCs are treated as coverage targets
@@ -17915,6 +18079,10 @@ for the recommended cleanup path.
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - workflow: unified the description of the implementation stage on `/qfai-implement`
 - integration: unified the `.agents/.claude/.codex` skill wrappers as symlinks
 
@@ -17930,6 +18098,10 @@ for the recommended cleanup path.
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - validate: extended the validation scope of `qfai validate` to the UI/UX area
 - config: added the `uiux` setting to `qfai.config.yaml`
 
@@ -17941,6 +18113,10 @@ for the recommended cleanup path.
   the 12-reviewer operation
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - skills: Require a concrete alternative whenever any reviewer returns FAIL
 - templates: Update the discussion review template to assume 12 reviewers
@@ -17954,6 +18130,10 @@ for the recommended cleanup path.
   and clarify the operating guidance for differential runs
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - skills: Restate the AskUserQuestion Protocol as a MUST operation and
   strengthen the SSOT procedure
@@ -17971,6 +18151,10 @@ for the recommended cleanup path.
   plan generation
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - init: Move integration wrapper distribution from text copies to symlinks
 - ci: Revisit the required build check context and the handling of
@@ -17990,6 +18174,10 @@ for the recommended cleanup path.
 ## [1.5.3] - 2026-03-07
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - **BREAKING**: Change the shared policy directory of layered specs from
   `.qfai/specs/_shared/` to `.qfai/specs/_policies/`
@@ -18012,6 +18200,10 @@ for the recommended cleanup path.
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - assets: Move the RCP footer reference of `qfai-discussion` and `qfai-sdd`
   from `assistant/templates` to each skill's own directory
 - tests: Update the init assets tests to the skill-local RCP footer layout
@@ -18033,6 +18225,10 @@ for the recommended cleanup path.
   discussion integration
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - core/preflight: Treat `Disposition: open` in `11_OQ-Register.md` as
   blocking regardless of the gate
@@ -18062,6 +18258,10 @@ for the recommended cleanup path.
 - docs/migrations: `v1.5.0.md` migration guide
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - **BREAKING**: config `requireDir` -> `discussionDir` (QfaiPaths type change)
 - core/sddPreflight: Switch from require-pack to discussion-pack
@@ -18094,6 +18294,10 @@ for the recommended cleanup path.
 ## [1.4.38] - 2026-03-03
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - core/prototyping: Extend `collectElements` to return both `ids` and `labels`
   (equivalent to `collectElementsDetailed`)
@@ -18134,6 +18338,10 @@ for the recommended cleanup path.
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - cli/prototyping: Return exit 2 when `--autogen-only` is given without
   `--autogen-ui-fidelity` (prevents no-op mistakes)
 - cli/prototyping: Write `uiFidelityAutogen.status=skipped` to the evidence
@@ -18165,6 +18373,10 @@ for the recommended cleanup path.
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - cli: Add the `--autogen-ui-fidelity`, `--autogen-only`, `--evidence-out` and
   `--base-url` options (for prototyping) to the args
 - env: Support the `QFAI_PROTOTYPE_FIDELITY_AUTOGEN=1` /
@@ -18184,6 +18396,10 @@ for the recommended cleanup path.
   `docs/examples/prototyping-ui-fidelity.good.json`)
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - validate/prototyping: Improve the diagnostics of `QFAI-PROT-232` by adding
   `contract_id/route/contract_element_labels(_by_contract_route)/missing_labels(alias)/required_actions`
@@ -18216,6 +18432,10 @@ for the recommended cleanup path.
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - tests/core: Extend the `prototypingEvidence` regression tests and add the
   minimal set for `QFAI-PROT-231/232/233`
 - tests/core: Update the `prototyping.json` of the `validate` fixture to
@@ -18240,6 +18460,10 @@ for the recommended cleanup path.
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - templates/prototyping: State the DoD of `/qfai-prototyping` in two layers,
   L1/L2, and update the REVISE conventions: default L2 (interactive),
   `uiFidelity` output required, and placeholder-only output rejected
@@ -18259,6 +18483,10 @@ for the recommended cleanup path.
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - templates/docs: Fix the description of deprecated wrappers in
   `.qfai/README.md` from "route" to "not distributed by init; use
   `/qfai-sdd`"
@@ -18276,6 +18504,10 @@ for the recommended cleanup path.
   arguments
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - templates/sdd: Update the argument handling of `/qfai-sdd` and state the
   rule that, without arguments, all of `spec-0001..N` are targeted in the
@@ -18302,6 +18534,10 @@ for the recommended cleanup path.
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - templates/prototyping: Update `/qfai-prototyping` from assuming a
   `<spec-id>` to assuming **ALL specs**, and require Preflight/Execution/
   Runtime Gate v2 plus `prototyping.md/json` evidence
@@ -18324,6 +18560,10 @@ error` and state the ban on narrowing the scope
   `qfai-sdd/templates/spec-pack`
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - templates/skills+agents: Unify the completion gate of `assistant/**` as
   `qfai validate --fail-on error` + `assistant/steering/test-layers.md`, and
@@ -18349,6 +18589,10 @@ error` and state the ban on narrowing the scope
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - templates/skills: Remove the coverage ledger completion gate from
   `qfai-verify` / `qfai-sdd` / `qfai-configure` / `qfai-prototyping` and state
   `qfai validate --fail-on error` + `assistant/steering/test-layers.md` as the
@@ -18370,6 +18614,10 @@ error` and state the ban on narrowing the scope
   alignment of the ATDD operation with the v1.4.27 hard gate
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - templates/assistant: Update `test-layers` / `workflow` / `agent-selection` /
   `drift-protocol` to an operation centered on US/TC/CON-API
@@ -18394,6 +18642,10 @@ error` and state the ban on narrowing the scope
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - templates/docs: Update the test-layer operation and the RCP perspectives to
   the ATDD annotation operation of v1.4.26
 - docs/tests: Update the README, the CI guide, the validator wording and the
@@ -18413,6 +18665,10 @@ error` and state the ban on narrowing the scope
   report artifact upload to the workflow
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - templates/skills: Add a completion gate to `/qfai-sdd` that requires running
   validate (error=0) and evidence (`validate.log` / `specs-coverage`)
@@ -18437,6 +18693,10 @@ error` and state the ban on narrowing the scope
   `.agents/README.md`, and support deleting stale wrappers with `--force`
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - templates/sdd: Update `/qfai-sdd` to a mandatory contracts-first flow and
   state the Contract Index (DB/API/UI short ID) convention of
@@ -18466,6 +18726,10 @@ error` and state the ban on narrowing the scope
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - validate/spec-pack: Unify the `release_candidate` decision of the release
   gate on the specs Initiative layer and remove the dependency on
   `.qfai/status/*.json`
@@ -18488,6 +18752,10 @@ error` and state the ban on narrowing the scope
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - templates/skills: Replace `qfai-sdd-refinement` / `qfai-sdd-planning` with
   deprecated wrappers that do no real processing, consolidating on `/qfai-sdd`
 - templates/init: Add a `.gitignore` to the report directory to make the
@@ -18508,6 +18776,10 @@ error` and state the ban on narrowing the scope
   non-How-only items in `10_Plan.md`
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - templates/specs: Update the layered canonical names to v1.4.21
   (`03_Acceptance-Criteria.md` / `04_Business-Rules.md` / `05_Examples.md` /
@@ -18534,6 +18806,10 @@ error` and state the ban on narrowing the scope
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - templates/skills: Update `/qfai-discuss` to an Open OQ=0 loop (`deferred`
   allowed) and unify the all-hands review route across `/qfai-discuss`,
   `/qfai-require` and `/qfai-sdd`
@@ -18557,6 +18833,10 @@ error` and state the ban on narrowing the scope
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - templates/init: Always provide `.qfai/review/.gitignore` to fix the
   append-only operation of review artifacts
 - templates/require: Update the artifacts of `/qfai-require` to the fixed 9
@@ -18579,6 +18859,10 @@ error` and state the ban on narrowing the scope
   child
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - templates/specs: Strengthen the mandatory Mermaid representation in
   `_shared/04_Business-flow.md` and `_shared/05_Contracts.md`
@@ -18605,6 +18889,10 @@ error` and state the ban on narrowing the scope
   and `spec/01..09`
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - core/spec-layout: Support `01_Spec.md + 02..06` as the standard layout of
   layered specs while keeping compatibility with the old layout
@@ -18634,6 +18922,10 @@ error` and state the ban on narrowing the scope
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - templates/require: Update `02_requirement-index.md` to be index-only
   (`REQ-ID / Statement / Priority / Source refs / Notes`) and clarify the ban
   on duplicating specs
@@ -18660,6 +18952,10 @@ error` and state the ban on narrowing the scope
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - templates/specs: Strengthen the Business Rules / Examples / Test-cases
   templates to the v1.4.15 density requirements (Catalog/Rule
   Definitions/Matrix, etc.)
@@ -18683,6 +18979,10 @@ error` and state the ban on narrowing the scope
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - templates/skills: Update the Mermaid rules and the review checklist of
   `/qfai-discuss` `/qfai-require` `/qfai-sdd-refinement`
 - templates/specs: Update the Business Flow template/README to assume
@@ -18698,6 +18998,10 @@ error` and state the ban on narrowing the scope
 - None
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - templates/discuss+require: Unify the naming of the discuss / require output
   directories on timestamps (`discuss-*` / `require-*`) and update the README
@@ -18722,6 +19026,10 @@ error` and state the ban on narrowing the scope
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - templates/skills: State the RCP procedure (attempt numbering, rework loop,
   fixed decision) in discuss/require/sdd-refinement/sdd-planning
 - tests: Add regression tests for review gate validation and review template
@@ -18739,6 +19047,10 @@ error` and state the ban on narrowing the scope
   (`qfai-sdd-refinement/templates/import-lite-evidence.md`)
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - templates/require: Renew the artifacts of `/qfai-require` as
   `01_sources.md` / `02_requirement-index.md` / `03_open-questions.md`
@@ -18760,6 +19072,10 @@ error` and state the ban on narrowing the scope
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - validate/ids: add `CAP` / `US` to ID extraction and duplicate detection
 - validate/layout: accept `*_delta.md` and detect the Layered layout first
 - docs/skills: update `.qfai/specs/README.md` and the skill's Mandatory Outputs
@@ -18774,6 +19090,10 @@ error` and state the ban on narrowing the scope
 - None
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - init/integrations: fix `qfai init` to regenerate `.claude/commands`,
   `.github/prompts`, `.codex/skills` and the agent wrappers (`.claude/agents`,
@@ -18793,6 +19113,10 @@ error` and state the ban on narrowing the scope
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - templates/init-root: remove the root sample feature so that `qfai init` no
   longer generates `features/spec-0001.feature`
 - tests/docs: update to the v1.4.8 notation
@@ -18805,6 +19129,10 @@ error` and state the ban on narrowing the scope
 - None
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - templates/skills: remove the retired skills (`qfai-implement` / `qfai-pr` /
   `qfai-scenario-test` / `qfai-spec` / `qfai-unit-test`)
@@ -18830,6 +19158,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - templates/skills: standardize, across all skills, listing the "next user
   actions" on completion
 - repo: update the package version to 1.4.6
@@ -18842,6 +19174,10 @@ Next Actions (MUST)` to every canonical skill
   `.qfai/assistant/skills/qfai-spec/templates/contracts/`
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - templates/init: turn the initial assets of `qfai init` into an empty scaffold
   (specs/discuss/require/contracts hold only README/.gitignore)
@@ -18862,6 +19198,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - validate: strengthen the fix instructions for Spec Pack/Ledger errors and
   make the cause and remedy clear per error_code
 - cleanup/docs: tidy up the paths to the old assets and unify on the v1.4.4
@@ -18879,6 +19219,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - templates/skills: retire `qfai-sdd-refinement` / `qfai-sdd-planning` and make
   `qfai-spec` a deprecated alias of `qfai-sdd`
 - templates/docs: update the README / `.qfai` documentation paths to point to
@@ -18893,6 +19237,10 @@ Next Actions (MUST)` to every canonical skill
   `qfai-require` (Core / Optional deep dive, `00..07`)
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - templates/skills: rework `qfai-discuss` / `qfai-require` into a "structured
   interview that gathers the inputs for a layered Spec Pack" flow
@@ -18909,6 +19257,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - validate: remove the discovery and validation that assumed the old artifacts
   (`spec.md` / `scenario.feature` / `case-catalogue.md` /
   `traceability-matrix.md`)
@@ -18924,6 +19276,10 @@ Next Actions (MUST)` to every canonical skill
   `API-0001` / `DB-0001` / `UI-0001` that can be consulted right after init
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - templates/docs: update `.qfai/specs/README.md` to the Spec Pack 01..18 layout
   and the reference-direction rule (lower to upper only)
@@ -18942,6 +19298,10 @@ Next Actions (MUST)` to every canonical skill
   `.qfai/assistant/skills.local/**`
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - validate: change a lone `implementation-brief.md` from a warning to an error
   (the How SSOT is now fully unified on `plan.md`)
@@ -18964,6 +19324,10 @@ Next Actions (MUST)` to every canonical skill
   the reviewer sub-agents
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - templates/specs/docs: move the standard file name of the How SSOT from
   `implementation-brief.md` to `plan.md` (the legacy name is treated as a
@@ -18988,6 +19352,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - validate: prohibit running `--phase refinement` in a CI environment and fail
   it with `QFAI-VALIDATE-017`
 - validate: limit waivers to Warn/Info findings and fail a waiver that targets
@@ -19010,6 +19378,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - templates/skills: update the delegation flow of the main stages
   (discuss/require/sdd/atdd/tdd/verify) to Delegate → Integrate → Reviewer Gate
 - templates/wrappers: reflect the same delegation requirements in the wrapper
@@ -19027,6 +19399,10 @@ Next Actions (MUST)` to every canonical skill
   requirements context (`QFAI-REQCTX-020/021`)
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - templates: move the skills structure to a self-contained `SKILL.md` (SSOT)
   and remove the dependency on `qfai-source` / `10_workflow.md`
@@ -19049,6 +19425,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - validate: relax the required How check and the SC→Test enforcement
   (`QFAI-TRACE-010/013`) in the refinement phase
 - templates/docs: add `implementation-brief.md` to the files required in a Spec
@@ -19067,6 +19447,10 @@ Next Actions (MUST)` to every canonical skill
   `.qfai/assistant/skills/**`)
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - templates: retire `prompts/commands` and move to a layout where
   `.qfai/assistant/skills` is the SSOT
@@ -19087,6 +19471,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - templates: add a Verification section to the delta.md template
 - templates: add a verification checklist item to the PR template
 - docs: add a minimal verification operation guide to the README and the init
@@ -19105,6 +19493,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - validate: attach the metadata used for waiver matching (`dl_id` / `file`) to
   findings and decide pass or fail on the result after waivers are applied
 - templates: add a Waivers declaration section to the PR template
@@ -19120,6 +19512,10 @@ Next Actions (MUST)` to every canonical skill
 - report: add the compat viewpoint and the display of scope mismatches
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - templates: update delta.md to v1.1 (`#### Migration / Follow-ups`) and add a
   compat section to the PR template
@@ -19140,6 +19536,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - templates: update the delta.md template to the v1 structure and add Change
   Type / Tags / delta reference / Review Focus to the PR template
 - tests: update the delta/ctype unit tests and the assets guardrails
@@ -19148,6 +19548,10 @@ Next Actions (MUST)` to every canonical skill
 ## [1.3.8] - 2026-02-06
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - templates: update the Claude Code slash commands (`.claude/commands/*.md`) to
   refer to `.qfai/assistant/skills/<id>/SKILL.md` (skills -> prompts(SSOT))
@@ -19159,12 +19563,20 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - Codex skill wrappers now reference `.qfai/assistant/skills/<id>/SKILL.md` as the canonical entrypoint (instead of `.qfai/assistant/prompts/<id>.md`).
 - Updated `.codex/README.md` to document the skills-first entrypoint for tool integrations.
 
 ## [1.3.6] - 2026-02-06
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - templates: update the GitHub Copilot prompt wrappers
   (`.github/prompts/*.prompt.md`) to refer to
@@ -19184,6 +19596,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - init: protect `assistant/skills.local` from being overwritten by
   `qfai init --force`
 - verify-pack: verify the generation of `assistant/skills` /
@@ -19193,6 +19609,10 @@ Next Actions (MUST)` to every canonical skill
 ## [1.3.4] - 2026-02-05
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - validate: update the version notation in the message about the staged
   introduction of the requirements context to v1.3.4
@@ -19207,6 +19627,10 @@ Next Actions (MUST)` to every canonical skill
   (`.qfai/assistant/instructions/change-classification.md`)
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - docs/templates: add a change classification reference to the README and
   `.qfai/README.md`
@@ -19225,6 +19649,10 @@ Next Actions (MUST)` to every canonical skill
 - tests: add unit tests for the requirements context validation
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - templates: add `paths.requireDir` to `qfai.config.yaml`
 - docs: add `requireDir` to the config example in the README
@@ -19245,6 +19673,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - docs: align the README with the content of npm EN v1.0.7 (root/package
   synced) and align the config example with the current schema
 - templates: align `.qfai/README.md` / `require/README.md` with the
@@ -19261,6 +19693,10 @@ Next Actions (MUST)` to every canonical skill
 - tests: add unit tests for the Change Type warnings
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - templates: add Change Type and the rejected reinforcement (do_not/temptation)
   to the Change Log template of delta.md
@@ -19288,6 +19724,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - docs: update the README's ATDD description and the sub-agent requirement
 - instructions: align the delegation map in agent-selection with the new roles
 
@@ -19303,6 +19743,10 @@ Next Actions (MUST)` to every canonical skill
 - tests: add unit tests for the new checks of the delta validator
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - templates: update the delta.md contract in `.qfai/specs/README.md` to Change
   Log + Decision Records + RE-OPEN
@@ -19320,6 +19764,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - None
 
 ## [1.2.11] - 2026-01-31
@@ -19334,6 +19782,10 @@ Next Actions (MUST)` to every canonical skill
   Considered Options / Selection Criteria / Chosen / Rejected / Contract Trace)
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - prompts: add the working order and required sections for OptionExplorer /
   OptionReviewer to qfai-spec
@@ -19354,6 +19806,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - prompts: make Open=0 the default completion condition and require evidence of
   user approval for Deferred
 - prompts: build the resolution of undefined items in qfai-spec into it as an
@@ -19369,6 +19825,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - prompts: update the question design of qfai-discuss to "draft everything,
   then one question at a time (total and number shown, 3 choices + leave it to
   you)"
@@ -19379,6 +19839,10 @@ Next Actions (MUST)` to every canonical skill
 ## [1.2.8] - 2026-01-30
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - templates: unify the structure descriptions in `.qfai/**/README.md` on a tree
   notation
@@ -19396,6 +19860,10 @@ Next Actions (MUST)` to every canonical skill
   case-catalogue.md/traceability-matrix.md to `specs/README.md`
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - prompts: update all prompts to refer to `.qfai/**/README.md` as the single
   source of truth for formatting
@@ -19431,6 +19899,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - prompts: strengthen qfai-tdd-green into an orchestrator-led flow with
   separated completion
 
@@ -19449,6 +19921,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - traceability: output SCs that are not referenced with the layer and cap it at
   a sample limit
 - docs: update the README / templates descriptions
@@ -19462,6 +19938,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - validate: add a warning when a Spec lists contract IDs but the Scenario says
   none
 - report: add a display of the e2e ratio/limit guardrails
@@ -19473,6 +19953,10 @@ Next Actions (MUST)` to every canonical skill
 - prompts: add qfai-atdd / qfai-tdd-red / qfai-tdd-green / qfai-tdd-refactor
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - prompts/docs: retire qfai-scenario-test / qfai-unit-test / qfai-implement and
   update to the new workflow
@@ -19489,6 +19973,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - report: count scenarios by the total number of scenarios, not by the number
   of scenario.feature files
 
@@ -19503,6 +19991,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - traceability: allow multiple Scenarios/Outlines in scenario.feature and drop
   the Spec:SC=1:1 constraint
 - prompts/docs: update the Spec Pack guide and qfai-spec to support multiple
@@ -19512,6 +20004,10 @@ Next Actions (MUST)` to every canonical skill
 ## [1.1.11] - 2026-01-26
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - prompts: restrict qfai-unit-test to test implementation only and update its
   completion condition to be based on running the tests
@@ -19524,6 +20020,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - prompts: add a test-only scope constraint and blocking conditions/DoD to
   qfai-unit-test
 - prompts: make runtime evidence mandatory in qfai-implement and add prohibited
@@ -19534,6 +20034,10 @@ Next Actions (MUST)` to every canonical skill
 ## [1.1.9] - 2026-01-24
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - ids: update the BR/SC ID format to match the local sequence numbers within a
   Spec
@@ -19547,6 +20051,10 @@ Next Actions (MUST)` to every canonical skill
 ## [1.1.8] - 2026-01-23
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - init: remove the specified READMEs and require.md from the `.qfai` templates
   and unify on generating the report at run time
@@ -19564,6 +20072,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - init: fully rewrite every README.md under `.qfai`, describing the purpose and
   background, where files may be placed, a structure example, a template, a
   finished example and a checklist in a unified format
@@ -19574,6 +20086,10 @@ Next Actions (MUST)` to every canonical skill
 ## [1.1.6] - 2026-01-22
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - prompts: add Contracts First ordering to qfai-spec (finish contracts, FIX,
   then create specs)
@@ -19589,6 +20105,10 @@ Next Actions (MUST)` to every canonical skill
 ## [1.1.5] - 2026-01-21
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - prompts: add quantitative guardrails to qfai-spec (1 spec pack = 1 scenario,
   ID format, BR limit, contractRef required)
@@ -19607,6 +20127,10 @@ Next Actions (MUST)` to every canonical skill
 ## [1.1.4] - 2026-01-20
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - init: drop generation of `.qfai/samples/**` and move the Decision Guardrails
   example to an inline example in the README
@@ -19628,6 +20152,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - prompts: add a preflight (config/steering convergence guarantee) to qfai-spec
 - prompts: add a note about the qfai-spec preflight to qfai-configure
 - docs: add a note about the qfai-spec preflight and a flow supplement to the
@@ -19636,6 +20164,10 @@ Next Actions (MUST)` to every canonical skill
 ## [1.1.1] - 2026-01-19
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - docs: append a v1.1.1 addendum to the v1.1.0 design document to match the
   v1.0.14 implementation
@@ -19659,6 +20191,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - init: flatten steering and make manifest references unique
 - prompts: add an automatic steering completion step to qfai-configure
 - verify-pack: add a guardrails extract smoke test
@@ -19673,12 +20209,20 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - init: remove cache settings from generated GitHub Actions workflow
 - docs: clarify that the default workflow avoids dependency caching and show optional setup-node cache snippet
 
 ## [1.0.13] - 2026-01-18
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - init: remove npm ci from generated GitHub Actions workflow
 - init: keep validate gate runnable without repository dependency install
@@ -19688,12 +20232,20 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - init: remove hard-coded version labels from init kit docs
 - init: use meaning labels in contract docs
 
 ## [1.0.11] - 2026-01-18
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - prompts: remove orphan reference to /qfai-pr from qfai-verify
 - tests: add guardrail to ensure prompt bodies do not reference missing /qfai-\* commands
@@ -19702,12 +20254,20 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - init: remove orphan prompt `qfai-pr` from `.qfai/assistant/prompts`
 - tests: add guardrail test to ensure prompt bodies and agent wrappers are aligned
 
 ## [1.0.9] - 2026-01-18
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - spec: change BR extraction from depending on fixed sections to scanning the
   whole document
@@ -19720,6 +20280,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - docs: fix the config schema example in the README to match the implementation
 
 ## [1.0.7] - 2026-01-16
@@ -19731,6 +20295,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - docs: rewrite the README in English and sync it with the npm README
 - verify-pack: extend what is verified of the init assets
 
@@ -19741,6 +20309,10 @@ Next Actions (MUST)` to every canonical skill
 - assistant assets: instructions set expanded (thinking/communication/quality/agent-selection)
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - init: remove root tests sample
 - contracts: DB is SQL
@@ -19754,6 +20326,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - Breaking: remove `.qfai/out/` and unify on `.qfai/report/`
 - Breaking: move `.qfai/prompts/` to `.qfai/assistant/prompts/`
 - Breaking: remove `qfai analyze` and the analyze assets
@@ -19763,6 +20339,10 @@ Next Actions (MUST)` to every canonical skill
 ## [1.0.4] - 2026-01-10
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - remove `.qfai/rules/**` and `.qfai/samples/**` from `qfai init` (simplifies
   adoption)
@@ -19786,6 +20366,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - Breaking: Scenario is fixed to `scenario.feature` (restated because it was
   already introduced in v1.0.2)
 - Breaking: `scenario.md` is an error from v1.0.3 (no automatic rescue)
@@ -19801,6 +20385,10 @@ Next Actions (MUST)` to every canonical skill
 - None
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - Breaking: change the Scenario file of a Spec Pack to `scenario.feature` (the
   old extension is not supported)
@@ -19822,6 +20410,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - core: add truncated/limit to the testFileGlobs scan
 - docs: state the Supported/Tested/Recommended Node.js versions
 - docs: document the policy on the internal representation of report.json /
@@ -19838,6 +20430,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - docs: align README/RELEASE/CHANGELOG for v1.0.0
 
 ## [0.9.2] - 2026-01-07
@@ -19848,6 +20444,10 @@ Next Actions (MUST)` to every canonical skill
   reference consistency
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - docs: unify the README first-day flow as init -> doctor -> validate -> report
 - docs: fix the npm README installation guidance to assume a dev dependency
@@ -19863,6 +20463,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - init: improve the template/naming of the standard analyze prompts
 
 ## [0.9.0] - 2026-01-07
@@ -19874,6 +20478,10 @@ Next Actions (MUST)` to every canonical skill
   `.qfai/samples/analyze/analysis.md` (create-only)
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - docs: add the purpose, usage and cautions of analyze
 
@@ -19900,6 +20508,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - init: overwrite only `.qfai/prompts` with `--force` (everything else is
   create-only)
 - validate: detect direct edits of `.qfai/prompts` (modifying the standard
@@ -19918,6 +20530,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - report.md: restructure into Summary / Findings / Guidance and state the issue
   counts, the stable sorting and the fail-on rationale
 - docs: align the first-day flow (init -> doctor -> validate -> report) and
@@ -19933,6 +20549,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - packages/qfai: complete the package.json metadata (license/description/
   repository and so on)
 - verify:pack: check that LICENSE/README.md are included in the packed artifact
@@ -19940,6 +20560,10 @@ Next Actions (MUST)` to every canonical skill
 ## [0.7.2] - 2026-01-06
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - packages/qfai: re-release as v0.7.2 to fix the package metadata (version
   field consistency)
@@ -19952,6 +20576,10 @@ Next Actions (MUST)` to every canonical skill
   first)
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - `init` does not overwrite `.qfai/prompts.local/**` (protects the user
   customization area)
@@ -19976,11 +20604,19 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - None
 
 ## [0.6.3] - 2026-01-05
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - docs: remove the count-based completion criteria and unify on DoD/CI criteria
 - docs: remove the version field from the JSON examples in the README
@@ -19999,6 +20635,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - remove formatVersion from the report/doctor JSON
 - add the non-contract policy and the review completion criteria to the
   README/docs
@@ -20006,6 +20646,10 @@ Next Actions (MUST)` to every canonical skill
 ## [0.6.1] - 2026-01-05
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - align the doctor check output order as config -> paths -> spec -> output ->
   traceability
@@ -20020,6 +20664,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - add `reportFormatVersion` to `report --format json`
 
 ## [0.5.2] - 2026-01-04
@@ -20031,6 +20679,10 @@ Next Actions (MUST)` to every canonical skill
 - assets/Docs smoke verification in `test:assets` and CI
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - annotation limit, de-duplication and summary output for
   `validate --format github`
@@ -20046,6 +20698,10 @@ Next Actions (MUST)` to every canonical skill
 - distinguish missing/none for Spec -> contract in report and output all Specs
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - unify the Scenario contract reference on the `# QFAI-CONTRACT-REF:` comment
   declaration (tag extraction removed)
@@ -20063,6 +20719,10 @@ Next Actions (MUST)` to every canonical skill
 - add operation prompts for traceability/contracts/change category
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - state (none)/(orphan) explicitly in the contract -> Spec / Spec -> contract
   tables of report
@@ -20116,6 +20776,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - unify the DATA ID into the DB ID (`DATA-xxxx` is disabled)
 - unify contract ID extraction on the declaration line (SSOT) (extraction from
   the body/operationId removed)
@@ -20133,6 +20797,10 @@ Next Actions (MUST)` to every canonical skill
 - add test discovery metadata (globs/exclusions/counts) to validate/report
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - switch the SC -> Test decision to the glob settings (not set or zero matches
   is `QFAI-TRACE-013`)
@@ -20154,6 +20822,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - allow multiple descriptions of a Scenario (the referenced SC is the same)
 - attach scenario file information to the missing display of SC coverage
 - downgrade `QFAI-TRACE-002` to info
@@ -20170,6 +20842,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - add an SC coverage section to the Markdown output of report
 
 ### Removed
@@ -20179,6 +20855,10 @@ Next Actions (MUST)` to every canonical skill
 ## [0.3.8] - 2026-01-01
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - remove schemaVersion from the validate/report input and output (backward
   compatibility dropped)
@@ -20193,11 +20873,19 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - (added for tag consistency) v0.3.7 has already been released
 
 ## [0.3.6] - 2026-01-01
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - update `.instruction/02_project` for the QFAI Toolkit and remove the source of
   misleading guidance
@@ -20214,6 +20902,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - state the policy that the targets of removing OQ notation are limited to
   "places referenced as the current spec"
 - update the notation in RELEASE/README (including the PromptPack addition)
@@ -20221,6 +20913,10 @@ Next Actions (MUST)` to every canonical skill
 ## [0.3.4] - 2025-12-31
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - move the require generated by init under `.qfai/require/` (no backward
   compatibility)
@@ -20244,6 +20940,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - add a "What you can do" section to the README
 - verify template generation in the init tests
 - update the version notation in the naming conventions document
@@ -20265,6 +20965,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - unify Spec Pack directory names on `spec-0001` (4 digits) (3 digits such as
   `spec-001` are not supported)
 - Spec Packs are supported only as directories directly under `.qfai/specs`
@@ -20282,6 +20986,10 @@ Next Actions (MUST)` to every canonical skill
   inheritance)
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - renew the config schema (paths.\* / output.validateJsonPath)
 - unify the placement of Scenario files under `specs/spec-xxx/`
@@ -20305,6 +21013,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - change the Spec required section decision to be based on H2 headings
 - limit Spec -> BR in traceability to BR definitions (inside business rules)
 - align the init templates/README with the current spec
@@ -20319,6 +21031,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - share contract ID collection between the traceability/duplicate checks
 - remove fixed wording from the init templates
 - remove `x-qfai-refs` from the API sample
@@ -20331,6 +21047,10 @@ Next Actions (MUST)` to every canonical skill
 - existence check of Spec -> Contract references
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - remove the rules metric from report
 - remove `paths.rulesDir` (no compatibility needed)
@@ -20346,6 +21066,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - make the ID format strictly `PREFIX-0001`
 - align the naming convention/template descriptions
 
@@ -20357,6 +21081,10 @@ Next Actions (MUST)` to every canonical skill
 - renew the minimal examples of Spec/Scenario/Contracts
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - unify the init output destination on `.qfai/`
 - update the default discovery/config paths to assume `.qfai`
@@ -20376,6 +21104,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - change the Spec/Contracts samples of the init templates to ID+slug naming
 - support `spec-0001-*.md` in the Spec discovery of validate/report/traceability
 
@@ -20392,6 +21124,10 @@ Next Actions (MUST)` to every canonical skill
 
 ### Changed
 
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
 - align the README Quick Start with the current CLI behavior
 - state the validate/report input and output and the GitHub Actions template
   entry point
@@ -20403,6 +21139,10 @@ Next Actions (MUST)` to every canonical skill
 ## [0.2.3] - 2025-12-25
 
 ### Changed
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - report: guidance when validate.json is missing and exit code 2
 - init: guidance to use --force when an existing file collides
