@@ -13,6 +13,7 @@
  * lays one out.
  */
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -28,6 +29,9 @@ import { removeTempTree } from "../helpers/tempTree.js";
 /** Bash is absent on some Windows images; the cases that execute the step are skipped there, not passed. */
 const HAS_BASH = spawnSync("bash", ["--version"], { encoding: "utf-8" }).error === undefined;
 
+const MDSCHEMA_VERSION: string = JSON.parse(
+  readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
+).dependencies["@jackchuka/mdschema"];
 const TOOLS_DIR = "tmp/qfai-docs-tools";
 const INSTALL_STEP = "Install the document-shape and diagram checkers";
 
@@ -123,7 +127,7 @@ describe("the delivered document lane installs its checkers outside the project'
     // it at the version that release depends on, so its schemas and their checker stay one release.
     expect(packages).toEqual(
       withQfai
-        ? ["@jackchuka/mdschema@0.15.5", "mermaid@11.17.2", "jsdom@29.1.1"]
+        ? [`@jackchuka/mdschema@${MDSCHEMA_VERSION}`, "mermaid@11.17.2", "jsdom@29.1.1"]
         : ["mermaid@11.17.2", "jsdom@29.1.1", "qfai"],
     );
   });
