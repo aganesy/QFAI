@@ -6,6 +6,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- Synchronize the document schema checker copies from the package manifest after
+  a frozen dependency install, including the Renovate repin workflow.
+
 - Add a branch catch-up helper that merges the remote default branch, resolves
   only proven digest conflicts and reseals generated pins without running tests.
 
@@ -38,6 +41,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   last message ends in a question, and nothing is filed under a no-question mode.
 
 ### Changed
+
+- **The release association gate uses Node.js to read pull request branches.**
+  Its two contributor cases require Node.js and Bash, without a jq dependency.
 
 - **Repeated edit reminders use short rule pointers.** The first relevant edit
   receives the full rules; later edits retain concise guidance. Missing session
@@ -328,6 +334,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Verify steps reject validation errors even when a custom Validate wrapper succeeds.
 - Clarify that the research agent reads the cache TTL extension in the project config; the CLI does not parse it.
 
 - Clarify that story ID candidates are snapshots and require a fresh collision

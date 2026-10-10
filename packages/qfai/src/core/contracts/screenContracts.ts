@@ -44,44 +44,6 @@ export type PrimaryTaskShapeFinding = {
 
 const REQUIRED_PRIMARY_TASK_KEYS = ["id", "label", "acceptance"] as const;
 
-/**
- * `discussionDirRelative` is the repo-relative discussion directory (e.g.
- * `.qfai/discussion`). It defaults to the stock location so standalone
- * callers / tests don't need to resolve config first, but callers that
- * override `paths.discussionDir` in `qfai.config.yaml` must pass the
- * configured value so the generated `sourceRef` points at the real file
- * instead of a dangling `.qfai/discussion/<pack>/...` path.
- */
-export async function readCanonicalScreenContracts(
-  packDir: string | null,
-  discussionDirRelative = ".qfai/discussion",
-): Promise<CanonicalScreenContract[]> {
-  if (!packDir) {
-    return [];
-  }
-
-  const filePath = path.join(packDir, "uiux", "40_screen_contracts.md");
-  const raw = await readSafe(filePath);
-  if (!raw) {
-    return [];
-  }
-
-  // Normalise to POSIX separators before concatenation so Windows callers
-  // that pass `.qfai\\discussion` still produce valid repo-relative refs.
-  const normalisedDiscussionDir = discussionDirRelative.replace(/\\/g, "/");
-
-  return parseCanonicalScreenContracts(raw).map((screen) => ({
-    ...screen,
-    sourceRef:
-      path.posix.join(
-        normalisedDiscussionDir,
-        path.basename(packDir),
-        "uiux",
-        "40_screen_contracts.md",
-      ) + `#${screen.screenId}`,
-  }));
-}
-
 export async function readUiContractScreenContracts(
   root: string,
   contractsDirRelative = ".qfai/contracts",
@@ -376,78 +338,6 @@ export async function findUiScreenCopyFindings(
     });
   }
   return found;
-}
-
-export function parseCanonicalScreenContracts(content: string): CanonicalScreenContract[] {
-  const screens: CanonicalScreenContract[] = [];
-  const lines = content.split(/\r?\n/);
-  let current: CanonicalScreenContract | null = null;
-  let inPrimaryTasks = false;
-
-  for (const line of lines) {
-    const headingMatch = /^###\s+Screen:\s*(.+)$/.exec(line);
-    if (headingMatch?.[1]) {
-      if (current?.screenId && current.route) {
-        screens.push(current);
-      }
-      const name = headingMatch[1].trim();
-      current = {
-        name,
-        screenId: slugifyScreenId(name),
-        route: "",
-        primaryTasks: [],
-        primaryTasksKeyPresent: false,
-        sourceRef: "",
-        primaryTaskShapeFindings: [],
-      };
-      inPrimaryTasks = false;
-      continue;
-    }
-
-    if (!current) {
-      continue;
-    }
-
-    const fieldMatch = /^\s*-\s+([\w_]+):\s*(.*)$/.exec(line);
-    if (fieldMatch) {
-      const key = fieldMatch[1];
-      const value = (fieldMatch[2] ?? "").trim();
-      if (key === "screen_id" && value) {
-        current.screenId = value;
-      } else if (key === "route" && value) {
-        current.route = value;
-      } else if (key === "primary_tasks") {
-        current.primaryTasksKeyPresent = true;
-      }
-      inPrimaryTasks = key === "primary_tasks" && value.length === 0;
-      continue;
-    }
-
-    if (inPrimaryTasks) {
-      const primaryTaskMatch = /^\s{2,}-\s+(.+)$/.exec(line);
-      if (primaryTaskMatch?.[1]) {
-        current.primaryTasks.push(primaryTaskMatch[1].trim());
-      } else if (line.trim() !== "") {
-        inPrimaryTasks = false;
-      }
-    }
-  }
-
-  if (current?.screenId && current.route) {
-    screens.push(current);
-  }
-
-  return screens.filter((screen, index, all) => {
-    return all.findIndex((candidate) => candidate.screenId === screen.screenId) === index;
-  });
-}
-
-function slugifyScreenId(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
 }
 
 /**
