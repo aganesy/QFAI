@@ -268,7 +268,7 @@ describe("parseArgs", () => {
         "qfai discussion: unknown or missing subcommand. Expected: list|use",
       );
       expect(parseArgs(["sdd"], cwd).invalidReason).toBe(
-        "qfai sdd: unknown or missing subcommand. Expected: preflight",
+        "qfai sdd: unknown or missing subcommand. Expected: preflight|renumber-decision",
       );
     });
 
@@ -792,6 +792,14 @@ describe("parseArgs: qfai sdd <subcommand>", () => {
     const parsed = parseArgs([...renumber, ...option], process.cwd());
     expect(parsed.invalid).toBe(true);
     expect(parsed.invalidReason).toContain(option[0]);
+  });
+
+  // QFAI:EX-0001-0008-16
+  it("rejects the validation profile option on renumber", () => {
+    const parsed = parseArgs([...renumber, "--profile", "full"], process.cwd());
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.invalidReason).toContain("--profile");
+    expect(parsed.invalidReason).toMatch(/not valid/i);
   });
 
   // QFAI:EX-0001-0008-16

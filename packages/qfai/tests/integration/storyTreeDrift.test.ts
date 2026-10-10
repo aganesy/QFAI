@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdir, mkdtemp, readFile, readlink, rm, writeFile } from "node:fs/promises";
+import { link, mkdir, mkdtemp, readFile, readlink, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -118,6 +118,7 @@ describe("decision renumber public CLI", () => {
     }
   }
 
+  // QFAI:AC-0001-0008-05
   // QFAI:EX-0001-0008-14
   it("previews fixed commits and affected paths without changing any bytes or reserving an ID", async () => {
     await prepare();
@@ -136,6 +137,7 @@ describe("decision renumber public CLI", () => {
     expect(gitText("rev-parse", "HEAD")).toBe(head);
   });
 
+  // QFAI:AC-0001-0008-06
   // QFAI:EX-0001-0008-15
   // QFAI:EX-0001-0008-19
   it("applies only the incoming row and provably added exact tokens despite a base-only source collision", async () => {
@@ -270,6 +272,98 @@ describe("decision renumber public CLI", () => {
     });
   }
 
+  for (const tree of ["HEAD", "base"] as const) {
+    // QFAI:EX-0001-0008-17
+    it.each([false, true])(
+      `refuses a destination cited elsewhere in the fixed ${tree} specs with apply=%s`,
+      async (apply) => {
+        await prepare();
+        const contract = `${specs}/03_contract/cli/cli-0001-choice.md`;
+        if (tree === "base") git("checkout", "main");
+        await put(
+          contract,
+          "# CLI-0001: Choice\n\n## Business rules\n\n" +
+            "| BR-ID | Statement | Examples |\n| --- | --- | --- |\n" +
+            "| BR-0001-0001 | Follow DEC-0013. | EX-0001-0001-01 |\n",
+        );
+        git("add", contract);
+        git("commit", "-m", "destination already cited by a contract");
+        if (tree === "base") git("checkout", "topic");
+        const candidates = tree === "HEAD" ? [...files, contract] : files;
+        const before = await snapshot(candidates);
+        const result = await invoke(apply ? ["--apply"] : []);
+        expect(result.code).toBe(2);
+        expect(result.stderr).toContain("DEC-0013");
+        expect(result.stderr).toContain(contract);
+        expect(result.stderr).toMatch(/already used/i);
+        expect(await snapshot(candidates)).toEqual(before);
+        expect(gitText("status", "--porcelain")).toBe("");
+      },
+    );
+  }
+
+  // QFAI:EX-0001-0008-17
+  it.each(["BR statement", "decision approach", "retirement successor"])(
+    "counts a %s reservation when checking the destination maximum",
+    async (reservation) => {
+      await prepare();
+      if (reservation === "BR statement") {
+        await put(
+          `${specs}/03_contract/cli/cli-0001-choice.md`,
+          "# CLI-0001: Choice\n\n## Business rules\n\n" +
+            "| BR-ID | Statement | Examples |\n| --- | --- | --- |\n" +
+            "| BR-0001-0001 | Retain DEC-0042. | EX-0001-0001-01 |\n",
+        );
+      } else {
+        await put(
+          decisions,
+          table +
+            inheritedRow +
+            addedRow +
+            (reservation === "decision approach"
+              ? "| DEC-0003 | Retired choice | Reserve DEC-0042 | DONE |\n"
+              : "| DEC-0003 | Retired choice | Keep its successor | SUPERSEDED (by DEC-0042) |\n"),
+        );
+      }
+      git("add", ".");
+      git("commit", "-m", "reserve a higher decision number");
+      const before = await snapshot();
+      const refused = await invoke(["--apply"], "DEC-0002", "DEC-0041");
+      expect(refused.code).toBe(2);
+      expect(refused.stderr).toMatch(/highest.*0042/i);
+      expect(await snapshot()).toEqual(before);
+      const accepted = await invoke([], "DEC-0002", "DEC-0043");
+      expect(accepted.code).toBe(0);
+      expect(accepted.stdout).toContain("DEC-0043");
+      expect(await snapshot()).toEqual(before);
+      expect(gitText("status", "--porcelain")).toBe("");
+    },
+  );
+
+  // QFAI:EX-0001-0008-17
+  it("ignores fictional example input IDs and unrelated binary visual assets for the maximum", async () => {
+    await prepare();
+    const example = `${specs}/02_business-flow/business-flow-0001/user-story-0001-0001/03_Example.md`;
+    const visual = `${specs}/03_contract/ui/preview.png`;
+    await put(
+      example,
+      "# Examples\n\n## Examples\n\n" +
+        "| EX-ID | AC-Ref | Input | Expected |\n| --- | --- | --- | --- |\n" +
+        "| EX-0001-0001-01 | AC-0001-0001-01 | A fictional DEC-9999 | Reject the input |\n",
+    );
+    await mkdir(path.dirname(path.join(root, visual)), { recursive: true });
+    await writeFile(path.join(root, visual), Buffer.from([0x89, 0x50, 0x4e, 0x47, 0xff, 0x00]));
+    git("add", ".");
+    git("commit", "-m", "example data and unrelated visual asset");
+    const before = await snapshot([...files, example, visual]);
+    const result = await invoke();
+    expect(result.code).toBe(0);
+    expect(result.stdout).toContain("DEC-0013");
+    expect(result.stdout).not.toContain(visual);
+    expect(await snapshot([...files, example, visual])).toEqual(before);
+    expect(gitText("status", "--porcelain")).toBe("");
+  });
+
   // QFAI:EX-0001-0008-17
   // QFAI:EX-0001-0008-18
   it.each([
@@ -362,6 +456,63 @@ describe("decision renumber public CLI", () => {
     }
   });
 
+  for (const apply of [false, true]) {
+    // QFAI:EX-0001-0008-20
+    it(`refuses an external hardlinked candidate with apply=${apply} without changing either path`, async (ctx) => {
+      await prepare();
+      const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-renumber-hardlink-"));
+      const target = path.join(outside, "choice.txt");
+      const original = await readFile(path.join(root, source));
+      try {
+        await writeFile(target, original);
+        await rm(path.join(root, source));
+        try {
+          await link(target, path.join(root, source));
+        } catch (error) {
+          if (
+            error instanceof Error &&
+            "code" in error &&
+            ["EPERM", "EACCES"].includes(String(error.code))
+          ) {
+            // Skip only when the host denies creation of this hardlink fixture.
+            ctx.skip();
+          }
+          throw error;
+        }
+        expect(gitText("status", "--porcelain")).toBe("");
+        const before = await snapshot();
+        const result = await invoke(apply ? ["--apply"] : []);
+        expect(result.code).toBe(2);
+        expect(result.stderr).toMatch(/hardlink/i);
+        expect(result.stderr).toContain(source);
+        expect(await snapshot()).toEqual(before);
+        expect(await readFile(target)).toEqual(original);
+        expect(gitText("status", "--porcelain")).toBe("");
+      } finally {
+        await rm(outside, { recursive: true, force: true });
+      }
+    });
+  }
+
+  // QFAI:AC-0001-0008-08
+  // QFAI:EX-0001-0008-20
+  it("checks a later unsafe candidate before writing any earlier valid candidate", async () => {
+    await prepare();
+    const candidate = "zz-last-candidate.txt";
+    await put(candidate, "Added DEC-0002 reference\n");
+    git("add", candidate);
+    git("commit", "-m", "later candidate");
+    await put(candidate, "Operator edited DEC-0002 reference\n");
+    const before = await snapshot([...files, candidate]);
+    const status = gitText("status", "--porcelain");
+    const result = await invoke(["--apply"]);
+    expect(result.code).toBe(2);
+    expect(result.stderr).toContain(candidate);
+    expect(await snapshot([...files, candidate])).toEqual(before);
+    expect(gitText("status", "--porcelain")).toBe(status);
+  });
+
+  // QFAI:AC-0001-0008-07
   // QFAI:EX-0001-0008-20
   it.each(["worktree", "index", "unsupported", "untracked", "invalid UTF-8", "oversized"])(
     "refuses an unsafe %s candidate without changing any candidate",

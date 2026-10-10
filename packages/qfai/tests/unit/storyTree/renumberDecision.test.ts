@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import type * as FsPromises from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -12,7 +13,7 @@ import {
 
 const faults = vi.hoisted(() => ({ unreadable: "", denied: 0 }));
 vi.mock("node:fs/promises", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("node:fs/promises")>();
+  const actual = await importOriginal<typeof FsPromises>();
   return {
     ...actual,
     open: (...args: Parameters<typeof actual.open>) => {
