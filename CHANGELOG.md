@@ -31,6 +31,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **Test exceptions take effect only at DONE.** A partially superseded exception
   no longer suppresses a missing-test error. Other decision kinds keep their
   status behavior. Fixes #3356.
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - **Questions ask only for answers the next step needs.** Background waiting
   and completion reports need no question. Dismissed questions and free-text
