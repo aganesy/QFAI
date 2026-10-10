@@ -447,3 +447,60 @@ describe.each([
     }
   });
 });
+
+describe.each([
+  ["TODO", false, false],
+  ["WIP", false, true],
+  ["DONE", true, true],
+  ["REJECTED", false, false],
+  ["SUPERSEDED (by DEC-0002)", false, false],
+  ["PARTLY SUPERSEDED (by DEC-0002)", false, true],
+] as const)("decision keyword force at %s", (status, exceptionInForce, changeInForce) => {
+  // QFAI:EX-0001-0056-06
+  it("keeps a test exception in force only at DONE", () => {
+    expect(
+      classifyRecordRow({
+        id: "DEC-0001",
+        content: "Test exception: BF-0001, AC-0001-0001-01, EX-0001-0001-01",
+        approach: "No test environment",
+        status,
+      }),
+    ).toMatchObject({
+      kind: "test-exception",
+      refs: ["BF-0001", "AC-0001-0001-01", "EX-0001-0001-01"],
+      inForce: exceptionInForce,
+    });
+  });
+
+  it("preserves change-request force and leaves ordinary rows inactive", () => {
+    const row = { id: "DEC-0001", approach: "Reason", status };
+    expect(
+      classifyRecordRow({ ...row, content: "Change request: 01_policy/glossary.md" }),
+    ).toMatchObject({
+      kind: "change-request",
+      refs: ["01_policy/glossary.md"],
+      inForce: changeInForce,
+    });
+    expect(classifyRecordRow({ ...row, content: "An ordinary decision" })).toMatchObject({
+      kind: "other",
+      refs: [],
+      inForce: false,
+    });
+  });
+});
+
+it.each([
+  ["TODO", true],
+  ["WIP", true],
+  ["DONE", false],
+  ["DEFERRED", false],
+] as const)("preserves Unadjudicated force at %s", (status, inForce) => {
+  expect(
+    classifyRecordRow({
+      id: "OQ-0001",
+      content: "Unadjudicated: Which path?",
+      approach: "Discuss",
+      status,
+    }),
+  ).toMatchObject({ kind: "unadjudicated", refs: [], inForce });
+});

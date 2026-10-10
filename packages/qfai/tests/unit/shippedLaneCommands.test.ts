@@ -26,10 +26,12 @@ import { classifyBuildCommand } from "../helpers/buildCommand.js";
 import {
   ALLOWED_ACTION_INPUTS,
   ALLOWED_ACTIONS,
+  ALLOWED_INIT_CONTENT,
   ALLOWED_INVOCATIONS,
   ALLOWED_INIT_SOURCE_BASENAMES,
   ALLOWED_INIT_SOURCE_EXTENSIONS,
   bodyDigest,
+  fileDigest,
   commandsOf,
   HARMLESS_PROGRAMS,
   initMustNotShip,
@@ -808,5 +810,31 @@ describe("the shipped-lane allowlist", () => {
       [...ALLOWED_INIT_SOURCE_BASENAMES].filter((name) => !name.startsWith(".")),
       "this set exists for names `path.extname` cannot see, which is what a leading dot makes",
     ).toEqual([]);
+  });
+});
+
+describe("reviewed init entry content", () => {
+  it.each([
+    ["AGENTS.md", "agents.txt"],
+    ["CLAUDE.md", "claude.txt"],
+  ])("keeps the reviewed bytes for %s in an independent fixture", async (entry, fixture) => {
+    const expected = await readFile(
+      new URL(`../fixtures/shipped-entry/${fixture}`, import.meta.url),
+    );
+    expect(expected.length).toBeGreaterThan(0);
+    expect(ALLOWED_INIT_CONTENT.get(entry)).toBe(fileDigest(expected));
+  });
+
+  it.each(["AGENTS.md", "CLAUDE.md"])("rejects unreviewed byte changes to %s", async (entry) => {
+    const actual = await readFile(new URL(`../../assets/init/root/${entry}`, import.meta.url));
+    const digest = ALLOWED_INIT_CONTENT.get(entry);
+    expect(digest).toBe(fileDigest(actual));
+    expect(fileDigest(Buffer.concat([actual, Buffer.from("Unreviewed instruction.\n")]))).not.toBe(
+      digest,
+    );
+    expect(fileDigest(actual.subarray(0, actual.length - 1))).not.toBe(digest);
+    expect(fileDigest(Buffer.from(actual.toString("utf8").replaceAll("\n", "\r\n")))).not.toBe(
+      digest,
+    );
   });
 });
