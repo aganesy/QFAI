@@ -1239,7 +1239,7 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
-  ["qfai-docs.yml", "70e1fc53abf4596daf6007b7875b5f972f6103e2401e16dc8bec009fc999c7f2"],
+  ["qfai-docs.yml", "44ec24d550811e8a74a366c8a855669f8c2779d52dd1745358e758d3d50ecdc7"],
   ["qfai-tests.yml", "d0eac08104ee1fab05c97d544459cedf4fad3a4dd2a3701904a16fc4ced6da15"],
   ["qfai-validate.yml", "d544c784615c28d884152ba68856d742ee3368b32a639a874cb3ee80bd104f7f"],
 ]);
@@ -2084,7 +2084,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-docs.yml#checks",
-    '{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body 29d4d4ffdc27885fb3608373da72ce6fc119738a3a4d2cf8595b29586a06c25a>"}',
+    '{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body fb106152ede2c87f02c5554c96cbd8bac7f4965ead2c17c68b158bca0f4c7799>"}',
   ],
   [
     "qfai-docs.yml#checks",
@@ -2368,7 +2368,7 @@ export const ALLOWED_SHELLS: ReadonlySet<string> = new Set(["bash"]);
  * runner, and that answer is still exactly one.
  */
 export const ALLOWED_TOOL_INSTALLS: ReadonlySet<string> = new Set([
-  "@jackchuka/mdschema@0.15.4 mermaid@11.17.2 jsdom@29.1.1",
+  "@jackchuka/mdschema@0.15.5 mermaid@11.17.2 jsdom@29.1.1",
   "mermaid@11.17.2 jsdom@29.1.1 qfai",
 ]);
 
