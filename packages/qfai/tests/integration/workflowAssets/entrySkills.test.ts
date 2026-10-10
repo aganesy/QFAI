@@ -223,6 +223,35 @@ describe("qfai-run", () => {
     expect(lines.length).toBeLessThanOrEqual(150);
   });
 
+  // QFAI:EX-0001-0196-43
+  it("resumes a waiting step for its requested reply and plans an independent new request", async () => {
+    const kinds = flat(sectionOf(await readShipped(RUN), "## Request kinds"));
+    expect(kinds).toMatch(/\brepl(?:y|ies)\b.*\brequested\b.*\bresult\b/i);
+    expect(kinds).toMatch(/\bresumes?\b.*\b(?:same|waiting) step\b/i);
+    expect(kinds).toMatch(
+      /\b(?:no|not|without|never|rather than)\b.*\b(?:fresh|new|another) invocation\b/i,
+    );
+    expect(kinds).toMatch(/\b(?:independent|separate) new request\b.*\bplan(?:ned)?\b/i);
+    expect(kinds).toContain("`references/operator-screens.md`");
+  });
+
+  // QFAI:EX-0001-0196-43
+  it("keeps uncertain replies unconfirmed and permits only the planned branch from a closed information request", async () => {
+    const screens = flat(await readShipped(SCREENS));
+    expect(screens).toMatch(/\b(?:ambiguous|uncertain|unclear) repl(?:y|ies)\b/i);
+    expect(screens).toMatch(
+      /\b(?:do not|never)\b.*\b(?:assume|infer|take|treat)\b.*\b(?:success|completion)\b.*\bapproval\b/i,
+    );
+    expect(screens).toMatch(/\b(?:no|without|do not)\b.*\b(?:new|fresh) plan\b/i);
+    expect(screens).toMatch(
+      /\b(?:no|without|do not)\b.*\b(?:skill invocation|invoke (?:another|a new) skill)\b/i,
+    );
+    expect(screens).toMatch(/\b(?:closed|completed) request for information\b/i);
+    expect(screens).toMatch(
+      /\b(?:plan's branch|branch (?:the )?plan (?:names|gives)|branch (?:as|by|per) (?:the )?plan)\b/i,
+    );
+  });
+
   // QFAI:AC-0001-0211-05
   // QFAI:EX-0001-0211-35
   it("defines every extraction value, shows an extraction with no route, and names no route", async () => {

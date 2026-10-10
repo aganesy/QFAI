@@ -66,11 +66,17 @@ Feature: Install or upgrade and get the free-text entry
     And a plain upgrade leaves a step whose copy differs from the shipped one as it is, and `--force` replaces it, as for a shipped skill
 
   # AC-0001-0196-11
-  Scenario: Every prompt restates that a request naming no skill goes to `qfai-run`
+  Scenario: User prompts restate when a new request naming no skill goes to `qfai-run`
     Given a fresh project, or a project with its own `.claude/settings.json` or `.codex/hooks.json`
     When `qfai init` runs
-    Then Claude Code and Codex each run, on every prompt, a hook that sends a request naming no skill to `qfai-run`
+    Then both hosts install the free-text entry reminder for a new request naming no skill
+    And Claude Code skips prompts with a line opening with `<task-notification>`, `<wake>` or `[SYSTEM NOTIFICATION`, and prints the reminder for any other prompt or input it cannot read
+    And Codex prints the free-text entry reminder on every prompt
+    And the reminder distinguishes replies to a run in progress from new requests
     And Codex also runs the structured-question reminder on every prompt
+    And its message allows an interim report without repeating a question only for an ongoing step awaiting the result of an external operation already requested, with no new decision or missing fact
+    And that report states the expected result and what resumes the step
+    And completed-route final reports and new facts, choices or permissions remain outside that exception
     And each Codex hook is one line that prints the same through `sh`, `cmd.exe` and PowerShell
     And an existing Codex hook file keeps the project's groups and gains only the ones it lacks, as the Claude Code settings file does
     And a file with a shape init cannot read is left unchanged, with a warning

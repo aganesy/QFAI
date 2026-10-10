@@ -15,12 +15,17 @@ import { describe, expect, it } from "vitest";
 
 import { STRUCTURED_QUESTION_HOOK_MARKER } from "../../src/core/claudeCodeHooks.js";
 import { projectDirOf, runReminderHook } from "../helpers/reminderHooks.js";
+import { flat, sectionOf } from "../helpers/shippedAssistant.js";
 
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 
 /** This repository's own hooks, and the copy `qfai init` writes. */
 const SETTINGS = [".claude/settings.json", "packages/qfai/assets/init/.claude/settings.json"];
+const QUESTION_RULES = [
+  ".agents/rules/user-questions.md",
+  "packages/qfai/assets/init/root/.agents/rules/user-questions.md",
+];
 
 type Hook = {
   readonly type: string;
@@ -56,6 +61,26 @@ async function payloadOf(rel: string, group: Group): Promise<string> {
     group.hooks.map((hook) => runReminderHook(hook, projectDirOf(repoRoot, rel))),
   );
   return outputs.join(" ");
+}
+
+function expectPendingOperationException(instruction: string): void {
+  const text = flat(instruction);
+  expect(text).toMatch(/\bonly (?:when|if|while|for)\b/i);
+  expect(text).toMatch(/\b(?:ongoing|active|waiting|in[ -]progress)\b.*\bstep\b/i);
+  expect(text).toMatch(/\b(?:already|previously) requested\b.*\bexternal operation\b/i);
+  expect(text).toMatch(/\b(?:pending|waiting|awaiting)\b.*\bresult\b|\bresult\b.*\bpending\b/i);
+  expect(text).toMatch(/\bno new (?:decision|choice)\b.*\bmissing (?:information|facts)\b/i);
+  expect(text).toMatch(/\b(?:report|state|give)\b.*\bexpected result\b.*\bresume condition\b/i);
+  expect(text).toMatch(
+    /\b(?:no|without) (?:duplicate|another|repeated) question\b|\bdo not repeat\b.*\bquestion\b/i,
+  );
+  expect(text).toMatch(/\bcompleted route\b.*\bfinal report\b.*\bquestion\b/i);
+  expect(text).toMatch(/\b(?:new|missing) (?:facts|information)\b/i);
+  expect(text).toMatch(/\b(?:choices?|decisions?)\b/i);
+  expect(text).toMatch(/\b(?:permission|approval)\b/i);
+  expect(text).toMatch(
+    /\b(?:new|missing)\b.*\b(?:permission|approval)\b.*\b(?:existing|normal|usual) question rules\b/i,
+  );
 }
 
 describe("the structured-question reminder", () => {
@@ -111,6 +136,21 @@ describe("the structured-question reminder", () => {
     );
   });
 
+  // QFAI:EX-0001-0196-26
+  it.each(QUESTION_RULES)(
+    "%s limits the no-question exception to a previously requested operation still awaiting its result",
+    async (rel) => {
+      const rule = await readFile(path.join(repoRoot, rel), "utf-8");
+      expectPendingOperationException(sectionOf(rule, "## 6. A turn that waits on the user"));
+    },
+  );
+
+  // QFAI:EX-0001-0196-26
+  it.each(SETTINGS)("%s carries the same pending-operation boundaries", async (rel) => {
+    const settings = await readSettings(rel);
+    expectPendingOperationException(await payloadOf(rel, promptGroup(settings)));
+  });
+
   /** What the host writes to a `UserPromptSubmit` hook's stdin for one prompt. */
   const promptInput = (prompt: string): string =>
     JSON.stringify({ hook_event_name: "UserPromptSubmit", prompt });
@@ -145,6 +185,9 @@ describe("the structured-question reminder", () => {
       // mentions one, and input with no prompt at all, get the reminder.
       for (const input of [
         promptInput("Fix the failing test"),
+        promptInput("done"),
+        promptInput("I have finished the operation"),
+        promptInput("Can I deploy it?"),
         promptInput("What does <task-notification> mean here?"),
         promptInput("<wakeup> is not a wrapper"),
         promptInput("What does [SYSTEM NOTIFICATION] mean here?"),
@@ -157,10 +200,7 @@ describe("the structured-question reminder", () => {
     },
   );
 
-  it.each([
-    ".agents/rules/user-questions.md",
-    "packages/qfai/assets/init/root/.agents/rules/user-questions.md",
-  ])("%s says it has a reminder", async (rel) => {
+  it.each(QUESTION_RULES)("%s says it has a reminder", async (rel) => {
     // A reader of the rule needs to know one fires, or a hook that stops firing
     // looks like a rule nobody wrote a reminder for. The writing-standard rule
     // documents its own the same way.
