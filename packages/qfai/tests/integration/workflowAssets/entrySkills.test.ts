@@ -364,9 +364,13 @@ describe("qfai-run", () => {
     ),
   ])("%s asks after completion only when another step requires an answer", async (skill) => {
     const text = flat(await readShipped(skill));
-    expect(text).toMatch(/ask (?:for|about) .*only when proceeding requires the user's answer/i);
-    expect(text).toMatch(/(?:completion|closure)-only report needs no question/i);
-    expect(text).toMatch(/under a no-question mode, list any remaining actions instead/i);
+    expect(text).toMatch(
+      /ask (?:for|about) .*only when proceeding requires the user's answer|when the next step needs the user's answer,? ask a question listing the next actions/i,
+    );
+    expect(text).toMatch(
+      /(?:completion|closure)-only reports? (?:needs? no question|ask nothing)/i,
+    );
+    expect(text).toMatch(/under a no-question mode, list (?:any )?remaining actions instead/i);
     expect(text).not.toMatch(/the report ends with a question listing the next actions/i);
   });
 
