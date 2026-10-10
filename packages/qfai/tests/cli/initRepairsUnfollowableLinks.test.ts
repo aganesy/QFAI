@@ -171,6 +171,7 @@ describe("qfai init repairs a link the OS will not follow", () => {
       expect((await readFile(path.join(linkPath, "SKILL.md"))).equals(original)).toBe(true);
       expect(symlinkCallsFor(linkPath)).toHaveLength(followable ? 0 : 1);
       expect(path.normalize(await readlink(linkPath))).toBe(path.normalize(primaryTarget));
+      expect((await stat(path.join(primary, LINK))).isDirectory()).toBe(true);
       expect((await readFile(path.join(primary, canonical))).equals(original)).toBe(true);
       expect(path.normalize(await readlink(path.join(primary, LINK)))).toBe(
         path.normalize(primaryTarget),

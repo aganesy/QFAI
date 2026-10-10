@@ -28,6 +28,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Windows link warnings describe the affected wrapper and its existing repair.**
+  Guidance recommends ordinary init without deleting links and distinguishes
+  consumer wrappers from the repository's canonical mirror. Refs #3240.
 - **Test exceptions take effect only at DONE.** A partially superseded exception
   no longer suppresses a missing-test error. Other decision kinds keep their
   status behavior. Fixes #3356.
