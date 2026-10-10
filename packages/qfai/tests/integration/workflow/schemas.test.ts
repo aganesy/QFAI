@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import Ajv2020 from "ajv/dist/2020";
 import { afterEach, expect, it } from "vitest";
 
-import { SIGNALS } from "../../../src/core/workflow/extraction.js";
+import { SIGNALS, type RoutingReading } from "../../../src/core/workflow/extraction.js";
 import { extractionFaults } from "../../../src/core/workflow/extractionShape.js";
 import { planOf } from "../../../src/core/workflow/plan.js";
 import { WORKFLOW_ROUTES } from "../../../src/core/workflow/routes.js";
@@ -99,7 +99,7 @@ it("Every example in the qfai-run plan reference validates against its schema", 
 // QFAI:EX-0001-0211-03
 it("The extraction schema and the parser accept and refuse the same extractions", async () => {
   const validate = await loadValidator();
-  const reading = { intent: "design", entryFlags: [], qualifiers: [], signals: [] };
+  const reading: RoutingReading = { intent: "design", entryFlags: [], qualifiers: [], signals: [] };
   const samples = [
     extraction(),
     extraction({ intent: null }),
