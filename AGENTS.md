@@ -52,9 +52,9 @@ workspace (`"qfai": "workspace:*"`).
   vitest.
 - A worktree stays on the commit it was made from and loads that commit's skills and
   rules. Merge `origin/main` into it before relying on them.
-- `jq` must be on `PATH` to run the association-gate cases of
-  `packages/qfai/tests/scripts/ownWorkflowTopology.test.ts`. Without it the case stops
-  and names the missing tool.
+- Node.js and Bash must be on `PATH` for the two association-gate cases in
+  `packages/qfai/tests/scripts/ownWorkflowTopology.test.ts`. A case stops and names
+  the missing tool when either is unavailable.
 - `scripts/run-lint-checks.sh`, which `pnpm ci:lint` runs, falls back to `corepack pnpm`
   when `pnpm` is not on `PATH`, and stops with a message when neither is installed.
 - Editing a pinned file (the guard programs, the local actions and the other paths in
@@ -150,9 +150,9 @@ repository is written once, in the shipped master, and only what is specific to
 this repository goes in the overlay. Overlays do not ship. See
 `.agents/rules/root-additions-policy.local.md`.
 
-`.claude/rules/` holds symlinks to these. On Windows this needs Git's `core.symlinks=true` and
-Developer Mode; without them `.claude/rules/*.md` become text files holding only the
-path string, so read the masters directly.
+`.claude/rules/scoped/` holds a short file for each rule tied to paths. Claude Code loads it
+when it reads or edits a matching file, and it points at the master here. Nothing else under
+`.claude/rules/` loads at session start.
 Codex reads this file; Copilot reads `.github/copilot-instructions.md`.
 
 Read `REVIEW.md` before reviewing a pull request or writing its description, from
