@@ -6,6 +6,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The README quick start now holds the whole first run.** The separate "Minimal
+  tutorial" section is removed from both README files: the quick start covers
+  `npx qfai init`, describing the change in your own words, answering the
+  questions the work puts to you or saying `stop`, and checking the result with
+  `npx qfai validate` and `npx qfai report` (#2690).
+
 - **The web-research skill states what its criteria require, and its MCP
   templates match the Codex and Copilot formats.** A search with no results is
   reported as "no web sources found" with every query issued and cites nothing.

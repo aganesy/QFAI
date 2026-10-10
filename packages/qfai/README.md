@@ -79,10 +79,20 @@ Then open your AI coding agent in the repository and describe the change in your
 
 > Let each customer register up to five notification addresses, with no duplicates.
 
+If you only have an idea, say so: the run starts with a discussion that structures scope and open questions.
+
 The agent announces the goal, the stages it will run and the files it may change, then runs them.
 It asks you only what it cannot decide for you, such as whether to create a new story.
+Answer its questions, or say `stop` to end the run.
 The stages fill the seeded story tree and follow the project's Standard commands in
 `<paths.contractsDir>/tech.md` (by default `.qfai/spec/03_contract/tech.md`) for its quality gates.
+
+When the run ends, check the result:
+
+```bash
+npx qfai validate
+npx qfai report
+```
 
 To drive the stages yourself instead:
 Run `/qfai-discussion` and `/qfai-sdd` to fill the seeded story tree.
@@ -420,16 +430,6 @@ Notes.
   `.qfai/assistant/rule/change-classification.md`. The `message` text and
   issue order are not stable; match on `issues[].code`.
 - `report.json`, `doctor.json`, and `run-*` JSON logs are internal exports and are not a stable external contract; prefer `report.md` for integrations that must survive tool upgrades.
-
-## Minimal tutorial
-
-1. `npx qfai init`
-2. Open your AI coding agent in the repository and describe the change in your own words.
-   If you only have an idea, say so: the run starts with a discussion that structures scope and open questions.
-3. Answer the questions the work puts to you, or say `stop` to end it.
-4. Run `npx qfai validate` then `npx qfai report`.
-
-To choose each stage yourself, see [Invoking a stage directly](#invoking-a-stage-directly-expert-path).
 
 ## FAQ
 

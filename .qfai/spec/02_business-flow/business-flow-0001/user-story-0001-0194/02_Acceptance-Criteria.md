@@ -30,7 +30,7 @@ Feature: Claim a host as supported only with evidence
     Given the root README and the published README
     When an adopter reads them
     Then the free-text entry is the primary usage and direct stage invocation the expert path
-    And neither the operating-model diagram nor the tutorial has the operator typing each stage
+    And neither the operating-model diagram nor the quick start has the operator typing each stage
 
   # AC-0001-0194-05
   Scenario: What ships keeps the repository's shipping rules
