@@ -118,15 +118,64 @@ async function fixture(version = NEXT_VERSION): Promise<string> {
   return root;
 }
 
-function run(root: string) {
+function run(root: string, preload?: string) {
   const source =
     `import { syncMdschemaVersion } from ${JSON.stringify(pathToFileURL(SCRIPT).href)};` +
     "process.exit(syncMdschemaVersion(process.argv[1]));";
-  return spawnSync(process.execPath, ["--input-type=module", "--eval", source, root], {
+  const args = [
+    ...(preload === undefined ? [] : ["--import", pathToFileURL(preload).href]),
+    "--input-type=module",
+    "--eval",
+    source,
+    root,
+  ];
+  return spawnSync(process.execPath, args, {
     cwd: root,
     encoding: "utf-8",
     timeout: 10_000,
   });
+}
+
+async function failurePreload(root: string, fault: "concurrent-change" | "write-failure") {
+  const preload = path.join(root, "write-fault.mjs");
+  const traceFile = path.join(root, "write-trace.json");
+  const parallel = `${await text(root, HELPER)}\n// concurrent fixture edit\n`;
+  await writeFile(
+    preload,
+    `
+import fs from "node:fs";
+import path from "node:path";
+import { syncBuiltinESMExports } from "node:module";
+const root = ${JSON.stringify(root)};
+const workflow = ${JSON.stringify(WORKFLOW)};
+const helper = ${JSON.stringify(HELPER)};
+const traceFile = ${JSON.stringify(traceFile)};
+const parallel = ${JSON.stringify(parallel)};
+const fault = ${JSON.stringify(fault)};
+const write = fs.writeFileSync;
+const trace = [];
+const save = () => write(traceFile, JSON.stringify(trace));
+save();
+fs.writeFileSync = (file, ...args) => {
+  const relative = path.relative(root, String(file)).split(path.sep).join("/");
+  trace.push(relative);
+  save();
+  if (relative === helper && fault === "write-failure") {
+    throw Object.assign(new Error("fixture refuses writing " + helper), { code: "EPERM" });
+  }
+  const result = write(file, ...args);
+  if (relative === workflow && fault === "concurrent-change") {
+    write(path.join(root, helper), parallel);
+    trace.push("concurrent helper change");
+    save();
+  }
+  return result;
+};
+syncBuiltinESMExports();
+`,
+    "utf-8",
+  );
+  return { preload, traceFile, parallel };
 }
 
 async function snapshot(root: string): Promise<Array<[string, string | null]>> {
@@ -356,6 +405,55 @@ describe("syncing the schema checker's declared version", () => {
     expect(again.status, again.stderr).toBe(0);
     expect(await snapshot(root)).toEqual(once);
     expect(git(root, ["status", "--porcelain"])).toBe("");
+  });
+
+  // QFAI:EX-0002-0003-07 QFAI:EX-0002-0003-09
+  it("retains a concurrent target change and stops before the next write", async () => {
+    const root = await fixture();
+    const before = await snapshot(root);
+    const original = await text(root, WORKFLOW);
+    const expected = original.replace(
+      /@jackchuka\/mdschema@\d+\.\d+\.\d+/,
+      `${PACKAGE}@${NEXT_VERSION}`,
+    );
+    const { preload, traceFile, parallel } = await failurePreload(root, "concurrent-change");
+    const result = run(root, preload);
+    expect(result.error).toBeUndefined();
+    expect(result.status, result.stderr).toBe(1);
+    expect(result.stderr).toContain(`the observed input changed: ${HELPER}`);
+    expect(result.stderr).toContain(`Partial changes retained: ${WORKFLOW}`);
+    expect(await text(root, WORKFLOW)).toBe(expected);
+    expect(await text(root, HELPER)).toBe(parallel);
+    expect((await snapshot(root)).filter(([file]) => file !== WORKFLOW && file !== HELPER)).toEqual(
+      before.filter(([file]) => file !== WORKFLOW && file !== HELPER),
+    );
+    const trace: unknown = JSON.parse(await readFile(traceFile, "utf-8"));
+    expect(trace).toEqual([WORKFLOW, "concurrent helper change"]);
+    expect(result.stdout).toBe("");
+  });
+
+  // QFAI:EX-0002-0003-07 QFAI:EX-0002-0003-09
+  it("reports a later write failure and retains only the completed write", async () => {
+    const root = await fixture();
+    const before = await snapshot(root);
+    const original = await text(root, WORKFLOW);
+    const expected = original.replace(
+      /@jackchuka\/mdschema@\d+\.\d+\.\d+/,
+      `${PACKAGE}@${NEXT_VERSION}`,
+    );
+    const { preload, traceFile } = await failurePreload(root, "write-failure");
+    const result = run(root, preload);
+    expect(result.error).toBeUndefined();
+    expect(result.status, result.stderr).toBe(1);
+    expect(result.stderr).toContain(`fixture refuses writing ${HELPER}`);
+    expect(result.stderr).toContain(`Partial changes retained: ${WORKFLOW}`);
+    expect(await text(root, WORKFLOW)).toBe(expected);
+    expect((await snapshot(root)).filter(([file]) => file !== WORKFLOW)).toEqual(
+      before.filter(([file]) => file !== WORKFLOW),
+    );
+    const trace: unknown = JSON.parse(await readFile(traceFile, "utf-8"));
+    expect(trace).toEqual([WORKFLOW, HELPER]);
+    expect(result.stdout).toBe("");
   });
 
   it("runs the sync before both resealers in Renovate's push step", async () => {
