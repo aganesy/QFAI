@@ -334,6 +334,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A released-entry repair moves complete new blocks back to Unreleased.**
+  The explicit local-base command refuses mixed historical edits, ambiguous
+  blocks and changed input bytes, and names exact source lines and categories.
+  It writes only the changelog and leaves Git operations to the caller. Fixes #3252.
 - Clarify that the research agent reads the cache TTL extension in the project config; the CLI does not parse it.
 
 - Clarify that story ID candidates are snapshots and require a fresh collision
