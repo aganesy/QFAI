@@ -39,8 +39,8 @@ Key rules to follow:
 - `.agents/rules/root-additions-policy.local.md` — two file shapes that turn up at this root, and where each belongs.
 - `.agents/rules/distributed-surface.md` — no internal QFAI IDs or version markers in shipped files.
 - `.agents/rules/distributed-surface.local.md` — the surface, the forbidden identifier shapes, and the four guards.
-- `.agents/rules/version-discipline.md` — release version numbers are the project maintainer's call; never select or bump one independently.
-- `.agents/rules/version-discipline.local.md` — this repository has adopted the branch-name pin, and these are the guards that read it.
+- `.agents/rules/version-discipline.md` — read before release, tag or publish work, or a change to the package version or a `CHANGELOG.md` version heading.
+- `.agents/rules/version-discipline.local.md` — this repository's overlay of that rule; read it with the master, and read `RELEASE.md` for the release procedure.
 - `.agents/rules/documentation-clarity.md` — plain, minimal writing in PRs, issues, comments and Markdown; no local identifiers, no account of how the work went.
 - `.agents/rules/minimal-implementation.md` — the order to try solutions in once a behaviour is agreed; mark a deliberate shortcut with its ceiling and the condition that lifts it.
 - `.agents/rules/interface-clarity.md` — what may appear on a screen or in terminal output; text explaining how to work a control is a defect report against that control.
