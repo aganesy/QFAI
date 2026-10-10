@@ -238,6 +238,8 @@ leave the budget unknown; a saved count is not a reservation for the next call.
 When a real response refuses a request because of a rate limit, stop calls to
 the affected resource and tell the watcher and known account-sharing tasks.
 A successful HTTP status with a rate-limit error in the body is also a refusal.
+For a secondary limit, pause affected requests across REST and GraphQL for the
+same account. Changing tokens or API surfaces is not recovery.
 Wait for `Retry-After` and any applicable reset time. For a secondary limit
 with neither delay nor an exhausted primary allowance, wait at least one minute.
 
