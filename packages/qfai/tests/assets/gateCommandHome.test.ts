@@ -29,7 +29,6 @@ describe("the story-tree contract owns quality-gate commands", () => {
       }
     });
 
-    // QFAI:AC-0001-0156-02
     // QFAI:EX-0001-0156-01
     // QFAI:EX-0001-0156-03
     it(`${tree}: custom Validate commands keep the full scan and cannot pass validation errors`, async () => {
