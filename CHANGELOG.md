@@ -42,6 +42,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- Resolve the optional Playwright dependency to 1.64.0 while keeping its existing supported version range.
+
 - **The writing rule removes unnecessary sentences without requiring needless rewrites.**
   Its opening deletion test leaves rewriting to the existing clarity clauses.
 - **The release association gate uses Node.js to read pull request branches.**
@@ -340,6 +342,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The explicit local-base command refuses mixed historical edits, ambiguous
   blocks and changed input bytes, and names exact source lines and categories.
   It writes only the changelog and leaves Git operations to the caller. Fixes #3252.
+
+- **Question-only work checks authority before repairing tracked files.**
+  Existing permission for the same target is reused. Otherwise the agent offers
+  repair or a report-only stop; an uncovered no-question run reports and stops
+  that target without writing a tracked open question.
 
 - **A diagnosed missing example reuses an existing rule for its obligation.**
   Equivalent rules use existing example coverage and stable rule IDs to settle
