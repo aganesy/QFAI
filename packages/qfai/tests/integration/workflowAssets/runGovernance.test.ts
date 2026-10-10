@@ -52,7 +52,10 @@ describe("the stage-skill entry check", () => {
     expect(byName).toMatch(/start no other stage/i);
     expect(implement).toMatch(/`implement-scaffold`.*the flow's missing acceptance tests/i);
     expect(implement).toMatch(/`implement-tdd`.*every owed example, red, green, refactor/i);
-    expect(implement).toMatch(/the report ends with a question listing the next actions/i);
+    expect(implement).toMatch(
+      /ask for the next action only when proceeding requires the user's answer/i,
+    );
+    expect(implement).toMatch(/a completion-only report needs no question/i);
     expect(sdd).toMatch(/`sdd-story`.*stories, gherkin ac and ex/i);
     expect(sdd).toMatch(
       /invoked by name, `\/qfai-sdd` runs standalone, ends at sdd and creates no run/i,
