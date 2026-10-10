@@ -43,9 +43,17 @@ describe.each(trees)("%s — qfai-implement parallel item policy", (tree) => {
   });
 
   it("isolates workers and keeps one integrator responsible for overlap", async () => {
-    const policy = await read(tree, policyPath);
+    const policy = (await read(tree, policyPath)).replace(/\s*\n\s*/g, " ");
+    expect(policy).toMatch(/each worker.*exact file ownership list.*checkout assigned by the host/);
+    expect(policy).toMatch(
+      /separate worktrees when.*host supports editing.*otherwise.*shared-index mode/,
+    );
     expect(policy).toContain(
-      "Give each worker a separate worktree and an exact file ownership list.",
+      ".qfai/assistant/rule/workflow.md#concurrency-stage-independent-mandatory",
+    );
+    expect(policy).toMatch(/Creating a worktree does not grant edit permission/);
+    expect(policy).toMatch(
+      /refused edit.*shared-skill-delegation-baseline\.md#worker-edit-boundary/,
     );
     expect(policy).toContain("Workers do not change another worker's files or the story tree.");
     expect(policy).toContain(
