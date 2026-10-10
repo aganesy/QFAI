@@ -1,25 +1,19 @@
 /**
- * Story-tree IDs that no open pull request has already taken.
+ * Story-tree ID candidates and collision checks against published heads.
  *
- * A new decision, business rule, acceptance criterion or example takes the next
- * number after the highest one in the tree. Read from the local checkout, that
- * number is the same for every branch cut from the same main, so pull requests
- * opened in parallel pick the same IDs and all but the first renumber after
- * merging main.
- *
- * - `next <scope>...` prints one ID per scope, in order, counted over main, the
- *   head of every open pull request and the working tree. A scope named twice
- *   gets two consecutive IDs.
- * - `check` names each ID this branch declares that main or another open pull
- *   request also declares. Two branches that picked their IDs before either was
- *   pushed are still caught, while renumbering costs one edit.
+ * - `next <scope>...` prints one candidate per scope from main, the latest 100
+ *   updated open pull requests and the working tree. It reserves nothing.
+ *   A scope named twice gets two consecutive candidates.
+ * - `check` names each ID this branch adds that main or a fetched open pull
+ *   request also adds. Unpublished changes and simultaneous publishers cannot
+ *   be checked. Commit edits, check a clean tree and push the same HEAD.
  *
  * Counting is the package's own allocator: what the story tree declares, plus
  * every ID a row of `decisions.md` names, so a retired ID is not handed out
  * again and an ID written only as an example in prose is not counted.
  *
  * Reading the trees costs one REST listing and one `git fetch`, however many
- * pull requests are open and however many scopes are asked for. The listing goes
+ * of the listed pull requests and scopes are asked for. The listing goes
  * through `gh-budget.mjs`, which keeps its reserve and reports the remaining
  * allowance on stderr, so stdout holds only the answer. A check during an unfinished
  * merge stops before fetching or comparing branch-owned identifiers.

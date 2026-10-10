@@ -312,6 +312,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Clarify that story ID candidates are snapshots and require a fresh collision
+  check of the committed changes before publishing the same branch head.
+
 - **Unfinished merges stop the branch ID check.** Finish the merge before
   comparing branch-owned identifiers or fetching pull-request heads. Fixes #3246.
 

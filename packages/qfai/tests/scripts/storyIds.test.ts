@@ -477,6 +477,29 @@ describe("parallel DEC candidates before push", () => {
       expect(git(second, "status", "--porcelain")).toBe(statusBefore);
       expect(git(bare, "for-each-ref", "--format=%(refname) %(objectname)")).toBe(refsBefore);
       expect(existsSync(secondPushCounter)).toBe(false);
+
+      log.mockClear();
+      error.mockClear();
+      expect(await run(["next", "DEC"], { cwd: second, list })).toBe(0);
+      expect(log.mock.calls).toEqual([["DEC-0003"]]);
+      writeDecisions(second, ["DEC-0001", "DEC-0003"]);
+      git(second, "config", "user.email", "test@example.com");
+      git(second, "config", "user.name", "test");
+      git(second, "config", "commit.gpgsign", "false");
+      git(second, "commit", "-q", "-am", "renumber second worker decision");
+      const repairedHead = git(second, "rev-parse", "HEAD");
+      const repairedBytes = readFileSync(secondDecision);
+      expect(git(second, "status", "--porcelain")).toBe("");
+      log.mockClear();
+      error.mockClear();
+      expect(await run(["check"], { cwd: second, list })).toBe(0);
+      expect(log.mock.calls).toEqual([["No ID this branch adds is taken elsewhere (1 checked)."]]);
+      expect(error.mock.calls).toEqual([]);
+      expect(git(second, "rev-parse", "HEAD")).toBe(repairedHead);
+      expect(readFileSync(secondDecision)).toEqual(repairedBytes);
+      expect(git(second, "status", "--porcelain")).toBe("");
+      expect(git(bare, "for-each-ref", "--format=%(refname) %(objectname)")).toBe(refsBefore);
+      expect(existsSync(secondPushCounter)).toBe(false);
     } finally {
       log.mockRestore();
       error.mockRestore();
