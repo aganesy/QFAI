@@ -42,6 +42,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Posting guidance explicitly permits numbers and links in pull request and issue bodies.**
+  Source and ordinary Markdown retain the identifier ban and existing exceptions.
+
 - Resolve the optional Playwright dependency to 1.64.0 while keeping its existing supported version range.
 
 - **The writing rule removes unnecessary sentences without requiring needless rewrites.**
@@ -338,6 +341,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Clarify how to report host-blocked temporary-file cleanup, hand off allowed
+  manual steps and verify removal without claiming pending cleanup is complete.
+
 - **Question-only work checks authority before repairing tracked files.**
   Existing permission for the same target is reused. Otherwise the agent offers
   repair or a report-only stop; an uncovered no-question run reports and stops
@@ -347,6 +353,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Equivalent rules use existing example coverage and stable rule IDs to settle
   the owner. Different or uncertain behaviour returns to specification work;
   the choice and its reason appear in the final report.
+
+- Clarify when delegated external settings and credential installation may run,
+  and distinguish confirmed external effects from repository changes and CI results.
 
 - Verify steps reject validation errors even when a custom Validate wrapper succeeds.
 - Clarify that the research agent reads the cache TTL extension in the project config; the CLI does not parse it.
