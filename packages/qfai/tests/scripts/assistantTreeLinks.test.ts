@@ -296,7 +296,6 @@ describe("link-assistant-tree --check", () => {
     expect(lstatSync(path.join(assistant, "rule")).isSymbolicLink()).toBe(true);
   });
 
-  // QFAI:AC-0002-0022-01
   // QFAI:EX-0002-0022-01
   it("follows the root mirror after a native Git worktree checkout and preserves its primary", async () => {
     const { root, script, assistant } = await makeIsolatedTree();
@@ -365,7 +364,6 @@ describe("link-assistant-tree --check", () => {
     fixtureGit(root, ["diff", "--exit-code", "--", "scripts", "packages", ".qfai", "sentinel.txt"]);
   });
 
-  // QFAI:AC-0002-0022-01
   // QFAI:EX-0002-0022-01
   it("repairs a native file-type link to a directory when the OS cannot follow it", async () => {
     const { root, script, assistant } = await makeIsolatedTree();
