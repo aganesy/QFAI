@@ -1,5 +1,6 @@
+import { execFileSync, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { cp, mkdir, mkdtemp } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -228,4 +229,244 @@ describe("BF-0002 toolchain and release acceptance", () => {
     ];
     expect(surfaces.filter((name) => /\bpr-(?:fix|merge)\b/u.test(name))).toEqual([]);
   });
+});
+
+function namedDiagnosticProgram(marker: string): string {
+  const job = workflowJobs("named-tests.yml")["named-test"];
+  const steps = job?.["steps"];
+  if (!Array.isArray(steps)) throw new Error("named diagnostic steps are absent");
+  const programs = steps
+    .filter(isRecord)
+    .map((step) => step["run"])
+    .filter((run): run is string => typeof run === "string" && run.includes(`<<'${marker}'`));
+  const [run] = programs;
+  if (programs.length !== 1 || run === undefined)
+    throw new Error("expected one quoted runner body");
+  const delimiter = `<<'${marker}'\n`;
+  const begin = run.indexOf(delimiter) + delimiter.length;
+  const end = run.indexOf(`\n${marker}`, begin);
+  if (begin < delimiter.length || end < begin) throw new Error("missing ordered runner delimiters");
+  return run.slice(begin, end) + "\n";
+}
+
+describe("the optional named diagnostic acceptance", () => {
+  // QFAI:AC-0002-0026-01
+  it("requires an explicit PR identity with read-only permissions and no test credentials", () => {
+    const workflow: unknown = parseYaml(readText(".github", "workflows", "named-tests.yml"));
+    if (!isRecord(workflow)) throw new Error("named diagnostic is not a mapping");
+    expect(workflow["permissions"]).toEqual({ contents: "read" });
+    const triggers = workflow["on"];
+    expect(isRecord(triggers) ? Object.keys(triggers) : []).toEqual(["workflow_dispatch"]);
+    const dispatch = isRecord(triggers) ? triggers["workflow_dispatch"] : undefined;
+    const inputs = isRecord(dispatch) ? dispatch["inputs"] : undefined;
+    if (!isRecord(inputs)) throw new Error("named diagnostic inputs are absent");
+    expect(Object.keys(inputs)).toEqual(["pr", "sha", "project", "file"]);
+    for (const input of Object.values(inputs)) {
+      expect(isRecord(input) ? input["required"] : undefined).toBe(true);
+      expect(isRecord(input) ? input["default"] : undefined).toBeUndefined();
+    }
+    const job = workflowJobs("named-tests.yml")["named-test"];
+    expect(job?.["timeout-minutes"]).toBe(20);
+    const text = readText(".github", "workflows", "named-tests.yml");
+    expect(text).not.toContain("secrets.");
+    expect(text).not.toContain("GITHUB_TOKEN");
+    for (const step of jobSteps("named-tests.yml", "named-test")) {
+      expect(runText(step)).not.toMatch(/\$\{\{\s*inputs\./u);
+      if (String(step["uses"]).startsWith("actions/checkout@")) {
+        expect(step["uses"]).toMatch(/^actions\/checkout@[a-f0-9]{40}$/u);
+        expect(stepInputs(step)["persist-credentials"]).toBe(false);
+        expect(stepInputs(step)["ref"]).toBe("${{ inputs.sha }}");
+      }
+    }
+  });
+
+  // QFAI:AC-0002-0026-02 QFAI:AC-0002-0026-03
+  // QFAI:EX-0002-0026-12
+  it("checks current project includes before the shared setup and uses normal failure gating", () => {
+    const steps = jobSteps("named-tests.yml", "named-test");
+    const preflight = steps.findIndex((step) => runText(step).includes("<<'PREFLIGHT'"));
+    const setup = steps.findIndex((step) => step["uses"] === SETUP_ACTION);
+    const build = steps.findIndex((step) => runText(step) === "pnpm -C packages/qfai build");
+    const run = steps.findIndex((step) => runText(step).includes("<<'RUNNER'"));
+    expect(preflight).toBeGreaterThan(-1);
+    expect(setup).toBeGreaterThan(preflight);
+    expect(build).toBeGreaterThan(setup);
+    expect(run).toBeGreaterThan(build);
+    expect(stepInputs(steps[setup])).toEqual({
+      "engines-manifest": "./packages/qfai/package.json",
+      "pin-engines-floor": "true",
+    });
+    expect(steps[build]?.["if"]).toBe("inputs.project == 'e2e' || inputs.project == 'integration'");
+    expect(steps[run]?.["if"]).toBeUndefined();
+    for (const step of steps) expect(step["continue-on-error"]).toBeUndefined();
+    expect(runText(steps[run] ?? {})).toContain('node "${RUNNER_TEMP}/named-preflight.mjs"');
+    const program = namedDiagnosticProgram("PREFLIGHT");
+    expect(program).toContain('readFileSync("packages/qfai/vitest.workspace.ts"');
+    expect(program).toContain('git("ls-tree", "HEAD", "--", file)');
+    expect(program).toContain("committed.equals(readFileSync(target))");
+    expect(sorted(runnerProjects())).toHaveLength(7);
+    for (const entry of declaredIncludeGlobs()) {
+      expect(entry.glob).toMatch(/^tests\/[a-z]+\/\*\*\/\*\.test\.ts$/u);
+    }
+    expect(setupSteps().some((step) => runText(step).includes(FROZEN_INSTALL))).toBe(true);
+  });
+
+  // QFAI:AC-0002-0026-05
+  // QFAI:EX-0002-0026-14
+  it("keeps all regular CI slices and its aggregate independent of diagnostic results", () => {
+    const projects = sorted(runnerProjects());
+    expect(sorted(matrixSlices("ci.yml", "test"))).toEqual(projects);
+    expect(sorted(matrixSlices("ci.yml", "node-floor"))).toEqual(projects);
+    const ci = workflowJobs("ci.yml");
+    const aggregate = ci["ci-pass"];
+    const needs = aggregate?.["needs"];
+    expect(Array.isArray(needs) ? needs : []).toContain("test");
+    expect(Array.isArray(needs) ? needs : []).toContain("node-floor");
+    expect(Array.isArray(needs) ? needs : []).not.toContain("named-test");
+    expect(readText(".github", "workflows", "ci.yml")).not.toContain("named-test");
+    expect(readText(".github", "required-status-contexts.json")).not.toContain(
+      "Named test diagnostic",
+    );
+    const diagnostic = workflowJobs("named-tests.yml");
+    expect(Object.keys(diagnostic)).toEqual(["named-test"]);
+    expect(diagnostic["named-test"]?.["needs"]).toBeUndefined();
+    expect(diagnostic["ci-pass"]).toBeUndefined();
+  });
+
+  // QFAI:AC-0002-0026-02 QFAI:AC-0002-0026-03 QFAI:AC-0002-0026-04
+  // QFAI:EX-0002-0026-01 QFAI:EX-0002-0026-10 QFAI:EX-0002-0026-11 QFAI:EX-0002-0026-13
+  it.each([
+    ["exact", 0, "Named diagnostic completed: 1 passed"],
+    ["excluded", 1, "exactly the requested file"],
+    ["collision", 1, "exactly the requested file"],
+    ["empty", 1, "Vitest test run failed"],
+    ["skipped", 1, "at least one executed test"],
+    ["failure", 1, "Vitest test run failed"],
+    ["timeout", 1, "Vitest test run failed"],
+    ["remote moved", 1, "changed before execution"],
+    ["checkout moved", 1, "changed before execution"],
+    ["remote unavailable", 1, "changed before execution"],
+    ["file changed during selection", 1, "differs from its pull request head"],
+    ["file changed after setup", 1, "differs from its pull request head"],
+  ] as const)(
+    "%s selection reports its real execution result",
+    async (kind, status, message) => {
+      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-named-real-runner-"));
+      try {
+        const packageRoot = path.join(root, "packages", "qfai");
+        const directory = path.join(packageRoot, "tests", "core");
+        await mkdir(directory, { recursive: true });
+        await symlink(
+          path.join(REPO_ROOT, "packages", "qfai", "node_modules"),
+          path.join(packageRoot, "node_modules"),
+          "junction",
+        );
+        await writeFile(
+          path.join(packageRoot, "vitest.workspace.ts"),
+          readText("packages", "qfai", "vitest.workspace.ts"),
+        );
+        const target = path.join(directory, "one.test.ts");
+        const changesDuringSelection = [
+          "remote moved",
+          "checkout moved",
+          "remote unavailable",
+          "file changed during selection",
+        ].includes(kind);
+        const code =
+          kind === "empty"
+            ? "export const marker = true;\n"
+            : kind === "timeout"
+              ? 'import { it } from "vitest";\nit("timeout", async () => { await new Promise((resolve) => setTimeout(resolve, 50)); }, 1);\n'
+              : changesDuringSelection || kind === "file changed after setup"
+                ? 'import { it } from "vitest";\nit("blocked", () => { throw new Error("SELECTED_TEST_EXECUTED"); });\n'
+                : `import { expect, it } from "vitest";\nit${kind === "skipped" ? ".skip" : ""}("named behavior", () => { expect(${kind === "failure" ? "false" : "true"}).toBe(true); });\n`;
+        await writeFile(target, code);
+        await writeFile(
+          path.join(directory, kind === "collision" ? "one.test.ts-copy.test.ts" : "other.test.ts"),
+          'import { it } from "vitest";\nit("unselected", () => { throw new Error("UNSELECTED_TEST_EXECUTED"); });\n',
+        );
+        const include =
+          kind === "excluded" ? "tests/core/missing.test.ts" : "tests/core/**/*.test.ts";
+        const mutation =
+          kind === "remote moved"
+            ? 'git("commit", "--allow-empty", "-m", "Advanced remote"); git("push", "origin", "HEAD:refs/pull/37/head"); git("checkout", process.env.EXPECTED_SHA);'
+            : kind === "checkout moved"
+              ? 'git("commit", "--allow-empty", "-m", "Advanced checkout");'
+              : kind === "remote unavailable"
+                ? 'git("remote", "remove", "origin");'
+                : kind === "file changed during selection"
+                  ? 'writeFileSync(path.join(process.env.RUNNER_TEMP, process.env.TEST_FILE), "export const changed = true;\\n");'
+                  : "";
+        const configPreamble =
+          mutation === ""
+            ? ""
+            : `import { execFileSync } from "node:child_process";\nimport { writeFileSync } from "node:fs";\nimport path from "node:path";\nif (process.argv.includes("list")) { const git = (...args) => execFileSync("git", args, { stdio: "pipe" }); ${mutation} }\n`;
+        await writeFile(
+          path.join(packageRoot, "vitest.config.mjs"),
+          `${configPreamble}export default { test: { maxWorkers: 1, fileParallelism: false, projects: [{ test: { name: "core", include: [${JSON.stringify(include)}] } }] } };\n`,
+        );
+        const git = (...args: string[]): string =>
+          execFileSync("git", args, {
+            cwd: root,
+            encoding: "utf-8",
+            stdio: ["ignore", "pipe", "pipe"],
+          }).trim();
+        git("init", "-b", "main");
+        git("config", "user.email", "fixture@example.invalid");
+        git("config", "user.name", "Named runner fixture");
+        git("config", "core.autocrlf", "false");
+        git(
+          "add",
+          "packages/qfai/tests",
+          "packages/qfai/vitest.config.mjs",
+          "packages/qfai/vitest.workspace.ts",
+        );
+        git("commit", "-m", "Runner fixture");
+        const head = git("rev-parse", "HEAD");
+        const origin = path.join(root, "origin.git");
+        git("init", "--bare", origin);
+        git("remote", "add", "origin", origin);
+        git("push", "origin", "HEAD:refs/pull/37/head");
+        const program = path.join(root, "runner.mjs");
+        const preflight = path.join(root, "named-preflight.mjs");
+        await writeFile(program, namedDiagnosticProgram("RUNNER"));
+        await writeFile(preflight, namedDiagnosticProgram("PREFLIGHT"));
+        const options = {
+          cwd: root,
+          encoding: "utf-8" as const,
+          timeout: 60_000,
+          env: {
+            ...process.env,
+            PR_NUMBER: "37",
+            EXPECTED_SHA: head,
+            TEST_PROJECT: "core",
+            TEST_FILE: "packages/qfai/tests/core/one.test.ts",
+            RUNNER_TEMP: root,
+          },
+        };
+        const initial = spawnSync(process.execPath, [preflight], options);
+        expect(initial.status, initial.stdout + initial.stderr).toBe(0);
+        expect(initial.stdout).toContain(head);
+        if (kind === "file changed after setup") {
+          await writeFile(target, code + "// Build changed this tracked file.\n");
+          expect(git("rev-parse", "HEAD")).toBe(head);
+        }
+        const result = spawnSync(
+          process.execPath,
+          [kind === "file changed after setup" ? preflight : program],
+          options,
+        );
+        const output = result.stdout + result.stderr;
+        expect(result.status, output).toBe(status);
+        expect(output).toContain(message);
+        expect(output).not.toContain("UNSELECTED_TEST_EXECUTED");
+        expect(output).not.toContain("SELECTED_TEST_EXECUTED");
+        if (status !== 0) expect(output).not.toContain("Named diagnostic completed:");
+        if (kind === "file changed during selection") expect(git("rev-parse", "HEAD")).toBe(head);
+      } finally {
+        await removeTempTree(root);
+      }
+    },
+    90_000,
+  );
 });
