@@ -24,7 +24,7 @@ const PIN = "scripts/pin-guard-bytes.mjs";
 const LIST_REL = ".github/pinned-bytes.txt";
 
 /** A pinned file that is data rather than code, so a textual merge conflicts in it often. */
-const PINNED_DATA_REL = "scripts/dogfood-backlog.json";
+const PINNED_DATA_REL = "scripts/fresh-init-findings.json";
 
 let staged: string;
 

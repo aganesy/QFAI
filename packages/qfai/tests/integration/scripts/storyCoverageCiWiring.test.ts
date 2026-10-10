@@ -15,7 +15,9 @@ describe("story coverage in the repository CI", () => {
     const manifest = JSON.parse(manifestText) as { scripts: Record<string, string> };
 
     expect(manifest.scripts["ci:lint:scans"]).not.toContain("check-atdd-annotation-ledger");
-    expect(workflow).toContain("node scripts/check-dogfood-backlog.mjs --profile full");
+    expect(workflow).toContain(
+      "node packages/qfai/dist/cli/index.mjs validate --profile full --fail-on error",
+    );
     expect(validator).toContain('validateStoryTreeObligations(root, config, "atdd", model)');
     expect(validator).toContain('validateStoryTreeObligations(root, config, "tdd", model)');
     expect(validator).toMatch(

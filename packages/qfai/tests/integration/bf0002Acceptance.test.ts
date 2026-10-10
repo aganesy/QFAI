@@ -210,14 +210,8 @@ describe("BF-0002 pull request workflow acceptance", () => {
     expect(pullRequestWorkflows).toEqual(["ci.yml"]);
     const ci = readFileSync(path.join(workflowsDir, "ci.yml"), "utf8");
     expect(ci).toMatch(
-      /\n {2}build:\n[\s\S]*?node scripts\/check-dogfood-backlog\.mjs --profile full/u,
+      /\n {2}build:\n[\s\S]*?node packages\/qfai\/dist\/cli\/index\.mjs validate --profile full --fail-on error --format github --root \./u,
     );
     expect(ci).toMatch(/\n {2}build:\n[\s\S]*?Run qfai validate gate \(fail on error\)/u);
-    const dogfood = readFileSync(
-      path.join(REPO_ROOT, "scripts", "check-dogfood-backlog.mjs"),
-      "utf8",
-    );
-    expect(dogfood).toContain('"packages/qfai/dist/cli/index.mjs"');
-    expect(dogfood).toContain('"--root", "."');
   });
 });

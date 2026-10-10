@@ -57,14 +57,13 @@ workspace (`"qfai": "workspace:*"`).
   and names the missing tool.
 - `scripts/run-lint-checks.sh`, which `pnpm ci:lint` runs, falls back to `corepack pnpm`
   when `pnpm` is not on `PATH`, and stops with a message when neither is installed.
-- Editing a pinned file (the guard programs, the local actions, `scripts/dogfood-backlog.json`
-  and the other paths in `.github/pinned-bytes.txt`) changes digests recorded in
+- Editing a pinned file (the guard programs, the local actions and the other paths in
+  `.github/pinned-bytes.txt`) changes digests recorded in
   `.github/pinned-bytes.txt`, `.github/required-status-contexts.json` and
   `.github/workflows/ci.yml`. Run `pnpm pins:reseal` afterwards and commit the files it
   rewrites in the same change. It runs
   `node scripts/pin-guard-bytes.mjs` and then `node scripts/pin-verification-bodies.mjs`,
-  which must run second and needs the dependencies installed. When the dogfood findings
-  changed, run `node scripts/check-dogfood-backlog.mjs --profile <profile> --pin` first.
+  which must run second and needs the dependencies installed.
   `pnpm ci:lint` starts with `node ./scripts/check-workflow-hygiene.mjs`, which reports a
   stale pin and names that command.
 

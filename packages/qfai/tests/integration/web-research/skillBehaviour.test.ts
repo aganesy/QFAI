@@ -390,8 +390,8 @@ describe("web-research skill behaviour", () => {
     expect(items.find((item) => item.startsWith("Only domains listed"))).toContain(
       "in the project allowlist may be fetched",
     );
-    expect(items.find((item) => item.startsWith("The allowlist is defined"))).toContain(
-      "`qfai.config.yaml` under `webResearch.allowlist`",
+    expect(items.find((item) => item.startsWith("The allowlist is a domain list"))).toContain(
+      "`qfai.config.yaml` under `webResearch.allowlist`, read by the agent; `qfai` does not parse it",
     );
     expect(items.find((item) => item.startsWith("Unknown domains"))).toContain(
       "the pipeline continues with allowed sources",

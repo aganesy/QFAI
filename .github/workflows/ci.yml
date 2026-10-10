@@ -351,7 +351,7 @@ jobs:
           done
           sha256sum -c --quiet <<'PINNED_INPUTS'
           2118bc0d10c060bbe25fd4d34785ec024ed46a57e7840252d42519f5bc3b44c9  scripts/check-toolchain-action.sh
-          d4ab3bb2b28b3f5be5849f6c09e0e9bb8eed52d0576c5ae1a955a60188e5c690  .github/pinned-bytes.txt
+          497898c6decd76031f797a8114b775135abfc8e064b61759705f87b0664f6e10  .github/pinned-bytes.txt
           bb649cb2684f9db02bdbe3872f029571a8e52c4c6e2ab95e8c8fcf804370af41  .github/lifecycle-manifests.txt
           43d2586975550f5062b4af23112223068cc5676f0906c04fce2bc231df471a9e  .github/command-files.txt
           PINNED_INPUTS
@@ -689,15 +689,12 @@ jobs:
           # `tdd` checks story test obligations, drift, test stubs, and
           # contracts against the repository root.
           #
-          # The lane is a ratchet, not a clean gate. This repository's story
-          # tree still owes tests: examples with no annotated unit test, which the
-          # test-obligation check reports as `error`.
-          # `check-dogfood-backlog.mjs` holds every file absent
-          # from the pin at zero and every pinned file to its pinned count, so
-          # a new failure still fails the build while the backfill lands. A
-          # waiver cannot substitute: `QFAI-WAIVER-002` refuses a waiver whose
-          # rule is an error.
-          node scripts/check-dogfood-backlog.mjs --profile tdd
+          # A clean gate: this profile reports no `error` on the repository's
+          # own story tree, so any error fails the build.
+          # SHIPPED-CI: not-applicable
+          # Because: this lane validates this repository's own story tree, and
+          # the shipped validate workflow already fails on any error.
+          node packages/qfai/dist/cli/index.mjs validate --profile tdd --fail-on error --format github --root .
 
       - name: QFAI self-validate this repo (dogfooding — SDD gates)
         shell: bash
@@ -730,16 +727,12 @@ jobs:
           # PUBLISHED release — CI would validate a version nobody is reviewing.
           # That is why the run was folded in rather than repointed at the
           # shipped workflow file.
-          # The lane is a ratchet, not a clean gate. This repository's story
-          # tree still owes tests: examples with no annotated unit test, and
-          # acceptance criteria no integration or API test annotates, which
-          # the test-obligation check reports as `error`.
-          # `check-dogfood-backlog.mjs` holds every file absent
-          # from the pin at zero and every pinned file to its pinned count, so
-          # a new failure still fails the build while the backfill lands. A
-          # waiver cannot substitute: `QFAI-WAIVER-002` refuses a waiver whose
-          # rule is an error.
-          node scripts/check-dogfood-backlog.mjs --profile full
+          # A clean gate: this profile reports no `error` on the repository's
+          # own story tree, so any error fails the build.
+          # SHIPPED-CI: not-applicable
+          # Because: this lane validates this repository's own story tree, and
+          # the shipped validate workflow already fails on any error.
+          node packages/qfai/dist/cli/index.mjs validate --profile full --fail-on error --format github --root .
 
       - name: Run qfai validate gate (fail on error)
         shell: bash

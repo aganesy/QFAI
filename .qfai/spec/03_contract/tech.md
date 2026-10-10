@@ -51,5 +51,5 @@ flowchart TD
 - Typecheck: `pnpm check-types`
 - Build: `pnpm build`
 - Skeleton: `qfai` -> `node scripts/smoke-qfai-cli.mjs`
-- Validate: `pnpm build && node scripts/check-dogfood-backlog.mjs --profile full`
+- Validate: `pnpm build && node packages/qfai/dist/cli/index.mjs validate --profile full --fail-on error --root .`
 - Pack / distribution: `pnpm verify:pack`

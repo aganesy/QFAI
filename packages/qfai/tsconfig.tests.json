@@ -297,7 +297,6 @@
     "tests/scripts/checkRepositoryLanguage.test.ts",
     "tests/scripts/shippedWorkflowCost.test.ts",
     "tests/scripts/checkSimplificationLedger.test.ts",
-    "tests/scripts/checkDogfoodBacklog.test.ts",
     "tests/scripts/checkMarkdownlintConfig.test.ts",
     "tests/scripts/checkMdschemaPosixPaths.test.ts",
     "tests/scripts/checkTscCompiler.test.ts",
