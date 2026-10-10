@@ -304,7 +304,7 @@ async function workflowEntry(
       "The command line is not `workflow plan` with exactly one of --in and --route, so run it with --help to see the form.";
     return emitPlanDocument({
       ok: false,
-      message: diagnosis === null ? message : `${message} ${diagnosis}`,
+      message: diagnosis ?? message,
       reasons: subjects.map((subject) => ({ reason: "invalid-input", subject })),
     });
   }
@@ -319,7 +319,7 @@ async function unavailableCommandDiagnosis(): Promise<string> {
   const [version, packageDir] = await Promise.all([resolveToolVersion(), resolveToolPackageDir()]);
   const location =
     packageDir === null ? "; package directory could not be determined" : ` from ${packageDir}`;
-  return `Running qfai ${version}${location}. If this command was expected, install or update the project's local qfai dependency.`;
+  return `This command is unavailable in qfai ${version}${location}; if you expected it, install or update the project's local qfai dependency.`;
 }
 
 // What a `workflow` command line gets wrong: an unknown operation or flag, a missing operation,

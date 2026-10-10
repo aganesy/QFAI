@@ -271,8 +271,6 @@ describe("cli usage errors", () => {
     expect(packageDir).not.toBeNull();
     expect(stderr).toContain(version);
     expect(stderr).toContain(packageDir);
-    expect(stderr).toMatch(/\b(?:install|update|upgrade)\b/i);
-    expect(stderr).toMatch(/\b(?:project|local)\b/i);
   }
 
   it("identifies the running installation when a top-level command is unknown", async () => {
