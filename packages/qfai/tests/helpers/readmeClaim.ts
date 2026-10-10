@@ -77,7 +77,7 @@ function operatorAliases(diagram: string): string[] {
 }
 
 /**
- * Every step of the operating-model sequence diagram and of the minimal tutorial in which the
+ * Every step of the operating-model sequence diagram and of the quick start in which the
  * operator types a `/qfai-*` stage.
  */
 export function typedStageSteps(readme: string): string[] {
@@ -91,10 +91,10 @@ export function typedStageSteps(readme: string): string[] {
         (line) => aliases.some((alias) => line.startsWith(`${alias}-`)) && line.includes("/qfai-"),
       );
   });
-  const tutorial = (section(readme, "Minimal tutorial") ?? "")
+  const quickStart = (section(readme, "Quick start") ?? "")
     .split("\n")
     .filter((line) => /^(\d+\.|-) /.test(line) && line.includes("/qfai-"));
-  return [...fromDiagram, ...tutorial];
+  return [...fromDiagram, ...quickStart];
 }
 
 // The phrase each region of the README introduces the free-text entry with.
@@ -107,7 +107,6 @@ export function stageFirstRegions(readme: string): string[] {
     introduction: intro,
     [OPERATING_MODEL]: section(readme, OPERATING_MODEL) ?? "",
     "Quick start": section(readme, "Quick start") ?? "",
-    "Minimal tutorial": section(readme, "Minimal tutorial") ?? "",
   };
   return Object.entries(regions)
     .filter(([, text]) => {

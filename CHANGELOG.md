@@ -22,6 +22,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The README quick start now holds the whole first run.** The separate "Minimal
+  tutorial" section is removed from both README files: the quick start covers
+  `npx qfai init`, describing the change in your own words, answering the
+  questions the work puts to you or saying `stop`, and checking the result with
+  `npx qfai validate` and `npx qfai report` (#2690).
+
 - **The documentation-clarity rule is one document in nine clauses, with a scope
   table naming the clauses each surface takes.** It now covers structure, claims
   and reports in any language, not only identifiers and wording. New guidance

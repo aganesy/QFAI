@@ -116,14 +116,14 @@ it("Both READMEs put the free-text entry first and name the words the operator t
   }).toEqual({ alignment: 0, stageFirst: [[], []], missing: [[], []] });
 });
 
-it("Neither the operating-model sequence diagram nor the tutorial has the operator typing a stage", async () => {
+it("Neither the operating-model sequence diagram nor the quick start has the operator typing a stage", async () => {
   expect(Object.values(await readmes()).map((readme) => typedStageSteps(readme))).toEqual([[], []]);
 });
 
-it("A copy with a tutorial step telling the operator to type /qfai-sdd is caught", async () => {
+it("A copy with a quick start step telling the operator to type /qfai-sdd is caught", async () => {
   const step = "2. Run `/qfai-sdd` to write the story tree.";
   const copies = Object.values(await readmes()).map((readme) =>
-    readme.split("## Minimal tutorial\n\n").join(`## Minimal tutorial\n\n${step}\n`),
+    readme.split("## Quick start\n\n").join(`## Quick start\n\n${step}\n`),
   );
 
   expect(copies.map((copy) => typedStageSteps(copy))).toEqual([[step], [step]]);
