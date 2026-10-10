@@ -39,6 +39,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The writing rule removes unnecessary sentences without requiring needless rewrites.**
+  Its opening deletion test leaves rewriting to the existing clarity clauses.
+
 - **Repeated edit reminders use short rule pointers.** The first relevant edit
   receives the full rules; later edits retain concise guidance. Missing session
   identity or unavailable counters keep the full reminder. Posting reminders
