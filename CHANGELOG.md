@@ -28,6 +28,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Missing test annotations use grammatical diagnostics.** Messages use
+  "an E2E test", "an integration or API test" and "a test" for the three
+  obligation kinds. Coverage and severity are unchanged. Fixes #3239.
+
 - **One goal can advance independent targets through their own plans.** Guidance
   keeps each target's scope, head-bound evidence and approval limits separate.
   A clean checkout can move to authorized work during remote waits; writers,
