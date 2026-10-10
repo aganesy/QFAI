@@ -6,17 +6,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
-- **The documentation-clarity rule now covers structure, claims and reports, in
-  any language.** Besides the identifier and wording clauses, the rule asks for a
-  settled message and the conclusion first, a table of patterns that add length
-  and no information (announcements, recaps, empty intensifiers, hollow verbs),
-  a named actor in place of a software subject that "knows" or "decides", a
-  label on what is fact, inference or unverified, and a report that opens with
-  its outcome and separates what was checked from what was not. A re-read
-  treats a pattern match as a candidate, then compares the rewrite with the
-  original so nothing is added or lost. The reminder hooks and the
-  communication rule carry the short form. `qfai init` refreshes the rule and
-  `reminders.json`.
+- **The documentation-clarity rule is one document in nine clauses, with a scope
+  table naming the clauses each surface takes.** It now covers structure, claims
+  and reports in any language, not only identifiers and wording. New guidance
+  includes the conclusion first, a table of patterns that add length and no
+  information (announcements, recaps, empty intensifiers), a named actor in
+  place of a software subject that "knows" or "decides", a mark on what is
+  unverified, and a report that opens with its outcome and separates what was
+  checked from what was not. The re-read walks the earlier clauses, and the
+  reminder hooks and the communication rule carry the short form. `qfai init`
+  refreshes the rule and `reminders.json`.
 
 - **The `qfai-sdd` normalization reference lists all six removed design
   contracts.** The reference that tells the skill which contracts not to generate
