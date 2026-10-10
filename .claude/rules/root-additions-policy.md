@@ -1,1 +1,0 @@
-../../.agents/rules/root-additions-policy.md

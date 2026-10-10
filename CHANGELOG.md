@@ -45,6 +45,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **Posting guidance explicitly permits numbers and links in pull request and issue bodies.**
   Source and ordinary Markdown retain the identifier ban and existing exceptions.
 
+- **The writing rule removes unnecessary sentences without requiring needless rewrites.**
+  Its opening deletion test leaves rewriting to the existing clarity clauses.
 - **The release association gate uses Node.js to read pull request branches.**
   Its two contributor cases require Node.js and Bash, without a jq dependency.
 
@@ -336,6 +338,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   constitution's Article V. Part of #2951.
 
 ### Fixed
+
+- **A diagnosed missing example reuses an existing rule for its obligation.**
+  Equivalent rules use existing example coverage and stable rule IDs to settle
+  the owner. Different or uncertain behaviour returns to specification work;
+  the choice and its reason appear in the final report.
 
 - Verify steps reject validation errors even when a custom Validate wrapper succeeds.
 - Clarify that the research agent reads the cache TTL extension in the project config; the CLI does not parse it.
