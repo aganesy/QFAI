@@ -74,14 +74,17 @@ describe.each(TREES)("%s", (rel) => {
     expectPhrase(master, "Never ask the user for something you could look up.");
     // A decision's owner depends on the session. In a user session the agent
     // waits; in a delegated one the recommendation settles it only after the
-    // rounds, and never a critical one.
+    // rounds, and never a critical one without actual recorded user authority.
     expectPhrase(master, "In a user session a decision is the user's, and you wait for it.");
     expectPhrase(master, "An agent that answers its own decisions there has not read this rule");
     expectPhrase(
       master,
       "In a delegated session a decision takes the griller's recommendation, reached in rounds and recorded.",
     );
-    expectPhrase(master, "never skips the rounds,\nand never takes a critical decision");
+    expectPhrase(
+      master,
+      "never skips the rounds, and never takes a critical decision without the recorded user authority above",
+    );
   });
 
   it("makes a delegated session the default, and names the one user session", async () => {
@@ -98,7 +101,7 @@ describe.each(TREES)("%s", (rel) => {
     );
   });
 
-  it("names the critical decisions that reach the user in every session", async () => {
+  it("names critical decisions and escalates those without applicable authority", async () => {
     const master = await read(rel);
     // Each class is one a wrong recommendation cannot be repaired from, or one
     // the agents would have to invent. Nothing else is critical, so doubt about
@@ -111,6 +114,10 @@ describe.each(TREES)("%s", (rel) => {
       "It rests on product or business intent that the request, the discussion pack, the specs and the contracts all leave unstated",
     );
     expectPhrase(master, "Nothing else is critical.");
+    expectPhrase(
+      master,
+      "Without an applicable authorization recorded under the explicit-delegation conditions, put it to the user when asking is permitted",
+    );
   });
 
   it("records every adopted decision and reports it without waiting", async () => {
@@ -134,13 +141,25 @@ describe.each(TREES)("%s", (rel) => {
   it("names five endings, and `adopted` is the delegated one", async () => {
     const master = await read(rel);
     expectPhrase(master, "### The five endings");
+    const table = master.split("### The five endings")[1]?.split(/^### /m)[0];
+    expect(table, "the ending table is missing").toBeDefined();
+    const endings = Array.from((table ?? "").matchAll(/^\| `([^`]+)`\s+\|/gm), (row) => row[1]);
+    expect(endings).toEqual(["confirmed", "user-closed", "adopted", "no-question", "stopped"]);
     expect(master).toMatch(
-      /^\| `adopted` +\| A delegated session: no node open, every critical decision answered by the user/m,
+      /^\| `adopted` +\| A delegated session meeting the conditions above: no node open, required human authority recorded, the rest adopted\s+\|/m,
     );
     expectPhrase(
       master,
-      "It **completes** when no\nnode is open and every critical decision has the user's answer, and it ends\n`adopted`.",
+      "It **completes** when no node is open and every critical decision has the user's answer or an explicit applicable authorization under the conditions above, and it ends `adopted`.",
     );
+    expectPhrase(master, "The user confirms the understanding is shared.");
+    expectPhrase(master, "Do not act on what was agreed until the confirmation in step 2.");
+    expectPhrase(master, "Discussion is a user session by default.");
+    expectPhrase(
+      master,
+      "Record the instruction as authority and the adopted option as the agents' decision, never as a fictional individual human answer.",
+    );
+    expectPhrase(master, "Rounds between agents produce agreement, not authority.");
   });
 
   it("carries no recommendation on a question that asks for a fact", async () => {

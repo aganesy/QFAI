@@ -1843,6 +1843,30 @@ describe("a no-question run opens every node, on every surface that says so", ()
     );
     expect(text).not.toMatch(/(?:every|each)\s+decision\s+left\s+over/);
     expect(text).toMatch(/undefaultable/);
+    if (rel.endsWith("/constitution.md")) {
+      const rule = text
+        .split("6. **A grilling session does not reach the user under `--auto`.**")[1]
+        ?.split("\n## Article XI")[0];
+      expect(rule, "Article X's no-question grilling rule is missing").toBeDefined();
+      const flat = rule?.replace(/\s+/g, " ");
+      expect(flat).toContain(
+        "A critical decision needs an actual user answer or recorded applicable authorization; without it the node stays open",
+      );
+      expect(flat).toContain(
+        "including uncovered critical decisions and unavailable user-held facts",
+      );
+      expect(flat).toContain("stage cannot complete over it");
+      expect(flat).toContain(
+        "A qualifying explicitly delegated session ends `adopted` only with the master's empty-tree, actual-input and authority conditions met",
+      );
+      expect(flat).toContain(
+        "No-question mode alone cannot close a node or authorize a reserved decision",
+      );
+      expect(flat).toContain("a labelled value under an open question is not a settled decision");
+      expect(flat).toContain(
+        "A fact declared undefaultable has no value to write down at all: the run stops and names it",
+      );
+    }
   });
 });
 

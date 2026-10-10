@@ -24,7 +24,12 @@ describe("answered review demands are carried into the next existing request", (
       ]) {
         expect(text.includes(clause), clause).toBe(true);
       }
-      expect(text).toContain("A critical decision in it still goes to the user");
+      const answered = text.split("## Answered demands (MUST)")[1]?.split("## ")[0];
+      expect(answered, "the answered-demand section is missing").toBeDefined();
+      expect(answered).toContain(
+        "A critical decision in it still requires actual applicable user authority",
+      );
+      expect(answered).toContain("uncovered authority is never supplied by the review");
     });
 
     it(`${tree}: the review step carries answers before reviewer dispatch`, async () => {

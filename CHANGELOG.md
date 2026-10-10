@@ -6,6 +6,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **Explicit discussion delegation supports adopted agent decisions.**
+  Recorded user authority permits in-scope agent judgment without fictional
+  user confirmation. Missing required inputs and critical decisions without
+  applicable authority remain open. Interactive sessions retain actual user
+  confirmation.
 - Synchronize the document schema checker copies from the package manifest after
   a frozen dependency install, including the Renovate repin workflow.
 

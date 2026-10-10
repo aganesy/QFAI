@@ -13,7 +13,10 @@ which owns the delegation rules these sit beside.
   answered, the work proceeds.
 - A finding the author cannot fix is reported in the stage's final report, with
   the finding and why it stays open.
-- A critical decision still goes to the user: one that contradicts a spec, a
+- A critical decision requires actual user authority under
+  `.agents/rules/grilling.md#explicit-delegation-for-a-discussion`.
+  Without an actual answer or recorded applicable authorization, it goes to
+  the user when questions are permitted: one that contradicts a spec, a
   contract or a recorded decision, one whose effect cannot be taken back, or one
   that rests on product intent nothing written states. So does a finding that
   names a concrete security defect, data loss or corruption, or a correctness
@@ -37,7 +40,8 @@ Close a repeat by citing its recorded answer. This bounds what a reviewer may
 require, not what a reviewer may report.
 
 A report of a new defect or evidence that an answer no longer applies must
-state what changed. A critical decision in it still goes to the user.
+state what changed. A critical decision in it still requires actual applicable
+user authority; uncovered authority is never supplied by the review.
 
 ## Discussion review precision
 
@@ -94,7 +98,10 @@ status is not permission to pass those.
 
 A grilling session between agents is a **delegated session**
 (`.agents/rules/grilling.md`): a griller interviews the authors, and the user is
-asked only a critical decision. These rules bound its rounds and say what
+asked only an uncovered critical decision when questions are permitted.
+Actual scoped user delegation may authorize reversible requested judgment
+without an individual option answer; record the agents' adoption and authority
+separately. These rules bound its rounds and say what
 settles each decision when they run out.
 
 **Two rounds.** After the second round **every
@@ -108,8 +115,9 @@ position is recorded beside it with whose it is. The stage reports every adopted
 decision at its end without waiting for an answer. A user who disagrees
 overturns one through a change request or a rerun.
 
-**A critical decision goes to the user at once**, without spending a round.
-Rounds between agents produce agreement, and agreement is not what these lack.
+**A critical decision without an actual answer or recorded applicable user
+authority goes to the user at once when asking is permitted**, without spending
+a round. Agent agreement and round exhaustion supply no authority.
 
 | Critical decision                                                                                                                             | Why it goes to the user                                                     |
 | --------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
@@ -121,15 +129,20 @@ A discussion pack answers product intent for this test. It is non-normative for
 the Drift Protocol, but it is where the user already answered these questions in
 a user session, and asking them again spends that session twice.
 
-Each critical decision goes to the user with every position and a
-recommendation. Escalating is not failure: the work stays where it is and the
+Each uncovered critical decision goes to the user with every position and a
+recommendation when asking is permitted. The work stays where it is while the
 user accepts, decides, or drops the item.
 
 **The budget does not end the session while a critical decision is open.** The
-session ends `adopted` once the user has answered every critical decision.
+session ends `adopted` only with no open node or running lookup, all required
+consumed inputs present, and every critical decision supported by an actual
+user answer or recorded applicable authorization under the master's conditions.
 
-Under a no-question mode the escalation has nobody to reach. A critical decision
-is opened as a question in the register the stage reads, so the stage cannot
-complete over it (`.qfai/assistant/rule/constitution.md` Article X,
+Under a no-question mode no escalation is sent to the user. A critical decision
+without that authority is opened in the register the stage reads, so the stage
+cannot complete over it (`.qfai/assistant/rule/constitution.md` Article X,
 rule 6), and that write ends the session `no-question`. Non-critical decisions
-are adopted as they are in any delegated session.
+are adopted as they are in any delegated session. A qualifying explicitly
+delegated session with every node settled ends `adopted`; no-question mode
+alone does not qualify it. Unknown facts and missing undefaultable consumed
+inputs retain the ordinary open/stop behavior.

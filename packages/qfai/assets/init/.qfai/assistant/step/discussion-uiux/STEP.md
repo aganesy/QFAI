@@ -16,7 +16,11 @@ read, without forcing an early visual direction.
 
 The same as `discussion-pack`: this run's stage report holds the
 `## Grilling Session` row, its `Ended at` is written, and `Ended` is
-`confirmed`, `user-closed` or `no-question`. Without that row, or with
+`confirmed`, `user-closed`, `no-question`, or `adopted` meeting
+`.agents/rules/grilling.md#explicit-delegation-for-a-discussion`.
+Check the actual delegation and rounds, required inputs, empty tree and
+human authority in the stage evidence; the ending label alone is insufficient.
+Without that row, or with
 `Ended: stopped`, write nothing and stop.
 
 ## Reads

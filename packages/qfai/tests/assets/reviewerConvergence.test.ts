@@ -61,7 +61,21 @@ describe("reviewer convergence", () => {
         content,
         "A finding the author cannot fix is reported in the stage's final report",
       );
-      expectPhrase(content, "A critical decision still goes to the user");
+      const review = content.split("## One review")[1]?.split(/^## /m)[0];
+      expect(review, "the one-review section is missing").toBeDefined();
+      expectPhrase(review ?? "", "A critical decision requires actual user authority");
+      expectPhrase(review ?? "", ".agents/rules/grilling.md#explicit-delegation-for-a-discussion");
+      expectPhrase(
+        review ?? "",
+        "Without an actual answer or recorded applicable authorization, it goes to the user when questions are permitted",
+      );
+      for (const critical of [
+        "contradicts a spec, a contract or a recorded decision",
+        "effect cannot be taken back",
+        "rests on product intent nothing written states",
+      ]) {
+        expectPhrase(review ?? "", critical);
+      }
       expectNoPhrase(content, "round N-1");
     });
 

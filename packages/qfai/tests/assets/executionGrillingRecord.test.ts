@@ -16,7 +16,9 @@ describe.each(trees)("%s — the grilling record", (tree) => {
     const body = flatten(await read(tree, RECORD));
     expect(body).toContain("Only the discussion stage writes this record.");
     expect(body).toContain("## One session");
-    expect(body).toContain("`Authoring began` is later than `Ended at`.");
+    expect(body).toContain(
+      "`Ended at` and `Authoring began` are actual timestamps, with authoring later.",
+    );
     expect(body).not.toContain("Work Orders Summary");
     expect(body).not.toContain("Run blocks");
   });
