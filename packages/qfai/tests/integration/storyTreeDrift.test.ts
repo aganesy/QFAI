@@ -354,9 +354,10 @@ describe("decision renumber public CLI", () => {
     );
     await put(
       contract,
+      // Japanese letters exercise Unicode token boundaries without adding a record citation.
       "# CLI-0001: Data\n\n## Business rules\n\n" +
         "| BR-ID | Statement | Examples |\n| --- | --- | --- |\n" +
-        "| BR-0001-0001 | Keep DEC-9998suffix, DEC-9998_name, DEC-9998-extended, DEC-9998日本 and 日本DEC-9998 unchanged. | EX-0001-0001-01 |\n",
+        "| BR-0001-0001 | Keep DEC-9998suffix, DEC-9998_name, DEC-9998-extended, DEC-9998\u65e5\u672c and \u65e5\u672cDEC-9998 unchanged. | EX-0001-0001-01 |\n",
     );
     await mkdir(path.dirname(path.join(root, visual)), { recursive: true });
     await writeFile(path.join(root, visual), Buffer.from([0x89, 0x50, 0x4e, 0x47, 0xff, 0x00]));
