@@ -547,7 +547,7 @@ describe("qfai-maintain", () => {
     const skill = await readShipped(MAINTAIN_EDIT);
     expect(frontMatterOf(await readShipped(MAINTAIN)).steps).toEqual(["maintain-edit"]);
     expect(flat(sectionOf(skill, "## What this is for"))).toMatch(
-      /alters what a reader reads and nothing a program or an agent does/i,
+      /alters what a reader reads and nothing a person, program or agent does/i,
     );
     expect(flat(sectionOf(skill, "## The edit"))).toMatch(/edit nothing outside it/i);
     const returns = flat(sectionOf(skill, "## What the stage returns"));
