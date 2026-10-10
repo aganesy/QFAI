@@ -36,6 +36,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **Windows link warnings describe the affected wrapper and its existing repair.**
   Guidance recommends ordinary init without deleting links and distinguishes
   consumer wrappers from the repository's canonical mirror. Refs #3240.
+
+- **Approved specification changes distinguish pending test annotations from completed tests.**
+  An exact AC test exception needs both specification-change and test-deferral
+  authority. Its review date is manual; uncovered changes remain open questions.
+  Fixes #3233.
 - **Test exceptions take effect only at DONE.** A partially superseded exception
   no longer suppresses a missing-test error. Other decision kinds keep their
   status behavior. Fixes #3356.
@@ -299,6 +304,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   constitution's Article V. Part of #2951.
 
 ### Fixed
+
+- Verify assistant link targets can be followed and safely recreate unfollowable
+  directory links to shipped assets. Fixes #3368.
 
 - **Decision and open-question row errors explain what to correct.** Cell-count
   errors report the expected and actual counts. Invalid Status errors show a
