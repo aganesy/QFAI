@@ -673,7 +673,7 @@ describe("the Codex tool-time reminders that repeat", () => {
         [
           "PostToolUse",
           "minimal-implementation",
-          patch("*** Update File: ../../outside.ts"),
+          patch("*** Update File: ../../../../outside.ts"),
           patch("*** Update File: src/a.ts"),
         ],
         [
