@@ -107,7 +107,7 @@ export function classifyRecordRow(row: RecordRow): ClassifiedRecordRow {
           .filter(Boolean);
   const inForce =
     kind === "test-exception"
-      ? row.status === "DONE" || PARTLY_SUPERSEDED.test(row.status)
+      ? row.status === "DONE"
       : kind === "change-request"
         ? row.status === "WIP" || row.status === "DONE" || PARTLY_SUPERSEDED.test(row.status)
         : kind === "unadjudicated"

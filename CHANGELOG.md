@@ -28,6 +28,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Test exceptions take effect only at DONE.** A partially superseded exception
+  no longer suppresses a missing-test error. Other decision kinds keep their
+  status behavior. Fixes #3356.
+
 - **Questions ask only for answers the next step needs.** Background waiting
   and completion reports need no question. Dismissed questions and free-text
   replies preserve prior authorization and pending-step boundaries. Fixes #3230.
