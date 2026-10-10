@@ -552,14 +552,53 @@ describe("qfai-run", () => {
   });
 
   // QFAI:AC-0001-0224-04
+  // QFAI:AC-0001-0224-10
   // QFAI:EX-0001-0224-05
+  // QFAI:EX-0001-0224-14
+  // QFAI:EX-0001-0224-15
   it("moves at a branch point by planning the destination, and asks before the third move", async () => {
-    const work = flat(sectionOf(await readShipped(STAGE_POINTS), "## Branch point"));
+    const branch = sectionOf(await readShipped(STAGE_POINTS), "## Branch point");
+    const work = flat(branch);
     expect(work).toMatch(
       /take the destination's plan with `npx qfai workflow plan --route <route>`/i,
     );
     expect(work).toMatch(
       /before the third move and every one after it, ask the user, naming the destination in plain words; `stop` ends the work/i,
+    );
+    const repairAuthority = flat(
+      branch
+        .split(/\r?\n\s*\r?\n/u)
+        .find(
+          (paragraph) => /question-only/i.test(paragraph) && /tracked[- ]files?/i.test(paragraph),
+        ) ?? "",
+    );
+    expect(repairAuthority, "the question-only branch needs its own repair authority rule").toMatch(
+      /explicit.*repair.*(?:authority|authori[sz]ation)/i,
+    );
+    expect(repairAuthority).toMatch(/same[- ]target/i);
+    expect(repairAuthority).toMatch(/(?:request|user).*project policy/i);
+    expect(repairAuthority).toMatch(
+      /(?:existing|standing|prior|reuse).*without.*(?:duplicate|another|again).*question/i,
+    );
+    expect(repairAuthority).toMatch(
+      /(?:otherwise|(?:without|absent|no).*authority).*ask.*repair.*report.*stop/i,
+    );
+    expect(repairAuthority).toMatch(
+      /no-question.*(?:without|no).*authority.*report.*stop.*target/i,
+    );
+    expect(repairAuthority).toMatch(
+      /\bno tracked\b[^.]*?(?:open[- ]question|`open-questions\.md`)|\b(?:do not|never)\b[^.]*\b(?:write|record)\b[^.]*\btracked\b[^.]*?(?:open[- ]question|`open-questions\.md`)/i,
+    );
+    expect(repairAuthority).toMatch(/no-question.*alone.*(?:no|not).*repair.*authority/i);
+    const repairChoice = flat(
+      sectionOf(await readShipped(SCREENS), "## Repair found by a question-only stage"),
+    );
+    expect(repairChoice).toMatch(/(?:defect|finding).*evidence|evidence.*(?:defect|finding)/i);
+    expect(repairChoice).toMatch(/scope/i);
+    expect(repairChoice).toMatch(/planned.*checks|checks.*planned/i);
+    expect(repairChoice).toMatch(/Repair.*Report and stop/i);
+    expect(repairChoice).toMatch(
+      /(?:no|not|never).*(?:edit|write).*(?:before|until).*answer|(?:edit|write) nothing.*(?:before|until).*answer|before.*answer.*(?:edit|write) nothing/i,
     );
   });
 
