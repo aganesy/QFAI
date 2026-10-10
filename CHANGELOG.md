@@ -308,6 +308,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Unfinished merges stop the branch ID check.** Finish the merge before
+  comparing branch-owned identifiers or fetching pull-request heads. Fixes #3246.
+
 - Verify assistant link targets can be followed and safely recreate unfollowable
   directory links to shipped assets. Fixes #3368.
 
