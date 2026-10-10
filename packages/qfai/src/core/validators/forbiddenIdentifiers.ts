@@ -31,8 +31,9 @@ function finding(code: "QFAI-SECURITY-001" | "QFAI-SECURITY-002"): Issue {
 }
 
 async function git(root: string, args: string[]): Promise<Buffer> {
-  const env: NodeJS.ProcessEnv = { ...process.env };
-  for (const key of Object.keys(env)) if (key.toUpperCase().startsWith("GIT_")) delete env[key];
+  const env: NodeJS.ProcessEnv = Object.fromEntries(
+    Object.entries(process.env).filter(([key]) => !key.toUpperCase().startsWith("GIT_")),
+  );
   const { stdout, stderr } = await execute(
     "git",
     ["--no-optional-locks", "-c", "core.fsmonitor=false", ...args],

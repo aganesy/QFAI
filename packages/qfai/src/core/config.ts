@@ -570,7 +570,10 @@ function normalizeForbiddenIdentifiers(
     issues.push(configIssue(configPath, "validation.forbiddenIdentifiers is invalid."));
     return undefined;
   };
-  if (!Array.isArray(raw) || raw.length > 64) return invalid();
+  if (!Array.isArray(raw) || raw.length > 64) {
+    invalid();
+    return undefined;
+  }
 
   const entries: QfaiForbiddenIdentifier[] = [];
   const pairs = new Set<string>();
@@ -587,13 +590,20 @@ function normalizeForbiddenIdentifiers(
       entry.byteLength < 1 ||
       entry.byteLength > 128
     ) {
-      return invalid();
+      invalid();
+      return undefined;
     }
     const pair = `${entry.sha256}:${entry.byteLength}`;
-    if (pairs.has(pair)) return invalid();
+    if (pairs.has(pair)) {
+      invalid();
+      return undefined;
+    }
     pairs.add(pair);
     lengths.add(entry.byteLength);
-    if (lengths.size > 8) return invalid();
+    if (lengths.size > 8) {
+      invalid();
+      return undefined;
+    }
     entries.push({ sha256: entry.sha256, byteLength: entry.byteLength });
   }
   return entries;
