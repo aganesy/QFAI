@@ -95,8 +95,6 @@ it("Every example in the qfai-run plan reference validates against its schema", 
 });
 
 // QFAI:AC-0001-0211-01
-// QFAI:EX-0001-0211-01
-// QFAI:EX-0001-0211-03
 it("The extraction schema and the parser accept and refuse the same extractions", async () => {
   const validate = await loadValidator();
   const reading: RoutingReading = { intent: "design", entryFlags: [], qualifiers: [], signals: [] };
