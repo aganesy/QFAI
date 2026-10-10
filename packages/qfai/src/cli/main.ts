@@ -5,6 +5,7 @@ import { runDbDrift } from "./commands/dbDrift.js";
 import { runInit } from "./commands/init.js";
 import { runReport } from "./commands/report.js";
 import { runSddPreflightCommand } from "./commands/sddPreflight.js";
+import { runSddRenumberDecisionCommand } from "./commands/sddRenumberDecision.js";
 import { runValidate } from "./commands/validate.js";
 import { emitPlanDocument, runWorkflowPlan, WORKFLOW_HELP } from "./commands/workflow.js";
 import type { ParsedArgs } from "./lib/args.js";
@@ -13,7 +14,7 @@ import { EXIT_CODES, formatExitCodesSection } from "./lib/exitCodes.js";
 import { describeIncompleteRun } from "./lib/warnings.js";
 import { error, info, warn } from "../core/logger.js";
 import { findConfigRoot } from "../core/config.js";
-import { resolveToolVersion } from "../core/version.js";
+import { resolveToolPackageDir, resolveToolVersion } from "../core/version.js";
 
 /**
  * Exit code for a command name nothing recognizes.
@@ -72,6 +73,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
   // with the code that ships it.
   if (command !== null && !KNOWN_COMMANDS.has(command)) {
     error(`Unknown command: ${command}`);
+    error(await unavailableCommandDiagnosis());
     info(usage());
     process.exitCode = UNKNOWN_COMMAND_EXIT_CODE;
     return;
@@ -216,9 +218,20 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
     case "sdd":
       {
         if (!options.sddAction) {
-          error("qfai sdd: unknown or missing subcommand. Expected: preflight");
+          error("qfai sdd: unknown or missing subcommand. Expected: preflight|renumber-decision");
           info(usage());
           process.exitCode = options.invalidExitCode;
+          return;
+        }
+        if (options.sddAction === "renumber-decision") {
+          const resolvedRoot = await resolveRoot(options);
+          process.exitCode = await runSddRenumberDecisionCommand({
+            root: resolvedRoot,
+            from: options.sddFrom ?? "",
+            to: options.sddTo ?? "",
+            base: options.sddBase ?? "",
+            apply: options.sddApply ?? false,
+          });
           return;
         }
         // The README documents `--format json` stdout as machine-readable.
@@ -296,10 +309,14 @@ async function workflowEntry(
   const subjects = workflowRefusalSubjects(invalid, options);
   if (subjects.length > 0) {
     error(invalidReason ?? "qfai workflow plan: give exactly one of --in and --route.");
+    const diagnosis =
+      options.workflowUnknownOperation !== undefined ? await unavailableCommandDiagnosis() : null;
+    if (diagnosis !== null) error(diagnosis);
+    const message =
+      "The command line is not `workflow plan` with exactly one of --in and --route, so run it with --help to see the form.";
     return emitPlanDocument({
       ok: false,
-      message:
-        "The command line is not `workflow plan` with exactly one of --in and --route, so run it with --help to see the form.",
+      message: diagnosis ?? message,
       reasons: subjects.map((subject) => ({ reason: "invalid-input", subject })),
     });
   }
@@ -308,6 +325,13 @@ async function workflowEntry(
     ...(options.workflowIn !== undefined ? { inPath: options.workflowIn } : {}),
     ...(options.workflowRoute !== undefined ? { route: options.workflowRoute } : {}),
   });
+}
+
+async function unavailableCommandDiagnosis(): Promise<string> {
+  const [version, packageDir] = await Promise.all([resolveToolVersion(), resolveToolPackageDir()]);
+  const location =
+    packageDir === null ? "; package directory could not be determined" : ` from ${packageDir}`;
+  return `This command is unavailable in qfai ${version}${location}; if you expected it, install or update the project's local qfai dependency.`;
 }
 
 // What a `workflow` command line gets wrong: an unknown operation or flag, a missing operation,
@@ -339,6 +363,7 @@ Commands:
   discussion use <id>          Set the active discussion session pointer
   sdd preflight                Run the /qfai-sdd Stage 0 gate (active discussion-pack selection / REQ count / blocker verdict) and write .qfai/report/preflight_summary.md
   sdd preflight --import <path> Use an imported specification as the source when no discussion pack exists
+  sdd renumber-decision --from <DEC-ID> --to <DEC-ID> --base <local-ref> [--apply]  Preview or apply a branch-added decision's renumbering
   atdd scaffold --story <US-ID> Generate one test skeleton per AC in a story
   atdd scaffold --flow <BF-ID>  Generate an E2E test skeleton for a flow
   workflow plan                Print the route plan for a request extraction (--in <path|->) or a route (--route <route>)
