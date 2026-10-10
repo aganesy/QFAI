@@ -21,6 +21,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   dropped, and the shipped references no longer mention the retired
   `.qfai/output/verify.json` location or the retired review-payload key.
 
+- **The shipped `qfai-docs.yml` installs `@jackchuka/mdschema` 0.15.5.** The
+  document-schema checker the docs lane runs moves from 0.15.4 to 0.15.5, the
+  version the package now depends on. The release changes only a dependency of
+  the checker.
+
+- **`/qfai-configure` leaves `paths.specsDir` to the default, adds routing and
+  review-profile overrides only on request, and records each test layer's tool
+  in the `tech.md` Stack table.** The skill no longer tells a project to gain a
+  key the package already defaults: an absent `paths.specsDir` resolves to
+  `.qfai/spec` and a configured value stays. Step 4 adds `routing` or
+  `reviewProfiles` only when the user asks to change one. Step 3 asks for one
+  Stack row per test layer, naming the tool, the files it was observed in and why
+  it fits that layer. Part of #2951.
+
 - **`qfai init` no longer cleans up after earlier releases, and
   `qfai validate` no longer reports their wrappers.** `--force` removes
   nothing: it no longer deletes the command and prompt wrappers, the skill and
@@ -131,6 +145,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   columns in a different order report that the columns must be in the order ID,
   Content, Approach and Status. The finding was one message for all three
   cases. Refs #2951.
+
+- **The `web-research` skill states what its acceptance criteria require.** It
+  now says that a crash or a dropped connection of an MCP server is noticed
+  within 10 seconds, that the built-in tools take over, and that the user is told
+  the server is unavailable; the earlier text treated a runtime under 10 seconds
+  as a crash. The session log records the search queries, the content hash of
+  every fetched URL, the sanitization events and the verification results. A
+  high-risk conclusion is not applied to code until a person has reviewed its
+  diff and citations. When every fetch fails, the skill reports the reason for
+  each URL and runs no extract stage, and a blocked redirect logs its chain.
+  Refs #2951.
 
 - **The `qfai-verify` context step reads the configured directories.**
   `references/context-load.md` named fixed `.qfai/spec` paths for the spec tree,

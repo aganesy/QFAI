@@ -58,7 +58,7 @@ gets a verdict this repository would not have given.
 4. **Register it in the manifest.** A schema missing from
    `assets/mdschema/manifest.yml` is never run.
 
-## Writing a schema for mdschema 0.15.4
+## Writing a schema for mdschema 0.15.5
 
 | Fact                                                                           | Consequence                                          |
 | ------------------------------------------------------------------------------ | ---------------------------------------------------- |
