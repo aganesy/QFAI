@@ -23,13 +23,20 @@
 import { execFileSync } from "node:child_process";
 import {
   existsSync,
+  linkSync,
   lstatSync,
+  mkdtempSync,
   mkdirSync,
   readdirSync,
   readlinkSync,
+  renameSync,
+  rmdirSync,
   rmSync,
+  statSync,
   symlinkSync,
+  unlinkSync,
 } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -179,6 +186,84 @@ function linkTarget(rel, sourceRel) {
   return toPosix(path.relative(fromDir, sourceRel));
 }
 
+function follows(abs, isDir) {
+  try {
+    const stat = statSync(abs);
+    return isDir ? stat.isDirectory() : stat.isFile();
+  } catch {
+    return false;
+  }
+}
+
+function sameLink(abs, original, want) {
+  const stat = lstatSync(abs, { throwIfNoEntry: false });
+  return (
+    stat?.isSymbolicLink() &&
+    stat.dev === original.dev &&
+    stat.ino === original.ino &&
+    toPosix(readlinkSync(abs)) === want
+  );
+}
+
+/** Hold the original until the typed replacement resolves; create entries without overwriting. */
+function repairDirectoryLink(abs, want, original, shown) {
+  if (!sameLink(abs, original, want)) throw new Error(`${shown} changed before repair`);
+  const holdingDir = mkdtempSync(path.join(os.tmpdir(), "qfai-assistant-link-"));
+  const held = path.join(holdingDir, "entry");
+  let moved = false;
+  let retained = abs;
+  try {
+    if (!sameLink(abs, original, want)) throw new Error("Entry changed before move");
+    if (lstatSync(held, { throwIfNoEntry: false }) !== undefined)
+      throw new Error("Holding path is occupied");
+    // A different scratch volume refuses the move and leaves the original in place.
+    renameSync(abs, held);
+    moved = true;
+    retained = held;
+    if (!sameLink(held, original, want)) throw new Error("Moved entry changed");
+    if (lstatSync(abs, { throwIfNoEntry: false }) !== undefined)
+      throw new Error("An entry appeared during repair");
+    symlinkSync(want, abs, "dir");
+    const replacement = lstatSync(abs);
+    if (!sameLink(abs, replacement, want) || !follows(abs, true))
+      throw new Error("Replacement cannot be followed");
+    if (!sameLink(abs, replacement, want) || !sameLink(held, original, want))
+      throw new Error("Entry changed before cleanup");
+    unlinkSync(held);
+    moved = false;
+    retained = abs;
+    rmdirSync(holdingDir);
+  } catch (error) {
+    const details = [];
+    if (moved) {
+      try {
+        if (
+          sameLink(held, original, want) &&
+          lstatSync(abs, { throwIfNoEntry: false }) === undefined
+        ) {
+          // Native hard-link creation fails rather than overwriting an entry that appeared meanwhile.
+          linkSync(held, abs);
+          if (sameLink(abs, original, want) && sameLink(held, original, want)) {
+            unlinkSync(held);
+            retained = abs;
+          }
+        }
+      } catch (restoreError) {
+        details.push(`Restoration failed: ${restoreError.message}`);
+      }
+    }
+    try {
+      rmdirSync(holdingDir);
+    } catch {
+      details.push(`Holding directory remains: ${holdingDir}`);
+    }
+    throw new Error(
+      `${shown} could not be repaired; retained entry: ${retained}. ${details.join(". ")}`,
+      { cause: error },
+    );
+  }
+}
+
 function verify(links, realDirs, unexpected) {
   const problems = [];
 
@@ -199,8 +284,11 @@ function verify(links, realDirs, unexpected) {
   for (const [rel, sourceRel] of links) {
     const shown = `${toPosix(TARGET_REL)}/${rel}`;
     const want = linkTarget(rel, sourceRel);
-    if (!existsSync(path.join(ROOT, sourceRel))) {
-      problems.push(`${shown} would point at ${want}, which does not exist`);
+    let sourceStat;
+    try {
+      sourceStat = statSync(path.join(ROOT, sourceRel));
+    } catch {
+      problems.push(`${shown} would point at ${want}, which cannot be followed`);
       continue;
     }
     const stat = lstatSafe(path.join(TARGET, rel));
@@ -215,7 +303,14 @@ function verify(links, realDirs, unexpected) {
       continue;
     }
     const got = toPosix(readlinkSync(path.join(TARGET, rel)));
-    if (got !== want) problems.push(`${shown} points at ${got}, not ${want}`);
+    if (got !== want) {
+      problems.push(`${shown} points at ${got}, not ${want}`);
+      continue;
+    }
+    if (!follows(path.join(TARGET, rel), sourceStat.isDirectory()))
+      problems.push(
+        `${shown} cannot be followed to the shipped ${sourceStat.isDirectory() ? "directory" : "file"}`,
+      );
   }
 
   return problems;
@@ -229,7 +324,18 @@ function apply(links, realDirs) {
     const abs = path.join(TARGET, rel);
     const want = linkTarget(rel, sourceRel);
     const stat = lstatSafe(abs);
-    if (stat?.isSymbolicLink() && toPosix(readlinkSync(abs)) === want) continue;
+    if (stat?.isSymbolicLink() && toPosix(readlinkSync(abs)) === want) {
+      const shown = `${toPosix(TARGET_REL)}/${rel}`;
+      const source = path.join(ROOT, sourceRel);
+      const sourceStat = statSync(source);
+      if (follows(abs, sourceStat.isDirectory())) continue;
+      if (!sourceStat.isDirectory())
+        throw new Error(`${shown} cannot be followed to the shipped file`);
+      readdirSync(source);
+      repairDirectoryLink(abs, want, stat, shown);
+      written += 1;
+      continue;
+    }
     if (stat !== undefined) rmSync(abs, { recursive: true, force: true });
     mkdirSync(path.dirname(abs), { recursive: true });
     const isDir = lstatSync(path.join(ROOT, sourceRel)).isDirectory();

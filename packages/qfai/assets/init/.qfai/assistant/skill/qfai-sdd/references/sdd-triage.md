@@ -58,6 +58,26 @@ whose Content opens Unadjudicated:, at TODO until decided. A justified test exce
 decision Content with Test exception:, names the exact BF, AC, or EX it exempts, and puts the reason
 in Approach. It takes effect only at DONE; it never exempts descendant items.
 
+A test annotation may remain pending only when authority to change the
+specification covers that state and the test deferral is approved. Record the
+specification change in its own `Change request:` row. Record the deferral as a
+`Test exception:` decision naming the exact AC at DONE. Its Approach states
+the reason, untested scope, owner, next decision date and condition for restoring
+the annotation.
+
+DONE establishes the exception decision; it does not mean test completion.
+The existing info finding names the exempted AC and its decision without
+claiming test execution or coverage. The exception never exempts descendant EX
+obligations or authorizes changes to EX or BR scope. Do not silently substitute
+an EX or prose rewrite for an approved specification change. Use the next
+decision date for manual review; there is no automatic expiry and no automatic
+warning.
+
+When specification changes are forbidden or either authority is missing, first
+append an `Unadjudicated:` OQ at TODO. Name the affected IDs, expected versus
+actual behavior, implementation-change evidence, owner and required permission.
+Stop dependent AC, EX and BR edits; independent authorized work may continue.
+
 ## Approval and no-question mode
 
 Use the shared user-question protocol for CREATE, DELETE, SPLIT, MERGE, SUPERSEDE, and UPDATE:REMOVE. Present the target and rationale. Do not self-approve. A request from the user in the session that names the operation and its effect is the approval, and no second question is asked.

@@ -33,6 +33,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Approved specification changes distinguish pending test annotations from completed tests.**
+  An exact AC test exception needs both specification-change and test-deferral
+  authority. Its review date is manual; uncovered changes remain open questions.
+  Fixes #3233.
 - **Test exceptions take effect only at DONE.** A partially superseded exception
   no longer suppresses a missing-test error. Other decision kinds keep their
   status behavior. Fixes #3356.
@@ -299,6 +303,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - **Unfinished merges stop the branch ID check.** Finish the merge before
   comparing branch-owned identifiers or fetching pull-request heads. Fixes #3246.
+
+- Verify assistant link targets can be followed and safely recreate unfollowable
+  directory links to shipped assets. Fixes #3368.
 
 - **Decision and open-question row errors explain what to correct.** Cell-count
   errors report the expected and actual counts. Invalid Status errors show a
