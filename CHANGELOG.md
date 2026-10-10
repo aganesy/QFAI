@@ -6,6 +6,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- Synchronize the document schema checker copies from the package manifest after
+  a frozen dependency install, including the Renovate repin workflow.
+
 - **A workspace bootstrap command prepares this checkout's local launcher.**
   It runs frozen installs around the package build, stops at the first failed
   step and rejects shared dependency links. Fixes #3244.
