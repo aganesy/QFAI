@@ -297,6 +297,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Verify assistant link targets can be followed and safely recreate unfollowable
+  directory links to shipped assets. Fixes #3368.
+
 - **Decision and open-question row errors explain what to correct.** Cell-count
   errors report the expected and actual counts. Invalid Status errors show a
   quoted preview and the table's allowed values. The preview replaces control
