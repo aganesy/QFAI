@@ -687,17 +687,80 @@ describe("qfai-run", () => {
     );
   });
 
-  it("stops before a step only a person can take, naming the action, its evidence and the read-only check", async () => {
+  // QFAI:AC-0001-0224-10
+  // QFAI:EX-0001-0224-14
+  // QFAI:EX-0001-0224-15
+  it("stops before person-only actions and permits only covered external actions through a safe host channel", async () => {
     const screens = await readShipped(SCREENS);
     const step = flat(sectionOf(screens, "## A step only a person can take"));
     expect(step).toMatch(/what the user must do/i);
     expect(step).toMatch(/what shows it was done/i);
     expect(step).toMatch(/what the agent will read to check it, which changes nothing/i);
-    expect(step).toMatch(/never types a password, token or key/i);
-    expect(step).toMatch(/never changes an account or service setting/i);
+    expect(step).toMatch(/interactive login.*new permission.*expansion.*authority/i);
+    expect(step).toMatch(
+      /user completes.*login.*permission grants.*authority expansion.*service's own page/i,
+    );
+    expect(step).toMatch(/human-run.*triage handoff.*never.*user's operation.*behalf/i);
+    expect(step).toMatch(/no-question mode.*nothing is asked.*does not depend.*goes on.*not done/i);
+
+    const paragraphs = sectionOf(screens, "## Authorized external actions")
+      .split(/\r?\n\s*\r?\n/u)
+      .map(flat);
+    const authority =
+      paragraphs.find((paragraph) => /specific target.*action/i.test(paragraph)) ?? "";
+    expect(authority).toMatch(
+      /only when.*prior user instructions.*project policy.*specific target.*action/i,
+    );
+    expect(authority).toMatch(/host.*allowed.*safe channel/i);
+    expect(authority).toMatch(/connector.*availability alone.*neither authority nor access/i);
+    expect(authority).toMatch(/reuse.*covering authority.*without.*new permission grant/i);
+
+    const credential =
+      paragraphs.find((paragraph) => /credential.*account.*scope.*expiry/i.test(paragraph)) ?? "";
+    expect(credential).toMatch(
+      /actual credential.*account.*project.*scope.*expiry.*fit.*authority/i,
+    );
+    expect(credential).toMatch(/one-time permission.*not continuing access/i);
+    expect(credential).toMatch(
+      /third-party.*ownership.*own authority.*permission.*project.*does not supply/i,
+    );
+    expect(credential).toMatch(/only.*host's actual safe channel.*credential installation/i);
+    expect(credential).toMatch(
+      /never.*password.*token.*key.*chat.*logs.*tracked files.*ask.*paste/i,
+    );
+    expect(credential).toMatch(/login.*permission grants.*authority expansion.*person-only/i);
+
+    const refusal = paragraphs.find((paragraph) => /host denies/i.test(paragraph)) ?? "";
+    expect(refusal).toMatch(
+      /authority.*credential ownership.*safe channel.*absent or unknown.*host denies.*stop.*dependent action/i,
+    );
+    expect(refusal).toMatch(/manual steps.*evidence.*confirm.*read-only.*check/i);
+    expect(refusal).toMatch(/do not bypass.*denial.*infer permission.*proceed/i);
+    expect(refusal).toMatch(
+      /human-run.*triage handoff.*handoff.*authorized independent work.*continue/i,
+    );
+
+    const report = paragraphs.find((paragraph) => /existing stage report/i.test(paragraph)) ?? "";
+    expect(report).toMatch(
+      /host access.*CI start.*authorization.*credential installation.*CI results.*merge.*publication.*separately/i,
+    );
+    expect(report).toMatch(/each.*effect.*confirmed.*pending.*unverified.*not requested/i);
+    expect(report).toMatch(
+      /target.*exact.*(?:revision|head).*evidence URL.*blocker.*resume condition/i,
+    );
+    expect(report).toMatch(/missing evidence.*unverified/i);
+    expect(report).toMatch(/green CI.*neither merge nor publication/i);
+    expect(report).toMatch(/repository change.*separately.*unverified external effects/i);
     const extraction = flat(await readShipped(EXTRACTION));
     expect(extraction).toMatch(
       /takes the intent of the repository change, with the entry flag `env`/i,
+    );
+    expect(extraction).toMatch(/`human-run`.*request that is only the operation/i);
+    expect(flat(await readShipped("step/triage-handoff/STEP.md"))).toMatch(
+      /run none of the operation here.*no push.*publication.*tag.*account/i,
+    );
+    expect(await readDefault("workflows/hand-off-operation.yml")).toMatch(
+      /releasePoint: triage-handoff/,
     );
   });
 
