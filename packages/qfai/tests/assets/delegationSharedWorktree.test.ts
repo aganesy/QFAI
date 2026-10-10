@@ -28,10 +28,17 @@ describe.each(trees)("%s — delegation in a shared worktree", (tree) => {
     expect(protocol).toContain("Each agent writes scratch files only under a path of its own.");
   });
 
+  // QFAI:EX-0001-0224-12
   it("fixes the commit a reviewer reads before the review starts", async () => {
     const protocol = await readProtocol(tree);
     expect(protocol).toContain(
-      "Commit the change, or give each reviewer a fixed commit, before a review starts, and leave the working tree alone until every review returns.",
+      "Give each reviewer a fixed commit. Leave the checkout alone until reviews return.",
+    );
+    expect(protocol).toContain(
+      "Only read-only fixed-SHA `git show` reviews permit clean switches.",
+    );
+    expect(protocol).toContain(
+      "Writers, local gates and reviews using live files or checkout-dependent execution must finish first.",
     );
   });
 });
