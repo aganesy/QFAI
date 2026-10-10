@@ -6,5 +6,5 @@ As a maintainer, I want the seven ID shapes defined on the story tree, with wher
 
 ## Non-goals
 
-- An ID allocation tool
+- ID reservations or automatic final allocation
 - Renumbering during migration

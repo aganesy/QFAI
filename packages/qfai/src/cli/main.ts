@@ -5,6 +5,7 @@ import { runDbDrift } from "./commands/dbDrift.js";
 import { runInit } from "./commands/init.js";
 import { runReport } from "./commands/report.js";
 import { runSddPreflightCommand } from "./commands/sddPreflight.js";
+import { runSddRenumberDecisionCommand } from "./commands/sddRenumberDecision.js";
 import { runValidate } from "./commands/validate.js";
 import { emitPlanDocument, runWorkflowPlan, WORKFLOW_HELP } from "./commands/workflow.js";
 import type { ParsedArgs } from "./lib/args.js";
@@ -217,9 +218,20 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
     case "sdd":
       {
         if (!options.sddAction) {
-          error("qfai sdd: unknown or missing subcommand. Expected: preflight");
+          error("qfai sdd: unknown or missing subcommand. Expected: preflight|renumber-decision");
           info(usage());
           process.exitCode = options.invalidExitCode;
+          return;
+        }
+        if (options.sddAction === "renumber-decision") {
+          const resolvedRoot = await resolveRoot(options);
+          process.exitCode = await runSddRenumberDecisionCommand({
+            root: resolvedRoot,
+            from: options.sddFrom ?? "",
+            to: options.sddTo ?? "",
+            base: options.sddBase ?? "",
+            apply: options.sddApply ?? false,
+          });
           return;
         }
         // The README documents `--format json` stdout as machine-readable.
@@ -351,6 +363,7 @@ Commands:
   discussion use <id>          Set the active discussion session pointer
   sdd preflight                Run the /qfai-sdd Stage 0 gate (active discussion-pack selection / REQ count / blocker verdict) and write .qfai/report/preflight_summary.md
   sdd preflight --import <path> Use an imported specification as the source when no discussion pack exists
+  sdd renumber-decision --from <DEC-ID> --to <DEC-ID> --base <local-ref> [--apply]  Preview or apply a branch-added decision's renumbering
   atdd scaffold --story <US-ID> Generate one test skeleton per AC in a story
   atdd scaffold --flow <BF-ID>  Generate an E2E test skeleton for a flow
   workflow plan                Print the route plan for a request extraction (--in <path|->) or a route (--route <route>)
