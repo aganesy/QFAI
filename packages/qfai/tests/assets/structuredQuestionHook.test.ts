@@ -72,7 +72,7 @@ function expectPendingOperationException(instruction: string): void {
   expect(text).toMatch(/\bno new (?:decision|choice)\b.*\bmissing (?:information|facts)\b/i);
   expect(text).toMatch(/\b(?:report|state|give)\b.*\bexpected result\b.*\bresume condition\b/i);
   expect(text).toMatch(
-    /\b(?:no|without) (?:duplicate|another|repeated) question\b|\bdo not repeat\b.*\bquestion\b/i,
+    /\b(?:no|without) (?:a )?(?:duplicate|another|repeated) question\b|\bdo not repeat\b.*\bquestion\b/i,
   );
   expect(text).toMatch(/\bcompleted route\b.*\bfinal report\b.*\bquestion\b/i);
   expect(text).toMatch(/\b(?:new|missing) (?:facts|information)\b/i);
