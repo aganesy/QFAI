@@ -336,6 +336,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Question-only work checks authority before repairing tracked files.**
+  Existing permission for the same target is reused. Otherwise the agent offers
+  repair or a report-only stop; an uncovered no-question run reports and stops
+  that target without writing a tracked open question.
+
 - **A diagnosed missing example reuses an existing rule for its obligation.**
   Equivalent rules use existing example coverage and stable rule IDs to settle
   the owner. Different or uncertain behaviour returns to specification work;
