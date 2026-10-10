@@ -6,6 +6,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- Add a branch catch-up helper that merges the remote default branch, resolves
+  only proven digest conflicts and reseals generated pins without running tests.
+
 - **A workspace bootstrap command prepares this checkout's local launcher.**
   It runs frozen installs around the package build, stops at the first failed
   step and rejects shared dependency links. Fixes #3244.
@@ -39,6 +42,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **The release association gate uses Node.js to read pull request branches.**
   Its two contributor cases require Node.js and Bash, without a jq dependency.
 
+- **Repeated edit reminders use short rule pointers.** The first relevant edit
+  receives the full rules; later edits retain concise guidance. Missing session
+  identity or unavailable counters keep the full reminder. Posting reminders
+  remain unchanged.
 
 - **Worker work orders state the permitted edit boundary.** They name the
   assigned checkout, owned paths and edit method. A refused edit returns a
