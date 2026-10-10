@@ -153,20 +153,20 @@ export function validateStoryTreeObligationsModel(
   const owed =
     profile === "atdd"
       ? [
-          ...model.flows.map((entry) => ({ ...entry, kind: "BF" as const, target: "E2E" })),
+          ...model.flows.map((entry) => ({ ...entry, kind: "BF" as const, target: "an E2E test" })),
           ...model.acceptanceCriteria.map((entry) => ({
             ...entry,
             kind: "AC" as const,
-            target: "integration or API",
+            target: "an integration or API test",
           })),
         ]
-      : model.examples.map((entry) => ({ ...entry, kind: "EX" as const, target: "test" }));
+      : model.examples.map((entry) => ({ ...entry, kind: "EX" as const, target: "a test" }));
   for (const entry of owed) {
     if (covered[entry.kind].has(entry.id) || exceptions.has(entry.id)) continue;
     issues.push(
       issue(
         "QFAI-STORY-006",
-        `${entry.id} is missing a ${entry.target} test annotation`,
+        `${entry.id} is missing ${entry.target} annotation`,
         "error",
         entry.file,
         "storyTree.testObligation",

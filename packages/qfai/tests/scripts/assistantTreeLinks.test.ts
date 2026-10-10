@@ -59,7 +59,10 @@ function runIsolated(
   checkOnly: boolean,
   preload?: string,
 ): { status: number; output: string } {
-  const args = [...(preload === undefined ? [] : ["--import", pathToFileURL(preload).href]), script];
+  const args = [
+    ...(preload === undefined ? [] : ["--import", pathToFileURL(preload).href]),
+    script,
+  ];
   if (checkOnly) args.push("--check");
   const result = spawnSync(process.execPath, args, {
     cwd: root,
@@ -432,7 +435,9 @@ describe("link-assistant-tree --check", () => {
     expect(repaired.status, repaired.output).toBe(0);
     expect(repaired.output).toContain("1 link(s) written");
     expect(await readlink(entry)).toBe(target);
-    expect(trace.attempts).toEqual([{ target, path: entry, type: "dir" }]);
+    expect(trace.attempts).toEqual([
+      { target: target.replaceAll(path.sep, "/"), path: entry, type: "dir" },
+    ]);
     expect(trace.moves).toHaveLength(1);
     expect(await readFile(path.join(entry, "quality.md"), "utf-8")).toBe("# Quality\n");
     expect(runIsolated(script, root, true).status).toBe(0);
