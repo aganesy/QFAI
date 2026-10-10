@@ -9,7 +9,12 @@ Feature: Run the init suites on Windows
     Given the own-CI workflow and the package's `test:windows-parity` script
     When the workflow tree is read
     Then a job on `windows-latest` runs that script and no other test command
-    And the script's suite list is exactly the declared workflow command, init and migration suites
+    And the script's suite list is exactly the declared workflow command, init, migration and assistant-mirror suites
+    And the suite list includes tests/scripts/assistantTreeLinks.test.ts as its only exception to the exclusion of tracked-link-dependent tests
+    And the repository-root canonical assistant mirror is prepared through repository-owned setup before the tests
+    And mirror parity uses native Windows directory and file link fixtures and a real Git worktree checkout without injected filesystem results
+    And the cases observe actual followability and treat a healthy checkout as healthy rather than a failure reproduction
+    And the cases preserve canonical files, the primary checkout and sibling sentinel paths
     And every entry of the list resolves to at least one collected test file
     And before the tests the job points `TEMP` and `TMP` at a directory whose name contains a space
 
