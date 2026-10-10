@@ -87,36 +87,17 @@ and for the files QFAI writes into a consuming project.
 
 `qfai validate` reports a contract whose ID, file name and index row disagree.
 
-## Version discipline (required reading for every AI)
+## Version discipline
 
-An AI never chooses the QFAI package's version number (`X.Y.Z`). The user decides.
-The user either pins `vX.Y.Z` in the branch name or gives an explicit instruction in conversation.
-For details and the guard, see `.agents/rules/version-discipline.md`.
-
-- **Releasing** (the default path): the user names the version and Prepare release (`prepare-release.yml`)
-  is dispatched with that bare `X.Y.Z`. It opens a `release/vX.Y.Z` pull request, so do not bump the manifest
-  by hand first. Merging that pull request is the instruction for the tag: `tag-release.yml` pushes `vX.Y.Z`,
-  so never push a tag by hand on that path. `RELEASE.md` has the full procedure and the manual path.
-- **pinned branch, manual path only** (e.g. `feature/v1.8.8`): the pin is the user's instruction.
-  When bringing the PR to a mergeable state, do the following three things.
-  - Sync `packages/qfai/package.json#version` to the pinned value
-  - Rename `## [Unreleased]` in `CHANGELOG.md` to `## [X.Y.Z] - YYYY-MM-DD`, and re-insert an empty `## [Unreleased]`
-  - Commit as `chore(release): qfai X.Y.Z`
-  - Changing to a version number different from the pin is prohibited (needs user confirmation)
-  - Merging it pushes no tag unless the branch is exactly `release/vX.Y.Z`; the tag is then pushed by hand,
-    on the user's explicit instruction
-- **unpinned branch** (e.g. `main`, `chore/...`): do not change `package.json#version`, a
-  CHANGELOG version heading, or make a `chore(release):` commit, without the user's explicit instruction.
-- On either kind of branch, a tag (`git tag vX.Y.Z`), `npm publish`, `git push --force`, an amend, and
-  `gh pr merge` all need the user's explicit instruction.
-
-Automatic guard: `packages/qfai/scripts/check-branch-version-pin.sh` (the CI lint job).
+Before release, tag or publish work, or a change to the package version or a `CHANGELOG.md`
+version heading, read `.agents/rules/version-discipline.md`, then
+`.agents/rules/version-discipline.local.md` and `RELEASE.md` (the release procedure).
 
 ## Rules shared by every AI (`.agents/rules/`)
 
 The masters under `.agents/rules/` are the single source of truth for the rules every AI working in the repository follows.
 
-- `version-discipline.md` (details of "Version discipline" above)
+- `version-discipline.md` (see "Version discipline" above)
 - `version-discipline.local.md` (this repository has adopted the pin convention, and the guards that read it)
 - `distributed-surface.md` (no internal ID or version leaks in the npm distribution)
 - `distributed-surface.local.md` (the surface, the forbidden identifier shapes, and the four guards)
