@@ -14,12 +14,11 @@ mode: execution-focused
 
 [DRIFT-PROTOCOL:REQUIRED]
 
-The user states a change once. This skill reads the request into facts, asks
-`npx qfai workflow plan` for the plan they give, and runs its steps in order.
+The CLI plans the extracted request; this skill runs its steps in order.
 
 - The facts a request is read into: `references/extraction.md`.
 - The command, its input and its output: `references/plan.md`.
-- What the user sees, and how questions are put: `references/operator-screens.md`.
+- Screens and questions: `references/operator-screens.md`.
 - What is done at a release, decision or branch point: `references/stage-points.md`.
 - Invoke the CLI through the launcher of `.qfai/assistant/rule/shared-skill-operating-baseline.md#canonical-qfai-launcher-mandatory`.
 
@@ -48,9 +47,8 @@ value but the three below plans nothing.
 - A change, a question, a proposal to decide or a report to close is planned.
   A question plans a route that answers it and changes nothing. Text that is
   not a request is not planned.
-- A result reported for a waiting step resumes that step, including a failure.
-  A separate explicit request to investigate the failure or repeat the operation
-  is planned as a new request under the extraction and scope rules below.
+- Reported results resume a waiting step, including failure. Read
+  `references/operator-screens.md` for external-operation replies.
 - `stop`: end the work at once and list every open decision as open.
 - A request naming a stage skill: invoke that skill by name.
 
