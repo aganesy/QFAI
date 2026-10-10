@@ -50,7 +50,14 @@ matches the current version.
   On the manual path, use `feature/vX.Y.Z`
 - Run CI locally before creating the PR (the commands are in the next section)
 - Review completion criteria: the DoD is met and every additional finding is resolved
-- A permission holder merges the PR. On the automated path, Tag release commit
+- Before merging, follow [REVIEW.md](REVIEW.md#merging-a-pull-request):
+  - Every CI check on the PR's current head succeeded or was skipped.
+  - No review thread is unresolved.
+  - The Codex review of that head is complete and holds no P0 or P1 finding.
+    If Codex has posted no review of that head, an independent read-only reviewer
+    reviews it instead and reports no P0 or P1 findings.
+- A permission holder merges the PR by hand with a merge commit. Do not enable
+  GitHub auto-merge. On the automated path, Tag release commit
   pushes the tag. It does not tag a merge from `feature/vX.Y.Z`, so on the manual
   path a permission holder pushes the tag by hand (step 4 of the manual procedure)
 
