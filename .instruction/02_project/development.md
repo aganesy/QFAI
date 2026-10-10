@@ -41,6 +41,43 @@ pnpm -C packages/qfai test
 pnpm verify:pack
 ```
 
+## Test directory mapping
+
+Vitest project names describe runner groups. QFAI classifies coverage from
+paths, so the runner group alone does not establish a test's layer.
+The current directories below are relative to `packages/qfai/`.
+
+| Directory           | Vitest project | QFAI kind     |
+| ------------------- | -------------- | ------------- |
+| `tests/e2e`         | `e2e`          | `e2e`         |
+| `tests/assets`      | `e2e`          | Unclassified  |
+| `tests/integration` | `integration`  | `integration` |
+| `tests/detection`   | `integration`  | Unclassified  |
+| `tests/skill`       | `integration`  | Unclassified  |
+| `tests/codex`       | `integration`  | Unclassified  |
+| `tests/core`        | `core`         | Unclassified  |
+| `tests/unit`        | `unit`         | Unclassified  |
+| `tests/validators`  | `validators`   | Unclassified  |
+| `tests/cli`         | `cli`          | Unclassified  |
+| `tests/scripts`     | `scripts`      | Unclassified  |
+
+For the directories listed here, QFAI recognizes `e2e`, `integration` or
+`api` immediately under `tests`. Unclassified paths have kind `null`; this does not assign
+a unit or component layer. `tests/api` would have kind `api`, but no current
+Vitest project includes that directory.
+
+The [test-layers policy][test-policy] defines the coverage obligations.
+BF coverage counts in QFAI's `e2e` kind; AC coverage counts in `integration`
+or `api`. EX coverage can count in selected tests outside QFAI's `e2e` kind,
+including paths with kind `null`. Thus `tests/assets` can count EX coverage
+even though its Vitest project is named `e2e`.
+
+[Project configuration][test-selection] selects `.test.ts` and `.spec.ts`
+files under `packages/*/tests/` for traceability and excludes test fixtures.
+That selection is separate from Vitest's current `.test.ts` includes.
+[Runner projects][test-runner], [path classification][test-kinds] and
+[coverage counting][test-obligations] hold the current mapping and logic.
+
 ## CLI Smoke Test (in an empty directory)
 
 ```
@@ -96,3 +133,8 @@ Paths in code spans are relative to the repository root.
 [workflow]: ../../.qfai/spec/03_contract/cli/cli-0015-qfai-workflow.md
 [clarity]: ../../scripts/check-doc-clarity.mjs
 [language]: ../../scripts/check-repository-language.mjs
+[test-policy]: ../../packages/qfai/assets/init/.qfai/assistant/rule/test-layers.md
+[test-selection]: ../../qfai.config.yaml
+[test-runner]: ../../packages/qfai/vitest.workspace.ts
+[test-kinds]: ../../packages/qfai/src/core/atddTraceability.ts
+[test-obligations]: ../../packages/qfai/src/core/validators/storyTreeObligations.ts

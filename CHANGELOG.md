@@ -32,6 +32,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   An exact AC test exception needs both specification-change and test-deferral
   authority. Its review date is manual; uncovered changes remain open questions.
   Fixes #3233.
+- **Test exceptions take effect only at DONE.** A partially superseded exception
+  no longer suppresses a missing-test error. Other decision kinds keep their
+  status behavior. Fixes #3356.
 - **One goal can advance independent targets through their own plans.** Guidance
   keeps each target's scope, head-bound evidence and approval limits separate.
   A clean checkout can move to authorized work during remote waits; writers,
