@@ -135,8 +135,10 @@ describe("independent targets under one goal", () => {
   // QFAI:EX-0001-0224-09
   it("extracts and plans each settled target separately, including newly eligible targets", async () => {
     const kinds = await passage(RUN, "## Request kinds");
-    expect(kinds).toMatch(/goal.*independent targets.*references\/operator-screens\.md/i);
-    expect(kinds).toMatch(/separate plans, waits and checkout changes.*before starting/i);
+    expect(kinds).toMatch(
+      /(?:goal.*independent targets|independent targets.*goal).*references\/operator-screens\.md/i,
+    );
+    expect(kinds).toMatch(/before planning.*switching.*wait/i);
     const extraction = await passage(EXTRACTION, "## Procedure");
     expect(extraction).toMatch(
       /settled independent scopes.*extract each target separately.*planner/i,
@@ -150,8 +152,9 @@ describe("independent targets under one goal", () => {
     expect(targets).toMatch(/newly eligible targets.*goal's criteria.*own plans/i);
     expect(targets).toMatch(/out-of-scope finding.*follow-up.*never as an extra step/i);
     expect(targets).toMatch(
-      /(?:needed|required).*target.*no planned stage.*(?:stop|halt).*target.*owner/i,
+      /no planned stage.*(?:needed|required|needs|requires).*(?:stop|halt).*target.*owner/i,
     );
+    expect(targets).toMatch(/owner.*stage skill.*invoke/i);
   });
 
   // QFAI:AC-0001-0224-07
@@ -189,19 +192,23 @@ describe("independent targets under one goal", () => {
     const targets = await passage(SCREENS, TARGETS);
     expect(targets).toMatch(/unknown dirty files postpone the switch/i);
     expect(targets).toMatch(/do not stash, reset or delete them/i);
-    expect(targets).toMatch(/reviewer using live files or local execution must finish/i);
+    expect(targets).toMatch(
+      /reviewer using live files or (?:local|checkout-dependent) execution must finish/i,
+    );
     expect(targets).toMatch(
       /read-only reviewer using only `git show <fixed SHA>:<path>`.*may continue across a clean orchestrator switch/i,
     );
     expect(targets).toMatch(/reviewer never switches the checkout/i);
     const delegation = await passage(DELEGATION, "### Orchestrator Protocol");
+    expect(delegation).toMatch(/each reviewer.*fixed commit/i);
+    expect(delegation).toMatch(/only read-only fixed-SHA `git show` reviews.*clean switches/i);
     expect(delegation).toMatch(
-      /read-only reviewer bound to a fixed commit.*only `git show <fixed SHA>:<path>`/i,
+      /writers, local gates.*reviews using live files or checkout-dependent execution.*finish first/i,
     );
-    expect(delegation).toMatch(/no live-checkout reads or dependent local execution/i);
-    expect(delegation).toMatch(/switch a clean checkout while that review continues/i);
-    expect(delegation).toMatch(/all writers, local gates and live-checkout reviewers must finish/i);
-    expect(delegation).toMatch(/read-only reviewer never switches it/i);
+    expect(delegation).toMatch(
+      /read-only agent never runs `git checkout` or `git switch`.*shares/i,
+    );
+    expect(delegation).toMatch(/reads other revisions with `git show <rev>:<path>`/i);
   });
 
   // QFAI:AC-0001-0224-09
@@ -234,7 +241,7 @@ describe("independent targets under one goal", () => {
     );
     expect(targets).toMatch(/routine choices as the agent's decisions under that authority/i);
     expect(targets).toMatch(
-      /(?:do not|never|without).*?(?:attribute|fabricat).*?(?:user|option).*?(?:approval|selection)|never as the user's (?:selection|approval)/i,
+      /(?:do not|never|without).*?(?:attribute|fabricat).*?(?:user|option).*?(?:approval|selection)|never as the user's (?:individual option )?(?:selection|approval)/i,
     );
     expect(targets).toMatch(/request to ask nothing supplies no uncovered approval/i);
   });
