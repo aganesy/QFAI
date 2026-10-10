@@ -22,6 +22,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **One goal can advance independent targets through their own plans.** Guidance
+  keeps each target's scope, head-bound evidence and approval limits separate.
+  A clean checkout can move to authorized work during remote waits; writers,
+  local gates and reviewers using live files finish first. Fixes #3231.
+
 - **API polling uses one watcher across a root task and its descendants.**
   Workers reuse saved snapshots. The rule includes a two-PR snapshot query,
   pagination guidance and recovery from actual rate-limit refusals. Fixes #3226.
