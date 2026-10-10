@@ -42,6 +42,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- Resolve the optional Playwright dependency to 1.64.0 while keeping its existing supported version range.
+
 - **The writing rule removes unnecessary sentences without requiring needless rewrites.**
   Its opening deletion test leaves rewriting to the existing clarity clauses.
 - **The release association gate uses Node.js to read pull request branches.**
