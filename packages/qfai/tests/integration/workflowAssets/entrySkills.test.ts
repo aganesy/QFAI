@@ -296,7 +296,10 @@ describe("qfai-run", () => {
     );
     expect(work).toMatch(/run each stage in plan order, and each of its steps in order/i);
     const announcement = flat(sectionOf(await readShipped(SCREENS), "## The announcement"));
-    expect(announcement).toMatch(/it asks nothing and lists no skipped stage/i);
+    expect(announcement).toMatch(/\basks nothing\b.*\blists no skipped stage\b/i);
+    expect(announcement).toMatch(
+      /\bcontinue\b.*\bpolicy check\b.*\bfirst stage\b.*\bsame turn\b.*\bwithout waiting for a reply\b/i,
+    );
     expect(flat(await readShipped(RUN))).toMatch(/add, drop or reorder a step the plan names/i);
   });
 
@@ -318,8 +321,15 @@ describe("qfai-run", () => {
   // QFAI:EX-0001-0229-23
   it("asks which scope to run before the first stage, runs only its stages, and never calls a narrower run done", async () => {
     const run = await readShipped(RUN);
-    expect(flat(sectionOf(run, "## The work"))).toMatch(
-      /\*\*scope\.\*\* ask which scope to run, as `references\/operator-screens\.md` says; run only its stages\./i,
+    const scopeInstruction = flat(
+      sectionOf(run, "## The work").split("**Scope.**")[1]?.split("**Announce.**")[0] ?? "",
+    );
+    expect(scopeInstruction).toContain("`references/operator-screens.md`");
+    expect(scopeInstruction).toMatch(
+      /\btwo or more scopes\b.*\bask which (?:scope )?to run\b.*\brun only (?:its|the chosen scope's) stages\b/i,
+    );
+    expect(scopeInstruction).toMatch(
+      /\bone scope\b.*\bno scopes\b.*\bbranch destination's plan\b.*\bask nothing\b.*\brun every stage\b/i,
     );
     expect(flat(run)).toMatch(/or run a stage outside the scope/i);
     const screens = await readShipped(SCREENS);
