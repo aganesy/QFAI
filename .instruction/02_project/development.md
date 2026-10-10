@@ -45,31 +45,31 @@ pnpm verify:pack
 
 Vitest project names describe runner groups. QFAI classifies coverage from
 paths, so the runner group alone does not establish a test's layer.
-The current directories below are relative to `packages/qfai/`.
+The current directories below are relative to the repository root.
 
-| Directory           | Vitest project | QFAI kind     |
-| ------------------- | -------------- | ------------- |
-| `tests/e2e`         | `e2e`          | `e2e`         |
-| `tests/assets`      | `e2e`          | Unclassified  |
-| `tests/integration` | `integration`  | `integration` |
-| `tests/detection`   | `integration`  | Unclassified  |
-| `tests/skill`       | `integration`  | Unclassified  |
-| `tests/codex`       | `integration`  | Unclassified  |
-| `tests/core`        | `core`         | Unclassified  |
-| `tests/unit`        | `unit`         | Unclassified  |
-| `tests/validators`  | `validators`   | Unclassified  |
-| `tests/cli`         | `cli`          | Unclassified  |
-| `tests/scripts`     | `scripts`      | Unclassified  |
+| Directory                         | Vitest project | QFAI kind     |
+| --------------------------------- | -------------- | ------------- |
+| `packages/qfai/tests/e2e`         | `e2e`          | `e2e`         |
+| `packages/qfai/tests/assets`      | `e2e`          | Unclassified  |
+| `packages/qfai/tests/integration` | `integration`  | `integration` |
+| `packages/qfai/tests/detection`   | `integration`  | Unclassified  |
+| `packages/qfai/tests/skill`       | `integration`  | Unclassified  |
+| `packages/qfai/tests/codex`       | `integration`  | Unclassified  |
+| `packages/qfai/tests/core`        | `core`         | Unclassified  |
+| `packages/qfai/tests/unit`        | `unit`         | Unclassified  |
+| `packages/qfai/tests/validators`  | `validators`   | Unclassified  |
+| `packages/qfai/tests/cli`         | `cli`          | Unclassified  |
+| `packages/qfai/tests/scripts`     | `scripts`      | Unclassified  |
 
 For the directories listed here, QFAI recognizes `e2e`, `integration` or
 `api` immediately under `tests`. Unclassified paths have kind `null`; this does not assign
-a unit or component layer. `tests/api` would have kind `api`, but no current
+a unit or component layer. An `api` directory immediately under `tests` would have kind `api`, but no current
 Vitest project includes that directory.
 
 The [test-layers policy][test-policy] defines the coverage obligations.
 BF coverage counts in QFAI's `e2e` kind; AC coverage counts in `integration`
 or `api`. EX coverage can count in selected tests outside QFAI's `e2e` kind,
-including paths with kind `null`. Thus `tests/assets` can count EX coverage
+including paths with kind `null`. Thus `packages/qfai/tests/assets` can count EX coverage
 even though its Vitest project is named `e2e`.
 
 [Project configuration][test-selection] selects `.test.ts` and `.spec.ts`
