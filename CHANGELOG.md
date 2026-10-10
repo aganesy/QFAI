@@ -346,6 +346,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the owner. Different or uncertain behaviour returns to specification work;
   the choice and its reason appear in the final report.
 
+- Clarify when delegated external settings and credential installation may run,
+  and distinguish confirmed external effects from repository changes and CI results.
+
 - Verify steps reject validation errors even when a custom Validate wrapper succeeds.
 - Clarify that the research agent reads the cache TTL extension in the project config; the CLI does not parse it.
 
