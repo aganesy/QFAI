@@ -4178,7 +4178,9 @@ describe("the optional exact-file diagnostic", () => {
     expect(inputs["ref"]).toBe("${{ inputs.sha }}");
     expect(inputs["persist-credentials"]).toBe(false);
     const checkIndex = steps.findIndex((step) => String(step["run"]).includes("<<'PREFLIGHT'"));
-    const setupIndex = steps.findIndex((step) => step["uses"] === "./.github/actions/setup");
+    const setupIndex = steps.findIndex(
+      (step) => step["uses"] === "./.ci-actions/.github/actions/setup",
+    );
     expect(checkIndex).toBeGreaterThan(-1);
     expect(setupIndex).toBeGreaterThan(checkIndex);
     const setup = steps[setupIndex];
@@ -4200,6 +4202,72 @@ describe("the optional exact-file diagnostic", () => {
       TEST_PROJECT: "${{ inputs.project }}",
       TEST_FILE: "${{ inputs.file }}",
     });
+  });
+
+  // QFAI:EX-0002-0026-09
+  it("resolves setup from the immutable workflow revision despite a replaced PR action", () => {
+    const steps = namedSteps();
+    const setup = steps.find((step) => step["uses"] === "./.ci-actions/.github/actions/setup");
+    expect(setup).toBeDefined();
+    expect(steps.some((step) => step["uses"] === "./.github/actions/setup")).toBe(false);
+    const checkout = steps.find((step) => {
+      const inputs = step["with"];
+      return isRecord(inputs) && inputs["path"] === ".ci-actions";
+    });
+    expect(checkout?.["uses"]).toMatch(/^actions\/checkout@[a-f0-9]{40}$/u);
+    const inputs = checkout?.["with"];
+    expect(inputs).toEqual({
+      repository: "${{ github.repository }}",
+      ref: "${{ github.workflow_sha }}",
+      path: ".ci-actions",
+      clean: false,
+      "sparse-checkout": ".github/actions",
+      "sparse-checkout-cone-mode": false,
+      "persist-credentials": false,
+    });
+    const preflightIndex = steps.findIndex((step) => String(step["run"]).includes("<<'PREFLIGHT'"));
+    expect(steps.indexOf(checkout ?? {})).toBeGreaterThan(preflightIndex);
+    expect(steps.indexOf(setup ?? {})).toBeGreaterThan(steps.indexOf(checkout ?? {}));
+    const fixture = namedFixture();
+    try {
+      const action = path.join(fixture.root, ".github", "actions", "setup", "action.yml");
+      mkdirSync(path.dirname(action), { recursive: true });
+      const trusted =
+        "name: Trusted setup\nruns:\n  using: composite\n  steps:\n    - shell: bash\n      run: echo TRUSTED_SETUP_ONLY\n";
+      writeFileSync(action, trusted);
+      namedGit(fixture.root, "add", "--", ".github/actions");
+      namedGit(fixture.root, "commit", "-m", "Workflow setup fixture");
+      const workflowSha = namedGit(fixture.root, "rev-parse", "HEAD");
+      namedGit(fixture.root, "push", "origin", `${workflowSha}:refs/heads/workflow`);
+      writeFileSync(
+        action,
+        'name: PR action\nruns:\n  using: composite\n  steps:\n    - shell: bash\n      run: echo "GITHUB_TOKEN=${{ github.token }}" >> "$GITHUB_ENV"\n',
+      );
+      namedGit(fixture.root, "add", "--", ".github/actions");
+      namedGit(fixture.root, "commit", "-m", "Replaced PR setup fixture");
+      namedGit(fixture.root, "push", "origin", "HEAD:refs/pull/37/head");
+      const sidecar = path.join(fixture.root, ".ci-actions");
+      namedGit(
+        fixture.root,
+        "clone",
+        "--no-checkout",
+        path.join(fixture.root, "origin.git"),
+        sidecar,
+      );
+      namedGit(sidecar, "sparse-checkout", "set", "--no-cone", ".github/actions");
+      namedGit(sidecar, "checkout", workflowSha);
+      expect(namedGit(sidecar, "rev-parse", "HEAD")).toBe(workflowSha);
+      expect(namedGit(fixture.root, "rev-parse", "HEAD")).not.toBe(workflowSha);
+      const uses = setup?.["uses"];
+      if (typeof uses !== "string") throw new Error("trusted setup reference is missing");
+      const selected = readFileSync(path.join(fixture.root, uses, "action.yml"), "utf-8");
+      expect(selected).toBe(trusted);
+      expect(selected).not.toContain("github.token");
+      expect(readFileSync(action, "utf-8")).toContain("github.token");
+      expect(verdictNeeds()).not.toContain("named-test");
+    } finally {
+      rmSync(fixture.root, { recursive: true, force: true });
+    }
   });
 
   // QFAI:EX-0002-0026-01 QFAI:EX-0002-0026-07

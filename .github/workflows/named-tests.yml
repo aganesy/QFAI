@@ -100,7 +100,17 @@ jobs:
           }
           PREFLIGHT
           node "${RUNNER_TEMP}/named-preflight.mjs"
-      - uses: ./.github/actions/setup
+      # The PR may replace its local action; load setup from this workflow's revision.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.workflow_sha }}
+          path: .ci-actions
+          clean: false
+          sparse-checkout: .github/actions
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - uses: ./.ci-actions/.github/actions/setup
         with:
           engines-manifest: ./packages/qfai/package.json
           pin-engines-floor: "true"

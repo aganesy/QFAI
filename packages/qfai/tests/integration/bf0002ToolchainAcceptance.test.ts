@@ -285,7 +285,7 @@ describe("the optional named diagnostic acceptance", () => {
   it("checks current project includes before the shared setup and uses normal failure gating", () => {
     const steps = jobSteps("named-tests.yml", "named-test");
     const preflight = steps.findIndex((step) => runText(step).includes("<<'PREFLIGHT'"));
-    const setup = steps.findIndex((step) => step["uses"] === SETUP_ACTION);
+    const setup = steps.findIndex((step) => step["uses"] === "./.ci-actions/.github/actions/setup");
     const build = steps.findIndex((step) => runText(step) === "pnpm -C packages/qfai build");
     const run = steps.findIndex((step) => runText(step).includes("<<'RUNNER'"));
     expect(preflight).toBeGreaterThan(-1);
