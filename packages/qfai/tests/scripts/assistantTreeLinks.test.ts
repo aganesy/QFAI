@@ -29,8 +29,13 @@ const SCRIPT = path.join(repoRoot, "scripts", "link-assistant-tree.mjs");
 const ASSISTANT = path.join(repoRoot, ".qfai", "assistant");
 const ASSETS = path.join(repoRoot, "packages", "qfai", "assets", "init", ".qfai", "assistant");
 const fixtureRoots: string[] = [];
+const fixtureHoldingDirs = new Set<string>();
 
 afterEach(async () => {
+  for (const holdingDir of fixtureHoldingDirs) {
+    await rm(holdingDir, { recursive: true, force: true });
+  }
+  fixtureHoldingDirs.clear();
   for (const root of fixtureRoots.splice(0)) await rm(root, { recursive: true, force: true });
 });
 
@@ -132,8 +137,37 @@ syncBuiltinESMExports();
   return { preload, traceFile };
 }
 
-async function linkTrace(traceFile: string): Promise<LinkTrace> {
-  return JSON.parse(await readFile(traceFile, "utf-8")) as LinkTrace;
+async function linkTrace(traceFile: string, entry: string): Promise<LinkTrace> {
+  const trace = JSON.parse(await readFile(traceFile, "utf-8")) as LinkTrace;
+  const root = fixtureRoots.find(
+    (candidate) => path.resolve(candidate) === path.dirname(traceFile),
+  );
+  if (root === undefined) throw new Error("the trace is not owned by a fixture");
+  const relativeEntry = path.relative(root, entry);
+  if (
+    relativeEntry === "" ||
+    relativeEntry === ".." ||
+    relativeEntry.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(relativeEntry)
+  ) {
+    throw new Error("the traced entry is outside its fixture");
+  }
+  for (const move of trace.moves) {
+    const holdingDir = path.dirname(path.resolve(move.to));
+    if (
+      path.resolve(move.from) !== path.resolve(entry) ||
+      path.basename(move.to) !== "entry" ||
+      path.dirname(holdingDir) !== path.resolve(os.tmpdir()) ||
+      !/^qfai-assistant-link-[A-Za-z0-9]{6}$/.test(path.basename(holdingDir))
+    ) {
+      throw new Error("the repair hold is outside its fixture's scratch paths");
+    }
+    const heldDirectory = lstatSync(holdingDir, { throwIfNoEntry: false });
+    if (heldDirectory?.isDirectory() && !heldDirectory.isSymbolicLink()) {
+      fixtureHoldingDirs.add(holdingDir);
+    }
+  }
+  return trace;
 }
 
 /** A failed repair must retain the original at its path or in its reported hold. */
@@ -256,7 +290,7 @@ describe("link-assistant-tree --check", () => {
     expect(checked.status, checked.output).toBe(1);
     expect(checked.output).toContain(".qfai/assistant/rule");
     expect(await readlink(entry)).toBe(target);
-    expect(await linkTrace(traceFile)).toEqual({ attempts: [], moves: [] });
+    expect(await linkTrace(traceFile, entry)).toEqual({ attempts: [], moves: [] });
   });
 
   // QFAI:EX-0002-0022-01
@@ -268,11 +302,11 @@ describe("link-assistant-tree --check", () => {
     const { preload, traceFile } = await faultPreload(root, entry, "unfollowable");
 
     const repaired = runIsolated(script, root, false, preload);
+    const trace = await linkTrace(traceFile, entry);
 
     expect(repaired.status, repaired.output).toBe(0);
     expect(repaired.output).toContain("1 link(s) written");
     expect(await readlink(entry)).toBe(target);
-    const trace = await linkTrace(traceFile);
     expect(trace.attempts).toEqual([{ target, path: entry, type: "dir" }]);
     expect(trace.moves).toHaveLength(1);
     expect(await readFile(path.join(entry, "quality.md"), "utf-8")).toBe("# Quality\n");
@@ -292,7 +326,7 @@ describe("link-assistant-tree --check", () => {
     expect(repeated.status, repeated.output).toBe(0);
     expect(repeated.output).toContain("0 link(s) written");
     expect(await readlink(entry)).toBe(target);
-    expect(await linkTrace(traceFile)).toEqual({ attempts: [], moves: [] });
+    expect(await linkTrace(traceFile, entry)).toEqual({ attempts: [], moves: [] });
     expect(runIsolated(script, root, true).status).toBe(0);
   });
 
@@ -311,7 +345,7 @@ describe("link-assistant-tree --check", () => {
     expect(refused.status, refused.output).toBe(1);
     expect(refused.output).toContain(".qfai/assistant/pointer.md");
     expect(await readlink(entry)).toBe(target);
-    expect(await linkTrace(traceFile)).toEqual({ attempts: [], moves: [] });
+    expect(await linkTrace(traceFile, entry)).toEqual({ attempts: [], moves: [] });
   });
 
   // QFAI:EX-0002-0022-01
@@ -323,9 +357,9 @@ describe("link-assistant-tree --check", () => {
     const { preload, traceFile } = await faultPreload(root, entry, "recreate-refused");
 
     const refused = runIsolated(script, root, false, preload);
+    const trace = await linkTrace(traceFile, entry);
 
     expect(refused.status, refused.output).toBe(1);
-    const trace = await linkTrace(traceFile);
     expect(trace.attempts.length).toBeGreaterThan(0);
     await retainedLink(entry, target, trace);
     for (const move of trace.moves) {
@@ -343,9 +377,9 @@ describe("link-assistant-tree --check", () => {
     const { preload, traceFile } = await faultPreload(root, entry, "foreign-before-move");
 
     const refused = runIsolated(script, root, false, preload);
+    const trace = await linkTrace(traceFile, entry);
 
     expect(refused.status, refused.output).toBe(1);
-    const trace = await linkTrace(traceFile);
     expect(trace.attempts).toEqual([]);
     const locations = [entry, ...trace.moves.map((move) => move.to)];
     const retained = locations.find(
@@ -366,10 +400,10 @@ describe("link-assistant-tree --check", () => {
     const { preload, traceFile } = await faultPreload(root, entry, "foreign-after-move");
 
     const refused = runIsolated(script, root, false, preload);
+    const trace = await linkTrace(traceFile, entry);
 
     expect(refused.status, refused.output).toBe(1);
     expect(await readFile(entry, "utf-8")).toBe("foreign after move\n");
-    const trace = await linkTrace(traceFile);
     expect(trace.moves).toHaveLength(1);
     await retainedLink(entry, target, trace);
     expect(refused.output).toContain(trace.moves[0]?.to);
