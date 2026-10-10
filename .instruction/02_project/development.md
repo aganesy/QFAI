@@ -14,6 +14,37 @@ version: 1.0.0
 
 ## Setup
 
+On Windows, run the lint lanes from Git Bash. `ci:lint` and
+`ci:gate:lint` invoke Bash, so Node.js and the pinned pnpm must be available
+in that shell. Running those lanes from PowerShell also requires Git for
+Windows' Bash directory on the PATH inherited by Node.
+
+Root scripts start `pnpm` subprocesses. Keep a pnpm shim on their inherited
+PATH even when starting a script with `corepack pnpm`. If Corepack is installed
+but pnpm has no shim on PATH, create one in a directory your account owns.
+In PowerShell:
+
+```powershell
+$pnpmShimDir = Join-Path $env:LOCALAPPDATA "qfai-pnpm"
+New-Item -ItemType Directory -Path $pnpmShimDir -Force | Out-Null
+corepack.cmd enable --install-directory $pnpmShimDir pnpm
+$env:PATH = "$pnpmShimDir;$env:PATH"
+```
+
+In Git Bash, add the same directory before running the setup sequence:
+
+```bash
+export PATH="$(cygpath -u "$LOCALAPPDATA")/qfai-pnpm:$PATH"
+```
+
+These PATH changes apply to the current shells. Add the shim directory to your
+user PATH and reopen terminals to reuse it. Corepack writes the shims to that
+directory, without changing the Node.js installation directory. The lint helper
+already creates temporary shims when Bash can find Corepack; that fallback
+does not supply pnpm to other root scripts.
+
+Run the setup sequence below from the repository root:
+
 ```
 pnpm install
 pnpm build
