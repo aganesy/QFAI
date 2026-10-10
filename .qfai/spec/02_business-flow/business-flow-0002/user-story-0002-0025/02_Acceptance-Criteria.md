@@ -29,7 +29,12 @@ Feature: Safe branch catch-up with CI pin resealing
     When the helper classifies every conflicted file before resolving any
     Then eligible conflicts contain only existing digest slots in the pinned-byte list, status-context declaration or CI workflow
     And pinned-list paths, order and comments agree
-    And declaration keys, structure and context agree with known 64-hex pinnedBytes and 16-hex verificationBodies values
+    And each declaration candidate first parses with JSON.parse
+    And removing only whitespace outside quoted JSON strings makes its compact raw text equal JSON.stringify of the parsed value
+    And duplicate keys and noncanonical values are rejected while formatter whitespace alone is allowed
+    And normalizing only known contexts[i].pinnedBytes 64-lowercase-hex and contexts[i].verificationBodies 16-lowercase-hex values leaves the full JSON values equal
+    And declaration keys, structure, context and map membership remain unchanged
+    And resolution preserves common bytes outside conflict regions without selecting a whole merge side
     And workflow differences are only the four existing PINNED_INPUTS target digests
     And a malformed, ambiguous, membership-changing, foreign, semantic or other-file conflict stops the helper
     And rejected conflicts retain the pending merge without partial automatic resolution, abort or reset
@@ -53,4 +58,14 @@ Feature: Safe branch catch-up with CI pin resealing
     And push failure preserves the completed commit and reports the explicit push invocation for retry
     And an up-to-date retry creates no empty commit
     And resealing is not reported as test execution or a shorter CI review wait
+
+  # AC-0002-0025-06
+  Scenario: Each mutation boundary checks the accepted state
+    Given the helper has recorded the accepted HEAD, index, conflict state and target-file bytes
+    When it reaches each conflict-resolution write, each reseal writer, staging, commit or push
+    Then it rechecks those observations before proceeding
+    And expected writes by the helper advance the recorded observations
+    And an unexpected observed difference stops further mutation, completion commit and push
+    And concurrent edits and the current merge state are preserved without abort or reset
+    And these checks promise neither an atomic snapshot nor detection of every race
 ```
