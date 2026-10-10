@@ -116,6 +116,113 @@ describe("a fix route from the diagnosis to the commit", () => {
   });
 });
 
+describe("the evidence gates on a fix-intermittent route", () => {
+  // QFAI:AC-0001-0220-05
+  // QFAI:EX-0001-0220-27
+  it("checks an existing ordinary Red on entry and otherwise retains the real stress harness", async () => {
+    const step = await readShipped("step/implement-stress-harness/STEP.md");
+    const paragraphs = sectionOf(step, "### Applicability on entry")
+      .split(/\r?\n\s*\r?\n/u)
+      .map(flat);
+    const eligibility =
+      paragraphs.find((paragraph) => /ordinary/i.test(paragraph) && /Red/.test(paragraph)) ?? "";
+    expect(eligibility, "the stress exception needs a bounded existing-proof condition").toMatch(
+      /(?:pre-existing|pre-entry|before.*enter).*executed.*Red|executed.*Red.*(?:pre-existing|pre-entry|before.*enter)/i,
+    );
+    expect(eligibility).toMatch(/(?:same|matching).*signature/i);
+    expect(eligibility).toMatch(/(?:verified|established|confirmed).*ordinary.*state-dependent/i);
+    for (const dependency of ["clock", "order", "parallelism", "load", "timing", "race"]) {
+      expect(eligibility).toMatch(new RegExp(`(?:no|without).*\\b${dependency}\\b`, "i"));
+    }
+    const refusal = paragraphs.find((paragraph) => /unknown|missing/i.test(paragraph)) ?? "";
+    expect(refusal).toMatch(/(?:missing|unrun|unexecuted).*Red/i);
+    expect(refusal).toMatch(/(?:wrong|different|mismatch).*signature/i);
+    expect(refusal).toMatch(/(?:unknown|uncertain).*cause/i);
+    const operational =
+      paragraphs.find(
+        (paragraph) => /tools?|waits?|time/i.test(paragraph) && /(?:not|never|no)/i.test(paragraph),
+      ) ?? "";
+    const race =
+      paragraphs.find((paragraph) => /(?:controlled|deterministic).*race/i.test(paragraph)) ?? "";
+    expect(race).toMatch(
+      /(?:controlled|deterministic).*race.*(?:harness|required)|(?:harness|required).*(?:controlled|deterministic).*race/i,
+    );
+    expect(operational).toMatch(
+      /(?:tools?|waits?|time).*not.*(?:exception|exempt|reason|ground)|(?:not|never).*(?:tools?|waits?|time).*(?:exception|exempt|reason|ground)/i,
+    );
+    const record = paragraphs.find((paragraph) => paragraph.includes("applicabilityGate")) ?? "";
+    const proof = paragraphs.find((paragraph) => /still runs/i.test(paragraph)) ?? "";
+    expect(proof).toMatch(/still runs.*(?:verify|inspect|check).*proof/i);
+    expect(record).toMatch(/applicabilityGate.*proof|proof.*applicabilityGate/i);
+    expect(record).toMatch(/applicabilityGate.*(?:reason|why)/i);
+    expect(record).toMatch(
+      /(?:not|no).*stress.*(?:run|execut)|(?:not|no).*(?:run|execut).*stress/i,
+    );
+    const actual = flat(sectionOf(step, "### When a harness is required"));
+    expect(actual).toMatch(/write the harness beside the project's tests/i);
+    expect(actual).toMatch(/run it a recorded number of times at the current revision/i);
+    expect(actual).toMatch(/failure appears at least once.*reported signature/i);
+    expect(flat(sectionOf(step, "## Gate"))).toMatch(/harness reproduces.*recorded rate/i);
+  });
+
+  // QFAI:AC-0001-0220-05
+  // QFAI:EX-0001-0220-27
+  it("checks prior Red and current Green only for an ordinary fix and never exempts quarantine", async () => {
+    const step = await readShipped("step/verify-repeat-run/STEP.md");
+    const paragraphs = sectionOf(step, "### Applicability on entry")
+      .split(/\r?\n\s*\r?\n/u)
+      .map(flat);
+    const eligibility =
+      paragraphs.find((paragraph) => /ordinary/i.test(paragraph) && /Red/.test(paragraph)) ?? "";
+    expect(eligibility, "repeat applicability must be limited to the ordinary fix route").toMatch(
+      /only.*fix-intermittent/i,
+    );
+    expect(eligibility).toMatch(/diagnosis.*(?:verifies|confirmed|verified).*ordinary.*cause/i);
+    expect(eligibility).toMatch(/(?:prior|previous).*executed.*Red/i);
+    expect(eligibility).toMatch(/(?:same|matching).*signature/i);
+    expect(eligibility).toMatch(
+      /(?:observed|executed).*Green.*(?:exact.*current|current.*exact).*revision/i,
+    );
+    expect(eligibility).toMatch(/(?:no|without).*timing.*load.*(?:uncertainty|dependence)/i);
+    const refusal = paragraphs.find((paragraph) => /unknown|missing/i.test(paragraph)) ?? "";
+    expect(refusal).toMatch(/(?:missing|unrun|unexecuted).*Red/i);
+    expect(refusal).toMatch(/(?:wrong|different|mismatch).*signature/i);
+    expect(refusal).toMatch(/(?:stale|older).*Green|Green.*(?:stale|older)/i);
+    expect(refusal).toMatch(/pending.*(?:CI|Green)|(?:CI|Green).*pending/i);
+    expect(refusal).toMatch(/(?:unknown|uncertain).*cause/i);
+    const operational =
+      paragraphs.find(
+        (paragraph) => /tools?|waits?|time/i.test(paragraph) && /(?:not|never|no)/i.test(paragraph),
+      ) ?? "";
+    expect(operational).toMatch(
+      /(?:tools?|waits?|time).*not.*(?:exception|exempt|reason|ground)|(?:not|never).*(?:tools?|waits?|time).*(?:exception|exempt|reason|ground)/i,
+    );
+    const quarantine =
+      paragraphs.find(
+        (paragraph) =>
+          /quarantine/i.test(paragraph) &&
+          /always|all.*real.*runs|never.*exception/i.test(paragraph),
+      ) ?? "";
+    expect(quarantine).toMatch(/quarantine.*(?:always|never.*exception|all.*real.*runs)/i);
+    const record = paragraphs.find((paragraph) => paragraph.includes("applicabilityGate")) ?? "";
+    const proof = paragraphs.find((paragraph) => /still runs/i.test(paragraph)) ?? "";
+    expect(proof).toMatch(/still runs.*(?:verify|inspect|check).*proof/i);
+    expect(record).toMatch(/applicabilityGate.*proof|proof.*applicabilityGate/i);
+    expect(record).toMatch(/applicabilityGate.*(?:reason|why)/i);
+    expect(record).toMatch(
+      /(?:not|no).*(?:repeat|consecutive).*(?:run|execut)|(?:not|no).*(?:run|execut).*(?:repeat|consecutive)/i,
+    );
+    const actual = flat(sectionOf(step, "### When repeated runs are required"));
+    expect(actual).toMatch(/fix the number of runs before the first one/i);
+    expect(actual).toMatch(/record every run in order/i);
+    expect(actual).toMatch(/one failure ends the step/i);
+    expect(actual).toMatch(/when every run passed, lift the quarantine/i);
+    expect(flat(sectionOf(step, "## Gate"))).toMatch(
+      /every run is recorded.*all of them passed on the same revision/i,
+    );
+  });
+});
+
 describe("where qfai-run runs the policy check and the commit", () => {
   it("checks policy after planning, writing nothing on a route that changes nothing", async () => {
     const work = flat(sectionOf(await readShipped("skill/qfai-run/SKILL.md"), "## The work"));
