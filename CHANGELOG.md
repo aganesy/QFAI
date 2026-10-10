@@ -39,6 +39,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Repeated edit reminders use short rule pointers.** The first relevant edit
+  receives the full rules; later edits retain concise guidance. Missing session
+  identity or unavailable counters keep the full reminder. Posting reminders
+  remain unchanged.
+
 - **Worker work orders state the permitted edit boundary.** They name the
   assigned checkout, owned paths and edit method. A refused edit returns a
   reviewable diff for coordinator integration without bypassing the refusal.
@@ -327,6 +332,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The explicit local-base command refuses mixed historical edits, ambiguous
   blocks and changed input bytes, and names exact source lines and categories.
   It writes only the changelog and leaves Git operations to the caller. Fixes #3252.
+- Clarify that the research agent reads the cache TTL extension in the project config; the CLI does not parse it.
 
 - Clarify that story ID candidates are snapshots and require a fresh collision
   check of the committed changes before publishing the same branch head.
