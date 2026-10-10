@@ -39,6 +39,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Posting guidance explicitly permits numbers and links in pull request and issue bodies.**
+  Source and ordinary Markdown retain the identifier ban and existing exceptions.
+
 - **Repeated edit reminders use short rule pointers.** The first relevant edit
   receives the full rules; later edits retain concise guidance. Missing session
   identity or unavailable counters keep the full reminder. Posting reminders
