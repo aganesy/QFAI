@@ -140,16 +140,13 @@ jobs:
           if ! pulls="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" 2>&1)"; then
             reject "could not ask which pull request carried ${GITHUB_SHA}, so whether this is a release merge is unknown: ${pulls}"
           fi
-          # Every associated pull request, not just the first: a commit can belong to more than
-          # one, and picking `.[0]` would decline a real release merge for an incidental sibling.
-          #
-          # `.head.ref`, which is what REST returns. `headRefName` is the GraphQL spelling and is
-          # absent from this response, so `jq` emitted `null` for every associated pull request
-          # and the comparison could not match — the branch below was taken on every release,
-          # the step reported success, and no tag was ever pushed (#1155). `// empty` drops the
-          # null instead of printing the string "null", which a branch named `release/vnull`
-          # would otherwise match.
-          if ! printf '%s' "$pulls" | jq -r '.[].head.ref // empty' | grep -qxF "release/v${claimed}"; then
+          # SHIPPED-CI: not-applicable
+          # Because: release association tagging belongs to this package repository.
+          # Check every associated pull request for the exact release branch.
+          # Node reads the REST array and emits only string head.ref values.
+          # Missing or nonstring refs are ignored. Malformed JSON or a nonarray
+          # response fails without output, so it cannot authorize a tag.
+          if ! printf '%s' "$pulls" | node -e 'const pulls = JSON.parse(require("node:fs").readFileSync(0, "utf8")); if (!Array.isArray(pulls)) process.exit(1); const refs = pulls.flatMap((pull) => typeof pull?.head?.ref === "string" ? [pull.head.ref] : []); if (refs.length > 0) process.stdout.write(refs.join("\n") + "\n");' | grep -qxF "release/v${claimed}"; then
             echo "tag-release: ${GITHUB_SHA} did not arrive from release/v${claimed}; nothing to tag"
             echo "push=false" >> "$GITHUB_OUTPUT"
             echo "version=${claimed}" >> "$GITHUB_OUTPUT"

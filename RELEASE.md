@@ -72,6 +72,22 @@ as before.
 3. **Tag release commit** pushes `vX.Y.Z` automatically, and `release.yml` starts
 4. Approving the `release` environment runs the npm publish
 
+The `release` environment currently names `aganesy` as its required reviewer.
+Recheck the current assignment under Settings → Environments → release before
+relying on that name. A release run awaiting approval shows **Review deployments**
+on its Actions page. These read-only queries show current pending deployments
+and approval history, respectively; replace `RUN_ID` with the run being checked:
+
+```sh
+gh api --method GET "repos/{owner}/{repo}/actions/runs/RUN_ID/pending_deployments"
+gh api --method GET "repos/{owner}/{repo}/actions/runs/RUN_ID/approvals"
+```
+
+An empty approval history does not show whether the run is currently waiting.
+An empty pending list does not prove publication succeeded; check the publishing
+job's result. The endpoint meanings are in the
+[GitHub workflow-run API documentation](https://docs.github.com/en/rest/actions/workflow-runs).
+
 ### What this automation does not do
 
 **It does not write the release text.** Whoever makes each change adds to
