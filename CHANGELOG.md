@@ -404,6 +404,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `pnpm install` and `pnpm rebuild`, and each of them printed a warning. It now
   runs right after `setup-node`. Publishing itself was not affected.
 
+- **Story-tree obligations parse example declarations only where they can count.**
+  Selected TDD files with EX annotations use declaration parsing. ATDD coverage
+  and annotation diagnostics retain their existing checks.
+
 ## [2.1.1] - 2026-10-08
 
 ### Added
