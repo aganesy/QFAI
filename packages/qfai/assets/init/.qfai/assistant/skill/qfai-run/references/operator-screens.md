@@ -12,6 +12,7 @@ What the user sees while a request is worked, and how a question reaches them.
 - Questions
 - A step only a person can take
 - Replies to a waiting step
+- Independent targets under one goal
 - Halt notice
 - Final report
 - Work orders summary
@@ -153,6 +154,48 @@ While an operation result is pending, use the interim-report exception in
 `.agents/rules/user-questions.md` § 6 only under its stated conditions. Report
 the current state, expected result and resume condition without repeating the
 question. A completed route still follows the final-report rule below.
+
+## Independent targets under one goal
+
+Read this section before handling several independent targets under one goal
+or switching the checkout during a target's wait.
+
+Plan each target separately only when its scope is settled and independent.
+Keep each plan's scope, stage order, steps, review and release points. A target
+with an unfinished prerequisite waits; mixed findings with unsettled scopes
+still take the existing bundle/decomposition handling. Give newly eligible
+targets within the goal's criteria their own plans. Report an out-of-scope
+finding as a follow-up, never as an extra step in the current target.
+If no planned stage serves work this target needs, stop that target and name
+the owner and stage skill to invoke. Other authorized independent targets may
+continue.
+
+Use the existing stage reports and handoff messages to retain each target's
+plan and scope, stage and step, branch and exact head, evidence, open approval
+or blocker, and resume condition. Report waiting targets as waiting. Before
+writing or using a result, confirm its target and head. A green check for an
+older or different head does not pass the current one; pending checks do not
+complete verification. A matching red check resumes the planned gate and its
+fix procedure. Keep each review verdict bound to the commit reviewed; never
+relabel it as a review of a newer head or add a review the plan does not name.
+
+Before changing the shared checkout, wait for every writer and local gate
+using it, preserve target edits in a permitted commit of only its paths, and
+ensure the whole index and worktree are clean. Unknown dirty files postpone
+the switch; do not stash, reset or delete them to move on. A reviewer using
+live files or checkout-dependent execution must finish. A read-only reviewer
+using only `git show <fixed SHA>:<path>` may continue across a clean orchestrator switch;
+the reviewer never switches the checkout. CI-only pending gates use the
+existing DELEGATED commit allowance only under explicit user instruction or
+project policy. A wait never authorizes an early commit or skipped gate.
+
+Use standing delegation only for the targets and actions it actually covers.
+Report routine choices as the agent's decisions under that authority, never
+as the user's individual option approval. A request to ask nothing supplies
+no uncovered approval. If a critical decision or release approval is missing,
+stop that target before dependent work and follow the existing question or
+no-question rules. Other authorized independent work may continue. A stop of
+the whole goal stops every target.
 
 ## Halt notice
 
