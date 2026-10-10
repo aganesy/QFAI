@@ -232,8 +232,9 @@ the session log as the coordination artifact.
 
 When the search stage returns no results:
 
-- Log "no sources found" to the session log.
-- Return a zero-result response with the original query for user review.
+- Log "no web sources found" to the session log.
+- Report "no web sources found" to the user together with every search query issued, for user review.
+- Generate no citations: the citation block stays empty, and nothing is cited from memory or from a source that was not fetched.
 - Do not proceed to fetch/extract stages.
 
 ### 9.2 Fetch Failure Isolation
@@ -252,8 +253,9 @@ outages do not block the entire research pipeline.
 ### 9.3 Rate Limiting
 
 - Detect HTTP 429 (Too Many Requests) responses.
-- Read and honour the `Retry-After` header.
-- Apply exponential backoff with jitter for retries.
+- Read and honour the `Retry-After` header: retry only after the delay it gives.
+- Apply exponential backoff with jitter for further retries.
+- Log each rate-limit event to the session log with the 429 status, the delay and the retry number.
 
 ## 10. Conservative Defaults
 
@@ -279,7 +281,8 @@ SKILL.md files follow a **progressive disclosure** loading strategy:
 ### 11.1 Invalid SKILL.md Handling
 
 If the YAML front-matter is **invalid** or produces a **parse error** (malformed
-YAML), the loader reports the error to the session log and activates
+YAML), the loader reports the parse error with its details (the YAML error
+message and its location) to the session log and activates
 **default behavior** as a fallback. The skill is still listed in the roster
 but operates with built-in defaults until the YAML is corrected.
 
@@ -297,15 +300,17 @@ rules apply:
 
 ## 13. Golden Task Evaluation
 
-**Golden task** sets are curated query-answer pairs used for regression
-evaluation. Each golden task is scored against 4 metrics:
+**Golden task** sets are curated query-answer pairs, each with its expected
+sources and citations, used for regression evaluation. Each golden task is
+scored against 4 metrics:
 
 - **Citation precision** — accuracy of generated citations.
 - **Coverage** — completeness of query facet coverage.
 - **Freshness** — recency of cited sources.
 - **Security hygiene** — sanitization pass rate.
 
-Golden task results are reported with the evaluation run.
+Each score is compared with its target in Section 5, and the scores and the
+comparison are reported with the evaluation run.
 
 ## Completion Contract (Shared)
 

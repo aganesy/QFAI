@@ -11,10 +11,10 @@ Feature: Prototyping skill validation
     Then the prototyping skill validator confirms current skill sections and CLI-removal wording.
 
   # AC-0001-0042-02
-  Scenario: Legacy validators stay validator slices
-    Given legacy artifact validators exist
+  Scenario: Design-system validators stay validator slices
+    Given a design-token file exists in the configured design tokens directory
     When production validation runs
-    Then legacy artifact validators are treated as validator slices rather than proof of a public runtime surface.
+    Then the design-token validator reports on it inside `qfai validate`, and `qfai --help` lists no command for design tokens or a harness.
 
   # AC-0001-0042-03
   Scenario: A present, parseable DESIGN.md raises no design finding

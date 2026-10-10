@@ -6,6 +6,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The web-research skill states what its criteria require, and its MCP
+  templates match the Codex and Copilot formats.** A search with no results is
+  reported as "no web sources found" with every query issued and cites nothing.
+  A rate-limited request is retried only after the `Retry-After` delay and each
+  event is logged. A front-matter parse error is reported with its details, and a
+  golden task carries its expected sources and citations and is scored against the
+  skill's targets. The Codex templates use the `[mcp_servers.<name>]` table and
+  pass API keys through `env_vars`; the Copilot templates use the `mcpServers`
+  wrapper with `type` and `tools`; the Firecrawl templates drop their
+  `_comment` keys. The default-deny sandbox template now records each denied
+  request with its capability, target and time. Part of #2951.
+
 - **`qfai init` and `qfai validate` stop reading the spec-pack layout and the
   `.gitignore` lines of earlier releases.** The managed `.gitignore` block no
   longer strips or renames the lines an earlier release wrote, and no longer
