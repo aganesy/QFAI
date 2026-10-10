@@ -61,11 +61,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   workflow list no longer has a retired set, and the spec-pack required-file
   lookup no longer falls back to `assistant/manifest/`.
 
-- **The `qfai-sdd` normalization reference lists all six removed design
-  contracts.** The reference that tells the skill which contracts not to generate
-  named four. It now also names `exploration-brief.yaml`, `reference-pool.yaml`
-  and `brand-design.yaml`, so every contract the skill retired is listed beside
-  `DESIGN.md`, the only design contract. Part of #2951.
+- **The `qfai-sdd` normalization reference names root `DESIGN.md` as the only
+  design contract and no longer lists any other.** The section that listed the
+  retired design contract files is gone, and the `common-design-md` step no
+  longer points at it.
+
+- **The library entry drops modules the CLI never ran.** `qfai` no longer
+  exports `runBrowserQaOrchestrated`, `summarizeBrowserQaResult`,
+  `BROWSER_QA_PHASES`, `runRenderCapture`, `PROTOTYPING_SUPPORTED_SURFACES`,
+  `isValidPrototypingSurface`, `isSupportedPrototypingSurface` or the
+  `PrototypingSurface` type. The browser QA runner, the render capture runner
+  and the render evidence checks, the browser provider registry, the handoff
+  reader and writer, the observability metrics, the display and stub surface
+  detection, the traceability matrix builder, the artifact reference helpers,
+  the strategy decision helper, the manifest write guard and the ADR parser are
+  deleted, together with the audit profile wrapper over the design audit and
+  four validators nothing called. The `uiux.renderEvidence` setting of
+  `qfai.config.yaml`, which only the render capture runner read, is no longer
+  parsed. The message catalog drops
+  `QFAI-PROT-244`, `QFAI-PROT-251` to `QFAI-PROT-253` and `QFAI-PROT-273` to
+  `QFAI-PROT-276`, which only the deleted code could raise.
 
 - **`qfai validate` no longer reports old discussion sidecars.** For a UI-bearing
   pack it no longer raises `QFAI-THREELAYER-001` for a file under `uiux/` that an

@@ -1,7 +1,6 @@
 export * from "./config.js";
 export * from "./atddTraceability.js";
 export * from "./ids.js";
-export * from "./review/prototyping.js";
 export * from "./preflight/sddPreflight.js";
 export * from "./report.js";
 export * from "./types.js";
@@ -18,11 +17,6 @@ export {
   isNonUiDiscussionSurface,
   requiresVisualBrowserEvidence,
 } from "./detection/surfaceType.js";
-// Browser QA 4-phase orchestration
-export { runBrowserQaOrchestrated, summarizeBrowserQaResult } from "./browserQa/runner.js";
-export { BROWSER_QA_PHASES } from "./browserQa/types.js";
-// Render evidence runner (capture infra for the iteration loop).
-export { runRenderCapture } from "./evidence/renderRunner.js";
 // DESIGN.md brand SSOT primitives, exposed on the public `qfai` entry so
 // consumer projects can parse and check root `DESIGN.md` without reaching
 // into the monorepo source layout.

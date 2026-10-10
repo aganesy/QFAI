@@ -99,8 +99,7 @@ const BARREL_EXPORT_RE = /export\s*\{([^}]*)\}\s*from\s*["']([^"']+)["']/g;
  * been passing surfaced at once. They are pre-existing gaps, each out of scope
  * here:
  * - `validateTasteInterview`, `validateTrendScan`, `validateStrategyStrong` —
- *   UI-bearing checks absent from `runCanonicalUixValidators`, whose only
- *   caller is the test-only helper `uix/nonUiOverfire.ts`. Wiring them changes
+ *   UI-bearing checks absent from `runCanonicalUixValidators`. Wiring them changes
  *   what `qfai validate` reports, so it belongs to a UIX change, not here.
  */
 const KNOWN_UNWIRED_BARREL_EXPORTS: ReadonlySet<string> = new Set<string>([
@@ -219,15 +218,13 @@ function collectDocumentedValidatorNames(guardSource: string): Set<string> {
  */
 const PENDING_WIRING: ReadonlyMap<string, string> = new Map<string, string>([
   ["validateIntegrationSurface", "2026-08-22 — validators/integrationSurface.ts, see #670"],
-  ["validatePhaseOrdering", "2026-08-22 — validators/skill/phaseOrdering.ts, see #670"],
-  ["validateSidecarFlowOrdering", "2026-08-22 — validators/skill/sidecarFlowOrdering.ts, see #670"],
   [
     "validateCanonicalSidecarFamilyCompleteness",
     "2026-08-22 — validators/uix/threeLayer.ts, unused `export const` alias, see #670",
   ],
   [
     "validateOptionComparison",
-    "2026-08-22 — validators/uix/comparisonValidator.ts, `export { … as … }` alias reached only from the unwired uix/nonUiOverfire.ts, see #670",
+    "2026-08-22 — validators/uix/comparisonValidator.ts, `export { … as … }` alias nothing calls, see #670",
   ],
 ]);
 
@@ -359,11 +356,11 @@ async function resolveModule(fromFile: string, rel: string): Promise<string | un
  * transitive closure of relative import edges from `validate.ts`, plus — for
  * every barrel name a reached module actually calls — the module defining it.
  *
- * Membership in `src/**` is not enough. `uix/nonUiOverfire.ts` lives in `src/`
- * but nothing imports it; only `tests/validators/uix/nonUiOverfire.test.ts`
- * does. Counting its references as wiring let `validateTasteInterview`,
- * `validateTrendScan` and `validateStrategyStrong` read as live rules while
- * being absent from every production call path.
+ * Membership in `src/**` is not enough. `migration/specToStory/index.ts` lives
+ * in `src/` and the library entry exports it, but nothing `validate.ts` loads
+ * imports it. Counting its references as wiring would let a validator called
+ * only from there read as a live rule while being absent from every production
+ * call path.
  *
  * The barrel itself is never expanded: it re-exports every validator, wired or
  * not, so following its edges would make "listed in the barrel" mean
@@ -572,11 +569,9 @@ describe("meta-test: validators/index.ts lists only wired validators", () => {
 
     // A module validate.ts pulls in through the barrel, two hops down.
     expect(reachable.has(path.resolve(SRC_ROOT, "core/validators/uix/canonical.ts"))).toBe(true);
-    // A src/ helper whose only caller is a test. Its references must not count
+    // A src/ module only the library entry loads. Its references must not count
     // as wiring, or a validator dropped from the production graph goes unseen.
-    expect(reachable.has(path.resolve(SRC_ROOT, "core/validators/uix/nonUiOverfire.ts"))).toBe(
-      false,
-    );
+    expect(reachable.has(path.resolve(SRC_ROOT, "migration/specToStory/index.ts"))).toBe(false);
     expect(reachable.has(VALIDATORS_INDEX)).toBe(false);
   });
 

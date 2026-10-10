@@ -197,7 +197,7 @@ describe("BF-0003: diagnose and repair a QFAI workspace", () => {
     const root = await fixture();
     await writeFile(
       path.join(root, "qfai.config.yaml"),
-      "paths:\n  specsDir: docs/stories\nuiux:\n  renderEvidence:\n    failOpen: not-a-boolean\n",
+      "paths:\n  specsDir: docs/stories\nuiux:\n  surfacePaths: not-a-list\n",
       "utf8",
     );
     const invalidConfig = cli(root, "doctor", "--root", root, "--format", "json");

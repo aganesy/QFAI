@@ -50,7 +50,6 @@ const KNOWN_LOCAL_FACTORIES: readonly string[] = [
   "competitiveIssue",
   "contractIssue",
   "finding",
-  "makeIssue",
   "skillIssue",
   "threeLayerIssue",
   "trendIssue",
