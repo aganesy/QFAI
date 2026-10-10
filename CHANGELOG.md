@@ -331,6 +331,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A diagnosed missing example reuses an existing rule for its obligation.**
+  Equivalent rules use existing example coverage and stable rule IDs to settle
+  the owner. Different or uncertain behaviour returns to specification work;
+  the choice and its reason appear in the final report.
+
 - Clarify that the research agent reads the cache TTL extension in the project config; the CLI does not parse it.
 
 - Clarify that story ID candidates are snapshots and require a fresh collision

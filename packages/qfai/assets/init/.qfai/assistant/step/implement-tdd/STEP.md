@@ -92,18 +92,31 @@ makes the failing test pass: the case a `missing-test` diagnosis found, or the
 behaviour a reverted change broke. The EX states what an existing AC already
 requires, so the step asks the user nothing:
 
+- Before appending the EX, select from existing contract rules that cite
+  examples of the matched AC and actually state the diagnosed expected
+  obligation. Prefer the existing owner when it qualifies; otherwise use the
+  sole qualifying rule.
+- When several qualify, choose only among rules proven equivalent in
+  conditions, outcomes, exceptions and authority. Prefer the one citing the
+  most distinct existing EXs of that AC, excluding the new EX; break a tie by
+  ascending BR ID order. Never let a majority choose different expected
+  behaviour.
+  If no rule qualifies, behaviour differs, equivalence is uncertain or an
+  obligation contradicts another, stop dependent work and route it to the
+  owning `/qfai-sdd` under `.qfai/assistant/rule/drift-protocol.md` before
+  changing any AC or EX. Add no rule and change no rule statement to resolve
+  the choice.
 - Append exactly one EX to the `03_Example.md` of the story that owns the AC
   the diagnosis matched. Its ID is the next free EX ID of that story, its
   `AC-Ref` is that AC, and the diagnosis is its reason.
-- Add the new EX ID to the Examples cell of the contract rule the diagnosis
-  names as owning that AC. The rule's Statement is unchanged. Where the
-  diagnosis names no single rule, because several rules cite examples of that
-  AC, stop and ask the user which one; never pick one.
+- Add the new EX ID to the selected rule's Examples cell. Its Statement is
+  unchanged. This choice of equivalent rules asks no extra question.
 - Change no story, AC, rule statement or existing EX.
 - Append no `decisions.md` row: the drift gate needs no `Change request:` row
   for appended example rows and the new EX ID in the citing rule's Examples
   cell.
-- List the EX in the run's final report.
+- List the EX, chosen BR and the reason for choosing it in the run's final
+  report.
 - No concrete-abstract cycle runs.
 
 An EX that would contradict a story, an AC, another EX or a rule is put to the
