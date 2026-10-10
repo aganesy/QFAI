@@ -338,6 +338,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Clarify how to report host-blocked temporary-file cleanup, hand off allowed
+  manual steps and verify removal without claiming pending cleanup is complete.
+
 - **Question-only work checks authority before repairing tracked files.**
   Existing permission for the same target is reused. Otherwise the agent offers
   repair or a report-only stop; an uncovered no-question run reports and stops
