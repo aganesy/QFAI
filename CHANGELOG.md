@@ -336,6 +336,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Clarify how to report host-blocked temporary-file cleanup, hand off allowed
+  manual steps and verify removal without claiming pending cleanup is complete.
+
 - Verify steps reject validation errors even when a custom Validate wrapper succeeds.
 - Clarify that the research agent reads the cache TTL extension in the project config; the CLI does not parse it.
 
