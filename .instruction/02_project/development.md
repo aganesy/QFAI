@@ -14,6 +14,37 @@ version: 1.0.0
 
 ## Setup
 
+On Windows, run the lint lanes from Git Bash. `ci:lint` and
+`ci:gate:lint` invoke Bash, so Node.js and the pinned pnpm must be available
+in that shell. Running those lanes from PowerShell also requires Git for
+Windows' Bash directory on the PATH inherited by Node.
+
+Root scripts start `pnpm` subprocesses. Keep a pnpm shim on their inherited
+PATH even when starting a script with `corepack pnpm`. If Corepack is installed
+but pnpm has no shim on PATH, create one in a directory your account owns.
+In PowerShell:
+
+```powershell
+$pnpmShimDir = Join-Path $env:LOCALAPPDATA "qfai-pnpm"
+New-Item -ItemType Directory -Path $pnpmShimDir -Force | Out-Null
+corepack.cmd enable --install-directory $pnpmShimDir pnpm
+$env:PATH = "$pnpmShimDir;$env:PATH"
+```
+
+In Git Bash, add the same directory before running the setup sequence:
+
+```bash
+export PATH="$(cygpath -u "$LOCALAPPDATA")/qfai-pnpm:$PATH"
+```
+
+These PATH changes apply to the current shells. Add the shim directory to your
+user PATH and reopen terminals to reuse it. Corepack writes the shims to that
+directory, without changing the Node.js installation directory. The lint helper
+already creates temporary shims when Bash can find Corepack; that fallback
+does not supply pnpm to other root scripts.
+
+Run the setup sequence below from the repository root:
+
 ```
 pnpm install
 pnpm build
@@ -45,31 +76,31 @@ pnpm verify:pack
 
 Vitest project names describe runner groups. QFAI classifies coverage from
 paths, so the runner group alone does not establish a test's layer.
-The current directories below are relative to `packages/qfai/`.
+The current directories below are relative to the repository root.
 
-| Directory           | Vitest project | QFAI kind     |
-| ------------------- | -------------- | ------------- |
-| `tests/e2e`         | `e2e`          | `e2e`         |
-| `tests/assets`      | `e2e`          | Unclassified  |
-| `tests/integration` | `integration`  | `integration` |
-| `tests/detection`   | `integration`  | Unclassified  |
-| `tests/skill`       | `integration`  | Unclassified  |
-| `tests/codex`       | `integration`  | Unclassified  |
-| `tests/core`        | `core`         | Unclassified  |
-| `tests/unit`        | `unit`         | Unclassified  |
-| `tests/validators`  | `validators`   | Unclassified  |
-| `tests/cli`         | `cli`          | Unclassified  |
-| `tests/scripts`     | `scripts`      | Unclassified  |
+| Directory                         | Vitest project | QFAI kind     |
+| --------------------------------- | -------------- | ------------- |
+| `packages/qfai/tests/e2e`         | `e2e`          | `e2e`         |
+| `packages/qfai/tests/assets`      | `e2e`          | Unclassified  |
+| `packages/qfai/tests/integration` | `integration`  | `integration` |
+| `packages/qfai/tests/detection`   | `integration`  | Unclassified  |
+| `packages/qfai/tests/skill`       | `integration`  | Unclassified  |
+| `packages/qfai/tests/codex`       | `integration`  | Unclassified  |
+| `packages/qfai/tests/core`        | `core`         | Unclassified  |
+| `packages/qfai/tests/unit`        | `unit`         | Unclassified  |
+| `packages/qfai/tests/validators`  | `validators`   | Unclassified  |
+| `packages/qfai/tests/cli`         | `cli`          | Unclassified  |
+| `packages/qfai/tests/scripts`     | `scripts`      | Unclassified  |
 
 For the directories listed here, QFAI recognizes `e2e`, `integration` or
 `api` immediately under `tests`. Unclassified paths have kind `null`; this does not assign
-a unit or component layer. `tests/api` would have kind `api`, but no current
+a unit or component layer. An `api` directory immediately under `tests` would have kind `api`, but no current
 Vitest project includes that directory.
 
 The [test-layers policy][test-policy] defines the coverage obligations.
 BF coverage counts in QFAI's `e2e` kind; AC coverage counts in `integration`
 or `api`. EX coverage can count in selected tests outside QFAI's `e2e` kind,
-including paths with kind `null`. Thus `tests/assets` can count EX coverage
+including paths with kind `null`. Thus `packages/qfai/tests/assets` can count EX coverage
 even though its Vitest project is named `e2e`.
 
 [Project configuration][test-selection] selects `.test.ts` and `.spec.ts`
