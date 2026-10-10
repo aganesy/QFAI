@@ -1,6 +1,16 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { cp, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import {
+  cp,
+  link,
+  lstat,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -695,6 +705,53 @@ async function expectPreflightRefusal(
 }
 
 describe("branch catch-up acceptance", () => {
+  it("refuses a hardlinked pin output before fetch and preserves its outside alias", async () => {
+    await withCatchup(async (fixture) => {
+      await commitChanges(fixture.root, {
+        [CATCHUP_OUTPUTS[3]]: "# manifests\n" + "e".repeat(64) + "  package.json\n",
+      });
+      await advanceOrigin(fixture, {
+        "package.json":
+          JSON.stringify({
+            name: "fixture",
+            private: true,
+            type: "module",
+            scripts: { prepare: "node scripts/example.mjs" },
+          }) + "\n",
+      });
+      const output = path.join(fixture.root, CATCHUP_OUTPUTS[3]);
+      const outside = path.join(fixture.sandbox, "outside-lifecycle.txt");
+      await link(output, outside);
+      const [outputStat, outsideStat] = await Promise.all([lstat(output), lstat(outside)]);
+      expect(outputStat.isFile()).toBe(true);
+      expect(outputStat.nlink).toBe(2);
+      expect([outsideStat.dev, outsideStat.ino]).toEqual([outputStat.dev, outputStat.ino]);
+      const before = fixtureState(fixture.root);
+      const original = await readFile(output);
+      const remote = nativeGit(fixture.sandbox, ["--git-dir", fixture.origin, "show-ref"]).stdout;
+      expect(existsSync(path.join(fixture.root, ".git/FETCH_HEAD"))).toBe(false);
+      const run = invokeCatchup(fixture, [], await catchupPreload(fixture));
+      expect(run.status, run.output).toBe(1);
+      expect(run.output).toMatch(/hard.?link/i);
+      expect(run.output).toContain(CATCHUP_OUTPUTS[3]);
+      expect(fixtureState(fixture.root)).toEqual(before);
+      expect((await readFile(output)).equals(original)).toBe(true);
+      expect((await readFile(outside)).equals(original)).toBe(true);
+      expect(nativeGit(fixture.sandbox, ["--git-dir", fixture.origin, "show-ref"]).stdout).toBe(
+        remote,
+      );
+      expect(existsSync(path.join(fixture.root, ".git/FETCH_HEAD"))).toBe(false);
+      expect(writerRecords(fixture.root)).toEqual([]);
+      expect(
+        commandRecords(fixture.root).filter(
+          ({ program, args }) =>
+            program !== "git" ||
+            ["fetch", "merge", "add", "commit", "push", "reset", "rebase"].includes(args[0] ?? ""),
+        ),
+      ).toEqual([]);
+    });
+  });
+
   // QFAI:AC-0002-0025-01
   // QFAI:AC-0002-0025-02
   // QFAI:AC-0002-0025-04
@@ -899,14 +956,15 @@ describe("branch catch-up acceptance", () => {
     await withCatchup(async (fixture) => {
       const first = (text: string): string => text.replace("common first", "topic first");
       const last = (text: string): string => text.replace("common last", "default last");
+      // Declaration sides share every JSON value apart from the known digest maps.
       await commitChanges(fixture.root, {
         [CATCHUP_OUTPUTS[0]]: first(pinText("a")),
-        [CATCHUP_OUTPUTS[1]]: first(declarationText("a")),
+        [CATCHUP_OUTPUTS[1]]: first(last(declarationText("a"))),
         [CATCHUP_OUTPUTS[2]]: first(workflowText("a")),
       });
       await advanceOrigin(fixture, {
         [CATCHUP_OUTPUTS[0]]: last(pinText("b")),
-        [CATCHUP_OUTPUTS[1]]: last(declarationText("b")),
+        [CATCHUP_OUTPUTS[1]]: first(last(declarationText("b"))),
         [CATCHUP_OUTPUTS[2]]: last(workflowText("b")),
       });
       const run = invokeCatchup(fixture);

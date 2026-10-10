@@ -61,6 +61,7 @@ function regularText(relative) {
     const stats = lstatSync(current);
     if (stats.isSymbolicLink()) refuse(`${relative} has a linked path component.`);
   }
+  if (lstatSync(current).nlink !== 1) refuse(`${relative} must have exactly one hard link.`);
   const value = readBoundedText(current, MAX_BYTES);
   if (value === undefined || value.includes("\uFFFD") || value.includes("\0")) {
     refuse(`${relative} is not readable bounded text.`);
@@ -208,17 +209,17 @@ function conflictCandidates(source) {
 }
 
 function listShape(source) {
-  const paths = [];
+  const paths = new Set();
   const lines = source.match(/[^\n]*(?:\n|$)/g)?.filter((line) => line !== "") ?? [];
   const normalized = lines.map((line) => {
     if (/^\r?\n$/.test(line) || line.startsWith("#")) return line;
     const match = /^([0-9a-f]{64}) {2}([^\r\n]+)(?:\r?\n)?$/.exec(line);
-    if (match === null || paths.includes(match[2])) refuse("Malformed pinned-byte list.");
-    paths.push(match[2]);
+    if (match === null || paths.has(match[2])) refuse("Malformed pinned-byte list.");
+    paths.add(match[2]);
     return "0".repeat(64) + line.slice(64);
   });
-  if (paths.length === 0) refuse("The pinned-byte list is empty.");
-  return { paths, normalized: normalized.join("") };
+  if (paths.size === 0) refuse("The pinned-byte list is empty.");
+  return { paths: [...paths], normalized: normalized.join("") };
 }
 
 function canonicalJson(source) {
@@ -340,9 +341,18 @@ function resolutions(observation) {
   for (const [relative, pair] of candidates) {
     let shapes;
     if (relative === OUTPUTS[0]) shapes = lists.map((list) => list.normalized);
-    else if (relative === OUTPUTS[1])
+    else if (relative === OUTPUTS[1]) {
+      // Git may merge semantic edits outside the remaining digest conflicts.
+      const versions = [2, 3].map((stage) => {
+        const source = git(["show", `:${stage}:${relative}`]).stdout.toString("utf-8");
+        if (source.includes("\uFFFD") || source.includes("\0"))
+          refuse(`${relative} has an unreadable merge side.`);
+        return declarationShape(source, lists[0].paths);
+      });
+      if (versions[0] !== versions[1])
+        refuse(`Non-digest conflict requires manual resolution: ${relative}`);
       shapes = pair.map((source) => declarationShape(source, lists[0].paths));
-    else shapes = pair.map(workflowShape);
+    } else shapes = pair.map(workflowShape);
     if (shapes[0] !== shapes[1])
       refuse(`Non-digest conflict requires manual resolution: ${relative}`);
   }
