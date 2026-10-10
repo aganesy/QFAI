@@ -264,7 +264,6 @@ describe("qfai init connects a pre-existing agent entry point to the rule master
           : pointer;
       const files = [
         "AGENTS.md",
-        "CLAUDE.md",
         ".github/copilot-instructions.md",
         ".github/instructions/code-review.instructions.md",
       ];
@@ -295,7 +294,7 @@ describe("qfai init connects a pre-existing agent entry point to the rule master
     });
   });
 
-  it("appends the managed section to an AGENTS.md / CLAUDE.md it did not create", async () => {
+  it("appends the managed section to an AGENTS.md it did not create", async () => {
     await withProject(async (root) => {
       for (const name of AGENT_ENTRY_POINT_FILES) {
         await writeFile(path.join(root, name), PROJECT_TEXT, "utf-8");
@@ -356,21 +355,21 @@ describe("qfai init connects a pre-existing agent entry point to the rule master
   it("keeps manual rule wiring when adding review guidance", async () => {
     await withProject(async (root) => {
       const masters = citedRuleMasters(
-        extractManagedRulesSection(await readTemplate("CLAUDE.md")) ?? "",
+        extractManagedRulesSection(await readTemplate("AGENTS.md")) ?? "",
       );
       const handWired = [
-        "# Claude Code",
+        "# Our agents",
         "",
         "Read these before acting:",
         "",
         ...masters.map((master) => `- \`${master}\``),
         "",
       ].join("\n");
-      await writeFile(path.join(root, "CLAUDE.md"), handWired, "utf-8");
+      await writeFile(path.join(root, "AGENTS.md"), handWired, "utf-8");
 
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      expect(await readEntryPoint(root, "CLAUDE.md")).toBe(`${REVIEW_DIRECTIVE_BLOCK}${handWired}`);
+      expect(await readEntryPoint(root, "AGENTS.md")).toBe(`${REVIEW_DIRECTIVE_BLOCK}${handWired}`);
     });
   });
 

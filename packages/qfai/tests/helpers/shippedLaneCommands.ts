@@ -1279,7 +1279,6 @@ export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
   ".gitattributes",
   ".gitignore",
   "AGENTS.md",
-  "CLAUDE.md",
   "qfai.config.yaml",
 ]);
 
@@ -1406,10 +1405,6 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   [
     "AGENTS.md",
     fileDigest(readFileSync(new URL("../fixtures/shipped-entry/agents.txt", import.meta.url))),
-  ],
-  [
-    "CLAUDE.md",
-    fileDigest(readFileSync(new URL("../fixtures/shipped-entry/claude.txt", import.meta.url))),
   ],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
@@ -1725,7 +1720,6 @@ export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
   "root/.github/workflows/qfai-tests.yml",
   "root/.github/workflows/qfai-validate.yml",
   "root/AGENTS.md",
-  "root/CLAUDE.md",
   "root/qfai.config.yaml",
   ".claude/settings.json",
   ".codex/hooks.json",

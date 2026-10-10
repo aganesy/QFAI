@@ -42,6 +42,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`qfai init` writes `AGENTS.md` only, and each rule it lists says when to read it.** The
+  managed section of `AGENTS.md` and the generated Copilot instructions now give every rule one
+  line that names the work it applies to, so an agent reads a rule when it matters and not before.
+  `qfai init` no longer writes `CLAUDE.md`: Claude Code reads `AGENTS.md` when the project has no
+  `CLAUDE.md` (Claude Code v2.1.277 or later; v2.1.281 or later in every session type), and
+  `CLAUDE.md` is also read in its place when it exists. **Migration:** a project whose
+  `CLAUDE.md` carries the old managed section keeps it and is not updated; to use `AGENTS.md`
+  alone, delete `CLAUDE.md`, or reduce it to a line `@AGENTS.md` plus any Claude-only notes.
+  A personal `CLAUDE.local.md` also hides `AGENTS.md`.
+
 - Resolve the optional Playwright dependency to 1.64.0 while keeping its existing supported version range.
 
 - **The writing rule removes unnecessary sentences without requiring needless rewrites.**

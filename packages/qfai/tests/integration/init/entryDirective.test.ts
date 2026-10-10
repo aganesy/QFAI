@@ -1,5 +1,5 @@
 /**
- * Integration: init writes no line into `AGENTS.md` or `CLAUDE.md` that sends a request to
+ * Integration: init writes no line into `AGENTS.md` that sends a request to
  * `qfai-run`, whether it seeds the file or edits one the project owns, and keeps a line an earlier
  * init wrote as written, without removing or editing it. The review directive is the only line init still prepends.
  */
@@ -11,7 +11,7 @@ import { describe, expect, it } from "vitest";
 
 import { initQuietly, withEmptyRepo } from "./upgradeStates.js";
 
-const ENTRY_POINTS = ["AGENTS.md", "CLAUDE.md"];
+const ENTRY_POINTS = ["AGENTS.md"];
 const COPILOT = ".github/copilot-instructions.md";
 const PROJECT_TEXT = "# Project rules\n\nKeep every original byte.\n";
 // The line that earlier releases seeded, kept as they wrote it.
@@ -43,7 +43,7 @@ async function entryPointsAfterInit(root: string, text: string): Promise<string[
 // QFAI:EX-0001-0196-08
 // QFAI:EX-0001-0196-09
 describe("the entry line", () => {
-  it("Fresh init: no line naming qfai-run in AGENTS.md, CLAUDE.md or Copilot", async () => {
+  it("Fresh init: no line naming qfai-run in AGENTS.md or Copilot", async () => {
     await withEmptyRepo(async (root) => {
       await initQuietly(root);
       for (const name of [...ENTRY_POINTS, COPILOT]) {

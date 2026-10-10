@@ -1256,7 +1256,6 @@ describe("qfai init", () => {
       const entryPoints = [
         path.join(root, ".github", "copilot-instructions.md"),
         path.join(root, "AGENTS.md"),
-        path.join(root, "CLAUDE.md"),
       ];
       // ... plus the whole instruction surface they hand the agent:
       // constitution, catalog contracts, skills and their references.
@@ -1830,7 +1829,6 @@ describe("qfai init", () => {
         path.join(root, ".qfai", "assistant", "agent", "delivery-planner.md"),
         path.join(root, ".github", "copilot-instructions.md"),
         path.join(root, "AGENTS.md"),
-        path.join(root, "CLAUDE.md"),
       ];
 
       for (const filePath of expectedRegularFiles) {

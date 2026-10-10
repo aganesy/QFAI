@@ -248,8 +248,8 @@ describe("distributed surface leakage smoke", () => {
     await captureStdout(() => runInit({ dir: tmpDir, force: false, dryRun: false, yes: true }));
 
     // Every entry point an agent loads on its own: Codex reads `AGENTS.md`,
-    // Claude Code reads `CLAUDE.md`, Copilot reads its instructions file.
-    const citingFiles = ["AGENTS.md", "CLAUDE.md", ".github/copilot-instructions.md"];
+    // Claude Code reads `AGENTS.md` too, and Copilot reads its instructions file.
+    const citingFiles = ["AGENTS.md", ".github/copilot-instructions.md"];
     const missing: string[] = [];
 
     for (const citing of citingFiles) {

@@ -584,7 +584,6 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         "AGENTS.md",
         ".github/copilot-instructions.md",
         "packages/qfai/assets/init/root/AGENTS.md",
-        "packages/qfai/assets/init/root/CLAUDE.md",
       ];
       const enumerates = /issue or pull request numbers/;
       const contradicting: string[] = [];
@@ -611,7 +610,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     it.each(
       [
         ["AGENTS.md", ".github/copilot-instructions.md"],
-        ["packages/qfai/assets/init/root/AGENTS.md", "packages/qfai/assets/init/root/CLAUDE.md"],
+        ["packages/qfai/assets/init/root/AGENTS.md"],
       ].flat(),
     )("%s cites the rule master", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
@@ -717,7 +716,6 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       "AGENTS.md",
       ".github/copilot-instructions.md",
       "packages/qfai/assets/init/root/AGENTS.md",
-      "packages/qfai/assets/init/root/CLAUDE.md",
       // The list `qfai init` appends to a project that already has an entry
       // point. A project with its own `AGENTS.md` keeps it, so this is the only
       // rule list that population ever sees.
@@ -806,7 +804,6 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       "AGENTS.md",
       ".github/copilot-instructions.md",
       "packages/qfai/assets/init/root/AGENTS.md",
-      "packages/qfai/assets/init/root/CLAUDE.md",
       // The list `qfai init` appends to a project that already has an entry
       // point, and the only rule list a populated project ever sees.
       "packages/qfai/src/cli/commands/init.ts",
@@ -1015,7 +1012,6 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       "AGENTS.md",
       ".github/copilot-instructions.md",
       "packages/qfai/assets/init/root/AGENTS.md",
-      "packages/qfai/assets/init/root/CLAUDE.md",
       "packages/qfai/src/cli/commands/init.ts",
     ])("%s cites the rule master", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
@@ -1030,11 +1026,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     });
 
     // QFAI:EX-0001-0196-57
-    it.each([
-      "packages/qfai/assets/init/root/AGENTS.md",
-      "packages/qfai/assets/init/root/CLAUDE.md",
-      "packages/qfai/src/cli/commands/init.ts",
-    ])(
+    it.each(["packages/qfai/assets/init/root/AGENTS.md", "packages/qfai/src/cli/commands/init.ts"])(
       "%s summarizes the required-answer boundary without forcing report questions",
       async (rel) => {
         const text = (await readFile(path.join(ROOT, rel), "utf-8")).replace(/\s+/g, " ");
@@ -1306,7 +1298,6 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       "AGENTS.md",
       ".github/copilot-instructions.md",
       "packages/qfai/assets/init/root/AGENTS.md",
-      "packages/qfai/assets/init/root/CLAUDE.md",
       // The list `qfai init` appends to a project that already has an entry
       // point. A project with its own `AGENTS.md` keeps it, so this is the only
       // rule list that population ever sees.
@@ -1381,7 +1372,6 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       "AGENTS.md",
       ".github/copilot-instructions.md",
       "packages/qfai/assets/init/root/AGENTS.md",
-      "packages/qfai/assets/init/root/CLAUDE.md",
       // The list `qfai init` appends to a project that already has an entry
       // point, and the only rule list a populated project ever sees.
       "packages/qfai/src/cli/commands/init.ts",
@@ -1448,7 +1438,6 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       "AGENTS.md",
       ".github/copilot-instructions.md",
       "packages/qfai/assets/init/root/AGENTS.md",
-      "packages/qfai/assets/init/root/CLAUDE.md",
       // The list `qfai init` appends to a project that already has an entry
       // point, and the only rule list a populated project ever sees.
       "packages/qfai/src/cli/commands/init.ts",
@@ -1526,7 +1515,6 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       "AGENTS.md",
       ".github/copilot-instructions.md",
       "packages/qfai/assets/init/root/AGENTS.md",
-      "packages/qfai/assets/init/root/CLAUDE.md",
       // The list `qfai init` appends to a project that already has an entry
       // point, and the only rule list a populated project ever sees.
       "packages/qfai/src/cli/commands/init.ts",
@@ -1585,7 +1573,6 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       "AGENTS.md",
       ".github/copilot-instructions.md",
       "packages/qfai/assets/init/root/AGENTS.md",
-      "packages/qfai/assets/init/root/CLAUDE.md",
       "packages/qfai/src/cli/commands/init.ts",
     ])("%s cites the rule master", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
@@ -1644,7 +1631,6 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       "AGENTS.md",
       ".github/copilot-instructions.md",
       "packages/qfai/assets/init/root/AGENTS.md",
-      "packages/qfai/assets/init/root/CLAUDE.md",
       "packages/qfai/src/cli/commands/init.ts",
       // The reviewer that reads a pull request's description, shipped and in this repository.
       "packages/qfai/assets/init/.github/instructions/code-review.instructions.md",
@@ -1724,7 +1710,6 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       "AGENTS.md",
       ".github/copilot-instructions.md",
       "packages/qfai/assets/init/root/AGENTS.md",
-      "packages/qfai/assets/init/root/CLAUDE.md",
       "packages/qfai/src/cli/commands/init.ts",
     ])("%s cites the rule master", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
@@ -1761,7 +1746,7 @@ describe("the question shape has one owner", () => {
 
   // Every shipped surface that summarises the rule uses the same criterion, so
   // an adopter is not told to enumerate a domain nobody can read.
-  it.each(["packages/qfai/assets/init/root/AGENTS.md", "packages/qfai/assets/init/root/CLAUDE.md"])(
+  it.each(["packages/qfai/assets/init/root/AGENTS.md"])(
     "%s summarises it by what can be listed",
     async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");

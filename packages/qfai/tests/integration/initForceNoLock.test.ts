@@ -63,7 +63,6 @@ describe("init --force overwrites the regenerated assets", () => {
     for (const file of [
       "qfai.config.yaml",
       "AGENTS.md",
-      "CLAUDE.md",
       ".qfai/spec/decisions.md",
       ".qfai/spec/03_contract/tech.md",
     ]) {
