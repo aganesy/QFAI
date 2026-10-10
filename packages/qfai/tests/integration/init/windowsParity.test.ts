@@ -8,6 +8,7 @@ import {
   cp,
   lstat,
   mkdir,
+  mkdtemp,
   rm,
   readdir,
   readFile,
@@ -18,6 +19,8 @@ import {
   writeFile,
 } from "node:fs/promises";
 import path from "node:path";
+import os from "node:os";
+import { createRequire } from "node:module";
 import { randomUUID } from "node:crypto";
 import { promisify } from "node:util";
 
@@ -28,6 +31,12 @@ import { assertBuiltCliFresh } from "../../helpers/builtCli.js";
 import { validateIntegrationSurface } from "../../../src/core/validators/integrationSurface.js";
 import { getInitAssetsDir } from "../../../src/shared/assets.js";
 import { coldValidationCli } from "../../helpers/validationInputManifest.js";
+import {
+  runControlledProfile,
+  saveProfileArtifact,
+  type ControlledProfileResult,
+} from "../../helpers/controlledProfile.js";
+import { DECLARED_TEST_TIMEOUT } from "../../../vitest.knobs.js";
 
 const CLI = path.resolve(import.meta.dirname, "../../../dist/cli/index.mjs");
 assertBuiltCliFresh(CLI);
@@ -320,6 +329,10 @@ describe("validation profiling child failures", () => {
       );
       let owned: { pid: number; token: string } | undefined;
       const running = coldValidationCli(cli, root, 5_000);
+      let failure: unknown;
+      let failed = false;
+      let cleanupFailure: unknown;
+      let cleanupFailed = false;
       try {
         owned = JSON.parse(await waitForProfileFixture(ready)) as { pid: number; token: string };
         expect(owned.token).toBe(token);
@@ -329,17 +342,74 @@ describe("validation profiling child failures", () => {
         await rm(marker, { force: true });
         await new Promise<void>((resolve) => setTimeout(resolve, 300));
         await expect(readFile(marker, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+      } catch (error: unknown) {
+        failure = error;
+        failed = true;
       } finally {
         await running;
         if (owned !== undefined && owned.token === token) {
           try {
             process.kill(owned.pid, "SIGKILL");
           } catch (error: unknown) {
-            if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error;
+            if ((error as NodeJS.ErrnoException).code !== "ESRCH") {
+              cleanupFailure = error;
+              cleanupFailed = true;
+            }
           }
         }
         await rm(marker, { force: true });
       }
+      if (failed && cleanupFailed)
+        throw new AggregateError(
+          [failure, cleanupFailure],
+          "Profiling and owned fixture cleanup both failed",
+        );
+      if (cleanupFailed) throw cleanupFailure;
+      if (failed) throw failure;
+    });
+  });
+});
+
+describe("full validation profiling", () => {
+  it("bounds real full validation and retains its input, timing and failure evidence", async () => {
+    const control = await mkdtemp(path.join(os.tmpdir(), "qfai-validation-profile-"));
+    const checkpoint = path.join(control, "checkpoint.json");
+    const packageRoot = path.resolve(import.meta.dirname, "../../..");
+    const runner = path.join(
+      path.dirname(createRequire(import.meta.url).resolve("vitest/package.json")),
+      "vitest.mjs",
+    );
+    const config = path.resolve(
+      import.meta.dirname,
+      "../../helpers/validationProfileWorker.config.ts",
+    );
+    let result: ControlledProfileResult | undefined;
+    try {
+      // Leave time within the inherited budget for owned-tree cleanup and artifact recording.
+      result = await runControlledProfile(process.execPath, [runner, "run", "--config", config], {
+        cwd: packageRoot,
+        env: { ...process.env, QFAI_VALIDATION_PROFILE_CHECKPOINT: checkpoint },
+        timeoutMs: DECLARED_TEST_TIMEOUT - 15_000,
+      });
+    } finally {
+      if (result !== undefined) {
+        const file = await saveProfileArtifact(
+          process.env.QFAI_VALIDATION_PROFILE_ARTIFACT_DIR ?? control,
+          result,
+          checkpoint,
+        );
+        process.stdout.write(`Validation profile artifact: ${file}\n`);
+      }
+    }
+    expect(result.closed, result.stderr).toBe(true);
+    expect(result.timedOut, result.stderr).toBe(false);
+    expect(result.error, result.stderr).toBeNull();
+    expect(result.terminationErrors, result.stderr).toEqual([]);
+    expect(result.signal, result.stderr).toBeNull();
+    expect(result.code, result.stderr).toBe(0);
+    expect(JSON.parse(await readFile(checkpoint, "utf8")) as unknown).toMatchObject({
+      phase: "complete",
+      spiesRestored: true,
     });
   });
 });

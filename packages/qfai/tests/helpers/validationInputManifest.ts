@@ -6,6 +6,8 @@ import { promisify } from "node:util";
 
 import fg from "fast-glob";
 
+import { runControlledProfile } from "./controlledProfile.js";
+
 import { loadConfig, resolvePath } from "../../src/core/config.js";
 import { collectFilesByGlobs } from "../../src/core/fs.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS, normalizeGlobs } from "../../src/core/traceability.js";
@@ -163,35 +165,17 @@ export async function validationInputManifest(root: string) {
   };
 }
 
-/** One fresh Node process, including bundle startup, validation, and report I/O. */
-export async function coldValidationCli(cli: string, root: string, timeout: number) {
-  const startedAt = Date.now();
-  const started = performance.now();
-  return await new Promise<{
-    startedAt: number;
-    wallMs: number;
-    code: number | null;
-    signal: unknown;
-    stdout: string;
-    stderr: string;
-    error: { name: string; message: string } | null;
-  }>((resolve) => {
-    execFileCallback(
-      process.execPath,
-      [cli, "validate", "--profile", "full", "--fail-on", "error", "--format", "json"],
-      { cwd: root, encoding: "utf8", timeout, maxBuffer: 16 * 1024 * 1024 },
-      (error, stdout, stderr) => {
-        const bag: Record<string, unknown> = error === null ? {} : { ...error };
-        resolve({
-          startedAt,
-          wallMs: performance.now() - started,
-          code: error === null ? 0 : typeof bag.code === "number" ? bag.code : null,
-          signal: bag.signal ?? null,
-          stdout,
-          stderr,
-          error: error === null ? null : { name: error.name, message: error.message },
-        });
-      },
-    );
-  });
+/** One fresh process; the controller owns and bounds its complete process tree. */
+export async function coldValidationCli(
+  cli: string,
+  root: string,
+  timeout: number,
+  ownGroup = true,
+) {
+  const result = await runControlledProfile(
+    process.execPath,
+    [cli, "validate", "--profile", "full", "--fail-on", "error", "--format", "json"],
+    { cwd: root, timeoutMs: timeout, ownGroup },
+  );
+  return { ...result, actualCode: result.code, code: result.timedOut ? null : result.code };
 }

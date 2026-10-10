@@ -414,9 +414,9 @@
         "Run lint gate": "7cd28c426d2b7309",
         "Run type check": "51c5eeee942920dc",
         "Run future TypeScript compatibility check": "55db3b7f97fd7fad",
-        "Run the package test suite on the floor (${{ matrix.slice }})": "cdce2fa04dd9f130",
-        "Run tests (${{ matrix.slice }})": "cdce2fa04dd9f130",
-        "Run the Windows parity suites": "ad3695a5821b00cb"
+        "Run the package test suite on the floor (${{ matrix.slice }})": "a931991b300a31e2",
+        "Run tests (${{ matrix.slice }})": "a931991b300a31e2",
+        "Run the Windows parity suites": "e9a048160a0b1d29"
       },
       "verificationBodiesNote": [
         "A digest of each verification step's `run` / `uses` / `with` / `env`, and of the package",

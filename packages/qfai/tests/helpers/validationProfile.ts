@@ -63,6 +63,7 @@ import * as fileScan from "../../src/core/fs.js";
 
 export type ValidatorMeasurement = {
   name: string;
+  capture: "observed" | "uncaptured";
   invokedCalls: number;
   recordedCalls: number;
   inclusiveMs: number;
@@ -73,6 +74,7 @@ export type ValidatorMeasurement = {
 /**
  * Spies forward the exact arguments and results to the original functions.
  * Parallel and nested boundaries overlap; never sum their inclusive times.
+ * Zero calls are uncaptured: internal or saved imported references can bypass spies.
  * Same-module calls remain inside their caller's time. Finer attribution needs
  * a CPU profile after these measurements identify a costly boundary.
  */
@@ -92,6 +94,7 @@ export function measureValidators() {
     restores.push(() => spy.mockRestore());
     readers.push(() => ({
       name,
+      capture: spy.mock.calls.length > 0 ? "observed" : "uncaptured",
       invokedCalls: spy.mock.calls.length,
       recordedCalls: histogram.count,
       inclusiveMs: histogram.count === 0 ? 0 : (histogram.mean * histogram.count) / 1e6,

@@ -336,6 +336,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Keep validation profiling inside an owned, bounded child process and retain
+  measurements or failure evidence from Linux and Windows CI.
+
 - Verify steps reject validation errors even when a custom Validate wrapper succeeds.
 - Clarify that the research agent reads the cache TTL extension in the project config; the CLI does not parse it.
 
