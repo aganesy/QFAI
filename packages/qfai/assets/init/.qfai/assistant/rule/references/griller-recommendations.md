@@ -6,11 +6,11 @@ Read when a griller's recommendation is used.
 
 A grilling session puts a recommended answer beside each question (`.agents/rules/grilling.md`). Who settled the decision decides what happens next.
 
-| The decision was settled                              | What follows                                                                      |
-| ----------------------------------------------------- | --------------------------------------------------------------------------------- |
-| By the user, from the recommendation among the inputs | The decision is theirs. The griller may review the artifact                       |
-| Agent to agent, non-critical or with recorded applicable human authority | The decision stands. The griller that recommended it does not review the artifact |
-| Agent to agent, critical, without an actual user answer or recorded applicable authority | The artifact is wrong, and no reviewer can clear it |
+| The decision was settled                                                                 | What follows                                                                      |
+| ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| By the user, from the recommendation among the inputs                                    | The decision is theirs. The griller may review the artifact                       |
+| Agent to agent, non-critical or with recorded applicable human authority                 | The decision stands. The griller that recommended it does not review the artifact |
+| Agent to agent, critical, without an actual user answer or recorded applicable authority | The artifact is wrong, and no reviewer can clear it                               |
 
 **The second row is how a delegated session is meant to end**
 (`.agents/rules/grilling.md`), not a finding. The reviewer checks the final

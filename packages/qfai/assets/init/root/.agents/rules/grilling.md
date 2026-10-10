@@ -15,7 +15,7 @@ does an ambiguity found while implementing.
 | Target                                            | Applies                                                            |
 | ------------------------------------------------- | ------------------------------------------------------------------ |
 | A session, once entered                           | Every round, until it ends                                         |
-| A critical decision                               | Requires actual user authority, never agent agreement                             |
+| A critical decision                               | Requires actual user authority, never agent agreement              |
 | Any other decision                                | Asked in a user session; in a delegated one, the recommendation    |
 | A fact the environment can settle                 | Never asked; looked up                                             |
 | A fact only the user holds                        | Asked as a value, never with a recommended answer                  |
@@ -324,13 +324,13 @@ usually a subject too large to hold at once. Break it up and grill the pieces.
 
 A session ends in exactly one of these, and a record of one names which:
 
-| Ending        | Reached when                                                                                                   | The work may proceed                                     |
-| ------------- | -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| `confirmed`   | Both conditions above: no node open, and the user confirms                                                     | Yes                                                      |
-| `user-closed` | The user answered `proceed` or `done`; each decision still open is recorded as an assumption and labelled      | Yes                                                      |
+| Ending        | Reached when                                                                                                        | The work may proceed                                     |
+| ------------- | ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `confirmed`   | Both conditions above: no node open, and the user confirms                                                          | Yes                                                      |
+| `user-closed` | The user answered `proceed` or `done`; each decision still open is recorded as an assumption and labelled           | Yes                                                      |
 | `adopted`     | A delegated session meeting the conditions above: no node open, required human authority recorded, the rest adopted | Yes, and the final report lists what was adopted         |
-| `no-question` | A no-question mode was active: the evidence settled what it could and every node left over is an open question | Yes, and whatever gates the work reports those questions |
-| `stopped`     | The user stopped the session                                                                                   | No. Report every open decision as open                   |
+| `no-question` | A no-question mode was active: the evidence settled what it could and every node left over is an open question      | Yes, and whatever gates the work reports those questions |
+| `stopped`     | The user stopped the session                                                                                        | No. Report every open decision as open                   |
 
 **`no-question` is an ending, not an exemption.** The completing condition needs
 the user's confirmation, and an invocation told not to ask cannot obtain one —

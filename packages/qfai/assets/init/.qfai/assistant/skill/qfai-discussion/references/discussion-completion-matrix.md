@@ -24,12 +24,12 @@ Blocking for every pack, UI-bearing or not:
 2. The stage report's `## Grilling Session` row shows the session ended before authoring began,
    with `Ended` reading an authoring ending and its conditions met:
 
-   | Ended         | Also required                                                                                                  |
-   | ------------- | -------------------------------------------------------------------------------------------------------------- |
-   | `confirmed`   | No node open — the frontier empty **and** no fact lookup still running                                         |
-   | `user-closed` | Lookups finished, and every decision still open recorded as a labelled assumption                              |
-   | `adopted` | Recorded explicit delegation, actual author rounds, no open node or lookup, all required inputs and applicable human authority; see `.agents/rules/grilling.md#explicit-delegation-for-a-discussion` |
-   | `no-question` | Every node still open registered — a decision, and a fact only the user holds — so item 3 below is what blocks |
+   | Ended         | Also required                                                                                                                                                                                        |
+   | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+   | `confirmed`   | No node open — the frontier empty **and** no fact lookup still running                                                                                                                               |
+   | `user-closed` | Lookups finished, and every decision still open recorded as a labelled assumption                                                                                                                    |
+   | `adopted`     | Recorded explicit delegation, actual author rounds, no open node or lookup, all required inputs and applicable human authority; see `.agents/rules/grilling.md#explicit-delegation-for-a-discussion` |
+   | `no-question` | Every node still open registered — a decision, and a fact only the user holds — so item 3 below is what blocks                                                                                       |
 
    `stopped` never completes: the user ended the run, and a pack authored after that is the run
    doing what they told it not to.

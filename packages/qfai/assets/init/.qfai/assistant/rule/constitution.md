@@ -337,10 +337,10 @@ critical. Nothing is recorded beyond the stage's final report.
 
 **Only one outcome is the Drift Protocol's.**
 
-| The stop concludes                                                                       | What follows                                                                                                   |
-| ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| The stop concludes                                                                       | What follows                                                                                                                                        |
+| ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Settled input must change                                                                | `.qfai/assistant/rule/drift-protocol.md`: stop dependent work, raise the Change Request, record actual applicable user authority before changing it |
-| The obstacle is this run's to solve — an unavailable dependency, an approach that failed | The run solves it. Nothing upstream changes, so there is nothing to approve                                    |
+| The obstacle is this run's to solve — an unavailable dependency, an approach that failed | The run solves it. Nothing upstream changes, so there is nothing to approve                                                                         |
 
 Stopping does not change settled input and is not a second way to. What it
 contributes to a Change Request is what that protocol asks of the class: for
@@ -421,9 +421,9 @@ Rules:
    settles what the repository settles, dispatches sub-agents for the facts, and
    in a delegated session adopts the griller's recommendation for non-critical
    decisions. A critical decision needs an actual user answer or recorded
-   applicable authorization; without it the node stays open. Every **node**
+   applicable authorization; without it the node stays open. It opens every **node**
    left over, including uncovered critical decisions and unavailable user-held
-   facts, is **opened as a question in the register the stage reads**, so the
+   facts, **as a question in the register the stage reads**, so the
    stage cannot complete over it. Every node, not every
    decision: a fact only the user holds cannot be settled from evidence either,
    and opening the decisions while dropping the facts loses exactly the nodes no
