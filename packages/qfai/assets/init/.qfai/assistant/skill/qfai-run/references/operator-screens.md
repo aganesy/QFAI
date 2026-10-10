@@ -5,12 +5,17 @@ What the user sees while a request is worked, and how a question reaches them.
 ## Contents
 
 - Every screen
+- Launcher recovery
+- Executing a step
 - The scope question
 - The announcement
 - Questions
 - A step only a person can take
+- Replies to a waiting step
+- Independent targets under one goal
 - Halt notice
 - Final report
+- Work orders summary
 
 ## Every screen
 
@@ -20,6 +25,31 @@ What the user sees while a request is worked, and how a question reaches them.
 - Name stages in plain words. No route identifier, stage kind or internal ID.
 - Show nothing while a call is running beyond the host's own activity
   indicator.
+
+## Launcher recovery
+
+Read this section if the canonical launcher is missing or its preflight fails,
+before planning.
+
+Use the project's package manager and declared install command in this checkout:
+
+- If `package.json` declares `qfai`, install the project's dependencies here.
+- If it does not, add `qfai` as a development dependency using that package manager.
+- Repeat the launcher preflight. Plan only after it succeeds.
+
+Never use a published, remote or cached QFAI launcher as a fallback.
+
+## Executing a step
+
+Read this section when a step is short or passes without edits.
+
+Read `STEP.md` at the plan's path and follow its Procedure. Run only its declared
+commands and pass its Gate.
+
+A `passThrough` step first reads what its Passes when section names. If that
+condition holds, write nothing and record the reason in the stage report.
+Do not skip the step. The planned independent review still runs, even when the
+step is only two lines.
 
 ## The scope question
 
@@ -52,8 +82,9 @@ Once the plan and its scope are known, and before the first stage:
 - the chosen stages in order;
 - the files the work may change.
 
-It asks nothing and lists no skipped stage. Text that is not a request gets no
-plan and no announcement.
+The announcement asks nothing and lists no skipped stage. Continue with the
+policy check and the first stage in the same turn without waiting for a reply.
+Text that is not a request gets no plan and no announcement.
 
 ## Questions
 
@@ -101,6 +132,78 @@ it, and `stop`.
 - Under a no-question mode nothing is asked. The work that does not depend on
   the action goes on, and the final report lists the action as not done.
 
+## Replies to a waiting step
+
+Read this section before treating a user's reply as a new request.
+
+- A reply answering a pending question or reporting the requested operation's
+  result resumes the same waiting step, including a reported failure. Use no
+  new plan and no skill invocation for that reply.
+- Free text supplying the requested value is an answer to that waiting step,
+  even if it does not repeat an option label.
+  Never treat an unrelated instruction as selection or approval of an option.
+- Dismissal or no response is not an answer or permission. Continue a routine
+  choice only under authorization the user already gave. A missing hard-required
+  fact, uncovered mandatory approval, cancellation or explicit tool block stays
+  protected; do only independent work that remains authorized.
+- An independent new request is planned under the extraction and scope rules
+  in `SKILL.md`. If a reply also contains one, resume the waiting step with its
+  answer and plan the independent request separately.
+- A separate explicit request to investigate the failure or repeat the operation
+  is planned as a new request under those same rules.
+- An answer to a closed request for information follows only the plan's branch
+  for received information. Add no branch or step.
+- For an ambiguous reply, do not assume success, completion, new facts or
+  approval. State what remains unconfirmed. Ask for any fact or decision still
+  needed under the normal question rules.
+
+Background waiting needs no question. Report the current state, awaited
+evidence or result and resume condition; promise no automatic restart unless
+the host provides it. Follow `.agents/rules/user-questions.md` § 6 when an
+answer is needed. A completion-only final report needs no question.
+
+## Independent targets under one goal
+
+Read this section before handling several independent targets under one goal
+or switching the checkout during a target's wait.
+
+Plan each target separately only when its scope is settled and independent.
+Keep each plan's scope, stage order, steps, review and release points. A target
+with an unfinished prerequisite waits; mixed findings with unsettled scopes
+still take the existing bundle/decomposition handling. Give newly eligible
+targets within the goal's criteria their own plans. Report an out-of-scope
+finding as a follow-up, never as an extra step in the current target.
+If no planned stage serves work this target needs, stop that target and name
+the owner and stage skill to invoke. Other authorized independent targets may
+continue.
+
+Use the existing stage reports and handoff messages to retain each target's
+plan and scope, stage and step, branch and exact head, evidence, open approval
+or blocker, and resume condition. Report waiting targets as waiting. Before
+writing or using a result, confirm its target and head. A green check for an
+older or different head does not pass the current one; pending checks do not
+complete verification. A matching red check resumes the planned gate and its
+fix procedure. Keep each review verdict bound to the commit reviewed; never
+relabel it as a review of a newer head or add a review the plan does not name.
+
+Before changing the shared checkout, wait for every writer and local gate
+using it, preserve target edits in a permitted commit of only its paths, and
+ensure the whole index and worktree are clean. Unknown dirty files postpone
+the switch; do not stash, reset or delete them to move on. A reviewer using
+live files or checkout-dependent execution must finish. A read-only reviewer
+using only `git show <fixed SHA>:<path>` may continue across a clean orchestrator switch;
+the reviewer never switches the checkout. CI-only pending gates use the
+existing DELEGATED commit allowance only under explicit user instruction or
+project policy. A wait never authorizes an early commit or skipped gate.
+
+Use standing delegation only for the targets and actions it actually covers.
+Report routine choices as the agent's decisions under that authority, never
+as the user's individual option approval. A request to ask nothing supplies
+no uncovered approval. If a critical decision or release approval is missing,
+stop that target before dependent work and follow the existing question or
+no-question rules. Other authorized independent work may continue. A stop of
+the whole goal stops every target.
+
 ## Halt notice
 
 One notice when the work stops before its end:
@@ -125,6 +228,16 @@ reset, a stash, a branch switch or a worktree removal.
 - A gate shows its verdict only.
 - An external effect nobody requested is listed as not requested.
 - The report does not restate the history of the work.
-- The report ends with a question listing the next actions, the recommended one
-  first, as `.agents/rules/user-questions.md` § 6 sets out. Under a no-question
-  mode it lists them instead.
+- Ask for the next action only when proceeding requires the user's answer,
+  in the shape `.agents/rules/user-questions.md` § 6 requires. A report that
+  only states completion needs no question. Under a no-question mode, list any
+  remaining actions without asking.
+
+## Work orders summary
+
+Read this section when parts ran in parallel. Report one row per part given to
+a sub-agent.
+
+| Step | Role (sub-agent) | Agent instance  | Task title        | Input (refs)  | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | --------------- | ----------------- | ------------- | ------------- | ---------------------------- |
+| 1    | `<role>`         | `<instance id>` | `<part in words>` | The step file | The result    | PASS/REVISE                  |

@@ -209,7 +209,7 @@ Default TTL: **24 hours** (24h).
 
 - Entries older than TTL are marked stale and re-fetched on next access.
 - Staleness is tracked per-entry; partial cache invalidation is supported.
-- TTL is configurable via `qfai.config.yaml` under `webResearch.cache.ttl`.
+- TTL is configurable via `qfai.config.yaml` under `webResearch.cache.ttl`, read by the agent; `qfai` does not parse it.
 
 ### 7.3 Storage
 

@@ -29,31 +29,39 @@ Neither is restated here.
 
 ## Procedure
 
-1. **Resolve the launcher once per stage.** Before the first qfai gate, run the
+1. **Determine applicable gates before resolving commands.** Use the calling
+   stage's scope and the project's declared scope. Do not narrow the gate set
+   from the diff alone. Decide whether the conditional `Build` (if relevant)
+   and `Pack / distribution` (if distributed) gates apply from those scopes.
+   When a condition is false, omit its gate from `gates` and record the reason
+   in the stage report. A required gate with a missing command, launcher or
+   environment remains UNRUN.
+2. **Resolve the launcher once per stage.** Before the first qfai gate, run the
    launcher preflight. Where it fails, every qfai gate is UNRUN: record it as a
    blocker and stop.
-2. **Resolve the command.** A qfai gate is the validate profile and scope the
+3. **Resolve the command.** A qfai gate is the validate profile and scope the
    calling step names, for example
    `npx qfai validate --profile sdd --fail-on error --flow BF-NNNN`. A project
    gate is the matching entry of the Standard commands section, used as
    written. An entry that is missing makes the gate UNRUN: record it and route
    the gap as the rule says; never substitute a command from another stack.
    An entry written `CI only: <check name>` instead of a command is not run
-   here: record the gate DELEGATED with that check name, and read the check's
-   state from the pull request when one exists.
-3. **Run it** on the tree the stage will hand to its reviewer, in the
+   here: record the gate DELEGATED with that check name. Record its `ci` state
+   as `green`, `red` or `pending` from the pull request when one exists; with no
+   result yet, record `pending`.
+4. **Run it** on the tree the stage will hand to its reviewer, in the
    environment the `Runtime` and `Platform` rows declare.
-4. **Report** in the stage report: the exact
+5. **Report** in the stage report: the exact
    command, the exit code, the counts or outcome, the revision the run read,
    and for a validate run the `<paths.outDir>/validate.log` path and the
    `run-*/` directory its `run_log:` line names. The CLI writes that log on
    every run; shell redirection is not needed.
-5. **Read a validate result from its JSON** where the step selects work from
+6. **Read a validate result from its JSON** where the step selects work from
    it. The result is usable only when the file exists, its `profile` is the one
    run, and its `generatedAt` is no earlier than this run's start. Read `counts`
    for the verdict and `issues[].code` for each finding; the array is `issues`
    (`.qfai/assistant/skill/qfai-verify/references/validate-json-schema.md`).
-6. **On a failure**, classify each finding and repair only what this stage
+7. **On a failure**, classify each finding and repair only what this stage
    owns, then rerun the same gate on the same scope. A gate that failed and then
    passed with no change in between is a nondeterministic gate: record every
    run, in order.
