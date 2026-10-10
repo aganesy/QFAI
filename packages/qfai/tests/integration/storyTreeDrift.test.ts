@@ -1,10 +1,11 @@
 import { execFileSync } from "node:child_process";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { run } from "../../src/cli/main.js";
 import { defaultConfig } from "../../src/core/config.js";
 import { validateStoryTreeDrift } from "../../src/core/validators/upstreamSsotGuard.js";
 
@@ -37,6 +38,211 @@ beforeEach(async () => {
   git("init", "-b", "main");
   git("config", "user.email", "test@example.test");
   git("config", "user.name", "Test");
+});
+
+describe("decision renumber public CLI", () => {
+  const references = `${specs}/decision-notes.md`;
+  const source = "src/decision.ts";
+  const inheritedRow = "| DEC-0001 | Inherited DEC-0002 mention | Keep | DONE |\n";
+  const addedRow = "| DEC-0002 | Incoming choice | Branch reason | TODO |\n";
+  const inheritedReference = "# Notes\nInherited DEC-0002 stays.\n";
+  const addedReference =
+    "Added DEC-0002; DEC-00020 DEC-0002-extra prefixDEC-0002 DEC-0002_suffix stay.\n";
+  const files = [decisions, references, source];
+
+  function gitText(...args: string[]): string {
+    return execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
+  }
+
+  async function prepare(): Promise<void> {
+    git("config", "core.autocrlf", "false");
+    await put(decisions, table + inheritedRow);
+    await put(references, inheritedReference);
+    git("add", ".");
+    git("commit", "-m", "ancestor");
+    git("checkout", "-b", "topic");
+    await put(decisions, table + inheritedRow + addedRow);
+    await put(references, inheritedReference + addedReference);
+    await put(source, 'const choice = "DEC-0002";\n');
+    git("add", ".");
+    git("commit", "-m", "incoming decision");
+    git("checkout", "main");
+    await put(
+      decisions,
+      table +
+        inheritedRow +
+        "| DEC-0002 | Base choice | Base reason | DONE |\n" +
+        "| DEC-0009 | Retired DEC-0012 | Reserve its ID | DONE |\n",
+    );
+    git("add", ".");
+    git("commit", "-m", "base advances independently");
+    git("checkout", "topic");
+  }
+
+  async function snapshot(candidates = files): Promise<Buffer[]> {
+    return Promise.all(candidates.map((file) => readFile(path.join(root, file))));
+  }
+
+  async function invoke(extra: string[] = [], from = "DEC-0002", to = "DEC-0013", base = "main") {
+    const previous = process.exitCode;
+    const stdout = vi.spyOn(process.stdout, "write").mockReturnValue(true);
+    const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+    process.exitCode = undefined;
+    try {
+      await run(
+        [
+          "sdd",
+          "renumber-decision",
+          "--root",
+          root,
+          "--from",
+          from,
+          "--to",
+          to,
+          "--base",
+          base,
+          ...extra,
+        ],
+        root,
+      );
+      return {
+        code: process.exitCode,
+        stdout: stdout.mock.calls.map((call) => String(call[0])).join(""),
+        stderr: stderr.mock.calls.map((call) => String(call[0])).join(""),
+      };
+    } finally {
+      stdout.mockRestore();
+      stderr.mockRestore();
+      process.exitCode = previous;
+    }
+  }
+
+  it("previews fixed commits and affected paths without changing any bytes or reserving an ID", async () => {
+    await prepare();
+    const before = await snapshot();
+    const head = gitText("rev-parse", "HEAD");
+    const base = gitText("rev-parse", "main");
+    const result = await invoke();
+    expect(result.code).toBe(0);
+    for (const value of [head, base, "DEC-0002", "DEC-0013", ...files])
+      expect(result.stdout).toContain(value);
+    expect(result.stdout).toMatch(/(?:preview|no files? changed|nothing (?:was )?written)/i);
+    expect(result.stdout).not.toContain("Incoming choice");
+    expect(result.stdout).not.toContain(addedReference.trim());
+    expect(await snapshot()).toEqual(before);
+    expect(gitText("status", "--porcelain", "--untracked-files=all")).toBe("");
+    expect(gitText("rev-parse", "HEAD")).toBe(head);
+  });
+
+  it("applies only the incoming row and provably added exact tokens despite a base-only source collision", async () => {
+    await prepare();
+    await put("unrelated.txt", "Operator work\n");
+    const result = await invoke(["--apply"]);
+    expect(result.code).toBe(0);
+    expect(await readFile(path.join(root, decisions), "utf8")).toBe(
+      table + inheritedRow + addedRow.replace("DEC-0002", "DEC-0013"),
+    );
+    expect(await readFile(path.join(root, references), "utf8")).toBe(
+      inheritedReference + addedReference.replace("Added DEC-0002;", "Added DEC-0013;"),
+    );
+    expect(await readFile(path.join(root, source), "utf8")).toBe('const choice = "DEC-0013";\n');
+    expect(await readFile(path.join(root, "unrelated.txt"), "utf8")).toBe("Operator work\n");
+    for (const file of files) expect(result.stdout).toContain(file);
+    expect(result.stdout).toMatch(/(?:applied|changed|written)/i);
+    expect(result.stdout).not.toContain("Incoming choice");
+    expect(gitText("show", `main:${decisions}`)).toContain("Base choice");
+    expect(gitText("show", `main:${decisions}`)).not.toContain("DEC-0013");
+  });
+
+  it("previews a valid ledger larger than Git's default one MiB output buffer", async () => {
+    await prepare();
+    const content = "x".repeat(1024 * 1024 + 64);
+    await put(decisions, table + inheritedRow + addedRow.replace("Incoming choice", content));
+    git("add", decisions);
+    git("commit", "-m", "large valid decision ledger");
+    const before = await snapshot();
+    const result = await invoke();
+    expect(result.code).toBe(0);
+    expect(result.stdout).toContain(decisions);
+    expect(result.stdout).not.toContain(content.slice(0, 100));
+    expect(await snapshot()).toEqual(before);
+    expect(gitText("status", "--porcelain")).toBe("");
+  });
+
+  it.each([
+    ["inherited", "DEC-0001", "DEC-0013", "main"],
+    ["missing", "DEC-0003", "DEC-0013", "main"],
+    ["used in base", "DEC-0002", "DEC-0009", "main"],
+    ["retired-inclusive gap", "DEC-0002", "DEC-0010", "main"],
+    ["reserved reference", "DEC-0002", "DEC-0012", "main"],
+    ["invalid base", "DEC-0002", "DEC-0013", "not-a-local-ref"],
+  ])("refuses an ineligible %s request before writing", async (_reason, from, to, base) => {
+    await prepare();
+    const before = await snapshot();
+    const status = gitText("status", "--porcelain", "--untracked-files=all");
+    const result = await invoke(["--apply"], from, to, base);
+    expect(result.code).toBe(2);
+    expect(result.stderr).toContain(base === "main" ? (from === "DEC-0002" ? to : from) : base);
+    expect(await snapshot()).toEqual(before);
+    expect(gitText("status", "--porcelain", "--untracked-files=all")).toBe(status);
+  });
+
+  it.each(["duplicate", "invalid status"])(
+    "refuses a %s source row before writing",
+    async (problem) => {
+      await prepare();
+      await put(
+        decisions,
+        table +
+          inheritedRow +
+          (problem === "duplicate" ? addedRow + addedRow : addedRow.replace("TODO", "INVALID")),
+      );
+      git("add", ".");
+      git("commit", "-m", "ineligible current row");
+      const before = await snapshot();
+      const result = await invoke(["--apply"]);
+      expect(result.code).toBe(2);
+      expect(result.stderr).toContain("DEC-0002");
+      expect(await snapshot()).toEqual(before);
+      expect(gitText("status", "--porcelain")).toBe("");
+    },
+  );
+
+  it.each(["worktree", "index", "unsupported", "untracked", "invalid UTF-8", "oversized"])(
+    "refuses an unsafe %s candidate without changing any candidate",
+    async (problem) => {
+      await prepare();
+      const candidate =
+        problem === "unsupported"
+          ? "unsafe.bin"
+          : problem === "untracked" || problem === "invalid UTF-8" || problem === "oversized"
+            ? "unsafe.txt"
+            : source;
+      if (problem === "invalid UTF-8") {
+        await writeFile(
+          path.join(root, candidate),
+          Buffer.from([0xff, ...Buffer.from(" DEC-0002")]),
+        );
+      } else if (problem === "oversized") {
+        const content = Buffer.alloc(16 * 1024 * 1024 + 1, "x");
+        content.write("DEC-0002 ");
+        await writeFile(path.join(root, candidate), content);
+      } else {
+        await put(candidate, 'const choice = "DEC-0002";\nOperator edit\n');
+      }
+      if (problem !== "untracked" && problem !== "worktree") git("add", candidate);
+      if (problem === "unsupported" || problem === "invalid UTF-8" || problem === "oversized")
+        git("commit", "-m", "unsafe candidate");
+      const candidates = [...new Set([...files, candidate])];
+      const before = await snapshot(candidates);
+      const status = gitText("status", "--porcelain", "--untracked-files=all");
+      const result = await invoke(["--apply"]);
+      expect(result.code).toBe(2);
+      expect(result.stderr).toContain(candidate);
+      expect(await snapshot(candidates)).toEqual(before);
+      expect(gitText("status", "--porcelain", "--untracked-files=all")).toBe(status);
+    },
+  );
 });
 
 afterEach(async () => {
