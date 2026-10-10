@@ -692,21 +692,6 @@ const BUILD_JOB = "build";
 const LOCAL_BINARY = "node packages/qfai/dist/cli/index.mjs";
 
 /**
- * The step that runs a dogfooding lane.
- *
- * The lanes call `validate` through a ratchet, because the ledger rules report
- * `error` and this repository carries rows written before they existed. What
- * each lane has to keep saying is unchanged, so the claims below read the
- * guard's own source for the parts that moved into it.
- */
-const DOGFOOD_GUARD = "scripts/check-dogfood-backlog.mjs";
-
-/** The guard's source, read once so a claim about it names a real line. */
-function dogfoodGuardSource(): string {
-  return readFileSync(path.join(REPO_ROOT, "scripts", "check-dogfood-backlog.mjs"), "utf-8");
-}
-
-/**
  * Every workflow file in the repository's own tree.
  *
  * Read from the directory rather than from a list, so a workflow added later is covered by
@@ -808,21 +793,16 @@ describe("TC-0017-0072 (TDD-0072): the folded run uses the local binary, not the
     if (fullProfile.length !== 1 || only === undefined) return;
     const run = stepRun(only);
 
-    // CLAIM 2 — it runs through the ratchet guard, and the guard targets the repository root
-    // with the LOCAL binary. The binary is the half that matters: every job installs before it
+    // CLAIM 2 — it targets the repository root with the LOCAL binary and fails the job on any
+    // error. The binary is the half that matters: every job installs before it
     // builds, so pnpm links no `node_modules/.bin/qfai`, and any resolution through the package
     // name would reach the published release instead of the build under review.
-    expect
-      .soft(run, `the folded run must go through the ratchet: ${JSON.stringify(run)}`)
-      .toContain(DOGFOOD_GUARD);
-
-    const guard = dogfoodGuardSource();
     for (const [needle, why] of [
-      ['"--root",', "the guard must validate the repository root"],
-      [LOCAL_BINARY.replace("node ", ""), "the guard must invoke the locally built binary"],
-      ["process.exit(1)", "the guard must fail the job, not merely report"],
+      [LOCAL_BINARY, "the run must invoke the locally built binary"],
+      ["--root .", "the run must validate the repository root"],
+      ["--fail-on error", "the run must fail the job, not merely report"],
     ] as const) {
-      expect.soft(guard, `${why}`).toContain(needle);
+      expect.soft(run, `${why}: ${JSON.stringify(run)}`).toContain(needle);
     }
 
     // CLAIM 3 — and no own workflow reaches the package through a resolver that would find
