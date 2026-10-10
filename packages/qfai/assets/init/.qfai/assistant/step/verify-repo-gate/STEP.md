@@ -189,7 +189,7 @@ For this skill, the smallest applicable smoke check of
 is the whole gate set of the scope, run to completion, with every outcome in
 `verify.json` and the report.
 
-A validation PASS needs zero errors in the declared profile. A successful custom Validate
+A PASS needs zero errors in the declared profile. A successful custom Validate
 wrapper does not waive validation errors or replace a full scan. Where the
 project has them, the distributed-surface guard and branch version pin must also
 pass.
