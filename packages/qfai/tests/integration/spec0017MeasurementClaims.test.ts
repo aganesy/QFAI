@@ -64,6 +64,7 @@ const REGRESSION_WITHOUT_NUMBERS = [
   "- Consequences: none; the legs are unchanged.",
 ].join("\n");
 
+// QFAI:AC-0002-0016-05
 // QFAI:EX-0002-0016-02
 describe("a cost claim with no captured numbers does not satisfy the rule", () => {
   it("rejects a saving asserted on argument, and accepts the same claim once the numbers are quoted", () => {
@@ -90,6 +91,7 @@ describe("a cost claim with no captured numbers does not satisfy the rule", () =
   });
 });
 
+// QFAI:AC-0002-0016-02
 // QFAI:EX-0002-0016-03
 describe("a recorded regression with the rebuilds kept is accepting", () => {
   it("resolves the criterion satisfied on a measured regression, and only while the rebuilds are there", () => {

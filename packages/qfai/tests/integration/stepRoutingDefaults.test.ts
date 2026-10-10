@@ -6,6 +6,7 @@ import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
+import { parse as parseYaml } from "yaml";
 import { describe, expect, it } from "vitest";
 
 import { runInit } from "../../src/cli/commands/init.js";
@@ -19,7 +20,12 @@ import {
 import { readRoutingDefaultsFiles } from "../../src/core/routingDefaults.js";
 import type { Issue } from "../../src/core/types.js";
 import { validateAgentDefinition } from "../../src/core/validators/agentDefinition.js";
-import { defaultRoutingEntries, frontMatterOf, readShipped } from "../helpers/shippedAssistant.js";
+import {
+  defaultRoutingEntries,
+  frontMatterOf,
+  readDefault,
+  readShipped,
+} from "../helpers/shippedAssistant.js";
 import { captureStdout } from "../helpers/stdout.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
@@ -35,16 +41,26 @@ function names(value: unknown): string[] {
 
 const AGENT_CHECKS = /^QFAI-AGENT-01[3-9]$/;
 const SDD_CONTRACT = path.join(".qfai", "assistant", "step", "sdd-contract", "STEP.md");
+const MIGRATION_SKILL = path.join(
+  ".qfai",
+  "assistant",
+  "skill",
+  "qfai-migration-v1-to-v2",
+  "SKILL.md",
+);
 
 const routingEntries = defaultRoutingEntries;
 
-/** Agent-check findings on a fresh install, after `edit` rewrites its `sdd-contract` step. */
-async function agentFindings(edit?: (text: string) => string): Promise<Issue[]> {
+/** Agent-check findings on a fresh install, after `edit` rewrites the step or skill at `relative`. */
+async function agentFindings(
+  edit?: (text: string) => string,
+  relative: string = SDD_CONTRACT,
+): Promise<Issue[]> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-step-routing-"));
   try {
     await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
     if (edit) {
-      const file = path.join(root, SDD_CONTRACT);
+      const file = path.join(root, relative);
       await writeFile(file, edit(await readFile(file, "utf-8")), "utf-8");
     }
     const { config } = await loadConfig(root);
@@ -124,6 +140,68 @@ describe("routing keyed by step", () => {
           finding.code === "QFAI-AGENT-018" && finding.file?.includes("sdd-contract") === true,
       ),
     ).not.toEqual([]);
+  });
+});
+
+describe("the migration skill's routing", () => {
+  // QFAI:AC-0001-0161-04
+  // QFAI:EX-0001-0161-04
+  it("runs plan, execution and review under the architecture-heavy profile, with roles that match", async () => {
+    const entry = (await routingEntries()).find(
+      (candidate) => candidate.skill === "qfai-migration-v1-to-v2",
+    );
+    const phases = Array.isArray(entry?.phases) ? entry.phases.filter(isRecord) : [];
+    expect(
+      phases.map((phase) => ({
+        id: phase.id,
+        mandatory: names(phase.mandatory_agents),
+        blocking: names(phase.blocking_agents),
+      })),
+    ).toEqual([
+      {
+        id: "plan",
+        mandatory: ["requirements-analyst", "solution-architect"],
+        blocking: ["solution-architect"],
+      },
+      { id: "execution", mandatory: ["devops-ci-engineer"], blocking: [] },
+      { id: "review", mandatory: ["architecture-reviewer"], blocking: ["architecture-reviewer"] },
+    ]);
+    expect(entry?.review_profile).toBe("architecture-heavy");
+
+    const profiles: unknown = parseYaml(await readDefault("review-profiles.yml"));
+    const selected = isRecord(profiles) && isRecord(profiles.profiles) ? profiles.profiles : {};
+    const heavy = isRecord(selected["architecture-heavy"]) ? selected["architecture-heavy"] : {};
+    const reviewers = names(heavy.always_required);
+    expect(reviewers).toEqual(["architecture-reviewer"]);
+
+    const skill = frontMatterOf(await readShipped("skill/qfai-migration-v1-to-v2/SKILL.md"));
+    expect(skill["routing-profile"]).toBe("architecture-heavy");
+    const roles = names(skill.roles);
+    for (const agent of [
+      "requirements-analyst",
+      "solution-architect",
+      "devops-ci-engineer",
+      "architecture-reviewer",
+      ...reviewers,
+    ]) {
+      expect(roles, agent).toContain(agent);
+    }
+
+    const ownFindings = (findings: Issue[]): Issue[] =>
+      findings.filter(
+        (finding) =>
+          /^QFAI-AGENT-01[5-9]$/.test(finding.code) &&
+          finding.message.includes("qfai-migration-v1-to-v2"),
+      );
+    expect(ownFindings(await agentFindings())).toEqual([]);
+
+    const unbound = ownFindings(
+      await agentFindings(
+        (text) => text.replace(/ +architecture-reviewer,\r?\n/, ""),
+        MIGRATION_SKILL,
+      ),
+    );
+    expect(unbound.map((finding) => finding.code)).toContain("QFAI-AGENT-019");
   });
 });
 
