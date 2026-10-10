@@ -297,8 +297,8 @@ describe("§ 4 of the minimal-implementation rule bounds unrequested fixes and r
  * Every rule master, read off the directory.
  *
  * The subject is the rules that exist, not the rules a list names. Reading the
- * directory is what makes that true: a master that skips either registration —
- * `README.md` or `.claude/rules/` — is still named by the case that finds it
+ * directory is what makes that true: a master that skips its registration —
+ * `README.md` — is still named by the case that finds it
  * missing, because it reached the case from disk rather than from an entry
  * someone had to add.
  *
@@ -307,18 +307,6 @@ describe("§ 4 of the minimal-implementation rule bounds unrequested fixes and r
 const RULE_MASTERS = readdirSync(path.join(ROOT, ".agents/rules"))
   .filter((entry) => entry.endsWith(".md") && entry !== "README.md")
   .sort();
-
-async function readMaybeSymlink(linkPath: string): Promise<string> {
-  return readFile(linkPath, "utf-8");
-}
-
-async function isSymlinkTo(linkPath: string, masterPath: string): Promise<boolean> {
-  const stat = await lstat(linkPath);
-  if (!stat.isSymbolicLink()) return false;
-  const linkReal = await realpath(linkPath);
-  const masterReal = await realpath(masterPath);
-  return linkReal === masterReal;
-}
 
 describe("cross-AI rules surface (.agents/rules/ master)", () => {
   it("master version-discipline.md exists with required content", async () => {
@@ -384,36 +372,17 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     );
   });
 
-  it.each(RULE_MASTERS)(".claude/rules/%s resolves to the master", async (fileName) => {
-    const link = path.join(ROOT, ".claude/rules", fileName);
-    const master = path.join(ROOT, ".agents/rules", fileName);
-    if (await isSymlinkTo(link, master)) {
-      // Symlink path: the resolved master must equal the master file.
-      expect(await realpath(link)).toBe(await realpath(master));
-      return;
-    }
-    // Non-symlink fallback, two shapes:
-    //   1. The file was committed as a regular file on a platform that
-    //      supports symlinks. Content equality with the master is the
-    //      contract.
-    //   2. Windows without `core.symlinks=true` / Developer Mode. Git writes
-    //      the link as a one-line text file holding the relative target path
-    //      (e.g. `../../.agents/rules/version-discipline.md`). Content
-    //      equality fails by construction, so the contract is that the path
-    //      resolves to the master. `.agents/rules/README.md` documents the
-    //      setup.
-    const linked = await readMaybeSymlink(link);
-    const trimmed = linked.trim();
-    const looksLikeRelativePath = /^\.\.\/.+\.md$/.test(trimmed);
-    if (looksLikeRelativePath) {
-      // Validate the path string actually points at the master.
-      const linkDir = path.dirname(link);
-      const resolvedTarget = path.resolve(linkDir, trimmed);
-      expect(path.resolve(master)).toBe(resolvedTarget);
-      return;
-    }
-    const masterText = await readFile(master, "utf-8");
-    expect(linked).toBe(masterText);
+  // A master no entry point names is reachable only by a reader who already
+  // knows it exists. The directory holds the rules, and AGENTS.md is where an
+  // agent finds out which of them to read.
+  it.each(RULE_MASTERS)("an entry file names %s", async (fileName) => {
+    const texts = await Promise.all(
+      ["AGENTS.md", "CLAUDE.md"].map((entry) => readFile(path.join(ROOT, entry), "utf-8")),
+    );
+    expect(
+      texts.some((text) => text.includes(fileName)),
+      `neither AGENTS.md nor CLAUDE.md names ${fileName}`,
+    ).toBe(true);
   });
 
   it("AGENTS.md references the master rules directory and version-discipline", async () => {

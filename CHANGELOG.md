@@ -47,6 +47,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The writing rule removes unnecessary sentences without requiring needless rewrites.**
+  Its opening deletion test leaves rewriting to the existing clarity clauses.
 - **The release association gate uses Node.js to read pull request branches.**
   Its two contributor cases require Node.js and Bash, without a jq dependency.
 
@@ -339,6 +341,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Verify steps reject validation errors even when a custom Validate wrapper succeeds.
 - Clarify that the research agent reads the cache TTL extension in the project config; the CLI does not parse it.
 
 - Clarify that story ID candidates are snapshots and require a fresh collision
