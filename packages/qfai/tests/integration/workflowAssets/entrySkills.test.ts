@@ -315,6 +315,56 @@ describe("qfai-run", () => {
     );
   });
 
+  // QFAI:EX-0001-0196-43
+  it("accepts requested free text as an answer and separates independent or mixed instructions", async () => {
+    const replies = flat(sectionOf(await readShipped(SCREENS), "## Replies to a waiting step"));
+    expect(replies).toMatch(
+      /free text supplying the requested value.*answer to that waiting step/i,
+    );
+    expect(replies).toMatch(/even if it does not repeat an option label/i);
+    expect(replies).toMatch(/unrelated instructions.*new requests/i);
+    expect(replies).toMatch(/split a mixed reply.*answer.*independent request/i);
+    expect(replies).toMatch(/never treat an unrelated instruction as selection or approval/i);
+    expect(replies).toMatch(/no new plan and no skill invocation/i);
+    expect(replies).toMatch(/plan the independent request separately/i);
+  });
+
+  it("does not infer an answer from dismissal and continues only previously authorized work", async () => {
+    const replies = flat(sectionOf(await readShipped(SCREENS), "## Replies to a waiting step"));
+    expect(replies).toMatch(/dismissal or no response is not an answer or permission/i);
+    expect(replies).toMatch(/routine choice only under authorization the user already gave/i);
+    for (const boundary of [
+      /hard-required fact/i,
+      /uncovered mandatory approval/i,
+      /cancellation/i,
+      /explicit tool block/i,
+    ])
+      expect(replies).toMatch(boundary);
+    expect(replies).toMatch(/only independent work that remains authorized/i);
+  });
+
+  it("reports background waiting with evidence and a resume condition without promising restart", async () => {
+    const replies = flat(sectionOf(await readShipped(SCREENS), "## Replies to a waiting step"));
+    expect(replies).toMatch(/background waiting needs no question/i);
+    expect(replies).toMatch(/current state, awaited evidence or result and resume condition/i);
+    expect(replies).toMatch(/promise no automatic restart unless the host provides it/i);
+    expect(replies).toMatch(/user-questions\.md.*§ 6.*when an answer is needed/i);
+    expect(replies).toMatch(/completion-only final report needs no question/i);
+  });
+
+  it.each([MAINTAIN, "skill/qfai-implement/SKILL.md"])(
+    "%s asks after completion only when another step requires an answer",
+    async (skill) => {
+      const text = flat(await readShipped(skill));
+      expect(text).toMatch(
+        /ask for the next action only when proceeding requires the user's answer/i,
+      );
+      expect(text).toMatch(/completion-only report needs no question/i);
+      expect(text).toMatch(/under a no-question mode, list any remaining actions instead/i);
+      expect(text).not.toMatch(/the report ends with a question listing the next actions/i);
+    },
+  );
+
   // QFAI:AC-0001-0211-05
   // QFAI:EX-0001-0211-35
   it("defines every extraction value, shows an extraction with no route, and names no route", async () => {
@@ -569,7 +619,11 @@ describe("qfai-run", () => {
     );
     const report = flat(sectionOf(await readShipped(SCREENS), "## Final report"));
     expect(report).toMatch(/every decision taken without the user, with its reason/i);
-    expect(report).toMatch(/the report ends with a question listing the next actions/i);
+    expect(report).toMatch(
+      /ask for the next action only when proceeding requires the user's answer/i,
+    );
+    expect(report).toMatch(/completion-only.*report needs no question/i);
+    expect(report).toMatch(/under a no-question mode.*remaining actions without asking/i);
   });
 
   // QFAI:AC-0001-0223-03
