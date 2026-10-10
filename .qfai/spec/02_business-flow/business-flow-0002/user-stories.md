@@ -27,3 +27,4 @@
 | US-0002-0022 | The assistant-tree mirror follows the renamed tree                          | `user-story-0002-0022/` |
 | US-0002-0023 | The shape table moves with the leak guards                                  | `user-story-0002-0023/` |
 | US-0002-0024 | Run the init suites on Windows                                              | `user-story-0002-0024/` |
+| US-0002-0026 | Run one pull request test file in manual CI                                 | `user-story-0002-0026/` |
