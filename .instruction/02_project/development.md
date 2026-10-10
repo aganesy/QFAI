@@ -61,8 +61,8 @@ The current directories below are relative to `packages/qfai/`.
 | `tests/cli`         | `cli`          | Unclassified  |
 | `tests/scripts`     | `scripts`      | Unclassified  |
 
-QFAI recognizes `e2e`, `integration` or `api` immediately after the deepest
-test-root directory. Unclassified paths have kind `null`; this does not assign
+For the directories listed here, QFAI recognizes `e2e`, `integration` or
+`api` immediately under `tests`. Unclassified paths have kind `null`; this does not assign
 a unit or component layer. `tests/api` would have kind `api`, but no current
 Vitest project includes that directory.
 
