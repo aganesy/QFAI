@@ -39,6 +39,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Repeated edit reminders use short rule pointers.** The first relevant edit
+  receives the full rules; later edits retain concise guidance. Missing session
+  identity or unavailable counters keep the full reminder. Posting reminders
+  remain unchanged.
+
 - **Worker work orders state the permitted edit boundary.** They name the
   assigned checkout, owned paths and edit method. A refused edit returns a
   reviewable diff for coordinator integration without bypassing the refusal.
