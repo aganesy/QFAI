@@ -361,3 +361,83 @@ describe("story-tree core", () => {
     });
   });
 });
+
+describe.each([
+  {
+    kind: "decisions" as const,
+    id: "DEC-0001",
+    allowed: [
+      "TODO",
+      "WIP",
+      "DONE",
+      "REJECTED",
+      "SUPERSEDED (by DEC-NNNN)",
+      "PARTLY SUPERSEDED (by DEC-NNNN)",
+    ],
+    wrongKindStatus: "DEFERRED",
+  },
+  {
+    kind: "open-questions" as const,
+    id: "OQ-0001",
+    allowed: ["TODO", "WIP", "DONE", "DEFERRED"],
+    wrongKindStatus: "REJECTED",
+  },
+])("$kind row diagnostics", ({ kind, id, allowed, wrongKindStatus }) => {
+  const header = "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
+  const table = (status: string): string => `${header}| ${id} | Choice | Reason | ${status} |\n`;
+  const diagnostic = (preview: string): string =>
+    `${kind} row ${id} has an invalid Status: "${preview}"; allowed: ${allowed.join(", ")}`;
+
+  it.each([3, 5])("reports expected four and actual %i cells", (count) => {
+    const cells = [id, "Choice", "Reason", "TODO", "Extra"].slice(0, count);
+    const parsed = parseRecordTable(`${header}| ${cells.join(" | ")} |\n`, kind);
+    const error = parsed.errors.find((message) => /(?:cells|columns)/i.test(message)) ?? "";
+    expect(error).toContain(`${kind} row 1`);
+    expect(error).toMatch(/expected\s+4\b/i);
+    expect(error).toMatch(new RegExp(`(?:actual|got|found)\\s+${count}\\b`, "i"));
+  });
+
+  it.each(["INVALID", "", wrongKindStatus])(
+    "lists only this kind's allowed values for Status %j",
+    (status) => {
+      const parsed = parseRecordTable(table(status), kind);
+      expect(parsed.errors).toEqual([diagnostic(status)]);
+      expect(parsed.rows[0]?.status).toBe(status);
+    },
+  );
+
+  it.each([39, 40, 41])(
+    "bounds the preview at forty Unicode characters for a %i-character value",
+    (length) => {
+      const status = "\u{1f680}".repeat(length);
+      const preview = "\u{1f680}".repeat(Math.min(length, 40)) + (length > 40 ? "..." : "");
+      const parsed = parseRecordTable(table(status), kind);
+      expect(parsed.errors).toEqual([diagnostic(preview)]);
+      expect(parsed.rows[0]?.status).toBe(status);
+    },
+  );
+
+  it("sanitizes control and format runs and Unicode breaks only in the one-line diagnostic", () => {
+    const status = '\u202e\0First  "quoted"\t\u0085\u200dSecond\u2028Third\u2029Fourth\rLast\u2066';
+    const parsed = parseRecordTable(table(status), kind);
+    expect(parsed.errors).toEqual([diagnostic('First  "quoted" Second Third Fourth Last')]);
+    expect(parsed.errors.join("")).not.toMatch(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u);
+    expect(parsed.rows[0]?.status).toBe(status);
+  });
+
+  it("applies the forty-character limit after sanitizing rather than to the raw value", () => {
+    const status = "A".repeat(20) + "\t\0\u202e\u2028\u2029" + "B".repeat(19);
+    const parsed = parseRecordTable(table(status), kind);
+    expect(parsed.errors).toEqual([diagnostic("A".repeat(20) + " " + "B".repeat(19))]);
+    expect(parsed.rows[0]?.status).toBe(status);
+  });
+
+  it("continues accepting every existing status without changing its returned value", () => {
+    for (const pattern of allowed) {
+      const status = pattern.replace("DEC-NNNN", "DEC-0042");
+      const parsed = parseRecordTable(table(status), kind);
+      expect(parsed.errors).toEqual([]);
+      expect(parsed.rows[0]?.status).toBe(status);
+    }
+  });
+});
