@@ -117,7 +117,7 @@ describe("qfai-triage invoked by name", () => {
 describe("a question answered without a change", () => {
   // QFAI:AC-0001-0214-01
   // QFAI:EX-0001-0214-01
-  // QFAI:EX-0001-0214-09
+  // QFAI:EX-0001-0214-11
   // QFAI:EX-0001-0223-08
   it("excludes only the pre-handoff approval record from the route's no-change gate", async () => {
     const gate = flat(sectionOf(await step("triage-close"), "## Gate"));
