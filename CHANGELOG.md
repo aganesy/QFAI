@@ -220,6 +220,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Validation text lists errors before warnings and information.** Groups of
+  the same severity retain their first-appearance order. JSON records, counts,
+  suppression and exit behavior stay unchanged.
+
 - **The release workflow's publish job no longer warns that `NODE_AUTH_TOKEN` is
   unset.** `setup-node` writes an auth-token entry that reads that variable
   into the job's `.npmrc`, and the job authenticates through the OIDC exchange,

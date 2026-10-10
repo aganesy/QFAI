@@ -603,9 +603,9 @@ interface TextIssueGroup {
 }
 
 /**
- * Issues of one code, severity and suppression state, in the order the first of
- * each group appeared. A rule that fails in a hundred places is one group, not
- * a hundred records.
+ * Issues grouped by code, severity and suppression state, ordered error,
+ * warning, then info. Groups of the same severity keep first-appearance order,
+ * and their items keep input order.
  */
 function groupIssues(issues: readonly Issue[]): TextIssueGroup[] {
   const groups = new Map<string, TextIssueGroup>();
@@ -618,7 +618,10 @@ function groupIssues(issues: readonly Issue[]): TextIssueGroup[] {
       groups.set(key, { head: item, items: [item] });
     }
   }
-  return [...groups.values()];
+  const severityRank: Record<Issue["severity"], number> = { error: 0, warning: 1, info: 2 };
+  return [...groups.values()].sort(
+    (left, right) => severityRank[left.head.severity] - severityRank[right.head.severity],
+  );
 }
 
 function formatTextIssueLine(item: Issue): string {
