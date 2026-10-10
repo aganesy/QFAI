@@ -2083,7 +2083,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-docs.yml#checks",
-    '{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body 29d4d4ffdc27885fb3608373da72ce6fc119738a3a4d2cf8595b29586a06c25a>"}',
+    '{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body fb106152ede2c87f02c5554c96cbd8bac7f4965ead2c17c68b158bca0f4c7799>"}',
   ],
   [
     "qfai-docs.yml#checks",
