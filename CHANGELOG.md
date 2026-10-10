@@ -339,6 +339,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - Clarify how to report host-blocked temporary-file cleanup, hand off allowed
   manual steps and verify removal without claiming pending cleanup is complete.
 
+- **Question-only work checks authority before repairing tracked files.**
+  Existing permission for the same target is reused. Otherwise the agent offers
+  repair or a report-only stop; an uncovered no-question run reports and stops
+  that target without writing a tracked open question.
+
+- **A diagnosed missing example reuses an existing rule for its obligation.**
+  Equivalent rules use existing example coverage and stable rule IDs to settle
+  the owner. Different or uncertain behaviour returns to specification work;
+  the choice and its reason appear in the final report.
+
 - Verify steps reject validation errors even when a custom Validate wrapper succeeds.
 - Clarify that the research agent reads the cache TTL extension in the project config; the CLI does not parse it.
 
