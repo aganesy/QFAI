@@ -1,1 +1,0 @@
-../../.agents/rules/instruction-tree.md
