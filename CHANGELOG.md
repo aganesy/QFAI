@@ -250,6 +250,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **SQL rules with no examples explain the required comment format.** The error
+  asks for a one-line Rule statement and `-- Examples:` on the immediately
+  following line. Other rule errors and parsing stay unchanged. Fixes #3225.
+
 - **Validation text lists errors before warnings and information.** Groups of
   the same severity retain their first-appearance order. JSON records, counts,
   suppression and exit behavior stay unchanged.
