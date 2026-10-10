@@ -6,6 +6,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **Validation can find forbidden identifiers from hash-only configuration.**
+  The optional policy scans tracked file names and current bytes, including
+  binary and ignored tracked files. Unsafe or incomplete coverage is an error;
+  findings omit matched values and unsafe paths. Fixes #3232.
+
 - **The agent reviews its session for problems in QFAI when all the work is
   done, and asks before filing them.** `qfai init` adds a `Stop` hook to
   `.claude/settings.json` and `.codex/hooks.json`, marked
