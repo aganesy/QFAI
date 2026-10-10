@@ -12,7 +12,6 @@
         "QFAI-STORY-006 EX-0001-0159-02": 1
       },
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0180/03_Example.md": {
-        "QFAI-STORY-006 EX-0001-0180-03": 1,
         "QFAI-STORY-006 EX-0001-0180-04": 1
       }
     },
@@ -61,12 +60,10 @@
       },
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0176/02_Acceptance-Criteria.md": {
         "QFAI-STORY-006 AC-0001-0176-01": 1,
-        "QFAI-STORY-006 AC-0001-0176-02": 1,
-        "QFAI-STORY-006 AC-0001-0176-03": 1
+        "QFAI-STORY-006 AC-0001-0176-02": 1
       },
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0177/02_Acceptance-Criteria.md": {
         "QFAI-STORY-006 AC-0001-0177-01": 1,
-        "QFAI-STORY-006 AC-0001-0177-02": 1,
         "QFAI-STORY-006 AC-0001-0177-03": 1,
         "QFAI-STORY-006 AC-0001-0177-04": 1
       },
@@ -81,21 +78,13 @@
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0180/02_Acceptance-Criteria.md": {
         "QFAI-STORY-006 AC-0001-0180-01": 1,
         "QFAI-STORY-006 AC-0001-0180-02": 1,
-        "QFAI-STORY-006 AC-0001-0180-03": 1,
         "QFAI-STORY-006 AC-0001-0180-04": 1
       },
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0180/03_Example.md": {
-        "QFAI-STORY-006 EX-0001-0180-03": 1,
         "QFAI-STORY-006 EX-0001-0180-04": 1
-      },
-      ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0181/02_Acceptance-Criteria.md": {
-        "QFAI-STORY-006 AC-0001-0181-01": 1
       },
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0182/02_Acceptance-Criteria.md": {
         "QFAI-STORY-006 AC-0001-0182-01": 1
-      },
-      ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0183/02_Acceptance-Criteria.md": {
-        "QFAI-STORY-006 AC-0001-0183-01": 1
       },
       ".qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0014/02_Acceptance-Criteria.md": {
         "QFAI-STORY-006 AC-0002-0014-05": 1
