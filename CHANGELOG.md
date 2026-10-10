@@ -36,6 +36,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Worker work orders state the permitted edit boundary.** They name the
+  assigned checkout, owned paths and edit method. A refused edit returns a
+  reviewable diff for coordinator integration without bypassing the refusal.
+
 - **Windows CI covers native assistant mirror links.** Its parity list includes
   mirror link behavior and prepares owned root links before testing, using the
   same temp directory as the suites. Healthy worktrees remain healthy cases.

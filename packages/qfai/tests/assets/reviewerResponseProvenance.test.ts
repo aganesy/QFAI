@@ -12,6 +12,7 @@ const ASSISTANT_ROOTS = [
 ];
 
 const BASELINE = "rule/shared-skill-delegation-baseline.md";
+const WORK_ORDER = "rule/references/worker-edit-boundary.md";
 
 async function readShipped(relative: string): Promise<string[]> {
   return Promise.all(ASSISTANT_ROOTS.map((root) => readFile(path.join(root, relative), "utf-8")));
@@ -21,7 +22,7 @@ async function readShipped(relative: string): Promise<string[]> {
 function fencedBlockUnder(content: string, heading: string): string {
   const sectionStart = content.indexOf(`## ${heading}\n`);
   expect(sectionStart, `section "## ${heading}" must exist`).toBeGreaterThanOrEqual(0);
-  const rest = content.slice(sectionStart);
+  const rest = content.slice(sectionStart).split("\n## ")[0] ?? "";
   const match = /```text\n([\s\S]*?)```/.exec(rest);
   expect(match, `section "## ${heading}" must carry a text block`).not.toBeNull();
   return match?.[1] ?? "";
@@ -47,7 +48,15 @@ describe("reviewer response provenance", () => {
   });
 
   it("keeps the verdict vocabulary out of the work order handed to a doer", async () => {
-    for (const content of await readShipped(BASELINE)) {
+    for (const baseline of await readShipped(BASELINE)) {
+      const pointer = baseline.split("\n## Work order template\n")[1]?.split("\n## ")[0];
+      expect(pointer).toBeDefined();
+      expect(pointer?.replace(/\s*\n\s*/g, " ")).toContain("When preparing a delegation");
+      expect(pointer).toContain(
+        ".qfai/assistant/rule/references/worker-edit-boundary.md#work-order-template",
+      );
+    }
+    for (const content of await readShipped(WORK_ORDER)) {
       const template = fencedBlockUnder(content, "Work order template");
 
       expect(template).toContain("Acceptance bar:");
