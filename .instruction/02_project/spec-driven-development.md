@@ -67,6 +67,12 @@ qfai report → .qfai/report/report.md
 - Confirm zero errors with `npx qfai validate --fail-on error`
 - Generate the report with `npx qfai report`
 
+CI self-validation runs the checkout's compiled CLI with `--profile full` and
+`--fail-on error`. It expects zero errors and has no accepted error baseline.
+The [Validate entry in Standard commands](../../.qfai/spec/03_contract/tech.md#standard-commands-copy-paste) records the local command.
+[Test exception notices](../../.qfai/spec/01_policy/glossary.md) identify approved deferred coverage;
+they do not prove that the exempted tests ran.
+
 ## Read a CLI contract
 
 Read the ownership boundary and relevant business-rule rows when investigating
