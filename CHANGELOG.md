@@ -334,6 +334,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Verify steps reject validation errors even when a custom Validate wrapper succeeds.
 - Clarify that the research agent reads the cache TTL extension in the project config; the CLI does not parse it.
 
 - Clarify that story ID candidates are snapshots and require a fresh collision
