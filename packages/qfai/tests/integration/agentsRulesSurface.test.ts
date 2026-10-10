@@ -999,6 +999,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toMatch(/inventing\s+one\s+to\s+fill\s+the\s*\n?\s*slot/i);
     });
 
+    // QFAI:EX-0001-0196-57
     it.each(MASTERS)(
       "%s asks only for a required answer and keeps stop and halt boundaries",
       async (rel) => {
@@ -1073,6 +1074,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).not.toMatch(/numbered\s+plain-text\s+choices\s+keep\s+the\s+same\s+parts/);
     });
 
+    // QFAI:EX-0001-0196-57
     it.each([
       "packages/qfai/assets/init/root/AGENTS.md",
       "packages/qfai/assets/init/root/CLAUDE.md",
@@ -1082,9 +1084,11 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       async (rel) => {
         const text = (await readFile(path.join(ROOT, rel), "utf-8")).replace(/\s+/g, " ");
         expect(text).toMatch(
-          /question is needed only when the next step requires the user's answer/i,
+          /(?:question is needed only when|ask only when) the next step requires the user's answer/i,
         );
-        expect(text).toMatch(/background waiting and completion-only reports need none/i);
+        expect(text).toMatch(
+          /background waiting and completion-only reports need (?:none|no question)/i,
+        );
         expect(text).not.toMatch(
           /a turn that waits on the user ends with a question listing the next actions/i,
         );

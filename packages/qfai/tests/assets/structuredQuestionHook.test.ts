@@ -150,6 +150,7 @@ describe("the structured-question reminder", () => {
   });
 
   // QFAI:EX-0001-0196-26
+  // QFAI:EX-0001-0196-57
   it.each(QUESTION_RULES)(
     "%s asks for required answers and reports waiting or completion without forced questions",
     async (rel) => {
@@ -159,10 +160,12 @@ describe("the structured-question reminder", () => {
   );
 
   // QFAI:EX-0001-0196-26
+  // QFAI:EX-0001-0196-57
   it.each(SETTINGS)("%s carries the same waiting and completion boundaries", async (rel) => {
     expectReportBoundary(await contextOf(rel));
   });
 
+  // QFAI:EX-0001-0196-58
   it.each(QUESTION_RULES)(
     "%s distinguishes prior delegation from answers and protected requirements",
     async (rel) => {
@@ -174,6 +177,7 @@ describe("the structured-question reminder", () => {
     },
   );
 
+  // QFAI:EX-0001-0196-58
   it.each(SETTINGS)(
     "%s retains prior authorization and required-input boundaries in the full reminder",
     async (rel) => {
@@ -182,6 +186,7 @@ describe("the structured-question reminder", () => {
   );
 
   // QFAI:EX-0001-0196-43
+  // QFAI:EX-0001-0196-59
   it.each(SETTINGS)(
     "%s distinguishes requested values from independent or mixed instructions",
     async (rel) => {
