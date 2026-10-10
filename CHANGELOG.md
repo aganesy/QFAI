@@ -22,15 +22,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
-- **The handoff step records reported failures without claiming success.**
-  Unresolved causes and retries are follow-ups. A separate explicit request
-  to investigate or retry gets its own plan. Fixes #3202.
+- **qfai-run records the required approval before handing an operation to a person.**
+  The row is a route record. Triage steps change no tracked file and never
+  run the handed-off operation. Fixes #3201.
 
 - **The qfai-run instructions clarify when to ask and when to continue.**
   A plan with one scope or no scopes runs every stage without a scope question.
   A session request naming the change and its effect shows acceptance, as the
   extraction reference defines. The agent continues from the announcement into
   the policy check and first stage without waiting for a reply. Fixes #3200.
+
+- **The handoff step records reported failures without claiming success.**
+  Unresolved causes and retries are follow-ups. A separate explicit request
+  to investigate or retry gets its own plan. Fixes #3202.
 
 - **The decision template states the limit of a passing validation result.**
   Every new row uses the four Approach items; validation does not establish
