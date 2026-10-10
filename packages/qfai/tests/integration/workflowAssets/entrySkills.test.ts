@@ -555,7 +555,6 @@ describe("qfai-run", () => {
   // QFAI:AC-0001-0224-10
   // QFAI:EX-0001-0224-05
   // QFAI:EX-0001-0224-14
-  // QFAI:EX-0001-0224-15
   it("moves at a branch point by planning the destination, and asks before the third move", async () => {
     const branch = sectionOf(await readShipped(STAGE_POINTS), "## Branch point");
     const work = flat(branch);
