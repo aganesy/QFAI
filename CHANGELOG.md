@@ -42,6 +42,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Windows CI covers native assistant mirror links.** Its parity list includes
+  mirror link behavior and prepares owned root links before testing, using the
+  same temp directory as the suites. Healthy worktrees remain healthy cases.
+
 - **Windows link warnings describe the affected wrapper and its existing repair.**
   Guidance recommends ordinary init without deleting links and distinguishes
   consumer wrappers from the repository's canonical mirror. Refs #3240.
@@ -317,6 +321,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   constitution's Article V. Part of #2951.
 
 ### Fixed
+
+- Clarify that story ID candidates are snapshots and require a fresh collision
+  check of the committed changes before publishing the same branch head.
 
 - **Language errors offer an ASCII code-point construction for code samples.**
   The guard keeps Unicode escape guidance and explains the alternative when
