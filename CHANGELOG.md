@@ -4,6 +4,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **The agent reviews its session for problems in QFAI when all the work is
+  done, and asks before filing them.** `qfai init` adds a `Stop` hook to
+  `.claude/settings.json` and `.codex/hooks.json`, marked
+  `QFAI session feedback reminder`, and the rule
+  `.agents/rules/session-feedback.md`. When a turn ends, the hook has the agent
+  check whether every task the user gave is complete and nothing waits on the
+  user. If so, the agent reviews the session for blockers, contradictions, lost
+  effort, tokens spent against output, poor value, over-work and quality that
+  missed the request. It drafts one issue for each, without the project's names,
+  source or secrets, and asks the user through the structured question tool
+  whether to file. Only approved drafts are filed to the QFAI repository. The
+  hook stays silent when a stop hook is already continuing the turn and when the
+  last message ends in a question, and nothing is filed under a no-question mode.
+
 ### Changed
 
 - **The README quick start now holds the whole first run.** The separate "Minimal
@@ -11,6 +27,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `npx qfai init`, describing the change in your own words, answering the
   questions the work puts to you or saying `stop`, and checking the result with
   `npx qfai validate` and `npx qfai report` (#2690).
+
+- **The documentation-clarity rule is one document in nine clauses, with a scope
+  table naming the clauses each surface takes.** It now covers structure, claims
+  and reports in any language, not only identifiers and wording. New guidance
+  includes the conclusion first, a table of patterns that add length and no
+  information (announcements, recaps, empty intensifiers), a named actor in
+  place of a software subject that "knows" or "decides", a mark on what is
+  unverified, and a report that opens with its outcome and separates what was
+  checked from what was not. The re-read walks the earlier clauses, and the
+  reminder hooks and the communication rule carry the short form. `qfai init`
+  refreshes the rule and `reminders.json`.
 
 - **The web-research skill says who reads its domain allowlist.** The list sits
   under `webResearch.allowlist` in `qfai.config.yaml` and the agent reads it from

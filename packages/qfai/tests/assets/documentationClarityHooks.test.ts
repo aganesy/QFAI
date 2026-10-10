@@ -35,6 +35,7 @@ import {
   GRILLING_PLAN_HOOK_MARKER,
   INSTALL_CHECK_HOOK_MARKER,
   MINIMAL_IMPLEMENTATION_HOOK_MARKER,
+  SESSION_FEEDBACK_HOOK_MARKER,
   STRUCTURED_QUESTION_HOOK_MARKER,
 } from "../../src/core/claudeCodeHooks.js";
 import {
@@ -75,6 +76,7 @@ const RESTATES: ReadonlyMap<string, string> = new Map([
   [GRILLING_PLAN_HOOK_MARKER, "grilling.md"],
   [STRUCTURED_QUESTION_HOOK_MARKER, "user-questions.md"],
   [API_BUDGET_HOOK_MARKER, "api-budget.md"],
+  [SESSION_FEEDBACK_HOOK_MARKER, "session-feedback.md"],
   // A skill rather than a rule master: the entry the request is sent to.
   [FREE_TEXT_ENTRY_HOOK_MARKER, "qfai-run"],
   [INSTALL_CHECK_HOOK_MARKER, "npm i -D qfai"],
@@ -157,7 +159,12 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
   });
 
   it("wires the reminder to a GitHub post and to a Markdown edit", () => {
-    expect([...hooks.keys()].sort()).toEqual(["PostToolUse", "PreToolUse", "UserPromptSubmit"]);
+    expect([...hooks.keys()].sort()).toEqual([
+      "PostToolUse",
+      "PreToolUse",
+      "Stop",
+      "UserPromptSubmit",
+    ]);
 
     // Selected by matcher rather than by position: other reminders share the
     // event, and asserting this one is the only entry made every later hook a
@@ -268,7 +275,7 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
         }
       }
     }
-    // Six readers. One prints the named message. One does the same but prints
+    // Seven readers. One prints the named message. One does the same but prints
     // only on the first call of a session and on every twentieth after it, which
     // is how a reminder on every write stays out of the way. One looks for this
     // checkout's launcher first and prints only where there is none. One reads
@@ -277,9 +284,11 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
     // exist at all. One reads the prompt and stays silent on a turn the host
     // started rather than the user typed. One reads the file a write names,
     // stays silent for what is plainly not source, and then counts like the
-    // second. A seventh would mean a reminder had grown logic of its own, which
-    // is the thing kept out of this file.
-    expect(readers.size, "a reminder runs one of the six pinned readers").toBe(6);
+    // second. One reads the stop and stays silent when a stop hook is already
+    // continuing the turn, which is what ends the loop, and when the last message
+    // ends in a question. An eighth would mean a reminder had grown logic of its
+    // own, which is the thing kept out of this file.
+    expect(readers.size, "a reminder runs one of the seven pinned readers").toBe(7);
     for (const reader of readers) {
       expect(reader).toContain("process.argv[1]");
       expect(reader).toContain("process.argv[2]");
@@ -393,6 +402,15 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
           const payload: unknown = JSON.parse(stdout);
           if (typeof payload !== "object" || payload === null) {
             throw new Error("hook printed something other than an object");
+          }
+          // A stop is answered by a decision that blocks it, not by context added to the turn.
+          if (event === "Stop") {
+            expect(Reflect.get(payload, "decision")).toBe("block");
+            const reason: unknown = Reflect.get(payload, "reason");
+            expect(reason).toEqual(
+              expect.stringContaining(RESTATES.get(entry.statusMessage) ?? ""),
+            );
+            continue;
           }
           const output: unknown = Reflect.get(payload, "hookSpecificOutput");
           if (typeof output !== "object" || output === null) {

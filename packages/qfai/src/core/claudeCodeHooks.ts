@@ -104,6 +104,19 @@ export const FREE_TEXT_ENTRY_HOOK_MARKER = "QFAI free-text entry reminder";
 export const INSTALL_CHECK_HOOK_MARKER = "QFAI install check reminder";
 
 /**
+ * Identity of the group that asks, when a turn ends, for the session review the
+ * session-feedback rule sets out.
+ *
+ * `Stop` rather than a prompt-time event: it is the one moment after the last
+ * task, and no hook can see whether the user's work is done. The group's program
+ * therefore blocks the stop once, with a message that has the agent decline at
+ * once unless the work is complete. It stays silent when a stop hook is already
+ * continuing the turn, which ends the loop, and when the turn ends in a question,
+ * which is a pause rather than a completion.
+ */
+export const SESSION_FEEDBACK_HOOK_MARKER = "QFAI session feedback reminder";
+
+/**
  * Identity of the group that restates the API-budget rule before a shell command.
  *
  * Its program decides whether to print: it reads the command out of the hook's
