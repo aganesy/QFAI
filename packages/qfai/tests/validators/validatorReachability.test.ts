@@ -33,13 +33,7 @@ const ENTRY_POINTS = ["validate.ts", "../index.ts", "../cli/index.ts", "../cli/m
  * later disconnection slip past unnoticed, because the filter would keep
  * hiding the module.
  */
-const KNOWN_UNREACHABLE = new Map<string, string>([
-  ["validators/auditProfile.ts", "unfiled — same class as #402"],
-  ["validators/skill/phaseOrdering.ts", "unfiled — same class as #402"],
-  ["validators/skill/sidecarFlowOrdering.ts", "unfiled — same class as #402"],
-  ["validators/uix/fixtureCoverage.ts", "#403 — retired uix/ validators"],
-  ["validators/uix/nonUiOverfire.ts", "#403 — retired uix/ validators"],
-]);
+const KNOWN_UNREACHABLE = new Map<string, string>([]);
 
 /**
  * Findings entry points that live in a module the graph *does* reach, yet that
