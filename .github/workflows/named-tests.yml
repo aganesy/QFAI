@@ -75,7 +75,7 @@ jobs:
             const globs = include === null ? [] : [...include[1].matchAll(/"([^"]+)"/gu)].map((match) => match[1]);
             // SIMPLIFIED: supports the workspace's literal tests/<directory>/**/*.test.ts includes.
             // Lift when: the workspace introduces another include shape.
-            if (globs.length === 0 || include[1].replace(/"[^"]*"/gu, "").replace(/[\s,]/gu, "") !== "" || globs.some((glob) => !/^tests\/[a-z]+\/\*\*\/\*\.test\.ts$/u.test(glob))) throw new Error("workspace include patterns are missing or unsupported");
+            if (globs.length === 0 || include[1].replace(/"[^"]*"/gu, "").replace(/[\s,]/gu, "") !== "" || globs.some((glob) => !/^tests\/[a-z0-9]+\/\*\*\/\*\.test\.ts$/u.test(glob))) throw new Error("workspace include patterns are missing or unsupported");
             if (!globs.some((glob) => file.startsWith(`packages/qfai/${glob.slice(0, glob.indexOf("**"))}`))) throw new Error("the current project includes do not match this file");
             const sha = inputSha.toLowerCase();
             const git = (...args) => execFileSync("git", args, { encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"] }).trim();

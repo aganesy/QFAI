@@ -322,7 +322,7 @@ describe("the optional named diagnostic acceptance", () => {
     expect(program).toContain("committed.equals(readFileSync(target))");
     expect(sorted(runnerProjects())).toHaveLength(7);
     for (const entry of declaredIncludeGlobs()) {
-      expect(entry.glob).toMatch(/^tests\/[a-z]+\/\*\*\/\*\.test\.ts$/u);
+      expect(entry.glob).toMatch(/^tests\/[a-z0-9]+\/\*\*\/\*\.test\.ts$/u);
     }
     expect(setupSteps().some((step) => runText(step).includes(FROZEN_INSTALL))).toBe(true);
   });
