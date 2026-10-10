@@ -132,8 +132,10 @@ describe("routing defaults are package data", () => {
     expect(profiles.optional_modes).toHaveProperty("devils-advocate");
   });
 
+  // QFAI:AC-0001-0164-01
   // QFAI:AC-0001-0164-02
   // QFAI:EX-0001-0164-01
+  // QFAI:EX-0001-0164-02
   it("defines devils-advocate as an advisory mode that needs an alternative", async () => {
     const profiles = parseYaml(await readAsset(path.join(DEFAULTS_DIR, "review-profiles.yml"))) as {
       optional_modes: Record<string, Record<string, unknown>>;
@@ -143,6 +145,22 @@ describe("routing defaults are package data", () => {
     expect(String(mode?.description)).toContain("do not block completion by default");
     expect(mode?.alternative_required).toBe(true);
     expect(mode?.bare_negation_invalid).toBe(true);
+  });
+
+  // QFAI:AC-0001-0166-01
+  // QFAI:EX-0001-0166-01
+  it("requires a concrete fix on every blocking finding of a REVISE", async () => {
+    for (const baseline of [SHARED_DELEGATION_BASELINE, LIVE_SHARED_DELEGATION_BASELINE]) {
+      const text = (await readAsset(baseline)).replace(/\s+/g, " ");
+      expect(text).toContain(
+        "Every reviewer returning `REVISE` must include a concrete fix proposal.",
+      );
+      expect(text).toContain("Fix: <action, for a blocking finding>");
+      expect(text).toContain(
+        "`Result: REVISE` is legal only when at least one finding is `Severity: blocking`.",
+      );
+      expect(text).toContain("There is no third verdict.");
+    }
   });
 
   it("routes the migration skill through the required three phases", async () => {

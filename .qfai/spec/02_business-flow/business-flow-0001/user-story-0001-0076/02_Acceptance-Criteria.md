@@ -16,15 +16,16 @@ Feature: Config Glob Tuning
     Given a project on the story tree with `qfai.config.yaml`
     When /qfai-configure updates its configuration
     Then it changes `validation.traceability.testFileGlobs` and, if needed, `testFileExcludeGlobs`
-    And it adds `paths.specsDir` only when that key is absent
-    And it adds routing or review-profile overrides only when the user requested them
-    And it writes nothing under `.qfai/assistant/`
+    And it adds no key whose value is the package default
+    And it adds routing or review-profile overrides only when the user asks to change one
+    And it writes only `qfai.config.yaml` and the project-owned policy and contract files, and nothing under `.qfai/assistant/` unless the user explicitly asks
 
   # AC-0001-0076-03
-  Scenario: Story-Tree Specs Directory
+  Scenario: Story-Tree Specs Directory Follows The Default
     Given a project on the story tree whose `qfai.config.yaml` has no `paths.specsDir`
     When `/qfai-configure` updates the config
-    Then it writes `paths.specsDir: .qfai/spec`
+    Then it does not add `paths.specsDir`
+    And the configuration loader resolves the specs directory to `.qfai/spec`
 
   # AC-0001-0076-04
   Scenario: UI Surface Paths In The Configuration
@@ -38,4 +39,5 @@ Feature: Config Glob Tuning
     Given a project on the story tree whose `qfai.config.yaml` already sets `paths.specsDir`
     When `/qfai-configure` updates the config
     Then the existing value is left unchanged
+    And the configuration loader resolves the specs directory to that value
 ```

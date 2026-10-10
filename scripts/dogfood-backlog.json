@@ -5,17 +5,12 @@
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0042/03_Example.md": {
         "QFAI-STORY-006 EX-0001-0042-02": 1
       },
-      ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0067/03_Example.md": {
-        "QFAI-STORY-006 EX-0001-0067-01": 1
-      },
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0070/03_Example.md": {
         "QFAI-STORY-006 EX-0001-0070-01": 1
       },
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0076/03_Example.md": {
-        "QFAI-STORY-006 EX-0001-0076-02": 1,
         "QFAI-STORY-006 EX-0001-0076-03": 1,
-        "QFAI-STORY-006 EX-0001-0076-04": 1,
-        "QFAI-STORY-006 EX-0001-0076-08": 1
+        "QFAI-STORY-006 EX-0001-0076-04": 1
       },
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0077/03_Example.md": {
         "QFAI-STORY-006 EX-0001-0077-01": 1,
@@ -25,7 +20,6 @@
         "QFAI-STORY-006 EX-0001-0078-01": 1
       },
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0079/03_Example.md": {
-        "QFAI-STORY-006 EX-0001-0079-01": 1,
         "QFAI-STORY-006 EX-0001-0079-02": 1
       },
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0080/03_Example.md": {
@@ -36,16 +30,6 @@
       },
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0083/03_Example.md": {
         "QFAI-STORY-006 EX-0001-0083-01": 1
-      },
-      ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0084/03_Example.md": {
-        "QFAI-STORY-006 EX-0001-0084-01": 1
-      },
-      ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0091/03_Example.md": {
-        "QFAI-STORY-006 EX-0001-0091-03": 1,
-        "QFAI-STORY-006 EX-0001-0091-06": 1
-      },
-      ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0158/03_Example.md": {
-        "QFAI-STORY-006 EX-0001-0158-02": 1
       },
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0159/03_Example.md": {
         "QFAI-STORY-006 EX-0001-0159-02": 1
@@ -60,14 +44,8 @@
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0162/03_Example.md": {
         "QFAI-STORY-006 EX-0001-0162-01": 1
       },
-      ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0164/03_Example.md": {
-        "QFAI-STORY-006 EX-0001-0164-02": 1
-      },
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0165/03_Example.md": {
         "QFAI-STORY-006 EX-0001-0165-01": 1
-      },
-      ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0166/03_Example.md": {
-        "QFAI-STORY-006 EX-0001-0166-01": 1
       },
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0180/03_Example.md": {
         "QFAI-STORY-006 EX-0001-0180-03": 1,
@@ -94,8 +72,7 @@
         "QFAI-STORY-006 AC-0001-0011-02": 1
       },
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0012/02_Acceptance-Criteria.md": {
-        "QFAI-STORY-006 AC-0001-0012-01": 1,
-        "QFAI-STORY-006 AC-0001-0012-02": 1
+        "QFAI-STORY-006 AC-0001-0012-01": 1
       },
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0017/02_Acceptance-Criteria.md": {
         "QFAI-STORY-006 AC-0001-0017-01": 1
@@ -106,32 +83,18 @@
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0042/03_Example.md": {
         "QFAI-STORY-006 EX-0001-0042-02": 1
       },
-      ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0067/02_Acceptance-Criteria.md": {
-        "QFAI-STORY-006 AC-0001-0067-01": 1
-      },
-      ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0067/03_Example.md": {
-        "QFAI-STORY-006 EX-0001-0067-01": 1
-      },
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0070/03_Example.md": {
         "QFAI-STORY-006 EX-0001-0070-01": 1
-      },
-      ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0072/02_Acceptance-Criteria.md": {
-        "QFAI-STORY-006 AC-0001-0072-01": 1
       },
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0075/02_Acceptance-Criteria.md": {
         "QFAI-STORY-006 AC-0001-0075-01": 1
       },
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0076/02_Acceptance-Criteria.md": {
-        "QFAI-STORY-006 AC-0001-0076-01": 1,
-        "QFAI-STORY-006 AC-0001-0076-02": 1,
-        "QFAI-STORY-006 AC-0001-0076-03": 1,
-        "QFAI-STORY-006 AC-0001-0076-05": 1
+        "QFAI-STORY-006 AC-0001-0076-01": 1
       },
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0076/03_Example.md": {
-        "QFAI-STORY-006 EX-0001-0076-02": 1,
         "QFAI-STORY-006 EX-0001-0076-03": 1,
-        "QFAI-STORY-006 EX-0001-0076-04": 1,
-        "QFAI-STORY-006 EX-0001-0076-08": 1
+        "QFAI-STORY-006 EX-0001-0076-04": 1
       },
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0077/02_Acceptance-Criteria.md": {
         "QFAI-STORY-006 AC-0001-0077-01": 1
@@ -147,11 +110,9 @@
         "QFAI-STORY-006 EX-0001-0078-01": 1
       },
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0079/02_Acceptance-Criteria.md": {
-        "QFAI-STORY-006 AC-0001-0079-01": 1,
         "QFAI-STORY-006 AC-0001-0079-02": 1
       },
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0079/03_Example.md": {
-        "QFAI-STORY-006 EX-0001-0079-01": 1,
         "QFAI-STORY-006 EX-0001-0079-02": 1
       },
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0080/02_Acceptance-Criteria.md": {
@@ -172,28 +133,8 @@
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0083/03_Example.md": {
         "QFAI-STORY-006 EX-0001-0083-01": 1
       },
-      ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0084/02_Acceptance-Criteria.md": {
-        "QFAI-STORY-006 AC-0001-0084-01": 1
-      },
-      ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0084/03_Example.md": {
-        "QFAI-STORY-006 EX-0001-0084-01": 1
-      },
-      ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0091/02_Acceptance-Criteria.md": {
-        "QFAI-STORY-006 AC-0001-0091-05": 1
-      },
-      ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0091/03_Example.md": {
-        "QFAI-STORY-006 EX-0001-0091-03": 1,
-        "QFAI-STORY-006 EX-0001-0091-06": 1
-      },
-      ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0157/02_Acceptance-Criteria.md": {
-        "QFAI-STORY-006 AC-0001-0157-01": 1
-      },
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0158/02_Acceptance-Criteria.md": {
-        "QFAI-STORY-006 AC-0001-0158-01": 1,
-        "QFAI-STORY-006 AC-0001-0158-02": 1
-      },
-      ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0158/03_Example.md": {
-        "QFAI-STORY-006 EX-0001-0158-02": 1
+        "QFAI-STORY-006 AC-0001-0158-01": 1
       },
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0159/02_Acceptance-Criteria.md": {
         "QFAI-STORY-006 AC-0001-0159-02": 1
@@ -218,26 +159,11 @@
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0162/03_Example.md": {
         "QFAI-STORY-006 EX-0001-0162-01": 1
       },
-      ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0164/02_Acceptance-Criteria.md": {
-        "QFAI-STORY-006 AC-0001-0164-01": 1
-      },
-      ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0164/03_Example.md": {
-        "QFAI-STORY-006 EX-0001-0164-02": 1
-      },
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0165/02_Acceptance-Criteria.md": {
         "QFAI-STORY-006 AC-0001-0165-01": 1
       },
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0165/03_Example.md": {
         "QFAI-STORY-006 EX-0001-0165-01": 1
-      },
-      ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0166/02_Acceptance-Criteria.md": {
-        "QFAI-STORY-006 AC-0001-0166-01": 1
-      },
-      ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0166/03_Example.md": {
-        "QFAI-STORY-006 EX-0001-0166-01": 1
-      },
-      ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0171/02_Acceptance-Criteria.md": {
-        "QFAI-STORY-006 AC-0001-0171-01": 1
       },
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0176/02_Acceptance-Criteria.md": {
         "QFAI-STORY-006 AC-0001-0176-01": 1,
