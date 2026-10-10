@@ -36,6 +36,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Worker work orders state the permitted edit boundary.** They name the
+  assigned checkout, owned paths and edit method. A refused edit returns a
+  reviewable diff for coordinator integration without bypassing the refusal.
+
 - **Missing test annotations use grammatical diagnostics.** Messages use
   "an E2E test", "an integration or API test" and "a test" for the three
   obligation kinds. Coverage and severity are unchanged. Fixes #3239.

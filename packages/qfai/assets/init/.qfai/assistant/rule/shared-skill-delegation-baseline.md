@@ -45,6 +45,25 @@ classified by the taxonomy below before any response.
   Writers, local gates and reviews using live files or checkout-dependent
   execution must finish first.
 
+### Worker edit boundary
+
+The work order names the checkout assigned to the task by the host, the worker's
+write paths and the permitted edit method. Creating a Git worktree does not
+grant the host's tools permission to edit it. Even an assigned checkout can
+receive a refusal; verify the actual edit result rather than claiming access.
+
+If an edit is refused, stop writes to that target. Report the tool, working
+directory, target path and refusal text, omitting secrets. Return the owned
+paths and a reviewable diff that can be prepared within the worker's permitted
+area. Do not bypass the refusal through a shell, script or another tool.
+This does not forbid shell authoring where the host already permits it.
+
+The orchestrator checks the diff against the current files in its own permitted
+checkout before applying it. If that edit is refused too, leave the application
+pending and continue only independent work. Follow the existing worktree or
+shared-index mode in `.qfai/assistant/rule/workflow.md#concurrency-stage-independent-mandatory`
+when assigning writers and integrating their paths.
+
 ### Capability Probe (MUST)
 
 1. No delegation attempt is required at the start of a stage. The orchestrator
@@ -219,6 +238,10 @@ Task title: <short>
 Role: <sub-agent role>
 Review series: <reviewed artifact> + <reviewer role> + <replacement ordinal>   # review work orders only
 Goal: <what to decide/produce>
+Checkout: <absolute checkout assigned to this task by the host>
+Write paths: <exact owned paths, or none for a read-only task>
+Edit method: <host-permitted tool; worktree creation does not grant access>
+If an edit is refused: stop that target; return tool, cwd, target, refusal text, owned paths and a reviewable diff
 Inputs (refs):
 - <file/section>
 - .qfai/assistant/rule/drift-protocol.md#core-rule  <!-- the protected set, in front of the agent -->
