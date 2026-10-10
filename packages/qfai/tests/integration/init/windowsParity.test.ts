@@ -8,6 +8,7 @@ import {
   cp,
   lstat,
   mkdir,
+  rm,
   readdir,
   readFile,
   readlink,
@@ -17,6 +18,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import path from "node:path";
+import { randomUUID } from "node:crypto";
 import { promisify } from "node:util";
 
 import { describe, expect, it } from "vitest";
@@ -25,6 +27,7 @@ import { HOST_SKILL_DIRS, initQuietly, modeLines, withEmptyRepo } from "./upgrad
 import { assertBuiltCliFresh } from "../../helpers/builtCli.js";
 import { validateIntegrationSurface } from "../../../src/core/validators/integrationSurface.js";
 import { getInitAssetsDir } from "../../../src/shared/assets.js";
+import { coldValidationCli } from "../../helpers/validationInputManifest.js";
 
 const CLI = path.resolve(import.meta.dirname, "../../../dist/cli/index.mjs");
 assertBuiltCliFresh(CLI);
@@ -266,6 +269,76 @@ describe("native linked worktree skill wrappers", () => {
         expect(await readFile(path.join(checkout, foreignSkill), "utf8")).toBe(
           "project-owned skill bytes\n",
         );
+      }
+    });
+  });
+});
+
+async function writeProfileFixture(root: string, program: string): Promise<string> {
+  const file = path.join(root, "profile fixture.cjs");
+  await writeFile(file, program, "utf8");
+  return file;
+}
+
+async function waitForProfileFixture(file: string): Promise<string> {
+  const deadline = Date.now() + 4_000;
+  while (Date.now() < deadline) {
+    try {
+      return await readFile(file, "utf8");
+    } catch (error: unknown) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      await new Promise<void>((resolve) => setTimeout(resolve, 20));
+    }
+  }
+  throw new Error(`The profiling fixture did not become ready: ${file}`);
+}
+
+describe("validation profiling child failures", () => {
+  it("keeps a completed nonzero exit and both partial output streams", async () => {
+    await withEmptyRepo(async (root) => {
+      const cli = await writeProfileFixture(
+        root,
+        'process.stdout.write("partial output\\n"); process.stderr.write("validation failed\\n"); process.exitCode = 7;',
+      );
+      const result = await coldValidationCli(cli, root, 5_000);
+      expect(result.code).toBe(7);
+      expect(result.signal).toBeNull();
+      expect(result.stdout).toBe("partial output\n");
+      expect(result.stderr).toBe("validation failed\n");
+    });
+  });
+
+  it("terminates the owned descendant as well as a timed-out profiling child", async () => {
+    await withEmptyRepo(async (root) => {
+      const token = randomUUID();
+      const ready = path.join(root, "owned descendant.json");
+      const marker = path.join(root, "descendant continued.txt");
+      const descendant = `const fs = require("node:fs"); fs.writeFileSync(${JSON.stringify(ready)}, JSON.stringify({ pid: process.pid, token: ${JSON.stringify(token)} })); process.on("SIGTERM", () => {}); setInterval(() => fs.writeFileSync(${JSON.stringify(marker)}, "still running"), 100);`;
+      const cli = await writeProfileFixture(
+        root,
+        `require("node:child_process").spawn(process.execPath, ["-e", ${JSON.stringify(descendant)}], { stdio: "ignore" }); process.stdout.write(${JSON.stringify("before timeout\n")}); setInterval(() => {}, 1000);`,
+      );
+      let owned: { pid: number; token: string } | undefined;
+      const running = coldValidationCli(cli, root, 5_000);
+      try {
+        owned = JSON.parse(await waitForProfileFixture(ready)) as { pid: number; token: string };
+        expect(owned.token).toBe(token);
+        const result = await running;
+        expect(result.code).toBeNull();
+        expect(result.stdout).toContain("before timeout");
+        await rm(marker, { force: true });
+        await new Promise<void>((resolve) => setTimeout(resolve, 300));
+        await expect(readFile(marker, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+      } finally {
+        await running;
+        if (owned !== undefined && owned.token === token) {
+          try {
+            process.kill(owned.pid, "SIGKILL");
+          } catch (error: unknown) {
+            if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error;
+          }
+        }
+        await rm(marker, { force: true });
       }
     });
   });
