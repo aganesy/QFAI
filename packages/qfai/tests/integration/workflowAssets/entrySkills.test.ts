@@ -727,7 +727,6 @@ describe("qfai-run", () => {
 
   // QFAI:AC-0001-0224-10
   // QFAI:EX-0001-0224-14
-  // QFAI:EX-0001-0224-15
   it("stops before person-only actions and permits only covered external actions through a safe host channel", async () => {
     const screens = await readShipped(SCREENS);
     const step = flat(sectionOf(screens, "## A step only a person can take"));
@@ -773,7 +772,9 @@ describe("qfai-run", () => {
       /authority.*credential ownership.*safe channel.*absent or unknown.*host denies.*stop.*dependent action/i,
     );
     expect(refusal).toMatch(/manual steps.*evidence.*confirm.*read-only.*check/i);
-    expect(refusal).toMatch(/do not bypass.*denial.*infer permission.*proceed/i);
+    expect(refusal).toMatch(
+      /do not bypass.*denial.*infer missing authority.*generic request.*proceed/i,
+    );
     expect(refusal).toMatch(
       /human-run.*triage handoff.*handoff.*authorized independent work.*continue/i,
     );

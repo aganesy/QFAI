@@ -92,7 +92,6 @@ describe("the steps the routes add to qfai-implement", () => {
   // QFAI:EX-0001-0200-02
   // QFAI:AC-0001-0224-09
   // QFAI:AC-0001-0224-10
-  // QFAI:EX-0001-0224-13
   // QFAI:EX-0001-0224-14
   it("states each step's own obligation", async () => {
     const bisect = flat(await stepText("implement-bisect"));
