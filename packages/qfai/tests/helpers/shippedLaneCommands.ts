@@ -1298,7 +1298,7 @@ export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
  * rather than drift. It moved a second time when the workflow's run state arrived: `.qfai/run/`
  * joined the ignore lines, and that line is the whole delta.
  *
- * `AGENTS.md` and `CLAUDE.md` are the entry points Codex and Claude Code load, seeded create-only so
+ * `AGENTS.md` is the entry point Codex and Claude Code load, seeded create-only so
  * that the `.agents/rules/` masters this run writes are cited by something. They belong here for the
  * same reason `.github/copilot-instructions.md` does: an adopter's agent reads them as instructions,
  * so their bytes are the reviewed surface. Each opens with its level-1 heading; the line that once
