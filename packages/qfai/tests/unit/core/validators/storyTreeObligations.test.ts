@@ -25,6 +25,21 @@ function model(decisions?: string) {
 
 // QFAI:EX-0004-0001-02
 describe("story-tree test obligations", () => {
+  it.each([
+    ["atdd", "BF-0001", "an E2E test"],
+    ["atdd", "AC-0001-0001-01", "an integration or API test"],
+    ["tdd", "EX-0001-0001-01", "a test"],
+  ] as const)(
+    "names the missing annotation for %s / %s in natural English",
+    (profile, id, target) => {
+      const findings = validateStoryTreeObligationsModel(model(), [], profile);
+      const finding = findings.find(
+        (item) => item.code === "QFAI-STORY-006" && item.refs?.includes(id),
+      );
+      expect(finding?.message).toBe(`${id} is missing ${target} annotation`);
+    },
+  );
+
   it("requires BF in E2E and AC in integration or API", () => {
     const findings = validateStoryTreeObligationsModel(
       model(),
