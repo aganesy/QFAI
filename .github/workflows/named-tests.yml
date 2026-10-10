@@ -1,0 +1,143 @@
+name: Named test diagnostic
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: Pull request number
+        required: true
+        type: string
+      sha:
+        description: Current pull request head, as a full 40 or 64 character commit SHA
+        required: true
+        type: string
+      project:
+        description: Vitest project containing the test file
+        required: true
+        type: choice
+        options: [core, unit, validators, integration, e2e, cli, scripts]
+      file:
+        description: Exact tracked packages/qfai/tests/.../file.test.ts path
+        required: true
+        type: string
+
+# SHIPPED-CI: not-applicable
+# Because: this optional diagnostic addresses this repository's own pull request refs and Vitest projects.
+permissions:
+  contents: read
+
+concurrency:
+  group: named-tests-${{ inputs.pr }}-${{ inputs.project }}
+  cancel-in-progress: true
+
+jobs:
+  named-test:
+    name: Named test diagnostic (${{ inputs.project }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PR_NUMBER: ${{ inputs.pr }}
+      EXPECTED_SHA: ${{ inputs.sha }}
+      TEST_PROJECT: ${{ inputs.project }}
+      TEST_FILE: ${{ inputs.file }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate named test request
+        run: |
+          set -euo pipefail
+          cat > "${RUNNER_TEMP}/named-preflight.mjs" <<'PREFLIGHT'
+          import { execFileSync } from "node:child_process";
+          import { lstatSync, readFileSync, realpathSync } from "node:fs";
+          import path from "node:path";
+          import process from "node:process";
+
+          try {
+            const { PR_NUMBER: pr, EXPECTED_SHA: inputSha, TEST_PROJECT: project, TEST_FILE: file } = process.env;
+            const projects = new Set(["core", "unit", "validators", "integration", "e2e", "cli", "scripts"]);
+            if (!/^[1-9][0-9]*$/u.test(pr ?? "")) throw new Error("pr must be a positive pull request number");
+            if (!/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/iu.test(inputSha ?? "")) throw new Error("sha must be a full commit SHA");
+            if (!projects.has(project)) throw new Error("project must name one supported Vitest project");
+            if (typeof file !== "string" || !/^[A-Za-z0-9._/-]+$/u.test(file)) throw new Error("file must be an exact repository-relative test path");
+            const parts = file.split("/");
+            if (parts.some((part) => part === "" || part === "." || part === "..") || parts.slice(0, 3).join("/") !== "packages/qfai/tests" || !file.endsWith(".test.ts")) {
+              throw new Error("file must be a test in the selected project, without traversal or glob characters");
+            }
+            const workspace = readFileSync("packages/qfai/vitest.workspace.ts", "utf-8");
+            const marks = [...workspace.matchAll(/name:\s*"([^"]+)"/gu)];
+            const at = marks.findIndex((mark) => mark[1] === project);
+            if (at < 0 || marks.filter((mark) => mark[1] === project).length !== 1) throw new Error("project must name one current workspace project");
+            const region = workspace.slice(marks[at].index, marks[at + 1]?.index ?? workspace.length);
+            const include = /include:\s*\[([^\]]*)\]/u.exec(region);
+            const globs = include === null ? [] : [...include[1].matchAll(/"([^"]+)"/gu)].map((match) => match[1]);
+            // SIMPLIFIED: supports the workspace's literal tests/<directory>/**/*.test.ts includes.
+            // Lift when: the workspace introduces another include shape.
+            if (globs.length === 0 || include[1].replace(/"[^"]*"/gu, "").replace(/[\s,]/gu, "") !== "" || globs.some((glob) => !/^tests\/[a-z]+\/\*\*\/\*\.test\.ts$/u.test(glob))) throw new Error("workspace include patterns are missing or unsupported");
+            if (!globs.some((glob) => file.startsWith(`packages/qfai/${glob.slice(0, glob.indexOf("**"))}`))) throw new Error("the current project includes do not match this file");
+            const sha = inputSha.toLowerCase();
+            const git = (...args) => execFileSync("git", args, { encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+            const ref = `refs/pull/${pr}/head`;
+            const live = git("ls-remote", "--refs", "origin", ref).split(/\r?\n/u);
+            if (live.length !== 1 || live[0] !== `${sha}\t${ref}` || git("rev-parse", "HEAD") !== sha) throw new Error("the input SHA, live pull request head and checkout HEAD must agree");
+            const entry = git("ls-tree", "HEAD", "--", file);
+            if (!/^(?:100644|100755) blob [0-9a-f]{40,64}\t/u.test(entry) || entry.slice(entry.indexOf("\t") + 1) !== file) throw new Error("file must be a tracked regular test at this head");
+            const root = process.cwd();
+            let target = root;
+            for (const part of parts) {
+              target = path.join(target, part);
+              if (lstatSync(target).isSymbolicLink()) throw new Error("test paths may not contain a symbolic link");
+            }
+            if (!lstatSync(target).isFile() || realpathSync(target) !== path.resolve(root, file)) throw new Error("file must resolve to a regular test inside the checkout");
+            const committed = execFileSync("git", ["show", `HEAD:${file}`], { maxBuffer: 16 * 1024 * 1024 });
+            if (!committed.equals(readFileSync(target))) throw new Error("the test file differs from its pull request head");
+            process.stdout.write(`Verified PR ${pr} at ${sha}: ${project} / ${file}\n`);
+          } catch (cause) {
+            process.stderr.write(`Named diagnostic: ${cause instanceof Error ? cause.message : String(cause)}\n`);
+            process.exitCode = 1;
+          }
+          PREFLIGHT
+          node "${RUNNER_TEMP}/named-preflight.mjs"
+      - uses: ./.github/actions/setup
+        with:
+          engines-manifest: ./packages/qfai/package.json
+          pin-engines-floor: "true"
+      - name: Build qfai for projects that read dist
+        if: inputs.project == 'e2e' || inputs.project == 'integration'
+        run: pnpm -C packages/qfai build
+      - name: Run the exact named test file
+        run: |
+          set -euo pipefail
+          node "${RUNNER_TEMP}/named-preflight.mjs"
+          node --input-type=module <<'RUNNER'
+          import { spawnSync } from "node:child_process";
+          import { readFileSync } from "node:fs";
+          import path from "node:path";
+          import process from "node:process";
+
+          try {
+            const cwd = path.resolve("packages/qfai");
+            const file = path.resolve(process.env.TEST_FILE);
+            const project = process.env.TEST_PROJECT;
+            const cli = path.join(cwd, "node_modules", "vitest", "vitest.mjs");
+            const listing = path.join(process.env.RUNNER_TEMP, "named-test-files.json");
+            const report = path.join(process.env.RUNNER_TEMP, "named-test-results.json");
+            const selected = ["--project", project, file];
+            const collect = spawnSync(process.execPath, [cli, "list", ...selected, "--filesOnly", "--json", listing], { cwd, stdio: "inherit" });
+            if (collect.status !== 0) throw new Error(`Vitest file selection failed (${collect.status ?? collect.signal})`);
+            const specs = JSON.parse(readFileSync(listing, "utf-8"));
+            if (!Array.isArray(specs) || specs.length !== 1 || specs[0]?.file !== file || specs[0]?.projectName !== project) throw new Error("Vitest must select exactly the requested file in the requested project");
+            const verified = spawnSync(process.execPath, [path.join(process.env.RUNNER_TEMP, "named-preflight.mjs")], { stdio: "inherit" });
+            if (verified.status !== 0) throw new Error("the pull request head or test path changed before execution");
+            const result = spawnSync(process.execPath, [cli, "run", ...selected, "--passWithNoTests=false", "--allowOnly=false", "--reporter=default", "--reporter=json", "--outputFile.json", report], { cwd, stdio: "inherit" });
+            if (result.status !== 0) throw new Error(`Vitest test run failed (${result.status ?? result.signal})`);
+            const results = JSON.parse(readFileSync(report, "utf-8"));
+            if (!Array.isArray(results.testResults) || results.testResults.length !== 1 || results.testResults[0]?.name !== file || !Number.isInteger(results.numPassedTests) || !Number.isInteger(results.numFailedTests) || results.numPassedTests + results.numFailedTests < 1) throw new Error("the named file must report at least one executed test");
+            process.stdout.write(`Named diagnostic completed: ${results.numPassedTests} passed, ${results.numFailedTests} failed. Full PR CI is still required.\n`);
+          } catch (cause) {
+            process.stderr.write(`Named diagnostic: ${cause instanceof Error ? cause.message : String(cause)}\n`);
+            process.exitCode = 1;
+          }
+          RUNNER

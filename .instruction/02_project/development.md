@@ -88,6 +88,32 @@ pnpm -C packages/qfai test
 pnpm verify:pack
 ```
 
+## Run one test file in CI
+
+The manual `named-tests.yml` workflow runs one tracked test file at a pull request's
+current head. It becomes available after the workflow is registered on main. Set
+`pr` to the pull request number, then dispatch from main:
+
+```bash
+pr=YOUR_PR_NUMBER
+sha="$(git ls-remote --refs origin "refs/pull/${pr}/head" | cut -f1)"
+gh workflow run named-tests.yml --ref main \
+  -f "pr=${pr}" -f "sha=${sha}" -f project=scripts \
+  -f file=packages/qfai/tests/scripts/changelogReleasedSections.test.ts
+```
+
+Select one of the seven Vitest projects and an exact repository-relative `.test.ts`
+path in that project's declared directories. Globs and traversal are rejected. The
+workflow verifies the live pull request ref, checkout SHA and tracked file before
+setup and again before execution. Both checks compare the file bytes with the
+selected commit's blob, so setup or build changes are rejected. It refuses multiple
+selected files, no matched file, an empty test file and a run with no executed tests.
+
+This is a diagnostic. Every normal PR CI check is still required. A new dispatch
+cancels an older named diagnostic for the same pull request and project. The job
+uses the shared frozen install and package Node floor, and builds normally for
+integration or e2e files that read the built CLI.
+
 ## Test directory mapping
 
 Vitest project names describe runner groups. QFAI classifies coverage from

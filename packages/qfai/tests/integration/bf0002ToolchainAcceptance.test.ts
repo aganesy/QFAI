@@ -348,125 +348,121 @@ describe("the optional named diagnostic acceptance", () => {
     ["remote unavailable", 1, "changed before execution"],
     ["file changed during selection", 1, "differs from its pull request head"],
     ["file changed after setup", 1, "differs from its pull request head"],
-  ] as const)(
-    "%s selection reports its real execution result",
-    async (kind, status, message) => {
-      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-named-real-runner-"));
-      try {
-        const packageRoot = path.join(root, "packages", "qfai");
-        const directory = path.join(packageRoot, "tests", "core");
-        await mkdir(directory, { recursive: true });
-        await symlink(
-          path.join(REPO_ROOT, "packages", "qfai", "node_modules"),
-          path.join(packageRoot, "node_modules"),
-          "junction",
-        );
-        await writeFile(
-          path.join(packageRoot, "vitest.workspace.ts"),
-          readText("packages", "qfai", "vitest.workspace.ts"),
-        );
-        const target = path.join(directory, "one.test.ts");
-        const changesDuringSelection = [
-          "remote moved",
-          "checkout moved",
-          "remote unavailable",
-          "file changed during selection",
-        ].includes(kind);
-        const code =
-          kind === "empty"
-            ? "export const marker = true;\n"
-            : kind === "timeout"
-              ? 'import { it } from "vitest";\nit("timeout", async () => { await new Promise((resolve) => setTimeout(resolve, 50)); }, 1);\n'
-              : changesDuringSelection || kind === "file changed after setup"
-                ? 'import { it } from "vitest";\nit("blocked", () => { throw new Error("SELECTED_TEST_EXECUTED"); });\n'
-                : `import { expect, it } from "vitest";\nit${kind === "skipped" ? ".skip" : ""}("named behavior", () => { expect(${kind === "failure" ? "false" : "true"}).toBe(true); });\n`;
-        await writeFile(target, code);
-        await writeFile(
-          path.join(directory, kind === "collision" ? "one.test.ts-copy.test.ts" : "other.test.ts"),
-          'import { it } from "vitest";\nit("unselected", () => { throw new Error("UNSELECTED_TEST_EXECUTED"); });\n',
-        );
-        const include =
-          kind === "excluded" ? "tests/core/missing.test.ts" : "tests/core/**/*.test.ts";
-        const mutation =
-          kind === "remote moved"
-            ? 'git("commit", "--allow-empty", "-m", "Advanced remote"); git("push", "origin", "HEAD:refs/pull/37/head"); git("checkout", process.env.EXPECTED_SHA);'
-            : kind === "checkout moved"
-              ? 'git("commit", "--allow-empty", "-m", "Advanced checkout");'
-              : kind === "remote unavailable"
-                ? 'git("remote", "remove", "origin");'
-                : kind === "file changed during selection"
-                  ? 'writeFileSync(path.join(process.env.RUNNER_TEMP, process.env.TEST_FILE), "export const changed = true;\\n");'
-                  : "";
-        const configPreamble =
-          mutation === ""
-            ? ""
-            : `import { execFileSync } from "node:child_process";\nimport { writeFileSync } from "node:fs";\nimport path from "node:path";\nif (process.argv.includes("list")) { const git = (...args) => execFileSync("git", args, { stdio: "pipe" }); ${mutation} }\n`;
-        await writeFile(
-          path.join(packageRoot, "vitest.config.mjs"),
-          `${configPreamble}export default { test: { maxWorkers: 1, fileParallelism: false, projects: [{ test: { name: "core", include: [${JSON.stringify(include)}] } }] } };\n`,
-        );
-        const git = (...args: string[]): string =>
-          execFileSync("git", args, {
-            cwd: root,
-            encoding: "utf-8",
-            stdio: ["ignore", "pipe", "pipe"],
-          }).trim();
-        git("init", "-b", "main");
-        git("config", "user.email", "fixture@example.invalid");
-        git("config", "user.name", "Named runner fixture");
-        git("config", "core.autocrlf", "false");
-        git(
-          "add",
-          "packages/qfai/tests",
-          "packages/qfai/vitest.config.mjs",
-          "packages/qfai/vitest.workspace.ts",
-        );
-        git("commit", "-m", "Runner fixture");
-        const head = git("rev-parse", "HEAD");
-        const origin = path.join(root, "origin.git");
-        git("init", "--bare", origin);
-        git("remote", "add", "origin", origin);
-        git("push", "origin", "HEAD:refs/pull/37/head");
-        const program = path.join(root, "runner.mjs");
-        const preflight = path.join(root, "named-preflight.mjs");
-        await writeFile(program, namedDiagnosticProgram("RUNNER"));
-        await writeFile(preflight, namedDiagnosticProgram("PREFLIGHT"));
-        const options = {
+  ] as const)("%s selection reports its real execution result", async (kind, status, message) => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-named-real-runner-"));
+    try {
+      const packageRoot = path.join(root, "packages", "qfai");
+      const directory = path.join(packageRoot, "tests", "core");
+      await mkdir(directory, { recursive: true });
+      await symlink(
+        path.join(REPO_ROOT, "packages", "qfai", "node_modules"),
+        path.join(packageRoot, "node_modules"),
+        "junction",
+      );
+      await writeFile(
+        path.join(packageRoot, "vitest.workspace.ts"),
+        readText("packages", "qfai", "vitest.workspace.ts"),
+      );
+      const target = path.join(directory, "one.test.ts");
+      const changesDuringSelection = [
+        "remote moved",
+        "checkout moved",
+        "remote unavailable",
+        "file changed during selection",
+      ].includes(kind);
+      const code =
+        kind === "empty"
+          ? "export const marker = true;\n"
+          : kind === "timeout"
+            ? 'import { it } from "vitest";\nit("timeout", async () => { await new Promise((resolve) => setTimeout(resolve, 50)); }, 1);\n'
+            : changesDuringSelection || kind === "file changed after setup"
+              ? 'import { it } from "vitest";\nit("blocked", () => { throw new Error("SELECTED_TEST_EXECUTED"); });\n'
+              : `import { expect, it } from "vitest";\nit${kind === "skipped" ? ".skip" : ""}("named behavior", () => { expect(${kind === "failure" ? "false" : "true"}).toBe(true); });\n`;
+      await writeFile(target, code);
+      await writeFile(
+        path.join(directory, kind === "collision" ? "one.test.ts-copy.test.ts" : "other.test.ts"),
+        'import { it } from "vitest";\nit("unselected", () => { throw new Error("UNSELECTED_TEST_EXECUTED"); });\n',
+      );
+      const include =
+        kind === "excluded" ? "tests/core/missing.test.ts" : "tests/core/**/*.test.ts";
+      const mutation =
+        kind === "remote moved"
+          ? 'git("commit", "--allow-empty", "-m", "Advanced remote"); git("push", "origin", "HEAD:refs/pull/37/head"); git("checkout", process.env.EXPECTED_SHA);'
+          : kind === "checkout moved"
+            ? 'git("commit", "--allow-empty", "-m", "Advanced checkout");'
+            : kind === "remote unavailable"
+              ? 'git("remote", "remove", "origin");'
+              : kind === "file changed during selection"
+                ? 'writeFileSync(path.join(process.env.RUNNER_TEMP, process.env.TEST_FILE), "export const changed = true;\\n");'
+                : "";
+      const configPreamble =
+        mutation === ""
+          ? ""
+          : `import { execFileSync } from "node:child_process";\nimport { writeFileSync } from "node:fs";\nimport path from "node:path";\nif (process.argv.includes("list")) { const git = (...args) => execFileSync("git", args, { stdio: "pipe" }); ${mutation} }\n`;
+      await writeFile(
+        path.join(packageRoot, "vitest.config.mjs"),
+        `${configPreamble}export default { test: { maxWorkers: 1, fileParallelism: false, projects: [{ test: { name: "core", include: [${JSON.stringify(include)}] } }] } };\n`,
+      );
+      const git = (...args: string[]): string =>
+        execFileSync("git", args, {
           cwd: root,
-          encoding: "utf-8" as const,
-          timeout: 60_000,
-          env: {
-            ...process.env,
-            PR_NUMBER: "37",
-            EXPECTED_SHA: head,
-            TEST_PROJECT: "core",
-            TEST_FILE: "packages/qfai/tests/core/one.test.ts",
-            RUNNER_TEMP: root,
-          },
-        };
-        const initial = spawnSync(process.execPath, [preflight], options);
-        expect(initial.status, initial.stdout + initial.stderr).toBe(0);
-        expect(initial.stdout).toContain(head);
-        if (kind === "file changed after setup") {
-          await writeFile(target, code + "// Build changed this tracked file.\n");
-          expect(git("rev-parse", "HEAD")).toBe(head);
-        }
-        const result = spawnSync(
-          process.execPath,
-          [kind === "file changed after setup" ? preflight : program],
-          options,
-        );
-        const output = result.stdout + result.stderr;
-        expect(result.status, output).toBe(status);
-        expect(output).toContain(message);
-        expect(output).not.toContain("UNSELECTED_TEST_EXECUTED");
-        expect(output).not.toContain("SELECTED_TEST_EXECUTED");
-        if (status !== 0) expect(output).not.toContain("Named diagnostic completed:");
-        if (kind === "file changed during selection") expect(git("rev-parse", "HEAD")).toBe(head);
-      } finally {
-        await removeTempTree(root);
+          encoding: "utf-8",
+          stdio: ["ignore", "pipe", "pipe"],
+        }).trim();
+      git("init", "-b", "main");
+      git("config", "user.email", "fixture@example.invalid");
+      git("config", "user.name", "Named runner fixture");
+      git("config", "core.autocrlf", "false");
+      git(
+        "add",
+        "packages/qfai/tests",
+        "packages/qfai/vitest.config.mjs",
+        "packages/qfai/vitest.workspace.ts",
+      );
+      git("commit", "-m", "Runner fixture");
+      const head = git("rev-parse", "HEAD");
+      const origin = path.join(root, "origin.git");
+      git("init", "--bare", origin);
+      git("remote", "add", "origin", origin);
+      git("push", "origin", "HEAD:refs/pull/37/head");
+      const program = path.join(root, "runner.mjs");
+      const preflight = path.join(root, "named-preflight.mjs");
+      await writeFile(program, namedDiagnosticProgram("RUNNER"));
+      await writeFile(preflight, namedDiagnosticProgram("PREFLIGHT"));
+      const options = {
+        cwd: root,
+        encoding: "utf-8" as const,
+        timeout: 60_000,
+        env: {
+          ...process.env,
+          PR_NUMBER: "37",
+          EXPECTED_SHA: head,
+          TEST_PROJECT: "core",
+          TEST_FILE: "packages/qfai/tests/core/one.test.ts",
+          RUNNER_TEMP: root,
+        },
+      };
+      const initial = spawnSync(process.execPath, [preflight], options);
+      expect(initial.status, initial.stdout + initial.stderr).toBe(0);
+      expect(initial.stdout).toContain(head);
+      if (kind === "file changed after setup") {
+        await writeFile(target, code + "// Build changed this tracked file.\n");
+        expect(git("rev-parse", "HEAD")).toBe(head);
       }
-    },
-    90_000,
-  );
+      const result = spawnSync(
+        process.execPath,
+        [kind === "file changed after setup" ? preflight : program],
+        options,
+      );
+      const output = result.stdout + result.stderr;
+      expect(result.status, output).toBe(status);
+      expect(output).toContain(message);
+      expect(output).not.toContain("UNSELECTED_TEST_EXECUTED");
+      expect(output).not.toContain("SELECTED_TEST_EXECUTED");
+      if (status !== 0) expect(output).not.toContain("Named diagnostic completed:");
+      if (kind === "file changed during selection") expect(git("rev-parse", "HEAD")).toBe(head);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
 });
