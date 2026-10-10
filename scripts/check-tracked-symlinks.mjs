@@ -23,18 +23,13 @@
  *
  * ## Which paths are expected to be links
  *
- * Derived, never listed here. Two surfaces own the answer, and each is read
- * from the tree that defines it:
- *
- * - every rule the package ships is read here through its shipped copy, so
- *   `.agents/rules/<name>` is a link for each `<name>` under
- *   `packages/qfai/assets/init/root/.agents/rules/`. A rule about this
- *   repository alone has no shipped copy and is a real file.
- * - `.claude/rules/` is the tool-specific entry point onto `.agents/rules/`, so
- *   every name present in both is a link on the `.claude` side.
- *
- * A rule added to either tree is covered by the same derivation, with no second
- * list to keep in step.
+ * Derived, never listed here. The package's shipped rules own the answer: every
+ * rule is read here through its shipped copy, so `.agents/rules/<name>` is a
+ * link for each `<name>` under
+ * `packages/qfai/assets/init/root/.agents/rules/`. A rule about this
+ * repository alone has no shipped copy and is a real file. A rule added to the
+ * shipped tree is covered by the same derivation, with no second list to keep
+ * in step.
  *
  * Usage:
  *   node scripts/check-tracked-symlinks.mjs
@@ -49,7 +44,6 @@ const SYMLINK_MODE = "120000";
 
 const SHIPPED_RULES = "packages/qfai/assets/init/root/.agents/rules";
 const OPERATING_RULES = ".agents/rules";
-const CLAUDE_RULES = ".claude/rules";
 
 /** `git ls-files -s`, as `{ mode, path }` rows. */
 function indexEntries() {
@@ -91,18 +85,10 @@ function namesUnder(entries, dir) {
 export function expectedLinks(entries) {
   const modes = new Map(entries.map((entry) => [entry.path, entry.mode]));
   const shipped = namesUnder(entries, SHIPPED_RULES);
-  const operating = namesUnder(entries, OPERATING_RULES);
 
   const expected = [];
   for (const name of shipped) {
     expected.push({ path: `${OPERATING_RULES}/${name}`, why: "the package ships this rule" });
-  }
-  for (const name of operating) {
-    if (!modes.has(`${CLAUDE_RULES}/${name}`)) continue;
-    expected.push({
-      path: `${CLAUDE_RULES}/${name}`,
-      why: `it is the entry point onto ${OPERATING_RULES}`,
-    });
   }
 
   return expected

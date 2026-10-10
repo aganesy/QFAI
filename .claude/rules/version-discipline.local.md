@@ -1,1 +1,0 @@
-../../.agents/rules/version-discipline.local.md
