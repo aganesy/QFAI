@@ -980,7 +980,7 @@ No host is declared supported in this release.
 ### Cross-AI rules and the writing reminder
 
 `npx qfai init` seeds `.agents/rules/**`, the rule set every AI coding agent in
-the project shares, and points `AGENTS.md` at it, with a line for each rule that says when to read it. Claude Code reads `AGENTS.md` when the project has no `CLAUDE.md` (v2.1.277 or later). One of those
+the project shares, and points `AGENTS.md` at it, with a line for each rule that says when to read it. Claude Code reads `AGENTS.md` when the project has no `CLAUDE.md` (Claude Code 2.1.277 or later). One of those
 rules, `documentation-clarity.md`, sets the writing standard for pull requests,
 issues, code comments and Markdown: no project-local identifiers, no account of
 how the work went, cut to what a reader outside the team can follow.
