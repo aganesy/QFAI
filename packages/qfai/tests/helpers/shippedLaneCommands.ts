@@ -29,6 +29,7 @@
  */
 
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 
 /**
@@ -1400,70 +1401,16 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // To re-pin: run `qfai init` into a temp root and hash the `.gitignore` it
   // wrote — never copy a value out of a failure message.
   [".gitignore", "b3dfe9b2704c0ae54ef8347cd23ed2a714c5966f38050932611a6ad326b597c4"],
-  // One bullet each, inside the managed cross-AI rules block: the
-  // `documentation-clarity.md` master that the same run seeds beside them.
-  // Removing that line from both files reproduces the previous digests
-  // (`04061092…` and `040faf04…`), so this is a review of one line per file.
-  //
-  // Re-pinned for a second bullet in the same block, naming
-  // `.agents/rules/minimal-implementation.md` — the rule the run now seeds
-  // beside the other masters. Derived by running `qfai init` into a temp root
-  // and hashing what it wrote, not read off a failure message, and checked the
-  // way the note above asks: dropping that one bullet reproduces `a832e27c…`
-  // and `20040ab0…` byte for byte.
-  //
-  // Every later master seeded beside them moves both digests the same way. To re-pin: run
-  // `qfai init` into a temp root and hash what it wrote, then drop the added bullet and confirm
-  // both previous digests come back byte for byte. That check is what keeps a re-pin a review of
-  // one line per file.
-  // Re-pinned for the sentence that describes what a later run does. It said the
-  // run leaves the section exactly as edited; it now adds a bullet for a rule
-  // being shipped into the project for the first time, and says that a bullet
-  // the project deleted stays deleted. Restoring the old sentence in both files
-  // reproduces `fff9e210…` and `7203ba75…` byte for byte, which is what makes
-  // this a review of one sentence per file.
-  //
-  // Re-pinned for the grilling bullet in the same block, which now says a session ends in one
-  // of four named endings. Derived by running `qfai init` into a temp root; restoring the old
-  // wording in both written files reproduces `d3d39ba4…` and `5b6487ba…` byte for byte.
-  //
-  // Re-pinned for the sentence on later runs, which names only what a run adds: a bullet for a
-  // rule shipped for the first time and the review directive. Derived by running `qfai init` into a
-  // temp root; restoring the old sentence in both written files reproduces `27d645ff…` and
-  // `39be7bca…` byte for byte.
-  //
-  // Re-pinned for the review directive the run now writes: a line pointing at the
-  // project's own review policy, and the sentence in the managed section that says
-  // a later run adds it when it is missing. Derived by running `qfai init` into a
-  // temp root; dropping the line and restoring the old sentence in both written
-  // files reproduces `4317f660…` and `40e0888f…` byte for byte.
-  //
-  // Re-pinned for the grilling bullet, which now says agents grill each other outside the
-  // discussion stage and only a critical decision reaches the user. Derived by running `qfai init`
-  // into a temp root; restoring the old wording in both written files reproduces `d2a68a94…` and
-  // `cbcc6841…` byte for byte.
-  //
-  // Re-pinned for one more bullet in the same block, naming `.agents/rules/api-budget.md` — the
-  // rule the run now seeds beside the other masters, which orders the surfaces a question about
-  // the forge may be asked of. Derived by running `qfai init` into a temp root and hashing what it
-  // wrote; dropping that one bullet from both written files reproduces `66f2f506…` and
-  // `bf6a52af…` byte for byte.
-  //
-  // Re-pinned for one more bullet in the same block, naming `.agents/rules/document-schema.md`,
-  // the rule master the run now seeds. Dropping that one bullet from both written files
-  // reproduces `51e3e03e…` and `07350d6a…` byte for byte.
-  //
-  // Re-pinned for the user-questions bullet, which now also says a turn that waits on the user
-  // ends with a question listing the next actions. Derived by running `qfai init` into a temp
-  // root; restoring the old wording in both written files reproduces `837a2663…` and
-  // `85cd31b5…` byte for byte.
-  //
-  // The entry files cite action-reversibility, untrusted-content and ai-readable-markdown.
-  // These digests cover the shipped root templates, which init copies into a fresh project.
-  // Re-pinned for the `session-feedback.md` bullet in both files. Dropping it reproduces
-  // `29bc32d7…` and `d7f71c44…` byte for byte.
-  ["AGENTS.md", "b8d8e240a8bdcdfdd77f24f531cef169fd56817b1b505fe16b3748d9043726e6"],
-  ["CLAUDE.md", "9d5382a86a1917a309466b40925f1d0a32975308d5b0e688c841dd33e1ac19a6"],
+  // Independent golden files pin the reviewed entry instructions. Update them only after
+  // independent review, preserving exact bytes without trimming or newline normalization.
+  [
+    "AGENTS.md",
+    fileDigest(readFileSync(new URL("../fixtures/shipped-entry/agents.txt", import.meta.url))),
+  ],
+  [
+    "CLAUDE.md",
+    fileDigest(readFileSync(new URL("../fixtures/shipped-entry/claude.txt", import.meta.url))),
+  ],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
   // rule when a pull request, issue or review is posted through the GitHub tools
@@ -1553,7 +1500,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // hashing what it wrote.
   // Re-pinned for the `Stop` group marked `QFAI session feedback reminder`. Removing the `Stop`
   // event from the file reproduces `03325965…` byte for byte.
-  [".claude/settings.json", "77353e45e357299d5a0e0807cf1900022cac0fa2942992b493809baf8e036a19"],
+  [".claude/settings.json", "f751cc6e4587be65e1341bb30fc8172b2506df805b5a256ebf151bc427fce730"],
   // Inside `.codex/`, and pinned for the reason `.claude/settings.json` is: its commands are a
   // program an adopter's agent runs. Two `UserPromptSubmit` groups, structured-question and
   // free-text entry. Codex takes one command string, so each runs the same `node -e` reader
@@ -1596,7 +1543,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // merge refreshes them. Derived the same way.
   // Re-pinned for the same `Stop` group. Removing the `Stop` event reproduces `4eb4c36d…` byte
   // for byte.
-  [".codex/hooks.json", "63935f7ac788cf8100dd667f2b9c81a813d0e86bc60c9c1be1830cea04c7dbad"],
+  [".codex/hooks.json", "e973ebb8f2047f6a3e901b9adbe3e6299cda7cad77dfb12cccfab933cd936904"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`

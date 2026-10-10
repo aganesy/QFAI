@@ -150,10 +150,9 @@ declares, so an enabled runner would never be offered and nothing would say so.
 It is also the program CI runs to judge its own update. A release that reported success would be
 automerged without anyone reading it, and then run on every developer machine.
 
-**Raising it is a manual step, and nobody is reminded to take it.** Raise `vitest` in
-`packages/qfai/package.json`, read the release notes, and let CI judge the result. Check for a new
-release whenever the runner's release notes are worth reading; there is no pull request that will
-do it.
+**Raising it is a manual step.** Check for a new release during the maintainer review below.
+Read the release notes, raise `vitest` in `packages/qfai/package.json`, and let CI judge the result.
+There is no routine update pull request that will do it.
 
 A security fix is the exception, and it still arrives on its own. The vulnerability policy is
 applied as a forced override, so it reaches the runner like any other package.
@@ -227,7 +226,38 @@ somebody looks at it.
 - **The re-pin job refused the branch.** It compares `scripts/` against `main` and stops if they
   differ, because it runs those programs with a write-capable token and Renovate never writes
   there. A branch that differs is not the plain dependency bump it claims to be.
-- **Tests are red.** That is the update, and it is what the pull request is for.
+- **Tests are red.** Read the logs to distinguish installation or runner startup failures
+  from failing test cases.
+
+## Maintainer follow-up
+
+`aganesy`, the repository maintainer, owns Dependency dashboard follow-up. Keep
+the dashboard assigned to this owner. Review the dashboard, the latest Renovate
+run, red update pull requests and the manual Vitest update at intervals of no
+more than seven days.
+
+Within 24 hours of the first failure observation or notification,
+read the CI logs and record the failing phase and commit. Distinguish a re-pin
+that did not run, a refused re-pin, installation failure and test failure.
+A missing or skipped run is not evidence that its checks passed.
+
+A pull request owned by another contributor is protected while it has activity
+within the preceding 24 hours. During that period, do not claim or assign it,
+comment on it or push to its branch. Read-only triage may continue. Recheck
+activity before taking over; new activity restarts the protected period.
+Once the failure is observed and the pull request has been inactive for at least
+24 hours, start repair within the next 24 hours. That clock starts when both
+conditions are met.
+
+If a blocker prevents progress, record the blocker and the evidence or action
+needed to resume. There is no fixed completion deadline. A maintainer whose
+human commit causes Renovate to stop updating a claimed branch owns the repair
+through completion.
+
+Run tests through the pull request's CI and inspect failed CI logs. Do not run
+local tests for this follow-up. While waiting for CI, advance another eligible
+update or resume a repair whose blocker has cleared. Keep the required checks
+and guards intact. Green updates retain the automerge policy above.
 
 ## The presets other repositories extend
 

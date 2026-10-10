@@ -18,6 +18,7 @@ const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
 const STAGE_COST = "assistant/rule/stage-cost.md";
 const DELEGATION = "assistant/rule/shared-skill-delegation-baseline.md";
+const WORK_ORDER = "assistant/rule/references/worker-edit-boundary.md";
 const AGENT_CARDS = "assistant/agent";
 const EVERY_ROLE = "Every agent card under `agent/`";
 
@@ -48,12 +49,20 @@ function tableRows(text: string): string[][] {
     );
 }
 
-function workOrderBlock(source: string): string {
-  const heading = source.indexOf("## Work order template");
-  expect(heading).toBeGreaterThan(-1);
-  const open = source.indexOf("```text", heading);
-  const close = source.indexOf("```", open + 7);
-  return source.slice(open, close);
+async function workOrderBlock(tree: string): Promise<string> {
+  const baseline = await read(tree, DELEGATION);
+  const pointer = baseline.split("\n## Work order template\n")[1]?.split("\n## ")[0];
+  expect(pointer).toBeDefined();
+  expect(flat(pointer ?? "")).toContain("When preparing a delegation");
+  expect(pointer).toContain(
+    ".qfai/assistant/rule/references/worker-edit-boundary.md#work-order-template",
+  );
+  const source = await read(tree, WORK_ORDER);
+  const body = source.split("\n## Work order template\n")[1]?.split("\n## ")[0];
+  expect(body).toBeDefined();
+  const block = /```text\n([\s\S]*?)```/.exec(body ?? "");
+  expect(block).not.toBeNull();
+  return block?.[1] ?? "";
 }
 
 /** Agent IDs, one per card file under `agent/`. */
@@ -118,7 +127,7 @@ describe("the stage cost rule", () => {
 describe("the work order carries the elapsed line", () => {
   for (const tree of QFAI_TREES) {
     it(`${tree}: an advisory budget and the line reported against it`, async () => {
-      const block = workOrderBlock(await read(tree, DELEGATION));
+      const block = await workOrderBlock(tree);
 
       expect(block).toContain("Time budget: none | <seconds>");
       expect(block).toContain("advisory: nothing stops at it");

@@ -14,19 +14,66 @@ version: 1.0.0
 
 ## Setup
 
-```
-pnpm install
-pnpm build
-pnpm install
+On Windows, run the lint lanes from Git Bash. `ci:lint` and
+`ci:gate:lint` invoke Bash, so Node.js and the pinned pnpm must be available
+in that shell. Running those lanes from PowerShell also requires Git for
+Windows' Bash directory on the PATH inherited by Node.
+
+Root scripts start `pnpm` subprocesses. Keep a pnpm shim on their inherited
+PATH even when starting a script with `corepack pnpm`. If Corepack is installed
+but pnpm has no shim on PATH, create one in a directory your account owns.
+In PowerShell:
+
+```powershell
+$pnpmShimDir = Join-Path $env:LOCALAPPDATA "qfai-pnpm"
+New-Item -ItemType Directory -Path $pnpmShimDir -Force | Out-Null
+corepack.cmd enable --install-directory $pnpmShimDir pnpm
+$env:PATH = "$pnpmShimDir;$env:PATH"
 ```
 
-The second install links `node_modules/.bin/qfai` to the build. pnpm skips that
-link while `packages/qfai/dist/` is missing.
+In Git Bash, add the same directory before running the setup sequence:
 
-`npx qfai` runs the build of the checkout that owns the `node_modules` it
-resolves. A worktree that needs its own build runs these three steps with its
-own `node_modules`, never through a junction shared with another checkout: an
-install there repoints the link for every checkout that shares it.
+```bash
+export PATH="$(cygpath -u "$LOCALAPPDATA")/qfai-pnpm:$PATH"
+```
+
+These PATH changes apply to the current shells. Add the shim directory to your
+user PATH and reopen terminals to reuse it. Corepack writes the shims to that
+directory, without changing the Node.js installation directory. The lint helper
+already creates temporary shims when Bash can find Corepack; that fallback
+does not supply pnpm to other root scripts.
+
+Run from this repository's root:
+
+```bash
+corepack pnpm bootstrap
+```
+
+Use `pnpm bootstrap` when pnpm is on PATH. The command uses the pinned
+workspace package manager and runs these steps in order:
+
+1. `pnpm install --frozen-lockfile`
+2. `pnpm -C packages/qfai build`
+3. `pnpm install --frozen-lockfile`
+
+The second install links `node_modules/.bin/qfai` to the local build.
+pnpm skips that link while `packages/qfai/dist/` is missing.
+A failed step stops the command before any later step runs.
+
+Each checkout must own its dependency directories. Bootstrap rejects a
+symlink or junction at root `node_modules` or
+`packages/qfai/node_modules` before installing. Do not share either
+directory with another checkout: an install can repoint its launcher.
+Run bootstrap separately in each fresh clone or worktree.
+`npx qfai` then resolves the build of the checkout that owns its
+`node_modules`.
+
+On Windows, a worktree can contain a file symlink to a directory that the OS
+cannot follow. Plain `qfai init` can repair this damage on its owned, same-target
+directory wrappers. This repository's canonical `.qfai/assistant/` mirror is
+managed separately by [the mirror script](../../scripts/link-assistant-tree.mjs).
+The mirror script checks followability and repairs owned, same-target directory
+links separately. Wrapper repair does not establish that the mirror is usable.
 
 ## Build and Quality Gates
 
@@ -41,6 +88,50 @@ pnpm -C packages/qfai test
 pnpm verify:pack
 ```
 
+The changelog gate checks changes under `packages/qfai/src/` and
+`packages/qfai/assets/`, and removal or rewording of an existing entry title.
+Shipped changes need an update under `## [Unreleased]`; a test-only change does
+not need an entry solely because it changes tests. An applicable exemption is a
+`Changelog-Exempt: <reason>` line in a commit message, not the pull request body.
+The [gate](../../scripts/check-changelog-entries.mjs) defines the current checks.
+
+## Test directory mapping
+
+Vitest project names describe runner groups. QFAI classifies coverage from
+paths, so the runner group alone does not establish a test's layer.
+The current directories below are relative to the repository root.
+
+| Directory                         | Vitest project | QFAI kind     |
+| --------------------------------- | -------------- | ------------- |
+| `packages/qfai/tests/e2e`         | `e2e`          | `e2e`         |
+| `packages/qfai/tests/assets`      | `e2e`          | Unclassified  |
+| `packages/qfai/tests/integration` | `integration`  | `integration` |
+| `packages/qfai/tests/detection`   | `integration`  | Unclassified  |
+| `packages/qfai/tests/skill`       | `integration`  | Unclassified  |
+| `packages/qfai/tests/codex`       | `integration`  | Unclassified  |
+| `packages/qfai/tests/core`        | `core`         | Unclassified  |
+| `packages/qfai/tests/unit`        | `unit`         | Unclassified  |
+| `packages/qfai/tests/validators`  | `validators`   | Unclassified  |
+| `packages/qfai/tests/cli`         | `cli`          | Unclassified  |
+| `packages/qfai/tests/scripts`     | `scripts`      | Unclassified  |
+
+For the directories listed here, QFAI recognizes `e2e`, `integration` or
+`api` immediately under `tests`. Unclassified paths have kind `null`; this does not assign
+a unit or component layer. An `api` directory immediately under `tests` would have kind `api`, but no current
+Vitest project includes that directory.
+
+The [test-layers policy][test-policy] defines the coverage obligations.
+BF coverage counts in QFAI's `e2e` kind; AC coverage counts in `integration`
+or `api`. EX coverage can count in selected tests outside QFAI's `e2e` kind,
+including paths with kind `null`. Thus `packages/qfai/tests/assets` can count EX coverage
+even though its Vitest project is named `e2e`.
+
+[Project configuration][test-selection] selects `.test.ts` and `.spec.ts`
+files under `packages/*/tests/` for traceability and excludes test fixtures.
+That selection is separate from Vitest's current `.test.ts` includes.
+[Runner projects][test-runner], [path classification][test-kinds] and
+[coverage counting][test-obligations] hold the current mapping and logic.
+
 ## CLI Smoke Test (in an empty directory)
 
 ```
@@ -53,6 +144,54 @@ npx qfai report
 
 - See `RELEASE.md` for details
 - Run `npm publish --dry-run` inside `packages/qfai`
+
+## Recover a timed-out push
+
+A timeout leaves the remote result unknown. Confirm the first push has ended
+and inspect the exact remote branch before retrying.
+
+Use Git Bash from this checkout. Finish and commit the merge first. Confirm
+that no earlier push from this checkout is running. Retain its tool session,
+PID and command when available; a PID alone does not establish ownership.
+Record the branch, HEAD and the remote ref's value or absence before pushing.
+The remote lookup must succeed. This example requires GNU `timeout`:
+
+```bash
+pushBranch=$(git symbolic-ref --quiet --short HEAD) || exit 1
+[ "$pushBranch" != main ] || exit 1
+pushHead=$(git rev-parse --verify HEAD) || exit 1
+timeout --foreground 100s git ls-remote --refs origin "refs/heads/$pushBranch"
+[ "$(git symbolic-ref --quiet --short HEAD)" = "$pushBranch" ] || exit 1
+[ "$(git rev-parse --verify HEAD)" = "$pushHead" ] || exit 1
+timeout --foreground 100s git push origin "$pushHead:refs/heads/$pushBranch"
+```
+
+Run each command separately in the same Git Bash session and keep its result.
+Do not start the push if the lookup fails or times out. These commands target
+`origin` and the current topic branch; confirm that this is the intended
+destination.
+
+Immediately before either the initial push or a retry, repeat the two snapshot
+comparisons above. Keep the original `pushBranch` and `pushHead` values.
+
+A tool timeout may leave a running session. Poll that session instead of
+starting another push. GNU `timeout` also does not establish that every Windows
+child has exited. Confirm termination from the session result and, if needed,
+the command and parentage of the owned process. If termination is unknown, stop.
+
+After the attempt has ended, repeat the bounded remote lookup above. Compare
+the exact ref and SHA with the recorded values:
+
+- Remote SHA equals `pushHead`: publication is complete, even if the push timed out.
+- Remote ref is unchanged or still absent: retry once with the same bounded push
+  only after confirming that the local branch and HEAD still match the snapshots.
+- Remote SHA changed to another value, the lookup fails, or the local snapshots
+  changed: stop and inspect the state before choosing another action.
+
+If the retry also times out, retain its result and inspect the remote again;
+do not enter a retry loop. Preserve the merge commit and working tree. Do not
+force-push, reset or delete locks. Do not terminate processes without ownership
+proof.
 
 ## Rule and hook integration map
 
@@ -96,3 +235,8 @@ Paths in code spans are relative to the repository root.
 [workflow]: ../../.qfai/spec/03_contract/cli/cli-0015-qfai-workflow.md
 [clarity]: ../../scripts/check-doc-clarity.mjs
 [language]: ../../scripts/check-repository-language.mjs
+[test-policy]: ../../packages/qfai/assets/init/.qfai/assistant/rule/test-layers.md
+[test-selection]: ../../qfai.config.yaml
+[test-runner]: ../../packages/qfai/vitest.workspace.ts
+[test-kinds]: ../../packages/qfai/src/core/atddTraceability.ts
+[test-obligations]: ../../packages/qfai/src/core/validators/storyTreeObligations.ts

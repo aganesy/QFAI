@@ -67,6 +67,36 @@ qfai report → .qfai/report/report.md
 - Confirm zero errors with `npx qfai validate --fail-on error`
 - Generate the report with `npx qfai report`
 
+CI self-validation runs the checkout's compiled CLI with `--profile full` and
+`--fail-on error`. It expects zero errors and has no accepted error baseline.
+The [Validate entry in Standard commands](../../.qfai/spec/03_contract/tech.md#standard-commands-copy-paste) records the local command.
+[Test exception notices](../../.qfai/spec/01_policy/glossary.md) identify approved deferred coverage;
+they do not prove that the exempted tests ran.
+
+## Read a CLI contract
+
+Read the ownership boundary and relevant business-rule rows when investigating
+one known CLI contract. If the BR-ID is known, select its complete row:
+
+```sh
+rg -n --fixed-strings -- '| BR-0009-0098 |' .qfai/spec/03_contract/cli/cli-0009-qfai-init.md
+```
+
+If the BR-ID is unknown, search for a topic in the same known file:
+
+```sh
+rg -n --fixed-strings -- 'Stop' .qfai/spec/03_contract/cli/cli-0009-qfai-init.md
+```
+
+Keep all matching rows as candidates. Read each selected row's complete
+Statement and Examples, then follow its EX references and relevant rules in
+other contracts. A keyword search can miss related obligations.
+
+These lookups locate material for a focused investigation. They do not replace
+a required review of the whole contract or the change's impact. Read the full
+contract when that review is required. Do not truncate Statement or Examples
+to fit the output.
+
 ## Quality Gates (minimum)
 
 - Each business flow and story has its required files and valid IDs.

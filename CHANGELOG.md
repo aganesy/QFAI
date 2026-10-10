@@ -6,6 +6,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- Synchronize the document schema checker copies from the package manifest after
+  a frozen dependency install, including the Renovate repin workflow.
+
+- Add a branch catch-up helper that merges the remote default branch, resolves
+  only proven digest conflicts and reseals generated pins without running tests.
+
+- **A workspace bootstrap command prepares this checkout's local launcher.**
+  It runs frozen installs around the package build, stops at the first failed
+  step and rejects shared dependency links. Fixes #3244.
+- **Validation can find forbidden identifiers from hash-only configuration.**
+  The optional policy scans tracked file names and current bytes, including
+  binary and ignored tracked files. Unsafe or incomplete coverage is an error;
+  findings omit matched values and unsafe paths. Fixes #3232.
+
 - **`qfai sdd renumber-decision` repairs a branch-added decision ID.**
   Explicit source, destination and local base arguments preview exact new
   references; `--apply` writes after checking fixed commits and original bytes.
@@ -28,6 +42,34 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The release association gate uses Node.js to read pull request branches.**
+  Its two contributor cases require Node.js and Bash, without a jq dependency.
+
+- **Repeated edit reminders use short rule pointers.** The first relevant edit
+  receives the full rules; later edits retain concise guidance. Missing session
+  identity or unavailable counters keep the full reminder. Posting reminders
+  remain unchanged.
+
+- **Worker work orders state the permitted edit boundary.** They name the
+  assigned checkout, owned paths and edit method. A refused edit returns a
+  reviewable diff for coordinator integration without bypassing the refusal.
+
+- **Windows CI covers native assistant mirror links.** Its parity list includes
+  mirror link behavior and prepares owned root links before testing, using the
+  same temp directory as the suites. Healthy worktrees remain healthy cases.
+
+- **Windows link warnings describe the affected wrapper and its existing repair.**
+  Guidance recommends ordinary init without deleting links and distinguishes
+  consumer wrappers from the repository's canonical mirror. Refs #3240.
+
+- **Missing test annotations use grammatical diagnostics.** Messages use
+  "an E2E test", "an integration or API test" and "a test" for the three
+  obligation kinds. Coverage and severity are unchanged. Fixes #3239.
+
+- **Approved specification changes distinguish pending test annotations from completed tests.**
+  An exact AC test exception needs both specification-change and test-deferral
+  authority. Its review date is manual; uncovered changes remain open questions.
+  Fixes #3233.
 - **Test exceptions take effect only at DONE.** A partially superseded exception
   no longer suppresses a missing-test error. Other decision kinds keep their
   status behavior. Fixes #3356.
@@ -291,6 +333,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   constitution's Article V. Part of #2951.
 
 ### Fixed
+
+- Clarify that the research agent reads the cache TTL extension in the project config; the CLI does not parse it.
+
+- Clarify that story ID candidates are snapshots and require a fresh collision
+  check of the committed changes before publishing the same branch head.
+
+- **Language errors offer an ASCII code-point construction for code samples.**
+  The guard keeps Unicode escape guidance and explains the alternative when
+  an editing tool decodes escapes. Forbidden characters remain rejected.
+  Fixes #3248.
+
+- **Unfinished merges stop the branch ID check.** Finish the merge before
+  comparing branch-owned identifiers or fetching pull-request heads. Fixes #3246.
+
+- Verify assistant link targets can be followed and safely recreate unfollowable
+  directory links to shipped assets. Fixes #3368.
 
 - **Decision and open-question row errors explain what to correct.** Cell-count
   errors report the expected and actual counts. Invalid Status errors show a
