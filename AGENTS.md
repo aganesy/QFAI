@@ -146,7 +146,7 @@ The masters under `.agents/rules/` are the single source of truth for the rules 
 A `<name>.local.md` is an overlay. A rule that also governs an adopter's
 repository is written once, in the shipped master, and only what is specific to
 this repository goes in the overlay. Overlays do not ship. See
-`.agents/rules/README.md`.
+`.agents/rules/root-additions-policy.local.md`.
 
 `.claude/rules/scoped/` holds a short file for each rule tied to paths. Claude Code loads it
 when it reads or edits a matching file, and it points at the master here. Nothing else under

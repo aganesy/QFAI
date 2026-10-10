@@ -570,6 +570,130 @@ describe("story-tree validation acceptance", () => {
     );
   });
 
+  // QFAI:AC-0001-0055-04
+  // QFAI:EX-0001-0055-12
+  it.each(["sql", "SQL"])(
+    "explains a multiline SQL rule's missing examples in a .%s contract and accepts its one-line repair",
+    async (extension) => {
+      const file = `${contract}/db/db-0003-orders.${extension}`;
+      const hint =
+        "Keep the Rule statement on one line and put -- Examples: on the immediately following line.";
+      const { root, config, issues } = await validateTree(
+        changed({
+          [`${contract}/cli/cli-0001-check.md`]: null,
+          [file]:
+            "-- QFAI-CONTRACT-ID: DB-0003\n-- Rule BR-0003-0001: An order row\n-- is saved\n-- Examples: EX-0001-0001-01\nSELECT 1;\n",
+        }),
+      );
+      const model = await readStoryTreeModel(root, config);
+      expect(model.rules).toMatchObject([
+        {
+          id: "BR-0003-0001",
+          statement: "An order row",
+          examples: [],
+          file: posix(path.join(root, file)),
+        },
+      ]);
+      const missing = errorsNaming(issues, "QFAI-STORY-005", "BR-0003-0001");
+      expect(missing).toHaveLength(1);
+      expect(missing[0]).toMatchObject({
+        code: "QFAI-STORY-005",
+        severity: "error",
+        refs: ["BR-0003-0001"],
+        file: posix(path.join(root, file)),
+      });
+      expect(missing[0]?.message).toContain(
+        `BR-0003-0001 has no examples in ${posix(path.join(root, file))}`,
+      );
+      expect(missing[0]?.message.endsWith(hint)).toBe(true);
+      const uncited = errorsNaming(issues, "QFAI-STORY-005", "EX-0001-0001-01");
+      expect(uncited).toHaveLength(1);
+      expect(uncited[0]).toMatchObject({
+        code: "QFAI-STORY-005",
+        severity: "error",
+        refs: ["EX-0001-0001-01"],
+        file: posix(path.join(root, story, "03_Example.md")),
+        message: `EX-0001-0001-01 is not cited by a rule in ${posix(path.join(root, story, "03_Example.md"))}`,
+      });
+
+      const repaired = await validateTree(
+        changed({
+          [`${contract}/cli/cli-0001-check.md`]: null,
+          [file]:
+            "-- QFAI-CONTRACT-ID: DB-0003\n-- Rule BR-0003-0001: An order row is saved\n-- Examples: EX-0001-0001-01\nSELECT 1;\n",
+        }),
+      );
+      const repairedModel = await readStoryTreeModel(repaired.root, repaired.config);
+      expect(repairedModel.rules).toMatchObject([
+        { id: "BR-0003-0001", statement: "An order row is saved", examples: ["EX-0001-0001-01"] },
+      ]);
+      expect(only(repaired.issues, "QFAI-STORY-005")).toEqual([]);
+    },
+  );
+
+  // QFAI:AC-0001-0055-04
+  it.each(["", "-- Examples:\n"])(
+    "adds the SQL layout hint for a missing or empty examples list %j",
+    async (examplesLine) => {
+      const file = `${contract}/db/db-0003-orders.sql`;
+      const { root, issues } = await validateTree(
+        changed({
+          [file]: `-- QFAI-CONTRACT-ID: DB-0003\n-- Rule BR-0003-0001: An order row is saved\n${examplesLine}SELECT 1;\n`,
+        }),
+      );
+      const reported = errorsNaming(issues, "QFAI-STORY-005", "BR-0003-0001");
+      expect(reported).toHaveLength(1);
+      expect(reported[0]).toMatchObject({
+        code: "QFAI-STORY-005",
+        severity: "error",
+        refs: ["BR-0003-0001"],
+        file: posix(path.join(root, file)),
+      });
+      expect(reported[0]?.message).toContain("BR-0003-0001 has no examples");
+      expect(
+        reported[0]?.message.endsWith(
+          "Keep the Rule statement on one line and put -- Examples: on the immediately following line.",
+        ),
+      ).toBe(true);
+    },
+  );
+
+  // QFAI:AC-0001-0055-04
+  it.each([
+    ["cli/cli-0001-check.md", "BR-0001-0001", rules(["BR-0001-0001", ""])],
+    [
+      "api/api-0002-orders.yaml",
+      "BR-0002-0001",
+      "# QFAI-CONTRACT-ID: API-0002\nx-qfai-rules:\n  - id: BR-0002-0001\n    statement: An order has a total\n    examples: []\n",
+    ],
+    [
+      "api/api-0002-orders.json",
+      "BR-0002-0001",
+      JSON.stringify({
+        "x-qfai-rules": [{ id: "BR-0002-0001", statement: "An order has a total", examples: [] }],
+      }),
+    ],
+    [
+      "db/db-0003-orders.sql",
+      "BR-0003-0001",
+      "-- QFAI-CONTRACT-ID: DB-0003\n-- Rule BR-0003-0001: An order row is saved\n-- Examples: EX-0001-0001-99\nSELECT 1;\n",
+    ],
+  ])("keeps unrelated rule diagnostics unchanged for %s", async (relative, rule, text) => {
+    const { root, issues } = await validateTree(changed({ [`${contract}/${relative}`]: text }));
+    const unknown = relative.endsWith(".sql");
+    const reported = errorsNaming(issues, "QFAI-STORY-005", rule).filter((found) =>
+      found.message.includes(unknown ? "cites unknown" : "has no examples"),
+    );
+    expect(reported).toHaveLength(1);
+    expect(reported[0]).toMatchObject({
+      code: "QFAI-STORY-005",
+      severity: "error",
+      file: posix(path.join(root, contract, relative)),
+      refs: unknown ? [rule, "EX-0001-0001-99"] : [rule],
+      message: `${rule} ${unknown ? "cites unknown EX-0001-0001-99" : "has no examples"} in ${posix(path.join(root, contract, relative))}`,
+    });
+  });
+
   // QFAI:AC-0001-0055-05
   it("names an example that no rule cites", async () => {
     const { root, issues } = await validateTree(

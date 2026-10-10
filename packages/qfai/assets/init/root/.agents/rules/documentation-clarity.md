@@ -72,15 +72,19 @@ there, and in commit messages and the changelog.
 
 ## 2. No account of how the work went
 
-The result describes the present, not the path to it. What happened while the change was being designed or written stays out of the
-result:
+Ordinary specifications and change descriptions state the current behaviour
+and why. They omit design and implementation history, including:
 
 - "started as X, changed to Y"
 - "adjusted after review"
 - "temporary until Z lands"
 
-State the current behaviour and the reason it is that way. The history is
-already in the git log and the pull request; do not write it twice.
+The git log and pull request already hold this history.
+
+Only when the user expressly requests an incident, event or work record,
+include the necessary account of what happened. State the observed events,
+evidence, uncertainty, current impact and next action. Separate observations
+from interpretation.
 
 ## 3. Settle the message before writing
 
@@ -205,13 +209,16 @@ surface (see Scope).
 | Question                                                                             | Clause |
 | ------------------------------------------------------------------------------------ | ------ |
 | Is there a number, ticket or private name the reader cannot open?                    | 1      |
-| Is there any account of how the work went?                                           | 2      |
+| Does any design or implementation history fall outside clause 2's exception?         | 2      |
 | Does the opening carry the result, and does each paragraph do one job?               | 3      |
 | Is anything left that clause 4 cuts?                                                 | 4      |
 | Is any word figurative, vague or missing its actor?                                  | 5      |
 | Does each claim show the certainty it has, with its basis?                           | 6      |
 | Does the layout show the structure?                                                  | 7      |
 | Does a report open with its outcome and separate what was checked from what was not? | 8      |
+
+When the user expressly requested an incident, event or work record, apply
+clause 2's exception before cutting the account of what happened.
 
 Last, check for a sentence that reads as a literal translation. An agent that
 reasons in one language and writes in another leaves translation artefacts

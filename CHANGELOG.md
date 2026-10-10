@@ -6,6 +6,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **Validation can find forbidden identifiers from hash-only configuration.**
+  The optional policy scans tracked file names and current bytes, including
+  binary and ignored tracked files. Unsafe or incomplete coverage is an error;
+  findings omit matched values and unsafe paths. Fixes #3232.
+
+- **`qfai sdd renumber-decision` repairs a branch-added decision ID.**
+  Explicit source, destination and local base arguments preview exact new
+  references; `--apply` writes after checking fixed commits and original bytes.
+  Inherited references remain unchanged. Unsafe or ambiguous candidates stop
+  the command, and rollback preserves concurrent edits. Fixes #3228.
+
 - **The agent reviews its session for problems in QFAI when all the work is
   done, and asks before filing them.** `qfai init` adds a `Stop` hook to
   `.claude/settings.json` and `.codex/hooks.json`, marked
@@ -22,13 +33,52 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Approved specification changes distinguish pending test annotations from completed tests.**
+  An exact AC test exception needs both specification-change and test-deferral
+  authority. Its review date is manual; uncovered changes remain open questions.
+  Fixes #3233.
+- **Test exceptions take effect only at DONE.** A partially superseded exception
+  no longer suppresses a missing-test error. Other decision kinds keep their
+  status behavior. Fixes #3356.
+- **One goal can advance independent targets through their own plans.** Guidance
+  keeps each target's scope, head-bound evidence and approval limits separate.
+  A clean checkout can move to authorized work during remote waits; writers,
+  local gates and reviewers using live files finish first. Fixes #3231.
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
+- **Questions ask only for answers the next step needs.** Background waiting
+  and completion reports need no question. Dismissed questions and free-text
+  replies preserve prior authorization and pending-step boundaries. Fixes #3230.
+
+- **Selected hook reminders stay visible without repeating their full text.**
+  Claude Code and Codex print the full reminder once per session, agent and
+  message key, then a one-line rule or skill pointer on every relevant trigger.
+  Missing identity or unavailable counter storage retains the full reminder.
+  Free-text reminders distinguish new requests from pending answers and
+  requested operation results. Fixes #3229.
+
+- **API polling uses one watcher across a root task and its descendants.**
+  Workers reuse saved snapshots. The rule includes a two-PR snapshot query,
+  pagination guidance and recovery from actual rate-limit refusals. Fixes #3226.
+
 - **The maintenance step covers procedures people follow.** Changes to actions,
   required values, commands or their order have a semantic effect even when
   only Markdown changes. Fixes #3203.
 
+- **qfai-run checks its local launcher before planning and follows each step's procedure.**
+  Recovery uses this checkout's package manager. A pass-through step records its
+  reason and retains the plan's independent review. Fixes #3211.
+
 - **qfai-run records the required approval before handing an operation to a person.**
   The row is a route record. Triage steps change no tracked file and never
   run the handed-off operation. Fixes #3201.
+
+- **Verification determines gate applicability before resolving commands.**
+  Conditional build and pack gates are omitted only when their conditions are
+  false. Pending CI checks are recorded without a completion claim. Fixes #3209.
 
 - **The qfai-run instructions clarify when to ask and when to continue.**
   A plan with one scope or no scopes runs every stage without a scope question.
@@ -36,9 +86,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   extraction reference defines. The agent continues from the announcement into
   the policy check and first stage without waiting for a reply. Fixes #3200.
 
+- **The handoff step records reported failures without claiming success.**
+  Unresolved causes and retries are follow-ups. A separate explicit request
+  to investigate or retry gets its own plan. Fixes #3202.
+
 - **The decision template states the limit of a passing validation result.**
   Every new row uses the four Approach items; validation does not establish
   that every existing row follows that layout. Fixes #3197.
+
+- **Replies resume the waiting step, and pending operation reports avoid duplicate questions.**
+  The exception requires no new decision or missing information. New requests
+  get a plan; completed routes still ask for the next action. Fixes #3205 and #3206.
 
 - **The README quick start now holds the whole first run.** The separate "Minimal
   tutorial" section is removed from both README files: the quick start covers
@@ -73,6 +131,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   wrapper with `type` and `tools`; the Firecrawl templates drop their
   `_comment` keys. The default-deny sandbox template now records each denied
   request with its capability, target and time. Part of #2951.
+
+- **Writing reminders allow expressly requested incident, event and work records.**
+  These keep necessary facts and evidence; ordinary specifications and change
+  descriptions omit design history. The posting reminder allows numbers and
+  links in pull request and issue bodies. Fixes #3214.
 
 - **`qfai init` and `qfai validate` stop reading the spec-pack layout and the
   `.gitignore` lines of earlier releases.** The managed `.gitignore` block no
@@ -237,6 +300,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   constitution's Article V. Part of #2951.
 
 ### Fixed
+
+- Verify assistant link targets can be followed and safely recreate unfollowable
+  directory links to shipped assets. Fixes #3368.
+
+- **Decision and open-question row errors explain what to correct.** Cell-count
+  errors report the expected and actual counts. Invalid Status errors show a
+  quoted preview and the table's allowed values. The preview replaces control
+  and format characters and line breaks with spaces, then keeps the first 40
+  Unicode code points, adding `...` when longer. Parsed values and accepted
+  statuses stay unchanged. Fixes #3224.
+
+- **SQL rules with no examples explain the required comment format.** The error
+  asks for a one-line Rule statement and `-- Examples:` on the immediately
+  following line. Other rule errors and parsing stay unchanged. Fixes #3225.
+
+- **Validation text lists errors before warnings and information.** Groups of
+  the same severity retain their first-appearance order. JSON records, counts,
+  suppression and exit behavior stay unchanged.
 
 - **Unknown commands identify the running QFAI installation.** The error shows
   its version and package location and suggests updating the project's local

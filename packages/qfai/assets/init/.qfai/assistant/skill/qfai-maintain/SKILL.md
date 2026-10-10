@@ -57,9 +57,9 @@ Markdown and link checks run over the changed files, each exiting 0. A check the
 project does not have is UNRUN, not a pass.
 
 The stage returns what `maintain-edit` lists under "What the stage returns".
-The report ends with a question listing the next actions, as
-`.agents/rules/user-questions.md` § 6 sets out.
-Under a no-question mode, list them in the report instead.
+Ask for the next action only when proceeding requires the user's answer, as
+`.agents/rules/user-questions.md` § 6 sets out. A completion-only report needs
+no question. Under a no-question mode, list any remaining actions instead.
 
 ## Default Autopilot Policy
 

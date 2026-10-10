@@ -1,12 +1,4 @@
-/**
- * What `qfai init` does about `.claude/settings.json`.
- *
- * A fresh project gets the whole shipped file from the create-only root copy.
- * A project that already has settings of its own gets only the hook entries,
- * merged in — and that is the case worth testing, because it is the one the
- * copy alone cannot reach and the one where a wrong merge damages a file the
- * project owns.
- */
+/** Init updates shipped readers while preserving the project's own host settings. */
 
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -38,13 +30,34 @@ const assetsRoot = path.resolve(
   "init",
 );
 
-/** The `hooks.PreToolUse` array of a parsed settings object. */
-function readPreToolUse(settings: unknown): unknown[] {
+function expectNoEmbeddedReminderText(program: string, messages: unknown): void {
+  if (typeof messages !== "object" || messages === null) throw new Error("no reminder catalog");
+  for (const message of Object.values(messages)) {
+    if (typeof message !== "object" || message === null) throw new Error("invalid reminder");
+    const output: unknown = Reflect.get(message, "hookSpecificOutput");
+    const full: unknown =
+      typeof output === "object" && output !== null
+        ? Reflect.get(output, "additionalContext")
+        : undefined;
+    for (const context of [
+      full,
+      Reflect.get(message, "reason"),
+      Reflect.get(message, "briefContext"),
+    ]) {
+      if (typeof context !== "string") continue;
+      expect(program).not.toContain(context);
+      expect(program).not.toContain(JSON.stringify(context).slice(1, -1));
+    }
+  }
+}
+
+/** The groups under one hook event. */
+function readHookGroups(settings: unknown, event = "PreToolUse"): unknown[] {
   const hooks: unknown =
     typeof settings === "object" && settings !== null ? Reflect.get(settings, "hooks") : undefined;
   const groups: unknown =
-    typeof hooks === "object" && hooks !== null ? Reflect.get(hooks, "PreToolUse") : undefined;
-  if (!Array.isArray(groups)) throw new Error("settings carry no PreToolUse groups");
+    typeof hooks === "object" && hooks !== null ? Reflect.get(hooks, event) : undefined;
+  if (!Array.isArray(groups)) throw new Error(`settings carry no ${event} groups`);
   return [...groups];
 }
 
@@ -60,10 +73,10 @@ async function initInto(root: string, force = false): Promise<string> {
 }
 
 /** One `qfai init` run; returns what it wrote to stdout. */
-async function initReporting(root: string): Promise<string> {
+async function initReporting(root: string, force = false): Promise<string> {
   return captureStdout(async () => {
     await captureStderr(async () => {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await runInit({ dir: root, force, dryRun: false, yes: true });
     });
   });
 }
@@ -99,9 +112,13 @@ async function earlierGroups(): Promise<unknown> {
   return JSON.parse(await readFile(fixture, "utf-8"));
 }
 
-async function seedSettings(root: string, settings: unknown): Promise<void> {
-  await mkdir(path.join(root, ".claude"), { recursive: true });
-  await writeFile(path.join(root, SETTINGS), `${JSON.stringify(settings, null, 2)}\n`, "utf-8");
+async function seedSettings(
+  root: string,
+  settings: unknown,
+  relativePath = SETTINGS,
+): Promise<void> {
+  await mkdir(path.dirname(path.join(root, relativePath)), { recursive: true });
+  await writeFile(path.join(root, relativePath), `${JSON.stringify(settings, null, 2)}\n`, "utf-8");
 }
 
 /** The project's own permission entry is still first; init appends the shipped ones after it. */
@@ -114,8 +131,11 @@ function expectOwnPermissionFirst(settings: Record<string, unknown>): void {
   expect(Array.isArray(allow) ? allow[0] : undefined).toBe("Bash(git status)");
 }
 
-async function readSettings(root: string): Promise<Record<string, unknown>> {
-  const parsed: unknown = JSON.parse(await readFile(path.join(root, SETTINGS), "utf-8"));
+async function readSettings(
+  root: string,
+  relativePath = SETTINGS,
+): Promise<Record<string, unknown>> {
+  const parsed: unknown = JSON.parse(await readFile(path.join(root, relativePath), "utf-8"));
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
     throw new Error("settings file is not a JSON object");
   }
@@ -131,8 +151,128 @@ async function withTempRoot(body: (root: string) => Promise<void>): Promise<void
   }
 }
 
+// Fixed readers from the templates that printed full reminders only.
+const earlierReaders = [
+  {
+    file: ".claude/settings.json",
+    event: "UserPromptSubmit",
+    key: "free-text-entry",
+    program:
+      "try{let p;try{p=JSON.parse(require('fs').readFileSync(0,'utf8')).prompt}catch{}if(!(typeof p==='string'&&/^[ \\t]*(<(task-notification|wake)[\\s>]|\\[SYSTEM NOTIFICATION)/m.test(p))){const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}catch{}",
+  },
+  {
+    file: ".claude/settings.json",
+    event: "PreToolUse",
+    key: "api-budget",
+    program:
+      "try{const f=require('fs');let i={};try{i=JSON.parse(f.readFileSync(0,'utf8'))}catch{}const c=i.tool_input&&i.tool_input.command;if(typeof c==='string'&&/(^|[^\\w.-])gh([^\\w.-]|$)|api\\.github\\.com/.test(c)){let n=1;if(typeof i.session_id==='string'){try{const t=require('path').join(require('os').tmpdir(),['qfai-reminder',i.session_id,i.agent_id||'main',process.argv[2]].join('-').replace(/[^\\w.-]/g,'_'));f.appendFileSync(t,'.');n=f.statSync(t).size}catch{}}if((n-1)%20===0){const m=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}}catch{}",
+  },
+  {
+    file: ".codex/hooks.json",
+    event: "UserPromptSubmit",
+    key: "free-text-entry",
+    program:
+      "node -e \"try{const f=require('fs'),p=require('path');let d=process.cwd(),r;for(;;){const c=p.join(d,'.agents','rules','reminders.json');if(r===undefined&&f.existsSync(c))r=c;if(f.existsSync(p.join(d,'.git')))break;const u=p.dirname(d);if(u===d){r=undefined;break}d=u}if(r){const m=JSON.parse(f.readFileSync(r,'utf8'))[process.argv[1]];m===undefined||console.log(JSON.stringify(m))}}catch{}\" free-text-entry",
+  },
+  {
+    file: ".codex/hooks.json",
+    event: "PreToolUse",
+    key: "api-budget",
+    program:
+      "node -e \"try{const j=JSON.parse(require('fs').readFileSync(0,'utf8')),i=j.tool_input.command;if(typeof i==='string'&&/[^\\w.-]gh[^\\w.-]|api\\.github\\.com/.test(' '+i+' ')){const f=require('fs'),p=require('path');let d=process.cwd(),r;for(;;){const c=p.join(d,'.agents','rules','reminders.json');if(r===undefined&&f.existsSync(c))r=c;if(f.existsSync(p.join(d,'.git')))break;const u=p.dirname(d);if(u===d){r=undefined;break}d=u}if(r){let n=1;if(typeof j.session_id==='string'){try{const t=p.join(require('os').tmpdir(),['qfai-reminder',j.session_id,j.agent_id||'main',process.argv[1]].join('-').replace(/[^\\w.-]/g,'_'));f.appendFileSync(t,'.');n=f.statSync(t).size}catch{}}if(Number.isInteger((n-1)/20)){const m=JSON.parse(f.readFileSync(r,'utf8'))[process.argv[1]];m===undefined||console.log(JSON.stringify(m))}}}}catch{}\" api-budget",
+  },
+] as const;
+
+function earlierReaderGroup(reader: (typeof earlierReaders)[number]) {
+  const claude = reader.file === ".claude/settings.json";
+  const statusMessage =
+    reader.key === "api-budget" ? "QFAI api-budget reminder" : "QFAI free-text entry reminder";
+  const entry = claude
+    ? {
+        type: "command",
+        statusMessage,
+        command: "node",
+        args: [
+          "-e",
+          reader.program,
+          "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
+          reader.key,
+        ],
+      }
+    : { type: "command", statusMessage, command: reader.program, timeout: 10 };
+  const hooks = [entry] as const;
+  if (reader.event === "PreToolUse") return { matcher: "Bash", hooks };
+  return claude ? { matcher: "*", hooks } : { hooks };
+}
+
 // QFAI:EX-0001-0021-09
 describe("qfai init and the reminder hooks", () => {
+  it.each(earlierReaders)("upgrades the full-only $key reader in $file", async (reader) => {
+    await withTempRoot(async (root) => {
+      const earlier = earlierReaderGroup(reader);
+      const own = { hooks: [{ type: "command", command: "./own.sh" }] };
+      await seedSettings(
+        root,
+        {
+          permissions: { allow: ["Bash(git status)"] },
+          hooks: { [reader.event]: [own, earlier] },
+        },
+        reader.file,
+      );
+      const shipped = readHookGroups(
+        await readSettings(assetsRoot, reader.file),
+        reader.event,
+      ).filter((group) => JSON.stringify(group).includes(earlier.hooks[0].statusMessage));
+      expect(shipped).toHaveLength(1);
+      expect(shipped[0]).not.toEqual(earlier);
+
+      const stdout = await initReporting(root);
+      const settings = await readSettings(root, reader.file);
+      const groups = readHookGroups(settings, reader.event);
+      expectOwnPermissionFirst(settings);
+      expect(groups.slice(0, 2)).toEqual([own, shipped[0]]);
+      expect(
+        groups.filter((group) => JSON.stringify(group).includes(earlier.hooks[0].statusMessage)),
+      ).toEqual(shipped);
+      expect(stdout).toContain(`updated: ${reader.file}`);
+      expect(stdout).not.toContain("(edited here)");
+      const updated = await readFile(path.join(root, reader.file), "utf-8");
+      for (const force of [false, true]) {
+        await initInto(root, force);
+        expect(await readFile(path.join(root, reader.file), "utf-8")).toBe(updated);
+      }
+    });
+  });
+
+  it.each(earlierReaders)(
+    "keeps a user-edited $key reader in $file, including with force",
+    async (reader) => {
+      await withTempRoot(async (root) => {
+        const earlier = earlierReaderGroup(reader);
+        const edited = {
+          ...earlier,
+          hooks: [{ ...earlier.hooks[0], command: "project-node" }] as const,
+        };
+        await seedSettings(root, { hooks: { [reader.event]: [edited] } }, reader.file);
+        let previous: string | undefined;
+        for (const force of [false, true, false]) {
+          const stdout = await initReporting(root, force);
+          const groups = readHookGroups(await readSettings(root, reader.file), reader.event);
+          expect(groups[0]).toEqual(edited);
+          expect(
+            groups.filter((group) => JSON.stringify(group).includes(edited.hooks[0].statusMessage)),
+          ).toEqual([edited]);
+          expect(stdout).toContain(
+            `kept: ${reader.file} hook group ${reader.event} "${edited.hooks[0].statusMessage}" (edited here)`,
+          );
+          const text = await readFile(path.join(root, reader.file), "utf-8");
+          if (previous !== undefined) expect(text).toBe(previous);
+          previous = text;
+        }
+      });
+    },
+  );
+
   it("seeds the whole settings file into a project that has none", async () => {
     await withTempRoot(async (root) => {
       await initInto(root);
@@ -148,12 +288,12 @@ describe("qfai init and the reminder hooks", () => {
       await initInto(root);
 
       const text = await readFile(path.join(root, SETTINGS), "utf-8");
-      expect(text).not.toContain("additionalContext");
       expect(text).not.toContain(".agents/rules/grilling.md");
       const messages: unknown = JSON.parse(
         await readFile(path.join(root, ".agents", "rules", "reminders.json"), "utf-8"),
       );
       if (typeof messages !== "object" || messages === null) throw new Error("no message table");
+      expectNoEmbeddedReminderText(text, messages);
       const entries = entriesOf(JSON.parse(text));
       expect(entries.length).toBeGreaterThan(0);
       for (const { entry } of entries) {
@@ -175,7 +315,10 @@ describe("qfai init and the reminder hooks", () => {
 
       const settings = await readSettings(root);
       expectOwnPermissionFirst(settings);
-      expect(JSON.stringify(settings)).not.toContain("additionalContext");
+      const messages: unknown = JSON.parse(
+        await readFile(path.join(root, ".agents", "rules", "reminders.json"), "utf-8"),
+      );
+      expectNoEmbeddedReminderText(JSON.stringify(settings), messages);
       const shipped = entriesOf(
         JSON.parse(await readFile(path.join(assetsRoot, ".claude", "settings.json"), "utf-8")),
       ).map(({ event, entry }) => JSON.stringify({ event, entry }));
@@ -204,7 +347,7 @@ describe("qfai init and the reminder hooks", () => {
 
       for (let run = 0; run < 2; run += 1) {
         const stdout = await initReporting(root);
-        expect(readPreToolUse(await readSettings(root))[0]).toEqual(edited);
+        expect(readHookGroups(await readSettings(root))[0]).toEqual(edited);
         expect(stdout).toContain(
           `kept: .claude/settings.json hook group PreToolUse "${DOCUMENTATION_CLARITY_HOOK_MARKER}" (edited here)`,
         );
@@ -243,7 +386,7 @@ describe("qfai init and the reminder hooks", () => {
       const shipped: unknown = JSON.parse(
         await readFile(path.join(assetsRoot, ".claude", "settings.json"), "utf-8"),
       );
-      const preToolUse = readPreToolUse(shipped);
+      const preToolUse = readHookGroups(shipped);
       const earlier = preToolUse.filter((group) =>
         JSON.stringify(group).includes(DOCUMENTATION_CLARITY_HOOK_MARKER),
       );
@@ -253,7 +396,7 @@ describe("qfai init and the reminder hooks", () => {
       await initInto(root);
 
       const settings = await readSettings(root);
-      const merged = readPreToolUse(settings);
+      const merged = readHookGroups(settings);
       expect(merged.length).toBe(preToolUse.length);
       for (const marker of [
         GRILLING_DESIGN_ARTIFACT_HOOK_MARKER,
@@ -333,14 +476,8 @@ describe("qfai init and the reminder hooks", () => {
     });
   });
 
-  // A read that fails for any reason other than "nothing is there" — a
-  // permission, or the path being something other than a file. The rest of the
-  // run is worth more than the reminder, so the fault is reported and init
-  // finishes; a throw here would abandon every later step over one optional file.
-  //
-  // The settings path is made a DIRECTORY rather than chmod-ed unreadable:
-  // `chmod 000` does not stop a privileged user, so that test passes vacuously
-  // wherever the suite runs as root, while `EISDIR` is a fault on every account.
+  // A directory at the settings path causes a read failure on every host.
+  // Init reports it and still writes the other assets.
   it("reports a settings path it cannot read and still completes the run", async () => {
     await withTempRoot(async (root) => {
       await mkdir(path.join(root, SETTINGS), { recursive: true });

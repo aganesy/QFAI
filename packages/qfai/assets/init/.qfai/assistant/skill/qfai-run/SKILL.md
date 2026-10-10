@@ -14,14 +14,14 @@ mode: execution-focused
 
 [DRIFT-PROTOCOL:REQUIRED]
 
-The user states a change once. This skill reads the request into facts, asks
-`npx qfai workflow plan` for the plan they give, and runs its steps in order.
+The CLI plans; this skill follows its steps in order.
 
-- The facts a request is read into: `references/extraction.md`.
-- The command, its input and its output: `references/plan.md`.
-- What the user sees, and how questions are put: `references/operator-screens.md`.
-- What is done at a release, decision or branch point: `references/stage-points.md`.
-- Invoke the CLI through the launcher of `.qfai/assistant/rule/shared-skill-operating-baseline.md#canonical-qfai-launcher-mandatory`.
+- Read `references/extraction.md` to extract a request.
+- Plan command and format: `references/plan.md`.
+- Screens and questions: `references/operator-screens.md`.
+- Release, decision and branch points: `references/stage-points.md`.
+- Run preflight before planning, as `.qfai/assistant/rule/shared-skill-operating-baseline.md#canonical-qfai-launcher-mandatory` says.
+  If the launcher is missing or preflight fails, read `references/operator-screens.md` for recovery.
 
 ## What this skill never does
 
@@ -45,9 +45,14 @@ value but the three below plans nothing.
 
 ## Request kinds
 
+- For independent targets under one goal, read `references/operator-screens.md`
+  before planning or switching during a wait.
 - A change, a question, a proposal to decide or a report to close is planned.
   A question plans a route that answers it and changes nothing. Text that is
   not a request is not planned.
+- A reply with a requested answer or result resumes the same step without a new
+  invocation, including failure. An independent new request is planned. Read
+  `references/operator-screens.md` for replies.
 - `stop`: end the work at once and list every open decision as open.
 - A request naming a stage skill: invoke that skill by name.
 
@@ -69,9 +74,10 @@ value but the three below plans nothing.
    `common-policy-check` once. On a route that changes no file, one that
    closes, answers or asks, it reads and reports and writes nothing.
 5. **Run the stages.** Run each stage in plan order, and each of its steps in
-   order. Write any artifact yourself. Give a part to a sub-agent only to run
-   independent parts in parallel, or for a review. At each step, handle the
-   points the plan names for it, as `references/stage-points.md` sets out:
+   order, as `.qfai/assistant/rule/shared-skill-operating-baseline.md#running-steps-mandatory` says.
+   When a step is short or passes without edits, read `references/operator-screens.md`.
+   Write artifacts yourself or delegate independent parallel work or review.
+   At each step, follow its plan's points in `references/stage-points.md`:
    - **Release point.** Ask the user to approve the release before the step `releasePoint` names.
    - **Decision point.** Put each critical decision at a step `decisionPoints` names to the user.
    - **Branch point.** Move to the destination a step `branchPoints` names, and plan it at once.
@@ -112,11 +118,7 @@ Follow `.qfai/assistant/rule/shared-skill-delegation-baseline.md`.
 
 ## Work Orders Summary
 
-Where parts ran in parallel, report one row per part given to a sub-agent.
-
-| Step | Role (sub-agent) | Agent instance  | Task title        | Input (refs)  | Output (refs) | Status (PASS/REVISE/PENDING) |
-| ---- | ---------------- | --------------- | ----------------- | ------------- | ------------- | ---------------------------- |
-| 1    | `<role>`         | `<instance id>` | `<part in words>` | The step file | The result    | PASS/REVISE                  |
+When parts ran in parallel, use the summary in `references/operator-screens.md`.
 
 ## Default Autopilot Policy
 
