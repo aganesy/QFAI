@@ -108,5 +108,5 @@ for. The pass names the surface set and the validation result.
 the recorded direction or the named theme does not supply, and no token
 prescribes a pattern from `design-anti-patterns.md` that the recorded direction
 does not ask for. An existing-file repair changes only its authorized part
-and preserves unrelated content. A reviewer fails the gate by naming the
-pattern or unauthorized change.
+and preserves unrelated content. A reviewer fails the gate by naming the pattern.
+An unauthorized change also fails the gate.
