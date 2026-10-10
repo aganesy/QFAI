@@ -324,38 +324,6 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
   addCheck(checks, await checkMdschemaBinary());
   for (const check of await checkWorkflowPreconditions(root)) addCheck(checks, check);
 
-  const deprecatedPromptsDir = resolvePath(root, config, "promptsDir");
-  const deprecatedPromptsExists = await exists(deprecatedPromptsDir);
-  let deprecatedPromptsContainContent = false;
-  if (deprecatedPromptsExists) {
-    try {
-      const entries = await readdir(deprecatedPromptsDir, { withFileTypes: true });
-      deprecatedPromptsContainContent =
-        entries.length !== 1 || entries[0]?.name !== ".gitkeep" || !entries[0].isFile();
-    } catch {
-      // A path that cannot be inspected is not the known empty init seed.
-      deprecatedPromptsContainContent = true;
-    }
-  }
-  // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional: checking deprecated promptsDir for diagnostic
-  const deprecatedPromptsConfigured = config.paths.promptsDir !== defaultConfig.paths.promptsDir;
-  addCheck(checks, {
-    id: "paths.promptsDirDeprecated",
-    severity: deprecatedPromptsContainContent || deprecatedPromptsConfigured ? "warning" : "ok",
-    title: "Deprecated path: promptsDir",
-    message: deprecatedPromptsConfigured
-      ? "promptsDir is deprecated and is set in the config (migrate to skillsDir)"
-      : deprecatedPromptsContainContent
-        ? "promptsDir is deprecated; even when it exists it is not used by validation (use skillsDir)"
-        : deprecatedPromptsExists
-          ? "promptsDir is deprecated; the shipped empty directory contains no prompts"
-          : "promptsDir is deprecated (not being created is fine)",
-    details: {
-      path: toRelativePath(root, deprecatedPromptsDir),
-      configured: deprecatedPromptsConfigured,
-    },
-  });
-
   if (options.profile === "prototyping") {
     checks.push(...(await buildPrototypingDoctorChecks(root, config, options.targetUrl)));
   }
@@ -908,10 +876,7 @@ async function buildIntegrationLinksCheck(root: string): Promise<DoctorCheck> {
     severity,
     title,
     // Counts and paths, not a diagnosis. `QFAI-LINK-001` covers several shapes
-    // and they do not share one sentence: a flattened link is not loaded at
-    // all, while a wrapper left behind by a retired skill resolves perfectly
-    // and is loading instructions this release no longer ships. Asserting
-    // "not being loaded" over both hid the second, which is the worse one.
+    // and they do not share one sentence.
     message:
       `${String(paths.length || broken.length)} integration wrapper(s) need attention. ` +
       "`qfai validate` reports the same paths as QFAI-LINK-001, and its finding says which " +
@@ -1173,8 +1138,6 @@ async function buildPrototypingDoctorChecks(
     buildTargetUrlCheck(root, targetUrl, targetUrlOverride ? "cli" : "config"),
   ]);
   const designMdChecks = await buildPrototypingDesignMdChecks(root);
-  // `launcherChecks` may yield 1 or 2 entries: the primary check plus an
-  // optional `D-DEPRECATED-PROBE` finding when the deprecated stage resolves.
   return [
     primarySpec,
     uiContracts,
@@ -1211,19 +1174,13 @@ async function buildPrototypingDesignMdChecks(root: string): Promise<DoctorCheck
     // so "file exists and parses" cannot distinguish an authored brand
     // from an unauthored one. Report it here, before a prototyping loop
     // runs against it as the project's brand.
-    //
-    // Samples seeded by releases that predate the marker are detected by
-    // content fingerprint instead, so the remediation text must not tell
-    // those projects to delete a comment that is not there.
-    const markerPresent = designMdText.includes(DESIGN_MD_SAMPLE_MARKER);
     checks.push({
       id: "prototyping.designMdRoot",
       severity: "error",
       title: "Root DESIGN.md",
-      message: markerPresent
-        ? "root DESIGN.md is still the qfai sample brand — replace it with this product's brand SSOT and delete the sample marker before prototyping"
-        : "root DESIGN.md is still the qfai sample brand (seeded by a release older than the sample marker) — replace it with this product's brand SSOT before prototyping",
-      details: { path: designMdRel, marker: markerPresent ? DESIGN_MD_SAMPLE_MARKER : null },
+      message:
+        "root DESIGN.md is still the qfai sample brand — replace it with this product's brand SSOT and delete the sample marker before prototyping",
+      details: { path: designMdRel, marker: DESIGN_MD_SAMPLE_MARKER },
     });
   } else {
     const parsed = parseDesignMd(designMdText);
@@ -1513,7 +1470,6 @@ async function buildPrototypingRolesCheck(root: string): Promise<DoctorCheck> {
   };
 }
 
-const PLAYWRIGHT_SUNSET = "1.10.0";
 const PLAYWRIGHT_INSTALL_HINT = "npm i -D playwright";
 
 async function buildPlaywrightLauncherChecks(root: string): Promise<DoctorCheck[]> {
@@ -1554,7 +1510,6 @@ function buildResolvedChecks(
       message: `playwright launcher resolved via ${resolved.origin} (stage=${resolved.stage}) and passed bounded invocation probe`,
       details: {
         resolvedStage: resolved.stage,
-        deprecated: resolved.stage === "deprecated-cli",
         origin: resolved.origin,
         executable: relativizeMaybe(root, resolved.executable),
         args: resolved.args,
@@ -1565,25 +1520,6 @@ function buildResolvedChecks(
       },
     },
   ];
-  if (resolved.stage === "deprecated-cli") {
-    // The literal `sunset: 1.10.0` substring is part of the public wire
-    // contract, so it is written as a constant rather than folded into prose.
-    checks.push({
-      // The config layer rejects this launcher, so anything softer than an
-      // error would have doctor call "fine" what `loadConfig` calls broken.
-      id: "D-DEPRECATED-PROBE",
-      severity: "error",
-      title: "Deprecated playwright-cli probe",
-      message: `playwright-cli probe is deprecated (sunset: ${PLAYWRIGHT_SUNSET}); install playwright as the primary launcher (${PLAYWRIGHT_INSTALL_HINT})`,
-      details: {
-        sunset: PLAYWRIGHT_SUNSET,
-        installHint: PLAYWRIGHT_INSTALL_HINT,
-        resolvedVia: resolved.origin,
-        executable: relativizeMaybe(root, resolved.executable),
-        probeOrder,
-      },
-    });
-  }
   return checks;
 }
 

@@ -359,10 +359,6 @@ function buildTraceabilityJson(
       shared_scope_violations: issues.filter(
         (issue) => issue.code === "TRACE_SHARED_SCOPE_VIOLATION",
       ).length,
-      legacy_status_warnings: issues.filter(
-        (issue) =>
-          issue.code === "LEGACY_STATUS_DIR" || issue.code === "LEGACY_STATUS_DIR_NONEMPTY",
-      ).length,
     },
   };
 }

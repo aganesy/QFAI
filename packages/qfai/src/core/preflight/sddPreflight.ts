@@ -268,7 +268,6 @@ type PackReadiness = {
   incompleteFiles: string[];
   blockingOqIds: string[];
   incompleteDeferredOqIds: string[];
-  unmigratedFiles: readonly { legacy: string; target: string }[];
   prototypingRequired: boolean;
 };
 
@@ -324,16 +323,6 @@ function resolvePackGaps(readiness: PackReadiness): string[] {
   if (readiness.incompleteFiles.length > 0) {
     gaps.push(
       `Files that do not meet the minimum content: ${readiness.incompleteFiles.join(", ")}`,
-    );
-  }
-
-  // The preflight side of the relocated-file `QFAI-DPACK-003`, which
-  // `validate --profile sdd` does not run either.
-  if (readiness.unmigratedFiles.length > 0) {
-    gaps.push(
-      `Files whose content has moved and that the pack still holds: ${readiness.unmigratedFiles
-        .map(({ legacy, target }) => `${legacy} → ${target}`)
-        .join(", ")}`,
     );
   }
 

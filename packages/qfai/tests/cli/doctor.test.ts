@@ -121,7 +121,6 @@ describe("doctor", () => {
         "skillsDir",
       ];
       const pathIndices = pathKeys.map((key) => indexOf(`paths.${key}`));
-      const promptsDeprecated = indexOf("paths.promptsDirDeprecated");
 
       const configSearch = indexOf("config.search");
       const configLoad = indexOf("config.load");
@@ -132,8 +131,7 @@ describe("doctor", () => {
 
       expect(configLoad).toBeGreaterThan(configSearch);
       expect(Math.min(...pathIndices)).toBeGreaterThan(configLoad);
-      expect(promptsDeprecated).toBeGreaterThan(Math.max(...pathIndices));
-      expect(outputValidate).toBeGreaterThan(promptsDeprecated);
+      expect(outputValidate).toBeGreaterThan(Math.max(...pathIndices));
       expect(outputAlignment).toBeGreaterThan(outputValidate);
       expect(outDirCollision).toBeGreaterThan(outputAlignment);
       expect(traceability).toBeGreaterThan(outDirCollision);
@@ -231,61 +229,6 @@ describe("doctor", () => {
       expect(globsCheck?.severity).toBe("ok");
 
       expect(await runDoctorExit(root, "error")).toBe(0);
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  // QFAI:EX-0003-0004-02
-  // QFAI:EX-0003-0004-03
-  it("accepts the shipped empty prompt directory but warns when content is added", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const promptDir = path.join(root, ".qfai", "assistant", "prompt");
-      expect(await readdir(promptDir)).toEqual([".gitkeep"]);
-
-      const fresh = findCheck((await readDoctorData(root)).checks, "paths.promptsDirDeprecated");
-      expect(fresh?.severity).toBe("ok");
-
-      await writeFile(path.join(promptDir, "custom.md"), "Custom prompt\n", "utf-8");
-      const populated = findCheck(
-        (await readDoctorData(root)).checks,
-        "paths.promptsDirDeprecated",
-      );
-      expect(populated?.severity).toBe("warning");
-      expect(populated?.message).toContain("not used by validation");
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  it("warns when deprecated promptsDir is configured", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-      const configPath = path.join(root, "qfai.config.yaml");
-      await writeFile(
-        configPath,
-        [
-          "paths:",
-          "  promptsDir: .qfai/assistant/legacy-prompts",
-          "validation:",
-          "  traceability:",
-          "    testFileGlobs: []",
-          "",
-        ].join("\n"),
-        "utf-8",
-      );
-
-      const parsed = await readDoctorData(root);
-      const promptsCheck = findCheck(parsed.checks, "paths.promptsDirDeprecated");
-      const skillsCheck = findCheck(parsed.checks, "paths.skillsDir");
-
-      expect(promptsCheck?.severity).toBe("warning");
-      expect(promptsCheck?.message).toContain("is set in the config");
-      expect(skillsCheck?.details?.path).toBe(".qfai/assistant/legacy-prompts");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -622,19 +565,18 @@ describe("doctor", () => {
     }
   });
 
-  it("reports launcher probe failures when only a broken playwright-cli exists", async () => {
+  it("reports launcher probe failures when only a broken playwright exists", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     const server = await startTestServer();
-    // Probe order (spec-0006): playwright-cli is now the
-    // deprecated stage. To force the launcher check into the error path we
-    // must also suppress the stage-2 `npx --no-install playwright` fallback,
-    // which would otherwise resolve against any developer-host install.
+    // To force the launcher check into the error path we must also suppress
+    // the stage-2 `npx --no-install playwright` fallback, which would
+    // otherwise resolve against any developer-host install.
     const originalPath = process.env.PATH;
     process.env.PATH = "";
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
       await seedPrototypingFixture(root, server.url);
-      await writeTestPlaywrightCli(path.join(root, "node_modules", ".bin"), 1);
+      await writeTestPlaywright(path.join(root, "node_modules", ".bin"), 1);
 
       const parsed = await readDoctorData(root, { profile: "prototyping", targetUrl: server.url });
       expect(findCheck(parsed.checks, "prototyping.playwrightCli")?.severity).toBe("error");
@@ -872,7 +814,7 @@ async function seedPrototypingFixture(root: string, targetUrl: string): Promise<
       "  primaryUiContract: UI-0001",
       "  execution:",
       `    targetUrl: ${targetUrl}`,
-      "    browserTool: playwright-cli",
+      "    browserTool: playwright",
       "",
     ].join("\n"),
     "utf-8",
@@ -941,18 +883,18 @@ async function seedPrototypingFixture(root: string, targetUrl: string): Promise<
     "",
   ].join("\n");
   await writeFile(path.join(root, "DESIGN.md"), designMdText, "utf-8");
-  await writeTestPlaywrightCli(binDir, 0);
+  await writeTestPlaywright(binDir, 0);
 }
 
-async function writeTestPlaywrightCli(binDir: string, exitCode: 0 | 1): Promise<void> {
+async function writeTestPlaywright(binDir: string, exitCode: 0 | 1): Promise<void> {
   if (process.platform === "win32") {
     const content = exitCode === 0 ? "@echo off\r\necho ok\r\n" : "@echo off\r\nexit /b 1\r\n";
-    await writeFile(path.join(binDir, "playwright-cli.cmd"), content, "utf-8");
+    await writeFile(path.join(binDir, "playwright.cmd"), content, "utf-8");
     return;
   }
 
   const content = exitCode === 0 ? "#!/bin/sh\necho ok\n" : "#!/bin/sh\nexit 1\n";
-  const launcherPath = path.join(binDir, "playwright-cli");
+  const launcherPath = path.join(binDir, "playwright");
   await writeFile(launcherPath, content, "utf-8");
   await chmod(launcherPath, 0o755);
 }

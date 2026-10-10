@@ -21,7 +21,6 @@ const DOCTOR_CLI = path.resolve(__dirname, "..", "..", "src", "cli", "commands",
 // QFAI:EX-0003-0001-03
 // QFAI:EX-0003-0002-01
 // QFAI:EX-0003-0003-01
-// QFAI:EX-0003-0004-01
 // QFAI:EX-0003-0012-01
 // QFAI:EX-0003-0012-02
 describe("TC-0006-0001: config found - text output", () => {

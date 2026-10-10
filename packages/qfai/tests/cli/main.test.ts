@@ -32,7 +32,7 @@ describe("cli root discovery", () => {
           "utf8",
         ),
       ).toContain(["QFAI:", "AC-0008-0007-01"].join(""));
-      await run(["atdd", "scaffold", "--root", root, "--spec", "spec-0008"], root);
+      await run(["atdd", "scaffold", "--root", root], root);
       expect(process.exitCode).toBe(2);
       await run(["atdd", "scaffold", "--root", root, "--story", "US-8-7"], root);
       expect(process.exitCode).toBe(2);
@@ -142,9 +142,7 @@ describe("cli root discovery", () => {
     const help = await captureStdout(() => run(["--help"], process.cwd()));
 
     expect(help).toContain(".qfai/assistant/{skill,agent}/**");
-    expect(help).toContain(".qfai/assistant/skill/<id>/ stays");
     expect(help).not.toContain(".qfai/assistant/{skills,agents}/**");
-    expect(help).not.toContain(".qfai/assistant/skills/<id>/ stays");
   });
 
   it("reports the unknown flag on stderr and exits 2 instead of running the command", async () => {
@@ -351,20 +349,6 @@ describe("cli usage text", () => {
     expect(entry).not.toContain("everything else is skipped if it already exists");
     expect(entry).toContain("rule/*.local.md overlays");
     expect(entry).not.toContain("assistant/catalog");
-  });
-
-  it("names the current assistant layers as the --upgrade-assistant-tree destinations", async () => {
-    const lines = (await captureHelp()).split("\n");
-    const start = lines.findIndex((candidate) =>
-      candidate.trimStart().startsWith("--upgrade-assistant-tree"),
-    );
-    expect(start).toBeGreaterThanOrEqual(0);
-    const entry = [lines[start], lines[start + 1]].join("\n");
-
-    expect(entry).toContain("-> rule/ skill/ agent/ prompt/");
-    for (const retired of ["constitution/", "manifest/", "catalog/", "process/"]) {
-      expect(entry).not.toContain(retired);
-    }
   });
 });
 

@@ -1,6 +1,6 @@
 /**
  * Acceptance of what `qfai init` distributes into a project, run through the
- * command itself: the agent symlinks, the wrapper prune, the git symlink
+ * command itself: the agent symlinks, the git symlink
  * setting, the Copilot instruction files and the assistant-tree layers.
  */
 
@@ -70,29 +70,6 @@ function sectionPaths(output: string, header: string): string[] {
   return paths;
 }
 
-/** A wrapper body shaped like the ones init once wrote: it delegates to the canonical doc. */
-function generatedCommandBody(stem: string): string {
-  return [
-    "---",
-    `description: "QFAI: ${stem}"`,
-    "---",
-    "Follow the canonical QFAI prompt exactly:",
-    `@.qfai/assistant/prompts/${stem}.md`,
-    "",
-  ].join("\n");
-}
-
-function generatedPromptBody(stem: string): string {
-  return [
-    "---",
-    `description: "QFAI: ${stem}"`,
-    "---",
-    "1) Open and follow the canonical QFAI prompt:",
-    `- .qfai/assistant/prompts/${stem}.md`,
-    "",
-  ].join("\n");
-}
-
 describe("init distribution: agents and wrappers", () => {
   // QFAI:AC-0001-0025-01
   it("links every canonical agent card from both hosts and writes no README beside them", async () => {
@@ -117,41 +94,6 @@ describe("init distribution: agents and wrappers", () => {
 
     for (const dir of [".agents", ".codex", ".claude/agents", ".github/agents"]) {
       expect(await exists(path.join(root, ...dir.split("/"), "README.md")), dir).toBe(false);
-    }
-  });
-
-  // QFAI:AC-0001-0027-01
-  it("prunes generated wrappers on --force and leaves adopter-owned entries alone", async () => {
-    const root = await initProject();
-    const generated = [
-      [path.join(root, ".claude", "commands", "qfai-spec.md"), generatedCommandBody("qfai-spec")],
-      [
-        path.join(root, ".github", "prompts", "qfai-spec.prompt.md"),
-        generatedPromptBody("qfai-spec"),
-      ],
-    ] as const;
-    const adopter = [
-      [path.join(root, ".claude", "commands", "qfai-release.md"), "project command\n"],
-      [path.join(root, ".github", "prompts", "qfai-release.prompt.md"), "project prompt\n"],
-      [path.join(root, ".codex", "skills", "custom-skill", "SKILL.md"), "project skill\n"],
-    ] as const;
-    for (const [file, text] of [...generated, ...adopter]) {
-      await mkdir(path.dirname(file), { recursive: true });
-      await writeFile(file, text, "utf-8");
-    }
-    const oldSkill = path.join(root, ".codex", "skills", "qfai-configure");
-    await rm(oldSkill, { recursive: true, force: true });
-    await mkdir(oldSkill, { recursive: true });
-    await writeFile(path.join(oldSkill, "SKILL.md"), "old wrapper\n", "utf-8");
-
-    await captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true }));
-
-    for (const [file] of generated) {
-      expect(await exists(file), file).toBe(false);
-    }
-    expect((await lstat(oldSkill)).isSymbolicLink()).toBe(true);
-    for (const [file, text] of adopter) {
-      expect(await readFile(file, "utf-8"), file).toBe(text);
     }
   });
 });

@@ -204,17 +204,6 @@ describe("validateDesignContractReadiness — unreplaced sample (QFAI-DCON-034)"
     expect(issues.find((i) => i.code === "QFAI-DCON-034")?.severity).toBe("warning");
   });
 
-  it("reports DCON-034 for a marker-less legacy sample seeded by an older init", async () => {
-    const root = await newTempDir();
-    const legacy = (await readShippedSample()).replace(
-      /<!-- QFAI-SAMPLE-DESIGN-MD:[\s\S]*?-->\n\n/,
-      "",
-    );
-    await writeFile(path.join(root, "DESIGN.md"), legacy, "utf-8");
-    const issues = await validateDesignContractReadiness(root, defaultConfig);
-    expect(issues.map((i) => i.code)).toContain("QFAI-DCON-034");
-  });
-
   it("stays silent for an authored DESIGN.md with no UI contracts", async () => {
     const root = await newTempDir();
     await writeFile(path.join(root, "DESIGN.md"), VALID_DESIGN_MD, "utf-8");

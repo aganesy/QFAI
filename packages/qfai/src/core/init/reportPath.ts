@@ -13,11 +13,10 @@ function isControlChar(char: string): boolean {
 /**
  * Renders one relative path for stdout.
  *
- * A path only reaches here from the filesystem, and on
- * `--upgrade-assistant-tree` that includes names an untrusted repository chose:
- * a legacy `instructions/` entry whose name carries a newline or an ANSI escape
- * is carried through the migration into `copied` and printed verbatim, which is
- * enough to forge the report's own headings or drive the terminal. A report
+ * A path only reaches here from the filesystem, and that includes names an
+ * untrusted repository chose: an entry whose name carries a newline or an ANSI
+ * escape and is printed verbatim is enough to forge the report's own headings
+ * or drive the terminal. A report
  * whose purpose is reviewing changes before they happen must not be
  * counterfeitable by the thing it reports on.
  *

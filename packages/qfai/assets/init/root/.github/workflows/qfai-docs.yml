@@ -611,7 +611,7 @@ jobs:
           # because a second `--no-save` install into the same prefix removes
           # what the first one added.
           if [ -d node_modules/qfai ]; then
-            npm install --no-save --no-audit --no-fund --ignore-scripts --include=optional --registry=https://registry.npmjs.org/ --prefix=tmp/qfai-docs-tools @jackchuka/mdschema@0.15.4 mermaid@11.17.2 jsdom@29.1.1
+            npm install --no-save --no-audit --no-fund --ignore-scripts --include=optional --registry=https://registry.npmjs.org/ --prefix=tmp/qfai-docs-tools @jackchuka/mdschema@0.15.5 mermaid@11.17.2 jsdom@29.1.1
           else
             npm install --no-save --no-audit --no-fund --ignore-scripts --include=optional --registry=https://registry.npmjs.org/ --prefix=tmp/qfai-docs-tools mermaid@11.17.2 jsdom@29.1.1 qfai
           fi

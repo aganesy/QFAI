@@ -1,7 +1,6 @@
 /**
  * Integration acceptance for spec-0015 CHG-006 test cases
- * TC-0015-0020..0033 (autopilot policy gate, handoff schema drift, doc
- * realignment / stale-reference report).
+ * TC-0015-0020..0033 (autopilot policy gate, handoff schema drift).
  *
  * Deterministic temp-fixture form: each `it` seeds a `mkdtemp` root
  * with the minimum on-disk shape required and invokes the production
@@ -14,8 +13,6 @@
 // QFAI:EX-0001-0169-01
 // QFAI:EX-0001-0171-01
 // QFAI:EX-0001-0171-01
-// QFAI:EX-0001-0174-01
-// QFAI:EX-0001-0174-01
 
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -29,9 +26,8 @@ import {
   HANDOFF_SCHEMA_REL,
   HANDOFF_WRITER_PAIRS,
 } from "../../src/core/validators/handoffSchemaPairs.js";
-import { validateStaleReferences } from "../../src/core/validators/staleReferences.js";
-import { validateHandoff } from "../../src/core/schemas/handoff.js";
-import { loadConfig } from "../../src/core/config.js";
+import { HANDOFF_MINIMUM_FIELDS, validateHandoff } from "../../src/core/schemas/handoff.js";
+import { runSaasPackageProfile } from "../../src/core/saasPackage/profile.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 let root: string;
@@ -169,6 +165,28 @@ describe("spec-0015 handoff schema CHG-006", () => {
     expect(f?.message).toMatch(/justification/i);
   });
 
+  // QFAI:AC-0001-0171-01
+  it("lists the minimum field set and reads no handoff file but the prototyping record", async () => {
+    expect([...HANDOFF_MINIMUM_FIELDS]).toEqual([
+      "companyName",
+      "primaryUiContract",
+      "startDate",
+      "signature",
+      "entryPattern",
+      "productScope",
+    ]);
+    await mkdir(path.join(root, ".qfai"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai", "handoff.yaml"),
+      "companyName: Acme\nprimaryUiContract: UI-0012\n",
+      "utf-8",
+    );
+    const issues = await runSaasPackageProfile(root, []);
+    const missing = issues.find((i) => i.code === "QFAI-SAAS-002");
+    expect(missing?.severity).toBe("error");
+    expect(missing?.file).toBe(".qfai/prototype/final/handoff.json");
+  });
+
   it("QFAI:EX-0001-0171-01 — normal: a handoff with extra keys passes validateHandoff (additionalProperties: true)", () => {
     const issues = validateHandoff({
       companyName: "Acme",
@@ -176,30 +194,5 @@ describe("spec-0015 handoff schema CHG-006", () => {
       extraKey: { foo: 1 },
     });
     expect(issues).toEqual([]);
-  });
-});
-
-describe("spec-0015 stale-ref report CHG-006", () => {
-  it("QFAI:EX-0001-0174-01 — normal: rewritten in-PR refs report zero stale references at HEAD", async () => {
-    const dir = path.join(root, ".qfai", "assistant", "skill", "qfai-prototyping", "references");
-    await mkdir(dir, { recursive: true });
-    await writeFile(path.join(dir, "handoff.md"), "# Handoff\nUses handoff.yaml.\n", "utf-8");
-    const issues = await validateStaleReferences(root, { config: (await loadConfig(root)).config });
-    expect(issues.filter((i) => i.code === "QFAI-STALE-001")).toEqual([]);
-  });
-
-  it("QFAI:EX-0001-0174-01 — error: a stale ref at HEAD reports warning", async () => {
-    const dir = path.join(root, ".qfai", "assistant", "skill", "qfai-prototyping", "references");
-    await mkdir(dir, { recursive: true });
-    await writeFile(
-      path.join(dir, "handoff.md"),
-      "# Handoff\nUses session-handoff.yaml.\n",
-      "utf-8",
-    );
-    const findings = (
-      await validateStaleReferences(root, { config: (await loadConfig(root)).config })
-    ).filter((i) => i.code === "QFAI-STALE-001");
-    expect(findings.length).toBeGreaterThanOrEqual(1);
-    expect(findings[0]?.severity).toBe("warning");
   });
 });

@@ -20,7 +20,6 @@ export type ParsedArgs = {
     force: boolean;
     yes: boolean;
     dryRun: boolean;
-    upgradeAssistantTree: boolean;
     /**
      * `qfai init --verbose`: expand the run report's `skipped` list. Off by
      * default so a no-op re-run reports its skip count instead of every
@@ -80,8 +79,6 @@ export type ParsedArgs = {
     sddImport?: string;
     /** Subcommand for `qfai atdd <scaffold>`. */
     atddAction?: "scaffold";
-    /** Retired `--spec <id>` value, retained for `qfai atdd scaffold` migration errors. */
-    atddSpecId?: string;
     atddStoryId?: string;
     atddFlowId?: string;
     /** `--flow <BF-NNNN>` values for `qfai validate`. */
@@ -147,7 +144,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     force: false,
     yes: false,
     dryRun: false,
-    upgradeAssistantTree: false,
     verbose: false,
     reportFormat: "md",
     reportRunValidate: false,
@@ -222,13 +218,12 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
    * A flag accepted where nothing reads it reaches nothing, and the run
    * proceeds as if it had not been given. `--dir` produced a verdict about the
    * CURRENT tree and made `report` overwrite its `report.md`;
-   * `--upgrade-assistant-tree` exited 0 having upgraded nothing;
    * `--dry-run` let an operator believe a run was a rehearsal.
    *
    * The owner lists are derived from where `main.ts` reads each field, not
    * guessed:
    *
-   * - `dir`, `upgradeAssistantTree` — `init`
+   * - `dir` — `init`
    * - `yes` — `init`, `doctor`
    * - `force` — `init`
    * - `dryRun` — `init`, `doctor`
@@ -380,16 +375,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid(notValidHere("--dry-run"));
         }
         break;
-      case "--upgrade-assistant-tree":
-        // Same shape as `--dir`, and worse in one way: accepted elsewhere it
-        // exited 0 having upgraded nothing, so the operator went on reading an
-        // assistant tree they believed had been refreshed.
-        if (ownedBy("init")) {
-          options.upgradeAssistantTree = true;
-        } else {
-          markInvalid(notValidHere("--upgrade-assistant-tree"));
-        }
-        break;
       case "--verbose":
         // init only, as the help states. Passing it to another command is
         // treated as a mistake rather than silently dropped, so automation
@@ -447,10 +432,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         } else {
           markInvalid(notValidHere("--strict"));
         }
-        break;
-      case "--phase":
-        markInvalid(`${scope()}: --phase is not supported.`);
-        consumeOptionValue();
         break;
       case "--profile": {
         const next = consumeOptionValue();
@@ -656,21 +637,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       // (not-consumed-on-misuse) used opposite conventions for the
       // same goal; this contract block plus the unified shape below
       // resolves the asymmetry.
-      case "--spec": {
-        const next = consumeOptionValue();
-        if (next === null) {
-          markInvalid(missingValue("--spec"));
-          break;
-        }
-        if (command === "atdd") {
-          options.atddSpecId = next;
-        } else if (command === "validate" || command === "report") {
-          markInvalid(`${scope()}: --spec is no longer supported. Use --flow BF-NNNN.`);
-        } else {
-          markInvalid(notValidHere("--spec"));
-        }
-        break;
-      }
       case "--flow": {
         const next = consumeOptionValue();
         if (next === null) {

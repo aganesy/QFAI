@@ -17,6 +17,34 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reminder hooks and the communication rule carry the short form. `qfai init`
   refreshes the rule and `reminders.json`.
 
+- **The shipped `qfai-docs.yml` installs `@jackchuka/mdschema` 0.15.5.** The
+  document-schema checker the docs lane runs moves from 0.15.4 to 0.15.5, the
+  version the package now depends on. The release changes only a dependency of
+  the checker.
+
+- **`/qfai-configure` leaves `paths.specsDir` to the default, adds routing and
+  review-profile overrides only on request, and records each test layer's tool
+  in the `tech.md` Stack table.** The skill no longer tells a project to gain a
+  key the package already defaults: an absent `paths.specsDir` resolves to
+  `.qfai/spec` and a configured value stays. Step 4 adds `routing` or
+  `reviewProfiles` only when the user asks to change one. Step 3 asks for one
+  Stack row per test layer, naming the tool, the files it was observed in and why
+  it fits that layer. Part of #2951.
+
+- **`qfai init` no longer cleans up after earlier releases, and
+  `qfai validate` no longer reports their wrappers.** `--force` removes
+  nothing: it no longer deletes the command and prompt wrappers, the skill and
+  agent links of skills and agents that are no longer shipped, `10_workflow.md`,
+  the assistant `README.md` or the Codex profile of an agent that left the
+  roster, and a wrapper left by a removed skill is no longer reported by
+  `QFAI-LINK-001`. `--upgrade-assistant-tree` and the notice about the end of the
+  earlier assistant tree are gone, together with `QFAI-DEPRECATED-001`.
+  An existing `AGENTS.md`, `CLAUDE.md` or Copilot instruction file keeps a rule
+  summary or review directive an earlier release wrote: init adds what is
+  missing and leaves the rest. The shipped
+  workflow list no longer has a retired set, and the spec-pack required-file
+  lookup no longer falls back to `assistant/manifest/`.
+
 - **The `qfai-sdd` normalization reference lists all six removed design
   contracts.** The reference that tells the skill which contracts not to generate
   named four. It now also names `exploration-brief.yaml`, `reference-pool.yaml`
@@ -29,6 +57,39 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   for the old evaluation headings in a current sidecar. The missing-sidecar
   check (`QFAI-THREELAYER-002`) is unchanged. The `qfai-discussion` templates
   and references no longer list the old file names.
+
+- **`qfai validate` no longer reports directories, files and names from earlier
+  releases.** It no longer raises `QFAI-HYG-001` for `.qfai/specs/`,
+  `.qfai/discussions/` and the other former directory names, `QFAI-DPACK-006`
+  and `QFAI-DPACK-010` for sequential discussion pack names, `QFAI-DPACK-003`
+  for a pack file whose content moved into another file, `QFAI-STALE-001` for
+  `session-handoff.yaml` in a skill document, or `QFAI-PROTOSKILL-002` for the
+  earlier prototyping wording. A `discussion-*` directory whose name is not the
+  canonical stamp, a sequential name and `discussion-legacy-*` included, is now
+  reported by `QFAI-DPACK-005` alone. `QFAI-TEST-001` no longer reads the
+  placeholder marker an earlier `qfai atdd scaffold` wrote, `QFAI-AUTOPILOT-001`
+  no longer names `companyName` and `primarySpecId` as retired entries (a skill
+  that lists either still fails it as an undeclared entry), `qfai report` no
+  longer rejects a `validate.json` for a `traceability` key, and
+  `qfai doctor --profile prototyping` no longer treats a `DESIGN.md` without
+  the sample marker as the sample brand.
+
+- **`qfai.config.yaml` and `qfai doctor` drop the keys and probes of earlier
+  releases.** The loader no longer reads `paths.promptsDir` (it was a fallback for
+  `paths.skillsDir`), `validation.testStrategy.requireLayerTags` and
+  `requireSizeTags`, and it no longer reports `brMustHaveSc`, `scNoTestSeverity`,
+  `orphanContractsPolicy`, `prototyping.execution.browserProvider` or
+  `renderProvider`: a project that still sets one loads without a finding and
+  the key has no effect. `prototyping.execution.browserTool` accepts only
+  `playwright`, and `qfai doctor` no longer has a `playwright-cli` probe stage,
+  the `D-DEPRECATED-PROBE` finding or the `paths.promptsDirDeprecated` check.
+  A waiver names a rule by the full finding code: the `QFAI-`-stripped spelling
+  (`STORY-006`) no longer matches.
+
+- **`--spec` and `--phase` are unknown options.** `qfai validate`, `qfai report`
+  and `qfai atdd scaffold` rejected them with a message of their own. They now
+  reject them as they reject any option they do not define, and the help text no
+  longer lists `--spec`.
 
 - **`qfai doctor` holds a Markdown assistant asset to 500 lines.** The
   `assets.lineBudget` check allowed 800 lines for every `.md`, `.yml` and `.yaml`
@@ -65,6 +126,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   columns in a different order report that the columns must be in the order ID,
   Content, Approach and Status. The finding was one message for all three
   cases. Refs #2951.
+
+- **The `qfai-verify` context step reads the configured directories.**
+  `references/context-load.md` named fixed `.qfai/spec` paths for the spec tree,
+  the contracts and `tech.md`. It now reads them from `paths.specsDir` and
+  `paths.contractsDir`, and reads `principle.md` with the other policy files.
+  Part of #2951.
+
+- **The minimal-implementation rule no longer lists an execution ledger.** Its
+  section on what the ladder never removes named an execution ledger, which the
+  story tree does not have. It names only the traceability links of the
+  constitution's Article V. Part of #2951.
 
 ### Fixed
 

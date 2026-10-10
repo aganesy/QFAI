@@ -93,7 +93,6 @@ type Journey = {
   validation: Result;
   validationIssues: ValidationIssue[];
   tddValidation: Result;
-  oldReader: Result;
 };
 type Failure = {
   result: Result;
@@ -292,14 +291,6 @@ beforeAll(async () => {
     "--fail-on",
     "error",
   ]);
-  const oldReader = run(root, process.execPath, [
-    cli,
-    "validate",
-    "--root",
-    root,
-    "--spec",
-    "spec-0001",
-  ]);
   journey = {
     root,
     dry,
@@ -310,7 +301,6 @@ beforeAll(async () => {
     validation,
     validationIssues: validationReport.issues,
     tddValidation,
-    oldReader,
   };
 
   const invalidRoot = await project();
@@ -449,8 +439,6 @@ describe("BF-0004 migration cutover", () => {
     await expect(lstat(path.join(journey.root, ".qfai/evidence"))).rejects.toMatchObject({
       code: "ENOENT",
     });
-    expect(journey.oldReader.status).toBe(2);
-    expect(`${journey.oldReader.stdout}\n${journey.oldReader.stderr}`).toContain("--flow BF-NNNN");
     for (const host of [".claude/skills", ".agents/skills", ".codex/skills", ".github/skills"]) {
       const wrapper = path.join(journey.root, host, "qfai-sdd");
       await expectLinkToCanonicalSkill(

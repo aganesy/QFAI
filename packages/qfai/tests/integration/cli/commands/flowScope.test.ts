@@ -6,10 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { runReport } from "../../../../src/cli/commands/report.js";
 import { runValidate, scopedReportPath } from "../../../../src/cli/commands/validate.js";
-import { parseArgs } from "../../../../src/cli/lib/args.js";
-import { run } from "../../../../src/cli/main.js";
 import { validateProject } from "../../../../src/core/validate.js";
-import { captureStderr } from "../../../helpers/stderr.js";
 import { captureStdout } from "../../../helpers/stdout.js";
 
 const roots: string[] = [];
@@ -151,35 +148,6 @@ describe("story-tree CLI flow scope", () => {
     },
   );
 
-  // QFAI:EX-0001-0094-05
-  it("TC-0004-0112: refuses --spec on a story tree", async () => {
-    const root = await storyRoot();
-    const parsed = parseArgs(["validate", "--spec", "0001"], root);
-    expect(parsed.invalid).toBe(true);
-    expect(parsed.invalidReason).toContain("--flow BF-NNNN");
-    expect(await exists(path.join(root, ".qfai/report/validate.spec-0001.json"))).toBe(false);
-  });
-
-  // QFAI:AC-0001-0057-02
-  // QFAI:EX-0001-0057-02
-  it("exits 2 and names --flow BF-NNNN when validate is given --spec", async () => {
-    const root = await storyRoot();
-    const previous = process.exitCode;
-    try {
-      process.exitCode = undefined;
-      const stderr = await captureStderr(async () => {
-        await captureStdout(() => run(["validate", "--spec", "spec-0001"], root));
-      });
-
-      expect(process.exitCode).toBe(2);
-      expect(stderr).toContain("--spec is no longer supported");
-      expect(stderr).toContain("--flow BF-NNNN");
-      expect(await scopedResults(root)).toEqual([]);
-    } finally {
-      process.exitCode = previous;
-    }
-  });
-
   // QFAI:AC-0001-0057-03
   // QFAI:EX-0001-0057-03
   it.each(["flow-1", "BF-0009"])(
@@ -227,11 +195,8 @@ describe("story-tree CLI flow scope", () => {
     },
   );
 
-  it("TC-0005-0016/0017: refuses --spec and malformed --flow before writing", async () => {
+  it("TC-0005-0016/0017: refuses a malformed --flow before writing", async () => {
     const root = await storyRoot();
-    const parsed = parseArgs(["report", "--spec", "0001"], root);
-    expect(parsed.invalid).toBe(true);
-    expect(parsed.invalidReason).toContain("--flow BF-NNNN");
     expect(await runReport({ root, format: "md", flowIds: ["../../outside"] })).toBe(2);
     expect(await exists(path.join(root, ".qfai/report/report.md"))).toBe(false);
   });

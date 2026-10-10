@@ -9,49 +9,14 @@ import { resolvePath } from "../config.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
-type LegacyDirRule = {
-  legacy: string;
-  canonical: string;
-};
-
-const LEGACY_DIR_RULES: LegacyDirRule[] = [
-  { legacy: "discussions", canonical: "discussion" },
-  { legacy: "discuss", canonical: "discussion" },
-  { legacy: "requirements", canonical: "discussion" },
-  { legacy: "require", canonical: "discussion" },
-  { legacy: "specs", canonical: "spec" },
-  { legacy: "specification", canonical: "spec" },
-];
-
 const SUSPICIOUS_TEMPLATE_NAME_RE = /^(?:_?templates?|_?sample(?:s)?|sample-template)$/i;
 
 export async function validateRepositoryHygiene(
   root: string,
   config: QfaiConfig,
 ): Promise<Issue[]> {
-  const qfaiRoot = path.join(root, ".qfai");
   const specsRoot = resolvePath(root, config, "specsDir");
   const issues: Issue[] = [];
-
-  for (const rule of LEGACY_DIR_RULES) {
-    const legacyPath = path.join(qfaiRoot, rule.legacy);
-    if (legacyPath === specsRoot) continue;
-    if (!(await isDirectory(legacyPath))) {
-      continue;
-    }
-    issues.push(
-      issue(
-        "QFAI-HYG-001",
-        `Legacy directory detected: .qfai/${rule.legacy}/`,
-        "error",
-        legacyPath,
-        "hygiene.legacyDirectory",
-        [rule.legacy, rule.canonical],
-        "change",
-        `Rename the directory to .qfai/${rule.canonical}/ and point generation and validation at the canonical name.`,
-      ),
-    );
-  }
 
   issues.push(...(await recommendedGitignoreIssues(root)));
 

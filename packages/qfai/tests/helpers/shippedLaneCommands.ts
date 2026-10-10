@@ -1239,7 +1239,7 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
-  ["qfai-docs.yml", "70e1fc53abf4596daf6007b7875b5f972f6103e2401e16dc8bec009fc999c7f2"],
+  ["qfai-docs.yml", "44ec24d550811e8a74a366c8a855669f8c2779d52dd1745358e758d3d50ecdc7"],
   ["qfai-tests.yml", "d0eac08104ee1fab05c97d544459cedf4fad3a4dd2a3701904a16fc4ced6da15"],
   ["qfai-validate.yml", "d544c784615c28d884152ba68856d742ee3368b32a639a874cb3ee80bd104f7f"],
 ]);
@@ -1352,11 +1352,6 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // the forge may be asked of. Derived by running `qfai init` into a temp root and hashing what
     // it wrote; dropping that one bullet reproduces `7f4f473a…` byte for byte.
     //
-    // Re-pinned for the legacy-layout item, which says the `instructions/` layout is past its
-    // compatibility window and that `qfai init` reports it on stderr as a `QFAI-DEPRECATED-001`
-    // error naming `--upgrade-assistant-tree`. Derived by running `qfai init` into a temp root;
-    // naming the second retired layout in that item again reproduces `5ebaa61d…` byte for byte.
-    //
     // Re-pinned for the work-log surface item, which the run no longer writes into the list of
     // canonical `.qfai/` locations. Derived by running `qfai init` into a temp root; restoring
     // that one item reproduces `be3d8ce2…` byte for byte.
@@ -1369,14 +1364,13 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // ends with a question listing the next actions. Derived by running `qfai init` into a temp
     // root; restoring the old wording reproduces `0a58ab20…` byte for byte.
     //
-    // Re-pinned for the legacy-layout item, which now names the finding code `QFAI-DEPRECATED-001`.
-    // Derived by hashing the builder's strings joined by newlines; restoring the old code name
-    // reproduces `8c687f2f…` byte for byte.
+    // Re-pinned for the removal of the legacy-layout item. Derived by running `qfai init` into a
+    // temp root; restoring that item reproduces `71a6afcc…` byte for byte.
     //
     // The generated rule list cites action-reversibility, untrusted-content and ai-readable-markdown.
     // This digest covers the bytes produced by the builder strings.
     ".github/copilot-instructions.md",
-    "71a6afcc55863d5b9b7f5784597f7f1d2fc10d17ccc845564701d0468bdfe873",
+    "fcdba5a86b5e719a0666b99d47277cbc025debbc4f46fa6d70ac0b9fa172e11a",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -2089,7 +2083,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-docs.yml#checks",
-    '{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body 29d4d4ffdc27885fb3608373da72ce6fc119738a3a4d2cf8595b29586a06c25a>"}',
+    '{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body fb106152ede2c87f02c5554c96cbd8bac7f4965ead2c17c68b158bca0f4c7799>"}',
   ],
   [
     "qfai-docs.yml#checks",
@@ -2373,7 +2367,7 @@ export const ALLOWED_SHELLS: ReadonlySet<string> = new Set(["bash"]);
  * runner, and that answer is still exactly one.
  */
 export const ALLOWED_TOOL_INSTALLS: ReadonlySet<string> = new Set([
-  "@jackchuka/mdschema@0.15.4 mermaid@11.17.2 jsdom@29.1.1",
+  "@jackchuka/mdschema@0.15.5 mermaid@11.17.2 jsdom@29.1.1",
   "mermaid@11.17.2 jsdom@29.1.1 qfai",
 ]);
 

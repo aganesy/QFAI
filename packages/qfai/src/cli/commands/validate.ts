@@ -275,14 +275,7 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-STORY-014",
   ],
   "story-test-scan": ["QFAI-SCAN-002"],
-  sdd: [
-    "QFAI-AUTOPILOT-*",
-    "QFAI-ASSISTANT-001",
-    "QFAI-SKILLDOC-001",
-    "QFAI-STALE-001",
-    "QFAI-ASSISTANT-002",
-    "QFAI-DEPRECATED-001",
-  ],
+  sdd: ["QFAI-AUTOPILOT-*", "QFAI-ASSISTANT-001", "QFAI-SKILLDOC-001", "QFAI-ASSISTANT-002"],
   "reviewer-gate-sdd": ["QFAI-POLICY-*"],
   "reviewer-gate-shared": ["QFAI-MOCKHREF-001"],
   contracts: [
@@ -1065,17 +1058,13 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "No open OQ remains in `11_OQ-Register.md` (`Disposition: open` blocks discussion completion).",
   "QFAI-DPACK-005":
     "Discussion pack naming must use `discussion-YYYYMMDDhhmmssSSS` for canonical outputs.",
-  "QFAI-DPACK-006": "Legacy discussion serial packs should be migrated or removed.",
   "QFAI-DPACK-007":
     "Every deferred OQ row in `11_OQ-Register.md` records its `Resolution` and a `Next-Decision-Point` naming the next point at which it is decided.",
   "QFAI-DPACK-008": "`03_Story-Workshop.md` must include at least one Mermaid block.",
   "QFAI-DPACK-009":
     "`03_Story-Workshop.md` Mermaid content should include `flowchart` or `sequenceDiagram`.",
-  "QFAI-DPACK-010":
-    "Legacy discussion naming is deprecated; canonical naming should be used for new outputs.",
   "QFAI-DPACK-011":
     "On a visual surface, every `DESIGN.md` key and archetype a discussion pack proposes is one the front-matter schema accepts.",
-  "QFAI-HYG-001": "Legacy directory aliases are forbidden and must be migrated to canonical names.",
   "QFAI-HYG-002": "Template/sample artifacts should not remain under `paths.specsDir`.",
   "QFAI-HYG-003":
     "The root `.gitignore` carries every recommended QFAI ignore entry, the root `tmp/` included.",
@@ -1187,11 +1176,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "No required Research Summary value is still the shipped `[...]` template placeholder.",
   "QFAI-AUTOPILOT-001":
     "Every `qfai-*` SKILL.md keeps its hard-required bucket to the common entries plus the ones it declares for itself, and names no retired entry. A skill may carry fewer — one it never reads costs a prompt and buys nothing — and never more.",
-  "QFAI-DEPRECATED-001": "The retired `.qfai/assistant/instructions/` layer is absent.",
   "QFAI-ASSISTANT-001": "Every directory under `.qfai/assistant/` is one of the canonical layers.",
   "QFAI-SKILLDOC-001": "A `project_memory:` block in a SKILL.md is the last thing in the file.",
-  "QFAI-STALE-001":
-    "No skill document still names a token that its implementation has since replaced.",
   "QFAI-ASSISTANT-002": "Every canonical `.qfai/assistant/` layer directory is seeded.",
   "QFAI-CFG-002": "Every value in qfai.config.yaml has the type and range its key declares.",
   "QFAI-AGENT-005": "Every agent definition file has each required section heading.",
@@ -1332,8 +1318,6 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-SCREEN-004": "Every screen's `required_states` includes the mandatory states.",
   "QFAI-SIDECAR-001": "A spec that is UI-bearing has a `uiux/` sidecar directory.",
   "QFAI-PROTOSKILL-001": "The prototyping skill claims no capability that is not implemented.",
-  "QFAI-PROTOSKILL-002":
-    "The prototyping skill uses none of the banned runtime-heavy default wording.",
   "QFAI-PROTOSKILL-003":
     "The prototyping skill documents the supported UI surfaces: web, mobile, desktop and mixed.",
   "QFAI-PROTOSKILL-004":

@@ -1,19 +1,16 @@
 import path from "node:path";
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { constants } from "node:fs";
 import type { Dirent, Stats } from "node:fs";
 import {
   lstat,
   mkdir,
-  link,
   open,
   readdir,
   readFile,
-  readlink,
   realpath,
   rename,
   rm,
-  rmdir,
   stat,
   writeFile,
 } from "node:fs/promises";
@@ -42,7 +39,6 @@ import { deriveTestFileGlobs, withDerivedTestFileGlobs } from "../../core/testGl
 import {
   CODEX_AGENT_WRAPPER_DIR,
   CODEX_AGENT_WRAPPER_SUFFIX,
-  isGeneratedCodexAgentToml,
   parseAgentCardKind,
   renderCodexAgentToml,
 } from "../../core/codexAgentToml.js";
@@ -59,55 +55,33 @@ import {
   extractManagedRulesSection,
   needsManagedRulesSection,
   newlyWrittenRuleMasters,
-  refreshSupersededRuleBullets,
-  refreshSupersededRuleBulletsInList,
   ruleListBullet,
 } from "../../core/agentEntryPoints.js";
 import {
   CLAUDE_SETTINGS_RELATIVE_PATH,
   CODEX_HOOKS_RELATIVE_PATH,
 } from "../../core/claudeCodeHooks.js";
-import {
-  ASSISTANT_DIR,
-  joinAssistantLayer,
-  joinAssistantReadme,
-  joinLegacyAssistantInstructions,
-  legacyAssistantTreeSunsetLabel,
-  REFRESHED_ASSISTANT_LAYERS,
-} from "../../core/paths/assistantPaths.js";
+import { ASSISTANT_DIR, REFRESHED_ASSISTANT_LAYERS } from "../../core/paths/assistantPaths.js";
 import {
   PENDING_CITATIONS_BASENAME,
   type PendingCitations,
   readPendingCitations,
   writePendingCitations,
 } from "../../core/pendingRuleCitations.js";
-import {
-  RETIRED_WORKFLOW_NAMES,
-  SHIPPED_WORKFLOW_NAMES,
-} from "../../shared/shippedWorkflowNames.js";
+import { SHIPPED_WORKFLOW_NAMES } from "../../shared/shippedWorkflowNames.js";
 import { readBoundedRegularFile } from "../../shared/boundedRead.js";
 import { normalizeNewlines } from "../../shared/text.js";
 import { refuseUnsafeEntryPointRewrite } from "../../core/init/entryPointFile.js";
 import {
-  SIDECAR_RE,
-  claimSidecar,
-  isFlattenedLink,
-  restoreSidecar,
-  toComparableTarget,
-} from "../../core/init/flattenedLink.js";
-import {
-  describeError,
   exists,
   findUnsafeHostFileComponent,
   findUnreachableHostDirComponent,
   findUnsafeWrapperComponent,
   firstLinkedComponent,
-  readPinnedRegularFile,
-  readPinnedRegularFileBytes,
   readTextFileIfPresent,
   safeLstat,
 } from "../../core/init/fsGuards.js";
-import type { PinnedFileRead, UnsafeComponent } from "../../core/init/fsGuards.js";
+import type { UnsafeComponent } from "../../core/init/fsGuards.js";
 import {
   CODEX_HOOKS_TRUST_NOTE,
   keptHookGroupNote,
@@ -214,7 +188,6 @@ export type InitOptions = {
   force: boolean;
   dryRun: boolean;
   yes: boolean;
-  upgradeAssistantTree?: boolean;
   /**
    * `--verbose`: expand the `skipped` list in the run report. Off by default —
    * a no-op re-run skips every shipped asset, and that list is the "nothing to
@@ -300,7 +273,7 @@ export async function runInit(
 
   if (options.force) {
     info(
-      "NOTE: --force overwrites .qfai/assistant/skill/**, step/**, agent/** and rule/**, the rule masters under .agents/rules/, the symlink assets (.agents/.claude/.github/.codex), and the qfai-provided .github/copilot-instructions.md and .github/instructions/**, and removes legacy wrappers. Local edits to those files are lost. Project specs, contracts, rule overlays, skill.local/, qfai.config.yaml, DESIGN.md, AGENTS.md and CLAUDE.md are preserved.",
+      "NOTE: --force overwrites .qfai/assistant/skill/**, step/**, agent/** and rule/**, the rule masters under .agents/rules/, the symlink assets (.agents/.claude/.github/.codex), and the qfai-provided .github/copilot-instructions.md and .github/instructions/**. Local edits to those files are lost. Project specs, contracts, rule overlays, skill.local/, qfai.config.yaml, DESIGN.md, AGENTS.md and CLAUDE.md are preserved.",
     );
   }
 
@@ -308,12 +281,6 @@ export async function runInit(
     await requireSymlinkCreation(symlinkRuntime);
   }
   await requireReadableShippedAssets(assistantAssets);
-
-  // Relocate known legacy files before shipped assets fill their destinations.
-  // The subsequent copy skips edited files, preserving the relocated content.
-  const upgradeResult = options.upgradeAssistantTree
-    ? await runUpgradeAssistantTree(destRoot, options.dryRun)
-    : { copied: [], skipped: [], removed: [], preservedNotes: [] as string[] };
 
   // A shipped workflow is written only where no file of that name exists, and
   // never through a `.github` or `.github/workflows` that is a symlink: `copyFile`
@@ -416,20 +383,12 @@ export async function runInit(
     options.dryRun,
     options.force,
     newlyWritten,
-    installedMasters,
   );
   const qfaiResult = await copyTemplateTree(qfaiAssets, destQfai, {
     force: false,
     dryRun: options.dryRun,
     conflictPolicy: "skip",
-    exclude: [
-      "spec",
-      ...STANDARD_ASSET_PATHS,
-      "assistant/constitution",
-      "assistant/manifest",
-      "assistant/catalog",
-      "assistant/process",
-    ],
+    exclude: ["spec", ...STANDARD_ASSET_PATHS],
   });
   const storyTreeResult = oldSpecLayout
     ? { copied: [] as string[], skipped: [] as string[], refused: [] as string[] }
@@ -439,10 +398,6 @@ export async function runInit(
     dryRun: options.dryRun,
     conflictPolicy: "skip",
   });
-  // The copy above is create-only and this release ships no README to copy, so
-  // the one an earlier release left behind is removed here rather than
-  // overwritten.
-  const markerRemoved = await removeAssistantMarker(destRoot, options.dryRun);
   reportRefusedWrites(
     [
       ...workflowResult.refused,
@@ -466,7 +421,7 @@ export async function runInit(
     info(note);
   }
 
-  // Prune retired wrappers, write the Copilot instruction files, link skills
+  // Write the Copilot instruction files, link skills
   // and agents into each tool's directory, and write the Codex agent profiles.
   const wrappersResult = await syncIntegrationWrappers(
     assistantAssets,
@@ -489,14 +444,7 @@ export async function runInit(
     CODEX_HOOKS_RELATIVE_PATH,
     options.dryRun,
   );
-  const removedLegacySkills = options.force
-    ? await pruneLegacySkillFiles(destRoot, options.dryRun)
-    : [];
-  const retiredSkillNotes = options.force
-    ? await keepRetiredAssistantDirs(destRoot, options.dryRun)
-    : [];
-
-  const removed = [...removedLegacySkills, ...wrappersResult.removed];
+  const removed = [...wrappersResult.removed];
 
   // Activation guidance for newly created instructions files
   const expectedInstructionsDir = path.join(destRoot, ".github", "instructions");
@@ -523,7 +471,6 @@ export async function runInit(
       ...entryPointRulesResult.copied,
       ...claudeHooksResult.copied,
       ...codexHooksResult.copied,
-      ...upgradeResult.copied,
     ],
     [
       ...rootResult.skipped,
@@ -535,9 +482,8 @@ export async function runInit(
       ...entryPointRulesResult.skipped,
       ...claudeHooksResult.skipped,
       ...codexHooksResult.skipped,
-      ...upgradeResult.skipped,
     ],
-    [...removed, ...upgradeResult.removed, ...markerRemoved],
+    removed,
     options.dryRun,
     "init",
     destRoot,
@@ -560,25 +506,6 @@ export async function runInit(
   }
   if (codexHooksResult.copied.length > 0 && !options.dryRun) {
     info(CODEX_HOOKS_TRUST_NOTE);
-  }
-
-  for (const note of [
-    ...upgradeResult.preservedNotes,
-    ...retiredSkillNotes,
-    ...(workflowsDirIsOwn ? await retiredWorkflowLines(destRoot) : []),
-  ]) {
-    info(note);
-  }
-
-  // A legacy instructions/ tree is reported as a
-  // QFAI-DEPRECATED-001 error on stderr. Emitted AFTER the report summary so
-  // it stays at the bottom of the terminal output and is not buried by the
-  // skipped-paths list.
-  // Skip when the user is currently running
-  // --upgrade-assistant-tree (the helper will move the directory
-  // itself); skip on dry-run; skip when no legacy dir exists.
-  if (!options.upgradeAssistantTree && !options.dryRun) {
-    await emitLegacyAssistantTreeSunset(destRoot);
   }
 }
 
@@ -664,23 +591,6 @@ function reportRefusedWrites(refused: readonly string[], destRoot: string): void
 }
 
 /**
- * The workflows an earlier release shipped that are still on disk. Init keeps no record of what
- * it wrote, so it cannot tell its own file from the adopter's, and removes none of them.
- */
-async function retiredWorkflowLines(destRoot: string): Promise<string[]> {
-  const present: string[] = [];
-  for (const name of [...RETIRED_WORKFLOW_NAMES].sort()) {
-    const relative = `.github/workflows/${name}`;
-    if (await pathExists(path.join(destRoot, ".github", "workflows", name))) present.push(relative);
-  }
-  if (present.length === 0) return [];
-  return [
-    "Formerly shipped workflows, kept; delete them if you do not use them:",
-    ...present.map((relative) => `  ${relative}`),
-  ];
-}
-
-/**
  * The summary line naming the workflow mode the project's config puts in force. Init writes no
  * mode, so an absent key reads as `active`; a value that is none of the three is named as invalid.
  */
@@ -701,153 +611,6 @@ function configuredWorkflowMode(document: unknown): unknown {
   return typeof workflow === "object" && workflow !== null && "mode" in workflow
     ? workflow.mode
     : workflow;
-}
-
-// ---------------------------------------------------------------------------
-// Assistant-tree marker retirement
-// ---------------------------------------------------------------------------
-
-/**
- * Ceiling on the README this retirement will read before deciding.
- *
- * Generous against what init wrote — a few hundred bytes — and small enough
- * that a document somebody else put at that path costs nothing to decline.
- */
-const ASSISTANT_README_MAX_BYTES = 64 * 1024;
-
-/**
- * The title earlier releases wrote, and the section every marker README had.
- *
- * One mention of the canonical tree is not a signature — a project documenting
- * where it keeps its own QFAI tree writes that sentence, and one of those made
- * a checkout that never ran init read as initialised. All three parts together
- * are init's, which is what makes them safe to remove.
- */
-const INIT_MARKER_TITLE = /^# QFAI /;
-const INIT_MARKER_SECTION = "## Canonical entrypoint";
-
-/** Whether a README body is one an earlier `qfai init` wrote. */
-function hasInitMarkerSignature(body: string): boolean {
-  return (
-    INIT_MARKER_TITLE.test(body) &&
-    body.includes(INIT_MARKER_SECTION) &&
-    body.includes(`${ASSISTANT_DIR}/`)
-  );
-}
-
-/**
- * Removes `.qfai/assistant/README.md` when it is the one an earlier release
- * wrote.
- *
- * That README documented how `qfai validate` decided whether init had run, and
- * `validators/integrationSurface.ts#INIT_MARKERS` now reads `.qfai/waivers.yml`
- * instead. Left in place it would describe behaviour the tool no longer has,
- * in the tree the assistant loads its instructions from. Everything else it
- * said is in `constitution/drift-protocol.md`, in more detail.
- *
- * Two conditions have to hold, and both are about ownership rather than about
- * the file being unwanted.
- *
- * The body carries init's signature. Every `.qfai/**` path is create-only, so
- * whatever a project put at this one is still there, and a project's own
- * README is not init's to delete.
- *
- * The body holds no preserved-body section. An earlier release repaired a
- * marker-less README by writing the template over it and filing what was there
- * below {@link PRESERVED_BODY_HEADING}. Those notes are the project's, so a
- * file carrying them is left alone even though the text above them is init's;
- * the operator can take the section out and the next run will remove the rest.
- *
- * Absence is the ordinary case and not a finding: this release writes no such
- * file, so every project initialised by it has none.
- */
-async function removeAssistantMarker(destRoot: string, dryRun: boolean): Promise<string[]> {
-  const dest = joinAssistantReadme(destRoot);
-  let current: Stats;
-  try {
-    current = await lstat(dest);
-  } catch (err: unknown) {
-    if (isEnoent(err)) {
-      return [];
-    }
-    // Not silence. The file is still there describing a check that no longer
-    // exists, and a run that says nothing reads as one that found nothing to do.
-    warn(
-      [
-        `WARN: could not stat ${dest} (${describeError(err)}).`,
-        `      It is a README earlier qfai releases wrote and this one no longer writes; remove it by hand, or check the permissions and run qfai init again.`,
-      ].join("\n"),
-    );
-    return [];
-  }
-  if (!current.isFile()) {
-    return [];
-  }
-  const existing = await readExistingReadme(dest);
-  if (existing === null) {
-    return [];
-  }
-  const body = decodeForDetection(existing.content);
-  if (!hasInitMarkerSignature(body) || body.includes(PRESERVED_BODY_HEADING)) {
-    return [];
-  }
-  if (!dryRun) {
-    // Re-read immediately before the unlink. The decision above was made from
-    // content, and `rm` takes a pathname: an editor that saved over this file
-    // in between would have its work deleted on the strength of what was there
-    // before. Comparing the bytes rather than only `dev`/`ino` is what catches
-    // the ordinary case, because an editor that truncates and rewrites keeps
-    // the inode. The window is not closed — no platform offers an atomic
-    // compare-and-unlink — but the common case declines instead of deleting.
-    const now = await readExistingReadme(dest).catch(() => null);
-    if (now === null || !now.content.equals(existing.content)) {
-      warn(
-        `WARN: another process replaced ${dest} while qfai init was running, so it was not removed. Run qfai init again.`,
-      );
-      return [];
-    }
-    try {
-      await rm(dest, { force: true });
-    } catch (err: unknown) {
-      warn(
-        `WARN: could not remove ${dest} (${describeError(err)}). It is a README earlier qfai releases wrote and this one no longer writes; remove it by hand.`,
-      );
-      return [];
-    }
-  }
-  return [dest];
-}
-
-/** Heading an earlier release filed a project's own README text under. */
-const PRESERVED_BODY_HEADING = "## The README that was here before qfai init";
-
-/**
- * The bytes at `filePath`, or `null` when it is not a bounded regular file.
- *
- * Bytes, not text: what comes back is spliced into the replacement verbatim.
- */
-async function readExistingReadme(filePath: string): Promise<PinnedFileRead | null> {
-  try {
-    return await readPinnedRegularFileBytes(filePath, ASSISTANT_README_MAX_BYTES);
-  } catch (err: unknown) {
-    // Removed between the `lstat` above and this read. Nothing to repair, and
-    // the caller's other branches all mean "leave it alone" too.
-    if (isEnoent(err)) {
-      return null;
-    }
-    throw err;
-  }
-}
-
-/**
- * The signature test's view of a body whose encoding is unknown.
- *
- * Lossy on purpose, and safe to be: the decoded string is only ever asked
- * whether init's ASCII heading and section are in it, and it is thrown away
- * afterwards. Nothing this returns is written anywhere.
- */
-function decodeForDetection(bytes: Buffer): string {
-  return bytes.toString("utf-8");
 }
 
 /**
@@ -922,130 +685,6 @@ async function writeConfigByRename(target: string, content: string): Promise<voi
 }
 
 // ---------------------------------------------------------------------------
-// --upgrade-assistant-tree migration helper
-// ---------------------------------------------------------------------------
-
-type UpgradeResult = {
-  copied: string[];
-  skipped: string[];
-  removed: string[];
-  preservedNotes: string[];
-};
-
-async function runUpgradeAssistantTree(destRoot: string, dryRun: boolean): Promise<UpgradeResult> {
-  const copied: string[] = [];
-  const skipped: string[] = [];
-  const removed: string[] = [];
-  const preservedNotes: string[] = [];
-
-  // Only known files in the legacy surface have relocation destinations.
-  // Unknown files remain where the project put them.
-  const legacyDir = joinLegacyAssistantInstructions(destRoot);
-  if (!(await pathExists(legacyDir))) {
-    // Already-upgraded project: emit info-only note so the operator
-    // sees the migration helper ran, under the same `W-USER-EDIT-PRESERVED`
-    // code the preserved-edit notes use.
-    preservedNotes.push(
-      "  W-USER-EDIT-PRESERVED: no pre-recut surface (.qfai/assistant/instructions/) found; no migration was needed.",
-    );
-    return { copied, skipped, removed, preservedNotes };
-  }
-
-  // Re-locate each legacy file into the singular assistant tree based on the
-  // name-driven classifier. User edits are preserved by file copy (not
-  // overwrite); legacy files are left in place AND a W-USER-EDIT-PRESERVED
-  // informational note is emitted so the operator can decide when to delete
-  // the originals.
-  for (const legacyPath of await collectFilesRecursive(legacyDir)) {
-    const target = classifyLegacyAssistantEntry(path.relative(legacyDir, legacyPath));
-    if (target === null) continue;
-    const newPath = joinAssistantLayer(destRoot, target.layer, ...target.subpath.split("/"));
-    if (await pathExists(newPath)) {
-      // User has already authored / edited the new file — preserve it.
-      skipped.push(newPath);
-      preservedNotes.push(
-        `  W-USER-EDIT-PRESERVED: ${path.relative(destRoot, newPath).replace(/\\/g, "/")} kept (existing user edit detected).`,
-      );
-      continue;
-    }
-    copied.push(newPath);
-    if (!dryRun) {
-      const body = await readFile(legacyPath, "utf-8");
-      await mkdir(path.dirname(newPath), { recursive: true });
-      await writeFile(newPath, body, "utf-8");
-    }
-  }
-
-  return { copied, skipped, removed, preservedNotes };
-}
-
-const UPGRADE_RULE_FILES = new Set([
-  "constitution.md",
-  "communication.md",
-  "thinking.md",
-  "workflow.md",
-  "drift-protocol.md",
-  "agent-selection.md",
-  "shared-skill-delegation-baseline.md",
-  "shared-skill-operating-baseline.md",
-  "review-convergence.md",
-  "quality.md",
-  "test-layers.md",
-  "change-classification.md",
-  "research-first-protocol.md",
-  "ui-definition-protocol.md",
-  "ui-procurement.md",
-]);
-
-function classifyLegacyAssistantEntry(
-  relPath: string,
-): { layer: "rule" | "skill"; subpath: string } | null {
-  const normalized = relPath.replace(/\\/g, "/");
-  if (normalized.includes("/")) return null;
-  if (normalized === "requirements-decomposition.md") {
-    return { layer: "skill", subpath: "qfai-sdd/references/requirements-decomposition.md" };
-  }
-  return UPGRADE_RULE_FILES.has(normalized) ? { layer: "rule", subpath: normalized } : null;
-}
-
-async function collectFilesRecursive(dir: string): Promise<string[]> {
-  const entries = await readdir(dir, { withFileTypes: true });
-  const files: string[] = [];
-  for (const entry of entries) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...(await collectFilesRecursive(full)));
-    } else if (entry.isFile()) {
-      files.push(full);
-    }
-  }
-  return files;
-}
-
-/**
- * Report a legacy pre-recut tree, at the severity the running version implies.
- *
- * The wording matches `assistantTreeMigration`, so `init` and `qfai validate`
- * describe the same layout the same way in the same repository. An unconditional
- * "read-compatible for the current minor release only" would be false at and
- * past the sunset. Post-sunset the line goes to stderr.
- *
- * The exit code deliberately does not change: `init` is what a bootstrap script
- * runs, and `validate` is the surface the contract charges with failing the
- * build.
- */
-async function emitLegacyAssistantTreeSunset(destRoot: string): Promise<void> {
-  if (!(await pathExists(joinLegacyAssistantInstructions(destRoot)))) return;
-  const sunset = legacyAssistantTreeSunsetLabel();
-  // The readers no longer accept the retired layout, so this is an error
-  // outright. The version stays in the message as the operator's only pointer
-  // to when it started applying.
-  error(
-    `  QFAI-DEPRECATED-001: .qfai/assistant/instructions/ past the announced sunset (v${sunset}). Run \`qfai init --upgrade-assistant-tree\` to migrate.`,
-  );
-}
-
-// ---------------------------------------------------------------------------
 // AGENTS.md / CLAUDE.md — QFAI managed cross-AI rules section
 // ---------------------------------------------------------------------------
 
@@ -1075,7 +714,6 @@ async function ensureAgentEntryPointRules(
   dryRun: boolean,
   force: boolean,
   newlyWritten: readonly string[],
-  installed: ReadonlySet<string>,
 ): Promise<{ copied: string[]; skipped: string[] }> {
   const copied: string[] = [];
   const skipped: string[] = [];
@@ -1112,7 +750,6 @@ async function ensureAgentEntryPointRules(
       destRoot,
       dryRun,
       await owed(COPILOT_INSTRUCTIONS_ENTRY),
-      installed,
       { copied, skipped },
       pending,
     );
@@ -1165,14 +802,11 @@ async function ensureAgentEntryPointRules(
     if (!needsManagedRulesSection(existing, section)) {
       // The section is already there. A master this run wrote is one the file
       // cannot have cited, and so is one an earlier run recorded as owed, so its
-      // bullet is added. A bullet a release wrote and the project never edited
-      // takes the template's wording. Everything else is left as the project
-      // has it, including a bullet it deleted or reworded.
-      const refreshed = refreshSupersededRuleBullets(existing, section, installed);
-      reportWithheldSummaries(target, refreshed.withheld);
+      // bullet is added. Everything else is left as the project has it,
+      // including a bullet it deleted or reworded.
       // The review directive goes in beside the citations; the project's own
       // text and the bullets it deleted are left as they are.
-      const cited = addRuleCitations(refreshed.text, section, toCite);
+      const cited = addRuleCitations(existing, section, toCite);
       const merged = hasReviewPolicy ? addReviewPointer(cited, template) : cited;
       const shown = new Set(citedRuleMastersOutsideCode(existing));
       const uncited = toCite.filter((master) => !shown.has(master));
@@ -1186,7 +820,7 @@ async function ensureAgentEntryPointRules(
       // reported citing masters it had not cited, and told an operator whose
       // rewrite was refused to add citations that were already there.
       const update = {
-        ...describeRuleListUpdate(cited !== refreshed.text, merged !== cited, refreshed.refreshed),
+        ...describeRuleListUpdate(cited !== existing, merged !== cited),
         pending: uncited,
       };
       const outcome = await writeRuleListUpdate(target, existing, merged, update, destRoot, dryRun);
@@ -1304,32 +938,16 @@ const INSTRUCTIONS_DIR_ENTRY = ".github/instructions";
  * Keeps the rule list in an existing `.github/copilot-instructions.md` current.
  *
  * That file is generated whole and then skipped, so without this a rule the run
- * shipped, or a summary the template rewords, reached Codex and Claude Code and
- * not the third agent this repository says loads it. It carries no managed
- * markers — the whole file is qfai's — so a new bullet goes after the last rule
- * bullet in it, a superseded one is replaced where it stands, and the same
- * refusals apply as to the two entry points.
+ * shipped reached Codex and Claude Code and not the third agent this repository
+ * says loads it. It carries no managed markers — the whole file is qfai's — so a
+ * new bullet goes after the last rule bullet in it, and the same refusals apply
+ * as to the two entry points.
  */
-/**
- * Names the masters whose summary this run left as it stands, with why.
- *
- * Silence here reads as "the summaries are current", which is the state this
- * withholding exists because the run could not reach.
- */
-function reportWithheldSummaries(target: string, withheld: readonly string[]): void {
-  if (withheld.length === 0) return;
-  info(
-    `  NOTE: ${formatReportPath(target)} keeps its summary of ${withheld.join(", ")} ` +
-      `(the master here is not this release's, so the bullet describes the file beside it)`,
-  );
-}
-
 async function updateCopilotRuleList(
   rootAssets: string,
   destRoot: string,
   dryRun: boolean,
   owed: readonly string[],
-  installed: ReadonlySet<string>,
   report: { copied: string[]; skipped: string[] },
   pending: PendingCitations,
 ): Promise<void> {
@@ -1350,9 +968,7 @@ async function updateCopilotRuleList(
 
   const shown = new Set(citedRuleMastersOutsideCode(existing));
   const uncited = owed.filter((master) => !shown.has(master));
-  const refreshed = refreshSupersededRuleBulletsInList(existing, section, installed);
-  reportWithheldSummaries(target, refreshed.withheld);
-  const merged = addRuleCitationsToList(refreshed.text, section, uncited);
+  const merged = addRuleCitationsToList(existing, section, uncited);
   if (merged === existing) {
     if (uncited.length === 0) pending[COPILOT_INSTRUCTIONS_ENTRY] = [];
     if (uncited.length > 0) {
@@ -1370,7 +986,7 @@ async function updateCopilotRuleList(
     return;
   }
   const update = {
-    ...describeRuleListUpdate(merged !== refreshed.text, false, refreshed.refreshed),
+    ...describeRuleListUpdate(merged !== existing, false),
     pending: uncited,
   };
   const outcome = await writeRuleListUpdate(target, existing, merged, update, destRoot, dryRun);
@@ -1439,17 +1055,13 @@ type RuleListUpdate = {
 };
 
 /**
- * The wording for an update that cites newly shipped masters, refreshes
- * superseded summaries, or both.
+ * The wording for an update that cites newly shipped masters, adds the review
+ * directive, or both.
  *
  * The report names every edit the write makes, so the "nothing else changed" it
  * closes with stays true.
  */
-function describeRuleListUpdate(
-  cited: boolean,
-  reviewDirective: boolean,
-  refreshed: readonly string[],
-): RuleListUpdate {
+function describeRuleListUpdate(cited: boolean, reviewDirective: boolean): RuleListUpdate {
   const planned: string[] = [];
   const done: string[] = [];
   const byHand: string[] = [];
@@ -1462,12 +1074,6 @@ function describeRuleListUpdate(
     planned.push("add the review directive");
     done.push("added the review directive");
     byHand.push("add the review directive");
-  }
-  if (refreshed.length > 0) {
-    const summaries = `${refreshed.length === 1 ? "summary" : "summaries"} of ${quoteList(refreshed)}`;
-    planned.push(`refresh the unedited ${summaries}`);
-    done.push(`refreshed the unedited ${summaries}`);
-    byHand.push(`refresh the ${summaries}`);
   }
   const clause = byHand.join(" and ");
   return {
@@ -1607,12 +1213,7 @@ function toReportPaths(paths: string[], baseDir: string): string[] {
  * The skip set with everything the run wrote taken out of it.
  *
  * De-duplicating each list on its own only settles repeats *within* a list; the
- * two lists can still name the same path. On a real `--upgrade-assistant-tree`
- * run the migration writes its destination and books it into `copied`, and the
- * template copy that follows finds that destination present and books the same
- * path into `skipped` — so one path was reported as both written and skipped,
- * and the skip count (the number shown when `--verbose` is off, and therefore
- * the only thing most operators see) was too high by one per migrated file.
+ * two lists can still name the same path.
  *
  * A write beats a skip: some producer did act on the path, so the categories
  * are resolved in the writer's favour rather than reported twice. `written` is
@@ -1645,21 +1246,13 @@ function listReportPaths(relativePaths: string[]): void {
  * file.
  *
  * Each list is deduplicated and then sorted before it is listed
- * (`toReportPaths`). For example, under `--upgrade-assistant-tree --dry-run`
- * the migration suppresses its writes but still pushes its destination onto
- * `copied`, and because that destination does not exist yet, the following
- * template copy pushes the same path onto `copied` too. Listing the duplicate
- * would make the count differ from a real run. The order comes from
- * `readdir()`, which no file system guarantees, so without sorting the same set
- * of writes could be listed in a different order and a preview could not be
- * diffed against one from another checkout.
+ * (`toReportPaths`). Listing a duplicate would make the count differ from a
+ * real run. The order comes from `readdir()`, which no file system guarantees,
+ * so without sorting the same set of writes could be listed in a different
+ * order and a preview could not be diffed against one from another checkout.
  *
- * Deduplicating within a list does not remove duplicates across categories.
- * In a real `--upgrade-assistant-tree` run the migration writes its destination
- * and pushes it onto `copied`, and the following template copy treats that
- * destination as existing and pushes it onto `skipped`, so the same path shows
- * up under both written and skipped and inflates the skipped count. A written
- * path is not a skip, so `excludeWritten` removes it from skipped.
+ * Deduplicating within a list does not remove duplicates across categories. A
+ * written path is not a skip, so `excludeWritten` removes it from skipped.
  *
  * These three lists cover only paths under `baseDir`. A change outside the
  * working tree (`core.symlinks` in `configureGitSymlinks`) does not belong
@@ -1700,121 +1293,10 @@ function report(
     }
   }
   if (removedPaths.length > 0) {
-    info(
-      `  ${dryRun ? "would remove legacy files" : "removed legacy files"}: ${removedPaths.length}`,
-    );
+    info(`  ${dryRun ? "would remove" : "removed"}: ${removedPaths.length}`);
     info(dryRun ? "  would remove paths:" : "  removed paths:");
     listReportPaths(removedPaths);
   }
-}
-
-/** Skills a release withdrew, kept in `skill.local/` rather than deleted. */
-const RETIRED_SKILLS = ["qfai-migration-spec-to-story", "qfai-atdd"] as const;
-
-/**
- * Steps a release withdrew. There is no local step tree to keep them in, so
- * init lists them for the person instead of moving or deleting them.
- */
-const RETIRED_STEPS = [
-  "atdd-scaffold",
-  "atdd-credentials",
-  "atdd-author",
-  "atdd-test-fix",
-] as const;
-
-/**
- * Moves each retired skill's directory to `skill.local/`, where a project
- * keeps its own skills, and lists each retired step still in the step tree.
- *
- * Nothing records what the release that shipped one wrote, so a copy the
- * project edited cannot be told from an untouched one. Moving a skill whole
- * keeps either; a step is left for the person to move or delete.
- */
-async function keepRetiredAssistantDirs(destRoot: string, dryRun: boolean): Promise<string[]> {
-  const notes: string[] = [];
-  const assistant = path.join(destRoot, ".qfai", "assistant");
-  const shown = (entry: string) => formatReportPath(toRelativePath(destRoot, entry));
-  for (const id of RETIRED_SKILLS) {
-    const source = path.join(assistant, "skill", id);
-    const target = path.join(assistant, "skill.local", id);
-    const sourceStats = await lstat(source).catch(() => null);
-    if (sourceStats?.isDirectory() !== true) continue;
-    if (
-      (await firstLinkedComponent(source, destRoot)) !== null ||
-      (await firstLinkedComponent(path.dirname(target), destRoot)) !== null
-    ) {
-      notes.push(
-        `NOTE: ${shown(source)}, a retired skill, was left in place because its path or the destination's passes through a symbolic link. Move it out of the skill tree by hand.`,
-      );
-      continue;
-    }
-    if (await pathExists(target)) {
-      notes.push(
-        `NOTE: ${shown(source)}, a retired skill, was left in place because ${shown(target)} already exists. Keep the copy you need and delete the other.`,
-      );
-      continue;
-    }
-    if (!dryRun) {
-      await mkdir(path.dirname(target), { recursive: true });
-      await rename(source, target);
-    }
-    notes.push(
-      `  ${dryRun ? "would move" : "moved"} retired skill: ${shown(source)} → ${shown(target)}`,
-    );
-  }
-  for (const id of RETIRED_STEPS) {
-    const step = path.join(assistant, "step", id);
-    if ((await lstat(step).catch(() => null))?.isDirectory() !== true) continue;
-    notes.push(
-      `NOTE: ${shown(step)} is a step this release no longer ships, and was left in place. Delete it, or move it out of the step tree if you changed it.`,
-    );
-  }
-  return notes;
-}
-
-async function pruneLegacySkillFiles(destRoot: string, dryRun: boolean): Promise<string[]> {
-  const roots = [
-    path.join(destRoot, ".qfai", "assistant", "skill"),
-    path.join(destRoot, ".qfai", "assistant", "skills"),
-  ];
-
-  const legacyFiles: string[] = [];
-  for (const root of roots) {
-    if ((await firstLinkedComponent(root, destRoot)) !== null) continue;
-    const found = await collectLegacyWorkflowFiles(root);
-    legacyFiles.push(...found);
-  }
-
-  if (!dryRun) {
-    for (const file of legacyFiles) {
-      await rm(file, { force: true });
-    }
-  }
-
-  return legacyFiles;
-}
-
-async function collectLegacyWorkflowFiles(dir: string): Promise<string[]> {
-  if (!(await exists(dir))) {
-    return [];
-  }
-
-  const entries = await readdir(dir, { withFileTypes: true });
-  const files: string[] = [];
-
-  for (const entry of entries) {
-    const fullPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      const nested = await collectLegacyWorkflowFiles(fullPath);
-      files.push(...nested);
-      continue;
-    }
-    if (entry.isFile() && entry.name === "10_workflow.md") {
-      files.push(fullPath);
-    }
-  }
-
-  return files;
 }
 
 /** Detects any path entry including broken symlinks (lstat-based). */
@@ -2059,10 +1541,7 @@ async function syncIntegrationWrappers(
   const copied: string[] = [];
   const skipped: string[] = [];
 
-  // Step 1: Prune deprecated wrappers (commands, prompts, old non-symlink dirs)
-  const removed = options.force
-    ? await pruneStaleQfaiWrappers(destRoot, skills, agents, options.dryRun)
-    : [];
+  const removed: string[] = [];
 
   // Step 2: Write copilot-instructions.md as regular file (with updated references)
   const copilotDest = path.join(destRoot, ".github", "copilot-instructions.md");
@@ -2423,58 +1902,7 @@ async function createCodexAgentTomls(
     copied.push(destination);
   }
 
-  if (options.force) {
-    removed.push(...(await pruneOrphanCodexProfiles(wrapperDir, new Set(roster), options.dryRun)));
-  }
-
   return { copied, skipped, removed };
-}
-
-/**
- * Deletes the generated profiles of agents that left the roster.
- *
- * The loop above only ever visits agents that still exist, so deleting an agent
- * from `assistant/agent/` left its TOML untouched — and a
- * Codex profile is a self-contained snapshot, not a symlink that goes dangling
- * with its referent. Codex alone kept loading a retired agent, write access
- * included. Scoped to `--force`, which is already the mode that rewrites this
- * tree, and to files carrying the generator's own shape so a project's
- * hand-written Codex profile survives.
- */
-async function pruneOrphanCodexProfiles(
-  wrapperDir: string,
-  roster: Set<string>,
-  dryRun: boolean,
-): Promise<string[]> {
-  const removed: string[] = [];
-  let entries: Dirent[];
-  try {
-    entries = await readdir(wrapperDir, { withFileTypes: true });
-  } catch (err: unknown) {
-    if (isEnoent(err)) {
-      return removed;
-    }
-    throw err;
-  }
-  for (const entry of entries) {
-    if (entry.isDirectory() || !entry.name.endsWith(CODEX_AGENT_WRAPPER_SUFFIX)) {
-      continue;
-    }
-    const agentName = entry.name.slice(0, -CODEX_AGENT_WRAPPER_SUFFIX.length);
-    if (roster.has(agentName)) {
-      continue;
-    }
-    const target = path.join(wrapperDir, entry.name);
-    const read = await readBoundedTextFile(target);
-    if (read.status !== "ok" || !isGeneratedCodexAgentToml(read.content, agentName)) {
-      continue;
-    }
-    removed.push(target);
-    if (!dryRun) {
-      await rm(target, { force: true });
-    }
-  }
-  return removed;
 }
 
 type CodexAgentProfilePlan =
@@ -2891,916 +2319,6 @@ async function replaceWithRegularFile(dest: string, content: string): Promise<vo
 }
 
 // ---------------------------------------------------------------------------
-// Prune deprecated wrappers
-// ---------------------------------------------------------------------------
-
-/**
- * Basenames (the stem, without the extension) of the wrappers qfai has
- * actually written into `.claude/commands/` and `.github/prompts/`.
- *
- * Writing to these two directories ended with the move to symlinks, and init
- * never writes there now, so a name outside this closed set was certainly put
- * there by the project. Deleting by the open glob `qfai-*` removed
- * project-specific slash commands such as `.claude/commands/qfai-release.md`
- * on every `--force`.
- *
- * The converse does not hold (being in the set does not mean qfai wrote it),
- * so whether to delete is decided by {@link isInitWrittenWrapper}, which also
- * reads the body.
- */
-const LEGACY_WRAPPER_STEMS: ReadonlySet<string> = new Set([
-  "qfai-atdd",
-  "qfai-configure",
-  "qfai-discuss",
-  "qfai-discussion",
-  "qfai-implement",
-  "qfai-pr",
-  "qfai-prototyping",
-  "qfai-require",
-  "qfai-scenario-test",
-  "qfai-sdd",
-  // These were on the roster while SDD was split into three skills (before the
-  // recut), so the generator of that time wrote both a command and a prompt
-  // wrapper for them.
-  "qfai-sdd-planning",
-  "qfai-sdd-refinement",
-  "qfai-spec",
-  "qfai-tdd-green",
-  "qfai-tdd-red",
-  "qfai-tdd-refactor",
-  "qfai-unit-test",
-  "qfai-verify",
-]);
-
-/**
- * Whether the name is one qfai has written a wrapper under in the past.
- *
- * It depends on the name alone, so it can answer against a `readdir` snapshot,
- * which is all the `predicate` of {@link pruneMatchingEntries} can see. It does
- * not decide ownership: it only narrows the candidates, and whether to delete
- * is decided by {@link isInitWrittenWrapper}, which reads the body.
- */
-function isLegacyWrapperName(name: string, suffix: string): boolean {
-  if (!name.endsWith(suffix)) {
-    return false;
-  }
-  return LEGACY_WRAPPER_STEMS.has(name.slice(0, -suffix.length));
-}
-
-/**
- * Whether the body proves that init wrote this wrapper.
- *
- * A stem shows only that qfai used the name at some point. Deleting by name
- * alone would lose user content, whether the project wrote its own
- * `.claude/commands/qfai-spec.md` or replaced an old wrapper with its own
- * text. Every wrapper qfai has shipped, in every generation, has a delegation
- * line pointing to "the canonical doc with the same stem"
- * ({@link DELEGATION_LINES}). That line is the evidence the file is generated,
- * and a file without it is left alone even when the stem matches.
- *
- * The check is an **exact match per line**. Taking the canonical path
- * appearing anywhere in the body as evidence would make a project's own
- * command of the same name look generated, and `--force` would delete it,
- * merely because its explanation, a negation or a code example mentions that
- * path. In a generated wrapper the delegation line is the whole line, so
- * there is no reason to allow a partial match.
- *
- * At most {@link WRAPPER_EVIDENCE_MAX_BYTES} of the body are read. Shipped
- * wrappers of every generation are under 1 KB, but what an ordinary file of
- * the same name is, is not ours to choose: if a huge log or a FIFO sits at
- * `qfai-spec.md`, expanding all of it into a string just to decide whether to
- * delete it could stop the whole init with an out-of-memory error. Anything
- * over the limit is kept as unable to prove ownership.
- *
- * This is passed as the `confirm` of {@link pruneMatchingEntries}, so the file
- * to read (`target`) and the name the stem comes from (`name`) are received
- * separately: once moved aside for quarantine, `target` carries the quarantine
- * name, and taking the stem from its basename would not give the original
- * wrapper name. For the same reason the check is asked twice, before and after
- * the move aside: if the file the name points to has been swapped, the second
- * answer falls to "cannot prove" and the file is restored.
- */
-async function isInitWrittenWrapper(
-  target: string,
-  name: string,
-  suffix: string,
-  delegations: DelegationForms,
-): Promise<boolean> {
-  if (!isLegacyWrapperName(name, suffix)) {
-    return false;
-  }
-  const stem = name.slice(0, -suffix.length);
-
-  const body = await readWrapperEvidence(target);
-  if (body === null) {
-    return false;
-  }
-
-  return hasDelegationLine(body, delegations(stem));
-}
-
-/**
- * Whether any line of the body matches a delegation line for the stem
- * **byte for byte**.
- *
- * Comparing after trimming would ignore indentation, and a command of the
- * project's own that merely writes `    @.qfai/assistant/prompt/qfai-spec.md`
- * as a Markdown code example would be mistaken for a generated file and
- * deleted. In a shipped wrapper the delegation line always starts at column 0,
- * so there is no reason to allow surrounding whitespace. Only the CRLF `\r`
- * is dropped by the split.
- *
- * Lines inside a fenced code block are ignored too. Even unindented, a line
- * inside ``` is a quotation, and a project's own command that merely copied
- * the contents of an old wrapper into its doc used to be deleted as generated.
- * The wrappers qfai shipped never put the delegation line inside a fence.
- */
-function hasDelegationLine(body: string, forms: readonly string[]): boolean {
-  const delegations = new Set(forms);
-  let open: { marker: string; length: number } | null = null;
-  for (const line of body.split(/\r?\n/)) {
-    const fence = FENCE_RE.exec(line);
-    if (fence !== null) {
-      const run = fence[1] ?? "";
-      const marker = run[0] ?? "";
-      const tail = fence[2] ?? "";
-      if (open === null) {
-        open = { marker, length: run.length };
-        continue;
-      }
-      // CommonMark: a fence closes on the same character as the opener, at
-      // least as long, on a line with only whitespace after the marker run.
-      // Checking only the character and length treated a line with an info
-      // string (such as a ```js written inside a ```md block, which is content
-      // and not a closing fence) as the close, and then counted the quoted
-      // line after it as a real delegation line.
-      if (marker === open.marker && run.length >= open.length && FENCE_CLOSE_TAIL_RE.test(tail)) {
-        open = null;
-      }
-      continue;
-    }
-    if (open === null && delegations.has(line)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-/** A Markdown code fence line (``` or ~~~, indented 0-3 spaces, info string allowed). */
-const FENCE_RE = /^ {0,3}(`{3,}|~{3,})(.*)$/;
-
-/** What may follow the marker run of a closing fence: whitespace only in CommonMark. */
-const FENCE_CLOSE_TAIL_RE = /^[ \t]*$/;
-
-/** Every delegation-line form shipped on a surface for the given stem. */
-type DelegationForms = (stem: string) => readonly string[];
-
-/**
- * The delegation lines that have shipped; the form differs per surface.
- *
- * A Claude slash command uses `@<path>`; a Copilot prompt and the `SKILL.md`
- * of a skill wrapper use a bullet `- <path>`. Accepting both on every surface
- * would make even a form qfai never wrote in that place evidence of
- * ownership, and a command of the project's own that merely lists references
- * as `-.qfai/...` would be deleted.
- *
- * The canonical location moved from `assistant/prompts/<stem>.md` to
- * `assistant/skills/<stem>/SKILL.md`, and a project may still hold wrappers
- * of either generation for commands and prompts. Skill wrappers were first
- * shipped after the move, so they have a single form.
- */
-const CLAUDE_COMMAND_DELEGATIONS: DelegationForms = (stem) => [
-  `@.qfai/assistant/prompts/${stem}.md`,
-  `@.qfai/assistant/skills/${stem}/SKILL.md`,
-  `@.qfai/assistant/prompt/${stem}.md`,
-  `@.qfai/assistant/skill/${stem}/SKILL.md`,
-];
-
-const GITHUB_PROMPT_DELEGATIONS: DelegationForms = (stem) => [
-  `- .qfai/assistant/prompts/${stem}.md`,
-  `- .qfai/assistant/skills/${stem}/SKILL.md`,
-  `- .qfai/assistant/prompt/${stem}.md`,
-  `- .qfai/assistant/skill/${stem}/SKILL.md`,
-];
-
-const SKILL_DOC_DELEGATIONS: DelegationForms = (id) => [
-  `- .qfai/assistant/skills/${id}/SKILL.md`,
-  `- .qfai/assistant/skill/${id}/SKILL.md`,
-];
-
-/**
- * The limit on how much of a wrapper body is read to decide ownership.
- *
- * Shipped `.claude/commands/*.md` wrappers are under 400 bytes and even a
- * skill wrapper's `SKILL.md` is under 1 KB, so 4 KB, the same limit the nearby
- * flattened-link check ({@link isFlattenedLink}) and the repair-sidecar
- * restore use, holds every generation whole.
- */
-const WRAPPER_EVIDENCE_MAX_BYTES = 4096;
-
-/**
- * The body read with a limit for the ownership check; `null` when it cannot be
- * read or exceeds the limit.
- *
- * As with `readPinnedRegularFile`, the limit applies to the inode actually
- * read, not the one lstat saw. Every failure here resolves to "cannot prove
- * qfai wrote it": pruning deletes, so keeping the file is the safe side when
- * the answer is unknown.
- */
-async function readWrapperEvidence(filePath: string): Promise<string | null> {
-  try {
-    return await readPinnedRegularFile(filePath, WRAPPER_EVIDENCE_MAX_BYTES);
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Skill ids that once shipped and have left the current roster.
- *
- * init places wrappers only for skills on the shipped roster, so an entry
- * whose name is neither shipped nor retired is not something init generated.
- * A project is allowed to have its own `.qfai/assistant/skill/my-skill/` (see
- * `canonicalSkillIds` in `integrationSurface.ts`), and symlinking it from
- * `.claude/skills/my-skill` is legitimate, so an entry must not be deleted
- * just because its link target is inside the canonical tree.
- */
-const RETIRED_SKILL_IDS: ReadonlySet<string> = new Set([
-  "qfai-atdd",
-  "qfai-discuss",
-  "qfai-migration-spec-to-story",
-  "qfai-pr",
-  "qfai-prototyping-full-harness",
-  "qfai-require",
-  "qfai-scenario-test",
-  "qfai-sdd-planning",
-  "qfai-sdd-refinement",
-  "qfai-spec",
-  "qfai-tdd-green",
-  "qfai-tdd-red",
-  "qfai-tdd-refactor",
-  "qfai-unit-test",
-]);
-
-/**
- * Whether the entry is a skill symlink init created, judged by the link
- * target, not the name.
- *
- * A name is not evidence of ownership. `qfai-` is not a reserved prefix, and
- * the canonical roster itself includes a skill without that prefix,
- * `web-research`. Judging by name deleted a project's own
- * `.claude/skills/qfai-deploy` whole on `--force`. init creates only symlinks
- * that resolve into the canonical tree, so this is a necessary condition but
- * not a sufficient one; the caller combines it with {@link RETIRED_SKILL_IDS}.
- *
- * The target must be the **same-named child** of the canonical tree. init
- * always creates `<id> ->.qfai/assistant/skill/<id>`, and an alias such as
- * `qfai-spec ->.../skills/my-skill` was made by the project itself, so it must
- * not be deleted just because it points into the canonical tree.
- */
-async function linksIntoCanonicalSkill(
-  entryPath: string,
-  canonicalSkill: string,
-): Promise<boolean> {
-  let target: string;
-  try {
-    target = await readlink(entryPath);
-  } catch {
-    // Anything unreadable cannot be proven to be qfai's, so keep it.
-    return false;
-  }
-  return path.resolve(path.dirname(entryPath), target) === path.resolve(canonicalSkill);
-}
-
-/**
- * Whether the entry is a skill wrapper init placed. There are three forms.
- *
- * 1. **symlink**: the form init has created since the recut. Judged by the
- *    link target ({@link linksIntoCanonicalSkills}).
- * 2. **real directory**: before the recut, init distributed directories such
- *    as `.codex/skills/<id>/SKILL.md`. Looking only at symlinks would let a
- *    retired wrapper (such as `qfai-spec/`) left in a project that upgraded
- *    straight from a pre-recut release slip past the prune: its name is not on
- *    the current roster, so {@link ensureSymlink} does not overwrite it either,
- *    and after `--force` the retired instructions would still be loadable by
- *    the assistant. Ownership is decided by the same criterion as the
- *    `.claude/commands/` wrappers ({@link isInitWrittenWrapper}): every
- *    `SKILL.md` that was distributed has a delegation line to the canonical
- *    doc of the same id. A directory without it was made by the project, so
- *    it is left alone even if its name collides with a retired id.
- * 3. **flattened symlink**: in a checkout with `core.symlinks = false` a
- *    symlink becomes a regular file whose content is the target string. It is
- *    the same form the nearby {@link isFlattenedLink} handles, and it is
- *    generated by init too. Treating every regular file as not generated
- *    would leave the retired wrapper in place in such a checkout.
- *
- * The remaining regular files are repair sidecars
- * (`qfai-sdd.qfai-repair-1234`), whose names do not match a retired id, so
- * they never reach here. The prune runs before the repair, so deleting one
- * would lose the only copy a previous failed repair left behind.
- */
-async function classifyInitWrittenSkillWrapper(
-  entry: Dirent,
-  entryPath: string,
-  canonicalSkillsDirs: readonly string[],
-): Promise<"link" | "directory" | null> {
-  const canonicalSkills = canonicalSkillsDirs.map((dir) => path.join(dir, entry.name));
-  if (entry.isSymbolicLink()) {
-    for (const canonicalSkill of canonicalSkills) {
-      if (await linksIntoCanonicalSkill(entryPath, canonicalSkill)) return "link";
-    }
-    return null;
-  }
-  if (entry.isDirectory()) {
-    const doc = await readWrapperEvidence(path.join(entryPath, "SKILL.md"));
-    return doc !== null && hasDelegationLine(doc, SKILL_DOC_DELEGATIONS(entry.name))
-      ? "directory"
-      : null;
-  }
-  if (!entry.isFile()) {
-    return null;
-  }
-  // A flattened link is exactly what git expanded the link target to, and
-  // nothing else. Compare byte for byte, as the nearby {@link isFlattenedLink}
-  // does; treating "the content resolves to somewhere inside the canonical
-  // tree" as enough would also delete a hand-written file made by
-  // `echo '../../.qfai/assistant/skill/qfai-spec' >.claude/skills/qfai-spec`
-  // and alternate spellings containing `//` or `./`.
-  try {
-    for (const canonicalSkill of canonicalSkills) {
-      const expected = path.relative(path.dirname(entryPath), canonicalSkill);
-      if (await isFlattenedLink(entryPath, expected)) return "link";
-    }
-    return null;
-  } catch {
-    // Anything unreadable cannot be proven to be qfai's, so keep it.
-    // Throwing here would abort the whole init in the middle of the prune.
-    return null;
-  }
-}
-
-/**
- * Removes the wrapper entries QFAI itself installed and no longer ships.
- *
- * A name selects candidates, and never authorises a delete. The `qfai-` prefix is
- * a reservation notice, so a prefix predicate is forbidden here — an adopter's
- * own `.claude/commands/qfai-release.md`, `.claude/skills/qfai-deploy/` or
- * `.github/prompts/qfai-ship.prompt.md` must survive `--force`.
- *
- * The evidence is in the file: every generation QFAI shipped delegates to the
- * canonical doc of the same stem on a line of its own, and a file without that
- * line is the adopter's whatever its name. The question is asked through
- * {@link pruneMatchingEntries}, and therefore twice — once against the name,
- * once against the object after it has been moved aside.
- *
- * `.github/workflows/` is adopter CI: nothing here enumerates it.
- */
-async function pruneStaleQfaiWrappers(
-  destRoot: string,
-  canonicalSkills: string[],
-  canonicalAgents: string[],
-  dryRun: boolean,
-): Promise<string[]> {
-  const canonical = new Set(canonicalSkills);
-  const removed: string[] = [];
-
-  // 1. Remove the .claude/commands/*.md wrappers qfai itself once wrote.
-  // Name in `predicate`, ownership in `confirm`: `predicate` only ever sees the `readdir`
-  // snapshot, so a test that reads the file belongs where it is asked again after the
-  // entry has been moved aside. A project file that takes the name between the snapshot
-  // and the delete carries no delegation line, so the second question refuses it.
-  // Neither directory is enumerated through a link, for the reason the agent prune gives.
-  if (await isSymlinkFreeDirectory(destRoot, ".claude/commands")) {
-    await pruneMatchingEntries(
-      path.join(destRoot, ".claude", "commands"),
-      (entry) => entry.isFile() && isLegacyWrapperName(entry.name, ".md"),
-      removed,
-      dryRun,
-      (target, name) => isInitWrittenWrapper(target, name, ".md", CLAUDE_COMMAND_DELEGATIONS),
-    );
-  }
-
-  // 2. Remove the .github/prompts/*.prompt.md wrappers qfai itself once wrote
-  if (await isSymlinkFreeDirectory(destRoot, ".github/prompts")) {
-    await pruneMatchingEntries(
-      path.join(destRoot, ".github", "prompts"),
-      (entry) => entry.isFile() && isLegacyWrapperName(entry.name, ".prompt.md"),
-      removed,
-      dryRun,
-      (target, name) => isInitWrittenWrapper(target, name, ".prompt.md", GITHUB_PROMPT_DELEGATIONS),
-    );
-  }
-
-  // 3. Remove the skill symlinks init installed for skills no longer shipped
-  const canonicalSkillsDirs = [
-    path.join(destRoot, ".qfai", "assistant", "skill"),
-    path.join(destRoot, ".qfai", "assistant", "skills"),
-  ];
-  for (const integDir of SKILL_INTEGRATION_DIRS) {
-    const fullDir = path.join(destRoot, integDir);
-    if (!(await isSymlinkFreeDirectory(destRoot, integDir))) {
-      continue;
-    }
-    const entries = await readdir(fullDir, { withFileTypes: true });
-    for (const entry of entries) {
-      if (canonical.has(entry.name)) {
-        continue;
-      }
-      // A name that is neither shipped nor retired is not a skill init placed
-      // a wrapper for; the project provided it, so keep it.
-      if (!RETIRED_SKILL_IDS.has(entry.name)) {
-        continue;
-      }
-      const entryPath = path.join(fullDir, entry.name);
-      const kind = await classifyInitWrittenSkillWrapper(entry, entryPath, canonicalSkillsDirs);
-      if (kind === null) {
-        continue;
-      }
-
-      if (kind === "link") {
-        removed.push(entryPath);
-        if (!dryRun) {
-          await rm(entryPath, { recursive: true, force: true });
-        }
-        continue;
-      }
-
-      // For the directory form, only `SKILL.md` was proven to be ours. The
-      // project may have added its own references or notes there, and deleting
-      // the directory recursively would lose them. Delete only the generated
-      // file, and remove the shell only when it is left empty.
-      const doc = path.join(entryPath, "SKILL.md");
-      removed.push(doc);
-      if (!dryRun) {
-        await rm(doc, { force: true });
-        await removeIfEmpty(entryPath);
-      }
-    }
-  }
-
-  // 4. Remove agent wrappers that name an agent this version no longer ships.
-  await pruneStaleAgentWrappers(destRoot, canonicalAgents, removed, dryRun);
-
-  return removed;
-}
-
-/**
- * Agent wrappers whose target names a canonical agent the shipped roster no
- * longer contains.
- *
- * Matched by the **resolved target**, not by the entry name: agent wrappers
- * carry a different suffix per integration directory (`.md` vs `.agent.md`),
- * so a name test cannot tell a retired wrapper from a file somebody wrote. The
- * target is the thing
- * init actually writes, and it is the same predicate `QFAI-LINK-001` reports on
- * — so detection and repair stay in agreement by construction.
- *
- * The canonical `.qfai/assistant/agent/*.md` behind a retired wrapper is
- * deliberately **not** deleted. That tree is create-only and a project may add
- * agents of its own to it; removing a file there would destroy content init
- * never wrote. `QFAI-LINK-001` says so in its remedy.
- */
-async function pruneStaleAgentWrappers(
-  destRoot: string,
-  canonicalAgents: string[],
-  removed: string[],
-  dryRun: boolean,
-): Promise<void> {
-  const shipped = new Set(canonicalAgents.map((name) => `${name}.md`));
-  const agentsDirs = [
-    path.join(destRoot, ".qfai", "assistant", "agent"),
-    path.join(destRoot, ".qfai", "assistant", "agents"),
-  ];
-
-  for (const { dir } of AGENT_INTEGRATION_CONFIGS) {
-    const fullDir = path.join(destRoot, dir);
-    if (!(await isSymlinkFreeDirectory(destRoot, dir))) {
-      continue;
-    }
-    const entries = await readdir(fullDir, { withFileTypes: true });
-    for (const entry of entries) {
-      // A `.qfai-repair-<n>` file holds the content a failed repair preserved,
-      // and is sometimes the only copy of it left. The skill-wrapper prune
-      // reaches the same conclusion through `RETIRED_SKILL_IDS` — no sidecar
-      // name is a retired skill id — but this prune matches on the resolved
-      // target, and a sidecar holding a retired wrapper's flattened bytes
-      // resolves to exactly the agent being pruned. It needs the name test.
-      if (SIDECAR_RE.test(entry.name)) {
-        continue;
-      }
-      const entryPath = path.join(fullDir, entry.name);
-      const target = await agentWrapperTarget(entryPath, entry);
-      if (target === null) {
-        continue;
-      }
-      const resolved = path.resolve(fullDir, target);
-      // Only an entry init itself could have written: a direct child of the
-      // canonical agents directory. Anything pointing elsewhere is somebody
-      // else's link, and anything pointing deeper is not a wrapper shape init
-      // produces.
-      if (!agentsDirs.includes(path.dirname(resolved)) || shipped.has(path.basename(resolved))) {
-        continue;
-      }
-      // A **regular** file is a wrapper only when it holds the exact bytes init
-      // writes for that target — `path.relative` from this directory, nothing
-      // else. Resolving the content and comparing the destination accepted
-      // `../../.qfai/assistant/agent/./retired.md`, and an absolute path to
-      // the same file, as things init had written; neither is a byte sequence
-      // it produces, and `--force` deleted a one-line file somebody wrote by
-      // hand. `isFlattenedLink` already keeps those non-canonical spellings on
-      // the preserve side, and this is a delete, so it holds the same line. A
-      // symlink is left to the resolved-target test: its content is the link,
-      // not a document, and `ensureSymlink` normalises it the same way.
-      if (!entry.isSymbolicLink() && !isGeneratedWrapperTarget(target, fullDir, resolved)) {
-        continue;
-      }
-      if (dryRun) {
-        removed.push(entryPath);
-        continue;
-      }
-      if (await removeJudgedAgentWrapper(entryPath, target)) {
-        removed.push(entryPath);
-      }
-    }
-  }
-}
-
-/**
- * True when `dir` is a real directory under `root` reached without crossing a
- * symlink.
- *
- * `readdir` follows a link. A `.claude/agents` — or any ancestor of it —
- * pointing at a tree outside the project therefore lists somebody else's
- * entries, while the target of an entry found there is resolved against the
- * **lexical** in-project path: a link or a one-line file living in that
- * external directory reads as a retired wrapper, and the delete that follows
- * destroys data the project never owned. `retiredWrappers` refuses to
- * enumerate a damaged directory for exactly this reason, and prune — which
- * deletes rather than reports — has to refuse too.
- *
- * An `lstat` that cannot answer counts as "do not enumerate": for a step whose
- * action is a delete, refusing is the safe direction to be wrong in. Only the
- * components **below** `root` are examined, because a project legitimately
- * sits behind a symlinked parent (`/tmp` on macOS is one).
- */
-async function isSymlinkFreeDirectory(root: string, dir: string): Promise<boolean> {
-  let current = root;
-  for (const segment of dir.split("/")) {
-    current = path.join(current, segment);
-    const stats = await safeLstat(current);
-    if (stats === undefined || !stats.isDirectory()) {
-      return false;
-    }
-  }
-  return true;
-}
-
-/**
- * Delete a wrapper this prune has judged, claiming its pathname first.
- *
- * Reading the target and deleting by pathname are two operations, and between
- * them another process — an editor, a second agent, a concurrent
- * `qfai init --force` — can leave a different file, or a whole directory, at
- * the same path. A delete on the strength of the earlier read then destroyed
- * content nothing had examined. `rename` is atomic against the pathname, so
- * afterwards this process holds the very entry it is about to remove: it
- * re-derives the target from what actually moved, and anything that is no
- * longer the wrapper it judged goes straight back. Same claim-then-verify
- * shape as `recreateFlattenedLink`, and the sidecar it claims carries
- * the one name prune leaves alone.
- *
- * Returns whether the wrapper was removed.
- */
-async function removeJudgedAgentWrapper(entryPath: string, target: string): Promise<boolean> {
-  const sidecar = await claimSidecar(entryPath);
-  try {
-    await rename(entryPath, sidecar);
-  } catch (renameErr: unknown) {
-    // Nothing moved, so the claim is a stray empty file — and it is one prune
-    // deliberately leaves alone, while a later attempt sidesteps it with a
-    // numbered name. Absence is a race with something else removing the
-    // wrapper: there is nothing left to prune.
-    await rm(sidecar, { force: true }).catch(() => undefined);
-    if (isEnoent(renameErr)) {
-      return false;
-    }
-    throw renameErr;
-  }
-  // What actually moved, not what `readdir` reported a moment ago. A probe that
-  // cannot answer is not a licence to delete: the entry goes back, `validate`
-  // reports it again, and the operator still has the file.
-  const moved = await safeLstat(sidecar);
-  const movedTarget =
-    moved === undefined ? null : await agentWrapperTarget(sidecar, moved).catch(() => null);
-  if (movedTarget !== target) {
-    try {
-      await restoreSidecar(sidecar, entryPath);
-    } catch (restoreErr: unknown) {
-      throw new Error(
-        [
-          `Aborted the retired-wrapper deletion but could not put the moved file back: ${entryPath}`,
-          `Cause: ${describeError(restoreErr)}`,
-          `The original file is at: ${sidecar}`,
-        ].join("\n"),
-        { cause: restoreErr },
-      );
-    }
-    info(`  note: ${entryPath} changed after it was checked, so it was not deleted`);
-    return false;
-  }
-  // A symlink or a small regular file — that is all the check above accepts —
-  // so `recursive` would only widen this to a directory it never judged.
-  await rm(sidecar, { force: true });
-  return true;
-}
-
-/**
- * Whether `target` is the byte sequence init writes for a wrapper in
- * `wrapperDir` pointing at `resolved`.
- *
- * `createAgentSymlinks` builds every agent target with `path.relative`, so that
- * is the only spelling a flattened wrapper can legitimately hold. Comparing
- * resolved destinations instead accepted every other spelling of the same file
- * — a redundant `./`, a doubled separator, an absolute path — and none of those
- * are bytes init produced. Separator-insensitive on Windows only, for the same
- * reason {@link toComparableTarget} is.
- */
-function isGeneratedWrapperTarget(target: string, wrapperDir: string, resolved: string): boolean {
-  return toComparableTarget(target) === toComparableTarget(path.relative(wrapperDir, resolved));
-}
-
-/**
- * The path an agent wrapper points at, in either form a checkout can leave it
- * in, or `null` when the entry is not a wrapper.
- *
- * A flattened wrapper — the regular file a `core.symlinks false` checkout
- * writes, holding the target bytes — has to answer too, or a retired wrapper
- * survives the prune on exactly the platform where flattening is the default.
- * A file holding anything else (an agent document a project wrote by hand) is
- * not a wrapper and is preserved: the content has to be a single-line relative
- * path landing on a canonical agent for this to remove it.
- *
- * Takes whatever already carries the entry's kind — the `Dirent` from the
- * listing, or the `Stats` of the inode that was claimed for deletion — so the
- * second read judges the thing that moved rather than a pathname.
- */
-async function agentWrapperTarget(
-  entryPath: string,
-  entry: Pick<Dirent, "isSymbolicLink" | "isFile">,
-): Promise<string | null> {
-  if (entry.isSymbolicLink()) {
-    try {
-      return await readlink(entryPath);
-    } catch (err: unknown) {
-      // Absence is a race with something else removing the entry — there is
-      // nothing left to prune. Any other fault means the target could not be
-      // read, and answering "not a wrapper" would silently keep it.
-      if (isEnoent(err)) {
-        return null;
-      }
-      throw err;
-    }
-  }
-  if (!entry.isFile()) {
-    return null;
-  }
-  const content = await readPinnedRegularFile(entryPath, 4096).catch((err: unknown) => {
-    if (isEnoent(err)) {
-      return null;
-    }
-    throw err;
-  });
-  // **No whitespace anywhere**, the same test `wrapperTarget` applies in the
-  // validator. Git writes the target for mode `120000` verbatim, with no
-  // trailing newline and none of the padding an editor or a shell `echo`
-  // leaves behind — so a project's own one-line note ending in a space or a
-  // tab is not a flattened wrapper. Refusing only `\r` and `\n` accepted
-  // `../../.qfai/assistant/agent/custom.md ` as one, and `--force` deleted a
-  // file init had never written.
-  if (content === null || content.length === 0 || /\s/.test(content)) {
-    return null;
-  }
-  return content;
-}
-
-/**
- * Remove the directory if it is empty; do nothing if anything remains.
- *
- * `ENOTEMPTY` / `EEXIST` mean project files remain. That is a normal outcome,
- * not a failure.
- */
-async function removeIfEmpty(dir: string): Promise<void> {
-  try {
-    await rmdir(dir);
-  } catch (error: unknown) {
-    const code = (error as NodeJS.ErrnoException | null)?.code;
-    if (code === "ENOTEMPTY" || code === "EEXIST" || code === "ENOENT") {
-      return;
-    }
-    throw error;
-  }
-}
-
-/**
- * The shipped and retired workflow name sets, re-exported.
- *
- * They moved to `shared/shippedWorkflowNames.ts` because `core/`'s doctor reader needs the same
- * answer and may not import from `cli/`. Without that move, the packaged-tree precondition would
- * call a gutted directory healthy, since that reader would not know what this package ships. The
- * re-export keeps this module's public surface exactly as it was.
- */
-export { RETIRED_WORKFLOW_NAMES, SHIPPED_WORKFLOW_NAMES };
-
-/**
- * The only removal primitive for QFAI-owned entries in an adopter tree:
- * removes the direct entries of `dir` that match `predicate`, appending
- * each removed path to `removed`.
- *
- * `confirm` is the ownership question, and it is asked TWICE: once against the path as the
- * snapshot named it, and once against the object after it has been moved aside. `predicate`
- * can only ever see the `readdir` snapshot, so a name selects candidates and never authorises
- * a delete: every caller here decides ownership by CONTENT, the delegation line every
- * generation of a legacy command or prompt wrapper was shipped with. A caller with no content
- * test passes `undefined` and gets the snapshot behaviour. `confirm` receives
- * the path to READ and, separately, the entry's original name, because after the move the two
- * differ and a caller resolving its evidence by basename would be resolving it against the
- * quarantine name.
- *
- * Why the move at all: checking a pathname, re-checking it and then
- * deleting it are three operations on a NAME, and between any two of them the adopter can put
- * their own file there: the content that was verified and the bytes that are deleted are then
- * different objects, and the deleted one is theirs. Renaming the entry to a name nothing else
- * holds collapses the three into one object — everything after the rename acts on what was
- * moved, whatever later takes the vacated name.
- *
- * The removal is deliberately NOT recursive. Every predicate here requires `isFile()`, so a
- * directory reaching the `rm` can only be one swapped in after the snapshot — and recursing
- * into it would delete a tree on the strength of a name. Refusing is the conservative
- * direction: a stale entry is recoverable, a deleted tree is not.
- */
-export async function pruneMatchingEntries(
-  dir: string,
-  predicate: (entry: Dirent) => boolean,
-  removed: string[],
-  dryRun: boolean,
-  confirm?: (target: string, name: string) => Promise<boolean>,
-): Promise<void> {
-  if (!(await exists(dir))) {
-    return;
-  }
-  const entries = await readdir(dir, { withFileTypes: true });
-  const held: QuarantinedEntry[] = [];
-  const pruned: string[] = [];
-  // Entries this run moved aside and could not put back. Restoring by
-  // `rename` would silently replace whatever took the name meanwhile, so the restore refuses
-  // instead — and a refusal nobody hears is a file that has quietly moved. The run stops
-  // naming them, because they are recoverable and only while somebody knows where they are.
-  const stranded: string[] = [];
-  try {
-    for (const entry of entries) {
-      if (!predicate(entry)) {
-        continue;
-      }
-      const target = path.join(dir, entry.name);
-      if (confirm !== undefined && !(await confirm(target, entry.name))) {
-        continue; // still QFAI's name, no longer QFAI's bytes
-      }
-      // Re-checked against the path as it is NOW, not as `readdir` reported it. Every predicate
-      // here requires `isFile()`, but that is a fact about the snapshot: a directory swapped in
-      // after it — by the adopter, or by a concurrent run — still carries a matching name, and a
-      // recursive delete would take the whole tree on the strength of it. `lstat`, so a symlink is
-      // refused rather than followed, and the `rm` below is deliberately not recursive: two
-      // independent reasons a swapped directory survives.
-      const atDeletion = await lstat(target).catch(() => undefined);
-      if (atDeletion === undefined || atDeletion.isSymbolicLink() || !atDeletion.isFile()) {
-        continue;
-      }
-      if (dryRun) {
-        pruned.push(target);
-        continue;
-      }
-      const moved = await quarantineEntry(target);
-      if (moved === undefined) {
-        continue; // could not take it aside; a file left alone is the conservative outcome
-      }
-      // The question re-asked against the OBJECT rather than the name. Everything before the
-      // rename described a path; this describes what was moved, and it is what gets deleted.
-      if (confirm !== undefined && !(await confirm(moved.quarantinePath, entry.name))) {
-        if (!(await restoreQuarantined(moved))) {
-          stranded.push(moved.quarantinePath);
-        }
-        continue;
-      }
-      held.push(moved);
-      pruned.push(target);
-    }
-  } catch (error) {
-    for (const moved of held) {
-      await restoreQuarantined(moved);
-    }
-    throw error;
-  }
-  removed.push(...pruned);
-  for (const moved of held) {
-    await rm(moved.quarantineDir, { recursive: true, force: true }).catch(() => undefined);
-  }
-  if (stranded.length > 0) {
-    throw new Error(
-      "qfai: these files were moved aside and could not be put back, because something else " +
-        "took their names in the interval and replacing it would have destroyed it. They are " +
-        `intact where they are:\n${stranded.map((at) => `  ${at}`).join("\n")}`,
-    );
-  }
-}
-
-/** A file moved aside into a directory nothing else holds, pending its delete or its restore. */
-type QuarantinedEntry = {
-  /** Where it was, and where a restore puts it back. */
-  originalPath: string;
-  /** The private directory holding it — what a discard removes. */
-  quarantineDir: string;
-  /** Where it is now — the object every step after the move acts on. */
-  quarantinePath: string;
-};
-
-/** How many times a colliding quarantine name is retried before the entry is left alone. */
-const QUARANTINE_ATTEMPTS = 8;
-
-/**
- * Moves `target` into a private DIRECTORY in the same parent, or answers `undefined`.
- *
- * A directory, not a claimed filename. Claiming a random name with `wx`, closing the handle,
- * and then renaming onto it would leave a window between the close and the rename in which
- * anything that can write the adopter's tree could replace the claim, and `rename` would
- * silently destroy the replacement. A claim is exclusive only at the moment of the claim, not
- * at the moment of use — a directory stays exclusive for the whole interval instead.
- *
- * `mkdir` without `recursive` fails with `EEXIST` when the name is taken, so the directory is one
- * this process created. The move then targets a path INSIDE it — a path that did not exist a
- * moment ago and whose parent nothing else knows the name of — so there is nothing there for the
- * rename to overwrite.
- *
- * Same parent directory, because a rename across filesystems is not one operation, and the whole
- * point of the move is that it is one.
- *
- * @param target the file to move aside
- * @returns the entry, or `undefined` when it could not be moved
- */
-async function quarantineEntry(target: string): Promise<QuarantinedEntry | undefined> {
-  const dir = path.dirname(target);
-  const base = path.basename(target);
-  for (let attempt = 0; attempt < QUARANTINE_ATTEMPTS; attempt += 1) {
-    const quarantineDir = path.join(dir, `.${base}.qfai-prune-${randomBytes(12).toString("hex")}`);
-    try {
-      // Deliberately not `{ recursive: true }`: that succeeds on an existing directory, which is
-      // exactly the case this has to refuse.
-      await mkdir(quarantineDir);
-    } catch {
-      continue; // the name is taken: try another rather than move into somebody else's directory
-    }
-    const quarantinePath = path.join(quarantineDir, base);
-    try {
-      await rename(target, quarantinePath);
-      return { originalPath: target, quarantineDir, quarantinePath };
-    } catch {
-      await rm(quarantineDir, { recursive: true, force: true }).catch(() => undefined);
-      return undefined; // the entry is gone or unmovable; either way it is not ours to delete
-    }
-  }
-  return undefined;
-}
-
-/**
- * Puts a quarantined entry back, or leaves it quarantined — but never overwrites.
- *
- * `link` is the whole mechanism: it FAILS when the destination exists, where `rename` would
- * silently replace it. The name was vacated by this function's own move, so a file standing there
- * now is one somebody else wrote in the interval, and it is theirs.
- *
- * There is no fallback for filesystems without hard links. An `exists` check followed by a plain
- * `rename` would not be one: a check is not a guarantee, and between the two a concurrent `init`
- * or the adopter could create the file that the rename then destroys. `rename` cannot be made to
- * refuse an occupied destination, so when the destination cannot be proven free, the entry stays
- * in quarantine and the caller reports it.
- * A file left in a `.qfai-prune-*` directory is recoverable; one silently replaced is not.
- *
- * @param entry the quarantined file
- * @returns whether it was put back
- */
-async function restoreQuarantined(entry: QuarantinedEntry): Promise<boolean> {
-  try {
-    await link(entry.quarantinePath, entry.originalPath);
-    await rm(entry.quarantineDir, { recursive: true, force: true }).catch(() => undefined);
-    return true;
-  } catch {
-    // `EEXIST` means the name is somebody else's now; anything else means this filesystem cannot
-    // give the guarantee. Both leave the file where it is, which is the only outcome that
-    // destroys nothing.
-    return false;
-  }
-}
-
-// ---------------------------------------------------------------------------
 // copilot-instructions builder (regular file)
 // ---------------------------------------------------------------------------
 
@@ -3865,9 +2383,6 @@ function buildCopilotInstructions(): string {
     "  - Skills: `.qfai/assistant/skill/`",
     "  - Agents: `.qfai/assistant/agent/`",
     "  - Prompts: `.qfai/assistant/prompt/`",
-    "- The legacy `.qfai/assistant/instructions/` layout is past its compatibility window.",
-    "  `qfai init` reports it on stderr as a `QFAI-DEPRECATED-001` error.",
-    "  Run `qfai init --upgrade-assistant-tree` to migrate it.",
     "- When asked to perform QFAI workflow tasks, prefer using the QFAI skill symlinks in `.github/skills/`.",
     "  - These symlinks resolve to `.qfai/assistant/skill/<skill-name>/`.",
     "- Do not invent repository structure, tools, or frameworks. Inspect the repo first and align with what is already used.",
@@ -3899,3 +2414,12 @@ function buildCopilotInstructions(): string {
     "",
   ].join("\n");
 }
+
+/**
+ * The shipped workflow name set, re-exported.
+ *
+ * It lives in `shared/shippedWorkflowNames.ts` because `core/`'s doctor reader needs the same
+ * answer and may not import from `cli/`. Without that move, the packaged-tree precondition would
+ * call a gutted directory healthy, since that reader would not know what this package ships.
+ */
+export { SHIPPED_WORKFLOW_NAMES };

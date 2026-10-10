@@ -29,8 +29,6 @@
 | US-0001-0023 | Dry run                                                                                | `user-story-0001-0023/` |
 | US-0001-0024 | Symlink-based skill integration                                                        | `user-story-0001-0024/` |
 | US-0001-0025 | Agent symlink integration                                                              | `user-story-0001-0025/` |
-| US-0001-0026 | Legacy file removal                                                                    | `user-story-0001-0026/` |
-| US-0001-0027 | Prune legacy wrappers                                                                  | `user-story-0001-0027/` |
 | US-0001-0028 | Git symlink setting and Windows support                                                | `user-story-0001-0028/` |
 | US-0001-0029 | Copilot instructions generation                                                        | `user-story-0001-0029/` |
 | US-0001-0030 | Copilot review instructions distribution                                               | `user-story-0001-0030/` |
@@ -38,14 +36,12 @@
 | US-0001-0032 | Instructions activation guidance                                                       | `user-story-0001-0032/` |
 | US-0001-0033 | Managed `.gitignore` block                                                             | `user-story-0001-0033/` |
 | US-0001-0034 | 4-layer asset-tree seeding                                                             | `user-story-0001-0034/` |
-| US-0001-0035 | --upgrade-assistant-tree migration helper                                              | `user-story-0001-0035/` |
 | US-0001-0036 | assistantPaths.ts SSOT module                                                          | `user-story-0001-0036/` |
-| US-0001-0037 | legacy layout past its sunset                                                          | `user-story-0001-0037/` |
 | US-0001-0038 | Story-tree seeding                                                                     | `user-story-0001-0038/` |
 | US-0001-0039 | Deterministic validation gate                                                          | `user-story-0001-0039/` |
 | US-0001-0042 | Prototyping skill validation                                                           | `user-story-0001-0042/` |
 | US-0001-0043 | Canonical assistant-tree layers                                                        | `user-story-0001-0043/` |
-| US-0001-0045 | Deprecated assistant paths and skill project memory                                    | `user-story-0001-0045/` |
+| US-0001-0045 | Skill project memory                                                                   | `user-story-0001-0045/` |
 | US-0001-0046 | Unseeded assistant layer is informational                                              | `user-story-0001-0046/` |
 | US-0001-0047 | Profile-specific validation reports                                                    | `user-story-0001-0047/` |
 | US-0001-0049 | SaaS package validation profile                                                        | `user-story-0001-0049/` |
@@ -65,7 +61,7 @@
 | US-0001-0063 | Output path control                                                                    | `user-story-0001-0063/` |
 | US-0001-0064 | Per-unit reports                                                                       | `user-story-0001-0064/` |
 | US-0001-0066 | Flow-scoped report                                                                     | `user-story-0001-0066/` |
-| US-0001-0067 | ATDD Test Volume Estimation                                                            | `user-story-0001-0067/` |
+| US-0001-0067 | ATDD Test Volume Follows Scope                                                         | `user-story-0001-0067/` |
 | US-0001-0068 | E2E Acceptance Test Implementation                                                     | `user-story-0001-0068/` |
 | US-0001-0069 | API Acceptance Test Implementation                                                     | `user-story-0001-0069/` |
 | US-0001-0070 | Integration Acceptance Test Implementation                                             | `user-story-0001-0070/` |
@@ -123,10 +119,9 @@
 | US-0001-0163 | Orchestrator Protocol                                                                  | `user-story-0001-0163/` |
 | US-0001-0164 | Devils-Advocate Reviewer                                                               | `user-story-0001-0164/` |
 | US-0001-0165 | Pattern-Doubler Reviewer                                                               | `user-story-0001-0165/` |
-| US-0001-0166 | All-Reviewer FAIL Obligation                                                           | `user-story-0001-0166/` |
+| US-0001-0166 | All-Reviewer REVISE Obligation                                                         | `user-story-0001-0166/` |
 | US-0001-0169 | SKILL.md `## Default Autopilot Policy` section                                         | `user-story-0001-0169/` |
-| US-0001-0171 | Cross-skill `handoff.yaml` schema                                                      | `user-story-0001-0171/` |
-| US-0001-0174 | Cross-skill documentation realignment to implementation                                | `user-story-0001-0174/` |
+| US-0001-0171 | Cross-skill handoff schema                                                             | `user-story-0001-0171/` |
 | US-0001-0176 | Standard Research Pipeline Execution                                                   | `user-story-0001-0176/` |
 | US-0001-0177 | MCP Server Integration for Web Research                                                | `user-story-0001-0177/` |
 | US-0001-0178 | Research Skill Packaging                                                               | `user-story-0001-0178/` |

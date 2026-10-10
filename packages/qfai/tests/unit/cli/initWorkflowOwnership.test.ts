@@ -1,16 +1,14 @@
 /**
- * The ways `qfai init` could decide a file in the adopter's tree was QFAI's to delete, and be
- * wrong by the time it acted: ownership established at one moment and acted on at another.
+ * How `qfai init` copies a workflow into the adopter's tree: creating exclusively, recording only
+ * what it wrote, and reading bounded and regular-only.
  */
 
-import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { pruneMatchingEntries } from "../../../src/cli/commands/init.js";
 import { copyTemplateTree } from "../../../src/core/fs/templateCopy.js";
 import { readBoundedRegularFile } from "../../../src/shared/boundedRead.js";
 
@@ -29,120 +27,6 @@ afterEach(async () => {
   }
 });
 
-const sha = (text: string): string => createHash("sha256").update(text).digest("hex");
-
-// ── [30] / [06] ──────────────────────────────────────────────────────────────
-describe("the prune asks the ownership question at the moment it deletes", () => {
-  it("keeps a file whose content changed after it was judged prunable", async () => {
-    const dir = await tempRoot();
-    const target = path.join(dir, "qfai-retired.yml");
-    await writeFile(target, "installed-by-qfai\n", "utf-8");
-
-    // Judged prunable against the bytes QFAI recorded — the state the real caller computes before
-    // the copy runs. Then the adopter replaces the file, which is the whole window.
-    const judgedDigest = sha("installed-by-qfai\n");
-    await writeFile(target, "the adopter's own workflow\n", "utf-8");
-
-    const removed: string[] = [];
-    await pruneMatchingEntries(
-      dir,
-      (entry) => entry.isFile() && entry.name === "qfai-retired.yml",
-      removed,
-      false,
-      async (candidate) => sha(await readFile(candidate, "utf-8")) === judgedDigest,
-    );
-
-    expect(removed, "the name still matched; the bytes did not").toEqual([]);
-    expect(await readFile(target, "utf-8")).toBe("the adopter's own workflow\n");
-  });
-
-  it("still deletes a file that is unchanged, so the confirm is a check and not a refusal", async () => {
-    const dir = await tempRoot();
-    const target = path.join(dir, "qfai-retired.yml");
-    await writeFile(target, "installed-by-qfai\n", "utf-8");
-    const judgedDigest = sha("installed-by-qfai\n");
-
-    const removed: string[] = [];
-    await pruneMatchingEntries(
-      dir,
-      (entry) => entry.isFile() && entry.name === "qfai-retired.yml",
-      removed,
-      false,
-      async (candidate) => sha(await readFile(candidate, "utf-8")) === judgedDigest,
-    );
-
-    expect(removed).toEqual([target]);
-    await expect(stat(target)).rejects.toThrow();
-  });
-});
-
-// ── [33] ────────────────────────────────────────────
-describe("the object that was verified is the object that is deleted", () => {
-  it("does not delete the adopter file that took the name after the answer was given", async () => {
-    const dir = await tempRoot();
-    const target = path.join(dir, "qfai-retired.yml");
-    await writeFile(target, "installed-by-qfai\n", "utf-8");
-    const judgedDigest = sha("installed-by-qfai\n");
-
-    // The window, made deterministic. `confirm` answers about the file it was handed and THEN
-    // the adopter writes their own content under the same name — which is the interleaving a
-    // second process produces and no in-process test can otherwise reach. Checking a pathname,
-    // re-checking it and deleting it are three operations on a name; this is what it costs.
-    let answered = 0;
-    const removed: string[] = [];
-    await pruneMatchingEntries(
-      dir,
-      (entry) => entry.isFile() && entry.name === "qfai-retired.yml",
-      removed,
-      false,
-      async (candidate) => {
-        const ok = sha(await readFile(candidate, "utf-8")) === judgedDigest;
-        answered += 1;
-        if (answered === 1) {
-          await writeFile(target, "the adopter's own workflow\n", "utf-8");
-        }
-        return ok;
-      },
-    );
-
-    expect(
-      await readFile(target, "utf-8"),
-      "the file deleted must be the one whose bytes were verified, not whatever holds the name",
-    ).toBe("the adopter's own workflow\n");
-    expect(removed, "and nothing QFAI owned was found to remove").toEqual([]);
-  });
-});
-
-// ── [30] the swapped-directory half ─────────────────────────────
-describe("a directory swapped in after the snapshot is not deleted as a tree", () => {
-  it("leaves the directory and everything under it alone", async () => {
-    const dir = await tempRoot();
-    const target = path.join(dir, "qfai-retired.yml");
-    await writeFile(target, "installed-by-qfai\n", "utf-8");
-
-    // The race, made deterministic. `readdir` sees a regular file, so the predicate matches; the
-    // swap happens between that snapshot and the delete, which is the window the finding is about.
-    // Reproducing it through `confirm` is the only way to hit it without a real second process.
-    const removed: string[] = [];
-    await pruneMatchingEntries(
-      dir,
-      (entry) => entry.isFile() && entry.name === "qfai-retired.yml",
-      removed,
-      false,
-      async () => {
-        await rm(target, { force: true });
-        await mkdir(target, { recursive: true });
-        await writeFile(path.join(target, "keep.txt"), "not QFAI's to delete\n", "utf-8");
-        return true;
-      },
-    );
-
-    expect(removed, "a directory reaching the delete is never this run's to remove").toEqual([]);
-    expect(await readFile(path.join(target, "keep.txt"), "utf-8")).toBe("not QFAI's to delete\n");
-  });
-});
-
-// ── the exclusive copy ───────────────────────────────────────
 describe("the copy creates, and records only what it created", () => {
   it("creates EXCLUSIVELY when not forcing, so a file that appeared meanwhile is not overwritten", async () => {
     // The race is between two syscalls inside one function — `shouldWrite`'s `exists` and the
@@ -153,7 +37,7 @@ describe("the copy creates, and records only what it created", () => {
     //
     // What the race costs is not only the adopter's bytes: the overwritten path lands in `copied`,
     // so the packaged digest is recorded as QFAI's own, doctor reports no drift on a file QFAI
-    // never wrote, and the retired-workflow prune considers it QFAI's to delete.
+    // never wrote.
     const source = await readFile(
       path.join(__dirname, "..", "..", "..", "src", "core", "fs", "templateCopy.ts"),
       "utf-8",
@@ -174,7 +58,7 @@ describe("the copy creates, and records only what it created", () => {
     // `qfai init`, or the adopter's own editor — can create the file between that check and the
     // copy, and a plain `copyFile` OVERWRITES it. Worse than the lost bytes: the path lands in
     // `copied`, so the packaged digest is recorded as QFAI's own, doctor reports no drift on a file
-    // QFAI never wrote, and the retired-workflow prune considers it QFAI's to delete.
+    // QFAI never wrote.
     //
     // The race is made deterministic by creating the destination first — which is the state the
     // race produces, reached without one.

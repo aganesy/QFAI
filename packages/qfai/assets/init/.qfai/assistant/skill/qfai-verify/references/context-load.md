@@ -1,9 +1,12 @@
 # Step 0 — Load context
 
+`<paths.specsDir>` and `<paths.contractsDir>` are the directories `qfai.config.yaml` sets.
+
 1. Read relevant **project policy** (if present):
-   - `.qfai/spec/01_policy/objective.md`
-   - `.qfai/spec/01_policy/initiative.md`
-   - `.qfai/spec/03_contract/tech.md`
+   - `<paths.specsDir>/01_policy/objective.md`
+   - `<paths.specsDir>/01_policy/initiative.md`
+   - `<paths.specsDir>/01_policy/principle.md`
+   - `<paths.contractsDir>/tech.md`
    - `.qfai/assistant/rule/agent-selection.md`. From
      `.qfai/assistant/rule/agent-selection.md` read the acting role's entry
      when a role needs one, not the whole file
@@ -14,9 +17,9 @@
    - `.qfai/assistant/rule/workflow.md` (or equivalent)
 
 3. Read existing artifacts for the current work item (if present):
-   - `.qfai/spec/02_business-flow/`
-   - `.qfai/spec/03_contract/`
-   - `.qfai/spec/decisions.md`
+   - `<paths.specsDir>/02_business-flow/`
+   - `<paths.contractsDir>/`
+   - `<paths.specsDir>/decisions.md`
 
    Do not use discussion-pack artifacts as verification inputs. Verify reads normalized specs, contracts, tests and code only.
 

@@ -1,8 +1,5 @@
 /**
- * The `prototyping.execution.browserTool` config field accepts one value:
- *   - `"playwright"`: loads with no configuration issue.
- *   - `"playwright-cli"`: refused by the loader, which keeps the `playwright`
- *     default and raises one configuration issue naming the value.
+ * The `prototyping.execution.browserTool` config field accepts `"playwright"`.
  *
  * Integration scope: config loader and the shipped default.
  */
@@ -41,7 +38,6 @@ async function writeConfigWithBrowserTool(root: string, browserTool: string): Pr
       "  discussionDir: .qfai/discussion",
       "  outDir: .qfai/out",
       "  skillsDir: .qfai/assistant/skills",
-      "  promptsDir: .qfai/assistant/skills",
       "  srcDir: src",
       "  testsDir: tests",
       "validation:",
@@ -55,6 +51,7 @@ async function writeConfigWithBrowserTool(root: string, browserTool: string): Pr
 }
 
 // QFAI:AC-0001-0129-01
+// QFAI:EX-0001-0129-01
 describe("browserTool config — `playwright` path", () => {
   it("accepts browserTool: playwright with no issues raised", async () => {
     const root = await newTempDir();
@@ -71,20 +68,5 @@ describe("browserTool config — `playwright` path", () => {
       "utf-8",
     );
     expect(shipped).toMatch(/^ {4}browserTool: playwright$/m);
-  });
-});
-
-// QFAI:EX-0001-0129-01
-describe("browserTool config — `playwright-cli` path", () => {
-  it("refuses browserTool: playwright-cli", async () => {
-    const root = await newTempDir();
-    await writeConfigWithBrowserTool(root, "playwright-cli");
-    const { config, issues } = await loadConfig(root);
-    // Refused past the sunset; the supported default stands in so a run that
-    // ignores the issue does not proceed against a launcher qfai dropped.
-    expect(config.prototyping?.execution?.browserTool).toBe("playwright");
-    const raised = issues.filter((i) => /browserTool/.test(i.message));
-    expect(raised).toHaveLength(1);
-    expect(raised[0]?.message).toContain("playwright-cli");
   });
 });

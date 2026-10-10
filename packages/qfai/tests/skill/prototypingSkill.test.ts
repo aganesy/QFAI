@@ -10,11 +10,10 @@ import {
   hasCliSurfaceDocumentation,
   hasUiContractScope,
   isStaticFirstAligned,
-  scanBannedPhrases,
   hasDelegationScopeTable,
   hasEnvironmentPreconditions,
   hasPreflightGuidance,
-  hasPlaywrightCliFallback,
+  hasPlaywrightLauncherInvocation,
   validatePrototypingSkillContent,
 } from "../../src/core/validators/skill/prototypingSkill.js";
 
@@ -136,14 +135,14 @@ describe("prototyping skill validator", () => {
   });
 
   it("documents a safe Playwright invocation path", () => {
-    expect(hasPlaywrightCliFallback(VALID_SKILL_CONTENT)).toBe(true);
+    expect(hasPlaywrightLauncherInvocation(VALID_SKILL_CONTENT)).toBe(true);
   });
 
   it("rejects unsafe bare npx playwright guidance", () => {
     // What the rule guards is the --no-install shape: a bare `npx playwright`
     // reaches the network and can install a package mid-run.
     const invalid = VALID_SKILL_CONTENT.replace("npx --no-install playwright", "npx playwright");
-    expect(hasPlaywrightCliFallback(invalid)).toBe(false);
+    expect(hasPlaywrightLauncherInvocation(invalid)).toBe(false);
   });
 
   it.each(["playwright-does-not-exist", "playwright-wrapper", "playwrightx"])(
@@ -156,29 +155,12 @@ describe("prototyping skill validator", () => {
       const invalid = VALID_SKILL_CONTENT.split("npx --no-install playwright").join(
         `npx --no-install ${impostor}`,
       );
-      expect(hasPlaywrightCliFallback(invalid)).toBe(false);
+      expect(hasPlaywrightLauncherInvocation(invalid)).toBe(false);
     },
   );
 
-  it.each([
-    "npx --no-install playwright",
-    "npx --no-install playwright-cli",
-    "node_modules/.bin/playwright",
-  ])("accepts %s", (form) => {
-    // `playwright-cli` stays accepted: a project that has not migrated its
-    // docs still documents a real, non-installing launcher.
-    expect(hasPlaywrightCliFallback(`Run \`${form} --version\` first.`)).toBe(true);
-  });
-
-  // QFAI:EX-0001-0042-01
-  it("flags banned phrases when v1.x mode wording is reintroduced", () => {
-    // v2.0 (spec-0012 absorbed): mode (recommended_mode / low-cost / standard) and
-    // L1/L2 reviewer separation are removed. The banned-phrase scanner
-    // still flags re-introductions.
-    const invalid = `${VALID_SKILL_CONTENT}\nl1 and l2 must run runtime checks\nrecommended_mode: standard-tier`;
-    expect(scanBannedPhrases(invalid)).toEqual(
-      expect.arrayContaining(["must run runtime checks", "recommended_mode", "l1 and l2"]),
-    );
+  it.each(["npx --no-install playwright", "node_modules/.bin/playwright"])("accepts %s", (form) => {
+    expect(hasPlaywrightLauncherInvocation(`Run \`${form} --version\` first.`)).toBe(true);
   });
 
   it("rejects content missing supported UI surface documentation", () => {

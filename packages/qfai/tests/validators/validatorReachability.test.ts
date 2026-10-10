@@ -35,11 +35,6 @@ const ENTRY_POINTS = ["validate.ts", "../index.ts", "../cli/index.ts", "../cli/m
  */
 const KNOWN_UNREACHABLE = new Map<string, string>([
   ["validators/auditProfile.ts", "unfiled — same class as #402"],
-  ["validators/requirePack.ts", "unfiled — same class as #402"],
-  ["validators/requirementsContext.ts", "unfiled — same class as #402"],
-  // Its last importer went with the retired validators; the module itself is
-  // still on disk, so the walk sees it and nothing reaches it.
-  ["validators/requireIndex.ts", "unfiled — QFAI-REQINDEX-* cannot fire; no importer left"],
   ["validators/skill/phaseOrdering.ts", "unfiled — same class as #402"],
   ["validators/skill/sidecarFlowOrdering.ts", "unfiled — same class as #402"],
   ["validators/uix/fixtureCoverage.ts", "#403 — retired uix/ validators"],

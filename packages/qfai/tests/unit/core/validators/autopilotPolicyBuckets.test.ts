@@ -127,11 +127,9 @@ describe("hard-required names with hyphens", () => {
     expect(splitJoinedEntries("business-flow id")).toEqual(["business-flow id"]);
     expect(splitJoinedEntries("con-ui-nnnn")).toEqual(["con-ui-nnnn"]);
     expect(classifyHardRequiredEntries(["a business-flow ID"], "qfai-configure")).toEqual({
-      retired: [],
       unknown: [],
     });
     expect(classifyHardRequiredEntries(["a full `UI-NNNN`"], "qfai-verify")).toEqual({
-      retired: [],
       unknown: [],
     });
     expect(
@@ -144,7 +142,7 @@ describe("hard-required names with hyphens", () => {
         ],
         "qfai-verify",
       ),
-    ).toEqual({ retired: [], unknown: [] });
+    ).toEqual({ unknown: [] });
   });
 
   // QFAI:EX-0001-0169-05

@@ -8,7 +8,7 @@
  * migration support, version normalization, module documentation,
  * and canonical template generation.
  */
-import { access, lstat, mkdtemp, readFile, readlink, rm, writeFile, mkdir } from "node:fs/promises";
+import { access, lstat, mkdtemp, readFile, readlink, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -165,110 +165,7 @@ describe("E2E: multi-tool wrapper generation (US-0003-0005)", () => {
 });
 
 // QFAI:BF-0001
-describe("E2E: legacy file evacuation (US-0003-0007)", () => {
-  it("--force removes legacy 10_workflow.md from skills", async () => {
-    const tmpDir = await createTempDir();
-    try {
-      await captureStdout(() => runInit({ dir: tmpDir, force: false, dryRun: false, yes: true }));
-
-      // Place a legacy file inside a skill directory
-      const skillDir = path.join(tmpDir, ".qfai", "assistant", "skill");
-      const subdirs = await (await import("node:fs/promises")).readdir(skillDir);
-      const firstSkill = subdirs.find((d) => d.startsWith("qfai-"));
-      // A run that shipped no skill leaves nothing to plant the legacy file in,
-      // and the case then asserted nothing at all.
-      expect(firstSkill, "init must ship at least one skill").toBeDefined();
-      const seeded = firstSkill ?? "";
-      await writeFile(path.join(skillDir, seeded, "10_workflow.md"), "legacy");
-
-      await captureStdout(() => runInit({ dir: tmpDir, force: true, dryRun: false, yes: true }));
-
-      expect(await pathExists(path.join(skillDir, seeded, "10_workflow.md"))).toBe(false);
-    } finally {
-      await cleanupTempDir(tmpDir);
-    }
-  });
-});
-
-// QFAI:BF-0001
-describe("E2E: commands/prompts deprecation + skill symlink integration (US-0003-0008)", () => {
-  it("--force removes the commands/prompts wrappers qfai shipped, and only those", async () => {
-    const tmpDir = await createTempDir();
-    try {
-      await captureStdout(() => runInit({ dir: tmpDir, force: false, dryRun: false, yes: true }));
-
-      // Place an old-style wrapper qfai itself wrote — a shipped basename
-      // whose body still delegates to the canonical doc of the same stem —
-      // alongside a file the project wrote for itself.
-      // Each surface carries the form qfai actually shipped there: `@` for
-      // the slash command, the bullet for the prompt file.
-      const shippedCommand = [
-        "Follow the canonical QFAI prompt exactly:",
-        "@.qfai/assistant/prompts/qfai-spec.md",
-        "",
-      ].join("\n");
-      const shippedPrompt = [
-        "1) Open and follow the canonical QFAI prompt:",
-        "- .qfai/assistant/prompts/qfai-spec.md",
-        "",
-      ].join("\n");
-      await mkdir(path.join(tmpDir, ".claude", "commands"), { recursive: true });
-      await writeFile(path.join(tmpDir, ".claude", "commands", "qfai-spec.md"), shippedCommand);
-      await writeFile(path.join(tmpDir, ".claude", "commands", "qfai-old.md"), "mine");
-      await mkdir(path.join(tmpDir, ".github", "prompts"), { recursive: true });
-      await writeFile(
-        path.join(tmpDir, ".github", "prompts", "qfai-spec.prompt.md"),
-        shippedPrompt,
-      );
-      await writeFile(path.join(tmpDir, ".github", "prompts", "qfai-old.prompt.md"), "mine");
-
-      await captureStdout(() => runInit({ dir: tmpDir, force: true, dryRun: false, yes: true }));
-
-      expect(await pathExists(path.join(tmpDir, ".claude", "commands", "qfai-spec.md"))).toBe(
-        false,
-      );
-      expect(await pathExists(path.join(tmpDir, ".github", "prompts", "qfai-spec.prompt.md"))).toBe(
-        false,
-      );
-      expect(await pathExists(path.join(tmpDir, ".claude", "commands", "qfai-old.md"))).toBe(true);
-      expect(await pathExists(path.join(tmpDir, ".github", "prompts", "qfai-old.prompt.md"))).toBe(
-        true,
-      );
-    } finally {
-      await cleanupTempDir(tmpDir);
-    }
-  });
-
-  it("--force prunes a qfai-* skill directory that is not a link", async () => {
-    // The story's third surface: a directory left by an older release, where a
-    // link belongs now. The two above cover the command and prompt wrappers.
-    const tmpDir = await createTempDir();
-    try {
-      await captureStdout(() => runInit({ dir: tmpDir, force: false, dryRun: false, yes: true }));
-
-      const stale = path.join(tmpDir, ".claude", "skills", "qfai-spec");
-      await rm(stale, { recursive: true, force: true });
-      await mkdir(stale, { recursive: true });
-      // The directory form init once wrote: a doc delegating to the canonical
-      // skill. Ownership is what authorises the delete, not the `qfai-` name.
-      await writeFile(
-        path.join(stale, "SKILL.md"),
-        [
-          "Follow the canonical QFAI skill:",
-          "- .qfai/assistant/skills/qfai-spec/SKILL.md",
-          "",
-        ].join("\n"),
-        "utf-8",
-      );
-
-      await captureStdout(() => runInit({ dir: tmpDir, force: true, dryRun: false, yes: true }));
-
-      expect(await pathExists(stale)).toBe(false);
-    } finally {
-      await cleanupTempDir(tmpDir);
-    }
-  });
-
+describe("E2E: skill symlink integration", () => {
   it("creates skill symlinks in integration directories", async () => {
     const tmpDir = await createTempDir();
     try {

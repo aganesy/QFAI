@@ -29,12 +29,6 @@ import {
 const TODO = ".todo";
 // Same split for the `*.skip(` token, which the JS/TS dialect now matches too.
 const SKIP = ".skip";
-// Same split for the placeholder marker an earlier scaffold wrote, which the validator matches
-// anywhere in a test file.
-const PLACEHOLDER = "QFAI-SCAFFOLD" + "-PLACEHOLDER";
-// The fixture's annotation is assembled too, so the traceability scan does not read it as one
-// of this file's own.
-const FIXTURE_ANNOTATION = "QFAI" + ":AC-0001-0001-01";
 const JS_STUB = `it${TODO}('later');
 `;
 
@@ -124,29 +118,6 @@ describe("every supported stack's stub construct is detected", () => {
     await withTests({ "tests/test_a.py": "pytest.skip('later')\n" }, async (root) => {
       const issues = await validateTestTodoStubs(root, CONFIG);
       expect(issues.find((i) => i.code === "QFAI-TEST-001")?.message).toContain("pytest/unittest");
-    });
-  });
-
-  it("reports a Python placeholder an earlier scaffold wrote", async () => {
-    // That release raised `NotImplementedError` instead of skipping, so no
-    // dialect pattern sees it; the marker line it left is what does.
-    const legacy = [
-      `# ${FIXTURE_ANNOTATION}`,
-      `# ${PLACEHOLDER} — replace this block with a real assertion.`,
-      "",
-      "import unittest",
-      "",
-      "",
-      "class Test_AC_0001_0001_01(unittest.TestCase):",
-      "    def test_ac_0001_0001_01(self) -> None:",
-      "        # TODO: implement assertion for AC-0001-0001-01",
-      '        raise NotImplementedError("pending — scaffold placeholder")',
-      "",
-    ].join("\n");
-    await withTests({ "tests/test_ac_0001_0001_01.py": legacy }, async (root) => {
-      const issues = await validateTestTodoStubs(root, CONFIG);
-      const stubs = issues.filter((i) => i.code === "QFAI-TEST-001");
-      expect(stubs.map((i) => [i.refs?.[0], i.loc?.line])).toEqual([[PLACEHOLDER, 2]]);
     });
   });
 

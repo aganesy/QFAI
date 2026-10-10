@@ -40,17 +40,11 @@ const CONFIG_TS = path.resolve(SRC_ROOT, "core/config.ts");
  * list MUST NOT grow without an issue reference: a new entry means a new knob
  * that lies to the operator.
  *
- * Keyed by the FULL config path, not the bare key name: `requireLayerTags`
- * exists under `validation.testStrategy` today, and a same-named key under
- * another parent must not inherit this exemption just by sharing a name.
- *
- * - `validation.testStrategy.requireLayerTags` / `requireSizeTags` — no
- *   validator reads them.
+ * Keyed by the FULL config path, not the bare key name: a same-named key
+ * under another parent must not inherit an exemption just by sharing a name.
+ * No key has one today.
  */
-const KNOWN_UNWIRED: ReadonlyMap<string, string> = new Map([
-  ["validation.testStrategy.requireLayerTags", "#408"],
-  ["validation.testStrategy.requireSizeTags", "#408"],
-]);
+const KNOWN_UNWIRED: ReadonlyMap<string, string> = new Map<string, string>();
 
 type LeafKey = {
   /** Bare key name, e.g. `testFileGlobs`. */
@@ -312,27 +306,25 @@ describe("validation config keys are wired", () => {
   });
 
   it("does not let the unwired allowlist grow silently", () => {
-    expect(Array.from(KNOWN_UNWIRED.keys()).sort()).toEqual([
-      "validation.testStrategy.requireLayerTags",
-      "validation.testStrategy.requireSizeTags",
-    ]);
+    expect(Array.from(KNOWN_UNWIRED.keys())).toEqual([]);
   });
 
   it("exempts an allowlisted key only under the path it was allowlisted for", () => {
-    // `requireLayerTags` is exempt under `validation.testStrategy`. A same-named
-    // key added under another parent is a NEW inert knob and must still be checked.
+    // A key exempt under `validation.testStrategy` does not exempt a same-named
+    // key added under another parent: that is a NEW inert knob and must still be checked.
+    const exempt = new Map([["validation.testStrategy.sampleKey", "#1"]]);
     const leaves = collectLeafKeys(
-      { testStrategy: { requireLayerTags: true }, traceability: { requireLayerTags: true } },
+      { testStrategy: { sampleKey: true }, traceability: { sampleKey: true } },
       "validation",
     );
 
     expect(leaves.map((leaf) => leaf.path)).toEqual([
-      "validation.testStrategy.requireLayerTags",
-      "validation.traceability.requireLayerTags",
+      "validation.testStrategy.sampleKey",
+      "validation.traceability.sampleKey",
     ]);
-    expect(leaves.filter((leaf) => !KNOWN_UNWIRED.has(leaf.path)).map((leaf) => leaf.path)).toEqual(
-      ["validation.traceability.requireLayerTags"],
-    );
+    expect(leaves.filter((leaf) => !exempt.has(leaf.path)).map((leaf) => leaf.path)).toEqual([
+      "validation.traceability.sampleKey",
+    ]);
   });
 
   it("does not accept a config path spelled out in a template literal", () => {

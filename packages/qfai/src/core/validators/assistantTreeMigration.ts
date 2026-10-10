@@ -3,21 +3,9 @@ import { readdir } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
-import {
-  ASSISTANT_LAYERS,
-  LEGACY_ASSISTANT_INSTRUCTIONS_DIR,
-  joinAssistantLayer,
-  joinLegacyAssistantInstructions,
-  isAssistantLayer,
-  legacyAssistantTreeSunsetLabel,
-} from "../paths/assistantPaths.js";
+import { ASSISTANT_LAYERS, joinAssistantLayer, isAssistantLayer } from "../paths/assistantPaths.js";
 import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
-
-/**
- * The pre-recut `.qfai/assistant/instructions/` layout was retired
- * at the release the message names, so a tree still holding it is an error.
- */
 
 export async function validateAssistantTreeMigration(
   root: string,
@@ -35,13 +23,10 @@ export async function validateAssistantTreeMigration(
       dirEntries = [];
     }
     const EXTRA_DIRS = new Set(["skill.local"]);
-    // instructions/ is a pre-recut layer that gets its own QFAI-DEPRECATED-001 below.
-    const PRE_RECUT_DEPRECATED_DIRS = new Set(["instructions"]);
     for (const entry of dirEntries) {
       if (!entry.isDirectory()) continue;
       if (isAssistantLayer(entry.name)) continue;
       if (EXTRA_DIRS.has(entry.name)) continue;
-      if (PRE_RECUT_DEPRECATED_DIRS.has(entry.name)) continue;
       issues.push(
         issue(
           "QFAI-ASSISTANT-001",
@@ -54,32 +39,14 @@ export async function validateAssistantTreeMigration(
     }
   }
 
-  // 2. QFAI-DEPRECATED-001 — the pre-recut .qfai/assistant/instructions/ layer is retired.
-  if (await exists(joinLegacyAssistantInstructions(root))) {
-    const sunset = legacyAssistantTreeSunsetLabel();
-    const label = `${LEGACY_ASSISTANT_INSTRUCTIONS_DIR}/`;
-    const severity = "error" as const;
-    issues.push(
-      issue(
-        "QFAI-DEPRECATED-001",
-        `${label} is past the announced sunset (v${sunset}). sunset: v${sunset}. Run \`qfai init --upgrade-assistant-tree\` to migrate.`,
-        severity,
-        label,
-        "assistantTreeMigration.deprecatedPath",
-      ),
-    );
-  }
-
-  // 3. Each canonical layer should have at least a .gitkeep so the
-  // tree is visible to consumers. Missing layer = info-only (the upgrade
-  // helper will seed it). We intentionally use "info" severity so this
-  // can't fail validate by itself.
+  // 2. Each canonical layer should have at least a .gitkeep so the
+  // tree is visible to consumers. Missing layer = info-only (init seeds
+  // it). We intentionally use "info" severity so this can't fail validate
+  // by itself.
   for (const layer of ASSISTANT_LAYERS) {
     const layerDir = joinAssistantLayer(root, layer);
     if (!(await exists(layerDir))) {
-      // Distinct info-only code so it doesn't overlap with the
-      // upgrade-collision semantics of W-USER-EDIT-PRESERVED in the
-      // contract. This is purely a layer-not-yet-seeded notification.
+      // This is purely a layer-not-yet-seeded notification.
       issues.push(
         issue(
           "QFAI-ASSISTANT-002",

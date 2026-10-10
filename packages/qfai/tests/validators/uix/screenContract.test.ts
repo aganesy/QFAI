@@ -104,7 +104,7 @@ describe("screen contract validator", () => {
     expect(stateIssue?.message).toContain("error");
   });
 
-  it("rejects legacy flat nested fields", async () => {
+  it("rejects inline values on nested fields", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     const content = [

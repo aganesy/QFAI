@@ -15,5 +15,5 @@ Feature: Item Completion Gate
   Scenario: Scoped Validate Gate Runs Per Business Flow
     Given a project on the story tree
     When `/qfai-implement`, invoked by name, runs its completion gate
-    Then its one validate run is `qfai validate --profile tdd --fail-on error --flow BF-NNNN` for the flow the invocation owns, and it runs no `--spec` validation.
+    Then its one validate run is `qfai validate --profile tdd --fail-on error --flow BF-NNNN` for the flow the invocation owns.
 ```

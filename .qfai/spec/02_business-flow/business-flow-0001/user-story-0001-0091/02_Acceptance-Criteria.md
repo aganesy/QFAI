@@ -21,8 +21,8 @@ Feature: TDD Micro-Cycle Execution
   # AC-0001-0091-03
   Scenario: Gate Commands From the Contract Directory
     Given a project on the story tree
-    When `/qfai-implement` needs a Test, Lint, Typecheck or Build command
-    Then it takes the command from the Standard commands section of `<paths.contractsDir>/tech.md` and from no other file.
+    When `/qfai-implement` needs the Test command, or `/qfai-verify` needs the Lint, Typecheck or Build command
+    Then it takes the command from the Standard commands section of `<paths.contractsDir>/tech.md` and from no other file, and a capability with no entry there is UNRUN.
 
   # AC-0001-0091-04
   Scenario: Exempted Examples Are Not Selected

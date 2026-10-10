@@ -163,11 +163,6 @@ function reportMismatches(options, rootLines, packageLines) {
 const WORKFLOW_NAMES_REL = "packages/qfai/src/shared/shippedWorkflowNames.ts";
 
 function workflowNameSet(source, constName) {
-  // Both declared forms: `new Set<string>([...])`, and the empty
-  // `new Set<string>()` that `RETIRED_WORKFLOW_NAMES` currently uses. The
-  // first draft required the bracketed form and reported the empty one as
-  // unparseable — which is the behaviour asked for here, and is how that gap
-  // was found instead of shipped.
   const pattern = new RegExp(
     `export const ${constName}\\s*:[^=]*=\\s*new Set<string>\\(\\s*(?:\\[([\\s\\S]*?)\\]\\s*)?\\)`,
   );
@@ -205,7 +200,6 @@ function reportCiSectionDrift(rootPath, rootIsDefault) {
 
   const source = readLines(WORKFLOW_NAMES_REL).join("\n");
   const shipped = workflowNameSet(source, "SHIPPED_WORKFLOW_NAMES");
-  const retired = workflowNameSet(source, "RETIRED_WORKFLOW_NAMES");
   if (shipped.length === 0) {
     console.error(
       `${WORKFLOW_NAMES_REL}: SHIPPED_WORKFLOW_NAMES parsed as empty, so this oracle would ` +
@@ -222,14 +216,6 @@ function reportCiSectionDrift(rootPath, rootIsDefault) {
       problems.push(
         `${rootPath}: the CI section does not name \`${name}\`, which \`qfai init\` writes into ` +
           "the adopter's `.github/workflows/`.",
-      );
-    }
-  }
-  for (const name of retired) {
-    if (readme.includes(name)) {
-      problems.push(
-        `${rootPath}: names \`${name}\`, which this version no longer ships (it is in ` +
-          "RETIRED_WORKFLOW_NAMES).",
       );
     }
   }

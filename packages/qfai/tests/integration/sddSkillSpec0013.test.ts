@@ -43,7 +43,15 @@ async function reference(name: string): Promise<string> {
   return await readFile(path.join(skillRoot, "references", name), "utf-8");
 }
 
+/** One step's body, with soft wraps collapsed. */
+async function stepBody(name: string): Promise<string> {
+  const text = await readFile(path.join(skillRoot, "..", "..", "step", name, "STEP.md"), "utf-8");
+  return text.replace(/\s+/g, " ");
+}
+
 describe("shipped qfai-sdd story-tree contract", () => {
+  // QFAI:AC-0001-0147-01
+  // QFAI:EX-0001-0147-01
   it("writes concrete examples before the rules that cite them", async () => {
     const steps = /^steps: \[(.*)\]$/m.exec(await parent())?.[1] ?? "";
     const flow = steps.indexOf("sdd-flow");
@@ -53,10 +61,25 @@ describe("shipped qfai-sdd story-tree contract", () => {
     expect(flow).toBeLessThan(story);
     expect(story).toBeLessThan(contract);
     expect(await skill()).toContain("Write a BR only after the EX it cites exists");
+    expect(await skill()).not.toMatch(/Contracts-first/i);
+    const flowStep = await stepBody("sdd-flow");
+    expect(flowStep).toContain("`01_policy/objective.md`");
+    expect(flowStep).toContain("`business-flow-NNNN/business-flow.md`");
+    const storyStep = await stepBody("sdd-story");
+    expect(storyStep).toContain("`user-story-NNNN-NNNN/`");
+    const contractStep = await stepBody("sdd-contract");
+    expect(contractStep).toContain("The examples `sdd-story` wrote");
+    expect(contractStep).toContain(
+      "Every BR cites at least one full EX ID, and nothing but EX IDs",
+    );
   });
 
+  // QFAI:AC-0001-0147-02
+  // QFAI:EX-0001-0147-02
   it("requires paired templates and exactly three files in a story directory", async () => {
     const content = await skill();
+    expect(content).toContain("State each AC as its ID comment and one named Gherkin `Scenario:`");
+    expect(await stepBody("sdd-story")).toContain("from their paired templates");
     expect(content).toContain(
       "The paired templates under `.qfai/assistant/skill/qfai-sdd/templates/spec/",
     );
@@ -66,6 +89,7 @@ describe("shipped qfai-sdd story-tree contract", () => {
     expect(content).toContain("Do not create another document inside a story directory");
   });
 
+  // QFAI:AC-0001-0147-02
   it("requires the complete BF to contract trace and a real Mermaid flow", async () => {
     const content = await skill();
     expect(content).toContain("BF → US → AC → EX ← BR");
@@ -76,6 +100,7 @@ describe("shipped qfai-sdd story-tree contract", () => {
     expect(content).toContain("Give each EX exactly one existing AC");
   });
 
+  // QFAI:AC-0001-0147-02
   it("keeps contract rules and their index rows together", async () => {
     const content = await skill();
     expect(content).toContain("Put each BR in the contract that enforces it");
@@ -100,15 +125,18 @@ describe("shipped qfai-sdd story-tree contract", () => {
     expect(content).toContain("every finding of the specification review is fixed or answered");
   });
 
+  // QFAI:AC-0001-0150-03
   // QFAI:EX-0001-0150-02
   it("gates each changed flow separately without inheriting a sibling worker's findings", async () => {
     const content = await skill();
+    expect(content).toMatch(
+      /For each flow:\s+1\. Run `npx qfai validate --profile sdd --fail-on error --flow BF-NNNN`/,
+    );
     expect(content).toContain("Each BF written or changed");
     expect(content).toContain(
       "A worker's flow gate does not include a sibling flow still being edited",
     );
     expect(content).toContain("npx qfai validate --profile sdd --fail-on error --flow BF-NNNN");
-    expect(content).not.toMatch(/--spec\b/);
   });
 
   // QFAI:EX-0001-0150-03
@@ -134,7 +162,6 @@ describe("shipped qfai-sdd story-tree contract", () => {
       await reference("sdd-quality-gate.md"),
     ];
     for (const content of files) {
-      expect(content).not.toMatch(/--spec\b/);
       expect(content).not.toMatch(/04_Business-Rules\.md/);
       expect(content).not.toMatch(/\.qfai\/decisions\//);
       expect(content).not.toMatch(/tdd\/test-list\.md/);

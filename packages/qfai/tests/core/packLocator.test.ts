@@ -12,21 +12,21 @@ import {
 } from "../../src/core/packLocator.js";
 
 describe("packLocator", () => {
-  it("validates canonical and legacy naming", () => {
+  it("validates canonical and dangerous naming", () => {
     const canonical = validatePackName("discussion", "discussion-20260218153015999");
     expect(canonical.status).toBe("canonical");
     expect(canonical.timestamp).toBe("20260218153015999");
 
-    const legacy = validatePackName("discussion", "discussion-0001");
-    expect(legacy.status).toBe("legacy");
-    expect(legacy.timestamp).toBeNull();
+    const sequential = validatePackName("discussion", "discussion-0001");
+    expect(sequential.status).toBe("dangerous");
+    expect(sequential.timestamp).toBeNull();
 
     const dangerous = validatePackName("discussion", "discussion-latest");
     expect(dangerous.status).toBe("dangerous");
 
-    const parkedLegacy = validatePackName("discussion", "discussion-legacy-0001");
-    expect(parkedLegacy.status).toBe("other");
-    expect(parkedLegacy.isDangerous).toBe(false);
+    const unrelated = validatePackName("discussion", "notes");
+    expect(unrelated.status).toBe("other");
+    expect(unrelated.isDangerous).toBe(false);
   });
 
   it("extracts timestamp only from canonical names", () => {
@@ -37,7 +37,7 @@ describe("packLocator", () => {
     expect(parsePackTimestamp("discussion", "discussion-0001")).toBeNull();
   });
 
-  it("selects latest canonical pack and ignores legacy/dangerous names", async () => {
+  it("selects latest canonical pack and ignores dangerous names", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-pack-locator-"));
     try {
       const discussionRoot = path.join(root, ".qfai", "discussion");
@@ -48,9 +48,6 @@ describe("packLocator", () => {
         recursive: true,
       });
       await mkdir(path.join(discussionRoot, "discussion-0001"), { recursive: true });
-      await mkdir(path.join(discussionRoot, "discussion-legacy-0001"), {
-        recursive: true,
-      });
       await mkdir(path.join(discussionRoot, "discussion-latest"), {
         recursive: true,
       });
@@ -59,7 +56,6 @@ describe("packLocator", () => {
       const selected = latestPack(packs);
       expect(selected?.name).toBe("discussion-20260218010101001");
       expect(selected?.isCanonical).toBe(true);
-      expect(packs.some((pack) => pack.name === "discussion-legacy-0001")).toBe(false);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

@@ -141,7 +141,7 @@ describe("autopilot policy in the story-tree assistant layout", () => {
     expect(await validateAutopilotPolicy(root)).toEqual([]);
   });
 
-  it("rejects the retired primarySpecId hard-required input", async () => {
+  it("rejects a hard-required input no skill declares", async () => {
     await writeBaseline(".qfai/assistant");
     await writeSkill(
       ".qfai/assistant/skill",

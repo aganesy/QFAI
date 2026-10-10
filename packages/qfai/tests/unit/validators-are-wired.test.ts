@@ -218,14 +218,7 @@ function collectDocumentedValidatorNames(guardSource: string): Set<string> {
  * directions honest.
  */
 const PENDING_WIRING: ReadonlyMap<string, string> = new Map<string, string>([
-  [
-    "validateDiscussMermaid",
-    "2026-08-22 — validators/discussMermaid.ts, unused `export const` alias, see #670",
-  ],
   ["validateIntegrationSurface", "2026-08-22 — validators/integrationSurface.ts, see #670"],
-  ["validateRequireIndexShape", "2026-08-22 — validators/requireIndex.ts, see #670"],
-  ["validateRequirementsContext", "2026-08-22 — validators/requirementsContext.ts, see #670"],
-  ["validateRequirePackReadiness", "2026-08-22 — validators/requirePack.ts, see #670"],
   ["validatePhaseOrdering", "2026-08-22 — validators/skill/phaseOrdering.ts, see #670"],
   ["validateSidecarFlowOrdering", "2026-08-22 — validators/skill/sidecarFlowOrdering.ts, see #670"],
   [
@@ -253,13 +246,9 @@ const PENDING_WIRING_INITIAL_KEYS: ReadonlySet<string> = new Set<string>([
   "validateAtddCoverageLedgers",
   "validateBusinessFlowHasMermaid",
   "validateConvergenceDoc",
-  "validateDiscussMermaid",
   "validateImportLiteEvidencePresence",
   "validateIntegrationSurface",
   "validateMermaidFenceUsage",
-  "validateRequireIndexShape",
-  "validateRequirementsContext",
-  "validateRequirePackReadiness",
   "validatePhaseOrdering",
   "validateSidecarFlowOrdering",
   "validateAntiPreference",
@@ -495,7 +484,7 @@ describe("meta-test: validators/index.ts lists only wired validators", () => {
     // The measured case. A line comment citing a glob carries `/*`; strip
     // block comments first and it opens one that runs to the next real `*/`,
     // swallowing every call between. `validate.ts` shipped exactly this and
-    // the guard accused `validateStaleReferences` of having no call site.
+    // the guard accused a validator of having no call site.
     const globInLineComment = [
       "  // `references/*.md` + SKILL.md as warning during the deprecation",
       "  ...(await validateFoo(root, { config })),",
@@ -597,14 +586,14 @@ describe("meta-test: validators/index.ts lists only wired validators", () => {
     // close the `/*` that glob spells. Everything between the two disappeared.
     const source = [
       "// Doc governance — `references/*.md` + SKILL.md as warning.",
-      "...(await validateStaleReferences(root, { config })),",
+      "...(await validateFoo(root, { config })),",
       "/** Count findings by severity. */",
       "export function countIssues(issues: Issue[]): ValidationCounts {",
     ].join("\n");
 
     // The call between the two comments has to survive, or every name it
     // mentions silently reads as unwired.
-    expect(referencesName(source, "validateStaleReferences")).toBe(true);
+    expect(referencesName(source, "validateFoo")).toBe(true);
     expect(stripComments(source)).toContain("export function countIssues");
 
     // Still a comment stripper: both forms go, in either order, and a `//`
@@ -612,12 +601,6 @@ describe("meta-test: validators/index.ts lists only wired validators", () => {
     expect(stripComments("/* a\n b */ kept")).not.toContain("a");
     expect(stripComments("/* has // inside */ kept").trim()).toBe("kept");
     expect(stripComments("const u = 'https://x';").trim()).toBe("const u = 'https://x';");
-  });
-
-  it("the retired /qfai-require validators are gone from the barrel", async () => {
-    const barrel = await collectBarrelValidators();
-    expect(barrel.has("validateRequireIndexShape")).toBe(false);
-    expect(barrel.has("validateRequirementsContext")).toBe(false);
   });
 });
 

@@ -18,8 +18,6 @@ export type AtddScaffoldOptions = {
   root: string;
   storyId?: string;
   flowId?: string;
-  /** Kept only to emit the migration refusal for an explicit --spec. */
-  specId?: string;
   write?: (message: string) => void;
   writeErr?: (message: string) => void;
 };
@@ -38,10 +36,6 @@ function targetsForStory(
 export async function runAtddScaffold(options: AtddScaffoldOptions): Promise<number> {
   const write = options.write ?? logInfo;
   const writeErr = options.writeErr ?? logError;
-  if (options.specId !== undefined) {
-    writeErr("qfai atdd scaffold: --spec is retired; use --story US-NNNN-NNNN or --flow BF-NNNN.");
-    return 2;
-  }
   if ((options.storyId === undefined) === (options.flowId === undefined)) {
     writeErr("qfai atdd scaffold: specify exactly one of --story US-NNNN-NNNN or --flow BF-NNNN.");
     return 2;

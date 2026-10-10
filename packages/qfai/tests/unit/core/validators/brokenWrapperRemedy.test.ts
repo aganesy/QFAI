@@ -96,16 +96,4 @@ describe("brokenWrapperRemedy names the repairs for the damage it is given", () 
     expect(text.split("\n")).toHaveLength(2);
     expect(text.indexOf(MARKERS.relink)).toBeLessThan(text.indexOf(MARKERS.notSymlink));
   });
-
-  it("puts the steps for a retired wrapper first, and alone when every wrapper is retired", () => {
-    const retired = { detail: "resolves into the canonical tree but names x", retired: true };
-    const alone = brokenWrapperRemedy([retired]);
-    expect(alone).toContain("A plain `qfai init` changes nothing for a retired wrapper");
-    expect(alone).not.toContain(MARKERS.relink);
-
-    const mixed = brokenWrapperRemedy([retired, { detail: "missing \u2014 x" }]);
-    expect(mixed.indexOf("A plain `qfai init`")).toBe(0);
-    expect(mixed).toContain(MARKERS.relink);
-    expect(mixed).not.toContain(MARKERS.unreadable);
-  });
 });

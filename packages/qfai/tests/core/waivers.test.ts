@@ -588,7 +588,7 @@ describe("applyWaivers", () => {
   it.each([
     ["QFAI-STORY-006", "storyTree.testObligation"],
     ["QFAI-STORY-007", "storyTree.misplacedAnnotation"],
-    ["QFAI-DEPRECATED-001", "config.deprecatedPath"],
+    ["QFAI-DT-006", "config.rule"],
     ["QFAI-CFG-LINK-001", "config.link"],
     ["QFAI-STORY-008", "storyTree.undeclaredAnnotation"],
     ["QFAI-STORY-009", "storyTree.testException"],
@@ -634,57 +634,13 @@ describe("applyWaivers", () => {
     }
   });
 
-  // Back-compat: waiver files written against the old grammar keep applying.
-  it("still accepts the QFAI-stripped rule id", async () => {
-    const root = await createRoot();
-    try {
-      await writeWaivers(
-        root,
-        [
-          "version: 1",
-          "waivers:",
-          "  - id: WVR-20260208-10",
-          "    rule: SPACK-090",
-          "    scope:",
-          '      paths: [".qfai/spec/02_business-flow/business-flow-0001/**"]',
-          '    reason: "written before the grammar widened"',
-          '    expires: "2099-01-01"',
-          '    evidence: "delta.md#DL-20260208-01"',
-          "",
-        ].join("\n"),
-      );
-
-      const findings: Issue[] = [
-        buildIssue({
-          code: "QFAI-SPACK-090",
-          rule: "specPack.layerPolicy",
-          file: path.join(
-            root,
-            ".qfai",
-            "spec",
-            "02_business-flow",
-            "business-flow-0001",
-            "delta.md",
-          ),
-        }),
-      ];
-      const result = await applyWaivers(root, findings);
-
-      expect(result.waivers.active).toHaveLength(1);
-      expect(result.issues.find((item) => item.code === "QFAI-SPACK-090")?.suppressed).toBe(true);
-      expect(result.waivers.suppressed.byRule["SPACK-090"]).toBe(1);
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
   // `validateTestTodoStubs` does not run under every profile (`--profile sdd`
   // skips it), so on those runs QFAI-TEST-003 reaches the severity index from
   // no finding. The rule is an error, so the waiver is refused — and the
   // static entry is what makes the refusal the same on a run that emits the
   // finding and a run that does not. Without it the same waiver file reads as
   // an unknown rule on one profile and an error-severity target on another.
-  it.each([["QFAI-TEST-003"], ["TEST-003"]])(
+  it.each([["QFAI-TEST-003"]])(
     "refuses a waiver naming %s as an error target, even when the stub validator did not run",
     async (rule) => {
       const root = await createRoot();
@@ -756,8 +712,7 @@ describe("applyWaivers", () => {
   // which the error-only case below covers.
   it.each([
     ["QFAI-DPACK-011", "a code the emitter names through a constant"],
-    ["DPACK-011", "the back-compat stripped alias"],
-    ["QFAI-STALE-001", "a code with a single-word area"],
+    ["QFAI-DIRECTION-001", "a code with a single-word area"],
   ])("keeps a waiver for the quiet rule %s active (%s)", async (rule) => {
     const root = await createRoot();
     try {
@@ -860,7 +815,6 @@ describe("applyWaivers", () => {
   // the run that finally fires the rule.
   it.each([
     ["QFAI-STORY-006", "the code the CLI prints"],
-    ["STORY-006", "the back-compat stripped alias"],
     ["QFAI-STORY-002", "a structure wrapper with fixed error severity"],
     ["QFAI-SPACK-102", "an open decision rejected by the story-tree wrapper"],
   ])("blocks a waiver for the quiet error-only rule %s (%s)", async (rule) => {
@@ -948,37 +902,6 @@ describe("applyWaivers", () => {
 
       expect(result.issues.some((item) => item.code === "QFAI-WAIVER-004")).toBe(true);
       expect(result.waivers.active).toHaveLength(0);
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  // The other half of the post-waiver check: `QFAI-DEPRECATED-001` is *also*
-  // emitted by `validators/assistantTreeMigration.ts`, which runs inside the
-  // waiver pass. A blanket "the CLI emits it, so drop it" would have taken a
-  // rule that is genuinely waivable with it.
-  it("recognises a rule the CLI re-emits but a validator raises too", async () => {
-    const root = await createRoot();
-    try {
-      await writeWaivers(
-        root,
-        [
-          "version: 1",
-          "waivers:",
-          "  - id: WVR-20260208-19",
-          "    rule: QFAI-DEPRECATED-001",
-          "    scope:",
-          '      paths: [".qfai/assistant/**"]',
-          '    reason: "migration scheduled for the next minor"',
-          '    expires: "2099-01-01"',
-          '    evidence: "delta.md#DL-20260208-01"',
-          "",
-        ].join("\n"),
-      );
-
-      const result = await applyWaivers(root, [buildIssue({ rule: "COMPAT-003" })]);
-
-      expect(result.issues.some((item) => item.code === "QFAI-WAIVER-004")).toBe(false);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

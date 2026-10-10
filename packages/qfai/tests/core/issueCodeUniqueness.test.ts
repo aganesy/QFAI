@@ -204,7 +204,6 @@ const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "QFAI-CONTRACT-013",
   "QFAI-CONTRACT-020",
   "QFAI-CONTRACT-021",
-  "QFAI-DEPRECATED-001",
   "QFAI-DT-001",
   "QFAI-DT-002",
   "QFAI-DT-004",
@@ -291,7 +290,7 @@ describe("issue report metadata", () => {
     const usage = await collectErrorCapableUsage();
     // `validators/skill/prototypingSkill.ts` never calls `issue(...)`: every
     // finding goes through its local `skillIssue(code, message, severity, fix)`.
-    expect(usage.get("QFAI-PROTOSKILL-002")).toEqual({
+    expect(usage.get("QFAI-PROTOSKILL-001")).toEqual({
       errorCapable: true,
       // The factory forwards its 4th argument as `suggested_action`, and every
       // call site fills it in.

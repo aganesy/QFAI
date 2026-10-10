@@ -20,5 +20,5 @@ Feature: Validate Gate Integration
   Scenario: Scoped Completion Gate Per Business Flow
     Given the story tree,
     When `/qfai-sdd` gates the business flows it wrote or changed before completion,
-    Then it runs `qfai validate --profile sdd --fail-on error --flow BF-NNNN` for each of those flows, so that a parallel worker gates only on its own flow, and it does not pass `--spec <spec-id>`.
+    Then it runs `qfai validate --profile sdd --fail-on error --flow BF-NNNN` for each of those flows, so that a parallel worker gates only on its own flow.
 ```

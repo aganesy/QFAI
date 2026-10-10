@@ -30,16 +30,7 @@ import type { Note } from "./managedLink.js";
  * makes the claim and the test one operation; the counter only has to produce
  * candidates, not guarantee anything by itself.
  */
-/**
- * Names {@link claimSidecar} produces, so prune leaves them alone.
- *
- * The skill-wrapper prune no longer needs this — it now deletes only names in
- * `RETIRED_SKILL_IDS`, and no sidecar name is a retired skill id. The
- * agent-wrapper prune still does: it matches on the resolved target, and a
- * sidecar holding a retired wrapper's flattened bytes resolves to exactly the
- * retired agent the prune is looking for. Deleting it would take the only copy
- * an earlier failed repair preserved.
- */
+/** Names {@link claimSidecar} produces. */
 export const SIDECAR_RE = /\.qfai-repair-\d+(?:-\d+)?$/;
 
 /**

@@ -33,21 +33,6 @@ describe("validateDiscussionPackReadiness — current-only wording", () => {
     });
   });
 
-  it("legacy sequential discussion-pack detection uses current-only wording", async () => {
-    await withRoot(async (root) => {
-      const discussionDir = path.join(root, ".qfai", "discussion");
-      await mkdir(path.join(discussionDir, "discussion-0001"), { recursive: true });
-
-      const issues = await validateDiscussionPackReadiness(root, defaultConfig);
-      const legacyIssue = issues.find((i) => i.code === "QFAI-DPACK-006");
-
-      expect(legacyIssue).toBeDefined();
-      expect(legacyIssue?.message).toContain(
-        "current canonical discussion-pack naming does not allow sequential pack directories",
-      );
-    });
-  });
-
   it("dangerous pack naming uses current-only wording without legacy retirement guidance", async () => {
     await withRoot(async (root) => {
       const discussionDir = path.join(root, ".qfai", "discussion");

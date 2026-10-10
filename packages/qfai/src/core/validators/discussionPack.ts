@@ -37,34 +37,12 @@ export async function validateDiscussionPackReadiness(
     );
   }
 
-  if (readiness.legacyPackNames.length > 0) {
-    issues.push(
-      issue(
-        "QFAI-DPACK-006",
-        `current canonical discussion-pack naming does not allow sequential pack directories: ${readiness.legacyPackNames.join(", ")}`,
-        "warning",
-        discussionRoot,
-        "discussionPack.legacy",
-        readiness.legacyPackNames,
-        "change",
-        [
-          "Only the current canonical layout is supported. Delete or rename the invalid directories.",
-          "Only canonical layout is supported. Remove or rename the non-canonical discussion directory.",
-        ].join("\n"),
-      ),
-    );
-  }
-
   if (!readiness.latestPackDir || !readiness.latestPackName) {
     // On the story tree a discussion pack is optional: SDD may start from an
     // explicit user requirement, and its own preflight stops when no usable
     // source exists. A pack of any other name still gets QFAI-DPACK-001 below,
-    // beside DPACK-005 or DPACK-006.
-    if (
-      readiness.dangerousPackNames.length === 0 &&
-      readiness.legacyPackNames.length === 0 &&
-      (await isStoryTreeProject(root, config))
-    ) {
+    // beside DPACK-005.
+    if (readiness.dangerousPackNames.length === 0 && (await isStoryTreeProject(root, config))) {
       return issues;
     }
     issues.push(
@@ -124,21 +102,6 @@ export async function validateDiscussionPackReadiness(
               `- \`${file}\` holds ${sections.map((section) => `\`## ${section}\``).join(", ")}`,
           ),
         ].join("\n"),
-      ),
-    );
-  }
-
-  for (const { legacy, target } of readiness.unmigratedFiles) {
-    issues.push(
-      issue(
-        "QFAI-DPACK-003",
-        `${legacy} still holds content that ${target} now carries`,
-        "error",
-        path.join(readiness.latestPackDir, legacy),
-        "discussionPack.unmigratedFile",
-        [legacy, target],
-        "change",
-        `Move the content of ${legacy} into ${target}, then delete ${legacy}.`,
       ),
     );
   }
