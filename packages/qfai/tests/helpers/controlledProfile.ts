@@ -69,8 +69,6 @@ export async function runControlledProfile(
     error: null,
   };
   let termination: Promise<void> | undefined;
-  let deadline: NodeJS.Timeout | undefined;
-  let closeGuard: NodeJS.Timeout | undefined;
   const note = (error: unknown) => {
     const bag: Record<string, unknown> =
       typeof error === "object" && error !== null ? { ...error } : {};
@@ -130,8 +128,8 @@ export async function runControlledProfile(
       result.signal = signal;
       result.closed = true;
       result.outcome = outcomeOf(code, signal);
-      if (deadline !== undefined) clearTimeout(deadline);
-      if (closeGuard !== undefined) clearTimeout(closeGuard);
+      clearTimeout(deadline);
+      clearTimeout(closeGuard);
       resolve();
     });
   });
@@ -152,11 +150,11 @@ export async function runControlledProfile(
   child.stderr.setEncoding("utf8");
   child.stdout.on("data", (chunk: string) => collect("stdout", chunk));
   child.stderr.on("data", (chunk: string) => collect("stderr", chunk));
-  deadline = setTimeout(() => {
+  const deadline = setTimeout(() => {
     result.timedOut = true;
     requestStop();
   }, options.timeoutMs);
-  closeGuard = setTimeout(() => {
+  const closeGuard = setTimeout(() => {
     result.error = {
       name: "ProfileCleanupDeadline",
       message:
@@ -171,8 +169,8 @@ export async function runControlledProfile(
   await closed;
   if (termination !== undefined) await termination;
   if (process.platform !== "win32" && options.ownGroup !== false) posixSignal("SIGKILL");
-  if (deadline !== undefined) clearTimeout(deadline);
-  if (closeGuard !== undefined) clearTimeout(closeGuard);
+  clearTimeout(deadline);
+  clearTimeout(closeGuard);
   result.wallMs = performance.now() - started;
   return result;
 }

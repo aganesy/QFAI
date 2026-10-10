@@ -9,7 +9,7 @@ export async function withValidatorMeasurements<T>(
   let failure: unknown;
   let failed = false;
   let result: { value: T } | undefined;
-  let observed: ValidatorMeasurement[] = [];
+  let observed: ValidatorMeasurement[];
   try {
     result = { value: await run() };
   } catch (error: unknown) {
@@ -26,7 +26,9 @@ export async function withValidatorMeasurements<T>(
     await record(observed);
   } catch (error: unknown) {
     if (failed)
-      throw new AggregateError([failure, error], "Profiling and result recording both failed");
+      throw new AggregateError([failure, error], "Profiling and result recording both failed", {
+        cause: error,
+      });
     throw error;
   }
   if (failed) throw failure;
