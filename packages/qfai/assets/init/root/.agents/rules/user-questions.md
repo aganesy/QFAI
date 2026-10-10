@@ -2,20 +2,19 @@
 
 The form every question to the user arrives in.
 
-This rule does not decide how many questions to ask, or whether a question is
-worth asking. It decides what a question looks like when it is put, and one
-place a question is always put, except under a no-question mode: the end of a
-turn that waits on the user.
+This rule decides what a question looks like when it is asked. A question is
+needed when the next step requires the user's answer. Background waiting and
+a report that only states completion do not require a question.
 
 ## Scope
 
-| Target                                       | Applies                                     |
-| -------------------------------------------- | ------------------------------------------- |
-| Any question put to the user                 | Always                                      |
-| The tool is callable in this invocation      | The tool, every time                        |
-| The tool is not callable in this invocation  | The fallback below, carrying the same parts |
-| A turn that leaves the next step to the user | Ends with a question — see § 6              |
-| How many questions to ask                    | Outside this rule — see § 7                 |
+| Target                                      | Applies                                     |
+| ------------------------------------------- | ------------------------------------------- |
+| Any question put to the user                | Always                                      |
+| The tool is callable in this invocation     | The tool, every time                        |
+| The tool is not callable in this invocation | The fallback below, carrying the same parts |
+| The next step requires the user's answer    | Ask in the answer's shape — see § 6         |
+| How many questions to ask                   | Outside this rule — see § 7                 |
 
 **Callable, not present.** A host may carry a structured-question capability
 that this invocation cannot use — a mode that offers no structured tool, a
@@ -201,8 +200,15 @@ took the question. It does not say the user saw it or answered it.
   an earlier send of the same question answers that question. An answer to a
   question already answered is not applied again.
 - The end of a turn and a notice that a request was resolved are not answers.
-  A decision is recorded from what the user answered. Until then the question
-  stays open and nothing that needs the answer starts.
+  A decision is recorded from what the user answered. Work requiring an answer
+  not already covered by the user's authorization stays blocked.
+- Dismissal or no response supplies neither an answer nor permission. Existing
+  delegation may already authorize the agent to choose a routine option and
+  continue. Record that choice as the agent's decision under the prior
+  authorization, never as the user's selection or approval.
+- Prior delegation does not supply a hard-required fact or an approval it does
+  not cover. Preserve cancellation and explicit tool blocks. State what is
+  still needed and continue only work that does not depend on it.
 - Where recovery needs the user to act, such as choosing another model or
   trying again, say what to do and how the work resumes. The open question
   carries over.
@@ -212,30 +218,22 @@ under a no-question mode.
 
 ## 6. A turn that waits on the user
 
-A turn that leaves the next step to the user ends with a question listing the
-next actions, except for the interim report below. A phase approved, a plan
-ready, a stage finished and a fork in the work each end such a turn.
+Ask a question when the next step needs a fact, a choice or permission the user
+has not already supplied or delegated. Ask in the answer's shape: listable
+choices use the options and recommendation rules; an open value is requested
+without invented options. A phase ending or a plan being ready does not itself
+create a need for an answer.
 
-- Each option is one concrete next action, and says what choosing it does.
-- The recommended action comes first, under § 3.
-- Where the tool is not callable, § 5's fallback carries the same list.
+- Each offered next action says what choosing it does.
+- The recommended action comes first where § 3 permits one.
+- Where the tool is not callable, § 5's fallback carries the same parts.
 
-Outside the exception below, a status report or an offer written in prose does
-not end that turn. Nothing tells the user the session is waiting, so it sits
-idle until they come back to ask whether anything is happening.
-
-It is not a clarification: it resolves no ambiguity in the request, and the
-work it follows did not need its answer.
-
-An interim report may omit a repeated question only when:
-
-- an ongoing step is awaiting the result of an already requested external operation;
-- no new decision or missing information is needed.
-
-Report the current state, expected result and resume condition without a
-duplicate question. Do not report the waiting step as complete. New facts,
-choices or a need for permission follow the normal question rules.
-A completed route's final report still ends with a question.
+Background waiting and completion-only reports need no question. While waiting,
+state the current state, awaited evidence or result, and resume condition.
+Do not report a waiting step as complete or promise automatic restart the host
+does not provide. An ongoing step awaiting an already requested external
+operation needs no repeated question when no new decision or missing fact is
+needed. Ask only if the report reveals an answer the next step still requires.
 
 **A user's stop is not such a turn.** The stop is confirmed in one line, every
 open decision is listed as open, and nothing is asked.
@@ -287,10 +285,9 @@ Either way it prints the full or brief message from
 `.agents/rules/reminders.json`. A missing or unreadable file prints nothing, so
 it cannot fail the session it is attached to.
 
-What it carries is where this rule lives, the obligation an agent is most likely
-to skip when it would rather not ask, the turn that waits on the user, and the language to
-reply in, which `.qfai/assistant/rule/communication.md` sets. A long session of tool output in
-another language is where replies drift out of the user's. The rest is here.
+It names this rule, when an answer is needed, and the language to reply in,
+which `.qfai/assistant/rule/communication.md` sets. A long session of tool output
+in another language is where replies drift out of the user's. The rest is here.
 
 ## Related
 

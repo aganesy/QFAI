@@ -139,9 +139,10 @@ every finding of its one review is fixed or answered. Invoked by name, it runs
 completion; when that fresh validate result has no test-obligation EX finding
 for this BF, the invocation reports "nothing to do", and reads or writes no
 ledger status. Inside a route it runs no validate: the verify stage does.
-The report ends with a question listing the next actions, `/qfai-verify`
-recommended, as `.agents/rules/user-questions.md` § 6 sets out.
-Under a no-question mode, list them in the report instead.
+When the next step needs the user's answer, ask a question listing the next
+actions, `/qfai-verify` recommended, per `.agents/rules/user-questions.md` § 6.
+Completion-only reports ask nothing. Under a no-question mode, list remaining
+actions instead.
 
 ## Default Autopilot Policy
 

@@ -406,6 +406,7 @@
     "tests/unit/migration/specToStory/steps05to08.test.ts",
     "tests/unit/migration/specToStory/verdictLine.test.ts",
     "tests/unit/storyTree/core.test.ts",
+    "tests/unit/storyTree/renumberDecision.test.ts",
     "tests/validators/agentDefaults.test.ts",
     "tests/e2e/bf0001DevelopVerifyFlowE2E.test.ts",
     "tests/e2e/bf0002CiReleaseFlowE2E.test.ts",
