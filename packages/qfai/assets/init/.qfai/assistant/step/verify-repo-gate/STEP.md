@@ -25,7 +25,8 @@ Create and update `.qfai/report/verify.json`.
 
 ## Procedure
 
-1. Run the repository gates (below).
+1. Determine the applicable repository gates through `common-gate-run` before
+   resolving their commands, then run those gates (below).
 2. Run the fix loop until every gate in scope passes, or stop as it says.
 3. Report the result.
 4. Write the verdict.
@@ -83,11 +84,17 @@ one code review reads the repair, as `qfai-verify`'s `## Review` section says.
 Report the scope, every gate command with its result, the open risks and the
 next actions.
 
+For a `DELEGATED` gate, record `check` and `ci` (`green`, `red` or `pending`).
+Name pending checks in `summary` and the stage report. Do not claim verification
+complete while a delegated check is pending.
+
 ## Verdict
 
 Write `.qfai/report/verify.json` at the end of the run. It is the
 machine-readable verdict downstream gates read, and the evidence markdown does
-not replace it. `status` is `"PASS"` only when every gate in scope passed.
+not replace it. `status` is `"PASS"` only when every gate in scope passed or is
+`DELEGATED` to a CI check that is not red. A red check or a non-delegated UNRUN
+gate makes `status` `"FAIL"`.
 `scope` is the one `verify-qfai-gate` ran, never a stage this run did not
 cover. Fields, the closed `scope` enum, a conforming example and what must
 never be written are in
