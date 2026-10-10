@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readlink, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { run } from "../../src/cli/main.js";
 import { defaultConfig } from "../../src/core/config.js";
 import { validateStoryTreeDrift } from "../../src/core/validators/upstreamSsotGuard.js";
+import { createSymlinkFixture } from "../helpers/symlinkFixture.js";
 
 let root: string;
 const specs = ".qfai/spec";
@@ -117,6 +118,7 @@ describe("decision renumber public CLI", () => {
     }
   }
 
+  // QFAI:EX-0001-0008-14
   it("previews fixed commits and affected paths without changing any bytes or reserving an ID", async () => {
     await prepare();
     const before = await snapshot();
@@ -134,6 +136,8 @@ describe("decision renumber public CLI", () => {
     expect(gitText("rev-parse", "HEAD")).toBe(head);
   });
 
+  // QFAI:EX-0001-0008-15
+  // QFAI:EX-0001-0008-19
   it("applies only the incoming row and provably added exact tokens despite a base-only source collision", async () => {
     await prepare();
     await put("unrelated.txt", "Operator work\n");
@@ -154,6 +158,7 @@ describe("decision renumber public CLI", () => {
     expect(gitText("show", `main:${decisions}`)).not.toContain("DEC-0013");
   });
 
+  // QFAI:EX-0001-0008-20
   it("previews a valid ledger larger than Git's default one MiB output buffer", async () => {
     await prepare();
     const content = "x".repeat(1024 * 1024 + 64);
@@ -169,6 +174,104 @@ describe("decision renumber public CLI", () => {
     expect(gitText("status", "--porcelain")).toBe("");
   });
 
+  // QFAI:EX-0001-0008-15
+  it("recomputes apply after the branch advances since a preview", async () => {
+    await prepare();
+    const preview = await invoke();
+    expect(preview.code).toBe(0);
+    await put(source, 'const choice = "DEC-0002";\nconst next = "DEC-0002";\n');
+    git("add", source);
+    git("commit", "-m", "another branch reference");
+    const head = gitText("rev-parse", "HEAD");
+    const result = await invoke(["--apply"]);
+    expect(result.code).toBe(0);
+    expect(result.stdout).toContain(head);
+    expect(await readFile(path.join(root, source), "utf8")).toBe(
+      'const choice = "DEC-0013";\nconst next = "DEC-0013";\n',
+    );
+  });
+
+  // QFAI:EX-0001-0008-19
+  it.each(["reworded", "moved"])(
+    "refuses %s inherited tokens with ambiguous ownership",
+    async (kind) => {
+      await prepare();
+      const moved = "moved-reference.md";
+      await put(
+        references,
+        kind === "moved"
+          ? addedReference
+          : inheritedReference.replace("Inherited", "Reworded") + addedReference,
+      );
+      if (kind === "moved") await put(moved, inheritedReference);
+      git("add", ".");
+      git("commit", "-m", "change inherited reference location or wording");
+      const candidates = kind === "moved" ? [...files, moved] : files;
+      const before = await snapshot(candidates);
+      const result = await invoke(["--apply"]);
+      expect(result.code).toBe(2);
+      expect(result.stderr).toMatch(/(?:ownership|ambiguous|inherited)/i);
+      expect(await snapshot(candidates)).toEqual(before);
+      expect(gitText("status", "--porcelain")).toBe("");
+    },
+  );
+
+  // QFAI:EX-0001-0008-18
+  it("refuses two best common ancestors before writing", async () => {
+    await prepare();
+    const head = gitText("rev-parse", "HEAD");
+    const base = gitText("rev-parse", "main");
+    const tree = gitText("rev-parse", "HEAD^{tree}");
+    const left = gitText("commit-tree", tree, "-p", head, "-p", base, "-m", "left merge");
+    const right = gitText("commit-tree", tree, "-p", base, "-p", head, "-m", "right merge");
+    git("update-ref", "refs/heads/main", left);
+    git("checkout", "--detach", right);
+    expect(gitText("merge-base", "--all", "HEAD", "main").split(/\r?\n/)).toHaveLength(2);
+    const before = await snapshot();
+    const result = await invoke(["--apply"]);
+    expect(result.code).toBe(2);
+    expect(result.stderr).toMatch(/(?:ancestor|merge.base)/i);
+    expect(await snapshot()).toEqual(before);
+    expect(gitText("status", "--porcelain")).toBe("");
+  });
+
+  for (const kind of ["candidate", "unrelated"] as const) {
+    // QFAI:EX-0001-0008-20
+    it(`handles a tracked ${kind} symbolic link without changing its target`, async (ctx) => {
+      await prepare();
+      git("config", "core.symlinks", "true");
+      const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-renumber-link-"));
+      const link = "linked.txt";
+      const target = path.join(outside, kind === "candidate" ? "DEC-0002.txt" : "target.txt");
+      const contents = "External DEC-0002 reference must stay untouched\n";
+      try {
+        await writeFile(target, contents);
+        if (!(await createSymlinkFixture(target, path.join(root, link), "file"))) {
+          // Only Windows EPERM while creating this fixture permits a skip.
+          ctx.skip();
+        }
+        git("add", link);
+        git("commit", "-m", "tracked symbolic link");
+        const before = await snapshot();
+        const result = await invoke(["--apply"]);
+        expect(result.code).toBe(kind === "candidate" ? 2 : 0);
+        if (kind === "candidate") {
+          expect(result.stderr).toContain(link);
+          expect(await snapshot()).toEqual(before);
+          expect(gitText("status", "--porcelain")).toBe("");
+        } else {
+          expect(await readFile(path.join(root, source), "utf8")).toContain("DEC-0013");
+        }
+        expect(await readFile(target, "utf8")).toBe(contents);
+        expect(await readlink(path.join(root, link))).toBe(target);
+      } finally {
+        await rm(outside, { recursive: true, force: true });
+      }
+    });
+  }
+
+  // QFAI:EX-0001-0008-17
+  // QFAI:EX-0001-0008-18
   it.each([
     ["inherited", "DEC-0001", "DEC-0013", "main"],
     ["missing", "DEC-0003", "DEC-0013", "main"],
@@ -187,6 +290,7 @@ describe("decision renumber public CLI", () => {
     expect(gitText("status", "--porcelain", "--untracked-files=all")).toBe(status);
   });
 
+  // QFAI:EX-0001-0008-18
   it.each(["duplicate", "invalid status"])(
     "refuses a %s source row before writing",
     async (problem) => {
@@ -208,6 +312,57 @@ describe("decision renumber public CLI", () => {
     },
   );
 
+  // QFAI:EX-0001-0008-20
+  it("accepts a tracked text candidate at the sixteen MiB ceiling without dumping it", async () => {
+    await prepare();
+    const candidate = "ceiling.txt";
+    const contents = Buffer.alloc(16 * 1024 * 1024, "x");
+    contents.write("DEC-0002 ");
+    await writeFile(path.join(root, candidate), contents);
+    git("add", candidate);
+    git("commit", "-m", "candidate at the read ceiling");
+    const before = await snapshot([...files, candidate]);
+    const result = await invoke();
+    expect(result.code).toBe(0);
+    expect(result.stdout).toContain(candidate);
+    expect(result.stdout).not.toContain("x".repeat(100));
+    expect(await snapshot([...files, candidate])).toEqual(before);
+    expect(gitText("status", "--porcelain")).toBe("");
+  });
+
+  // QFAI:EX-0001-0008-20
+  it("refuses a regular candidate beneath a linked directory", async (ctx) => {
+    await prepare();
+    const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-renumber-parent-link-"));
+    const original = await readFile(path.join(root, source));
+    try {
+      await writeFile(path.join(outside, "decision.ts"), original);
+      await rm(path.join(root, "src"), { recursive: true, force: true });
+      if (
+        !(await createSymlinkFixture(
+          outside,
+          path.join(root, "src"),
+          process.platform === "win32" ? "junction" : "dir",
+        ))
+      ) {
+        // Only Windows EPERM while creating this fixture permits a skip.
+        ctx.skip();
+      }
+      const before = await snapshot();
+      const status = gitText("status", "--porcelain", "--untracked-files=all");
+      const result = await invoke(["--apply"]);
+      expect(result.code).toBe(2);
+      expect(result.stderr).toMatch(/linked/i);
+      expect(result.stderr).toContain(source);
+      expect(await snapshot()).toEqual(before);
+      expect(await readFile(path.join(outside, "decision.ts"))).toEqual(original);
+      expect(gitText("status", "--porcelain", "--untracked-files=all")).toBe(status);
+    } finally {
+      await rm(outside, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:EX-0001-0008-20
   it.each(["worktree", "index", "unsupported", "untracked", "invalid UTF-8", "oversized"])(
     "refuses an unsafe %s candidate without changing any candidate",
     async (problem) => {

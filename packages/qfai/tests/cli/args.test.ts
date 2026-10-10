@@ -782,6 +782,7 @@ describe("parseArgs: qfai sdd <subcommand>", () => {
     expect(parsed.options.help).toBe(false);
   });
 
+  // QFAI:EX-0001-0008-16
   it.each([
     ["--format", "json"],
     ["--fail-on", "never"],
@@ -793,6 +794,7 @@ describe("parseArgs: qfai sdd <subcommand>", () => {
     expect(parsed.invalidReason).toContain(option[0]);
   });
 
+  // QFAI:EX-0001-0008-16
   it.each([
     ["sdd", "renumber-decision", "--from", "DEC-0002", "--to", "DEC-0013"],
     ["sdd", "renumber-decision", "--to", "DEC-0013", "--base", "main"],
