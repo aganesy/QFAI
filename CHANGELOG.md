@@ -40,6 +40,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   assigned checkout, owned paths and edit method. A refused edit returns a
   reviewable diff for coordinator integration without bypassing the refusal.
 
+- **Windows link warnings describe the affected wrapper and its existing repair.**
+  Guidance recommends ordinary init without deleting links and distinguishes
+  consumer wrappers from the repository's canonical mirror. Refs #3240.
+
 - **Missing test annotations use grammatical diagnostics.** Messages use
   "an E2E test", "an integration or API test" and "a test" for the three
   obligation kinds. Coverage and severity are unchanged. Fixes #3239.
@@ -311,6 +315,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   constitution's Article V. Part of #2951.
 
 ### Fixed
+
+- **Unfinished merges stop the branch ID check.** Finish the merge before
+  comparing branch-owned identifiers or fetching pull-request heads. Fixes #3246.
 
 - Verify assistant link targets can be followed and safely recreate unfollowable
   directory links to shipped assets. Fixes #3368.
