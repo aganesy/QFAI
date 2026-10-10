@@ -2028,7 +2028,7 @@ const VERIFICATION_SET = [
  * Membership without a type assertion.
  *
  * `LIST.includes(value)` on an `as const` tuple rejects a plain `string`, and the usual workaround
- * is `value as (typeof LIST)[number]` — a bare assertion, which `CLAUDE.md` forbids. Widening the
+ * is `value as (typeof LIST)[number]` — a bare assertion, which `AGENTS.md` forbids. Widening the
  * parameter to `readonly string[]` accepts every tuple in this file and needs no assertion at all.
  */
 function listHas(list: readonly string[], value: string): boolean {
