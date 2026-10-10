@@ -21,6 +21,8 @@ Feature: Run one pull request test file in manual CI
     When the diagnostic checks the exact file before installation and before execution
     Then the file must be tracked at the selected head and included by the selected project's current include patterns
     And it must be a normal file inside the package with no linked parent or leaf
+    And at both checks its current bytes must equal its tracked blob at the requested SHA
+    And a byte mismatch stops the diagnostic even if HEAD is unchanged
     And an absolute, traversing, untracked, missing, linked or out-of-project path stops the diagnostic
     And a project name denotes a Vitest project without adding a QFAI test layer
 
@@ -34,12 +36,13 @@ Feature: Run one pull request test file in manual CI
     And the result identifies the requested SHA, project and file without exposing credentials
 
   # AC-0002-0026-04
-  Scenario: A moved head stops execution
+  Scenario: Changed identity or selected bytes stop execution
     Given the initial identity check passed
     When the diagnostic is ready to start the test runner
     Then it reads the live pull request head again and checks the checkout commit again
-    And unavailable data or a difference from the requested SHA stops execution
-    And this check does not guarantee that the remote head stays fixed after the observation
+    And it compares the selected file bytes with its tracked blob at the requested SHA
+    And unavailable data, an identity difference or a byte mismatch stops execution
+    And these checks provide neither an atomic file snapshot nor a guarantee that the remote head stays fixed after the observation
 
   # AC-0002-0026-05
   Scenario: Manual diagnosis leaves required CI unchanged
