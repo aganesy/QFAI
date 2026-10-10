@@ -316,6 +316,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A released-entry repair moves complete new blocks back to Unreleased.**
+  The explicit local-base command refuses mixed historical edits, ambiguous
+  blocks and changed input bytes, and names exact source lines and categories.
+  It writes only the changelog and leaves Git operations to the caller. Fixes #3252.
+
 - **Language errors offer an ASCII code-point construction for code samples.**
   The guard keeps Unicode escape guidance and explains the alternative when
   an editing tool decodes escapes. Forbidden characters remain rejected.

@@ -53,13 +53,19 @@
  * An unresolvable base warns and passes, because a check that cannot compute
  * its answer must not invent one.
  *
- * Exit codes: 0 clean or base unresolvable / 1 a tagged section gained an
- * entry / 2 a bad invocation.
+ * `--fix --base <local-ref>` moves complete added blocks only when removing
+ * them restores every changed tagged section byte for byte. It refuses mixed
+ * corrections and unknown tag answers, and writes only the working changelog.
+ * The read-only check keeps the correction and unresolved-base rules above.
  *
- * Usage: `node scripts/check-changelog-released-sections.mjs [--base <ref>]`
+ * Exit codes: 0 clean or base unresolvable / 1 a tagged section gained an
+ * entry or a repair was refused / 2 a bad invocation.
+ *
+ * Usage: `node scripts/check-changelog-released-sections.mjs [--base <ref>] [--fix]`
  */
+import { Buffer } from "node:buffer";
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { lstatSync, readFileSync, writeFileSync } from "node:fs";
 import { argv, exit, stderr, stdout } from "node:process";
 import { pathToFileURL } from "node:url";
 
@@ -191,10 +197,311 @@ export function releasedAdditions(added, tagExists) {
   return { refused, notes };
 }
 
+const CATEGORIES = new Set(["Added", "Changed", "Deprecated", "Removed", "Fixed", "Security"]);
+
+/** Original line offsets; headings and bullets inside fences remain entry content. */
+function spans(text) {
+  const lines = [...text.matchAll(/[^\n]*\n|[^\n]+$/gu)].map((match, index) => ({
+    text: match[0].replace(/\r?\n$/u, ""),
+    start: match.index,
+    end: match.index + match[0].length,
+    number: index + 1,
+  }));
+  const sections = [];
+  let section = null;
+  let category = null;
+  let entry = null;
+  let fence = null;
+  function finish(offset) {
+    if (entry !== null) entry.end = offset;
+    if (category !== null) category.end = offset;
+  }
+  for (const line of lines) {
+    const marker = /^ {0,3}(`{3,}|~{3,})(.*)$/u.exec(line.text);
+    if (marker !== null) {
+      const run = marker[1];
+      if (fence === null) fence = { marker: run[0], length: run.length };
+      else if (run[0] === fence.marker && run.length >= fence.length && marker[2].trim() === "")
+        fence = null;
+      continue;
+    }
+    if (fence !== null) continue;
+    if (/^## /u.test(line.text)) {
+      finish(line.start);
+      if (section !== null) section.end = line.start;
+      const released = /^## \[(\d+\.\d+\.\d+)\][ \t]+-[ \t]+\d{4}-\d{2}-\d{2}[ \t]*$/u.exec(
+        line.text,
+      );
+      section = {
+        version: released?.[1] ?? null,
+        unreleased: /^## \[Unreleased\][ \t]*$/u.test(line.text),
+        start: line.start,
+        end: text.length,
+        categories: [],
+        entries: [],
+      };
+      sections.push(section);
+      category = null;
+      entry = null;
+      continue;
+    }
+    if (section === null) continue;
+    const heading = /^### (.+)$/u.exec(line.text);
+    if (heading !== null) {
+      finish(line.start);
+      category = { name: heading[1], start: line.start, end: section.end };
+      section.categories.push(category);
+      entry = null;
+      continue;
+    }
+    const titles = entryTitles(line.text);
+    if (titles.length === 0) continue;
+    if (entry !== null) entry.end = line.start;
+    entry = {
+      title: titles[0],
+      category: category?.name ?? null,
+      start: line.start,
+      end: section.end,
+      line: line.number,
+    };
+    section.entries.push(entry);
+  }
+  finish(text.length);
+  if (fence !== null) throw new Error("an unclosed fence makes entry boundaries ambiguous");
+  const versions = sections.filter((item) => item.version !== null).map((item) => item.version);
+  if (new Set(versions).size !== versions.length)
+    throw new Error("duplicate released section heading");
+  return { sections, lines };
+}
+
+function validCategories(section) {
+  const names = section.categories.map((item) => item.name);
+  if (names.some((name) => !CATEGORIES.has(name)) || new Set(names).size !== names.length) {
+    throw new Error("unknown or duplicate category heading");
+  }
+  const titles = section.entries.map((item) => titleKey(item.title));
+  if (new Set(titles).size !== titles.length) throw new Error("duplicate entry title");
+}
+
+/** Remove complete added blocks only when every remaining source byte equals the base. */
+function sourceBlocks(text, section, before, candidates, lines) {
+  const relevant = lines.filter((line) => line.start >= section.start && line.start < section.end);
+  const removed = new Set();
+  const moves = candidates.map((entry) => {
+    const body = relevant.filter((line) => line.start >= entry.start && line.start < entry.end);
+    while (body.length > 0 && body.at(-1).text.trim() === "") body.pop();
+    const end = body.at(-1).end;
+    for (const line of body) removed.add(line.start);
+    return {
+      ...entry,
+      version: section.version,
+      block: text.slice(entry.start, end),
+      lastLine: body.at(-1).number,
+    };
+  });
+  const wanted = [...before.matchAll(/[^\n]*\n|[^\n]+$/gu)].map((match) => match[0]);
+  let next = 0;
+  let restored = "";
+  for (let index = 0; index < relevant.length; index += 1) {
+    const line = relevant[index];
+    if (removed.has(line.start)) continue;
+    const raw = text.slice(line.start, line.end);
+    if (raw === wanted[next]) {
+      restored += raw;
+      next += 1;
+      continue;
+    }
+    // Blank separators beside a moved block belong to it only when retaining
+    // them would disagree with the base. No prose or historical byte is dropped.
+    let left = index - 1;
+    let right = index + 1;
+    while (left >= 0 && relevant[left].text.trim() === "") left -= 1;
+    while (right < relevant.length && relevant[right].text.trim() === "") right += 1;
+    if (
+      line.text.trim() === "" &&
+      (removed.has(relevant[left]?.start) || removed.has(relevant[right]?.start))
+    )
+      continue;
+    throw new Error(
+      `${section.version}: removing added blocks does not restore the section byte-for-byte`,
+    );
+  }
+  if (restored !== before)
+    throw new Error(
+      `${section.version}: removing added blocks does not restore the section byte-for-byte`,
+    );
+  return moves;
+}
+
+/** Compute the whole repair before any file is opened for writing. */
+function planRepair(base, head, tagged) {
+  const before = spans(base);
+  const after = spans(head);
+  for (const section of before.sections) {
+    if (
+      section.version !== null &&
+      !after.sections.some((item) => item.version === section.version)
+    ) {
+      throw new Error(`missing or renamed released section ${section.version}`);
+    }
+  }
+  const destinations = after.sections.filter((section) => section.unreleased);
+  if (destinations.length !== 1) throw new Error("repair needs exactly one Unreleased section");
+  const destination = destinations[0];
+  validCategories(destination);
+  const destinationKeys = new Set(destination.entries.map((entry) => titleKey(entry.title)));
+  const moves = [];
+  const edits = [];
+  for (const section of after.sections) {
+    if (section.version === null) continue;
+    const old = before.sections.find((item) => item.version === section.version);
+    if (old === undefined) continue;
+    const known = new Set(old.entries.map((entry) => titleKey(entry.title)));
+    const candidates = section.entries.filter((entry) => !known.has(titleKey(entry.title)));
+    const oldText = base.slice(old.start, old.end);
+    if (candidates.length === 0 && head.slice(section.start, section.end) === oldText) continue;
+    const released = tagged(section.version);
+    if (released === null) throw new Error(`the tag v${section.version} could not be verified`);
+    if (released === false) continue;
+    if (candidates.length === 0)
+      throw new Error(
+        `${section.version}: removing added blocks does not restore the section byte-for-byte`,
+      );
+    validCategories(section);
+    validCategories(old);
+    if (candidates.some((entry) => !CATEGORIES.has(entry.category)))
+      throw new Error("an added entry has no supported category");
+    const blocks = sourceBlocks(
+      head,
+      section,
+      base.slice(old.start, old.end),
+      candidates,
+      after.lines,
+    );
+    for (const move of blocks) {
+      const key = titleKey(move.title);
+      if (destinationKeys.has(key)) throw new Error("duplicate destination entry title");
+      destinationKeys.add(key);
+      moves.push(move);
+    }
+    edits.push({
+      start: section.start,
+      end: section.end,
+      text: base.slice(old.start, old.end),
+    });
+  }
+  let text = head;
+  for (const edit of edits.sort((a, b) => b.start - a.start))
+    text = text.slice(0, edit.start) + edit.text + text.slice(edit.end);
+  const restored = spans(text).sections.find((section) => section.unreleased);
+  const newline = head.includes("\r\n") ? "\r\n" : "\n";
+  const grouped = new Map();
+  for (const move of moves) {
+    const blocks = grouped.get(move.category) ?? [];
+    blocks.push(move.block);
+    grouped.set(move.category, blocks);
+  }
+  const insertions = new Map();
+  let absent = "";
+  for (const [name, blocks] of grouped) {
+    const content = blocks.join(newline) + newline;
+    const category = restored.categories.find((item) => item.name === name);
+    if (category === undefined) absent += `### ${name}${newline}${newline}${content}`;
+    else {
+      const prefix = text.slice(category.start, category.end).endsWith(newline + newline)
+        ? ""
+        : newline;
+      insertions.set(category.end, (insertions.get(category.end) ?? "") + prefix + content);
+    }
+  }
+  if (absent !== "") {
+    const prefix = text.slice(restored.start, restored.end).endsWith(newline + newline)
+      ? ""
+      : newline;
+    insertions.set(restored.end, (insertions.get(restored.end) ?? "") + prefix + absent);
+  }
+  for (const [offset, insertion] of [...insertions].sort(([a], [b]) => b - a)) {
+    text = text.slice(0, offset) + insertion + text.slice(offset);
+  }
+  return { text, moves };
+}
+
+function resolveCommit(ref) {
+  if (typeof ref !== "string" || ref === "" || ref.startsWith("-"))
+    throw new Error("--fix --base needs a resolvable local commit");
+  const result = spawnSync(
+    "git",
+    ["rev-parse", "--verify", "--end-of-options", `${ref}^{commit}`],
+    { encoding: "utf-8" },
+  );
+  if (result.status !== 0)
+    throw new Error(`the local base ${JSON.stringify(ref)} could not be resolved`);
+  return result.stdout.trim();
+}
+
+function ownedChangelog() {
+  const stat = lstatSync(CHANGELOG);
+  if (!stat.isFile() || stat.nlink !== 1)
+    throw new Error(`${CHANGELOG} must be a regular file with one link`);
+  return stat;
+}
+
+function repairChangelog(baseRef) {
+  const baseSha = resolveCommit(baseRef);
+  const headSha = headCommit();
+  const ancestor = spawnSync("git", ["merge-base", "--is-ancestor", baseSha, headSha], {
+    encoding: "utf-8",
+  });
+  if (ancestor.status !== 0) throw new Error("the repair base must be an ancestor of HEAD");
+  const baseRead = spawnSync("git", ["show", `${baseSha}:${CHANGELOG}`], {
+    maxBuffer: 128 * 1024 * 1024,
+  });
+  if (baseRead.status !== 0) throw new Error(`${CHANGELOG} is absent at the repair base`);
+  const base = baseRead.stdout.toString("utf-8");
+  if (!Buffer.from(base, "utf-8").equals(baseRead.stdout))
+    throw new Error("the base changelog must contain valid UTF-8 text");
+  const owner = ownedChangelog();
+  const originalBytes = readFileSync(CHANGELOG);
+  const original = originalBytes.toString("utf-8");
+  if (!Buffer.from(original, "utf-8").equals(originalBytes))
+    throw new Error("CHANGELOG.md must contain valid UTF-8 text");
+  const plan = planRepair(base, original, (version) => tagOnOrigin(version, headSha));
+  const currentOwner = ownedChangelog();
+  if (
+    headCommit() !== headSha ||
+    resolveCommit(baseRef) !== baseSha ||
+    blobAt(baseSha, CHANGELOG) !== base ||
+    !readFileSync(CHANGELOG).equals(originalBytes) ||
+    currentOwner.dev !== owner.dev ||
+    currentOwner.ino !== owner.ino
+  ) {
+    throw new Error(
+      "HEAD, base or CHANGELOG.md changed while the repair was prepared; nothing written",
+    );
+  }
+  if (plan.text !== original) writeFileSync(CHANGELOG, plan.text);
+  for (const move of plan.moves)
+    stdout.write(
+      `${move.version} / ${move.category}: lines ${move.line}-${move.lastLine} ${move.title} -> Unreleased / ${move.category}\n`,
+    );
+  stdout.write(
+    plan.moves.length === 0
+      ? "check-changelog-released-sections: nothing to repair.\n"
+      : "check-changelog-released-sections: repaired CHANGELOG.md; review and commit the diff.\n",
+  );
+  return 0;
+}
+
 function parseArgs(args) {
   const out = {};
   for (let i = 2; i < args.length; i += 1) {
-    if (args[i] === "--base") {
+    if (args[i] === "--fix") {
+      out.fix = true;
+    } else if (args[i] === "--base") {
+      if (args[i + 1] === undefined || args[i + 1].startsWith("--")) {
+        stderr.write("check-changelog-released-sections: --base needs a ref\n");
+        return null;
+      }
       out.base = args[i + 1];
       i += 1;
     } else if (args[i] === "--help" || args[i] === "-h") {
@@ -215,17 +522,29 @@ function main() {
   if (args.help === true) {
     stdout.write(
       [
-        "Usage: check-changelog-released-sections.mjs [--base <ref>]",
+        "Usage: check-changelog-released-sections.mjs [--base <ref>] [--fix]",
         "",
         "Refuses a change that adds an entry to a changelog section already released,",
         "meaning one whose tag v<version> exists.",
         "",
         "  --base <ref>   compare against <ref> (default: $BASE_REF or origin/main).",
         "                 On a push event it is the previous head instead.",
+        "  --fix          move only proven added blocks to Unreleased; requires --base.",
         "",
       ].join("\n"),
     );
     return 0;
+  }
+
+  if (args.fix === true) {
+    try {
+      return repairChangelog(args.base);
+    } catch (cause) {
+      stderr.write(
+        `check-changelog-released-sections: ${cause instanceof Error ? cause.message : String(cause)}\n`,
+      );
+      return 1;
+    }
   }
 
   const range = resolveRange(args.base);
@@ -258,7 +577,31 @@ function main() {
     stderr.write(`${version}: ${gained.length} entr(y|ies) added after that release was built:\n`);
     for (const title of gained) stderr.write(`  ${title}\n`);
   }
-  stderr.write(`\n${REMEDIATION}\n`);
+  try {
+    const details = spans(head);
+    for (const { version, gained } of added) {
+      const section = details.sections.find((item) => item.version === version);
+      for (const entry of section?.entries ?? []) {
+        if (!gained.some((title) => titleKey(title) === titleKey(entry.title))) continue;
+        const last = details.lines
+          .filter(
+            (line) =>
+              line.start >= entry.start && line.start < entry.end && line.text.trim() !== "",
+          )
+          .at(-1);
+        stderr.write(
+          `${version} / ${entry.category ?? "unknown category"}: lines ${entry.line}-${last?.number ?? entry.line} ${entry.title} -> Unreleased / ${entry.category ?? "choose category"}\n`,
+        );
+      }
+    }
+  } catch (cause) {
+    stderr.write(
+      `Precise move locations unavailable: ${cause instanceof Error ? cause.message : String(cause)}\n`,
+    );
+  }
+  stderr.write(
+    `\n${REMEDIATION}\n\nRepair pure additions with:\nnode scripts/check-changelog-released-sections.mjs --fix --base ${range.baseRev}\n`,
+  );
   return 1;
 }
 

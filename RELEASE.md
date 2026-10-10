@@ -204,6 +204,21 @@ npx qfai validate
 npx qfai report --out .qfai/report/report.md
 ```
 
+## Repair misplaced changelog entries
+
+When an old branch adds entries to an already tagged release, the CI diagnostic names
+the source lines and the Unreleased destination category. Run its printed command:
+
+```sh
+node scripts/check-changelog-released-sections.mjs --fix --base <local-base-ref>
+```
+
+The base must resolve locally and be an ancestor of HEAD. Repair moves complete added
+bullet blocks only when removing them restores each released section byte for byte.
+It refuses mixed historical edits, ambiguous headings or fences, duplicate entries,
+and unknown tag answers. Review the diff, then commit it yourself. The command writes
+only `CHANGELOG.md`; it does not stage, commit, push or change a version.
+
 ## Notes
 
 - Check that you are logged in with `npm whoami`.

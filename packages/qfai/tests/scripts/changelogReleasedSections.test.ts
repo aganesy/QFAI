@@ -10,8 +10,9 @@
  * added to a released section, an entry added to `## [Unreleased]`, and the
  * release commit that renames one heading into the other.
  */
+import { Buffer } from "node:buffer";
 import { spawnSync } from "node:child_process";
-import { cp, link, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { cp, link, mkdir, mkdtemp, readFile, rename, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -395,10 +396,10 @@ describe("explicit repair of misplaced released entries", () => {
     await unchangedFailure(head, message);
   });
 
-  it.each(["missing-ref"])("refuses unresolvable base %s", async (base) => {
+  it("refuses an unresolvable base", async () => {
     const fixture = await repairFixture();
     const before = await readFile(path.join(fixture.root, "CHANGELOG.md"), "utf-8");
-    expect(repair(fixture.root, base).status).toBe(1);
+    expect(repair(fixture.root, "missing-ref").status).toBe(1);
     expect(await readFile(path.join(fixture.root, "CHANGELOG.md"), "utf-8")).toBe(before);
   });
 
@@ -439,6 +440,47 @@ describe("explicit repair of misplaced released entries", () => {
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("regular file with one link");
     expect(await readFile(path.join(fixture.root, "alias.md"), "utf-8")).toBe(lateEntry());
+  });
+
+  it("refuses a renamed version heading instead of treating it as a new release", async () => {
+    await unchangedFailure(lateEntry().replace("[1.2.0]", "[1.2.1]"), "missing or renamed");
+  });
+
+  it("keeps a genuinely new release section unchanged", async () => {
+    const head = lateEntry().replace(
+      "## [Unreleased]",
+      "## [Unreleased]\n\n## [1.3.0] - 2026-02-03",
+    );
+    const fixture = await repairFixture(head);
+    expect(repair(fixture.root, fixture.base).status).toBe(0);
+    const text = await readFile(path.join(fixture.root, "CHANGELOG.md"), "utf-8");
+    expect(text).toContain(
+      "## [1.3.0] - 2026-02-03\n\n### Changed\n\n- **Something not yet released.**",
+    );
+    expect(text.slice(text.indexOf("## [1.2.0]"))).toBe(
+      RELEASED.slice(RELEASED.indexOf("## [1.2.0]")),
+    );
+  });
+
+  it("refuses a symbolic changelog leaf without touching its target", async () => {
+    const fixture = await repairFixture();
+    const target = path.join(fixture.root, "target.md");
+    await rename(path.join(fixture.root, "CHANGELOG.md"), target);
+    await symlink(target, path.join(fixture.root, "CHANGELOG.md"), "file");
+    const result = repair(fixture.root, fixture.base);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("regular file with one link");
+    expect(await readFile(target, "utf-8")).toBe(lateEntry());
+  });
+
+  it("refuses invalid UTF-8 bytes without replacing them", async () => {
+    const fixture = await repairFixture();
+    const bytes = Buffer.concat([Buffer.from(lateEntry()), Buffer.from([0xff])]);
+    await writeFile(path.join(fixture.root, "CHANGELOG.md"), bytes);
+    const result = repair(fixture.root, fixture.base);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("valid UTF-8");
+    expect(await readFile(path.join(fixture.root, "CHANGELOG.md"))).toEqual(bytes);
   });
 
   it.each(["file", "HEAD", "base", "write"])(
