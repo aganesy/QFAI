@@ -286,12 +286,17 @@ describe("the optional named diagnostic acceptance", () => {
     const text = readText(".github", "workflows", "named-tests.yml");
     expect(text).not.toContain("secrets.");
     expect(text).not.toContain("GITHUB_TOKEN");
-    for (const step of jobSteps("named-tests.yml", "named-test")) {
+    const steps = jobSteps("named-tests.yml", "named-test");
+    const checkouts = steps.filter((step) => String(step["uses"]).startsWith("actions/checkout@"));
+    expect(checkouts.map((step) => [stepInputs(step)["path"], stepInputs(step)["ref"]])).toEqual([
+      [undefined, "${{ inputs.sha }}"],
+      [".ci-actions", "${{ github.workflow_sha }}"],
+    ]);
+    for (const step of steps) {
       expect(runText(step)).not.toMatch(/\$\{\{\s*inputs\./u);
       if (String(step["uses"]).startsWith("actions/checkout@")) {
         expect(step["uses"]).toMatch(/^actions\/checkout@[a-f0-9]{40}$/u);
         expect(stepInputs(step)["persist-credentials"]).toBe(false);
-        expect(stepInputs(step)["ref"]).toBe("${{ inputs.sha }}");
       }
     }
   });
@@ -477,6 +482,11 @@ describe("the optional named diagnostic acceptance", () => {
       expect(output).not.toContain("SELECTED_TEST_EXECUTED");
       if (status !== 0) expect(output).not.toContain("Named diagnostic completed:");
       if (kind === "file changed during selection") expect(git("rev-parse", "HEAD")).toBe(head);
+      if (kind === "remote unavailable") {
+        expect(existsSync(origin)).toBe(true);
+        expect(git("remote").split(/\r?\n/u)).not.toContain("origin");
+        expect(git("rev-parse", "HEAD")).toBe(head);
+      }
     } finally {
       await removeTempTree(root);
     }

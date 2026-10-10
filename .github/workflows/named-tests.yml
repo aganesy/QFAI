@@ -80,6 +80,8 @@ jobs:
             const sha = inputSha.toLowerCase();
             const git = (...args) => execFileSync("git", args, { encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"] }).trim();
             const ref = `refs/pull/${pr}/head`;
+            // Require a configured origin; an unconfigured name can resolve to a local path.
+            git("remote", "get-url", "origin");
             const live = git("ls-remote", "--refs", "origin", ref).split(/\r?\n/u);
             if (live.length !== 1 || live[0] !== `${sha}\t${ref}` || git("rev-parse", "HEAD") !== sha) throw new Error("the input SHA, live pull request head and checkout HEAD must agree");
             const entry = git("ls-tree", "HEAD", "--", file);
