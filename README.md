@@ -602,6 +602,17 @@ Waiver policy.
 - Expired waivers are reported as warnings (`QFAI-WAIVER-003`) and must be renewed or removed with evidence.
 - Suppressed findings remain visible in reports as `suppressed=true`; waivers do not erase findings.
 
+When upgrading a project with `.qfai/waivers.yml`, back up that file. Check the
+current public finding codes and the release notes for confirmed removals or
+renames. Update a `rule:` value only when the documented rename preserves the
+finding's meaning and scope. Remove confirmed retired or inapplicable waivers,
+keeping the backup and recording each removal's reason for the operator. Do not
+rename whole code prefixes or automatically delete an unknown rule.
+
+Rerun full validation and require zero errors. An unknown waiver rule produces
+`QFAI-WAIVER-004` at `warning` and is not applied in that run; investigate it
+against the current diagnostics and release notes.
+
 Typical customizations.
 
 - Add a `doctor` step before validate if you want to fail fast on path/glob/config issues.
