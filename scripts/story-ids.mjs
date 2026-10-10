@@ -5,15 +5,16 @@
  *   updated open pull requests and the working tree. It reserves nothing.
  *   A scope named twice gets two consecutive candidates.
  * - `check` names each ID this branch adds that main or a fetched open pull
- *   request also adds. Unpublished changes and simultaneous publishers cannot
- *   be checked. Commit edits, check a clean tree and push the same HEAD.
+ *   request also adds. Other branches' unpublished changes are outside this
+ *   snapshot, and simultaneous publishers may still collide. Commit edits,
+ *   check a clean tree and push the same HEAD.
  *
  * Counting is the package's own allocator: what the story tree declares, plus
  * every ID a row of `decisions.md` names, so a retired ID is not handed out
  * again and an ID written only as an example in prose is not counted.
  *
- * Reading the trees costs one REST listing and one `git fetch`, however many
- * of the listed pull requests and scopes are asked for. The listing goes
+ * Reading the listed pull-request heads and requested scopes costs one REST
+ * listing and one `git fetch`. The listing goes
  * through `gh-budget.mjs`, which keeps its reserve and reports the remaining
  * allowance on stderr, so stdout holds only the answer. A check during an unfinished
  * merge stops before fetching or comparing branch-owned identifiers.
