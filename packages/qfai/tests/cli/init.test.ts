@@ -2042,10 +2042,8 @@ describe("qfai init", () => {
 
   // TC-1.4.1 — fresh init writes no DESIGN.md at root
   it("writes no DESIGN.md at root (TC-1.4.1)", async () => {
-    // `/qfai-discussion` emits the brand SSOT, and only for a
-    // visual-prototyping surface. Seeding it here put the file in every
-    // project — the cli-only and non-UI ones that skill exempts included —
-    // and the next `qfai validate` then reported the tool's own seed.
+    // `/qfai-sdd` authors the brand SSOT for visual prototyping surfaces.
+    // CLI-only and non-UI projects do not require it.
     // `tests/cli/initNoDesignSeed.test.ts` holds the rest of that contract.
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-design-"));
     try {
