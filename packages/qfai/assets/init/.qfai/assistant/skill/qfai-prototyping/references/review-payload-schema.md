@@ -7,7 +7,7 @@ and the user reads what it finds before confirming the prototype.
 The schema is **closed**: any key not listed below is rejected. The
 orchestrator checks each payload against it before writing it, and asks the
 reviewer again for one that does not conform before the prototype is put to
-the user. A near-miss (extra key, misspelled field, legacy flat key) fails the
+the user. A near-miss (extra key, misspelled field) fails the
 whole file.
 
 ## Contents
@@ -99,8 +99,7 @@ These keys belong to the per-iteration summary, **not** to this payload.
 Writing any of them here breaks the closed schema:
 
 `iterIndex`, `reviewerId`, `proseCritique`, `pivotDirective`,
-`evidenceRefs`, and the retired flat `timeBudgetSoftWarning` string
-(use `softWarnings.timeBudget: boolean`).
+and `evidenceRefs`.
 
 ## `sessionStatus` and the retry policy
 

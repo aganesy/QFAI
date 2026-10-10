@@ -3,9 +3,6 @@ import path from "node:path";
 import fg from "fast-glob";
 import { parse as parseYaml } from "yaml";
 
-import type { BrowserQaScreenContractRef } from "../browserQa/types.js";
-import type { RenderCaptureTarget } from "../evidence/types.js";
-import { DEFAULT_RENDER_VIEWPORTS } from "../uiux/renderEvidenceTypes.js";
 import { readSafe } from "../validators/utils.js";
 import { analyzeScreenCopy, isMapping, type ScreenCopyFinding } from "./screenCopy.js";
 
@@ -443,35 +440,6 @@ export function parseCanonicalScreenContracts(content: string): CanonicalScreenC
   return screens.filter((screen, index, all) => {
     return all.findIndex((candidate) => candidate.screenId === screen.screenId) === index;
   });
-}
-
-export function buildScreenRenderTargets(
-  screens: CanonicalScreenContract[],
-  viewports: Array<Pick<RenderCaptureTarget, "viewport" | "width" | "height">> = [
-    { viewport: DEFAULT_RENDER_VIEWPORTS[0], width: 1440, height: 900 },
-    { viewport: DEFAULT_RENDER_VIEWPORTS[1], width: 390, height: 844 },
-  ],
-): RenderCaptureTarget[] {
-  return screens.flatMap((screen) =>
-    viewports.map((viewport) => ({
-      targetId: `${screen.screenId}-${viewport.viewport}`,
-      route: screen.route,
-      descriptor: screen.name,
-      viewport: viewport.viewport,
-      ...(viewport.width !== undefined ? { width: viewport.width } : {}),
-      ...(viewport.height !== undefined ? { height: viewport.height } : {}),
-    })),
-  );
-}
-
-export function toBrowserQaScreenContracts(
-  screens: CanonicalScreenContract[],
-): BrowserQaScreenContractRef[] {
-  return screens.map((screen) => ({
-    screen_id: screen.screenId,
-    route: screen.route,
-    ...(screen.primaryTasks.length > 0 ? { primary_tasks: [...screen.primaryTasks] } : {}),
-  }));
 }
 
 function slugifyScreenId(value: string): string {

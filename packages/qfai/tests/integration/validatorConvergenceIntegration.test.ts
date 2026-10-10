@@ -2,7 +2,7 @@
  * Integration tests for spec-0004: Validator Convergence
  *
  * Tests canonical UIX aggregator path, screen-level sidecar expectations,
- * non-UI pack UIX skip, and truthful evidence/browser QA.
+ * and non-UI pack UIX skip.
  *
  * TC-0004-0023..0026 are backfill trace anchors only (no body tests in this
  * file). The actual tests live in:
@@ -125,69 +125,5 @@ describe("UIX-VAL determinism", () => {
 
     expect(first.length).toBeGreaterThan(0);
     expect(second).toEqual(first);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// render-evidence truthful state
-// ---------------------------------------------------------------------------
-
-describe("render-evidence truthful state", () => {
-  it("captured/skipped/failed states verified — no placeholder pass", async () => {
-    const { captureRenderEvidence } = await import("../../src/core/uiux/renderEvidence.js");
-
-    // Test with available environment
-    const resultCaptured = await captureRenderEvidence(
-      [{ id: "test", url: "http://localhost", viewport: "desktop", width: 1280, height: 720 }],
-      { available: true },
-      {},
-    );
-    expect(["captured", "skipped", "failed"]).toContain(resultCaptured.status);
-    expect(resultCaptured.status).not.toBe("pass");
-
-    // Test with unavailable environment
-    const resultSkipped = await captureRenderEvidence(
-      [{ id: "test", url: "http://localhost", viewport: "desktop", width: 1280, height: 720 }],
-      { available: false, reason: "No browser" },
-      {},
-    );
-    expect(resultSkipped.status).toBe("skipped");
-    expect(resultSkipped.reason).toBeTruthy();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Browser QA minimal runner truthful
-// ---------------------------------------------------------------------------
-
-describe("Browser QA minimal runner truthful", () => {
-  it("browser QA runner reports truthful results (not pass-all)", async () => {
-    const { runBrowserQaOrchestrated, validateBrowserQaBundle } =
-      await import("../../src/core/browserQa/index.js");
-
-    // Run with actual HTML content
-    const result = await runBrowserQaOrchestrated({
-      htmlContent: "<div>Hello</div>",
-      surface: "web",
-    });
-    expect(result.phases.length).toBeGreaterThan(0);
-    expect(result.provider).toBeTruthy();
-    expect(result.timestamp).toBeTruthy();
-
-    // Validate a well-formed bundle produces no schema errors
-    const bundle = {
-      browserQa: {
-        executed: true,
-        status: "completed" as const,
-        summary: {
-          smoke: { status: "passed" as const, findingsCount: 0, checksCount: 1 },
-          interaction: { status: "passed" as const, findingsCount: 0, checksCount: 1 },
-          visual: { status: "passed" as const, findingsCount: 0, checksCount: 1 },
-          accessibility: { status: "passed" as const, findingsCount: 0, checksCount: 1 },
-        },
-      },
-    };
-    const issues = validateBrowserQaBundle(bundle);
-    expect(issues.every((i) => !i.message.includes("placeholder"))).toBe(true);
   });
 });

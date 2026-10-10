@@ -13,6 +13,7 @@ import path from "node:path";
 import { vi } from "vitest";
 
 import { runInit } from "../../../src/cli/commands/init.js";
+import { QFAI_GITIGNORE_GOVERNANCE_NEGATIONS } from "../../../src/core/gitignore.js";
 import { captureStdout } from "../../helpers/stdout.js";
 
 /**
@@ -84,16 +85,13 @@ const OVERLAYS: Record<string, (root: string) => Promise<void>> = {
       }
     }
   },
-  // A block an earlier release wrote: no run-state ignore, and the negations that re-included
-  // records under the evidence directory.
-  "older-gitignore": async (root) => {
+  // A managed block missing its last governance negation, so the next `qfai init` rebuilds it.
+  "block-missing-negation": async (root) => {
     const file = path.join(root, ".gitignore");
-    const kept = (await readFile(file, "utf-8"))
-      .replace(/\n+$/, "")
-      .split("\n")
-      .filter((line) => line !== ".qfai/run/");
-    const retired = ["!.qfai/evidence/", "!.qfai/evidence/decision/", "!.qfai/evidence/workflow/"];
-    await writeFile(file, [...kept, ...retired, ""].join("\n"), "utf-8");
+    const negation =
+      QFAI_GITIGNORE_GOVERNANCE_NEGATIONS[QFAI_GITIGNORE_GOVERNANCE_NEGATIONS.length - 1];
+    const kept = (await readFile(file, "utf-8")).split("\n").filter((line) => line !== negation);
+    await writeFile(file, kept.join("\n"), "utf-8");
   },
 };
 

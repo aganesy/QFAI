@@ -11,7 +11,6 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 const VERIFY_JSON_REL = ".qfai/report/verify.json";
-const VERIFY_JSON_LEGACY_REL = ".qfai/output/verify.json";
 
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
@@ -48,12 +47,6 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     expect(contract).toContain(`Canonical path: \`${VERIFY_JSON_REL}\``);
   });
 
-  it("records the legacy location as read-only rather than dropping it", async () => {
-    const contract = await read(tree, CONTRACT);
-    expect(contract).toContain(`\`${VERIFY_JSON_LEGACY_REL}\` is the legacy location`);
-    expect(contract).toContain("Never write there.");
-  });
-
   it.each(WRITE_SIDE_DOCS)("%s tells the writer to write only the canonical path", async (rel) => {
     const doc = await read(tree, rel);
     const instructed = matchAll(doc, WRITE_INSTRUCTION);
@@ -68,7 +61,7 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     // which is the shape of the drift this guard exists for.
     const doc = await read(tree, rel);
     for (const p of matchAll(doc, ANY_VERIFY_PATH)) {
-      expect([VERIFY_JSON_REL, VERIFY_JSON_LEGACY_REL]).toContain(p);
+      expect(p).toBe(VERIFY_JSON_REL);
     }
   });
 });

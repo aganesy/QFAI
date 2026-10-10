@@ -33,6 +33,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { parse, stringify } from "yaml";
 
 import { ensureRootGitignoreEntries } from "../../src/core/init/rootGitignore.js";
+import { EARLIER_BLOCK_LINES } from "../../src/migration/specToStory/step10UpdateGitignore.js";
 import { atLocation } from "../helpers/reportLocation.js";
 import { assertBuiltCliFresh } from "../helpers/builtCli.js";
 import { removeTempTree } from "../helpers/tempTree.js";
@@ -592,7 +593,7 @@ describe("spec-0018: one shipped-script migration journey", () => {
     expect(ignore).toContain("# Local notes stay ignored.\nscratch/\n");
     expect(ignore).not.toContain("!.qfai/evidence/");
     const expected = await cloneProject(journey.beforeLinks);
-    await ensureRootGitignoreEntries(expected, false, () => {});
+    await ensureRootGitignoreEntries(expected, false, () => {}, EARLIER_BLOCK_LINES);
     expect(ignore).toBe(await textAt(expected, ".gitignore"));
     const record = ".qfai/evidence/decision/receipt.json";
     await mkdir(path.dirname(path.join(journey.root, record)), { recursive: true });

@@ -14,10 +14,7 @@ import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
 import { collectFilesByGlobs } from "../../src/core/fs.js";
-import {
-  DEFAULT_TEST_FILE_EXCLUDE_GLOBS,
-  collectScTestReferences,
-} from "../../src/core/traceability.js";
+import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "../../src/core/traceability.js";
 import { readEffectiveRouting } from "../../src/core/validators/agentDefinition.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
@@ -148,9 +145,11 @@ describe("Glob Patterns Cover Test Locations", () => {
       const globs = ["packages/qfai/tests/**/*.test.ts", "src/**/*.test.ts"];
       const withoutDefaults = await collectFilesByGlobs(root, { globs, ignore: [] });
       expect(withoutDefaults.matchedFileCount, "the globs reach into excluded directories").toBe(4);
-      const scan = (await collectScTestReferences(root, globs, [])).scan;
-      expect(scan.matchedFileCount, "an empty exclude list still skips them").toBe(2);
-      expect(scan.excludeGlobs).toEqual(DEFAULT_TEST_FILE_EXCLUDE_GLOBS);
+      const withDefaults = await collectFilesByGlobs(root, {
+        globs,
+        ignore: DEFAULT_TEST_FILE_EXCLUDE_GLOBS,
+      });
+      expect(withDefaults.matchedFileCount, "the default exclusions skip them").toBe(2);
     } finally {
       await removeTempTree(root);
     }
@@ -330,7 +329,10 @@ describe("Zero Match Triggers Stop", () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-configure-zero-"));
     try {
       await writeTree(root, ["tests/unit/a.test.ts", "src/b.ts"]);
-      const scan = (await collectScTestReferences(root, ["tests/**/*.spec.py"], [])).scan;
+      const scan = await collectFilesByGlobs(root, {
+        globs: ["tests/**/*.spec.py"],
+        ignore: DEFAULT_TEST_FILE_EXCLUDE_GLOBS,
+      });
       expect(scan.matchedFileCount, "a Python glob in a TypeScript-only project").toBe(0);
     } finally {
       await removeTempTree(root);

@@ -21,7 +21,6 @@ version: 1.0.0
 
 ## Parsing and Formatting
 
-- Gherkin parsing: `@cucumber/gherkin`, `@cucumber/messages`
 - YAML parsing: `yaml` (`qfai.config.yaml`)
 - Markdown schema check: `@jackchuka/mdschema`, a dependency of the package that
   `qfai validate` and the shipped docs lane both run

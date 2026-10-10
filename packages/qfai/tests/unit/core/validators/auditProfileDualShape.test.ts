@@ -1,15 +1,11 @@
 /**
- * Unit: `auditProfile.ts` task shape (TC-0004-0069 / TDD-0049).
+ * Unit: `designAudit.ts` task shape (TC-0004-0069 / TDD-0049).
  *
- * - `auditProfile.ts` re-exports the audit lane entrypoints from
- *   `designAudit.ts`. A UI contract whose `primary_tasks` entries are
+ * - A UI contract whose `primary_tasks` entries are
  *   structured `{id, label, acceptance}` mappings passes: no
  *   `QFAI-AUD-021` shape findings, no `QFAI-AUD-020` ceiling findings,
  *   no `QFAI-AUD-001` empty findings. A sibling contract whose entries
  *   are plain strings is rejected with one `QFAI-AUD-021` per entry.
- *
- * - Verifies the auditProfile surface delegates to the shared
- *   designAudit lane.
  */
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -19,10 +15,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../../../src/core/config.js";
-import {
-  runAuditProfile,
-  validateDesignAudit,
-} from "../../../../src/core/validators/auditProfile.js";
+import { validateDesignAudit } from "../../../../src/core/validators/designAudit.js";
 
 let root: string;
 
@@ -64,7 +57,7 @@ afterEach(async () => {
 });
 
 // QFAI:EX-0001-0050-01
-describe("TC-0004-0069: auditProfile accepts only structured primary_tasks", () => {
+describe("TC-0004-0069: the audit lane accepts only structured primary_tasks", () => {
   it("rejects plain string primary_tasks, one QFAI-AUD-021 per entry", async () => {
     const ui = [
       "screens:",
@@ -79,7 +72,7 @@ describe("TC-0004-0069: auditProfile accepts only structured primary_tasks", () 
     ].join("\n");
     await writeUiContract("legacy.yaml", ui);
 
-    const issues = await runAuditProfile(root, defaultConfig);
+    const issues = await validateDesignAudit(root, defaultConfig);
     expect(issues.filter((i) => i.code === "QFAI-AUD-021")).toHaveLength(3);
     expect(issues.find((i) => i.code === "QFAI-AUD-001")?.severity).toBe("error");
   });
@@ -104,7 +97,7 @@ describe("TC-0004-0069: auditProfile accepts only structured primary_tasks", () 
     ].join("\n");
     await writeUiContract("structured.yaml", ui);
 
-    const issues = await runAuditProfile(root, defaultConfig);
+    const issues = await validateDesignAudit(root, defaultConfig);
     expect(issues.find((i) => i.code === "QFAI-AUD-021")).toBeUndefined();
     expect(issues.find((i) => i.code === "QFAI-AUD-020")).toBeUndefined();
     expect(issues.find((i) => i.code === "QFAI-AUD-001")).toBeUndefined();
@@ -146,29 +139,10 @@ describe("TC-0004-0069: auditProfile accepts only structured primary_tasks", () 
       ].join("\n"),
     );
 
-    const issues = await runAuditProfile(root, defaultConfig);
+    const issues = await validateDesignAudit(root, defaultConfig);
     const shape = issues.filter((i) => i.code === "QFAI-AUD-021");
     expect(shape).toHaveLength(3);
     expect(shape.every((i) => i.file?.includes("legacy.yaml"))).toBe(true);
     expect(issues.filter((i) => i.file?.includes("structured.yaml"))).toEqual([]);
-  });
-
-  it("auditProfile.runAuditProfile delegates to validateDesignAudit (same observable behavior)", async () => {
-    const ui = [
-      "screens:",
-      "  - id: dashboard",
-      "    title: Dashboard",
-      "    route: /dashboard",
-      "    primary_tasks:",
-      "      - View orders",
-      "      - Refund an order",
-      "      - Open order detail",
-      "",
-    ].join("\n");
-    await writeUiContract("legacy.yaml", ui);
-
-    const viaWrapper = await runAuditProfile(root, defaultConfig);
-    const viaDirect = await validateDesignAudit(root, defaultConfig);
-    expect(viaWrapper.map((i) => i.code).sort()).toEqual(viaDirect.map((i) => i.code).sort());
   });
 });

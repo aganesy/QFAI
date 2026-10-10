@@ -11,7 +11,7 @@ import { runInit } from "../../src/cli/commands/init.js";
 import { runReport } from "../../src/cli/commands/report.js";
 import { runValidate } from "../../src/cli/commands/validate.js";
 import { defaultConfig } from "../../src/core/config.js";
-import { PROTOTYPING_SUPPORTED_SURFACES } from "../../src/core/review/prototyping.js";
+import { CANONICAL_PROTOTYPING_SURFACES } from "../../src/core/domain/surface.js";
 import { parseAllMarkdownTables } from "../../src/core/specPackParsers.js";
 import { readImplementFlowSteps } from "../helpers/implementSteps.js";
 import { findTableArityMismatches } from "../helpers/markdownTableArity.js";
@@ -857,11 +857,6 @@ describe("assets guardrails", () => {
   // .npmignore files removed — gitignore entries now live in root .gitignore
   // (see ensureRootGitignoreEntries in core/init/rootGitignore.ts)
 
-  it("does not ship review_archive gitignore in init template", () => {
-    const reviewArchiveIgnorePath = path.join(templateQfaiDir, "review_archive", ".gitignore");
-    expect(existsSync(reviewArchiveIgnorePath)).toBe(false);
-  });
-
   it("does not ship .qfai artifact README or seed placeholder files", async () => {
     const forbidden = await fg(
       [
@@ -1346,7 +1341,9 @@ describe("assets guardrails", () => {
     const enumerations = [...(noteLine ?? "").matchAll(/`([a-z-]+(?:\|[a-z-]+)+)`/g)]
       .map((match) => match[1])
       .filter((value): value is string => value !== undefined);
-    expect(enumerations).toContain(PROTOTYPING_SUPPORTED_SURFACES.join("|"));
+    expect(enumerations).toContain(
+      CANONICAL_PROTOTYPING_SURFACES.filter((surface) => surface !== "cli").join("|"),
+    );
     for (const enumeration of enumerations) {
       expect(enumeration.split("|")).not.toContain("cli");
       expect(enumeration.split("|")).not.toContain("non-ui");

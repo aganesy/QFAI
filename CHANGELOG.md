@@ -17,6 +17,33 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reminder hooks and the communication rule carry the short form. `qfai init`
   refreshes the rule and `reminders.json`.
 
+- **The web-research skill states what its criteria require, and its MCP
+  templates match the Codex and Copilot formats.** A search with no results is
+  reported as "no web sources found" with every query issued and cites nothing.
+  A rate-limited request is retried only after the `Retry-After` delay and each
+  event is logged. A front-matter parse error is reported with its details, and a
+  golden task carries its expected sources and citations and is scored against the
+  skill's targets. The Codex templates use the `[mcp_servers.<name>]` table and
+  pass API keys through `env_vars`; the Copilot templates use the `mcpServers`
+  wrapper with `type` and `tools`; the Firecrawl templates drop their
+  `_comment` keys. The default-deny sandbox template now records each denied
+  request with its capability, target and time. Part of #2951.
+
+- **`qfai init` and `qfai validate` stop reading the spec-pack layout and the
+  `.gitignore` lines of earlier releases.** The managed `.gitignore` block no
+  longer strips or renames the lines an earlier release wrote, and no longer
+  carries `.qfai/run/` or `.qfai/review_archive/*`; a rerun rebuilds the block
+  and keeps the project's own lines, and the migration's step 10 alone drops the
+  lines a 1.x block holds. `QFAI-STORY-014`, the warning for a `QFAI:US-`,
+  `QFAI:TC-`, `QFAI:SC-` or `QFAI:SPEC-` mark in a test, is removed. The
+  spec-pack discovery code is gone: the layout collector and its lifecycle
+  parser, the ATDD coverage scan of spec packs, the layered traceability graph
+  and the Gherkin readers they used. The run log's `traceability.json` no
+  longer has an `edges` list, and the library no longer exports the removed
+  functions. The `@cucumber/gherkin` and `@cucumber/messages` dependencies are
+  dropped, and the shipped references no longer mention the retired
+  `.qfai/output/verify.json` location or the retired review-payload key.
+
 - **The shipped `qfai-docs.yml` installs `@jackchuka/mdschema` 0.15.5.** The
   document-schema checker the docs lane runs moves from 0.15.4 to 0.15.5, the
   version the package now depends on. The release changes only a dependency of
@@ -45,11 +72,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   workflow list no longer has a retired set, and the spec-pack required-file
   lookup no longer falls back to `assistant/manifest/`.
 
-- **The `qfai-sdd` normalization reference lists all six removed design
-  contracts.** The reference that tells the skill which contracts not to generate
-  named four. It now also names `exploration-brief.yaml`, `reference-pool.yaml`
-  and `brand-design.yaml`, so every contract the skill retired is listed beside
-  `DESIGN.md`, the only design contract. Part of #2951.
+- **The `qfai-sdd` normalization reference names root `DESIGN.md` as the only
+  design contract and no longer lists any other.** The section that listed the
+  retired design contract files is gone, and the `common-design-md` step no
+  longer points at it.
+
+- **The library entry drops modules the CLI never ran.** `qfai` no longer
+  exports `runBrowserQaOrchestrated`, `summarizeBrowserQaResult`,
+  `BROWSER_QA_PHASES`, `runRenderCapture`, `PROTOTYPING_SUPPORTED_SURFACES`,
+  `isValidPrototypingSurface`, `isSupportedPrototypingSurface` or the
+  `PrototypingSurface` type. The browser QA runner, the render capture runner
+  and the render evidence checks, the browser provider registry, the handoff
+  reader and writer, the observability metrics, the display and stub surface
+  detection, the traceability matrix builder, the artifact reference helpers,
+  the strategy decision helper, the manifest write guard and the ADR parser are
+  deleted, together with the audit profile wrapper over the design audit and
+  four validators nothing called. The `uiux.renderEvidence` setting of
+  `qfai.config.yaml`, which only the render capture runner read, is no longer
+  parsed. The message catalog drops
+  `QFAI-PROT-244`, `QFAI-PROT-251` to `QFAI-PROT-253` and `QFAI-PROT-273` to
+  `QFAI-PROT-276`, which only the deleted code could raise.
 
 - **`qfai validate` no longer reports old discussion sidecars.** For a UI-bearing
   pack it no longer raises `QFAI-THREELAYER-001` for a file under `uiux/` that an
@@ -126,6 +168,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   columns in a different order report that the columns must be in the order ID,
   Content, Approach and Status. The finding was one message for all three
   cases. Refs #2951.
+
+- **The `web-research` skill states what its acceptance criteria require.** It
+  now says that a crash or a dropped connection of an MCP server is noticed
+  within 10 seconds, that the built-in tools take over, and that the user is told
+  the server is unavailable; the earlier text treated a runtime under 10 seconds
+  as a crash. The session log records the search queries, the content hash of
+  every fetched URL, the sanitization events and the verification results. A
+  high-risk conclusion is not applied to code until a person has reviewed its
+  diff and citations. When every fetch fails, the skill reports the reason for
+  each URL and runs no extract stage, and a blocked redirect logs its chain.
+  Refs #2951.
 
 - **The `qfai-verify` context step reads the configured directories.**
   `references/context-load.md` named fixed `.qfai/spec` paths for the spec tree,

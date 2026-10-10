@@ -47,7 +47,7 @@ const START_LOAD_BUDGET: Readonly<Record<string, number>> = {
   "qfai-sdd": 50_000,
   "qfai-triage": 50_000,
   "qfai-verify": 51_000,
-  "web-research": 59_000,
+  "web-research": 60_000,
 };
 
 const length = (text: string): number => [...text].length;

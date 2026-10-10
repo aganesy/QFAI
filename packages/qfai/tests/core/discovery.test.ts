@@ -7,36 +7,9 @@ import { describe, expect, it } from "vitest";
 import {
   collectApiContractFiles,
   collectDbContractFiles,
-  collectSpecFiles,
   collectUiContractFiles,
   collectThemaContractFiles,
 } from "../../src/core/discovery.js";
-
-describe("collectSpecFiles", () => {
-  it("filters spec files by naming rules", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-discovery-"));
-    const specRoot = path.join(root, ".qfai", "specs");
-    const candidates = [
-      "spec-0001/01_Spec.md",
-      "SPEC-0002/01_Spec.md",
-      "nested/spec-0003/01_Spec.md",
-      "spec-0004/18_delta.md",
-      "spec-001/01_Spec.md",
-      "spec-0001/spec.md",
-    ];
-
-    for (const file of candidates) {
-      const fullPath = path.join(specRoot, file);
-      await mkdir(path.dirname(fullPath), { recursive: true });
-      await writeFile(fullPath, "sample");
-    }
-
-    const found = await collectSpecFiles(specRoot);
-    const relative = found.map((file) => toPosix(path.relative(specRoot, file))).sort();
-
-    expect(relative).toEqual(["SPEC-0002/01_Spec.md", "spec-0001/01_Spec.md"].sort());
-  });
-});
 
 describe("collectContractFiles", () => {
   it("collects contract files by allowed extensions", async () => {
@@ -95,7 +68,3 @@ describe("collectContractFiles", () => {
     expect(dbFound.map((file) => path.basename(file)).sort()).toEqual(["schema.sql"].sort());
   });
 });
-
-function toPosix(value: string): string {
-  return value.split(path.sep).join("/");
-}

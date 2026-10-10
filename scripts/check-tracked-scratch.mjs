@@ -52,9 +52,7 @@ export const GENERATED_DIRS = [
   ".qfai/report",
   ".qfai/evidence",
   ".qfai/review",
-  ".qfai/output",
   ".qfai/discussion",
-  ".qfai/review_archive",
 ];
 
 /**

@@ -245,7 +245,7 @@ installed package's copy. A copy the project changed is replaced, an untracked
 file and an uncommitted edit included, and the replacement is listed under
 `## Operations`. A skill the package does not ship and
 `.qfai/assistant/skill.local/` are left alone. Step 11 also adds each missing
-host skill link and the `.qfai/run/` line of the managed `.gitignore` block. A
+host skill link and brings the managed `.gitignore` block up to date. A
 path it cannot write is reported with the reason. It leaves `AGENTS.md` and
 `CLAUDE.md` as they are, a line an earlier `npx qfai init` wrote included.
 

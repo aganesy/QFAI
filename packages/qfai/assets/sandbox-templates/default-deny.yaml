@@ -28,6 +28,12 @@ sandbox:
       - scope: "*"
         reason: "default-deny: all network access blocked unless explicitly allowlisted"
 
+  # Denial log: every denied request is recorded. For a network request the
+  # target is the denied domain.
+  logging:
+    denied: true
+    fields: [capability, target, timestamp]
+
   # Process restrictions
   process:
     policy: deny

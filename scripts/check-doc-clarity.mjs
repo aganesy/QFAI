@@ -50,7 +50,6 @@ const EXCLUDE_PREFIX = [
   "node_modules/",
   "packages/qfai/node_modules/",
   ".qfai/review/",
-  ".qfai/review_archive/",
   ".qfai/report/",
   ".qfai/discussion/",
   ".qfai/discussion_archive/",

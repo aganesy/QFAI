@@ -37,9 +37,8 @@ Feature: Own-CI supply-chain hardening with an accountable pin owner
 
   # AC-0002-0014-05
   Scenario: Pinning without an owner is an unsatisfied requirement, not a partial one
-    Given no automated action-bump configuration exists in the repository
-    And a repository-root bump configuration requires explicit user approval before it can be added
+    Given a repository-root bump configuration requires explicit user approval before it can be added
     When the pins land
-    Then a durable repository artifact — this spec, or the bump configuration itself — names who bumps them
+    Then a durable repository artifact — this spec's decision record, or the bump configuration itself — names who bumps them
     And a bump owner stated only in a pull-request description does not satisfy the criterion, because no gate can read it
 ```
