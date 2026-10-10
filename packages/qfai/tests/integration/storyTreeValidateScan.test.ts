@@ -218,6 +218,7 @@ describe("forbidden identifiers through validate", () => {
     expectPrivate(security(issues));
   }
 
+  // QFAI:AC-0001-0232-01
   it("leaves absent and empty policies inert outside a Git repository", async () => {
     const root = await fixture(false);
     await put(root, "untracked.txt", candidate);
@@ -227,6 +228,13 @@ describe("forbidden identifiers through validate", () => {
     }
   });
 
+  // QFAI:AC-0001-0232-01
+  // QFAI:AC-0001-0232-02
+  // QFAI:EX-0001-0232-02
+  // QFAI:EX-0001-0232-04
+  // QFAI:EX-0001-0232-05
+  // QFAI:EX-0001-0232-06
+  // QFAI:EX-0001-0232-11
   it("rejects invalid policy shapes, limits and YAML without exposing supplied values", async () => {
     const root = await fixture(false);
     const records = (count: number, distinctLengths: boolean) =>
@@ -267,6 +275,9 @@ describe("forbidden identifiers through validate", () => {
     expectPrivate(malformed);
   });
 
+  // QFAI:AC-0001-0232-08
+  // QFAI:EX-0001-0232-34
+  // QFAI:EX-0001-0232-35
   it("detects current tracked bytes in every profile and before damaged integration stops profile validators", async () => {
     const root = await fixture();
     await put(root, "tracked.bin", Buffer.from(`\u0000${candidate}\u0000`, "ascii"));
@@ -292,6 +303,8 @@ describe("forbidden identifiers through validate", () => {
     expectMatch(damaged.issues);
   });
 
+  // QFAI:AC-0001-0232-08
+  // QFAI:EX-0001-0232-39
   it("still detects a tracked match before the legacy-layout early return", async () => {
     const root = await fixture();
     await put(root, ".qfai/specs/spec-0001/01_Spec.md", "# Legacy fixture\n");
@@ -303,6 +316,11 @@ describe("forbidden identifiers through validate", () => {
     expectMatch(result.issues);
   });
 
+  // QFAI:AC-0001-0232-04
+  // QFAI:EX-0001-0232-17
+  // QFAI:EX-0001-0232-18
+  // QFAI:EX-0001-0232-20
+  // QFAI:EX-0001-0232-36
   it("scans tracked ignored binary current bytes while excluding history and untracked files", async () => {
     const root = await fixture();
     await put(root, ".gitignore", "ignored.bin\n");
@@ -315,6 +333,8 @@ describe("forbidden identifiers through validate", () => {
     expect(security(await scan(root))).toEqual([]);
   });
 
+  // QFAI:AC-0001-0232-03
+  // QFAI:EX-0001-0232-14
   it("matches an embedded case-exact ASCII window without requiring word boundaries", async () => {
     const root = await fixture();
     await put(
@@ -328,6 +348,9 @@ describe("forbidden identifiers through validate", () => {
     expect(security(await scan(root))).toEqual([]);
   });
 
+  // QFAI:AC-0001-0232-04
+  // QFAI:AC-0001-0232-05
+  // QFAI:EX-0001-0232-22
   it("checks tracked relative paths with spaces without echoing the matched candidate or digest", async () => {
     const root = await fixture();
     const file = `space directory/prefix${candidate}suffix.bin`;
@@ -336,6 +359,8 @@ describe("forbidden identifiers through validate", () => {
     expectMatch(await scan(root));
   });
 
+  // QFAI:AC-0001-0232-06
+  // QFAI:EX-0001-0232-23
   it("fails coverage when enabled Git enumeration is unavailable or a tracked file is missing", async () => {
     const outside = await fixture(false);
     expectIncomplete(await scan(outside));
@@ -346,6 +371,8 @@ describe("forbidden identifiers through validate", () => {
     expectIncomplete(await scan(root));
   });
 
+  // QFAI:AC-0001-0232-06
+  // QFAI:EX-0001-0232-25
   it("refuses a tracked symbolic-link leaf without reading its target", async (ctx) => {
     const root = await fixture();
     const outside = await fixture(false);
@@ -361,6 +388,8 @@ describe("forbidden identifiers through validate", () => {
     expect(await readFile(target, "utf8")).toBe(candidate);
   });
 
+  // QFAI:AC-0001-0232-06
+  // QFAI:EX-0001-0232-25
   it("refuses a tracked file beneath a symbolic-link parent", async (ctx) => {
     const root = await fixture();
     const outside = await fixture(false);
@@ -379,6 +408,7 @@ describe("forbidden identifiers through validate", () => {
     expectIncomplete(await scan(root));
   });
 
+  // QFAI:AC-0001-0232-06
   it("refuses a hardlinked tracked file without changing its external bytes", async (ctx) => {
     const root = await fixture();
     const outside = await fixture(false);
@@ -400,6 +430,7 @@ describe("forbidden identifiers through validate", () => {
     expect(await readFile(target, "utf8")).toBe("safe contents\n");
   });
 
+  // QFAI:AC-0001-0232-07
   it("fails coverage for a tracked file exceeding sixteen MiB rather than reporting a clean scan", async () => {
     const root = await fixture();
     await put(root, "large.bin", "");
