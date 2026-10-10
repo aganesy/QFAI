@@ -11,7 +11,7 @@ open-questions.md, and every file under paths.contractsDir. Production code and 
 obligation may change in a later task, but the change must preserve or deliberately reapprove that obligation.
 QFAI-owned files under .qfai/assistant/rule/ are updated through the package, then synchronized by init.
 
-A new change-request row in decisions.md is permitted without an earlier change request. Existing rows are append-only records: a prior row may change its Status cell, while its ID, Content, and Approach stay fixed. A changed obligation needs a new row, even when an older row discusses the same topic.
+A new change-request row in decisions.md is permitted without an earlier change request. Existing rows are append-only records: a prior row may change its Status cell, while its ID, Content, and Approach stay fixed. The sole ID-change exception is explicit local renumbering of a unique branch-added decision absent from the unique common ancestor of HEAD and a required local base. That operation changes only its ID and provably branch-added exact references. Inherited row cells and references stay fixed. A changed obligation needs a new row, even when an older row discusses the same topic.
 
 ## Allowed exceptions (minimal whitelist)
 
@@ -112,6 +112,6 @@ copy of a locked file before deciding its lock is wrong.
 ## Non-negotiable constraints
 
 - Downstream stages do not patch protected upstream artifacts before an in-force Change request: decision row authorizes the path. The drift profile compares the branch against baseBranch and reports QFAI-DRIFT-001 for an unapproved protected change. The SDD owner may create the request row itself without a prior row.
-- Existing decisions.md and open-questions.md rows retain their ID, Content, and Approach. A former row may change Status; new content is appended as a new row.
+- Existing decisions.md and open-questions.md rows retain their ID, Content, and Approach, except for the explicit branch-added decision renumbering above. Inherited rows retain those cells without exception. A former row may change Status; new content is appended as a new row.
 - Vendored assistant rules are changed in the package and synchronized into projects by `npx qfai init --force`, which overwrites a local edit. A project rule lives in a `*.local.md` overlay beside the vendored one.
 - When approval is unavailable, keep the affected items stopped and report the decision needed. Continue unrelated work.

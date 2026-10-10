@@ -20,7 +20,8 @@ Feature: Unified SDD Workflow
   Scenario: Records Go To The Two Tables
     Given the story tree,
     When `/qfai-sdd` records a triage decision, a change request, a retired story, a rejected option or an open question,
-    Then each of the first four is a row of `decisions.md` and the open question is a row of `open-questions.md`. Every row carries exactly the cells ID, Content, Approach and Status, with a Status from its table's vocabulary. Nothing is written under `.qfai/decisions/`, no `01_Spec-retired` file is written, and a row already in a table changes only its Status.
+    Then each of the first four is a row of `decisions.md` and the open question is a row of `open-questions.md`. Every row carries exactly the cells ID, Content, Approach and Status, with a Status from its table's vocabulary. Nothing is written under `.qfai/decisions/`, no `01_Spec-retired` file is written, and an inherited row changes only its Status.
+    And the only ID-change exception is explicit renumbering of a unique branch-added DEC absent from the common ancestor of HEAD and an explicit local base, with only provably branch-added references changed; inherited ID, Content and Approach cells stay fixed.
 
   # AC-0001-0147-04
   Scenario: The Four Merged Files State Each Fact Once
