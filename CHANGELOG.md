@@ -41,6 +41,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   identity or unavailable counters keep the full reminder. Posting reminders
   remain unchanged.
 
+- **Worker work orders state the permitted edit boundary.** They name the
+  assigned checkout, owned paths and edit method. A refused edit returns a
+  reviewable diff for coordinator integration without bypassing the refusal.
+
 - **Windows CI covers native assistant mirror links.** Its parity list includes
   mirror link behavior and prepares owned root links before testing, using the
   same temp directory as the suites. Healthy worktrees remain healthy cases.
@@ -320,6 +324,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   constitution's Article V. Part of #2951.
 
 ### Fixed
+
+- Clarify that story ID candidates are snapshots and require a fresh collision
+  check of the committed changes before publishing the same branch head.
 
 - **Language errors offer an ASCII code-point construction for code samples.**
   The guard keeps Unicode escape guidance and explains the alternative when
