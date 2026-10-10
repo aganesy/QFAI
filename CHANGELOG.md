@@ -4,6 +4,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- Verify assistant link targets can be followed and safely recreate unfollowable
+  directory links to shipped assets. Fixes #3368.
+
 ### Added
 
 - **Validation can find forbidden identifiers from hash-only configuration.**

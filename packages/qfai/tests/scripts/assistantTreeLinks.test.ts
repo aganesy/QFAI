@@ -64,11 +64,7 @@ function runIsolated(
 }
 
 type LinkFault =
-  | "healthy"
-  | "unfollowable"
-  | "recreate-refused"
-  | "foreign-before-move"
-  | "foreign-after-move";
+  "healthy" | "unfollowable" | "recreate-refused" | "foreign-before-move" | "foreign-after-move";
 
 type LinkTrace = {
   attempts: { target: string; path: string; type: string | null }[];
@@ -352,7 +348,9 @@ describe("link-assistant-tree --check", () => {
     const trace = await linkTrace(traceFile);
     expect(trace.attempts).toEqual([]);
     const locations = [entry, ...trace.moves.map((move) => move.to)];
-    const retained = locations.find((location) => existsSync(location) && lstatSync(location).isFile());
+    const retained = locations.find(
+      (location) => existsSync(location) && lstatSync(location).isFile(),
+    );
     expect(retained).toBeDefined();
     if (retained === undefined) throw new Error("the concurrent fixture file was lost");
     expect(await readFile(retained, "utf-8")).toBe("foreign before move\n");
