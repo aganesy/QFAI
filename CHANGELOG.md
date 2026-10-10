@@ -22,6 +22,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Replies resume the waiting step, and pending operation reports avoid duplicate questions.**
+  The exception requires no new decision or missing information. New requests
+  get a plan; completed routes still ask for the next action. Fixes #3205 and #3206.
+
 - **qfai-run records the required approval before handing an operation to a person.**
   The row is a route record. Triage steps change no tracked file and never
   run the handed-off operation. Fixes #3201.
