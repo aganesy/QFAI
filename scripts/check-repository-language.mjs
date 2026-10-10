@@ -14,6 +14,10 @@
  *
  * Where behaviour needs a non-English literal, write it as `\uXXXX` escapes
  * beside an English comment saying what it is.
+ * If an edit tool decodes escapes in JavaScript or TypeScript code, use numeric
+ * code points, for example `String.fromCodePoint(0xFF1F)`, with an English comment.
+ * This ASCII construction also supports astral characters. It is for code,
+ * not YAML or Markdown literals.
  *
  * Skipped without a verdict: symlinks, files holding a NUL byte, and files that
  * are not valid UTF-8. None of them is text a reader could write in a language.
@@ -141,7 +145,11 @@ export function run(cwd = process.cwd()) {
   if (total > 0) {
     console.error(
       "This repository is written in English. Write it in English; where behaviour " +
-        "needs the literal, write it as \\uXXXX escapes with an English comment.",
+        "needs the literal, write it as \\uXXXX escapes with an English comment. " +
+        "If an edit tool decodes escapes in JavaScript or TypeScript code, use numeric " +
+        "code points, for example String.fromCodePoint(0xFF1F), with an English comment. " +
+        "This ASCII construction also supports astral characters. " +
+        "It is for code, not YAML or Markdown literals.",
     );
     return 1;
   }
