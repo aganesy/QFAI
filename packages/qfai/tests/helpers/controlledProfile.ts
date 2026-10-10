@@ -72,7 +72,9 @@ export async function runControlledProfile(
   let deadline: NodeJS.Timeout | undefined;
   let closeGuard: NodeJS.Timeout | undefined;
   const note = (error: unknown) => {
-    if ((error as NodeJS.ErrnoException).code !== "ESRCH")
+    const bag: Record<string, unknown> =
+      typeof error === "object" && error !== null ? { ...error } : {};
+    if (bag.code !== "ESRCH")
       result.terminationErrors.push(error instanceof Error ? error.message : String(error));
   };
   const killChild = () => {

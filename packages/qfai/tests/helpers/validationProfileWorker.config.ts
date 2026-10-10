@@ -4,7 +4,7 @@ import { defineConfig } from "vitest/config";
 
 import { projectKnobs, SETUP_FILES } from "../../vitest.knobs.js";
 
-/** One private case in one terminable Node process; normal projects are unchanged. */
+/** One private test file in one terminable Node process; normal projects are unchanged. */
 export default defineConfig({
   root: path.resolve(import.meta.dirname, "../.."),
   test: {
