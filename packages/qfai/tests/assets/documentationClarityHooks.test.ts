@@ -460,8 +460,15 @@ describe("documentation clarity reminder scope", () => {
     messages = new Map(
       keys.map((key) => {
         const value: unknown = Reflect.get(parsed, key);
-        if (typeof value !== "string") throw new Error(`${key} is not a message`);
-        return [key, flat(value)];
+        if (typeof value !== "object" || value === null)
+          throw new Error(`${key} is not an envelope`);
+        const output: unknown = Reflect.get(value, "hookSpecificOutput");
+        if (typeof output !== "object" || output === null) {
+          throw new Error(`${key} has no hookSpecificOutput`);
+        }
+        const context: unknown = Reflect.get(output, "additionalContext");
+        if (typeof context !== "string") throw new Error(`${key} has no additionalContext`);
+        return [key, flat(context)];
       }),
     );
     master = ruleText;
