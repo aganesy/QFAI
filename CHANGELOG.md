@@ -42,6 +42,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Posting guidance explicitly permits numbers and links in pull request and issue bodies.**
+  Source and ordinary Markdown retain the identifier ban and existing exceptions.
+
 - Resolve the optional Playwright dependency to 1.64.0 while keeping its existing supported version range.
 
 - **The writing rule removes unnecessary sentences without requiring needless rewrites.**
