@@ -22,6 +22,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The maintenance step covers procedures people follow.** Changes to actions,
+  required values, commands or their order have a semantic effect even when
+  only Markdown changes. Fixes #3203.
+
 - **qfai-run records the required approval before handing an operation to a person.**
   The row is a route record. Triage steps change no tracked file and never
   run the handed-off operation. Fixes #3201.
@@ -31,6 +35,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   A session request naming the change and its effect shows acceptance, as the
   extraction reference defines. The agent continues from the announcement into
   the policy check and first stage without waiting for a reply. Fixes #3200.
+
+- **The handoff step records reported failures without claiming success.**
+  Unresolved causes and retries are follow-ups. A separate explicit request
+  to investigate or retry gets its own plan. Fixes #3202.
 
 - **The decision template states the limit of a passing validation result.**
   Every new row uses the four Approach items; validation does not establish
@@ -237,6 +245,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   constitution's Article V. Part of #2951.
 
 ### Fixed
+
+- **Validation text lists errors before warnings and information.** Groups of
+  the same severity retain their first-appearance order. JSON records, counts,
+  suppression and exit behavior stay unchanged.
 
 - **Unknown commands identify the running QFAI installation.** The error shows
   its version and package location and suggests updating the project's local

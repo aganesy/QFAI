@@ -113,6 +113,8 @@ Read this section before treating a user's reply as a new request.
 - An independent new request is planned under the extraction and scope rules
   in `SKILL.md`. If a reply also contains one, resume the waiting step with its
   answer and plan the independent request separately.
+- A separate explicit request to investigate the failure or repeat the operation
+  is planned as a new request under those same rules.
 - An answer to a closed request for information follows only the plan's branch
   for received information. Add no branch or step.
 - For an ambiguous reply, do not assume success, completion, new facts or

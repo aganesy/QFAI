@@ -48,7 +48,7 @@ value but the three below plans nothing.
   A question plans a route that answers it and changes nothing. Text that is
   not a request is not planned.
 - A reply with a requested answer or result resumes the same step without a new
-  invocation. An independent new request is planned. Read
+  invocation, including failure. An independent new request is planned. Read
   `references/operator-screens.md` for replies.
 - `stop`: end the work at once and list every open decision as open.
 - A request naming a stage skill: invoke that skill by name.
