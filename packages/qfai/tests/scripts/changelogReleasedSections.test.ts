@@ -396,6 +396,27 @@ describe("explicit repair of misplaced released entries", () => {
     await unchangedFailure(head, message);
   });
 
+  it("rejects --fix without --base as a usage error without changing files or Git state", async () => {
+    const fixture = await repairFixture();
+    const changelog = path.join(fixture.root, "CHANGELOG.md");
+    const index = path.join(fixture.root, ".git", "index");
+    const beforeBytes = await readFile(changelog);
+    const beforeIndex = await readFile(index);
+    const beforeHead = git(fixture.root, "rev-parse", "HEAD");
+    const beforeRefs = git(fixture.root, "show-ref");
+    const result = spawnSync(
+      process.execPath,
+      [path.join(fixture.root, "scripts", "check-changelog-released-sections.mjs"), "--fix"],
+      { cwd: fixture.root, encoding: "utf-8" },
+    );
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain("--base");
+    expect(await readFile(changelog)).toEqual(beforeBytes);
+    expect(await readFile(index)).toEqual(beforeIndex);
+    expect(git(fixture.root, "rev-parse", "HEAD")).toBe(beforeHead);
+    expect(git(fixture.root, "show-ref")).toBe(beforeRefs);
+  });
+
   it("refuses an unresolvable base", async () => {
     const fixture = await repairFixture();
     const before = await readFile(path.join(fixture.root, "CHANGELOG.md"), "utf-8");
@@ -509,6 +530,43 @@ describe("explicit repair of misplaced released entries", () => {
       expect(git(fixture.root, "diff", "--cached")).toBe("");
     },
   );
+
+  it("reports a write failure after retaining actual partial bytes without changing HEAD or index", async () => {
+    const fixture = await repairFixture();
+    const beforeHead = git(fixture.root, "rev-parse", "HEAD");
+    const index = path.join(fixture.root, ".git", "index");
+    const beforeIndex = await readFile(index);
+    const preload = path.join(fixture.root, "partial-write.mjs");
+    await writeFile(
+      preload,
+      [
+        'import fs from "node:fs";',
+        'import { syncBuiltinESMExports } from "node:module";',
+        "const write = fs.writeFileSync;",
+        "fs.writeFileSync = function (file, data, ...options) {",
+        '  if (String(file).endsWith("CHANGELOG.md")) {',
+        "    write.call(this, file, Buffer.from(data).subarray(0, 96), ...options);",
+        '    throw Object.assign(new Error("EPERM: fixture partial write"), { code: "EPERM" });',
+        "  }",
+        "  return write.call(this, file, data, ...options);",
+        "};",
+        "syncBuiltinESMExports();",
+      ].join("\n"),
+    );
+    const result = repair(fixture.root, fixture.base, preload);
+    const planned = RELEASED.replace(
+      "## [1.2.0]",
+      "### Added\n\n- **A late fix.**\n  Its continuation stays with the entry.\n\n## [1.2.0]",
+    );
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("EPERM");
+    expect(result.stdout).not.toContain("repaired CHANGELOG.md");
+    expect(await readFile(path.join(fixture.root, "CHANGELOG.md"))).toEqual(
+      Buffer.from(planned).subarray(0, 96),
+    );
+    expect(git(fixture.root, "rev-parse", "HEAD")).toBe(beforeHead);
+    expect(await readFile(index)).toEqual(beforeIndex);
+  });
 
   it("prints the source lines, destination category and exact repair command in check mode", async () => {
     const fixture = await repairFixture();

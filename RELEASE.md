@@ -219,6 +219,10 @@ It refuses mixed historical edits, ambiguous headings or fences, duplicate entri
 and unknown tag answers. Review the diff, then commit it yourself. The command writes
 only `CHANGELOG.md`; it does not stage, commit, push or change a version.
 
+The identity and byte checks are observations before writing, not an atomic
+write guarantee. A write failure may leave partial contents in `CHANGELOG.md`.
+Inspect and recover those contents before retrying.
+
 ## Notes
 
 - Check that you are logged in with `npm whoami`.

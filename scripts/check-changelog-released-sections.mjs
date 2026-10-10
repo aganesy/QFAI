@@ -537,6 +537,10 @@ function main() {
   }
 
   if (args.fix === true) {
+    if (args.base === undefined) {
+      stderr.write("check-changelog-released-sections: --fix requires --base <local-ref>\n");
+      return 2;
+    }
     try {
       return repairChangelog(args.base);
     } catch (cause) {
