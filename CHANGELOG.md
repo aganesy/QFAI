@@ -319,6 +319,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Clarify that story ID candidates are snapshots and require a fresh collision
+  check of the committed changes before publishing the same branch head.
+
 - **Language errors offer an ASCII code-point construction for code samples.**
   The guard keeps Unicode escape guidance and explains the alternative when
   an editing tool decodes escapes. Forbidden characters remain rejected.
