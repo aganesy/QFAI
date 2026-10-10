@@ -213,19 +213,29 @@ under a no-question mode.
 ## 6. A turn that waits on the user
 
 A turn that leaves the next step to the user ends with a question listing the
-next actions. A phase approved, a plan ready, a stage finished and a fork in the
-work each end such a turn.
+next actions, except for the interim report below. A phase approved, a plan
+ready, a stage finished and a fork in the work each end such a turn.
 
 - Each option is one concrete next action, and says what choosing it does.
 - The recommended action comes first, under § 3.
 - Where the tool is not callable, § 5's fallback carries the same list.
 
-A status report, or an offer written in prose, does not end that turn. Nothing
-tells the user the session is waiting, so it sits idle until they come back to
-ask whether anything is happening.
+Outside the exception below, a status report or an offer written in prose does
+not end that turn. Nothing tells the user the session is waiting, so it sits
+idle until they come back to ask whether anything is happening.
 
 It is not a clarification: it resolves no ambiguity in the request, and the
 work it follows did not need its answer.
+
+An interim report may omit a repeated question only when:
+
+- an ongoing step is awaiting the result of an already requested external operation;
+- no new decision or missing information is needed.
+
+Report the current state, expected result and resume condition without a
+duplicate question. Do not report the waiting step as complete. New facts,
+choices or a need for permission follow the normal question rules.
+A completed route's final report still ends with a question.
 
 **A user's stop is not such a turn.** The stop is confirmed in one line, every
 open decision is listed as open, and nothing is asked.
