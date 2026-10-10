@@ -170,7 +170,7 @@ describe("Config Update Is Minimal", () => {
     const content = await readFile(SKILL_PATH, "utf-8");
     const update = section(content, "Step 4");
     expect(update).toMatch(
-      /`routing` or `reviewProfiles`[^.;]*only (?:when|if) the user (?:asks|requests)/,
+      /`routing` or `reviewProfiles`[^.;]*only (?:when|if) the user (?:asks to change one|requests (?:a change|an override))/,
     );
     expect(update).toMatch(/each matching entry replaces[^.]*default as a whole/);
     expect(update).toMatch(/(?:Keep|Preserve) all other config keys unchanged/);

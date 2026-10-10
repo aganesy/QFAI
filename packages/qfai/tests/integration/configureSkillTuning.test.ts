@@ -102,7 +102,7 @@ describe("Config Minimal Diff", () => {
     expect(step4).toContain("- `validation.traceability.testFileGlobs`");
     expect(step4).toContain("- `validation.traceability.testFileExcludeGlobs` (only if needed)");
     expect(step4.replace(/\s+/g, " ")).toMatch(
-      /`routing` or `reviewProfiles`[^.;]*only (?:when|if) the user (?:asks|requests)/,
+      /`routing` or `reviewProfiles`[^.;]*only (?:when|if) the user (?:asks to change one|requests (?:a change|an override))/,
     );
     expect(step4).toContain("Add no key the package already defaults");
 
