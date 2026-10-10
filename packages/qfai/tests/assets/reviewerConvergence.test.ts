@@ -53,8 +53,9 @@ const OPERATING = "assistant/rule/shared-skill-operating-baseline.md";
 async function readOptionalSkill(file: string): Promise<string | undefined> {
   try {
     return await readFile(file, "utf-8");
-  } catch {
-    return undefined;
+  } catch (cause) {
+    if (cause instanceof Error && "code" in cause && cause.code === "ENOENT") return undefined;
+    throw new Error(`Cannot read skill file: ${file}`, { cause });
   }
 }
 
