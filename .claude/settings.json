@@ -198,6 +198,24 @@
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "QFAI session feedback reminder",
+            "command": "node",
+            "args": [
+              "-e",
+              "try{const f=require('fs');let i;try{i=JSON.parse(f.readFileSync(0,'utf8'))}catch{process.exit(0)}const l=typeof i.last_assistant_message==='string'?i.last_assistant_message.trim():'';if(i.stop_hook_active===true||(l.length>0&&('?'+String.fromCharCode(65311)).includes(l.slice(-1))))process.exit(0);const m=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}catch{}",
+              "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
+              "session-feedback"
+            ]
+          }
+        ]
+      }
     ]
   }
 }

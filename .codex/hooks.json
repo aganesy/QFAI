@@ -107,6 +107,18 @@
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "QFAI session feedback reminder",
+            "command": "node -e \"try{const f=require('fs'),p=require('path');let d=process.cwd(),r;for(;;){const c=p.join(d,'.agents','rules','reminders.json');if(r===undefined&&f.existsSync(c))r=c;if(f.existsSync(p.join(d,'.git')))break;const u=p.dirname(d);if(u===d){r=undefined;break}d=u}if(r){let i;try{i=JSON.parse(f.readFileSync(0,'utf8'))}catch{process.exit(0)}const l=typeof i.last_assistant_message==='string'?i.last_assistant_message.trim():'';if(i.stop_hook_active===true||(l.length>0&&('?'+String.fromCharCode(65311)).includes(l.slice(-1))))process.exit(0);const m=JSON.parse(f.readFileSync(r,'utf8'))[process.argv[1]];m===undefined||console.log(JSON.stringify(m))}}catch{}\" session-feedback",
+            "timeout": 10
+          }
+        ]
+      }
     ]
   }
 }

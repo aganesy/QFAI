@@ -1369,8 +1369,11 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     //
     // The generated rule list cites action-reversibility, untrusted-content and ai-readable-markdown.
     // This digest covers the bytes produced by the builder strings.
+    // Re-pinned for one more bullet on the rules list, naming `.agents/rules/session-feedback.md`.
+    // Derived by running `qfai init` into a temp root; dropping that one bullet reproduces
+    // `fcdba5a8…` byte for byte.
     ".github/copilot-instructions.md",
-    "fcdba5a86b5e719a0666b99d47277cbc025debbc4f46fa6d70ac0b9fa172e11a",
+    "cb284d00e117d38ce47706bfdc22d0c5f799df3f2ed057099da8996a99495579",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1457,8 +1460,10 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   //
   // The entry files cite action-reversibility, untrusted-content and ai-readable-markdown.
   // These digests cover the shipped root templates, which init copies into a fresh project.
-  ["AGENTS.md", "29bc32d7406b9e0972dc276911a010a3e393b84fea0b2fe4846bc5e7e3722335"],
-  ["CLAUDE.md", "d7f71c44d619f42269802fd5d0068a2f74a93563fd2032ed3b5dc803e6755bf3"],
+  // Re-pinned for the `session-feedback.md` bullet in both files. Dropping it reproduces
+  // `29bc32d7…` and `d7f71c44…` byte for byte.
+  ["AGENTS.md", "dae130241067ed72cc475e5befe8a80c306831d93cd5e8d0a32f6c5c2c3ef07a"],
+  ["CLAUDE.md", "99a458c0f5c796f48791f308c3dc4d7720fb1c4e0b70e99519cd53b4678660cd"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
   // rule when a pull request, issue or review is posted through the GitHub tools
@@ -1546,7 +1551,9 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // call. Events, matchers, markers and message keys are unchanged; the previous group is listed
   // as superseded so the merge refreshes it. Derived by running `qfai init` into a temp root and
   // hashing what it wrote.
-  [".claude/settings.json", "033259652238bbaaba1846f4a51ae1adc4f625436b519c74d08b1138d9f13711"],
+  // Re-pinned for the `Stop` group marked `QFAI session feedback reminder`. Removing the `Stop`
+  // event from the file reproduces `03325965…` byte for byte.
+  [".claude/settings.json", "a45fb5f9c4b219f8b127b17c4b52b4b99172627a3f8d4be6bae8807b3d11f23c"],
   // Inside `.codex/`, and pinned for the reason `.claude/settings.json` is: its commands are a
   // program an adopter's agent runs. Two `UserPromptSubmit` groups, structured-question and
   // free-text entry. Codex takes one command string, so each runs the same `node -e` reader
@@ -1587,7 +1594,9 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // `node -e "<program>" <key>` line with no character a hook shell expands. Events, matchers,
   // markers and message keys are unchanged; the previous groups are listed as superseded so the
   // merge refreshes them. Derived the same way.
-  [".codex/hooks.json", "4eb4c36dcf31ae9196b26444b56867a32164ee1d875e192527f196da90463832"],
+  // Re-pinned for the same `Stop` group. Removing the `Stop` event reproduces `4eb4c36d…` byte
+  // for byte.
+  [".codex/hooks.json", "3e30093dfccbbab4f9a3e94f3db5982588af3c21bf8c2e82605d861014a0f81a"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`
@@ -1759,6 +1768,7 @@ export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
   "root/.agents/rules/minimal-implementation.md",
   "root/.agents/rules/reminders.json",
   "root/.agents/rules/root-additions-policy.md",
+  "root/.agents/rules/session-feedback.md",
   "root/.agents/rules/temporary-files.md",
   "root/.agents/rules/untrusted-content.md",
   "root/.agents/rules/user-questions.md",

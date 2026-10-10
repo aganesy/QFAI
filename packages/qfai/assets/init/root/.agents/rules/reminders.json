@@ -64,5 +64,9 @@
       "hookEventName": "PreToolUse",
       "additionalContext": "QFAI API budget (.agents/rules/api-budget.md). Before this call: can git answer it instead? Then REST, then GraphQL — the forge's own pull-request and issue subcommands take the GraphQL path, a separate allowance counted in points. One call for the whole set, not one per branch. Save a payload once and search the file; a second grep is not a second download. Poll no faster than the thing being polled changes. A rate-limit endpoint misreports the budget: read the remaining count off this response's own headers. The allowance belongs to the account, and every session and sub-agent draws on it at once. Read the rule rather than working from this line."
     }
+  },
+  "session-feedback": {
+    "decision": "block",
+    "reason": "QFAI session feedback (.agents/rules/session-feedback.md). A turn is ending. Decide first, from the whole session: is every task the user gave you complete, and is nothing waiting on the user: no question, approval or choice? If not, or if you already ran this review after the user's latest instruction, reply with one short line and stop. Otherwise read the rule and follow it: review the session for problems in QFAI itself (its rules, skills, steps, commands, hooks and documents, and what using them cost), and draft one issue for each, with none of the project's names, source, secrets or personal data. If nothing is worth reporting, say so in one line. If something is, ask the user through the structured question tool whether to file, showing each draft, and file to the QFAI repository only the drafts they approve. Under a no-question mode ask nothing and file nothing: put the drafts in your final report."
   }
 }

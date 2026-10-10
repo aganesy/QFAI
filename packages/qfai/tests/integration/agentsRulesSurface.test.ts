@@ -1361,6 +1361,74 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     });
   });
 
+  // An agent in an adopter's repository is the one that sees where QFAI cost it
+  // time, so the master ships, and both copies are held to the same clauses.
+  // QFAI:AC-0001-0231-03
+  // QFAI:AC-0001-0231-04
+  // QFAI:AC-0001-0231-05
+  // QFAI:EX-0001-0231-10
+  // QFAI:EX-0001-0231-11
+  // QFAI:EX-0001-0231-12
+  // QFAI:EX-0001-0231-13
+  describe("session-feedback rule", () => {
+    const MASTERS = [
+      ".agents/rules/session-feedback.md",
+      "packages/qfai/assets/init/root/.agents/rules/session-feedback.md",
+    ];
+
+    it.each(MASTERS)("%s states every clause", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      // One token per clause that no other clause in the file carries, so a
+      // clause cannot be dropped and still leave the master looking complete.
+      for (const clause of [
+        // When it runs, and the pauses it never runs at.
+        /Every\s+task\s+the\s+user\s+gave\s+is\s+complete/,
+        /Nothing\s+waits\s+on\s+the\s+user/,
+        /replies\s+with\s+one\s+short\s+line\s+and\s+stops/,
+        /If\s+the\s+user's\s+next\s+answer\s+would\s+start\s+more\s+work/,
+        /In\s+doubt,\s+the\s+work\s+is\s+not\s+complete/,
+        // What is reviewed.
+        /\*\*Tokens\s+against\s+output\.\*\*/,
+        /\*\*Over-work\.\*\*/,
+        /A\s+feeling\s+without\s+evidence\s+is\s+not\s+a\s+finding/,
+        // What a draft may not carry.
+        /the\s+name\s+of\s+the\s+project\s+or\s+its\s+organisation/,
+        // Nothing is filed without a yes, and where.
+        /choosing\s+none\s+files\s+nothing/,
+        /gh\s+issue\s+create\s+--repo\s+aganesy\/QFAI/,
+        /Never\s+ask\s+for,\s+read\s+or\s+enter\s+a\s+credential/,
+        // A mode that asks nothing files nothing.
+        /Nothing\s+is\s+asked\s+and\s+nothing\s+is\s+filed/,
+        // The shortcut's ceiling and the condition that lifts it.
+        /Lift\s+when:\s+the\s+host\s+reports\s+whether\s+the\s+user's\s+work\s+is\s+complete/,
+      ]) {
+        expect(text).toMatch(clause);
+      }
+    });
+
+    it("ships to adopters", async () => {
+      const shipped = path.join(
+        ROOT,
+        "packages/qfai/assets/init/root/.agents/rules/session-feedback.md",
+      );
+      expect((await lstat(shipped)).isFile()).toBe(true);
+    });
+
+    it.each([
+      "AGENTS.md",
+      "CLAUDE.md",
+      ".github/copilot-instructions.md",
+      "packages/qfai/assets/init/root/AGENTS.md",
+      "packages/qfai/assets/init/root/CLAUDE.md",
+      // The list `qfai init` appends to a project that already has an entry
+      // point, and the only rule list a populated project ever sees.
+      "packages/qfai/src/cli/commands/init.ts",
+    ])("%s cites the rule master", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toContain("session-feedback.md");
+    });
+  });
+
   // An agent in an adopter's repository can delete, overwrite and publish there
   // as easily as here, so the master ships, and both copies are held to the same
   // clauses.
