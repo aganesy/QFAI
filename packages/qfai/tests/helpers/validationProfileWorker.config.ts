@@ -13,7 +13,6 @@ export default defineConfig({
     include: ["tests/helpers/validationProfileWorker.test.ts"],
     pool: "threads",
     maxWorkers: 1,
-    minWorkers: 1,
     fileParallelism: false,
   },
 });

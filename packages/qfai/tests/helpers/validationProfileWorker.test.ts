@@ -33,7 +33,7 @@ function comparableValidation(result: ValidationResult) {
     profile: result.profile,
     profileValidatorsRan: result.profileValidatorsRan,
     counts: result.counts,
-    issues: result.issues.toSorted((left, right) =>
+    issues: [...result.issues].sort((left, right) =>
       JSON.stringify(left).localeCompare(JSON.stringify(right)),
     ),
     waivers: result.waivers,
@@ -237,7 +237,7 @@ describe("full validation profiling", () => {
           strict: false,
           profile: "full",
           failOn: "error",
-          format: "json",
+          format: "text",
         });
       } finally {
         capture.mockRestore();

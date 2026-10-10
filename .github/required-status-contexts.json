@@ -280,7 +280,8 @@
       ],
       "closureActions": [
         "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
-        "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
+        "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+        "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9"
       ],
       "closureActionsNote": [
         "The EXTERNAL actions a step in this context's closure may invoke directly, as",
@@ -292,9 +293,9 @@
         "makes a reference immutable and says nothing about what it does, and an action running before",
         "the verdict step can write a workflow command file.",
         "",
-        "An allow-list rather than a ban, because the closure legitimately needs two: the checkout every",
-        "job starts with, and the artifact upload the aggregate uses. Pinned to the SHA, so a bump is a",
-        "change read here as well as in the workflow."
+        "The closure needs checkout, the aggregate report upload, and validation profiling uploads.",
+        "Each action version is pinned to its SHA, so a bump is a change read here as well as in the",
+        "workflow."
       ],
       "nestedActions": ["actions/setup-node@820762786026740c76f36085b0efc47a31fe5020"],
       "nestedActionsNote": [

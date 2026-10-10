@@ -174,7 +174,7 @@ export async function coldValidationCli(
 ) {
   const result = await runControlledProfile(
     process.execPath,
-    [cli, "validate", "--profile", "full", "--fail-on", "error", "--format", "json"],
+    [cli, "validate", "--profile", "full", "--fail-on", "error", "--format", "text"],
     { cwd: root, timeoutMs: timeout, ownGroup },
   );
   return { ...result, actualCode: result.code, code: result.timedOut ? null : result.code };
