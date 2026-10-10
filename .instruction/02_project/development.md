@@ -68,6 +68,13 @@ Run bootstrap separately in each fresh clone or worktree.
 `npx qfai` then resolves the build of the checkout that owns its
 `node_modules`.
 
+On Windows, a worktree can contain a file symlink to a directory that the OS
+cannot follow. Plain `qfai init` can repair this damage on its owned, same-target
+directory wrappers. This repository's canonical `.qfai/assistant/` mirror is
+managed separately by [the mirror script](../../scripts/link-assistant-tree.mjs).
+The mirror script checks followability and repairs owned, same-target directory
+links separately. Wrapper repair does not establish that the mirror is usable.
+
 ## Build and Quality Gates
 
 ```
