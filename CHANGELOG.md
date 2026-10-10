@@ -297,6 +297,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Unfinished merges stop the branch ID check.** Finish the merge before
+  comparing branch-owned identifiers or fetching pull-request heads. Fixes #3246.
+
 - **Decision and open-question row errors explain what to correct.** Cell-count
   errors report the expected and actual counts. Invalid Status errors show a
   quoted preview and the table's allowed values. The preview replaces control
