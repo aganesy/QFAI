@@ -11,7 +11,14 @@ open-questions.md, and every file under paths.contractsDir. Production code and 
 obligation may change in a later task, but the change must preserve or deliberately reapprove that obligation.
 QFAI-owned files under .qfai/assistant/rule/ are updated through the package, then synchronized by init.
 
-A new change-request row in decisions.md is permitted without an earlier change request. Existing rows are append-only records: a prior row may change its Status cell, while its ID, Content, and Approach stay fixed. The sole ID-change exception is explicit local renumbering of a unique branch-added decision absent from the unique common ancestor of HEAD and a required local base. That operation changes only its ID and provably branch-added exact references. Inherited row cells and references stay fixed. A changed obligation needs a new row, even when an older row discusses the same topic.
+A new change-request row in decisions.md is permitted without an earlier change request.
+Existing rows are append-only records: a prior row may change its Status cell,
+while its ID, Content, and Approach stay fixed. The sole ID-change exception is
+explicit local renumbering of a unique branch-added decision absent from the
+unique common ancestor of HEAD and a required local base. That operation changes
+only its ID and provably branch-added exact references. Inherited row cells and
+references stay fixed. A changed obligation needs a new row, even when an older
+row discusses the same topic.
 
 ## Allowed exceptions (minimal whitelist)
 

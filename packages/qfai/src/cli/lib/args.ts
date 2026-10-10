@@ -460,6 +460,10 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         break;
       case "--profile": {
         const next = consumeOptionValue();
+        if (command === "sdd" && options.sddAction === "renumber-decision") {
+          markInvalid(notValidHere("--profile"));
+          break;
+        }
         if (next === null) {
           markInvalid(missingValue("--profile"));
           break;

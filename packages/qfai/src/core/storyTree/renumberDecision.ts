@@ -137,6 +137,8 @@ async function regular(root: string, file: string): Promise<void> {
     if (stats.isSymbolicLink()) throw new Error(`Linked candidate path: ${file}`);
     if (current === path.resolve(root, file) && !stats.isFile())
       throw new Error(`Candidate is not a regular file: ${file}`);
+    if (current === path.resolve(root, file) && stats.nlink > 1)
+      throw new Error(`Hardlinked candidate path: ${file}`);
   }
 }
 
@@ -203,6 +205,24 @@ function records(source: string, file: string) {
   return parsed.rows;
 }
 
+async function fixedSpecTexts(
+  root: string,
+  sha: string,
+  specs: string,
+): Promise<Map<string, string>> {
+  const listing = await git(root, ["ls-tree", "-r", "-z", sha, "--", specs]);
+  const entries = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(listing);
+  const files = new Map<string, string>();
+  for (const entry of entries.split("\0").filter(Boolean)) {
+    const match = /^[0-7]+ blob ([a-f0-9]+)\t(.+)$/.exec(entry);
+    if (!match?.[1] || !match[2]) throw new Error(`The fixed story tree has a non-blob: ${specs}`);
+    const file = match[2];
+    if (!SUFFIXES.has(path.extname(file).toLowerCase())) continue;
+    files.set(file, text(await git(root, ["cat-file", "blob", match[1]]), file));
+  }
+  return files;
+}
+
 export async function buildDecisionRenumberPlan(
   options: DecisionRenumberOptions,
 ): Promise<DecisionRenumberPlan> {
@@ -263,20 +283,29 @@ export async function buildDecisionRenumberPlan(
   }
   let highest = 0;
   for (const sha of [headSha, baseSha]) {
-    const ledger = await blob(root, sha, decisionFile);
-    if (!ledger) continue;
-    const source = text(ledger, decisionFile);
-    const rows = records(source, decisionFile);
-    const model = buildStoryTreeModel(new Map([[decisionFile, source]]), { specsDir: specs });
+    const specTexts = await fixedSpecTexts(root, sha, specs);
+    for (const [file, source] of specTexts) {
+      if (token(options.to).test(source))
+        throw new Error(
+          `Destination ${options.to} is already used in the fixed story tree: ${file}`,
+        );
+    }
+    const ledger = specTexts.get(decisionFile);
+    if (ledger !== undefined) records(ledger, decisionFile);
+    const model = buildStoryTreeModel(specTexts, { specsDir: specs });
     highest = Math.max(highest, Number(nextStoryTreeId(model, "DEC").slice(4)) - 1);
-    for (const row of rows) {
-      const retiredReference = /DEC-(\d{4})/.exec(row.status);
-      if (retiredReference) highest = Math.max(highest, Number(retiredReference[1]));
+    for (const rule of model.rules) {
+      for (const reference of rule.statement.matchAll(/(?<![A-Za-z0-9_-])DEC-(\d{4})(?![0-9-])/g))
+        highest = Math.max(highest, Number(reference[1]));
+    }
+    for (const row of model.decisions?.rows ?? []) {
+      const successor = /^(?:PARTLY )?SUPERSEDED \(by DEC-(\d{4})\)$/.exec(row.status);
+      if (successor) highest = Math.max(highest, Number(successor[1]));
     }
   }
   if (Number(options.to.slice(4)) <= highest)
     throw new Error(
-      `Destination must be unused and above the highest DEC number (${String(highest).padStart(4, "0")}).`,
+      `Destination ${options.to} must be unused and above the highest DEC number (${String(highest).padStart(4, "0")}).`,
     );
   const tracked = new Set((await git(root, ["ls-files", "-z", "--cached"])).toString().split("\0"));
   const inheritedFiles = await matchingFiles(root, options.from, ancestorSha);
