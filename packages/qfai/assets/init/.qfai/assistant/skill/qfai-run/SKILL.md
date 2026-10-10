@@ -14,12 +14,12 @@ mode: execution-focused
 
 [DRIFT-PROTOCOL:REQUIRED]
 
-The CLI plans the extracted request; this skill runs its steps in order.
+The CLI plans the request; this skill runs its steps in order.
 
-- The facts a request is read into: `references/extraction.md`.
-- The command, its input and its output: `references/plan.md`.
+- Read `references/extraction.md` to extract a request.
+- Plan command and format: `references/plan.md`.
 - Screens and questions: `references/operator-screens.md`.
-- What is done at a release, decision or branch point: `references/stage-points.md`.
+- Release, decision and branch points: `references/stage-points.md`.
 - Invoke the CLI through the launcher of `.qfai/assistant/rule/shared-skill-operating-baseline.md#canonical-qfai-launcher-mandatory`.
 
 ## What this skill never does
@@ -47,8 +47,9 @@ value but the three below plans nothing.
 - A change, a question, a proposal to decide or a report to close is planned.
   A question plans a route that answers it and changes nothing. Text that is
   not a request is not planned.
-- Reported results resume a waiting step, including failure. Read
-  `references/operator-screens.md` for external-operation replies.
+- A reply with a requested answer or result resumes the same step without a new
+  invocation, including failure. An independent new request is planned. Read
+  `references/operator-screens.md` for replies.
 - `stop`: end the work at once and list every open decision as open.
 - A request naming a stage skill: invoke that skill by name.
 
