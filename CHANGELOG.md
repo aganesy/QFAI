@@ -45,6 +45,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **Agent entry instructions include report and reply guidance.** Reports and
   replies start with the outcome and distinguish checked from unchecked work.
 
+- Resolve the optional Playwright dependency to 1.64.0 while keeping its existing supported version range.
+
 - **The writing rule removes unnecessary sentences without requiring needless rewrites.**
   Its opening deletion test leaves rewriting to the existing clarity clauses.
 - **The release association gate uses Node.js to read pull request branches.**
@@ -338,6 +340,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   constitution's Article V. Part of #2951.
 
 ### Fixed
+
+- **Question-only work checks authority before repairing tracked files.**
+  Existing permission for the same target is reused. Otherwise the agent offers
+  repair or a report-only stop; an uncovered no-question run reports and stops
+  that target without writing a tracked open question.
 
 - **A diagnosed missing example reuses an existing rule for its obligation.**
   Equivalent rules use existing example coverage and stable rule IDs to settle
