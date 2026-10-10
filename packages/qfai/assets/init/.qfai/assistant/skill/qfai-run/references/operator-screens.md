@@ -138,6 +138,13 @@ Read this section before treating a user's reply as a new request.
 - A reply answering a pending question or reporting the requested operation's
   result resumes the same waiting step, including a reported failure. Use no
   new plan and no skill invocation for that reply.
+- Free text supplying the requested value is an answer to that waiting step,
+  even if it does not repeat an option label.
+  Never treat an unrelated instruction as selection or approval of an option.
+- Dismissal or no response is not an answer or permission. Continue a routine
+  choice only under authorization the user already gave. A missing hard-required
+  fact, uncovered mandatory approval, cancellation or explicit tool block stays
+  protected; do only independent work that remains authorized.
 - An independent new request is planned under the extraction and scope rules
   in `SKILL.md`. If a reply also contains one, resume the waiting step with its
   answer and plan the independent request separately.
@@ -149,10 +156,10 @@ Read this section before treating a user's reply as a new request.
   approval. State what remains unconfirmed. Ask for any fact or decision still
   needed under the normal question rules.
 
-While an operation result is pending, use the interim-report exception in
-`.agents/rules/user-questions.md` § 6 only under its stated conditions. Report
-the current state, expected result and resume condition without repeating the
-question. A completed route still follows the final-report rule below.
+Background waiting needs no question. Report the current state, awaited
+evidence or result and resume condition; promise no automatic restart unless
+the host provides it. Follow `.agents/rules/user-questions.md` § 6 when an
+answer is needed. A completion-only final report needs no question.
 
 ## Halt notice
 
@@ -178,9 +185,10 @@ reset, a stash, a branch switch or a worktree removal.
 - A gate shows its verdict only.
 - An external effect nobody requested is listed as not requested.
 - The report does not restate the history of the work.
-- The report ends with a question listing the next actions, the recommended one
-  first, as `.agents/rules/user-questions.md` § 6 sets out. Under a no-question
-  mode it lists them instead.
+- Ask for the next action only when proceeding requires the user's answer,
+  in the shape `.agents/rules/user-questions.md` § 6 requires. A report that
+  only states completion needs no question. Under a no-question mode, list any
+  remaining actions without asking.
 
 ## Work orders summary
 

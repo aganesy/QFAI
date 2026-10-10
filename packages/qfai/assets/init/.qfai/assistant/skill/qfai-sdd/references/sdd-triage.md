@@ -34,7 +34,7 @@ Inspect the impact cascade: policy → BF → US → AC → EX → enforcing con
 ## Decision and question rows
 
 Use <paths.specsDir>/decisions.md and <paths.specsDir>/open-questions.md, each with exactly ID, Content, Approach, Status. Append a row; later only Status may change, including to `PARTLY SUPERSEDED (by DEC-NNNN)` when a later row narrows a decision without replacing it.
-Do not edit the first three cells or remove the row. Use the next highest ID in the table plus one. A retired item still reserves its BF or US ID.
+Do not edit the first three cells or remove the row, except for explicit branch-added decision renumbering under ID allocation below. Inherited rows retain those cells. Use the next highest ID in the table plus one. A retired item still reserves its BF or US ID.
 
 decisions.md records only what the user decided: each change request the user approved or declined,
 and each critical decision the user made. A row is appended once the user has decided what it records.
@@ -57,6 +57,26 @@ specific future decision point. An unanswered critical product decision is an op
 whose Content opens Unadjudicated:, at TODO until decided. A justified test exception opens a
 decision Content with Test exception:, names the exact BF, AC, or EX it exempts, and puts the reason
 in Approach. It takes effect only at DONE; it never exempts descendant items.
+
+A test annotation may remain pending only when authority to change the
+specification covers that state and the test deferral is approved. Record the
+specification change in its own `Change request:` row. Record the deferral as a
+`Test exception:` decision naming the exact AC at DONE. Its Approach states
+the reason, untested scope, owner, next decision date and condition for restoring
+the annotation.
+
+DONE establishes the exception decision; it does not mean test completion.
+The existing info finding names the exempted AC and its decision without
+claiming test execution or coverage. The exception never exempts descendant EX
+obligations or authorizes changes to EX or BR scope. Do not silently substitute
+an EX or prose rewrite for an approved specification change. Use the next
+decision date for manual review; there is no automatic expiry and no automatic
+warning.
+
+When specification changes are forbidden or either authority is missing, first
+append an `Unadjudicated:` OQ at TODO. Name the affected IDs, expected versus
+actual behavior, implementation-change evidence, owner and required permission.
+Stop dependent AC, EX and BR edits; independent authorized work may continue.
 
 ## Approval and no-question mode
 
@@ -81,7 +101,7 @@ A story-tree or contract file changes only on the user's approval:
    records who approved it, when, and the label of the option chosen.
 3. Move the row to DONE once every change it names is written.
 
-A row present before the stage started keeps its ID, Content and Approach.
+A row present before the stage started keeps its ID, Content and Approach, except for explicit branch-added decision renumbering under ID allocation below. Inherited rows keep those cells without exception.
 Only a row this stage appended changes its Status.
 
 ## Retiring an EX, AC or BR
@@ -109,7 +129,8 @@ Two branches can take the same next ID. When a merge leaves one ID on two items:
 1. The merge target's item keeps the ID. Renumber the incoming item, the one the merge brings in.
 2. Give it the next ID of its scope.
    A renumbered BF or US takes its child IDs and its directory names with it, as a move to another BF does below.
-3. Change every citation of the old ID in the same commit.
+3. Change every citation belonging to the incoming item in the same commit.
+   For a decision, leave inherited references unchanged.
 4. State the old ID, the new ID and the renamed record's subject or path in the commit message.
    A citation of the old ID elsewhere is then told apart from the item that kept it.
 
@@ -117,6 +138,32 @@ A `decisions.md` or `open-questions.md` row already on the target keeps its ID, 
 A row the incoming branch added takes the next ID of its table.
 An ID that two merged records already share is not renumbered:
 ask the user for a change request row that states which record each citation meant.
+
+For a unique decision added by the incoming branch, repair its ID before merging:
+
+```text
+qfai sdd renumber-decision --from <old-DEC-ID> --to <new-DEC-ID> --base <local-ref>
+```
+
+The explicit base and HEAD must resolve locally and have one common ancestor
+that declares no source row. The base may already use that ID; the current
+tree must declare it only once. Choose an unused destination above both story trees'
+highest decision number, retired IDs included, within the four-digit grammar.
+The command reserves no number and chooses no final number automatically.
+
+Read the preview's fixed SHAs, IDs, relative paths and replacement lines or
+counts. It writes nothing and dumps no original lines or full files. Each
+invocation builds its own plan. Run with `--apply` to recheck that invocation's
+fixed refs and original bytes before writing; changed refs after a preview can
+produce a different plan. Preflight-only
+`--format`, `--fail-on`, `--import` and `--assume` are not accepted here.
+Only provably branch-added exact references change. Inherited references stay
+fixed; ambiguous ownership, dirty or linked candidates, unsupported text or
+failed reads stop the whole plan before writing. Unrelated links and dirty
+files are not candidates. Apply rechecks original bytes before each write.
+Rollback restores a changed file only if its bytes still match this invocation's
+replacement, preserving concurrent changes and naming any unrestored path.
+These checks guarantee neither atomic concurrency nor power-loss safety.
 
 A move to another BF changes the story's US ID and all child AC and EX IDs. Record the old IDs as retired, allocate new IDs in the destination scope, and update every citation before the move is complete.
 

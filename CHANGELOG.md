@@ -6,6 +6,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`qfai sdd renumber-decision` repairs a branch-added decision ID.**
+  Explicit source, destination and local base arguments preview exact new
+  references; `--apply` writes after checking fixed commits and original bytes.
+  Inherited references remain unchanged. Unsafe or ambiguous candidates stop
+  the command, and rollback preserves concurrent edits. Fixes #3228.
+
 - **The agent reviews its session for problems in QFAI when all the work is
   done, and asks before filing them.** `qfai init` adds a `Stop` hook to
   `.claude/settings.json` and `.codex/hooks.json`, marked
@@ -26,6 +32,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   An exact AC test exception needs both specification-change and test-deferral
   authority. Its review date is manual; uncovered changes remain open questions.
   Fixes #3233.
+
+- **Questions ask only for answers the next step needs.** Background waiting
+  and completion reports need no question. Dismissed questions and free-text
+  replies preserve prior authorization and pending-step boundaries. Fixes #3230.
 
 - **Selected hook reminders stay visible without repeating their full text.**
   Claude Code and Codex print the full reminder once per session, agent and
