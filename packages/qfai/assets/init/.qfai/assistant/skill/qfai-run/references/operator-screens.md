@@ -52,8 +52,9 @@ Once the plan and its scope are known, and before the first stage:
 - the chosen stages in order;
 - the files the work may change.
 
-It asks nothing and lists no skipped stage. Text that is not a request gets no
-plan and no announcement.
+The announcement asks nothing and lists no skipped stage. Continue with the
+policy check and the first stage in the same turn without waiting for a reply.
+Text that is not a request gets no plan and no announcement.
 
 ## Questions
 

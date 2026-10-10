@@ -22,6 +22,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The qfai-run instructions clarify when to ask and when to continue.**
+  A plan with one scope or no scopes runs every stage without a scope question.
+  A session request naming the change and its effect shows acceptance, as the
+  extraction reference defines. The agent continues from the announcement into
+  the policy check and first stage without waiting for a reply. Fixes #3200.
+
 - **The README quick start now holds the whole first run.** The separate "Minimal
   tutorial" section is removed from both README files: the quick start covers
   `npx qfai init`, describing the change in your own words, answering the
