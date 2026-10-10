@@ -504,6 +504,9 @@ describe("qfai-run", () => {
     );
     expect(work).toMatch(/a decision you took appends no row/i);
     expect(release).toMatch(/which authorizes no push, merge, tag or publication/i);
+    expect(release).toMatch(
+      /`qfai-run`.*\b(?:records|writes)\b.*`decisions\.md`.*\bbefore\b.*`triage-handoff`/i,
+    );
   });
 
   // QFAI:AC-0001-0223-05

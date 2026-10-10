@@ -117,6 +117,31 @@ describe("qfai-triage invoked by name", () => {
 describe("a question answered without a change", () => {
   // QFAI:AC-0001-0214-01
   // QFAI:EX-0001-0214-01
+  // QFAI:EX-0001-0214-11
+  // QFAI:EX-0001-0223-08
+  it("excludes only the pre-handoff approval record from the route's no-change gate", async () => {
+    const gate = flat(sectionOf(await step("triage-close"), "## Gate"));
+
+    expect(gate).toMatch(/\bno tracked file (?:was )?changed by (?:any|a|the) triage step\b/i);
+    expect(gate).toMatch(/\bonly (?:exception|exclusion|tracked-file changes allowed)\b/i);
+    expect(gate).toMatch(/\brequired approval row\b/i);
+    expect(gate).toContain("`decisions.md`");
+    expect(gate).toMatch(/`qfai-run`.*\b(?:records|writes)\b.*\bbefore\b.*`triage-handoff`/i);
+
+    for (const name of ["triage-handoff", "triage-close"]) {
+      expect(flat(sectionOf(await step(name), "## What it writes")), name).toMatch(
+        /No file git tracks/,
+      );
+    }
+    const handoff = await step("triage-handoff");
+    expect(flat(sectionOf(handoff, "## Procedure"))).toMatch(
+      /run none of the operation here: no push, publication, tag or change to an account/i,
+    );
+    expect(flat(sectionOf(handoff, "## Gate"))).toMatch(/nothing was run on their behalf/i);
+  });
+
+  // QFAI:AC-0001-0214-01
+  // QFAI:EX-0001-0214-01
   it("answers in one triage stage with no verify stage and no review, and never says a change is done", async () => {
     const plan = (await loadBuiltInPlans()).find((each) => each.route === "answer-question");
     expect(
