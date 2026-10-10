@@ -294,12 +294,14 @@ describe("cli usage errors", () => {
     ]);
 
     expect(exitCode).toBe(2);
-    expect(JSON.parse(stdout)).toMatchObject({
+    const refusal = JSON.parse(stdout) as { message: string };
+    expect(refusal).toMatchObject({
       ok: false,
       reasons: [{ reason: "invalid-input", subject: "go" }],
     });
     expect(stderr).toContain("go");
     await expectInstallationDiagnostic(stderr);
+    await expectInstallationDiagnostic(refusal.message);
   });
 
   it("writes the rejection reason to stderr, not only usage to stdout", async () => {
