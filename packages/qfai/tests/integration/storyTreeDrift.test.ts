@@ -367,7 +367,7 @@ describe("decision renumber public CLI", () => {
     expect(result.code).toBe(0);
     expect(result.stdout).toContain("DEC-0013");
     expect(result.stdout).not.toContain(visual);
-    expect(await snapshot([...files, example, visual])).toEqual(before);
+    expect(await snapshot([...files, example, visual, contract])).toEqual(before);
     expect(gitText("status", "--porcelain")).toBe("");
   });
 
