@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { readdir, readFile, rm } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -19,14 +19,19 @@ type Group = { readonly hooks: readonly Entry[] };
 
 /** The reminders printed on a limited schedule, and the ones printed on every call. */
 const LIMITED = [
-  "grilling-design-artifact",
-  "grilling-delegation",
   "minimal-implementation",
   "documentation-clarity-after-write",
   "documentation-clarity-after-edit",
-  "api-budget",
 ];
-const EVERY_CALL = ["documentation-clarity-before-post", "grilling-plan"];
+const EVERY_CALL = ["documentation-clarity-before-post"];
+const POINTERS = [
+  ["api-budget", ".agents/rules/api-budget.md"],
+  ["grilling-design-artifact", ".agents/rules/grilling.md"],
+  ["grilling-delegation", ".agents/rules/grilling.md"],
+  ["grilling-plan", ".agents/rules/grilling.md"],
+  ["free-text-entry", "qfai-run"],
+  ["structured-question", ".agents/rules/user-questions.md"],
+] as const;
 
 /** Calls between two prints of one reminder, after the first. */
 const PERIOD = 20;
@@ -71,7 +76,124 @@ function call(rel: string, entry: Entry, input: Record<string, unknown>): Promis
   );
 }
 
+function contextOf(stdout: string): string {
+  expect(stdout.trim(), "a relevant reminder must emit a JSON envelope").not.toBe("");
+  const parsed: unknown = JSON.parse(stdout);
+  if (typeof parsed !== "object" || parsed === null) throw new Error("no hook envelope");
+  const output: unknown = Reflect.get(parsed, "hookSpecificOutput");
+  if (typeof output !== "object" || output === null) throw new Error("no hookSpecificOutput");
+  const context: unknown = Reflect.get(output, "additionalContext");
+  if (typeof context !== "string") throw new Error("no additionalContext");
+  return context;
+}
+
+async function fullContext(key: string): Promise<string> {
+  const messages: Record<string, unknown> = JSON.parse(
+    await readFile(
+      path.join(repoRoot, "packages/qfai/assets/init/root/.agents/rules/reminders.json"),
+      "utf-8",
+    ),
+  );
+  return contextOf(JSON.stringify(messages[key]));
+}
+
+function expectPointer(context: string, full: string, reference: string): void {
+  expect(context).toContain(reference);
+  expect(context.trim()).not.toBe("");
+  expect(context).not.toMatch(/[\r\n\u2028\u2029]/);
+  expect(context.length).toBeLessThan(full.length);
+  if (reference === "qfai-run") {
+    expect(context).toMatch(/\bnew requests?\b.*\bplan\b/i);
+    expect(context).toMatch(
+      /\b(?:requested|pending|waiting)\b.*\b(?:answers?|results?|repl(?:y|ies))\b/i,
+    );
+    expect(context).toMatch(/\b(?:current|same|waiting)\b.*\bstep\b/i);
+    expect(context).not.toMatch(/\b(?:activeRun|turn_id)\b/);
+  }
+}
+
 describe.each(SETTINGS)("%s limits how often a tool-time reminder repeats", (rel) => {
+  it.each(POINTERS)(
+    "prints %s in full once, then a one-line pointer on every relevant trigger",
+    async (key, reference) => {
+      const entry = (await entries(rel)).get(key);
+      if (entry === undefined) throw new Error(`no entry carries ${key}`);
+      const full = await fullContext(key);
+      const input = { session_id: newSession(), prompt: "Fix the failing test" };
+      expect(contextOf(await call(rel, entry, input))).toBe(full);
+      for (let count = 2; count <= PERIOD + 1; count += 1) {
+        expectPointer(contextOf(await call(rel, entry, input)), full, reference);
+      }
+    },
+  );
+
+  it("keeps pointer counters separate by session, optional agent and message key", async () => {
+    const byKey = await entries(rel);
+    const session_id = newSession();
+    for (const [key, reference] of POINTERS) {
+      const entry = byKey.get(key);
+      if (entry === undefined) throw new Error(`no entry carries ${key}`);
+      const full = await fullContext(key);
+      for (const input of [
+        { session_id },
+        { session_id, agent_id: "helper" },
+        { session_id: newSession() },
+      ]) {
+        expect(contextOf(await call(rel, entry, input))).toBe(full);
+        expectPointer(contextOf(await call(rel, entry, input)), full, reference);
+      }
+    }
+  });
+
+  it("falls back to full context on every selected trigger without a usable identity", async () => {
+    const byKey = await entries(rel);
+    for (const [key] of POINTERS) {
+      const entry = byKey.get(key);
+      if (entry === undefined) throw new Error(`no entry carries ${key}`);
+      for (const input of [{}, { session_id: 7 }]) {
+        const full = await fullContext(key);
+        expect(contextOf(await call(rel, entry, input))).toBe(full);
+        expect(contextOf(await call(rel, entry, input))).toBe(full);
+      }
+    }
+  });
+
+  it("falls back to full context and exit zero when selected counters cannot be stored", async () => {
+    const byKey = await entries(rel);
+    for (const [key] of POINTERS) {
+      const entry = byKey.get(key);
+      if (entry === undefined) throw new Error(`no entry carries ${key}`);
+      const session_id = newSession();
+      const counter = path.join(os.tmpdir(), `qfai-reminder-${session_id}-main-${key}`);
+      await mkdir(counter);
+      try {
+        const full = await fullContext(key);
+        expect(contextOf(await call(rel, entry, { session_id }))).toBe(full);
+        expect(contextOf(await call(rel, entry, { session_id }))).toBe(full);
+      } finally {
+        await rm(counter, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it("filters known Claude notification prompts before counting either prompt reminder", async () => {
+    const byKey = await entries(rel);
+    for (const key of ["free-text-entry", "structured-question"]) {
+      const entry = byKey.get(key);
+      if (entry === undefined) throw new Error(`no entry carries ${key}`);
+      const session_id = newSession();
+      for (const prompt of [
+        "<task-notification>Done</task-notification>",
+        '<wake reason="external-event">CI finished</wake>',
+        "[SYSTEM NOTIFICATION - NOT USER INPUT]\nCI finished",
+      ]) {
+        expect(await call(rel, entry, { session_id, prompt })).toBe("");
+      }
+      expect(
+        contextOf(await call(rel, entry, { session_id, prompt: "Fix the failing test" })),
+      ).toBe(await fullContext(key));
+    }
+  });
   it("prints each limited reminder on a session's first call and not on the second", async () => {
     const byKey = await entries(rel);
     for (const key of LIMITED) {
@@ -128,10 +250,10 @@ describe.each(SETTINGS)("%s limits how often a tool-time reminder repeats", (rel
         "",
       );
     }
-    expect(await call(rel, entry, { session_id })).toContain("api-budget.md");
+    expect(contextOf(await call(rel, entry, { session_id }))).toBe(await fullContext("api-budget"));
   });
 
-  it("leaves the reminders for a post and for leaving plan mode on every call", async () => {
+  it("leaves the reminder before a post on every call", async () => {
     const byKey = await entries(rel);
     for (const key of EVERY_CALL) {
       const entry = byKey.get(key);
