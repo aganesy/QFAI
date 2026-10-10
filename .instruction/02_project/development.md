@@ -43,21 +43,30 @@ directory, without changing the Node.js installation directory. The lint helper
 already creates temporary shims when Bash can find Corepack; that fallback
 does not supply pnpm to other root scripts.
 
-Run the setup sequence below from the repository root:
+Run from this repository's root:
 
-```
-pnpm install
-pnpm build
-pnpm install
+```bash
+corepack pnpm bootstrap
 ```
 
-The second install links `node_modules/.bin/qfai` to the build. pnpm skips that
-link while `packages/qfai/dist/` is missing.
+Use `pnpm bootstrap` when pnpm is on PATH. The command uses the pinned
+workspace package manager and runs these steps in order:
 
-`npx qfai` runs the build of the checkout that owns the `node_modules` it
-resolves. A worktree that needs its own build runs these three steps with its
-own `node_modules`, never through a junction shared with another checkout: an
-install there repoints the link for every checkout that shares it.
+1. `pnpm install --frozen-lockfile`
+2. `pnpm -C packages/qfai build`
+3. `pnpm install --frozen-lockfile`
+
+The second install links `node_modules/.bin/qfai` to the local build.
+pnpm skips that link while `packages/qfai/dist/` is missing.
+A failed step stops the command before any later step runs.
+
+Each checkout must own its dependency directories. Bootstrap rejects a
+symlink or junction at root `node_modules` or
+`packages/qfai/node_modules` before installing. Do not share either
+directory with another checkout: an install can repoint its launcher.
+Run bootstrap separately in each fresh clone or worktree.
+`npx qfai` then resolves the build of the checkout that owns its
+`node_modules`.
 
 ## Build and Quality Gates
 
