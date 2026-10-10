@@ -11,7 +11,12 @@ Record a change request as one row in `<paths.specsDir>/decisions.md`. The row h
 - Describe the actual contradiction and its source in `Content`. In `Approach`, state the proposed correction, affected work, and the gate that proves it is applied, inside the form stated at the top of `templates/spec/decisions.md`. Keep both cells concise enough to review as a table row.
 - Append the row only once the user approves the change, at `WIP`, and record in `Approach` who approved it, when, and the option chosen. Move it to `DONE` only after the owner rerun, affected artifacts, and validation evidence are complete. Use `SUPERSEDED (by DEC-NNNN)` when a later decision replaces the row, and `PARTLY SUPERSEDED (by DEC-NNNN)` when it replaces only part of it.
 - Append a declined change at `REJECTED`, recording in `Approach` who declined it and when. It authorizes no edit.
-- After appending, change only `Status`, apart from the drift protocol's explicit branch-added decision renumbering or published decision prefix recovery. Keep inherited ID, Content and Approach fixed, and never delete a row. A row the base holds at DONE authorizes nothing at any Status, so a later change needs a new row. If its scope or proposed correction changes, append a new decision row and supersede the old one.
+- After appending, change only `Status`, apart from the drift protocol's
+  explicit branch-added decision renumbering or published decision prefix
+  recovery. Keep inherited ID, Content and Approach fixed, and never delete a
+  row. A row the base holds at DONE authorizes nothing at any Status, so a later
+  change needs a new row. If its scope or proposed correction changes, append a
+  new decision row and supersede the old one.
 - Keep open questions in `<paths.specsDir>/open-questions.md`. Use the same four columns there, with `OQ-NNNN` IDs and the statuses permitted by that template.
 
 ## Published decision prefix recovery
