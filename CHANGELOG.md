@@ -37,6 +37,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   "an E2E test", "an integration or API test" and "a test" for the three
   obligation kinds. Coverage and severity are unchanged. Fixes #3239.
 
+
+- **Approved specification changes distinguish pending test annotations from completed tests.**
+  An exact AC test exception needs both specification-change and test-deferral
+  authority. Its review date is manual; uncovered changes remain open questions.
+  Fixes #3233.
 - **Test exceptions take effect only at DONE.** A partially superseded exception
   no longer suppresses a missing-test error. Other decision kinds keep their
   status behavior. Fixes #3356.
