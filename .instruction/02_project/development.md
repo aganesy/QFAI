@@ -138,6 +138,49 @@ npx qfai report
 - See `RELEASE.md` for details
 - Run `npm publish --dry-run` inside `packages/qfai`
 
+## Recover a timed-out push
+
+A timeout leaves the remote result unknown. Confirm the first push has ended
+and inspect the exact remote branch before retrying.
+
+Use Git Bash from this checkout. Finish and commit the merge first. Confirm
+that no earlier push from this checkout is running. Retain its tool session,
+PID and command when available; a PID alone does not establish ownership.
+Record the branch, HEAD and the remote ref's value or absence before pushing.
+The remote lookup must succeed. This example requires GNU `timeout`:
+
+```bash
+pushBranch=$(git symbolic-ref --quiet --short HEAD) || exit 1
+[ "$pushBranch" != main ] || exit 1
+pushHead=$(git rev-parse --verify HEAD) || exit 1
+timeout --foreground 100s git ls-remote --refs origin "refs/heads/$pushBranch"
+timeout --foreground 100s git push origin "HEAD:refs/heads/$pushBranch"
+```
+
+Run each command separately in the same Git Bash session and keep its result.
+Do not start the push if the lookup fails or times out. These commands target
+`origin` and the current topic branch; confirm that this is the intended
+destination.
+
+A tool timeout may leave a running session. Poll that session instead of
+starting another push. GNU `timeout` also does not establish that every Windows
+child has exited. Confirm termination from the session result and, if needed,
+the command and parentage of the owned process. If termination is unknown, stop.
+
+After the attempt has ended, repeat the bounded remote lookup above. Compare
+the exact ref and SHA with the recorded values:
+
+- Remote SHA equals `pushHead`: publication is complete, even if the push timed out.
+- Remote ref is unchanged or still absent: retry once with the same bounded push
+  only after confirming that the local branch and HEAD still match the snapshots.
+- Remote SHA changed to another value, the lookup fails, or the local snapshots
+  changed: stop and inspect the state before choosing another action.
+
+If the retry also times out, retain its result and inspect the remote again;
+do not enter a retry loop. Preserve the merge commit and working tree. Do not
+force-push, reset or delete locks. Do not terminate processes without ownership
+proof.
+
 ## Rule and hook integration map
 
 This map locates existing owners when rule or hook surfaces change.
