@@ -334,6 +334,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Question-only work checks authority before repairing tracked files.**
+  Existing permission for the same target is reused. Otherwise the agent offers
+  repair or a report-only stop; an uncovered no-question run reports and stops
+  that target without writing a tracked open question.
+
 - Verify steps reject validation errors even when a custom Validate wrapper succeeds.
 - Clarify that the research agent reads the cache TTL extension in the project config; the CLI does not parse it.
 
