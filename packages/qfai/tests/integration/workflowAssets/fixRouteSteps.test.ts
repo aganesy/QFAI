@@ -45,7 +45,7 @@ describe("a fix route from the diagnosis to the commit", () => {
     );
     expect(text).toMatch(/the behaviour a reverted change broke/i);
     expect(text).toMatch(/the step asks the user nothing/i);
-    expect(text).toMatch(/list the EX in the run's final report/i);
+    expect(text).toMatch(/list the EX\b.*\bin the run's final report/i);
   });
 
   // QFAI:EX-0001-0094-02
@@ -109,10 +109,46 @@ describe("a fix route from the diagnosis to the commit", () => {
     expect(text).toMatch(/opening `Test exception:` names, with Status DONE, is exempt/i);
   });
 
-  it("asks which rule owns the AC when several cite its examples", async () => {
-    const text = await section("implement-tdd", "## A diagnosed missing example");
-    expect(text).toMatch(/the contract rule the diagnosis names as owning that AC/i);
-    expect(text).toMatch(/stop and ask the user which one; never pick one/i);
+  // QFAI:AC-0001-0206-01
+  // QFAI:AC-0001-0206-03
+  // QFAI:EX-0001-0206-01
+  // QFAI:EX-0001-0206-03
+  it("selects an equivalent existing owner and stops unresolved obligations before writing", async () => {
+    const diagnosed = sectionOf(
+      await readShipped("step/implement-tdd/STEP.md"),
+      "## A diagnosed missing example",
+    );
+    const ownership = flat(
+      diagnosed.split("- Before appending the EX")[1]?.split("- Append exactly one EX")[0] ?? "",
+    );
+    expect(ownership, "owner selection needs its own eligibility and equivalence policy").toMatch(
+      /existing.*rules.*cite.*matched AC.*state.*expected obligation/i,
+    );
+    expect(ownership).toMatch(/(?:prefer|retain|use).*existing owner.*(?:qualif|eligible)/i);
+    expect(ownership).toMatch(/(?:sole|only).*qualifying rule/i);
+    expect(ownership).toMatch(/only.*rules.*(?:proven|confirmed|demonstrably).*equivalent/i);
+    expect(ownership).toMatch(
+      /conditions.*(?:outcomes|results).*exceptions.*(?:authority|authorization)/i,
+    );
+    expect(ownership).toMatch(/(?:most|greatest|highest).*distinct.*existing EXs?.*that AC/i);
+    expect(ownership).toMatch(/(?:exclud|without|not count).*new EX/i);
+    expect(ownership).toMatch(/tie.*(?:ascending|stable|lowest).*BR ID/i);
+    expect(ownership).toMatch(/(?:never|do not|not).*majority.*different.*(?:behaviour|behavior)/i);
+    expect(ownership).toMatch(/no rule qualifies.*stop/i);
+    expect(ownership).toMatch(/(?:behaviour|behavior) differs.*equivalence.*uncertain.*stop/i);
+    expect(ownership).toMatch(
+      /stop dependent work.*qfai-sdd.*drift-protocol\.md.*before changing.*AC.*EX/i,
+    );
+    expect(ownership).toMatch(/add no rule.*change no rule statement/i);
+    const bullets = diagnosed.split(/\r?\n(?=- )/u);
+    const citingRule = flat(
+      bullets.find((bullet) => bullet.startsWith("- Add the new EX ID")) ?? "",
+    );
+    expect(citingRule).toMatch(/new EX ID.*selected rule.*Examples cell/i);
+    expect(citingRule).toMatch(/(?:the rule's|its) Statement is unchanged/i);
+    expect(citingRule).toMatch(/(?:asks? no|no extra).*question/i);
+    const report = flat(bullets.find((bullet) => bullet.startsWith("- List the EX")) ?? "");
+    expect(report).toMatch(/chosen BR.*reason.*final report/i);
   });
 });
 
