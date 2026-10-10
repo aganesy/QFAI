@@ -170,7 +170,7 @@ describe("Config Update Is Minimal", () => {
   it("records one whole routing entry and copies no other default into the config", async () => {
     const content = await readFile(SKILL_PATH, "utf-8");
     expect(section(content, "Step 4")).toContain(
-      "`routing` or `reviewProfiles` only when the project needs an override; each matching entry replaces the shipped default as a whole",
+      "`routing` or `reviewProfiles` only when the user asks to change one; each matching entry replaces the shipped default as a whole",
     );
     expect(section(content, "Step 4")).toContain("Keep all other config keys unchanged.");
     expect(section(content, "Constraints")).toContain(
