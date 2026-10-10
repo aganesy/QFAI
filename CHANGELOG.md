@@ -41,6 +41,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   identity or unavailable counters keep the full reminder. Posting reminders
   remain unchanged.
 
+- **Windows CI covers native assistant mirror links.** Its parity list includes
+  mirror link behavior and prepares owned root links before testing, using the
+  same temp directory as the suites. Healthy worktrees remain healthy cases.
+
 - **Windows link warnings describe the affected wrapper and its existing repair.**
   Guidance recommends ordinary init without deleting links and distinguishes
   consumer wrappers from the repository's canonical mirror. Refs #3240.
@@ -316,6 +320,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   constitution's Article V. Part of #2951.
 
 ### Fixed
+
+- **Language errors offer an ASCII code-point construction for code samples.**
+  The guard keeps Unicode escape guidance and explains the alternative when
+  an editing tool decodes escapes. Forbidden characters remain rejected.
+  Fixes #3248.
 
 - **Unfinished merges stop the branch ID check.** Finish the merge before
   comparing branch-owned identifiers or fetching pull-request heads. Fixes #3246.
