@@ -19,7 +19,7 @@ Four places own rules, and a file here restates none of them. It points.
 | ---------------------------- | ----------------------------------------------------- |
 | `.agents/rules/**`           | The cross-AI rules, one master per rule               |
 | `.qfai/assistant/rule/**`    | The articles, and the Absolute Rules                  |
-| `AGENTS.md`, `CLAUDE.md`     | Naming, indexing, and which of the above applies when |
+| `AGENTS.md`                  | Naming, indexing, and which of the above applies when |
 | `REVIEW.md`, the agent cards | What a reviewer looks for, and what each role does    |
 
 On any disagreement the owner wins and the file here is wrong. A second

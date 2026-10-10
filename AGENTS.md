@@ -37,12 +37,13 @@ document often exists in two trees. **Edit the one the package carries.**
   needs its own build runs the three steps with its own `node_modules`, never through a junction
   shared with another checkout. A new worktree has no `node_modules`: run
   `pnpm install --frozen-lockfile` first, and merge `origin/main` into it before relying on its skills.
-- Where `pnpm` is not on `PATH`, run `corepack pnpm <script>`. npm stops at the `workspace:` protocol,
+- Where `pnpm` is not on `PATH`, run `corepack pnpm <script>`; `scripts/run-lint-checks.sh` falls back to it itself. npm stops at the `workspace:` protocol,
   and `scripts/check-not-a-dependency.mjs` refuses a yarn install. On Windows a linked file reads as a
   one-line path unless `core.symlinks` is enabled: open its target under
   `packages/qfai/assets/init/root/.agents/rules/`.
-- `jq` must be on `PATH` for the association-gate cases of
-  `packages/qfai/tests/scripts/ownWorkflowTopology.test.ts`.
+- Node.js and Bash must be on `PATH` for the two association-gate cases in
+  `packages/qfai/tests/scripts/ownWorkflowTopology.test.ts`. A case stops and names the missing tool
+  when either is unavailable.
 - Editing a pinned file (the guard programs, the local actions and the other paths in
   `.github/pinned-bytes.txt`) changes digests in `.github/pinned-bytes.txt`,
   `.github/required-status-contexts.json` and `.github/workflows/ci.yml`. Run `pnpm pins:reseal`
@@ -68,8 +69,8 @@ document often exists in two trees. **Edit the one the package carries.**
 - Keep the traceability chain BF → US → AC → EX → Test → Code, with each BR in the contract that
   enforces it. Story-tree IDs must not collide or reference entries the tree does not declare.
   References point one way: a BR cites only EX, only code and tests cite a BR, and a contract never
-  names an implementation file. Take a new ID from `node scripts/story-ids.mjs next <scope>`, and run
-  `node scripts/story-ids.mjs check` before a pull request merges. The tool needs Node.js 22.18 or later.
+  names an implementation file. Take a new ID from `node scripts/story-ids.mjs next <scope>`, which reads main and every open
+  pull request, and run `node scripts/story-ids.mjs check` before a pull request merges. The tool needs Node.js 22.18 or later.
 - After changing a TypeScript file, run `pnpm format:check && pnpm lint && pnpm check-types` and
   report the result.
 - Read `REVIEW.md` before reviewing a pull request or writing its description, from the branch the
