@@ -44,7 +44,9 @@ import {
   mkdtempSync,
   readFileSync,
   readdirSync,
+  renameSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -1689,6 +1691,7 @@ describe("the required-context job and the lint lane both stay unconditional", (
  */
 const OWN_WORKFLOW_FILES = [
   "ci.yml",
+  "named-tests.yml",
   "prepare-release.yml",
   "release-notes-drift.yml",
   "release.yml",
@@ -4080,6 +4083,367 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
             "complete run and what the suite count above assumes",
         )
         .toContain("pnpm -C packages/qfai test");
+    }
+  });
+});
+
+function namedWorkflow(): Record<string, unknown> {
+  const document: unknown = parseYaml(
+    readFileSync(path.join(WORKFLOWS_DIR, "named-tests.yml"), "utf-8"),
+  );
+  if (!isRecord(document)) throw new Error("named-tests.yml must contain a workflow mapping");
+  return document;
+}
+
+function namedJob(): Record<string, unknown> {
+  const jobs = namedWorkflow()["jobs"];
+  if (!isRecord(jobs) || !isRecord(jobs["named-test"]))
+    throw new Error("named diagnostic job is absent");
+  return jobs["named-test"];
+}
+
+function namedSteps(): Record<string, unknown>[] {
+  const steps = namedJob()["steps"];
+  if (!Array.isArray(steps)) throw new Error("named diagnostic steps are absent");
+  return steps.filter(isRecord);
+}
+
+function namedProgram(marker: string): string {
+  const bodies = namedSteps()
+    .map((step) => step["run"])
+    .filter((run): run is string => typeof run === "string" && run.includes(`<<'${marker}'`));
+  const [body] = bodies;
+  if (bodies.length !== 1 || body === undefined)
+    throw new Error(`expected one quoted ${marker} body`);
+  const begin = body.indexOf(`<<'${marker}'\n`) + marker.length + 5;
+  const end = body.indexOf(`\n${marker}\n`, begin);
+  if (begin < marker.length + 5 || end < begin)
+    throw new Error(`missing ordered ${marker} delimiters`);
+  return body.slice(begin, end) + "\n";
+}
+
+type NamedFixture = { root: string; sha: string; file: string };
+
+function namedGit(root: string, ...args: string[]): string {
+  return execFileSync("git", args, {
+    cwd: root,
+    encoding: "utf-8",
+    stdio: ["ignore", "pipe", "pipe"],
+  }).trim();
+}
+
+function namedFixture(file = "packages/qfai/tests/core/one.test.ts", sha256 = false): NamedFixture {
+  const root = mkdtempSync(path.join(tmpdir(), "qfai-named-head-"));
+  mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
+  writeFileSync(path.join(root, file), "export const fixture = true;\n");
+  writeFileSync(
+    path.join(root, "packages", "qfai", "vitest.workspace.ts"),
+    readFileSync(path.join(REPO_ROOT, "packages", "qfai", "vitest.workspace.ts")),
+  );
+  namedGit(root, "init", "-b", "main", ...(sha256 ? ["--object-format=sha256"] : []));
+  namedGit(root, "config", "user.email", "fixture@example.invalid");
+  namedGit(root, "config", "user.name", "Named test fixture");
+  namedGit(root, "config", "core.autocrlf", "false");
+  namedGit(root, "add", "--", file, "packages/qfai/vitest.workspace.ts");
+  namedGit(root, "commit", "-m", "Test fixture");
+  const sha = namedGit(root, "rev-parse", "HEAD");
+  const origin = path.join(root, "origin.git");
+  namedGit(root, "init", "--bare", ...(sha256 ? ["--object-format=sha256"] : []), origin);
+  namedGit(root, "remote", "add", "origin", origin);
+  namedGit(root, "push", "origin", "HEAD:refs/pull/37/head");
+  return { root, sha, file };
+}
+
+function runNamedPreflight(
+  fixture: NamedFixture,
+  env: Record<string, string> = {},
+): { status: number | null; stderr: string } {
+  const program = path.join(fixture.root, "preflight.mjs");
+  writeFileSync(program, namedProgram("PREFLIGHT"));
+  const result = spawnSync(process.execPath, [program], {
+    cwd: fixture.root,
+    encoding: "utf-8",
+    env: {
+      ...process.env,
+      PR_NUMBER: "37",
+      EXPECTED_SHA: fixture.sha,
+      TEST_PROJECT: "core",
+      TEST_FILE: fixture.file,
+      ...env,
+    },
+  });
+  return { status: result.status, stderr: result.stderr };
+}
+
+describe("the optional exact-file diagnostic", () => {
+  // QFAI:EX-0002-0026-14
+  it("is manual, read-only, bounded, and outside every required CI context", () => {
+    const workflow = namedWorkflow();
+    const triggers = workflow["on"];
+    expect(isRecord(triggers) ? Object.keys(triggers) : []).toEqual(["workflow_dispatch"]);
+    const dispatch = isRecord(triggers) ? triggers["workflow_dispatch"] : undefined;
+    const inputs = isRecord(dispatch) ? dispatch["inputs"] : undefined;
+    expect(isRecord(inputs) ? Object.keys(inputs) : []).toEqual(["pr", "sha", "project", "file"]);
+    if (!isRecord(inputs)) throw new Error("named diagnostic has no input mapping");
+    for (const input of Object.values(inputs)) {
+      expect(isRecord(input) ? input["required"] : undefined).toBe(true);
+      expect(isRecord(input) ? input["default"] : undefined).toBeUndefined();
+    }
+    const project = inputs["project"];
+    expect(isRecord(project) ? project["type"] : undefined).toBe("choice");
+    const options = isRecord(project) ? project["options"] : undefined;
+    expect(isStringArray(options) ? [...options].sort() : []).toEqual([...declaredSlices()].sort());
+    expect(workflow["permissions"]).toEqual({ contents: "read" });
+    const concurrency = workflow["concurrency"];
+    expect(isRecord(concurrency) ? concurrency["cancel-in-progress"] : undefined).toBe(true);
+    const timeout = namedJob()["timeout-minutes"];
+    expect(typeof timeout === "number" && timeout > 0 && timeout <= 20).toBe(true);
+    expect(namedJob()["strategy"]).toBeUndefined();
+    expect(namedJob()["needs"]).toBeUndefined();
+    expect(namedJob()["name"]).toBe("Named test diagnostic (${{ inputs.project }})");
+    const contexts = readFileSync(
+      path.join(REPO_ROOT, ".github", "required-status-contexts.json"),
+      "utf-8",
+    );
+    expect(contexts).not.toContain("Named test diagnostic");
+    expect(verdictNeeds()).not.toContain("named-test");
+    expect(readFileSync(CI_WORKFLOW, "utf-8")).not.toContain("named-tests.yml");
+  });
+
+  // QFAI:EX-0002-0026-09 QFAI:EX-0002-0026-12 QFAI:EX-0002-0026-13
+  it("checks the head before the shared floor setup and again before running tests", () => {
+    const steps = namedSteps();
+    const checkout = steps.find((step) => String(step["uses"]).startsWith("actions/checkout@"));
+    const checkoutWith = checkout?.["with"];
+    const inputs = isRecord(checkoutWith) ? checkoutWith : {};
+    expect(checkout?.["uses"]).toMatch(/^actions\/checkout@[a-f0-9]{40}$/u);
+    expect(inputs["ref"]).toBe("${{ inputs.sha }}");
+    expect(inputs["persist-credentials"]).toBe(false);
+    const checkIndex = steps.findIndex((step) => String(step["run"]).includes("<<'PREFLIGHT'"));
+    const setupIndex = steps.findIndex(
+      (step) => step["uses"] === "./.ci-actions/.github/actions/setup",
+    );
+    expect(checkIndex).toBeGreaterThan(-1);
+    expect(setupIndex).toBeGreaterThan(checkIndex);
+    const setup = steps[setupIndex];
+    const setupWith = setup?.["with"];
+    const setupInputs = isRecord(setupWith) ? setupWith : {};
+    expect(setupInputs).toEqual({
+      "engines-manifest": "./packages/qfai/package.json",
+      "pin-engines-floor": "true",
+    });
+    const run = steps.find((step) => String(step["run"]).includes("<<'RUNNER'"));
+    expect(String(run?.["run"])).toContain('node "${RUNNER_TEMP}/named-preflight.mjs"');
+    expect(String(run?.["run"])).not.toMatch(/\$\{\{\s*inputs\./u);
+    expect(String(run?.["run"])).not.toMatch(/passWithNoTests=true|allowOnly=true/u);
+    const build = steps.find((step) => String(step["run"]) === "pnpm -C packages/qfai build");
+    expect(build?.["if"]).toBe("inputs.project == 'e2e' || inputs.project == 'integration'");
+    expect(namedJob()["env"]).toEqual({
+      PR_NUMBER: "${{ inputs.pr }}",
+      EXPECTED_SHA: "${{ inputs.sha }}",
+      TEST_PROJECT: "${{ inputs.project }}",
+      TEST_FILE: "${{ inputs.file }}",
+    });
+  });
+
+  // QFAI:EX-0002-0026-09
+  it("resolves setup from the immutable workflow revision despite a replaced PR action", () => {
+    const steps = namedSteps();
+    const setup = steps.find((step) => step["uses"] === "./.ci-actions/.github/actions/setup");
+    expect(setup).toBeDefined();
+    expect(steps.some((step) => step["uses"] === "./.github/actions/setup")).toBe(false);
+    const checkout = steps.find((step) => {
+      const inputs = step["with"];
+      return isRecord(inputs) && inputs["path"] === ".ci-actions";
+    });
+    expect(checkout?.["uses"]).toMatch(/^actions\/checkout@[a-f0-9]{40}$/u);
+    const inputs = checkout?.["with"];
+    expect(inputs).toEqual({
+      repository: "${{ github.repository }}",
+      ref: "${{ github.workflow_sha }}",
+      path: ".ci-actions",
+      clean: false,
+      "sparse-checkout": ".github/actions",
+      "sparse-checkout-cone-mode": false,
+      "persist-credentials": false,
+    });
+    const preflightIndex = steps.findIndex((step) => String(step["run"]).includes("<<'PREFLIGHT'"));
+    expect(steps.indexOf(checkout ?? {})).toBeGreaterThan(preflightIndex);
+    expect(steps.indexOf(setup ?? {})).toBeGreaterThan(steps.indexOf(checkout ?? {}));
+    const fixture = namedFixture();
+    try {
+      const action = path.join(fixture.root, ".github", "actions", "setup", "action.yml");
+      mkdirSync(path.dirname(action), { recursive: true });
+      const trusted =
+        "name: Trusted setup\nruns:\n  using: composite\n  steps:\n    - shell: bash\n      run: echo TRUSTED_SETUP_ONLY\n";
+      writeFileSync(action, trusted);
+      namedGit(fixture.root, "add", "--", ".github/actions");
+      namedGit(fixture.root, "commit", "-m", "Workflow setup fixture");
+      const workflowSha = namedGit(fixture.root, "rev-parse", "HEAD");
+      namedGit(fixture.root, "push", "origin", `${workflowSha}:refs/heads/workflow`);
+      writeFileSync(
+        action,
+        'name: PR action\nruns:\n  using: composite\n  steps:\n    - shell: bash\n      run: echo "GITHUB_TOKEN=${{ github.token }}" >> "$GITHUB_ENV"\n',
+      );
+      namedGit(fixture.root, "add", "--", ".github/actions");
+      namedGit(fixture.root, "commit", "-m", "Replaced PR setup fixture");
+      namedGit(fixture.root, "push", "origin", "HEAD:refs/pull/37/head");
+      const sidecar = path.join(fixture.root, ".ci-actions");
+      namedGit(
+        fixture.root,
+        "clone",
+        "--no-checkout",
+        path.join(fixture.root, "origin.git"),
+        sidecar,
+      );
+      namedGit(sidecar, "sparse-checkout", "set", "--no-cone", ".github/actions");
+      namedGit(sidecar, "checkout", workflowSha);
+      expect(namedGit(sidecar, "rev-parse", "HEAD")).toBe(workflowSha);
+      expect(namedGit(fixture.root, "rev-parse", "HEAD")).not.toBe(workflowSha);
+      const uses = setup?.["uses"];
+      if (typeof uses !== "string") throw new Error("trusted setup reference is missing");
+      const selected = readFileSync(path.join(fixture.root, uses, "action.yml"), "utf-8");
+      expect(selected).toBe(trusted);
+      expect(selected).not.toContain("github.token");
+      expect(readFileSync(action, "utf-8")).toContain("github.token");
+      expect(verdictNeeds()).not.toContain("named-test");
+    } finally {
+      rmSync(fixture.root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:EX-0002-0026-01 QFAI:EX-0002-0026-07
+  it.each([
+    ["core", "core"],
+    ["unit", "unit"],
+    ["validators", "validators"],
+    ["integration", "integration"],
+    ["integration", "detection"],
+    ["integration", "skill"],
+    ["integration", "codex"],
+    ["e2e", "e2e"],
+    ["e2e", "assets"],
+    ["cli", "cli"],
+    ["scripts", "scripts"],
+  ])("accepts a live tracked %s project file under %s", (project, directory) => {
+    const fixture = namedFixture(`packages/qfai/tests/${directory}/one.test.ts`);
+    try {
+      expect(runNamedPreflight(fixture, { TEST_PROJECT: project })).toEqual({
+        status: 0,
+        stderr: "",
+      });
+    } finally {
+      rmSync(fixture.root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:EX-0002-0026-01
+  it("accepts a full SHA256 head from a real Git repository", () => {
+    const fixture = namedFixture("packages/qfai/tests/core/one.test.ts", true);
+    try {
+      expect(fixture.sha).toHaveLength(64);
+      expect(runNamedPreflight(fixture).status).toBe(0);
+    } finally {
+      rmSync(fixture.root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:EX-0002-0026-02 QFAI:EX-0002-0026-03 QFAI:EX-0002-0026-04 QFAI:EX-0002-0026-09
+  it.each([
+    ["empty path", "TEST_FILE", ""],
+    ["empty PR", "PR_NUMBER", ""],
+    ["empty SHA", "EXPECTED_SHA", ""],
+    ["empty project", "TEST_PROJECT", ""],
+    ["command substitution", "TEST_FILE", "$(echo unsafe)"],
+    ["traversal", "TEST_FILE", "packages/qfai/tests/core/../one.test.ts"],
+    ["glob", "TEST_FILE", "packages/qfai/tests/core/*.test.ts"],
+    ["absolute path", "TEST_FILE", "/tmp/one.test.ts"],
+    ["option injection", "TEST_FILE", "--passWithNoTests=true"],
+    ["shell injection", "PR_NUMBER", "37; echo unsafe"],
+    ["short SHA", "EXPECTED_SHA", "abcdef12"],
+    ["missing PR", "PR_NUMBER", "38"],
+    ["unsupported project", "TEST_PROJECT", "all"],
+    ["project mismatch", "TEST_PROJECT", "cli"],
+    ["untracked file", "TEST_FILE", "packages/qfai/tests/core/missing.test.ts"],
+  ])("refuses %s before tests run", (_label, key, value) => {
+    const fixture = namedFixture();
+    try {
+      expect(runNamedPreflight(fixture, { [key]: value }).status).toBe(1);
+    } finally {
+      rmSync(fixture.root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:EX-0002-0026-08
+  it("refuses an assets file selected as integration", () => {
+    const fixture = namedFixture("packages/qfai/tests/assets/one.test.ts");
+    try {
+      expect(runNamedPreflight(fixture, { TEST_PROJECT: "integration" }).status).toBe(1);
+    } finally {
+      rmSync(fixture.root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:EX-0002-0026-03 QFAI:EX-0002-0026-05 QFAI:EX-0002-0026-06 QFAI:EX-0002-0026-13
+  it.each([
+    "stale checkout",
+    "advanced remote",
+    "edited file",
+    "missing file",
+    "symbolic file",
+    "symbolic parent",
+    "nonregular file",
+    "untracked local file",
+    "changed includes",
+    "indexed-only file",
+  ])("refuses %s instead of running a different head or path", (kind) => {
+    const fixture = namedFixture();
+    try {
+      let env: Record<string, string> = {};
+      if (kind === "stale checkout" || kind === "advanced remote") {
+        namedGit(fixture.root, "commit", "--allow-empty", "-m", "Next head");
+        if (kind === "advanced remote") {
+          namedGit(fixture.root, "push", "origin", "HEAD:refs/pull/37/head");
+          namedGit(fixture.root, "checkout", fixture.sha);
+        }
+      } else if (kind === "edited file")
+        writeFileSync(path.join(fixture.root, fixture.file), "changed contents\n");
+      else if (kind === "missing file") rmSync(path.join(fixture.root, fixture.file));
+      else if (kind === "symbolic file") {
+        const target = path.join(fixture.root, "target.ts");
+        writeFileSync(target, "export const fixture = true;\n");
+        rmSync(path.join(fixture.root, fixture.file));
+        symlinkSync(target, path.join(fixture.root, fixture.file), "file");
+      } else if (kind === "symbolic parent") {
+        const directory = path.dirname(path.join(fixture.root, fixture.file));
+        const target = path.join(fixture.root, "real-core");
+        renameSync(directory, target);
+        symlinkSync(target, directory, "junction");
+      } else if (kind === "nonregular file") {
+        rmSync(path.join(fixture.root, fixture.file));
+        mkdirSync(path.join(fixture.root, fixture.file));
+      } else if (kind === "changed includes") {
+        const workspace = path.join(fixture.root, "packages", "qfai", "vitest.workspace.ts");
+        writeFileSync(
+          workspace,
+          readFileSync(workspace, "utf-8").replace(
+            '"tests/core/**/*.test.ts"',
+            '"tests/unit/**/*.test.ts"',
+          ),
+        );
+      } else if (kind === "untracked local file") {
+        const file = "packages/qfai/tests/core/untracked.test.ts";
+        writeFileSync(path.join(fixture.root, file), "export const fixture = true;\n");
+        env = { TEST_FILE: file };
+      } else {
+        const file = "packages/qfai/tests/core/indexed.test.ts";
+        writeFileSync(path.join(fixture.root, file), "export const fixture = true;\n");
+        namedGit(fixture.root, "add", "--", file);
+        env = { TEST_FILE: file };
+      }
+      expect(runNamedPreflight(fixture, env).status).toBe(1);
+    } finally {
+      rmSync(fixture.root, { recursive: true, force: true });
     }
   });
 });
