@@ -57,6 +57,5 @@ in `qfai.config.yaml`, and nowhere else.
 ## Forbidden Fallbacks
 
 - Do not infer downstream UI behavior from discussion-pack sidecars.
-- Do not use retired design contract files.
 - Do not use HTML mock sections as downstream source of truth.
 - Do not treat a competitor reference as a selected design direction.

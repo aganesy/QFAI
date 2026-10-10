@@ -211,12 +211,6 @@ importers:
 
   packages/qfai:
     dependencies:
-      '@cucumber/gherkin':
-        specifier: ^42.0.0
-        version: 42.0.1
-      '@cucumber/messages':
-        specifier: ^34.0.0
-        version: 34.2.1
       '@jackchuka/mdschema':
         specifier: 0.15.5
         version: 0.15.5
@@ -342,12 +336,6 @@ packages:
   '@csstools/css-tokenizer@4.0.0':
     resolution: {integrity: sha512-QxULHAm7cNu72w97JUNCBFODFaXpbDg+dP8b/oWFAZ2MTRppA3U00Y2L1HqaS4J6yBqxwa/Y3nMBaxVKbB/NsA==}
     engines: {node: '>=20.19.0'}
-
-  '@cucumber/gherkin@42.0.1':
-    resolution: {integrity: sha512-Kqg0ULhWqbXp/a1c04ND4sS4KTlIL831tQ0NhZLXWdEhT6LiNsZ5LFRzy/lBy7QQpcKhroKp/i3C2WdEnRBKNg==}
-
-  '@cucumber/messages@34.2.1':
-    resolution: {integrity: sha512-aj2iCAG9ZOpMVcMxcgShifv5fbR96b7SMgdWcPXXh2QbFp7OEcAnQ5MC5YfWUDSDasmw7FU5NJEsOrXdTQOU1A==}
 
   '@electric-sql/pglite@0.5.8':
     resolution: {integrity: sha512-n9tsbUOhwx2epK1V0ZG9Ar4SHWUju04dhmzZXiSBXwBoleOvIfals33NAaWgagQVAL4Rbvx/Ptsu3P+pA09f6Q==}
@@ -2657,12 +2645,6 @@ snapshots:
       css-tree: 3.2.1
 
   '@csstools/css-tokenizer@4.0.0': {}
-
-  '@cucumber/gherkin@42.0.1':
-    dependencies:
-      '@cucumber/messages': 34.2.1
-
-  '@cucumber/messages@34.2.1': {}
 
   '@electric-sql/pglite@0.5.8': {}
 

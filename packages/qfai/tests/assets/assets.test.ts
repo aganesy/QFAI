@@ -857,11 +857,6 @@ describe("assets guardrails", () => {
   // .npmignore files removed — gitignore entries now live in root .gitignore
   // (see ensureRootGitignoreEntries in core/init/rootGitignore.ts)
 
-  it("does not ship review_archive gitignore in init template", () => {
-    const reviewArchiveIgnorePath = path.join(templateQfaiDir, "review_archive", ".gitignore");
-    expect(existsSync(reviewArchiveIgnorePath)).toBe(false);
-  });
-
   it("does not ship .qfai artifact README or seed placeholder files", async () => {
     const forbidden = await fg(
       [

@@ -187,29 +187,9 @@ describe("TC-0008-0017 (TDD-0017): the guidance grows no vocabulary", () => {
     return [...codes].sort();
   }
 
-  it("leaves the ATDD finding-code set at its baseline", async () => {
-    // Enumerated, not counted: a set that lost one code and gained another
-    // keeps its size. This is the row that reddens if the prose deliverable
-    // quietly became a validator.
-    //
-    // Keep an explicit set so a removed code cannot silently make room for a
-    // new code from this guidance.
-    expect(await atddFindingCodes()).toEqual([
-      "QFAI-ATDD-101",
-      "QFAI-ATDD-103",
-      "QFAI-ATDD-105",
-      "QFAI-ATDD-111",
-      "QFAI-ATDD-112",
-      "QFAI-ATDD-113",
-      "QFAI-ATDD-114",
-      "QFAI-ATDD-115",
-      "QFAI-ATDD-117",
-      "QFAI-ATDD-118",
-      "QFAI-ATDD-119",
-      "QFAI-ATDD-128",
-      "QFAI-ATDD-134",
-      "QFAI-ATDD-135",
-    ]);
+  it("declares no ATDD finding code", async () => {
+    // The prose deliverable must not quietly become a validator.
+    expect(await atddFindingCodes()).toEqual([]);
   });
 
   it("leaves the layer token set at its five members", async () => {

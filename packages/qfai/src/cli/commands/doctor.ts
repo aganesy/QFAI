@@ -24,7 +24,7 @@ export type DoctorCommandOptions = {
    */
   failOn?: FailOn;
   profile?: DoctorProfile;
-  /** Skill name when `--profile <skill>` is passed (vs the legacy `prototyping`). */
+  /** Skill name when `--profile <skill>` is passed (as against the `prototyping` profile). */
   skillProfile?: string;
   targetUrl?: string;
   /** `--clean`: prune TTL-expired `<outDir>/run-*` validate run logs. */
@@ -270,7 +270,7 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
   // prepended to stdout (and to the `--out` file), which would corrupt
   // the JSON document for any consumer that pipes stdout to `jq` or
   // reads the file with `JSON.parse`. Under `--format text` the prefix
-  // remains on stdout (legacy human-readable behavior).
+  // remains on stdout.
   const sideEffectPrefix =
     !isJson && sideEffectLines.length > 0 ? `${sideEffectLines.join("\n")}\n` : "";
   const failOn = resolveFailOn(

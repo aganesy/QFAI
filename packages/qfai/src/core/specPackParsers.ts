@@ -1,86 +1,7 @@
-import { parseScenarioDocument } from "./scenarioModel.js";
-import { extractIdsByKind } from "./specPackIds.js";
-import type { SpecPackIdKind } from "./specPackIds.js";
-
-const FEATURE_LINE_RE = /^\s*Feature:/gm;
-const EX_ID_RE = /^EX-\d+$/;
-const AC_ID_RE = /^AC-\d+$/;
-
-export type ParsedExamplesScenario = {
-  name: string;
-  tags: string[];
-  exIds: string[];
-  acIds: string[];
-  layerTags: string[];
-};
-
-export type ParsedExamplesFeature = {
-  scenarios: ParsedExamplesScenario[];
-  errors: string[];
-};
-
 export type MarkdownTable = {
   headers: string[];
   rows: string[][];
 };
-
-export function parseIdsFromText(text: string, kind: SpecPackIdKind): string[] {
-  return extractIdsByKind(text, kind);
-}
-
-export function parseAcceptanceCriteriaIds(text: string): string[] {
-  return extractIdsByKind(text, "AC");
-}
-
-export function parseTestCaseIds(text: string): string[] {
-  return extractIdsByKind(text, "TC");
-}
-
-export function parseExamplesFeature(text: string, filePath: string): ParsedExamplesFeature {
-  const errors: string[] = [];
-  const featureCount = text.match(FEATURE_LINE_RE)?.length ?? 0;
-  if (featureCount !== 1) {
-    errors.push(`Exactly one Feature definition is allowed (found: ${featureCount}).`);
-  }
-
-  const parsed = parseScenarioDocument(text, filePath);
-  if (!parsed.document || parsed.errors.length > 0) {
-    return {
-      scenarios: [],
-      errors: [...errors, ...parsed.errors.map((error) => `Gherkin parse failure: ${error}`)],
-    };
-  }
-
-  const scenarios = parsed.document.scenarios.map((scenario) => {
-    const tags = scenario.tags;
-    return {
-      name: scenario.name,
-      tags,
-      exIds: tags.filter((tag) => EX_ID_RE.test(tag)),
-      acIds: tags.filter((tag) => AC_ID_RE.test(tag)),
-      layerTags: tags.filter((tag) => tag.startsWith("layer-")),
-    };
-  });
-
-  return { scenarios, errors };
-}
-
-/**
- * Matches the template heading `## Test Case Table (required)` and its bare
- * `## Test Case Table` form — and nothing else.
- *
- * The suffix is limited to a single parenthesised qualifier (so a qualifier in
- * another language still matches) and the heading must then end. A trailing word makes
- * it a different section: `## Test Case Table Format` / `## Test Case Table
- * Notes` document the format, and treating one of those as the named section
- * hands the validators an illustration table — or, when it holds no `TC-ID`
- * table at all, produces an `unresolved` result even though the real table is
- * right there in the document.
- */
-const TEST_CASE_TABLE_HEADING = /^ {0,3}(#{1,6})\s*test\s*case\s*table\s*(?:\([^)]*\))?\s*$/i;
-
-/** Any ATX heading, with the 0-3 leading spaces CommonMark permits. */
-const ANY_HEADING = /^ {0,3}(#{1,6})\s+\S/;
 
 /** A fenced code block opener, per CommonMark (0-3 leading spaces). */
 const FENCE_LINE = /^ {0,3}(`{3,}|~{3,})/;
@@ -270,7 +191,7 @@ const BLANK_TERMINATED_HTML_START = new RegExp(
  * These documents often illustrate their own format. Without this, an
  * illustrative `## Test Case Table` plus `TC-ID` table inside one is selected as
  * the named section and its example IDs are handed to the validators and the
- * report — and for a heading-less legacy document it flips a previously correct
+ * report — and for a heading-less document it flips a previously correct
  * resolution into a wrong one, because the hidden sample outranks the real
  * table.
  *
@@ -391,62 +312,6 @@ export function maskNonSpecRegions(text: string): string {
       return masked.text;
     })
     .join("\n");
-}
-
-const TC_ID_HEADER = "TC-ID";
-
-/**
- * Case-**sensitive**, on purpose: a `TC-Id` / `tc-id` header is a mistyped
- * column. `atddTraceability.ts#collectTableTcLevels` reads through
- * `resolveTestCaseTables`, so a mistyped header leaves the TC with no declared
- * `Level` there, and `QFAI-ATDD-112` keeps the default obligation until the
- * header is fixed.
- */
-function hasTcIdColumn(table: MarkdownTable): boolean {
-  return table.headers.some((header) => header.trim() === TC_ID_HEADER);
-}
-
-/**
- * Returns the body of the `## Test Case Table` section, or `null` when the
- * document has no such heading. The section ends at the next heading of the
- * same or a higher level.
- */
-export function extractTestCaseTableSection(text: string): string | null {
-  const lines = text.replace(/\r\n/g, "\n").split("\n");
-  const start = lines.findIndex((line) => TEST_CASE_TABLE_HEADING.test(line));
-  if (start === -1) {
-    return null;
-  }
-  const level = (TEST_CASE_TABLE_HEADING.exec(lines[start] ?? "")?.[1] ?? "#").length;
-
-  let end = lines.length;
-  for (let index = start + 1; index < lines.length; index += 1) {
-    const match = ANY_HEADING.exec(lines[index] ?? "");
-    if (match && (match[1] ?? "").length <= level) {
-      end = index;
-      break;
-    }
-  }
-  return lines.slice(start + 1, end).join("\n");
-}
-
-/**
- * Every `TC-ID`-bearing table the spec declares, not only the first.
- *
- * A spec may split `06_Test-Cases.md` into several tables — per BR, per AC, or
- * a migration table beside the authoritative one. A reader that stopped at the
- * first would miss the level every `TC-*` in the later tables declares.
- */
-export function resolveTestCaseTables(rawText: string): MarkdownTable[] {
-  const text = maskNonSpecRegions(rawText);
-  const section = extractTestCaseTableSection(text);
-  const tables = parseAllMarkdownTables(section ?? text);
-  return tables.filter(hasTcIdColumn);
-}
-
-export function parseFirstMarkdownTable(text: string): MarkdownTable | null {
-  const tables = parseAllMarkdownTables(text);
-  return tables.length > 0 ? (tables[0] ?? null) : null;
 }
 
 /**

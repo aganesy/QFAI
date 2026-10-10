@@ -3,15 +3,10 @@ import { maskNonSpecRegions } from "./specPackParsers.js";
 import { isContractId } from "./storyTree/ids.js";
 
 const DECLARED_ID = String.raw`(?:CLI|API|DB|UI)-\d{4}`;
-/** A 1.x `CON-*` ID, which only the 1.x to 2.x migration reads, beside a current one. */
-const LEGACY_DECLARED_ID = String.raw`CON-(?:API|UI|DB)-\d+|${DECLARED_ID}`;
-const declarationPattern = (id: string): RegExp =>
-  new RegExp(
-    String.raw`^\s*(?:#|\/\/|--|\/\*+|\*+)?\s*QFAI-CONTRACT-ID:\s*(${id})\s*(?:\*\/)?\s*$`,
-    "gm",
-  );
-const CONTRACT_DECLARATION_RE = declarationPattern(DECLARED_ID);
-const LEGACY_CONTRACT_DECLARATION_RE = declarationPattern(LEGACY_DECLARED_ID);
+const CONTRACT_DECLARATION_RE = new RegExp(
+  String.raw`^\s*(?:#|\/\/|--|\/\*+|\*+)?\s*QFAI-CONTRACT-ID:\s*(${DECLARED_ID})\s*(?:\*\/)?\s*$`,
+  "gm",
+);
 const CONTRACT_DECLARATION_LINE_RE = new RegExp(
   String.raw`^\s*(?:#|\/\/|--|\/\*+|\*+)?\s*QFAI-CONTRACT-ID:\s*(?:${DECLARED_ID})\s*(?:\*\/)?\s*$`,
 );
@@ -32,14 +27,10 @@ export function declaredContractId(file: string, text: string): string | null {
   return id !== undefined && others.length === 0 && isContractId(id) ? id : null;
 }
 
-/**
- * The IDs the `QFAI-CONTRACT-ID` lines of a contract declare. `legacy` also reads
- * a 1.x `CON-*` declaration, for the migration that rewrites it.
- */
-export function extractDeclaredContractIds(text: string, { legacy = false } = {}): string[] {
+/** The IDs the `QFAI-CONTRACT-ID` lines of a contract declare. */
+export function extractDeclaredContractIds(text: string): string[] {
   const ids: string[] = [];
-  const pattern = legacy ? LEGACY_CONTRACT_DECLARATION_RE : CONTRACT_DECLARATION_RE;
-  for (const match of text.matchAll(pattern)) {
+  for (const match of text.matchAll(CONTRACT_DECLARATION_RE)) {
     const id = match[1];
     if (id) {
       ids.push(id);

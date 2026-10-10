@@ -5,7 +5,6 @@ import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { evaluateAtddCodeTraceability } from "../../src/core/atddTraceability.js";
 import { defaultConfig } from "../../src/core/config.js";
 import { declaredContractId } from "../../src/core/contractsDecl.js";
 import { writeBusinessFlowReports } from "../../src/core/specPackReport.js";
@@ -546,31 +545,6 @@ describe("the new contract IDs in the checks that read the old ones", () => {
     const findings = await applyOrder("DB-0001");
     expect(findings).toEqual([expect.stringMatching(/db-0004-lines\.sql .*DB-0001 \(orders\)\.$/)]);
     expect(findings.join("\n")).not.toContain("archive");
-  });
-
-  // QFAI:AC-0001-0052-04
-  // QFAI:EX-0001-0052-09
-  it("counts API-NNNN and DB-NNNN contracts, not Markdown files, in ATDD coverage", async () => {
-    const root = await contractTree([], {
-      "api/api-0002-orders.yaml": API_CONTRACT,
-      "db/db-0004-orders.sql": DB_CONTRACT,
-    });
-    await put(root, `${contracts}/api/api-0003-refunds.md`, "# API-0003: Refunds\n");
-    await put(root, `${contracts}/db/db-0005-lines.md`, "# DB-0005: Lines\n");
-    await put(
-      root,
-      "tests/api/orders.test.ts",
-      "// QFAI:API-0002\n// QFAI:DB-0004\n// QFAI:API-0003-copy\n// QFAI:API-0003-0001\n",
-    );
-    await put(root, "tests/atdd/malformed.test.ts", "// QFAI:API-0003-copy\n");
-    await put(root, "tests/atdd/annotated.test.ts", "// QFAI:API-0003\n");
-    const result = await evaluateAtddCodeTraceability(root, defaultConfig);
-    expect([...result.activeApiContractIds].sort()).toEqual(["API-0002"]);
-    expect([...result.activeDbContractIds].sort()).toEqual(["DB-0004"]);
-    expect([...result.refs.api.keys()]).toEqual(["API-0002"]);
-    expect(result.skippedTestFiles.map((file) => path.basename(file))).toEqual([
-      "annotated.test.ts",
-    ]);
   });
 });
 

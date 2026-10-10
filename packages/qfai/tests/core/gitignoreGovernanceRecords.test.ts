@@ -10,34 +10,11 @@ import { describe, expect, it } from "vitest";
 import {
   QFAI_GITIGNORE_BLOCK,
   QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
-  QFAI_GITIGNORE_LEGACY_LINES,
   QFAI_GITIGNORE_RECOMMENDED_ENTRIES,
 } from "../../src/core/gitignore.js";
-import { CANONICAL_TIMESTAMP_GLOB } from "../../src/core/packLocator.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const execFile = promisify(execFileCb);
-
-/** Every negation an earlier managed block wrote under `.qfai/evidence/`. */
-const RETIRED_EVIDENCE_LINES = [
-  ".qfai/evidence/prototyping/*",
-  "!.qfai/evidence/",
-  "!.qfai/evidence/decision/",
-  "!.qfai/evidence/decision/**",
-  "!.qfai/evidence/prototyping/",
-  "!.qfai/evidence/prototyping/grilling.md",
-  "!.qfai/evidence/workflow/",
-  "!.qfai/evidence/change-request-*.md",
-  "!.qfai/evidence/decision-*.md",
-  "!.qfai/evidence/implement-*.md",
-  "!.qfai/evidence/sdd-*.md",
-  `!.qfai/evidence/discussion-${CANONICAL_TIMESTAMP_GLOB}.md`,
-  "!.qfai/evidence/atdd-*.md",
-  "!.qfai/evidence/import-lite.md",
-  `!.qfai/evidence/import-lite-${CANONICAL_TIMESTAMP_GLOB}.md`,
-  "!.qfai/evidence/coverage-depth-*.md",
-  "!.qfai/evidence/skeleton.md",
-];
 
 // QFAI:EX-0001-0033-03
 describe("the managed block ignores the evidence directory whole", () => {
@@ -62,23 +39,6 @@ describe("the managed block ignores the evidence directory whole", () => {
     const lines = QFAI_GITIGNORE_BLOCK.split("\n");
     expect(lines).toContain(".qfai/evidence/*");
     expect(lines.filter((line) => line.includes(".qfai/evidence/"))).toEqual([".qfai/evidence/*"]);
-  });
-
-  it("retires every line that re-included or re-ignored a record under it", () => {
-    // A rerun strips a retired line from the block, so an adopter's evidence
-    // becomes ignored on the next `qfai init`.
-    for (const line of RETIRED_EVIDENCE_LINES) {
-      expect(QFAI_GITIGNORE_LEGACY_LINES).toContain(line);
-      expect(QFAI_GITIGNORE_BLOCK.split("\n")).not.toContain(line);
-    }
-  });
-
-  it("retires the obsolete decision directory negations", () => {
-    for (const line of ["!.qfai/decisions/", "!.qfai/decisions/**"]) {
-      expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).not.toContain(line);
-      expect(QFAI_GITIGNORE_LEGACY_LINES).toContain(line);
-      expect(QFAI_GITIGNORE_BLOCK.split("\n")).not.toContain(line);
-    }
   });
 });
 

@@ -2,7 +2,7 @@
 
 ## User Story
 
-As an operator, I want `qfai init` to append the QFAI managed block to my root `.gitignore`, ignoring `.qfai/report/*`, `.qfai/evidence/*`, `.qfai/discussion/*`, `.qfai/review/*` and `.qfai/run/` with no negation that re-includes a path under `.qfai/evidence/`, and to strip on a rerun every line an earlier release wrote and this one retired, so that QFAI's work records stay local and my own entries are left alone.
+As an operator, I want `qfai init` to append the QFAI managed block to my root `.gitignore`, ignoring `.qfai/report/*`, `.qfai/evidence/*`, `.qfai/discussion/*` and `.qfai/review/*` with no negation that re-includes a path under `.qfai/evidence/`, and to rebuild it on a rerun, so that QFAI's work records stay local and my own entries are left alone.
 
 ## Non-goals
 

@@ -245,32 +245,6 @@ describe("TC-0003-0018: append the managed gitignore block (new file)", () => {
   });
 });
 
-// TC-0003-0019: remove legacy lines and replace the managed block
-// Actual assertions live in tests/cli/init.test.ts ("strips legacy review-*/ negation lines when migrating from old managed block").
-describe("TC-0003-0019: remove legacy lines and replace the managed block", () => {
-  it("init references QFAI_GITIGNORE_LEGACY_LINES for migration", async () => {
-    const content = await readFile(ROOT_GITIGNORE_WRITER, "utf-8");
-    expect(content).toContain("QFAI_GITIGNORE_LEGACY_LINES");
-    expect(content).toContain("removeManagedBlock");
-  });
-});
-
-// TC-0003-0020: review-*/ subdirectories are gitignored
-// Actual assertions live in tests/cli/init.test.ts ("does not track review-*/ subdirectories after init").
-describe("TC-0003-0020: review-*/ subdirectories are gitignored", () => {
-  it("QFAI_GITIGNORE_BLOCK SSOT excludes review-*/ negations from REQUIRED_ENTRIES", async () => {
-    const { QFAI_GITIGNORE_BLOCK, QFAI_GITIGNORE_RECOMMENDED_ENTRIES } =
-      await import("../../src/core/gitignore.js");
-    expect(QFAI_GITIGNORE_BLOCK).toContain(".qfai/discussion/*");
-    expect(QFAI_GITIGNORE_BLOCK).not.toContain("!.qfai/discussion/README.md");
-    expect(QFAI_GITIGNORE_BLOCK).not.toContain(".qfai/discussion/discussion-*/");
-    expect(QFAI_GITIGNORE_BLOCK).not.toContain("!.qfai/review/review-*/");
-    expect(QFAI_GITIGNORE_RECOMMENDED_ENTRIES).not.toContain("!.qfai/discussion/README.md");
-    expect(QFAI_GITIGNORE_RECOMMENDED_ENTRIES).not.toContain("!.qfai/review/review-*/");
-    expect(QFAI_GITIGNORE_RECOMMENDED_ENTRIES).not.toContain("!.qfai/review/review-*/**");
-  });
-});
-
 // Runtime assertions live in tests/cli/init.test.ts. These checks pin the
 // assistant-tree path helpers used by init.
 

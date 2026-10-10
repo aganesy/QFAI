@@ -65,7 +65,7 @@ import process from "node:process";
  * unreadable to every text tool, which is not a thing any record is improved
  * by; and none of these files carries one.
  */
-const frozenRecordPrefixes = [".qfai/review/", ".qfai/review_archive/"];
+const frozenRecordPrefixes = [".qfai/review/"];
 
 const bidiRanges = [
   [0x202a, 0x202e],

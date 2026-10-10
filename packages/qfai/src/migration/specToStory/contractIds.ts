@@ -1,10 +1,6 @@
 import path from "node:path";
 
-import {
-  declaredContractId,
-  extractDeclaredContractIds,
-  extractDeclaredDependencies,
-} from "../../core/contractsDecl.js";
+import { declaredContractId, extractDeclaredDependencies } from "../../core/contractsDecl.js";
 import { collectFilesByGlobs } from "../../core/fs.js";
 import { parseHeadings } from "../../core/parse/markdown.js";
 import { CONTRACT_KIND_BY_DIR, contractNumber } from "../../core/storyTree/ids.js";
@@ -48,6 +44,16 @@ const DESIGN = "design";
 const OLD_CONTRACT_ID = /^CON-(?:API|DB|UI)-(\d+)$/;
 export const OLD_CONTRACT_TOKEN = /\bCON-(?:API|DB|UI)-\d+(?!-?\w)/g;
 const DECLARATION = /^(\s*(?:#|\/\/|--|\/\*+|\*+)?\s*QFAI-CONTRACT-ID:\s*)(\S+)(.*)$/;
+/** A `QFAI-CONTRACT-ID` line naming a 1.x `CON-*` ID or a current one. */
+const OLD_OR_CURRENT_DECLARATION =
+  /^\s*(?:#|\/\/|--|\/\*+|\*+)?\s*QFAI-CONTRACT-ID:\s*(CON-(?:API|UI|DB)-\d+|(?:CLI|API|DB|UI)-\d{4})\s*(?:\*\/)?\s*$/gm;
+
+/** The IDs the `QFAI-CONTRACT-ID` lines of a file declare, 1.x `CON-*` IDs included. */
+function declaredOldOrCurrentIds(text: string): string[] {
+  return Array.from(text.matchAll(OLD_OR_CURRENT_DECLARATION), (match) => match[1] ?? "").filter(
+    (id) => id.length > 0,
+  );
+}
 const FILE_LIMIT = 200_000;
 /**
  * Why step 3 writes no contract from a file under the contracts directory, or
@@ -156,7 +162,7 @@ async function assignContractIds(
       highest = Math.max(highest, Number(contractNumber(current)));
       continue;
     }
-    const declared = extractDeclaredContractIds(text, { legacy: true });
+    const declared = declaredOldOrCurrentIds(text);
     if (declared.length > 1) {
       forAPerson.push(
         `${contractRepoPath(context, relative)}: declares ${declared.join(", ")}; keep one declaration and run step 3 again`,

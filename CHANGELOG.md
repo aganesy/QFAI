@@ -6,6 +6,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`qfai init` and `qfai validate` stop reading the spec-pack layout and the
+  `.gitignore` lines of earlier releases.** The managed `.gitignore` block no
+  longer strips or renames the lines an earlier release wrote, and no longer
+  carries `.qfai/run/` or `.qfai/review_archive/*`; a rerun rebuilds the block
+  and keeps the project's own lines, and the migration's step 10 alone drops the
+  lines a 1.x block holds. `QFAI-STORY-014`, the warning for a `QFAI:US-`,
+  `QFAI:TC-`, `QFAI:SC-` or `QFAI:SPEC-` mark in a test, is removed. The
+  spec-pack discovery code is gone: the layout collector and its lifecycle
+  parser, the ATDD coverage scan of spec packs, the layered traceability graph
+  and the Gherkin readers they used. The run log's `traceability.json` no
+  longer has an `edges` list, and the library no longer exports the removed
+  functions. The `@cucumber/gherkin` and `@cucumber/messages` dependencies are
+  dropped, and the shipped references no longer mention the retired
+  `.qfai/output/verify.json` location or the retired review-payload key.
+
 - **The shipped `qfai-docs.yml` installs `@jackchuka/mdschema` 0.15.5.** The
   document-schema checker the docs lane runs moves from 0.15.4 to 0.15.5, the
   version the package now depends on. The release changes only a dependency of

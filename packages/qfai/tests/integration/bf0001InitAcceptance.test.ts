@@ -20,9 +20,7 @@ import { describe, expect, it } from "vitest";
 
 import { runInit } from "../../src/cli/commands/init.js";
 import {
-  QFAI_GITIGNORE_BLOCK,
   QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
-  QFAI_GITIGNORE_LEGACY_LINES,
   QFAI_GITIGNORE_MARKER,
 } from "../../src/core/gitignore.js";
 import { LANGUAGE_RULES_MARKER } from "../../src/core/instructionLanguageRules.js";
@@ -71,13 +69,6 @@ const countOf = (lines: readonly string[], line: string): number =>
   lines.filter((candidate) => candidate === line).length;
 
 const IGNORE_LINES = [".qfai/report/*", ".qfai/evidence/*", ".qfai/discussion/*", ".qfai/review/*"];
-const RETIRED_README_NEGATIONS = [
-  "!.qfai/report/README.md",
-  "!.qfai/evidence/README.md",
-  "!.qfai/review/README.md",
-  "!.qfai/discussion/README.md",
-];
-const REVIEW_NEGATIONS = ["!.qfai/review/review-*/", "!.qfai/review/review-*/**"];
 
 describe("BF-0001 init rerun, preview and links", () => {
   // QFAI:AC-0001-0021-01
@@ -195,13 +186,6 @@ describe("BF-0001 managed .gitignore block", () => {
     const lines = await gitignoreLines(dir);
     expect(countOf(lines, QFAI_GITIGNORE_MARKER)).toBe(1);
     for (const line of IGNORE_LINES) expect(countOf(lines, line), line).toBe(1);
-    for (const line of [
-      ...RETIRED_README_NEGATIONS,
-      ".qfai/discussion/discussion-*/",
-      ...REVIEW_NEGATIONS,
-    ]) {
-      expect(lines, line).not.toContain(line);
-    }
     expect(lines.filter((line) => line.startsWith("!.qfai/evidence/"))).toEqual([]);
 
     // The ignore lines come first and the governance negations after them, so a later pattern wins.
@@ -223,53 +207,5 @@ describe("BF-0001 managed .gitignore block", () => {
     expect(countOf(lines, "*.log")).toBe(1);
     expect(countOf(lines, QFAI_GITIGNORE_MARKER)).toBe(1);
     for (const line of IGNORE_LINES) expect(countOf(lines, line), line).toBe(1);
-  });
-
-  // QFAI:AC-0001-0033-02
-  it("replaces a block that carries any legacy line with the current block and removes every legacy line", async () => {
-    const dir = await newTempDir();
-    const earlier = [
-      QFAI_GITIGNORE_MARKER,
-      ...QFAI_GITIGNORE_BLOCK.split("\n").filter(
-        (line) => line !== "" && line !== QFAI_GITIGNORE_MARKER,
-      ),
-      ...QFAI_GITIGNORE_LEGACY_LINES,
-    ];
-    await writeFile(
-      path.join(dir, ".gitignore"),
-      ["node_modules/", "", ...earlier, "", "coverage-local/", ""].join("\n"),
-      "utf-8",
-    );
-
-    await init(dir);
-
-    const lines = await gitignoreLines(dir);
-    expect(countOf(lines, QFAI_GITIGNORE_MARKER)).toBe(1);
-    expect(lines.filter((line) => QFAI_GITIGNORE_LEGACY_LINES.includes(line))).toEqual([]);
-    const current = QFAI_GITIGNORE_BLOCK.split("\n").filter((line) => line !== "");
-    const start = lines.indexOf(QFAI_GITIGNORE_MARKER);
-    expect(lines.slice(start, start + current.length)).toEqual(current);
-    expect(countOf(lines, "node_modules/")).toBe(1);
-    expect(countOf(lines, "coverage-local/")).toBe(1);
-  });
-
-  // QFAI:EX-0001-0033-02
-  it("removes the two review negations of the old block and leaves one marker", async () => {
-    const dir = await newTempDir();
-    await writeFile(
-      path.join(dir, ".gitignore"),
-      [QFAI_GITIGNORE_MARKER, ...IGNORE_LINES, ...REVIEW_NEGATIONS, ""].join("\n"),
-      "utf-8",
-    );
-
-    await init(dir);
-
-    const lines = await gitignoreLines(dir);
-    for (const negation of REVIEW_NEGATIONS) expect(lines, negation).not.toContain(negation);
-    expect(countOf(lines, QFAI_GITIGNORE_MARKER)).toBe(1);
-    for (const negation of QFAI_GITIGNORE_GOVERNANCE_NEGATIONS) {
-      expect(countOf(lines, negation), negation).toBe(1);
-    }
-    expect(countOf(lines, ".qfai/run/")).toBe(1);
   });
 });

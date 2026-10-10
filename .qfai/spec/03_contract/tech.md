@@ -39,10 +39,6 @@ flowchart TD
   - Parses the configuration and every contract stub the validators read.
 - `fast-glob`
   - Finds the files every scan walks.
-- `@cucumber/gherkin`
-  - Parses the Gherkin blocks in acceptance documents with Cucumber's own grammar.
-- `@cucumber/messages`
-  - Supplies the message types the Gherkin parser returns.
 - `jsdom`
   - Gives the diagram lane a DOM to render Mermaid in, to check each diagram parses.
 
