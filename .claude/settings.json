@@ -17,6 +17,22 @@
       "Bash(npx qfai:*)",
       "Bash(yarn exec qfai:*)",
       "Bash(yarn qfai:*)"
+    ],
+    "ask": [
+      "Bash(git tag:*)",
+      "Bash(git push --tags:*)",
+      "Bash(git push --follow-tags:*)",
+      "Bash(npm publish:*)",
+      "Bash(pnpm publish:*)",
+      "Bash(yarn npm publish:*)",
+      "Bash(gh release create:*)",
+      "Bash(gh workflow run prepare-release.yml:*)",
+      "Bash(gh workflow run tag-release.yml:*)",
+      "Bash(gh workflow run release.yml:*)",
+      "Bash(git push * --tags)",
+      "Bash(git push * --tags *)",
+      "Bash(git push * --follow-tags)",
+      "Bash(git push * --follow-tags *)"
     ]
   },
   "hooks": {
