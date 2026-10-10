@@ -3470,10 +3470,7 @@ describe("release automation performs decisions rather than making them", () => 
         );
         const run = spawnSync("bash", [script], { encoding: "utf-8" });
         if (run.error !== undefined) throw run.error;
-        // A tool the gate calls and this machine lacks leaves the gate silent,
-        // which reads as a verdict: the positive case failed saying the workflow
-        // would not tag a release, and the negative ones passed for no reason.
-        // The GitHub runner ships `jq`; a contributor's machine need not.
+        // Missing tools must fail explicitly rather than look like a no-tag verdict.
         const missing = /: ([\w.+-]+): command not found/.exec(run.stderr)?.[1];
         if (missing !== undefined) {
           throw new Error(
