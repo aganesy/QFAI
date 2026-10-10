@@ -98,10 +98,12 @@ Feature: Install or upgrade and get the free-text entry
     And the documentation-clarity reminder after a write fires only for a patch that adds or changes a Markdown file
     And the minimal-implementation reminder after a write fires only for a file that is product source: not a test, a file under `tmp/`, a document, a configuration file or a file outside the project
     And the API-budget reminder fires only for a shell command that names the forge's CLI or its API host
-    And in each host that supports their event, the API-budget and three grilling keys print the full message on their first eligible invocation and a one-line reminder on every later invocation, using the existing counter for each session, optional agent and key
+    And in each host that supports their event, the API-budget, three grilling, minimal-implementation and documentation-clarity after-write/edit keys print the full message on their first eligible invocation and a one-line reminder on every later invocation, using the existing counter for each session, optional agent and key
+    And the brief implementation reminder points to the implementation rule, its non-removable floor and the interface rule, and the brief documentation reminder points to the writing rule
     And command filters run before counting, so a skipped call consumes no first display
     And a new session, agent or key starts its own sequence; missing session identity or counter-storage failure prints the full message and exits 0
-    And the other reminder schedules, hook envelopes and exit behavior stay unchanged, and the counters imply no active run, completion, approval or routing
+    And the documentation-clarity reminder before a post prints in full on every eligible post, and the other reminder schedules, hook envelopes and exit behavior stay unchanged
+    And no compaction event resets the counter, and the counters imply no active run, completion, approval or routing
     And the reminder before leaving plan mode has no Codex group, because Codex has no tool call that leaves plan mode
     And each runs under every shell as the prompt-time reminders do
     And an existing file gains the tool-time groups once, and a second run changes nothing
