@@ -90,6 +90,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `_comment` keys. The default-deny sandbox template now records each denied
   request with its capability, target and time. Part of #2951.
 
+- **Writing reminders allow expressly requested incident, event and work records.**
+  These keep necessary facts and evidence; ordinary specifications and change
+  descriptions omit design history. The posting reminder allows numbers and
+  links in pull request and issue bodies. Fixes #3214.
+
 - **`qfai init` and `qfai validate` stop reading the spec-pack layout and the
   `.gitignore` lines of earlier releases.** The managed `.gitignore` block no
   longer strips or renames the lines an earlier release wrote, and no longer
