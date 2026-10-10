@@ -323,6 +323,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Verify steps reject validation errors even when a custom Validate wrapper succeeds.
+
 - Clarify that story ID candidates are snapshots and require a fresh collision
   check of the committed changes before publishing the same branch head.
 
