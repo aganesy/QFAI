@@ -1068,18 +1068,6 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-VIS-001": "`01_Context.md` should include at least one Mermaid diagram.",
   "QFAI-VIS-002":
     "HTML+CSS visual mock is an optional fallback aid and should only be referenced when intentionally selected. Sidecar artifacts (uiux/) are the primary UI definition.",
-  "QFAI-PROT-244": "captured render artifacts must be path-only and referenced files must exist.",
-  "QFAI-PROT-251":
-    "render evidence path field contains inline payload (data URI, base64, inline HTML, or oversized content). Path-only required.",
-  "QFAI-PROT-252":
-    "render evidence status requires accompanying field (skippedReason for skipped, error for failed, imagePath/htmlPath for captured).",
-  "QFAI-PROT-253":
-    "render evidence top-level status contradicts screen-level statuses (e.g. status=captured but no captured screens).",
-  "QFAI-PROT-273": "browser QA bundle schema is invalid (missing or malformed browserQa block).",
-  "QFAI-PROT-274":
-    "browser QA executed/status contradiction (e.g. executed=true but status!=completed).",
-  "QFAI-PROT-275": "browser QA summary is malformed (non-object or invalid bucket counts).",
-  "QFAI-PROT-276": "browser QA findings are malformed (non-array or invalid finding structure).",
   "QFAI-CFG-LINK-001":
     "qfai.config.yaml: prototyping.primaryUiContract names a UI-NNNN contract declared under `<paths.contractsDir>/ui/`.",
   "QFAI-CFG-LINK-002":
@@ -1412,17 +1400,6 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   // every rung of the ladder depends on this catalog for its `fix:` line. The
   // even codes are repaired by writing a `Parent`, the odd ones by pointing an
   // existing `Parent` at something the level above actually defines.
-  // The browser-QA bundle checks are schema assertions raised by a local
-  // `makeIssue` helper that has no `suggested_action` parameter, so every one of
-  // their call sites depends on this catalog for its `fix:` line.
-  "QFAI-PROT-273":
-    "Add the `browserQa` block the message names to the browser-QA bundle, with `executed` a boolean and `status` one of completed|skipped|failed.",
-  "QFAI-PROT-274":
-    "Make `browserQa.executed` and `browserQa.status` agree: `executed=true` pairs with `status=completed`, and any other status pairs with `executed=false`.",
-  "QFAI-PROT-275":
-    "Give `browserQa.summary` an object per phase (smoke, interaction, visual, accessibility) carrying `status`, `findingsCount`, and `checksCount`, with `passed`/`failed` numeric when present.",
-  "QFAI-PROT-276":
-    "Make `findings` an array whose every entry carries a non-empty summary and detail, a severity from the supported set, at least one `evidence_refs` entry, and `repair_suggestions`.",
   "QFAI-RESEARCH-015":
     "Point `source_id` at an `id` that the same Research Summary's `sources[]` declares, or add the missing source entry.",
   "QFAI-RESEARCH-016":

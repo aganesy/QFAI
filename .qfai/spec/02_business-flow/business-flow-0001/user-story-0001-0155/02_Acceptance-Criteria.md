@@ -14,6 +14,6 @@ Feature: `primary_tasks` ceiling + accepted shape documented
   # AC-0001-0155-02
   Scenario: `primary_tasks` accepts only the structured shape
     Given a UI contract whose `primary_tasks` entries are structured `{id, label, acceptance}` (all-required, closed schema per DR-0268) or plain strings,
-    When `auditProfile.ts` evaluates them,
+    When the audit lane evaluates them,
     Then a complete structured item is accepted; a plain string item, a structured item missing any of `id` / `label` / `acceptance`, or one carrying extra keys, is rejected.
 ```

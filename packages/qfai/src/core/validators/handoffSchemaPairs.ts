@@ -39,16 +39,9 @@ export type HandoffWriterPair = {
 /**
  * Registered writer list. Add a new entry whenever a new skill gains a
  * handoff-write call-site, so the pair-sync scan catches missing fields.
- * The library writer is `core/handoff/writer.ts`; the prototyping skill
- * writes its record by following its handoff reference.
+ * The prototyping skill writes its record by following its handoff reference.
  */
 export const HANDOFF_WRITER_PAIRS: readonly HandoffWriterPair[] = [
-  {
-    clause: "canonical-handoff-writer",
-    writerRel: "packages/qfai/src/core/handoff/writer.ts",
-    writerToken: "HandoffArtifact",
-    namesSchemaFields: false,
-  },
   {
     clause: "prototyping-handoff-writer",
     writerRel:

@@ -15,37 +15,6 @@ A cli-only target has no root `DESIGN.md`; it still normalizes
 `/qfai-prototyping` records its handoff in
 `.qfai/prototype/final/handoff.json`. SDD does not author it.
 
-## Removed yaml contracts (permanent)
-
-The legacy per-aspect brand yaml contracts have been **removed**. The
-brand SSOT is now root `DESIGN.md` only, authored by `common-design-md`.
-Do not regenerate or reintroduce these files. Their content is subsumed by
-`DESIGN.md`:
-
-- brand archetype / voice / audience → `DESIGN.md` `brand` + `audience` +
-  `# Brand Philosophy` body.
-- negative references / things-to-avoid →
-  `audience.do_not_look_like` and the **Don't** subsection of
-  `# Brand Philosophy`.
-- color / typography / spacing / radius / shadow tokens →
-  `DESIGN.md` `visual.*` token tree.
-
-The following contracts MUST NOT be generated:
-
-- `exploration-brief.yaml` — the design direction is recorded in
-  `DESIGN.md`; no separate brief is authored.
-- `reference-pool.yaml` — reference material is not authored as a
-  contract; things to avoid live in `audience.do_not_look_like`.
-- `brand-design.yaml` — the brand is authored in `DESIGN.md`.
-- `evaluation-rubric.yaml` — evaluation axes are global constants; no
-  per-project rubric.
-- `evaluator-calibration.yaml` — calibration is the ordinal scale plus
-  a 200–500 word prose critique authored at review time.
-- `absorption-policy.yaml` — absorption / harvest concepts are not
-  used.
-- `selected-direction.yaml` — winner selection is not used; the latest
-  accepted iteration is always the artifact.
-
 ## Sidecar mapping
 
 The remaining UI-bearing sidecar maps to its contract as follows:
@@ -54,8 +23,7 @@ The remaining UI-bearing sidecar maps to its contract as follows:
 
 Project-specific anti-pattern notes live in `audience.do_not_look_like`
 of `DESIGN.md`. Evaluator axes are fixed by the review validation the
-QFAI CLI applies
-and are no longer authored as sidecar files.
+QFAI CLI applies.
 
 ## Normalization Rules
 

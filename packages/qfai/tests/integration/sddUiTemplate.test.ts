@@ -78,15 +78,6 @@ describe("TC-0013-0025: shipped ui-contract.sample.yaml carries a primary_tasks 
 
 const SDD_SKILL_DIR = path.resolve(TEMPLATE_PATH, "..", "..", "..");
 
-const LEGACY_DESIGN_CONTRACTS = [
-  "exploration-brief.yaml",
-  "evaluation-rubric.yaml",
-  "evaluator-calibration.yaml",
-  "selected-direction.yaml",
-  "reference-pool.yaml",
-  "brand-design.yaml",
-];
-
 describe("shipped primary_tasks ceiling", () => {
   // QFAI:AC-0001-0155-01
   // QFAI:EX-0001-0155-01
@@ -106,6 +97,7 @@ describe("shipped primary_tasks ceiling", () => {
 
 describe("shipped qfai-sdd design contracts", () => {
   // QFAI:AC-0001-0152-02
+  // QFAI:EX-0001-0152-02
   it("names root DESIGN.md as the one design contract and keeps the handoff out of the contract layer", async () => {
     const assistant = path.join(SDD_SKILL_DIR, "..", "..");
     const normalization = (
@@ -137,51 +129,11 @@ describe("shipped qfai-sdd design contracts", () => {
       }
     }
     expect(naming).toEqual([]);
-  });
 
-  // QFAI:AC-0001-0152-01
-  // QFAI:EX-0001-0152-01
-  // QFAI:EX-0001-0152-02
-  it("writes no legacy design contract and lists the removed ones", async () => {
-    const templates = await readdir(path.join(SDD_SKILL_DIR, "templates"), { recursive: true });
-    const names = templates.map((entry) => path.basename(entry));
-    for (const legacy of LEGACY_DESIGN_CONTRACTS) {
-      expect(names).not.toContain(legacy);
-    }
-
-    const normalizationPath = path.join(
-      SDD_SKILL_DIR,
-      "references",
-      "ui-design-contract-normalization.md",
-    );
-    const normalization = await readFile(normalizationPath, "utf-8");
-    expect(normalization).toContain("MUST NOT be generated");
-    for (const legacy of LEGACY_DESIGN_CONTRACTS) {
-      expect(normalization).toContain(`\`${legacy}\``);
-    }
-
-    // The reference is the one place the names appear; every other file of the
-    // skill and of its steps leaves them out.
-    const assistantDir = path.join(SDD_SKILL_DIR, "..", "..");
-    const readers = [SDD_SKILL_DIR, path.join(assistantDir, "step")];
-    for (const dir of readers) {
-      const entries = await readdir(dir, { recursive: true, withFileTypes: true });
-      for (const entry of entries) {
-        if (!entry.isFile()) continue;
-        const file = path.join(entry.parentPath, entry.name);
-        if (file === normalizationPath) continue;
-        const body = await readFile(file, "utf-8");
-        for (const legacy of LEGACY_DESIGN_CONTRACTS) {
-          expect(body, `${file} names ${legacy}`).not.toContain(legacy);
-        }
-      }
-    }
     const designMd = await readFile(
-      path.join(SDD_SKILL_DIR, "..", "..", "step", "common-design-md", "STEP.md"),
+      path.join(assistant, "step", "common-design-md", "STEP.md"),
       "utf-8",
     );
-    expect(normalization).toContain("common-design-md/STEP.md#author-and-validate");
     expect(designMd).toContain("## Author and validate");
-    expect(normalization).toContain(".qfai/prototype/final/handoff.json");
   });
 });

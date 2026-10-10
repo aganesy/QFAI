@@ -717,8 +717,7 @@ async function seedInvalidConfigValue(root: string): Promise<void> {
     configPath,
     `${existing}
 uiux:
-  renderEvidence:
-    failOpen: "not-a-boolean"
+  surfacePaths: "not-a-list"
 `,
     "utf-8",
   );

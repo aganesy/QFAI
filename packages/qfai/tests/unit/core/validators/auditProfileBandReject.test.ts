@@ -1,5 +1,5 @@
 /**
- * Unit: `auditProfile.ts` band warning + closed-schema reject
+ * Unit: `designAudit.ts` band warning + closed-schema reject
  * (TC-0004-0070 / TDD-0050).
  *
  * - A UI contract with 9 `primary_tasks` entries must trigger
@@ -20,8 +20,8 @@ import { defaultConfig } from "../../../../src/core/config.js";
 import {
   PRIMARY_TASKS_MAX,
   PRIMARY_TASKS_MAX_LABEL,
-  runAuditProfile,
-} from "../../../../src/core/validators/auditProfile.js";
+  validateDesignAudit,
+} from "../../../../src/core/validators/designAudit.js";
 
 let root: string;
 
@@ -80,7 +80,7 @@ describe("TC-0004-0070: QFAI-AUD-020 ceiling warn + missing acceptance reject (e
     ].join("\n");
     await writeUiContract("over-band.yaml", ui);
 
-    const issues = await runAuditProfile(root, defaultConfig);
+    const issues = await validateDesignAudit(root, defaultConfig);
     const band = issues.find((i) => i.code === "QFAI-AUD-020");
     expect(band, "expected QFAI-AUD-020 finding for 9 tasks").toBeDefined();
     expect(band?.severity).toBe("warning");
@@ -110,7 +110,7 @@ describe("TC-0004-0070: QFAI-AUD-020 ceiling warn + missing acceptance reject (e
     ].join("\n");
     await writeUiContract("missing-acceptance.yaml", ui);
 
-    const issues = await runAuditProfile(root, defaultConfig);
+    const issues = await validateDesignAudit(root, defaultConfig);
     const shape = issues.find((i) => i.code === "QFAI-AUD-021");
     expect(shape, "expected QFAI-AUD-021 finding for missing acceptance").toBeDefined();
     expect(shape?.severity).toBe("error");
@@ -134,7 +134,7 @@ describe("TC-0004-0070: QFAI-AUD-020 ceiling warn + missing acceptance reject (e
     ].join("\n");
     await writeUiContract("at-ceiling.yaml", ui);
 
-    const issues = await runAuditProfile(root, defaultConfig);
+    const issues = await validateDesignAudit(root, defaultConfig);
     expect(issues.find((i) => i.code === "QFAI-AUD-020")).toBeUndefined();
   });
 
@@ -152,7 +152,7 @@ describe("TC-0004-0070: QFAI-AUD-020 ceiling warn + missing acceptance reject (e
     ].join("\n");
     await writeUiContract("single-task.yaml", ui);
 
-    const issues = await runAuditProfile(root, defaultConfig);
+    const issues = await validateDesignAudit(root, defaultConfig);
     expect(issues.filter((i) => i.code === "QFAI-AUD-020")).toEqual([]);
   });
 });

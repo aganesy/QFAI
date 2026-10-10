@@ -88,9 +88,6 @@ export const KEPT_EMPHASIS: Readonly<Record<string, readonly KeptEmphasis[]>> = 
   ".qfai/assistant/skill/qfai-grill/SKILL.md": [DELEGATION_HEADING],
   ".qfai/assistant/skill/qfai-grilling/SKILL.md": [DELEGATION_HEADING],
   ".qfai/assistant/skill/qfai-run/SKILL.md": [DELEGATION_HEADING],
-  ".qfai/assistant/skill/qfai-sdd/references/ui-design-contract-normalization.md": [
-    { phrase: "MUST NOT be generated", readBy: "tests/integration/sddUiTemplate.test.ts" },
-  ],
   ".qfai/assistant/skill/qfai-verify/references/verify-output-contract.md": [
     {
       phrase: "`/qfai-verify` MUST write `.qfai/report/verify.json`",
