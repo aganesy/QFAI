@@ -23,6 +23,6 @@ Feature: Standard Research Pipeline Execution
   Scenario: All fetches fail after search succeeds
     Given a search that returns valid results
     When all fetch attempts fail (timeout/403/500)
-    Then the agent reports partial results with failure reasons per URL
-    And the agent does not proceed with unverified content
+    Then the agent reports that every fetch failed, with the failure reason per URL
+    And the agent does not run the extract stage
 ```

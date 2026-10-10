@@ -119,8 +119,9 @@ Configuration templates: `.qfai/assistant/skill/web-research/mcp-templates/playw
 
 ### 2.4 MCP Failure Recovery
 
-- Crash detection threshold: **< 10 seconds** runtime indicates abnormal termination.
+- Crash detection: notice an MCP server crash or a dropped connection within **10 seconds**.
 - On MCP server crash, fallback to built-in tools (WebSearch / WebFetch).
+- Tell the user that the MCP server is unavailable and that the built-in tools are in use.
 - Rate limit: detect HTTP 429 responses and honour `Retry-After` header with exponential backoff.
 
 ## 3. Security
@@ -143,9 +144,10 @@ Default policy: **default-deny**.
 
 - Only domains listed in the project allowlist may be fetched.
 - The allowlist is defined in `qfai.config.yaml` under `webResearch.allowlist`.
-- Unknown domains are logged and skipped; the pipeline continues with allowed sources.
+- Unknown domains are logged with the blocked domain and skipped; the pipeline continues with allowed sources.
 - Redirect chains are followed only while all hops remain on allowlisted domains.
-  A redirect to a non-allowlisted domain is blocked and the fetch is rejected.
+  A redirect to a non-allowlisted domain is blocked at that target, the fetch is rejected,
+  and the redirect chain up to the blocked target is logged.
 
 ### 3.3 --yolo Flag and Security Gates
 
@@ -159,14 +161,14 @@ cannot be bypassed.
 
 Every pipeline execution produces a session log with **6 mandatory fields**:
 
-| Field        | Description                             |
-| ------------ | --------------------------------------- |
-| `session_id` | Unique identifier for this research run |
-| `query`      | The original search query               |
-| `timestamp`  | ISO-8601 start time                     |
-| `stages`     | Array of stage results with timing      |
-| `sources`    | List of fetched URLs with status codes  |
-| `citations`  | Final citation entries                  |
+| Field        | Description                                                             |
+| ------------ | ----------------------------------------------------------------------- |
+| `session_id` | Unique identifier for this research run                                 |
+| `query`      | The request and every search query issued                               |
+| `timestamp`  | ISO-8601 start time                                                     |
+| `stages`     | Stage results with timing, sanitization events and verification results |
+| `sources`    | List of fetched URLs with status codes and content hashes               |
+| `citations`  | Final citation entries                                                  |
 
 The session log is part of the research report, not a file of its own.
 
@@ -186,6 +188,9 @@ Risk-based gating strategy:
 - **Low-risk queries**: Auto-approve. No human gate required.
 - **High-risk queries** (e.g., medical, legal, financial): Gate before cite stage.
   Human must confirm source selection and extracted claims.
+- **A high-risk conclusion** is not applied to code until a human has reviewed it.
+  The gate blocks and shows the diff the conclusion would produce together with its citations.
+  A low-risk conclusion is applied without blocking.
 - `--yolo` flag is **ignored** for security gates (see Section 3.3).
 
 Risk classification is determined by query topic analysis and domain sensitivity rules.
@@ -236,6 +241,10 @@ When the search stage returns no results:
 Each URL is fetched independently. A fetch failure for one URL does not
 abort the pipeline. Failed URLs are logged and excluded; the remaining
 successful fetches produce a partial result.
+
+When every fetch fails, no partial result exists. Report that every fetch failed,
+with the failure reason (status code or timeout) for each URL, and do not run the
+extract stage.
 
 This isolation ensures that transient network errors or single-domain
 outages do not block the entire research pipeline.
