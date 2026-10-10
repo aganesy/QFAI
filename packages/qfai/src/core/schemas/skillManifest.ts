@@ -1,11 +1,10 @@
 /**
- * Skill manifest schema (Pair III SSOT-side).
+ * Declares runtimeDependencies for skill manifests.
  *
- * The full manifest schema (file location, validation rules, distributed-surface
- * lint) is owned by the skill-governance slice; this module exposes only the
- * canonical field-name token that the doctor probe and the schema MUST agree
- * on. The pair check in `validators/skillManifestDrift.ts` scans for this
- * token on both sides.
+ * packageSelfGovernance runs skillManifestDrift against the source-file pairs
+ * registered in skillManifestPairs. The check reads this file and the doctor
+ * probe source to detect mismatched field-name tokens. The doctor probe uses
+ * its own constant; it does not import this module.
  */
 
 export const SKILL_MANIFEST_RUNTIME_DEPENDENCIES_FIELD = "runtimeDependencies";

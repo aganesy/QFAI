@@ -58,6 +58,17 @@ gets a verdict this repository would not have given.
 4. **Register it in the manifest.** A schema missing from
    `assets/mdschema/manifest.yml` is never run.
 
+## Updating the checker
+
+`packages/qfai/package.json` declares the checker version. Update the root
+manifest and lockfile with it, then install the dependencies in this checkout.
+`pnpm sync:mdschema` checks those versions and updates the shipped docs install,
+its explicit tool allowlist, the two shipped workflow pins and the heading below.
+It stops before writing if an expected anchor or existing pin does not match.
+Renovate groups both manifests and runs the same command in its repin job before
+the guard-byte and verification-body resealers. Install-script permissions stay
+unchanged; synchronization runs no install, build or test.
+
 ## Writing a schema for mdschema 0.15.5
 
 | Fact                                                                           | Consequence                                          |
