@@ -380,8 +380,11 @@ async function withCatchup(run: (fixture: CatchupFixture) => Promise<void>): Pro
       ["commit.gpgsign", "false"],
       ["core.autocrlf", "false"],
       ["core.hooksPath", path.join(sandbox, "no-hooks")],
-    ])
+    ]) {
+      if (key === undefined || value === undefined)
+        throw new Error("Fixture Git config needs a key and value.");
       nativeGit(seed, ["config", key, value]);
+    }
     await put(seed, ".gitignore", "node_modules/\n");
     await put(seed, "package.json", '{"name":"fixture","private":true,"type":"module"}\n');
     await put(seed, "semantic.txt", "base semantic bytes\n");
@@ -417,8 +420,11 @@ async function withCatchup(run: (fixture: CatchupFixture) => Promise<void>): Pro
       ["commit.gpgsign", "false"],
       ["core.autocrlf", "false"],
       ["core.hooksPath", path.join(sandbox, "no-hooks")],
-    ])
+    ]) {
+      if (key === undefined || value === undefined)
+        throw new Error("Fixture Git config needs a key and value.");
       nativeGit(root, ["config", key, value]);
+    }
     for (const relative of ["node_modules/prettier", "packages/qfai/node_modules/yaml"]) {
       await put(root, `${relative}/package.json`, '{"main":"index.cjs"}\n');
       await put(root, `${relative}/index.cjs`, "module.exports={};\n");
@@ -602,9 +608,11 @@ async function digestConflict(
   });
 }
 
-async function expectedPending(
-  fixture: CatchupFixture,
-): Promise<{ files: string[]; conflicts: string; other: Record<string, string> }> {
+function expectedPending(fixture: CatchupFixture): {
+  files: string[];
+  conflicts: string;
+  other: Record<string, string>;
+} {
   const control = path.join(fixture.sandbox, "control");
   nativeGit(fixture.sandbox, ["clone", "-q", "--branch", "topic", fixture.origin, control]);
   // The fixture's topic may contain local commits not published to origin.
@@ -633,7 +641,7 @@ async function expectedPending(
 }
 
 async function expectRejectedConflict(fixture: CatchupFixture): Promise<void> {
-  const expected = await expectedPending(fixture);
+  const expected = expectedPending(fixture);
   const head = nativeGit(fixture.root, ["rev-parse", "HEAD"]).stdout.trim();
   const run = invokeCatchup(fixture, [], await catchupPreload(fixture));
   expect(run.status, run.output).toBe(1);
@@ -663,6 +671,7 @@ async function expectPreflightRefusal(
   const before = fixtureState(fixture.root);
   const run = invokeCatchup(fixture, args, await catchupPreload(fixture));
   expect(run.status, run.output).toBe(1);
+  expect(run.output).not.toContain("MODULE_NOT_FOUND");
   expect(run.output).toMatch(reason);
   expect(fixtureState(fixture.root)).toEqual(before);
   expect(writerRecords(fixture.root)).toEqual([]);
@@ -1186,12 +1195,16 @@ describe("branch catch-up acceptance", () => {
       editDeclaration(tree, (declaration) => {
         const context = declaration.contexts.find(({ job }) => job === "ci-pass");
         if (context === undefined) throw new Error("Fixture needs the aggregate context.");
+        if (context.dependencies === undefined)
+          throw new Error("Fixture needs the aggregate dependencies.");
         expect(context.dependencies).toContain("test");
-        context.dependencies = context.dependencies?.filter((dependency) => dependency !== "test");
+        context.dependencies = context.dependencies.filter((dependency) => dependency !== "test");
+        return declaration;
       });
       const gate = runLane(tree);
       expect(gate.exitCode, gate.output).toBe(1);
       expect(gate.output).toMatch(/depend|require|test/i);
+      expect(gate.output).toMatch(/depends on test, which .* does not declare/);
     } finally {
       await removeTempTree(tree);
     }
