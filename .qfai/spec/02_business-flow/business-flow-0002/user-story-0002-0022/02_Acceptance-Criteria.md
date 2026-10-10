@@ -7,10 +7,12 @@ Feature: The assistant-tree mirror follows the renamed tree
   # AC-0002-0022-01
   Scenario: The repository-root assistant tree follows the singular directory names
     Given the packaged assistant tree holds the rule, skill, agent and prompt directories
+    And an owned directory link has the correct target text but cannot be followed
+    When link-assistant-tree --check runs before repair
+    Then it names the unfollowable link as drift and exits 1 without changing it
     When pnpm sync:ssot runs
-    Then the repository-root rule, skill, agent and prompt paths resolve to the packaged assets
-    And check mode reports an owned same-target directory link that cannot be followed as drift, names it and exits 1 without changing it even when its target text matches
-    And directory-type repair recreates only that owned same-target link as a directory link
+    Then directory-type repair recreates only that owned same-target link as a directory link
+    And the repository-root rule, skill, agent and prompt paths resolve to the packaged assets
     And healthy and foreign links remain unchanged
     And repair preserves canonical files, the primary checkout and sibling sentinel paths
     And pnpm ci:gate:ssot reports no diff
