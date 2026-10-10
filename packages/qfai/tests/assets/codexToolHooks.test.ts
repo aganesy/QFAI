@@ -45,6 +45,27 @@ const LINE = /^node -e "([^"]*)" ([a-z-]+)$/;
 type Entry = Record<string, unknown>;
 type Group = { readonly matcher: unknown; readonly hooks: readonly Entry[] };
 
+function expectNoEmbeddedReminderText(program: string, messages: unknown): void {
+  if (typeof messages !== "object" || messages === null) throw new Error("no reminder catalog");
+  for (const message of Object.values(messages)) {
+    if (typeof message !== "object" || message === null) throw new Error("invalid reminder");
+    const output: unknown = Reflect.get(message, "hookSpecificOutput");
+    const full: unknown =
+      typeof output === "object" && output !== null
+        ? Reflect.get(output, "additionalContext")
+        : undefined;
+    for (const context of [
+      full,
+      Reflect.get(message, "reason"),
+      Reflect.get(message, "briefContext"),
+    ]) {
+      if (typeof context !== "string") continue;
+      expect(program).not.toContain(context);
+      expect(program).not.toContain(JSON.stringify(context).slice(1, -1));
+    }
+  }
+}
+
 function asRecord(value: unknown, what: string): Entry {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     throw new Error(`${what} is not an object`);
@@ -258,6 +279,9 @@ describe("the Codex tool-time reminders", () => {
   });
 
   it("keep every program free of what a shell would expand or cut", async () => {
+    const messages: unknown = JSON.parse(
+      await readFile(path.join(repoRoot, SHIPPED_MESSAGES), "utf-8"),
+    );
     for (const event of ALL_EVENTS) {
       for (const entry of (await readGroups(SHIPPED_CODEX, event)).flatMap((g) => g.hooks)) {
         const { program } = partsOf(entry);
@@ -266,7 +290,7 @@ describe("the Codex tool-time reminders", () => {
         // and two to the others.
         expect(program).not.toMatch(/[$`%!"]/);
         expect(program).not.toContain("\\\\");
-        expect(program).not.toContain("additionalContext");
+        expectNoEmbeddedReminderText(program, messages);
         expect(entry.type).toBe("command");
         expect(entry.timeout).toBeGreaterThan(0);
         expect(entry.timeout).toBeLessThanOrEqual(30);

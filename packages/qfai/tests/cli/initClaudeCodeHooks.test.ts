@@ -1,12 +1,4 @@
-/**
- * What `qfai init` does about `.claude/settings.json`.
- *
- * A fresh project gets the whole shipped file from the create-only root copy.
- * A project that already has settings of its own gets only the hook entries,
- * merged in — and that is the case worth testing, because it is the one the
- * copy alone cannot reach and the one where a wrong merge damages a file the
- * project owns.
- */
+/** Init updates shipped readers while preserving the project's own host settings. */
 
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -37,6 +29,27 @@ const assetsRoot = path.resolve(
   "assets",
   "init",
 );
+
+function expectNoEmbeddedReminderText(program: string, messages: unknown): void {
+  if (typeof messages !== "object" || messages === null) throw new Error("no reminder catalog");
+  for (const message of Object.values(messages)) {
+    if (typeof message !== "object" || message === null) throw new Error("invalid reminder");
+    const output: unknown = Reflect.get(message, "hookSpecificOutput");
+    const full: unknown =
+      typeof output === "object" && output !== null
+        ? Reflect.get(output, "additionalContext")
+        : undefined;
+    for (const context of [
+      full,
+      Reflect.get(message, "reason"),
+      Reflect.get(message, "briefContext"),
+    ]) {
+      if (typeof context !== "string") continue;
+      expect(program).not.toContain(context);
+      expect(program).not.toContain(JSON.stringify(context).slice(1, -1));
+    }
+  }
+}
 
 /** The groups under one hook event. */
 function readHookGroups(settings: unknown, event = "PreToolUse"): unknown[] {
@@ -275,12 +288,12 @@ describe("qfai init and the reminder hooks", () => {
       await initInto(root);
 
       const text = await readFile(path.join(root, SETTINGS), "utf-8");
-      expect(text).not.toContain("additionalContext");
       expect(text).not.toContain(".agents/rules/grilling.md");
       const messages: unknown = JSON.parse(
         await readFile(path.join(root, ".agents", "rules", "reminders.json"), "utf-8"),
       );
       if (typeof messages !== "object" || messages === null) throw new Error("no message table");
+      expectNoEmbeddedReminderText(text, messages);
       const entries = entriesOf(JSON.parse(text));
       expect(entries.length).toBeGreaterThan(0);
       for (const { entry } of entries) {
@@ -302,7 +315,10 @@ describe("qfai init and the reminder hooks", () => {
 
       const settings = await readSettings(root);
       expectOwnPermissionFirst(settings);
-      expect(JSON.stringify(settings)).not.toContain("additionalContext");
+      const messages: unknown = JSON.parse(
+        await readFile(path.join(root, ".agents", "rules", "reminders.json"), "utf-8"),
+      );
+      expectNoEmbeddedReminderText(JSON.stringify(settings), messages);
       const shipped = entriesOf(
         JSON.parse(await readFile(path.join(assetsRoot, ".claude", "settings.json"), "utf-8")),
       ).map(({ event, entry }) => JSON.stringify({ event, entry }));
@@ -460,14 +476,8 @@ describe("qfai init and the reminder hooks", () => {
     });
   });
 
-  // A read that fails for any reason other than "nothing is there" — a
-  // permission, or the path being something other than a file. The rest of the
-  // run is worth more than the reminder, so the fault is reported and init
-  // finishes; a throw here would abandon every later step over one optional file.
-  //
-  // The settings path is made a DIRECTORY rather than chmod-ed unreadable:
-  // `chmod 000` does not stop a privileged user, so that test passes vacuously
-  // wherever the suite runs as root, while `EISDIR` is a fault on every account.
+  // A directory at the settings path causes a read failure on every host.
+  // Init reports it and still writes the other assets.
   it("reports a settings path it cannot read and still completes the run", async () => {
     await withTempRoot(async (root) => {
       await mkdir(path.join(root, SETTINGS), { recursive: true });
