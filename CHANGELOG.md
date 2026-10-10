@@ -6,6 +6,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A workspace bootstrap command prepares this checkout's local launcher.**
+  It runs frozen installs around the package build, stops at the first failed
+  step and rejects shared dependency links. Fixes #3244.
 - **Validation can find forbidden identifiers from hash-only configuration.**
   The optional policy scans tracked file names and current bytes, including
   binary and ignored tracked files. Unsafe or incomplete coverage is an error;
