@@ -8,6 +8,10 @@ Before a step `releasePoint` names runs, ask the user to approve the release; wh
 `verify-commit` runs after that, so the commit holds the approval. Nothing after it
 runs without the approval, which authorizes no push, merge, tag or publication.
 
+After approval at a handoff release point, `qfai-run` writes the required
+approval row in `decisions.md` before `triage-handoff` runs. Every triage step
+still changes no tracked file. No handed-off operation runs on the user's behalf.
+
 ## Decision point
 
 At a step `decisionPoints` names, put each critical

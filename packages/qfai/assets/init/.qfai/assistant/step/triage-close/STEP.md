@@ -69,5 +69,9 @@ Any other route closes here.
 
 The reviewer, or the stage worker where the work order names none, confirms one outcome is recorded with the evidence behind it,
 every follow-up the earlier steps found is listed with its goal and reason,
-no follow-up was routed or started, and no tracked file changed. The report
-never says a change is done.
+no follow-up was routed or started, and no tracked file was changed by any
+triage step. The report never says a change is done.
+
+Outside triage steps, the only tracked-file changes allowed are the records
+the route's discussion stage names and the required approval row that
+`qfai-run` writes in `decisions.md` before `triage-handoff` runs.
