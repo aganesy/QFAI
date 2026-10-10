@@ -301,6 +301,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Language errors offer an ASCII code-point construction for code samples.**
+  The guard keeps Unicode escape guidance and explains the alternative when
+  an editing tool decodes escapes. Forbidden characters remain rejected.
+  Fixes #3248.
+
 - Verify assistant link targets can be followed and safely recreate unfollowable
   directory links to shipped assets. Fixes #3368.
 
