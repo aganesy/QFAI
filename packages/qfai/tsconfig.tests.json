@@ -210,6 +210,7 @@
     "tests/integration/cli/commands/validate.strictFailOnPrecedence.test.ts",
     "tests/integration/cliStartupCost.test.ts",
     "tests/integration/contractDeferralNotes.test.ts",
+    "tests/integration/configureSkillTuning.test.ts",
     "tests/integration/contractIdScheme.test.ts",
     "tests/integration/designAuditTokenDrift.test.ts",
     "tests/integration/discussionSidecarAcceptance.test.ts",
