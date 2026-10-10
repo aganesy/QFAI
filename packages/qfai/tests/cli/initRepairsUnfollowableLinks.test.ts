@@ -2,8 +2,8 @@
  * `qfai init` repairs a wrapper whose target string is right but which the OS
  * will not follow.
  *
- * On Windows a `git worktree add` writes every `.claude/skills/*` link as a
- * FILE symlink pointing at a directory — at the moment git writes one, its
+ * On Windows a `git worktree add` can write a `.claude/skills/*` link as a
+ * FILE symlink pointing at a directory — at the moment git writes it, its
  * target does not yet exist in the new worktree and it has no reftype hint —
  * and the OS refuses to resolve that. `readlink` returns the correct target, so
  * `ensureSymlink` declared the entry sound and returned `"skipped"`, while
@@ -20,9 +20,21 @@
  * that file's sibling gives: `vi.mock` is hoisted to module scope, so a mock
  * added there would apply to every case in it.
  */
-import { lstat, mkdtemp, readdir, readFile, readlink, rm, stat, writeFile } from "node:fs/promises";
+import { execFile as execFileCallback } from "node:child_process";
+import {
+  lstat,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  readlink,
+  rm,
+  stat,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { promisify } from "node:util";
 
 import type * as fsPromises from "node:fs/promises";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -57,6 +69,7 @@ function symlinkCallsFor(linkPath: string): unknown[][] {
 const { runInit } = await import("../../src/cli/commands/init.js");
 
 const LINK = path.join(".claude", "skills", "qfai-implement");
+const execFile = promisify(execFileCallback);
 
 function errno(code: string): NodeJS.ErrnoException {
   const error = new Error(`simulated ${code}`) as NodeJS.ErrnoException;
@@ -112,6 +125,65 @@ beforeEach(() => {
 });
 
 describe("qfai init repairs a link the OS will not follow", () => {
+  it("keeps a real linked worktree's owned skill wrapper reachable after a non-force init", async () => {
+    await withProject(async (root) => {
+      const primary = path.join(root, "primary");
+      const linked = path.join(root, "linked");
+      const canonical = path.join(".qfai", "assistant", "skill", "qfai-implement", "SKILL.md");
+      await mkdir(primary);
+      const git = (args: string[]) => execFile("git", args, { cwd: primary });
+      await git(["init", "--initial-branch=main"]);
+      await git(["config", "--local", "core.symlinks", "true"]);
+      await git(["config", "--local", "core.autocrlf", "false"]);
+      await runInit({ dir: primary, force: false, dryRun: false, yes: true });
+      await writeFile(path.join(primary, "sentinel.txt"), "project-owned bytes\n");
+      const original = await readFile(path.join(primary, canonical));
+      const primaryTarget = await readlink(path.join(primary, LINK));
+      await git(["add", "--force", "--", canonical, LINK, "sentinel.txt"]);
+      await git([
+        "-c",
+        "user.email=qfai@example.test",
+        "-c",
+        "user.name=qfai",
+        "-c",
+        "commit.gpgsign=false",
+        "commit",
+        "-m",
+        "tracked skill wrapper",
+      ]);
+      await git(["worktree", "add", "--detach", linked, "HEAD"]);
+
+      const linkPath = path.join(linked, LINK);
+      expect((await lstat(linkPath)).isSymbolicLink()).toBe(true);
+      expect((await readFile(path.join(linked, canonical))).equals(original)).toBe(true);
+      let followable = false;
+      try {
+        followable = (await stat(linkPath)).isDirectory();
+      } catch (error) {
+        expect(process.platform).toBe("win32");
+        expect(error).toMatchObject({ code: "EPERM" });
+      }
+      symlinkSpy.mockClear();
+
+      await runInit({ dir: linked, force: false, dryRun: false, yes: true });
+
+      expect((await stat(linkPath)).isDirectory()).toBe(true);
+      expect((await readFile(path.join(linkPath, "SKILL.md"))).equals(original)).toBe(true);
+      expect(symlinkCallsFor(linkPath)).toHaveLength(followable ? 0 : 1);
+      expect(path.normalize(await readlink(linkPath))).toBe(path.normalize(primaryTarget));
+      expect((await stat(path.join(primary, LINK))).isDirectory()).toBe(true);
+      expect((await readFile(path.join(primary, canonical))).equals(original)).toBe(true);
+      expect(path.normalize(await readlink(path.join(primary, LINK)))).toBe(
+        path.normalize(primaryTarget),
+      );
+      for (const checkout of [primary, linked]) {
+        expect(await readFile(path.join(checkout, "sentinel.txt"), "utf8")).toBe(
+          "project-owned bytes\n",
+        );
+      }
+    });
+  });
+
   it("recreates it without --force, so the printed remedy clears the finding", async () => {
     await withProject(async (root) => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
