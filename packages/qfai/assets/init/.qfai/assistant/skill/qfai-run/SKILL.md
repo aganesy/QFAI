@@ -57,12 +57,16 @@ value but the three below plans nothing.
 ## The work
 
 1. **Extract.** Read the request into an extraction as
-   `references/extraction.md` sets out, and pass it to
+   `references/extraction.md` sets out, using its definition of acceptance.
+   Pass the extraction to
    `npx qfai workflow plan --in <file>`, or `--in -` on standard input.
 2. **Candidates.** When `plan` returns `candidates`, put one single-select
    question, each option saying in the user's words what that route will do,
    then run `npx qfai workflow plan --route <route>` for the chosen one.
-3. **Scope.** Ask which scope to run, as `references/operator-screens.md` says; run only its stages.
+3. **Scope.** With two or more scopes, ask which to run as
+   `references/operator-screens.md` says, and run only its stages.
+   With one scope, no scopes, or a branch destination's plan, ask nothing and
+   run every stage.
 4. **Announce.** Before the first stage, give the goal, the chosen stages in
    order in plain words, and the files the work may change. Ask nothing. Then run
    `common-policy-check` once. On a route that changes no file, one that
