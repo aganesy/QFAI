@@ -20,9 +20,9 @@ sandbox:
   network:
     policy: deny
     allow:
-      # Only allowlisted domains from qfai.config.yaml are permitted at runtime.
-      # This template enforces that no network access is granted unless the
-      # domain appears in webResearch.allowlist.
+      # Only the domains listed under webResearch.allowlist in qfai.config.yaml
+      # are permitted at runtime. This template grants no network access to a
+      # domain that list does not name; qfai itself does not parse the list.
       - scope: allowlisted-domains-only
     deny:
       - scope: "*"

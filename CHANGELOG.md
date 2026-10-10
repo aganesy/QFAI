@@ -17,6 +17,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reminder hooks and the communication rule carry the short form. `qfai init`
   refreshes the rule and `reminders.json`.
 
+- **The web-research skill says who reads its domain allowlist.** The list sits
+  under `webResearch.allowlist` in `qfai.config.yaml` and the agent reads it from
+  the file; `qfai` does not parse or validate it. The default-deny sandbox
+  template's comment now says the same. Fixes #3191.
+
 - **The web-research skill states what its criteria require, and its MCP
   templates match the Codex and Copilot formats.** A search with no results is
   reported as "no web sources found" with every query issued and cites nothing.
