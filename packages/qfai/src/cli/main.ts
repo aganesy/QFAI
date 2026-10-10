@@ -13,7 +13,7 @@ import { EXIT_CODES, formatExitCodesSection } from "./lib/exitCodes.js";
 import { describeIncompleteRun } from "./lib/warnings.js";
 import { error, info, warn } from "../core/logger.js";
 import { findConfigRoot } from "../core/config.js";
-import { resolveToolVersion } from "../core/version.js";
+import { resolveToolPackageDir, resolveToolVersion } from "../core/version.js";
 
 /**
  * Exit code for a command name nothing recognizes.
@@ -72,6 +72,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
   // with the code that ships it.
   if (command !== null && !KNOWN_COMMANDS.has(command)) {
     error(`Unknown command: ${command}`);
+    error(await unavailableCommandDiagnosis());
     info(usage());
     process.exitCode = UNKNOWN_COMMAND_EXIT_CODE;
     return;
@@ -296,10 +297,14 @@ async function workflowEntry(
   const subjects = workflowRefusalSubjects(invalid, options);
   if (subjects.length > 0) {
     error(invalidReason ?? "qfai workflow plan: give exactly one of --in and --route.");
+    const diagnosis =
+      options.workflowUnknownOperation !== undefined ? await unavailableCommandDiagnosis() : null;
+    if (diagnosis !== null) error(diagnosis);
+    const message =
+      "The command line is not `workflow plan` with exactly one of --in and --route, so run it with --help to see the form.";
     return emitPlanDocument({
       ok: false,
-      message:
-        "The command line is not `workflow plan` with exactly one of --in and --route, so run it with --help to see the form.",
+      message: diagnosis ?? message,
       reasons: subjects.map((subject) => ({ reason: "invalid-input", subject })),
     });
   }
@@ -308,6 +313,13 @@ async function workflowEntry(
     ...(options.workflowIn !== undefined ? { inPath: options.workflowIn } : {}),
     ...(options.workflowRoute !== undefined ? { route: options.workflowRoute } : {}),
   });
+}
+
+async function unavailableCommandDiagnosis(): Promise<string> {
+  const [version, packageDir] = await Promise.all([resolveToolVersion(), resolveToolPackageDir()]);
+  const location =
+    packageDir === null ? "; package directory could not be determined" : ` from ${packageDir}`;
+  return `This command is unavailable in qfai ${version}${location}; if you expected it, install or update the project's local qfai dependency.`;
 }
 
 // What a `workflow` command line gets wrong: an unknown operation or flag, a missing operation,
