@@ -45,10 +45,11 @@ Feature: Find forbidden identifiers in the tracked worktree
 
   # AC-0001-0232-06
   Scenario: Unsafe or incomplete coverage is an error
-    Given unsafe Git execution, incomplete listing, an invalid or traversing path, a parent or leaf symlink, a hard link, gitlink or nonregular entry, or a missing, unreadable or changing file
+    Given unsafe Git execution, incomplete listing, an invalid or traversing path, a parent or leaf symlink, a hard link, gitlink or nonregular entry, or a missing or unreadable file, an observed descriptor identity or metadata change, or an inconsistent bounded read
     When the enabled scan attempts coverage
     Then QFAI-SECURITY-002 is raised at error without following an unsafe path or treating omitted input as clear
     And its diagnostic exposes no path, identifier, digest, raw exception or Git stderr
+    And the scan provides no atomic snapshot or guarantee that every concurrent mutation is detected
 
   # AC-0001-0232-07
   Scenario: Inclusive capacity limits bound the scan
