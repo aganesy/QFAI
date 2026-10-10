@@ -22,6 +22,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The maintenance step covers procedures people follow.** Changes to actions,
+  required values, commands or their order have a semantic effect even when
+  only Markdown changes. Fixes #3203.
+
 - **The decision template states the limit of a passing validation result.**
   Every new row uses the four Approach items; validation does not establish
   that every existing row follows that layout. Fixes #3197.
