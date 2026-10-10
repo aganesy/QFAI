@@ -312,6 +312,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Language errors offer an ASCII code-point construction for code samples.**
+  The guard keeps Unicode escape guidance and explains the alternative when
+  an editing tool decodes escapes. Forbidden characters remain rejected.
+  Fixes #3248.
+
 - **Unfinished merges stop the branch ID check.** Finish the merge before
   comparing branch-owned identifiers or fetching pull-request heads. Fixes #3246.
 
