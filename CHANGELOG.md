@@ -320,6 +320,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Clarify that the research agent reads the cache TTL extension in the project config; the CLI does not parse it.
+
 - Clarify that story ID candidates are snapshots and require a fresh collision
   check of the committed changes before publishing the same branch head.
 
