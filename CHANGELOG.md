@@ -28,6 +28,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Test exceptions take effect only at DONE.** A partially superseded exception
+  no longer suppresses a missing-test error. Other decision kinds keep their
+  status behavior. Fixes #3356.
 - **One goal can advance independent targets through their own plans.** Guidance
   keeps each target's scope, head-bound evidence and approval limits separate.
   A clean checkout can move to authorized work during remote waits; writers,
