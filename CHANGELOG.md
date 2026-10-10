@@ -22,6 +22,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Approved specification changes distinguish pending test annotations from completed tests.**
+  An exact AC test exception needs both specification-change and test-deferral
+  authority. Its review date is manual; uncovered changes remain open questions.
+  Fixes #3233.
+
 - **Selected hook reminders stay visible without repeating their full text.**
   Claude Code and Codex print the full reminder once per session, agent and
   message key, then a one-line rule or skill pointer on every relevant trigger.
