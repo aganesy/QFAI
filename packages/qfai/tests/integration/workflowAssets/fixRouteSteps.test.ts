@@ -118,7 +118,6 @@ describe("a fix route from the diagnosis to the commit", () => {
 
 describe("the evidence gates on a fix-intermittent route", () => {
   // QFAI:AC-0001-0220-05
-  // QFAI:EX-0001-0220-27
   // QFAI:EX-0001-0220-43
   // QFAI:EX-0001-0220-45
   // QFAI:EX-0001-0220-46
@@ -172,7 +171,6 @@ describe("the evidence gates on a fix-intermittent route", () => {
 
   // QFAI:AC-0001-0220-05
   // QFAI:AC-0001-0220-06
-  // QFAI:EX-0001-0220-27
   // QFAI:EX-0001-0220-44
   // QFAI:EX-0001-0220-45
   // QFAI:EX-0001-0220-46
