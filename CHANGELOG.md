@@ -395,6 +395,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `pnpm install` and `pnpm rebuild`, and each of them printed a warning. It now
   runs right after `setup-node`. Publishing itself was not affected.
 
+- **Verification commits keep pending CI separate from completed verification.**
+  Guidance records exact-head CI evidence, preserves observed failures and
+  requires separate authority for remote actions. Installed asset refresh uses
+  the verified local package and preserves project-owned files. Fixes #3294.
+
 ## [2.1.1] - 2026-10-08
 
 ### Added
