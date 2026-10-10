@@ -28,7 +28,7 @@ This repository uses QFAI (Quality-First AI) to improve the quality and consiste
 
 The authoritative rule set shared across all AI coding agents (Claude
 Code / Codex / Copilot) lives under `.agents/rules/`. Tool-specific
-mirrors (`.claude/rules/`, etc.) reference these masters; the
+mirrors (`.claude/rules/scoped/`, etc.) reference these masters; the
 `.agents/rules/` files are SSOT.
 
 Key rules to follow:
