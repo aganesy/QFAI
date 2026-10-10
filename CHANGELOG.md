@@ -36,6 +36,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Windows CI covers native assistant mirror links.** Its parity list includes
+  mirror link behavior and prepares owned root links before testing, using the
+  same temp directory as the suites. Healthy worktrees remain healthy cases.
+
 - **Windows link warnings describe the affected wrapper and its existing repair.**
   Guidance recommends ordinary init without deleting links and distinguishes
   consumer wrappers from the repository's canonical mirror. Refs #3240.
