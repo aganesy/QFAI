@@ -1,8 +1,10 @@
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 import { readRule } from "../helpers/ruleWithReferences.js";
+import { useTempDirPool } from "../helpers/shippedWorkflowFixtures.js";
 
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
@@ -56,4 +58,47 @@ describe("a reviewer's demand for more work is bounded by the artifact", () => {
       }
     });
   }
+});
+
+describe("referenced rule reads", () => {
+  const createTempDir = useTempDirPool("qfai-rule-reference-read-");
+
+  it("keeps the baseline when optional references are absent", async () => {
+    const root = await createTempDir();
+    const file = path.join(root, "shared-skill-baseline.md");
+    await writeFile(file, "baseline", "utf-8");
+    await expect(readRule(file)).resolves.toBe("baseline");
+  });
+
+  it("appends sorted markdown bodies after the baseline and ignores other files", async () => {
+    const root = await createTempDir();
+    const file = path.join(root, "shared-skill-baseline.md");
+    const references = path.join(root, "references");
+    await writeFile(file, "baseline", "utf-8");
+    await mkdir(references);
+    await writeFile(path.join(references, "z.md"), "last", "utf-8");
+    await writeFile(path.join(references, "a.md"), "first", "utf-8");
+    await writeFile(path.join(references, "ignored.txt"), "not a rule", "utf-8");
+    await expect(readRule(file)).resolves.toBe("baseline\nfirst\nlast");
+  });
+
+  it("rejects references stored as a file with the full path and original read cause", async () => {
+    const root = await createTempDir();
+    const file = path.join(root, "shared-skill-baseline.md");
+    const references = path.join(root, "references");
+    await writeFile(file, "baseline", "utf-8");
+    await writeFile(references, "not a directory", "utf-8");
+    await expect(readRule(path.relative(process.cwd(), file))).rejects.toMatchObject({
+      message: `Cannot read rule references: ${references}`,
+      cause: expect.objectContaining({ code: "ENOTDIR" }),
+    });
+  });
+
+  it("returns an ordinary rule without reading neighboring references", async () => {
+    const root = await createTempDir();
+    const file = path.join(root, "ordinary-rule.md");
+    await writeFile(file, "ordinary rule", "utf-8");
+    await writeFile(path.join(root, "references"), "not a directory", "utf-8");
+    await expect(readRule(file)).resolves.toBe("ordinary rule");
+  });
 });
