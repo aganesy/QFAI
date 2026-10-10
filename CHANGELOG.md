@@ -22,6 +22,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **qfai-run records the required approval before handing an operation to a person.**
+  The row is a route record. Triage steps change no tracked file and never
+  run the handed-off operation. Fixes #3201.
+
 - **The README quick start now holds the whole first run.** The separate "Minimal
   tutorial" section is removed from both README files: the quick start covers
   `npx qfai init`, describing the change in your own words, answering the

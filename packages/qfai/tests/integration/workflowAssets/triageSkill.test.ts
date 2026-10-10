@@ -122,8 +122,8 @@ describe("a question answered without a change", () => {
   it("excludes only the pre-handoff approval record from the route's no-change gate", async () => {
     const gate = flat(sectionOf(await step("triage-close"), "## Gate"));
 
-    expect(gate).toMatch(/\bno tracked file changed by (?:any|a|the) triage step\b/i);
-    expect(gate).toMatch(/\bonly (?:exception|exclusion)\b/i);
+    expect(gate).toMatch(/\bno tracked file (?:was )?changed by (?:any|a|the) triage step\b/i);
+    expect(gate).toMatch(/\bonly (?:exception|exclusion|tracked-file changes allowed)\b/i);
     expect(gate).toMatch(/\brequired approval row\b/i);
     expect(gate).toContain("`decisions.md`");
     expect(gate).toMatch(/`qfai-run`.*\b(?:records|writes)\b.*\bbefore\b.*`triage-handoff`/i);
