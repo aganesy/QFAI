@@ -28,6 +28,10 @@ async function planned(fields: Partial<WorkflowExtraction>): Promise<PlanDocumen
 }
 
 // QFAI:EX-0001-0211-01
+// QFAI:AC-0001-0211-02
+// QFAI:AC-0001-0220-06
+// QFAI:EX-0001-0211-45
+// QFAI:EX-0001-0220-49
 it("An extraction that names no route is routed by the rule that holds", async () => {
   const document = await planned({ intent: "defect", entryFlags: ["repro", "expect"] });
 
@@ -80,6 +84,8 @@ it("An extraction that names no route is routed by the rule that holds", async (
 
 // QFAI:AC-0001-0211-02
 // QFAI:EX-0001-0211-04
+// QFAI:EX-0001-0211-46
+// QFAI:EX-0001-0211-48
 it("An extraction two rules could read is routed by the lower-numbered one", async () => {
   const security: Partial<WorkflowExtraction> = {
     intent: "security",
@@ -127,6 +133,8 @@ it("An extraction two rules could read is routed by the lower-numbered one", asy
 });
 
 // QFAI:EX-0001-0211-03
+// QFAI:AC-0001-0211-02
+// QFAI:EX-0001-0211-47
 it("An extraction value outside its vocabulary is refused, naming the field", async () => {
   const root = await minimalProject();
   const refused = async (fields: Record<string, unknown>) => {

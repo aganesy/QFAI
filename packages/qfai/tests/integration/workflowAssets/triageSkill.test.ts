@@ -40,6 +40,11 @@ function step(name: string): Promise<string> {
 describe("qfai-triage as a stage skill", () => {
   // QFAI:AC-0001-0214-04
   // QFAI:EX-0001-0214-05
+  // QFAI:AC-0001-0211-02
+  // QFAI:AC-0001-0220-06
+  // QFAI:EX-0001-0211-45
+  // QFAI:EX-0001-0211-46
+  // QFAI:EX-0001-0220-49
   it("lists the ten triage steps, closing last, and opens its description with its trigger", async () => {
     const steps = await skillSteps("qfai-triage");
     expect([...steps].sort()).toEqual([...TRIAGE_STEPS].sort());

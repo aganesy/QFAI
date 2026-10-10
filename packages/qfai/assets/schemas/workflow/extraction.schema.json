@@ -80,7 +80,8 @@
           "mechanism-inert",
           "removal-requested",
           "visual-open",
-          "prototype-requested"
+          "prototype-requested",
+          "owned-temporary-cleanup"
         ]
       }
     },
@@ -170,6 +171,54 @@
           "alternatives": true
         }
       }
+    },
+    {
+      "then": {
+        "properties": {
+          "intent": {
+            "const": "order"
+          },
+          "artifacts": {
+            "maxItems": 0
+          }
+        }
+      },
+      "if": {
+        "required": ["qualifiers"],
+        "properties": {
+          "qualifiers": {
+            "contains": {
+              "const": "owned-temporary-cleanup"
+            }
+          }
+        }
+      }
+    },
+    {
+      "then": {
+        "properties": {
+          "artifacts": {
+            "maxItems": 0
+          }
+        }
+      },
+      "if": {
+        "required": ["alternatives"],
+        "properties": {
+          "alternatives": {
+            "contains": {
+              "required": ["qualifiers"],
+              "properties": {
+                "qualifiers": {
+                  "contains": {
+                    "const": "owned-temporary-cleanup"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   ],
   "$defs": {
@@ -252,7 +301,8 @@
               "mechanism-inert",
               "removal-requested",
               "visual-open",
-              "prototype-requested"
+              "prototype-requested",
+              "owned-temporary-cleanup"
             ]
           }
         },
@@ -271,7 +321,28 @@
             ]
           }
         }
-      }
+      },
+      "allOf": [
+        {
+          "then": {
+            "properties": {
+              "intent": {
+                "const": "order"
+              }
+            }
+          },
+          "if": {
+            "required": ["qualifiers"],
+            "properties": {
+              "qualifiers": {
+                "contains": {
+                  "const": "owned-temporary-cleanup"
+                }
+              }
+            }
+          }
+        }
+      ]
     }
   }
 }
