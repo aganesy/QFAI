@@ -261,9 +261,11 @@ in its report instead.
 `.claude/settings.json` and `.codex/hooks.json` put this rule in front of the
 agent on every turn, through a `UserPromptSubmit` hook.
 
-Every turn rather than once, because the moment a question forms is
-unpredictable and a session-start reminder is gone by the time the context is
-compacted — which is when a long session starts reaching for an exception.
+The first eligible prompt prints the full message. Later prompts print a
+one-line reminder to read this rule. The counter keeps a separate sequence for
+each session, optional agent and message key. Missing session identity or a
+counter-storage failure prints the full message. A shorter reminder changes
+neither the question rules nor what an answer means.
 
 Every turn the user types, that is. A turn the host starts on its own — a
 background task's notification, a scheduled wake-up, a sub-agent's report — is
@@ -271,7 +273,9 @@ not one where a question to the user forms. The Claude Code hook reads the promp
 from its input and stays silent when a line of it opens with a `<task-notification>`
 or `<wake>` wrapper, or a `[SYSTEM NOTIFICATION` header. Any other prompt, and input
 it cannot read, gets the reminder. The hook that sends a request to `qfai-run` skips
-the same turns. The Codex hook prints on every turn.
+the same turns. These exclusions run before counting, so a skipped notification
+does not consume the first full display. The Codex hook prints on every turn
+without these notification exclusions.
 
 It reminds and never blocks. Deciding whether a question should have been asked
 as a structured choice needs intent, and a false positive on a hook that fires
@@ -279,9 +283,9 @@ every turn stops the session outright. Claude Code runs `node` directly, with
 no shell and no network. Codex runs one command line, the same under every
 shell, whose program finds the message file by looking upward from where it
 runs, once the project's hooks are trusted.
-Either way it prints one message from `.agents/rules/reminders.json`. A missing
-or unreadable file prints nothing, so it cannot fail the session it is attached
-to.
+Either way it prints the full or brief message from
+`.agents/rules/reminders.json`. A missing or unreadable file prints nothing, so
+it cannot fail the session it is attached to.
 
 What it carries is where this rule lives, the obligation an agent is most likely
 to skip when it would rather not ask, the turn that waits on the user, and the language to
