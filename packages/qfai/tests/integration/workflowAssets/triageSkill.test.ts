@@ -87,8 +87,16 @@ describe("qfai-triage as a stage skill", () => {
     );
     expect(preflight).toMatch(/Git ignores.*contents.*no tracked file.*inside/i);
     expect(preflight).toMatch(/do not change ignore rules/i);
+    expect(preflight).toMatch(/allow only ordinary directories and regular files/i);
     expect(preflight).toMatch(
-      /every descendant.*every path component.*reject.*symbolic links.*junctions.*reparse points.*nested repositories.*nonregular/i,
+      /required host deletion permissions.*every target.*before the first deletion/i,
+    );
+    expect(preflight).toMatch(/read-only permission inspection.*not proof of deletion permission/i);
+    expect(preflight).toMatch(
+      /missing or unknown permission.*entire cleanup.*without deleting any target/i,
+    );
+    expect(preflight).toMatch(
+      /every descendant.*every path component.*reject.*symbolic links.*junctions.*reparse points.*nested repositories.*special entries/i,
     );
     expect(preflight).toMatch(
       /current-task ownership.*every entry.*no process.*other task.*pending operation.*uses/i,
@@ -171,6 +179,7 @@ describe("qfai-triage as a stage skill", () => {
     expect(effective.routing?.has("qfai-triage")).toBe(false);
     for (const name of TRIAGE_STEPS) {
       expect(frontMatterOf(await step(name))["routing-profile"], name).toBe("default");
+      expect(effective.routing?.has(name), name).toBe(true);
       expect(stepReview(effective, name).profile, name).toBe("default");
       expect(stepReview(effective, name).alwaysRequired, name).toEqual([]);
     }
