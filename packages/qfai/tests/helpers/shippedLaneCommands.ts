@@ -1553,7 +1553,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // hashing what it wrote.
   // Re-pinned for the `Stop` group marked `QFAI session feedback reminder`. Removing the `Stop`
   // event from the file reproduces `03325965…` byte for byte.
-  [".claude/settings.json", "a45fb5f9c4b219f8b127b17c4b52b4b99172627a3f8d4be6bae8807b3d11f23c"],
+  [".claude/settings.json", "77353e45e357299d5a0e0807cf1900022cac0fa2942992b493809baf8e036a19"],
   // Inside `.codex/`, and pinned for the reason `.claude/settings.json` is: its commands are a
   // program an adopter's agent runs. Two `UserPromptSubmit` groups, structured-question and
   // free-text entry. Codex takes one command string, so each runs the same `node -e` reader
@@ -1596,7 +1596,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // merge refreshes them. Derived the same way.
   // Re-pinned for the same `Stop` group. Removing the `Stop` event reproduces `4eb4c36d…` byte
   // for byte.
-  [".codex/hooks.json", "3e30093dfccbbab4f9a3e94f3db5982588af3c21bf8c2e82605d861014a0f81a"],
+  [".codex/hooks.json", "63935f7ac788cf8100dd667f2b9c81a813d0e86bc60c9c1be1830cea04c7dbad"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`
