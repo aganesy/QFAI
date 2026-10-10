@@ -376,13 +376,8 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
   // knows it exists. The directory holds the rules, and AGENTS.md is where an
   // agent finds out which of them to read.
   it.each(RULE_MASTERS)("an entry file names %s", async (fileName) => {
-    const texts = await Promise.all(
-      ["AGENTS.md"].map((entry) => readFile(path.join(ROOT, entry), "utf-8")),
-    );
-    expect(
-      texts.some((text) => text.includes(fileName)),
-      `AGENTS.md does not name ${fileName}`,
-    ).toBe(true);
+    const text = await readFile(path.join(ROOT, "AGENTS.md"), "utf-8");
+    expect(text, `AGENTS.md does not name ${fileName}`).toContain(fileName);
   });
 
   it("AGENTS.md references the master rules directory and version-discipline", async () => {
@@ -462,8 +457,8 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       }
     });
 
-    it.each(["AGENTS.md"])("%s cites the rule master", async (rel) => {
-      const text = await readFile(path.join(ROOT, rel), "utf-8");
+    it("AGENTS.md cites the rule master", async () => {
+      const text = await readFile(path.join(ROOT, "AGENTS.md"), "utf-8");
       expect(text).toContain("repository-language.md");
     });
 

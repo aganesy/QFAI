@@ -654,7 +654,7 @@ describe("TC-0017-0023 (TDD-0023): a planted floating reference exits 1 and is n
  * A package manifest's `scripts` entry, narrowed.
  *
  * The three call sites below each read one script out of one manifest, and each one used to do
- * it with two bare `as Record<string, unknown>` assertions — `CLAUDE.md` forbids them and
+ * it with two bare `as Record<string, unknown>` assertions — `AGENTS.md` forbids them and
  * nothing in the lint configuration catches them inside `tests/**`. One narrowing helper
  * removes six.
  */
