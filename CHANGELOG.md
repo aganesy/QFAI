@@ -6,6 +6,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- Synchronize the document schema checker copies from the package manifest after
+  a frozen dependency install, including the Renovate repin workflow.
+
 - Add a branch catch-up helper that merges the remote default branch, resolves
   only proven digest conflicts and reseals generated pins without running tests.
 
