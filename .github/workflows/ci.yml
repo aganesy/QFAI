@@ -649,6 +649,14 @@ jobs:
       - uses: ./.github/actions/setup
       - name: Build qfai on the Windows runner
         run: pnpm -C packages/qfai build
+      # SHIPPED-CI: not-applicable
+      # Because: the repository mirror points to package assets; adopters use
+      # their installed assistant tree.
+      - name: Prepare repository assistant mirror
+        env:
+          TEMP: ${{ runner.temp }}\qfai tmp
+          TMP: ${{ runner.temp }}\qfai tmp
+        run: node scripts/link-assistant-tree.mjs
       - name: Run the Windows parity suites
         env:
           TEMP: ${{ runner.temp }}\qfai tmp

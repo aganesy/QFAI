@@ -33,6 +33,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Windows CI covers native assistant mirror links.** Its parity list includes
+  mirror link behavior and prepares owned root links before testing, using the
+  same temp directory as the suites. Healthy worktrees remain healthy cases.
+
 - **Test exceptions take effect only at DONE.** A partially superseded exception
   no longer suppresses a missing-test error. Other decision kinds keep their
   status behavior. Fixes #3356.
