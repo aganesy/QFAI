@@ -6,6 +6,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A workspace bootstrap command prepares this checkout's local launcher.**
+  It runs frozen installs around the package build, stops at the first failed
+  step and rejects shared dependency links. Fixes #3244.
 - **`qfai sdd renumber-decision` repairs a branch-added decision ID.**
   Explicit source, destination and local base arguments preview exact new
   references; `--apply` writes after checking fixed commits and original bytes.
