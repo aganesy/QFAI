@@ -203,6 +203,7 @@
         ".github/actions/setup/dependency-builds.txt": "3230335c2f0bc71bfcec72150d56fd51dc30524ca0fb35405197054709bd13b5",
         ".github/actions/setup/verify-rebuild-sources.mjs": "81c83080bfbae274d46c90cdae9f9ae3dd3af6240fe56fc88aec461799802ae3",
         "scripts/bootstrap.mjs": "cc87185c6a7824e974c9590f77bf9f3f44690c6f0c04dd78867a8540b8ed437e",
+        "scripts/branch-catchup.mjs": "d21a6494add3ec56066a0a756b02060e6082e878cb413c3df812b864518b0497",
         "scripts/check-bidi.mjs": "295f9f9779686435a54d481b740e00b150108525630be3796369403873b70ed5",
         "scripts/check-build-warnings.mjs": "f07d6df10d28a9ffcb4cdf1130e379c4aadfc2a89329e5f66ae23fd117000077",
         "scripts/check-changelog-entries.mjs": "5c4a94118edd783be8609610c9b2c6cfc393ebdeca8f841166307ef6374b78f1",
@@ -401,7 +402,7 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "e995414dcbc61032",
-        "Verify the toolchain action before running it": "afdd03f7c24c15ca",
+        "Verify the toolchain action before running it": "9f3a772da41dec1d",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "a9e48843fd69e79c",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "5b9cb61d789d7eda",
