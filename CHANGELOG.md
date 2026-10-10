@@ -22,6 +22,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The handoff step records reported failures without claiming success.**
+  Unresolved causes and retries are follow-ups. A separate explicit request
+  to investigate or retry gets its own plan. Fixes #3202.
+
 - **The decision template states the limit of a passing validation result.**
   Every new row uses the four Approach items; validation does not establish
   that every existing row follows that layout. Fixes #3197.

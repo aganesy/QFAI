@@ -48,6 +48,9 @@ value but the three below plans nothing.
 - A change, a question, a proposal to decide or a report to close is planned.
   A question plans a route that answers it and changes nothing. Text that is
   not a request is not planned.
+- A result reported for a waiting step resumes that step, including a failure.
+  A separate explicit request to investigate the failure or repeat the operation
+  is planned as a new request under the extraction and scope rules below.
 - `stop`: end the work at once and list every open decision as open.
 - A request naming a stage skill: invoke that skill by name.
 
