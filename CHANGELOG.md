@@ -42,6 +42,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The release association gate uses Node.js to read pull request branches.**
+  Its two contributor cases require Node.js and Bash, without a jq dependency.
+
 - **Repeated edit reminders use short rule pointers.** The first relevant edit
   receives the full rules; later edits retain concise guidance. Missing session
   identity or unavailable counters keep the full reminder. Posting reminders

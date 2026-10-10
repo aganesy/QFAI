@@ -52,9 +52,9 @@ workspace (`"qfai": "workspace:*"`).
   vitest.
 - A worktree stays on the commit it was made from and loads that commit's skills and
   rules. Merge `origin/main` into it before relying on them.
-- `jq` must be on `PATH` to run the association-gate cases of
-  `packages/qfai/tests/scripts/ownWorkflowTopology.test.ts`. Without it the case stops
-  and names the missing tool.
+- Node.js and Bash must be on `PATH` for the two association-gate cases in
+  `packages/qfai/tests/scripts/ownWorkflowTopology.test.ts`. A case stops and names
+  the missing tool when either is unavailable.
 - `scripts/run-lint-checks.sh`, which `pnpm ci:lint` runs, falls back to `corepack pnpm`
   when `pnpm` is not on `PATH`, and stops with a message when neither is installed.
 - Editing a pinned file (the guard programs, the local actions and the other paths in
