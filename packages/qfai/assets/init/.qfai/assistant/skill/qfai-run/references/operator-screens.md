@@ -5,6 +5,8 @@ What the user sees while a request is worked, and how a question reaches them.
 ## Contents
 
 - Every screen
+- Launcher recovery
+- Executing a step
 - The scope question
 - The announcement
 - Questions
@@ -12,6 +14,7 @@ What the user sees while a request is worked, and how a question reaches them.
 - External-operation replies
 - Halt notice
 - Final report
+- Work orders summary
 
 ## Every screen
 
@@ -21,6 +24,31 @@ What the user sees while a request is worked, and how a question reaches them.
 - Name stages in plain words. No route identifier, stage kind or internal ID.
 - Show nothing while a call is running beyond the host's own activity
   indicator.
+
+## Launcher recovery
+
+Read this section if the canonical launcher is missing or its preflight fails,
+before planning.
+
+Use the project's package manager and declared install command in this checkout:
+
+- If `package.json` declares `qfai`, install the project's dependencies here.
+- If it does not, add `qfai` as a development dependency using that package manager.
+- Repeat the launcher preflight. Plan only after it succeeds.
+
+Never use a published, remote or cached QFAI launcher as a fallback.
+
+## Executing a step
+
+Read this section when a step is short or passes without edits.
+
+Read `STEP.md` at the plan's path and follow its Procedure. Run only its declared
+commands and pass its Gate.
+
+A `passThrough` step first reads what its Passes when section names. If that
+condition holds, write nothing and record the reason in the stage report.
+Do not skip the step. The planned independent review still runs, even when the
+step is only two lines.
 
 ## The scope question
 
@@ -137,3 +165,12 @@ reset, a stash, a branch switch or a worktree removal.
 - The report ends with a question listing the next actions, the recommended one
   first, as `.agents/rules/user-questions.md` § 6 sets out. Under a no-question
   mode it lists them instead.
+
+## Work orders summary
+
+Read this section when parts ran in parallel. Report one row per part given to
+a sub-agent.
+
+| Step | Role (sub-agent) | Agent instance  | Task title        | Input (refs)  | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | --------------- | ----------------- | ------------- | ------------- | ---------------------------- |
+| 1    | `<role>`         | `<instance id>` | `<part in words>` | The step file | The result    | PASS/REVISE                  |

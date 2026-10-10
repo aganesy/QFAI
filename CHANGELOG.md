@@ -26,6 +26,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   required values, commands or their order have a semantic effect even when
   only Markdown changes. Fixes #3203.
 
+- **qfai-run checks its local launcher before planning and follows each step's procedure.**
+  Recovery uses this checkout's package manager. A pass-through step records its
+  reason and retains the plan's independent review. Fixes #3211.
+
 - **qfai-run records the required approval before handing an operation to a person.**
   The row is a route record. Triage steps change no tracked file and never
   run the handed-off operation. Fixes #3201.
