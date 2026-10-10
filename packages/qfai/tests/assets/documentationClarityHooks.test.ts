@@ -582,6 +582,21 @@ describe("shipped template and this repository agree", () => {
       SETTINGS_PATHS.map((rel) => readFile(path.join(repoRoot, rel), "utf-8")),
     );
 
-    expect(JSON.parse(own)).toEqual(JSON.parse(shipped));
+    // The hooks and the allow list are shared. `permissions.ask` is this
+    // repository's own: it stops the commands that tag and publish
+    // (`releaseCommandStop.test.ts`).
+    const shared = (text: string): unknown => {
+      const settings: Record<string, unknown> = JSON.parse(text);
+      const permissions = settings.permissions;
+      return {
+        hooks: settings.hooks,
+        allow:
+          typeof permissions === "object" && permissions !== null
+            ? Reflect.get(permissions, "allow")
+            : undefined,
+      };
+    };
+
+    expect(shared(own ?? "")).toEqual(shared(shipped ?? ""));
   });
 });

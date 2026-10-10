@@ -9,6 +9,7 @@ What the user sees while a request is worked, and how a question reaches them.
 - The announcement
 - Questions
 - A step only a person can take
+- External-operation replies
 - Halt notice
 - Final report
 
@@ -101,6 +102,13 @@ it, and `stop`.
   user says to go on.
 - Under a no-question mode nothing is asked. The work that does not depend on
   the action goes on, and the final report lists the action as not done.
+
+## External-operation replies
+
+Read this section when a user reports the result requested by a waiting step.
+The result resumes that step, including a failure. A separate explicit request
+to investigate the failure or repeat the operation is planned as a new request
+under the extraction and scope rules in `SKILL.md`.
 
 ## Halt notice
 
