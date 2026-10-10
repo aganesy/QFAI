@@ -254,6 +254,7 @@
         "scripts/smoke-qfai-cli.mjs": "7c223309c1791d97caf516d3218a845ca64e62dfe3fb1bb67e37470da688d4c2",
         "scripts/story-ids.mjs": "3c185527bbb7e67d69a6cc5164ef0ff8dc91348bc9b13e771a032bce9af9a2b7",
         "scripts/sync-init-to-root.mjs": "f053272f5a47c1e08fd53112255b52366b4da3bd62718c1ca57d30f7787d3af3",
+        "scripts/sync-mdschema-version.mjs": "5fb8635edafc2259bac319a4228a3c9264e77e904b365745b953dd6c2c0d6e5d",
         "scripts/verify-pack.mjs": "fc3e6088d042426bbe4689e1318b7a68a9a49e71c9f68a1b04842f36afbda802"
       },
       "pinnedBytesNote": [
@@ -402,7 +403,7 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "e995414dcbc61032",
-        "Verify the toolchain action before running it": "3b628dc83f694564",
+        "Verify the toolchain action before running it": "2e694c8e7643fec3",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "a9e48843fd69e79c",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "5b9cb61d789d7eda",

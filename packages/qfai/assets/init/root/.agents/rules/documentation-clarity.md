@@ -5,8 +5,8 @@ pull requests, issues, source-code comments, Markdown files, and the reports
 and replies an agent writes.
 
 Write for a reader who knows neither the background of the change nor the
-habits of this team. One test decides every clause below: if deleting or
-changing a sentence leaves that reader no worse off, delete or change it.
+habits of this team. One test decides every clause below: if deleting a
+sentence leaves that reader no worse off, delete it.
 
 The clauses describe patterns of structure and meaning, not word lists. They
 hold in any language: the examples are English, and in another language the
@@ -67,8 +67,8 @@ understands. These may appear in a document written for that reader:
 Where the reader cannot already know a term, define it once at its first use.
 Use one spelling throughout.
 
-Pull request and issue bodies are outside this clause (see Scope). Numbers and links belong
-there, and in commit messages and the changelog.
+Pull request and issue bodies are outside this clause (see Scope). Numbers and
+links belong there, and in commit messages and the changelog.
 
 ## 2. No account of how the work went
 
