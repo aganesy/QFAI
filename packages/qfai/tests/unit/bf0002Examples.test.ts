@@ -244,10 +244,9 @@ describe("BF-0002 CI verdict examples", () => {
     const fullProfile = buildSteps.find(
       (step) => step["name"] === "QFAI self-validate this repo (dogfooding — full profile)",
     );
-    expect(fullProfile?.["run"]).toContain("check-dogfood-backlog.mjs --profile full");
-    const dogfood = readFileSync(path.join(root, "scripts/check-dogfood-backlog.mjs"), "utf8");
-    expect(dogfood).toContain('"packages/qfai/dist/cli/index.mjs"');
-    expect(dogfood).toContain('"--root", "."');
+    expect(fullProfile?.["run"]).toContain(
+      "node packages/qfai/dist/cli/index.mjs validate --profile full --fail-on error --format github --root .",
+    );
     const sandboxValidate = buildSteps.find(
       (step) => step["name"] === "Run qfai validate gate (fail on error)",
     );

@@ -40,8 +40,10 @@ describe("the story-tree contract owns quality-gate commands", () => {
     });
   }
 
-  it("this repository's Validate entry runs the dogfood ratchet", async () => {
+  it("this repository's Validate entry fails on any error of the full profile", async () => {
     const tech = await readFile(path.join(repoRoot, ".qfai/spec/03_contract/tech.md"), "utf-8");
-    expect(tech).toContain("- Validate: `pnpm build && node scripts/check-dogfood-backlog.mjs");
+    expect(tech).toContain(
+      "- Validate: `pnpm build && node packages/qfai/dist/cli/index.mjs validate --profile full --fail-on error",
+    );
   });
 });
