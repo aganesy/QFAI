@@ -26,6 +26,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The row is a route record. Triage steps change no tracked file and never
   run the handed-off operation. Fixes #3201.
 
+- **The qfai-run instructions clarify when to ask and when to continue.**
+  A plan with one scope or no scopes runs every stage without a scope question.
+  A session request naming the change and its effect shows acceptance, as the
+  extraction reference defines. The agent continues from the announcement into
+  the policy check and first stage without waiting for a reply. Fixes #3200.
+
+- **The decision template states the limit of a passing validation result.**
+  Every new row uses the four Approach items; validation does not establish
+  that every existing row follows that layout. Fixes #3197.
+
 - **The README quick start now holds the whole first run.** The separate "Minimal
   tutorial" section is removed from both README files: the quick start covers
   `npx qfai init`, describing the change in your own words, answering the
@@ -223,6 +233,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   constitution's Article V. Part of #2951.
 
 ### Fixed
+
+- **Unknown commands identify the running QFAI installation.** The error shows
+  its version and package location and suggests updating the project's local
+  dependency. An unknown workflow operation also includes this diagnosis in
+  its refusal JSON. Exit codes and refusal reasons stay the same. Fixes #3196.
 
 - **The release workflow's publish job no longer warns that `NODE_AUTH_TOKEN` is
   unset.** `setup-node` writes an auth-token entry that reads that variable
