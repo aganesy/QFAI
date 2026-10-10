@@ -32,6 +32,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   An exact AC test exception needs both specification-change and test-deferral
   authority. Its review date is manual; uncovered changes remain open questions.
   Fixes #3233.
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
 
 - **Questions ask only for answers the next step needs.** Background waiting
   and completion reports need no question. Dismissed questions and free-text
