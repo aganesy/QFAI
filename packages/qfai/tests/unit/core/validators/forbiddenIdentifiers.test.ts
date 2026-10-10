@@ -149,47 +149,54 @@ beforeEach(() => {
   hooks.seen = [];
   for (const mock of [hooks.git, hooks.lstat, hooks.realpath, hooks.open, hooks.readFile])
     mock.mockReset();
-  hooks.git.mockImplementation(async (_command: string, args: string[]) => ({
-    stdout: args.includes("--show-toplevel") ? Buffer.from(`${root}\n`) : listing,
-    stderr: Buffer.alloc(0),
-  }));
-  hooks.realpath.mockImplementation(async (target: string) => path.resolve(target));
-  hooks.lstat.mockImplementation(async (target: string) => {
-    const file = files.get(target);
-    if (file) return metadata(file, file.inspected);
-    if (
-      target === root ||
-      [...files.keys()].some((name) => name.startsWith(`${target}${path.sep}`))
-    ) {
-      return metadata({ body: Buffer.alloc(0), size: 0, kind: "directory" });
-    }
-    throw new Error(unsafe);
-  });
-  hooks.open.mockImplementation(async (target: string) => {
-    const file = files.get(target);
-    if (!file || file.unreadable) throw new Error(unsafe);
-    let position = 0;
-    let stats = 0;
-    const close = vi.fn(async () => {});
-    closes.push(close);
-    return {
-      stat: async () => metadata(file, stats++ === 0 ? file.opened : file.after),
-      read: async (buffer: Buffer, offset: number, length: number) => {
-        const amount = Math.min(
-          length,
-          Math.max(0, (file.readBytes ?? file.size) - position),
-          file.chunk ?? length,
-        );
-        buffer.fill(0, offset, offset + amount);
-        if (amount > 0 && position < file.body.length) {
-          file.body.copy(buffer, offset, position, position + amount);
-        }
-        position += amount;
-        return { bytesRead: amount, buffer };
-      },
-      close,
-    };
-  });
+  hooks.git.mockImplementation((_command: string, args: string[]) =>
+    Promise.resolve({
+      stdout: args.includes("--show-toplevel") ? Buffer.from(`${root}\n`) : listing,
+      stderr: Buffer.alloc(0),
+    }),
+  );
+  hooks.realpath.mockImplementation((target: string) => Promise.resolve(path.resolve(target)));
+  hooks.lstat.mockImplementation((target: string) =>
+    Promise.resolve().then(() => {
+      const file = files.get(target);
+      if (file) return metadata(file, file.inspected);
+      if (
+        target === root ||
+        [...files.keys()].some((name) => name.startsWith(`${target}${path.sep}`))
+      ) {
+        return metadata({ body: Buffer.alloc(0), size: 0, kind: "directory" });
+      }
+      throw new Error(unsafe);
+    }),
+  );
+  hooks.open.mockImplementation((target: string) =>
+    Promise.resolve().then(() => {
+      const file = files.get(target);
+      if (!file || file.unreadable) throw new Error(unsafe);
+      let position = 0;
+      let stats = 0;
+      const close = vi.fn(() => Promise.resolve());
+      closes.push(close);
+      return {
+        stat: () => Promise.resolve(metadata(file, stats++ === 0 ? file.opened : file.after)),
+        read: (buffer: Buffer, offset: number, length: number) =>
+          Promise.resolve().then(() => {
+            const amount = Math.min(
+              length,
+              Math.max(0, (file.readBytes ?? file.size) - position),
+              file.chunk ?? length,
+            );
+            buffer.fill(0, offset, offset + amount);
+            if (amount > 0 && position < file.body.length) {
+              file.body.copy(buffer, offset, position, position + amount);
+            }
+            position += amount;
+            return { bytesRead: amount, buffer };
+          }),
+        close,
+      };
+    }),
+  );
   hooks.readFile.mockResolvedValue(
     JSON.stringify({ validation: { forbiddenIdentifiers: [entry] } }),
   );
@@ -383,7 +390,9 @@ describe("ASCII windows and private findings", () => {
       expect(shouldFail(result, "error")).toBe(true);
       expect(shouldFail(result, "warning")).toBe(true);
       expect(shouldFail(result, "never")).toBe(false);
-      const output = await captureStdout(async () => emitText(result, "error"));
+      const output = await captureStdout(() =>
+        Promise.resolve().then(() => emitText(result, "error")),
+      );
       for (const text of [candidate, entry.sha256, root, unsafe]) {
         expect(output).not.toContain(text);
         expect(JSON.stringify(result)).not.toContain(text);
@@ -396,17 +405,17 @@ describe("incomplete coverage fails closed", () => {
   // QFAI:EX-0001-0232-23
   it("keeps missing Git, stderr and wrong-worktree errors generic", async () => {
     for (const failure of [
-      async () => {
-        throw new Error(unsafe);
-      },
-      async () => ({
-        stdout: Buffer.from(`${root}\n`),
-        stderr: Buffer.from(unsafe),
-      }),
-      async () => ({
-        stdout: Buffer.from(`${path.dirname(root)}\n`),
-        stderr: Buffer.alloc(0),
-      }),
+      () => Promise.reject(new Error(unsafe)),
+      () =>
+        Promise.resolve({
+          stdout: Buffer.from(`${root}\n`),
+          stderr: Buffer.from(unsafe),
+        }),
+      () =>
+        Promise.resolve({
+          stdout: Buffer.from(`${path.dirname(root)}\n`),
+          stderr: Buffer.alloc(0),
+        }),
     ]) {
       hooks.git.mockImplementation(failure);
       findings(await scan(), "QFAI-SECURITY-002");
@@ -415,9 +424,9 @@ describe("incomplete coverage fails closed", () => {
   });
   // QFAI:EX-0001-0232-23
   it("fails generic coverage when listing itself fails after worktree confirmation", async () => {
-    hooks.git.mockImplementation(async (_command: string, args: string[]) => {
-      if (args.includes("ls-files")) throw new Error(unsafe);
-      return { stdout: Buffer.from(`${root}\n`), stderr: Buffer.alloc(0) };
+    hooks.git.mockImplementation((_command: string, args: string[]) => {
+      if (args.includes("ls-files")) return Promise.reject(new Error(unsafe));
+      return Promise.resolve({ stdout: Buffer.from(`${root}\n`), stderr: Buffer.alloc(0) });
     });
     findings(await scan(), "QFAI-SECURITY-002");
     expect(hooks.open).not.toHaveBeenCalled();
@@ -570,12 +579,12 @@ describe("incomplete coverage fails closed", () => {
   it("refuses an inconsistent bytesRead response and awaits descriptor cleanup", async () => {
     tracked("!", "a");
     for (const bytesRead of [-1, 1.5, 3]) {
-      const close = vi.fn(async () => {});
+      const close = vi.fn(() => Promise.resolve());
       const file = files.get(path.join(root, "!"));
       if (!file) throw new Error("Missing fixture");
       hooks.open.mockResolvedValue({
-        stat: async () => metadata(file),
-        read: async () => ({ bytesRead }),
+        stat: () => Promise.resolve(metadata(file)),
+        read: () => Promise.resolve({ bytesRead }),
         close,
       });
       findings(await scan(), "QFAI-SECURITY-002");
@@ -590,21 +599,22 @@ describe("incomplete coverage fails closed", () => {
     if (!file) throw new Error("Missing fixture");
     for (const failure of ["stat", "read", "close"]) {
       let read = false;
-      const close = vi.fn(async () => {
-        if (failure === "close") throw new Error(unsafe);
-      });
+      const close = vi.fn(() =>
+        failure === "close" ? Promise.reject(new Error(unsafe)) : Promise.resolve(),
+      );
       hooks.open.mockResolvedValue({
-        stat: async () => {
-          if (failure === "stat") throw new Error(unsafe);
-          return metadata(file);
+        stat: () => {
+          if (failure === "stat") return Promise.reject(new Error(unsafe));
+          return Promise.resolve(metadata(file));
         },
-        read: async (buffer: Buffer) => {
-          if (failure === "read") throw new Error(unsafe);
-          if (read) return { bytesRead: 0 };
-          read = true;
-          buffer[0] = 97;
-          return { bytesRead: 1 };
-        },
+        read: (buffer: Buffer) =>
+          Promise.resolve().then(() => {
+            if (failure === "read") throw new Error(unsafe);
+            if (read) return { bytesRead: 0 };
+            read = true;
+            buffer[0] = 97;
+            return { bytesRead: 1 };
+          }),
         close,
       });
       findings(await scan(), "QFAI-SECURITY-002");

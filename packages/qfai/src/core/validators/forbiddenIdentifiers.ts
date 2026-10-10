@@ -17,16 +17,23 @@ const WINDOWS = 1_000_000;
 type Entry = { sha256: string; byteLength: number };
 type Budget = { treeBytes: number; windows: number; hashBytes: number; matched: boolean };
 
-function finding(code: "QFAI-SECURITY-001" | "QFAI-SECURITY-002"): Issue {
+function matchFinding(): Issue {
   return {
-    code,
+    code: "QFAI-SECURITY-001",
     severity: "error",
     category: "canonical",
     rule: "security.forbiddenIdentifiers",
-    message:
-      code === "QFAI-SECURITY-001"
-        ? "Forbidden identifier detected in the tracked worktree."
-        : "Forbidden-identifier scan could not safely cover the tracked worktree.",
+    message: "Forbidden identifier detected in the tracked worktree.",
+  };
+}
+
+function coverageFinding(): Issue {
+  return {
+    code: "QFAI-SECURITY-002",
+    severity: "error",
+    category: "canonical",
+    rule: "security.forbiddenIdentifiers",
+    message: "Forbidden-identifier scan could not safely cover the tracked worktree.",
   };
 }
 
@@ -238,11 +245,8 @@ export async function validateForbiddenIdentifiers(
       offset = end + 1;
     }
     if (!sameObject(rootStats, await lstat(worktree))) throw new Error("Changed worktree");
-    return budget.matched ? [finding("QFAI-SECURITY-001")] : [];
+    return budget.matched ? [matchFinding()] : [];
   } catch {
-    return [
-      ...(budget.matched ? [finding("QFAI-SECURITY-001")] : []),
-      finding("QFAI-SECURITY-002"),
-    ];
+    return [...(budget.matched ? [matchFinding()] : []), coverageFinding()];
   }
 }
