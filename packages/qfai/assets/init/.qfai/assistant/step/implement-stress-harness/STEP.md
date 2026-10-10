@@ -22,8 +22,30 @@ be checked against something more than one lucky run.
   the failure appears.
 - The commands of `common-gate-run`, and the test tools the project already
   carries.
+- Existing Red evidence with its command, signature and revision, and the
+  evidence that establishes its cause.
 
 ## Procedure
+
+### Applicability on entry
+
+This step always checks the evidence on entry. Pressure is unnecessary only
+when a prior executed Red reproduces the same failure signature and a verified
+ordinary cause explains it without clock, operation order, parallelism, load,
+timing or race dependence. A fixed
+seed or controlled schedule that exposes a race is not an ordinary cause.
+Uncertainty requires the real harness below. Missing or unexecuted Red,
+another signature or an unknown cause cannot justify omitting pressure.
+Stale or pending CI, unavailable tools, waits and limited time do not supply
+missing proof. A cause found later cannot justify claiming that an earlier
+harness was unnecessary or not performed.
+
+When the entry evidence qualifies, build no harness and run no pressure. In
+the stage report, cite the inspected Red and cause evidence, record why load
+or soak is unnecessary, and state that the stress run was not performed. The
+gate checks this applicability reason and its proof; report no stress PASS.
+
+### When a harness is required
 
 1. Pick the cheapest pressure that reaches the failure:
    - a deterministic schedule: a fixed seed, an injected clock, or a
@@ -49,5 +71,8 @@ be checked against something more than one lucky run.
 
 ## Gate
 
-The step is done when the harness reproduces the reported failure at a
-recorded rate, and no production code changed.
+When a harness is required, the step is done when it reproduces the reported
+failure at a recorded rate, and no production code changed.
+For the ordinary-cause case, the entry proof and applicability reason are
+recorded, and no production code changed. No unperformed stress run counts
+as passed.
