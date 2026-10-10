@@ -268,7 +268,7 @@ describe("parseArgs", () => {
         "qfai discussion: unknown or missing subcommand. Expected: list|use",
       );
       expect(parseArgs(["sdd"], cwd).invalidReason).toBe(
-        "qfai sdd: unknown or missing subcommand. Expected: preflight",
+        "qfai sdd: unknown or missing subcommand. Expected: preflight|renumber-decision",
       );
     });
 
@@ -763,6 +763,57 @@ describe("parseArgs dash-leading positionals", () => {
 });
 
 describe("parseArgs: qfai sdd <subcommand>", () => {
+  const renumber = [
+    "sdd",
+    "renumber-decision",
+    "--from",
+    "DEC-0002",
+    "--to",
+    "DEC-0013",
+    "--base",
+    "main",
+  ];
+
+  it.each([false, true])("accepts explicit renumber arguments with apply=%s", (apply) => {
+    const parsed = parseArgs([...renumber, ...(apply ? ["--apply"] : [])], process.cwd());
+    expect(parsed.invalid).toBe(false);
+    expect(parsed.command).toBe("sdd");
+    expect(parsed.options.sddAction).toBe("renumber-decision");
+    expect(parsed.options.help).toBe(false);
+  });
+
+  // QFAI:EX-0001-0008-16
+  it.each([
+    ["--format", "json"],
+    ["--fail-on", "never"],
+    ["--import", "legacy"],
+    ["--assume", "reviewed"],
+  ])("rejects the preflight-only option %s on renumber", (...option) => {
+    const parsed = parseArgs([...renumber, ...option], process.cwd());
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.invalidReason).toContain(option[0]);
+  });
+
+  // QFAI:EX-0001-0008-16
+  it("rejects the validation profile option on renumber", () => {
+    const parsed = parseArgs([...renumber, "--profile", "full"], process.cwd());
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.invalidReason).toContain("--profile");
+    expect(parsed.invalidReason).toMatch(/not valid/i);
+  });
+
+  // QFAI:EX-0001-0008-16
+  it.each([
+    ["sdd", "renumber-decision", "--from", "DEC-0002", "--to", "DEC-0013"],
+    ["sdd", "renumber-decision", "--to", "DEC-0013", "--base", "main"],
+    ["sdd", "renumber-decision", "--from", "DEC-0002", "--base", "main"],
+    ["sdd", "renumber-decision", "--from", "DEC-2", "--to", "DEC-0013", "--base", "main"],
+    ["sdd", "renumber-decision", "--from", "DEC-0002", "--to", "DEC-10000", "--base", "main"],
+    ["sdd", "renumber-decision", "--from", "DEC-0002", "--to", "DEC-0002", "--base", "main"],
+  ])("rejects missing or invalid explicit renumber inputs %j", (...argv) => {
+    expect(parseArgs(argv, process.cwd()).invalid).toBe(true);
+  });
+
   it("routes `sdd preflight` and its diagnostic flags", () => {
     const cwd = process.cwd();
     const parsed = parseArgs(["sdd", "preflight", "--format", "json", "--fail-on", "error"], cwd);
