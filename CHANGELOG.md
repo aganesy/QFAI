@@ -42,6 +42,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- Resolve the optional Playwright dependency to 1.64.0 while keeping its existing supported version range.
+
 - **The writing rule removes unnecessary sentences without requiring needless rewrites.**
   Its opening deletion test leaves rewriting to the existing clarity clauses.
 - **The release association gate uses Node.js to read pull request branches.**
@@ -339,6 +341,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - UI consistency repairs reach design authoring in the SDD stage. Existing
   design files change only within a newly authorized request; unrelated brand
   and tokens are preserved, and unsupported source values stop the repair.
+
+- **Question-only work checks authority before repairing tracked files.**
+  Existing permission for the same target is reused. Otherwise the agent offers
+  repair or a report-only stop; an uncovered no-question run reports and stops
+  that target without writing a tracked open question.
 
 - **A diagnosed missing example reuses an existing rule for its obligation.**
   Equivalent rules use existing example coverage and stable rule IDs to settle
