@@ -88,6 +88,13 @@ pnpm -C packages/qfai test
 pnpm verify:pack
 ```
 
+The changelog gate checks changes under `packages/qfai/src/` and
+`packages/qfai/assets/`, and removal or rewording of an existing entry title.
+Shipped changes need an update under `## [Unreleased]`; a test-only change does
+not need an entry solely because it changes tests. An applicable exemption is a
+`Changelog-Exempt: <reason>` line in a commit message, not the pull request body.
+The [gate](../../scripts/check-changelog-entries.mjs) defines the current checks.
+
 ## Test directory mapping
 
 Vitest project names describe runner groups. QFAI classifies coverage from
