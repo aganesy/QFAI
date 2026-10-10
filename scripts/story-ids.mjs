@@ -1,27 +1,23 @@
 /**
- * Story-tree IDs that no open pull request has already taken.
+ * Story-tree ID candidates and collision checks against published heads.
  *
- * A new decision, business rule, acceptance criterion or example takes the next
- * number after the highest one in the tree. Read from the local checkout, that
- * number is the same for every branch cut from the same main, so pull requests
- * opened in parallel pick the same IDs and all but the first renumber after
- * merging main.
- *
- * - `next <scope>...` prints one ID per scope, in order, counted over main, the
- *   head of every open pull request and the working tree. A scope named twice
- *   gets two consecutive IDs.
- * - `check` names each ID this branch declares that main or another open pull
- *   request also declares. Two branches that picked their IDs before either was
- *   pushed are still caught, while renumbering costs one edit.
+ * - `next <scope>...` prints one candidate per scope from main, the latest 100
+ *   updated open pull requests and the working tree. It reserves nothing.
+ *   A scope named twice gets two consecutive candidates.
+ * - `check` names each ID this branch adds that main or a fetched open pull
+ *   request also adds. Other branches' unpublished changes are outside this
+ *   snapshot, and simultaneous publishers may still collide. Commit edits,
+ *   check a clean tree and push the same HEAD.
  *
  * Counting is the package's own allocator: what the story tree declares, plus
  * every ID a row of `decisions.md` names, so a retired ID is not handed out
  * again and an ID written only as an example in prose is not counted.
  *
- * Every invocation costs one REST listing and one `git fetch`, however many
- * pull requests are open and however many scopes are asked for. The listing goes
+ * Reading the listed pull-request heads and requested scopes costs one REST
+ * listing and one `git fetch`. The listing goes
  * through `gh-budget.mjs`, which keeps its reserve and reports the remaining
- * allowance on stderr, so stdout holds only the answer.
+ * allowance on stderr, so stdout holds only the answer. A check during an unfinished
+ * merge stops before fetching or comparing branch-owned identifiers.
  *
  * Usage:
  *   node scripts/story-ids.mjs next <scope>...
@@ -35,7 +31,8 @@
  *
  * Exit codes: 0 answered; 1 a collision was found, or the listing left the
  * budget below the reserve (the answer is still printed); 2 the arguments,
- * the runtime, `git` or `gh` could not be used; 3 a scope has no number left.
+ * the runtime, `git` or `gh` could not be used, or `check` found an unfinished
+ * merge; 3 a scope has no number left.
  */
 /* global console, process */
 import { execFileSync } from "node:child_process";
@@ -319,6 +316,13 @@ function nextCommand(reader, scopes, pulls, allocate) {
 }
 
 function checkCommand(reader, pulls) {
+  try {
+    reader.git(["rev-parse", "--verify", "--quiet", "MERGE_HEAD"]);
+    console.error("Finish the merge before checking branch-owned identifiers.");
+    return 2;
+  } catch (cause) {
+    if (cause?.status !== 1) throw cause;
+  }
   const heads = fetchHeads(reader, pulls);
   const base = declared(reader.atCommit(reader.text(["merge-base", "HEAD", heads.main]).trim()));
   const mine = added(declared(reader.inWorkingTree()), base);
@@ -387,6 +391,7 @@ const USAGE = [
   "Usage:",
   "  node scripts/story-ids.mjs next <scope>...",
   "  node scripts/story-ids.mjs check",
+  "check: finish any pending merge first; an unfinished merge exits 2.",
   "Scopes: DEC, OQ, BF, US-<flow>, AC-<flow>-<story>, EX-<flow>-<story>, BR-<contract>",
 ].join("\n");
 

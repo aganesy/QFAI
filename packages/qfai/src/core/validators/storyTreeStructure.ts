@@ -213,8 +213,12 @@ export function validateStoryTreeStructureModel(model: StoryTreeModel): Issue[] 
   const citedExamples = new Set<string>();
   for (const rule of model.rules) {
     if (rule.examples.length === 0) {
+      const hint =
+        path.extname(rule.file).toLowerCase() === ".sql"
+          ? " Keep the Rule statement on one line and put -- Examples: on the immediately following line."
+          : "";
       issues.push(
-        finding("QFAI-STORY-005", `${rule.id} has no examples in ${rule.file}`, rule.file, [
+        finding("QFAI-STORY-005", `${rule.id} has no examples in ${rule.file}${hint}`, rule.file, [
           rule.id,
         ]),
       );

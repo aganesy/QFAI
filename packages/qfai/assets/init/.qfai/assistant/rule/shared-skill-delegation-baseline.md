@@ -1,12 +1,12 @@
 # Shared Skill Delegation Baseline
 
-Use this document to keep SKILL bodies compact. Skill files should reference this baseline and only add role-, stage-, or gate-specific rules.
+Skills cite this baseline and add only role, stage or gate overrides.
 
 ## Sub-agent Delegation (MANDATORY)
 
-This section binds every skill and every step as written. A skill or step
-restates none of it and writes no placeholder stanza for a subsection it does
-not change; it states only an override, under the subsection it overrides.
+This section binds every skill and step. A skill or step repeats none of it
+and adds no placeholder for a subsection it does not change. State only an
+override, under the subsection it overrides.
 
 Delegation is optional. The session agent, called the orchestrator below, may
 author any artifact itself. It uses a sub-agent only for work that runs in
@@ -40,8 +40,15 @@ classified by the taxonomy below before any response.
 - A read-only agent never runs `git checkout` or `git switch` in a worktree it
   shares; it reads other revisions with `git show <rev>:<path>`. Each agent
   writes scratch files only under a path of its own.
-- Commit the change, or give each reviewer a fixed commit, before a review
-  starts, and leave the working tree alone until every review returns.
+- Give each reviewer a fixed commit. Leave the checkout alone until reviews
+  return. Only read-only fixed-SHA `git show` reviews permit clean switches.
+  Writers, local gates and reviews using live files or checkout-dependent
+  execution must finish first.
+
+### Worker edit boundary
+
+Before assigning write paths or handling a refused edit, read
+`.qfai/assistant/rule/references/worker-edit-boundary.md`.
 
 ### Capability Probe (MUST)
 
@@ -212,25 +219,8 @@ A blocking review that cannot be delegated because the agent budget is spent is 
 
 ## Work order template
 
-```text
-Task title: <short>
-Role: <sub-agent role>
-Review series: <reviewed artifact> + <reviewer role> + <replacement ordinal>   # review work orders only
-Goal: <what to decide/produce>
-Inputs (refs):
-- <file/section>
-- .qfai/assistant/rule/drift-protocol.md#core-rule  <!-- the protected set, in front of the agent -->
-Constraints:
-- must: enforce Drift Protocol
-- must: follow applicable test-layer or validation policy
-- must_not: patch upstream artifacts directly; every upstream change requires
-  STOP + Change Request + owner rerun per .qfai/assistant/rule/drift-protocol.md
-Output format:
-- <headings / bullet schema>
-Time budget: none | <seconds>   # advisory: nothing stops at it. See .qfai/assistant/rule/stage-cost.md
-Elapsed line: end every message with `elapsed <seconds>s / <budget>s`, or `elapsed <seconds>s` when the budget is none
-Acceptance bar: <accept when ...> | <rework when ...>   # never `PASS`/`REVISE`: that is the reviewer's vocabulary and the completion gate matches on it, so a doer told to report in it emits a verdict on its own work
-```
+When preparing a delegation, use the template in
+`.qfai/assistant/rule/references/worker-edit-boundary.md#work-order-template`.
 
 ## Reviewer response template
 
