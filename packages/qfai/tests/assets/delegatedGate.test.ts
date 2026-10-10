@@ -61,12 +61,12 @@ describe("a gate the project runs in CI only is recorded as delegated", () => {
       const gateStatusRow = contract
         .split("\n")
         .find((line) => line.startsWith("| `status`") && line.includes('"UNRUN"'));
-      expect(gateStatusRow?.split("|")[2]?.match(/"[A-Z]+"/g)).toEqual([
-        '"PASS"',
-        '"FAIL"',
-        '"UNRUN"',
-        '"DELEGATED"',
-      ]);
+      expect(
+        gateStatusRow
+          ?.split("|")[3]
+          ?.split(".")[0]
+          ?.match(/"[A-Z]+"/g),
+      ).toEqual(['"PASS"', '"FAIL"', '"UNRUN"', '"DELEGATED"']);
     });
 
     it(`${tree}: the gate step, the repository gate, the commit step and the contract agree`, async () => {
