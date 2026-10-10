@@ -476,6 +476,7 @@
     "tests/integration/workflow/shippedAssets.test.ts",
     "tests/integration/workflow/theMissingTestBranch.test.ts",
     "tests/integration/workflow/workflowProject.ts",
+    "tests/helpers/windowsFullSuiteFixture.ts",
     "tests/helpers/workflowExtraction.ts",
     "tests/integration/workflow/theCoreDecidesTheRoute.test.ts",
     "tests/unit/workflow/theDecisionRulesChooseTheRoute.test.ts",
