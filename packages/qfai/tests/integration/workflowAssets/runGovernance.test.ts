@@ -131,6 +131,8 @@ describe("governance inside a run", () => {
 });
 
 describe("independent targets under one goal", () => {
+  // QFAI:AC-0001-0224-07
+  // QFAI:EX-0001-0224-09
   it("extracts and plans each settled target separately, including newly eligible targets", async () => {
     const kinds = await passage(RUN, "## Request kinds");
     expect(kinds).toMatch(/goal.*independent targets.*references\/operator-screens\.md/i);
@@ -147,8 +149,13 @@ describe("independent targets under one goal", () => {
     );
     expect(targets).toMatch(/newly eligible targets.*goal's criteria.*own plans/i);
     expect(targets).toMatch(/out-of-scope finding.*follow-up.*never as an extra step/i);
+    expect(targets).toMatch(
+      /(?:needed|required).*target.*no planned stage.*(?:stop|halt).*target.*owner/i,
+    );
   });
 
+  // QFAI:AC-0001-0224-07
+  // QFAI:EX-0001-0224-10
   it("keeps unmet prerequisites and unsettled mixed findings on their existing paths", async () => {
     const extraction = await passage(EXTRACTION, "## Procedure");
     expect(extraction).toMatch(/do not infer independence.*prerequisite is unfinished/i);
@@ -161,6 +168,8 @@ describe("independent targets under one goal", () => {
     );
   });
 
+  // QFAI:AC-0001-0224-08
+  // QFAI:EX-0001-0224-11
   it("switches a shared checkout only after writers and gates finish and all files are clean", async () => {
     const targets = await passage(SCREENS, TARGETS);
     expect(targets).toMatch(
@@ -174,6 +183,8 @@ describe("independent targets under one goal", () => {
     expect(targets).toMatch(/wait never authorizes an early commit or skipped gate/i);
   });
 
+  // QFAI:AC-0001-0224-08
+  // QFAI:EX-0001-0224-12
   it("blocks dirty or live-checkout work but permits a bounded fixed-blob read-only review", async () => {
     const targets = await passage(SCREENS, TARGETS);
     expect(targets).toMatch(/unknown dirty files postpone the switch/i);
@@ -193,6 +204,8 @@ describe("independent targets under one goal", () => {
     expect(delegation).toMatch(/read-only reviewer never switches it/i);
   });
 
+  // QFAI:AC-0001-0224-09
+  // QFAI:EX-0001-0224-13
   it("resumes only with the target's exact head and retains pending, red and review evidence honestly", async () => {
     const targets = await passage(SCREENS, TARGETS);
     expect(targets).toMatch(/existing stage reports and handoff messages.*each target's/i);
@@ -212,6 +225,8 @@ describe("independent targets under one goal", () => {
     expect(targets).toMatch(/never.*add a review the plan does not name/i);
   });
 
+  // QFAI:AC-0001-0224-10
+  // QFAI:EX-0001-0224-14
   it("uses actual standing authority for its covered targets without fabricating approval", async () => {
     const targets = await passage(SCREENS, TARGETS);
     expect(targets).toMatch(
@@ -224,6 +239,8 @@ describe("independent targets under one goal", () => {
     expect(targets).toMatch(/request to ask nothing supplies no uncovered approval/i);
   });
 
+  // QFAI:AC-0001-0224-10
+  // QFAI:EX-0001-0224-15
   it("stops only dependent target work for uncovered approval and stops all targets for a goal-wide stop", async () => {
     const targets = await passage(SCREENS, TARGETS);
     expect(targets).toMatch(
