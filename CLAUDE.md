@@ -92,8 +92,10 @@ Quality-First AI (QFAI) — a verification framework and CLI for specification-d
   fix the language an assistant replies in, nor what an adopter writes in their
   own repository. See `.claude/rules/repository-language.md` (master:
   `.agents/rules/repository-language.md`).
-- Writing standard for PRs, issues, code comments and Markdown — plain wording,
-  no local identifiers, no account of how the work went: see
+- Writing standard for PRs, issues, code comments, Markdown, reports and replies:
+  use plain wording, omit local identifiers in source or Markdown and accounts
+  of how the work went. Start reports and replies with the outcome and
+  distinguish what was checked from what was not. See
   `.claude/rules/documentation-clarity.md` (master:
   `.agents/rules/documentation-clarity.md`). The hooks in `.claude/settings.json`
   restate it before a GitHub post and after a Markdown edit.

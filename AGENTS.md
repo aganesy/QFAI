@@ -110,7 +110,9 @@ The masters under `.agents/rules/` are the single source of truth for the rules 
   check it, and no document opts out)
 - `document-schema.local.md` (the lanes, where the checkers live, and how a
   schema is changed)
-- `documentation-clarity.md` (writing standard for PRs, issues, comments and Markdown)
+- `documentation-clarity.md` (writing standard for PRs, issues, comments, Markdown,
+  reports and replies; both start with the outcome and distinguish checked
+  from unchecked work)
 - `repository-language.md` (this repository is written in English)
 - `minimal-implementation.md` (the order to try solutions in, once a
   behaviour is agreed, and how a deliberate shortcut is marked)
@@ -160,13 +162,16 @@ from the work under review.
 
 ## Writing standard (required reading for every AI)
 
-PR and issue titles and descriptions, and the code comments and Markdown in a change's diff,
-are done only once they meet `.agents/rules/documentation-clarity.md` (the single source of truth).
+PR and issue titles and descriptions, reports and replies, and the code comments
+and Markdown in a change's diff are done only once they meet
+`.agents/rules/documentation-clarity.md` (the single source of truth).
 
 - Do not write issue or pull request numbers, ticket IDs or in-group names in source or Markdown.
   PR and issue bodies, commit messages and `CHANGELOG.md` are exempt; numbers and links
   belong there.
 - Do not write the history of the design or implementation. Write only the current specification and the reason for it.
+- Start reports and replies with the outcome. Distinguish what was checked from
+  what was not.
 - Cut anything self-evident, repeated or wordy. Organize with bullet lists and tables.
 - Use only common terms, and keep sentences short.
 - When done, reread everything in the change and rewrite sentences that read like a translation into natural ones.
