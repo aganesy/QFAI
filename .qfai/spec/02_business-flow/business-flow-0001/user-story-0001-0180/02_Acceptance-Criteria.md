@@ -8,7 +8,7 @@ Feature: Domain and URL Allowlisting
   Scenario: Fetch from allowlisted domain succeeds
     Given a domain allowlist containing "docs.python.org"
     When the agent attempts to fetch from docs.python.org
-    Then the fetch succeeds
+    Then the fetch is allowed and made
 
   # AC-0001-0180-02
   Scenario: Fetch from non-allowlisted domain is blocked

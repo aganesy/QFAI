@@ -8,7 +8,7 @@ Feature: Removed compatibility namespaces
   Scenario: Verify Articles Restate Article V Without TC
     Given a project on the story tree,
     When `/qfai-verify` reads `references/articles.md`,
-    Then the file restates the constitution's Article V chain with no TC hop and no `tdd/test-list.md`, and its Tests hop answers a BF from E2E tests, an AC from integration or API tests, and an EX from any test.
+    Then the file restates the constitution's Article V chain with no TC hop and no `tdd/test-list.md`, and its Tests hop answers a BF from E2E tests, an AC from integration or API tests, and an EX from a selected non-E2E test.
 
   # AC-0001-0159-03
   Scenario: Verify Loads Constitution and Settings From the Recut Assistant Tree

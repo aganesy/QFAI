@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -15,6 +15,7 @@ import {
 
 const WORKFLOWS_DIR = path.join(REPO_ROOT, ".github", "workflows");
 const ACTIONS_DIR = path.join(REPO_ROOT, ".github", "actions");
+const PACKAGE_ROOT = path.join(REPO_ROOT, "packages", "qfai");
 
 type OwnJob = { id: string; workflow: Record<string, unknown>; job: Record<string, unknown> };
 type OwnStep = { where: string; step: Record<string, unknown> };
@@ -223,6 +224,80 @@ describe("BF-0002 workflow hygiene acceptance", () => {
     } finally {
       await Promise.all([clean, planted].map((root) => removeTempTree(root)));
     }
+  });
+
+  // QFAI:AC-0002-0014-05
+  it("names the bump owner in files a gate can read: the Renovate configuration, its workflow and its guide", () => {
+    const config = readFileSync(path.join(REPO_ROOT, ".github", "renovate.json5"), "utf8");
+    expect(config).toMatch(/^\s*"helpers:pinGitHubActionDigests",/mu);
+    expect(config).toMatch(/matchManagers:\s*\["github-actions"\]/u);
+
+    const workflow = readYaml(path.join(WORKFLOWS_DIR, "renovate.yml"));
+    const jobs = workflow["jobs"];
+    if (!isRecord(jobs)) throw new Error("renovate.yml declares no jobs");
+    const bumpers = stepsOf(jobs["renovate"]).flatMap((step) =>
+      typeof step["uses"] === "string" ? [step["uses"]] : [],
+    );
+    expect(bumpers.some((uses) => /^renovatebot\/github-action@[0-9a-f]{40}$/u.test(uses))).toBe(
+      true,
+    );
+
+    const guide = readFileSync(path.join(REPO_ROOT, ".github", "renovate.md"), "utf8");
+    expect(guide).toMatch(/\*\*What runs it:\*\*\s*`\.github\/workflows\/renovate\.yml`/u);
+    expect(guide).toMatch(/\*\*What it does:\*\*\s*`\.github\/renovate\.json5`/u);
+
+    const rootConfigs = [
+      "renovate.json",
+      "renovate.json5",
+      ".renovaterc",
+      ".renovaterc.json",
+      "dependabot.yml",
+    ];
+    expect(rootConfigs.filter((name) => existsSync(path.join(REPO_ROOT, name)))).toEqual([]);
+  });
+
+  // QFAI:AC-0002-0020-02
+  it("keeps the shipped-set contract gate in a lane every pull request runs, with the duplicate gone and the cost recorded as the lost cross-check", () => {
+    const gate = "tests/integration/shippedWorkflowShapeGate.test.ts";
+    expect(existsSync(path.join(PACKAGE_ROOT, gate))).toBe(true);
+
+    const scripts = (file: string): Record<string, unknown> => {
+      const manifest: unknown = JSON.parse(readFileSync(file, "utf8"));
+      const declared = isRecord(manifest) ? manifest["scripts"] : undefined;
+      if (!isRecord(declared)) throw new Error(`${file} declares no scripts`);
+      return declared;
+    };
+    expect(scripts(path.join(PACKAGE_ROOT, "package.json"))["lint:workflow-shape"]).toBe(
+      `vitest run ${gate}`,
+    );
+    const rootScripts = scripts(path.join(REPO_ROOT, "package.json"));
+    expect(String(rootScripts["ci:lint:structure"])).toContain("lint:workflow-shape");
+    expect(String(rootScripts["ci:lint"])).toContain("run-lint-checks.sh");
+    expect(readFileSync(path.join(WORKFLOWS_DIR, "ci.yml"), "utf8")).toContain("run: pnpm ci:lint");
+
+    expect(existsSync(path.join(WORKFLOWS_DIR, "qfai-validate.yml"))).toBe(false);
+    expect(
+      existsSync(
+        path.join(
+          REPO_ROOT,
+          "packages",
+          "qfai",
+          "assets",
+          "init",
+          "root",
+          ".github",
+          "workflows",
+          "qfai-validate.yml",
+        ),
+      ),
+    ).toBe(true);
+
+    const record = readFileSync(path.join(REPO_ROOT, ".qfai", "spec", "decisions.md"), "utf8")
+      .split(/\r?\n/u)
+      .find((line) => /^\| DEC-\d+ \|/u.test(line) && line.includes("#DR-0017-0007:"));
+    expect(record).toBeDefined();
+    expect(record).toContain("**manual cross-check**");
+    expect(record).toMatch(/It is \*\*not\*\* the loss of a mirror/u);
   });
 
   // QFAI:AC-0002-0018-03
