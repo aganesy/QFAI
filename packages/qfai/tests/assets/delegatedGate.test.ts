@@ -61,7 +61,7 @@ describe("a gate the project runs in CI only is recorded as delegated", () => {
       const gateStatusRow = contract
         .split("\n")
         .find((line) => line.startsWith("| `status`") && line.includes('"UNRUN"'));
-      expect(gateStatusRow?.match(/"[A-Z]+"/g)).toEqual([
+      expect(gateStatusRow?.split("|")[2]?.match(/"[A-Z]+"/g)).toEqual([
         '"PASS"',
         '"FAIL"',
         '"UNRUN"',
