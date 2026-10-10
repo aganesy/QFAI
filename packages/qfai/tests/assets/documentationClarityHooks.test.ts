@@ -328,8 +328,8 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
         }
       }
     }
-    // Eight shared readers cover prompt, tool and stop filters, full/brief
-    // delivery, and the unchanged periodic reminders.
+    // Eight shared readers cover prompt and tool filters, full/brief delivery,
+    // posting, the install check and the Stop reminder.
     expect(readers.size, "each entry uses one of the eight shared readers").toBe(8);
     for (const reader of readers) {
       expect(reader).toContain("process.argv[1]");
