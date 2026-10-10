@@ -98,7 +98,9 @@ describe("native linked worktree skill wrappers", () => {
         "qfai-verify",
         "web-research",
       ];
-      const wrappers = skills.map((skill) => path.join(".claude", "skills", skill));
+      const wrappers = HOST_SKILL_DIRS.flatMap((host) =>
+        skills.map((skill) => path.join(...host.split("/"), skill)),
+      );
       const canonicals = layers.map((layer) => path.join(assistant, layer));
       const targetFor = (from: string, to: string) =>
         path.relative(path.dirname(from), to).split(path.sep).join("/");
@@ -168,6 +170,16 @@ describe("native linked worktree skill wrappers", () => {
       await git(["init", "--initial-branch=main"]);
       await git(["config", "--local", "core.symlinks", "true"]);
       await git(["config", "--local", "core.autocrlf", "false"]);
+      const primaryAssets = await snapshot(path.join(primary, assets));
+      await execFile(process.execPath, [CLI, "init", "--yes"], { cwd: primary });
+      expect(await validateIntegrationSurface(primary)).toEqual([]);
+      expect(await snapshot(path.join(primary, assets))).toEqual(primaryAssets);
+      const claudeSkills = await readdir(path.join(primary, ".claude", "skills"), {
+        withFileTypes: true,
+      });
+      const claudeLinks = claudeSkills.filter((entry) => entry.isSymbolicLink());
+      expect(claudeLinks).toHaveLength(13);
+      expect(claudeLinks.map((entry) => entry.name).sort()).toEqual(skills);
       await git(["add", "--force", "--all"]);
       await git([
         "-c",
