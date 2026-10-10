@@ -23,6 +23,7 @@ export { validateExternalReferences } from "./externalReferences.js";
 export { validateStoryTreeDrift } from "./upstreamSsotGuard.js";
 export { validateDocumentSchema } from "./documentSchema.js";
 export { validateStaleTerms } from "./staleTerms.js";
+export { validateForbiddenIdentifiers } from "./forbiddenIdentifiers.js";
 export { validateConfigReferenceIntegrity } from "./configReferenceIntegrity.js";
 export { validateRepositoryHygiene } from "./repositoryHygiene.js";
 export { validateDesignToken } from "./designToken.js";

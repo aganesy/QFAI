@@ -17,6 +17,7 @@ import { readStoryTreeModel, type StoryTreeModel } from "./storyTree/tree.js";
 import { validateStoryTreeStructure } from "./validators/storyTreeStructure.js";
 import { validateDocumentSchema } from "./validators/documentSchema.js";
 import { validateStaleTerms } from "./validators/staleTerms.js";
+import { validateForbiddenIdentifiers } from "./validators/forbiddenIdentifiers.js";
 import { validateStoryTreeObligations } from "./validators/storyTreeObligations.js";
 import { validateStoryTreeContractReferences } from "./validators/contractReferences.js";
 import { validateStoryPolicyPlaceholders } from "./validators/assistantAssets.js";
@@ -99,6 +100,11 @@ export async function validateProject(
   const resolved = configResult ?? (await loadConfig(root));
   const { config, issues: configIssues } = resolved;
   const profile: ValidationProfile = options.profile ?? "full";
+  const forbiddenIdentifiers = config.validation.forbiddenIdentifiers ?? [];
+  const securityIssues =
+    forbiddenIdentifiers.length > 0
+      ? await validateForbiddenIdentifiers(root, forbiddenIdentifiers)
+      : [];
 
   const specsRoot = resolvePath(root, config, "specsDir");
   let oldLayoutRoot: string | undefined;
@@ -123,13 +129,14 @@ export async function validateProject(
       oldLayoutRoot,
       "storyTree.oldLayout",
     );
+    const layoutIssues = [layoutIssue, ...securityIssues];
     return {
       toolVersion: await resolveToolVersion(),
       generatedAt: new Date().toISOString(),
       profile,
       profileValidatorsRan: false,
-      issues: [layoutIssue],
-      counts: countIssues([layoutIssue]),
+      issues: layoutIssues,
+      counts: countIssues(layoutIssues),
     };
   }
   const storyModel = await readStoryTreeModel(root, config);
@@ -155,7 +162,7 @@ export async function validateProject(
     options.platform,
     storyModel,
   );
-  const findings = [...configIssues, ...scopeIssues, ...profileRun.issues];
+  const findings = [...configIssues, ...securityIssues, ...scopeIssues, ...profileRun.issues];
   const scopedFindings = findings.filter((finding) => isFindingInFlowScope(finding, flowScope));
   const { issues, waivers } = await applyWaivers(root, scopedFindings);
 

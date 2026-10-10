@@ -166,3 +166,4 @@
 | US-0001-0229 | Choose how far the work on a request goes before it starts                             | `user-story-0001-0229/` |
 | US-0001-0230 | Purposeful copy in a screen's UI contract                                              | `user-story-0001-0230/` |
 | US-0001-0231 | Send session feedback to QFAI when the work is complete                                | `user-story-0001-0231/` |
+| US-0001-0232 | Find forbidden identifiers in the tracked worktree                                     | `user-story-0001-0232/` |

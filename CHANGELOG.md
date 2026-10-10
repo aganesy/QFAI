@@ -6,6 +6,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **Validation can find forbidden identifiers from hash-only configuration.**
+  The optional policy scans tracked file names and current bytes, including
+  binary and ignored tracked files. Unsafe or incomplete coverage is an error;
+  findings omit matched values and unsafe paths. Fixes #3232.
+
 - **`qfai sdd renumber-decision` repairs a branch-added decision ID.**
   Explicit source, destination and local base arguments preview exact new
   references; `--apply` writes after checking fixed commits and original bytes.
@@ -32,6 +37,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   "an E2E test", "an integration or API test" and "a test" for the three
   obligation kinds. Coverage and severity are unchanged. Fixes #3239.
 
+- **Test exceptions take effect only at DONE.** A partially superseded exception
+  no longer suppresses a missing-test error. Other decision kinds keep their
+  status behavior. Fixes #3356.
 - **One goal can advance independent targets through their own plans.** Guidance
   keeps each target's scope, head-bound evidence and approval limits separate.
   A clean checkout can move to authorized work during remote waits; writers,
