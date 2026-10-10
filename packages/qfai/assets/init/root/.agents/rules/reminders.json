@@ -20,7 +20,7 @@
   "documentation-clarity-before-post": {
     "hookSpecificOutput": {
       "hookEventName": "PreToolUse",
-      "additionalContext": "QFAI documentation clarity (.agents/rules/documentation-clarity.md). Before this title or body ships: no issue or PR numbers, ticket IDs or team-local jargon in source and docs; no account of how the work went, only the current behaviour and why; conclusion first; cut self-evident, repeated and wordy text, and announcements, recaps and empty intensifiers; ordinary words, name who acts, one claim per sentence, short lines; bullet lists and tables for parallel items; mark what is unverified; then re-read every line and rewrite anything that reads as a literal translation or matches a pattern in the rule."
+      "additionalContext": "QFAI documentation clarity (.agents/rules/documentation-clarity.md). PR and issue bodies may contain numbers and links. No issue or PR numbers, ticket IDs or team-local jargon in source or ordinary Markdown; keep the rule's existing exceptions. Ordinary specifications and change descriptions omit design and implementation history. Only when the user expressly requests an incident, event or work record, include necessary observed events, evidence, uncertainty, current impact and next action. Lead with the result. Cut self-evident, repeated or wordy text, announcements, recaps and empty intensifiers. Use ordinary words, name who acts, one claim per sentence, short lines, and lists or tables for parallel items. Mark what is unverified. Re-read every changed line and rewrite literal translations or patterns the rule excludes."
     }
   },
   "grilling-design-artifact": {
@@ -44,13 +44,13 @@
   "documentation-clarity-after-write": {
     "hookSpecificOutput": {
       "hookEventName": "PostToolUse",
-      "additionalContext": "QFAI documentation clarity (.agents/rules/documentation-clarity.md). For the Markdown just written, inside this change only: no issue or PR numbers, ticket IDs or team-local jargon; no account of how the work went, only the current behaviour and why; conclusion first; cut self-evident, repeated and wordy text, and announcements, recaps and empty intensifiers; ordinary words, name who acts, one claim per sentence, short lines; bullet lists and tables for parallel items; mark what is unverified; then re-read every line and rewrite anything that reads as a literal translation or matches a pattern in the rule."
+      "additionalContext": "QFAI documentation clarity (.agents/rules/documentation-clarity.md). For the changed source and ordinary Markdown: no issue or PR numbers, ticket IDs or team-local jargon; keep the rule's existing exceptions. Ordinary specifications and change descriptions omit design and implementation history. Only when the user expressly requests an incident, event or work record, include necessary observed events, evidence, uncertainty, current impact and next action. Lead with the result. Cut self-evident, repeated or wordy text, announcements, recaps and empty intensifiers. Use ordinary words, name who acts, one claim per sentence, short lines, and lists or tables for parallel items. Mark what is unverified. Re-read every changed line and rewrite literal translations or patterns the rule excludes."
     }
   },
   "documentation-clarity-after-edit": {
     "hookSpecificOutput": {
       "hookEventName": "PostToolUse",
-      "additionalContext": "QFAI documentation clarity (.agents/rules/documentation-clarity.md). For the Markdown just edited, inside this change only: no issue or PR numbers, ticket IDs or team-local jargon; no account of how the work went, only the current behaviour and why; conclusion first; cut self-evident, repeated and wordy text, and announcements, recaps and empty intensifiers; ordinary words, name who acts, one claim per sentence, short lines; bullet lists and tables for parallel items; mark what is unverified; then re-read every line and rewrite anything that reads as a literal translation or matches a pattern in the rule."
+      "additionalContext": "QFAI documentation clarity (.agents/rules/documentation-clarity.md). For the changed source and ordinary Markdown: no issue or PR numbers, ticket IDs or team-local jargon; keep the rule's existing exceptions. Ordinary specifications and change descriptions omit design and implementation history. Only when the user expressly requests an incident, event or work record, include necessary observed events, evidence, uncertainty, current impact and next action. Lead with the result. Cut self-evident, repeated or wordy text, announcements, recaps and empty intensifiers. Use ordinary words, name who acts, one claim per sentence, short lines, and lists or tables for parallel items. Mark what is unverified. Re-read every changed line and rewrite literal translations or patterns the rule excludes."
     }
   },
   "minimal-implementation": {

@@ -26,6 +26,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   required values, commands or their order have a semantic effect even when
   only Markdown changes. Fixes #3203.
 
+- **Writing reminders allow expressly requested incident, event and work records.**
+  These keep necessary facts and evidence; ordinary specifications and change
+  descriptions omit design history. The posting reminder allows numbers and
+  links in pull request and issue bodies. Fixes #3214.
+
 - **qfai-run records the required approval before handing an operation to a person.**
   The row is a route record. Triage steps change no tracked file and never
   run the handed-off operation. Fixes #3201.
