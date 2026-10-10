@@ -262,8 +262,10 @@ describe("check-instructions-size listed AGENTS ancestor chain", () => {
 
   it("counts UTF-8 multibyte text, the BOM and LF or CRLF without normalization", async () => {
     const root = Buffer.from("r".repeat(16384), "utf-8");
-    const lf = Buffer.from(`\uFEFF${"界".repeat(5460)}\n`, "utf-8");
-    const crlf = Buffer.from(`\uFEFF${"界".repeat(5460)}\r\n`, "utf-8");
+    // A Han sample occupies three UTF-8 bytes.
+    const character = String.fromCodePoint(0x754c);
+    const lf = Buffer.from(`\uFEFF${character.repeat(5460)}\n`, "utf-8");
+    const crlf = Buffer.from(`\uFEFF${character.repeat(5460)}\r\n`, "utf-8");
     expect(lf.length).toBe(16384);
     expect(crlf.length).toBe(16385);
     expect(root.length + lf.length).toBe(32768);
