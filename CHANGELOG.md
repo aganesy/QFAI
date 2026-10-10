@@ -242,6 +242,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Decision and open-question row errors explain what to correct.** Cell-count
+  errors report the expected and actual counts. Invalid Status errors show a
+  quoted preview and the table's allowed values. The preview replaces control
+  and format characters and line breaks with spaces, then keeps the first 40
+  Unicode code points, adding `...` when longer. Parsed values and accepted
+  statuses stay unchanged. Fixes #3224.
+
 - **Validation text lists errors before warnings and information.** Groups of
   the same severity retain their first-appearance order. JSON records, counts,
   suppression and exit behavior stay unchanged.

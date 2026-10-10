@@ -388,6 +388,7 @@ describe.each([
   const diagnostic = (preview: string): string =>
     `${kind} row ${id} has an invalid Status: "${preview}"; allowed: ${allowed.join(", ")}`;
 
+  // QFAI:EX-0001-0053-13
   it.each([3, 5])("reports expected four and actual %i cells", (count) => {
     const cells = [id, "Choice", "Reason", "TODO", "Extra"].slice(0, count);
     const parsed = parseRecordTable(`${header}| ${cells.join(" | ")} |\n`, kind);
@@ -397,7 +398,8 @@ describe.each([
     expect(error).toMatch(new RegExp(`(?:actual|got|found)\\s+${count}\\b`, "i"));
   });
 
-  it.each(["INVALID", "", wrongKindStatus])(
+  // QFAI:EX-0001-0053-14
+  it.each(["WAITING", "", wrongKindStatus])(
     "lists only this kind's allowed values for Status %j",
     (status) => {
       const parsed = parseRecordTable(table(status), kind);
@@ -406,6 +408,7 @@ describe.each([
     },
   );
 
+  // QFAI:EX-0001-0053-15
   it.each([39, 40, 41])(
     "bounds the preview at forty Unicode characters for a %i-character value",
     (length) => {
@@ -417,6 +420,7 @@ describe.each([
     },
   );
 
+  // QFAI:EX-0001-0053-15
   it("sanitizes control and format runs and Unicode breaks only in the one-line diagnostic", () => {
     const status = '\u202e\0First  "quoted"\t\u0085\u200dSecond\u2028Third\u2029Fourth\rLast\u2066';
     const parsed = parseRecordTable(table(status), kind);
@@ -425,6 +429,7 @@ describe.each([
     expect(parsed.rows[0]?.status).toBe(status);
   });
 
+  // QFAI:EX-0001-0053-15
   it("applies the forty-character limit after sanitizing rather than to the raw value", () => {
     const status = "A".repeat(20) + "\t\0\u202e\u2028\u2029" + "B".repeat(19);
     const parsed = parseRecordTable(table(status), kind);
@@ -432,6 +437,7 @@ describe.each([
     expect(parsed.rows[0]?.status).toBe(status);
   });
 
+  // QFAI:EX-0001-0053-02
   it("continues accepting every existing status without changing its returned value", () => {
     for (const pattern of allowed) {
       const status = pattern.replace("DEC-NNNN", "DEC-0042");
