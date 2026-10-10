@@ -232,10 +232,15 @@ async function project(): Promise<string> {
   return root;
 }
 
-function prepareThrough(root: string, last: number): void {
-  for (let number = 1; number <= last; number += 1) {
-    requireComplete(step(root, number), `prepare step ${number}`, number === 4);
+async function snapshotProject(root: string): Promise<string> {
+  if (!(await lstat(path.join(root, ".git"))).isDirectory()) {
+    throw new Error("The migration snapshot needs a project-owned Git directory");
   }
+  const snapshot = await mkdtemp(path.join(os.tmpdir(), "qfai-bf0004-snapshot-"));
+  tempRoots.push(snapshot);
+  // Relative host links stay local; the package link still names the installed build.
+  await cp(root, snapshot, { recursive: true, verbatimSymlinks: true });
+  return snapshot;
 }
 
 let journey: Journey;
@@ -250,6 +255,8 @@ beforeAll(async () => {
   const dry: Result[] = [];
   const real: Result[] = [];
   const dryUnchanged: boolean[] = [];
+  let invalidRoot: string | undefined;
+  let unresolvedRoot: string | undefined;
   for (let number = 1; number <= 10; number += 1) {
     const before = await hashTree(root);
     const preview = step(root, number, ["--dry-run"]);
@@ -259,6 +266,8 @@ beforeAll(async () => {
     const applied = step(root, number);
     requireComplete(applied, `real step ${number}`, number === 4);
     real.push(applied);
+    if (number === 3) invalidRoot = await snapshotProject(root);
+    if (number === 6) unresolvedRoot = await snapshotProject(root);
   }
   const firstHash = await hashTree(root);
   for (let number = 1; number <= 10; number += 1) {
@@ -303,8 +312,8 @@ beforeAll(async () => {
     tddValidation,
   };
 
-  const invalidRoot = await project();
-  prepareThrough(invalidRoot, 3);
+  if (!invalidRoot || !unresolvedRoot) throw new Error("Migration snapshots are missing");
+  const mainBeforeFailures = await hashTree(root);
   const planPath = path.join(invalidRoot, "tmp/qfai-migration/plan.yaml");
   const originalPlan = await readFile(planPath, "utf8");
   const brokenPlan = originalPlan.replace(
@@ -325,8 +334,6 @@ beforeAll(async () => {
     sourceAfter: await readFile(flowSource, "utf8"),
   };
 
-  const unresolvedRoot = await project();
-  prepareThrough(unresolvedRoot, 6);
   // The contract the plan names is gone by the time step 7 runs.
   await rm(path.join(unresolvedRoot, ".qfai/spec/03_contract/api/api-0001-order.yaml"));
   const ruleSource = path.join(unresolvedRoot, ".qfai/spec/spec-0001/04_Business-Rules.md");
@@ -340,6 +347,9 @@ beforeAll(async () => {
     sourceBefore: ruleText,
     sourceAfter: await readFile(ruleSource, "utf8"),
   };
+  if ((await hashTree(root)) !== mainBeforeFailures) {
+    throw new Error("Failure fixtures changed the main migration project");
+  }
 }, 420_000);
 
 afterAll(async () => {

@@ -3470,10 +3470,7 @@ describe("release automation performs decisions rather than making them", () => 
         );
         const run = spawnSync("bash", [script], { encoding: "utf-8" });
         if (run.error !== undefined) throw run.error;
-        // A tool the gate calls and this machine lacks leaves the gate silent,
-        // which reads as a verdict: the positive case failed saying the workflow
-        // would not tag a release, and the negative ones passed for no reason.
-        // The GitHub runner ships `jq`; a contributor's machine need not.
+        // Missing tools must fail explicitly rather than look like a no-tag verdict.
         const missing = /: ([\w.+-]+): command not found/.exec(run.stderr)?.[1];
         if (missing !== undefined) {
           throw new Error(
@@ -3494,8 +3491,20 @@ describe("release automation performs decisions rather than making them", () => 
 
     it("tags a release merge and declines everything else, measured by running it", () => {
       expect(
+        associationGate(),
+        "the association check must use the installed Node runtime",
+      ).not.toMatch(/\bjq\b/);
+      expect(
         wouldTag(restPayload("release/v1.10.2"), "1.10.2"),
         "the merge of `release/v1.10.2` must be tagged: this is the whole point of the workflow",
+      ).toBe(true);
+
+      expect(
+        wouldTag(
+          [{ head: { ref: "feature/another-change" } }, { head: { ref: "release/v1.10.2" } }],
+          "1.10.2",
+        ),
+        "a release pull request must match even when another association comes first",
       ).toBe(true);
 
       expect(
@@ -3511,29 +3520,62 @@ describe("release automation performs decisions rather than making them", () => 
       expect(wouldTag([], "1.10.2"), "a direct push belongs to no pull request").toBe(false);
     });
 
-    it("is not satisfied by the GraphQL spelling of the field", () => {
-      // The regression pin. `headRefName` is what GraphQL calls it and what the
-      // gate used to read; REST carries no such key, so `jq` printed `null` for
-      // every associated pull request, the comparison never matched, and the step
-      // reported success having pushed nothing. It had never once tagged.
+    it("reads only string REST refs and rejects malformed responses", () => {
       const graphqlShaped = [{ number: 1152, headRefName: "release/v1.10.2" }];
       expect(
         wouldTag(graphqlShaped, "1.10.2"),
-        "a payload carrying ONLY the GraphQL key must not tag — and a gate that reads that key " +
-          "cannot tag the REST payload above, which is the defect",
+        "the GraphQL field cannot authorise a tag from a REST response",
       ).toBe(false);
 
-      // `// empty` is asserted on the filter TEXT, not through a payload, and
-      // deliberately: no input distinguishes it from the bare `.[].head.ref`.
-      // `jq -r` prints a missing value as the four characters `null`, and the
-      // pattern beside it is always `release/v` + a version, so the two forms
-      // decline every payload alike. Writing a row that appeared to tell them
-      // apart would need a fixture built to fake the difference. It is kept
-      // because it says what the filter means; the guard is that it is there.
+      const gate = associationGate();
+      expect(gate, "the association check must not depend on jq").not.toMatch(/\bjq\b/);
+      const parser = /\bnode\s+-e\s+'([^']+)'/u.exec(gate)?.[1];
       expect(
-        associationGate(),
-        "the filter must drop a missing value rather than print it as `null`",
-      ).toContain("// empty");
+        parser,
+        "the production check must parse stdin with its inline Node program",
+      ).toBeTypeOf("string");
+      if (parser === undefined) throw new Error("the association check has no inline Node parser");
+      const parse = (input: string) => {
+        const run = spawnSync(process.execPath, ["-e", parser], { input, encoding: "utf-8" });
+        if (run.error !== undefined) throw run.error;
+        return run;
+      };
+      const missingOrNonstringRefs = [
+        {},
+        { head: {} },
+        { head: { ref: null } },
+        { head: { ref: false } },
+        { head: { ref: 123 } },
+        { head: { ref: {} } },
+        { head: { ref: ["release/v1.10.2"] } },
+      ];
+      for (const payload of [[], graphqlShaped, missingOrNonstringRefs]) {
+        const run = parse(JSON.stringify(payload));
+        expect(run.status).toBe(0);
+        expect(run.stdout).toBe("");
+        expect(run.stderr).toBe("");
+        expect(wouldTag(payload, "1.10.2")).toBe(false);
+      }
+      const strings = parse(
+        JSON.stringify([
+          ...missingOrNonstringRefs,
+          { head: { ref: "feature/another-change" } },
+          { head: { ref: "release/v1.10.2" } },
+        ]),
+      );
+      expect(strings.status).toBe(0);
+      expect(strings.stdout).toBe("feature/another-change\nrelease/v1.10.2\n");
+      expect(strings.stderr).toBe("");
+      for (const input of ["{", "{}", "null", '"release/v1.10.2"']) {
+        const run = parse(input);
+        expect(run.status, "invalid REST responses must stop the parser").not.toBe(0);
+        expect(run.stdout, "invalid REST responses must emit no branch refs").toBe("");
+      }
+      for (const payload of [{}, null, "release/v1.10.2"]) {
+        expect(wouldTag(payload, "1.10.2"), "a non-array response must not authorise a tag").toBe(
+          false,
+        );
+      }
     });
   });
 });

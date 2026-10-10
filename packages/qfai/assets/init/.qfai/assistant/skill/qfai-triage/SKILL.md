@@ -94,9 +94,10 @@ Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#completion-contr
 find changed when it started.
 
 The report states the outcome `triage-close` recorded and lists each follow-up
-request. It never says a change is done. It ends with a question listing the
-next actions, as `.agents/rules/user-questions.md` § 6 sets out; under a
-no-question mode, list them in the report instead.
+request. It never says a change is done. Ask for the next action only when
+proceeding requires the user's answer, as `.agents/rules/user-questions.md`
+§ 6 sets out. A closure-only report needs no question. Under a no-question mode,
+list any remaining actions instead.
 
 ## Default Autopilot Policy
 

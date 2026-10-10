@@ -297,8 +297,8 @@ describe("§ 4 of the minimal-implementation rule bounds unrequested fixes and r
  * Every rule master, read off the directory.
  *
  * The subject is the rules that exist, not the rules a list names. Reading the
- * directory is what makes that true: a master that skips either registration —
- * `README.md` or `.claude/rules/` — is still named by the case that finds it
+ * directory is what makes that true: a master that skips its registration —
+ * `README.md` — is still named by the case that finds it
  * missing, because it reached the case from disk rather than from an entry
  * someone had to add.
  *
@@ -307,18 +307,6 @@ describe("§ 4 of the minimal-implementation rule bounds unrequested fixes and r
 const RULE_MASTERS = readdirSync(path.join(ROOT, ".agents/rules"))
   .filter((entry) => entry.endsWith(".md") && entry !== "README.md")
   .sort();
-
-async function readMaybeSymlink(linkPath: string): Promise<string> {
-  return readFile(linkPath, "utf-8");
-}
-
-async function isSymlinkTo(linkPath: string, masterPath: string): Promise<boolean> {
-  const stat = await lstat(linkPath);
-  if (!stat.isSymbolicLink()) return false;
-  const linkReal = await realpath(linkPath);
-  const masterReal = await realpath(masterPath);
-  return linkReal === masterReal;
-}
 
 describe("cross-AI rules surface (.agents/rules/ master)", () => {
   it("master version-discipline.md exists with required content", async () => {
@@ -384,36 +372,17 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     );
   });
 
-  it.each(RULE_MASTERS)(".claude/rules/%s resolves to the master", async (fileName) => {
-    const link = path.join(ROOT, ".claude/rules", fileName);
-    const master = path.join(ROOT, ".agents/rules", fileName);
-    if (await isSymlinkTo(link, master)) {
-      // Symlink path: the resolved master must equal the master file.
-      expect(await realpath(link)).toBe(await realpath(master));
-      return;
-    }
-    // Non-symlink fallback, two shapes:
-    //   1. The file was committed as a regular file on a platform that
-    //      supports symlinks. Content equality with the master is the
-    //      contract.
-    //   2. Windows without `core.symlinks=true` / Developer Mode. Git writes
-    //      the link as a one-line text file holding the relative target path
-    //      (e.g. `../../.agents/rules/version-discipline.md`). Content
-    //      equality fails by construction, so the contract is that the path
-    //      resolves to the master. `.agents/rules/README.md` documents the
-    //      setup.
-    const linked = await readMaybeSymlink(link);
-    const trimmed = linked.trim();
-    const looksLikeRelativePath = /^\.\.\/.+\.md$/.test(trimmed);
-    if (looksLikeRelativePath) {
-      // Validate the path string actually points at the master.
-      const linkDir = path.dirname(link);
-      const resolvedTarget = path.resolve(linkDir, trimmed);
-      expect(path.resolve(master)).toBe(resolvedTarget);
-      return;
-    }
-    const masterText = await readFile(master, "utf-8");
-    expect(linked).toBe(masterText);
+  // A master no entry point names is reachable only by a reader who already
+  // knows it exists. The directory holds the rules, and AGENTS.md is where an
+  // agent finds out which of them to read.
+  it.each(RULE_MASTERS)("an entry file names %s", async (fileName) => {
+    const texts = await Promise.all(
+      ["AGENTS.md", "CLAUDE.md"].map((entry) => readFile(path.join(ROOT, entry), "utf-8")),
+    );
+    expect(
+      texts.some((text) => text.includes(fileName)),
+      `neither AGENTS.md nor CLAUDE.md names ${fileName}`,
+    ).toBe(true);
   });
 
   it("AGENTS.md references the master rules directory and version-discipline", async () => {
@@ -999,30 +968,30 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toMatch(/inventing\s+one\s+to\s+fill\s+the\s*\n?\s*slot/i);
     });
 
-    // A turn that leaves the next step to the user and ends on a report leaves
-    // the session idle with nothing saying it waits. One token per clause: the
-    // question is owed, it lists the next actions recommended first, the
-    // fallback carries it, it is not a clarification, a stop asks nothing, and
-    // a no-question mode reports the actions instead of asking.
-    it.each(MASTERS)("%s ends a turn that waits on the user with the next actions", async (rel) => {
-      const text = await readFile(path.join(ROOT, rel), "utf-8");
-      expect(text).toMatch(
-        /A\s+turn\s+that\s+leaves\s+the\s+next\s+step\s+to\s+the\s+user\s+ends\s+with\s+a\s+question\s+listing\s+the\s+next\s+actions/,
-      );
-      expect(text).toMatch(/recommended\s+action\s+comes\s+first/);
-      expect(text).toMatch(/§\s+5's\s+fallback\s+carries\s+the\s+same\s+list/);
-      expect(text).toMatch(/It\s+is\s+not\s+a\s+clarification:\s+it\s+resolves\s+no\s+ambiguity/);
-      expect(text).toMatch(/A\s+user's\s+stop\s+is\s+not\s+such\s+a\s+turn/);
-      expect(text).toMatch(
-        /confirmed\s+in\s+one\s+line,\s+every\s+open\s+decision\s+is\s+listed\s+as\s+open,\s+and\s+nothing\s+is\s+asked/,
-      );
-      // A halt's form is the halt notice `qfai-run` sets out, not this question.
-      expect(text).toMatch(/Neither\s+is\s+a\s+`qfai-run`\s+halt/);
-      expect(text).toMatch(/records\s+the\s+next\s+actions\s+in\s+its\s+report\s+instead/);
-      // The introduction states the same exception, or it promises a question
-      // the mode forbids.
-      expect(text).toMatch(/always\s+put,\s+except\s+under\s+a\s+no-question\s+mode/);
-    });
+    // QFAI:EX-0001-0196-57
+    it.each(MASTERS)(
+      "%s asks only for a required answer and keeps stop and halt boundaries",
+      async (rel) => {
+        const text = (await readFile(path.join(ROOT, rel), "utf-8")).replace(/\s+/g, " ");
+        expect(text).toMatch(
+          /ask a question when the next step needs a fact, a choice or permission/i,
+        );
+        expect(text).toMatch(/not already supplied or delegated/i);
+        expect(text).toMatch(/background waiting and completion-only reports need no question/i);
+        expect(text).toMatch(/current state, awaited evidence or result, and resume condition/i);
+        expect(text).toMatch(/do not.*promise automatic restart the host does not provide/i);
+        expect(text).toMatch(/recommended\s+action\s+comes\s+first/);
+        expect(text).toMatch(/§\s+5's\s+fallback\s+carries\s+the\s+same\s+parts/);
+        expect(text).toMatch(/A\s+user's\s+stop\s+is\s+not\s+such\s+a\s+turn/);
+        expect(text).toMatch(
+          /confirmed\s+in\s+one\s+line,\s+every\s+open\s+decision\s+is\s+listed\s+as\s+open,\s+and\s+nothing\s+is\s+asked/,
+        );
+        // A halt's form is the halt notice `qfai-run` sets out, not this question.
+        expect(text).toMatch(/Neither\s+is\s+a\s+`qfai-run`\s+halt/);
+        expect(text).toMatch(/records\s+the\s+next\s+actions\s+in\s+its\s+report\s+instead/);
+        expect(text).not.toMatch(/always put, except under a no-question mode/i);
+      },
+    );
 
     // A tool that returns only an acceptance has told the agent the host took the
     // question, not that the user saw or answered it. One token per clause: the
@@ -1074,18 +1043,26 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).not.toMatch(/numbered\s+plain-text\s+choices\s+keep\s+the\s+same\s+parts/);
     });
 
-    // The entry points `qfai init` writes are where an adopter's agent meets
-    // the rule, so their summary names the turn that waits on the user too.
+    // QFAI:EX-0001-0196-57
     it.each([
       "packages/qfai/assets/init/root/AGENTS.md",
       "packages/qfai/assets/init/root/CLAUDE.md",
       "packages/qfai/src/cli/commands/init.ts",
-    ])("%s cites the next-action question", async (rel) => {
-      const text = await readFile(path.join(ROOT, rel), "utf-8");
-      expect(text).toMatch(
-        /user-questions\.md` — [^\n]*a turn that waits on the user ends with a question listing the next actions/,
-      );
-    });
+    ])(
+      "%s summarizes the required-answer boundary without forcing report questions",
+      async (rel) => {
+        const text = (await readFile(path.join(ROOT, rel), "utf-8")).replace(/\s+/g, " ");
+        expect(text).toMatch(
+          /(?:question is needed only when|ask only when) the next step requires the user's answer/i,
+        );
+        expect(text).toMatch(
+          /background waiting and completion-only reports need (?:none|no question)/i,
+        );
+        expect(text).not.toMatch(
+          /a turn that waits on the user ends with a question listing the next actions/i,
+        );
+      },
+    );
 
     // The two rules divide one subject: which questions to ask, and what each
     // one looks like. A grilling round is delivered under this rule's § 4, so
