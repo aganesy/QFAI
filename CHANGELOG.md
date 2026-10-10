@@ -6,6 +6,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **Validation can find forbidden identifiers from hash-only configuration.**
+  The optional policy scans tracked file names and current bytes, including
+  binary and ignored tracked files. Unsafe or incomplete coverage is an error;
+  findings omit matched values and unsafe paths. Fixes #3232.
+
 - **`qfai sdd renumber-decision` repairs a branch-added decision ID.**
   Explicit source, destination and local base arguments preview exact new
   references; `--apply` writes after checking fixed commits and original bytes.

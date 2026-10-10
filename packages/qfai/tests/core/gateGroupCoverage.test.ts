@@ -92,6 +92,10 @@ const PROFILE_INDEPENDENT_CODES: ReadonlyMap<string, Exemption> = new Map([
     "QFAI-CFG-001": "the `qfai.config.yaml` read, which every profile needs first",
     "QFAI-CFG-002": "config parse failure: nothing downstream runs, so no group owns it",
   }),
+  ...raisedBy("src/core/validators/forbiddenIdentifiers.ts", {
+    "QFAI-SECURITY-001": "the enabled tracked-worktree scan runs before profile dispatch",
+    "QFAI-SECURITY-002": "as QFAI-SECURITY-001",
+  }),
   ...raisedBy("src/core/waivers.ts", {
     "QFAI-WAIVER-001": "the waiver engine, applied to the findings of whatever profile ran",
     "QFAI-WAIVER-002": "as QFAI-WAIVER-001",
