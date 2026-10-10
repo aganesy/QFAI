@@ -19,7 +19,7 @@ import { existsSync, lstatSync, realpathSync, statSync } from "node:fs";
 import { cp, mkdir, mkdtemp, readFile, readlink, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -59,7 +59,7 @@ function runIsolated(
   checkOnly: boolean,
   preload?: string,
 ): { status: number; output: string } {
-  const args = [...(preload === undefined ? [] : ["--import", preload]), script];
+  const args = [...(preload === undefined ? [] : ["--import", pathToFileURL(preload).href]), script];
   if (checkOnly) args.push("--check");
   const result = spawnSync(process.execPath, args, {
     cwd: root,
