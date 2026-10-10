@@ -817,6 +817,8 @@ describe("applyWaivers", () => {
     ["QFAI-STORY-006", "the code the CLI prints"],
     ["QFAI-STORY-002", "a structure wrapper with fixed error severity"],
     ["QFAI-SPACK-102", "an open decision rejected by the story-tree wrapper"],
+    ["QFAI-SEC-001", "a forbidden identifier match"],
+    ["QFAI-SEC-002", "incomplete forbidden identifier scan coverage"],
   ])("blocks a waiver for the quiet error-only rule %s (%s)", async (rule) => {
     const root = await createRoot();
     try {
