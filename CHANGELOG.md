@@ -22,6 +22,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **API polling uses one watcher across a root task and its descendants.**
+  Workers reuse saved snapshots. The rule includes a two-PR snapshot query,
+  pagination guidance and recovery from actual rate-limit refusals. Fixes #3226.
+
 - **The maintenance step covers procedures people follow.** Changes to actions,
   required values, commands or their order have a semantic effect even when
   only Markdown changes. Fixes #3203.
@@ -265,6 +269,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and format characters and line breaks with spaces, then keeps the first 40
   Unicode code points, adding `...` when longer. Parsed values and accepted
   statuses stay unchanged. Fixes #3224.
+
+- **SQL rules with no examples explain the required comment format.** The error
+  asks for a one-line Rule statement and `-- Examples:` on the immediately
+  following line. Other rule errors and parsing stay unchanged. Fixes #3225.
 
 - **Validation text lists errors before warnings and information.** Groups of
   the same severity retain their first-appearance order. JSON records, counts,
