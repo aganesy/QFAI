@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { runInit } from "../../src/cli/commands/init.js";
 import { run } from "../../src/cli/main.js";
-import { resolveToolVersion } from "../../src/core/version.js";
+import { resolveToolPackageDir, resolveToolVersion } from "../../src/core/version.js";
 import { captureStdout } from "../helpers/stdout.js";
 
 describe("cli root discovery", () => {
@@ -265,6 +265,43 @@ describe("cli usage errors", () => {
     }
   }
 
+  async function expectInstallationDiagnostic(stderr: string): Promise<void> {
+    const version = await resolveToolVersion();
+    const packageDir = await resolveToolPackageDir();
+    expect(packageDir).not.toBeNull();
+    expect(stderr).toContain(version);
+    expect(stderr).toContain(packageDir);
+  }
+
+  it("identifies the running installation when a top-level command is unknown", async () => {
+    const { stdout, stderr, exitCode } = await captureRun(["bogus"]);
+
+    expect(exitCode).toBe(1);
+    expect(stderr).toContain("bogus");
+    expect(stdout).toContain("qfai <command> [options]");
+    await expectInstallationDiagnostic(stderr);
+  });
+
+  // QFAI:EX-0001-0222-07
+  it("identifies the running installation while keeping an unknown workflow operation's refusal JSON", async () => {
+    const { stdout, stderr, exitCode } = await captureRun([
+      "workflow",
+      "go",
+      "--in",
+      "tmp/request.json",
+    ]);
+
+    expect(exitCode).toBe(2);
+    const refusal = JSON.parse(stdout) as { message: string };
+    expect(refusal).toMatchObject({
+      ok: false,
+      reasons: [{ reason: "invalid-input", subject: "go" }],
+    });
+    expect(stderr).toContain("go");
+    await expectInstallationDiagnostic(stderr);
+    await expectInstallationDiagnostic(refusal.message);
+  });
+
   it("writes the rejection reason to stderr, not only usage to stdout", async () => {
     const { stdout, stderr } = await captureRun(["validate", "--profile", "bogus"]);
     expect(stderr).toContain("--profile");
@@ -290,6 +327,13 @@ describe("cli usage errors", () => {
     const { stdout, stderr } = await captureRun(["--help"]);
     expect(stderr).toBe("");
     expect(stdout).toContain("qfai <command> [options]");
+  });
+
+  it("exposes the explicit decision-renumber preview and apply command in help", async () => {
+    const { stdout, stderr } = await captureRun(["sdd", "--help"]);
+    expect(stderr).toBe("");
+    expect(stdout).toContain("renumber-decision");
+    for (const flag of ["--from", "--to", "--base", "--apply"]) expect(stdout).toContain(flag);
   });
 });
 

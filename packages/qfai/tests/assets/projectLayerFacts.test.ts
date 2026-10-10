@@ -11,7 +11,7 @@
  *
  * Two classes of claim are checkable, and they are the two that went wrong.
  *
- * 1. A repository-relative path the prose names must exist.
+ * 1. A path citation must exist from the repository root, including table cells.
  * 2. A Node version stated as a floor must be the one `package.json` declares.
  *
  * The layer is free to go, and this goes quiet with it rather than blocking the
