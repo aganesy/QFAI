@@ -28,6 +28,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   extraction reference defines. The agent continues from the announcement into
   the policy check and first stage without waiting for a reply. Fixes #3200.
 
+- **The decision template states the limit of a passing validation result.**
+  Every new row uses the four Approach items; validation does not establish
+  that every existing row follows that layout. Fixes #3197.
+
 - **The README quick start now holds the whole first run.** The separate "Minimal
   tutorial" section is removed from both README files: the quick start covers
   `npx qfai init`, describing the change in your own words, answering the
