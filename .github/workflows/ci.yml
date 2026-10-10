@@ -351,7 +351,7 @@ jobs:
           done
           sha256sum -c --quiet <<'PINNED_INPUTS'
           2118bc0d10c060bbe25fd4d34785ec024ed46a57e7840252d42519f5bc3b44c9  scripts/check-toolchain-action.sh
-          b59af605376a4ee9456e5ed7ed359032b31c4c4a6ad5d715a964cf453fa07a98  .github/pinned-bytes.txt
+          14d7c47efb0de016cfc4b109269960ee722d824e7d221a44e053c08ae6a1934f  .github/pinned-bytes.txt
           bb649cb2684f9db02bdbe3872f029571a8e52c4c6e2ab95e8c8fcf804370af41  .github/lifecycle-manifests.txt
           43d2586975550f5062b4af23112223068cc5676f0906c04fce2bc231df471a9e  .github/command-files.txt
           PINNED_INPUTS
@@ -649,6 +649,14 @@ jobs:
       - uses: ./.github/actions/setup
       - name: Build qfai on the Windows runner
         run: pnpm -C packages/qfai build
+      # SHIPPED-CI: not-applicable
+      # Because: the repository mirror points to package assets; adopters use
+      # their installed assistant tree.
+      - name: Prepare repository assistant mirror
+        env:
+          TEMP: ${{ runner.temp }}\qfai tmp
+          TMP: ${{ runner.temp }}\qfai tmp
+        run: node scripts/link-assistant-tree.mjs
       - name: Run the Windows parity suites
         env:
           TEMP: ${{ runner.temp }}\qfai tmp
