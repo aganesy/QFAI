@@ -12,7 +12,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   applicable authority remain open. Interactive sessions retain actual user
   confirmation.
 - Add a branch catch-up helper that merges the remote default branch, resolves
-  only proven digest conflicts and reseals generated pins without running tests.in
+  only proven digest conflicts and reseals generated pins without running tests.
 
 - **A workspace bootstrap command prepares this checkout's local launcher.**
   It runs frozen installs around the package build, stops at the first failed
