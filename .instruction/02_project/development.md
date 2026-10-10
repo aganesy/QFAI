@@ -28,6 +28,13 @@ resolves. A worktree that needs its own build runs these three steps with its
 own `node_modules`, never through a junction shared with another checkout: an
 install there repoints the link for every checkout that shares it.
 
+On Windows, a worktree can contain a file symlink to a directory that the OS
+cannot follow. Plain `qfai init` can repair this damage on its owned, same-target
+directory wrappers. This repository's canonical `.qfai/assistant/` mirror is
+managed separately by [the mirror script](../../scripts/link-assistant-tree.mjs).
+That script retains matching link text without checking followability, so
+wrapper repair does not establish that the mirror is usable.
+
 ## Build and Quality Gates
 
 ```
