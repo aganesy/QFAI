@@ -6,6 +6,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A workspace bootstrap command prepares this checkout's local launcher.**
+  It runs frozen installs around the package build, stops at the first failed
+  step and rejects shared dependency links. Fixes #3244.
 - **Validation can find forbidden identifiers from hash-only configuration.**
   The optional policy scans tracked file names and current bytes, including
   binary and ignored tracked files. Unsafe or incomplete coverage is an error;
@@ -37,6 +40,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   receives the full rules; later edits retain concise guidance. Missing session
   identity or unavailable counters keep the full reminder. Posting reminders
   remain unchanged.
+
+- **Missing test annotations use grammatical diagnostics.** Messages use
+  "an E2E test", "an integration or API test" and "a test" for the three
+  obligation kinds. Coverage and severity are unchanged. Fixes #3239.
 
 - **Approved specification changes distinguish pending test annotations from completed tests.**
   An exact AC test exception needs both specification-change and test-deferral
