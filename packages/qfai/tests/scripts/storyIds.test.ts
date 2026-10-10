@@ -7,7 +7,7 @@
  * hold what reaches stdout and what the user's git configuration cannot change.
  */
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -287,6 +287,108 @@ describe("against a repository", () => {
       expect(log.mock.calls).toEqual([["DEC-0003"]]);
     } finally {
       log.mockRestore();
+    }
+  });
+});
+
+describe("main IDs received through a merge", () => {
+  it.each([
+    { name: "excludes inherited DEC IDs after the merge is committed", commitMerge: true },
+    {
+      name: "refuses a pending merge before assigning inherited IDs to this branch",
+      commitMerge: false,
+    },
+  ])("$name", async ({ commitMerge }) => {
+    const root = mkdtempSync(path.join(os.tmpdir(), "story-ids-merge-"));
+    const work = path.join(root, "work");
+    const bare = path.join(root, "origin.git");
+    const git = (cwd: string, ...args: string[]): string =>
+      execFileSync("git", args, { cwd, encoding: "utf-8" }).trim();
+    const decisionFile = path.join(work, ".qfai", "spec", "decisions.md");
+    const writeDecisions = (ids: string[]): void => {
+      writeFileSync(
+        decisionFile,
+        [
+          "# Decisions",
+          "",
+          "## Decisions",
+          "",
+          "| ID | Content | Approach | Status |",
+          "| --- | --- | --- | --- |",
+          ...ids.map((id) => `| ${id} | Change request: x | - Date: 2026-09-28 | DONE |`),
+          "",
+        ].join("\n"),
+      );
+    };
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      git(root, "init", "-q", "--bare", "-b", "main", bare);
+      git(root, "init", "-q", "-b", "main", work);
+      git(work, "config", "user.email", "test@example.com");
+      git(work, "config", "user.name", "test");
+      git(work, "config", "commit.gpgsign", "false");
+      git(work, "remote", "add", "origin", bare);
+      mkdirSync(path.dirname(decisionFile), { recursive: true });
+      writeDecisions(["DEC-0001"]);
+      git(work, "add", "-A");
+      git(work, "commit", "-q", "-m", "base");
+      const base = git(work, "rev-parse", "HEAD");
+      git(work, "push", "-q", "origin", "main");
+
+      const inherited = [
+        "DEC-0001",
+        "DEC-0002",
+        "DEC-0003",
+        "DEC-0004",
+        "DEC-0005",
+        "DEC-0006",
+        "DEC-0007",
+      ];
+      git(work, "checkout", "-q", "-b", "other");
+      writeDecisions(inherited);
+      git(work, "commit", "-q", "-am", "other IDs");
+      git(work, "push", "-q", "origin", "HEAD:refs/pull/7/head");
+      git(work, "checkout", "-q", "main");
+      writeDecisions(inherited);
+      git(work, "commit", "-q", "-am", "main IDs");
+      git(work, "push", "-q", "origin", "main");
+      git(work, "checkout", "-q", "-b", "mine", base);
+      git(work, "commit", "-q", "--allow-empty", "-m", "feature without DEC changes");
+      git(work, "merge", "--no-commit", "--no-ff", "main");
+      if (commitMerge) {
+        git(work, "commit", "-q", "-m", "merge main");
+        expect(git(work, "rev-parse", "HEAD^2")).toBe(git(work, "rev-parse", "main"));
+      } else {
+        expect(git(work, "rev-parse", "--verify", "MERGE_HEAD")).toBe(
+          git(work, "rev-parse", "main"),
+        );
+        expect(git(work, "show", "HEAD:.qfai/spec/decisions.md")).not.toContain("DEC-0002");
+      }
+
+      const fetchHead = path.join(work, ".git", "FETCH_HEAD");
+      if (!commitMerge) expect(existsSync(fetchHead)).toBe(false);
+
+      const list = () => ({ code: 0, pulls: [{ number: 7, branch: "other" }] });
+      const code = await run(["check"], { cwd: work, list });
+      if (commitMerge) {
+        expect(code).toBe(0);
+        expect(log.mock.calls).toEqual([
+          ["No ID this branch adds is taken elsewhere (0 checked)."],
+        ]);
+        expect(error.mock.calls).toEqual([]);
+      } else {
+        expect(code).toBe(2);
+        expect(log.mock.calls).toEqual([]);
+        expect(error.mock.calls.flat().join("\n")).toMatch(/finish.*merge/i);
+        expect(existsSync(fetchHead)).toBe(false);
+      }
+      const output = [...log.mock.calls, ...error.mock.calls].flat().join("\n");
+      expect(output).not.toMatch(/DEC-\d{4}.*also added|renumber/i);
+    } finally {
+      log.mockRestore();
+      error.mockRestore();
+      rmSync(root, { recursive: true, force: true });
     }
   });
 });
