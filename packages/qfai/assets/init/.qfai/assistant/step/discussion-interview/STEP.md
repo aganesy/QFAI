@@ -10,8 +10,10 @@ routing-profile: default
 # discussion-interview
 
 The core interview for concept, scope, stakeholders and constraints. It is a
-user session: the interview is this stage's work, so every decision is put to
-the user. An interview with no method is the agent deciding and reporting.
+user session by default: every decision is put to the user. The only delegated
+exception is `.agents/rules/grilling.md#explicit-delegation-for-a-discussion`,
+with actual user authority recorded before agent-to-agent rounds.
+An interview with no method is the agent deciding and reporting.
 
 ## Reads
 
@@ -78,13 +80,14 @@ Where each outcome is recorded is
 
 ## How the session ends
 
-A user session reaches four of the five endings the rule names — `adopted` ends
-only a delegated session — and three of them let authoring start:
+The default user session reaches four of the five endings. An explicitly
+delegated discussion may also end `adopted` under the master's conditions:
 
 | Ended         | What the user did                                                                                                | Authoring                                                                                                                                                                  |
 | ------------- | ---------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `confirmed`   | Confirmed on the session's own condition: no node open — the frontier empty **and** no fact lookup still running | Starts                                                                                                                                                                     |
 | `user-closed` | Said `proceed`, `done`, or words to that effect                                                                  | Starts. Lookups already running are finished and each decision still open becomes a labelled assumption, except one a document requires the user to make and record        |
+| `adopted` | Explicitly delegated judgment for this scope | Starts only after the recorded delegation conditions are met; no open node, lookup or unsupported human decision remains |
 | `no-question` | Nothing — `--auto` reached nobody                                                                                | Starts. Every node still open is registered — a decision, and a fact only the user holds, which nothing else can supply, and the open count is then what blocks completion |
 | `stopped`     | Said `stop`                                                                                                      | **Does not start.** Report every open decision as open and end the run                                                                                                     |
 
@@ -101,11 +104,14 @@ still there, so a decision they own is put again rather than assumed. The
 run consumes, and this is a decision the run is not permitted to take. The
 visual direction is the case here —
 `.qfai/assistant/skill/qfai-discussion/references/design-dna-intake.md` says
-only the user may choose a theme. The rule states the same bound from its side:
+only the user may choose a theme by default. Only an actual specifically
+applicable user instruction can override that request under the master's
+authority conditions; the agents' choice is never labelled `chosen_by: user`.
+The rule states the same bound from its side:
 closing the questions waives the agent's own uncertainty, never an
 authorization the user has not given.
 
-**`--auto` is the other case, and its answer is already written.** Nobody is
+**`--auto` without qualifying explicit delegation is the other case.** Nobody is
 there to put the question to, so the documented path holds: take the most
 conventional candidate, record it `chosen_by: assumption`, open it in
 `11_OQ-Register.md`, and author — the open count is what blocks completion.
@@ -136,8 +142,9 @@ runs.
 The reviewer confirms:
 
 - the stage report's `## Grilling Session` row shows the session ended before
-  authoring began, with `Ended` one of `confirmed`, `user-closed` or
-  `no-question`;
+  authoring began, with `Ended` one of `confirmed`, `user-closed`,
+  `no-question`, or `adopted` with the recorded explicit-delegation conditions
+  verified;
 - every decision the session settled is recorded where
   `.qfai/assistant/skill/qfai-discussion/references/oq-and-deferred-rules.md`
   says;

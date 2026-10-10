@@ -53,5 +53,13 @@ The stage holds one session per run. The row goes in the stage report, under
 | confirmed | <ISO8601> | <ISO8601> | empty | none in flight | <n> | <n> |
 ```
 
-Only `confirmed`, `user-closed` and `no-question` authorize authoring.
-`Authoring began` is later than `Ended at`.
+The authoring endings are `confirmed`, `user-closed`, `no-question`, and
+conditionally `adopted`. For `adopted`, verify
+`.agents/rules/grilling.md#explicit-delegation-for-a-discussion`: actual user
+delegation with source, scope and authority; actual griller-to-author rounds
+with reasons and dissent; no open node or running lookup; all consumed required
+inputs present; and actual human authority for every reserved decision.
+Record these in the stage evidence, not as a fictional human option answer.
+`Ended at` and `Authoring began` are actual timestamps, with authoring later.
+A missing hard-required consumed input authorizes no authoring ending.
+Allowing authoring is not a completion or validation receipt.

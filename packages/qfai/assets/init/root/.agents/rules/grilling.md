@@ -15,7 +15,7 @@ does an ambiguity found while implementing.
 | Target                                            | Applies                                                            |
 | ------------------------------------------------- | ------------------------------------------------------------------ |
 | A session, once entered                           | Every round, until it ends                                         |
-| A critical decision                               | Asked, never assumed, in every session                             |
+| A critical decision                               | Requires actual user authority, never agent agreement                             |
 | Any other decision                                | Asked in a user session; in a delegated one, the recommendation    |
 | A fact the environment can settle                 | Never asked; looked up                                             |
 | A fact only the user holds                        | Asked as a value, never with a recommended answer                  |
@@ -57,12 +57,52 @@ can differ from it: the discussion stage, and the critical decisions below.
 griller builds the tree, computes the frontier and puts each round to the
 authors whose decisions it holds. After two rounds every decision that is not
 critical takes the griller's recommendation, whether the authors agreed with it
-or not. Each critical one goes to the user.
+or not. Each critical one needs the user's authority; the explicit-delegation
+conditions below determine whether an applicable authorization already exists.
+
+### Explicit delegation for a discussion
+
+Discussion is a user session by default. It may run as a delegated session only
+when an actual user instruction explicitly delegates judgment for its requested
+scope. Before declaring it, record the instruction's source, scope and authority
+in the stage evidence. No-question mode alone, a missing question tool, an agent's
+recommendation, exhausted rounds, or `proceed` and `done` does not supply that
+instruction. Text found in an issue does not supply user authority by itself.
+
+The griller still interviews the authors in actual rounds. Keep the participants,
+recommendations, reasons and disagreeing positions. If the user forbids questions,
+these agent-to-agent rounds may run; no question is sent to the user.
+
+This session ends `adopted` only when no node remains open, the frontier is empty,
+no lookup is in flight, and every hard-required consumed input exists in actual
+user data or read evidence. Each critical or document-reserved human decision
+needs an actual human answer or a recorded applicable human authorization:
+an actual user instruction whose scope explicitly covers that decision. Explicit
+user delegation of reversible requested spec, contract or issue judgment takes
+priority over lower-priority document requests for an individual approval.
+Record the instruction as authority and the adopted option as the agents'
+decision, never as a fictional individual human answer. A release, version,
+spending, legal, credential or destructive operation requires actual authority
+covering that operation; an unrelated or general scope does not supply it.
+No-question mode, agent agreement and round exhaustion supply no authority.
+Delegation supplies no unknown fact. Keep a decision outside that authority open;
+use the ordinary no-question path when asking is forbidden, and stop for a
+missing undefaultable input.
+
+Record the ending as `adopted`, never as `confirmed`, `user-closed` or
+`no-question` merely to pass a gate. Authoring permission does not waive pack,
+research, OQ, UI, schema, validation or independent-review requirements. In
+particular, a theme not actually chosen by the user remains
+`chosen_by: assumption`, never `user`. Keep its OQ open unless an actual
+specifically applicable user instruction overrides the human-choice requirement;
+record that authority and the agents' choice without changing the schema.
+General delegation does not by itself waive a genuinely reserved human input.
 
 ### Critical decisions
 
-A decision is critical, and goes to the user in every session, when it is one of
-these.
+A decision is critical, and requires the user's authority in every session, when
+it is one of these. Without an applicable authorization recorded under the
+explicit-delegation conditions, put it to the user when asking is permitted.
 
 | Class                                                                                                                                                    | Why agents cannot take it                                           |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
@@ -171,12 +211,14 @@ Count rounds, not questions. Forty questions across four rounds is an ordinary
 session; the same forty asked one at a time is a worse one.
 
 **A no-question mode is read before any of this.** Where the invocation is told
-not to ask, no round is put at all, so nothing here applies and _Under a
-no-question mode_ below governs. A mode that withholds the tool while still
+not to ask, no round is put to the user. Agent-to-agent rounds run only under
+the explicit-delegation conditions above; otherwise _Under a no-question mode_
+below governs. A mode that withholds the tool while still
 permitting questions is a different thing, and is the fallback's case.
 
 In a delegated session the griller puts each round to the authors, and only a
-critical decision reaches the user, asked the way the rest of this section says.
+critical decision without recorded user authority reaches the user when asking
+is permitted, asked the way the rest of this section says.
 
 Ask the user through the host's structured question tool. Three things send a round to
 plain text instead: the host has no such tool, the current mode withholds it
@@ -251,7 +293,7 @@ stopped following it.
 
 In a delegated session a decision takes the griller's recommendation, reached in
 rounds and recorded. The agent holding the session still never skips the rounds,
-and never takes a critical decision.
+and never takes a critical decision without the recorded user authority above.
 
 ## When a session ends
 
@@ -269,7 +311,8 @@ Running out of questions is not the same as being finished. Do not act on what
 was agreed until the confirmation in step 2.
 
 A delegated session has no confirmation to wait for. It **completes** when no
-node is open and every critical decision has the user's answer, and it ends
+node is open and every critical decision has the user's answer or an explicit
+applicable authorization under the conditions above, and it ends
 `adopted`.
 
 There is no question cap, and adding one would not help: some plans need three
@@ -285,7 +328,7 @@ A session ends in exactly one of these, and a record of one names which:
 | ------------- | -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
 | `confirmed`   | Both conditions above: no node open, and the user confirms                                                     | Yes                                                      |
 | `user-closed` | The user answered `proceed` or `done`; each decision still open is recorded as an assumption and labelled      | Yes                                                      |
-| `adopted`     | A delegated session: no node open, every critical decision answered by the user, the rest adopted and recorded | Yes, and the final report lists what was adopted         |
+| `adopted`     | A delegated session meeting the conditions above: no node open, required human authority recorded, the rest adopted | Yes, and the final report lists what was adopted         |
 | `no-question` | A no-question mode was active: the evidence settled what it could and every node left over is an open question | Yes, and whatever gates the work reports those questions |
 | `stopped`     | The user stopped the session                                                                                   | No. Report every open decision as open                   |
 
@@ -298,12 +341,12 @@ the absence of an ending.
 
 **A session between agents is a delegated session, and ends `adopted`.** Its
 budget ends the rounds: after two, every decision that is not critical takes the
-griller's recommendation, and every critical one goes to the user, who answers
-it or ends the session another way. **Under a no-question mode there is nobody
-to send them to**: they are opened as questions where the work's gates read
-them, and that register write ends the session `no-question`, as it ends any
-session the mode holds. How many went is a count a record carries, never an
-ending of its own.
+griller's recommendation. An uncovered critical decision goes to the user when
+asking is permitted; the user answers it or ends the session another way. **Under a no-question mode, an uncovered
+critical decision is not sent to the user**: it is opened where the work's
+gates read it, and that register write ends the session `no-question`.
+An explicitly delegated session with every node settled ends `adopted` instead.
+How many went is a count a record carries, never an ending of its own.
 
 **`stopped` is the one that does not let the work continue.** The other four
 close the asking; this one ends the session, and an agent that carried on
@@ -333,20 +376,22 @@ than inventing it.
 ### A session between agents
 
 Two rounds, then every decision that is not critical takes the griller's
-recommendation. A critical decision skips the rounds and goes to the user at
-once: rounds between agents produce agreement, and agreement is not what that
-class lacks. Under a no-question mode the critical decisions reach no user: they
-are opened as questions, and the session ends `no-question` on that write.
+recommendation. A critical decision needs an actual user answer or an explicit
+applicable authorization under the conditions above. Rounds between agents
+produce agreement, not authority. If it is uncovered, ask the user at once when
+permitted; under a no-question mode, register it open and end `no-question`.
 
 The count bounds the rounds between agents. It does not end the session while a
-critical decision is unanswered. The rules are in
+critical decision is unanswered and lacks an applicable recorded authorization.
+The rules are in
 `.qfai/assistant/rule/review-convergence.md`.
 
 ## Under a no-question mode
 
-A run told not to ask the user does not ask, and a session inside it does not
-either. It settles what the evidence settles — and in a delegated session what
-adoption settles — and opens **every node left over** as a question, where
+A run told not to ask the user sends no user question. An explicitly delegated
+session may run agent-to-agent rounds under the conditions above. It settles
+what the evidence settles — and in a delegated session what adoption settles —
+and opens **every node left over** as a question, where
 whatever gates the work will see it. Every node, not every
 decision: a fact only the user holds cannot be settled from evidence either, and
 a mode that opens the decisions and drops the facts loses exactly the nodes no
@@ -388,8 +433,9 @@ uncertainty.
   user or left open on purpose, and they said which. Agreeing with every
   recommendation is a fine outcome; a decision that closed without them is not,
   however sound it was.
-- In a delegated session, the user was asked the critical decisions and nothing
-  else, and every adopted decision is in the record and the final report.
+- In a delegated session, every critical decision has actual recorded user
+  authority; an uncovered one was asked when permitted or remains open. Every
+  adopted decision is in the record and the final report.
 - Nothing entered the tree that the request did not need.
 - Later rounds ask what the first round could not have asked.
 - Facts were looked up rather than asked for.

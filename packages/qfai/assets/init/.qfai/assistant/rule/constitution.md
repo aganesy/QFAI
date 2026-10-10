@@ -3,6 +3,13 @@
 This document defines **non‑negotiable operating rules** for QFAI agents and subagents.
 It is inspired by proven “constitution / articles / guardrails” patterns in existing SDD toolchains, but adapted to QFAI’s minimal workflow.
 
+Actual user instructions take priority over repository guidelines. Recorded
+applicable user authority is defined in
+`.agents/rules/grilling.md#explicit-delegation-for-a-discussion`: an explicit
+in-scope delegation may authorize reversible requested judgment without a
+fictional individual approval answer. It supplies no unknown fact or authority
+for an operation outside its scope.
+
 Inside an `npx qfai workflow` run, what authorizes the run's work and the one target a work order binds its stage to are stated in `.qfai/assistant/rule/shared-skill-operating-baseline.md#what-authorizes-a-runs-work`. They add to these articles and except none.
 
 ---
@@ -260,7 +267,7 @@ sanctioned move, and neither is asking a sixth clarification anyway.
 **A grilling session survives exhaustion too**, and for the same reason: its
 questions never spent budget, so there is none left to run out of. A session
 already under way continues to its own end condition, a delegated one still
-putting its critical decisions to the user, and a stage reached after
+requiring actual user authority for critical decisions, and a stage reached after
 exhaustion still opens one where its work calls for it. Treating a spent budget
 as the end of a session would put the design decisions back where this article
 found them — settled quietly, on an assumption nobody was asked about.
@@ -322,15 +329,17 @@ If confidence is low, inspect the repository further.
 
 **Stop on detection.** Where a contradiction in the spec, an unconsidered case,
 or a technical obstacle surfaces mid-run, stop rather than deciding alone.
-Settle it between the agents, and put a critical decision to the user
-(`.agents/rules/grilling.md#critical-decisions`). A contradiction with the spec
-is critical. Nothing is recorded beyond the stage's final report.
+Settle it between the agents. A critical decision needs an actual user answer
+or recorded applicable authorization under
+`.agents/rules/grilling.md#explicit-delegation-for-a-discussion`; without it,
+ask when permitted or register it open. A contradiction with the spec is
+critical. Nothing is recorded beyond the stage's final report.
 
 **Only one outcome is the Drift Protocol's.**
 
 | The stop concludes                                                                       | What follows                                                                                                   |
 | ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| Settled input must change                                                                | `.qfai/assistant/rule/drift-protocol.md`: stop the dependent work, raise the Change Request, wait for approval |
+| Settled input must change                                                                | `.qfai/assistant/rule/drift-protocol.md`: stop dependent work, raise the Change Request, record actual applicable user authority before changing it |
 | The obstacle is this run's to solve — an unavailable dependency, an approach that failed | The run solves it. Nothing upstream changes, so there is nothing to approve                                    |
 
 Stopping does not change settled input and is not a second way to. What it
@@ -366,7 +375,9 @@ rule master names.
 Rules:
 
 0. **A no-question mode is read first.** Where rule 4 applies, no question is put
-   at all, so there is nothing whose availability rules 1 to 3 could judge. Read
+   to the user, so there is nothing whose availability rules 1 to 3 could judge.
+   Actual qualifying explicit delegation may still permit agent-to-agent rounds
+   under the master; no-question mode alone does not. Read
    the other way round, a mode that withholds the tool would make it unavailable,
    route the question to rule 3's plain-text fallback, and hand the agent a rule
    that says to ask beside one that says not to.
@@ -406,12 +417,14 @@ Rules:
    this rule is activated by the `--auto` flag alone.
 6. **A grilling session does not reach the user under `--auto`.** Its questions
    are exempt from the Article VI budget, not from rule 4: a no-question mode
-   asks nothing, whatever the question is for. The session still runs — it
+   sends no question to the user, whatever it is for. The session still runs — it
    settles what the repository settles, dispatches sub-agents for the facts, and
-   in a delegated session adopts the griller's recommendation for every decision
-   that is not critical — and every **node** left over (in a delegated session,
-   each critical decision and each fact only the user holds) is **opened as a
-   question in the register the stage reads**, so the stage cannot complete over it. Every node, not every
+   in a delegated session adopts the griller's recommendation for non-critical
+   decisions. A critical decision needs an actual user answer or recorded
+   applicable authorization; without it the node stays open. Every **node**
+   left over, including uncovered critical decisions and unavailable user-held
+   facts, is **opened as a question in the register the stage reads**, so the
+   stage cannot complete over it. Every node, not every
    decision: a fact only the user holds cannot be settled from evidence either,
    and opening the decisions while dropping the facts loses exactly the nodes no
    lookup could have reached. Where a document requires the field to hold
@@ -419,7 +432,10 @@ Rules:
    open question; a labelled value under an open question is not a settled
    decision. What rule 4 does not license is the assumption **alone**, which
    reads as settled to whoever finds it next. A fact declared undefaultable has
-   no value to write down at all: the run stops and names it.
+   no value to write down at all: the run stops and names it. A qualifying
+   explicitly delegated session ends `adopted` only with the master's empty-tree,
+   actual-input and authority conditions met. No-question mode alone cannot
+   close a node or authorize a reserved decision.
 
 This article survives context compaction because `.qfai/assistant/rule/constitution.md` is a P1 reload target.
 

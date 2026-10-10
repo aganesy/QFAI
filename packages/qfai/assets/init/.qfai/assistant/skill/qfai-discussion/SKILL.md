@@ -120,6 +120,12 @@ End the turn with a question listing the next actions, `/qfai-sdd` recommended, 
 
 ## Default Autopilot Policy
 
+The entries below govern the default user interview. Only an actual user
+delegation recorded under
+`.agents/rules/grilling.md#explicit-delegation-for-a-discussion` enables the
+delegated `adopted` path. No-question mode alone does not enable it; missing
+inputs and uncovered human decisions retain their ordinary blocking behavior.
+
 - ask-user:
   - every decision the interview puts on the frontier, over every topic in `references/discussion-coverage-checklist.md`. Running the interview is what this skill performs, so these are its own operations
   - the confirmation that closes the session

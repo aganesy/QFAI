@@ -22,12 +22,13 @@ Blocking for every pack, UI-bearing or not:
    resolves to a `sources[].id`, and at least one `reflection[]` entry records an apply decision.
    `npx qfai validate --profile discussion --fail-on error` reports `QFAI-RESEARCH-*` until it is.
 2. The stage report's `## Grilling Session` row shows the session ended before authoring began,
-   with `Ended` reading one of the three endings that authorize it:
+   with `Ended` reading an authoring ending and its conditions met:
 
    | Ended         | Also required                                                                                                  |
    | ------------- | -------------------------------------------------------------------------------------------------------------- |
    | `confirmed`   | No node open — the frontier empty **and** no fact lookup still running                                         |
    | `user-closed` | Lookups finished, and every decision still open recorded as a labelled assumption                              |
+   | `adopted` | Recorded explicit delegation, actual author rounds, no open node or lookup, all required inputs and applicable human authority; see `.agents/rules/grilling.md#explicit-delegation-for-a-discussion` |
    | `no-question` | Every node still open registered — a decision, and a fact only the user holds — so item 3 below is what blocks |
 
    `stopped` never completes: the user ended the run, and a pack authored after that is the run
@@ -43,6 +44,10 @@ Blocking for every pack, UI-bearing or not:
    pack authored mid-session looks exactly like one authored after: nine files, every topic
    covered, every open question registered. What is missing is that someone agreed to what is in
    them, and nothing downstream can tell.
+
+   Delegation is not a human confirmation or a completion receipt. The
+   ordinary research, pack, OQ, UI, schema, validation and independent-review
+   gates remain blocking. No reserved decision or missing fact is forced closed.
 
    The no-question row is the one to read carefully: `--auto` can reach nobody, so waiting for a
    confirmation would stop the run before it could write the open questions that are what block it.
@@ -73,7 +78,11 @@ Completion is blocked until all are true:
 5. `01_Context.md#Design Direction` names an adopted theme, what departs from it, and what stays
    ordinary. This is the one visual decision made here, because no later stage asks the user for
    it: `/qfai-sdd`'s `common-design-md` step authors tokens from whatever is recorded. A direction taken without the
-   user carries `chosen_by: assumption` and an open entry in `11_OQ-Register.md`.
+   user carries `chosen_by: assumption`, never `user`. Its OQ stays open unless
+   an actual specifically applicable user instruction overrides the human-choice
+   requirement under the master's conditions; record that authority and the agents'
+   choice without falsifying the schema. General delegation alone does not waive
+   a genuinely reserved human input.
 
 Evaluation axes are global constants (4-step ordinal: weak / acceptable / strong /
 exceptional) and are NOT authored as discussion sidecars.

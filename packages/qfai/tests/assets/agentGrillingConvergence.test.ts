@@ -84,7 +84,10 @@ describe("a grilling session between agents has an end", () => {
       // The discussion pack counts as an answer here: it is where the user
       // already answered product intent in a user session.
       expectPhrase(content, "A discussion pack answers product intent for this test.");
-      expectPhrase(content, "Each uncovered critical decision goes to the user with every position");
+      expectPhrase(
+        content,
+        "Each uncovered critical decision goes to the user with every position",
+      );
       // The budget bounds the rounds, never the wait for the user's answer.
       expectPhrase(
         content,

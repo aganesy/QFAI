@@ -266,9 +266,7 @@ describe("the primitive carries the master's clauses", () => {
       expect(text).toMatch(/A no-question mode is read before any of this/);
       expect(text).toMatch(/A no-question mode silences user questions, not the session/);
       expect(text).toMatch(/Agent rounds require explicit delegation/);
-      expect(text).toMatch(
-        /A withheld tool with questions still permitted uses the fallback/,
-      );
+      expect(text).toMatch(/A withheld tool with questions still permitted uses the fallback/);
       expect(text).toMatch(/The whole round falls back, not the question that triggered it/);
       expect(text).toMatch(/say which question it could not carry/);
     });
