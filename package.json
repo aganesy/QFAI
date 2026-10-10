@@ -13,6 +13,7 @@
   },
   "scripts": {
     "preinstall": "node ./scripts/check-not-a-dependency.mjs",
+    "bootstrap": "node ./scripts/bootstrap.mjs",
     "build": "pnpm -C packages/qfai build",
     "sync:ssot": "node ./scripts/link-assistant-tree.mjs && node ./scripts/sync-init-to-root.mjs && node ./scripts/gen-codex-agents.mjs",
     "ci:gate": "pnpm ci:gate:checks && pnpm -C packages/qfai test",

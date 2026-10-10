@@ -45,6 +45,27 @@ const LINE = /^node -e "([^"]*)" ([a-z-]+)$/;
 type Entry = Record<string, unknown>;
 type Group = { readonly matcher: unknown; readonly hooks: readonly Entry[] };
 
+function expectNoEmbeddedReminderText(program: string, messages: unknown): void {
+  if (typeof messages !== "object" || messages === null) throw new Error("no reminder catalog");
+  for (const message of Object.values(messages)) {
+    if (typeof message !== "object" || message === null) throw new Error("invalid reminder");
+    const output: unknown = Reflect.get(message, "hookSpecificOutput");
+    const full: unknown =
+      typeof output === "object" && output !== null
+        ? Reflect.get(output, "additionalContext")
+        : undefined;
+    for (const context of [
+      full,
+      Reflect.get(message, "reason"),
+      Reflect.get(message, "briefContext"),
+    ]) {
+      if (typeof context !== "string") continue;
+      expect(program).not.toContain(context);
+      expect(program).not.toContain(JSON.stringify(context).slice(1, -1));
+    }
+  }
+}
+
 function asRecord(value: unknown, what: string): Entry {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     throw new Error(`${what} is not an object`);
@@ -258,6 +279,9 @@ describe("the Codex tool-time reminders", () => {
   });
 
   it("keep every program free of what a shell would expand or cut", async () => {
+    const messages: unknown = JSON.parse(
+      await readFile(path.join(repoRoot, SHIPPED_MESSAGES), "utf-8"),
+    );
     for (const event of ALL_EVENTS) {
       for (const entry of (await readGroups(SHIPPED_CODEX, event)).flatMap((g) => g.hooks)) {
         const { program } = partsOf(entry);
@@ -266,7 +290,7 @@ describe("the Codex tool-time reminders", () => {
         // and two to the others.
         expect(program).not.toMatch(/[$`%!"]/);
         expect(program).not.toContain("\\\\");
-        expect(program).not.toContain("additionalContext");
+        expectNoEmbeddedReminderText(program, messages);
         expect(entry.type).toBe("command");
         expect(entry.timeout).toBeGreaterThan(0);
         expect(entry.timeout).toBeLessThanOrEqual(30);
@@ -396,11 +420,8 @@ describe("the Codex tool-time reminders", () => {
 /** Calls between two prints of one reminder, after the first. */
 const PERIOD = 20;
 
-/** The six limited entries, each with a call it prints for. */
+/** Entries whose existing limited schedule is unchanged. */
 const LIMITED = [
-  ["PreToolUse", "grilling-design-artifact", "apply_patch", patch("*** Update File: src/a.ts")],
-  ["PreToolUse", "grilling-delegation", "spawn_agent", "delegate"],
-  ["PreToolUse", "api-budget", "Bash", "gh api repos/o/r"],
   ["PostToolUse", "documentation-clarity-after-write", "apply_patch", patch("*** Add File: a.md")],
   [
     "PostToolUse",
@@ -411,8 +432,163 @@ const LIMITED = [
   ["PostToolUse", "minimal-implementation", "apply_patch", patch("*** Update File: src/a.ts")],
 ] as const;
 
+const POINTERS = [
+  [
+    "PreToolUse",
+    "grilling-design-artifact",
+    "apply_patch",
+    patch("*** Update File: src/a.ts"),
+    ".agents/rules/grilling.md",
+  ],
+  ["PreToolUse", "grilling-delegation", "spawn_agent", "delegate", ".agents/rules/grilling.md"],
+  ["PreToolUse", "api-budget", "Bash", "gh api repos/o/r", ".agents/rules/api-budget.md"],
+  ["UserPromptSubmit", "free-text-entry", "", "Fix the failing test", "qfai-run"],
+  [
+    "UserPromptSubmit",
+    "structured-question",
+    "",
+    "Fix the failing test",
+    ".agents/rules/user-questions.md",
+  ],
+] as const;
+
+async function fullContext(key: string): Promise<string> {
+  const messages = asRecord(
+    JSON.parse(await readFile(path.join(repoRoot, SHIPPED_MESSAGES), "utf-8")),
+    "messages",
+  );
+  const output = asRecord(asRecord(messages[key], key).hookSpecificOutput, "hookSpecificOutput");
+  if (typeof output.additionalContext !== "string") throw new Error("no additionalContext");
+  return output.additionalContext;
+}
+
+async function firedContext(
+  entry: Entry,
+  shell: CodexShell,
+  cwd: string,
+  input: string,
+  event: string,
+): Promise<string> {
+  const result = await runCodexLine(entry, shell, cwd, input);
+  expect(eventOf(shell, result)).toBe(event);
+  const envelope = asRecord(JSON.parse(result.stdout), "envelope");
+  expect(envelope).not.toHaveProperty("briefContext");
+  const output = asRecord(envelope.hookSpecificOutput, "hookSpecificOutput");
+  if (typeof output.additionalContext !== "string") throw new Error("no additionalContext");
+  return output.additionalContext;
+}
+
+function expectPointer(context: string, full: string, reference: string): void {
+  expect(context).toContain(reference);
+  expect(context.trim()).not.toBe("");
+  expect(context).not.toMatch(/[\r\n\u2028\u2029]/);
+  expect(context.length).toBeLessThan(full.length);
+  if (reference === "qfai-run") {
+    expect(context).toMatch(/\bnew requests?\b.*\bplan\b/i);
+    expect(context).toMatch(
+      /\b(?:requested|pending|waiting)\b.*\b(?:answers?|results?|repl(?:y|ies))\b/i,
+    );
+    expect(context).toMatch(/\b(?:current|same|waiting)\b.*\bstep\b/i);
+    expect(context).not.toMatch(/\b(?:activeRun|turn_id)\b/);
+  }
+}
+
 // QFAI:EX-0001-0196-40
 describe("the Codex tool-time reminders that repeat", () => {
+  // QFAI:EX-0001-0196-56
+  it.each(POINTERS)(
+    "prints %s/%s in full once, then a pointer under every shell",
+    async (event, key, tool, command, reference) => {
+      const entry = await codexEntry(event, key);
+      const full = await fullContext(key);
+      await withProject(async (cwd) => {
+        for (const shell of CODEX_SHELLS) {
+          const input = inSession(codexInput(event, tool, command), newSession());
+          expect(await firedContext(entry, shell, cwd, input, event)).toBe(full);
+          for (let call = 2; call <= PERIOD + 1; call += 1) {
+            expectPointer(await firedContext(entry, shell, cwd, input, event), full, reference);
+          }
+        }
+      });
+    },
+  );
+
+  // QFAI:EX-0001-0196-56
+  it("isolates selected counters by session, agent and message key", async () => {
+    await withProject(async (cwd) => {
+      const session = newSession();
+      for (const [event, key, tool, command, reference] of POINTERS) {
+        const entry = await codexEntry(event, key);
+        const full = await fullContext(key);
+        const main = inSession(codexInput(event, tool, command), session);
+        const helper = JSON.stringify({
+          ...asRecord(JSON.parse(main), "input"),
+          agent_id: "helper",
+        });
+        for (const input of [main, helper, inSession(main, newSession())]) {
+          expect(await firedContext(entry, "sh", cwd, input, event)).toBe(full);
+          expectPointer(await firedContext(entry, "sh", cwd, input, event), full, reference);
+        }
+      }
+    });
+  });
+
+  // QFAI:EX-0001-0196-56
+  it("prints full context on every selected trigger without an identity", async () => {
+    await withProject(async (cwd) => {
+      for (const [event, key, tool, command] of POINTERS) {
+        const entry = await codexEntry(event, key);
+        const full = await fullContext(key);
+        const input = inSession(codexInput(event, tool, command), null);
+        expect(await firedContext(entry, "sh", cwd, input, event)).toBe(full);
+        expect(await firedContext(entry, "sh", cwd, input, event)).toBe(full);
+      }
+    });
+  });
+
+  // QFAI:EX-0001-0196-56
+  it("prints full context and exits zero when selected counter storage fails", async () => {
+    await withProject(async (cwd) => {
+      for (const [event, key, tool, command] of POINTERS) {
+        const entry = await codexEntry(event, key);
+        const session = newSession();
+        const counter = path.join(os.tmpdir(), `qfai-reminder-${session}-main-${key}`);
+        await mkdir(counter);
+        try {
+          const input = inSession(codexInput(event, tool, command), session);
+          const full = await fullContext(key);
+          expect(await firedContext(entry, "sh", cwd, input, event)).toBe(full);
+          expect(await firedContext(entry, "sh", cwd, input, event)).toBe(full);
+        } finally {
+          await rm(counter, { recursive: true, force: true });
+        }
+      }
+    });
+  });
+
+  // QFAI:EX-0001-0196-56
+  it("keeps the full envelope on repeated tool calls when the catalog has no brief context", async () => {
+    const key = "api-budget";
+    const event = "PreToolUse";
+    const entry = await codexEntry(event, key);
+    await withProject(async (cwd) => {
+      const messageFile = path.resolve(cwd, "..", "..", ".agents", "rules", "reminders.json");
+      const messages = asRecord(JSON.parse(await readFile(messageFile, "utf-8")), "messages");
+      const message = asRecord(messages[key], key);
+      delete message.briefContext;
+      messages[key] = message;
+      await writeFile(messageFile, JSON.stringify(messages), "utf-8");
+      for (const shell of CODEX_SHELLS) {
+        const input = inSession(codexInput(event, "Bash", "gh api repos/o/r"), newSession());
+        for (let count = 1; count <= 3; count += 1) {
+          const result = await runCodexLine(entry, shell, cwd, input);
+          expect(eventOf(shell, result)).toBe(event);
+          expect(JSON.parse(result.stdout)).toEqual(message);
+        }
+      }
+    });
+  });
+
   it("print on a session's first call and not on its second, under every shell", async () => {
     await withProject(async (cwd) => {
       for (const [event, key, tool, command] of LIMITED) {
@@ -456,6 +632,7 @@ describe("the Codex tool-time reminders that repeat", () => {
     });
   });
 
+  // QFAI:EX-0001-0196-56
   it("count only the calls they would print for", async () => {
     await withProject(async (cwd) => {
       const cases = [
@@ -470,7 +647,16 @@ describe("the Codex tool-time reminders that repeat", () => {
           firedEventIn(entry, "sh", cwd, inSession(codexInput(event, tool, command), session));
         for (let n = 0; n < 3; n += 1) expect(await call(silent), `${key}, silent`).toBeNull();
         const first = key === "api-budget" ? loud : patch(`*** Update File: ${loud}`);
-        expect(await call(first), `${key}, first loud call`).toBe(event);
+        expect(
+          await firedContext(
+            entry,
+            "sh",
+            cwd,
+            inSession(codexInput(event, tool, first), session),
+            event,
+          ),
+          `${key}, first loud call`,
+        ).toBe(await fullContext(key));
       }
     });
   });

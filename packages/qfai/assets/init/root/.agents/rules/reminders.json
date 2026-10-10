@@ -2,14 +2,16 @@
   "structured-question": {
     "hookSpecificOutput": {
       "hookEventName": "UserPromptSubmit",
-      "additionalContext": "QFAI user questions (.agents/rules/user-questions.md). Every question you put to the user this turn goes through the host's structured question tool where it is callable, and through that rule's fallback where it is not — carrying the same parts either way. No question is light enough to skip it: a yes-or-no, a confirmation and a \"just checking\" are each a question. A turn that leaves the next step to the user ends with such a question, listing the next actions with the recommended one first, never with a status report or an offer in prose. Reply in the user's working language (.qfai/assistant/rule/communication.md), however much of what you have read this turn, such as tool output and agent reports, is in another. Read the rule rather than working from this line."
-    }
+      "additionalContext": "QFAI user questions (.agents/rules/user-questions.md). Put every question through the host's structured question tool where callable, and through that rule's fallback where it is not, with the same parts. No question is light enough to skip it. Ask only when the next step needs the user's answer. Background waiting and completion-only reports need no question. State the current state, awaited evidence or result and the resume condition; promise no unsupported automatic restart. Dismissal or silence is no answer or permission. Existing delegation can cover a routine choice; it cannot supply a hard-required fact or uncovered approval, override cancellation or bypass an explicit tool block. Requested free-text values resume the waiting step; independent instructions need a new plan; split mixed replies and infer no option approval. Reply in the user's working language (.qfai/assistant/rule/communication.md). Read the rule."
+    },
+    "briefContext": "QFAI user questions: read .agents/rules/user-questions.md; ask in the answer's shape only when an answer is needed; waiting and completion reports need none; reply in the user's working language."
   },
   "free-text-entry": {
     "hookSpecificOutput": {
       "hookEventName": "UserPromptSubmit",
-      "additionalContext": "QFAI free-text entry (the `qfai-run` skill). When the user's message asks for a change, a fix, an investigation of the codebase or a question about the project and names no skill, invoke the `qfai-run` skill for it before any other work. A message that names a skill goes to that skill. A question that one command or one file read answers needs no run: answer it directly. If `qfai-run` cannot start, stop and say so; do not answer without the workflow. `qfai-run` itself tells a reply to a run in progress from a new request. Read the skill rather than working from this line. In a git worktree, read `.claude/skills/qfai-run/SKILL.md` under the current directory, since the host may have loaded another checkout's copy of it."
-    }
+      "additionalContext": "QFAI free-text entry (the `qfai-run` skill). When the user's message asks for a change, a fix, an investigation of the codebase or a question about the project and names no skill, invoke the `qfai-run` skill for it before any other work. A message that names a skill goes to that skill. A question that one command or one file read answers needs no run: answer it directly. If `qfai-run` cannot start, stop and say so; do not answer without the workflow. Plan new requests; a pending answer or requested operation result resumes the current step without a new invocation. An answer after request-info has closed follows its declared branch. An ambiguous reply implies no success, fact or approval. Read the skill rather than working from this line. In a git worktree, read `.claude/skills/qfai-run/SKILL.md` under the current directory, since the host may have loaded another checkout's copy of it."
+    },
+    "briefContext": "For new requests, use qfai-run to plan; pending answers or requested operation results resume the current step."
   },
   "qfai-not-installed": {
     "hookSpecificOutput": {
@@ -20,37 +22,40 @@
   "documentation-clarity-before-post": {
     "hookSpecificOutput": {
       "hookEventName": "PreToolUse",
-      "additionalContext": "QFAI documentation clarity (.agents/rules/documentation-clarity.md). Before this title or body ships: no issue or PR numbers, ticket IDs or team-local jargon in source and docs; no account of how the work went, only the current behaviour and why; conclusion first; cut self-evident, repeated and wordy text, and announcements, recaps and empty intensifiers; ordinary words, name who acts, one claim per sentence, short lines; bullet lists and tables for parallel items; mark what is unverified; then re-read every line and rewrite anything that reads as a literal translation or matches a pattern in the rule."
+      "additionalContext": "QFAI documentation clarity (.agents/rules/documentation-clarity.md). PR and issue bodies may contain numbers and links. No issue or PR numbers, ticket IDs or team-local jargon in source or ordinary Markdown; keep the rule's existing exceptions. Ordinary specifications and change descriptions omit design and implementation history. Only when the user expressly requests an incident, event or work record, include necessary observed events, evidence, uncertainty, current impact and next action. Put the conclusion first. Cut self-evident, repeated or wordy text, announcements, recaps and empty intensifiers. Use ordinary words, name who acts, one claim per sentence, short lines, and lists or tables for parallel items. Also mark what is unverified. Re-read every changed line and rewrite literal translations or anything that matches a pattern in the rule."
     }
   },
   "grilling-design-artifact": {
     "hookSpecificOutput": {
       "hookEventName": "PreToolUse",
       "additionalContext": "QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be fixed that the request needs and the repository cannot settle? Outside the discussion stage, settle it between agents and take the griller's recommendation; ask the user only a critical decision — one that contradicts a spec, a contract or a recorded decision, one whose effect cannot be taken back, or product intent nothing written states. Do not ask about, or add, what the request did not need. Read the rule rather than working from this line."
-    }
+    },
+    "briefContext": "QFAI grilling: read .agents/rules/grilling.md before fixing a required decision; consult agents and bring only critical decisions to the user."
   },
   "grilling-delegation": {
     "hookSpecificOutput": {
       "hookEventName": "PreToolUse",
       "additionalContext": "QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be fixed that the request needs and the repository cannot settle? Outside the discussion stage, settle it between agents and take the griller's recommendation; ask the user only a critical decision — one that contradicts a spec, a contract or a recorded decision, one whose effect cannot be taken back, or product intent nothing written states. Do not ask about, or add, what the request did not need. Read the rule rather than working from this line."
-    }
+    },
+    "briefContext": "QFAI grilling: read .agents/rules/grilling.md before fixing a required decision; consult agents and bring only critical decisions to the user."
   },
   "grilling-plan": {
     "hookSpecificOutput": {
       "hookEventName": "PreToolUse",
       "additionalContext": "QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be fixed that the request needs and the repository cannot settle? Outside the discussion stage, settle it between agents and take the griller's recommendation; ask the user only a critical decision — one that contradicts a spec, a contract or a recorded decision, one whose effect cannot be taken back, or product intent nothing written states. Do not ask about, or add, what the request did not need. Read the rule rather than working from this line."
-    }
+    },
+    "briefContext": "QFAI grilling: read .agents/rules/grilling.md before fixing a required decision; consult agents and bring only critical decisions to the user."
   },
   "documentation-clarity-after-write": {
     "hookSpecificOutput": {
       "hookEventName": "PostToolUse",
-      "additionalContext": "QFAI documentation clarity (.agents/rules/documentation-clarity.md). For the Markdown just written, inside this change only: no issue or PR numbers, ticket IDs or team-local jargon; no account of how the work went, only the current behaviour and why; conclusion first; cut self-evident, repeated and wordy text, and announcements, recaps and empty intensifiers; ordinary words, name who acts, one claim per sentence, short lines; bullet lists and tables for parallel items; mark what is unverified; then re-read every line and rewrite anything that reads as a literal translation or matches a pattern in the rule."
+      "additionalContext": "QFAI documentation clarity (.agents/rules/documentation-clarity.md). For the changed source and ordinary Markdown: no issue or PR numbers, ticket IDs or team-local jargon; keep the rule's existing exceptions. Ordinary specifications and change descriptions omit design and implementation history. Only when the user expressly requests an incident, event or work record, include necessary observed events, evidence, uncertainty, current impact and next action. Put the conclusion first. Cut self-evident, repeated or wordy text, announcements, recaps and empty intensifiers. Use ordinary words, name who acts, one claim per sentence, short lines, and lists or tables for parallel items. Also mark what is unverified. Re-read every changed line and rewrite literal translations or anything that matches a pattern in the rule."
     }
   },
   "documentation-clarity-after-edit": {
     "hookSpecificOutput": {
       "hookEventName": "PostToolUse",
-      "additionalContext": "QFAI documentation clarity (.agents/rules/documentation-clarity.md). For the Markdown just edited, inside this change only: no issue or PR numbers, ticket IDs or team-local jargon; no account of how the work went, only the current behaviour and why; conclusion first; cut self-evident, repeated and wordy text, and announcements, recaps and empty intensifiers; ordinary words, name who acts, one claim per sentence, short lines; bullet lists and tables for parallel items; mark what is unverified; then re-read every line and rewrite anything that reads as a literal translation or matches a pattern in the rule."
+      "additionalContext": "QFAI documentation clarity (.agents/rules/documentation-clarity.md). For the changed source and ordinary Markdown: no issue or PR numbers, ticket IDs or team-local jargon; keep the rule's existing exceptions. Ordinary specifications and change descriptions omit design and implementation history. Only when the user expressly requests an incident, event or work record, include necessary observed events, evidence, uncertainty, current impact and next action. Put the conclusion first. Cut self-evident, repeated or wordy text, announcements, recaps and empty intensifiers. Use ordinary words, name who acts, one claim per sentence, short lines, and lists or tables for parallel items. Also mark what is unverified. Re-read every changed line and rewrite literal translations or anything that matches a pattern in the rule."
     }
   },
   "minimal-implementation": {
@@ -63,7 +68,8 @@
     "hookSpecificOutput": {
       "hookEventName": "PreToolUse",
       "additionalContext": "QFAI API budget (.agents/rules/api-budget.md). Before this call: can git answer it instead? Then REST, then GraphQL — the forge's own pull-request and issue subcommands take the GraphQL path, a separate allowance counted in points. One call for the whole set, not one per branch. Save a payload once and search the file; a second grep is not a second download. Poll no faster than the thing being polled changes. A rate-limit endpoint misreports the budget: read the remaining count off this response's own headers. The allowance belongs to the account, and every session and sub-agent draws on it at once. Read the rule rather than working from this line."
-    }
+    },
+    "briefContext": "QFAI API budget: read .agents/rules/api-budget.md; use git before REST before GraphQL and reuse saved results."
   },
   "session-feedback": {
     "decision": "block",

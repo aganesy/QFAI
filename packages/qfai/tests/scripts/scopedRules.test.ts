@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-// tests/integration/<this file> -> tests -> packages/qfai -> packages -> repo root
+// tests/scripts/<this file> -> tests -> packages/qfai -> packages -> repo root
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const RULES = path.join(ROOT, ".claude", "rules");
 const SCOPED = path.join(RULES, "scoped");
