@@ -535,9 +535,78 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /Spec-tree IDs/,
         /Names the reader sees/,
         /State\s+the\s+point\s+directly,\s+not\s+through\s+a\s+metaphor\s+or\s+a\s+flourish/,
+        // The clauses on structure, claims and reports. None depends on a
+        // language: each names a pattern of meaning, not a word list.
+        /^## 3\. Settle the message before writing$/m,
+        /^### Patterns that add length and no information$/m,
+        /^- Name who acts\./m,
+        /^## 6\. Say how sure you are, and on what basis$/m,
+        /^## 8\. Reports and replies$/m,
+        /^## 9\. Re-read what you wrote$/m,
+        /A pattern is a candidate, not a verdict/,
+        // The sections the text sends the reader to, at the numbers it names.
+        /^## 4\. Cut$/m,
+        /^## 7\. Make it readable at a glance$/m,
       ]) {
         expect(text).toMatch(clause);
       }
+    });
+
+    // One document, not a pile of clauses: the numbered headings run 1 to 9
+    // with no gap, and the scope table names a clause range for every surface.
+    it.each(MASTERS)("%s numbers its clauses 1 to 9 and maps each surface to them", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      const numbers = [...text.matchAll(/^## (\d+)\. /gm)].map((match) => Number(match[1]));
+      expect(numbers.map((n, i) => n - i)).toEqual(numbers.map(() => 1));
+      const last = numbers.at(-1) ?? 0;
+      const scope = /^## Scope$([\s\S]*?)^## /m.exec(text)?.[1] ?? "";
+      const rows = scope
+        .split(/\r?\n/)
+        .filter((line) => /^\| (Pull|Issue|Comments|Markdown|Reports)/.test(line));
+      expect(rows).toHaveLength(5);
+      for (const row of rows) {
+        const cell = /\|\s*(\d)(?: to (\d))?(?:, (\d))?\s*\|$/.exec(row);
+        expect(cell, row).not.toBeNull();
+        const start = Number(cell?.[1]);
+        const end = Number(cell?.[2] ?? cell?.[1]);
+        expect(start, row).toBeGreaterThanOrEqual(1);
+        expect(end, row).toBeLessThanOrEqual(last);
+        expect(start, row).toBeLessThanOrEqual(end);
+        // A pull request and an issue body may carry numbers and links, so
+        // the identifier clause (the first) is not theirs.
+        if (/^\| (Pull|Issue)/.test(row)) expect(start, row).toBe(2);
+        if (/^\| (Comments|Markdown)/.test(row)) expect(start, row).toBe(1);
+      }
+    });
+
+    // The reminder restates the standard where it is easiest to skip, so the
+    // structure-and-claims clauses have to reach it, not only the master.
+    it("the shipped reminders and the communication rule carry the structure and claim clauses", async () => {
+      const reminders: Record<string, { hookSpecificOutput: { additionalContext: string } }> =
+        JSON.parse(
+          await readFile(
+            path.join(ROOT, "packages/qfai/assets/init/root/.agents/rules/reminders.json"),
+            "utf-8",
+          ),
+        );
+      for (const key of [
+        "documentation-clarity-before-post",
+        "documentation-clarity-after-write",
+        "documentation-clarity-after-edit",
+      ]) {
+        const context = reminders[key]?.hookSpecificOutput.additionalContext ?? "";
+        expect(context, key).toMatch(/conclusion first/);
+        expect(context, key).toMatch(/name who acts/);
+        expect(context, key).toMatch(/mark what is unverified/);
+        expect(context, key).toMatch(/matches a pattern in the rule/);
+      }
+      const communication = await readFile(
+        path.join(ROOT, "packages/qfai/assets/init/.qfai/assistant/rule/communication.md"),
+        "utf-8",
+      );
+      expect(communication).toMatch(/open\s+with\s+the\s+conclusion/i);
+      expect(communication).toMatch(/name who acts/i);
+      expect(communication).toMatch(/open\s+a\s+report\s+with\s+the\s+outcome/i);
     });
 
     // An entry point may summarise the rule or point at it, and a summary that

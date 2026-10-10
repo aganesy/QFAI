@@ -20,7 +20,7 @@
   "documentation-clarity-before-post": {
     "hookSpecificOutput": {
       "hookEventName": "PreToolUse",
-      "additionalContext": "QFAI documentation clarity (.agents/rules/documentation-clarity.md). Before this title or body ships: no issue or PR numbers, ticket IDs or team-local jargon in source and docs; no account of how the work went, only the current behaviour and why; cut self-evident, repeated and wordy text; ordinary words, one claim per sentence, short lines; bullet lists and tables for parallel items; then re-read every line and rewrite anything that reads as a literal translation."
+      "additionalContext": "QFAI documentation clarity (.agents/rules/documentation-clarity.md). Before this title or body ships: no issue or PR numbers, ticket IDs or team-local jargon in source and docs; no account of how the work went, only the current behaviour and why; conclusion first; cut self-evident, repeated and wordy text, and announcements, recaps and empty intensifiers; ordinary words, name who acts, one claim per sentence, short lines; bullet lists and tables for parallel items; mark what is unverified; then re-read every line and rewrite anything that reads as a literal translation or matches a pattern in the rule."
     }
   },
   "grilling-design-artifact": {
@@ -44,13 +44,13 @@
   "documentation-clarity-after-write": {
     "hookSpecificOutput": {
       "hookEventName": "PostToolUse",
-      "additionalContext": "QFAI documentation clarity (.agents/rules/documentation-clarity.md). For the Markdown just written, inside this change only: no issue or PR numbers, ticket IDs or team-local jargon; no account of how the work went, only the current behaviour and why; cut self-evident, repeated and wordy text; ordinary words, one claim per sentence, short lines; bullet lists and tables for parallel items; then re-read every line and rewrite anything that reads as a literal translation."
+      "additionalContext": "QFAI documentation clarity (.agents/rules/documentation-clarity.md). For the Markdown just written, inside this change only: no issue or PR numbers, ticket IDs or team-local jargon; no account of how the work went, only the current behaviour and why; conclusion first; cut self-evident, repeated and wordy text, and announcements, recaps and empty intensifiers; ordinary words, name who acts, one claim per sentence, short lines; bullet lists and tables for parallel items; mark what is unverified; then re-read every line and rewrite anything that reads as a literal translation or matches a pattern in the rule."
     }
   },
   "documentation-clarity-after-edit": {
     "hookSpecificOutput": {
       "hookEventName": "PostToolUse",
-      "additionalContext": "QFAI documentation clarity (.agents/rules/documentation-clarity.md). For the Markdown just edited, inside this change only: no issue or PR numbers, ticket IDs or team-local jargon; no account of how the work went, only the current behaviour and why; cut self-evident, repeated and wordy text; ordinary words, one claim per sentence, short lines; bullet lists and tables for parallel items; then re-read every line and rewrite anything that reads as a literal translation."
+      "additionalContext": "QFAI documentation clarity (.agents/rules/documentation-clarity.md). For the Markdown just edited, inside this change only: no issue or PR numbers, ticket IDs or team-local jargon; no account of how the work went, only the current behaviour and why; conclusion first; cut self-evident, repeated and wordy text, and announcements, recaps and empty intensifiers; ordinary words, name who acts, one claim per sentence, short lines; bullet lists and tables for parallel items; mark what is unverified; then re-read every line and rewrite anything that reads as a literal translation or matches a pattern in the rule."
     }
   },
   "minimal-implementation": {

@@ -22,6 +22,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The documentation-clarity rule is one document in nine clauses, with a scope
+  table naming the clauses each surface takes.** It now covers structure, claims
+  and reports in any language, not only identifiers and wording. New guidance
+  includes the conclusion first, a table of patterns that add length and no
+  information (announcements, recaps, empty intensifiers), a named actor in
+  place of a software subject that "knows" or "decides", a mark on what is
+  unverified, and a report that opens with its outcome and separates what was
+  checked from what was not. The re-read walks the earlier clauses, and the
+  reminder hooks and the communication rule carry the short form. `qfai init`
+  refreshes the rule and `reminders.json`.
+
 - **The web-research skill says who reads its domain allowlist.** The list sits
   under `webResearch.allowlist` in `qfai.config.yaml` and the agent reads it from
   the file; `qfai` does not parse or validate it. The default-deny sandbox
