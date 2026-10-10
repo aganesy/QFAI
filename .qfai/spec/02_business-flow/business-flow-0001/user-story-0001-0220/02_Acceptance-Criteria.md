@@ -33,6 +33,14 @@ Feature: Get one fixed plan for every kind of request
     Given a route of the `fix` family
     When its plan is issued
     Then it prepares what its kind of defect needs, diagnoses, fixes and verifies
+    And the harness and soak steps of `fix-intermittent` still run and record an evidence applicability check
+    And harness construction is unnecessary only with preexisting executed Red matching the failure signature and a verified ordinary cause unrelated to clocks, ordering, load or races
+    And repetitions are unnecessary only after diagnosis verifies that cause, with prior executed Red and matching executed Green at the exact current revision and no timing or load uncertainty
+    And unknown causes or controlled races require the real procedures
+    And missing or mismatched Red cannot establish either exception; stale Green or pending CI cannot establish the repetition exception
+    And quarantine removal still requires the recorded real repetitions
+    And a report names the evidence and why stress or repetitions are unnecessary without claiming they ran or passed
+    And the route, step order, false pass-through flags and diagnosis verdict vocabulary are unchanged
 
   # AC-0001-0220-06
   Scenario: The upkeep family keeps tests, CI and dependencies working

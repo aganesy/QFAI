@@ -22,6 +22,8 @@ run.
 - The number of runs the quarantine record or the work order names, where one
   does.
 - The Test command, through `common-gate-run`.
+- The diagnosis and its executed same-signature Red, and observed Green
+  evidence for the current exact revision.
 
 ## Writes
 
@@ -31,6 +33,28 @@ run.
   record the quarantine added, and nothing else.
 
 ## Procedure
+
+### Applicability on entry
+
+This step always checks the diagnosis and test evidence. Only a
+`fix-intermittent` diagnosis of a verified ordinary cause, with a prior
+executed Red of the same failure signature and observed Green for the current
+exact revision, can make repetitions unnecessary. The cause must have no
+clock, operation order, parallelism, load, timing or race dependence or
+uncertainty. A fixed seed or deterministic schedule exposing a race does not
+qualify. Quarantine never uses this case: lifting one always requires the
+actual consecutive runs below.
+
+Missing or unexecuted Red, another signature, stale Green, pending CI, an
+unknown cause or unresolved timing or load uncertainty require the real runs.
+Unavailable tools, waits or limited time do not make repetitions unnecessary.
+When the evidence qualifies, cite the inspected diagnosis, prior Red and
+current Green, including their commands, results and revisions, in the stage
+report, with the applicability reason and why load or soak is unnecessary. State that repeat runs were not performed. The gate
+checks this proof and reason; report no repeat-run PASS. A later cause never
+changes the earlier record of what ran.
+
+### When repeated runs are required
 
 1. Fix the number of runs before the first one, and record it with its reason.
    Where nothing names a number, take at least three divided by the failure
@@ -48,6 +72,12 @@ run.
 
 ## Gate
 
+When repeated runs are required:
+
 - The number of runs was fixed and recorded before the first run.
 - Every run is recorded, and all of them passed on the same revision.
 - A lifted quarantine removed only its marker and its record.
+
+For the ordinary `fix-intermittent` case, the inspected diagnosis, prior Red,
+current exact-revision Green and applicability reason are recorded. No
+unperformed repetitions count as passed, and no quarantine is lifted.

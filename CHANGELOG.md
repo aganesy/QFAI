@@ -331,6 +331,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Intermittent-fix steps check whether pressure and repeats are applicable.**
+  Executed regression evidence for a verified ordinary cause can make them
+  unnecessary. The steps record their proof and reason without claiming runs
+  they did not perform; races, uncertainty and quarantine still require runs.
+
 - Clarify that the research agent reads the cache TTL extension in the project config; the CLI does not parse it.
 
 - Clarify that story ID candidates are snapshots and require a fresh collision
