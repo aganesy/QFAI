@@ -283,3 +283,67 @@ describe("story-tree test obligations", () => {
     ).toBe(true);
   });
 });
+
+describe.each([
+  "DONE",
+  "TODO",
+  "WIP",
+  "REJECTED",
+  "SUPERSEDED (by DEC-0002)",
+  "PARTLY SUPERSEDED (by DEC-0002)",
+] as const)("test exceptions with Status %s", (status) => {
+  // QFAI:EX-0001-0056-06
+  // QFAI:EX-0001-0056-07
+  it.each([
+    ["BF-0001", "atdd"],
+    ["AC-0001-0001-01", "atdd"],
+    ["EX-0001-0001-01", "tdd"],
+  ] as const)("exempts only %s at DONE under %s", (id, profile) => {
+    const decisions =
+      "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n" +
+      `| DEC-0001 | Test exception: ${id} | No test environment | ${status} |\n` +
+      "| DEC-0002 | Successor decision | Keep obligations | DONE |\n";
+    const current = model(decisions);
+    const findings = validateStoryTreeObligationsModel(current, [], profile);
+    expect(
+      findings.filter((finding) => finding.code === "QFAI-STORY-006" && finding.refs?.includes(id)),
+    ).toEqual(
+      status === "DONE" ? [] : [expect.objectContaining({ severity: "error", refs: [id] })],
+    );
+    expect(findings.filter((finding) => finding.code === "QFAI-STORY-009")).toEqual(
+      status === "DONE"
+        ? [expect.objectContaining({ severity: "info", refs: [id, "DEC-0001"] })]
+        : [],
+    );
+    if (id === "BF-0001") {
+      expect(findings).toContainEqual(
+        expect.objectContaining({ code: "QFAI-STORY-006", refs: ["AC-0001-0001-01"] }),
+      );
+    }
+    if (id !== "EX-0001-0001-01") {
+      expect(validateStoryTreeObligationsModel(current, [], "tdd")).toContainEqual(
+        expect.objectContaining({ code: "QFAI-STORY-006", refs: ["EX-0001-0001-01"] }),
+      );
+    }
+  });
+});
+
+// QFAI:EX-0001-0056-07
+it.each(["BF-9999", "AC-9999-0001-01", "EX-0001-0001-99"] as const)(
+  "a DONE exception naming undefined %s exempts nothing",
+  (id) => {
+    const decisions =
+      "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n" +
+      `| DEC-0001 | Test exception: ${id} | No test environment | DONE |\n`;
+    for (const profile of ["atdd", "tdd"] as const) {
+      const findings = validateStoryTreeObligationsModel(model(decisions), [], profile);
+      expect(findings.filter((finding) => finding.code === "QFAI-STORY-006")).toEqual(
+        validateStoryTreeObligationsModel(model(), [], profile).filter(
+          (finding) => finding.code === "QFAI-STORY-006",
+        ),
+      );
+      expect(findings.filter((finding) => finding.code === "QFAI-STORY-009")).toEqual([]);
+      expect(findings.some((finding) => finding.refs?.includes(id))).toBe(false);
+    }
+  },
+);
