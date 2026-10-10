@@ -84,6 +84,18 @@ describe("decision renumber public CLI", () => {
     return Promise.all(candidates.map((file) => readFile(path.join(root, file))));
   }
 
+  function expectSnapshotsEqual(actual: Buffer[], expected: Buffer[], candidates = files): void {
+    expect(actual).toHaveLength(candidates.length);
+    expect(expected).toHaveLength(candidates.length);
+    for (const [index, file] of candidates.entries()) {
+      const current = actual[index];
+      const original = expected[index];
+      if (current === undefined || original === undefined)
+        throw new Error(`Missing snapshot for ${file}`);
+      expect(current.equals(original), file).toBe(true);
+    }
+  }
+
   async function invoke(extra: string[] = [], from = "DEC-0002", to = "DEC-0013", base = "main") {
     const previous = process.exitCode;
     const stdout = vi.spyOn(process.stdout, "write").mockReturnValue(true);
@@ -172,7 +184,7 @@ describe("decision renumber public CLI", () => {
     expect(result.code).toBe(0);
     expect(result.stdout).toContain(decisions);
     expect(result.stdout).not.toContain(content.slice(0, 100));
-    expect(await snapshot()).toEqual(before);
+    expectSnapshotsEqual(await snapshot(), before);
     expect(gitText("status", "--porcelain")).toBe("");
   });
 
@@ -428,7 +440,7 @@ describe("decision renumber public CLI", () => {
     expect(result.code).toBe(0);
     expect(result.stdout).toContain(candidate);
     expect(result.stdout).not.toContain("x".repeat(100));
-    expect(await snapshot([...files, candidate])).toEqual(before);
+    expectSnapshotsEqual(await snapshot([...files, candidate]), before, [...files, candidate]);
     expect(gitText("status", "--porcelain")).toBe("");
   });
 
@@ -553,7 +565,7 @@ describe("decision renumber public CLI", () => {
       const result = await invoke(["--apply"]);
       expect(result.code).toBe(2);
       expect(result.stderr).toContain(candidate);
-      expect(await snapshot(candidates)).toEqual(before);
+      expectSnapshotsEqual(await snapshot(candidates), before, candidates);
       expect(gitText("status", "--porcelain", "--untracked-files=all")).toBe(status);
     },
   );
