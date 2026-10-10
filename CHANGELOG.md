@@ -26,6 +26,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   keeps each target's scope, head-bound evidence and approval limits separate.
   A clean checkout can move to authorized work during remote waits; writers,
   local gates and reviewers using live files finish first. Fixes #3231.
+- **Selected hook reminders stay visible without repeating their full text.**
+  Claude Code and Codex print the full reminder once per session, agent and
+  message key, then a one-line rule or skill pointer on every relevant trigger.
+  Missing identity or unavailable counter storage retains the full reminder.
+  Free-text reminders distinguish new requests from pending answers and
+  requested operation results. Fixes #3229.
 
 - **API polling uses one watcher across a root task and its descendants.**
   Workers reuse saved snapshots. The rule includes a two-PR snapshot query,

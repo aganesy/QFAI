@@ -52,6 +52,27 @@ const MESSAGES_ARG = `${PROJECT_DIR_PLACEHOLDER}/.agents/rules/reminders.json`;
 /** The shipped message file. */
 const SHIPPED_MESSAGES = "packages/qfai/assets/init/root/.agents/rules/reminders.json";
 
+function expectNoEmbeddedReminderText(program: string, messages: unknown): void {
+  if (typeof messages !== "object" || messages === null) throw new Error("no reminder catalog");
+  for (const message of Object.values(messages)) {
+    if (typeof message !== "object" || message === null) throw new Error("invalid reminder");
+    const output: unknown = Reflect.get(message, "hookSpecificOutput");
+    const full: unknown =
+      typeof output === "object" && output !== null
+        ? Reflect.get(output, "additionalContext")
+        : undefined;
+    for (const context of [
+      full,
+      Reflect.get(message, "reason"),
+      Reflect.get(message, "briefContext"),
+    ]) {
+      if (typeof context !== "string") continue;
+      expect(program).not.toContain(context);
+      expect(program).not.toContain(JSON.stringify(context).slice(1, -1));
+    }
+  }
+}
+
 /** What the host writes to a `Bash` hook's stdin for one command. */
 function hookInput(command: string): string {
   return JSON.stringify({
@@ -154,9 +175,11 @@ function toEntry(value: unknown): HookEntry {
 
 describe.each(SETTINGS_PATHS)("%s", (rel) => {
   let hooks: ReadonlyMap<string, readonly HookGroup[]>;
+  let catalog: unknown;
 
   beforeAll(async () => {
     hooks = readHooks(await readFile(path.join(repoRoot, rel), "utf-8"));
+    catalog = JSON.parse(await readFile(path.join(repoRoot, SHIPPED_MESSAGES), "utf-8"));
   });
 
   it("wires the reminder to a GitHub post and to a Markdown edit", () => {
@@ -271,25 +294,14 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
           // lives in the file, so a release that changes it leaves this alone.
           expect(entry.args).toHaveLength(4);
           expect(entry.args[2]).toBe(MESSAGES_ARG);
-          expect(entry.args.join(" ")).not.toContain("additionalContext");
+          expectNoEmbeddedReminderText(entry.args.join(" "), catalog);
           readers.add(entry.args[1] ?? "");
         }
       }
     }
-    // Seven readers. One prints the named message. One does the same but prints
-    // only on the first call of a session and on every twentieth after it, which
-    // is how a reminder on every write stays out of the way. One looks for this
-    // checkout's launcher first and prints only where there is none. One reads
-    // the hook's own input first and prints only for a command that names the
-    // forge, and then counts like the second, which is what lets a `Bash` matcher
-    // exist at all. One reads the prompt and stays silent on a turn the host
-    // started rather than the user typed. One reads the file a write names,
-    // stays silent for what is plainly not source, and then counts like the
-    // second. One reads the stop and stays silent when a stop hook is already
-    // continuing the turn, which is what ends the loop, and when the last message
-    // ends in a question. An eighth would mean a reminder had grown logic of its
-    // own, which is the thing kept out of this file.
-    expect(readers.size, "a reminder runs one of the seven pinned readers").toBe(7);
+    // Eight shared readers cover prompt, tool and stop filters, full/brief
+    // delivery, and the unchanged periodic reminders.
+    expect(readers.size, "each entry uses one of the eight shared readers").toBe(8);
     for (const reader of readers) {
       expect(reader).toContain("process.argv[1]");
       expect(reader).toContain("process.argv[2]");
