@@ -223,6 +223,69 @@ describe("qfai-run", () => {
     expect(lines.length).toBeLessThanOrEqual(150);
   });
 
+  // QFAI:EX-0001-0216-08
+  it("points stage execution at the step rules and explains pass-through work without skipping its review", async () => {
+    const [run, screens, baseline] = await Promise.all([
+      readShipped(RUN),
+      readShipped(SCREENS),
+      readShipped("rule/shared-skill-operating-baseline.md"),
+    ]);
+    const loop = flat(
+      sectionOf(run, "## The work").split("**Run the stages.**")[1]?.split("**Review.**")[0] ?? "",
+    );
+    expect(baseline).toContain("## Running Steps (Mandatory)");
+    expect(loop).toContain(
+      ".qfai/assistant/rule/shared-skill-operating-baseline.md#running-steps-mandatory",
+    );
+    expect(loop).toMatch(
+      /\b(?:if|when|as needed)\b.*operator-screens\.md|operator-screens\.md.*\b(?:if|when|as needed)\b/i,
+    );
+
+    const guide = flat(screens);
+    expect(guide).toContain("`STEP.md`");
+    expect(guide).toMatch(/\b(?:follow|run|execute)\b.*\bprocedure\b/i);
+    expect(guide).toMatch(/\bonly\b.*\b(?:declared|listed|named)\b.*\bcommands?\b/i);
+    expect(guide).toMatch(/\b(?:pass|satisfy)\b.*\bgate\b/i);
+    expect(guide).toContain("`passThrough`");
+    expect(guide).toMatch(/\bPasses when\b/i);
+    expect(guide).toMatch(/\breason\b.*\bstage report\b|\bstage report\b.*\breason\b/i);
+    expect(guide).toMatch(/\b(?:not|never|do not)\b.*\bskip\b/i);
+    expect(guide).toMatch(/\b(?:independent|independently)\b.*\breview\b/i);
+    expect(guide).toMatch(
+      /\b(?:planned|required|declared|plan's)\b.*\breview\b.*\b(?:still|always)\b/i,
+    );
+  });
+
+  // QFAI:AC-0001-0196-14
+  it("requires launcher preflight before planning and directs a missing install to project recovery", async () => {
+    const [run, screens] = await Promise.all([readShipped(RUN), readShipped(SCREENS)]);
+    const intro = run.split("## What this skill never does")[0] ?? "";
+    const extract = sectionOf(run, "## The work")
+      .split("**Extract.**")[1]
+      ?.split("**Candidates.**")[0];
+    const launcherInstructions = flat(`${intro} ${extract ?? ""}`);
+
+    expect(launcherInstructions).toContain(
+      ".qfai/assistant/rule/shared-skill-operating-baseline.md#canonical-qfai-launcher-mandatory",
+    );
+    expect(launcherInstructions).toMatch(
+      /\bpreflight\b.*\bbefore\b.*\bplan(?:ning)?\b|\bbefore\b.*\bplan(?:ning)?\b.*\bpreflight\b/i,
+    );
+    expect(launcherInstructions).toMatch(
+      /\b(?:if|when)\b.*\b(?:missing|fails?|unavailable|no local)\b.*operator-screens\.md/i,
+    );
+
+    const guide = flat(screens);
+    expect(guide).toMatch(/\b(?:missing|no local)\b.*\b(?:install|dependency|dependencies)\b/i);
+    expect(guide).toMatch(/\bproject(?:'s)?\b.*\b(?:package manager|install command)\b/i);
+    expect(guide).toMatch(/\b(?:rerun|repeat|again)\b.*\bpreflight\b|\bpreflight\b.*\bagain\b/i);
+    expect(guide).toMatch(/\b(?:do not|never|no)\b[^.]*\b(?:published|remote)\b/i);
+    expect(guide).toMatch(/\b(?:do not|never|no)\b[^.]*\b(?:cache|cached)\b/i);
+    expect(guide).not.toMatch(
+      /\bSessionStart`?\s+(?:automatically installs?|installs? automatically)\b/i,
+    );
+  });
+
   // QFAI:AC-0001-0211-05
   // QFAI:EX-0001-0211-35
   it("defines every extraction value, shows an extraction with no route, and names no route", async () => {
