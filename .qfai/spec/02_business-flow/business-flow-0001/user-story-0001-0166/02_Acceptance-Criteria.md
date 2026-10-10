@@ -3,10 +3,10 @@
 ## Criteria
 
 ```gherkin
-Feature: All-Reviewer FAIL Obligation
+Feature: All-Reviewer REVISE Obligation
   # AC-0001-0166-01
-  Scenario: All-Reviewer FAIL Obligation
-    Given any reviewer returning FAIL
+  Scenario: All-Reviewer REVISE Obligation
+    Given any reviewer returning `REVISE`
     When checked
-    Then feedback includes a concrete alternative or fix proposal. Feedback without alternative is invalid.
+    Then each blocking finding includes a concrete fix proposal. Feedback without one is invalid.
 ```
