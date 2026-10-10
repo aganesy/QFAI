@@ -34,6 +34,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The row is a route record. Triage steps change no tracked file and never
   run the handed-off operation. Fixes #3201.
 
+- **Verification determines gate applicability before resolving commands.**
+  Conditional build and pack gates are omitted only when their conditions are
+  false. Pending CI checks are recorded without a completion claim. Fixes #3209.
+
 - **The qfai-run instructions clarify when to ask and when to continue.**
   A plan with one scope or no scopes runs every stage without a scope question.
   A session request naming the change and its effect shows acceptance, as the
@@ -47,6 +51,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **The decision template states the limit of a passing validation result.**
   Every new row uses the four Approach items; validation does not establish
   that every existing row follows that layout. Fixes #3197.
+
+- **Replies resume the waiting step, and pending operation reports avoid duplicate questions.**
+  The exception requires no new decision or missing information. New requests
+  get a plan; completed routes still ask for the next action. Fixes #3205 and #3206.
 
 - **The README quick start now holds the whole first run.** The separate "Minimal
   tutorial" section is removed from both README files: the quick start covers
@@ -245,6 +253,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   constitution's Article V. Part of #2951.
 
 ### Fixed
+
+- **Validation text lists errors before warnings and information.** Groups of
+  the same severity retain their first-appearance order. JSON records, counts,
+  suppression and exit behavior stay unchanged.
 
 - **Unknown commands identify the running QFAI installation.** The error shows
   its version and package location and suggests updating the project's local

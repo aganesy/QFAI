@@ -11,7 +11,7 @@ What the user sees while a request is worked, and how a question reaches them.
 - The announcement
 - Questions
 - A step only a person can take
-- External-operation replies
+- Replies to a waiting step
 - Halt notice
 - Final report
 - Work orders summary
@@ -131,12 +131,28 @@ it, and `stop`.
 - Under a no-question mode nothing is asked. The work that does not depend on
   the action goes on, and the final report lists the action as not done.
 
-## External-operation replies
+## Replies to a waiting step
 
-Read this section when a user reports the result requested by a waiting step.
-The result resumes that step, including a failure. A separate explicit request
-to investigate the failure or repeat the operation is planned as a new request
-under the extraction and scope rules in `SKILL.md`.
+Read this section before treating a user's reply as a new request.
+
+- A reply answering a pending question or reporting the requested operation's
+  result resumes the same waiting step, including a reported failure. Use no
+  new plan and no skill invocation for that reply.
+- An independent new request is planned under the extraction and scope rules
+  in `SKILL.md`. If a reply also contains one, resume the waiting step with its
+  answer and plan the independent request separately.
+- A separate explicit request to investigate the failure or repeat the operation
+  is planned as a new request under those same rules.
+- An answer to a closed request for information follows only the plan's branch
+  for received information. Add no branch or step.
+- For an ambiguous reply, do not assume success, completion, new facts or
+  approval. State what remains unconfirmed. Ask for any fact or decision still
+  needed under the normal question rules.
+
+While an operation result is pending, use the interim-report exception in
+`.agents/rules/user-questions.md` § 6 only under its stated conditions. Report
+the current state, expected result and resume condition without repeating the
+question. A completed route still follows the final-report rule below.
 
 ## Halt notice
 
