@@ -42,6 +42,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Posting guidance explicitly permits numbers and links in pull request and issue bodies.**
+  Source and ordinary Markdown retain the identifier ban and existing exceptions.
+
 - **The release association gate uses Node.js to read pull request branches.**
   Its two contributor cases require Node.js and Bash, without a jq dependency.
 

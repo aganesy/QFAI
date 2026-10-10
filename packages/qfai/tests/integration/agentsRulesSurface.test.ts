@@ -644,6 +644,48 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
           .find((block) => enumerates.test(block));
         if (bullet !== undefined && !/CHANGELOG/i.test(bullet)) contradicting.push(rel);
       }
+      const reminders: Record<string, { hookSpecificOutput: { additionalContext: string } }> =
+        JSON.parse(
+          await readFile(
+            path.join(ROOT, "packages/qfai/assets/init/root/.agents/rules/reminders.json"),
+            "utf-8",
+          ),
+        );
+      const communication = await readFile(
+        path.join(ROOT, "packages/qfai/assets/init/.qfai/assistant/rule/communication.md"),
+        "utf-8",
+      );
+      const communicationBullet =
+        /^- Keep out issue or pull-request numbers[^\r\n]*(?:\r?\n[ \t]+[^\r\n]*)*/m.exec(
+          communication,
+        )?.[0];
+      const shippedSummaries = [
+        {
+          name: "documentation-clarity-before-post",
+          text: reminders["documentation-clarity-before-post"]?.hookSpecificOutput
+            .additionalContext,
+          sourceBan:
+            "No issue or PR numbers, ticket IDs or team-local jargon in source or ordinary Markdown;",
+        },
+        {
+          name: "communication.md identifier bullet",
+          text: communicationBullet,
+          sourceBan:
+            "Keep out issue or pull-request numbers, ticket identifiers and names only this project understands, anywhere in source code or Markdown files.",
+        },
+      ];
+      for (const { name, text, sourceBan } of shippedSummaries) {
+        const clause = text?.replace(/\s+/gu, " ") ?? "";
+        expect(clause, `${name} must keep the source and Markdown identifier ban`).toContain(
+          sourceBan,
+        );
+        expect(
+          clause,
+          `${name} must explicitly permit numbers and links in both kinds of body`,
+        ).toMatch(
+          /(?:^|\. )(?:PR|Pull request) and issue bodies may contain numbers and links\.(?: |$)/u,
+        );
+      }
       expect(
         contradicting,
         "an entry point whose identifier clause does not name the surfaces the master exempts",
