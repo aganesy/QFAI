@@ -478,6 +478,7 @@
     "tests/integration/init/managedGitignoreBlock.test.ts",
     "tests/integration/init/modeLine.test.ts",
     "tests/integration/init/noOpenaiYaml.test.ts",
+    "tests/integration/init/sessionFeedbackHook.test.ts",
     "tests/integration/init/upgradeStates.ts",
     "tests/integration/init/windowsParity.test.ts",
     "tests/integration/init/workflowPreconditionsNote.test.ts",

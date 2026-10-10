@@ -4,6 +4,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **The agent reviews its session for problems in QFAI when all the work is
+  done, and asks before filing them.** `qfai init` adds a `Stop` hook to
+  `.claude/settings.json` and `.codex/hooks.json`, marked
+  `QFAI session feedback reminder`, and the rule
+  `.agents/rules/session-feedback.md`. When a turn ends, the hook has the agent
+  check whether every task the user gave is complete and nothing waits on the
+  user. If so, the agent reviews the session for blockers, contradictions, lost
+  effort, tokens spent against output, poor value, over-work and quality that
+  missed the request. It drafts one issue for each, without the project's names,
+  source or secrets, and asks the user through the structured question tool
+  whether to file. Only approved drafts are filed to the QFAI repository. The
+  hook stays silent when a stop hook is already continuing the turn and when the
+  last message ends in a question, and nothing is filed under a no-question mode.
+
 ### Changed
 
 - **`qfai init` no longer cleans up after earlier releases, and

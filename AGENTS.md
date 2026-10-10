@@ -159,6 +159,9 @@ The masters under `.agents/rules/` are the single source of truth for the rules 
 - `ai-readable-markdown.md` (a Markdown file an agent reads stays at or under
   500 lines and a `SKILL.md` body at or under 20,000 characters; every pointer
   says when to read the file it names, and references stay one level deep)
+- `session-feedback.md` (when every task the user gave is complete, and never at
+  a pause, review the session for problems in QFAI itself and, with the user's
+  yes, file them to the QFAI repository)
 
 A `<name>.local.md` is an overlay. A rule that also governs an adopter's
 repository is written once, in the shipped master, and only what is specific to
