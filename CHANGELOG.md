@@ -36,6 +36,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The release association gate uses Node.js to read pull request branches.**
+  Its two contributor cases require Node.js and Bash, without a jq dependency.
+
+
 - **Worker work orders state the permitted edit boundary.** They name the
   assigned checkout, owned paths and edit method. A refused edit returns a
   reviewable diff for coordinator integration without bypassing the refusal.
