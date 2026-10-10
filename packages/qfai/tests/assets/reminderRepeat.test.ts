@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readdir, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { projectDirOf, runReminderHook } from "../helpers/reminderHooks.js";
+import { removeTempTree } from "../helpers/tempTree.js";
 
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
@@ -80,6 +81,7 @@ function contextOf(stdout: string): string {
   expect(stdout.trim(), "a relevant reminder must emit a JSON envelope").not.toBe("");
   const parsed: unknown = JSON.parse(stdout);
   if (typeof parsed !== "object" || parsed === null) throw new Error("no hook envelope");
+  expect(parsed).not.toHaveProperty("briefContext");
   const output: unknown = Reflect.get(parsed, "hookSpecificOutput");
   if (typeof output !== "object" || output === null) throw new Error("no hookSpecificOutput");
   const context: unknown = Reflect.get(output, "additionalContext");
@@ -94,7 +96,11 @@ async function fullContext(key: string): Promise<string> {
       "utf-8",
     ),
   );
-  return contextOf(JSON.stringify(messages[key]));
+  const message = messages[key];
+  if (typeof message !== "object" || message === null) throw new Error("no message");
+  return contextOf(
+    JSON.stringify({ hookSpecificOutput: Reflect.get(message, "hookSpecificOutput") }),
+  );
 }
 
 function expectPointer(context: string, full: string, reference: string): void {
@@ -113,6 +119,7 @@ function expectPointer(context: string, full: string, reference: string): void {
 }
 
 describe.each(SETTINGS)("%s limits how often a tool-time reminder repeats", (rel) => {
+  // QFAI:EX-0001-0196-55
   it.each(POINTERS)(
     "prints %s in full once, then a one-line pointer on every relevant trigger",
     async (key, reference) => {
@@ -127,6 +134,7 @@ describe.each(SETTINGS)("%s limits how often a tool-time reminder repeats", (rel
     },
   );
 
+  // QFAI:EX-0001-0196-55
   it("keeps pointer counters separate by session, optional agent and message key", async () => {
     const byKey = await entries(rel);
     const session_id = newSession();
@@ -145,6 +153,7 @@ describe.each(SETTINGS)("%s limits how often a tool-time reminder repeats", (rel
     }
   });
 
+  // QFAI:EX-0001-0196-55
   it("falls back to full context on every selected trigger without a usable identity", async () => {
     const byKey = await entries(rel);
     for (const [key] of POINTERS) {
@@ -158,6 +167,7 @@ describe.each(SETTINGS)("%s limits how often a tool-time reminder repeats", (rel
     }
   });
 
+  // QFAI:EX-0001-0196-55
   it("falls back to full context and exit zero when selected counters cannot be stored", async () => {
     const byKey = await entries(rel);
     for (const [key] of POINTERS) {
@@ -176,6 +186,41 @@ describe.each(SETTINGS)("%s limits how often a tool-time reminder repeats", (rel
     }
   });
 
+  // QFAI:EX-0001-0196-55
+  it("keeps the full envelope on repeated tool calls when the catalog has no brief context", async () => {
+    const key = "api-budget";
+    const entry = (await entries(rel)).get(key);
+    if (entry === undefined) throw new Error(`no entry carries ${key}`);
+    const messages: Record<string, unknown> = JSON.parse(
+      await readFile(
+        path.join(repoRoot, "packages/qfai/assets/init/root/.agents/rules/reminders.json"),
+        "utf-8",
+      ),
+    );
+    const message = messages[key];
+    if (typeof message !== "object" || message === null) throw new Error("no message");
+    Reflect.deleteProperty(message, "briefContext");
+    const full = await fullContext(key);
+    const project = await mkdtemp(path.join(os.tmpdir(), "qfai-claude-old-catalog-"));
+    try {
+      const rules = path.join(project, ".agents", "rules");
+      await mkdir(rules, { recursive: true });
+      await writeFile(path.join(rules, "reminders.json"), JSON.stringify(messages), "utf-8");
+      const input = JSON.stringify({
+        session_id: newSession(),
+        tool_input: { command: "gh api repos/o/r" },
+      });
+      for (let count = 1; count <= 3; count += 1) {
+        const stdout = await runReminderHook(entry, project, input);
+        expect(JSON.parse(stdout)).toEqual(message);
+        expect(contextOf(stdout)).toBe(full);
+      }
+    } finally {
+      await removeTempTree(project);
+    }
+  });
+
+  // QFAI:EX-0001-0196-55
   it("filters known Claude notification prompts before counting either prompt reminder", async () => {
     const byKey = await entries(rel);
     for (const key of ["free-text-entry", "structured-question"]) {
@@ -241,6 +286,7 @@ describe.each(SETTINGS)("%s limits how often a tool-time reminder repeats", (rel
     }
   });
 
+  // QFAI:EX-0001-0196-55
   it("counts the API-budget reminder only on a command that names the forge", async () => {
     const entry = (await entries(rel)).get("api-budget");
     if (entry === undefined) throw new Error("no entry carries api-budget");

@@ -447,10 +447,9 @@ async function firedContext(
 ): Promise<string> {
   const result = await runCodexLine(entry, shell, cwd, input);
   expect(eventOf(shell, result)).toBe(event);
-  const output = asRecord(
-    asRecord(JSON.parse(result.stdout), "envelope").hookSpecificOutput,
-    "hookSpecificOutput",
-  );
+  const envelope = asRecord(JSON.parse(result.stdout), "envelope");
+  expect(envelope).not.toHaveProperty("briefContext");
+  const output = asRecord(envelope.hookSpecificOutput, "hookSpecificOutput");
   if (typeof output.additionalContext !== "string") throw new Error("no additionalContext");
   return output.additionalContext;
 }
@@ -472,6 +471,7 @@ function expectPointer(context: string, full: string, reference: string): void {
 
 // QFAI:EX-0001-0196-40
 describe("the Codex tool-time reminders that repeat", () => {
+  // QFAI:EX-0001-0196-56
   it.each(POINTERS)(
     "prints %s/%s in full once, then a pointer under every shell",
     async (event, key, tool, command, reference) => {
@@ -489,6 +489,7 @@ describe("the Codex tool-time reminders that repeat", () => {
     },
   );
 
+  // QFAI:EX-0001-0196-56
   it("isolates selected counters by session, agent and message key", async () => {
     await withProject(async (cwd) => {
       const session = newSession();
@@ -508,6 +509,7 @@ describe("the Codex tool-time reminders that repeat", () => {
     });
   });
 
+  // QFAI:EX-0001-0196-56
   it("prints full context on every selected trigger without an identity", async () => {
     await withProject(async (cwd) => {
       for (const [event, key, tool, command] of POINTERS) {
@@ -520,6 +522,7 @@ describe("the Codex tool-time reminders that repeat", () => {
     });
   });
 
+  // QFAI:EX-0001-0196-56
   it("prints full context and exits zero when selected counter storage fails", async () => {
     await withProject(async (cwd) => {
       for (const [event, key, tool, command] of POINTERS) {
@@ -534,6 +537,29 @@ describe("the Codex tool-time reminders that repeat", () => {
           expect(await firedContext(entry, "sh", cwd, input, event)).toBe(full);
         } finally {
           await rm(counter, { recursive: true, force: true });
+        }
+      }
+    });
+  });
+
+  // QFAI:EX-0001-0196-56
+  it("keeps the full envelope on repeated tool calls when the catalog has no brief context", async () => {
+    const key = "api-budget";
+    const event = "PreToolUse";
+    const entry = await codexEntry(event, key);
+    await withProject(async (cwd) => {
+      const messageFile = path.resolve(cwd, "..", "..", ".agents", "rules", "reminders.json");
+      const messages = asRecord(JSON.parse(await readFile(messageFile, "utf-8")), "messages");
+      const message = asRecord(messages[key], key);
+      delete message.briefContext;
+      messages[key] = message;
+      await writeFile(messageFile, JSON.stringify(messages), "utf-8");
+      for (const shell of CODEX_SHELLS) {
+        const input = inSession(codexInput(event, "Bash", "gh api repos/o/r"), newSession());
+        for (let count = 1; count <= 3; count += 1) {
+          const result = await runCodexLine(entry, shell, cwd, input);
+          expect(eventOf(shell, result)).toBe(event);
+          expect(JSON.parse(result.stdout)).toEqual(message);
         }
       }
     });
@@ -582,6 +608,7 @@ describe("the Codex tool-time reminders that repeat", () => {
     });
   });
 
+  // QFAI:EX-0001-0196-56
   it("count only the calls they would print for", async () => {
     await withProject(async (cwd) => {
       const cases = [
