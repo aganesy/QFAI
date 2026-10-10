@@ -36,6 +36,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Windows link warnings describe the affected wrapper and its existing repair.**
+  Guidance recommends ordinary init without deleting links and distinguishes
+  consumer wrappers from the repository's canonical mirror. Refs #3240.
+
 - **Missing test annotations use grammatical diagnostics.** Messages use
   "an E2E test", "an integration or API test" and "a test" for the three
   obligation kinds. Coverage and severity are unchanged. Fixes #3239.
