@@ -77,9 +77,11 @@ Feature: Install or upgrade and get the free-text entry
     And missing session identity or counter-storage failure prints the full message and exits 0
     And the full and brief free-text entry messages distinguish new requests that need planning from pending answers or requested operation results that resume the same step
     And Codex also runs the structured-question reminder on every prompt
-    And its message allows an interim report without repeating a question only for an ongoing step awaiting the result of an external operation already requested, with no new decision or missing fact
-    And that report states the expected result and what resumes the step
-    And completed-route final reports and new facts, choices or permissions remain outside that exception
+    And the question message asks only when the next step requires the user's answer; background waiting and completion-only reports need no question
+    And a waiting report gives the current state, awaited evidence or result and resume condition without promising unsupported automatic restart
+    And dismissal or no response grants no answer or permission; an already delegated routine choice may continue under that prior authorization
+    And hard-required facts, mandatory approvals outside that authorization, cancellation and explicit tool blocks remain protected
+    And requested free-text values resume the waiting step, independent instructions need a new plan, mixed replies are split, and unrelated instructions imply no option selection or approval
     And each Codex hook is one line that prints the same through `sh`, `cmd.exe` and PowerShell
     And an existing Codex hook file keeps the project's groups and gains only the ones it lacks, as the Claude Code settings file does
     And a file with a shape init cannot read is left unchanged, with a warning
