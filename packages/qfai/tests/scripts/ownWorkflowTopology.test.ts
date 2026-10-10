@@ -1697,6 +1697,9 @@ describe("the required-context job and the lint lane both stay unconditional", (
  * and `workflow_dispatch` only. Its check appears on the scheduled runs and nowhere else, so no
  * pull request gains a context and branch protection has nothing to configure.
  *
+ * The optional Windows diagnostic is manual-only and adds no required check. It
+ * runs the complete workspace on the requested head, without splitting PR lanes.
+ *
  * The list stays a literal for the reason it always was: a creation, removal or rename should be
  * a failing test naming which file, not a diff somebody has to interpret. It named each of these.
  */
@@ -1708,6 +1711,7 @@ const OWN_WORKFLOW_FILES = [
   "release.yml",
   "renovate.yml",
   "tag-release.yml",
+  "windows-full-suite-diagnostic.yml",
 ] as const;
 
 // QFAI:EX-0002-0017-03
@@ -4623,7 +4627,9 @@ describe("the Windows diagnostic's actual Node programs", () => {
       try {
         expect(runWindowsPreflight(fixture).status).toBe(0);
         if (change === "unavailable") {
-          namedGit(fixture.root, "remote", "remove", "origin");
+          const unavailable = path.join(fixture.root, "unavailable-origin.git");
+          expect(existsSync(unavailable)).toBe(false);
+          namedGit(fixture.root, "remote", "set-url", "origin", unavailable);
         } else {
           writeFileSync(path.join(fixture.root, fixture.file), "export const changed = true;\n");
           namedGit(fixture.root, "add", "--", fixture.file);
@@ -4633,7 +4639,9 @@ describe("the Windows diagnostic's actual Node programs", () => {
             namedGit(fixture.root, "checkout", "--detach", fixture.sha);
           }
         }
-        expect(runWindowsPreflight(fixture).status).not.toBe(0);
+        const result = runWindowsPreflight(fixture);
+        expect(result.status).not.toBe(0);
+        expect(result.stderr).toContain("identity is invalid, changed or unavailable");
       } finally {
         rmSync(fixture.root, { recursive: true, force: true });
       }
