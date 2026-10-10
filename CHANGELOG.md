@@ -33,6 +33,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Repeated edit reminders use short rule pointers.** The first relevant edit
+  receives the full rules; later edits retain concise guidance. Missing session
+  identity or unavailable counters keep the full reminder. Posting reminders
+  remain unchanged.
+
 - **Approved specification changes distinguish pending test annotations from completed tests.**
   An exact AC test exception needs both specification-change and test-deferral
   authority. Its review date is manual; uncovered changes remain open questions.
