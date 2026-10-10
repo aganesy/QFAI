@@ -20,11 +20,12 @@ type Entry = { mode: string; path: string };
 const LINK = "120000";
 const FILE = "100644";
 
-/** An index holding one shipped rule and its operating link. */
+/** An index holding one shipped rule, its operating link and its Claude link. */
 function index(overrides: Partial<Record<string, string>> = {}): Entry[] {
   const modes: Record<string, string> = {
     "packages/qfai/assets/init/root/.agents/rules/grilling.md": FILE,
     ".agents/rules/grilling.md": LINK,
+    ".claude/rules/grilling.md": LINK,
     ...overrides,
   };
   return Object.entries(modes).map(([path, mode]) => ({ mode, path }));
@@ -35,6 +36,7 @@ describe("expectedLinks derives the paths that must be symlinks", () => {
     const found = expectedLinks(index()).map((item: { path: string }) => item.path);
 
     expect(found).toContain(".agents/rules/grilling.md");
+    expect(found).toContain(".claude/rules/grilling.md");
   });
 
   it("reports the mode a path is staged with, so a copy is visible", () => {
@@ -53,6 +55,16 @@ describe("expectedLinks derives the paths that must be symlinks", () => {
     const found = expectedLinks(entries).map((item: { path: string }) => item.path);
 
     expect(found).not.toContain(".agents/rules/repository-language.md");
+  });
+
+  it("asks nothing of a Claude entry point that does not exist", () => {
+    // Adding the rule and linking it from a tool directory are separate
+    // changes; the rules register is what fails on a master nothing registers.
+    const entries = index();
+    const withoutClaude = entries.filter((entry) => !entry.path.startsWith(".claude/"));
+    const found = expectedLinks(withoutClaude).map((item: { path: string }) => item.path);
+
+    expect(found).toEqual([".agents/rules/grilling.md"]);
   });
 
   it("ignores a nested path under a rules directory", () => {
