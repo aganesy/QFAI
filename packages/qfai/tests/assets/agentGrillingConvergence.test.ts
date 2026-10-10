@@ -28,7 +28,11 @@ describe("a grilling session between agents has an end", () => {
       const content = await read(path.join(tree, CONVERGENCE));
       expectPhrase(content, "## Agent-to-agent grilling (MUST)");
       expectPhrase(content, "A grilling session between agents is a **delegated session**");
-      expectPhrase(content, "the user is\nasked only a critical decision");
+      expectPhrase(
+        content,
+        "the user is asked only an uncovered critical decision when questions are permitted",
+      );
+      expectPhrase(content, "record the agents' adoption and authority separately");
       expectPhrase(
         content,
         "These rules bound its rounds and say what\nsettles each decision when they run out.",
@@ -60,15 +64,16 @@ describe("a grilling session between agents has an end", () => {
       expectPhrase(content, "overturns one through a change request or a rerun");
     });
 
-    it(`${tree}: sends a critical decision to the user without spending a round`, async () => {
-      // Each class is one the agents cannot take: more rounds produce
-      // agreement rather than an answer, and agreement between two agents is
-      // the failure that is hardest to see afterwards.
+    it(`${tree}: keeps an uncovered critical decision open without spending a round`, async () => {
+      // More rounds cannot supply missing user authority. Uncovered critical
+      // decisions remain open even when every agent agrees.
       const content = await read(path.join(tree, CONVERGENCE));
       expectPhrase(
         content,
-        "**A critical decision goes to the user at once**, without spending a round.",
+        "**A critical decision without an actual answer or recorded applicable user authority goes to the user at once when asking is permitted**",
       );
+      expectPhrase(content, "without spending a round");
+      expectPhrase(content, "Agent agreement and round exhaustion supply no authority");
       expectPhrase(content, "It contradicts a spec, a contract or a recorded decision");
       expectPhrase(content, "Its effect cannot be taken back");
       expectPhrase(
@@ -79,7 +84,7 @@ describe("a grilling session between agents has an end", () => {
       // The discussion pack counts as an answer here: it is where the user
       // already answered product intent in a user session.
       expectPhrase(content, "A discussion pack answers product intent for this test.");
-      expectPhrase(content, "Escalating is not failure");
+      expectPhrase(content, "Each uncovered critical decision goes to the user with every position");
       // The budget bounds the rounds, never the wait for the user's answer.
       expectPhrase(
         content,
@@ -87,7 +92,11 @@ describe("a grilling session between agents has an end", () => {
       );
       expectPhrase(
         content,
-        "The\nsession ends `adopted` once the user has answered every critical decision.",
+        "session ends `adopted` only with no open node or running lookup, all required consumed inputs present",
+      );
+      expectPhrase(
+        content,
+        "every critical decision supported by an actual user answer or recorded applicable authorization",
       );
     });
 
@@ -96,14 +105,20 @@ describe("a grilling session between agents has an end", () => {
       // resolves every unsettled decision: an open question the completion gate
       // reads, rather than a decision taken by default.
       const content = await read(path.join(tree, CONVERGENCE));
-      expectPhrase(content, "the escalation has nobody to reach");
-      expectPhrase(content, "so the stage cannot\ncomplete over it");
+      expectPhrase(content, "Under a no-question mode no escalation is sent to the user");
+      expectPhrase(content, "A critical decision without that authority is opened in the register");
+      expectPhrase(content, "so the stage cannot complete over it");
       expectPhrase(content, "Article X,\nrule 6");
       // And the session still ends: the register write is its ending there.
       expectPhrase(content, "that write ends the session `no-question`");
       expectPhrase(
         content,
-        "Non-critical decisions\nare adopted as they are in any delegated session.",
+        "Non-critical decisions are adopted as they are in any delegated session.",
+      );
+      expectPhrase(content, "no-question mode alone does not qualify it");
+      expectPhrase(
+        content,
+        "Unknown facts and missing undefaultable consumed inputs retain the ordinary open/stop behavior",
       );
     });
   }
@@ -119,7 +134,7 @@ describe("a grilling session between agents has an end", () => {
       // to choose between.
       //
       // What it says is that the budget bounds the rounds and the session ends
-      // `adopted` only once every critical decision has the user's answer.
+      // `adopted` only once every critical decision has actual user authority.
       const content = await read(rel);
       expectPhrase(content, "The user confirms the understanding is shared.");
       expectPhrase(content, "### A session between agents");
@@ -130,7 +145,7 @@ describe("a grilling session between agents has an end", () => {
       expectPhrase(content, "The count bounds the rounds between agents.");
       expectPhrase(
         content,
-        "It does not end the session while a\ncritical decision is unanswered.",
+        "It does not end the session while a critical decision is unanswered and lacks an applicable recorded authorization.",
       );
       expectPhrase(content, "review-convergence.md");
     },
