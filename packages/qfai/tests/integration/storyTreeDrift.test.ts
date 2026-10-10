@@ -341,21 +341,28 @@ describe("decision renumber public CLI", () => {
   );
 
   // QFAI:EX-0001-0008-17
-  it("ignores fictional example input IDs and unrelated binary visual assets for the maximum", async () => {
+  it("ignores fictional IDs, larger identifiers and unrelated visual assets for the maximum", async () => {
     await prepare();
     const example = `${specs}/02_business-flow/business-flow-0001/user-story-0001-0001/03_Example.md`;
     const visual = `${specs}/03_contract/ui/preview.png`;
+    const contract = `${specs}/03_contract/cli/cli-0001-data.md`;
     await put(
       example,
       "# Examples\n\n## Examples\n\n" +
         "| EX-ID | AC-Ref | Input | Expected |\n| --- | --- | --- | --- |\n" +
         "| EX-0001-0001-01 | AC-0001-0001-01 | A fictional DEC-9999 | Reject the input |\n",
     );
+    await put(
+      contract,
+      "# CLI-0001: Data\n\n## Business rules\n\n" +
+        "| BR-ID | Statement | Examples |\n| --- | --- | --- |\n" +
+        "| BR-0001-0001 | Keep DEC-9998suffix, DEC-9998_name, DEC-9998-extended, DEC-9998日本 and 日本DEC-9998 unchanged. | EX-0001-0001-01 |\n",
+    );
     await mkdir(path.dirname(path.join(root, visual)), { recursive: true });
     await writeFile(path.join(root, visual), Buffer.from([0x89, 0x50, 0x4e, 0x47, 0xff, 0x00]));
     git("add", ".");
     git("commit", "-m", "example data and unrelated visual asset");
-    const before = await snapshot([...files, example, visual]);
+    const before = await snapshot([...files, example, visual, contract]);
     const result = await invoke();
     expect(result.code).toBe(0);
     expect(result.stdout).toContain("DEC-0013");

@@ -295,7 +295,9 @@ export async function buildDecisionRenumberPlan(
     const model = buildStoryTreeModel(specTexts, { specsDir: specs });
     highest = Math.max(highest, Number(nextStoryTreeId(model, "DEC").slice(4)) - 1);
     for (const rule of model.rules) {
-      for (const reference of rule.statement.matchAll(/(?<![A-Za-z0-9_-])DEC-(\d{4})(?![0-9-])/g))
+      for (const reference of rule.statement.matchAll(
+        /(?<![\p{L}\p{N}_-])DEC-(\d{4})(?![\p{L}\p{N}_-])/gu,
+      ))
         highest = Math.max(highest, Number(reference[1]));
     }
     for (const row of model.decisions?.rows ?? []) {
