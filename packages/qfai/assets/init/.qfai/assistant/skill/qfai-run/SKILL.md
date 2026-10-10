@@ -14,7 +14,7 @@ mode: execution-focused
 
 [DRIFT-PROTOCOL:REQUIRED]
 
-The CLI plans the request; this skill runs its steps in order.
+The CLI plans; this skill follows its steps in order.
 
 - Read `references/extraction.md` to extract a request.
 - Plan command and format: `references/plan.md`.
@@ -45,6 +45,8 @@ value but the three below plans nothing.
 
 ## Request kinds
 
+- For independent targets under one goal, read `references/operator-screens.md`
+  before planning or switching during a wait.
 - A change, a question, a proposal to decide or a report to close is planned.
   A question plans a route that answers it and changes nothing. Text that is
   not a request is not planned.
@@ -74,9 +76,8 @@ value but the three below plans nothing.
 5. **Run the stages.** Run each stage in plan order, and each of its steps in
    order, as `.qfai/assistant/rule/shared-skill-operating-baseline.md#running-steps-mandatory` says.
    When a step is short or passes without edits, read `references/operator-screens.md`.
-   Write any artifact yourself. Give a part to a sub-agent only to run
-   independent parts in parallel, or for a review. At each step, handle the
-   points the plan names for it, as `references/stage-points.md` sets out:
+   Write artifacts yourself or delegate independent parallel work or review.
+   At each step, follow its plan's points in `references/stage-points.md`:
    - **Release point.** Ask the user to approve the release before the step `releasePoint` names.
    - **Decision point.** Put each critical decision at a step `decisionPoints` names to the user.
    - **Branch point.** Move to the destination a step `branchPoints` names, and plan it at once.
