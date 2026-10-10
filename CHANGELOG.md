@@ -242,6 +242,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Validation text lists errors before warnings and information.** Groups of
+  the same severity retain their first-appearance order. JSON records, counts,
+  suppression and exit behavior stay unchanged.
+
 - **Unknown commands identify the running QFAI installation.** The error shows
   its version and package location and suggests updating the project's local
   dependency. An unknown workflow operation also includes this diagnosis in
