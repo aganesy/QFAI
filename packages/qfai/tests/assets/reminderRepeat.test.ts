@@ -18,12 +18,12 @@ const SETTINGS = [".claude/settings.json", "packages/qfai/assets/init/.claude/se
 type Entry = { readonly command?: string; readonly args?: readonly string[] };
 type Group = { readonly hooks: readonly Entry[] };
 
-/** The reminders printed on a limited schedule, and the ones printed on every call. */
-const LIMITED = [
-  "minimal-implementation",
-  "documentation-clarity-after-write",
-  "documentation-clarity-after-edit",
-];
+/** Editing reminders use the same first-full, later-pointer delivery. */
+const WRITE_POINTERS = [
+  ["minimal-implementation", ".agents/rules/minimal-implementation.md"],
+  ["documentation-clarity-after-write", ".agents/rules/documentation-clarity.md"],
+  ["documentation-clarity-after-edit", ".agents/rules/documentation-clarity.md"],
+] as const;
 const EVERY_CALL = ["documentation-clarity-before-post"];
 const POINTERS = [
   ["api-budget", ".agents/rules/api-budget.md"],
@@ -32,9 +32,10 @@ const POINTERS = [
   ["grilling-plan", ".agents/rules/grilling.md"],
   ["free-text-entry", "qfai-run"],
   ["structured-question", ".agents/rules/user-questions.md"],
+  ...WRITE_POINTERS,
 ] as const;
 
-/** Calls between two prints of one reminder, after the first. */
+/** Repeated delivery is checked through invocation twenty-one. */
 const PERIOD = 20;
 
 /** Session ids this file made, so the counters they left in the temp directory can go. */
@@ -108,6 +109,10 @@ function expectPointer(context: string, full: string, reference: string): void {
   expect(context.trim()).not.toBe("");
   expect(context).not.toMatch(/[\r\n\u2028\u2029]/);
   expect(context.length).toBeLessThan(full.length);
+  if (reference.endsWith("minimal-implementation.md")) {
+    expect(context).toMatch(/§\s*2|\b(?:floor|non-removable)\b/i);
+    expect(context).toContain(".agents/rules/interface-clarity.md");
+  }
   if (reference === "qfai-run") {
     expect(context).toMatch(/\bnew requests?\b.*\bplan\b/i);
     expect(context).toMatch(
@@ -118,8 +123,9 @@ function expectPointer(context: string, full: string, reference: string): void {
   }
 }
 
-describe.each(SETTINGS)("%s limits how often a tool-time reminder repeats", (rel) => {
+describe.each(SETTINGS)("%s sends full context first and pointers on later tool calls", (rel) => {
   // QFAI:EX-0001-0196-55
+  // QFAI:EX-0001-0196-56
   it.each(POINTERS)(
     "prints %s in full once, then a one-line pointer on every relevant trigger",
     async (key, reference) => {
@@ -135,6 +141,7 @@ describe.each(SETTINGS)("%s limits how often a tool-time reminder repeats", (rel
   );
 
   // QFAI:EX-0001-0196-55
+  // QFAI:EX-0001-0196-56
   it("keeps pointer counters separate by session, optional agent and message key", async () => {
     const byKey = await entries(rel);
     const session_id = newSession();
@@ -154,6 +161,7 @@ describe.each(SETTINGS)("%s limits how often a tool-time reminder repeats", (rel
   });
 
   // QFAI:EX-0001-0196-55
+  // QFAI:EX-0001-0196-56
   it("falls back to full context on every selected trigger without a usable identity", async () => {
     const byKey = await entries(rel);
     for (const [key] of POINTERS) {
@@ -168,6 +176,7 @@ describe.each(SETTINGS)("%s limits how often a tool-time reminder repeats", (rel
   });
 
   // QFAI:EX-0001-0196-55
+  // QFAI:EX-0001-0196-56
   it("falls back to full context and exit zero when selected counters cannot be stored", async () => {
     const byKey = await entries(rel);
     for (const [key] of POINTERS) {
@@ -239,44 +248,68 @@ describe.each(SETTINGS)("%s limits how often a tool-time reminder repeats", (rel
       ).toBe(await fullContext(key));
     }
   });
-  it("prints each limited reminder on a session's first call and not on the second", async () => {
+  // QFAI:EX-0001-0196-56
+  it("prints editing reminders in full first and as pointers on the second eligible call", async () => {
     const byKey = await entries(rel);
-    for (const key of LIMITED) {
+    for (const [key, reference] of WRITE_POINTERS) {
       const entry = byKey.get(key);
       if (entry === undefined) throw new Error(`no entry carries ${key}`);
       const session_id = newSession();
-      expect(await call(rel, entry, { session_id }), `${key}, first call`).toContain(
-        "additionalContext",
-      );
-      expect(await call(rel, entry, { session_id }), `${key}, second call`).toBe("");
+      const input = {
+        session_id,
+        hook_event_name: "PostToolUse",
+        tool_name: "Edit",
+        tool_input: { file_path: key === "minimal-implementation" ? "src/a.ts" : "docs/a.md" },
+      };
+      const full = await fullContext(key);
+      expect(contextOf(await call(rel, entry, input)), `${key}, first call`).toBe(full);
+      expectPointer(contextOf(await call(rel, entry, input)), full, reference);
     }
   });
 
-  it("prints again on the call after a full period, and not before it", async () => {
+  // QFAI:EX-0001-0196-53
+  // QFAI:EX-0001-0196-56
+  it("keeps implementation pointers on every call through invocation twenty-one", async () => {
     const entry = (await entries(rel)).get("minimal-implementation");
     if (entry === undefined) throw new Error("no entry carries minimal-implementation");
     const session_id = newSession();
-    const printed: number[] = [];
+    const full = await fullContext("minimal-implementation");
+    const input = {
+      session_id,
+      hook_event_name: "PostToolUse",
+      tool_name: "Write",
+      tool_input: { file_path: "src/a.ts" },
+    };
     for (let n = 1; n <= PERIOD + 1; n += 1) {
-      if ((await call(rel, entry, { session_id })) !== "") printed.push(n);
+      const context = contextOf(await call(rel, entry, input));
+      if (n === 1) expect(context).toBe(full);
+      else expectPointer(context, full, ".agents/rules/minimal-implementation.md");
     }
-    expect(printed).toEqual([1, PERIOD + 1]);
   });
 
-  it("counts each session, and each sub-agent of a session, on its own", async () => {
+  // QFAI:EX-0001-0196-56
+  it("keeps implementation sequences separate when an agent or session changes", async () => {
     const entry = (await entries(rel)).get("minimal-implementation");
     if (entry === undefined) throw new Error("no entry carries minimal-implementation");
     const session_id = newSession();
-    await call(rel, entry, { session_id });
-    expect(await call(rel, entry, { session_id, agent_id: "helper" })).toContain(
-      "additionalContext",
-    );
-    expect(await call(rel, entry, { session_id: newSession() })).toContain("additionalContext");
+    const full = await fullContext("minimal-implementation");
+    for (const input of [
+      { session_id },
+      { session_id, agent_id: "helper" },
+      { session_id: newSession() },
+    ]) {
+      expect(contextOf(await call(rel, entry, input))).toBe(full);
+      expectPointer(
+        contextOf(await call(rel, entry, input)),
+        full,
+        ".agents/rules/minimal-implementation.md",
+      );
+    }
   });
 
   it("prints on every call when the input names no session", async () => {
     const byKey = await entries(rel);
-    for (const key of LIMITED) {
+    for (const [key] of WRITE_POINTERS) {
       const entry = byKey.get(key);
       if (entry === undefined) throw new Error(`no entry carries ${key}`);
       for (const input of [{}, { session_id: 7 }]) {
@@ -299,14 +332,47 @@ describe.each(SETTINGS)("%s limits how often a tool-time reminder repeats", (rel
     expect(contextOf(await call(rel, entry, { session_id }))).toBe(await fullContext("api-budget"));
   });
 
-  it("leaves the reminder before a post on every call", async () => {
+  // QFAI:EX-0001-0196-53
+  // QFAI:EX-0001-0196-56
+  it("filters excluded implementation files before the first full display", async () => {
+    const entry = (await entries(rel)).get("minimal-implementation");
+    if (entry === undefined) throw new Error("no implementation reminder");
+    const session_id = newSession();
+    const input = (file_path: string) => ({
+      session_id,
+      hook_event_name: "PostToolUse",
+      tool_name: "Edit",
+      tool_input: { file_path },
+    });
+    for (const file of ["README.md", "tmp/a.ts", "tests/a.ts", "../outside.ts"]) {
+      expect(await call(rel, entry, input(file)), file).toBe("");
+    }
+    const full = await fullContext("minimal-implementation");
+    expect(contextOf(await call(rel, entry, input("src/a.ts")))).toBe(full);
+    expectPointer(
+      contextOf(await call(rel, entry, input("src/a.ts"))),
+      full,
+      ".agents/rules/minimal-implementation.md",
+    );
+  });
+
+  // QFAI:EX-0001-0196-56
+  it("leaves before-post full on every call even after editing reminders", async () => {
     const byKey = await entries(rel);
     for (const key of EVERY_CALL) {
       const entry = byKey.get(key);
       if (entry === undefined) throw new Error(`no entry carries ${key}`);
       const session_id = newSession();
-      expect(await call(rel, entry, { session_id }), key).toContain("additionalContext");
-      expect(await call(rel, entry, { session_id }), key).toContain("additionalContext");
+      for (const [editKey] of WRITE_POINTERS) {
+        const editing = byKey.get(editKey);
+        if (editing === undefined) throw new Error(`no entry carries ${editKey}`);
+        await call(rel, editing, { session_id });
+        await call(rel, editing, { session_id });
+      }
+      const full = await fullContext(key);
+      for (let n = 1; n <= PERIOD + 1; n += 1) {
+        expect(contextOf(await call(rel, entry, { session_id })), `${key}, call ${n}`).toBe(full);
+      }
     }
   });
 });

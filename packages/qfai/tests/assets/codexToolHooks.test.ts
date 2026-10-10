@@ -417,19 +417,32 @@ describe("the Codex tool-time reminders", () => {
   });
 });
 
-/** Calls between two prints of one reminder, after the first. */
+/** Repeated delivery is checked through invocation twenty-one. */
 const PERIOD = 20;
 
-/** Entries whose existing limited schedule is unchanged. */
-const LIMITED = [
-  ["PostToolUse", "documentation-clarity-after-write", "apply_patch", patch("*** Add File: a.md")],
+/** Editing reminders use the same first-full, later-pointer delivery. */
+const WRITE_POINTERS = [
+  [
+    "PostToolUse",
+    "documentation-clarity-after-write",
+    "apply_patch",
+    patch("*** Add File: a.md"),
+    ".agents/rules/documentation-clarity.md",
+  ],
   [
     "PostToolUse",
     "documentation-clarity-after-edit",
     "apply_patch",
     patch("*** Update File: a.md"),
+    ".agents/rules/documentation-clarity.md",
   ],
-  ["PostToolUse", "minimal-implementation", "apply_patch", patch("*** Update File: src/a.ts")],
+  [
+    "PostToolUse",
+    "minimal-implementation",
+    "apply_patch",
+    patch("*** Update File: src/a.ts"),
+    ".agents/rules/minimal-implementation.md",
+  ],
 ] as const;
 
 const POINTERS = [
@@ -450,6 +463,7 @@ const POINTERS = [
     "Fix the failing test",
     ".agents/rules/user-questions.md",
   ],
+  ...WRITE_POINTERS,
 ] as const;
 
 async function fullContext(key: string): Promise<string> {
@@ -483,6 +497,10 @@ function expectPointer(context: string, full: string, reference: string): void {
   expect(context.trim()).not.toBe("");
   expect(context).not.toMatch(/[\r\n\u2028\u2029]/);
   expect(context.length).toBeLessThan(full.length);
+  if (reference.endsWith("minimal-implementation.md")) {
+    expect(context).toMatch(/§\s*2|\b(?:floor|non-removable)\b/i);
+    expect(context).toContain(".agents/rules/interface-clarity.md");
+  }
   if (reference === "qfai-run") {
     expect(context).toMatch(/\bnew requests?\b.*\bplan\b/i);
     expect(context).toMatch(
@@ -589,41 +607,45 @@ describe("the Codex tool-time reminders that repeat", () => {
     });
   });
 
-  it("print on a session's first call and not on its second, under every shell", async () => {
+  // QFAI:EX-0001-0196-56
+  it("send editing context in full first and a pointer on the second call under every shell", async () => {
     await withProject(async (cwd) => {
-      for (const [event, key, tool, command] of LIMITED) {
+      for (const [event, key, tool, command, reference] of WRITE_POINTERS) {
         const entry = await codexEntry(event, key);
+        const full = await fullContext(key);
         for (const shell of CODEX_SHELLS) {
           const input = inSession(codexInput(event, tool, command), newSession());
-          expect(await firedEventIn(entry, shell, cwd, input), `${key}, ${shell}, first`).toBe(
-            event,
-          );
-          expect(await firedEventIn(entry, shell, cwd, input), `${key}, ${shell}, second`).toBe(
-            null,
-          );
+          expect(
+            await firedContext(entry, shell, cwd, input, event),
+            `${key}, ${shell}, first`,
+          ).toBe(full);
+          expectPointer(await firedContext(entry, shell, cwd, input, event), full, reference);
         }
       }
     });
   });
 
-  it("print again on the call after a full period, and not before it", async () => {
+  // QFAI:EX-0001-0196-53
+  // QFAI:EX-0001-0196-56
+  it("keep implementation pointers through invocation twenty-one", async () => {
     const entry = await codexEntry("PostToolUse", "minimal-implementation");
     await withProject(async (cwd) => {
       const input = inSession(
         codexInput("PostToolUse", "apply_patch", patch("*** Update File: src/a.ts")),
         newSession(),
       );
-      const printed: number[] = [];
+      const full = await fullContext("minimal-implementation");
       for (let call = 1; call <= PERIOD + 1; call += 1) {
-        if ((await firedEventIn(entry, "sh", cwd, input)) !== null) printed.push(call);
+        const context = await firedContext(entry, "sh", cwd, input, "PostToolUse");
+        if (call === 1) expect(context).toBe(full);
+        else expectPointer(context, full, ".agents/rules/minimal-implementation.md");
       }
-      expect(printed).toEqual([1, PERIOD + 1]);
     });
   });
 
   it("print on every call when the input names no session", async () => {
     await withProject(async (cwd) => {
-      for (const [event, key, tool, command] of LIMITED) {
+      for (const [event, key, tool, command] of WRITE_POINTERS) {
         const entry = await codexEntry(event, key);
         const input = inSession(codexInput(event, tool, command), null);
         expect(await firedEventIn(entry, "sh", cwd, input), `${key}, first`).toBe(event);
@@ -636,7 +658,48 @@ describe("the Codex tool-time reminders that repeat", () => {
   it("count only the calls they would print for", async () => {
     await withProject(async (cwd) => {
       const cases = [
-        ["PostToolUse", "minimal-implementation", patch("*** Update File: tmp/x.py"), "src/a.ts"],
+        [
+          "PostToolUse",
+          "minimal-implementation",
+          patch("*** Update File: tmp/x.py"),
+          patch("*** Update File: src/a.ts"),
+        ],
+        [
+          "PostToolUse",
+          "minimal-implementation",
+          patch("*** Update File: README.md"),
+          patch("*** Update File: src/a.ts"),
+        ],
+        [
+          "PostToolUse",
+          "minimal-implementation",
+          patch("*** Update File: ../../outside.ts"),
+          patch("*** Update File: src/a.ts"),
+        ],
+        [
+          "PostToolUse",
+          "documentation-clarity-after-write",
+          patch("*** Update File: a.md"),
+          patch("*** Add File: docs/a.md"),
+        ],
+        [
+          "PostToolUse",
+          "documentation-clarity-after-write",
+          patch("*** Add File: src/a.ts"),
+          patch("*** Add File: docs/a.md"),
+        ],
+        [
+          "PostToolUse",
+          "documentation-clarity-after-edit",
+          patch("*** Add File: a.md"),
+          patch("*** Update File: docs/a.md"),
+        ],
+        [
+          "PostToolUse",
+          "documentation-clarity-after-edit",
+          patch("*** Update File: src/a.ts"),
+          patch("*** Update File: docs/a.md"),
+        ],
         ["PreToolUse", "api-budget", "git status", "gh api repos/o/r"],
       ] as const;
       for (const [event, key, silent, loud] of cases) {
@@ -646,17 +709,43 @@ describe("the Codex tool-time reminders that repeat", () => {
         const call = (command: string) =>
           firedEventIn(entry, "sh", cwd, inSession(codexInput(event, tool, command), session));
         for (let n = 0; n < 3; n += 1) expect(await call(silent), `${key}, silent`).toBeNull();
-        const first = key === "api-budget" ? loud : patch(`*** Update File: ${loud}`);
         expect(
           await firedContext(
             entry,
             "sh",
             cwd,
-            inSession(codexInput(event, tool, first), session),
+            inSession(codexInput(event, tool, loud), session),
             event,
           ),
           `${key}, first loud call`,
         ).toBe(await fullContext(key));
+      }
+    });
+  });
+
+  // QFAI:EX-0001-0196-56
+  it("keep before-post full on every call after editing under every shell", async () => {
+    const posting = await codexEntry("PreToolUse", "documentation-clarity-before-post");
+    const full = await fullContext("documentation-clarity-before-post");
+    await withProject(async (cwd) => {
+      for (const shell of CODEX_SHELLS) {
+        const session = newSession();
+        for (const [event, key, tool, command] of WRITE_POINTERS) {
+          const editing = await codexEntry(event, key);
+          const input = inSession(codexInput(event, tool, command), session);
+          await firedContext(editing, shell, cwd, input, event);
+          await firedContext(editing, shell, cwd, input, event);
+        }
+        const input = inSession(
+          codexInput("PreToolUse", "mcp__github__create_issue", "Post the prepared issue"),
+          session,
+        );
+        for (let call = 1; call <= PERIOD + 1; call += 1) {
+          expect(
+            await firedContext(posting, shell, cwd, input, "PreToolUse"),
+            `${shell}, call ${call}`,
+          ).toBe(full);
+        }
       }
     });
   });

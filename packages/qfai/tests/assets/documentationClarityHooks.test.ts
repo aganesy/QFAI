@@ -279,6 +279,35 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
     expect(text).toContain(".agents/rules/interface-clarity.md");
   });
 
+  // QFAI:EX-0001-0196-53
+  // QFAI:EX-0001-0196-56
+  it("keeps compact editing pointers in the shared catalog with their required rules", () => {
+    if (typeof catalog !== "object" || catalog === null) throw new Error("no reminder catalog");
+    for (const [key, rule] of [
+      ["minimal-implementation", ".agents/rules/minimal-implementation.md"],
+      ["documentation-clarity-after-write", ".agents/rules/documentation-clarity.md"],
+      ["documentation-clarity-after-edit", ".agents/rules/documentation-clarity.md"],
+    ] as const) {
+      const message: unknown = Reflect.get(catalog, key);
+      if (typeof message !== "object" || message === null) throw new Error(`no ${key}`);
+      const brief: unknown = Reflect.get(message, "briefContext");
+      expect(typeof brief, `${key} has a repeat pointer`).toBe("string");
+      if (typeof brief !== "string") throw new Error(`no ${key} pointer`);
+      expect(brief).toContain(rule);
+      expect(brief).not.toMatch(/[\r\n\u2028\u2029]/);
+      const output: unknown = Reflect.get(message, "hookSpecificOutput");
+      if (typeof output !== "object" || output === null) throw new Error("no hook output");
+      const full: unknown = Reflect.get(output, "additionalContext");
+      if (typeof full !== "string") throw new Error("no full context");
+      expect(brief.trim().length).toBeGreaterThan(0);
+      expect(brief.length).toBeLessThan(full.length);
+      if (key === "minimal-implementation") {
+        expect(brief).toMatch(/§\s*2|\b(?:floor|non-removable)\b/i);
+        expect(brief).toContain(".agents/rules/interface-clarity.md");
+      }
+    }
+  });
+
   it("runs a program directly, with no shell and no message of its own", () => {
     const readers = new Set<string>();
     for (const [, groups] of hooks) {
