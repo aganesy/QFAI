@@ -26,6 +26,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   required values, commands or their order have a semantic effect even when
   only Markdown changes. Fixes #3203.
 
+- **qfai-run checks its local launcher before planning and follows each step's procedure.**
+  Recovery uses this checkout's package manager. A pass-through step records its
+  reason and retains the plan's independent review. Fixes #3211.
+
 - **qfai-run records the required approval before handing an operation to a person.**
   The row is a route record. Triage steps change no tracked file and never
   run the handed-off operation. Fixes #3201.
@@ -85,6 +89,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   wrapper with `type` and `tools`; the Firecrawl templates drop their
   `_comment` keys. The default-deny sandbox template now records each denied
   request with its capability, target and time. Part of #2951.
+
+- **Writing reminders allow expressly requested incident, event and work records.**
+  These keep necessary facts and evidence; ordinary specifications and change
+  descriptions omit design history. The posting reminder allows numbers and
+  links in pull request and issue bodies. Fixes #3214.
 
 - **`qfai init` and `qfai validate` stop reading the spec-pack layout and the
   `.gitignore` lines of earlier releases.** The managed `.gitignore` block no

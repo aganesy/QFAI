@@ -20,7 +20,8 @@ The CLI plans the request; this skill runs its steps in order.
 - Plan command and format: `references/plan.md`.
 - Screens and questions: `references/operator-screens.md`.
 - Release, decision and branch points: `references/stage-points.md`.
-- Invoke the CLI through the launcher of `.qfai/assistant/rule/shared-skill-operating-baseline.md#canonical-qfai-launcher-mandatory`.
+- Run preflight before planning, as `.qfai/assistant/rule/shared-skill-operating-baseline.md#canonical-qfai-launcher-mandatory` says.
+  If the launcher is missing or preflight fails, read `references/operator-screens.md` for recovery.
 
 ## What this skill never does
 
@@ -71,7 +72,9 @@ value but the three below plans nothing.
    `common-policy-check` once. On a route that changes no file, one that
    closes, answers or asks, it reads and reports and writes nothing.
 5. **Run the stages.** Run each stage in plan order, and each of its steps in
-   order. Write any artifact yourself. Give a part to a sub-agent only to run
+   order, as `.qfai/assistant/rule/shared-skill-operating-baseline.md#running-steps-mandatory` says.
+   When a step is short or passes without edits, read `references/operator-screens.md`.
+   Write any artifact yourself. Give a part to a sub-agent only to run
    independent parts in parallel, or for a review. At each step, handle the
    points the plan names for it, as `references/stage-points.md` sets out:
    - **Release point.** Ask the user to approve the release before the step `releasePoint` names.
@@ -114,11 +117,7 @@ Follow `.qfai/assistant/rule/shared-skill-delegation-baseline.md`.
 
 ## Work Orders Summary
 
-Where parts ran in parallel, report one row per part given to a sub-agent.
-
-| Step | Role (sub-agent) | Agent instance  | Task title        | Input (refs)  | Output (refs) | Status (PASS/REVISE/PENDING) |
-| ---- | ---------------- | --------------- | ----------------- | ------------- | ------------- | ---------------------------- |
-| 1    | `<role>`         | `<instance id>` | `<part in words>` | The step file | The result    | PASS/REVISE                  |
+When parts ran in parallel, use the summary in `references/operator-screens.md`.
 
 ## Default Autopilot Policy
 
