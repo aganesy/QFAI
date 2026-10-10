@@ -33,9 +33,16 @@ only names this step; it never deletes anything.
      never the temporary root itself, the workspace root or Git metadata.
    - Verify that Git ignores the target and its contents, and no tracked file
      or tracked directory entry sits inside it. Do not change ignore rules.
-   - Inspect every descendant and every path component. Reject symbolic
-     links, junctions, reparse points, nested repositories and nonregular
-     entries; stop if the host cannot establish these facts.
+   - Verify the required host deletion permissions for every target, its
+     descendants and their containing directories before the first deletion.
+     Use only host-allowed read-only permission inspection. User authority,
+     read access and available tools are not proof of deletion permission.
+     Missing or unknown permission stops the entire cleanup without deleting
+     any target. Do not change permissions or elevate privileges to proceed.
+   - Inspect every descendant and every path component. Allow only ordinary
+     directories and regular files. Reject symbolic links, junctions,
+     reparse points, nested repositories and special entries; stop if the host
+     cannot establish these facts.
    - Verify current-task ownership of every entry and that no process, other
      task or pending operation uses it. Unknown ownership or use stops the
      cleanup; do not terminate processes to make a target removable.
@@ -44,7 +51,7 @@ only names this step; it never deletes anything.
      Snapshot tracked contents and the index separately, without exposing
      their contents in the receipt.
 3. Recheck each target against that preflight immediately before deleting it.
-   Stop if its path, identity or contents changed, or any fact is unknown.
+   Stop if its path, identity, contents or permissions changed, or any fact is unknown.
    Use the host's allowed native operation with literal absolute paths in one
    shell. Never pass enumerated paths to another shell, follow links, disable
    a guard, elevate privileges or use another tool to bypass a host denial.
