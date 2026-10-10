@@ -33,6 +33,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Missing test annotations use grammatical diagnostics.** Messages use
+  "an E2E test", "an integration or API test" and "a test" for the three
+  obligation kinds. Coverage and severity are unchanged. Fixes #3239.
+
 - **Approved specification changes distinguish pending test annotations from completed tests.**
   An exact AC test exception needs both specification-change and test-deferral
   authority. Its review date is manual; uncovered changes remain open questions.
