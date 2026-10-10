@@ -109,7 +109,7 @@ describe("qfai-triage as a stage skill", () => {
 
     const recheck = flat(phases.find((phase) => /^3\./.test(phase)) ?? "");
     expect(recheck).toMatch(/recheck each target.*immediately before deleting/i);
-    expect(recheck).toMatch(/stop.*path.*identity.*contents changed.*unknown/i);
+    expect(recheck).toMatch(/stop.*path.*identity.*contents or permissions changed.*unknown/i);
     expect(recheck).toMatch(/literal absolute paths.*one shell/i);
     expect(recheck).toMatch(
       /never.*another shell.*follow links.*disable.*guard.*elevate.*bypass.*host denial/i,

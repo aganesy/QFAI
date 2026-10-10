@@ -179,6 +179,7 @@
             "const": "order"
           },
           "artifacts": {
+            "type": "array",
             "maxItems": 0
           }
         }
@@ -187,6 +188,7 @@
         "required": ["qualifiers"],
         "properties": {
           "qualifiers": {
+            "type": "array",
             "contains": {
               "const": "owned-temporary-cleanup"
             }
@@ -198,6 +200,7 @@
       "then": {
         "properties": {
           "artifacts": {
+            "type": "array",
             "maxItems": 0
           }
         }
@@ -206,10 +209,13 @@
         "required": ["alternatives"],
         "properties": {
           "alternatives": {
+            "type": "array",
             "contains": {
+              "type": "object",
               "required": ["qualifiers"],
               "properties": {
                 "qualifiers": {
+                  "type": "array",
                   "contains": {
                     "const": "owned-temporary-cleanup"
                   }
@@ -335,6 +341,7 @@
             "required": ["qualifiers"],
             "properties": {
               "qualifiers": {
+                "type": "array",
                 "contains": {
                   "const": "owned-temporary-cleanup"
                 }

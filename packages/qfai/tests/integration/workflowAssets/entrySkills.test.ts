@@ -141,6 +141,7 @@ const EXTRACTION_VOCABULARIES: Record<string, string[]> = {
     "removal-requested",
     "visual-open",
     "prototype-requested",
+    "owned-temporary-cleanup",
   ],
   signals: [
     "approved-record-task",
