@@ -7,7 +7,7 @@
  * hold what reaches stdout and what the user's git configuration cannot change.
  */
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -366,6 +366,9 @@ describe("main IDs received through a merge", () => {
         expect(git(work, "show", "HEAD:.qfai/spec/decisions.md")).not.toContain("DEC-0002");
       }
 
+      const fetchHead = path.join(work, ".git", "FETCH_HEAD");
+      if (!commitMerge) expect(existsSync(fetchHead)).toBe(false);
+
       const list = () => ({ code: 0, pulls: [{ number: 7, branch: "other" }] });
       const code = await run(["check"], { cwd: work, list });
       if (commitMerge) {
@@ -378,6 +381,7 @@ describe("main IDs received through a merge", () => {
         expect(code).toBe(2);
         expect(log.mock.calls).toEqual([]);
         expect(error.mock.calls.flat().join("\n")).toMatch(/finish.*merge/i);
+        expect(existsSync(fetchHead)).toBe(false);
       }
       const output = [...log.mock.calls, ...error.mock.calls].flat().join("\n");
       expect(output).not.toMatch(/DEC-\d{4}.*also added|renumber/i);
