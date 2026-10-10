@@ -119,8 +119,9 @@ Configuration templates: `.qfai/assistant/skill/web-research/mcp-templates/playw
 
 ### 2.4 MCP Failure Recovery
 
-- Crash detection threshold: **< 10 seconds** runtime indicates abnormal termination.
+- Crash detection: notice an MCP server crash or a dropped connection within **10 seconds**.
 - On MCP server crash, fallback to built-in tools (WebSearch / WebFetch).
+- Tell the user that the MCP server is unavailable and that the built-in tools are in use.
 - Rate limit: detect HTTP 429 responses and honour `Retry-After` header with exponential backoff.
 
 ## 3. Security
@@ -143,9 +144,10 @@ Default policy: **default-deny**.
 
 - Only domains listed in the project allowlist may be fetched.
 - The allowlist is defined in `qfai.config.yaml` under `webResearch.allowlist`.
-- Unknown domains are logged and skipped; the pipeline continues with allowed sources.
+- Unknown domains are logged with the blocked domain and skipped; the pipeline continues with allowed sources.
 - Redirect chains are followed only while all hops remain on allowlisted domains.
-  A redirect to a non-allowlisted domain is blocked and the fetch is rejected.
+  A redirect to a non-allowlisted domain is blocked at that target, the fetch is rejected,
+  and the redirect chain up to the blocked target is logged.
 
 ### 3.3 --yolo Flag and Security Gates
 
@@ -159,14 +161,14 @@ cannot be bypassed.
 
 Every pipeline execution produces a session log with **6 mandatory fields**:
 
-| Field        | Description                             |
-| ------------ | --------------------------------------- |
-| `session_id` | Unique identifier for this research run |
-| `query`      | The original search query               |
-| `timestamp`  | ISO-8601 start time                     |
-| `stages`     | Array of stage results with timing      |
-| `sources`    | List of fetched URLs with status codes  |
-| `citations`  | Final citation entries                  |
+| Field        | Description                                                             |
+| ------------ | ----------------------------------------------------------------------- |
+| `session_id` | Unique identifier for this research run                                 |
+| `query`      | The request and every search query issued                               |
+| `timestamp`  | ISO-8601 start time                                                     |
+| `stages`     | Stage results with timing, sanitization events and verification results |
+| `sources`    | List of fetched URLs with status codes and content hashes               |
+| `citations`  | Final citation entries                                                  |
 
 The session log is part of the research report, not a file of its own.
 
@@ -186,6 +188,9 @@ Risk-based gating strategy:
 - **Low-risk queries**: Auto-approve. No human gate required.
 - **High-risk queries** (e.g., medical, legal, financial): Gate before cite stage.
   Human must confirm source selection and extracted claims.
+- **A high-risk conclusion** is not applied to code until a human has reviewed it.
+  The gate blocks and shows the diff the conclusion would produce together with its citations.
+  A low-risk conclusion is applied without blocking.
 - `--yolo` flag is **ignored** for security gates (see Section 3.3).
 
 Risk classification is determined by query topic analysis and domain sensitivity rules.
@@ -227,8 +232,9 @@ the session log as the coordination artifact.
 
 When the search stage returns no results:
 
-- Log "no sources found" to the session log.
-- Return a zero-result response with the original query for user review.
+- Log "no web sources found" to the session log.
+- Report "no web sources found" to the user together with every search query issued, for user review.
+- Generate no citations: the citation block stays empty, and nothing is cited from memory or from a source that was not fetched.
 - Do not proceed to fetch/extract stages.
 
 ### 9.2 Fetch Failure Isolation
@@ -237,14 +243,19 @@ Each URL is fetched independently. A fetch failure for one URL does not
 abort the pipeline. Failed URLs are logged and excluded; the remaining
 successful fetches produce a partial result.
 
+When every fetch fails, no partial result exists. Report that every fetch failed,
+with the failure reason (status code or timeout) for each URL, and do not run the
+extract stage.
+
 This isolation ensures that transient network errors or single-domain
 outages do not block the entire research pipeline.
 
 ### 9.3 Rate Limiting
 
 - Detect HTTP 429 (Too Many Requests) responses.
-- Read and honour the `Retry-After` header.
-- Apply exponential backoff with jitter for retries.
+- Read and honour the `Retry-After` header: retry only after the delay it gives.
+- Apply exponential backoff with jitter for further retries.
+- Log each rate-limit event to the session log with the 429 status, the delay and the retry number.
 
 ## 10. Conservative Defaults
 
@@ -270,7 +281,8 @@ SKILL.md files follow a **progressive disclosure** loading strategy:
 ### 11.1 Invalid SKILL.md Handling
 
 If the YAML front-matter is **invalid** or produces a **parse error** (malformed
-YAML), the loader reports the error to the session log and activates
+YAML), the loader reports the parse error with its details (the YAML error
+message and its location) to the session log and activates
 **default behavior** as a fallback. The skill is still listed in the roster
 but operates with built-in defaults until the YAML is corrected.
 
@@ -288,15 +300,17 @@ rules apply:
 
 ## 13. Golden Task Evaluation
 
-**Golden task** sets are curated query-answer pairs used for regression
-evaluation. Each golden task is scored against 4 metrics:
+**Golden task** sets are curated query-answer pairs, each with its expected
+sources and citations, used for regression evaluation. Each golden task is
+scored against 4 metrics:
 
 - **Citation precision** — accuracy of generated citations.
 - **Coverage** — completeness of query facet coverage.
 - **Freshness** — recency of cited sources.
 - **Security hygiene** — sanitization pass rate.
 
-Golden task results are reported with the evaluation run.
+Each score is compared with its target in Section 5, and the scores and the
+comparison are reported with the evaluation run.
 
 ## Completion Contract (Shared)
 

@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   escapeTableCell,
   maskNonSpecRegions,
-  parseFirstMarkdownTable,
   splitMarkdownRow,
 } from "../../src/core/specPackParsers.js";
 
@@ -66,24 +65,6 @@ describe("escapeTableCell ↔ splitMarkdownRow round-trip identity", () => {
 
   it("CRLF and CR line breaks collapse to a single space", () => {
     expect(roundTrip("line1\r\nline2", "line1\rline2")).toEqual(["line1 line2", "line1 line2"]);
-  });
-});
-
-describe("parseFirstMarkdownTable", () => {
-  it("parses table with || header and | rows consistently", () => {
-    const text = ["|| Col1 | Col2 |", "| --- | --- |", "| a | b |"].join("\n");
-    const table = parseFirstMarkdownTable(text);
-    expect(table).toBeDefined();
-    expect(table?.headers).toEqual(["Col1", "Col2"]);
-    expect(table?.rows).toEqual([["a", "b"]]);
-  });
-
-  it("parses standard single-pipe table unchanged", () => {
-    const text = ["| Col1 | Col2 |", "| --- | --- |", "| a | b |"].join("\n");
-    const table = parseFirstMarkdownTable(text);
-    expect(table).toBeDefined();
-    expect(table?.headers).toEqual(["Col1", "Col2"]);
-    expect(table?.rows).toEqual([["a", "b"]]);
   });
 });
 

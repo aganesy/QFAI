@@ -1239,7 +1239,7 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
-  ["qfai-docs.yml", "70e1fc53abf4596daf6007b7875b5f972f6103e2401e16dc8bec009fc999c7f2"],
+  ["qfai-docs.yml", "44ec24d550811e8a74a366c8a855669f8c2779d52dd1745358e758d3d50ecdc7"],
   ["qfai-tests.yml", "d0eac08104ee1fab05c97d544459cedf4fad3a4dd2a3701904a16fc4ced6da15"],
   ["qfai-validate.yml", "d544c784615c28d884152ba68856d742ee3368b32a639a874cb3ee80bd104f7f"],
 ]);
@@ -1399,7 +1399,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   //
   // To re-pin: run `qfai init` into a temp root and hash the `.gitignore` it
   // wrote — never copy a value out of a failure message.
-  [".gitignore", "76c6c855ae5c4bf4d04a8d3ed34018b26d17d1b3a02ca68d60d1e514028ffc2f"],
+  [".gitignore", "b3dfe9b2704c0ae54ef8347cd23ed2a714c5966f38050932611a6ad326b597c4"],
   // One bullet each, inside the managed cross-AI rules block: the
   // `documentation-clarity.md` master that the same run seeds beside them.
   // Removing that line from both files reproduces the previous digests
@@ -1427,9 +1427,10 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // of four named endings. Derived by running `qfai init` into a temp root; restoring the old
   // wording in both written files reproduces `d3d39ba4…` and `5b6487ba…` byte for byte.
   //
-  // Re-pinned for the sentence on later runs, which now says a run rewords a bullet still as an
-  // earlier release wrote it. Derived by running `qfai init` into a temp root; restoring the old
-  // sentence in both written files reproduces `04f04e43…` and `8da8af3f…` byte for byte.
+  // Re-pinned for the sentence on later runs, which names only what a run adds: a bullet for a
+  // rule shipped for the first time and the review directive. Derived by running `qfai init` into a
+  // temp root; restoring the old sentence in both written files reproduces `27d645ff…` and
+  // `39be7bca…` byte for byte.
   //
   // Re-pinned for the review directive the run now writes: a line pointing at the
   // project's own review policy, and the sentence in the managed section that says
@@ -1460,9 +1461,9 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // The entry files cite action-reversibility, untrusted-content and ai-readable-markdown.
   // These digests cover the shipped root templates, which init copies into a fresh project.
   // Re-pinned for the `session-feedback.md` bullet in both files. Dropping it reproduces
-  // `27d645ff…` and `39be7bca…` byte for byte.
-  ["AGENTS.md", "c4ef047179b1eb4a6751264b8b076d15079855bfa32c92b34d5e0461b5035a7b"],
-  ["CLAUDE.md", "1a3796df24b48906da43c97f73a2e043effd77ca9b544c845a345146d16d3488"],
+  // `29bc32d7…` and `d7f71c44…` byte for byte.
+  ["AGENTS.md", "dae130241067ed72cc475e5befe8a80c306831d93cd5e8d0a32f6c5c2c3ef07a"],
+  ["CLAUDE.md", "99a458c0f5c796f48791f308c3dc4d7720fb1c4e0b70e99519cd53b4678660cd"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
   // rule when a pull request, issue or review is posted through the GitHub tools
@@ -2093,7 +2094,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-docs.yml#checks",
-    '{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body 29d4d4ffdc27885fb3608373da72ce6fc119738a3a4d2cf8595b29586a06c25a>"}',
+    '{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body fb106152ede2c87f02c5554c96cbd8bac7f4965ead2c17c68b158bca0f4c7799>"}',
   ],
   [
     "qfai-docs.yml#checks",
@@ -2377,7 +2378,7 @@ export const ALLOWED_SHELLS: ReadonlySet<string> = new Set(["bash"]);
  * runner, and that answer is still exactly one.
  */
 export const ALLOWED_TOOL_INSTALLS: ReadonlySet<string> = new Set([
-  "@jackchuka/mdschema@0.15.4 mermaid@11.17.2 jsdom@29.1.1",
+  "@jackchuka/mdschema@0.15.5 mermaid@11.17.2 jsdom@29.1.1",
   "mermaid@11.17.2 jsdom@29.1.1 qfai",
 ]);
 

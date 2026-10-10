@@ -272,7 +272,6 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-STORY-007",
     "QFAI-STORY-008",
     "QFAI-STORY-009",
-    "QFAI-STORY-014",
   ],
   "story-test-scan": ["QFAI-SCAN-002"],
   sdd: ["QFAI-AUTOPILOT-*", "QFAI-ASSISTANT-001", "QFAI-SKILLDOC-001", "QFAI-ASSISTANT-002"],
@@ -1018,8 +1017,6 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Each section of `01_policy/constraint.md` numbers its IDs from 01 in table order, with the section's prefix: TC, OC or BC.",
   "QFAI-STORY-013":
     "The `## Architecture` section of the contract-layer tech.md draws exactly the layers and dependencies its table lists, and each row depends only on layers in rows below it.",
-  "QFAI-STORY-014":
-    "A test file records its trace only as `QFAI:BF-`, `QFAI:AC-` or `QFAI:EX-` annotations, the shapes a check reads.",
   "QFAI-STORY-015":
     "Story-tree documents name no file outside `.qfai` by a repository path, so a spec does not depend on a file that changes without a spec review.",
   "QFAI-STORY-016":
@@ -1071,18 +1068,6 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-VIS-001": "`01_Context.md` should include at least one Mermaid diagram.",
   "QFAI-VIS-002":
     "HTML+CSS visual mock is an optional fallback aid and should only be referenced when intentionally selected. Sidecar artifacts (uiux/) are the primary UI definition.",
-  "QFAI-PROT-244": "captured render artifacts must be path-only and referenced files must exist.",
-  "QFAI-PROT-251":
-    "render evidence path field contains inline payload (data URI, base64, inline HTML, or oversized content). Path-only required.",
-  "QFAI-PROT-252":
-    "render evidence status requires accompanying field (skippedReason for skipped, error for failed, imagePath/htmlPath for captured).",
-  "QFAI-PROT-253":
-    "render evidence top-level status contradicts screen-level statuses (e.g. status=captured but no captured screens).",
-  "QFAI-PROT-273": "browser QA bundle schema is invalid (missing or malformed browserQa block).",
-  "QFAI-PROT-274":
-    "browser QA executed/status contradiction (e.g. executed=true but status!=completed).",
-  "QFAI-PROT-275": "browser QA summary is malformed (non-object or invalid bucket counts).",
-  "QFAI-PROT-276": "browser QA findings are malformed (non-array or invalid finding structure).",
   "QFAI-CFG-LINK-001":
     "qfai.config.yaml: prototyping.primaryUiContract names a UI-NNNN contract declared under `<paths.contractsDir>/ui/`.",
   "QFAI-CFG-LINK-002":
@@ -1269,12 +1254,6 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-SKILLS-012": "The Reviewer Gate Baseline states every obligation a skill inherits.",
   "QFAI-TEST-002":
     "The stub scan reads every test file the configured globs select, so a clean result shows that no stub exists.",
-  "QFAI-TRACE-118": "The scenario document in a spec's examples parses.",
-  "QFAI-TRACE-119": "A spec's examples feature carries exactly one `@SPEC` tag, naming the spec.",
-  "QFAI-TRACE-120": "Every scenario's `@SPEC` tag names the spec.",
-  "QFAI-TRACE-121": "Every scenario has exactly one `@SC-XXXX-YYYY` tag.",
-  "QFAI-TRACE-122": "A scenario's SC ID uses the namespace of its spec number.",
-  "QFAI-TRACE-123": "Every scenario names the AC it covers in a comment.",
   "QFAI-VALIDATE-017":
     "A CI run uses a full-scan profile before it declares completion; a stage-gate profile is valid but proves no completion.",
   "QFAI-WAIVER-001":
@@ -1386,8 +1365,6 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
     "Renumber the named section of `constraint.md` from 01 in table order. A constraint ID is positional and is not meant to be cited; where another document cites the old ID, state the limit there in words instead.",
   "QFAI-STORY-013":
     "Order the Architecture rows from the uppermost layer down, so each Depends on names only rows below it, and give the diagram one node per layer and one Upper --> Lower edge per Depends on entry, nothing more.",
-  "QFAI-STORY-014":
-    "Replace the named mark with the `QFAI:BF-`, `QFAI:AC-` or `QFAI:EX-` annotation the test proves, or delete it.",
   "QFAI-STORY-015":
     "State the fact in the document in words, or cite a document under `.qfai` instead of the outside file.",
   "QFAI-STORY-016":
@@ -1423,17 +1400,6 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   // every rung of the ladder depends on this catalog for its `fix:` line. The
   // even codes are repaired by writing a `Parent`, the odd ones by pointing an
   // existing `Parent` at something the level above actually defines.
-  // The browser-QA bundle checks are schema assertions raised by a local
-  // `makeIssue` helper that has no `suggested_action` parameter, so every one of
-  // their call sites depends on this catalog for its `fix:` line.
-  "QFAI-PROT-273":
-    "Add the `browserQa` block the message names to the browser-QA bundle, with `executed` a boolean and `status` one of completed|skipped|failed.",
-  "QFAI-PROT-274":
-    "Make `browserQa.executed` and `browserQa.status` agree: `executed=true` pairs with `status=completed`, and any other status pairs with `executed=false`.",
-  "QFAI-PROT-275":
-    "Give `browserQa.summary` an object per phase (smoke, interaction, visual, accessibility) carrying `status`, `findingsCount`, and `checksCount`, with `passed`/`failed` numeric when present.",
-  "QFAI-PROT-276":
-    "Make `findings` an array whose every entry carries a non-empty summary and detail, a severity from the supported set, at least one `evidence_refs` entry, and `repair_suggestions`.",
   "QFAI-RESEARCH-015":
     "Point `source_id` at an `id` that the same Research Summary's `sources[]` declares, or add the missing source entry.",
   "QFAI-RESEARCH-016":

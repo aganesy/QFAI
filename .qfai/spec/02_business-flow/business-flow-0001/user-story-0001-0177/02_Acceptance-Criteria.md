@@ -7,9 +7,9 @@ Feature: MCP Server Integration for Web Research
   # AC-0001-0177-01
   Scenario: Brave Search MCP integration
     Given a QFAI MCP template for Brave Search
-    When the developer configures the template with a valid API key
-    Then the MCP server responds to search queries
-    And results flow into the research pipeline
+    When the developer supplies a valid API key through the BRAVE_API_KEY environment variable
+    Then the template starts the Brave Search MCP server with that key
+    And the search stage of the research pipeline issues its queries through that server
 
   # AC-0001-0177-02
   Scenario: MCP server crashes mid-operation

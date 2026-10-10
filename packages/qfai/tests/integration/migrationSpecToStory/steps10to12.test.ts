@@ -447,7 +447,7 @@ describe("migration steps 11 and 12: the free-text entry", () => {
       `${EARLIER_LINE}\n${CLAUDE_TEXT}`,
     );
     const ignore = await readFile(path.join(root, ".gitignore"), "utf8");
-    expect(ignore).toContain(".qfai/run/\n");
+    expect(ignore).toContain("!.qfai/assistant/**\n");
     expect(ignore).not.toContain("!.qfai/evidence/");
     expect(await lstat(path.join(root, ".qfai/evidence")).catch(() => null)).toBeNull();
     const outside = changedPaths(before, await entries(root)).filter(
@@ -579,7 +579,10 @@ describe("migration steps 11 and 12: the free-text entry", () => {
         "gitignore",
         async (root) => {
           const file = path.join(root, ".gitignore");
-          await writeFile(file, (await readFile(file, "utf8")).replace(".qfai/run/\n", ""));
+          await writeFile(
+            file,
+            (await readFile(file, "utf8")).replace("!.qfai/assistant/**\n", ""),
+          );
         },
         "gitignore: .gitignore: the QFAI managed block differs from the one the installed package writes",
       ],
@@ -767,7 +770,9 @@ describe("migration steps 11 and 12: the free-text entry", () => {
       );
     }
     expect(await readFile(path.join(root, "AGENTS.md"), "utf8")).toBe(AGENTS_TEXT);
-    expect(await readFile(path.join(root, ".gitignore"), "utf8")).toContain(".qfai/run/\n");
+    expect(await readFile(path.join(root, ".gitignore"), "utf8")).toContain(
+      "!.qfai/assistant/**\n",
+    );
     for (const file of HOOK_FILES) {
       expect(await textOrNull(root, file), file).toBe(await textOrNull(initialised, file));
     }

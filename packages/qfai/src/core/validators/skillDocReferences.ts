@@ -45,7 +45,6 @@ export async function validateSkillDocReferences(
     // Operator-facing relPath derived from the actual scan path so
     // relocated skillsDir surfaces under its real (root-relative or
     // absolute) location — not a hardcoded default skill directory.
-    // legacy.
     const skillDocRelPath = path.relative(root, skillDoc).replace(/\\/g, "/");
     let body: string;
     try {
@@ -119,7 +118,7 @@ export async function validateSkillDocReferences(
             // Indented but not a YAML structural line → reject.
             return false;
           }
-          if (line.startsWith("-")) continue; // top-level list (legacy form)
+          if (line.startsWith("-")) continue; // top-level list (unindented items)
           // Any other non-blank top-level line means the block isn't trailing.
           return false;
         }

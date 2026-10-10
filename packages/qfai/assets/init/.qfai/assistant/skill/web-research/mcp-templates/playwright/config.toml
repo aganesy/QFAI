@@ -1,3 +1,3 @@
-[mcp.playwright]
+[mcp_servers.playwright]
 command = "npx"
 args = ["-y", "@executeautomation/playwright-mcp-server@1.0.12"]

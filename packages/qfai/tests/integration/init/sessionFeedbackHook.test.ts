@@ -99,7 +99,7 @@ const SILENT_INPUTS: readonly string[] = [
   stopInput({ stop_hook_active: false, last_assistant_message: "Shall I continue?" }),
   stopInput({ stop_hook_active: false, last_assistant_message: "Continue?\n" }),
   // The fullwidth question mark, written as an escape: this repository holds no such character.
-  stopInput({ stop_hook_active: false, last_assistant_message: "Continue？" }),
+  stopInput({ stop_hook_active: false, last_assistant_message: "Continue\uFF1F" }),
   // Input the hook cannot read is no completion: blocking it could never end the turn.
   "",
   "{ not json",

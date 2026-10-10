@@ -8,8 +8,8 @@ Feature: Contract-first verification gates
   Scenario: Design-system validators run when their prerequisites exist
     Given design-system prerequisites exist
     When their validators are selected
-    Then Design-system related validators continue to run when their prerequisite files/artifacts exist.
-    And legacy `full-harness` wording inside validator slices is treated as artifact vocabulary, not as a public command contract.
+    Then the design-system validators report on the prerequisite files and report nothing when those files are absent.
+    And no shipped source, asset or command names `full-harness`.
 
   # AC-0001-0158-02
   Scenario: Verify Loads the Story-Tree Directories

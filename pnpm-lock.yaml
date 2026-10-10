@@ -173,8 +173,8 @@ importers:
         specifier: ^10.0.1
         version: 10.0.1(eslint@10.10.0(supports-color@7.2.0))
       '@jackchuka/mdschema':
-        specifier: 0.15.4
-        version: 0.15.4
+        specifier: 0.15.5
+        version: 0.15.5
       '@types/node':
         specifier: ^24.0.0
         version: 24.19.1
@@ -211,15 +211,9 @@ importers:
 
   packages/qfai:
     dependencies:
-      '@cucumber/gherkin':
-        specifier: ^42.0.0
-        version: 42.0.1
-      '@cucumber/messages':
-        specifier: ^34.0.0
-        version: 34.2.1
       '@jackchuka/mdschema':
-        specifier: 0.15.4
-        version: 0.15.4
+        specifier: 0.15.5
+        version: 0.15.5
       fast-glob:
         specifier: ^3.3.2
         version: 3.3.3
@@ -342,12 +336,6 @@ packages:
   '@csstools/css-tokenizer@4.0.0':
     resolution: {integrity: sha512-QxULHAm7cNu72w97JUNCBFODFaXpbDg+dP8b/oWFAZ2MTRppA3U00Y2L1HqaS4J6yBqxwa/Y3nMBaxVKbB/NsA==}
     engines: {node: '>=20.19.0'}
-
-  '@cucumber/gherkin@42.0.1':
-    resolution: {integrity: sha512-Kqg0ULhWqbXp/a1c04ND4sS4KTlIL831tQ0NhZLXWdEhT6LiNsZ5LFRzy/lBy7QQpcKhroKp/i3C2WdEnRBKNg==}
-
-  '@cucumber/messages@34.2.1':
-    resolution: {integrity: sha512-aj2iCAG9ZOpMVcMxcgShifv5fbR96b7SMgdWcPXXh2QbFp7OEcAnQ5MC5YfWUDSDasmw7FU5NJEsOrXdTQOU1A==}
 
   '@electric-sql/pglite@0.5.8':
     resolution: {integrity: sha512-n9tsbUOhwx2epK1V0ZG9Ar4SHWUju04dhmzZXiSBXwBoleOvIfals33NAaWgagQVAL4Rbvx/Ptsu3P+pA09f6Q==}
@@ -578,44 +566,44 @@ packages:
   '@iconify/utils@3.1.5':
     resolution: {integrity: sha512-nT+AWyh5caHY6xa0PdLXpUooIz6l7qsT+adqsCTYBfbdn5Q18VrWs2fvuTa7KEoJnPBfEPqWkmAIht0EHtCi2A==}
 
-  '@jackchuka/mdschema-darwin-arm64@0.15.4':
-    resolution: {integrity: sha512-wzeENSL7k2ss/iZbUjnAK0gbKks028q87JoqzP14R9G2cA+9mDA7XhMFZIobad+oUpSATZ214tQlSMpkddsSqQ==}
+  '@jackchuka/mdschema-darwin-arm64@0.15.5':
+    resolution: {integrity: sha512-EckAGAiYTCbWt4sRz4fec1xjIEL4ghlXjWf96SLZJ3Ua5/+UtOpZLdo299VMU7Td2BRqOouuhB9Kq5/SYpdglg==}
     cpu: [arm64]
     os: [darwin]
     hasBin: true
 
-  '@jackchuka/mdschema-darwin-x64@0.15.4':
-    resolution: {integrity: sha512-vMsdVI592f00KCWjB5waANvdL171nYGCEssh09h8s4jf1qAHddVvET006zUiKNWF1ntFwartXwea8Mb7ArOSgA==}
+  '@jackchuka/mdschema-darwin-x64@0.15.5':
+    resolution: {integrity: sha512-IZ+Uq1d10DH8PPaxDQ32N6gqyxkOQ33l++y/GT9VVh8LcDkbRSQOzf4fvqp122IyIsm/nHiVJ6j+485JkJYjdw==}
     cpu: [x64]
     os: [darwin]
     hasBin: true
 
-  '@jackchuka/mdschema-linux-arm64@0.15.4':
-    resolution: {integrity: sha512-rBX9Icvl18ZAvfhjyx75p/ixTScorxjqCT4IB9bjrAGHQHtpeeM/HtTToO1z+oTe6Q1ToozuHwffnJBTgfDW1g==}
+  '@jackchuka/mdschema-linux-arm64@0.15.5':
+    resolution: {integrity: sha512-zTxMbzWOYw78+Hha/aITQtb71UJNgdvBUvMvVv7lPTsLkxhLYGmToMshWyyFKeiizCwwlKK7rox62S+CGxw7Tw==}
     cpu: [arm64]
     os: [linux]
     hasBin: true
 
-  '@jackchuka/mdschema-linux-x64@0.15.4':
-    resolution: {integrity: sha512-J3DD/Lm6mQLznf7PkJjfNluxXU84P4yncqE16XJi0gcm9IA2ym0z4biSL1MN3CTet2liTJd8BpJO6GjDqW4sbA==}
+  '@jackchuka/mdschema-linux-x64@0.15.5':
+    resolution: {integrity: sha512-yyE0Yq1ATi6S4acmyHxGGxz9yyB6/8M9ghm7XxNaZgNrjE8jmXbiEN5ptORqPm0grmgcSUxjFyYn7Ig9tKWaTA==}
     cpu: [x64]
     os: [linux]
     hasBin: true
 
-  '@jackchuka/mdschema-windows-arm64@0.15.4':
-    resolution: {integrity: sha512-0PtSCg5Vyti/w4E1HiPIiVUP/gaU5/Qyg99gn58OmM1NjRpYPygMc7PyKpIDk7iQZ1EtouNcwJdfGL9JJ0DZuA==}
+  '@jackchuka/mdschema-windows-arm64@0.15.5':
+    resolution: {integrity: sha512-m3f+i74DzVwPlRchm7F3nJSBGFBrX04+OapAMzs5OC2jGKlemgt3VHlLXDOEQct9J3Jv0/ZI0PqUhTHK/u02Mw==}
     cpu: [arm64]
     os: [win32]
     hasBin: true
 
-  '@jackchuka/mdschema-windows-x64@0.15.4':
-    resolution: {integrity: sha512-BOb7/5X15HKzjurkJTkf4oIdTSBwBR19ITEZ4fiDevLGgmKf6ivY+3QNCDLyYyEIj4VziALFEk+XD3N6Ls5wHw==}
+  '@jackchuka/mdschema-windows-x64@0.15.5':
+    resolution: {integrity: sha512-Wxa3HyAjhM71R0dJSSuCoVY5ymLtTA3mRsJ5jdVFrBqKN1kFG3ItBNEu2LXYjt8XHoiZBqSbzFvhtWmoQgwoPQ==}
     cpu: [x64]
     os: [win32]
     hasBin: true
 
-  '@jackchuka/mdschema@0.15.4':
-    resolution: {integrity: sha512-bR5+eOV7wWMYB7SITWjjjrBLOW7vmn3Es7jx/sFQ3CI9xsE64/tLW8ar7UcocQ80E061IuYU8YsTRfNV1qoUNw==}
+  '@jackchuka/mdschema@0.15.5':
+    resolution: {integrity: sha512-Y7tlvR3RWqTMoDVw/eanzAP1+06D+ckK6E6aRRyCg3mua5vIaQi8wqjnJI21Nay+ukfGuvnUp+V49xOXuYAe7Q==}
     engines: {node: '>=14'}
     hasBin: true
 
@@ -2658,12 +2646,6 @@ snapshots:
 
   '@csstools/css-tokenizer@4.0.0': {}
 
-  '@cucumber/gherkin@42.0.1':
-    dependencies:
-      '@cucumber/messages': 34.2.1
-
-  '@cucumber/messages@34.2.1': {}
-
   '@electric-sql/pglite@0.5.8': {}
 
   '@esbuild/aix-ppc64@0.27.2':
@@ -2799,32 +2781,32 @@ snapshots:
       '@iconify/types': 2.0.0
       import-meta-resolve: 4.2.0
 
-  '@jackchuka/mdschema-darwin-arm64@0.15.4':
+  '@jackchuka/mdschema-darwin-arm64@0.15.5':
     optional: true
 
-  '@jackchuka/mdschema-darwin-x64@0.15.4':
+  '@jackchuka/mdschema-darwin-x64@0.15.5':
     optional: true
 
-  '@jackchuka/mdschema-linux-arm64@0.15.4':
+  '@jackchuka/mdschema-linux-arm64@0.15.5':
     optional: true
 
-  '@jackchuka/mdschema-linux-x64@0.15.4':
+  '@jackchuka/mdschema-linux-x64@0.15.5':
     optional: true
 
-  '@jackchuka/mdschema-windows-arm64@0.15.4':
+  '@jackchuka/mdschema-windows-arm64@0.15.5':
     optional: true
 
-  '@jackchuka/mdschema-windows-x64@0.15.4':
+  '@jackchuka/mdschema-windows-x64@0.15.5':
     optional: true
 
-  '@jackchuka/mdschema@0.15.4':
+  '@jackchuka/mdschema@0.15.5':
     optionalDependencies:
-      '@jackchuka/mdschema-darwin-arm64': 0.15.4
-      '@jackchuka/mdschema-darwin-x64': 0.15.4
-      '@jackchuka/mdschema-linux-arm64': 0.15.4
-      '@jackchuka/mdschema-linux-x64': 0.15.4
-      '@jackchuka/mdschema-windows-arm64': 0.15.4
-      '@jackchuka/mdschema-windows-x64': 0.15.4
+      '@jackchuka/mdschema-darwin-arm64': 0.15.5
+      '@jackchuka/mdschema-darwin-x64': 0.15.5
+      '@jackchuka/mdschema-linux-arm64': 0.15.5
+      '@jackchuka/mdschema-linux-x64': 0.15.5
+      '@jackchuka/mdschema-windows-arm64': 0.15.5
+      '@jackchuka/mdschema-windows-x64': 0.15.5
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:

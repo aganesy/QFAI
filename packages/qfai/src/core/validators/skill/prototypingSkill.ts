@@ -103,7 +103,7 @@ export function hasCliSurfaceDocumentation(content: string): boolean {
 
 /**
  * `UI-NNNN` standing on its own. A letter, digit, `_` or `-` on either side makes
- * it part of a longer token, such as the retired `CON-UI-NNNN`.
+ * it part of a longer token, such as `X-UI-NNNN`.
  */
 const UI_CONTRACT_ID_PLACEHOLDER = /(?<![\w-])ui-nnnn(?![\w-])/;
 

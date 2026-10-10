@@ -63,10 +63,6 @@ for it.
    `01_Context.md#Design Direction` asks for it. Name the pattern in the
    finding, replace the value, and check the file again.
 
-The retired per-aspect brand contracts are not regenerated; their content lives
-in `DESIGN.md`
-(`.qfai/assistant/skill/qfai-sdd/references/ui-design-contract-normalization.md#removed-yaml-contracts-permanent`).
-
 ## Check before building
 
 Before anything is generated from `DESIGN.md`:

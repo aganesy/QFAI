@@ -2,9 +2,7 @@
 
 `/qfai-verify` MUST write `.qfai/report/verify.json` at the end of the run. This file is the machine-readable verdict; the stage report is the human-readable account. No `qfai` command reads it, so an absent `verify.json` does not fail `npx qfai validate`.
 
-Canonical path: `.qfai/report/verify.json` (NOT `.qfai/output/`). Create the `.qfai/report/` directory if absent — it is the same directory `validate.json` is written to.
-
-`.qfai/output/verify.json` is the legacy location, history for projects created before the move. Never write there.
+Canonical path: `.qfai/report/verify.json`. Create the `.qfai/report/` directory if absent — it is the same directory `validate.json` is written to.
 
 | Field        | Type             | Required | Meaning                                                                                                                                                 |
 | ------------ | ---------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |

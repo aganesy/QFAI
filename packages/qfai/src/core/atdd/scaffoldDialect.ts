@@ -176,7 +176,7 @@ export type ScaffoldDialectResolution =
    * excluded by the project's own globs — by its basename convention, by the
    * directory it lands in (when the destination is known), or by an explicit
    * `testFileExcludeGlobs` entry covering that directory. Either way the file
-   * would be scanned by `QFAI-ATDD-112` (which widens to the bare extension)
+   * would be scanned for annotations (the scan widens to the bare extension)
    * while never being collected by the runner: coverage cleared by a test that
    * never runs.
    *
@@ -752,7 +752,7 @@ function normalizeGlobPath(value: string): string {
  * `test_<id>.py` name, so the writer emitted
  * `tests/integration/<US-ID>/test_<id>.py` — a path those globs do not
  * cover, and therefore a file the project's own test scan never collects.
- * `QFAI-ATDD-112` widens to the bare extension and counted the annotation
+ * The annotation scan widens to the bare extension and counted the annotation
  * anyway, so the written test cleared the coverage gate with a test
  * that never ran — the exact outcome this selection exists to prevent, one
  * axis over.
@@ -817,9 +817,9 @@ export type ScaffoldDialectOptions = {
   readonly scaffoldDir?: string;
   /**
    * `validation.traceability.testFileExcludeGlobs` — the patterns
-   * `collectScTestReferences` hands fast-glob as `ignore`. A destination they
+   * the test scan hands fast-glob as `ignore`. A destination they
    * cover is a destination the project's normal test scan skips, while
-   * `QFAI-ATDD-112` still widens to the bare extension and counts the
+   * the annotation scan still widens to the bare extension and counts the
    * annotation, so an included-but-excluded path clears the coverage gate with
    * a test nothing collects. Only meaningful alongside `scaffoldDir`: an
    * exclude glob describes a location, and there is none to test without one.

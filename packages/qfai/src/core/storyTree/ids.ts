@@ -1,6 +1,5 @@
 import path from "node:path";
 
-import { parseTestFlowRefs } from "../businessFlow.js";
 import {
   ANNOTATION_ANCHOR_PATTERNS,
   DECLARATION_MASK,
@@ -166,11 +165,10 @@ export function parseCountedExampleAnnotations(text: string, file: string): stri
 }
 
 export function parseStoryTestAnnotations(text: string): Record<"BF" | "AC" | "EX", string[]> {
-  const exactFlowIds = new Set(
-    [...text.matchAll(STORY_TEST_ANNOTATIONS.BF)].map((match) => match[1] ?? ""),
-  );
   return {
-    BF: parseTestFlowRefs(text).filter((id) => exactFlowIds.has(id)),
+    BF: [...new Set([...text.matchAll(STORY_TEST_ANNOTATIONS.BF)].map((match) => match[1] ?? ""))]
+      .filter(Boolean)
+      .sort(),
     AC: [...new Set([...text.matchAll(STORY_TEST_ANNOTATIONS.AC)].map((match) => match[1] ?? ""))]
       .filter(Boolean)
       .sort(),

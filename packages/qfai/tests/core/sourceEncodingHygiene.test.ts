@@ -6,8 +6,8 @@
 // repository has, including the ones that look for leaked identifiers.
 //
 // Two files carried one each, both written as a raw byte where the two-character
-// escape was meant: `validators/traceability.ts` in a comment describing an
-// invalid glob, and `testFileGlobsConfiguration.test.ts` in the glob itself.
+// escape was meant: a source comment describing an invalid glob, and
+// `testFileGlobsConfiguration.test.ts` in the glob itself.
 // The second one is load-bearing - the test needs a pattern fast-glob rejects -
 // which is exactly why the escape is the right spelling: same value, still text.
 import { readdir, readFile, stat } from "node:fs/promises";

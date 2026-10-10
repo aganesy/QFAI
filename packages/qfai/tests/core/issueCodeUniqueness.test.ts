@@ -41,7 +41,7 @@ function extractCodesWithRules(content: string): Map<string, Set<string>> {
     let rule = "unknown";
     for (let j = Math.max(0, i - 5); j < Math.min(lines.length, i + 10); j++) {
       const ruleMatch = lines[j].match(
-        /"(prototypingEvidence\.\w+|prototypingRecommendation\.\w+|renderEvidence\.\w+)"/,
+        /"(prototypingEvidence\.\w+|prototypingRecommendation\.\w+)"/,
       );
       if (ruleMatch) {
         rule = ruleMatch[1];
@@ -65,7 +65,6 @@ const TAXONOMY_RANGE_MAX = 299;
 // Some codes intentionally serve the same semantic purpose from multiple validation call sites.
 // These are allowed to map to more than one rule name as long as the rules share the same category.
 const KNOWN_MULTI_RULE_CODES = new Set([
-  "QFAI-PROT-244", // render artifact validation (bundle-level + screen-level checks)
   // V1 lifecycle uses `prototypingEvidence.iterations`; V2 lifecycle (round
   // workflow) uses `prototypingEvidence.rounds`. Both branches gate on the
   // same "at least one primary lifecycle entry" rule.
@@ -77,15 +76,13 @@ const KNOWN_MULTI_RULE_CODES = new Set([
 const PENDING_DESCRIPTION_CODES = new Set<string>(["QFAI-PROT-280"]);
 
 describe("issue code uniqueness", () => {
-  it("every QFAI-PROT-2xx code in validators, uiux, and browserQa maps to exactly one rule", async () => {
+  it("every QFAI-PROT-2xx code in validators and uiux maps to exactly one rule", async () => {
     const validatorDir = path.resolve(__dirname, "../../src/core/validators");
     const uiuxDir = path.resolve(__dirname, "../../src/core/uiux");
-    const browserQaDir = path.resolve(__dirname, "../../src/core/browserQa");
 
     const validatorFiles = await collectTsFiles(validatorDir);
     const uiuxFiles = await collectTsFiles(uiuxDir);
-    const browserQaFiles = await collectTsFiles(browserQaDir);
-    const allFiles = [...validatorFiles, ...uiuxFiles, ...browserQaFiles];
+    const allFiles = [...validatorFiles, ...uiuxFiles];
 
     const globalCodeRuleMap = new Map<string, Set<string>>();
 
@@ -122,7 +119,7 @@ describe("issue code uniqueness", () => {
     expect(violations).toEqual([]);
   });
 
-  it("every QFAI-PROT-2xx code used in validators/uiux/browserQa has a description in validate.ts", async () => {
+  it("every QFAI-PROT-2xx code used in validators and uiux has a description in validate.ts", async () => {
     const validatePath = path.resolve(__dirname, "../../src/cli/commands/validate.ts");
     const validateContent = await readFile(validatePath, "utf-8");
 
@@ -133,13 +130,11 @@ describe("issue code uniqueness", () => {
 
     const validatorDir = path.resolve(__dirname, "../../src/core/validators");
     const uiuxDir = path.resolve(__dirname, "../../src/core/uiux");
-    const browserQaDir = path.resolve(__dirname, "../../src/core/browserQa");
     const validatorFiles = await collectTsFiles(validatorDir);
     const uiuxFiles = await collectTsFiles(uiuxDir);
-    const browserQaFiles = await collectTsFiles(browserQaDir);
 
     const usedCodes = new Set<string>();
-    for (const filePath of [...validatorFiles, ...uiuxFiles, ...browserQaFiles]) {
+    for (const filePath of [...validatorFiles, ...uiuxFiles]) {
       const content = await readFile(filePath, "utf-8");
       for (const match of content.matchAll(/"(QFAI-PROT-\d+)"/g)) {
         usedCodes.add(match[1]);
@@ -223,9 +218,6 @@ const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "QFAI-MOCK-012",
   "QFAI-MOCKHREF-001",
   "QFAI-POLICY-001",
-  "QFAI-PROT-251",
-  "QFAI-PROT-252",
-  "QFAI-PROT-253",
   "QFAI-RESEARCH-001",
   "QFAI-RESEARCH-003",
   "QFAI-RESEARCH-004",
@@ -238,12 +230,6 @@ const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "QFAI-RESEARCH-011",
   "QFAI-SKILLS-010",
   "QFAI-SKILLS-011",
-  "QFAI-TRACE-118",
-  "QFAI-TRACE-119",
-  "QFAI-TRACE-120",
-  "QFAI-TRACE-121",
-  "QFAI-TRACE-122",
-  "QFAI-TRACE-123",
   "QFAI-WAIVER-001",
 ]);
 
@@ -272,18 +258,26 @@ async function censusOf(source: string): Promise<Map<string, IssueCodeUsage>> {
 describe("issue report metadata", () => {
   it("counts codes named by a constant, not only codes written as a string literal", async () => {
     const usage = await collectErrorCapableUsage();
-    // `core/saasPackage/profile.ts` passes a `const CODE = "..."` binding, and
-    // `core/browserQa/index.ts` passes a member of a `const` code table. Neither
-    // is a literal at the call site, so both used to slip past the ratchet.
+    // `core/saasPackage/profile.ts` passes a `const CODE = "..."` binding, which
+    // is not a literal at the call site, so it used to slip past the ratchet.
     expect(usage.has("QFAI-SAAS-001")).toBe(true);
     expect(usage.has("QFAI-SAAS-002")).toBe(true);
-    expect(usage.has("QFAI-PROT-273")).toBe(true);
     // A code emitted only below `error` stays out of the error census even when
     // its constant now resolves. `VERIFY_SKIPPED_CODE` is the exemplar because it
     // sits in the same file, behind the same kind of `const` binding, as the two
     // error-capable codes asserted above — so the contrast is the severity and
     // nothing else. (`QFAI-TABLE-001` held this role until it was raised to error.)
     expect(usage.has("QFAI-SAAS-003")).toBe(false);
+  });
+
+  it("counts codes named by a member of a const code table", async () => {
+    const usage = await censusOf(`
+      const CODES = { schema: "QFAI-SAMPLE-003" } as const;
+      export function check() {
+        return issue(CODES.schema, "m", "error", "f", "r");
+      }
+    `);
+    expect(usage.has("QFAI-SAMPLE-003")).toBe(true);
   });
 
   it("counts codes forwarded through a validator's own Issue factory", async () => {
