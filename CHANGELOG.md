@@ -28,6 +28,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Questions ask only for answers the next step needs.** Background waiting
+  and completion reports need no question. Dismissed questions and free-text
+  replies preserve prior authorization and pending-step boundaries. Fixes #3230.
+
 - **Selected hook reminders stay visible without repeating their full text.**
   Claude Code and Codex print the full reminder once per session, agent and
   message key, then a one-line rule or skill pointer on every relevant trigger.
