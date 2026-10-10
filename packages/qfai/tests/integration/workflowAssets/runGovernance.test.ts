@@ -12,6 +12,10 @@ import { flat, readShipped, rowOf, sectionOf } from "../../helpers/shippedAssist
 
 const OPERATING = "rule/shared-skill-operating-baseline.md";
 const DELEGATION = "rule/shared-skill-delegation-baseline.md";
+const RUN = "skill/qfai-run/SKILL.md";
+const EXTRACTION = "skill/qfai-run/references/extraction.md";
+const SCREENS = "skill/qfai-run/references/operator-screens.md";
+const TARGETS = "## Independent targets under one goal";
 
 async function entryCheck(): Promise<string> {
   return sectionOf(await readShipped(OPERATING), "## Workflow Run Entry Check");
@@ -123,5 +127,110 @@ describe("governance inside a run", () => {
     expect(drift).toMatch(
       /a row naming a story file the bugfix did not touch would state an upstream change that did not happen/i,
     );
+  });
+});
+
+describe("independent targets under one goal", () => {
+  it("extracts and plans each settled target separately, including newly eligible targets", async () => {
+    const kinds = await passage(RUN, "## Request kinds");
+    expect(kinds).toMatch(/goal.*independent targets.*references\/operator-screens\.md/i);
+    expect(kinds).toMatch(/separate plans, waits and checkout changes.*before starting/i);
+    const extraction = await passage(EXTRACTION, "## Procedure");
+    expect(extraction).toMatch(
+      /settled independent scopes.*extract each target separately.*planner/i,
+    );
+    expect(extraction).toMatch(/newly eligible target.*goal's selection criteria.*own extraction/i);
+    const targets = await passage(SCREENS, TARGETS);
+    expect(targets).toMatch(/plan each target separately.*scope is settled and independent/i);
+    expect(targets).toMatch(
+      /keep each plan's scope, stage order, steps, review and release points/i,
+    );
+    expect(targets).toMatch(/newly eligible targets.*goal's criteria.*own plans/i);
+    expect(targets).toMatch(/out-of-scope finding.*follow-up.*never as an extra step/i);
+  });
+
+  it("keeps unmet prerequisites and unsettled mixed findings on their existing paths", async () => {
+    const extraction = await passage(EXTRACTION, "## Procedure");
+    expect(extraction).toMatch(/do not infer independence.*prerequisite is unfinished/i);
+    expect(extraction).toMatch(/unsettled mixed findings.*bundle\/decomposition handling/i);
+    expect(extraction).toMatch(/goal is not a new intent/i);
+    const targets = await passage(SCREENS, TARGETS);
+    expect(targets).toMatch(/target with an unfinished prerequisite waits/i);
+    expect(targets).toMatch(
+      /mixed findings with unsettled scopes.*existing bundle\/decomposition handling/i,
+    );
+  });
+
+  it("switches a shared checkout only after writers and gates finish and all files are clean", async () => {
+    const targets = await passage(SCREENS, TARGETS);
+    expect(targets).toMatch(
+      /before changing the shared checkout.*wait for every writer and local gate/i,
+    );
+    expect(targets).toMatch(/preserve target edits.*permitted commit of only its paths/i);
+    expect(targets).toMatch(/whole index and worktree are clean/i);
+    expect(targets).toMatch(
+      /CI-only pending gates.*DELEGATED commit allowance.*only under explicit user instruction or project policy/i,
+    );
+    expect(targets).toMatch(/wait never authorizes an early commit or skipped gate/i);
+  });
+
+  it("blocks dirty or live-checkout work but permits a bounded fixed-blob read-only review", async () => {
+    const targets = await passage(SCREENS, TARGETS);
+    expect(targets).toMatch(/unknown dirty files postpone the switch/i);
+    expect(targets).toMatch(/do not stash, reset or delete them/i);
+    expect(targets).toMatch(/reviewer using live files or local execution must finish/i);
+    expect(targets).toMatch(
+      /read-only reviewer using only `git show <fixed SHA>:<path>`.*may continue across a clean orchestrator switch/i,
+    );
+    expect(targets).toMatch(/reviewer never switches the checkout/i);
+    const delegation = await passage(DELEGATION, "### Orchestrator Protocol");
+    expect(delegation).toMatch(
+      /read-only reviewer bound to a fixed commit.*only `git show <fixed SHA>:<path>`/i,
+    );
+    expect(delegation).toMatch(/no live-checkout reads or dependent local execution/i);
+    expect(delegation).toMatch(/switch a clean checkout while that review continues/i);
+    expect(delegation).toMatch(/all writers, local gates and live-checkout reviewers must finish/i);
+    expect(delegation).toMatch(/read-only reviewer never switches it/i);
+  });
+
+  it("resumes only with the target's exact head and retains pending, red and review evidence honestly", async () => {
+    const targets = await passage(SCREENS, TARGETS);
+    expect(targets).toMatch(/existing stage reports and handoff messages.*each target's/i);
+    expect(targets).toMatch(
+      /plan and scope, stage and step, branch and exact head, evidence, open approval or blocker, and resume condition/i,
+    );
+    expect(targets).toMatch(/report waiting targets as waiting/i);
+    expect(targets).toMatch(/before writing or using a result, confirm its target and head/i);
+    expect(targets).toMatch(
+      /green check for an older or different head does not pass the current one/i,
+    );
+    expect(targets).toMatch(/pending checks do not complete verification/i);
+    expect(targets).toMatch(/matching red check resumes the planned gate and its fix procedure/i);
+    expect(targets).toMatch(
+      /review verdict bound to the commit reviewed.*never relabel it as a review of a newer head/i,
+    );
+    expect(targets).toMatch(/never.*add a review the plan does not name/i);
+  });
+
+  it("uses actual standing authority for its covered targets without fabricating approval", async () => {
+    const targets = await passage(SCREENS, TARGETS);
+    expect(targets).toMatch(
+      /standing delegation only for the targets and actions it actually covers/i,
+    );
+    expect(targets).toMatch(/routine choices as the agent's decisions under that authority/i);
+    expect(targets).toMatch(
+      /(?:do not|never|without).*?(?:attribute|fabricat).*?(?:user|option).*?(?:approval|selection)|never as the user's (?:selection|approval)/i,
+    );
+    expect(targets).toMatch(/request to ask nothing supplies no uncovered approval/i);
+  });
+
+  it("stops only dependent target work for uncovered approval and stops all targets for a goal-wide stop", async () => {
+    const targets = await passage(SCREENS, TARGETS);
+    expect(targets).toMatch(
+      /critical decision or release approval is missing.*stop that target before dependent work/i,
+    );
+    expect(targets).toMatch(/follow the existing question or no-question rules/i);
+    expect(targets).toMatch(/other authorized independent work may continue/i);
+    expect(targets).toMatch(/stop of the whole goal stops every target/i);
   });
 });
