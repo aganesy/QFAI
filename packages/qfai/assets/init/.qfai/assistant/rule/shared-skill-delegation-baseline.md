@@ -1,12 +1,12 @@
 # Shared Skill Delegation Baseline
 
-Use this document to keep SKILL bodies compact. Skill files should reference this baseline and only add role-, stage-, or gate-specific rules.
+Skills cite this baseline and add only role, stage or gate overrides.
 
 ## Sub-agent Delegation (MANDATORY)
 
-This section binds every skill and every step as written. A skill or step
-restates none of it and writes no placeholder stanza for a subsection it does
-not change; it states only an override, under the subsection it overrides.
+This section binds every skill and step. A skill or step repeats none of it
+and adds no placeholder for a subsection it does not change. State only an
+override, under the subsection it overrides.
 
 Delegation is optional. The session agent, called the orchestrator below, may
 author any artifact itself. It uses a sub-agent only for work that runs in
@@ -40,8 +40,10 @@ classified by the taxonomy below before any response.
 - A read-only agent never runs `git checkout` or `git switch` in a worktree it
   shares; it reads other revisions with `git show <rev>:<path>`. Each agent
   writes scratch files only under a path of its own.
-- Commit the change, or give each reviewer a fixed commit, before a review
-  starts, and leave the working tree alone until every review returns.
+- Give each reviewer a fixed commit. Leave the checkout alone until reviews
+  return. Only read-only fixed-SHA `git show` reviews permit clean switches.
+  Writers, local gates and reviews using live files or checkout-dependent
+  execution must finish first.
 
 ### Capability Probe (MUST)
 
