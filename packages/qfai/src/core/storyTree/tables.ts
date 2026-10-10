@@ -30,6 +30,11 @@ const PARTLY_SUPERSEDED = /^PARTLY SUPERSEDED \(by DEC-\d{4}\)$/;
 const QUESTION_STATUS = /^(?:TODO|WIP|DONE|DEFERRED)$/;
 const ROW_KEYS = ["id", "content", "approach", "status"] as const;
 
+function statusPreview(status: string): string {
+  const characters = Array.from(status.replace(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]+/gu, " ").trim());
+  return characters.slice(0, 40).join("") + (characters.length > 40 ? "..." : "");
+}
+
 export function parseRecordTable(text: string, kind: RecordTableKind): ParsedRecordTable {
   const tables = parseAllMarkdownTables(text);
   const errors: string[] = [];
@@ -57,8 +62,11 @@ export function parseRecordTable(text: string, kind: RecordTableKind): ParsedRec
   }));
   const seen = new Set<string>();
   for (const [index, row] of rows.entries()) {
-    if (table.rows[index]?.length !== HEADERS.length) {
-      errors.push(`${kind} row ${index + 1} has the wrong number of cells`);
+    const actualCellCount = table.rows[index]?.length;
+    if (actualCellCount !== HEADERS.length) {
+      errors.push(
+        `${kind} row ${index + 1} has the wrong number of cells: expected ${HEADERS.length}, actual ${actualCellCount}`,
+      );
     }
     if (!isStoryTreeId(row.id, kind === "decisions" ? "DEC" : "OQ")) {
       errors.push(`${kind} row ${index + 1} has an invalid ID: ${row.id}`);
@@ -67,7 +75,13 @@ export function parseRecordTable(text: string, kind: RecordTableKind): ParsedRec
     seen.add(row.id);
     const statusPattern = kind === "decisions" ? DECISION_STATUS : QUESTION_STATUS;
     if (!statusPattern.test(row.status)) {
-      errors.push(`${kind} row ${row.id} has an invalid Status: ${row.status}`);
+      const allowedStatuses =
+        kind === "decisions"
+          ? "TODO, WIP, DONE, REJECTED, SUPERSEDED (by DEC-NNNN), PARTLY SUPERSEDED (by DEC-NNNN)"
+          : "TODO, WIP, DONE, DEFERRED";
+      errors.push(
+        `${kind} row ${row.id} has an invalid Status: "${statusPreview(row.status)}"; allowed: ${allowedStatuses}`,
+      );
     }
   }
   return { rows, errors };
