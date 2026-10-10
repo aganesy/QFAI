@@ -30,6 +30,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The row is a route record. Triage steps change no tracked file and never
   run the handed-off operation. Fixes #3201.
 
+- **Verification determines gate applicability before resolving commands.**
+  Conditional build and pack gates are omitted only when their conditions are
+  false. Pending CI checks are recorded without a completion claim. Fixes #3209.
+
 - **The qfai-run instructions clarify when to ask and when to continue.**
   A plan with one scope or no scopes runs every stage without a scope question.
   A session request naming the change and its effect shows acceptance, as the
