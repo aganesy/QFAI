@@ -499,7 +499,7 @@ describe("documentation clarity reminder scope", () => {
         (clause) =>
           /\b(?:observed|factual)\b/i.test(clause) && /\b(?:events?|facts?)\b/i.test(clause),
       ),
-      "the record separates observed events from interpretation",
+      "the record names observed events",
     ).toBe(true);
     expect(text).toMatch(/\bevidence\b/i);
     expect(text).toMatch(/\b(?:uncertainty|unverified|unknowns?)\b/i);
