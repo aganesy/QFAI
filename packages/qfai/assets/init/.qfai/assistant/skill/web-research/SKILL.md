@@ -143,7 +143,7 @@ The sanitizer is idempotent: applying it twice produces byte-identical output.
 Default policy: **default-deny**.
 
 - Only domains listed in the project allowlist may be fetched.
-- The allowlist is defined in `qfai.config.yaml` under `webResearch.allowlist`.
+- The allowlist is a domain list in `qfai.config.yaml` under `webResearch.allowlist`, read by the agent; `qfai` does not parse it.
 - Unknown domains are logged with the blocked domain and skipped; the pipeline continues with allowed sources.
 - Redirect chains are followed only while all hops remain on allowlisted domains.
   A redirect to a non-allowlisted domain is blocked at that target, the fetch is rejected,
