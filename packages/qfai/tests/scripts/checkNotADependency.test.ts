@@ -16,7 +16,7 @@
  */
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { copyFile, mkdir, mkdtemp, readFile, symlink, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readFile, rmdir, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -110,6 +110,8 @@ type BootstrapOptions = {
   unsafeModules?: { relative: string; kind: "link" | "file" };
   realModules?: boolean;
   invalidNode?: boolean;
+  filePackageParent?: boolean;
+  signal?: boolean;
 };
 
 async function runBootstrap(options: BootstrapOptions = {}) {
@@ -123,6 +125,11 @@ async function runBootstrap(options: BootstrapOptions = {}) {
       mkdir(dir, { recursive: true }),
     ),
   );
+  if (options.filePackageParent) {
+    const parent = path.join(root, "packages/qfai");
+    await rmdir(parent);
+    await writeFile(parent, "keep package parent");
+  }
   const entry = path.join(scripts, "bootstrap.mjs");
   const source = path.join(REPO_ROOT, "scripts/bootstrap.mjs");
   if (existsSync(source)) await copyFile(source, entry);
@@ -174,6 +181,25 @@ if (stage === Number(process.env.BOOTSTRAP_FAIL_STAGE)) process.exitCode = 40 + 
         entry,
       ]
     : [entry];
+  if (options.signal) {
+    args.unshift(
+      "--import",
+      "data:text/javascript," +
+        encodeURIComponent(`
+import childProcess from "node:child_process";
+import { syncBuiltinESMExports } from "node:module";
+const original = childProcess.spawnSync;
+let signalled = false;
+childProcess.spawnSync = (...args) => {
+  const result = original(...args);
+  if (signalled) return result;
+  signalled = true;
+  return { ...result, status: null, signal: "SIGTERM" };
+};
+syncBuiltinESMExports();
+`),
+    );
+  }
   const result = spawnSync(process.execPath, args, { cwd: foreign, env, encoding: "utf8" });
   const calls: unknown[] = existsSync(log)
     ? (await readFile(log, "utf8"))
@@ -245,6 +271,23 @@ describe("the repository bootstrap entry", () => {
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("Could not start pnpm");
     expect(result.calls).toEqual([]);
+  });
+
+  it("retains a non-directory dependency parent and starts no command", async () => {
+    const result = await runBootstrap({ filePackageParent: true });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("Cannot inspect dependency path packages/qfai/node_modules.");
+    expect(result.calls).toEqual([]);
+    expect(await readFile(path.join(result.root, "packages/qfai"), "utf8")).toBe(
+      "keep package parent",
+    );
+  });
+
+  it("reports a signalled child and starts no later stage", async () => {
+    const result = await runBootstrap({ signal: true });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("pnpm stopped on signal SIGTERM.");
+    expect(result.calls).toEqual([{ argv: bootstrapSteps[0], cwd: result.root }]);
   });
 
   it.each(["node_modules", "packages/qfai/node_modules"])(
