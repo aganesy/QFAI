@@ -6,6 +6,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- Route authorized cleanup of current-task, ignored temporary directories
+  through a bounded triage step. Unsafe or uncertain targets stop before
+  deletion, and completion requires absence and unchanged tracked files and
+  index. Fixes #3286.
+
 - Synchronize the document schema checker copies from the package manifest after
   a frozen dependency install, including the Renovate repin workflow.
 
@@ -351,6 +356,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Check the combined raw bytes of listed AGENTS ancestor chains and report each
+  file's contribution when the chain exceeds the source-byte budget.
+
 - **A released-entry repair moves complete new blocks back to Unreleased.**
   The explicit local-base command refuses mixed historical edits, ambiguous
   blocks and changed input bytes, and names exact source lines and categories.
@@ -370,6 +378,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Equivalent rules use existing example coverage and stable rule IDs to settle
   the owner. Different or uncertain behaviour returns to specification work;
   the choice and its reason appear in the final report.
+
+- **An optional manual Windows diagnostic runs every package test project.**
+  It checks the current pull request head, keeps the normal CI unchanged and
+  retains full-suite counts plus the executed full-flow result and duration.
+  Workflow registration alone does not supply Windows execution evidence.
 
 - **Published branch-added decision records have a bounded form recovery.**
   A separately approved prefix may restore missing evidence labels while keeping
@@ -427,6 +440,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Reviewed project inputs and trusted SDK callers remain the accepted scope;
   untrusted inputs require their own mitigation and security review. Dependencies
   and runtime behavior are unchanged. Refs #3296.
+
+- Distinguish acceptance annotations, empty bodies, asserted behavior and actual
+  run outcomes in applicable reports. Hand off remaining bodies with their owner
+  and completion criteria while preserving the two-stage acceptance rules.
 
 ## [2.1.1] - 2026-10-08
 
