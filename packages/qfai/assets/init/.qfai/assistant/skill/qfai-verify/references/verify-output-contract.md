@@ -13,6 +13,13 @@ Canonical path: `.qfai/report/verify.json`. Create the `.qfai/report/` directory
 | `summary`    | string           | no       | One or two sentences an operator can read without opening the stage report.                                                                             |
 | `gates`      | array of objects | no       | Per-gate results: as set out below. Advisory; no reader gates on it today.                                                                              |
 
+When the scope includes acceptance scaffolds or unfinished BF/AC acceptance
+bodies, an optional `summary` stays one or two short sentences naming remaining
+work, its owner or UNASSIGNED, and the detailed human-report reference. The
+five-field detail belongs in `verify-repo-gate`'s `## Report` section, not a
+new JSON field or table inside `summary`. Empty-body exemptions, verdicts and
+completion rules stay unchanged.
+
 `status` is a closed two-value enum: `"PASS"` / `"FAIL"`. There is no `"WARN"` — a run with only `warning` / `info` findings is `"PASS"` (waivers apply to those severities only). Any `error` finding makes it `"FAIL"`.
 
 Each entry of `gates` is `{ name, status, command }`, plus these optional fields:
