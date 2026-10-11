@@ -356,10 +356,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
-- Focused TDD reports identify the selected case's actual execution and result,
-  apart from process exits, counts and containers. Normal verification reconciles
-  full collection membership without adding a full run to each focused cycle.
-
 - Include authorized temporary-directory cleanup in the workflow candidate purpose.
   Fixes #3455.
 
@@ -373,6 +369,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The explicit local-base command refuses mixed historical edits, ambiguous
   blocks and changed input bytes, and names exact source lines and categories.
   It writes only the changelog and leaves Git operations to the caller. Fixes #3252.
+
+- Focused TDD reports identify the selected case's actual execution and result,
+  apart from process exits, counts and containers. Normal verification reconciles
+  full collection membership without adding a full run to each focused cycle.
 
 - Include the existing acceptance-body signal in both extraction schema readings.
 
