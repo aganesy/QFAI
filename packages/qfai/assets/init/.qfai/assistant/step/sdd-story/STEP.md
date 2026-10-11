@@ -45,6 +45,9 @@ states.
    `.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#capacity-before-writing`.
    Report the retired-inclusive remaining capacity and requested count, and
    stop an over-capacity batch before any dependent declaration.
+   For an approved capacity-only sibling or actual move, read
+   `.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#capacity-partition`
+   and its following complete-map procedure before the affected write.
 2. Write the story index and the three files of each affected story, each in
    its template's shape and nothing more, as
    `.qfai/assistant/skill/qfai-sdd/references/spec-traceability-rules.md#document-shapes`

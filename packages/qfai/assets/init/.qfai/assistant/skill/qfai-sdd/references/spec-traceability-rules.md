@@ -90,15 +90,20 @@ The table holds no rule. A behaviour a layer must show is a BR in the contract t
 Use highest existing number plus one in the scope. Count IDs named in retired-item decisions, so deletion never frees an ID. Empty scopes begin at 0001 or, for AC and EX tails, 01. Directory names match their BF and US IDs. Do not add a CLI allocator.
 
 AC/EX tails remain two digits with upper bound 99. Before planned additions,
-read `sdd-triage.md#capacity-before-writing` and compare requested additions
-with the retired-inclusive remaining 99-H. Stop an over-capacity batch before
-partial declarations. For an approved capacity-only sibling or actual move,
-read that reference's capacity partition and complete-map procedure first;
-no larger ID or new product outcome is a substitute for the required scope.
+compare requested additions with the retired-inclusive remaining 99-H. Stop an
+over-capacity batch before partial declarations. For an approved capacity-only
+sibling or actual move, apply the owning stage's capacity preflight and complete
+map before writing; no larger ID or new product outcome is a substitute for the
+required scope.
 
 Constraint IDs are the exception. `TC-NN`, `OC-NN` and `BC-NN` in constraint.md are positional: each section numbers its rows from 01 in table order. No other document cites one, so a removed row closes the gap and the rows after it are renumbered. `npx qfai validate` reports a constraint ID that is not its row's place.
 
-Moving a story to another flow changes its US ID and every child AC and EX ID under its existing approval path. Preserve case meanings and assertions through the complete fixed-source map, update approved active indexes, contract citations and counted test references, and retire old IDs in a new approved record. Inherited DEC ID, Content and Approach cells and their old-ID references stay historical and unchanged.
+Moving a story to another flow changes its US ID and every child AC and EX ID
+under its existing approval path. Preserve case meanings and assertions through
+the complete fixed-source map, update approved active indexes, contract citations
+and counted test references. Record the old IDs as retired in a new approved
+record so they cannot be issued again. Inherited DEC ID, Content and Approach
+cells and their old-ID references stay historical and unchanged.
 
 ## Edge rules
 

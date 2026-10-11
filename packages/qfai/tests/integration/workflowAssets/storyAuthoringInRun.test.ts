@@ -280,7 +280,9 @@ describe("capacity-safe story authoring guidance", () => {
     expect(preWrite).toMatch(/retired-inclusive remaining capacity and requested count/u);
     expect(preWrite).toMatch(/stop an over-capacity batch before any dependent declaration/u);
     const scopes = await section(TRACEABILITY, "## Identifier scopes");
-    expect(scopes).toContain("sdd-triage.md#capacity-before-writing");
+    expect(scopes).toMatch(
+      /For an approved capacity-only sibling or actual move.*owning stage.s capacity preflight and complete map before writing/u,
+    );
     expect(scopes).toMatch(/retired-inclusive remaining 99-H/u);
     expect(scopes).toMatch(/Stop an over-capacity batch before partial declarations/u);
   });
@@ -352,7 +354,12 @@ describe("capacity-safe story authoring guidance", () => {
       /same actual actor goal.*same BF.*requested AC or EX additions exceed.*remaining capacity/u,
     );
     expect(decomposition).toMatch(/only new, cohesive incoming cases.*covering change request/u);
-    expect(decomposition).toContain("sdd-triage.md#capacity-partition");
+    expect(decomposition).toMatch(
+      /Confirm retired-inclusive capacity and the owning approval before writing/u,
+    );
+    expect(await section("step/sdd-story/STEP.md", "## Procedure")).toContain(
+      "sdd-triage.md#capacity-partition",
+    );
     expect(decomposition).toMatch(
       /invents no new product outcome.*grants no future creation or move permission/u,
     );

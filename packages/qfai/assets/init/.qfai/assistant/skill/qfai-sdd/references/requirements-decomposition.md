@@ -28,9 +28,10 @@ Use source-backed discussion requirements to write one connected, testable story
 A capacity-only sibling may represent the same actual actor goal within the
 same BF when requested AC or EX additions exceed the source story's remaining
 capacity. Prefer preserving published cases and IDs, and place only new,
-cohesive incoming cases under their own covering change request. Before that
-write, read `sdd-triage.md#capacity-partition`; this exception invents no new
-product outcome and grants no future creation or move permission.
+cohesive incoming cases under their own covering change request. Confirm
+retired-inclusive capacity and the owning approval before writing; this
+exception invents no new product outcome and grants no future creation or move
+permission.
 
 Allocate each ID as the highest ID of its kind in its defined scope plus one, counting retired IDs. Never reuse an ID. The scopes and widths are in the `ID allocation` section of the triage reference.
 
