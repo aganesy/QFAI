@@ -28,6 +28,7 @@ async function planned(fields: Partial<WorkflowExtraction>): Promise<PlanDocumen
 }
 
 // QFAI:EX-0001-0211-01
+// QFAI:AC-0001-0222-05
 // QFAI:AC-0001-0211-02
 // QFAI:AC-0001-0220-06
 // QFAI:EX-0001-0211-45
@@ -78,6 +79,20 @@ it("An extraction that names no route is routed by the rule that holds", async (
     ["answer-question", 8],
     ["run-owned-cleanup", 15],
   ]);
+  const cleanupCandidate = candidates.find((candidate) => candidate.route === "run-owned-cleanup");
+  expect(cleanupCandidate).toMatchObject({
+    family: "upkeep",
+    recommended: false,
+    scopes: [{ scope: "broad", stages: ["cleanup", "close"], recommended: true }],
+  });
+  expect(cleanupCandidate?.summary).toMatch(/\b(?:remove|clean up|cleanup)\b/i);
+  expect(cleanupCandidate?.summary).toMatch(/\bauthorized\b/i);
+  expect(cleanupCandidate?.summary).toMatch(/\btemporary (?:directories|folders)\b/i);
+  expect(cleanupCandidate?.summary).toMatch(/\b(?:repair|fix)\b/i);
+  for (const subject of ["tests", "CI", "dependencies"]) {
+    expect(cleanupCandidate?.summary).toContain(subject);
+  }
+  expect(cleanupCandidate?.summary).toContain("Stages: cleanup, close.");
   expect(Object.hasOwn(alternative, "stages")).toBe(false);
   expect(await listTree(root)).toEqual(before);
 });

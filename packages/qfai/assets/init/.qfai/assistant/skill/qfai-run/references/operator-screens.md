@@ -6,6 +6,7 @@ What the user sees while a request is worked, and how a question reaches them.
 
 - Every screen
 - Launcher recovery
+- Refreshing installed instructions
 - Executing a step
 - The scope question
 - The announcement
@@ -40,6 +41,24 @@ Use the project's package manager and declared install command in this checkout:
 - Repeat the launcher preflight. Plan only after it succeeds.
 
 Never use a published, remote or cached QFAI launcher as a fallback.
+
+## Refreshing installed instructions
+
+Read this section before applying corrected guidance to an adopting project.
+
+Install or update its project-local QFAI dependency using the project's package
+manager and approved package source. Verify that the canonical launcher resolves
+that installation, then inspect the installed step and reference files for the
+required guidance. A source fix or package version string alone does not prove
+that a published package contains it.
+
+Preview the refresh with that verified local launcher using
+`npx qfai init --force --dry-run`. Review the managed files it would replace,
+including any direct local edits, before `npx qfai init --force`. Review the
+resulting diff. Force refresh overwrites managed assistant and rule masters;
+project specs, contracts, rule overlays, `skill.local/`, configuration overrides
+and existing entry documents remain project-owned. Keep them intact; do not
+replace them with templates to make the refresh pass.
 
 ## Executing a step
 
@@ -250,8 +269,18 @@ the switch; do not stash, reset or delete them to move on. A reviewer using
 live files or checkout-dependent execution must finish. A read-only reviewer
 using only `git show <fixed SHA>:<path>` may continue across a clean orchestrator switch;
 the reviewer never switches the checkout. CI-only pending gates use the
-existing DELEGATED commit allowance only under explicit user instruction or
-project policy. A wait never authorizes an early commit or skipped gate.
+existing DELEGATED commit allowance only under a user instruction or project
+policy covering that verification commit and its tracked paths. The project
+must declare the gate CI-only and name its actual check. Every nondelegated gate
+must pass. A delegated red check stops transport of the same unchanged candidate.
+Explicit CI-only delegation covering transport may instead carry actual changes
+addressing that failure through the existing planned fix into a new candidate,
+even while HEAD names the failed commit. Keep the prior head, check, run and
+observed result as FAIL; never relabel that evidence pending. Report the actual
+fix and the new head after committing. Its missing or pending CI result leaves
+verification incomplete. Ordinary FAIL or UNRUN still stops the commit. A commit
+grants no push or pull request authority: each remote action needs its own covered
+instruction or policy. Waiting alone never authorizes a commit or skipped gate.
 
 Use standing delegation only for the targets and actions it actually covers.
 Report routine choices as the agent's decisions under that authority, never
@@ -281,7 +310,15 @@ reset, a stash, a branch switch or a worktree removal.
 | At the chosen scope                   | The chosen stages complete, the stages not chosen, and a verdict for each gate that ran, never that a change is done |
 | At a closing step                     | The closure outcome and each follow-up request, never that a change is done                                          |
 | With a gate failing                   | Each failing gate marked pre-existing or new, with its owner. Nothing reads as complete                              |
+| With delegated CI pending             | The verification commit, pending checks and resume condition; verification remains incomplete                        |
 
+- For a CI wait, name the target, current head, run ID or URL when available,
+  check, actual outcome and counts, blocker and resume condition. State when no
+  run exists. Missing, red or mismatched evidence stops formal completion or
+  merge; every required check needs actual passing evidence for the current head.
+- Report repository outcome separately from external publication. A local commit
+  is not a push or pull request, and passing repository checks do not prove a
+  deployment, package publication or other external effect occurred.
 - A gate shows its verdict only.
 - An external effect nobody requested is listed as not requested.
 - The report does not restate the history of the work.
