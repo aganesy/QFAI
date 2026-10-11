@@ -1279,7 +1279,6 @@ export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
   ".gitattributes",
   ".gitignore",
   "AGENTS.md",
-  "CLAUDE.md",
   "qfai.config.yaml",
 ]);
 
@@ -1299,7 +1298,7 @@ export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
  * rather than drift. It moved a second time when the workflow's run state arrived: `.qfai/run/`
  * joined the ignore lines, and that line is the whole delta.
  *
- * `AGENTS.md` and `CLAUDE.md` are the entry points Codex and Claude Code load, seeded create-only so
+ * `AGENTS.md` is the entry point Codex and Claude Code load, seeded create-only so
  * that the `.agents/rules/` masters this run writes are cited by something. They belong here for the
  * same reason `.github/copilot-instructions.md` does: an adopter's agent reads them as instructions,
  * so their bytes are the reviewed surface. Each opens with its level-1 heading; the line that once
@@ -1370,11 +1369,13 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     //
     // The generated rule list cites action-reversibility, untrusted-content and ai-readable-markdown.
     // This digest covers the bytes produced by the builder strings.
+    // Re-pinned for a read-when line on each rule of the list, worded as in the shipped
+    // `AGENTS.md`. Derived by running `qfai init` into a temp root.
     // Re-pinned for one more bullet on the rules list, naming `.agents/rules/session-feedback.md`.
     // Derived by running `qfai init` into a temp root; dropping that one bullet reproduces
     // `fcdba5a8…` byte for byte.
     ".github/copilot-instructions.md",
-    "3a7378f9562e03819a632f7a1f08f8d721aadf78a7cd7cf63296b6d7c0ef1c7f",
+    "b756eb95a096958e188a406f275d4a31a3128336c58ca50a9e002c2d2e503d4d",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1406,10 +1407,6 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   [
     "AGENTS.md",
     fileDigest(readFileSync(new URL("../fixtures/shipped-entry/agents.txt", import.meta.url))),
-  ],
-  [
-    "CLAUDE.md",
-    fileDigest(readFileSync(new URL("../fixtures/shipped-entry/claude.txt", import.meta.url))),
   ],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
@@ -1725,7 +1722,6 @@ export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
   "root/.github/workflows/qfai-tests.yml",
   "root/.github/workflows/qfai-validate.yml",
   "root/AGENTS.md",
-  "root/CLAUDE.md",
   "root/qfai.config.yaml",
   ".claude/settings.json",
   ".codex/hooks.json",
