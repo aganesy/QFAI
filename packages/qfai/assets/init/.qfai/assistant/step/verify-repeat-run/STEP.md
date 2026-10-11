@@ -50,7 +50,8 @@ unknown cause or unresolved timing or load uncertainty require the real runs.
 Unavailable tools, waits or limited time do not make repetitions unnecessary.
 When the evidence qualifies, cite the inspected diagnosis, prior Red and
 current Green, including their commands, results and revisions, in the stage
-report, with the applicability reason and why load or soak is unnecessary. State that repeat runs were not performed. The gate
+report, with the applicability reason and why load or soak is unnecessary.
+State that repeat runs were not performed. The gate
 checks this proof and reason; report no repeat-run PASS. A later cause never
 changes the earlier record of what ran.
 
