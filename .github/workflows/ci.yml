@@ -1048,7 +1048,7 @@ jobs:
             if (JSON.stringify(after) !== JSON.stringify(before)) fail('Repository source or index changed before archiving.');
             preflight('stage-preflight', stage, selected);
             const archive = path.join(receiptRoot, 'bundle.tar');
-            command('tar-create', tar, ['-cf', archive, '-C', stage, ...selected.map((item) => './' + item.name)]);
+            command('tar-create', tar, ['--format=pax', '-cf', archive, '-C', stage, ...selected.map((item) => './' + item.name)]);
             const archiveSHA = digest(fs.readFileSync(archive));
             const listed = members('tar-list', archive, selected);
             const checkRoot = path.join(scratch, 'producer-self-check');
