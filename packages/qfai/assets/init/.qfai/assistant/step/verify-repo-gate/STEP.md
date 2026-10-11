@@ -142,8 +142,9 @@ never be written are in
 Inside an `npx qfai workflow` run, the stage runs every required gate over the
 run's change and reports each result.
 
-- Name this run's `.qfai/report/verify.json`, its scope and the revision checked
-  in the stage report, with the commands and evidence for each gate.
+- The stage writes this run's `.qfai/report/verify.json` and names its scope and
+  the revision checked in the stage report, with the commands and evidence for
+  each gate.
 - A `verify.json` written by another run, scoped to another flow or kept in a
   shared location is never named as this stage's report.
 - Report the stage's completion or stop separately from actual test and gate

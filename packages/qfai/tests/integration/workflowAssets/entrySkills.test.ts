@@ -904,7 +904,7 @@ describe("qfai-maintain", () => {
       /alters what a reader reads and nothing a person, program or agent does/i,
     );
     expect(flat(sectionOf(skill, "## The edit"))).toMatch(/edit nothing outside it/i);
-    const returns = flat(sectionOf(skill, "## What the stage returns"));
+    const returns = flat(sectionOf(skill, "## Stage report"));
     for (const receipt of [
       /the diff/i,
       /the no-behaviour-change judgement/i,
