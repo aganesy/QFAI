@@ -417,6 +417,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the original decision bytes and authority intact. Unsafe or ambiguous records
   stop before writing; inherited records require their own owning decision.
 
+- Fix Playwright launcher probes for Windows .cmd and .bat paths containing spaces.
+
 - Clarify when delegated external settings and credential installation may run,
   and distinguish confirmed external effects from repository changes and CI results.
 
