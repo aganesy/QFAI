@@ -24,8 +24,6 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { workflowJobs } from "../helpers/spec0017WorkflowSurfaces.js";
-
 import {
   type BuildVerdict,
   classifyBuildCommand,
@@ -1992,10 +1990,6 @@ describe("the real workflow trees", () => {
         "build::ci.yml::pnpm -C packages/qfai build",
         // A third time: the `windows-parity` job builds for the same reason, on the Windows runner.
         "build::ci.yml::pnpm -C packages/qfai build",
-        // This temporary job adds one build occurrence until its retained proof is checked.
-        ...(Object.hasOwn(workflowJobs("ci.yml"), "temporary-discussion-proof")
-          ? ["build::ci.yml::pnpm -C packages/qfai build"]
-          : []),
         // This one is new, and it is a fact about the repository rather than about the predicate:
         // the own tree has a THIRD lane that builds. `check-types` runs `tsc -b`, which emits into
         // `dist`, so the type-check lane and the build lane compile the same package twice.
