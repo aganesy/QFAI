@@ -361,6 +361,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   regenerating past packs. Source selection and validation gates remain unchanged.
   Fixes #3302.
 
+- Include authorized temporary-directory cleanup in the workflow candidate purpose.
+  Fixes #3455.
+
 - Update compatible dependency resolutions and scoped lint-parser patches while
   retaining the supported Node floor.
 
@@ -443,6 +446,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   so the variable is never set. The step that removes the entry ran after
   `pnpm install` and `pnpm rebuild`, and each of them printed a warning. It now
   runs right after `setup-node`. Publishing itself was not affected.
+
+- **Verification commits keep pending CI separate from completed verification.**
+  Guidance records exact-head CI evidence, preserves observed failures and
+  requires separate authority for remote actions. Installed asset refresh uses
+  the verified local package and preserves project-owned files. Fixes #3294.
 
 - **Dependency guidance limits acceptance of the unresolved glob-matching risk.**
   Reviewed project inputs and trusted SDK callers remain the accepted scope;
