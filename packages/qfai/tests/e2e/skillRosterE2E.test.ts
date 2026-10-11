@@ -40,15 +40,29 @@ describe("E2E: parallel dispatch rules", () => {
   it("SKILL.md defines allow/deny conditions and delivery-planner authority", async () => {
     // Full conditions live in references/parallelization-policy.md.
     const content = await readImplementFlowSteps(implementAssistantDir);
-    const policy = await readFile(
-      path.join(path.dirname(implementSkillPath), "references", "parallelization-policy.md"),
-      "utf-8",
-    );
+    const policy = (
+      await readFile(
+        path.join(path.dirname(implementSkillPath), "references", "parallelization-policy.md"),
+        "utf-8",
+      )
+    ).replace(/\s*\n\s*/g, " ");
     expect(content).toContain("Work one EX at a time by default");
     expect(policy).toContain("explicit user approval and a delivery-planner PASS");
     expect(policy).toContain("Deny parallel dispatch when two items write the same shared fixture");
+    expect(policy).toMatch(/each worker.*exact file ownership list.*checkout assigned by the host/);
+    expect(policy).toMatch(
+      /separate worktrees when.*host supports editing.*otherwise.*shared-index mode/,
+    );
     expect(policy).toContain(
-      "Give each worker a separate worktree and an exact file ownership list",
+      ".qfai/assistant/rule/workflow.md#concurrency-stage-independent-mandatory",
+    );
+    expect(policy).toMatch(/Creating a worktree does not grant edit permission/);
+    expect(policy).toMatch(
+      /refused edit.*shared-skill-delegation-baseline\.md#worker-edit-boundary/,
+    );
+    expect(policy).toContain("Workers do not change another worker's files or the story tree.");
+    expect(policy).toMatch(
+      /orchestrator integrates their results and resolves every overlap before judging either item complete/,
     );
     expect(policy).toContain("After integration, rerun every item selector on the merged tree");
   });

@@ -562,19 +562,17 @@ describe("the session agent holds the work and delegates by choice", () => {
   // QFAI:EX-0001-0224-02
   it("lets the session author any artifact and keeps every review with a non-author", async () => {
     for (const section of await baselineSections("### Orchestrator Protocol")) {
-      expect(section).toContain("may author any artifact itself");
-      expect(section).toContain("sub-agents that run in parallel");
-      expect(section).toContain(
-        "A review is done by an agent that did not author what it reviews.",
-      );
+      expect(section).toMatch(/may (?:author|write) any artifact itself/);
+      expect(section).toMatch(/independent parts[^.]*sub-agents[^.]*parallel/);
+      expect(section).toMatch(/review[^.]*agent[^.]*did not (?:author|write) what it reviews/);
       expect(section).toContain("never reviews its own work");
     }
     for (const content of [
       await readAsset(SHARED_DELEGATION_BASELINE),
       await readAsset(LIVE_SHARED_DELEGATION_BASELINE),
     ]) {
-      expect(getSection(content, "## Sub-agent Delegation (MANDATORY)")).toContain(
-        "Delegation is optional.",
+      expect(getSection(content, "## Sub-agent Delegation (MANDATORY)")).toMatch(
+        /Delegation is optional/,
       );
     }
     for (const skill of [QFAI_IMPLEMENT_SKILL, LIVE_QFAI_IMPLEMENT_SKILL]) {
@@ -586,11 +584,12 @@ describe("the session agent holds the work and delegates by choice", () => {
   // QFAI:EX-0001-0163-02
   it("requires no delegation at stage start, and treats a chosen delegation as the capability check", async () => {
     for (const section of await baselineSections("### Capability Probe (MUST)")) {
-      expect(section).toContain("No delegation attempt is required at the start of a stage.");
-      expect(section).toContain("delegates only when it chooses to");
-      expect(section).toContain("the real delegation attempt is the capability check");
-      expect(section).toContain("Do not gate execution on preflight availability questions");
-      expect(section).toContain("If the delegation fails, classify the failure first");
+      expect(section).toMatch(/No delegation attempt is required[^.]*start of a stage/);
+      expect(section).toMatch(/delegates only when it chooses/);
+      expect(section).toMatch(/(?:real|actual) delegation attempt is the capability check/);
+      expect(section).toMatch(/Do not gate execution on preflight availability questions/);
+      expect(section).toMatch(/delegation fails[^.]*classify the failure first/);
+      expect(section).toMatch(/Never simulate a role/);
     }
   });
 
@@ -603,7 +602,8 @@ describe("the session agent holds the work and delegates by choice", () => {
     for (const section of await baselineSections(
       "### Delegation Failure — `unavailable` (The Orchestrator Does The Work)",
     )) {
-      expect(section).toContain("does the work itself and reports it as its own");
+      expect(section).toMatch(/does the work itself[^.]*reports it as its own/);
+      expect(section).toMatch(/never as the attempted role/);
       for (const field of [
         "Delegation failure:",
         "Failure class: unavailable",
@@ -622,7 +622,7 @@ describe("the session agent holds the work and delegates by choice", () => {
 describe("delegation failure taxonomy is actionable", () => {
   it("classifies a limit the user must lift as unavailable, not saturated", async () => {
     for (const taxonomy of await baselineSections("### Delegation Failure Taxonomy (MUST)")) {
-      expect(taxonomy).toContain("A limit or quota that only a user can lift is `unavailable`");
+      expect(taxonomy).toMatch(/limit or quota[^.]*only a user can lift[^.]*`unavailable`/);
       expect(taxonomy).toMatch(/retryability is not explicit, default to `unavailable`/);
     }
   });
@@ -632,8 +632,8 @@ describe("delegation failure taxonomy is actionable", () => {
     for (const taxonomy of await baselineSections("### Delegation Failure Taxonomy (MUST)")) {
       expect(taxonomy).toContain("`agent thread limit reached`");
       expect(taxonomy).toContain("Bounded wait-and-retry of the identical delegation");
-      expect(taxonomy).toContain(
-        "handle the failure as `unavailable` and report the class as `saturated (retry budget exhausted)`",
+      expect(taxonomy).toMatch(
+        /handle the failure as `unavailable`[^.]*report[^.]*`saturated \(retry budget exhausted\)`/,
       );
     }
     for (const retry of await baselineSections(

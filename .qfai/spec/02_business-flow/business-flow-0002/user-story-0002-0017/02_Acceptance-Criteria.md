@@ -8,9 +8,10 @@ Feature: Layer-separated test lanes without a new check name
   Scenario: The layer split stays inside the existing file
     Given every check name is a repository setting that no agent can configure
     When the test layers are separated into their own jobs and matrix legs by cost and duration
-    Then the own-CI workflow file count is unchanged
+    Then the workflow file count for that layer separation is unchanged
     And the aggregate check name is unchanged
-    And a new workflow file would create a check name nobody has configured, so it is rejected in review
+    And a new layer-specific workflow file is rejected in review
+    And one general optional manual diagnostic outside the required aggregate does not replace the regular matrix or its required checks
 
   # AC-0002-0017-02
   Scenario: Splitting release checks preserves the publication barrier

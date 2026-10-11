@@ -1,0 +1,86 @@
+# Commands that tag a release, publish a package or start a release workflow ask first.
+# The same commands are in the permissions.ask entries of .claude/settings.json.
+
+prefix_rule(
+    pattern = ["git", "tag"],
+    decision = "prompt",
+    justification = "Tagging, publishing and starting a release need a person's approval",
+    match = ["git tag v1.0.0"],
+)
+
+prefix_rule(
+    pattern = ["git", "push", "--tags"],
+    decision = "prompt",
+    justification = "Tagging, publishing and starting a release need a person's approval",
+    match = ["git push --tags"],
+)
+
+prefix_rule(
+    pattern = ["git", "push", "--follow-tags"],
+    decision = "prompt",
+    justification = "Tagging, publishing and starting a release need a person's approval",
+    match = ["git push --follow-tags"],
+)
+
+prefix_rule(
+    pattern = ["git", "push", "origin", "--tags"],
+    decision = "prompt",
+    justification = "Tagging, publishing and starting a release need a person's approval",
+    match = ["git push origin --tags"],
+)
+
+prefix_rule(
+    pattern = ["git", "push", "origin", "--follow-tags"],
+    decision = "prompt",
+    justification = "Tagging, publishing and starting a release need a person's approval",
+    match = ["git push origin --follow-tags"],
+)
+
+prefix_rule(
+    pattern = ["npm", "publish"],
+    decision = "prompt",
+    justification = "Tagging, publishing and starting a release need a person's approval",
+    match = ["npm publish"],
+)
+
+prefix_rule(
+    pattern = ["pnpm", "publish"],
+    decision = "prompt",
+    justification = "Tagging, publishing and starting a release need a person's approval",
+    match = ["pnpm publish"],
+)
+
+prefix_rule(
+    pattern = ["yarn", "npm", "publish"],
+    decision = "prompt",
+    justification = "Tagging, publishing and starting a release need a person's approval",
+    match = ["yarn npm publish"],
+)
+
+prefix_rule(
+    pattern = ["gh", "release", "create"],
+    decision = "prompt",
+    justification = "Tagging, publishing and starting a release need a person's approval",
+    match = ["gh release create v1.0.0"],
+)
+
+prefix_rule(
+    pattern = ["gh", "workflow", "run", "prepare-release.yml"],
+    decision = "prompt",
+    justification = "Tagging, publishing and starting a release need a person's approval",
+    match = ["gh workflow run prepare-release.yml"],
+)
+
+prefix_rule(
+    pattern = ["gh", "workflow", "run", "tag-release.yml"],
+    decision = "prompt",
+    justification = "Tagging, publishing and starting a release need a person's approval",
+    match = ["gh workflow run tag-release.yml"],
+)
+
+prefix_rule(
+    pattern = ["gh", "workflow", "run", "release.yml"],
+    decision = "prompt",
+    justification = "Tagging, publishing and starting a release need a person's approval",
+    match = ["gh workflow run release.yml"],
+)

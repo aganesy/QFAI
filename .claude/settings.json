@@ -17,6 +17,22 @@
       "Bash(npx qfai:*)",
       "Bash(yarn exec qfai:*)",
       "Bash(yarn qfai:*)"
+    ],
+    "ask": [
+      "Bash(git tag:*)",
+      "Bash(git push --tags:*)",
+      "Bash(git push --follow-tags:*)",
+      "Bash(npm publish:*)",
+      "Bash(pnpm publish:*)",
+      "Bash(yarn npm publish:*)",
+      "Bash(gh release create:*)",
+      "Bash(gh workflow run prepare-release.yml:*)",
+      "Bash(gh workflow run tag-release.yml:*)",
+      "Bash(gh workflow run release.yml:*)",
+      "Bash(git push * --tags)",
+      "Bash(git push * --tags *)",
+      "Bash(git push * --follow-tags)",
+      "Bash(git push * --follow-tags *)"
     ]
   },
   "hooks": {
@@ -30,7 +46,7 @@
             "command": "node",
             "args": [
               "-e",
-              "try{let p;try{p=JSON.parse(require('fs').readFileSync(0,'utf8')).prompt}catch{}if(!(typeof p==='string'&&/^[ \\t]*(<(task-notification|wake)[\\s>]|\\[SYSTEM NOTIFICATION)/m.test(p))){const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}catch{}",
+              "try{const f=require('fs');let i={};try{i=JSON.parse(f.readFileSync(0,'utf8'))||{}}catch{}const p=i.prompt;if(!(typeof p==='string'&&/^[ \\t]*(<(task-notification|wake)[\\s>]|\\[SYSTEM NOTIFICATION)/m.test(p))){let n=1;if(typeof i.session_id==='string'){try{const t=require('path').join(require('os').tmpdir(),['qfai-reminder',i.session_id,i.agent_id||'main',process.argv[2]].join('-').replace(/[^\\w.-]/g,'_'));f.appendFileSync(t,'.');n=f.statSync(t).size}catch{}}const e=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(e!==undefined){const {briefContext,...m}=e;if(n>1&&typeof briefContext==='string')m.hookSpecificOutput.additionalContext=briefContext;console.log(JSON.stringify(m))}}}catch{}",
               "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
               "structured-question"
             ]
@@ -46,7 +62,7 @@
             "command": "node",
             "args": [
               "-e",
-              "try{let p;try{p=JSON.parse(require('fs').readFileSync(0,'utf8')).prompt}catch{}if(!(typeof p==='string'&&/^[ \\t]*(<(task-notification|wake)[\\s>]|\\[SYSTEM NOTIFICATION)/m.test(p))){const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}catch{}",
+              "try{const f=require('fs');let i={};try{i=JSON.parse(f.readFileSync(0,'utf8'))||{}}catch{}const p=i.prompt;if(!(typeof p==='string'&&/^[ \\t]*(<(task-notification|wake)[\\s>]|\\[SYSTEM NOTIFICATION)/m.test(p))){let n=1;if(typeof i.session_id==='string'){try{const t=require('path').join(require('os').tmpdir(),['qfai-reminder',i.session_id,i.agent_id||'main',process.argv[2]].join('-').replace(/[^\\w.-]/g,'_'));f.appendFileSync(t,'.');n=f.statSync(t).size}catch{}}const e=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(e!==undefined){const {briefContext,...m}=e;if(n>1&&typeof briefContext==='string')m.hookSpecificOutput.additionalContext=briefContext;console.log(JSON.stringify(m))}}}catch{}",
               "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
               "free-text-entry"
             ]
@@ -96,7 +112,7 @@
             "command": "node",
             "args": [
               "-e",
-              "try{const f=require('fs');let i={};try{i=JSON.parse(f.readFileSync(0,'utf8'))}catch{}let n=1;if(typeof i.session_id==='string'){try{const t=require('path').join(require('os').tmpdir(),['qfai-reminder',i.session_id,i.agent_id||'main',process.argv[2]].join('-').replace(/[^\\w.-]/g,'_'));f.appendFileSync(t,'.');n=f.statSync(t).size}catch{}}if((n-1)%20===0){const m=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}catch{}",
+              "try{const f=require('fs');let i={};try{i=JSON.parse(f.readFileSync(0,'utf8'))||{}}catch{}let n=1;if(typeof i.session_id==='string'){try{const t=require('path').join(require('os').tmpdir(),['qfai-reminder',i.session_id,i.agent_id||'main',process.argv[2]].join('-').replace(/[^\\w.-]/g,'_'));f.appendFileSync(t,'.');n=f.statSync(t).size}catch{}}const e=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(e!==undefined){const {briefContext,...m}=e;if(n>1&&typeof briefContext==='string')m.hookSpecificOutput.additionalContext=briefContext;console.log(JSON.stringify(m))}}catch{}",
               "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
               "grilling-design-artifact"
             ]
@@ -112,7 +128,7 @@
             "command": "node",
             "args": [
               "-e",
-              "try{const f=require('fs');let i={};try{i=JSON.parse(f.readFileSync(0,'utf8'))}catch{}let n=1;if(typeof i.session_id==='string'){try{const t=require('path').join(require('os').tmpdir(),['qfai-reminder',i.session_id,i.agent_id||'main',process.argv[2]].join('-').replace(/[^\\w.-]/g,'_'));f.appendFileSync(t,'.');n=f.statSync(t).size}catch{}}if((n-1)%20===0){const m=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}catch{}",
+              "try{const f=require('fs');let i={};try{i=JSON.parse(f.readFileSync(0,'utf8'))||{}}catch{}let n=1;if(typeof i.session_id==='string'){try{const t=require('path').join(require('os').tmpdir(),['qfai-reminder',i.session_id,i.agent_id||'main',process.argv[2]].join('-').replace(/[^\\w.-]/g,'_'));f.appendFileSync(t,'.');n=f.statSync(t).size}catch{}}const e=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(e!==undefined){const {briefContext,...m}=e;if(n>1&&typeof briefContext==='string')m.hookSpecificOutput.additionalContext=briefContext;console.log(JSON.stringify(m))}}catch{}",
               "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
               "grilling-delegation"
             ]
@@ -128,7 +144,7 @@
             "command": "node",
             "args": [
               "-e",
-              "try{const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}catch{}",
+              "try{const f=require('fs');let i={};try{i=JSON.parse(f.readFileSync(0,'utf8'))||{}}catch{}let n=1;if(typeof i.session_id==='string'){try{const t=require('path').join(require('os').tmpdir(),['qfai-reminder',i.session_id,i.agent_id||'main',process.argv[2]].join('-').replace(/[^\\w.-]/g,'_'));f.appendFileSync(t,'.');n=f.statSync(t).size}catch{}}const e=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(e!==undefined){const {briefContext,...m}=e;if(n>1&&typeof briefContext==='string')m.hookSpecificOutput.additionalContext=briefContext;console.log(JSON.stringify(m))}}catch{}",
               "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
               "grilling-plan"
             ]
@@ -144,7 +160,7 @@
             "command": "node",
             "args": [
               "-e",
-              "try{const f=require('fs');let i={};try{i=JSON.parse(f.readFileSync(0,'utf8'))}catch{}const c=i.tool_input&&i.tool_input.command;if(typeof c==='string'&&/(^|[^\\w.-])gh([^\\w.-]|$)|api\\.github\\.com/.test(c)){let n=1;if(typeof i.session_id==='string'){try{const t=require('path').join(require('os').tmpdir(),['qfai-reminder',i.session_id,i.agent_id||'main',process.argv[2]].join('-').replace(/[^\\w.-]/g,'_'));f.appendFileSync(t,'.');n=f.statSync(t).size}catch{}}if((n-1)%20===0){const m=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}}catch{}",
+              "try{const f=require('fs');let i={};try{i=JSON.parse(f.readFileSync(0,'utf8'))||{}}catch{}const c=i.tool_input&&i.tool_input.command;if(typeof c==='string'&&/(^|[^\\w.-])gh([^\\w.-]|$)|api\\.github\\.com/.test(c)){let n=1;if(typeof i.session_id==='string'){try{const t=require('path').join(require('os').tmpdir(),['qfai-reminder',i.session_id,i.agent_id||'main',process.argv[2]].join('-').replace(/[^\\w.-]/g,'_'));f.appendFileSync(t,'.');n=f.statSync(t).size}catch{}}const e=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(e!==undefined){const {briefContext,...m}=e;if(n>1&&typeof briefContext==='string')m.hookSpecificOutput.additionalContext=briefContext;console.log(JSON.stringify(m))}}}catch{}",
               "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
               "api-budget"
             ]
@@ -163,7 +179,7 @@
             "command": "node",
             "args": [
               "-e",
-              "try{const f=require('fs');let i={};try{i=JSON.parse(f.readFileSync(0,'utf8'))}catch{}let n=1;if(typeof i.session_id==='string'){try{const t=require('path').join(require('os').tmpdir(),['qfai-reminder',i.session_id,i.agent_id||'main',process.argv[2]].join('-').replace(/[^\\w.-]/g,'_'));f.appendFileSync(t,'.');n=f.statSync(t).size}catch{}}if((n-1)%20===0){const m=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}catch{}",
+              "try{const f=require('fs');let i={};try{i=JSON.parse(f.readFileSync(0,'utf8'))}catch{}let n=1;if(typeof i.session_id==='string'){try{const t=require('path').join(require('os').tmpdir(),['qfai-reminder',i.session_id,i.agent_id||'main',process.argv[2]].join('-').replace(/[^\\w.-]/g,'_'));f.appendFileSync(t,'.');n=f.statSync(t).size}catch{}}const e=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(e!==undefined){const {briefContext,...m}=e;if(n>1&&typeof briefContext==='string')m.hookSpecificOutput.additionalContext=briefContext;console.log(JSON.stringify(m))}}catch{}",
               "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
               "documentation-clarity-after-write"
             ]
@@ -175,7 +191,7 @@
             "command": "node",
             "args": [
               "-e",
-              "try{const f=require('fs');let i={};try{i=JSON.parse(f.readFileSync(0,'utf8'))}catch{}let n=1;if(typeof i.session_id==='string'){try{const t=require('path').join(require('os').tmpdir(),['qfai-reminder',i.session_id,i.agent_id||'main',process.argv[2]].join('-').replace(/[^\\w.-]/g,'_'));f.appendFileSync(t,'.');n=f.statSync(t).size}catch{}}if((n-1)%20===0){const m=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}catch{}",
+              "try{const f=require('fs');let i={};try{i=JSON.parse(f.readFileSync(0,'utf8'))}catch{}let n=1;if(typeof i.session_id==='string'){try{const t=require('path').join(require('os').tmpdir(),['qfai-reminder',i.session_id,i.agent_id||'main',process.argv[2]].join('-').replace(/[^\\w.-]/g,'_'));f.appendFileSync(t,'.');n=f.statSync(t).size}catch{}}const e=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(e!==undefined){const {briefContext,...m}=e;if(n>1&&typeof briefContext==='string')m.hookSpecificOutput.additionalContext=briefContext;console.log(JSON.stringify(m))}}catch{}",
               "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
               "documentation-clarity-after-edit"
             ]
@@ -191,7 +207,7 @@
             "command": "node",
             "args": [
               "-e",
-              "try{const f=require('fs'),p=require('path'),R=p.dirname(p.dirname(p.dirname(process.argv[1])));let i={};try{i=JSON.parse(f.readFileSync(0,'utf8'))}catch{}const u=i.tool_input&&i.tool_input.file_path;let src=true;if(typeof u==='string'&&(x=>{const s=x.split(p.sep),b=s.pop();return p.isAbsolute(x)||s[0]==='..'||s.some(y=>['tmp','test','tests','__tests__','node_modules','.qfai','.agents'].includes(y))||b[0]==='.'||/\\.(test|spec)\\./.test(b)||['.md','.mdx','.markdown','.txt','.rst','.yml','.yaml','.json','.jsonc','.json5','.toml','.ini','.csv','.tsv','.lock','.svg','.png','.jpg','.jpeg','.gif'].includes(p.extname(b).toLowerCase())})(p.relative(R,p.resolve(R,u))))src=false;if(src){let n=1;if(typeof i.session_id==='string'){try{const t=require('path').join(require('os').tmpdir(),['qfai-reminder',i.session_id,i.agent_id||'main',process.argv[2]].join('-').replace(/[^\\w.-]/g,'_'));f.appendFileSync(t,'.');n=f.statSync(t).size}catch{}}if((n-1)%20===0){const m=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}}catch{}",
+              "try{const f=require('fs'),p=require('path'),R=p.dirname(p.dirname(p.dirname(process.argv[1])));let i={};try{i=JSON.parse(f.readFileSync(0,'utf8'))}catch{}const u=i.tool_input&&i.tool_input.file_path;let src=true;if(typeof u==='string'&&(x=>{const s=x.split(p.sep),b=s.pop();return p.isAbsolute(x)||s[0]==='..'||s.some(y=>['tmp','test','tests','__tests__','node_modules','.qfai','.agents'].includes(y))||b[0]==='.'||/\\.(test|spec)\\./.test(b)||['.md','.mdx','.markdown','.txt','.rst','.yml','.yaml','.json','.jsonc','.json5','.toml','.ini','.csv','.tsv','.lock','.svg','.png','.jpg','.jpeg','.gif'].includes(p.extname(b).toLowerCase())})(p.relative(R,p.resolve(R,u))))src=false;if(src){let n=1;if(typeof i.session_id==='string'){try{const t=require('path').join(require('os').tmpdir(),['qfai-reminder',i.session_id,i.agent_id||'main',process.argv[2]].join('-').replace(/[^\\w.-]/g,'_'));f.appendFileSync(t,'.');n=f.statSync(t).size}catch{}}const e=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(e!==undefined){const {briefContext,...m}=e;if(n>1&&typeof briefContext==='string')m.hookSpecificOutput.additionalContext=briefContext;console.log(JSON.stringify(m))}}}catch{}",
               "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
               "minimal-implementation"
             ]
