@@ -72,7 +72,7 @@ async function nativeObservation(
     signal: child.signal,
     error: child.error?.message ?? null,
   };
-  console.info("Native focused execution", JSON.stringify(observed));
+  process.stdout.write(`Native focused execution ${JSON.stringify(observed)}\n`);
   expect(observed.error, JSON.stringify(observed)).toBeNull();
   expect(observed.signal, JSON.stringify(observed)).toBeNull();
   expect(observed.runtime, JSON.stringify(observed)).toBe(process.version);
@@ -205,9 +205,20 @@ describe("native focused execution observations", () => {
         );
         expect(imported.exit, JSON.stringify(imported)).toBe(1);
         expect(imported.body, JSON.stringify(imported)).toBe("");
-        expect(imported.stdout + imported.stderr, JSON.stringify(imported)).toContain(
-          "ERR_MODULE_NOT_FOUND",
-        );
+        if (reporter === "junit") {
+          expect(imported.stdout, JSON.stringify(imported)).toMatch(
+            /<testcase\b[^>]*name="(?:[^"]*[/\\])?broken\.test\.mjs"/,
+          );
+          expect(imported.stdout, JSON.stringify(imported)).toMatch(
+            /<failure\b[^>]*type="testCodeFailure"/,
+          );
+          expect(imported.stdout, JSON.stringify(imported)).toContain("ERR_TEST_FAILURE");
+          expect(imported.stdout).not.toMatch(/<testcase\b[^>]*name="receipt target"/);
+        } else {
+          expect(imported.stdout + imported.stderr, JSON.stringify(imported)).toContain(
+            "ERR_MODULE_NOT_FOUND",
+          );
+        }
         expect(imported.stdout + imported.stderr).not.toContain("INTENDED_ASSERTION");
 
         const other = await nativeObservation(

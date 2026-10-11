@@ -356,6 +356,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Focused TDD reports identify the selected case's actual execution and result,
+  apart from process exits, counts and containers. Normal verification reconciles
+  full collection membership without adding a full run to each focused cycle.
+
 - Check the combined raw bytes of listed AGENTS ancestor chains and report each
   file's contribution when the chain exceeds the source-byte budget.
 
