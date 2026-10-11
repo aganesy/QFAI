@@ -439,6 +439,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `pnpm install` and `pnpm rebuild`, and each of them printed a warning. It now
   runs right after `setup-node`. Publishing itself was not affected.
 
+- **Dependency guidance limits acceptance of the unresolved glob-matching risk.**
+  Reviewed project inputs and trusted SDK callers remain the accepted scope;
+  untrusted inputs require their own mitigation and security review. Dependencies
+  and runtime behavior are unchanged. Refs #3296.
+
 - **CI receipts distinguish verification from closed cleanup.** Guidance records
   run, job, check and purpose evidence with actual counts and logs. Branch
   overviews and cleanup skips cannot replace verification on the current head.
