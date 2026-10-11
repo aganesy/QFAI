@@ -426,6 +426,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - Clarify when delegated external settings and credential installation may run,
   and distinguish confirmed external effects from repository changes and CI results.
 
+- Keep validation findings available when an assistant integration path has
+  a file as an ancestor.
+
 - Verify steps reject validation errors even when a custom Validate wrapper succeeds.
 - Clarify that the research agent reads the cache TTL extension in the project config; the CLI does not parse it.
 
