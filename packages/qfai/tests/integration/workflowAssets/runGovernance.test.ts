@@ -8,7 +8,13 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { flat, readShipped, rowOf, sectionOf } from "../../helpers/shippedAssistant.js";
+import {
+  flat,
+  readShipped,
+  rowOf,
+  sectionOf,
+  shippedExists,
+} from "../../helpers/shippedAssistant.js";
 
 const OPERATING = "rule/shared-skill-operating-baseline.md";
 const DELEGATION = "rule/shared-skill-delegation-baseline.md";
@@ -16,6 +22,13 @@ const RUN = "skill/qfai-run/SKILL.md";
 const EXTRACTION = "skill/qfai-run/references/extraction.md";
 const SCREENS = "skill/qfai-run/references/operator-screens.md";
 const TARGETS = "## Independent targets under one goal";
+
+const REACHED_OBSERVATIONS = "skill/qfai-run/references/reached-step-observations.md";
+
+async function observedPassage(heading: string): Promise<string> {
+  expect(shippedExists(REACHED_OBSERVATIONS), "the shipped reached-step guide exists").toBe(true);
+  return passage(REACHED_OBSERVATIONS, heading);
+}
 
 async function entryCheck(): Promise<string> {
   return sectionOf(await readShipped(OPERATING), "## Workflow Run Entry Check");
@@ -454,5 +467,115 @@ describe("CI receipts qualify the target's verification evidence", () => {
     expect(names).toEqual(["status", "baseline", "reason", "check", "ci"]);
     expect(rowOf(gateFields, "`ci`")).toMatch(/`"green"`.*`"red"`.*`"pending"`/);
     expect(rowOf(gateFields, "`ci`")).not.toMatch(/unverified|skipped/i);
+  });
+});
+
+// QFAI:AC-0001-0224-12
+describe("reached-step observations in the existing report", () => {
+  // QFAI:EX-0001-0224-33
+  it("binds reached work and actual gate results to its owner, target and source", async () => {
+    const comparison = await observedPassage("## The stage comparison");
+    expect(comparison).toMatch(/existing stage report.*not a new schema/i);
+    expect(comparison).toMatch(/plan step.*owner.*purpose.*target.*source identity/i);
+    expect(comparison).toMatch(/actual input reads.*action or output.*artifact references/i);
+    expect(comparison).toMatch(/applicable Gate observations/i);
+    const gates = await observedPassage("## Gate observations");
+    expect(gates).toMatch(/actual command.*purpose.*status.*observed result.*available exit/i);
+    expect(gates).toMatch(/for test commands.*actual executed case counts/i);
+    const entry = flat(await readShipped(RUN));
+    const baseline = flat(await readShipped(OPERATING));
+    expect(entry).toContain("references/reached-step-observations.md");
+    expect(baseline).toContain("skill/qfai-run/references/reached-step-observations.md");
+  });
+
+  // QFAI:EX-0001-0224-34
+  it("keeps a declaration or read receipt distinct from procedural evidence", async () => {
+    const missing = await observedPassage("## Missing proof and observed omission");
+    expect(missing).toMatch(
+      /plan declaration.*content-read receipt.*neither.*execution.*understanding.*adherence/i,
+    );
+    expect(missing).toMatch(
+      /missing evidence.*UNVERIFIED.*missing proof or blocker.*owner.*resume condition/i,
+    );
+    expect(missing).toMatch(/absence alone does not prove.*action was omitted/i);
+  });
+
+  // QFAI:EX-0001-0224-35
+  it("does not use an unrelated green build to complete a design step", async () => {
+    const binding = await observedPassage("## Purpose and source binding");
+    expect(binding).toMatch(/unrelated green build.*cannot complete.*design step/i);
+    expect(binding).toMatch(/required artifact.*procedural proof.*UNVERIFIED/i);
+    expect(binding).toMatch(/owner.*resume condition/i);
+  });
+
+  // QFAI:EX-0001-0224-36
+  it("reports positive omission evidence as incomplete rather than merely absent proof", async () => {
+    const omission = await observedPassage("## Missing proof and observed omission");
+    expect(omission).toMatch(/positive target-bound evidence.*required action was not performed/i);
+    expect(omission).toMatch(/observed omission.*evidence.*incomplete/i);
+    expect(omission).toMatch(/existing authorized owner procedure/i);
+    expect(omission).toMatch(/do not add.*step.*route.*review.*gate/i);
+  });
+
+  // QFAI:EX-0001-0224-37
+  it("records a reached no-write pass and its actual Passes when inputs", async () => {
+    const pass = await observedPassage("## No-write passes");
+    expect(pass).toMatch(/actual input reads.*source identity.*Passes when.*condition.*reason/i);
+    expect(pass).toMatch(/step ran.*writing nothing.*not a skip/i);
+    expect(pass).toMatch(/applicable Gate observations.*planned independent review/i);
+  });
+
+  // QFAI:EX-0001-0224-38
+  it("compares only reached work before the selected stop or termination", async () => {
+    const reach = await observedPassage("## Reach and termination");
+    expect(reach).toMatch(
+      /finite set.*whose turn was reached.*selected scope.*declared stop or termination/i,
+    );
+    expect(reach).toMatch(/excluded or unreached work.*neither.*omission.*completed/i);
+    expect(reach).toMatch(/preserve.*order.*scope.*stop.*pass-through/i);
+  });
+
+  // QFAI:EX-0001-0224-39
+  it("refuses wrong target, source or purpose before consuming proof or resuming writes", async () => {
+    const binding = await observedPassage("## Purpose and source binding");
+    expect(binding).toMatch(
+      /check.*target.*source identity.*purpose.*before.*consuming evidence.*resuming writes/i,
+    );
+    expect(binding).toMatch(/wrong target.*old source.*wrong purpose.*UNVERIFIED/i);
+    expect(binding).toMatch(/matching command name or totals.*not.*proof/i);
+  });
+
+  // QFAI:EX-0001-0224-40
+  it("recovers existing receipts without repeating external actions to manufacture evidence", async () => {
+    const recovery = await observedPassage("## Recover existing receipts safely");
+    expect(recovery).toMatch(/inspect existing receipts.*recover.*target-bound proof/i);
+    expect(recovery).toMatch(
+      /do not repeat.*irreversible or external action.*manufacture evidence/i,
+    );
+    expect(recovery).toMatch(/unavailable.*safely.*blocker.*owner.*resume condition/i);
+    expect(recovery).toMatch(/only genuinely owed work.*existing covered authority/i);
+  });
+
+  // QFAI:EX-0001-0224-41
+  it("retains failed, unrun and pending commands without invented non-test counts", async () => {
+    const gates = await observedPassage("## Gate observations");
+    expect(gates).toMatch(/FAIL.*UNRUN.*pending.*cannot.*PASS/i);
+    expect(gates).toMatch(/non-test commands.*no invented case counts/i);
+    expect(gates).toMatch(/delegated transport.*not formal completion/i);
+    expect(gates).toMatch(/artifact reference.*available.*outcome/i);
+  });
+
+  // QFAI:EX-0001-0224-42
+  it("uses the already-planned independent review without an engine or new gate", async () => {
+    const review = await observedPassage("## Existing review and limits");
+    expect(review).toMatch(
+      /already-planned independent reviewer.*reached work.*actual observations/i,
+    );
+    expect(review).toMatch(/unresolved proof.*without.*extra review or gate/i);
+    expect(review).toMatch(/preserve.*reviewer independence.*count.*route.*plan order/i);
+    expect(review).toMatch(
+      /no engine.*command.*plan key.*runtime schema.*ledger.*automatic obedience detector/i,
+    );
+    expect(review).toMatch(/passing instruction fixture.*does not prove.*host.*adherence/i);
   });
 });
