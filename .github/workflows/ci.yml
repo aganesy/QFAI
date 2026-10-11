@@ -1171,14 +1171,14 @@ jobs:
             }
             return fail('Required native executable is missing: ' + name);
           }
-          function command(label, file, argv, expectedExit = 0, cwd = repositoryRoot) {
+          function command(label, file, argv, expectedExit = 0, cwd = repositoryRoot, environment = {}) {
             const start = new Date().toISOString();
-            const result = spawnSync(file, argv, { cwd, encoding: null, timeout: 60000, maxBuffer: 4 * 1024 * 1024 });
+            const result = spawnSync(file, argv, { cwd, env: { ...process.env, ...environment }, encoding: null, timeout: 60000, maxBuffer: 4 * 1024 * 1024 });
             const prefix = String(commands.length + 1).padStart(3, '0') + '-' + label;
             fs.writeFileSync(path.join(logRoot, prefix + '.stdout'), result.stdout ?? Buffer.alloc(0));
             fs.writeFileSync(path.join(logRoot, prefix + '.stderr'), result.stderr ?? Buffer.alloc(0));
             const receipt = { label, executable: file, argv, cwd, startUTC: start, endUTC: new Date().toISOString(),
-              exit: result.status, signal: result.signal, error: result.error?.message ?? null, expectedExit };
+              exit: result.status, signal: result.signal, error: result.error?.message ?? null, expectedExit, environmentOverrides: environment };
             commands.push(receipt);
             json(path.join(logRoot, prefix + '.json'), receipt);
             if (result.error || result.signal || result.status !== expectedExit) {
@@ -1192,6 +1192,7 @@ jobs:
           let recipe;
           let git;
           let tar;
+          let listingTar;
           function sourceObservation(label) {
             const head = command(label + '-head', git, ['rev-parse', 'HEAD']).trim();
             const branch = command(label + '-branch', git, ['rev-parse', '--abbrev-ref', 'HEAD']).trim();
@@ -1207,6 +1208,16 @@ jobs:
             tar = process.platform === 'win32' ? path.join(process.env.SystemRoot, 'System32', 'tar.exe') : executable('tar');
             if (!fs.existsSync(tar) || !fs.statSync(tar).isFile()) fail('Required native tar executable is missing.');
             observed.tar = { executable: tar, versionOutput: command('tar-version', tar, ['--version']) };
+            let gitRoot = path.dirname(git);
+            if (!['bin', 'cmd'].includes(path.basename(gitRoot).toLowerCase())) fail('The observed Git installation layout is unsupported.');
+            gitRoot = path.dirname(gitRoot);
+            if (/^mingw(?:32|64)$/u.test(path.basename(gitRoot).toLowerCase())) gitRoot = path.dirname(gitRoot);
+            listingTar = path.join(gitRoot, 'usr', 'bin', 'tar.exe');
+            if (!fs.existsSync(listingTar) || !fs.lstatSync(listingTar).isFile()) fail('The native Git-distribution listing tar is missing or non-regular.');
+            const listingVersion = command('tar-list-version', listingTar, ['--version']);
+            if (!/^tar \(GNU tar\) /u.test(listingVersion)) fail('The native listing executable is not GNU tar.');
+            observed.listingTar = { executable: listingTar, versionOutput: listingVersion,
+              environmentOverrides: { LC_ALL: 'C.UTF-8', LANG: 'C.UTF-8' } };
             const guide = fs.readFileSync(path.join(repositoryRoot, ...guideRelative.split('/')));
             if (digest(guide) !== guideSHA) fail('Published guide bytes differ from the reviewed source.');
             const text = guide.toString('utf8');
@@ -1235,7 +1246,8 @@ jobs:
             return actual;
           }
           function members(label, archive, selected) {
-            const listing = command(label, tar, ['-tf', archive]);
+            const listing = command(label, listingTar, ['--force-local', '--quoting-style=literal', '-tf', archive],
+              0, repositoryRoot, observed.listingTar.environmentOverrides);
             const actual = listing.split(/\r?\n/u).filter((line) => line.length).map((name) => name.startsWith('./') ? name.slice(2) : name);
             const expected = selected.map((item) => item.name).sort();
             if (JSON.stringify(actual.sort()) !== JSON.stringify(expected)) fail('Native archive member inventory differs.');
@@ -1835,14 +1847,14 @@ jobs:
             }
             return fail('Required native executable is missing: ' + name);
           }
-          function command(label, file, argv, expectedExit = 0, cwd = repositoryRoot) {
+          function command(label, file, argv, expectedExit = 0, cwd = repositoryRoot, environment = {}) {
             const start = new Date().toISOString();
-            const result = spawnSync(file, argv, { cwd, encoding: null, timeout: 60000, maxBuffer: 4 * 1024 * 1024 });
+            const result = spawnSync(file, argv, { cwd, env: { ...process.env, ...environment }, encoding: null, timeout: 60000, maxBuffer: 4 * 1024 * 1024 });
             const prefix = String(commands.length + 1).padStart(3, '0') + '-' + label;
             fs.writeFileSync(path.join(logRoot, prefix + '.stdout'), result.stdout ?? Buffer.alloc(0));
             fs.writeFileSync(path.join(logRoot, prefix + '.stderr'), result.stderr ?? Buffer.alloc(0));
             const receipt = { label, executable: file, argv, cwd, startUTC: start, endUTC: new Date().toISOString(),
-              exit: result.status, signal: result.signal, error: result.error?.message ?? null, expectedExit };
+              exit: result.status, signal: result.signal, error: result.error?.message ?? null, expectedExit, environmentOverrides: environment };
             commands.push(receipt);
             json(path.join(logRoot, prefix + '.json'), receipt);
             if (result.error || result.signal || result.status !== expectedExit) {
@@ -1856,6 +1868,7 @@ jobs:
           let recipe;
           let git;
           let tar;
+          let listingTar;
           function sourceObservation(label) {
             const head = command(label + '-head', git, ['rev-parse', 'HEAD']).trim();
             const branch = command(label + '-branch', git, ['rev-parse', '--abbrev-ref', 'HEAD']).trim();
@@ -1871,6 +1884,16 @@ jobs:
             tar = process.platform === 'win32' ? path.join(process.env.SystemRoot, 'System32', 'tar.exe') : executable('tar');
             if (!fs.existsSync(tar) || !fs.statSync(tar).isFile()) fail('Required native tar executable is missing.');
             observed.tar = { executable: tar, versionOutput: command('tar-version', tar, ['--version']) };
+            let gitRoot = path.dirname(git);
+            if (!['bin', 'cmd'].includes(path.basename(gitRoot).toLowerCase())) fail('The observed Git installation layout is unsupported.');
+            gitRoot = path.dirname(gitRoot);
+            if (/^mingw(?:32|64)$/u.test(path.basename(gitRoot).toLowerCase())) gitRoot = path.dirname(gitRoot);
+            listingTar = path.join(gitRoot, 'usr', 'bin', 'tar.exe');
+            if (!fs.existsSync(listingTar) || !fs.lstatSync(listingTar).isFile()) fail('The native Git-distribution listing tar is missing or non-regular.');
+            const listingVersion = command('tar-list-version', listingTar, ['--version']);
+            if (!/^tar \(GNU tar\) /u.test(listingVersion)) fail('The native listing executable is not GNU tar.');
+            observed.listingTar = { executable: listingTar, versionOutput: listingVersion,
+              environmentOverrides: { LC_ALL: 'C.UTF-8', LANG: 'C.UTF-8' } };
             const guide = fs.readFileSync(path.join(repositoryRoot, ...guideRelative.split('/')));
             if (digest(guide) !== guideSHA) fail('Published guide bytes differ from the reviewed source.');
             const text = guide.toString('utf8');
@@ -1899,7 +1922,8 @@ jobs:
             return actual;
           }
           function members(label, archive, selected) {
-            const listing = command(label, tar, ['-tf', archive]);
+            const listing = command(label, listingTar, ['--force-local', '--quoting-style=literal', '-tf', archive],
+              0, repositoryRoot, observed.listingTar.environmentOverrides);
             const actual = listing.split(/\r?\n/u).filter((line) => line.length).map((name) => name.startsWith('./') ? name.slice(2) : name);
             const expected = selected.map((item) => item.name).sort();
             if (JSON.stringify(actual.sort()) !== JSON.stringify(expected)) fail('Native archive member inventory differs.');
