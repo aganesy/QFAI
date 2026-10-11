@@ -19,7 +19,7 @@ the master rather than this file.
 - `.agents/rules/root-additions-policy.md` — never add root-level files or directories without explicit user approval.
 - `.agents/rules/distributed-surface.md` — keep internal identifiers and private version markers out of published files.
 - `.agents/rules/version-discipline.md` — never choose a release version number on your own; the user decides.
-- `.agents/rules/documentation-clarity.md` — plain, minimal writing in pull requests, issues, comments and Markdown; no local identifiers, no account of how the work went.
+- `.agents/rules/documentation-clarity.md` — plain, minimal writing in pull requests, issues, comments, Markdown, reports and replies; reports and replies start with the outcome and distinguish what was checked from what was not; no local identifiers in source or Markdown, no account of how the work went.
 - `.agents/rules/minimal-implementation.md` — the order to try solutions in once a behaviour is agreed; mark a deliberate shortcut with its ceiling and the condition that lifts it.
 - `.agents/rules/interface-clarity.md` — what may appear on a screen or in terminal output; text explaining how to work a control is a defect report against that control.
 - `.agents/rules/grilling.md` — interview the decision tree before a design is fixed; outside the discussion stage agents grill each other, and only a critical decision reaches the user.
