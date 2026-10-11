@@ -335,7 +335,9 @@ describe("BF-0004: the migration from a 1.x project, and again on a migrated one
     );
     expect(await textOrNull(root, REMINDERS)).toBe(shipped);
 
-    const reminder = JSON.stringify(freeText);
+    const { briefContext, ...fullReminder } = record(freeText);
+    expect(typeof briefContext).toBe("string");
+    const reminder = JSON.stringify(fullReminder);
     const claudeHook = await freeTextHook(root, ".claude/settings.json");
     const claudeArgs = isUnknownArray(claudeHook.args) ? claudeHook.args.map(String) : [];
     const claude = spawnSync(
@@ -343,6 +345,8 @@ describe("BF-0004: the migration from a 1.x project, and again on a migrated one
       claudeArgs.map((arg) => arg.replace(CLAUDE_PROJECT_DIR, root)),
       { cwd: root, encoding: "utf8" },
     );
+    expect(claude.status, claude.stderr).toBe(0);
+    expect(claude.stderr).toBe("");
     expect(claude.stdout.trim()).toBe(reminder);
     const codexHook = await freeTextHook(root, ".codex/hooks.json");
     const codex = spawnSync(String(codexHook.command), {
@@ -350,6 +354,8 @@ describe("BF-0004: the migration from a 1.x project, and again on a migrated one
       encoding: "utf8",
       shell: true,
     });
+    expect(codex.status, codex.stderr).toBe(0);
+    expect(codex.stderr).toBe("");
     expect(codex.stdout.trim()).toBe(reminder);
   }, 300_000);
 });

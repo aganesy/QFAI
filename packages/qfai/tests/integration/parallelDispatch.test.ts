@@ -8,6 +8,27 @@ import { getInitAssetsDir } from "../../src/shared/assets.js";
 const skillDir = path.join(getInitAssetsDir(), ".qfai", "assistant", "skill", "qfai-implement");
 const policyPath = path.join(skillDir, "references", "parallelization-policy.md");
 
+function expectWorkerIsolation(policy: string): void {
+  const independence = policy.split("\n## Independence gate\n")[1]?.split("\n## ")[0];
+  expect(independence).toBeDefined();
+  const boundary = (independence ?? "").replace(/\s*\n\s*/g, " ");
+  expect(boundary).toMatch(/each worker.*exact file ownership list.*checkout assigned by the host/);
+  expect(boundary).toMatch(
+    /separate worktrees when.*host supports editing.*otherwise.*shared-index mode/,
+  );
+  expect(boundary).toContain(
+    ".qfai/assistant/rule/workflow.md#concurrency-stage-independent-mandatory",
+  );
+  expect(boundary).toMatch(/Creating a worktree does not grant edit permission/);
+  expect(boundary).toMatch(
+    /refused edit.*shared-skill-delegation-baseline\.md#worker-edit-boundary/,
+  );
+  expect(boundary).toContain("Workers do not change another worker's files or the story tree.");
+  expect(boundary).toMatch(
+    /orchestrator integrates their results and resolves every overlap before judging either item complete/,
+  );
+}
+
 describe("parallel EX dispatch and integration", () => {
   it("requires user approval and delivery-planner PASS before parallel item work", async () => {
     const policy = await readFile(policyPath, "utf-8");
@@ -36,7 +57,7 @@ describe("parallel EX dispatch and integration", () => {
     expect(policy).toMatch(
       /Parallel item work requires explicit user approval and a delivery-planner PASS on concrete independence/,
     );
-    expect(policy).toMatch(/Give each worker a separate worktree and an exact file ownership list/);
+    expectWorkerIsolation(policy);
     expect(policy).toMatch(/Deny parallel dispatch when two items write the same shared fixture/);
     expect(policy).toMatch(/If any dependency is uncertain, use serial execution/);
     expect(policy).toMatch(/A worker's isolated PASS is not an integrated PASS/);
@@ -54,10 +75,10 @@ describe("parallel EX dispatch and integration", () => {
     );
   });
 
-  it("separates worktrees, gives exact ownership, and integrates before completion", async () => {
+  it("assigns host-permitted isolation, gives exact ownership, and integrates before completion", async () => {
     const policy = await readFile(policyPath, "utf-8");
-    expect(policy).toMatch(/Give each worker a separate worktree and an exact file ownership list/);
-    expect(policy).toMatch(
+    expectWorkerIsolation(policy);
+    expect(policy.replace(/\s*\n\s*/g, " ")).toMatch(
       /integrates their results and resolves every overlap before judging either item complete/,
     );
   });

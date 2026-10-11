@@ -1,7 +1,7 @@
 ---
 name: qfai-triage
-title: QFAI Triage (Requests that end without a change)
-description: "Use when invoked by name or handed a QFAI work order for a request that ends without a change to the project: a question to answer, a duplicate, missing information, a request to split, automated reports, a security report to take in, or an operation only a person can run."
+title: QFAI Triage (Requests that end without a tracked change)
+description: "Use when invoked by name or handed a QFAI work order for a request that ends without a tracked change: a question, a duplicate, missing information, a split, automated reports, a security report, an operation only a person can run, or authorized cleanup of current-task temporary directories."
 argument-hint: "<the request, as it was reported>"
 allowed-tools: [Read, Glob, Grep, Write, Bash, TodoWrite, Task, Agent]
 roles:
@@ -24,12 +24,13 @@ steps:
   - triage-cluster
   - triage-security-intake
   - triage-handoff
+  - triage-owned-cleanup
   - triage-close
 requires: []
 mode: execution-focused
 ---
 
-## /qfai-triage - Requests that end without a change
+## /qfai-triage - Requests that end without a tracked change
 
 [DRIFT-PROTOCOL:REQUIRED]
 
@@ -39,7 +40,10 @@ first.
 
 This skill answers, closes, splits or hands over a request, and changes no
 file git tracks. Work the request needs is recorded as a follow-up request,
-never done here.
+never done here except the exact current-task temporary cleanup that
+`triage-owned-cleanup` permits. That step rechecks existing user authority and
+repository-local scope before any deletion. No other triage step executes an
+operation, and `triage-handoff` still waits for the person's reported result.
 
 ## Inputs
 
@@ -59,17 +63,18 @@ Invoked by name, run the steps in this order, as
 states: read `.qfai/assistant/step/<name>/STEP.md` for the current step only,
 run it, then move to the next.
 
-| Step                     | What it does                                                   | Skipped when                                                                     |
-| ------------------------ | -------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `triage-dedupe`          | Finds the same or a successor item, and links it               | The request neither may repeat an existing item nor rests on a premise that aged |
-| `triage-request-info`    | Asks for the facts the request is missing                      | The request states every fact its handling needs                                 |
-| `triage-investigate`     | Reads internals, history and outside facts to find the answer  | The documents and code as they stand answer the question                         |
-| `triage-answer`          | Answers, citing what shows the answer                          | The request asks no question                                                     |
-| `triage-decompose`       | Splits the request into child requests with their dependencies | The request is one piece of work                                                 |
-| `triage-cluster`         | Groups automated reports by signature                          | The request is not a set of automated reports                                    |
-| `triage-security-intake` | Takes a vulnerability report in privately                      | The request reports no exploitable weakness                                      |
-| `triage-handoff`         | Gives a person the steps of an operation only they can run     | The request needs no operation that only a person can run                        |
-| `triage-close`           | Records the outcome and each follow-up, and closes             | Only `triage-security-intake` ran: the fix follows it, so the request stays open |
+| Step                     | What it does                                                               | Skipped when                                                                     |
+| ------------------------ | -------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `triage-dedupe`          | Finds the same or a successor item, and links it                           | The request neither may repeat an existing item nor rests on a premise that aged |
+| `triage-request-info`    | Asks for the facts the request is missing                                  | The request states every fact its handling needs                                 |
+| `triage-investigate`     | Reads internals, history and outside facts to find the answer              | The documents and code as they stand answer the question                         |
+| `triage-answer`          | Answers, citing what shows the answer                                      | The request asks no question                                                     |
+| `triage-decompose`       | Splits the request into child requests with their dependencies             | The request is one piece of work                                                 |
+| `triage-cluster`         | Groups automated reports by signature                                      | The request is not a set of automated reports                                    |
+| `triage-security-intake` | Takes a vulnerability report in privately                                  | The request reports no exploitable weakness                                      |
+| `triage-handoff`         | Gives a person the steps of an operation only they can run                 | The request needs no operation that only a person can run                        |
+| `triage-owned-cleanup`   | Removes authorized current-task temporary directories and verifies absence | The request is not the specific repository-local cleanup the step permits        |
+| `triage-close`           | Records the outcome and each follow-up, and closes                         | Only `triage-security-intake` ran: the fix follows it, so the request stays open |
 
 Invoked by name, the skill ends at this stage. It starts no other stage and
 routes no follow-up: a request to carry a follow-up out goes to `qfai-run`.
@@ -94,9 +99,13 @@ Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#completion-contr
 find changed when it started.
 
 The report states the outcome `triage-close` recorded and lists each follow-up
-request. It never says a change is done. It ends with a question listing the
-next actions, as `.agents/rules/user-questions.md` § 6 sets out; under a
-no-question mode, list them in the report instead.
+request. It never says a tracked change is done. `cleaned` says only that the
+named temporary targets were removed and their absence and unchanged tracked
+contents and index were verified; unfinished cleanup cannot use it.
+Ask for the next action only when
+proceeding requires the user's answer, as `.agents/rules/user-questions.md`
+§ 6 sets out. A closure-only report needs no question. Under a no-question mode,
+list any remaining actions instead.
 
 ## Default Autopilot Policy
 
@@ -105,6 +114,7 @@ no-question mode, list them in the report instead.
 
 project_memory:
 
-- Triage changes no tracked file; work it finds is a follow-up request.
+- Triage changes no tracked file; only `triage-owned-cleanup` executes its bounded cleanup.
+- Other work it finds is a follow-up request.
 - A follow-up is recorded, never routed inside the run that found it.
 - A security report stays private until the fix is ready to disclose.

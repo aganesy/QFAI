@@ -1596,9 +1596,9 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
         reachable.map((entry) => entry.relative),
         "change",
         [
-          "This shape appears in every `git worktree`, in every skill wrapper directory rather than `.claude/` alone. Git writes each link as a FILE symlink to a directory — at the moment it writes it the target does not yet exist in the new worktree — and the OS will not follow that. The same paths in the primary checkout are intact.",
-          "To relink them in the worktree: check the setting with `git config --get core.symlinks`, set it with `git config core.symlinks true` if it is not already true, then delete the paths named above and run `qfai init`. Windows may also need Developer Mode enabled.",
-          "Left as they are, the assistant in that worktree does not load these skills or agents. The documents themselves are under `.qfai/assistant/**` and can be opened at the canonical path.",
+          "On Windows, a directory wrapper may be stored as a file symlink. Its target text can be correct while the OS cannot follow it; this can occur during a Git worktree checkout.",
+          "Run `qfai init` with its default non-force behavior in this checkout to repair owned directory wrappers that already name the expected target. Link creation may require Windows Developer Mode or suitable permissions. Canonical links maintained by a project's separate setup are outside that wrapper repair.",
+          "The affected wrapper paths do not reach the skills or agents. Their canonical documents remain readable under `.qfai/assistant/**`.",
         ].join("\n"),
         { relatedFiles: reachable.slice(1).map((entry) => entry.relative) },
       ),
