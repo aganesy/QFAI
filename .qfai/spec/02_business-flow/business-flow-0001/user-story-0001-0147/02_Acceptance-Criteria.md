@@ -67,6 +67,7 @@ Feature: Unified SDD Workflow
     When its change is applied,
     Then an AC or EX this invocation wrote is changed directly, an item that existed when the invocation started changes only under an in-force `Change request:` row whose approved change covers it, and creating, splitting, merging or retiring a BF or US is put to the user however recently the item was written.
     And under `--contract` a finding that only a story change answers asks for a wider change request and leaves the story unchanged, and after the changes the BRs are rewritten from the updated EXs.
+    And a capacity-only story partition instead requires an in-force owning change request explicitly covering its paths, requested AC or EX additions exceeding the source story's retired-inclusive remaining 99-H at its actual observed high-water H, and a truthful cohesive scope under the same BF and actual actor goal without inventing a product outcome; it grants no wider semantic change or flow operation
 
   # AC-0001-0147-12
   Scenario: At Most Two Cycles
@@ -89,4 +90,19 @@ Feature: Unified SDD Workflow
     When the stage makes its first story-tree write,
     Then a delegated grilling checkpoint has settled that stage's open decisions, a critical one by the user's answer.
     And the final report lists each decision the checkpoint adopted, with its reason.
+
+  # AC-0001-0147-16
+  Scenario: A capacity partition preserves truthful scope and case identity
+    Given the requested additions for an actual AC or EX kind exceed the source story's retired-inclusive remaining 99-H at its observed high-water H under the unchanged grammar
+    When the owner considers a capacity-only partition or an actual case move
+    Then it records the kind, source story, observed H, remainder and requested count, and additions that fit the original scope do not qualify for this exception
+    And it first preserves existing published cases and IDs and prefers a cohesive incoming group in a capacity-checked sibling story within the same BF
+    And only an in-force owning change request explicitly approving the partition and affected paths permits that narrow creation exception under the same actual actor goal without inventing a new product outcome
+    And truthful cohesive scope and criterion ownership are settled before writing, without silently duplicating or weakening obligations
+    And a different actor, goal, flow or intended behavior returns to its existing owning approval path, and no truthful partition or insufficient destination capacity stops the dependent write
+    And an actual move or incoming collision repair has a complete one-to-one map binding fixed source commit and paths and original identity and meaning to destination story and AC and EX identity and paths, active BR citations and every counted adjacent test declaration, with unchanged cases identified
+    And case inputs, expected outcomes and executable assertions are preserved, destination links and counted test obligations remain complete, and both scopes' retired-inclusive capacity is checked
+    And moved old IDs are retired through a new approved record and never reissued, while inherited published decision ID and Content and Approach cells and their historical references stay unchanged
+    And only approved active references and provably incoming collision items change, without blanket replacement or claiming completion from an ID change
+    And an incomplete map, ambiguous ownership or collision, missing counted link, uncovered declaration or changed assertion stops the move, with no new executor or schema
 ```

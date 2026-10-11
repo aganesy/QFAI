@@ -75,4 +75,15 @@ Feature: ID grammar
     And a multi-file write failure triggers a best-effort restore of files already changed
     And rollback restores only files whose current bytes still match this invocation's replacement; it preserves concurrent changes and reports every unrestored path
     And the command guarantees neither atomic concurrency nor power-loss safety and never reports a partial apply as success
+
+  # AC-0001-0008-09
+  Scenario: Planned AC and EX additions fit the retired-inclusive capacity
+    Given planned additions to a story's AC or EX scope under the unchanged two-digit grammar
+    When the owner checks capacity before writing
+    Then it reports the kind and story, retired-inclusive high-water number H or 0 for an empty scope, remaining capacity 99-H and requested additions
+    And it includes valid IDs in the tree and decisions and observed published parallel heads and known reservations available through the project's existing method, with a fixed observation and its coverage limits
+    And unobserved concurrency stays disclosed and the calculation reserves no ID
+    And a batch larger than the remainder stops before invalid declarations or partial allocation, without filling gaps, reusing retired IDs or emitting 100
+    And newly published claims or collisions require another owner check before publication
+    And an existing exhausted AC or EX allocation diagnostic names the kind, parent, upper bound 99, remaining 0 and the owning partition guidance without producing a candidate or new command
 ```
