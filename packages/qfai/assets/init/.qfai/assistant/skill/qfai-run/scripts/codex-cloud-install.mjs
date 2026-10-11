@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { accessSync, constants, readFileSync, statSync } from "node:fs";
 import path from "node:path";
+import process from "node:process";
 
 function failure(label, error) {
   const reason = error?.code ?? error?.name ?? "unavailable";
