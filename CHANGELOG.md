@@ -356,8 +356,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
-- Fix Playwright launcher probes for Windows .cmd and .bat paths containing spaces.
-
 - Include authorized temporary-directory cleanup in the workflow candidate purpose.
   Fixes #3455.
 
@@ -396,6 +394,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   A separately approved prefix may restore missing evidence labels while keeping
   the original decision bytes and authority intact. Unsafe or ambiguous records
   stop before writing; inherited records require their own owning decision.
+
+- Fix Playwright launcher probes for Windows .cmd and .bat paths containing spaces.
 
 - Clarify when delegated external settings and credential installation may run,
   and distinguish confirmed external effects from repository changes and CI results.
