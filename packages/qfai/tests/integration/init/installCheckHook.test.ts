@@ -433,6 +433,7 @@ describe("the generated installer's native process boundary", () => {
       expect(stderr).toMatch(/canonical|launcher|qfai|confirmation/i);
       expect(stdout).not.toMatch(/preparation.*succeeded/i);
       expect(calls).toHaveLength(1);
+      expect(confirmations).toHaveLength(launcher === "pnp-failed" ? 1 : 0);
     }),
   );
   // QFAI:EX-0001-0196-67
@@ -443,7 +444,6 @@ describe("the generated installer's native process boundary", () => {
         expect(signal, stderr).toBeNull();
         expect(status, stderr).toBe(0);
         expect(calls).toHaveLength(1);
-        expect(confirmations).toHaveLength(launcher === "pnp-failed" ? 1 : 0);
         expect(confirmations).toEqual([
           { command: "yarn", argv: ["exec", "qfai", "--help"], cwd: root, shell: false },
         ]);
