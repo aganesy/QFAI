@@ -283,7 +283,7 @@ function resolvePreflightBlockers(readiness: PackReadiness): string[] {
       [
         "The latest discussion-pack was not found. Existing specifications may still provide usable input.",
         "Read `.qfai/assistant/skill/qfai-sdd/references/sdd-execution-playbook.md#stage-0-source-inventory` for source selection.",
-        "If a readable existing specification is authoritative, run `npx qfai sdd preflight --import <path>`.",
+        "If a readable existing specification is authoritative, run `qfai sdd preflight --import <path>`.",
         "Use `/qfai-discussion` only when no usable discussion pack, imported specification, or explicit user requirement exists.",
       ].join(" "),
     );
