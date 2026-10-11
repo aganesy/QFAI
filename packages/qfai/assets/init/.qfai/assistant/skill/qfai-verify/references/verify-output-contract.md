@@ -1,5 +1,15 @@
 # Verify Output Contract — `.qfai/report/verify.json`
 
+## Contents
+
+- Verdict file
+- Per-gate results
+- CI-only checks
+- Scope
+- Example and rules
+
+## Verdict file
+
 `/qfai-verify` MUST write `.qfai/report/verify.json` at the end of the run. This file is the machine-readable verdict; the stage report is the human-readable account. No `qfai` command reads it, so an absent `verify.json` does not fail `npx qfai validate`.
 
 Canonical path: `.qfai/report/verify.json`. Create the `.qfai/report/` directory if absent — it is the same directory `validate.json` is written to.
@@ -22,6 +32,8 @@ completion rules stay unchanged.
 
 `status` is a closed two-value enum: `"PASS"` / `"FAIL"`. There is no `"WARN"` — a run with only `warning` / `info` findings is `"PASS"` (waivers apply to those severities only). Any `error` finding makes it `"FAIL"`.
 
+## Per-gate results
+
 Each entry of `gates` is `{ name, status, command }`, plus these optional fields:
 
 | Field      | Type   | Meaning                                                                                                                           |
@@ -32,7 +44,34 @@ Each entry of `gates` is `{ name, status, command }`, plus these optional fields
 | `check`    | string | On a `"DELEGATED"` gate: the CI check that runs it.                                                                               |
 | `ci`       | string | On a `"DELEGATED"` gate: `"green"`, `"red"` or `"pending"`, the state of that check when the file is written.                     |
 
-A gate the project runs in CI only is recorded `"DELEGATED"` with its `check` and `ci`. A `"red"` check makes the top-level `status` `"FAIL"`. A `"pending"` one does not, and `summary` names it, so a reader sees what the run left to CI. A gate that can run here is never delegated to avoid running it.
+## CI-only checks
+
+A gate the project's Standard commands declare `CI only: <check name>` is
+recorded `"DELEGATED"` with its `check` and `ci` for the candidate being evaluated.
+`check` names the actual CI check and `ci` its observed state.
+A `"red"` check makes the top-level `status` `"FAIL"` for that candidate.
+A `"pending"` one does not, and `summary` names it. A runnable local gate is
+never delegated to avoid running it. Retain an observed FAIL or
+UNRUN; neither becomes PASS or DELEGATED because a verification commit is wanted.
+
+A `"PASS"` verdict with pending delegated checks supports only the existing
+verification-commit allowance under a user instruction or project policy
+covering that commit and its paths. It does not establish formal completion or
+permission to push, create a pull request or merge. Every nondelegated gate
+must pass. A delegated red check stops transport of the same unchanged candidate.
+Explicit CI-only delegation covering a transport commit may instead carry actual
+changes addressing that failure through the existing planned fix into a new
+candidate, while HEAD still names the failed commit. Preserve the prior head,
+check, run and observed result as FAIL; never relabel that evidence pending.
+Report the actual fix and, after committing, the new head and resume condition.
+The new candidate remains unverified until its own CI results are observed.
+
+The stage report records the target, current head, run ID or URL when available,
+check, actual outcome and counts, blocker and resume condition. No run yet means
+no result; invent neither. `ci: "green"` needs actual passing evidence for that
+same target and head. Missing or mismatched evidence remains pending. Formal
+completion or merge waits for every required check to pass on the current head.
+Keep this evidence in the stage report and `summary`; add no verdict fields or states.
 
 A gate that fails identically on the base, or did not run and is not delegated, still makes the top-level `status` `"FAIL"`. The fields let a reader tell it from a failure the run caused.
 
@@ -43,7 +82,13 @@ or turn it into a behavioral PASS. Preserve failures for the current head;
 unknown identity or purpose remains unverified. The receipt adds no fields or
 states to this contract.
 
-`scope` is a closed enum. Write the one that matches the stage you were invoked for:
+## Scope
+
+`scope` is a closed enum. Write the gate set this invocation covers through
+execution or an explicitly declared matching CI-only check. Delegation never
+claims that the profile already ran; its check must perform the required scan
+and profile. A whole-repository scope still requires full validation. Write the
+one that matches the stage you were invoked for:
 
 | `scope`       | Written by                                                          | validate profile                                |
 | ------------- | ------------------------------------------------------------------- | ----------------------------------------------- |
@@ -53,6 +98,8 @@ states to this contract.
 
 There is no `implement` value: the enum is closed at these three, and a run after
 `/qfai-implement` is recorded as `full`.
+
+## Example and rules
 
 Minimal conforming example for the prototyping gate:
 
@@ -68,6 +115,12 @@ Minimal conforming example for the prototyping gate:
 
 Rules:
 
-- Never write `"status": "PASS"` without the command outputs that justify it. A `FAIL` verdict is a legitimate output — the gate downstream is supposed to stop.
-- Never write a `scope` you did not actually run. Writing `"prototyping"` after a `full` run is a false verdict, not a workaround — and the reverse is just as wrong: a `--profile verify` run is `scope: "full"`, not `scope: "atdd"`, because `atdd` means the ATDD gate set only.
+- A PASS gate needs actual command output or matching CI evidence. The existing
+  top-level pending-DELEGATED allowance supports only the covered verification
+  commit described above. A `FAIL` verdict is a legitimate output; downstream
+  work stops as its gate requires.
+- Never write a `scope` this invocation does not cover by execution or its
+  declared matching CI-only check. Writing `"prototyping"` for a `full` gate set
+  is a false verdict, not a workaround. A `--profile verify` gate is
+  `scope: "full"`, not `scope: "atdd"`; `atdd` covers the ATDD gate set only.
 - Do not add a `version` / `schemaVersion` field. No reader validates one, and a second version series in a distributed artifact is exactly what the distributed-surface rule forbids: the npm package version is the only version this surface has.
