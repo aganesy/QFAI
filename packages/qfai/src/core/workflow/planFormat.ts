@@ -93,6 +93,7 @@ const KINDS: Record<string, string[]> = {
     "triage-cluster",
     "triage-security-intake",
     "triage-handoff",
+    "triage-owned-cleanup",
   ],
   discussion: [
     "discussion-research",

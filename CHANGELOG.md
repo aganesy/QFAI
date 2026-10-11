@@ -6,6 +6,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- Route authorized cleanup of current-task, ignored temporary directories
+  through a bounded triage step. Unsafe or uncertain targets stop before
+  deletion, and completion requires absence and unchanged tracked files and
+  index. Fixes #3286.
+
 - Synchronize the document schema checker copies from the package manifest after
   a frozen dependency install, including the Renovate repin workflow.
 
