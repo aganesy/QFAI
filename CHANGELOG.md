@@ -356,9 +356,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
-- Keep validation profiling inside an owned, bounded child process and retain
-  measurements or failure evidence from Linux and Windows CI.
-
 - Include authorized temporary-directory cleanup in the workflow candidate purpose.
   Fixes #3455.
 
@@ -377,6 +374,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - Clarify how to report host-blocked temporary-file cleanup, hand off allowed
   manual steps and verify removal without claiming pending cleanup is complete.
+
+- Keep validation profiling inside an owned, bounded child process and retain
+  measurements or failure evidence from Linux and Windows CI.
+
+- **Story-tree obligations parse example declarations only where they can count.**
+  Selected TDD files with EX annotations use declaration parsing. ATDD coverage
+  and annotation diagnostics retain their existing checks.
 
 - **Question-only work checks authority before repairing tracked files.**
   Existing permission for the same target is reused. Otherwise the agent offers
@@ -444,10 +448,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   so the variable is never set. The step that removes the entry ran after
   `pnpm install` and `pnpm rebuild`, and each of them printed a warning. It now
   runs right after `setup-node`. Publishing itself was not affected.
-
-- **Story-tree obligations parse example declarations only where they can count.**
-  Selected TDD files with EX annotations use declaration parsing. ATDD coverage
-  and annotation diagnostics retain their existing checks.
 
 - **Verification commits keep pending CI separate from completed verification.**
   Guidance records exact-head CI evidence, preserves observed failures and
