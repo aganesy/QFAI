@@ -326,3 +326,133 @@ describe("independent targets under one goal", () => {
     expect(targets).toMatch(/stop of the whole goal stops every target/i);
   });
 });
+
+// QFAI:AC-0001-0224-09
+describe("CI receipts qualify the target's verification evidence", () => {
+  const GATE = "step/common-gate-run/STEP.md";
+  const RECEIPT = ".qfai/assistant/step/common-gate-run/STEP.md#ci-evidence";
+  const OUTPUT = "skill/qfai-verify/references/verify-output-contract.md";
+
+  // QFAI:EX-0001-0224-20
+  it("requires full execution identity and purpose instead of accepting a branch overview", async () => {
+    const evidence = await passage(GATE, "## CI evidence");
+    expect(evidence).toMatch(/branch overview.*not a formal verification receipt/i);
+    expect(evidence).toMatch(/current full head SHA.*verification.*purpose/i);
+    expect(evidence).toMatch(/workflow identity and name.*event.*run ID or URL.*run attempt/i);
+    expect(evidence).toMatch(
+      /job identity and name.*check identity and name.*status and conclusion/i,
+    );
+    expect(evidence).toMatch(
+      /for test checks, actual test counts.*executed behavior.*job log or artifact/i,
+    );
+    expect(evidence).toMatch(/distinguish missing counts from zero executed tests/i);
+    expect(evidence).toMatch(
+      /for lint, build and other non-test checks, evidence of actual execution and results.*do not invent test counts for these checks/i,
+    );
+    expect(evidence).toMatch(
+      /closed-pull-request cleanup purpose.*evidence.*closed.*selected for cleanup rather than verification/i,
+    );
+    expect(evidence).toMatch(
+      /same head SHA and check name do not make two runs the same verification/i,
+    );
+    expect(evidence).toMatch(
+      /`pull_request` event or later timestamp alone does not prove closed cleanup/i,
+    );
+    expect(evidence).toMatch(/confirmed closed cleanup SKIP.*neither.*behavioral PASS.*override/i);
+    expect(evidence).toMatch(
+      /matrix job skipped.*selection policy.*SKIP does not prove.*behavior ran/i,
+    );
+    expect(evidence).toMatch(/unavailable identity or purpose.*unknown and unverified/i);
+    expect(evidence).toMatch(/remaining blocker and resume condition/i);
+    expect(evidence).toMatch(
+      /job IDs and check IDs separately where present.*record their absence/i,
+    );
+    expect(evidence).toMatch(/check\/job.*ambiguous.*unverified.*job and check are distinguished/i);
+    expect(evidence).toMatch(
+      /for a test check, if an actual reported run.*missing workflow, event, attempt, job, purpose, counts and logs remain unknown/i,
+    );
+    expect(evidence).toMatch(/unverified.*gaps as blockers.*synthetic rows do not fill them/i);
+  });
+
+  // QFAI:EX-0001-0224-18
+  it("works through distinct verification and cleanup receipts without filling actual unknowns", async () => {
+    const gate = await readShipped(GATE);
+    const evidence = flat(sectionOf(gate, "## CI evidence"));
+    expect(evidence).toMatch(
+      /retain an identified successful verification.*target and head.*later run is confirmed closed cleanup.*SKIP does not replace it/i,
+    );
+    const example = sectionOf(gate, "### Synthetic worked example");
+    const explanation = flat(example);
+    expect(explanation).toMatch(/synthetic, not evidence from an actual repository/i);
+    expect(explanation).toMatch(/they concern test checks for the required unit suite/i);
+    expect(explanation).toMatch(
+      /full head `a{40}`.*required verification `unit suite`.*check name `tests`/i,
+    );
+    const earlier = rowOf(example, "Earlier verification");
+    const later = rowOf(example, "Later verification");
+    const cleanup = rowOf(example, "Closed cleanup");
+    expect(earlier).toMatch(/`71`.*`CI`.*`push`.*`91001`.*`1`.*`81001`.*`unit`.*`71001`.*`tests`/);
+    expect(earlier).toMatch(
+      /`completed`.*`success`.*29 passed.*0 failed.*29 unit tests executed.*unit-success[.]log/,
+    );
+    expect(later).toMatch(
+      /`71`.*`CI`.*`workflow_dispatch`.*`91002`.*`2`.*`81002`.*`unit`.*`71002`.*`tests`/,
+    );
+    expect(later).toMatch(
+      /same unit suite.*`completed`.*`failure`.*28 passed.*1 failed.*29 unit tests executed.*unit-failure[.]log/,
+    );
+    expect(cleanup).toMatch(
+      /`72`.*`Cleanup`.*`pull_request`.*`91003`.*`3`.*`81003`.*`unit`.*`71003`.*`tests`/,
+    );
+    expect(cleanup).toMatch(
+      /payload action.*`closed`.*target state is closed.*selection job log confirms cleanup only/i,
+    );
+    expect(cleanup).toMatch(
+      /`completed`.*`skipped`.*0 executed.*no unit test coverage.*cleanup-selection[.]log.*no test log/i,
+    );
+    expect(explanation).toMatch(
+      /verification remains FAIL.*cleanup SKIP neither clears it nor proves.*passed/i,
+    );
+    expect(explanation).toMatch(
+      /for a test check, if an actual reported run.*missing workflow, event, attempt, job, purpose, counts and logs remain unknown/i,
+    );
+    expect(explanation).toMatch(/unverified.*gaps as blockers.*synthetic rows do not fill them/i);
+  });
+
+  // QFAI:EX-0001-0224-19
+  it("keeps current-head failures authoritative and the receipt outside the closed verdict fields", async () => {
+    const evidence = await passage(GATE, "## CI evidence");
+    expect(evidence).toMatch(/green result for an old SHA does not verify the current head/i);
+    expect(evidence).toMatch(
+      /later failure.*same verification.*current head cannot be replaced by its older success/i,
+    );
+    expect(evidence).toMatch(
+      /keep the failure visible until a matching verification actually passes/i,
+    );
+    expect(evidence).toMatch(/missing logs or unknown purpose leave execution unverified/i);
+    expect(evidence).toMatch(
+      /for test checks, missing counts or zero executed tests do not prove behavioral coverage/i,
+    );
+    expect(evidence).toMatch(
+      /receipt details belong in the stage report.*do not add fields or states to `verify[.]json`/i,
+    );
+    const targets = await passage(SCREENS, TARGETS);
+    expect(targets).toMatch(/matching red check resumes the planned gate and its fix procedure/i);
+    const contract = await readShipped(OUTPUT);
+    const report = await passage("step/verify-repo-gate/STEP.md", "## Report");
+    for (const text of [flat(contract), report]) {
+      expect(text).toContain(RECEIPT);
+      expect(text).toMatch(/(?:keep|receipt).*stage report/i);
+      expect(text).toMatch(
+        /overview.*confirmed closed cleanup SKIP.*do(?:es)? not replace actual verification/i,
+      );
+    }
+    const gateFields = contract.split("Each entry of `gates`")[1]?.split("A gate")[0] ?? "";
+    const names = [...gateFields.matchAll(/^\| `(?<name>[^`]+)` +\|/gm)].map(
+      (match) => match.groups?.name,
+    );
+    expect(names).toEqual(["status", "baseline", "reason", "check", "ci"]);
+    expect(rowOf(gateFields, "`ci`")).toMatch(/`"green"`.*`"red"`.*`"pending"`/);
+    expect(rowOf(gateFields, "`ci`")).not.toMatch(/unverified|skipped/i);
+  });
+});

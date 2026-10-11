@@ -441,6 +441,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   requires separate authority for remote actions. Installed asset refresh uses
   the verified local package and preserves project-owned files. Fixes #3294.
 
+- **CI receipts distinguish verification from closed cleanup.** Guidance records
+  run, job, check and purpose evidence with actual counts and logs. Branch
+  overviews and cleanup skips cannot replace verification on the current head.
+  Fixes #3295.
+
 - Distinguish acceptance annotations, empty bodies, asserted behavior and actual
   run outcomes in applicable reports. Hand off remaining bodies with their owner
   and completion criteria while preserving the two-stage acceptance rules.
