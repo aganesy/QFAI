@@ -474,10 +474,10 @@
         "because the verdict executes and is not one of its own dependencies."
       ],
       "codePathCostPin": {
-        "instances": 22,
-        "timeoutMinutesSum": 295,
-        "installInstances": 20,
-        "buildJobs": ["build", "node-floor", "test", "windows-parity"]
+        "instances": 23,
+        "timeoutMinutesSum": 415,
+        "installInstances": 21,
+        "buildJobs": ["build", "node-floor", "temporary-worker-benchmark", "test", "windows-parity"]
       },
       "codePathCostPinNote": [
         "What a code-path pull request costs, pinned as four figures recomputed from the workflow tree.",
