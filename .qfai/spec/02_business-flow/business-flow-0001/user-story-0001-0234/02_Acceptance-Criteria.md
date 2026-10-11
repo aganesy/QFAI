@@ -40,4 +40,10 @@ Feature: Choose the graph that answers the exploration question
     Given missing or stale required analysis
     When I attempt exploration
     Then preparation guidance or a narrowly human-approved exception is required
+
+  # AC-0001-0234-07
+  Scenario: Exclude secrets from analysis and its outputs
+    Given requested code or document analysis and credentials for an explicitly selected backend
+    When graph integration prepares analysis or reports its outcome
+    Then secret files are excluded from corpus and storage and credentials are not written to tracked settings, logs or reusable snapshots
 ```

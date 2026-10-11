@@ -25,7 +25,7 @@ Feature: Reuse completed analysis safely across worktrees
 
   # AC-0001-0236-04
   Scenario: Reject unusable snapshots
-    Given a missing, partial, corrupt or incompatible candidate
+    Given a missing, partial, corrupt, incompatible or unsafe candidate
     When I prepare analysis
     Then the candidate is excluded from queries and required local preparation is reported
 

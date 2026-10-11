@@ -11,7 +11,7 @@
 | CLI-0005 | `qfai atdd scaffold` | `.qfai/spec/03_contract/cli/cli-0005-qfai-atdd-scaffold.md` | - | - | BF and AC acceptance tests with empty, passing bodies. |
 | CLI-0007 | `qfai discussion` | `.qfai/spec/03_contract/cli/cli-0007-qfai-discussion.md` | - | - | Discussion-pack listing and active pointer. |
 | CLI-0008 | `qfai doctor` | `.qfai/spec/03_contract/cli/cli-0008-qfai-doctor.md` | - | - | Environment and asset checks with repair guidance. |
-| CLI-0009 | `qfai init` | `.qfai/spec/03_contract/cli/cli-0009-qfai-init.md` | - | - | Project seed, graph preparation, paths and assistant integration. |
+| CLI-0009 | `qfai init` | `.qfai/spec/03_contract/cli/cli-0009-qfai-init.md` | - | - | Project seed, paths, and assistant integration. |
 | CLI-0010 | `/qfai-migration-v1-to-v2` scripts | `.qfai/spec/03_contract/cli/cli-0010-qfai-migration-v1-to-v2.md` | - | - | Bundled migration steps, the free-text entry they install and check, and their write boundary. |
 | CLI-0011 | Prototyping | `.qfai/spec/03_contract/cli/cli-0011-qfai-prototyping.md` | - | - | UI contract loop, review scoring, user confirmation and handoff. |
 | CLI-0013 | `qfai report` | `.qfai/spec/03_contract/cli/cli-0013-qfai-report.md` | - | - | Report rendering and flow scope. |
