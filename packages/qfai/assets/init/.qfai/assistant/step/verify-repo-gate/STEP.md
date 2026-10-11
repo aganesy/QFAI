@@ -47,8 +47,10 @@ commands entry named after the colon:
 
 Run listed commands and record outputs. A gate whose Standard commands entry
 is `CI only: <check name>` is not run here: record it `DELEGATED` with that
-check name. Where the environment cannot run any other command, ask the user to
-run it and provide the output. Never assume PASS without evidence.
+check name. This requires an actual CI check covering the same gate and scope;
+local environment failure alone creates no delegation. Retain observed FAIL or
+UNRUN results. Where the environment cannot run any other command, ask the user
+to run it and provide the output. Never assume PASS without evidence.
 
 ## Fix loop
 
@@ -84,9 +86,29 @@ one code review reads the repair, as `qfai-verify`'s `## Review` section says.
 Report the scope, every gate command with its result, the open risks and the
 next actions.
 
+For CI results, keep the full receipt in the stage report as
+`.qfai/assistant/step/common-gate-run/STEP.md#ci-evidence` requires. A branch
+overview and a confirmed closed cleanup SKIP do not replace actual verification.
+
 For a `DELEGATED` gate, record `check` and `ci` (`green`, `red` or `pending`).
-Name pending checks in `summary` and the stage report. Do not claim verification
-complete while a delegated check is pending.
+In the stage report, bind evidence to the target and current head: run ID or URL,
+check, actual outcome and counts, blocker and resume condition. If no run exists,
+record that fact. A result for another head does not pass this head; a missing
+or mismatched result remains pending. Keep earlier failures visible.
+
+Name pending checks in `summary` and the stage report. A covered verification
+commit may use the existing DELEGATED allowance in `verify-commit`; it does not
+complete verification. With explicit CI-only delegation covering transport,
+actual changes addressing a failed check through the existing planned fix may
+be committed while HEAD still names the failing commit. Every nondelegated gate
+must pass. Retain the prior head, check, run and observed result as FAIL, and
+report the actual fix and new head after committing. Never relabel the prior
+failure pending or transport the same unchanged red candidate. The new candidate
+remains unverified until its own results are observed; report a missing run as
+missing. Formal completion or merge requires actual passing results for every
+required check on the current target and head. Pending, red, missing or
+mismatched evidence stops completion. Repair follows the existing
+fix procedure under its own covered authority.
 
 ### Acceptance evidence and follow-up
 
@@ -121,57 +143,84 @@ sentences naming remaining work, its owner or UNASSIGNED, and the detailed
 report reference. Put the table in the human report, without new JSON fields,
 statuses, scopes, gates or routes.
 
+### Full collection evidence
+
+During the existing normal verify run, record the full intended collection
+and actual collection and execution. Reconcile omitted cases against
+comparable case membership at the same revision, command/filter, runner and
+environment, or explain intentional differences. Preserve the Standard Test
+command's quoted arguments: shell expansion can change collection depth.
+Equal aggregate counts do not prove equal membership. Keep unknown expected
+counts unknown; unexplained omissions prevent a full-scope completion claim.
+
+A focused target pass, file/container success or static annotation linkage
+proves no full collection. For a focused case's source identity, actual body
+execution, terminal state and raw evidence, read
+`.qfai/assistant/skill/qfai-implement/references/red-admissibility.md#selected-case-execution`.
+Keep its result distinct from full-scope evidence. No extra full run is
+required during each focused cycle. Record these facts in the existing human
+report; add no permanent inventory, ledger, JSON field, gate status, runtime
+parser or runner.
+
 ## Verdict
 
 Write `.qfai/report/verify.json` at the end of the run. It is the
 machine-readable verdict downstream gates read, and the evidence markdown does
 not replace it. `status` is `"PASS"` only when every gate in scope passed or is
-`DELEGATED` to a CI check that is not red. A red check or a non-delegated UNRUN
-gate makes `status` `"FAIL"`.
-`scope` is the one `verify-qfai-gate` ran, never a stage this run did not
-cover. Fields, the closed `scope` enum, a conforming example and what must
+`DELEGATED` to a CI check that is not red for the candidate being evaluated.
+A red check for that candidate or a non-delegated UNRUN gate makes `status`
+`"FAIL"`. Preserve the previous candidate's FAIL evidence when an explicitly
+covered transport commit carries actual repairs into a new candidate. Its own
+pending delegated checks permit only that transport, never formal completion;
+they do not replace the earlier failed result. Keep revision and run evidence
+in the stage report, without adding verdict fields or states.
+`scope` is the gate set `verify-qfai-gate` covered through execution or an
+explicitly declared matching CI-only check, never a stage this run did not
+cover. Delegation does not claim that its validation profile has already run. Fields, the closed `scope` enum, a conforming example and what must
 never be written are in
 `.qfai/assistant/skill/qfai-verify/references/verify-output-contract.md`.
 
-## The stage result
+## Stage report
 
 Inside an `npx qfai workflow` run, the stage runs every required gate over the
 run's change and reports each result.
 
-- The stage writes this run's `.qfai/report/verify.json` and names it in
-  `artifactRefs`.
+- The stage writes this run's `.qfai/report/verify.json` and names its scope and
+  the revision checked in the stage report, with the commands and evidence for
+  each gate.
 - A `verify.json` written by another run, scoped to another flow or kept in a
   shared location is never named as this stage's report.
-- The stage's own `gateResults` are information only: the run decides no gate
-  from them.
-- `outcome` and `testObservation` are reported apart.
-- A required gate that did not run is reported `unrun`, never as a pass.
-- A gate the project runs in CI only is reported `delegated`, with its check
-  name.
+- Report the stage's completion or stop separately from actual test and gate
+  observations. A required gate that did not run is UNRUN, never a pass.
+- A gate the project runs in CI only is DELEGATED, with its check name and
+  observed CI status.
 
-`verify.json` itself is unchanged inside a run: its fields and values are
-`.qfai/assistant/skill/qfai-verify/references/verify-output-contract.md`'s,
-and the run's values stay in the stage result.
+Keep these details in the stage report and session handoff. `verify.json`
+keeps only the fields and values in
+`.qfai/assistant/skill/qfai-verify/references/verify-output-contract.md`.
 
 ## Findings verify did not cause
 
 Inside a run, verify edits no artifact another owner holds. A finding it did
-not cause returns `needs_repair`, with the finding listed in `debts` under its
-`resolvingOwner`, so the run sends the repair there.
+not cause returns `needs_repair`. The stage report and handoff name the
+finding, its evidence and affected paths, the repair owner and the repair
+needed before verification can resume.
 
-| Finding                   | `resolvingOwner` |
+| Finding                   | Owner            |
 | ------------------------- | ---------------- |
 | A story or contract gap   | `qfai-sdd`       |
 | An acceptance-test defect | `qfai-implement` |
 | An implementation defect  | `qfai-implement` |
 
-These three are the only repairs verify routes.
+These three are the only repairs verify hands off to an owner.
 
 ## A missing environment
 
-- A gate whose environment is missing returns the stage `blocked`, with the
-  blocker `stage-blocked` and `operator` as the one who clears it.
-- No debt is listed for it, and no repair is routed.
+- A gate whose environment is missing leaves the stage `blocked`. Record
+  the missing environment in the stage report, with the operator as its owner
+  and the capability needed to resume.
+- This is an environment stop, not a product repair. The gate remains UNRUN
+  with its reason.
 
 ## A failure the run did not cause
 
@@ -189,7 +238,9 @@ The step is done when:
   reason, or is recorded DELEGATED with its CI check;
 - every gate passes, or each failure has an actionable fix list and an owner;
 - `verify.json` exists, its `status` matches the gate results and its `scope`
-  matches the validate profile that ran.
+  matches the required validate profile. A delegated validation check must cover
+  that same profile and scan; a whole-repository scope still requires a full
+  scan. Pending delegation never claims it ran.
 
 For this skill, the smallest applicable smoke check of
 `.qfai/assistant/rule/shared-skill-operating-baseline.md#completion-contract-shared`

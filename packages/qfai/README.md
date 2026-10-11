@@ -431,6 +431,30 @@ Notes.
   issue order are not stable; match on `issues[].code`.
 - `report.json`, `doctor.json`, and `run-*` JSON logs are internal exports and are not a stable external contract; prefer `report.md` for integrations that must survive tool upgrades.
 
+## Dependency security
+
+The glob-matching dependency `braces` has an unresolved
+[stack-exhaustion denial-of-service advisory](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm).
+QFAI accepts this residual risk only for reviewed project patterns and paths,
+trusted configuration and trusted SDK callers. This is risk acceptance, not a
+clean audit or proof that QFAI is unaffected. Reproduction and exploitation in
+QFAI remain unverified.
+
+Review include, ignore and negative patterns, constructed paths and SDK inputs.
+`validateProject` accepts a caller-supplied `ConfigLoadResult` without invoking
+the configuration loader; the caller must review those values too. Catching
+errors and limiting results after glob expansion do not defend against stack
+exhaustion during expansion.
+
+Untrusted pull requests, externally supplied configuration and service request
+inputs are outside this acceptance. Review those inputs and restrict access;
+do not expose glob processing to them until your mitigation and security review
+cover them.
+
+Reassess the risk when a compatible patch becomes available or untrusted input
+is needed. A forced downgrade to `qfai@0.4.0` is not a compatible fix for the
+current major API; do not apply it through `npm audit fix --force`.
+
 ## FAQ
 
 - Q: A story directory fails validation.
