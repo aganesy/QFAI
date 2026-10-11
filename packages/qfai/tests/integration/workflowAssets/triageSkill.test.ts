@@ -134,9 +134,7 @@ describe("qfai-triage as a stage skill", () => {
     expect(writes).toMatch(
       /receipt.*stage report.*authority.*ownership evidence.*exact targets.*preflight.*deletion results.*absence checks.*tracked-content.*index comparison/i,
     );
-    expect(writes).toMatch(
-      /receipt file stays outside.*deletion targets.*artifactRefs.*not.*changedFiles/i,
-    );
+    expect(writes).toMatch(/ignored receipt file stays outside.*deletion targets.*stage report/i);
     expect(flat(sectionOf(cleanup, "## Gate"))).toMatch(
       /every exact target.*absent.*tracked contents.*index.*unchanged.*receipt.*evidence/i,
     );
