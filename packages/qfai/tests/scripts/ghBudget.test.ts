@@ -188,3 +188,72 @@ describe("the reserve", () => {
     expect(source).toContain("500 of the 5000 calls");
   });
 });
+
+describe("branch overview conclusions are separate from gate receipts", () => {
+  const shared = {
+    head_branch: "topic",
+    head_sha: "a".repeat(40),
+    workflow_id: 41,
+    name: "CI",
+    event: "pull_request",
+    status: "completed",
+  };
+
+  it("keeps a same-head cleanup skip in the overview beside a matching verification success", () => {
+    // REST-shaped metadata has no confirmed action or job purpose. The overview
+    // retains conclusions; it does not decide whether a skipped job is cleanup.
+    const cleanup = {
+      ...shared,
+      id: 5102,
+      run_attempt: 2,
+      check_suite_id: 6102,
+      created_at: "2026-01-02T10:01:00Z",
+      conclusion: "skipped",
+    };
+    const verification = {
+      ...shared,
+      id: 5101,
+      run_attempt: 1,
+      check_suite_id: 6101,
+      created_at: "2026-01-02T10:00:00Z",
+      conclusion: "success",
+    };
+    const response = { total_count: 2, workflow_runs: [cleanup, verification] };
+    expect(branchRows(response.workflow_runs)).toEqual([
+      { branch: "topic", head: "aaaaaaa", state: "done", result: "skipped" },
+    ]);
+    expect(branchRows([verification, cleanup])).toEqual([
+      { branch: "topic", head: "aaaaaaa", state: "done", result: "skipped" },
+    ]);
+  });
+
+  it("keeps a later same-head failure and drops an older-head success", () => {
+    const response = {
+      total_count: 3,
+      workflow_runs: [
+        { ...shared, id: 5104, run_attempt: 2, conclusion: "failure" },
+        { ...shared, id: 5103, run_attempt: 1, conclusion: "success" },
+        { ...shared, id: 5100, run_attempt: 1, head_sha: "b".repeat(40), conclusion: "success" },
+      ],
+    };
+    expect(branchRows(response.workflow_runs)).toEqual([
+      { branch: "topic", head: "aaaaaaa", state: "done", result: "failure" },
+    ]);
+  });
+
+  it("documents that the overview neither proves verification nor identifies cleanup", async () => {
+    const source = await readFile(path.join(repoRoot, SCRIPT_REL), "utf-8");
+    const declaration = source.indexOf("export function branchRows(runs)");
+    const comment = source.slice(source.lastIndexOf("/**", declaration), declaration);
+    expect(comment).toMatch(/overview/i);
+    expect(comment).toMatch(/not.*formal verification/i);
+    expect(comment).toMatch(
+      /drops workflow,.*event, run attempt, job, check and purpose context/is,
+    );
+    expect(comment).toMatch(
+      /closed cleanup SKIP.*share a head and check name.*without proving its behavior/is,
+    );
+    expect(comment).toMatch(/individual runs and logs.*required verification/is);
+    expect(comment).toMatch(/check name or workflow event cannot establish cleanup purpose/i);
+  });
+});
