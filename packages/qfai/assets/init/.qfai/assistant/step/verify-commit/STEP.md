@@ -16,6 +16,8 @@ The last step of a change route. It records the run's work as a local commit.
 - The verify results in the stage report.
 - The paths the run wrote, as its stage reports name them.
 - The project's commit message convention, where it states one.
+- `.agents/rules/action-reversibility.md`, before an action that deletes, pushes, publishes or
+  is visible to others.
 
 ## Writes
 
