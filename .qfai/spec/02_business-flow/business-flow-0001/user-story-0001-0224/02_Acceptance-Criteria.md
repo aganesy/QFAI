@@ -84,4 +84,18 @@ Feature: Follow a route in the session
     And no-question wording alone supplies no missing approval
     And an uncovered critical decision or release approval stays open and stops dependent work on that target under the existing question or no-question rules
     And other authorized independent targets may continue, while a goal-wide stop stops all targets
+
+  # AC-0001-0224-13
+  Scenario: An authorized procedure has its own documentation writer
+    Given a request to author an ordinary operational Markdown procedure within existing policy
+    When the session extracts and plans the request
+    Then it uses intent procedure and the actual docs deliverable without inventing code, tests, specification or contract artifacts
+    And rule 29 selects write-procedure after refactor and before docs, while rules 1 through 28 retain priority
+    And the plan runs implement-procedure in a documentation stage, followed by the existing change-note code review and QFAI, repository and commit verification
+    And every step keeps the existing four output keys and applicable checks; no release point, branch point or extra review is added
+    And qfai-implement owns the route-only step with doc-steward; ordinary named business-flow implementation and wording-only maintenance keep their existing procedures
+    And the writer changes only authorized procedure documents within existing policy, stopping before protected-owner edits or invented required facts
+    And writing the procedure grants no permission to execute its actions or expand external authority
+    And a mixed request retains its actual artifacts and existing checks rather than hiding implementation in a docs-only reading
+    And unavailable required checks remain UNRUN; unobserved procedure execution is not reported as completed
 ```
