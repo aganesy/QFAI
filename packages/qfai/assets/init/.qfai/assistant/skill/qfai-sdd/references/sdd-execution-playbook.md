@@ -4,10 +4,35 @@ Use this sequence for /qfai-sdd. The shipped templates under ../templates/spec/ 
 
 ## Stage 0: source inventory
 
-1. Run npx qfai sdd preflight and read its selectedInputPath and source. Respect an explicitly selected discussion pack, including one older than the newest pack.
-2. Read the selected pack, completed reviews that target it, explicit user requirements, and the existing story tree. A pack is reference and provenance material. Disposition its applicable review advice in the SDD report, a decision row, or an open question. A pack discrepancy does not itself block SDD.
-3. Stop if there is no usable input source. Stop on an unresolved product decision that cannot safely be inferred; record the question in open-questions.md.
-4. If no discussion pack exists and an imported specification does, run npx qfai sdd preflight --import <path> with that file, which selects it as the source. An explicit user requirement is used as it is and named in the SDD report. Do not manufacture a discussion pack.
+1. Use the launcher established by
+   `.qfai/assistant/rule/shared-skill-operating-baseline.md#canonical-qfai-launcher-mandatory`.
+   Record its resolved package path and version in the SDD report. Check that
+   the installed Stage 0 instructions support the procedure being used.
+2. Run `npx qfai sdd preflight` and read its `selectedInputPath` and `source`.
+   Respect an explicitly selected discussion pack, including one older than the
+   newest pack.
+3. Read the selected pack, completed reviews that target it, explicit user
+   requirements, and the existing story tree. A pack is reference and provenance
+   material. Disposition its applicable review advice in the SDD report, a decision
+   row, or an open question. A pack discrepancy does not itself block SDD. For
+   the current request, read the existing purpose in
+   `<paths.specsDir>/01_policy/objective.md` and inspect related flows and stories.
+4. A missing discussion pack does not mean that specifications are missing. If
+   an existing readable specification is authoritative for this request, run
+   `npx qfai sdd preflight --import <path>` with that file. The fallback does
+   not replace a selected pack or bypass unsafe pack names, unreadable files,
+   invalid active pointers, config errors, or a mismatched tool.
+5. Use an explicit user requirement as supplied and name it in the SDD report.
+   Do not invent an import file from conversation. Without a file, CLI preflight
+   can remain blocked while SDD assesses that explicit requirement.
+6. Use `/qfai-discussion` only when no usable source exists; stop SDD until one
+   is available. Stop on an unresolved product decision that cannot safely be
+   inferred; record the question in `open-questions.md`. Do not manufacture or
+   regenerate a past discussion pack, or regenerate the existing purpose,
+   merely to clear preflight.
+7. Import-lite readiness identifies the input source. It does not establish
+   complete requirements or a validation PASS. Keep the existing purpose and
+   current request while updating only affected flow and story content.
 
 ## Stage 1: triage and decisions
 
