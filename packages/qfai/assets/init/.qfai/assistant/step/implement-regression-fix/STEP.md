@@ -41,9 +41,10 @@ appended and no evidence entry is removed. A contradiction or obstacle found
 here stops the work under Article IX of
 `.qfai/assistant/rule/constitution.md`.
 
-Inside a workflow run, the stage result carries the `regressionFix` receipt:
-`testId` names that test, `rerunRef` its GREEN re-run, `reviewRef` its
-independent review.
+The stage report names the same test, its GREEN re-run evidence, and the
+independent reviewer with the review verdict and evidence reference. Include
+the changed production paths in that report. Keep these references in the
+session handoff so the next stage can verify them.
 
 ## Gate
 

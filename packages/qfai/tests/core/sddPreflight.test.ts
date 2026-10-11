@@ -56,12 +56,28 @@ describe("runSddPreflight", () => {
       expect(result.status).toBe("blocked");
       expect(result.source).toBe("discussion-pack");
       expect(result.selectedInputPath).toBeNull();
+      expect(result.importedReqCount).toBeNull();
+      expect(result.packGaps).toEqual([
+        `Missing required files: ${DISCUSSION_PACK_FILES.join(", ")}`,
+      ]);
+      expect(result.openQuestions).toEqual([]);
+      expect(result.blockers).toHaveLength(1);
       expect(result.blockers.some((item) => item.includes("latest discussion-pack"))).toBe(true);
       expect(result.nextCommands).toEqual(["/qfai-discussion"]);
 
       const summary = await readFile(result.preflightSummaryPath, "utf-8");
       expect(summary).toContain("status: blocked");
       expect(summary).toContain("/qfai-discussion");
+      // EX-0001-0148-03: absent provenance does not require replacing an existing source.
+      for (const guidance of [
+        ".qfai/assistant/skill/qfai-sdd/references/sdd-execution-playbook.md#stage-0-source-inventory",
+        "--import <path>",
+        "Use `/qfai-discussion` only when no usable",
+      ]) {
+        expect(result.blockers[0]).toContain(guidance);
+        expect(summary).toContain(guidance);
+      }
+      expect(result.blockers[0]).not.toContain("(create `");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -74,7 +90,11 @@ describe("runSddPreflight", () => {
       await mkdir(path.dirname(imported), { recursive: true });
       await writeFile(imported, "# Imported specification\n", "utf-8");
 
+      const before = await readFile(imported);
       const result = await runSddPreflight(root, defaultConfig, { importPath: imported });
+
+      expect(await readFile(imported)).toEqual(before);
+      expect(await readdir(path.join(root, ".qfai"))).not.toContain("discussion");
 
       expect(result.status).toBe("ready");
       expect(result.source).toBe("import-lite");

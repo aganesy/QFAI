@@ -48,9 +48,11 @@ describe("qfai-prototyping in a workflow run", () => {
   it("writes nothing and returns blocked when no UI contract serves the bound flow", async () => {
     const text = await section(PROTOTYPING_SCOPE_STEP, "## Scope");
     expect(text).toMatch(/writes no `DESIGN\.md`, no UI contract and no surface declaration/i);
-    expect(text).toMatch(
-      /returns outcome `blocked` with one `debts` entry naming the missing UI surface/i,
-    );
-    expect(text).toMatch(/`owningFlow` the bound flow and `resolvingOwner` `operator`/i);
+    expect(text).toMatch(/\b(?:stop|stops|stopped)\b/iu);
+    expect(text).toMatch(/missing UI (?:surface|contract)/iu);
+    expect(text).toMatch(/bound (?:business )?flow/iu);
+    expect(text).toMatch(/\b(?:session|stage) report\b|handoff/iu);
+    expect(text).toMatch(/\boperator\b/iu);
+    expect(text).toMatch(/resume.*contract.*serves.*bound flow/iu);
   });
 });
