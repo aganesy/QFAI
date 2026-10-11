@@ -87,6 +87,8 @@ describe("qfai sdd preflight", () => {
     expect(stdout).toContain("source: discussion-pack");
     expect(stdout).toContain("selected discussion-pack: (not found)");
     expect(stdout).toContain("imported REQ count: (n/a)");
+    expect(stdout).toContain("pack gaps (recorded, not blocking):");
+    expect(stdout).toContain(`Missing required files: ${DISCUSSION_PACK_FILES.join(", ")}`);
     for (const guidance of [
       ".qfai/assistant/skill/qfai-sdd/references/sdd-execution-playbook.md#stage-0-source-inventory",
       "--import <path>",
@@ -144,7 +146,9 @@ describe("qfai sdd preflight", () => {
     expect(payload["nextCommands"]).toEqual(["/qfai-discussion"]);
     expect(payload["selectedInputPath"]).toBeNull();
     expect(payload["importedReqCount"]).toBeNull();
-    expect(payload["packGaps"]).toEqual([]);
+    expect(payload["packGaps"]).toEqual([
+      `Missing required files: ${DISCUSSION_PACK_FILES.join(", ")}`,
+    ]);
     expect(payload["openQuestions"]).toEqual([]);
     const summary = await readFile(
       path.join(root, ".qfai", "report", "preflight_summary.md"),

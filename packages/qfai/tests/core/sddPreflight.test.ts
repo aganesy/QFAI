@@ -57,7 +57,9 @@ describe("runSddPreflight", () => {
       expect(result.source).toBe("discussion-pack");
       expect(result.selectedInputPath).toBeNull();
       expect(result.importedReqCount).toBeNull();
-      expect(result.packGaps).toEqual([]);
+      expect(result.packGaps).toEqual([
+        `Missing required files: ${DISCUSSION_PACK_FILES.join(", ")}`,
+      ]);
       expect(result.openQuestions).toEqual([]);
       expect(result.blockers).toHaveLength(1);
       expect(result.blockers.some((item) => item.includes("latest discussion-pack"))).toBe(true);
