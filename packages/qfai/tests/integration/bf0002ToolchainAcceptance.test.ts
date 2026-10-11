@@ -12,6 +12,7 @@ import {
   symlink,
   writeFile,
 } from "node:fs/promises";
+import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -259,6 +260,14 @@ describe("BF-0002 toolchain and release acceptance", () => {
   });
 });
 
+async function linkFixtureVitest(packageRoot: string): Promise<void> {
+  const require = createRequire(import.meta.url);
+  const installed = path.dirname(require.resolve("vitest/package.json"));
+  const modules = path.join(packageRoot, "node_modules");
+  await mkdir(modules, { recursive: true });
+  await symlink(installed, path.join(modules, "vitest"), "junction");
+}
+
 function namedDiagnosticProgram(marker: string): string {
   const job = workflowJobs("named-tests.yml")["named-test"];
   const steps = job?.["steps"];
@@ -387,11 +396,7 @@ describe("the optional named diagnostic acceptance", () => {
       const packageRoot = path.join(root, "packages", "qfai");
       const directory = path.join(packageRoot, "tests", "core");
       await mkdir(directory, { recursive: true });
-      await symlink(
-        path.join(REPO_ROOT, "packages", "qfai", "node_modules"),
-        path.join(packageRoot, "node_modules"),
-        "junction",
-      );
+      await linkFixtureVitest(packageRoot);
       await writeFile(
         path.join(packageRoot, "vitest.workspace.ts"),
         readText("packages", "qfai", "vitest.workspace.ts"),
@@ -1765,11 +1770,7 @@ describe("the optional Windows full-suite acceptance", () => {
         expect(await readFile(target, "utf8")).toBe(source);
       }
       await writeFile(path.join(packageRoot, "package.json"), '{"type":"module"}\n');
-      await symlink(
-        path.join(REPO_ROOT, "packages", "qfai", "node_modules"),
-        path.join(packageRoot, "node_modules"),
-        "junction",
-      );
+      await linkFixtureVitest(packageRoot);
       const projects = runnerProjects();
       const included = declaredIncludeGlobs();
       const files: string[] = [];
