@@ -1,5 +1,15 @@
 # Verify Output Contract — `.qfai/report/verify.json`
 
+## Contents
+
+- Verdict file
+- Per-gate results
+- CI-only checks
+- Scope
+- Example and rules
+
+## Verdict file
+
 `/qfai-verify` MUST write `.qfai/report/verify.json` at the end of the run. This file is the machine-readable verdict; the stage report is the human-readable account. No `qfai` command reads it, so an absent `verify.json` does not fail `npx qfai validate`.
 
 Canonical path: `.qfai/report/verify.json`. Create the `.qfai/report/` directory if absent — it is the same directory `validate.json` is written to.
@@ -22,6 +32,8 @@ completion rules stay unchanged.
 
 `status` is a closed two-value enum: `"PASS"` / `"FAIL"`. There is no `"WARN"` — a run with only `warning` / `info` findings is `"PASS"` (waivers apply to those severities only). Any `error` finding makes it `"FAIL"`.
 
+## Per-gate results
+
 Each entry of `gates` is `{ name, status, command }`, plus these optional fields:
 
 | Field      | Type   | Meaning                                                                                                                           |
@@ -31,6 +43,8 @@ Each entry of `gates` is `{ name, status, command }`, plus these optional fields
 | `reason`   | string | On an `"UNRUN"` gate, or a `baseline` of `"unrun"`: what is missing.                                                              |
 | `check`    | string | On a `"DELEGATED"` gate: the CI check that runs it.                                                                               |
 | `ci`       | string | On a `"DELEGATED"` gate: `"green"`, `"red"` or `"pending"`, the state of that check when the file is written.                     |
+
+## CI-only checks
 
 A gate the project's Standard commands declare `CI only: <check name>` is
 recorded `"DELEGATED"` with its `check` and `ci` for the candidate being evaluated.
@@ -61,6 +75,8 @@ Keep this evidence in the stage report and `summary`; add no verdict fields or s
 
 A gate that fails identically on the base, or did not run and is not delegated, still makes the top-level `status` `"FAIL"`. The fields let a reader tell it from a failure the run caused.
 
+## Scope
+
 `scope` is a closed enum. Write the gate set this invocation covers through
 execution or an explicitly declared matching CI-only check. Delegation never
 claims that the profile already ran; its check must perform the required scan
@@ -75,6 +91,8 @@ one that matches the stage you were invoked for:
 
 There is no `implement` value: the enum is closed at these three, and a run after
 `/qfai-implement` is recorded as `full`.
+
+## Example and rules
 
 Minimal conforming example for the prototyping gate:
 
