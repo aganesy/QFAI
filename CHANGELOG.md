@@ -351,6 +351,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Fix Playwright launcher probes for Windows .cmd and .bat paths containing spaces.
+
 - Check the combined raw bytes of listed AGENTS ancestor chains and report each
   file's contribution when the chain exceeds the source-byte budget.
 

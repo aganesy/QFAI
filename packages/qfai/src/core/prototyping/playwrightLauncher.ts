@@ -230,10 +230,16 @@ function spawnProbeChild(
 ): ReturnType<typeof spawn> {
   const useCmdShim = process.platform === "win32" && /\.(cmd|bat|ps1)$/i.test(candidate.executable);
   if (useCmdShim) {
+    const isBatchShim = /\.(cmd|bat)$/i.test(candidate.executable);
+    const command = toCmdCommand(candidate, args);
     return spawn(
       process.env.ComSpec ?? "cmd.exe",
-      ["/d", "/s", "/c", toCmdCommand(candidate, args)],
-      { stdio: ["ignore", "pipe", "pipe"], windowsHide: true },
+      ["/d", "/s", "/c", isBatchShim ? `"${command}"` : command],
+      {
+        stdio: ["ignore", "pipe", "pipe"],
+        windowsHide: true,
+        ...(isBatchShim ? { windowsVerbatimArguments: true } : {}),
+      },
     );
   }
   return spawn(candidate.executable, args, {
