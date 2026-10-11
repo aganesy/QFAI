@@ -26,6 +26,10 @@ Neither is restated here.
   globs.
 - The launcher the preflight established, for a qfai command
   (`.qfai/assistant/rule/shared-skill-operating-baseline.md#canonical-qfai-launcher-mandatory`).
+- `.agents/rules/temporary-files.md`, when this step writes captured output or a script to a
+  file.
+- `.agents/rules/api-budget.md`, when this step reads CI state or the project's items through
+  the forge's API.
 
 ## Procedure
 
