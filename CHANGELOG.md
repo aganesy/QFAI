@@ -360,6 +360,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   design files change only within a newly authorized request; unrelated brand
   and tokens are preserved, and unsupported source values stop the repair.
 
+- Update compatible dependency resolutions and scoped lint-parser patches while
+  retaining the supported Node floor.
+
 - Check the combined raw bytes of listed AGENTS ancestor chains and report each
   file's contribution when the chain exceeds the source-byte budget.
 
