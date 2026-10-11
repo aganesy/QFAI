@@ -486,6 +486,64 @@ describe("story-tree structure", () => {
     ).toEqual([expect.stringContaining("neither file: nor command: (looked at the code)")]);
   });
 
+  describe("literal Approach labels inside closed inline code", () => {
+    const findings = (cell: string) =>
+      validateStoryTreeStructureModel(
+        model({
+          [`${specs}/decisions.md`]:
+            "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n" +
+            `| DEC-2098 | Decide | ${cell} | DONE |`,
+        }),
+      ).filter((item) => item.code === "QFAI-STORY-017");
+    const whole = (grounds: string, evidence = "file:a.ts") =>
+      `- Evidence: ${evidence} - Grounds: ${grounds} - Residual risk: x - Rollback: y`;
+
+    // QFAI:EX-0001-0053-16
+    // QFAI:EX-0001-0053-17
+    // QFAI:EX-0001-0053-18
+    // QFAI:EX-0001-0053-20
+    // QFAI:EX-0001-0053-23
+    it.each([
+      "\u00e9\u{1f600} quotes `- Evidence: file:quoted.ts - Grounds: literal` in its explanation",
+      "`` - Evidence: file:quoted.ts ` and ``` - Grounds: literal``",
+      "` - Grounds: literal`",
+      "`unmatched then `` - Evidence: file:quoted.ts - Grounds: literal``",
+      "` - Grounds: literal\\`",
+      "\\``` - Grounds: literal``",
+      "\\\\`` - Grounds: literal``",
+    ])("does not split the original Grounds value %s", (grounds) => {
+      expect(findings(whole(grounds))).toEqual([]);
+    });
+
+    it("keeps quoted labels within an existing valid Evidence entry", () => {
+      expect(findings(whole("g", "file:a.ts quotes ` - Grounds: literal`"))).toEqual([]);
+    });
+
+    // QFAI:EX-0001-0053-19
+    // QFAI:EX-0001-0053-21
+    // QFAI:EX-0001-0053-22
+    // QFAI:EX-0001-0053-23
+    it.each([
+      [
+        "- Evidence: file:a.ts quotes `text - Grounds: literal` - Residual risk: x - Rollback: y",
+        "lacks the item Grounds",
+      ],
+      [whole("` - Grounds: literal\\` - Rollback: premature"), "out of order"],
+      [whole("`` unmatched ``` - Grounds: duplicate"), "out of order"],
+      [whole("g") + " - Grounds: duplicate", "out of order or more than once"],
+      ["- Evidence: file:a.ts - Grounds: g - Rollback: y - Residual risk: x", "out of order"],
+      [whole(""), "empty Grounds item"],
+      [whole("g", "`file:a.ts`"), "neither file: nor command:"],
+      [whole("none — assumed"), '"none —" in its Grounds item'],
+    ])("retains malformed unquoted-item rejection for %s", (cell, problem) => {
+      const issues = findings(cell);
+      expect(issues.map((item) => [item.code, item.severity, item.file, item.refs])).toEqual([
+        ["QFAI-STORY-017", "error", `${specs}/decisions.md`, ["DEC-2098"]],
+      ]);
+      expect(issues[0]?.message).toContain(problem);
+    });
+  });
+
   it("checks flow and story index membership against declarations", () => {
     const findings = validateStoryTreeStructureModel(
       model({
