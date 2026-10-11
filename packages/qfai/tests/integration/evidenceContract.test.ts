@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, writeFile } from "node:fs/promises";
 import os, { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -556,4 +556,41 @@ describe("the published native observation example", () => {
       expect(binding).toMatch(/old source[\s\S]*UNVERIFIED/i);
     });
   });
+
+  // QFAI:EX-0001-0224-39 QFAI:EX-0001-0224-41
+  it.each(["HEAD", "a".repeat(39), "a".repeat(41), "a".repeat(40) + "\n", "--output=receipt.txt"])(
+    "refuses invalid source %s before native reads or controlled writes",
+    async (invalidSource) => {
+      const code = await nativeObservationExample();
+      await withObservationFixture(code, async ({ root, program, env }) => {
+        const files = [
+          path.join(root, "receipt.txt"),
+          path.join(root, ".git", "index"),
+          path.join(root, ".git", "HEAD"),
+          program,
+        ];
+        const before = await Promise.all(files.map((file) => readFile(file)));
+        const entries = (await readdir(root)).sort();
+        const observed = spawnSync(
+          process.execPath,
+          [program, root, invalidSource, "receipt.txt"],
+          {
+            encoding: "utf8",
+            env,
+            maxBuffer: 4 * 1024 * 1024,
+            timeout: 30_000,
+          },
+        );
+        expect(observed.error).toBeUndefined();
+        expect(observed.signal).toBeNull();
+        expect(observed.status).toBe(1);
+        expect(observed.stdout).toBe("");
+        expect(observed.stderr).toBe(
+          "Supply a full 40- or 64-digit hexadecimal source identifier.\n",
+        );
+        expect(await Promise.all(files.map((file) => readFile(file)))).toEqual(before);
+        expect((await readdir(root)).sort()).toEqual(entries);
+      });
+    },
+  );
 });
