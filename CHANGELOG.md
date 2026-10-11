@@ -359,6 +359,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - Keep validation profiling inside an owned, bounded child process and retain
   measurements or failure evidence from Linux and Windows CI.
 
+- Include authorized temporary-directory cleanup in the workflow candidate purpose.
+  Fixes #3455.
+
 - Update compatible dependency resolutions and scoped lint-parser patches while
   retaining the supported Node floor.
 
@@ -445,6 +448,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **Story-tree obligations parse example declarations only where they can count.**
   Selected TDD files with EX annotations use declaration parsing. ATDD coverage
   and annotation diagnostics retain their existing checks.
+
+- **Verification commits keep pending CI separate from completed verification.**
+  Guidance records exact-head CI evidence, preserves observed failures and
+  requires separate authority for remote actions. Installed asset refresh uses
+  the verified local package and preserves project-owned files. Fixes #3294.
 
 - **Dependency guidance limits acceptance of the unresolved glob-matching risk.**
   Reviewed project inputs and trusted SDK callers remain the accepted scope;
