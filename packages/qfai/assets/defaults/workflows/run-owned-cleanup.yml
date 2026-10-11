@@ -1,0 +1,12 @@
+route: run-owned-cleanup
+family: upkeep
+stages:
+  - id: cleanup
+    kind: triage
+    steps: [triage-owned-cleanup]
+  - id: close
+    kind: triage
+    steps: [triage-close]
+    after: [cleanup]
+decisionPoints: []
+branchPoints: []

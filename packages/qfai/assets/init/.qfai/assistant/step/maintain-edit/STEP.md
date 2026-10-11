@@ -63,18 +63,17 @@ A change to a file listed under [Never a maintenance edit](#never-a-maintenance-
 or a planned edit with a semantic effect, is not a maintenance edit. Nothing is
 edited: stop, and report that the change is not a maintenance edit.
 
-Inside a workflow run the stage returns it this way. No stage of the route
-serves the finding's owner, so the run is `blocked`, naming the finding and the
-owner skill to invoke by name:
+In a workflow run, report `needs_repair`: no stage of the route serves the finding's owner,
+so the run is `blocked`, naming the finding and the owner skill to invoke by name.
+The session report records:
 
-- The outcome is `needs_repair`, and `changedFiles` is empty.
-- `debts` holds one entry for the finding:
-  - `findingCode` is `maintain-semantic-effect`;
-  - `owningFlow` is `null`, because an `edit-text` run binds no flow;
-  - `detectingCommand` names the review or the command that found it;
-  - `resolvingOwner` is the skill that owns that kind of change, never one the
-    `edit-text` plan names: `qfai-implement` for a code or configuration change,
-    `qfai-sdd` for a story or contract.
+- the semantic effect, affected paths and the review or command that found it;
+- that nothing was edited and the `edit-text` run binds no flow;
+- the owner skill to invoke by name: `qfai-implement` for code or configuration,
+  or `qfai-sdd` for a story or contract;
+- the authorized owner route needed before work can resume.
+
+Do not treat a stage of the `edit-text` plan as the owner of this repair.
 
 ## Passes when
 
@@ -87,7 +86,7 @@ change altered is brought in line too: the behaviour already changed, so the
 edit changes none. Any other entry under
 [Never a maintenance edit](#never-a-maintenance-edit) still stops the step.
 
-## What the stage returns
+## Stage report
 
 - The diff.
 - The no-behaviour-change judgement, with its reason.

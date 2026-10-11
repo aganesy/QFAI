@@ -253,3 +253,165 @@ describe("qfai-sdd writes the story tree", () => {
     expect(shippedExists("skill/qfai-sdd/references/requirements-decomposition.md")).toBe(true);
   });
 });
+
+describe("capacity-safe story authoring guidance", () => {
+  // QFAI:AC-0001-0008-09
+  // QFAI:EX-0001-0008-23
+  // QFAI:EX-0001-0008-24
+  // QFAI:EX-0001-0008-25
+  it("preflights the entire batch against retired-inclusive two-digit capacity", async () => {
+    const capacity = await section(TRIAGE, "### Capacity before writing");
+    expect(capacity).toMatch(/AC and EX tails stay two digits.*01 through 99/u);
+    expect(capacity).toMatch(/Before writing a planned batch.*each affected kind and story/u);
+    expect(capacity).toMatch(/high-water number H.*0 when empty/u);
+    expect(capacity).toMatch(/remaining capacity 99-H.*requested additions/u);
+    expect(capacity).toMatch(/tree and decisions, including retired IDs/u);
+    expect(capacity).toMatch(
+      /requested additions exceed 99-H.*stop before any partial allocation or invalid declaration/u,
+    );
+    expect(capacity).toMatch(/Never fill gaps, reuse retired IDs or emit tail 100/u);
+    expect(capacity).toMatch(/empty scope has capacity 99/u);
+    expect(capacity).toMatch(/H = 98 allows one addition at tail 99, not two/u);
+    expect(capacity).toMatch(/retired 99 still exhausts the scope/u);
+
+    const procedure = await section("step/sdd-story/STEP.md", "## Procedure");
+    const preWrite = procedure.split("2. Write the story index")[0] ?? "";
+    expect(preWrite).toContain("sdd-triage.md#capacity-before-writing");
+    expect(preWrite).toMatch(/retired-inclusive remaining capacity and requested count/u);
+    expect(preWrite).toMatch(/stop an over-capacity batch before any dependent declaration/u);
+    const scopes = await section(TRACEABILITY, "## Identifier scopes");
+    expect(scopes).toMatch(
+      /For an approved capacity-only sibling or actual move.*owning stage.s capacity preflight and complete map before writing/u,
+    );
+    expect(scopes).toMatch(/retired-inclusive remaining 99-H/u);
+    expect(scopes).toMatch(/Stop an over-capacity batch before partial declarations/u);
+  });
+
+  // QFAI:AC-0001-0008-09
+  // QFAI:EX-0001-0008-26
+  it("bounds capacity claims to observed sources and rechecks later publication", async () => {
+    const capacity = await section(TRIAGE, "### Capacity before writing");
+    expect(capacity).toMatch(/observed published parallel heads and known reservations/u);
+    expect(capacity).toMatch(/project.s existing method/u);
+    expect(capacity).toMatch(/Name the fixed observation and what it did not cover/u);
+    expect(capacity).toMatch(
+      /snapshot reserves nothing.*cannot cover unpublished concurrent work/u,
+    );
+    expect(capacity).toMatch(/Recheck newly published claims or collisions before publication/u);
+    const collisions =
+      (await section(TRIAGE, "### Actual moves and incoming collisions")).split(
+        "Two branches can take",
+      )[0] ?? "";
+    expect(collisions).toMatch(/fixed provenance and meaning.*only the provably incoming item/u);
+    expect(collisions).toMatch(/without blanket replacement/u);
+    expect(collisions).toMatch(/Keep unaffected published cases and IDs/u);
+  });
+
+  // QFAI:AC-0001-0147-16
+  // QFAI:EX-0001-0147-41
+  // QFAI:EX-0001-0147-43
+  it("limits a same-goal sibling to approved cohesive incoming overflow and rejects fitting additions", async () => {
+    const partition = await section(TRIAGE, "### Capacity partition");
+    expect(partition).toMatch(
+      /Only additions exceeding an actual AC or EX scope.s remaining 99-H qualify/u,
+    );
+    expect(partition).toMatch(/source story, affected kind, H, remainder and requested count/u);
+    expect(partition).toMatch(/leaving every published case and ID in place/u);
+    expect(partition).toMatch(
+      /cohesive incoming group.*capacity-checked sibling.*same BF and actual actor goal/u,
+    );
+    expect(partition).toMatch(
+      /in-force owning change request.*explicitly approve.*partition.*affected paths before writing/u,
+    );
+    expect(partition).toMatch(/truthful cohesive scope.*each criterion.s owner/u);
+    expect(partition).toMatch(
+      /do not invent a new product outcome, duplicate an obligation or weaken it/u,
+    );
+    expect(partition).toMatch(
+      /different actor, goal, flow or intended behavior.*existing owning approval path/u,
+    );
+    expect(partition).toMatch(/Additions that fit the original scope do not qualify/u);
+    expect(partition).toMatch(
+      /Missing authority, insufficient destination capacity or no truthful partition stops the dependent write/u,
+    );
+    expect(partition).toMatch(
+      /prospective split places new overflow cases.*existing case.*complete map/u,
+    );
+    expect(partition).toMatch(/approve no future specific creation, move or split/u);
+    const moves =
+      (await section(TRIAGE, "### Actual moves and incoming collisions")).split(
+        "Two branches can take",
+      )[0] ?? "";
+    expect(moves).toMatch(
+      /uncovered declarations, missing counted test links, changed assertions or an incomplete map stops/u,
+    );
+
+    const decomposition = await section(
+      "skill/qfai-sdd/references/requirements-decomposition.md",
+      "## Item size",
+    );
+    expect(decomposition).toMatch(
+      /same actual actor goal.*same BF.*requested AC or EX additions exceed.*remaining capacity/u,
+    );
+    expect(decomposition).toMatch(/only new, cohesive incoming cases.*covering change request/u);
+    expect(decomposition).toMatch(
+      /Confirm retired-inclusive capacity and the owning approval before writing/u,
+    );
+    expect(await section("step/sdd-story/STEP.md", "## Procedure")).toContain(
+      "sdd-triage.md#capacity-partition",
+    );
+    expect(decomposition).toMatch(
+      /invents no new product outcome.*grants no future creation or move permission/u,
+    );
+  });
+
+  // QFAI:AC-0001-0147-16
+  // QFAI:EX-0001-0147-42
+  // QFAI:EX-0001-0147-44
+  it("requires a complete approved source-bound move map and preserves historical decision references", async () => {
+    const moves =
+      (await section(TRIAGE, "### Actual moves and incoming collisions")).split(
+        "Two branches can take",
+      )[0] ?? "";
+    expect(moves).toMatch(
+      /approved actual AC\/EX move or incoming collision repair.*complete one-to-one map/u,
+    );
+    for (const term of [
+      "fixed source commit and declaration path",
+      "original BF/US/AC/EX identity",
+      "case meaning",
+      "destination story, AC/EX IDs and paths",
+      "active BR citation",
+      "counted adjacent test declaration",
+      "unaffected cases",
+      "input, expected outcome and executable assertion",
+    ]) {
+      expect(moves).toContain(term);
+    }
+    expect(moves).toMatch(/both scopes. retired-inclusive capacity/u);
+    expect(moves).toMatch(/destination EX needs one existing destination AC.*each AC needs an EX/u);
+    expect(moves).toMatch(/owning BR link and counted test obligation/u);
+    expect(moves).toMatch(/ID change alone proves no coverage/u);
+    expect(moves).toMatch(/Retire old moved IDs in a new approved record and never refill them/u);
+    expect(moves).toMatch(
+      /Inherited published DEC ID, Content and Approach cells.*old-ID references remain historical and unchanged/u,
+    );
+    expect(moves).toMatch(/update only approved active references/u);
+    expect(moves).toMatch(
+      /fixed provenance and meaning.*only the provably incoming item.*without blanket replacement/u,
+    );
+    expect(moves).toMatch(
+      /Unknown ownership, ambiguous collisions.*incomplete map stops the move without a completion claim/u,
+    );
+    expect(moves).toMatch(
+      /manual approval and mapping procedure, not a relocation executor or mapping schema/u,
+    );
+    const scopes = await section(TRACEABILITY, "## Identifier scopes");
+    expect(scopes).toMatch(
+      /complete fixed-source map.*approved active indexes, contract citations and counted test references/u,
+    );
+    expect(scopes).toMatch(
+      /Inherited DEC ID, Content and Approach cells.*historical and unchanged/u,
+    );
+  });
+});

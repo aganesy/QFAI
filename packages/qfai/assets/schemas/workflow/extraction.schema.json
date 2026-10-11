@@ -80,7 +80,8 @@
           "mechanism-inert",
           "removal-requested",
           "visual-open",
-          "prototype-requested"
+          "prototype-requested",
+          "owned-temporary-cleanup"
         ]
       }
     },
@@ -171,6 +172,60 @@
           "alternatives": true
         }
       }
+    },
+    {
+      "then": {
+        "properties": {
+          "intent": {
+            "const": "order"
+          },
+          "artifacts": {
+            "type": "array",
+            "maxItems": 0
+          }
+        }
+      },
+      "if": {
+        "required": ["qualifiers"],
+        "properties": {
+          "qualifiers": {
+            "type": "array",
+            "contains": {
+              "const": "owned-temporary-cleanup"
+            }
+          }
+        }
+      }
+    },
+    {
+      "then": {
+        "properties": {
+          "artifacts": {
+            "type": "array",
+            "maxItems": 0
+          }
+        }
+      },
+      "if": {
+        "required": ["alternatives"],
+        "properties": {
+          "alternatives": {
+            "type": "array",
+            "contains": {
+              "type": "object",
+              "required": ["qualifiers"],
+              "properties": {
+                "qualifiers": {
+                  "type": "array",
+                  "contains": {
+                    "const": "owned-temporary-cleanup"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   ],
   "$defs": {
@@ -253,7 +308,8 @@
               "mechanism-inert",
               "removal-requested",
               "visual-open",
-              "prototype-requested"
+              "prototype-requested",
+              "owned-temporary-cleanup"
             ]
           }
         },
@@ -273,7 +329,29 @@
             ]
           }
         }
-      }
+      },
+      "allOf": [
+        {
+          "then": {
+            "properties": {
+              "intent": {
+                "const": "order"
+              }
+            }
+          },
+          "if": {
+            "required": ["qualifiers"],
+            "properties": {
+              "qualifiers": {
+                "type": "array",
+                "contains": {
+                  "const": "owned-temporary-cleanup"
+                }
+              }
+            }
+          }
+        }
+      ]
     }
   }
 }

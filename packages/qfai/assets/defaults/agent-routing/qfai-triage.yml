@@ -4,6 +4,15 @@
 routing:
   # The triage steps change no tracked file, so each has one author and no
   # build or test phase.
+  - step: triage-owned-cleanup
+    phases:
+      - id: cleanup
+        mandatory_agents: [devops-ci-engineer]
+        conditional_agents: []
+        parallel_groups: []
+        rerun_policy: changed-scope-dependents
+    review_profile: default
+
   - step: triage-close
     phases:
       - id: record

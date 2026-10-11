@@ -4275,6 +4275,8 @@ describe("the optional exact-file diagnostic", () => {
       namedGit(
         fixture.root,
         "clone",
+        "--config",
+        "core.autocrlf=false",
         "--no-checkout",
         path.join(fixture.root, "origin.git"),
         sidecar,
