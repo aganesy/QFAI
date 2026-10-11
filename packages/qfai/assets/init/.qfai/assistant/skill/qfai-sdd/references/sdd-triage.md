@@ -144,6 +144,67 @@ Read all IDs of the kind in the relevant scope, including IDs named by retiremen
 A contract number spans every contract kind, and a BR is numbered inside its contract. DEC and OQ each span their table.
 Empty numeric scopes begin at 0001, and AC/EX tails begin at 01. Do not reuse an ID because its file was removed or a row was rejected.
 
+### Capacity before writing
+
+AC and EX tails stay two digits, from 01 through 99. Before writing a planned
+batch, report each affected kind and story, its high-water number H (0 when
+empty), remaining capacity 99-H and the number of requested additions. Count
+valid IDs in the tree and decisions, including retired IDs, plus observed
+published parallel heads and known reservations under the project's existing
+method. Name the fixed observation and what it did not cover. A snapshot
+reserves nothing and cannot cover unpublished concurrent work.
+
+If requested additions exceed 99-H, stop before any partial allocation or
+invalid declaration. Never fill gaps, reuse retired IDs or emit tail 100.
+An empty scope has capacity 99. H = 98 allows one addition at tail 99, not two;
+a retired 99 still exhausts the scope. Recheck newly published claims or
+collisions before publication.
+
+### Capacity partition
+
+Only additions exceeding an actual AC or EX scope's remaining 99-H qualify for
+a capacity-only story partition. Record the source story, affected kind, H,
+remainder and requested count first. Prefer leaving every published case and ID
+in place and putting a cohesive incoming group in a capacity-checked sibling
+under the same BF and actual actor goal. An in-force owning change request must
+explicitly approve this partition and its affected paths before writing.
+
+State the sibling's truthful cohesive scope and settle each criterion's owner;
+do not invent a new product outcome, duplicate an obligation or weaken it.
+A different actor, goal, flow or intended behavior needs its existing owning
+approval path. Additions that fit the original scope do not qualify. Missing
+authority, insufficient destination capacity or no truthful partition stops
+the dependent write. This prospective split places new overflow cases; moving
+an existing case also needs the complete map below. These instructions approve
+no future specific creation, move or split.
+
+### Actual moves and incoming collisions
+
+Before an approved actual AC/EX move or incoming collision repair, make a
+complete one-to-one map of:
+
+- the fixed source commit and declaration path;
+- each original BF/US/AC/EX identity and its case meaning;
+- destination story, AC/EX IDs and paths;
+- every affected active BR citation and counted adjacent test declaration;
+- unaffected cases and the input, expected outcome and executable assertion
+  each mapped case preserves.
+
+Check both scopes' retired-inclusive capacity. Each destination EX needs one
+existing destination AC; each AC needs an EX. Preserve every moved EX's
+owning BR link and counted test obligation. An ID change alone proves no
+coverage. Retire old moved IDs in a new approved record and never refill them.
+Inherited published DEC ID, Content and Approach cells and their old-ID
+references remain historical and unchanged; update only approved active
+references.
+
+Keep unaffected published cases and IDs. Identify same-number branch cases by
+fixed provenance and meaning, and change only the provably incoming item,
+without blanket replacement. Unknown ownership, ambiguous collisions,
+uncovered declarations, missing counted test links, changed assertions or an
+incomplete map stops the move without a completion claim. This is a manual
+approval and mapping procedure, not a relocation executor or mapping schema.
+
 Two branches can take the same next ID. When a merge leaves one ID on two items:
 
 1. The merge target's item keeps the ID. Renumber the incoming item, the one the merge brings in.
@@ -185,7 +246,7 @@ Rollback restores a changed file only if its bytes still match this invocation's
 replacement, preserving concurrent changes and naming any unrestored path.
 These checks guarantee neither atomic concurrency nor power-loss safety.
 
-A move to another BF changes the story's US ID and all child AC and EX IDs. Record the old IDs as retired, allocate new IDs in the destination scope, and update every citation before the move is complete.
+A move to another BF changes the story's US ID and all child AC and EX IDs. It follows the existing approval path, not the same-BF capacity exception. Apply the complete map above to approved active citations and retire old IDs in a new approved record; inherited DEC cells and their historical references stay unchanged.
 
 ## Completion of triage
 
