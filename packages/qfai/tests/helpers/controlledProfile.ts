@@ -1,8 +1,8 @@
 import { execFile, spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { lstat, mkdir, mkdtemp, readFile, realpath, rm, unlink, writeFile } from "node:fs/promises";
-import path from "node:path";
 import os from "node:os";
+import path from "node:path";
 
 import { outcomeOf } from "./spawnCaptured.js";
 import type { ValidationResult } from "../../src/core/types.js";
