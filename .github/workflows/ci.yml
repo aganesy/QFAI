@@ -960,16 +960,27 @@ jobs:
           function output(name, value) {
             fs.appendFileSync(process.env.GITHUB_OUTPUT, name + '=' + value + '\n');
           }
+          let finished = false;
           function finish(error = null) {
+            if (error) {
+              process.exitCode = 1;
+              console.error(error?.stack ?? String(error));
+            }
+            if (finished) return;
+            finished = true;
             observed.endedUTC = new Date().toISOString();
             observed.actualControllerExit = error ? 1 : 0;
             observed.blocker = error?.message ?? null;
             observed.nativeCommandCount = commands.length;
-            json(path.join(receiptRoot, 'job-receipt.json'), observed);
-            if (error) {
-              fs.writeFileSync(path.join(receiptRoot, 'failure.txt'), error.stack + '\n', { flag: 'wx' });
-              console.error(error.stack);
+            try {
+              json(path.join(receiptRoot, 'job-receipt.json'), observed);
+              if (error) {
+                fs.writeFileSync(path.join(receiptRoot, 'failure.txt'), (error?.stack ?? String(error)) + '\n', { flag: 'wx' });
+              }
+            } catch (receiptError) {
               process.exitCode = 1;
+              observed.actualControllerExit = 1;
+              console.error('Evidence receipt write failed; terminal receipt is incomplete: ' + (receiptError?.stack ?? String(receiptError)));
             }
           }
           try {
@@ -1066,9 +1077,9 @@ jobs:
             output('trusted', Buffer.from(JSON.stringify(trusted)).toString('base64'));
             output('archive-sha', archiveSHA);
             output('manifest-sha', manifestSHA);
-            finish();
             output('index-sha', digest(fs.readFileSync(path.join(receiptRoot, 'index.json'))));
             output('index-bytes', String(fs.statSync(path.join(receiptRoot, 'index.json')).size));
+            finish();
           } catch (error) {
             finish(error);
           }
@@ -1264,16 +1275,27 @@ jobs:
           function output(name, value) {
             fs.appendFileSync(process.env.GITHUB_OUTPUT, name + '=' + value + '\n');
           }
+          let finished = false;
           function finish(error = null) {
+            if (error) {
+              process.exitCode = 1;
+              console.error(error?.stack ?? String(error));
+            }
+            if (finished) return;
+            finished = true;
             observed.endedUTC = new Date().toISOString();
             observed.actualControllerExit = error ? 1 : 0;
             observed.blocker = error?.message ?? null;
             observed.nativeCommandCount = commands.length;
-            json(path.join(receiptRoot, 'job-receipt.json'), observed);
-            if (error) {
-              fs.writeFileSync(path.join(receiptRoot, 'failure.txt'), error.stack + '\n', { flag: 'wx' });
-              console.error(error.stack);
+            try {
+              json(path.join(receiptRoot, 'job-receipt.json'), observed);
+              if (error) {
+                fs.writeFileSync(path.join(receiptRoot, 'failure.txt'), (error?.stack ?? String(error)) + '\n', { flag: 'wx' });
+              }
+            } catch (receiptError) {
               process.exitCode = 1;
+              observed.actualControllerExit = 1;
+              console.error('Evidence receipt write failed; terminal receipt is incomplete: ' + (receiptError?.stack ?? String(receiptError)));
             }
           }
           try {
@@ -1370,9 +1392,9 @@ jobs:
             output('trusted', Buffer.from(JSON.stringify(trusted)).toString('base64'));
             output('archive-sha', archiveSHA);
             output('manifest-sha', manifestSHA);
-            finish();
             output('index-sha', digest(fs.readFileSync(path.join(receiptRoot, 'index.json'))));
             output('index-bytes', String(fs.statSync(path.join(receiptRoot, 'index.json')).size));
+            finish();
           } catch (error) {
             finish(error);
           }
@@ -1588,16 +1610,27 @@ jobs:
           function output(name, value) {
             fs.appendFileSync(process.env.GITHUB_OUTPUT, name + '=' + value + '\n');
           }
+          let finished = false;
           function finish(error = null) {
+            if (error) {
+              process.exitCode = 1;
+              console.error(error?.stack ?? String(error));
+            }
+            if (finished) return;
+            finished = true;
             observed.endedUTC = new Date().toISOString();
             observed.actualControllerExit = error ? 1 : 0;
             observed.blocker = error?.message ?? null;
             observed.nativeCommandCount = commands.length;
-            json(path.join(receiptRoot, 'job-receipt.json'), observed);
-            if (error) {
-              fs.writeFileSync(path.join(receiptRoot, 'failure.txt'), error.stack + '\n', { flag: 'wx' });
-              console.error(error.stack);
+            try {
+              json(path.join(receiptRoot, 'job-receipt.json'), observed);
+              if (error) {
+                fs.writeFileSync(path.join(receiptRoot, 'failure.txt'), (error?.stack ?? String(error)) + '\n', { flag: 'wx' });
+              }
+            } catch (receiptError) {
               process.exitCode = 1;
+              observed.actualControllerExit = 1;
+              console.error('Evidence receipt write failed; terminal receipt is incomplete: ' + (receiptError?.stack ?? String(receiptError)));
             }
           }
           try {
@@ -1906,16 +1939,27 @@ jobs:
           function output(name, value) {
             fs.appendFileSync(process.env.GITHUB_OUTPUT, name + '=' + value + '\n');
           }
+          let finished = false;
           function finish(error = null) {
+            if (error) {
+              process.exitCode = 1;
+              console.error(error?.stack ?? String(error));
+            }
+            if (finished) return;
+            finished = true;
             observed.endedUTC = new Date().toISOString();
             observed.actualControllerExit = error ? 1 : 0;
             observed.blocker = error?.message ?? null;
             observed.nativeCommandCount = commands.length;
-            json(path.join(receiptRoot, 'job-receipt.json'), observed);
-            if (error) {
-              fs.writeFileSync(path.join(receiptRoot, 'failure.txt'), error.stack + '\n', { flag: 'wx' });
-              console.error(error.stack);
+            try {
+              json(path.join(receiptRoot, 'job-receipt.json'), observed);
+              if (error) {
+                fs.writeFileSync(path.join(receiptRoot, 'failure.txt'), (error?.stack ?? String(error)) + '\n', { flag: 'wx' });
+              }
+            } catch (receiptError) {
               process.exitCode = 1;
+              observed.actualControllerExit = 1;
+              console.error('Evidence receipt write failed; terminal receipt is incomplete: ' + (receiptError?.stack ?? String(receiptError)));
             }
           }
           try {
