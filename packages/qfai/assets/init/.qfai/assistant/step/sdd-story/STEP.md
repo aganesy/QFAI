@@ -21,6 +21,9 @@ Stage 3 of the story tree: stories and examples.
   `.qfai/assistant/rule/test-layers.md`.
 - `.qfai/assistant/skill/qfai-sdd/references/sdd-phase-checklists.md#stories-and-examples`
   when editing.
+- `.agents/rules/document-schema.md`, when writing or editing a story-tree document: start from
+  its template and add no section the schema does not name.
+- `.agents/rules/documentation-clarity.md`, when writing the prose this step produces.
 
 ## Writes
 
