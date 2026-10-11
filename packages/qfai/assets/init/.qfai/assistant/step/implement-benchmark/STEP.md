@@ -43,7 +43,7 @@ is follows from whether the run already carries a baseline record.
 
 ## What it writes
 
-- The stage report states that the step changed no file git tracks.
+- The step changes no file git tracks. Its stage report records that result.
 - The stage report holds the conditions, the numbers and, on
   the second run, the comparison.
 

@@ -63,8 +63,9 @@ A change to a file listed under [Never a maintenance edit](#never-a-maintenance-
 or a planned edit with a semantic effect, is not a maintenance edit. Nothing is
 edited: stop, and report that the change is not a maintenance edit.
 
-Inside a workflow run, report `needs_repair` and stop the run as `blocked`: no
-stage of this route serves the finding's owner. The session report records:
+In a workflow run, report `needs_repair`: no stage of the route serves the finding's owner,
+so the run is `blocked`, naming the finding and the owner skill to invoke by name.
+The session report records:
 
 - the semantic effect, affected paths and the review or command that found it;
 - that nothing was edited and the `edit-text` run binds no flow;
