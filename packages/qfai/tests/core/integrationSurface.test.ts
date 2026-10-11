@@ -1711,3 +1711,70 @@ describe("a canonical vendored by link is a layout, not damage", () => {
     });
   });
 });
+
+describe("canonical ancestor type metadata without symlinks", () => {
+  // QFAI:EX-0001-0232-35
+  it.each([
+    ["skill root", ".qfai/assistant/skill"],
+    ["assistant root", ".qfai/assistant"],
+  ])("records a regular file at the %s as unwalkable", async (_name, relative) => {
+    await withProject(async (root) => {
+      await seedInitRecord(root);
+      const ancestor = path.join(root, ...relative.split("/"));
+      await mkdir(path.dirname(ancestor), { recursive: true });
+      await writeFile(ancestor, "not a directory\n", "utf-8");
+      for (const dir of INTEGRATION_SURFACE_DIRS) {
+        await mkdir(path.join(root, ...dir.split("/")), { recursive: true });
+      }
+      await writeFile(
+        path.join(root, ".claude", "skills", "qfai-implement"),
+        skillTarget(".claude/skills", "qfai-implement"),
+        "utf-8",
+      );
+
+      const report = await inspectIntegrationSurface(root);
+      expect(report.issues.map((entry) => entry.code)).toContain("QFAI-LINK-001");
+      expect(report.issues.some((entry) => entry.message.includes(relative))).toBe(true);
+      expect(report.unwalkable).toContain(relative);
+      expect(report.unwalkable).not.toContain(`${relative}/qfai-implement`);
+    });
+  });
+
+  it("does not mark an absent canonical skill root as unwalkable", async () => {
+    await withProject(async (root) => {
+      await seedInitRecord(root);
+      for (const dir of INTEGRATION_SURFACE_DIRS) {
+        await mkdir(path.join(root, ...dir.split("/")), { recursive: true });
+      }
+      await writeFile(
+        path.join(root, ".claude", "skills", "qfai-implement"),
+        skillTarget(".claude/skills", "qfai-implement"),
+        "utf-8",
+      );
+
+      const report = await inspectIntegrationSurface(root);
+      expect(report.issues.map((entry) => entry.code)).toContain("QFAI-LINK-001");
+      expect(report.unwalkable).toEqual([]);
+    });
+  });
+
+  it("does not mark a regular-file agent ancestor as unwalkable", async () => {
+    await withProject(async (root) => {
+      await seedCanonical(root, ["qfai-implement"], []);
+      await seedInitRecord(root);
+      const agents = path.join(root, ".qfai", "assistant", "agent");
+      await rm(agents, { recursive: true, force: true });
+      await writeFile(agents, "not a directory\n", "utf-8");
+      for (const dir of INTEGRATION_SURFACE_DIRS) {
+        await mkdir(path.join(root, ...dir.split("/")), { recursive: true });
+      }
+
+      const report = await inspectIntegrationSurface(root);
+      expect(report.issues.map((entry) => entry.code)).toContain("QFAI-LINK-001");
+      expect(report.issues.some((entry) => entry.message.includes(".qfai/assistant/agent"))).toBe(
+        true,
+      );
+      expect(report.unwalkable).toEqual([]);
+    });
+  });
+});

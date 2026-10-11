@@ -351,6 +351,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Keep validation findings available when an assistant integration path has
+  a file as an ancestor.
+
 - Check the combined raw bytes of listed AGENTS ancestor chains and report each
   file's contribution when the chain exceeds the source-byte budget.
 
