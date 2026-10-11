@@ -356,6 +356,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Compare named-test result paths with native absolute path semantics while
+  preserving exact file selection and failure checks. Fixes #3459.
+
 - Include authorized temporary-directory cleanup in the workflow candidate purpose.
   Fixes #3455.
 
