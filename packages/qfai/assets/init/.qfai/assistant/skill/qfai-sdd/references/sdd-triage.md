@@ -7,6 +7,7 @@ Triage selects the smallest story-tree change that answers each incoming require
 - Inputs
 - Operation choice
 - Decision and question rows
+- Published decision prefix recovery
 - Approval and no-question mode
 - Retiring an EX, AC or BR
 - ID allocation
@@ -34,7 +35,7 @@ Inspect the impact cascade: policy → BF → US → AC → EX → enforcing con
 ## Decision and question rows
 
 Use <paths.specsDir>/decisions.md and <paths.specsDir>/open-questions.md, each with exactly ID, Content, Approach, Status. Append a row; later only Status may change, including to `PARTLY SUPERSEDED (by DEC-NNNN)` when a later row narrows a decision without replacing it.
-Do not edit the first three cells or remove the row, except for explicit branch-added decision renumbering under ID allocation below. Inherited rows retain those cells. Use the next highest ID in the table plus one. A retired item still reserves its BF or US ID.
+Do not edit the first three cells or remove the row, except for explicit branch-added decision renumbering under ID allocation below or the bounded published decision prefix recovery below. Inherited rows retain those cells. Use the next highest ID in the table plus one. A retired item still reserves its BF or US ID.
 
 decisions.md records only what the user decided: each change request the user approved or declined,
 and each critical decision the user made. A row is appended once the user has decided what it records.
@@ -78,6 +79,25 @@ append an `Unadjudicated:` OQ at TODO. Name the affected IDs, expected versus
 actual behavior, implementation-change evidence, owner and required permission.
 Stop dependent AC, EX and BR edits; independent authorized work may continue.
 
+## Published decision prefix recovery
+
+When an approved request names a published malformed decision added by the
+branch, read `.qfai/assistant/rule/drift-protocol.md#published-decision-prefix-recovery`.
+That rule defines the source, byte boundaries, exact prefix and stop conditions.
+Approval of the generic protocol alone authorizes no target; append a separate
+new target-specific recovery change request using `templates/change-request.md`.
+
+Record the fixed base and unique common ancestor, absence of the target in both,
+the published source commit's ancestry, raw Approach digests and the exact
+approved prefix. Immediately before writing, recheck the unique current row,
+its original ID, Content and Status, and its old digest. Preserve every original
+Approach byte as the suffix and leave every other row unchanged. Recheck the
+existing form and validation; status or supersession clears no malformed form.
+Record actual results, including any stopped recovery, without claiming an
+automatic repair. Inherited records and open-question rows remain excluded.
+Rollback follows the recorded new-digest check and restores the original form
+failure; it never resets, amends or force pushes.
+
 ## Approval and no-question mode
 
 Use the shared user-question protocol for CREATE, DELETE, SPLIT, MERGE, SUPERSEDE, and UPDATE:REMOVE. Present the target and rationale. Do not self-approve. A request from the user in the session that names the operation and its effect is the approval, and no second question is asked.
@@ -101,7 +121,7 @@ A story-tree or contract file changes only on the user's approval:
    records who approved it, when, and the label of the option chosen.
 3. Move the row to DONE once every change it names is written.
 
-A row present before the stage started keeps its ID, Content and Approach, except for explicit branch-added decision renumbering under ID allocation below. Inherited rows keep those cells without exception.
+A row present before the stage started keeps its ID, Content and Approach, except for explicit branch-added decision renumbering under ID allocation below or published decision prefix recovery above. Inherited rows keep those cells without exception.
 Only a row this stage appended changes its Status.
 
 ## Retiring an EX, AC or BR
