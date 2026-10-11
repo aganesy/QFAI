@@ -36,7 +36,8 @@ covering that action, target and scope. Commit authority alone covers none of th
    covers the verification commit and its paths. Record it `DELEGATED`, name
    the actual check, and retain its pending state. A gate
    recorded `DELEGATED` does not stop the commit while its named CI check
-   is pending under that authority; it permits no verification-complete claim.
+   is pending under that authority. This permits that commit, not a
+   verification-complete claim.
    Every nondelegated gate must pass.
    A delegated red check stops transport of the same unchanged candidate.
    Under explicit CI-only delegation covering the transport commit, the
