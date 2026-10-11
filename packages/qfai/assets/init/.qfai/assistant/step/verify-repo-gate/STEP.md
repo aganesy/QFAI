@@ -180,45 +180,47 @@ cover. Delegation does not claim that its validation profile has already run. Fi
 never be written are in
 `.qfai/assistant/skill/qfai-verify/references/verify-output-contract.md`.
 
-## The stage result
+## Stage report
 
 Inside an `npx qfai workflow` run, the stage runs every required gate over the
 run's change and reports each result.
 
-- The stage writes this run's `.qfai/report/verify.json` and names it in
-  `artifactRefs`.
+- The stage writes this run's `.qfai/report/verify.json` and names its scope and
+  the revision checked in the stage report, with the commands and evidence for
+  each gate.
 - A `verify.json` written by another run, scoped to another flow or kept in a
   shared location is never named as this stage's report.
-- The stage's own `gateResults` are information only: the run decides no gate
-  from them.
-- `outcome` and `testObservation` are reported apart.
-- A required gate that did not run is reported `unrun`, never as a pass.
-- A gate the project runs in CI only is reported `delegated`, with its check
-  name.
+- Report the stage's completion or stop separately from actual test and gate
+  observations. A required gate that did not run is UNRUN, never a pass.
+- A gate the project runs in CI only is DELEGATED, with its check name and
+  observed CI status.
 
-`verify.json` itself is unchanged inside a run: its fields and values are
-`.qfai/assistant/skill/qfai-verify/references/verify-output-contract.md`'s,
-and the run's values stay in the stage result.
+Keep these details in the stage report and session handoff. `verify.json`
+keeps only the fields and values in
+`.qfai/assistant/skill/qfai-verify/references/verify-output-contract.md`.
 
 ## Findings verify did not cause
 
 Inside a run, verify edits no artifact another owner holds. A finding it did
-not cause returns `needs_repair`, with the finding listed in `debts` under its
-`resolvingOwner`, so the run sends the repair there.
+not cause returns `needs_repair`. The stage report and handoff name the
+finding, its evidence and affected paths, the repair owner and the repair
+needed before verification can resume.
 
-| Finding                   | `resolvingOwner` |
+| Finding                   | Owner            |
 | ------------------------- | ---------------- |
 | A story or contract gap   | `qfai-sdd`       |
 | An acceptance-test defect | `qfai-implement` |
 | An implementation defect  | `qfai-implement` |
 
-These three are the only repairs verify routes.
+These three are the only repairs verify hands off to an owner.
 
 ## A missing environment
 
-- A gate whose environment is missing returns the stage `blocked`, with the
-  blocker `stage-blocked` and `operator` as the one who clears it.
-- No debt is listed for it, and no repair is routed.
+- A gate whose environment is missing leaves the stage `blocked`. Record
+  the missing environment in the stage report, with the operator as its owner
+  and the capability needed to resume.
+- This is an environment stop, not a product repair. The gate remains UNRUN
+  with its reason.
 
 ## A failure the run did not cause
 

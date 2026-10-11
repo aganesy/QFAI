@@ -44,8 +44,8 @@ changing it and report a branch:
 
 ## What it writes
 
-- The moved code, and a test's reference to a moved name, listed in
-  `changedFiles`.
+- The changed, moved or deleted file paths for the code and any test reference
+  to a moved name, listed in the stage report.
 - A record of each move and each suite run, in the stage report.
 
 ## Gate
