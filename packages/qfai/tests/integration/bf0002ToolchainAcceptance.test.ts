@@ -159,10 +159,15 @@ describe("BF-0002 toolchain and release acceptance", () => {
     const uploads = Object.keys(workflowJobs("ci.yml")).flatMap((id) =>
       jobSteps("ci.yml", id).filter(
         (step) =>
-          typeof step["uses"] === "string" && step["uses"].startsWith("actions/upload-artifact@"),
+          typeof step["uses"] === "string" &&
+          step["uses"].startsWith("actions/upload-artifact@") &&
+          stepInputs(step)["name"] === "qfai-report" &&
+          String(stepInputs(step)["path"])
+            .split(/\s+/u)
+            .includes("tmp/pack/sandbox/out/.qfai/report/validate.json"),
       ),
     );
-    expect(uploads.length).toBeGreaterThan(0);
+    expect(uploads).toHaveLength(1);
     for (const upload of uploads) {
       const condition = String(upload["if"]);
       expect(condition).toContain("!cancelled()");

@@ -163,6 +163,25 @@ still fails.
 While implementing, run only the selected test. The full suite, Lint,
 Typecheck, Build and `npx qfai validate` run once, in the verify stage.
 
+### Selected-case execution
+
+Before each focused invocation, link the selected EX to its test declaration
+and full file/parent/case identity. Record observed execution of that case's
+body and its terminal result, apart from process exit, counts, container
+results and static annotation linkage. A passing file or zero selected cases
+cannot close Red, Green or Refactor. Retain the output, correct selection or
+observation and repeat the focused invocation.
+
+Read
+`.qfai/assistant/skill/qfai-implement/references/red-admissibility.md#selected-case-execution`
+for the human receipt, command arguments, cwd, runtime version, reporter, revision,
+raw output and case identity. Ordinary RED needs the selected intended
+assertion or expected-exception failure. A parent, unrelated, import or
+unconditional-throw failure is not that RED. GREEN and Refactor need the same
+selected behavior's observed success on the intended input; skip, TODO,
+cancellation, interruption or an expected-failure inversion does not supply
+ordinary success. Existing approved alternative RED routes remain available.
+
 1. **Red:** Run the Test command from `tech.md` for the selected test alone.
    Observe the assertion fail for the intended behavior before changing
    production code. A load error, missing dependency, or broken fixture is
@@ -209,6 +228,8 @@ Change nothing on the surface that owns the truth.
 The stage report gives each example its own `### EX-NNNN-NNNN-NN` section with
 the obligation, test path and selector,
 RED, GREEN, and Refactor commands and observed results, and open findings.
+For each focused phase, include the selected-case execution receipt above;
+command, exit and aggregate counts alone do not establish behavior execution.
 Evidence without a command and result pair does not prove a gate.
 A failing or unrun gate cannot be reported as PASS.
 

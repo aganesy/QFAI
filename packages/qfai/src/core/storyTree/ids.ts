@@ -109,7 +109,13 @@ export function nextId(
     .filter((id) => shape.test(id))
     .reduce((max, id) => Math.max(max, Number(id.slice(-width))), 0);
   if (highest >= 10 ** width - 1) {
-    throw new RangeError(`${kind} ID space is exhausted under ${parentId ?? "the tree"}`);
+    const guidance =
+      kind === "AC" || kind === "EX"
+        ? "; upper bound 99, remaining 0. Read .qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#capacity-partition for an approved capacity partition."
+        : "";
+    throw new RangeError(
+      `${kind} ID space is exhausted under ${parentId ?? "the tree"}${guidance}`,
+    );
   }
   return `${prefix}${String(highest + 1).padStart(width, "0")}`;
 }
