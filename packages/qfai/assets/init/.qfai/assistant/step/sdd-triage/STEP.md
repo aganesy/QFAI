@@ -36,16 +36,27 @@ no-argument batch, and its gate runs with `--flow BF-NNNN` for that flow.
 
 ## Stage 0: source and preflight
 
-1. Run `npx qfai sdd preflight` and use its `selectedInputPath`; a selected
+1. Use the launcher established by
+   `.qfai/assistant/rule/shared-skill-operating-baseline.md#canonical-qfai-launcher-mandatory`.
+   Record its resolved package path and version in the SDD report. Check that
+   the installed Stage 0 instructions support the procedure being used.
+2. Run `npx qfai sdd preflight` and use its `selectedInputPath`; a selected
    discussion pack may be older than the newest pack.
-2. Read the pack, its completed reviews, explicit user requirements, and the
+3. Read the pack, its completed reviews, explicit user requirements, and the
    existing story tree. A discussion pack is provenance and design input, not a
    normative SSOT. Record a discrepancy in an SDD-owned row or the SDD report; do not
-   edit the pack to clear this stage.
-3. Stop if no usable source exists or a product decision cannot be inferred
-   safely. An imported tree without a discussion pack takes its source as
-   `.qfai/assistant/skill/qfai-sdd/references/sdd-execution-playbook.md#stage-0-source-inventory`
-   says.
+   edit the pack to clear this stage. For the current request, read the existing
+   purpose in `<paths.specsDir>/01_policy/objective.md` and inspect related flows
+   and stories. Do not regenerate the existing purpose or a past pack merely
+   because discussion provenance is absent.
+4. A missing-pack diagnosis does not mean that specifications are absent. For
+   conditional source selection, read
+   `.qfai/assistant/skill/qfai-sdd/references/sdd-execution-playbook.md#stage-0-source-inventory`.
+   Use an existing readable authoritative specification with `--import <path>`;
+   use an explicit user requirement as supplied, without inventing an import
+   file. Stop if no usable source exists or a product decision cannot be
+   inferred safely. Import-lite readiness does not establish complete
+   requirements or a validation PASS.
 
 ## Stage 1: triage and records
 

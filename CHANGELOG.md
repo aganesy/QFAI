@@ -365,20 +365,39 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - Check the combined raw bytes of listed AGENTS ancestor chains and report each
   file's contribution when the chain exceeds the source-byte budget.
 
+- Check identifier capacity before writing a story batch. Separate incoming
+  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
+
 - **A released-entry repair moves complete new blocks back to Unreleased.**
   The explicit local-base command refuses mixed historical edits, ambiguous
   blocks and changed input bytes, and names exact source lines and categories.
   It writes only the changelog and leaves Git operations to the caller. Fixes #3252.
+
+- Focused TDD reports identify the selected case's actual execution and result,
+  apart from process exits, counts and containers. Normal verification reconciles
+  full collection membership without adding a full run to each focused cycle.
 
 - Include the existing acceptance-body signal in both extraction schema readings.
 
 - Clarify how to report host-blocked temporary-file cleanup, hand off allowed
   manual steps and verify removal without claiming pending cleanup is complete.
 
+- Keep validation profiling inside an owned, bounded child process and retain
+  measurements or failure evidence from Linux and Windows CI.
+
+- **Story-tree obligations parse example declarations only where they can count.**
+  Selected TDD files with EX annotations use declaration parsing. ATDD coverage
+  and annotation diagnostics retain their existing checks.
+
 - **Question-only work checks authority before repairing tracked files.**
   Existing permission for the same target is reused. Otherwise the agent offers
   repair or a report-only stop; an uncovered no-question run reports and stops
   that target without writing a tracked open question.
+
+- **Missing-pack preflight diagnostics explain how to use existing specifications.**
+  Conditional import guidance preserves the current purpose and request without
+  regenerating past packs. Source selection and validation gates remain unchanged.
+  Fixes #3302.
 
 - **A diagnosed missing example reuses an existing rule for its obligation.**
   Equivalent rules use existing example coverage and stable rule IDs to settle

@@ -557,7 +557,20 @@ jobs:
         # The per-slice script, not the generic runner with a project name — the
         # reason the `test` job's step gives, and the reason surface 3 of
         # `sliceSurfaceAlignment` is load-bearing.
+        # SHIPPED-CI: not-applicable
+        # Because: this profiles the repository's validation corpus, which
+        # the shipped adopter test placeholders do not run.
+        env:
+          QFAI_VALIDATION_PROFILE_ARTIFACT_DIR: ${{ matrix.slice == 'integration' && format('{0}/qfai-validation-profile/{1}/{2}', runner.temp, github.job, matrix.slice) || '' }}
         run: QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:${{ matrix.slice }}
+      - name: Upload validation profile
+        if: ${{ !cancelled() && matrix.slice == 'integration' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: qfai-validation-profile-${{ runner.os }}-node-floor-${{ github.job }}-${{ matrix.slice }}-attempt-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: error
+          path: ${{ runner.temp }}/qfai-validation-profile/${{ github.job }}/${{ matrix.slice }}/*.json
 
   # ── 4. Tests (matrix: test slices) ──────────────────────────────
   test:
@@ -608,7 +621,20 @@ jobs:
         # SHIPPED-CI: not-applicable
         # Because: the shipped test lanes are placeholders that run no test, so
         # there is no invocation on that side for a worker cap to bound.
+        # SHIPPED-CI: not-applicable
+        # Because: this profiles the repository's validation corpus, which
+        # the shipped adopter test placeholders do not run.
+        env:
+          QFAI_VALIDATION_PROFILE_ARTIFACT_DIR: ${{ matrix.slice == 'integration' && format('{0}/qfai-validation-profile/{1}/{2}', runner.temp, github.job, matrix.slice) || '' }}
         run: QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:${{ matrix.slice }}
+      - name: Upload validation profile
+        if: ${{ !cancelled() && matrix.slice == 'integration' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: qfai-validation-profile-${{ runner.os }}-node-current-${{ github.job }}-${{ matrix.slice }}-attempt-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: error
+          path: ${{ runner.temp }}/qfai-validation-profile/${{ github.job }}/${{ matrix.slice }}/*.json
 
   # ── 4a. Windows parity ───────────────────────────────────────────
   # Init and upgrade must behave on Windows as on Linux: CRLF checkouts and paths
@@ -658,10 +684,22 @@ jobs:
           TMP: ${{ runner.temp }}\qfai tmp
         run: node scripts/link-assistant-tree.mjs
       - name: Run the Windows parity suites
+        # SHIPPED-CI: not-applicable
+        # Because: this profiles the repository's validation corpus, which
+        # the shipped adopter test placeholders do not run.
         env:
           TEMP: ${{ runner.temp }}\qfai tmp
           TMP: ${{ runner.temp }}\qfai tmp
+          QFAI_VALIDATION_PROFILE_ARTIFACT_DIR: ${{ runner.temp }}/qfai-validation-profile/${{ github.job }}/parity
         run: pnpm -C packages/qfai test:windows-parity
+      - name: Upload validation profile
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: qfai-validation-profile-${{ runner.os }}-node-current-${{ github.job }}-parity-attempt-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: error
+          path: ${{ runner.temp }}/qfai-validation-profile/${{ github.job }}/parity/*.json
 
   # ── 5. Build, pack verification & qfai validate ─────────────────
   build:

@@ -292,9 +292,9 @@
         "makes a reference immutable and says nothing about what it does, and an action running before",
         "the verdict step can write a workflow command file.",
         "",
-        "An allow-list rather than a ban, because the closure legitimately needs two: the checkout every",
-        "job starts with, and the artifact upload the aggregate uses. Pinned to the SHA, so a bump is a",
-        "change read here as well as in the workflow."
+        "The closure needs checkout, the aggregate report upload, and validation profiling uploads.",
+        "Each action version is pinned to its SHA, so a bump is a change read here as well as in the",
+        "workflow."
       ],
       "nestedActions": ["actions/setup-node@820762786026740c76f36085b0efc47a31fe5020"],
       "nestedActionsNote": [
@@ -414,9 +414,9 @@
         "Run lint gate": "80e8104e145eebb5",
         "Run type check": "51c5eeee942920dc",
         "Run future TypeScript compatibility check": "55db3b7f97fd7fad",
-        "Run the package test suite on the floor (${{ matrix.slice }})": "cdce2fa04dd9f130",
-        "Run tests (${{ matrix.slice }})": "cdce2fa04dd9f130",
-        "Run the Windows parity suites": "ad3695a5821b00cb"
+        "Run the package test suite on the floor (${{ matrix.slice }})": "a931991b300a31e2",
+        "Run tests (${{ matrix.slice }})": "a931991b300a31e2",
+        "Run the Windows parity suites": "e9a048160a0b1d29"
       },
       "verificationBodiesNote": [
         "A digest of each verification step's `run` / `uses` / `with` / `env`, and of the package",
