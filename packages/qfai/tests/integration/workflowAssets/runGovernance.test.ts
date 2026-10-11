@@ -186,9 +186,11 @@ describe("independent targets under one goal", () => {
     expect(targets).toMatch(/preserve target edits.*permitted commit of only its paths/i);
     expect(targets).toMatch(/whole index and worktree are clean/i);
     expect(targets).toMatch(
-      /CI-only pending gates.*DELEGATED commit allowance.*only under explicit user instruction or project policy/i,
+      /CI-only pending gates.*DELEGATED commit allowance.*only under (?:explicit |a )user instruction or project policy/i,
     );
-    expect(targets).toMatch(/wait never authorizes an early commit or skipped gate/i);
+    expect(targets).toMatch(
+      /(?:wait never authorizes an early commit|waiting alone never authorizes a commit) or skipped gate/i,
+    );
   });
 
   // QFAI:AC-0001-0224-08
@@ -218,6 +220,8 @@ describe("independent targets under one goal", () => {
 
   // QFAI:AC-0001-0224-09
   // QFAI:EX-0001-0224-13
+  // QFAI:EX-0001-0224-16
+  // QFAI:EX-0001-0224-17
   it("resumes only with the target's exact head and retains pending, red and review evidence honestly", async () => {
     const targets = await passage(SCREENS, TARGETS);
     expect(targets).toMatch(/existing stage reports and handoff messages.*each target's/i);
@@ -235,6 +239,65 @@ describe("independent targets under one goal", () => {
       /review verdict bound to the commit reviewed.*never relabel it as a review of a newer head/i,
     );
     expect(targets).toMatch(/never.*add a review the plan does not name/i);
+    const finalReport = sectionOf(await readShipped(SCREENS), "## Final report");
+    const receipt = flat(
+      finalReport
+        .split(/\r?\n(?=- )/)
+        .find((paragraph) => paragraph.startsWith("- For a CI wait")) ?? "",
+    );
+    const contract = await readShipped("skill/qfai-verify/references/verify-output-contract.md");
+    const verdictReceipt = flat(
+      contract
+        .split(/\r?\n\s*\r?\n/)
+        .find((paragraph) => paragraph.startsWith("The stage report records")) ?? "",
+    );
+    const gateReport = sectionOf(await readShipped("step/verify-repo-gate/STEP.md"), "## Report");
+    const gateReceipt = flat(
+      gateReport
+        .split(/\r?\n\s*\r?\n/)
+        .find((paragraph) => paragraph.startsWith("For a `DELEGATED` gate")) ?? "",
+    );
+    for (const evidence of [receipt, verdictReceipt, gateReceipt]) {
+      expect(evidence).toMatch(/target.*current head.*run ID or URL/i);
+      expect(evidence).toMatch(/check.*actual outcome and counts.*blocker and resume condition/i);
+      expect(evidence).toMatch(/(?:no run exists|no run yet means no result)/i);
+    }
+    expect(receipt).toMatch(
+      /missing, red or mismatched evidence stops formal completion or merge/i,
+    );
+    expect(receipt).toMatch(/every required check.*actual passing evidence.*current head/i);
+    expect(verdictReceipt).toMatch(/no result.*invent neither/i);
+    expect(verdictReceipt).toMatch(/green.*actual passing evidence.*same target and head/i);
+    expect(verdictReceipt).toMatch(/missing or mismatched evidence remains pending/i);
+    expect(verdictReceipt).toMatch(/completion or merge.*every required check.*current head/i);
+    expect(verdictReceipt).toMatch(/stage report.*summary.*add no verdict fields or states/i);
+    expect(gateReceipt).toMatch(
+      /another head does not pass this head.*missing or mismatched result remains pending/i,
+    );
+    expect(gateReceipt).toMatch(/keep earlier failures visible/i);
+    const completion = flat(
+      gateReport
+        .split(/\r?\n\s*\r?\n/)
+        .find((paragraph) => paragraph.startsWith("Name pending checks")) ?? "",
+    );
+    expect(completion).toMatch(
+      /covered verification commit.*DELEGATED allowance.*does not complete verification/i,
+    );
+    expect(completion).toMatch(
+      /formal completion or merge.*every required check.*current target and head/i,
+    );
+    expect(completion).toMatch(/pending, red, missing or mismatched evidence stops completion/i);
+    expect(completion).toMatch(/existing fix procedure.*own covered authority/i);
+    const publication = flat(
+      finalReport
+        .split(/\r?\n(?=- )/)
+        .find((paragraph) => paragraph.startsWith("- Report repository outcome")) ?? "",
+    );
+    expect(publication).toMatch(/repository outcome separately from external publication/i);
+    expect(publication).toMatch(/local commit is not a push or pull request/i);
+    expect(publication).toMatch(
+      /passing repository checks do not prove.*deployment.*package publication.*external effect/i,
+    );
   });
 
   // QFAI:AC-0001-0224-10
