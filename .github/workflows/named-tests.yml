@@ -21,8 +21,6 @@ on:
         required: true
         type: string
 
-# SHIPPED-CI: not-applicable
-# Because: native path identity belongs to this repository's optional named-test diagnostic; no shipped workflow has it.
 permissions:
   contents: read
 
@@ -30,6 +28,8 @@ concurrency:
   group: named-tests-${{ inputs.pr }}-${{ inputs.project }}
   cancel-in-progress: true
 
+# SHIPPED-CI: not-applicable
+# Because: native path identity belongs to this repository's optional named-test diagnostic; no shipped workflow has it.
 jobs:
   named-test:
     name: Named test diagnostic (${{ inputs.project }})
