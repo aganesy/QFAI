@@ -42,8 +42,9 @@ here stops the work under Article IX of
 `.qfai/assistant/rule/constitution.md`.
 
 The stage report names the same test, its GREEN re-run evidence, and the
-independent reviewer with the review verdict and evidence reference. Keep
-these references in the session handoff so the next stage can verify them.
+independent reviewer with the review verdict and evidence reference. Include
+the changed production paths in that report. Keep these references in the
+session handoff so the next stage can verify them.
 
 ## Gate
 

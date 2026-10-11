@@ -36,6 +36,7 @@ waits until the acceptance stage has taken RED.
    report.
 
 Name the target test and the observation it must expose in the stage report.
+Include the changed paths in that report.
 
 ## When the seam cannot be landed or observed
 

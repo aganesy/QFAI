@@ -35,9 +35,9 @@ it.
 
 ## What it writes
 
-- The quarantine entry or marker, listed in the stage report. Next to it: the
-  test, the failure's signature, the failure rate, and what lets it back in —
-  a recorded number of consecutive passing runs.
+- The changed file path for the quarantine entry or marker, listed in the
+  stage report. Next to it: the test, the failure's signature, the failure rate,
+  and what lets it back in — a recorded number of consecutive passing runs.
 - A record of the runs, in the stage report.
 
 ## Gate

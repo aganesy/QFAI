@@ -28,7 +28,8 @@ run.
 - In the stage report: the number of runs and why, then
   every run in order, each with its command, result and revision.
 - Where the runs lift a quarantine: the removal of the quarantine marker and
-  record the quarantine added, and nothing else.
+  record the quarantine added, and nothing else. Name the removed paths in the
+  stage report.
 
 ## Procedure
 

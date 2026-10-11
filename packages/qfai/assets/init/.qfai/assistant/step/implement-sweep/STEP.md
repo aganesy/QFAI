@@ -60,7 +60,7 @@ The choice between fix and baseline is this step's decision point.
 
 ## What it writes
 
-- The fixes and the baseline entries, listed in the stage report.
+- The changed paths for fixes and baseline entries, listed in the stage report.
 - A record of each finding and what was done with it, in the stage report.
 
 ## Gate
