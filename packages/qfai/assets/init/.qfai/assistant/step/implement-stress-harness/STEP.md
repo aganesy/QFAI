@@ -42,7 +42,7 @@ be checked against something more than one lucky run.
 
 ## What it writes
 
-- The harness files, listed in `changedFiles`. The step changes no production
+- The harness files, listed in the stage report. The step changes no production
   code.
 - A record of the pressure, the seed or load, the number of runs and the
   number of failures, in the stage report.
