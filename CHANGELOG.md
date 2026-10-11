@@ -446,6 +446,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   an editing tool decodes escapes. Forbidden characters remain rejected.
   Fixes #3248.
 
+- Add a selected-file evidence handover guide with native preflight, retained
+  delivery and independent receipt requirements before session archive. Preserve
+  original outcomes and keep unavailable handover pending. Fixes #3301.
+
 - **Unfinished merges stop the branch ID check.** Finish the merge before
   comparing branch-owned identifiers or fetching pull-request heads. Fixes #3246.
 
