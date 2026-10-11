@@ -14,11 +14,15 @@ Feature: Decision and open-question tables
 
   # AC-0001-0007-02
   Scenario: Table rows are only appended
-    Given a row that `decisions.md` or `open-questions.md` already holds on the story tree
+    Given a row that `decisions.md` or `open-questions.md` inherits from the common ancestor of the branch and its explicit base
     When the table changes
     Then the row is still there with the same ID, Content and Approach
     And only its Status may differ
     And a new decision or question is a new row at the end of the table
+    And the only ID-change exception is explicit renumbering of a unique branch-added DEC absent from that ancestor, with only provably branch-added references changed
+    And a published branch-added malformed DEC may receive only a source-bound exact Approach prefix repair under a separate new approved recovery change request
+    And that repair preserves its ID, Content, Status and original Approach suffix, excludes inherited and open-question rows, and stops on unknown or stale proof
+    And a rollback removes only the recorded prefix while its new digest matches and restores the original form error
 
   # AC-0001-0007-03
   Scenario: Triage records, change requests and retired stories are decision rows

@@ -43,6 +43,7 @@ import {
   projectDirOf,
   runReminderHook,
 } from "../helpers/reminderHooks.js";
+import { flat, sectionOf } from "../helpers/shippedAssistant.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 /** Where every entry reads its message, as the settings file names it. */
@@ -50,6 +51,27 @@ const MESSAGES_ARG = `${PROJECT_DIR_PLACEHOLDER}/.agents/rules/reminders.json`;
 
 /** The shipped message file. */
 const SHIPPED_MESSAGES = "packages/qfai/assets/init/root/.agents/rules/reminders.json";
+
+function expectNoEmbeddedReminderText(program: string, messages: unknown): void {
+  if (typeof messages !== "object" || messages === null) throw new Error("no reminder catalog");
+  for (const message of Object.values(messages)) {
+    if (typeof message !== "object" || message === null) throw new Error("invalid reminder");
+    const output: unknown = Reflect.get(message, "hookSpecificOutput");
+    const full: unknown =
+      typeof output === "object" && output !== null
+        ? Reflect.get(output, "additionalContext")
+        : undefined;
+    for (const context of [
+      full,
+      Reflect.get(message, "reason"),
+      Reflect.get(message, "briefContext"),
+    ]) {
+      if (typeof context !== "string") continue;
+      expect(program).not.toContain(context);
+      expect(program).not.toContain(JSON.stringify(context).slice(1, -1));
+    }
+  }
+}
 
 /** What the host writes to a `Bash` hook's stdin for one command. */
 function hookInput(command: string): string {
@@ -153,9 +175,11 @@ function toEntry(value: unknown): HookEntry {
 
 describe.each(SETTINGS_PATHS)("%s", (rel) => {
   let hooks: ReadonlyMap<string, readonly HookGroup[]>;
+  let catalog: unknown;
 
   beforeAll(async () => {
     hooks = readHooks(await readFile(path.join(repoRoot, rel), "utf-8"));
+    catalog = JSON.parse(await readFile(path.join(repoRoot, SHIPPED_MESSAGES), "utf-8"));
   });
 
   it("wires the reminder to a GitHub post and to a Markdown edit", () => {
@@ -255,6 +279,35 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
     expect(text).toContain(".agents/rules/interface-clarity.md");
   });
 
+  // QFAI:EX-0001-0196-53
+  // QFAI:EX-0001-0196-56
+  it("keeps compact editing pointers in the shared catalog with their required rules", () => {
+    if (typeof catalog !== "object" || catalog === null) throw new Error("no reminder catalog");
+    for (const [key, rule] of [
+      ["minimal-implementation", ".agents/rules/minimal-implementation.md"],
+      ["documentation-clarity-after-write", ".agents/rules/documentation-clarity.md"],
+      ["documentation-clarity-after-edit", ".agents/rules/documentation-clarity.md"],
+    ] as const) {
+      const message: unknown = Reflect.get(catalog, key);
+      if (typeof message !== "object" || message === null) throw new Error(`no ${key}`);
+      const brief: unknown = Reflect.get(message, "briefContext");
+      expect(typeof brief, `${key} has a repeat pointer`).toBe("string");
+      if (typeof brief !== "string") throw new Error(`no ${key} pointer`);
+      expect(brief).toContain(rule);
+      expect(brief).not.toMatch(/[\r\n\u2028\u2029]/);
+      const output: unknown = Reflect.get(message, "hookSpecificOutput");
+      if (typeof output !== "object" || output === null) throw new Error("no hook output");
+      const full: unknown = Reflect.get(output, "additionalContext");
+      if (typeof full !== "string") throw new Error("no full context");
+      expect(brief.trim().length).toBeGreaterThan(0);
+      expect(brief.length).toBeLessThan(full.length);
+      if (key === "minimal-implementation") {
+        expect(brief).toMatch(/§\s*2|\b(?:floor|non-removable)\b/i);
+        expect(brief).toContain(".agents/rules/interface-clarity.md");
+      }
+    }
+  });
+
   it("runs a program directly, with no shell and no message of its own", () => {
     const readers = new Set<string>();
     for (const [, groups] of hooks) {
@@ -270,25 +323,14 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
           // lives in the file, so a release that changes it leaves this alone.
           expect(entry.args).toHaveLength(4);
           expect(entry.args[2]).toBe(MESSAGES_ARG);
-          expect(entry.args.join(" ")).not.toContain("additionalContext");
+          expectNoEmbeddedReminderText(entry.args.join(" "), catalog);
           readers.add(entry.args[1] ?? "");
         }
       }
     }
-    // Seven readers. One prints the named message. One does the same but prints
-    // only on the first call of a session and on every twentieth after it, which
-    // is how a reminder on every write stays out of the way. One looks for this
-    // checkout's launcher first and prints only where there is none. One reads
-    // the hook's own input first and prints only for a command that names the
-    // forge, and then counts like the second, which is what lets a `Bash` matcher
-    // exist at all. One reads the prompt and stays silent on a turn the host
-    // started rather than the user typed. One reads the file a write names,
-    // stays silent for what is plainly not source, and then counts like the
-    // second. One reads the stop and stays silent when a stop hook is already
-    // continuing the turn, which is what ends the loop, and when the last message
-    // ends in a question. An eighth would mean a reminder had grown logic of its
-    // own, which is the thing kept out of this file.
-    expect(readers.size, "a reminder runs one of the seven pinned readers").toBe(7);
+    // Eight shared readers cover prompt and tool filters, full/brief delivery,
+    // posting, the install check and the Stop reminder.
+    expect(readers.size, "each entry uses one of the eight shared readers").toBe(8);
     for (const reader of readers) {
       expect(reader).toContain("process.argv[1]");
       expect(reader).toContain("process.argv[2]");
@@ -432,12 +474,170 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
   });
 });
 
+// QFAI:SPEC-REF: AC-0001-0196-12, EX-0001-0196-37
+// These guards cover the shared instruction payload, not an agent's judgment.
+describe("documentation clarity reminder scope", () => {
+  const keys = [
+    "documentation-clarity-before-post",
+    "documentation-clarity-after-write",
+    "documentation-clarity-after-edit",
+  ] as const;
+  let messages: ReadonlyMap<string, string>;
+  let master: string;
+
+  beforeAll(async () => {
+    const [messageText, ruleText] = await Promise.all([
+      readFile(path.join(repoRoot, SHIPPED_MESSAGES), "utf-8"),
+      readFile(
+        path.join(
+          repoRoot,
+          "packages/qfai/assets/init/root/.agents/rules/documentation-clarity.md",
+        ),
+        "utf-8",
+      ),
+    ]);
+    const parsed: unknown = JSON.parse(messageText);
+    if (typeof parsed !== "object" || parsed === null) throw new Error("no message table");
+    messages = new Map(
+      keys.map((key) => {
+        const value: unknown = Reflect.get(parsed, key);
+        if (typeof value !== "object" || value === null)
+          throw new Error(`${key} is not an envelope`);
+        const output: unknown = Reflect.get(value, "hookSpecificOutput");
+        if (typeof output !== "object" || output === null) {
+          throw new Error(`${key} has no hookSpecificOutput`);
+        }
+        const context: unknown = Reflect.get(output, "additionalContext");
+        if (typeof context !== "string") throw new Error(`${key} has no additionalContext`);
+        return [key, flat(context)];
+      }),
+    );
+    master = ruleText;
+  });
+
+  function clauses(text: string): string[] {
+    return flat(text).split(/[.;!?]\s+/);
+  }
+
+  function expectRequestedRecordScope(text: string): void {
+    const condition =
+      clauses(text).find(
+        (clause) =>
+          /\buser\b/i.test(clause) &&
+          /\brequest\w*\b/i.test(clause) &&
+          /\b(?:incident|event|work)\b/i.test(clause) &&
+          /\b(?:record|report|account)\w*\b/i.test(clause),
+      ) ?? "";
+    expect(condition, "the record exception needs an explicit user request").toMatch(
+      /\b(?:explicit\w*|express\w*|specifically)\b/i,
+    );
+    expect(condition, "the exception must be conditional").toMatch(
+      /\b(?:only|if|when|exception)\b/i,
+    );
+    expect(text).toMatch(/\b(?:necessary|needed|required)\b/i);
+    expect(
+      clauses(text).some(
+        (clause) =>
+          /\b(?:observed|factual)\b/i.test(clause) && /\b(?:events?|facts?)\b/i.test(clause),
+      ),
+      "the record names observed events",
+    ).toBe(true);
+    expect(text).toMatch(/\bevidence\b/i);
+    expect(text).toMatch(/\b(?:uncertainty|unverified|unknowns?)\b/i);
+    expect(text).toMatch(/\bcurrent\b[^.;]*\bimpact\b/i);
+    expect(text).toMatch(/\bnext\b[^.;]*\b(?:actions?|steps?)\b/i);
+  }
+
+  function expectOrdinaryHistoryExcluded(text: string): void {
+    expect(text).toMatch(/\b(?:specifications?|specs?)\b/i);
+    expect(text).toMatch(/\bchange\b/i);
+    const prohibition =
+      clauses(text).find(
+        (clause) =>
+          /\b(?:no|not|never|omit|exclude)\b/i.test(clause) &&
+          ((/\b(?:design|implementation)\b/i.test(clause) && /\bhistory\b/i.test(clause)) ||
+            /how (?:the )?work went/i.test(clause)),
+      ) ?? "";
+    expect(prohibition, "ordinary specifications and change descriptions exclude history").not.toBe(
+      "",
+    );
+  }
+
+  it("allows numbers and links in pull request and issue bodies before posting", () => {
+    const allowance =
+      clauses(messages.get(keys[0]) ?? "").find(
+        (clause) =>
+          /\b(?:PR|pull[ -]requests?)\b/i.test(clause) &&
+          /\bissues?\b/i.test(clause) &&
+          /\bbod(?:y|ies)\b/i.test(clause) &&
+          /\bnumbers?\b/i.test(clause) &&
+          /\blinks?\b/i.test(clause),
+      ) ?? "";
+    expect(allowance).toMatch(/\b(?:allow\w*|may|can|belong\w*|permitted)\b/i);
+    expect(allowance).not.toMatch(/\b(?:no|never|prohibit\w*)\b[^.;]*\bnumbers?\b/i);
+  });
+
+  it("keeps source and ordinary Markdown identifier restrictions and existing exceptions", () => {
+    for (const key of keys.slice(1)) {
+      const message = messages.get(key) ?? "";
+      expect(message).toMatch(/\bMarkdown\b/i);
+      expect(message).toMatch(
+        /\b(?:no|never|prohibit\w*)\b[^.;]*\b(?:issue|PR|pull[ -]request)\b[^.;]*\bnumbers?\b/i,
+      );
+    }
+    const identifiers = flat(sectionOf(master, "## 1."));
+    expect(identifiers).toMatch(/Never write[^.]*source code or Markdown files/i);
+    expect(identifiers).toMatch(/Pull request and issue bodies[^.]*outside this clause/i);
+    expect(identifiers).toMatch(/Numbers and links belong[^.]*commit messages and the changelog/i);
+    expect(identifiers).toContain("Spec-tree IDs");
+    expect(identifiers).toContain("Names the reader sees");
+  });
+
+  it("limits all three reminders to expressly requested records with necessary factual content", () => {
+    for (const key of keys) expectRequestedRecordScope(messages.get(key) ?? "");
+  });
+
+  it("keeps design history out of ordinary specifications and change descriptions in every reminder", () => {
+    for (const key of keys) expectOrdinaryHistoryExcluded(messages.get(key) ?? "");
+  });
+
+  it("gives clause two the same narrow record exception without weakening ordinary writing", () => {
+    const history = flat(sectionOf(master, "## 2."));
+    expectRequestedRecordScope(history);
+    expectOrdinaryHistoryExcluded(history);
+  });
+
+  it("makes the re-read check distinguish requested records from excluded design history", () => {
+    const reread = flat(sectionOf(master, "## 9."));
+    const historyCheck =
+      reread.split("|").find((cell) => /(?:how the work went|\bhistory\b)/i.test(cell)) ?? "";
+    expect(historyCheck).toMatch(/\b(?:request\w*|exception|clause 2)\b|§\s*2/i);
+    expect(reread).toMatch(/\b(?:explicit\w*|express\w*|specifically)\b/i);
+    expect(reread).toMatch(/\b(?:incident|event|work)\b[^.;]*\b(?:record|report|account)\w*\b/i);
+  });
+});
+
 describe("shipped template and this repository agree", () => {
   it("carries the same hooks in both copies", async () => {
     const [shipped, own] = await Promise.all(
       SETTINGS_PATHS.map((rel) => readFile(path.join(repoRoot, rel), "utf-8")),
     );
 
-    expect(JSON.parse(own)).toEqual(JSON.parse(shipped));
+    // The hooks and the allow list are shared. `permissions.ask` is this
+    // repository's own: it stops the commands that tag and publish
+    // (`releaseCommandStop.test.ts`).
+    const shared = (text: string): unknown => {
+      const settings: Record<string, unknown> = JSON.parse(text);
+      const permissions = settings.permissions;
+      return {
+        hooks: settings.hooks,
+        allow:
+          typeof permissions === "object" && permissions !== null
+            ? Reflect.get(permissions, "allow")
+            : undefined,
+      };
+    };
+
+    expect(shared(own ?? "")).toEqual(shared(shipped ?? ""));
   });
 });
