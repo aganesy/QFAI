@@ -29,6 +29,13 @@ A gate the project runs in CI only is recorded `"DELEGATED"` with its `check` an
 
 A gate that fails identically on the base, or did not run and is not delegated, still makes the top-level `status` `"FAIL"`. The fields let a reader tell it from a failure the run caused.
 
+Keep the full CI receipt in the stage report, as
+`.qfai/assistant/step/common-gate-run/STEP.md#ci-evidence` requires. A branch
+overview or a confirmed closed cleanup SKIP does not replace actual verification
+or turn it into a behavioral PASS. Preserve failures for the current head;
+unknown identity or purpose remains unverified. The receipt adds no fields or
+states to this contract.
+
 `scope` is a closed enum. Write the one that matches the stage you were invoked for:
 
 | `scope`       | Written by                                                          | validate profile                                |
