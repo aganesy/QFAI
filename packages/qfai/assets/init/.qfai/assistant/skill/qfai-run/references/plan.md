@@ -181,9 +181,10 @@ keeps its scopes: `--route` returns none.
 `schema` for an extraction field, naming its `cause`: `missing` for a required
 field that is absent, `unknown` for a key the extraction does not take,
 `wrong-type` for a value of another type, `wrong-value` for a value outside the
-field's vocabulary, and `invalid` for the rule that ties `alternatives` to
-`confidence`; each cause states what was expected and received, or the field
-name. `unknown-route` for a route the catalog does
+field's vocabulary, and `invalid` for the rules tying `alternatives` to
+`confidence` or requiring `owned-temporary-cleanup` to use `intent: order` and
+empty `artifacts`, including alternative readings. Each cause states what was
+expected and received, or the field name. `unknown-route` for a route the catalog does
 not name, `plan-invalid` for a plan that does not load, naming its `file` and
 `cause`, `artifact-unserved` for an artifact the extraction names when no stage
 of the route writes any artifact it names, so the work stops before the first

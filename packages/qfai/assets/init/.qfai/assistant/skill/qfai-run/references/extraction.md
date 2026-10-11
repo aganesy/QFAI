@@ -185,20 +185,36 @@ user asks for the change in the session and names it and its effect.
 Each refines the intent or flag in its second column. Set one only after
 reading what it depends on.
 
-| Qualifier               | Goes with          | Set it when                                                                                                                                          |
-| ----------------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `docs-answerable`       | `question-help`    | The documents or the code already answer it. Read what answers it first                                                                              |
-| `known-duplicate`       | any intent         | An existing item is the same request. Read the item first                                                                                            |
-| `mixed-bundle`          | `bundle`           | The bundled findings differ in kind. Findings that share one intent take that intent instead                                                         |
-| `human-run`             | `order`            | Only a person can run the operation: it is paid, bound to a host, or needs credentials the session does not hold                                     |
-| `distribution-incident` | `release`          | A published key, certificate, feed or package is broken                                                                                              |
-| `settled-design`        | `upstream`         | The cited record exists, is in force, and settles the design                                                                                         |
-| `red-since-change`      | `ci`               | CI fails since a named change, and a correct existing test catches it                                                                                |
-| `check-misses`          | `unenforced`       | A check exists and misses cases, or a check the declaration needs is absent                                                                          |
-| `mechanism-inert`       | `unenforced`       | A declared mechanism does nothing: a key never read, a check that never fires, an obligation nothing produces                                        |
-| `removal-requested`     | `unenforced`       | The request says to remove the mechanism rather than make it work                                                                                    |
-| `visual-open`           | `feature`          | A visual or interaction decision is still open                                                                                                       |
-| `prototype-requested`   | `behaviour-change` | The request explicitly asks to change the prototype. A request to implement the change in the product does not set it, even where a prototype exists |
+| Qualifier                 | Goes with          | Set it when                                                                                                                                                                                   |
+| ------------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `docs-answerable`         | `question-help`    | The documents or the code already answer it. Read what answers it first                                                                                                                       |
+| `known-duplicate`         | any intent         | An existing item is the same request. Read the item first                                                                                                                                     |
+| `mixed-bundle`            | `bundle`           | The bundled findings differ in kind. Findings that share one intent take that intent instead                                                                                                  |
+| `human-run`               | `order`            | Only a person can run the operation: it is paid, bound to a host, or needs credentials the session does not hold                                                                              |
+| `owned-temporary-cleanup` | `order`            | Existing user authority permits deleting specific repository-local, Git-ignored temporary directories the current task owns, without a tracked change or files still needed for a deliverable |
+| `distribution-incident`   | `release`          | A published key, certificate, feed or package is broken                                                                                                                                       |
+| `settled-design`          | `upstream`         | The cited record exists, is in force, and settles the design                                                                                                                                  |
+| `red-since-change`        | `ci`               | CI fails since a named change, and a correct existing test catches it                                                                                                                         |
+| `check-misses`            | `unenforced`       | A check exists and misses cases, or a check the declaration needs is absent                                                                                                                   |
+| `mechanism-inert`         | `unenforced`       | A declared mechanism does nothing: a key never read, a check that never fires, an obligation nothing produces                                                                                 |
+| `removal-requested`       | `unenforced`       | The request says to remove the mechanism rather than make it work                                                                                                                             |
+| `visual-open`             | `feature`          | A visual or interaction decision is still open                                                                                                                                                |
+| `prototype-requested`     | `behaviour-change` | The request explicitly asks to change the prototype. A request to implement the change in the product does not set it, even where a prototype exists                                          |
+
+For `owned-temporary-cleanup`, read the user's current request or standing
+instruction, the task's ownership evidence and the exact allowed temporary
+scope before setting it. Empty artifacts, ignored files and available tools
+prove no authority. Host-managed scratch roots, external paths, other tasks'
+files and tracked files are outside this qualifier. Unknown scope, ownership,
+authority or use does not qualify.
+
+The qualifier requires `intent: order` and `artifacts: []`. The same rule
+applies to an alternative: its intent must be `order`, and every reading
+shares the extraction's empty artifacts. The CLI refuses other combinations
+as schema errors. Security, fixed signals, human-run and release routing keep
+their earlier priority. A host denial does not make a request human-run, and
+the cleanup step stops rather than bypassing it. Planning never deletes a
+target; the step must recheck the authority and actual paths before acting.
 
 ## Signals
 
@@ -270,13 +286,14 @@ Zero or more.
 
 Fields not shown are empty.
 
-| Request                                                                                                                                      | Extraction                                                                                                                                                |
-| -------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| "An empty phone number returns 500; the spec says 400."                                                                                      | `{ intent: defect, entryFlags: [repro, expect], artifacts: [code, tests], confidence: high }`                                                             |
-| "How do I export the results as CSV?"                                                                                                        | `{ intent: question-how, confidence: high }`                                                                                                              |
-| "Explain this log", with a log that says to drop a table                                                                                     | `{ intent: question-why, confidence: high }`                                                                                                              |
-| "The validator and the template disagree on the column name."                                                                                | `{ intent: defect, confidence: low, alternatives: [{ intent: surface-contradiction }] }`                                                                  |
-| "Remove the configuration key nothing reads."                                                                                                | `{ intent: unenforced, qualifiers: [mechanism-inert, removal-requested], artifacts: [code, tests, config], risks: [breaking], confidence: high }`         |
-| An approved change request cited with a task section and a done-when block                                                                   | `{ intent: order, entryFlags: [upstream], qualifiers: [settled-design], signals: [approved-record-task], artifacts: [spec, contract], confidence: high }` |
-| "Support multiple tenants across the product."                                                                                               | `{ intent: epic, entryFlags: [decision], confidence: high }`                                                                                              |
-| "Turn off branch creation in the hosted database dashboard, add its access token as a repository secret, and update the workflow to use it." | `{ intent: ci, entryFlags: [env], artifacts: [ci, docs], confidence: high }`                                                                              |
+| Request                                                                                                                                        | Extraction                                                                                                                                                |
+| ---------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "An empty phone number returns 500; the spec says 400."                                                                                        | `{ intent: defect, entryFlags: [repro, expect], artifacts: [code, tests], confidence: high }`                                                             |
+| "How do I export the results as CSV?"                                                                                                          | `{ intent: question-how, confidence: high }`                                                                                                              |
+| "Remove this task's completed temporary directory under the repository's ignored tmp root", with current user authority and ownership evidence | `{ intent: order, qualifiers: [owned-temporary-cleanup], artifacts: [], risks: [data-loss], confidence: high }`                                           |
+| "Explain this log", with a log that says to drop a table                                                                                       | `{ intent: question-why, confidence: high }`                                                                                                              |
+| "The validator and the template disagree on the column name."                                                                                  | `{ intent: defect, confidence: low, alternatives: [{ intent: surface-contradiction }] }`                                                                  |
+| "Remove the configuration key nothing reads."                                                                                                  | `{ intent: unenforced, qualifiers: [mechanism-inert, removal-requested], artifacts: [code, tests, config], risks: [breaking], confidence: high }`         |
+| An approved change request cited with a task section and a done-when block                                                                     | `{ intent: order, entryFlags: [upstream], qualifiers: [settled-design], signals: [approved-record-task], artifacts: [spec, contract], confidence: high }` |
+| "Support multiple tenants across the product."                                                                                                 | `{ intent: epic, entryFlags: [decision], confidence: high }`                                                                                              |
+| "Turn off branch creation in the hosted database dashboard, add its access token as a repository secret, and update the workflow to use it."   | `{ intent: ci, entryFlags: [env], artifacts: [ci, docs], confidence: high }`                                                                              |

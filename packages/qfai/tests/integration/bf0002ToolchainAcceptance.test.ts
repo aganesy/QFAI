@@ -12,6 +12,7 @@ import {
   symlink,
   writeFile,
 } from "node:fs/promises";
+import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -159,10 +160,15 @@ describe("BF-0002 toolchain and release acceptance", () => {
     const uploads = Object.keys(workflowJobs("ci.yml")).flatMap((id) =>
       jobSteps("ci.yml", id).filter(
         (step) =>
-          typeof step["uses"] === "string" && step["uses"].startsWith("actions/upload-artifact@"),
+          typeof step["uses"] === "string" &&
+          step["uses"].startsWith("actions/upload-artifact@") &&
+          stepInputs(step)["name"] === "qfai-report" &&
+          String(stepInputs(step)["path"])
+            .split(/\s+/u)
+            .includes("tmp/pack/sandbox/out/.qfai/report/validate.json"),
       ),
     );
-    expect(uploads.length).toBeGreaterThan(0);
+    expect(uploads).toHaveLength(1);
     for (const upload of uploads) {
       const condition = String(upload["if"]);
       expect(condition).toContain("!cancelled()");
@@ -258,6 +264,14 @@ describe("BF-0002 toolchain and release acceptance", () => {
     expect(surfaces.filter((name) => /\bpr-(?:fix|merge)\b/u.test(name))).toEqual([]);
   });
 });
+
+async function linkFixtureVitest(packageRoot: string): Promise<void> {
+  const require = createRequire(import.meta.url);
+  const installed = path.dirname(require.resolve("vitest/package.json"));
+  const modules = path.join(packageRoot, "node_modules");
+  await mkdir(modules, { recursive: true });
+  await symlink(installed, path.join(modules, "vitest"), "junction");
+}
 
 function namedDiagnosticProgram(marker: string): string {
   const job = workflowJobs("named-tests.yml")["named-test"];
@@ -387,11 +401,7 @@ describe("the optional named diagnostic acceptance", () => {
       const packageRoot = path.join(root, "packages", "qfai");
       const directory = path.join(packageRoot, "tests", "core");
       await mkdir(directory, { recursive: true });
-      await symlink(
-        path.join(REPO_ROOT, "packages", "qfai", "node_modules"),
-        path.join(packageRoot, "node_modules"),
-        "junction",
-      );
+      await linkFixtureVitest(packageRoot);
       await writeFile(
         path.join(packageRoot, "vitest.workspace.ts"),
         readText("packages", "qfai", "vitest.workspace.ts"),
@@ -499,6 +509,80 @@ describe("the optional named diagnostic acceptance", () => {
         expect(git("remote").split(/\r?\n/u)).not.toContain("origin");
         expect(git("rev-parse", "HEAD")).toBe(head);
       }
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+});
+
+describe("named runner returned file identity", () => {
+  // QFAI:AC-0002-0026-02 QFAI:AC-0002-0026-03
+  it.each(
+    (["listing", "report"] as const).flatMap((phase) =>
+      (["missing", "relative", "drive-relative", "wrong-file", "duplicate"] as const).map(
+        (kind) => ({ phase, kind }),
+      ),
+    ),
+  )("refuses $kind identity in the $phase", async ({ phase, kind }) => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-named-returned-"));
+    try {
+      const packageRoot = path.join(root, "packages", "qfai");
+      const target = path.join(packageRoot, "tests", "core", "one.test.ts");
+      const returned =
+        kind === "missing"
+          ? undefined
+          : kind === "relative"
+            ? "tests/core/one.test.ts"
+            : kind === "drive-relative"
+              ? "C:one.test.ts"
+              : kind === "wrong-file"
+                ? path.join(packageRoot, "tests", "core", "other.test.ts")
+                : target;
+      const listedFile = { file: phase === "listing" ? returned : target, projectName: "core" };
+      const listing = [listedFile];
+      const reportedFile = { name: phase === "report" ? returned : target };
+      const report = {
+        testResults: [reportedFile],
+        numPassedTests: 1,
+        numFailedTests: 0,
+      };
+      if (kind === "duplicate") {
+        if (phase === "listing") listing.push(listedFile);
+        else report.testResults.push(reportedFile);
+      }
+      const calls = path.join(root, "calls.txt");
+      const cli = path.join(packageRoot, "node_modules", "vitest", "vitest.mjs");
+      await mkdir(path.dirname(cli), { recursive: true });
+      // This child supplies invalid runner metadata; the original cases still run real Vitest.
+      await writeFile(
+        cli,
+        `import { appendFileSync, writeFileSync } from "node:fs";
+const args = process.argv.slice(2);
+const listing = args[0] === "list";
+appendFileSync(${JSON.stringify(calls)}, args[0] + "\\n");
+const output = args[args.indexOf(listing ? "--json" : "--outputFile.json") + 1];
+writeFileSync(output, JSON.stringify(listing ? ${JSON.stringify(listing)} : ${JSON.stringify(report)}));
+`,
+      );
+      await writeFile(path.join(root, "named-preflight.mjs"), "export {};\n");
+      const runner = path.join(root, "runner.mjs");
+      await writeFile(runner, namedDiagnosticProgram("RUNNER"));
+      const result = spawnSync(process.execPath, [runner], {
+        cwd: root,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          TEST_FILE: "packages/qfai/tests/core/one.test.ts",
+          TEST_PROJECT: "core",
+          RUNNER_TEMP: root,
+        },
+      });
+      expect(result.status, result.stdout + result.stderr).toBe(1);
+      expect(result.stderr).toContain(
+        phase === "listing" ? "exactly the requested file" : "at least one executed test",
+      );
+      expect(result.stdout + result.stderr).not.toContain("Named diagnostic completed:");
+      expect(await readFile(calls, "utf8")).toBe(phase === "listing" ? "list\n" : "list\nrun\n");
     } finally {
       await removeTempTree(root);
     }
@@ -681,7 +765,16 @@ async function withCatchup(run: (fixture: CatchupFixture) => Promise<void>): Pro
     const topic = nativeGit(seed, ["rev-parse", "HEAD"]).stdout.trim();
     nativeGit(seed, ["remote", "add", "origin", origin]);
     nativeGit(seed, ["push", "-q", "origin", "trunk", "topic"]);
-    nativeGit(sandbox, ["clone", "-q", "--branch", "topic", origin, root]);
+    nativeGit(sandbox, [
+      "clone",
+      "--config",
+      "core.autocrlf=false",
+      "-q",
+      "--branch",
+      "topic",
+      origin,
+      root,
+    ]);
     for (const [key, value] of [
       ["user.name", "Fixture"],
       ["user.email", "fixture@example.invalid"],
@@ -882,7 +975,16 @@ function expectedPending(fixture: CatchupFixture): {
   other: Record<string, string>;
 } {
   const control = path.join(fixture.sandbox, "control");
-  nativeGit(fixture.sandbox, ["clone", "-q", "--branch", "topic", fixture.origin, control]);
+  nativeGit(fixture.sandbox, [
+    "clone",
+    "--config",
+    "core.autocrlf=false",
+    "-q",
+    "--branch",
+    "topic",
+    fixture.origin,
+    control,
+  ]);
   // The fixture's topic may contain local commits not published to origin.
   nativeGit(control, ["fetch", "-q", fixture.root, "topic"]);
   nativeGit(control, ["reset", "--hard", "FETCH_HEAD"]);
@@ -1765,11 +1867,7 @@ describe("the optional Windows full-suite acceptance", () => {
         expect(await readFile(target, "utf8")).toBe(source);
       }
       await writeFile(path.join(packageRoot, "package.json"), '{"type":"module"}\n');
-      await symlink(
-        path.join(REPO_ROOT, "packages", "qfai", "node_modules"),
-        path.join(packageRoot, "node_modules"),
-        "junction",
-      );
+      await linkFixtureVitest(packageRoot);
       const projects = runnerProjects();
       const included = declaredIncludeGlobs();
       const files: string[] = [];
@@ -1839,9 +1937,17 @@ describe("the optional Windows full-suite acceptance", () => {
       expect(evidence["status"]).toBe("passed");
       expect(evidence["suite"]["executed"]).toBe(projects.length);
       const observed = report["testResults"].filter(isRecord).map((file) => file["name"]);
-      expect(sorted(observed.filter((file): file is string => typeof file === "string"))).toEqual(
-        sorted(files),
+      expect(observed).toHaveLength(files.length);
+      expect(observed.every((file) => typeof file === "string" && path.isAbsolute(file))).toBe(
+        true,
       );
+      expect(
+        sorted(
+          observed
+            .filter((file): file is string => typeof file === "string")
+            .map((file) => path.resolve(file)),
+        ),
+      ).toEqual(sorted(files.map((file) => path.resolve(file))));
       const bodies = windowsSuiteSteps().map(runText).join("\n");
       expect(bodies).not.toMatch(
         /--project|--exclude|--retry|--testNamePattern|--testTimeout|--hookTimeout|--maxWorkers|--maxConcurrency|--poolOptions/u,

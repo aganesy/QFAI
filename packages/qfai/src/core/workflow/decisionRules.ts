@@ -118,6 +118,10 @@ export const DECISION_RULES: readonly DecisionRule[] = [
   rule(
     15,
     clause(
+      (input) => is("order")(input) && qualified(input, "owned-temporary-cleanup"),
+      "run-owned-cleanup",
+    ),
+    clause(
       (input) =>
         flag(input, "upstream") && qualified(input, "settled-design") && prototypeChange(input),
       "apply-settled-prototype",

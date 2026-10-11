@@ -94,6 +94,9 @@ it("Every example in the qfai-run plan reference validates against its schema", 
   });
 });
 
+// QFAI:AC-0001-0211-02
+// QFAI:EX-0001-0211-47
+
 // QFAI:AC-0001-0211-01
 it("The extraction schema and the parser accept and refuse the same extractions", async () => {
   const validate = await loadValidator();
@@ -113,6 +116,37 @@ it("The extraction schema and the parser accept and refuse the same extractions"
   expect(samples.map((sample) => validate(EXTRACTION, sample))).toEqual(
     samples.map((sample) => extractionFaults(sample).length === 0),
   );
+  const cleanupReading = { ...reading, intent: "order", qualifiers: ["owned-temporary-cleanup"] };
+  const mainCleanup = {
+    ...extraction({ intent: "order", artifacts: [] }),
+    qualifiers: ["owned-temporary-cleanup"],
+  };
+  const alternativeCleanup = {
+    ...extraction({ confidence: "low", artifacts: [] }),
+    alternatives: [cleanupReading],
+  };
+  const cleanupSamples = [
+    mainCleanup,
+    alternativeCleanup,
+    { ...mainCleanup, intent: "feature" },
+    { ...alternativeCleanup, alternatives: [{ ...cleanupReading, intent: "feature" }] },
+    { ...mainCleanup, artifacts: ["code"] },
+    { ...alternativeCleanup, artifacts: ["docs"] },
+  ];
+  expect(
+    cleanupSamples.map((sample) => [
+      validate(EXTRACTION, sample),
+      extractionFaults(sample).length === 0,
+    ]),
+  ).toEqual([
+    [true, true],
+    [true, true],
+    [false, false],
+    [false, false],
+    [false, false],
+    [false, false],
+  ]);
+
   const schema: {
     properties: { signals: { items: { enum: string[] } } };
     $defs: { reading: { properties: { signals: { items: { enum: string[] } } } } };

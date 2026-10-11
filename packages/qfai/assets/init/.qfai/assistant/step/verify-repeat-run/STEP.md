@@ -30,7 +30,8 @@ run.
 - In the stage report: the number of runs and why, then
   every run in order, each with its command, result and revision.
 - Where the runs lift a quarantine: the removal of the quarantine marker and
-  record the quarantine added, and nothing else.
+  record the quarantine added, and nothing else. Name the removed paths in the
+  stage report.
 
 ## Procedure
 
@@ -66,9 +67,10 @@ changes the earlier record of what ran.
    reporting, as
    `.qfai/assistant/rule/references/gate-failure-autorepair.md#nondeterministic-gates`
    says.
-4. One failure ends the step. Inside a run, return `needs_repair` with the
-   failure in `debts`, owned by the skill that owns the failing test's layer or
-   the code it exercises. The count starts again only after a new fix.
+4. One failure ends the step. Inside a run, return `needs_repair`. Record
+   the failed run and its evidence in the stage report, with the skill that
+   owns the failing test's layer or code as the repair owner. The count starts
+   again only after a new fix.
 5. When every run passed, lift the quarantine where there is one.
 
 ## Gate

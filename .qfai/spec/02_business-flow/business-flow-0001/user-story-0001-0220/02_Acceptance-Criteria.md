@@ -43,10 +43,13 @@ Feature: Get one fixed plan for every kind of request
     And the route, step order, false pass-through flags and diagnosis verdict vocabulary are unchanged
 
   # AC-0001-0220-06
-  Scenario: The upkeep family keeps tests, CI and dependencies working
+  Scenario: The upkeep family maintains the project or clears owned temporary targets
     Given a route of the `upkeep` family
     When its plan is returned
-    Then it changes the test, the pipeline or the dependency and verifies
+    Then it changes the test, the pipeline or the dependency and verifies, or runs `run-owned-cleanup` for the authorized owned temporary operation alone
+    And owned cleanup runs its cleanup and close steps without tracked repository/product deliverables, test gates or a commit
+    And it checks authority, current ownership and every target before deletion, then verifies target absence and unchanged tracked files and index
+    And denial, unsafe or changed targets, busy targets or partial deletion keep it unfinished instead of reporting cleaned
 
   # AC-0001-0220-07
   Scenario: The release family prepares a release or hands work to a person

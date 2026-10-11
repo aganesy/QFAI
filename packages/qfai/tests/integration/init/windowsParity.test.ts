@@ -8,6 +8,8 @@ import {
   cp,
   lstat,
   mkdir,
+  mkdtemp,
+  rm,
   readdir,
   readFile,
   readlink,
@@ -17,6 +19,9 @@ import {
   writeFile,
 } from "node:fs/promises";
 import path from "node:path";
+import os from "node:os";
+import { createRequire } from "node:module";
+import { randomUUID } from "node:crypto";
 import { promisify } from "node:util";
 
 import { describe, expect, it } from "vitest";
@@ -25,6 +30,15 @@ import { HOST_SKILL_DIRS, initQuietly, modeLines, withEmptyRepo } from "./upgrad
 import { assertBuiltCliFresh } from "../../helpers/builtCli.js";
 import { validateIntegrationSurface } from "../../../src/core/validators/integrationSurface.js";
 import { getInitAssetsDir } from "../../../src/shared/assets.js";
+import { coldValidationCli } from "../../helpers/validationInputManifest.js";
+import {
+  runControlledProfile,
+  removeBaselineSource,
+  retainedProfileFailure,
+  saveProfileArtifact,
+  type ControlledProfileResult,
+} from "../../helpers/controlledProfile.js";
+import { DECLARED_TEST_TIMEOUT } from "../../../vitest.knobs.js";
 
 const CLI = path.resolve(import.meta.dirname, "../../../dist/cli/index.mjs");
 assertBuiltCliFresh(CLI);
@@ -267,6 +281,159 @@ describe("native linked worktree skill wrappers", () => {
           "project-owned skill bytes\n",
         );
       }
+    });
+  });
+});
+
+async function writeProfileFixture(root: string, program: string): Promise<string> {
+  const file = path.join(root, "profile fixture.cjs");
+  await writeFile(file, program, "utf8");
+  return file;
+}
+
+async function waitForProfileFixture(file: string): Promise<string> {
+  const deadline = Date.now() + 4_000;
+  while (Date.now() < deadline) {
+    try {
+      return await readFile(file, "utf8");
+    } catch (error: unknown) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      await new Promise<void>((resolve) => setTimeout(resolve, 20));
+    }
+  }
+  throw new Error(`The profiling fixture did not become ready: ${file}`);
+}
+
+describe("validation profiling child failures", () => {
+  it("keeps a completed nonzero exit and both partial output streams", async () => {
+    await withEmptyRepo(async (root) => {
+      const cli = await writeProfileFixture(
+        root,
+        'process.stdout.write("partial output\\n"); process.stderr.write("validation failed\\n"); process.exitCode = 7;',
+      );
+      const result = await coldValidationCli(cli, root, 5_000);
+      expect(result.code).toBe(7);
+      expect(result.signal).toBeNull();
+      expect(result.stdout).toBe("partial output\n");
+      expect(result.stderr).toBe("validation failed\n");
+    });
+  });
+
+  it("terminates the owned descendant as well as a timed-out profiling child", async () => {
+    await withEmptyRepo(async (root) => {
+      const token = randomUUID();
+      const ready = path.join(root, "owned descendant.json");
+      const marker = path.join(root, "descendant continued.txt");
+      const descendant = `const fs = require("node:fs"); fs.writeFileSync(${JSON.stringify(ready)}, JSON.stringify({ pid: process.pid, token: ${JSON.stringify(token)} })); process.on("SIGTERM", () => {}); setInterval(() => fs.writeFileSync(${JSON.stringify(marker)}, "still running"), 100);`;
+      const cli = await writeProfileFixture(
+        root,
+        `require("node:child_process").spawn(process.execPath, ["-e", ${JSON.stringify(descendant)}], { stdio: "ignore" }); process.stdout.write(${JSON.stringify("before timeout\n")}); setInterval(() => {}, 1000);`,
+      );
+      let owned: { pid: number; token: string } | undefined;
+      const running = coldValidationCli(cli, root, 5_000);
+      let failure: unknown;
+      let failed = false;
+      let cleanupFailure: unknown;
+      let cleanupFailed = false;
+      try {
+        owned = JSON.parse(await waitForProfileFixture(ready)) as { pid: number; token: string };
+        expect(owned.token).toBe(token);
+        const result = await running;
+        expect(result.code).toBeNull();
+        expect(result.stdout).toContain("before timeout");
+        await rm(marker, { force: true });
+        await new Promise<void>((resolve) => setTimeout(resolve, 300));
+        await expect(readFile(marker, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+      } catch (error: unknown) {
+        failure = error;
+        failed = true;
+      } finally {
+        await running;
+        if (owned !== undefined && owned.token === token) {
+          try {
+            process.kill(owned.pid, "SIGKILL");
+          } catch (error: unknown) {
+            if ((error as NodeJS.ErrnoException).code !== "ESRCH") {
+              cleanupFailure = error;
+              cleanupFailed = true;
+            }
+          }
+        }
+        await rm(marker, { force: true });
+      }
+      if (failed && cleanupFailed)
+        throw new AggregateError(
+          [failure, cleanupFailure],
+          "Profiling and owned fixture cleanup both failed",
+        );
+      if (cleanupFailed) throw cleanupFailure;
+      if (failed) throw failure;
+    });
+  });
+});
+
+describe("full validation profiling", () => {
+  it("bounds real full validation and retains its input, timing and failure evidence", async () => {
+    const control = await mkdtemp(path.join(os.tmpdir(), "qfai-validation-profile-"));
+    const checkpoint = path.join(control, "checkpoint.json");
+    const packageRoot = path.resolve(import.meta.dirname, "../../..");
+    const runner = path.join(
+      path.dirname(createRequire(import.meta.url).resolve("vitest/package.json")),
+      "vitest.mjs",
+    );
+    const config = path.resolve(
+      import.meta.dirname,
+      "../../helpers/validationProfileWorker.config.ts",
+    );
+    let result: ControlledProfileResult | undefined;
+    let cleanupFailure: unknown;
+    let workerFailure: unknown;
+    let workerFailed = false;
+    try {
+      // Leave time within the inherited budget for owned-tree cleanup and artifact recording.
+      result = await runControlledProfile(process.execPath, [runner, "run", "--config", config], {
+        cwd: packageRoot,
+        env: { ...process.env, QFAI_VALIDATION_PROFILE_CHECKPOINT: checkpoint },
+        timeoutMs: DECLARED_TEST_TIMEOUT - 15_000,
+      });
+    } catch (error: unknown) {
+      workerFailure = error;
+      workerFailed = true;
+    } finally {
+      // The parent removes only its sidecar after the owned worker tree has closed.
+      try {
+        await removeBaselineSource(control, result);
+      } catch (error: unknown) {
+        cleanupFailure = error;
+        result?.terminationErrors.push(JSON.stringify(retainedProfileFailure(error)));
+      }
+      if (result !== undefined) {
+        const file = await saveProfileArtifact(
+          process.env.QFAI_VALIDATION_PROFILE_ARTIFACT_DIR ?? control,
+          result,
+          checkpoint,
+          cleanupFailure,
+        );
+        process.stdout.write(`Validation profile artifact: ${file}\n`);
+      }
+    }
+    if (workerFailed && cleanupFailure !== undefined)
+      throw new AggregateError(
+        [workerFailure, cleanupFailure],
+        "Worker and sidecar cleanup both failed",
+      );
+    if (workerFailed) throw workerFailure;
+    if (result === undefined)
+      throw new Error("The profiling worker did not return a process result");
+    expect(result.closed, result.stderr).toBe(true);
+    expect(result.timedOut, result.stderr).toBe(false);
+    expect(result.error, result.stderr).toBeNull();
+    expect(result.terminationErrors, result.stderr).toEqual([]);
+    expect(result.signal, result.stderr).toBeNull();
+    expect(result.code, result.stderr).toBe(0);
+    expect(JSON.parse(await readFile(checkpoint, "utf8")) as unknown).toMatchObject({
+      phase: "complete",
+      spiesRestored: true,
     });
   });
 });

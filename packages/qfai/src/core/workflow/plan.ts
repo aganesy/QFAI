@@ -74,7 +74,7 @@ const FAMILY_SUMMARIES: Record<string, string> = {
   consistency: "Make the declared surfaces agree.",
   change: "Change the product's behaviour.",
   fix: "Fix the defect.",
-  upkeep: "Repair tests, CI or dependencies.",
+  upkeep: "Repair tests, CI or dependencies, or remove authorized temporary directories.",
   release: "Prepare the release or the operation.",
 };
 

@@ -6,6 +6,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- Route authorized cleanup of current-task, ignored temporary directories
+  through a bounded triage step. Unsafe or uncertain targets stop before
+  deletion, and completion requires absence and unchanged tracked files and
+  index. Fixes #3286.
+
 - Synchronize the document schema checker copies from the package manifest after
   a frozen dependency install, including the Renovate repin workflow.
 
@@ -356,44 +361,90 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   unnecessary. The steps record their proof and reason without claiming runs
   they did not perform; races, uncertainty and quarantine still require runs.
 
+- Include authorized temporary-directory cleanup in the workflow candidate purpose.
+  Fixes #3455.
+
+- Update compatible dependency resolutions and scoped lint-parser patches while
+  retaining the supported Node floor.
+
+- Check the combined raw bytes of listed AGENTS ancestor chains and report each
+  file's contribution when the chain exceeds the source-byte budget.
+
+- Check identifier capacity before writing a story batch. Separate incoming
+  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
+
 - **A released-entry repair moves complete new blocks back to Unreleased.**
   The explicit local-base command refuses mixed historical edits, ambiguous
   blocks and changed input bytes, and names exact source lines and categories.
   It writes only the changelog and leaves Git operations to the caller. Fixes #3252.
 
+- Focused TDD reports identify the selected case's actual execution and result,
+  apart from process exits, counts and containers. Normal verification reconciles
+  full collection membership without adding a full run to each focused cycle.
+
 - Include the existing acceptance-body signal in both extraction schema readings.
+
+- Treat quoted decision Approach labels as literal content while retaining
+  structural item and Evidence checks. Fixes #3443.
 
 - Clarify how to report host-blocked temporary-file cleanup, hand off allowed
   manual steps and verify removal without claiming pending cleanup is complete.
+
+- Keep validation profiling inside an owned, bounded child process and retain
+  measurements or failure evidence from Linux and Windows CI.
+
+- **Story-tree obligations parse example declarations only where they can count.**
+  Selected TDD files with EX annotations use declaration parsing. ATDD coverage
+  and annotation diagnostics retain their existing checks.
 
 - **Question-only work checks authority before repairing tracked files.**
   Existing permission for the same target is reused. Otherwise the agent offers
   repair or a report-only stop; an uncovered no-question run reports and stops
   that target without writing a tracked open question.
 
+- **Missing-pack preflight diagnostics explain how to use existing specifications.**
+  Conditional import guidance preserves the current purpose and request without
+  regenerating past packs. Source selection and validation gates remain unchanged.
+  Fixes #3302.
+
 - **A diagnosed missing example reuses an existing rule for its obligation.**
   Equivalent rules use existing example coverage and stable rule IDs to settle
   the owner. Different or uncertain behaviour returns to specification work;
   the choice and its reason appear in the final report.
+
+- Replace obsolete workflow-result field instructions with stage reports and
+  session handoffs, preserving authorization, review and verification evidence.
+  Fixes #3322.
 
 - **An optional manual Windows diagnostic runs every package test project.**
   It checks the current pull request head, keeps the normal CI unchanged and
   retains full-suite counts plus the executed full-flow result and duration.
   Workflow registration alone does not supply Windows execution evidence.
 
+- Refuse bootstrap before starting commands when a dependency path has a file
+  as an ancestor.
+
 - **Published branch-added decision records have a bounded form recovery.**
   A separately approved prefix may restore missing evidence labels while keeping
   the original decision bytes and authority intact. Unsafe or ambiguous records
   stop before writing; inherited records require their own owning decision.
 
+- Fix Playwright launcher probes for Windows .cmd and .bat paths containing spaces.
+
 - Clarify when delegated external settings and credential installation may run,
   and distinguish confirmed external effects from repository changes and CI results.
+
+- Keep validation findings available when an assistant integration path has
+  a file as an ancestor.
 
 - Verify steps reject validation errors even when a custom Validate wrapper succeeds.
 - Clarify that the research agent reads the cache TTL extension in the project config; the CLI does not parse it.
 
 - Clarify that story ID candidates are snapshots and require a fresh collision
   check of the committed changes before publishing the same branch head.
+
+- Compare named-test result paths with native absolute path semantics while
+  preserving exact file selection and failure checks. Fixes #3459.
 
 - **Language errors offer an ASCII code-point construction for code samples.**
   The guard keeps Unicode escape guidance and explains the alternative when
@@ -432,6 +483,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   so the variable is never set. The step that removes the entry ran after
   `pnpm install` and `pnpm rebuild`, and each of them printed a warning. It now
   runs right after `setup-node`. Publishing itself was not affected.
+
+- **Verification commits keep pending CI separate from completed verification.**
+  Guidance records exact-head CI evidence, preserves observed failures and
+  requires separate authority for remote actions. Installed asset refresh uses
+  the verified local package and preserves project-owned files. Fixes #3294.
+
+- **Dependency guidance limits acceptance of the unresolved glob-matching risk.**
+  Reviewed project inputs and trusted SDK callers remain the accepted scope;
+  untrusted inputs require their own mitigation and security review. Dependencies
+  and runtime behavior are unchanged. Refs #3296.
+
+- **CI receipts distinguish verification from closed cleanup.** Guidance records
+  run, job, check and purpose evidence with actual counts and logs. Branch
+  overviews and cleanup skips cannot replace verification on the current head.
+  Fixes #3295.
+
+- Distinguish acceptance annotations, empty bodies, asserted behavior and actual
+  run outcomes in applicable reports. Hand off remaining bodies with their owner
+  and completion criteria while preserving the two-stage acceptance rules.
 
 ## [2.1.1] - 2026-10-08
 

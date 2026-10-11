@@ -21,8 +21,6 @@ on:
         required: true
         type: string
 
-# SHIPPED-CI: not-applicable
-# Because: this optional diagnostic addresses this repository's own pull request refs and Vitest projects.
 permissions:
   contents: read
 
@@ -30,6 +28,8 @@ concurrency:
   group: named-tests-${{ inputs.pr }}-${{ inputs.project }}
   cancel-in-progress: true
 
+# SHIPPED-CI: not-applicable
+# Because: native path identity belongs to this repository's optional named-test diagnostic; no shipped workflow has it.
 jobs:
   named-test:
     name: Named test diagnostic (${{ inputs.project }})
@@ -140,13 +140,13 @@ jobs:
             const collect = spawnSync(process.execPath, [cli, "list", ...selected, "--filesOnly", "--json", listing], { cwd, stdio: "inherit" });
             if (collect.status !== 0) throw new Error(`Vitest file selection failed (${collect.status ?? collect.signal})`);
             const specs = JSON.parse(readFileSync(listing, "utf-8"));
-            if (!Array.isArray(specs) || specs.length !== 1 || specs[0]?.file !== file || specs[0]?.projectName !== project) throw new Error("Vitest must select exactly the requested file in the requested project");
+            if (!Array.isArray(specs) || specs.length !== 1 || typeof specs[0]?.file !== "string" || !path.isAbsolute(specs[0].file) || path.resolve(specs[0].file) !== file || specs[0]?.projectName !== project) throw new Error("Vitest must select exactly the requested file in the requested project");
             const verified = spawnSync(process.execPath, [path.join(process.env.RUNNER_TEMP, "named-preflight.mjs")], { stdio: "inherit" });
             if (verified.status !== 0) throw new Error("the pull request head or test path changed before execution");
             const result = spawnSync(process.execPath, [cli, "run", ...selected, "--passWithNoTests=false", "--allowOnly=false", "--reporter=default", "--reporter=json", "--outputFile.json", report], { cwd, stdio: "inherit" });
             if (result.status !== 0) throw new Error(`Vitest test run failed (${result.status ?? result.signal})`);
             const results = JSON.parse(readFileSync(report, "utf-8"));
-            if (!Array.isArray(results.testResults) || results.testResults.length !== 1 || results.testResults[0]?.name !== file || !Number.isInteger(results.numPassedTests) || !Number.isInteger(results.numFailedTests) || results.numPassedTests + results.numFailedTests < 1) throw new Error("the named file must report at least one executed test");
+            if (!Array.isArray(results.testResults) || results.testResults.length !== 1 || typeof results.testResults[0]?.name !== "string" || !path.isAbsolute(results.testResults[0].name) || path.resolve(results.testResults[0].name) !== file || !Number.isInteger(results.numPassedTests) || !Number.isInteger(results.numFailedTests) || results.numPassedTests + results.numFailedTests < 1) throw new Error("the named file must report at least one executed test");
             process.stdout.write(`Named diagnostic completed: ${results.numPassedTests} passed, ${results.numFailedTests} failed. Full PR CI is still required.\n`);
           } catch (cause) {
             process.stderr.write(`Named diagnostic: ${cause instanceof Error ? cause.message : String(cause)}\n`);
