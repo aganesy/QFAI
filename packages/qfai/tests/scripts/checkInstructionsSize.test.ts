@@ -11,6 +11,7 @@
  * move when the real files change. The last case runs the real tree against
  * the real pins.
  */
+import { Buffer } from "node:buffer";
 import { spawnSync } from "node:child_process";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -42,12 +43,12 @@ afterEach(async () => {
 
 /** A directory holding the given files, with the pin file the check reads. */
 async function newTree(
-  files: Record<string, string>,
+  files: Record<string, string | Buffer>,
   pins: Record<string, unknown> | string = {},
 ): Promise<string> {
   const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-size-"));
   tempDirs.push(dir);
-  const all: Record<string, string> = {
+  const all: Record<string, string | Buffer> = {
     ...files,
     "scripts/entry-file-size-pins.json": typeof pins === "string" ? pins : JSON.stringify(pins),
   };
@@ -191,6 +192,101 @@ describe("check-instructions-size Codex byte limit", () => {
   it("passes a root AGENTS.md at the limit", async () => {
     const dir = await newTree({ "AGENTS.md": `${"x".repeat(32767)}\n` });
     expect(run(dir).status).toBe(0);
+  });
+});
+
+describe("check-instructions-size listed AGENTS ancestor chain", () => {
+  const nestedAgents = "packages/qfai/assets/init/root/AGENTS.md";
+
+  function expectChainFailure(
+    result: RunResult,
+    rootBytes: number,
+    nestedBytes: number,
+    totalBytes: number,
+  ): void {
+    expect(result.status).toBe(1);
+    const diagnostic = result.output
+      .split(/\r?\n/u)
+      .find((line) => /chain/iu.test(line) && line.includes(nestedAgents));
+    expect(diagnostic).toBeDefined();
+    expect(diagnostic).toMatch(/(?:^|[\s:])AGENTS\.md(?=[\s:(])/u);
+    expect(diagnostic).toContain(nestedAgents);
+    expect(diagnostic).toContain(`${rootBytes} bytes`);
+    expect(diagnostic).toContain(`${nestedBytes} bytes`);
+    expect(diagnostic).toContain(`${totalBytes} bytes`);
+    expect(diagnostic).toMatch(/total|combined/iu);
+    expect(diagnostic).toContain("32768");
+    expect(diagnostic).toMatch(/limit/iu);
+  }
+
+  it.each([
+    { nestedBytes: 16384, totalBytes: 32768, status: 0 },
+    { nestedBytes: 16385, totalBytes: 32769, status: 1 },
+  ])("holds the listed root and nested chain to $totalBytes bytes", async (boundary) => {
+    const root = Buffer.from("r".repeat(16384), "utf-8");
+    const nested = Buffer.from("n".repeat(boundary.nestedBytes), "utf-8");
+    expect(root.length).toBe(16384);
+    expect(nested.length).toBe(boundary.nestedBytes);
+    expect(root.length + nested.length).toBe(boundary.totalBytes);
+    const dir = await newTree({ "AGENTS.md": root, [nestedAgents]: nested });
+    const result = run(dir);
+    expect(result.status).toBe(boundary.status);
+    if (boundary.status === 1) {
+      expectChainFailure(result, 16384, boundary.nestedBytes, boundary.totalBytes);
+      expect(result.output).not.toMatch(/AGENTS\.md: \d+ bytes, over/u);
+    }
+  });
+
+  it.each(["AGENTS.md", "packages/qfai/assets/init/root/AGENTS.md"])(
+    "does not invent chain bytes when only %s exists",
+    async (file) => {
+      const content = Buffer.from("x".repeat(32768), "utf-8");
+      expect(content.length).toBe(32768);
+      const dir = await newTree({ [file]: content });
+      const result = run(dir);
+      expect(result.status).toBe(0);
+      expect(result.output).not.toMatch(/chain/iu);
+    },
+  );
+
+  it("ignores an unlisted sibling AGENTS file even when it exceeds the byte limit", async () => {
+    const dir = await newTree({
+      "AGENTS.md": Buffer.from("r".repeat(16384), "utf-8"),
+      [nestedAgents]: Buffer.from("n".repeat(16384), "utf-8"),
+      "packages/qfai/assets/init/sibling/AGENTS.md": Buffer.from("s".repeat(32769), "utf-8"),
+    });
+    const result = run(dir);
+    expect(result.status).toBe(0);
+    expect(result.output).not.toContain("sibling/AGENTS.md");
+  });
+
+  it("counts UTF-8 multibyte text, the BOM and LF or CRLF without normalization", async () => {
+    const root = Buffer.from("r".repeat(16384), "utf-8");
+    // A Han sample occupies three UTF-8 bytes.
+    const character = String.fromCodePoint(0x754c);
+    const lf = Buffer.from(`\uFEFF${character.repeat(5460)}\n`, "utf-8");
+    const crlf = Buffer.from(`\uFEFF${character.repeat(5460)}\r\n`, "utf-8");
+    expect(lf.length).toBe(16384);
+    expect(crlf.length).toBe(16385);
+    expect(root.length + lf.length).toBe(32768);
+    expect(root.length + crlf.length).toBe(32769);
+    const passing = await newTree({ "AGENTS.md": root, [nestedAgents]: lf });
+    expect(run(passing).status).toBe(0);
+    const failing = await newTree({ "AGENTS.md": root, [nestedAgents]: crlf });
+    expectChainFailure(run(failing), 16384, 16385, 32769);
+  });
+
+  it("keeps a line pin from waiving the combined byte limit", async () => {
+    const root = Buffer.from(lines(250, 71), "utf-8");
+    const nested = Buffer.from("n".repeat(15000), "utf-8");
+    expect(root.length).toBe(18000);
+    expect(nested.length).toBe(15000);
+    expect(root.length + nested.length).toBe(33000);
+    const dir = await newTree({ "AGENTS.md": root, [nestedAgents]: nested }, { "AGENTS.md": 250 });
+    const result = run(dir);
+    expect(result.output).toContain("held at its pin");
+    expect(result.output).not.toMatch(/over its pin|over the 200-line ceiling/u);
+    expectChainFailure(result, 18000, 15000, 33000);
   });
 });
 

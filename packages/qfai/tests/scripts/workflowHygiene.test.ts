@@ -112,6 +112,7 @@ const ACTIONS_DIR = path.join(REPO_ROOT, ".github", "actions");
  */
 // The named diagnostic accepts any existing project test, including tests that compare
 // commits or use a merge base. Its supplied-SHA checkout keeps that history available.
+// The manual Windows diagnostic also runs history-dependent tests in the complete workspace.
 const FULL_HISTORY_JOBS = [
   "ci.yml::build",
   "ci.yml::detect",
@@ -119,6 +120,7 @@ const FULL_HISTORY_JOBS = [
   "named-tests.yml::named-test",
   "release.yml::verify",
   "release.yml::gate",
+  "windows-full-suite-diagnostic.yml::windows-full-suite-diagnostic",
 ];
 
 type ParsedWorkflow = { file: string; doc: Record<string, unknown> };
@@ -332,7 +334,7 @@ describe("TC-0017-0021 (TDD-0021): full history is job-scoped, never a workflow 
     expect
       .soft(
         requesting,
-        "full history belongs only to the listed diff, verification and named diagnostic jobs",
+        "full history belongs only to the listed diff, verification and diagnostic jobs",
       )
       .toEqual([...FULL_HISTORY_JOBS].sort());
 
