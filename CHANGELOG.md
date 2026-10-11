@@ -365,6 +365,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - Check the combined raw bytes of listed AGENTS ancestor chains and report each
   file's contribution when the chain exceeds the source-byte budget.
 
+- Check identifier capacity before writing a story batch. Separate incoming
+  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
+
 - **A released-entry repair moves complete new blocks back to Unreleased.**
   The explicit local-base command refuses mixed historical edits, ambiguous
   blocks and changed input bytes, and names exact source lines and categories.
