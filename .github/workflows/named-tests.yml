@@ -22,7 +22,7 @@ on:
         type: string
 
 # SHIPPED-CI: not-applicable
-# Because: this optional diagnostic addresses this repository's own pull request refs and Vitest projects.
+# Because: native path identity belongs to this repository's optional named-test diagnostic; no shipped workflow has it.
 permissions:
   contents: read
 
