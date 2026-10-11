@@ -189,7 +189,6 @@ describe("the reserve", () => {
   });
 });
 
-// QFAI:AC-0001-0224-09
 describe("branch overview conclusions are separate from gate receipts", () => {
   const shared = {
     head_branch: "topic",
@@ -200,7 +199,6 @@ describe("branch overview conclusions are separate from gate receipts", () => {
     status: "completed",
   };
 
-  // QFAI:EX-0001-0224-18
   it("keeps a same-head cleanup skip in the overview beside a matching verification success", () => {
     // REST-shaped metadata has no confirmed action or job purpose. The overview
     // retains conclusions; it does not decide whether a skipped job is cleanup.
@@ -229,7 +227,6 @@ describe("branch overview conclusions are separate from gate receipts", () => {
     ]);
   });
 
-  // QFAI:EX-0001-0224-19
   it("keeps a later same-head failure and drops an older-head success", () => {
     const response = {
       total_count: 3,
