@@ -423,6 +423,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `pnpm install` and `pnpm rebuild`, and each of them printed a warning. It now
   runs right after `setup-node`. Publishing itself was not affected.
 
+- **Dependency guidance limits acceptance of the unresolved glob-matching risk.**
+  Reviewed project inputs and trusted SDK callers remain the accepted scope;
+  untrusted inputs require their own mitigation and security review. Dependencies
+  and runtime behavior are unchanged. Refs #3296.
+
 ## [2.1.1] - 2026-10-08
 
 ### Added
