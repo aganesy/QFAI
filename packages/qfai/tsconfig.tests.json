@@ -501,6 +501,12 @@
     "tests/integration/workflow/planOneCommand.test.ts",
     "tests/integration/workflow/planPoints.test.ts",
     "tests/integration/workflow/planScopes.test.ts",
-    "tests/e2e/routingEvalRunnerHostStop.test.ts"
+    "tests/e2e/routingEvalRunnerHostStop.test.ts",
+    "tests/helpers/controlledProfile.ts",
+    "tests/helpers/validationInputManifest.ts",
+    "tests/helpers/validationProfile.ts",
+    "tests/helpers/validationProfileRun.ts",
+    "tests/helpers/validationProfileWorker.config.ts",
+    "tests/helpers/validationProfileWorker.test.ts"
   ]
 }
