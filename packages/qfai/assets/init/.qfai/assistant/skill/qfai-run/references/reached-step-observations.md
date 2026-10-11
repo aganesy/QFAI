@@ -71,7 +71,11 @@ If proof is unavailable or cannot be recovered safely, keep the blocker, owner a
 
 ## Native read-only example
 
-This optional example invokes existing native Git reads, not a new QFAI command. Review the local checkout, full source identifier and tracked text artifact path before use. Read only text already cleared for this report; do not dump secrets or publish its contents automatically. Save the block in an owned temporary `.mjs` file and supply those three arguments in that order. Binary verification and unreviewed inputs are outside this example.
+This optional example invokes existing native Git reads, not a new QFAI command.
+Review the local checkout, full source identifier and tracked text artifact path before use.
+Read only text already cleared for this report; do not dump secrets or publish its contents automatically.
+Save the block in an owned temporary `.mjs` file and supply those three arguments in that order.
+Binary verification and unreviewed inputs are outside this example.
 
 The reads are bounded to 1 MiB of output and 10 seconds each. Repository override environment variables are excluded, optional index writes are disabled, and the status read uses no filesystem monitor. A bounded or failed read can leave partial evidence; do not treat it as a complete receipt.
 
@@ -107,10 +111,17 @@ for (const args of reads) {
 }
 ```
 
-The example reports raw read outcomes. Its zero exit does not complete a plan step. Compare the observed current HEAD with the requested source and the actual target/purpose before using the artifact. A missing artifact read is failed evidence collection, not proof that its required action was omitted. Successful reads and unchanged files do not establish a `Passes when` decision; the owner records that actual decision separately.
+The example reports raw read outcomes.
+Its zero exit does not complete a plan step.
+Compare the observed current HEAD with the requested source and the actual target/purpose before using the artifact.
+A missing artifact read is failed evidence collection, not proof that its required action was omitted.
+Successful reads and unchanged files do not establish a `Passes when` decision; the owner records that actual decision separately.
 
 ## Existing review and limits
 
 The already-planned independent reviewer assesses the reached work it reviews against actual observations and reports unresolved proof without an extra review or gate. Preserve reviewer independence, count, route and plan order. The comparison changes none of the selected scope, termination, pass-through, authority or required gate obligations.
 
-No engine, command, plan key, runtime schema, ledger, registry or automatic obedience detector is introduced. Reports remain existing human artifacts. A passing instruction fixture does not prove host understanding or adherence, and the native read example proves only its observed reads and outcomes. Missing or stale observations can still leave work UNVERIFIED; no automatic or zero-cost conformance claim is made.
+No engine, command, plan key, runtime schema, ledger, registry or automatic obedience detector is introduced.
+Reports remain existing human artifacts.
+A passing instruction fixture does not prove host understanding or adherence, and the native read example proves only its observed reads and outcomes.
+Missing or stale observations can still leave work UNVERIFIED; no automatic or zero-cost conformance claim is made.
