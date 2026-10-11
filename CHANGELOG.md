@@ -6,6 +6,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- Route authorized cleanup of current-task, ignored temporary directories
+  through a bounded triage step. Unsafe or uncertain targets stop before
+  deletion, and completion requires absence and unchanged tracked files and
+  index. Fixes #3286.
+
 - Synchronize the document schema checker copies from the package manifest after
   a frozen dependency install, including the Renovate repin workflow.
 
@@ -433,6 +438,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   so the variable is never set. The step that removes the entry ran after
   `pnpm install` and `pnpm rebuild`, and each of them printed a warning. It now
   runs right after `setup-node`. Publishing itself was not affected.
+
+- **CI receipts distinguish verification from closed cleanup.** Guidance records
+  run, job, check and purpose evidence with actual counts and logs. Branch
+  overviews and cleanup skips cannot replace verification on the current head.
+  Fixes #3295.
 
 - Distinguish acceptance annotations, empty bodies, asserted behavior and actual
   run outcomes in applicable reports. Hand off remaining bodies with their owner

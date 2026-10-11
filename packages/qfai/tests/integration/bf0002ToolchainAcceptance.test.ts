@@ -681,7 +681,16 @@ async function withCatchup(run: (fixture: CatchupFixture) => Promise<void>): Pro
     const topic = nativeGit(seed, ["rev-parse", "HEAD"]).stdout.trim();
     nativeGit(seed, ["remote", "add", "origin", origin]);
     nativeGit(seed, ["push", "-q", "origin", "trunk", "topic"]);
-    nativeGit(sandbox, ["clone", "-q", "--branch", "topic", origin, root]);
+    nativeGit(sandbox, [
+      "clone",
+      "--config",
+      "core.autocrlf=false",
+      "-q",
+      "--branch",
+      "topic",
+      origin,
+      root,
+    ]);
     for (const [key, value] of [
       ["user.name", "Fixture"],
       ["user.email", "fixture@example.invalid"],
@@ -882,7 +891,16 @@ function expectedPending(fixture: CatchupFixture): {
   other: Record<string, string>;
 } {
   const control = path.join(fixture.sandbox, "control");
-  nativeGit(fixture.sandbox, ["clone", "-q", "--branch", "topic", fixture.origin, control]);
+  nativeGit(fixture.sandbox, [
+    "clone",
+    "--config",
+    "core.autocrlf=false",
+    "-q",
+    "--branch",
+    "topic",
+    fixture.origin,
+    control,
+  ]);
   // The fixture's topic may contain local commits not published to origin.
   nativeGit(control, ["fetch", "-q", fixture.root, "topic"]);
   nativeGit(control, ["reset", "--hard", "FETCH_HEAD"]);
