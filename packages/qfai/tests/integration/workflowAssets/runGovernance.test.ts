@@ -470,6 +470,153 @@ describe("CI receipts qualify the target's verification evidence", () => {
   });
 });
 
+const LEGACY_RECORD_GUIDES = [
+  "rule/shared-skill-operating-baseline.md",
+  "step/common-review-cycle/STEP.md",
+  "step/implement-backport/STEP.md",
+  "step/implement-benchmark/STEP.md",
+  "step/implement-dep-bump/STEP.md",
+  "step/implement-oracle-parity/STEP.md",
+  "step/implement-quarantine/STEP.md",
+  "step/implement-refactor/STEP.md",
+  "step/implement-regression-fix/STEP.md",
+  "step/implement-retire/STEP.md",
+  "step/implement-revert/STEP.md",
+  "step/implement-seam/STEP.md",
+  "step/implement-stress-harness/STEP.md",
+  "step/implement-sweep/STEP.md",
+  "step/implement-tooling/STEP.md",
+  "step/maintain-edit/STEP.md",
+  "step/prototyping-grill/STEP.md",
+  "step/triage-answer/STEP.md",
+  "step/triage-close/STEP.md",
+  "step/triage-cluster/STEP.md",
+  "step/triage-investigate/STEP.md",
+  "step/triage-owned-cleanup/STEP.md",
+  "step/triage-security-intake/STEP.md",
+  "step/verify-external/STEP.md",
+  "step/verify-repeat-run/STEP.md",
+  "step/verify-repo-gate/STEP.md",
+] as const;
+
+describe("report ownership after workflow record retirement", () => {
+  it.each(LEGACY_RECORD_GUIDES)("%s requires no retired machine result fields", async (file) => {
+    const body = flat(await readShipped(file));
+    expect(body, file).not.toMatch(
+      /\b(?:actorHistory|human_decision|request_scope|artifactRefs|changedFiles|regressionFix|gateResults|testObservation|owningFlow|resolvingOwner|detectingCommand|findingCode|debts)\b/u,
+    );
+    expect(body, file).not.toMatch(
+      /\b(?:result carries \x60closure\x60 as|carries \x60branch\x60 as)\b/iu,
+    );
+  });
+
+  it("keeps actual answers and required-input provenance in the session report", async () => {
+    const policy = await passage(OPERATING, "## Default Autopilot Policy inside a run");
+    for (const bucket of ["ask-user", "hard-required", "auto-decide"]) {
+      expect(policy).toContain(bucket);
+    }
+    expect(policy).toMatch(/\b(?:session|stage) report\b/iu);
+    expect(policy).toMatch(/\b(?:answer|approval|authorization|authority)\b/iu);
+    expect(policy).toMatch(/\b(?:source|provenance|instruction|authority)\b/iu);
+    expect(policy).toMatch(/\b(?:user|project)\b/iu);
+    expect(policy).toMatch(/work order.*target.*flow/iu);
+    expect(policy).toMatch(/(?:no binding|no bound flow).*hard-required/iu);
+    expect(policy).toMatch(/\x60--auto\x60 satisfies nothing/iu);
+    expect(policy).toMatch(
+      /answers no \x60ask-user\x60 item.*supplies no \x60hard-required\x60 input/iu,
+    );
+  });
+
+  it("retains named authors and independent reviewers with verdicts and finding answers", async () => {
+    const file = "step/common-review-cycle/STEP.md";
+    const cycle = await passage(file, "## Cycle");
+    expect(cycle).toMatch(/authored.*edited.*recommended.*not.*independent reviewer/iu);
+    expect(cycle).toMatch(
+      /session report.*names.*authors.*editors.*recommenders.*independent reviewers/iu,
+    );
+    const writes = await passage(file, "## Writes");
+    expect(writes).toMatch(/stage report/iu);
+    expect(writes).toMatch(/reviewer.*verdict.*findings.*(?:fixed|answered)/iu);
+    const gate = await passage(file, "## Gate");
+    expect(gate).toMatch(/every routed reviewer responded once/iu);
+    expect(gate).toMatch(/critical decision.*user/iu);
+  });
+
+  it("records the actual changed paths in each writing step's stage report", async () => {
+    for (const name of [
+      "implement-backport",
+      "implement-dep-bump",
+      "implement-oracle-parity",
+      "implement-quarantine",
+      "implement-refactor",
+      "implement-retire",
+      "implement-revert",
+      "implement-stress-harness",
+      "implement-sweep",
+      "implement-tooling",
+    ]) {
+      const writes = await passage("step/" + name + "/STEP.md", "## What it writes");
+      expect(writes, name).toMatch(/\b(?:changed|deleted|moved|written|files|paths)\b/iu);
+      expect(writes, name).toMatch(/stage report/iu);
+    }
+  });
+
+  it("keeps the same-test Green rerun and independent regression review as report evidence", async () => {
+    const procedure = await passage("step/implement-regression-fix/STEP.md", "## Procedure");
+    expect(procedure).toMatch(/same test.*GREEN/iu);
+    expect(procedure).toMatch(/production code only.*no test.*story or contract.*changes/iu);
+    expect(procedure).toMatch(/stage report/iu);
+    expect(procedure).toMatch(
+      /\b(?:test identity|test identifier|test's identity|named test|name the test|test it names|names the same test)\b/iu,
+    );
+    expect(procedure).toMatch(/independent review/iu);
+    expect(procedure).toMatch(/contradiction or obstacle.*stops/iu);
+  });
+
+  it("stops a semantic maintenance edit and records its evidence, flow and owning skill", async () => {
+    const refusal = await passage("step/maintain-edit/STEP.md", "## A semantic effect");
+    expect(refusal).toMatch(/nothing is edited.*stop/iu);
+    expect(refusal).toMatch(/\b(?:stage|session) report\b|handoff/iu);
+    expect(refusal).toMatch(/\b(?:finding|reason)\b/iu);
+    expect(refusal).toMatch(/\b(?:review|command|evidence)\b/iu);
+    expect(refusal).toMatch(/\b(?:owner|owning)\b/iu);
+    expect(refusal).toMatch(/qfai-implement.*code or configuration/iu);
+    expect(refusal).toMatch(/qfai-sdd.*story or contract/iu);
+    expect(refusal).toMatch(/\b(?:no bound flow|binds no flow)\b/iu);
+    expect(refusal).toMatch(/\b(?:resume|invoke|invocation)\b/iu);
+  });
+
+  it("keeps verify fields and failing or unrun gates while assigning foreign findings to reports", async () => {
+    const file = "step/verify-repo-gate/STEP.md";
+    const findings = await passage(file, "## Findings verify did not cause");
+    expect(findings).toMatch(/edits no artifact another owner holds/iu);
+    expect(findings).toMatch(/stage report|handoff/iu);
+    expect(findings).toMatch(/qfai-sdd/iu);
+    expect(findings).toMatch(/qfai-implement/iu);
+    const environment = await passage(file, "## A missing environment");
+    expect(environment).toMatch(/blocked.*operator/iu);
+    expect(environment).toMatch(/not a product repair.*UNRUN.*reason/iu);
+    const priorFailure = await passage(file, "## A failure the run did not cause");
+    expect(priorFailure).toMatch(/status.*FAIL.*stop.*verify-commit/iu);
+    const gate = await passage(file, "## Gate");
+    expect(gate).toMatch(/UNRUN.*reason.*DELEGATED.*CI check/iu);
+    const contract = await readShipped("skill/qfai-verify/references/verify-output-contract.md");
+    const top = contract.split("| Field")[1]?.split("When the scope")[0] ?? "";
+    expect([...top.matchAll(/^\|\s*\x60([^\x60]+)\x60\s*\|/gmu)].map((match) => match[1])).toEqual([
+      "status",
+      "scope",
+      "flowId",
+      "recordedAt",
+      "summary",
+      "gates",
+    ]);
+    expect(flat(contract)).toMatch(/closed two-value enum.*PASS.*FAIL/iu);
+    expect(flat(contract)).toMatch(/UNRUN.*never a pass/iu);
+    expect(flat(contract)).toMatch(/red.*top-level.*FAIL/iu);
+    expect(flat(contract)).toMatch(/pending.*summary.*names it/iu);
+  });
+});
+
 // QFAI:AC-0001-0224-12
 describe("reached-step observations in the existing report", () => {
   // QFAI:EX-0001-0224-33

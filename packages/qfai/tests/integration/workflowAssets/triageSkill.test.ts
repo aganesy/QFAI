@@ -134,9 +134,7 @@ describe("qfai-triage as a stage skill", () => {
     expect(writes).toMatch(
       /receipt.*stage report.*authority.*ownership evidence.*exact targets.*preflight.*deletion results.*absence checks.*tracked-content.*index comparison/i,
     );
-    expect(writes).toMatch(
-      /receipt file stays outside.*deletion targets.*artifactRefs.*not.*changedFiles/i,
-    );
+    expect(writes).toMatch(/ignored receipt file stays outside.*deletion targets.*stage report/i);
     expect(flat(sectionOf(cleanup, "## Gate"))).toMatch(
       /every exact target.*absent.*tracked contents.*index.*unchanged.*receipt.*evidence/i,
     );
@@ -278,7 +276,7 @@ describe("a question answered without a change", () => {
     expect(procedure).toMatch(/Each follow-up states its goal and the reason it exists/);
     expect(procedure).toMatch(/no step is added to the run for it/);
     expect(flat(sectionOf(close, "## What it writes"))).toMatch(
-      /the report states the outcome and lists each follow-up/,
+      /stage report.*outcome.*each follow-up.*goal.*reason/i,
     );
   });
 });
@@ -300,7 +298,7 @@ describe("a split request", () => {
     expect(procedure).toMatch(/Route nothing/);
     expect(procedure).toMatch(/no step is added to the run for it/);
     expect(flat(sectionOf(close, "## What it writes"))).toMatch(
-      /`closure` as `\{ outcome, followUps \}`, each follow-up `\{ goal, reason \}`/,
+      /stage report.*outcome.*each follow-up.*goal.*reason/i,
     );
   });
 });

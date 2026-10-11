@@ -404,24 +404,39 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the owner. Different or uncertain behaviour returns to specification work;
   the choice and its reason appear in the final report.
 
+- Replace obsolete workflow-result field instructions with stage reports and
+  session handoffs, preserving authorization, review and verification evidence.
+  Fixes #3322.
+
 - **An optional manual Windows diagnostic runs every package test project.**
   It checks the current pull request head, keeps the normal CI unchanged and
   retains full-suite counts plus the executed full-flow result and duration.
   Workflow registration alone does not supply Windows execution evidence.
+
+- Refuse bootstrap before starting commands when a dependency path has a file
+  as an ancestor.
 
 - **Published branch-added decision records have a bounded form recovery.**
   A separately approved prefix may restore missing evidence labels while keeping
   the original decision bytes and authority intact. Unsafe or ambiguous records
   stop before writing; inherited records require their own owning decision.
 
+- Fix Playwright launcher probes for Windows .cmd and .bat paths containing spaces.
+
 - Clarify when delegated external settings and credential installation may run,
   and distinguish confirmed external effects from repository changes and CI results.
+
+- Keep validation findings available when an assistant integration path has
+  a file as an ancestor.
 
 - Verify steps reject validation errors even when a custom Validate wrapper succeeds.
 - Clarify that the research agent reads the cache TTL extension in the project config; the CLI does not parse it.
 
 - Clarify that story ID candidates are snapshots and require a fresh collision
   check of the committed changes before publishing the same branch head.
+
+- Compare named-test result paths with native absolute path semantics while
+  preserving exact file selection and failure checks. Fixes #3459.
 
 - **Language errors offer an ASCII code-point construction for code samples.**
   The guard keeps Unicode escape guidance and explains the alternative when
