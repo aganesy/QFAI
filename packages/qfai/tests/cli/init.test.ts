@@ -40,6 +40,23 @@ const REQUIRED_SKILLS = [
   "qfai-verify",
 ];
 
+const DISCUSSION_AUTHORITY_ASSETS = [
+  ".agents/rules/grilling.md",
+  ".qfai/assistant/step/common-grilling-record/STEP.md",
+  ".qfai/assistant/step/discussion-interview/STEP.md",
+  ".qfai/assistant/step/discussion-pack/STEP.md",
+  ".qfai/assistant/step/discussion-oq/STEP.md",
+  ".qfai/assistant/step/discussion-uiux/STEP.md",
+  ".qfai/assistant/skill/qfai-discussion/SKILL.md",
+  ".qfai/assistant/skill/qfai-discussion/references/discussion-completion-matrix.md",
+  ".qfai/assistant/skill/qfai-grilling/SKILL.md",
+  ".qfai/assistant/skill/qfai-grilling/references/delegated-session.md",
+  ".qfai/assistant/skill/qfai-grilling/references/session-record.md",
+  ".qfai/assistant/rule/references/griller-recommendations.md",
+  ".qfai/assistant/rule/review-convergence.md",
+  ".qfai/assistant/rule/constitution.md",
+] as const;
+
 const execFile = promisify(execFileCb);
 
 async function expectSymlink(linkPath: string): Promise<void> {
@@ -536,6 +553,85 @@ describe("qfai init", () => {
         const after = await readFile(path.join(root, relative), "utf-8");
         expect(after).toBe(`authored ${relative}\n`);
       }
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  // QFAI:EX-0001-0024-02
+  it("refreshes discussion authority assets and preserves project inputs", async () => {
+    const assets = getInitAssetsDir();
+    const shipped = await Promise.all(
+      DISCUSSION_AUTHORITY_ASSETS.map(async (relative) => {
+        const segments = relative.split("/");
+        const source = path.join(
+          assets,
+          ...(relative.startsWith(".agents/") ? ["root", ...segments] : segments),
+        );
+        return { relative, source, bytes: await readFile(source) };
+      }),
+    );
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-authority-"));
+    async function expectDiscussionLinks(): Promise<void> {
+      for (const host of [".agents", ".claude", ".codex", ".github"]) {
+        for (const skill of ["qfai-discussion", "qfai-grilling"]) {
+          const link = path.join(root, host, "skills", skill);
+          await expectSymlink(link);
+          expect((await readlink(link)).replace(/\\/g, "/")).toBe(
+            `../../.qfai/assistant/skill/${skill}`,
+          );
+          expect(await readFile(path.join(link, "SKILL.md"))).toEqual(
+            await readFile(path.join(assets, ".qfai", "assistant", "skill", skill, "SKILL.md")),
+          );
+        }
+      }
+    }
+    try {
+      await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+      for (const { relative, bytes } of shipped) {
+        expect(await readFile(path.join(root, relative)), relative).toEqual(bytes);
+      }
+      await expectDiscussionLinks();
+
+      const projectInputs = [
+        [
+          "qfai.config.yaml",
+          `${await readFile(path.join(root, "qfai.config.yaml"), "utf-8")}\n# Project configuration\n`,
+        ],
+        [".qfai/spec/01_policy/objective.md", "Project objective\n"],
+        [".qfai/spec/03_contract/api/api-0001-project.yaml", "Project API contract\n"],
+        [".qfai/assistant/rule/quality.local.md", "Project rule overlay\n"],
+        [".qfai/assistant/skill.local/project-skill/SKILL.md", "Project skill\n"],
+        [".codex/skills/custom-skill/SKILL.md", "Custom host skill\n"],
+      ] as const;
+      for (const [relative, content] of projectInputs) {
+        const target = path.join(root, relative);
+        await mkdir(path.dirname(target), { recursive: true });
+        await writeFile(target, content, "utf-8");
+      }
+      for (const { relative } of shipped) {
+        await writeFile(path.join(root, relative), `Stale supplier asset: ${relative}\n`, "utf-8");
+      }
+
+      await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+      for (const { relative } of shipped) {
+        expect(await readFile(path.join(root, relative), "utf-8"), relative).toBe(
+          `Stale supplier asset: ${relative}\n`,
+        );
+      }
+      for (const [relative, content] of projectInputs) {
+        expect(await readFile(path.join(root, relative), "utf-8"), relative).toBe(content);
+      }
+
+      await captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true }));
+      for (const { relative, source, bytes } of shipped) {
+        expect(await readFile(path.join(root, relative)), relative).toEqual(bytes);
+        expect(await readFile(source), source).toEqual(bytes);
+      }
+      for (const [relative, content] of projectInputs) {
+        expect(await readFile(path.join(root, relative), "utf-8"), relative).toBe(content);
+      }
+      await expectDiscussionLinks();
     } finally {
       await removeTempTree(root);
     }

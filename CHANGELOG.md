@@ -4,6 +4,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **Explicit discussion delegation supports adopted agent decisions.**
+  Recorded user authority permits in-scope agent judgment without fictional
+  user confirmation. Missing required inputs and critical decisions without
+  applicable authority remain open. Interactive sessions retain actual user
+  confirmation.
+
 ## [2.1.2] - 2026-10-11
 
 ### Added
