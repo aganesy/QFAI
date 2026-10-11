@@ -872,7 +872,7 @@ jobs:
             return result.stdout.toString('utf8');
           }
           const guideRelative = 'packages/qfai/assets/init/.qfai/assistant/skill/qfai-run/references/evidence-delivery.md';
-          const guideSHA = 'd630d3cc53122088127c6d3ad7c890550c07b473b6a1f1b85b00bd7e27568e79';
+          const guideSHA = 'c672724f6c4b66942dfb20822dfcbaecee96e1f0965c34b10a911d84eaee4b60';
           const recipeSHA = '156fef3be9ce7e6383f81b365a2f3e4b4c7e42a85ddf805769beab37ef707c38';
           let recipe;
           let git;
@@ -1187,7 +1187,7 @@ jobs:
             return result.stdout.toString('utf8');
           }
           const guideRelative = 'packages/qfai/assets/init/.qfai/assistant/skill/qfai-run/references/evidence-delivery.md';
-          const guideSHA = 'd630d3cc53122088127c6d3ad7c890550c07b473b6a1f1b85b00bd7e27568e79';
+          const guideSHA = 'c672724f6c4b66942dfb20822dfcbaecee96e1f0965c34b10a911d84eaee4b60';
           const recipeSHA = '156fef3be9ce7e6383f81b365a2f3e4b4c7e42a85ddf805769beab37ef707c38';
           let recipe;
           let git;
@@ -1534,7 +1534,7 @@ jobs:
             return result.stdout.toString('utf8');
           }
           const guideRelative = 'packages/qfai/assets/init/.qfai/assistant/skill/qfai-run/references/evidence-delivery.md';
-          const guideSHA = 'd630d3cc53122088127c6d3ad7c890550c07b473b6a1f1b85b00bd7e27568e79';
+          const guideSHA = 'c672724f6c4b66942dfb20822dfcbaecee96e1f0965c34b10a911d84eaee4b60';
           const recipeSHA = '156fef3be9ce7e6383f81b365a2f3e4b4c7e42a85ddf805769beab37ef707c38';
           let recipe;
           let git;
@@ -1863,7 +1863,7 @@ jobs:
             return result.stdout.toString('utf8');
           }
           const guideRelative = 'packages/qfai/assets/init/.qfai/assistant/skill/qfai-run/references/evidence-delivery.md';
-          const guideSHA = 'd630d3cc53122088127c6d3ad7c890550c07b473b6a1f1b85b00bd7e27568e79';
+          const guideSHA = 'c672724f6c4b66942dfb20822dfcbaecee96e1f0965c34b10a911d84eaee4b60';
           const recipeSHA = '156fef3be9ce7e6383f81b365a2f3e4b4c7e42a85ddf805769beab37ef707c38';
           let recipe;
           let git;

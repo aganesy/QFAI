@@ -1,5 +1,16 @@
 # Evidence delivery
 
+## Contents
+
+- When delivery is required
+- Identity and the ignored index
+- Selection and privacy
+- Native preflight
+- Copy and archive
+- Retained storage and receipt
+- Independent receiver
+- Failure and proof limits
+
 ## When delivery is required
 
 Read this guide when a request requires evidence handover before a session is
