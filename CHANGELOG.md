@@ -354,6 +354,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - Keep validation profiling inside an owned, bounded child process and retain
   measurements or failure evidence from Linux and Windows CI.
 
+- Check the combined raw bytes of listed AGENTS ancestor chains and report each
+  file's contribution when the chain exceeds the source-byte budget.
+
 - **A released-entry repair moves complete new blocks back to Unreleased.**
   The explicit local-base command refuses mixed historical edits, ambiguous
   blocks and changed input bytes, and names exact source lines and categories.
@@ -434,6 +437,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **Story-tree obligations parse example declarations only where they can count.**
   Selected TDD files with EX annotations use declaration parsing. ATDD coverage
   and annotation diagnostics retain their existing checks.
+
+- Distinguish acceptance annotations, empty bodies, asserted behavior and actual
+  run outcomes in applicable reports. Hand off remaining bodies with their owner
+  and completion criteria while preserving the two-stage acceptance rules.
 
 ## [2.1.1] - 2026-10-08
 
