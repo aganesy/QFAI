@@ -320,3 +320,47 @@ describe("layer-specific test obligations", () => {
     expect(await owed(root, "tdd")).toEqual(["EX-0001-0001-02", "EX-0001-0001-03"]);
   });
 });
+
+describe.each([
+  "DONE",
+  "TODO",
+  "WIP",
+  "REJECTED",
+  "SUPERSEDED (by DEC-0002)",
+  "PARTLY SUPERSEDED (by DEC-0002)",
+] as const)("whole validation of test exceptions at %s", (status) => {
+  // QFAI:AC-0001-0056-06
+  // QFAI:EX-0001-0056-06
+  // QFAI:EX-0001-0056-07
+  it.each([
+    ["BF-0001", "atdd"],
+    ["AC-0001-0001-01", "atdd"],
+    ["EX-0001-0001-01", "tdd"],
+  ] as const)("only DONE exempts %s under %s", async (id, profile) => {
+    const approach =
+      "- Evidence: none — isolated fixture - Grounds: no test environment - Residual risk: coverage remains unverified - Rollback: restore the obligation";
+    const root = await project({
+      [`${spec}/decisions.md`]: decisions(
+        `| DEC-0001 | Test exception: ${id} | ${approach} | ${status} |`,
+        `| DEC-0002 | Successor decision | ${approach} | DONE |`,
+      ),
+    });
+    const missing = await owed(root, profile);
+    expect(missing.includes(id)).toBe(status !== "DONE");
+    expect(await findings(root, profile, "QFAI-STORY-009")).toEqual(
+      status === "DONE"
+        ? [expect.objectContaining({ severity: "info", refs: [id, "DEC-0001"] })]
+        : [],
+    );
+    if (id === "BF-0001") {
+      expect(missing).toEqual(expect.arrayContaining(["AC-0001-0001-01", "AC-0001-0001-02"]));
+    }
+    if (id !== "EX-0001-0001-01") {
+      expect(await owed(root, "tdd")).toEqual(
+        expect.arrayContaining(["EX-0001-0001-01", "EX-0001-0001-02"]),
+      );
+    }
+    if (id === "EX-0001-0001-01") expect(missing).toContain("EX-0001-0001-02");
+    expect(await findings(root, profile, "QFAI-STORY-003")).toEqual([]);
+  });
+});

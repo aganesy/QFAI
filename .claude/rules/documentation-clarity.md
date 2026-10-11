@@ -1,1 +1,0 @@
-../../.agents/rules/documentation-clarity.md

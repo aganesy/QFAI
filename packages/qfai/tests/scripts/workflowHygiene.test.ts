@@ -110,10 +110,13 @@ const ACTIONS_DIR = path.join(REPO_ROOT, ".github", "actions");
  * registers against the merge base with `origin/main`. At depth 1 that merge base resolves
  * to nothing, so the check returns without reporting — in a job whose result blocks a merge.
  */
+// The named diagnostic accepts any existing project test, including tests that compare
+// commits or use a merge base. Its supplied-SHA checkout keeps that history available.
 const FULL_HISTORY_JOBS = [
   "ci.yml::build",
   "ci.yml::detect",
   "ci.yml::lint",
+  "named-tests.yml::named-test",
   "release.yml::verify",
   "release.yml::gate",
 ];
@@ -329,7 +332,7 @@ describe("TC-0017-0021 (TDD-0021): full history is job-scoped, never a workflow 
     expect
       .soft(
         requesting,
-        "full history belongs to change detection, the lint lane's pair-changed diff and the release verification job, and to no other job",
+        "full history belongs only to the listed diff, verification and named diagnostic jobs",
       )
       .toEqual([...FULL_HISTORY_JOBS].sort());
 
@@ -592,8 +595,8 @@ describe("TC-0017-0023 (TDD-0023): a planted floating reference exits 1 and is n
     const dir = plantedTree((d) => {
       editWorkflow(d, "ci.yml", (t) =>
         t.replace(
-          "        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
-          "        uses: actions/upload-artifact@" + "v" + "4",
+          /uses: actions\/upload-artifact@[0-9a-f]{40}\b/,
+          "uses: actions/upload-artifact@" + "v" + "7",
         ),
       );
     });
@@ -603,7 +606,7 @@ describe("TC-0017-0023 (TDD-0023): a planted floating reference exits 1 and is n
       expect.soft(run.output, "and name the failure code").toContain("R-WORKFLOW-HYGIENE-DRIFT");
       expect
         .soft(run.output, "and name the offending reference, not merely the file")
-        .toContain("actions/upload-artifact");
+        .toContain("actions/upload-artifact@" + "v" + "7");
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -654,7 +657,7 @@ describe("TC-0017-0023 (TDD-0023): a planted floating reference exits 1 and is n
  * A package manifest's `scripts` entry, narrowed.
  *
  * The three call sites below each read one script out of one manifest, and each one used to do
- * it with two bare `as Record<string, unknown>` assertions — `CLAUDE.md` forbids them and
+ * it with two bare `as Record<string, unknown>` assertions — `AGENTS.md` forbids them and
  * nothing in the lint configuration catches them inside `tests/**`. One narrowing helper
  * removes six.
  */
