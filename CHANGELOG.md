@@ -42,6 +42,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Workflow steps name the rule documents they require.** The commit and retire steps read the
+  rule on how hard an action is to undo; the triage, diagnose, research and external-report steps
+  read the rule on text the project did not write; the gate steps read the rules on scratch files
+  and the forge's API; the story-tree and prose steps read the document-schema and
+  documentation-clarity rules. Each is one bullet in the step's `## Reads` section that says when
+  to read the rule. `qfai init` refreshes the steps.
+
 - **Posting guidance explicitly permits numbers and links in pull request and issue bodies.**
   Source and ordinary Markdown retain the identifier ban and existing exceptions.
 
@@ -343,6 +350,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - Keep validation profiling inside an owned, bounded child process and retain
   measurements or failure evidence from Linux and Windows CI.
+
+- Include the existing acceptance-body signal in both extraction schema readings.
 
 - Clarify how to report host-blocked temporary-file cleanup, hand off allowed
   manual steps and verify removal without claiming pending cleanup is complete.

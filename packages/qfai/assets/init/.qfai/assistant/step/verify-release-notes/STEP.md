@@ -17,6 +17,7 @@ Drafts what a user reads about a release. It releases nothing.
 - The changes merged since the last release, from the history.
 - The format the project's earlier release notes use.
 - The version the user named, if any.
+- `.agents/rules/documentation-clarity.md`, when writing the prose this step produces.
 
 ## Writes
 
