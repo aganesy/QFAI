@@ -47,8 +47,10 @@ commands entry named after the colon:
 
 Run listed commands and record outputs. A gate whose Standard commands entry
 is `CI only: <check name>` is not run here: record it `DELEGATED` with that
-check name. Where the environment cannot run any other command, ask the user to
-run it and provide the output. Never assume PASS without evidence.
+check name. This requires an actual CI check covering the same gate and scope;
+local environment failure alone creates no delegation. Retain observed FAIL or
+UNRUN results. Where the environment cannot run any other command, ask the user
+to run it and provide the output. Never assume PASS without evidence.
 
 ## Fix loop
 
@@ -84,19 +86,78 @@ one code review reads the repair, as `qfai-verify`'s `## Review` section says.
 Report the scope, every gate command with its result, the open risks and the
 next actions.
 
+For CI results, keep the full receipt in the stage report as
+`.qfai/assistant/step/common-gate-run/STEP.md#ci-evidence` requires. A branch
+overview and a confirmed closed cleanup SKIP do not replace actual verification.
+
 For a `DELEGATED` gate, record `check` and `ci` (`green`, `red` or `pending`).
-Name pending checks in `summary` and the stage report. Do not claim verification
-complete while a delegated check is pending.
+In the stage report, bind evidence to the target and current head: run ID or URL,
+check, actual outcome and counts, blocker and resume condition. If no run exists,
+record that fact. A result for another head does not pass this head; a missing
+or mismatched result remains pending. Keep earlier failures visible.
+
+Name pending checks in `summary` and the stage report. A covered verification
+commit may use the existing DELEGATED allowance in `verify-commit`; it does not
+complete verification. With explicit CI-only delegation covering transport,
+actual changes addressing a failed check through the existing planned fix may
+be committed while HEAD still names the failing commit. Every nondelegated gate
+must pass. Retain the prior head, check, run and observed result as FAIL, and
+report the actual fix and new head after committing. Never relabel the prior
+failure pending or transport the same unchanged red candidate. The new candidate
+remains unverified until its own results are observed; report a missing run as
+missing. Formal completion or merge requires actual passing results for every
+required check on the current target and head. Pending, red, missing or
+mismatched evidence stops completion. Repair follows the existing
+fix procedure under its own covered authority.
+
+### Acceptance evidence and follow-up
+
+When implementation, verification or handoff scope includes acceptance scaffolds
+or unfinished BF/AC acceptance bodies, include these five fields in the human
+report. A lint-only scope without these bodies needs no acceptance report.
+
+| Field                      | Report                                                                                                                                                                                                                                                  |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Annotation proof           | BF/AC annotation IDs, their test files and the inspection or validation result that established them.                                                                                                                                                   |
+| Acceptance bodies          | Empty, implemented and unclassified body counts, with each counting unit and file references. Keep BF test bodies and AC test bodies separate; test bodies are not unique obligations. Use UNKNOWN, not zero, for a count inspection did not establish. |
+| Asserted behavior and runs | The actual assertion that observes each implemented body's BF or AC, and its actual run results with evidence references. An annotation alone does not establish the assertion or its execution.                                                        |
+| Observed outcomes          | PASS, FAIL, skipped, UNRUN and pending observations, with their logs or evidence references. Only an actual run supplies an execution result. A passing empty body establishes no behavioral proof.                                                     |
+| Remaining work             | Identified unfinished BF/AC bodies and files, the actual owner or UNASSIGNED, completion criteria and the next route. Use `write-acceptance-tests` to write the remaining bodies under its existing acceptance-writing rules.                           |
+
+Do not derive completed ACs by subtracting empty bodies from the suite's pass
+total. An assertion for another EX does not complete an empty AC body. Zero
+validation errors do not prove BF/AC behavior. Guidance fixtures prove the
+reporting guidance they inspect, not an adopter's actual behavior.
+
+For example, an illustrative inspection can identify two AC test bodies, one
+empty and one with recorded assertion and run evidence, plus one unclassified
+BF test body. Report those body counts with their separate units and files;
+the remaining bodies still need owners and completion criteria. If inspection
+has not established the count, write UNKNOWN. If no owner has been assigned,
+write UNASSIGNED; do not invent an assignment or a successful run.
+
+Legitimate empty bodies keep their existing exemption. An actual required-check
+FAIL remains FAIL, and the acceptance-writing completion gate is unchanged.
+When using the existing optional `verify.json` summary, keep one or two short
+sentences naming remaining work, its owner or UNASSIGNED, and the detailed
+report reference. Put the table in the human report, without new JSON fields,
+statuses, scopes, gates or routes.
 
 ## Verdict
 
 Write `.qfai/report/verify.json` at the end of the run. It is the
 machine-readable verdict downstream gates read, and the evidence markdown does
 not replace it. `status` is `"PASS"` only when every gate in scope passed or is
-`DELEGATED` to a CI check that is not red. A red check or a non-delegated UNRUN
-gate makes `status` `"FAIL"`.
-`scope` is the one `verify-qfai-gate` ran, never a stage this run did not
-cover. Fields, the closed `scope` enum, a conforming example and what must
+`DELEGATED` to a CI check that is not red for the candidate being evaluated.
+A red check for that candidate or a non-delegated UNRUN gate makes `status`
+`"FAIL"`. Preserve the previous candidate's FAIL evidence when an explicitly
+covered transport commit carries actual repairs into a new candidate. Its own
+pending delegated checks permit only that transport, never formal completion;
+they do not replace the earlier failed result. Keep revision and run evidence
+in the stage report, without adding verdict fields or states.
+`scope` is the gate set `verify-qfai-gate` covered through execution or an
+explicitly declared matching CI-only check, never a stage this run did not
+cover. Delegation does not claim that its validation profile has already run. Fields, the closed `scope` enum, a conforming example and what must
 never be written are in
 `.qfai/assistant/skill/qfai-verify/references/verify-output-contract.md`.
 
@@ -156,14 +217,16 @@ The step is done when:
   reason, or is recorded DELEGATED with its CI check;
 - every gate passes, or each failure has an actionable fix list and an owner;
 - `verify.json` exists, its `status` matches the gate results and its `scope`
-  matches the validate profile that ran.
+  matches the required validate profile. A delegated validation check must cover
+  that same profile and scan; a whole-repository scope still requires a full
+  scan. Pending delegation never claims it ran.
 
 For this skill, the smallest applicable smoke check of
 `.qfai/assistant/rule/shared-skill-operating-baseline.md#completion-contract-shared`
 is the whole gate set of the scope, run to completion, with every outcome in
 `verify.json` and the report.
 
-A PASS needs zero errors in the declared profile, or errors only within the
-project's recorded backlog as `verify-qfai-gate` reports it, and, where the
-project has them, a clean distributed-surface guard and a clean branch version
-pin.
+A PASS needs zero errors in the declared profile. A successful custom Validate
+wrapper does not waive validation errors or replace a full scan. Where the
+project has them, the distributed-surface guard and branch version pin must also
+pass.

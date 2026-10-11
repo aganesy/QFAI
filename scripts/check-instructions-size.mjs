@@ -1,22 +1,23 @@
 /* global console */
 /**
- * Hold the files an agent loads on its own to a size.
+ * Limit the listed default instruction files and their AGENTS ancestor chains.
  *
- * An entry file is read at every session start, so each line costs on every
- * turn, and a longer file lowers how well each instruction in it is followed.
+ * This is a static source-byte budget. Host settings and instruction discovery
+ * can change what is loaded; this check does not measure session context.
  *
- * | File                                      | Held to                                   |
- * | ----------------------------------------- | ----------------------------------------- |
- * | Entry files (listed below)                | 200 lines; 100 is the target, not a gate  |
- * | Each `AGENTS.md` entry file               | 32768 bytes, the limit Codex reads to     |
- * | `.github/instructions/*.instructions.md`  | 4000 characters each                      |
+ * | File                                       | Held to                                  |
+ * | ------------------------------------------ | ---------------------------------------- |
+ * | Entry files (listed below)                 | 200 lines; 100 is the target, not a gate  |
+ * | Each listed AGENTS file and ancestor chain | 32768 raw UTF-8 bytes                    |
+ * | `.github/instructions/*.instructions.md`   | 4000 characters each                     |
  *
  * A file above the ceiling is pinned at its length in
  * `scripts/entry-file-size-pins.json` and may not get longer. A file shorter
  * than its pin passes and prints the length to pin; a file that reaches the
  * ceiling has its pin removed.
  *
- * Paths are relative to the working directory.
+ * Paths are relative to the working directory. Only listed AGENTS files join
+ * a chain; host-global files and discovery overrides are outside this check.
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -66,6 +67,7 @@ function loadPins() {
 function checkEntryFiles(pins) {
   const problems = [];
   const notes = [];
+  const agents = [];
 
   for (const file of ENTRY_FILES) {
     const pin = pins[file];
@@ -94,9 +96,29 @@ function checkEntryFiles(pins) {
       notes.push(`${file}: ${lines} lines, held at its pin (ceiling ${CEILING_LINES})`);
     }
 
-    // Codex reads AGENTS.md files up to a combined byte limit and cuts the file that crosses it.
-    if (path.basename(file) === "AGENTS.md" && content.length > CODEX_MAX_BYTES) {
-      problems.push(`${file}: ${content.length} bytes, over the ${CODEX_MAX_BYTES}-byte limit`);
+    if (path.basename(file) === "AGENTS.md") {
+      agents.push({ file, directory: path.dirname(path.resolve(file)), bytes: content.length });
+      if (content.length > CODEX_MAX_BYTES) {
+        problems.push(`${file}: ${content.length} bytes, over the ${CODEX_MAX_BYTES}-byte limit`);
+      }
+    }
+  }
+
+  for (const target of agents) {
+    const chain = agents.filter((entry) => {
+      const relative = path.relative(entry.directory, target.directory);
+      return (
+        relative === "" ||
+        (!path.isAbsolute(relative) && relative !== ".." && !relative.startsWith(`..${path.sep}`))
+      );
+    });
+    if (chain.length < 2) continue;
+    const total = chain.reduce((sum, entry) => sum + entry.bytes, 0);
+    if (total > CODEX_MAX_BYTES) {
+      const files = chain.map((entry) => `${entry.file} (${entry.bytes} bytes)`).join(" -> ");
+      problems.push(
+        `AGENTS chain for ${target.file}: ${files}; ${total} bytes total, over the ${CODEX_MAX_BYTES}-byte limit`,
+      );
     }
   }
   return { problems, notes };

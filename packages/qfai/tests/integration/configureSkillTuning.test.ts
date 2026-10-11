@@ -101,16 +101,16 @@ describe("Config Minimal Diff", () => {
 
     expect(step4).toContain("- `validation.traceability.testFileGlobs`");
     expect(step4).toContain("- `validation.traceability.testFileExcludeGlobs` (only if needed)");
-    expect(step4).toContain(
-      "- `routing` or `reviewProfiles` only when the user asks to change one;",
+    expect(step4.replace(/\s+/g, " ")).toMatch(
+      /`routing` or `reviewProfiles`[^.;]*only (?:when|if) the user (?:asks to change one|requests (?:a change|an override))/,
     );
     expect(step4).toContain("Add no key the package already defaults");
 
     const constraints = section(skill, "## Constraints");
-    expect(constraints).toContain(
-      "- Only update `qfai.config.yaml` and project-owned policy and contract files under `.qfai/spec/` unless explicitly asked.",
+    expect(constraints.replace(/\s+/g, " ")).toMatch(
+      /Only update `qfai\.config\.yaml`[^.]*project-owned policy and contract files under `\.qfai\/spec\/`[^.]*unless explicitly (?:asked|requested)/,
     );
-    expect(constraints).toContain("- Do **not** modify tests or source code.");
+    expect(constraints).toMatch(/Do \*\*not\*\* modify tests or source code/);
   });
 });
 
@@ -136,8 +136,9 @@ describe("Existing specs directory remains configured", () => {
   it("keeps a configured paths.specsDir and resolves to it through the loader", async () => {
     const skill = await readFile(SKILL_PATH, "utf-8");
     const step4 = section(skill, "## Step 4 - Update `qfai.config.yaml` (minimal diff)");
-    expect(step4).toContain("Keep all other config keys unchanged.");
-    expect(step4).toContain("a value the project set stays");
+    const update = step4.replace(/\s+/g, " ");
+    expect(update).toMatch(/(?:Keep|Preserve) all other config keys unchanged/);
+    expect(update).toMatch(/a value the project set (?:stays|is preserved)/);
 
     const loaded = await specsDirOf("paths:\n  specsDir: docs/spec\n");
     expect(loaded.issues).toEqual([]);

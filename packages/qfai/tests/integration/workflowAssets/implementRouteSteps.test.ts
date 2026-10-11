@@ -90,6 +90,9 @@ describe("the steps the routes add to qfai-implement", () => {
 
   // QFAI:AC-0001-0200-02
   // QFAI:EX-0001-0200-02
+  // QFAI:AC-0001-0224-09
+  // QFAI:AC-0001-0224-10
+  // QFAI:EX-0001-0224-14
   it("states each step's own obligation", async () => {
     const bisect = flat(await stepText("implement-bisect"));
     expect(bisect).toMatch(/report `branch: \{ outcome: "revert" \}` when all three hold/i);
@@ -116,9 +119,48 @@ describe("the steps the routes add to qfai-implement", () => {
     expect(bump).toMatch(/when the dependency is `qfai` itself/i);
     expect(bump).toMatch(/`init --force`, the retired files the release notes list/i);
 
-    const tooling = flat(await stepText("implement-tooling"));
+    const toolingStep = await stepText("implement-tooling");
+    const tooling = flat(toolingStep);
     expect(tooling).toMatch(/where the project ships CI to others, record one disposition/i);
     expect(tooling).toMatch(/record it as unverified until the next release/i);
+    const externalParagraphs = sectionOf(toolingStep, "### External actions")
+      .split(/\r?\n\s*\r?\n/u)
+      .map(flat);
+    const authority =
+      externalParagraphs.find((paragraph) => /specific target.*action/i.test(paragraph)) ?? "";
+    expect(authority).toMatch(/login.*permission grants.*authority expansion.*person-only/i);
+    expect(authority).toMatch(/human-run.*triage handoff.*never executes.*user/i);
+    expect(authority).toMatch(
+      /settings.*credential installation.*require prior authority.*specific target.*action.*host.*actual.*allowed safe channel/i,
+    );
+    expect(authority).toMatch(/connector availability alone.*not proof/i);
+    expect(authority).toMatch(/credential.*account.*project.*scope.*expiry.*ownership/i);
+    expect(authority).toMatch(/one-time permission.*no continuing access/i);
+    expect(authority).toMatch(/third-party credentials.*separate authority/i);
+    expect(authority).toMatch(/no secrets.*chat.*logs.*tracked files/i);
+
+    const result = externalParagraphs.find((paragraph) => /host denial/i.test(paragraph)) ?? "";
+    expect(result).toMatch(
+      /absent or unknown authority.*safe handling.*host denial.*stops.*dependent action/i,
+    );
+    expect(result).toMatch(
+      /manual steps.*evidence.*read-only check.*confirm.*never bypass.*denial/i,
+    );
+    expect(result).toMatch(/repository changes.*external effects separately/i);
+    expect(result).toMatch(
+      /host access.*CI start.*authorization.*credential installation.*CI.*merge.*publication/i,
+    );
+    expect(result).toMatch(/each.*effect.*confirmed.*pending.*unverified.*not requested/i);
+    expect(result).toMatch(
+      /target.*exact.*(?:revision|head).*evidence URL.*blocker.*resume condition/i,
+    );
+    expect(result).toMatch(/green CI.*not proof.*merge.*publication/i);
+    expect(flat(sectionOf(toolingStep, "## What it writes"))).toMatch(
+      /each command run.*result.*stage report/i,
+    );
+    expect(flat(sectionOf(toolingStep, "## Gate"))).toMatch(
+      /every part that can run here ran and passed.*cannot run.*check.*waits/i,
+    );
 
     const backport = flat(await stepText("implement-backport"));
     expect(backport).toMatch(

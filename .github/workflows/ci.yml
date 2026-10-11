@@ -351,7 +351,7 @@ jobs:
           done
           sha256sum -c --quiet <<'PINNED_INPUTS'
           2118bc0d10c060bbe25fd4d34785ec024ed46a57e7840252d42519f5bc3b44c9  scripts/check-toolchain-action.sh
-          ca8b290114e85da6c05a75e70c0d7fac29c1a43fc41b1524e1238d550c275722  .github/pinned-bytes.txt
+          2903680cf3ea58e8f2affe221d528be66f3dc9541ce012f1a51edfece377d249  .github/pinned-bytes.txt
           bb649cb2684f9db02bdbe3872f029571a8e52c4c6e2ab95e8c8fcf804370af41  .github/lifecycle-manifests.txt
           43d2586975550f5062b4af23112223068cc5676f0906c04fce2bc231df471a9e  .github/command-files.txt
           PINNED_INPUTS
@@ -761,7 +761,7 @@ jobs:
         # upload is most useful when the job FAILED, and worth nothing when nobody
         # waited for the result. `always()` spends runner minutes on both.
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: qfai-report
           # Seven days, not the action's default of ninety. These are diagnostic

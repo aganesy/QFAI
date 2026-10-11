@@ -60,13 +60,24 @@ change request the user approved or declined, and each critical decision the
 user made. Record unresolved
 questions in `<paths.specsDir>/open-questions.md`. Every row has exactly
 `ID | Content | Approach | Status`. Append rows only; afterwards change only
-Status. A change request Content begins `Change request:` and names the
+Status, except for explicit branch-added decision renumbering or the bounded
+published decision prefix recovery in the drift protocol. A change request
+Content begins `Change request:` and names the
 affected repository-relative paths; its Approach names the operation, the affected BF or US,
 its source as `discussion-<id>#REQ-NNNN` when that source exists, and who
 approved it, when, and the option chosen. A declined change request is appended at
 REJECTED, recording who declined it and when. A decision the agent took
 appends no row. Do not write a second decision-record
 directory or a retired story file.
+
+For a published malformed branch-added decision, follow
+`.qfai/assistant/rule/drift-protocol.md#published-decision-prefix-recovery`
+before any write. A separate new target-specific approved recovery change
+request must bind the original source, base, ancestor, raw cell bytes, digests
+and exact prefix. Preserve ID, Content, Status and the entire original suffix.
+Inherited rows, unknown provenance and stale data stop recovery. A diagnostic
+suggestion does not authorize a rewrite. Record the pre-write checks and the
+existing validation result; this step provides no recovery executor.
 
 Put each approval-required operation to the user before anything depends on
 it. A request from the user in the session that names the operation and its

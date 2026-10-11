@@ -206,9 +206,11 @@ jobs:
         id: repin
         run: |
           set -euo pipefail
-          # ORDER, not preference. The first writes `.github/pinned-bytes.txt` and the `ci.yml`
-          # step that carries that file's digest; the second digests that step's body. Run the
-          # other way round, the second one pins a body the first is about to rewrite.
+          # The guard-byte resealer writes `.github/pinned-bytes.txt` and the `ci.yml` digest.
+          # The verification-body resealer hashes that updated step and must run after it.
+          # SHIPPED-CI: not-applicable
+          # Because: this updates QFAI's own dependency copies and reviewed template pins.
+          node scripts/sync-mdschema-version.mjs
           node scripts/pin-guard-bytes.mjs
           node scripts/pin-verification-bodies.mjs
 

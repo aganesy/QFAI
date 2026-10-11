@@ -22,6 +22,8 @@ is follows from whether the run already carries a baseline record.
 - The baseline record, on the second run.
 - The commands of `common-gate-run`, including any benchmark command the
   project declares.
+- `.agents/rules/temporary-files.md`, when this step writes captured output or a script to a
+  file.
 
 ## Procedure
 

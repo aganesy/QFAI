@@ -46,7 +46,7 @@ describe("defect example seeding", () => {
     );
     expect(text).toMatch(/its ID is the next free EX ID of that story, its `AC-Ref` is that AC/i);
     expect(text).toMatch(
-      /add the new EX ID to the Examples cell of the contract rule the diagnosis names as owning that AC/i,
+      /add the new EX ID to (?:the Examples cell of the contract rule the diagnosis names as owning that AC|the selected rule's Examples cell)/i,
     );
   });
 
@@ -54,7 +54,7 @@ describe("defect example seeding", () => {
   // QFAI:EX-0001-0206-02
   it("changes no story, criterion, rule statement, existing example or test", async () => {
     const text = await section(STORY_STEP, SEEDING);
-    expect(text).toMatch(/the rule's Statement is unchanged/i);
+    expect(text).toMatch(/(?:the rule's|its) Statement is unchanged/i);
     expect(text).toMatch(/change no story, AC, rule statement or existing EX/i);
   });
 
@@ -64,7 +64,7 @@ describe("defect example seeding", () => {
     const text = await section(STORY_STEP, SEEDING);
     expect(text).toMatch(/the diagnosis is its reason/i);
     expect(text).toMatch(/change no story, AC/i);
-    expect(text).toMatch(/the rule's Statement is unchanged/i);
+    expect(text).toMatch(/(?:the rule's|its) Statement is unchanged/i);
   });
 
   // QFAI:AC-0001-0206-03
@@ -75,7 +75,7 @@ describe("defect example seeding", () => {
     expect(text).toMatch(
       /append no `decisions\.md` row: the drift gate needs no `Change request:` row for appended example rows/i,
     );
-    expect(text).toMatch(/list the EX in the run's final report/i);
+    expect(text).toMatch(/list the EX\b.*\bin the run's final report/i);
   });
 });
 

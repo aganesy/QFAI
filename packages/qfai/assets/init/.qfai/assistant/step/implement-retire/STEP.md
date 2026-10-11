@@ -22,6 +22,8 @@ This step carries it out.
 - The recorded decision to retire it, and what it says about anything public:
   a command, a key, an option, an exported name.
 - The commands of `common-gate-run`.
+- `.agents/rules/action-reversibility.md`, before an action that deletes, pushes, publishes or
+  is visible to others.
 
 ## Procedure
 

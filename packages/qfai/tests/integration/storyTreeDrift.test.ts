@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { link, mkdir, mkdtemp, readFile, readlink, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -7,6 +8,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { run } from "../../src/cli/main.js";
 import { defaultConfig } from "../../src/core/config.js";
+import { buildStoryTreeModel } from "../../src/core/storyTree/tree.js";
+import { validateStoryTreeStructureModel } from "../../src/core/validators/storyTreeStructure.js";
 import { validateStoryTreeDrift } from "../../src/core/validators/upstreamSsotGuard.js";
 import { createSymlinkFixture } from "../helpers/symlinkFixture.js";
 
@@ -576,6 +579,87 @@ afterEach(async () => {
 });
 
 describe("story-tree drift", () => {
+  // QFAI:AC-0001-0007-02
+  // QFAI:EX-0001-0007-13
+  // QFAI:EX-0001-0007-14
+  // QFAI:EX-0001-0007-16
+  it("validates the exact prefixed Approach without exempting status or supersession", () => {
+    const original =
+      "Keep  the published café wording and literal\\n. - Residual risk: bounded observation. - Rollback: restore the prior bytes.";
+    const prefix = "- Evidence: file:src/choice.ts - Grounds: ";
+    const proposed = prefix + original;
+    const originalBytes = Buffer.from(original, "utf8");
+    const proposedRow = `| DEC-2098 | Published choice | ${proposed} | DONE |`;
+    const rowBytes = Buffer.from(proposedRow, "utf8");
+    const originalRowBytes = Buffer.from(
+      `| DEC-2098 | Published choice | ${original} | DONE |`,
+      "utf8",
+    );
+    const start = Buffer.byteLength("| DEC-2098 | Published choice | ", "utf8");
+    const end = rowBytes.length - Buffer.byteLength(" | DONE |", "utf8");
+    const proposedBytes = rowBytes.subarray(start, end);
+    expect(rowBytes.subarray(0, start)).toEqual(originalRowBytes.subarray(0, start));
+    expect(rowBytes.subarray(end)).toEqual(
+      originalRowBytes.subarray(originalRowBytes.length - Buffer.byteLength(" | DONE |", "utf8")),
+    );
+    expect(proposedBytes.subarray(Buffer.byteLength(prefix, "utf8"))).toEqual(originalBytes);
+    expect(createHash("sha256").update(originalBytes).digest("hex")).toBe(
+      "220945b840f088df65b61b8fc98ff0525517027f9f459a1ef0616d69a9de8aa4",
+    );
+    expect(createHash("sha256").update(proposedBytes).digest("hex")).toBe(
+      "74f80c15409342ea7c905854fa063ee8ac4b08d814935fe95835c31249b89cf1",
+    );
+    const findings = (approach: string, status: string) => {
+      const model = buildStoryTreeModel(
+        new Map([
+          [
+            `${specs}/02_business-flow/business-flows.md`,
+            "| BF-ID | Flow | Path |\n| --- | --- | --- |\n",
+          ],
+          [
+            decisions,
+            `${table}| DEC-2098 | Published choice | ${approach} | ${status} |\n| DEC-0001 | Successor | Keep | DONE |\n`,
+          ],
+          [`${specs}/open-questions.md`, table],
+        ]),
+        { specsDir: specs, contractsDir: `${specs}/03_contract` },
+      );
+      return validateStoryTreeStructureModel(model);
+    };
+    expect(findings(proposed, "DONE")).toEqual([]);
+    expect(findings(proposed, "SUPERSEDED (by DEC-0001)")).toEqual([]);
+    for (const status of [
+      "TODO",
+      "WIP",
+      "DONE",
+      "REJECTED",
+      "SUPERSEDED (by DEC-0001)",
+      "PARTLY SUPERSEDED (by DEC-0001)",
+    ]) {
+      const invalid = findings(original, status);
+      expect(
+        invalid.map(({ code }) => code),
+        status,
+      ).toEqual(["QFAI-STORY-017"]);
+      expect(invalid[0]).toMatchObject({ file: decisions, refs: ["DEC-2098"] });
+      expect(invalid[0]?.message).toMatch(/Evidence.*Grounds/);
+    }
+    for (const suffix of [
+      "Published reason. - Rollback: restore bytes. - Residual risk: bounded.",
+      "Published reason. - Residual risk: bounded. - Rollback:",
+    ]) {
+      const invalidSuffix = findings(prefix + suffix, "DONE");
+      expect(invalidSuffix.map(({ code }) => code)).toEqual(["QFAI-STORY-017"]);
+      expect(invalidSuffix[0]).toMatchObject({ file: decisions, refs: ["DEC-2098"] });
+    }
+    const invalidStatus = findings(proposed, "APPROVED");
+    expect(invalidStatus.map(({ code }) => code)).toEqual(["QFAI-STORY-003"]);
+    expect(invalidStatus[0]?.message).toMatch(/DEC-2098.*invalid Status/);
+    const absentSuccessor = findings(proposed, "SUPERSEDED (by DEC-0009)");
+    expect(absentSuccessor.map(({ code }) => code)).toEqual(["QFAI-STORY-003"]);
+    expect(absentSuccessor[0]).toMatchObject({ file: decisions, refs: ["DEC-2098", "DEC-0009"] });
+  });
+
   // QFAI:AC-0001-0054-03
   // QFAI:EX-0001-0002-04
   // QFAI:EX-0001-0054-04
@@ -847,12 +931,13 @@ describe("story-tree drift", () => {
   // QFAI:AC-0001-0054-01
   // QFAI:EX-0001-0007-07
   // QFAI:EX-0001-0054-02
+  // QFAI:EX-0001-0007-14
   it("reports a rewritten decision row in drift even when a change request names the file", async () => {
     const questions = `${specs}/open-questions.md`;
     const questionTable = "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
     await put(
       decisions,
-      `${table}| DEC-0001 | Choice A | Reason | DONE |\n| DEC-0002 | Choice X | Reason | DONE |\n`,
+      `${table}| DEC-0001 | Choice A | Reason | DONE |\n| DEC-0002 | Choice X | Reason | DONE |\n| DEC-2098 | Published choice | Published reason. - Residual risk: bounded. - Rollback: restore bytes. | DONE |\n`,
     );
     await put(questions, `${questionTable}| OQ-0001 | Which layout | Pending | TODO |\n`);
     git("add", ".");
@@ -860,7 +945,7 @@ describe("story-tree drift", () => {
     git("checkout", "-b", "topic");
     await put(
       decisions,
-      `${table}| DEC-0001 | Choice B | Reason | DONE |\n| DEC-0009 | Choice X | Reason | DONE |\n| DEC-0003 | Change request: ${decisions} | Approved | DONE |\n`,
+      `${table}| DEC-0001 | Choice B | Reason | DONE |\n| DEC-0009 | Choice X | Reason | DONE |\n| DEC-2098 | Published choice | - Evidence: file:src/choice.ts - Grounds: Published reason. - Residual risk: bounded. - Rollback: restore bytes. | DONE |\n| DEC-0003 | Change request: ${decisions} | Approved | DONE |\n`,
     );
     await put(questions, `${questionTable}| OQ-0001 | Which layout | Pending | DONE |\n`);
     git("add", ".");
@@ -874,6 +959,11 @@ describe("story-tree drift", () => {
     ).toBe(true);
     expect(
       rewritten.some((item) => item.file === decisions && item.message.includes("DEC-0002 id")),
+    ).toBe(true);
+    expect(
+      rewritten.some(
+        (item) => item.file === decisions && item.message.includes("DEC-2098 approach"),
+      ),
     ).toBe(true);
     expect(rewritten.some((item) => item.file === questions)).toBe(false);
   });

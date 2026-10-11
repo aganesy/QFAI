@@ -42,6 +42,7 @@ changes.
 
 - The write scope the request or the work order gives.
 - The files being edited.
+- `.agents/rules/documentation-clarity.md`, when writing the prose this step produces.
 
 ## The edit
 

@@ -45,7 +45,7 @@ describe("a fix route from the diagnosis to the commit", () => {
     );
     expect(text).toMatch(/the behaviour a reverted change broke/i);
     expect(text).toMatch(/the step asks the user nothing/i);
-    expect(text).toMatch(/list the EX in the run's final report/i);
+    expect(text).toMatch(/list the EX\b.*\bin the run's final report/i);
   });
 
   // QFAI:EX-0001-0094-02
@@ -68,20 +68,108 @@ describe("a fix route from the diagnosis to the commit", () => {
   it("commits exactly the paths the run wrote, and pushes nothing", async () => {
     const step = flat(await readShipped("step/verify-commit/STEP.md"));
     expect(step).toMatch(
-      /stage exactly the tracked deliverables the run wrote, with `git add <those paths>`/i,
+      /stage exactly the (?:authorized )?tracked deliverables the run wrote, with `git add <those paths>`/i,
     );
     expect(step).toMatch(/never `git add -A`/i);
     expect(step).toMatch(
       /already modified before the run and then written by it is committed whole; the final report names it/i,
     );
     expect(step).toMatch(/in the final report: the commit, and the files it holds/i);
-    expect(step).toMatch(/the step never pushes, opens a pull request or merges/i);
+    const gate = flat(sectionOf(await readShipped("step/verify-commit/STEP.md"), "## Gate"));
+    expect(gate).toMatch(/nothing was pushed, and no pull request or merge was made/i);
   });
 
   // QFAI:EX-0001-0225-08
   it("makes no commit when a verify gate failed", async () => {
     const procedure = await section("verify-commit", "## Procedure");
-    expect(procedure).toMatch(/stop when a verify gate failed or did not run, and say which/i);
+    expect(procedure).toMatch(
+      /stop (?:when a verify gate failed or did not run, and say which|at an ordinary FAIL or UNRUN, and say which gate)/i,
+    );
+  });
+
+  // QFAI:EX-0001-0225-10
+  it("transports only qualified CI candidates while retaining prior failures", async () => {
+    const firstGate = flat(
+      sectionOf(await readShipped("step/verify-commit/STEP.md"), "## Procedure").split(
+        /\n2\. /,
+      )[0] ?? "",
+    );
+    expect(firstGate).toMatch(
+      /allowance applies only when.*project declares.*CI only: <check name>/i,
+    );
+    expect(firstGate).toMatch(
+      /user instruction or project policy.*verification commit and its paths/i,
+    );
+    expect(firstGate).toMatch(/DELEGATED.*actual check.*pending state/i);
+    expect(firstGate).toMatch(/permits that commit.*not.*verification-complete claim/i);
+    expect(firstGate).toMatch(/stop at an ordinary FAIL or UNRUN.*which gate/i);
+    expect(firstGate).toMatch(/every nondelegated gate.*(?:pass|passed)/i);
+    expect(firstGate).toMatch(/red.*(?:stop|block).*same.*unchanged.*candidate/i);
+    expect(firstGate).toMatch(/explicit(?:ly)?.*CI-only delegat.*covering.*transport commit/i);
+    expect(firstGate).toMatch(/existing planned fix.*(?:procedure|changes)/i);
+    expect(firstGate).toMatch(/actual.*(?:uncommitted )?changes.*address.*failure/i);
+    expect(firstGate).toMatch(/HEAD still names the failed commit/i);
+    expect(firstGate).toMatch(/(?:prior|failing).*head.*check.*run.*(?:result|outcome).*FAIL/i);
+    expect(firstGate).toMatch(/actual fix.*after the commit.*new head and resume condition/i);
+    expect(firstGate).toMatch(/never.*(?:relabel|rebadge).*(?:failure|evidence|FAIL).*pending/i);
+    expect(firstGate).toMatch(
+      /(?:new|changed).*candidate.*unverified.*(?:own|its).*CI.*(?:observed|results)/i,
+    );
+    const writes = await section("verify-commit", "## Writes");
+    expect(writes).toMatch(/local commit.*does not establish formal verification/i);
+    expect(writes).toMatch(
+      /push.*pull request.*merge.*user instruction or project policy.*action, target and scope/i,
+    );
+    expect(writes).toMatch(/commit authority alone covers none/i);
+    const completion = await section("verify-commit", "## Completion after CI");
+    expect(completion).toMatch(
+      /every required check.*actual passing evidence.*current target and head/i,
+    );
+    expect(completion).toMatch(/pending, missing, mismatched or red evidence stops completion/i);
+    expect(completion).toMatch(/verification commit and pending report.*step's gate.*CI waits/i);
+  });
+
+  // QFAI:EX-0001-0225-11
+  it("keeps ordinary failures and unrun gates outside the CI-only allowance", async () => {
+    const firstGate = flat(
+      sectionOf(await readShipped("step/verify-commit/STEP.md"), "## Procedure").split(
+        /\n2\. /,
+      )[0] ?? "",
+    );
+    expect(firstGate).toMatch(
+      /exception covers neither an ordinary FAIL or UNRUN.*locally runnable gate.*avoid running/i,
+    );
+    expect(firstGate).toMatch(/red.*(?:stop|block).*same.*unchanged.*candidate/i);
+    expect(firstGate).toMatch(/never.*(?:relabel|rebadge).*(?:failure|evidence|FAIL).*pending/i);
+    expect(firstGate).toMatch(/fails the same way on the base commit.*still a failed gate/i);
+    const repoGates = await section("verify-repo-gate", "## Repository gates");
+    expect(repoGates).toMatch(/actual CI check.*same gate and scope/i);
+    expect(repoGates).toMatch(/local environment failure alone creates no delegation/i);
+    expect(repoGates).toMatch(/retain observed FAIL or UNRUN/i);
+    expect(repoGates).toMatch(/environment cannot run any other command.*user.*output/i);
+    const contract = flat(
+      await readShipped("skill/qfai-verify/references/verify-output-contract.md"),
+    );
+    const delegation =
+      contract
+        .split("A gate the project's Standard commands declare")[1]
+        ?.split('A `"PASS"` verdict')[0] ?? "";
+    expect(delegation).toMatch(/CI only: <check name>.*DELEGATED.*actual.*check/i);
+    expect(delegation).toMatch(/red.*status.*FAIL/i);
+    expect(delegation).toMatch(/runnable local gate.*never delegated to avoid running/i);
+    expect(delegation).toMatch(/observed FAIL or UNRUN.*neither becomes PASS or DELEGATED/i);
+    expect(contract).toMatch(
+      /fails identically on the base.*did not run and is not delegated.*status.*FAIL/i,
+    );
+    expect(contract).toMatch(/status.*closed two-value enum.*PASS.*FAIL/i);
+    expect(contract).toMatch(/scope.*closed enum/i);
+    expect(contract).toMatch(/no.*implement.*value.*closed at these three/i);
+    expect(contract).toMatch(/PASS gate needs actual command output or matching CI evidence/i);
+    expect(contract).toMatch(
+      /delegation never claims.*profile already ran.*check.*required scan and profile/i,
+    );
+    expect(contract).toMatch(/whole-repository scope.*requires full validation/i);
+    expect(contract).toMatch(/stage report.*summary.*add no verdict fields or states/i);
   });
 
   // QFAI:EX-0001-0225-07
@@ -109,10 +197,46 @@ describe("a fix route from the diagnosis to the commit", () => {
     expect(text).toMatch(/opening `Test exception:` names, with Status DONE, is exempt/i);
   });
 
-  it("asks which rule owns the AC when several cite its examples", async () => {
-    const text = await section("implement-tdd", "## A diagnosed missing example");
-    expect(text).toMatch(/the contract rule the diagnosis names as owning that AC/i);
-    expect(text).toMatch(/stop and ask the user which one; never pick one/i);
+  // QFAI:AC-0001-0206-01
+  // QFAI:AC-0001-0206-03
+  // QFAI:EX-0001-0206-01
+  // QFAI:EX-0001-0206-03
+  it("selects an equivalent existing owner and stops unresolved obligations before writing", async () => {
+    const diagnosed = sectionOf(
+      await readShipped("step/implement-tdd/STEP.md"),
+      "## A diagnosed missing example",
+    );
+    const ownership = flat(
+      diagnosed.split("- Before appending the EX")[1]?.split("- Append exactly one EX")[0] ?? "",
+    );
+    expect(ownership, "owner selection needs its own eligibility and equivalence policy").toMatch(
+      /existing.*rules.*cite.*matched AC.*state.*expected obligation/i,
+    );
+    expect(ownership).toMatch(/(?:prefer|retain|use).*existing owner.*(?:qualif|eligible)/i);
+    expect(ownership).toMatch(/(?:sole|only).*qualifying rule/i);
+    expect(ownership).toMatch(/only.*rules.*(?:proven|confirmed|demonstrably).*equivalent/i);
+    expect(ownership).toMatch(
+      /conditions.*(?:outcomes|results).*exceptions.*(?:authority|authorization)/i,
+    );
+    expect(ownership).toMatch(/(?:most|greatest|highest).*distinct.*existing EXs?.*that AC/i);
+    expect(ownership).toMatch(/(?:exclud|without|not count).*new EX/i);
+    expect(ownership).toMatch(/tie.*(?:ascending|stable|lowest).*BR ID/i);
+    expect(ownership).toMatch(/(?:never|do not|not).*majority.*different.*(?:behaviour|behavior)/i);
+    expect(ownership).toMatch(/no rule qualifies.*stop/i);
+    expect(ownership).toMatch(/(?:behaviour|behavior) differs.*equivalence.*uncertain.*stop/i);
+    expect(ownership).toMatch(
+      /stop dependent work.*qfai-sdd.*drift-protocol\.md.*before changing.*AC.*EX/i,
+    );
+    expect(ownership).toMatch(/add no rule.*change no rule statement/i);
+    const bullets = diagnosed.split(/\r?\n(?=- )/u);
+    const citingRule = flat(
+      bullets.find((bullet) => bullet.startsWith("- Add the new EX ID")) ?? "",
+    );
+    expect(citingRule).toMatch(/new EX ID.*selected rule.*Examples cell/i);
+    expect(citingRule).toMatch(/(?:the rule's|its) Statement is unchanged/i);
+    expect(citingRule).toMatch(/(?:asks? no|no extra).*question/i);
+    const report = flat(bullets.find((bullet) => bullet.startsWith("- List the EX")) ?? "");
+    expect(report).toMatch(/chosen BR.*reason.*final report/i);
   });
 });
 

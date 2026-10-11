@@ -224,6 +224,11 @@ const SUPERSEDED_HOOK_GROUPS: ReadonlySet<string> = new Set([
   "cb60506ba7716c5a7f508324e006857a4c17738e294cdb8263c6b92ea93680ec",
   "9575f07ca1f37cdc55f729a1ce08da4e161f677b1d28e0a8f6f2702be387d677",
   "b05b5cdea6b3e6745d466a11d8aaf6dc42650d69ab2f2619575b5e5fa51988fc",
+  // Periodic implementation and Markdown after-write/edit groups.
+  "f74e061b33e277789e4afa4f9b30c0fac70c0e3f456b88a495f83beb4b2b3e2f",
+  "26119b735d6ae96ce9fffd4a7d4b2bb1a5dba536503880122eadc059b59381df",
+  "5ffb70d0579c16a473619d3fc2fe668a668406bd2e30f465f672eed42914d738",
+  "2e28aee8fc1aa408e661a6cf565c9fdfea3ea26dad6509f3d37142217edf7d20",
 ]);
 
 export type HookMergeResult =

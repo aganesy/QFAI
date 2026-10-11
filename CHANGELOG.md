@@ -6,6 +6,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- Route authorized cleanup of current-task, ignored temporary directories
+  through a bounded triage step. Unsafe or uncertain targets stop before
+  deletion, and completion requires absence and unchanged tracked files and
+  index. Fixes #3286.
+
+- Synchronize the document schema checker copies from the package manifest after
+  a frozen dependency install, including the Renovate repin workflow.
+
+- Add a branch catch-up helper that merges the remote default branch, resolves
+  only proven digest conflicts and reseals generated pins without running tests.
+
 - **A workspace bootstrap command prepares this checkout's local launcher.**
   It runs frozen installs around the package build, stops at the first failed
   step and rejects shared dependency links. Fixes #3244.
@@ -35,6 +46,31 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   last message ends in a question, and nothing is filed under a no-question mode.
 
 ### Changed
+
+- **Agent entry instructions include report and reply guidance.** Reports and
+  replies start with the outcome and distinguish checked from unchecked work.
+
+- **Workflow steps name the rule documents they require.** The commit and retire steps read the
+  rule on how hard an action is to undo; the triage, diagnose, research and external-report steps
+  read the rule on text the project did not write; the gate steps read the rules on scratch files
+  and the forge's API; the story-tree and prose steps read the document-schema and
+  documentation-clarity rules. Each is one bullet in the step's `## Reads` section that says when
+  to read the rule. `qfai init` refreshes the steps.
+
+- **Posting guidance explicitly permits numbers and links in pull request and issue bodies.**
+  Source and ordinary Markdown retain the identifier ban and existing exceptions.
+
+- Resolve the optional Playwright dependency to 1.64.0 while keeping its existing supported version range.
+
+- **The writing rule removes unnecessary sentences without requiring needless rewrites.**
+  Its opening deletion test leaves rewriting to the existing clarity clauses.
+- **The release association gate uses Node.js to read pull request branches.**
+  Its two contributor cases require Node.js and Bash, without a jq dependency.
+
+- **Repeated edit reminders use short rule pointers.** The first relevant edit
+  receives the full rules; later edits retain concise guidance. Missing session
+  identity or unavailable counters keep the full reminder. Posting reminders
+  remain unchanged.
 
 - **Worker work orders state the permitted edit boundary.** They name the
   assigned checkout, owned paths and edit method. A refused edit returns a
@@ -320,6 +356,51 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Include authorized temporary-directory cleanup in the workflow candidate purpose.
+  Fixes #3455.
+
+- Update compatible dependency resolutions and scoped lint-parser patches while
+  retaining the supported Node floor.
+
+- Check the combined raw bytes of listed AGENTS ancestor chains and report each
+  file's contribution when the chain exceeds the source-byte budget.
+
+- **A released-entry repair moves complete new blocks back to Unreleased.**
+  The explicit local-base command refuses mixed historical edits, ambiguous
+  blocks and changed input bytes, and names exact source lines and categories.
+  It writes only the changelog and leaves Git operations to the caller. Fixes #3252.
+
+- Include the existing acceptance-body signal in both extraction schema readings.
+
+- Clarify how to report host-blocked temporary-file cleanup, hand off allowed
+  manual steps and verify removal without claiming pending cleanup is complete.
+
+- **Question-only work checks authority before repairing tracked files.**
+  Existing permission for the same target is reused. Otherwise the agent offers
+  repair or a report-only stop; an uncovered no-question run reports and stops
+  that target without writing a tracked open question.
+
+- **A diagnosed missing example reuses an existing rule for its obligation.**
+  Equivalent rules use existing example coverage and stable rule IDs to settle
+  the owner. Different or uncertain behaviour returns to specification work;
+  the choice and its reason appear in the final report.
+
+- **An optional manual Windows diagnostic runs every package test project.**
+  It checks the current pull request head, keeps the normal CI unchanged and
+  retains full-suite counts plus the executed full-flow result and duration.
+  Workflow registration alone does not supply Windows execution evidence.
+
+- **Published branch-added decision records have a bounded form recovery.**
+  A separately approved prefix may restore missing evidence labels while keeping
+  the original decision bytes and authority intact. Unsafe or ambiguous records
+  stop before writing; inherited records require their own owning decision.
+
+- Clarify when delegated external settings and credential installation may run,
+  and distinguish confirmed external effects from repository changes and CI results.
+
+- Verify steps reject validation errors even when a custom Validate wrapper succeeds.
+- Clarify that the research agent reads the cache TTL extension in the project config; the CLI does not parse it.
+
 - Clarify that story ID candidates are snapshots and require a fresh collision
   check of the committed changes before publishing the same branch head.
 
@@ -360,6 +441,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   so the variable is never set. The step that removes the entry ran after
   `pnpm install` and `pnpm rebuild`, and each of them printed a warning. It now
   runs right after `setup-node`. Publishing itself was not affected.
+
+- **Verification commits keep pending CI separate from completed verification.**
+  Guidance records exact-head CI evidence, preserves observed failures and
+  requires separate authority for remote actions. Installed asset refresh uses
+  the verified local package and preserves project-owned files. Fixes #3294.
+
+- **Dependency guidance limits acceptance of the unresolved glob-matching risk.**
+  Reviewed project inputs and trusted SDK callers remain the accepted scope;
+  untrusted inputs require their own mitigation and security review. Dependencies
+  and runtime behavior are unchanged. Refs #3296.
+
+- **CI receipts distinguish verification from closed cleanup.** Guidance records
+  run, job, check and purpose evidence with actual counts and logs. Branch
+  overviews and cleanup skips cannot replace verification on the current head.
+  Fixes #3295.
+
+- Distinguish acceptance annotations, empty bodies, asserted behavior and actual
+  run outcomes in applicable reports. Hand off remaining bodies with their owner
+  and completion criteria while preserving the two-stage acceptance rules.
 
 ## [2.1.1] - 2026-10-08
 
