@@ -810,11 +810,17 @@ jobs:
           if (mode === "published") mkdirSync(work);
           const cache = path.join(home, "cache", mode);
           mkdirSync(cache, { recursive: true });
+          const config = path.join(home, "config", mode);
+          mkdirSync(config, { recursive: true });
+          const userConfig = path.join(config, "user-config");
+          const globalConfig = path.join(config, "global-config");
+          writeFileSync(userConfig, "", { flag: "wx" });
+          writeFileSync(globalConfig, "", { flag: "wx" });
           const env = {
             ...Object.fromEntries(Object.entries(process.env).filter(([key]) =>
               !/(?:TOKEN|PASSWORD|SECRET|AUTH)/i.test(key) && !/^npm_config_/i.test(key))),
-            npm_config_userconfig: "/dev/null",
-            npm_config_globalconfig: "/dev/null",
+            npm_config_userconfig: userConfig,
+            npm_config_globalconfig: globalConfig,
             npm_config_registry: "https://registry.npmjs.org/",
             npm_config_cache: cache,
           };
