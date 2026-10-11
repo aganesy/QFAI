@@ -437,6 +437,54 @@ describe("validate --format text matches the validate contract's text output gra
   });
 
   // QFAI:EX-0001-0039-15
+  it.each(["error", "warning", "never"] as const)(
+    "orders text groups by severity without changing issue order, counts or --fail-on %s",
+    async (failOn) => {
+      const guideline = await readGuideline();
+      const grammar = extractGrammar(guideline);
+      const errors = manyOfOneCode("QFAI-TEST-021", "error", 7).reverse();
+      const nextError = manyOfOneCode("QFAI-TEST-020", "error", 1);
+      const warnings = manyOfOneCode("QFAI-TEST-023", "warning", 2).reverse();
+      const nextWarning = manyOfOneCode("QFAI-TEST-022", "warning", 1);
+      const infos = manyOfOneCode("QFAI-TEST-025", "info", 2).reverse();
+      const nextInfo = manyOfOneCode("QFAI-TEST-024", "info", 1);
+      const issues = [
+        ...infos.slice(0, 1),
+        ...warnings.slice(0, 1),
+        ...errors.slice(0, 2),
+        ...nextInfo,
+        ...nextWarning,
+        ...nextError,
+        ...errors.slice(2, 4),
+        ...infos.slice(1),
+        ...warnings.slice(1),
+        ...errors.slice(4),
+      ];
+      const result = resultOf(issues);
+      const originalJson = JSON.stringify(result);
+
+      const output = await captureStdout(() => {
+        emitText(result, failOn);
+        return Promise.resolve();
+      });
+      const lines = output.trimEnd().split("\n");
+
+      expect(JSON.stringify(result)).toBe(originalJson);
+      expect(lines.slice(-2)).toEqual(["counts: info=3 warning=3 error=8", `fail-on: ${failOn}`]);
+      expect(lines.filter((line) => /^\[(error|warning|info)\] /.test(line))).toEqual([
+        ...errors.slice(0, 5).map((issue) => renderFromGrammar(grammar, issue)),
+        extractGroupTail(guideline)
+          .replace("[<severity>]", "[error]")
+          .replace("<CODE>", "QFAI-TEST-021")
+          .replace("<n>", "2"),
+        ...[...nextError, ...warnings, ...nextWarning, ...infos, ...nextInfo].map((issue) =>
+          renderFromGrammar(grammar, issue),
+        ),
+      ]);
+    },
+  );
+
+  // QFAI:EX-0001-0039-15
   it("prints at most five issues of one code and counts the rest, as documented", async () => {
     const guideline = await readGuideline();
     const grammar = extractGrammar(guideline);
