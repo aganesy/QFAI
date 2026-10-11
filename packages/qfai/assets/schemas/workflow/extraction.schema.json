@@ -80,7 +80,8 @@
           "mechanism-inert",
           "removal-requested",
           "visual-open",
-          "prototype-requested"
+          "prototype-requested",
+          "owned-temporary-cleanup"
         ]
       }
     },
@@ -95,7 +96,8 @@
           "flaky-label",
           "backport",
           "release-notes",
-          "test-plan"
+          "test-plan",
+          "acceptance-bodies"
         ]
       }
     },
@@ -168,6 +170,60 @@
         "required": ["alternatives"],
         "properties": {
           "alternatives": true
+        }
+      }
+    },
+    {
+      "then": {
+        "properties": {
+          "intent": {
+            "const": "order"
+          },
+          "artifacts": {
+            "type": "array",
+            "maxItems": 0
+          }
+        }
+      },
+      "if": {
+        "required": ["qualifiers"],
+        "properties": {
+          "qualifiers": {
+            "type": "array",
+            "contains": {
+              "const": "owned-temporary-cleanup"
+            }
+          }
+        }
+      }
+    },
+    {
+      "then": {
+        "properties": {
+          "artifacts": {
+            "type": "array",
+            "maxItems": 0
+          }
+        }
+      },
+      "if": {
+        "required": ["alternatives"],
+        "properties": {
+          "alternatives": {
+            "type": "array",
+            "contains": {
+              "type": "object",
+              "required": ["qualifiers"],
+              "properties": {
+                "qualifiers": {
+                  "type": "array",
+                  "contains": {
+                    "const": "owned-temporary-cleanup"
+                  }
+                }
+              }
+            }
+          }
         }
       }
     }
@@ -252,7 +308,8 @@
               "mechanism-inert",
               "removal-requested",
               "visual-open",
-              "prototype-requested"
+              "prototype-requested",
+              "owned-temporary-cleanup"
             ]
           }
         },
@@ -267,11 +324,34 @@
               "flaky-label",
               "backport",
               "release-notes",
-              "test-plan"
+              "test-plan",
+              "acceptance-bodies"
             ]
           }
         }
-      }
+      },
+      "allOf": [
+        {
+          "then": {
+            "properties": {
+              "intent": {
+                "const": "order"
+              }
+            }
+          },
+          "if": {
+            "required": ["qualifiers"],
+            "properties": {
+              "qualifiers": {
+                "type": "array",
+                "contains": {
+                  "const": "owned-temporary-cleanup"
+                }
+              }
+            }
+          }
+        }
+      ]
     }
   }
 }

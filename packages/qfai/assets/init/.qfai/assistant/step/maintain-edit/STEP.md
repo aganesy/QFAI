@@ -11,8 +11,8 @@ routing-profile: default
 
 ## What this is for
 
-A change that alters what a reader reads and nothing a program or an agent
-does: wording, a typo, a code comment, prose in a document.
+A change that alters what a reader reads and nothing a person, program or
+agent does: wording, a typo, a code comment, prose in a document.
 
 ## Non-goals
 
@@ -34,10 +34,15 @@ as [A semantic effect](#a-semantic-effect) says:
 
 A file extension alone never makes a change a maintenance edit.
 
+A procedure's actions, required values, commands and order govern what a person
+does. Changing any of them has a semantic effect, even when only Markdown
+changes.
+
 ## Reads
 
 - The write scope the request or the work order gives.
 - The files being edited.
+- `.agents/rules/documentation-clarity.md`, when writing the prose this step produces.
 
 ## The edit
 

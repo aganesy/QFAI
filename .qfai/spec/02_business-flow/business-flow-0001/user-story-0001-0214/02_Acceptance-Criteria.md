@@ -5,11 +5,13 @@
 ```gherkin
 Feature: Close, answer or hand back a request without a change
   # AC-0001-0214-01
-  Scenario: A route without a change ends at triage-close and changes no tracked file
+  Scenario: A route without a change ends at triage-close with only its allowed records
     Given a route that ends at `triage-close`
     When it ends
     Then no verify stage and no review have run
-    And no tracked file outside its discussion records changed
+    And no tracked file changed except its discussion records and a required approval row that `qfai-run` wrote in `decisions.md` before the triage step
+    And every triage step changed no tracked file
+    And no handed-off operation ran on the user's behalf
     And the final report states the closure outcome and never that a change is done
 
   # AC-0001-0214-02
@@ -29,7 +31,7 @@ Feature: Close, answer or hand back a request without a change
   Scenario: qfai-triage is a stage skill that owns the triage steps
     Given the skills `qfai init` installs
     When `qfai-triage` is read or invoked by name
-    Then it lists the nine triage steps and is covered by the stage-skill rules
+    Then it lists the ten triage steps, including bounded `triage-owned-cleanup`, and is covered by the stage-skill rules
     And invoked by name it changes no tracked file and ends at its stage
 
   # AC-0001-0214-05

@@ -43,6 +43,154 @@ asking it once costs what asking about a single item costs.
 Three branches polled separately spend three times what the answer needs, and
 the multiplier grows with the work rather than staying put.
 
+### A first snapshot of two pull requests
+
+When git and a REST listing cannot answer the combined CI and review question,
+use aliases and a common fragment. Supply the repository owner, name and two
+pull-request numbers as variables. This query reads the first pages only.
+
+```graphql
+query PullRequestSnapshot($owner: String!, $name: String!, $firstPR: Int!, $secondPR: Int!) {
+  repository(owner: $owner, name: $name) {
+    first: pullRequest(number: $firstPR) {
+      ...PullRequestState
+    }
+    second: pullRequest(number: $secondPR) {
+      ...PullRequestState
+    }
+  }
+}
+
+fragment PullRequestState on PullRequest {
+  id
+  number
+  headRefOid
+  state
+  mergeable
+  commits(last: 1) {
+    nodes {
+      commit {
+        id
+        oid
+        statusCheckRollup {
+          id
+          state
+          contexts(first: 50, after: null) {
+            nodes {
+              __typename
+              ... on CheckRun {
+                id
+                name
+                status
+                conclusion
+                detailsUrl
+                completedAt
+              }
+              ... on StatusContext {
+                id
+                context
+                state
+                targetUrl
+              }
+            }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+          }
+        }
+      }
+    }
+    pageInfo {
+      hasPreviousPage
+      startCursor
+    }
+  }
+  reviewThreads(first: 50, after: null) {
+    nodes {
+      id
+      isResolved
+      isOutdated
+      comments(first: 20, after: null) {
+        nodes {
+          id
+          body
+          author {
+            login
+          }
+          createdAt
+          updatedAt
+          url
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+  reviews(first: 50, after: null) {
+    nodes {
+      id
+      state
+      body
+      author {
+        login
+      }
+      submittedAt
+      commit {
+        oid
+      }
+      url
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+  comments(first: 50, after: null) {
+    nodes {
+      id
+      body
+      author {
+        login
+      }
+      createdAt
+      updatedAt
+      url
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}
+```
+
+- Keep a separate cursor for each PR's contexts, threads, reviews and comments,
+  and for each thread's comments. While `hasNextPage` is true, fetch that
+  connection with its own `endCursor` as `after`, retaining earlier pages.
+  Batch independent next-page requests with distinct aliases and variables;
+  never reuse one connection's cursor for another.
+- `commits(last: 1)` selects the head evidence, not the full commit history.
+  Its commit `oid` must equal that PR's `headRefOid`. Earlier commits indicated
+  by `hasPreviousPage` need not be fetched for this head check.
+- Require every page of the status and review connections before claiming
+  coverage. API errors, null PRs or required evidence, missing heads, or an OID
+  mismatch leave the snapshot incomplete. A null rollup does not prove CI passed.
+  If the head changes during pagination, discard that head's coverage and
+  collect a new snapshot. Apply the project's completion and merge rules only
+  to complete evidence for the current head.
+
+GitHub's [pull-request fields](https://docs.github.com/en/graphql/reference/pulls),
+[commit status fields](https://docs.github.com/en/graphql/reference/commits) and
+[pagination guide](https://docs.github.com/en/graphql/guides/using-pagination-in-the-graphql-api)
+define the query's fields and cursors.
+
 ## 3. Save a payload once and read it locally
 
 A log, a diff or a listing that will be searched more than once is written to
@@ -60,17 +208,48 @@ already said.
 Where the subject's duration is unknown, ask once, wait, and widen the gap as
 the wait grows.
 
+### One watcher for the task
+
+The root agent names one API watcher for recurring hosted-state checks. The
+root and all its descendants together have at most one such watcher. Other
+workers read its saved payloads and request fresh snapshots from it. Save the
+capture time, covered PRs and heads, pagination state and response headers with
+each payload so workers can judge whether it answers their question.
+
+Coordinate targets and timing with other known tasks using the same account;
+reuse their watcher where it can cover the combined set. This does not reserve
+the account or guarantee exclusive access against unknown sessions. It limits
+API polling, not workers doing local work or making necessary non-polling calls.
+
+These are operating instructions. The reminder does not elect a watcher or
+enforce the limit.
+
 ## 5. `rate_limit` is not the budget
 
-A dedicated rate-limit endpoint can report a stale or wrong figure. One has
-answered `0` calls used against a token that a real endpoint reported, minutes
-later, as most of the way through its allowance. An agent that trusts the
-endpoint reads reassurance and keeps spending.
+Read the budget from the response to a call that was going to be made anyway,
+never a dedicated `rate_limit` probe. Record that response's resource, remaining count
+and reset time. On GitHub these are `x-ratelimit-resource`,
+`x-ratelimit-remaining` and `x-ratelimit-reset`; also retain `Retry-After` when
+present. REST and GraphQL have separate primary allowances. Missing headers
+leave the budget unknown; a saved count is not a reservation for the next call.
 
-The instrument is the response to a call that was going to be made anyway.
-Every response carries the remaining count, the reset time and the name of the
-allowance it was drawn from — and that last one is what says which allowance a
-refusal came from, where REST and GraphQL are counted separately.
+### Recover from an actual refusal
+
+When a real response refuses a request because of a rate limit, stop calls to
+the affected resource and tell the watcher and known account-sharing tasks.
+A successful HTTP status with a rate-limit error in the body is also a refusal.
+For a secondary limit, pause affected requests across REST and GraphQL for the
+same account. Changing tokens or API surfaces is not recovery.
+Wait for `Retry-After` and any applicable reset time. For a secondary limit
+with neither delay nor an exhausted primary allowance, wait at least one minute.
+
+After the wait, make one real request already needed for the work. Resume that
+resource only when the request succeeds and its own headers show available
+budget. If it is refused again or the headers are missing, keep it stopped;
+do not run a retry loop or a `rate_limit` probe. Continue work that needs no
+call to that resource. GitHub's
+[rate-limit guidance](https://docs.github.com/en/graphql/overview/rate-limits-and-query-limits-for-the-graphql-api)
+describes the refusal signals and wait headers.
 
 ## The command, where there is one
 
