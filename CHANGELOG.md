@@ -356,9 +356,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
-- Treat quoted decision Approach labels as literal content while retaining
-  structural item and Evidence checks. Fixes #3443.
-
 - Include authorized temporary-directory cleanup in the workflow candidate purpose.
   Fixes #3455.
 
@@ -374,6 +371,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   It writes only the changelog and leaves Git operations to the caller. Fixes #3252.
 
 - Include the existing acceptance-body signal in both extraction schema readings.
+
+- Treat quoted decision Approach labels as literal content while retaining
+  structural item and Evidence checks. Fixes #3443.
 
 - Clarify how to report host-blocked temporary-file cleanup, hand off allowed
   manual steps and verify removal without claiming pending cleanup is complete.
