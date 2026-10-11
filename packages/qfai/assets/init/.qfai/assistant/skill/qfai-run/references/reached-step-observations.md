@@ -88,6 +88,11 @@ if (!checkout || !source || !artifact) {
   process.exit(1);
 }
 
+if (![40, 64].includes(source.length) || /[^0-9a-f]/i.test(source)) {
+  process.stderr.write("Supply a full 40- or 64-digit hexadecimal source identifier.\n");
+  process.exit(1);
+}
+
 const env = Object.fromEntries(
   Object.entries(process.env).filter(([key]) => !key.toUpperCase().startsWith("GIT_")),
 );
