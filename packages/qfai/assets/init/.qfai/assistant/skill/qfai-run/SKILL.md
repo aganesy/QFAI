@@ -137,6 +137,10 @@ When parts ran in parallel, use the summary in `references/operator-screens.md`.
 
 Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#completion-contract-shared`. **Smallest applicable smoke check** (this skill's override): the gates of the `verify-qfai-gate` and `verify-repo-gate` steps the chosen scope holds; a scope holding none runs no gate, and the report says so. A gate that cannot run is UNRUN, not a pass.
 
+At each existing stage boundary, use `references/reached-step-observations.md`
+to compare reached scoped steps with actual observations in the existing report.
+This adds no gate or review.
+
 project_memory:
 
 - The user names no stage after the first request.

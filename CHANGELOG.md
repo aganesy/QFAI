@@ -6,6 +6,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- Compare reached workflow steps with actual reads, actions, outputs and gate
+  evidence in existing human reports. Missing proof stays unverified; no extra
+  reviewer, gate or execution engine is added. Fixes #3336.
+
 - Route authorized cleanup of current-task, ignored temporary directories
   through a bounded triage step. Unsafe or uncertain targets stop before
   deletion, and completion requires absence and unchanged tracked files and
