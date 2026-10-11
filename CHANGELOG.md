@@ -376,6 +376,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the owner. Different or uncertain behaviour returns to specification work;
   the choice and its reason appear in the final report.
 
+- **An optional manual Windows diagnostic runs every package test project.**
+  It checks the current pull request head, keeps the normal CI unchanged and
+  retains full-suite counts plus the executed full-flow result and duration.
+  Workflow registration alone does not supply Windows execution evidence.
+
 - **Published branch-added decision records have a bounded form recovery.**
   A separately approved prefix may restore missing evidence labels while keeping
   the original decision bytes and authority intact. Unsafe or ambiguous records

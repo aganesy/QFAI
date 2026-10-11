@@ -2020,6 +2020,7 @@ describe("the real workflow trees", () => {
         "build::release.yml::pnpm ci:gate:checks",
         // The independent types job reaches the same tsc build through its entry point.
         "build::release.yml::pnpm ci:gate:types",
+        'build::windows-full-suite-diagnostic.yml::pnpm -C packages/qfai build 2>&1 | tee "$(cygpath -u "$RUNNER_TEMP")/windows-full-suite/build.log"',
         "heuristic::ci.yml::pnpm ci:build-verify",
         // This entry point reaches the bundler through a Node wrapper, not a package script.
         "heuristic::release.yml::pnpm ci:gate:build",
