@@ -356,6 +356,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Missing-pack preflight diagnostics explain how to use existing specifications.**
+  Conditional import guidance preserves the current purpose and request without
+  regenerating past packs. Source selection and validation gates remain unchanged.
+  Fixes #3302.
+
 - Update compatible dependency resolutions and scoped lint-parser patches while
   retaining the supported Node floor.
 
