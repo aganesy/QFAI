@@ -13,6 +13,13 @@ Canonical path: `.qfai/report/verify.json`. Create the `.qfai/report/` directory
 | `summary`    | string           | no       | One or two sentences an operator can read without opening the stage report.                                                                             |
 | `gates`      | array of objects | no       | Per-gate results: as set out below. Advisory; no reader gates on it today.                                                                              |
 
+When the scope includes acceptance scaffolds or unfinished BF/AC acceptance
+bodies, an optional `summary` stays one or two short sentences naming remaining
+work, its owner or UNASSIGNED, and the detailed human-report reference. The
+five-field detail belongs in `verify-repo-gate`'s `## Report` section, not a
+new JSON field or table inside `summary`. Empty-body exemptions, verdicts and
+completion rules stay unchanged.
+
 `status` is a closed two-value enum: `"PASS"` / `"FAIL"`. There is no `"WARN"` — a run with only `warning` / `info` findings is `"PASS"` (waivers apply to those severities only). Any `error` finding makes it `"FAIL"`.
 
 Each entry of `gates` is `{ name, status, command }`, plus these optional fields:
@@ -28,6 +35,13 @@ Each entry of `gates` is `{ name, status, command }`, plus these optional fields
 A gate the project runs in CI only is recorded `"DELEGATED"` with its `check` and `ci`. A `"red"` check makes the top-level `status` `"FAIL"`. A `"pending"` one does not, and `summary` names it, so a reader sees what the run left to CI. A gate that can run here is never delegated to avoid running it.
 
 A gate that fails identically on the base, or did not run and is not delegated, still makes the top-level `status` `"FAIL"`. The fields let a reader tell it from a failure the run caused.
+
+Keep the full CI receipt in the stage report, as
+`.qfai/assistant/step/common-gate-run/STEP.md#ci-evidence` requires. A branch
+overview or a confirmed closed cleanup SKIP does not replace actual verification
+or turn it into a behavioral PASS. Preserve failures for the current head;
+unknown identity or purpose remains unverified. The receipt adds no fields or
+states to this contract.
 
 `scope` is a closed enum. Write the one that matches the stage you were invoked for:
 

@@ -74,13 +74,14 @@ async function reportAfterPassingTests(
       return { testExitCode: 0, validationExitCode, reportExitCode: null, testOutput };
     }
   }
+  // Reuse the full-profile validation artifact produced above.
   const reportExitCode = await runReport({
     root,
+    inputPath: path.join(root, ".qfai", "report", "validate.flow-0001.json"),
     format: "json",
     failOn: "error",
     profile: "full",
     flowIds: [flowId],
-    runValidate: true,
   });
   return { testExitCode: 0, validationExitCode: 0, reportExitCode, testOutput };
 }
