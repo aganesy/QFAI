@@ -4,6 +4,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+## [2.1.2] - 2026-10-11
+
 ### Added
 
 - Route authorized cleanup of current-task, ignored temporary directories
