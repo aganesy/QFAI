@@ -756,6 +756,7 @@ describe("the ratchet in --scope changed", () => {
   ): Promise<string> {
     const root = await newTempDir();
     git(root, "init", "-q", "-b", "main", ".");
+    git(root, "config", "core.autocrlf", "false");
     git(root, "config", "user.email", "lane@example.com");
     git(root, "config", "user.name", "lane");
     for (const [pack, body] of Object.entries(base)) {
