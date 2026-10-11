@@ -383,6 +383,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - Include the existing acceptance-body signal in both extraction schema readings.
 
+- Treat quoted decision Approach labels as literal content while retaining
+  structural item and Evidence checks. Fixes #3443.
+
 - Clarify how to report host-blocked temporary-file cleanup, hand off allowed
   manual steps and verify removal without claiming pending cleanup is complete.
 
@@ -438,6 +441,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - Clarify that story ID candidates are snapshots and require a fresh collision
   check of the committed changes before publishing the same branch head.
+
+- Compare named-test result paths with native absolute path semantics while
+  preserving exact file selection and failure checks. Fixes #3459.
 
 - **Language errors offer an ASCII code-point construction for code samples.**
   The guard keeps Unicode escape guidance and explains the alternative when
