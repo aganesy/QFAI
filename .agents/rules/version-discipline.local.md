@@ -31,6 +31,24 @@ Three things follow.
 - To publish a tag that already exists again, run `release.yml` by hand with
   its `tag` input. That cuts no new tag.
 
+## Commands that stop for approval
+
+A command that tags a release, publishes a package or starts a release workflow
+asks a person first, in both tools. Claude Code asks through `permissions.ask`
+in `.claude/settings.json`, and Codex through `.codex/rules/release.rules`.
+The two lists name the same commands: `git tag`, pushing tags, `npm`, `pnpm`
+and `yarn npm` publish, `gh release create`, and `gh workflow run` for
+`prepare-release.yml`, `tag-release.yml` and `release.yml`. Add a command to
+both.
+
+The lists match command text, so they are a reminder and not a boundary. They do
+not catch a tag created by pushing a ref (`git push origin v1.2.3`), an option
+placed before the subcommand (`git -C . tag`), `corepack pnpm publish`, a
+workflow named by title or path, or a tag or release made through `gh api`.
+A read-only `git tag --list` and `npm publish --dry-run` ask too. The guard
+that holds is the approval a reviewer of the `release` environment gives
+before `release.yml` publishes.
+
 ## The pinned branch
 
 A branch named `<type>/v<X.Y.Z>[-<slug>]` carries a pin — `feature/v1.8.8`,

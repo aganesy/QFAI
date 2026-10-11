@@ -2,10 +2,12 @@
  * `scripts/check-repository-language.mjs` holds every tracked text file to
  * English.
  *
- * Every forbidden sample is written as an escape, so this file carries none of
- * the characters it tests for.
+ * Forbidden samples use Unicode escapes or numeric code points, so this file
+ * stores none of the characters it tests for.
  */
-import { spawnSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -74,4 +76,41 @@ describe("check-repository-language.mjs", () => {
     expect(child.stderr).toBe("");
     expect(child.status).toBe(0);
   });
+
+  it.each([
+    { name: "a fullwidth question mark", codePoint: 0xff1f, code: "U+FF1F" },
+    { name: "an astral Han character", codePoint: 0x20bb7, code: "U+20BB7" },
+  ])(
+    "gives an ASCII repair for $name while rejecting its stored literal",
+    ({ name, codePoint, code }) => {
+      const root = mkdtempSync(path.join(os.tmpdir(), "repository-language-repair-"));
+      const fixture = path.join(root, "fixture.js");
+      try {
+        execFileSync("git", ["init", "-q", root]);
+        writeFileSync(
+          fixture,
+          `// A fixture for ${name}.\nconst sample = "${String.fromCodePoint(codePoint)}";\n`,
+        );
+        execFileSync("git", ["add", "--", "fixture.js"], { cwd: root });
+
+        const rejected = spawnSync("node", [SCRIPT], { cwd: root, encoding: "utf-8" });
+        expect(rejected.status).toBe(1);
+        expect(rejected.stderr).toContain(code);
+        expect(rejected.stderr).toContain("String.fromCodePoint(0xFF1F)");
+        expect(rejected.stderr).toMatch(/if[^\n]*edit[^\n]*decod[^\n]*escapes?/i);
+
+        const hexadecimal = codePoint.toString(16).toUpperCase();
+        writeFileSync(
+          fixture,
+          `// A fixture for ${name}.\nconst sample = String.fromCodePoint(0x${hexadecimal});\n`,
+        );
+        const repaired = spawnSync("node", [SCRIPT], { cwd: root, encoding: "utf-8" });
+        expect(repaired.status).toBe(0);
+        expect(repaired.stderr).toBe("");
+        expect(repaired.stdout).toContain("No non-English characters found (1 tracked paths).");
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    },
+  );
 });

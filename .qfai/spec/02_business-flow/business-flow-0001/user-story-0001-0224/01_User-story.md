@@ -2,4 +2,4 @@
 
 ## User Story
 
-As a developer, I want the session to follow the route's plan itself, so that the work keeps moving with no run engine or run records to maintain.
+As a developer, I want the session to follow each target's plan within a goal, so that independent work keeps moving while every target retains its scope, evidence and approval boundaries without a run engine or run records.
