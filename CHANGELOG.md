@@ -47,6 +47,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Workflow steps name the rule documents they require.** The commit and retire steps read the
+  rule on how hard an action is to undo; the triage, diagnose, research and external-report steps
+  read the rule on text the project did not write; the gate steps read the rules on scratch files
+  and the forge's API; the story-tree and prose steps read the document-schema and
+  documentation-clarity rules. Each is one bullet in the step's `## Reads` section that says when
+  to read the rule. `qfai init` refreshes the steps.
+
+- **Posting guidance explicitly permits numbers and links in pull request and issue bodies.**
+  Source and ordinary Markdown retain the identifier ban and existing exceptions.
+
+- Resolve the optional Playwright dependency to 1.64.0 while keeping its existing supported version range.
+
 - **The writing rule removes unnecessary sentences without requiring needless rewrites.**
   Its opening deletion test leaves rewriting to the existing clarity clauses.
 - **The release association gate uses Node.js to read pull request branches.**
@@ -341,10 +353,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Include the existing acceptance-body signal in both extraction schema readings.
+
+- Clarify how to report host-blocked temporary-file cleanup, hand off allowed
+  manual steps and verify removal without claiming pending cleanup is complete.
+
+- **Question-only work checks authority before repairing tracked files.**
+  Existing permission for the same target is reused. Otherwise the agent offers
+  repair or a report-only stop; an uncovered no-question run reports and stops
+  that target without writing a tracked open question.
+
 - **A diagnosed missing example reuses an existing rule for its obligation.**
   Equivalent rules use existing example coverage and stable rule IDs to settle
   the owner. Different or uncertain behaviour returns to specification work;
   the choice and its reason appear in the final report.
+
+- Clarify when delegated external settings and credential installation may run,
+  and distinguish confirmed external effects from repository changes and CI results.
 
 - Verify steps reject validation errors even when a custom Validate wrapper succeeds.
 - Clarify that the research agent reads the cache TTL extension in the project config; the CLI does not parse it.
