@@ -65,6 +65,7 @@ export const QUALIFIERS = [
   "removal-requested",
   "visual-open",
   "prototype-requested",
+  "owned-temporary-cleanup",
 ] as const;
 
 export const SIGNALS = [
