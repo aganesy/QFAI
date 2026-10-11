@@ -95,7 +95,8 @@
           "flaky-label",
           "backport",
           "release-notes",
-          "test-plan"
+          "test-plan",
+          "acceptance-bodies"
         ]
       }
     },
@@ -267,7 +268,8 @@
               "flaky-label",
               "backport",
               "release-notes",
-              "test-plan"
+              "test-plan",
+              "acceptance-bodies"
             ]
           }
         }

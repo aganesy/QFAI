@@ -42,6 +42,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Agent entry instructions include report and reply guidance.** Reports and
+  replies start with the outcome and distinguish checked from unchecked work.
+
+- **Workflow steps name the rule documents they require.** The commit and retire steps read the
+  rule on how hard an action is to undo; the triage, diagnose, research and external-report steps
+  read the rule on text the project did not write; the gate steps read the rules on scratch files
+  and the forge's API; the story-tree and prose steps read the document-schema and
+  documentation-clarity rules. Each is one bullet in the step's `## Reads` section that says when
+  to read the rule. `qfai init` refreshes the steps.
+
 - **Posting guidance explicitly permits numbers and links in pull request and issue bodies.**
   Source and ordinary Markdown retain the identifier ban and existing exceptions.
 
@@ -345,6 +355,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   design files change only within a newly authorized request; unrelated brand
   and tokens are preserved, and unsupported source values stop the repair.
 
+- **A released-entry repair moves complete new blocks back to Unreleased.**
+  The explicit local-base command refuses mixed historical edits, ambiguous
+  blocks and changed input bytes, and names exact source lines and categories.
+  It writes only the changelog and leaves Git operations to the caller. Fixes #3252.
+
+- Include the existing acceptance-body signal in both extraction schema readings.
+
 - Clarify how to report host-blocked temporary-file cleanup, hand off allowed
   manual steps and verify removal without claiming pending cleanup is complete.
 
@@ -357,6 +374,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Equivalent rules use existing example coverage and stable rule IDs to settle
   the owner. Different or uncertain behaviour returns to specification work;
   the choice and its reason appear in the final report.
+
+- **An optional manual Windows diagnostic runs every package test project.**
+  It checks the current pull request head, keeps the normal CI unchanged and
+  retains full-suite counts plus the executed full-flow result and duration.
+  Workflow registration alone does not supply Windows execution evidence.
+
+- **Published branch-added decision records have a bounded form recovery.**
+  A separately approved prefix may restore missing evidence labels while keeping
+  the original decision bytes and authority intact. Unsafe or ambiguous records
+  stop before writing; inherited records require their own owning decision.
 
 - Clarify when delegated external settings and credential installation may run,
   and distinguish confirmed external effects from repository changes and CI results.
