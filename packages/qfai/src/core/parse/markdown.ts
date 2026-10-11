@@ -7,6 +7,52 @@ export type H2Section = {
   body: string;
 };
 
+/** Closed backtick-span bodies as half-open UTF-16 offsets, without changing the text. */
+export function inlineCodeSpans(text: string): Array<readonly [number, number]> {
+  const runs: Array<{ start: number; end: number; openerLength: number; close?: number }> = [];
+  let backslashes = 0;
+  let cursor = 0;
+  while (cursor < text.length) {
+    if (text[cursor] === "\\") {
+      backslashes += 1;
+      cursor += 1;
+      continue;
+    }
+    if (text[cursor] !== "`") {
+      backslashes = 0;
+      cursor += 1;
+      continue;
+    }
+    const start = cursor;
+    while (text[cursor] === "`") cursor += 1;
+    // A prose escape consumes only the first tick; the remainder can open a span.
+    const openerLength = cursor - start - (backslashes % 2);
+    runs.push({ start, end: cursor, openerLength });
+    backslashes = 0;
+  }
+
+  const nextByLength = new Map<number, number>();
+  for (let index = runs.length - 1; index >= 0; index -= 1) {
+    const run = runs[index];
+    if (!run) continue;
+    const close = nextByLength.get(run.openerLength);
+    if (close !== undefined) run.close = close;
+    // Inside a span, backslashes are literal and only a complete equal-length run closes it.
+    nextByLength.set(run.end - run.start, index);
+  }
+
+  const spans: Array<readonly [number, number]> = [];
+  for (let index = 0; index < runs.length; index += 1) {
+    const run = runs[index];
+    if (!run || run.openerLength === 0 || run.close === undefined) continue;
+    const close = runs[run.close];
+    if (!close) continue;
+    spans.push([run.end, close.start]);
+    index = run.close;
+  }
+  return spans;
+}
+
 /**
  * ATX heading, with the up-to-three leading spaces CommonMark allows. A
  * document that indents a heading — the third space is still a heading, the

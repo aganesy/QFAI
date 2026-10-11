@@ -15,7 +15,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { parseHeadings } from "../../src/core/parse/markdown.js";
+import { inlineCodeSpans, parseHeadings } from "../../src/core/parse/markdown.js";
 
 const doc = (...lines: string[]): string => lines.join("\n");
 
@@ -102,5 +102,33 @@ describe("parseHeadings", () => {
     const md = doc("# Doc", "```", "  # inside", "```", "## Real", "```", "  # inside", "```");
 
     expect(titles(md)).toEqual(["Doc", "Real"]);
+  });
+});
+
+describe("inlineCodeSpans", () => {
+  it.each([
+    { text: "no ticks", expected: [] },
+    { text: "`a`", expected: [[1, 2]] },
+    { text: "``a ` ``` b``", expected: [[2, 11]] },
+    { text: "`a``b`", expected: [[1, 5]] },
+    { text: "`open", expected: [] },
+    { text: "`open ``later``", expected: [[8, 13]] },
+    { text: "\\`x`", expected: [] },
+    { text: "\\\\`x`", expected: [[3, 4]] },
+    { text: "\\``x`", expected: [[3, 4]] },
+    { text: "\\```x``", expected: [[4, 5]] },
+    { text: "`x\\`", expected: [[1, 3]] },
+    { text: "`x\\``y`", expected: [[1, 6]] },
+    { text: "```open `x`", expected: [[9, 10]] },
+    {
+      text: "`a` ``b``",
+      expected: [
+        [1, 2],
+        [6, 7],
+      ],
+    },
+    { text: "\u00e9\u{1f600} `\u6f22`", expected: [[5, 6]] },
+  ])("returns closed code body offsets for $text", ({ text, expected }) => {
+    expect(inlineCodeSpans(text)).toEqual(expected);
   });
 });

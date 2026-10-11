@@ -356,6 +356,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Treat quoted decision Approach labels as literal content while retaining
+  structural item and Evidence checks. Fixes #3443.
+
 - Check the combined raw bytes of listed AGENTS ancestor chains and report each
   file's contribution when the chain exceeds the source-byte budget.
 
