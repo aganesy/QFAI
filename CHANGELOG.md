@@ -341,6 +341,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- UI consistency repairs reach design authoring in the SDD stage. Existing
+  design files change only within a newly authorized request; unrelated brand
+  and tokens are preserved, and unsupported source values stop the repair.
+
 - Clarify how to report host-blocked temporary-file cleanup, hand off allowed
   manual steps and verify removal without claiming pending cleanup is complete.
 
