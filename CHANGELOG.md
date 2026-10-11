@@ -42,6 +42,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Agent entry instructions include report and reply guidance.** Reports and
+  replies start with the outcome and distinguish checked from unchecked work.
+
 - **Workflow steps name the rule documents they require.** The commit and retire steps read the
   rule on how hard an action is to undo; the triage, diagnose, research and external-report steps
   read the rule on text the project did not write; the gate steps read the rules on scratch files
