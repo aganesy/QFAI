@@ -140,6 +140,23 @@ unverified with those gaps as blockers; the synthetic rows do not fill them.
   is neither repaired here nor counted as this gate's pass.
 - A repository-wide PASS is never claimed from one flow's result.
 
+### Selected-case execution
+
+When the caller selects a focused Test case, record its command arguments,
+cwd, file and case selection, actual runtime version, reporter, revision and raw output.
+Link the EX and source declaration to the full file/parent/case identity and
+observed body execution and terminal result. Keep exit, counts, containers
+and static scanner linkage separate; none proves that selected behavior ran.
+
+Zero selected executions or unidentifiable, skipped, TODO, cancelled or
+interrupted target results cannot close the focused phase. Retain the output,
+name the missing evidence, correct selection or observation and repeat it.
+Read
+`.qfai/assistant/skill/qfai-implement/references/red-admissibility.md#selected-case-execution`
+before judging a focused RED or ordinary success. A focused result establishes
+only its selected case; the existing verify run owns full collection coverage.
+This human receipt changes no gate status or JSON field and adds no runner.
+
 ## Outcomes
 
 | Outcome     | Means                                                              |

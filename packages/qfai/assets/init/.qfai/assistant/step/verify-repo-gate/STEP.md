@@ -143,6 +143,25 @@ sentences naming remaining work, its owner or UNASSIGNED, and the detailed
 report reference. Put the table in the human report, without new JSON fields,
 statuses, scopes, gates or routes.
 
+### Full collection evidence
+
+During the existing normal verify run, record the full intended collection
+and actual collection and execution. Reconcile omitted cases against
+comparable case membership at the same revision, command/filter, runner and
+environment, or explain intentional differences. Preserve the Standard Test
+command's quoted arguments: shell expansion can change collection depth.
+Equal aggregate counts do not prove equal membership. Keep unknown expected
+counts unknown; unexplained omissions prevent a full-scope completion claim.
+
+A focused target pass, file/container success or static annotation linkage
+proves no full collection. For a focused case's source identity, actual body
+execution, terminal state and raw evidence, read
+`.qfai/assistant/skill/qfai-implement/references/red-admissibility.md#selected-case-execution`.
+Keep its result distinct from full-scope evidence. No extra full run is
+required during each focused cycle. Record these facts in the existing human
+report; add no permanent inventory, ledger, JSON field, gate status, runtime
+parser or runner.
+
 ## Verdict
 
 Write `.qfai/report/verify.json` at the end of the run. It is the
