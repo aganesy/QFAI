@@ -102,7 +102,7 @@ async function lintMarkdown(
 describe("installed markdownlint CLI caller compatibility", () => {
   it("lints an ordinary Markdown document", async () => {
     const child = await lintMarkdown(
-      "# Heading\n\nA paragraph with a [link](https://example.com).\n",
+      "# Heading\n\nA paragraph with a [example documentation](https://example.com).\n",
     );
     expect(child.status, child.stderr).toBe(0);
     expect(child.stdout).toContain("Linting: 1 file(s)");
