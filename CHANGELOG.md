@@ -356,9 +356,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
-- Refuse bootstrap before starting commands when a dependency path has a file
-  as an ancestor.
-
 - Include authorized temporary-directory cleanup in the workflow candidate purpose.
   Fixes #3455.
 
@@ -392,6 +389,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   It checks the current pull request head, keeps the normal CI unchanged and
   retains full-suite counts plus the executed full-flow result and duration.
   Workflow registration alone does not supply Windows execution evidence.
+
+- Refuse bootstrap before starting commands when a dependency path has a file
+  as an ancestor.
 
 - **Published branch-added decision records have a bounded form recovery.**
   A separately approved prefix may restore missing evidence labels while keeping
