@@ -387,6 +387,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   repair or a report-only stop; an uncovered no-question run reports and stops
   that target without writing a tracked open question.
 
+- **Missing-pack preflight diagnostics explain how to use existing specifications.**
+  Conditional import guidance preserves the current purpose and request without
+  regenerating past packs. Source selection and validation gates remain unchanged.
+  Fixes #3302.
+
 - **A diagnosed missing example reuses an existing rule for its obligation.**
   Equivalent rules use existing example coverage and stable rule IDs to settle
   the owner. Different or uncertain behaviour returns to specification work;
