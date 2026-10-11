@@ -42,6 +42,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Agent entry instructions include report and reply guidance.** Reports and
+  replies start with the outcome and distinguish checked from unchecked work.
+
 - **Workflow steps name the rule documents they require.** The commit and retire steps read the
   rule on how hard an action is to undo; the triage, diagnose, research and external-report steps
   read the rule on text the project did not write; the gate steps read the rules on scratch files
@@ -348,6 +351,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A released-entry repair moves complete new blocks back to Unreleased.**
+  The explicit local-base command refuses mixed historical edits, ambiguous
+  blocks and changed input bytes, and names exact source lines and categories.
+  It writes only the changelog and leaves Git operations to the caller. Fixes #3252.
+
 - Include the existing acceptance-body signal in both extraction schema readings.
 
 - Clarify how to report host-blocked temporary-file cleanup, hand off allowed
@@ -362,6 +370,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Equivalent rules use existing example coverage and stable rule IDs to settle
   the owner. Different or uncertain behaviour returns to specification work;
   the choice and its reason appear in the final report.
+
+- **Published branch-added decision records have a bounded form recovery.**
+  A separately approved prefix may restore missing evidence labels while keeping
+  the original decision bytes and authority intact. Unsafe or ambiguous records
+  stop before writing; inherited records require their own owning decision.
 
 - Clarify when delegated external settings and credential installation may run,
   and distinguish confirmed external effects from repository changes and CI results.
