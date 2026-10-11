@@ -474,8 +474,8 @@
         "because the verdict executes and is not one of its own dependencies."
       ],
       "codePathCostPin": {
-        "instances": 26,
-        "timeoutMinutesSum": 315,
+        "instances": 22,
+        "timeoutMinutesSum": 295,
         "installInstances": 20,
         "buildJobs": ["build", "node-floor", "test", "windows-parity"]
       },
