@@ -294,7 +294,7 @@ export function retainedProfileFailure(error: unknown) {
     name: error.name,
     message: error.message,
     stack: error.stack,
-    retained: error instanceof ProfileCleanupUnconfirmed ? error.retained : undefined,
+    ...(error instanceof ProfileCleanupUnconfirmed ? { retained: error.retained } : {}),
     cause:
       cause instanceof Error
         ? {
