@@ -49,7 +49,8 @@ next step from disk after it runs.
 
 ## What it writes
 
-- The manifest, the lockfile and any adapted call, listed in `changedFiles`.
+- The actual changed paths for the manifest, lockfile and any adapted call,
+  listed in the stage report.
 - A record of the versions, the breaking changes read and how each was met, in the stage report.
 
 ## Gate
