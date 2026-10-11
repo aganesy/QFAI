@@ -401,7 +401,7 @@ describe("full validation profiling", () => {
     } finally {
       // The parent removes only its sidecar after the owned worker tree has closed.
       try {
-        await removeBaselineSource(control);
+        await removeBaselineSource(control, result);
       } catch (error: unknown) {
         cleanupFailure = error;
         result?.terminationErrors.push(JSON.stringify(retainedProfileFailure(error)));
@@ -411,6 +411,7 @@ describe("full validation profiling", () => {
           process.env.QFAI_VALIDATION_PROFILE_ARTIFACT_DIR ?? control,
           result,
           checkpoint,
+          cleanupFailure,
         );
         process.stdout.write(`Validation profile artifact: ${file}\n`);
       }

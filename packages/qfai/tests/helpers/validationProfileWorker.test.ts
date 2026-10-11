@@ -1,7 +1,6 @@
 import { execFile as execFileCallback } from "node:child_process";
-import { readFile, writeFile, rename, mkdtemp, rm, realpath, mkdir } from "node:fs/promises";
+import { readFile, writeFile, rename, mkdir } from "node:fs/promises";
 import path from "node:path";
-import os from "node:os";
 import { promisify } from "node:util";
 import { createHash } from "node:crypto";
 
@@ -22,66 +21,32 @@ import {
   prepareBaselineSource,
   archivedSourceReceipt,
   sourceTreeEntries,
+  removeBaselineSource,
 } from "./validationInputManifest.js";
 import { withValidatorMeasurements } from "./validationProfileRun.js";
 import type { ValidatorMeasurement } from "./validationProfile.js";
 import { assertBuiltCliFresh } from "./builtCli.js";
 import { DECLARED_TEST_TIMEOUT } from "../../vitest.knobs.js";
 import {
-  runControlledProfile,
   retainedProfileFailure,
   saveProfileArtifact,
   ProfileArtifactError,
+  literalFileReceipt,
+  withProfileFixture,
+  comparableValidation,
 } from "./controlledProfile.js";
 
 const CLI = path.resolve(import.meta.dirname, "../../dist/cli/index.mjs");
 assertBuiltCliFresh(CLI);
 const execFile = promisify(execFileCallback);
 
-async function literalFileReceipt(file: string) {
-  const bytes = await readFile(file);
-  return {
-    file: await realpath(file),
-    bytes: bytes.length,
-    nativeSha256: createHash("sha256").update(bytes).digest("hex"),
-  };
-}
-
-function comparableValidation(result: ValidationResult) {
-  const snapshot = structuredClone(result);
-  delete snapshot.generatedAt;
-  return {
-    ...snapshot,
-    issues: snapshot.issues.sort((left, right) =>
-      JSON.stringify(left).localeCompare(JSON.stringify(right)),
-    ),
-    timings:
-      snapshot.timings === undefined
-        ? undefined
-        : {
-            ...snapshot.timings,
-            uiuxMs: undefined,
-            htmlMockMs: undefined,
-          },
-  };
-}
-
-/** Controlled fixtures use the outer controller's process group, never a detached group. */
-async function withProfileFixture(run: (root: string) => Promise<void>) {
-  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-profile-failure-"));
-  try {
-    await run(root);
-  } finally {
-    await rm(root, { recursive: true, force: true });
-  }
-}
-
 describe("retained profiling failures", () => {
   it("terminates a hanging measurement and preserves its checkpoint and partial output", async () => {
-    await withProfileFixture(async (root) => {
+    let retainedRoot = "";
+    await withProfileFixture(async (root, profile, retain) => {
       const checkpoint = path.join(root, "checkpoint.json");
       const program = `require("node:fs").writeFileSync(${JSON.stringify(checkpoint)}, JSON.stringify({ phase: "measured-validation", retained: true })); process.stdout.write("partial measurement"); setInterval(() => {}, 1000);`;
-      const result = await runControlledProfile(process.execPath, ["-e", program], {
+      const result = await profile(process.execPath, ["-e", program], {
         cwd: root,
         timeoutMs: 2_000,
         ownGroup: false,
@@ -97,12 +62,39 @@ describe("retained profiling failures", () => {
         checkpoint: { phase: "measured-validation", retained: true },
         checkpointError: null,
       });
+      const sidecar = path.join(root, "baseline-source");
+      await mkdir(sidecar);
+      await writeFile(path.join(sidecar, "keep.txt"), "retained sidecar");
+      // Inject an unconfirmed receipt without claiming that the completed fixture is still live.
+      retain();
+      retainedRoot = root;
+      await expect(removeBaselineSource(root, undefined)).rejects.toThrow(/closure is unconfirmed/);
+      for (const uncertain of [
+        { ...result, closed: false },
+        { ...result, terminationErrors: ["owned tree termination unconfirmed"] },
+      ]) {
+        const failure = await removeBaselineSource(root, uncertain).catch(
+          (error: unknown) => error,
+        );
+        expect(failure).toMatchObject({ name: "ProfileCleanupUnconfirmed" });
+        expect(
+          JSON.parse(
+            await readFile(await saveProfileArtifact(root, uncertain, checkpoint, failure), "utf8"),
+          ) as unknown,
+        ).toMatchObject({
+          process: { closed: uncertain.closed, terminationErrors: uncertain.terminationErrors },
+          cleanup: { retained: { phase: "cleanup-unconfirmed", control: root, sidecar } },
+        });
+      }
     });
+    expect(await readFile(path.join(retainedRoot, "baseline-source", "keep.txt"), "utf8")).toBe(
+      "retained sidecar",
+    );
   });
 
   it("bounds runaway output without losing the retained output or termination cause", async () => {
-    await withProfileFixture(async (root) => {
-      const result = await runControlledProfile(
+    await withProfileFixture(async (root, profile) => {
+      const result = await profile(
         process.execPath,
         [
           "-e",
@@ -120,8 +112,8 @@ describe("retained profiling failures", () => {
   });
 
   it("retains an unavailable executable and malformed checkpoint bytes", async () => {
-    await withProfileFixture(async (root) => {
-      const result = await runControlledProfile(path.join(root, "missing executable"), [], {
+    await withProfileFixture(async (root, profile) => {
+      const result = await profile(path.join(root, "missing executable"), [], {
         cwd: root,
         timeoutMs: 2_000,
         ownGroup: false,
@@ -202,12 +194,19 @@ describe("retained profiling failures", () => {
   });
 
   it("keeps the completed nonzero child result when artifact writing fails", async () => {
-    await withProfileFixture(async (root) => {
-      const result = await runControlledProfile(
+    await withProfileFixture(async (root, profile) => {
+      const result = await profile(
         process.execPath,
         ["-e", 'process.stderr.write("failed validation"); process.exitCode = 7;'],
         { cwd: root, timeoutMs: 5_000, ownGroup: false },
       );
+      const sidecar = path.join(root, "baseline-source");
+      await mkdir(sidecar);
+      await writeFile(path.join(sidecar, "keep.txt"), "completed sidecar");
+      await removeBaselineSource(root, result);
+      await expect(readFile(path.join(sidecar, "keep.txt"))).rejects.toMatchObject({
+        code: "ENOENT",
+      });
       expect(result.code).toBe(7);
       expect(result.signal).toBeNull();
       const blocked = path.join(root, "blocked directory");

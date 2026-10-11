@@ -9,8 +9,6 @@ import {
   mkdir,
   realpath,
   symlink,
-  unlink,
-  rm,
 } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -18,6 +16,7 @@ import { promisify } from "node:util";
 import fg from "fast-glob";
 
 import { runControlledProfile } from "./controlledProfile.js";
+export { removeBaselineSource } from "./controlledProfile.js";
 
 import { loadConfig, resolvePath } from "../../src/core/config.js";
 import { collectFilesByGlobs } from "../../src/core/fs.js";
@@ -470,30 +469,4 @@ export async function prepareBaselineSource(
     currentNative,
     native,
   };
-}
-
-/** Unlink each dependency entry before removing the parent's owned sidecar leaf. */
-export async function removeBaselineSource(control: string): Promise<void> {
-  const sidecar = baselineSidecar(control);
-  const own = await lstat(sidecar).catch((error: unknown) => {
-    if (error instanceof Error && "code" in error && error.code === "ENOENT") return undefined;
-    throw error;
-  });
-  if (own === undefined) return;
-  if (!own.isDirectory() || own.isSymbolicLink())
-    throw new Error("The owned baseline sidecar was replaced; cleanup stopped");
-  for (const link of [
-    path.join(sidecar, "packages", "qfai", "node_modules"),
-    path.join(sidecar, "node_modules"),
-  ]) {
-    const linked = await lstat(link).catch((error: unknown) => {
-      if (error instanceof Error && "code" in error && error.code === "ENOENT") return undefined;
-      throw error;
-    });
-    if (linked !== undefined) {
-      if (!linked.isSymbolicLink()) throw new Error("The baseline dependency link was replaced");
-      await unlink(link);
-    }
-  }
-  await rm(sidecar, { recursive: true });
 }

@@ -1,9 +1,11 @@
 import { execFile, spawn } from "node:child_process";
-import { randomUUID } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { createHash, randomUUID } from "node:crypto";
+import { lstat, mkdir, mkdtemp, readFile, realpath, rm, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
+import os from "node:os";
 
 import { outcomeOf } from "./spawnCaptured.js";
+import type { ValidationResult } from "../../src/core/types.js";
 
 export type ControlledProfileResult = {
   pid: number | null;
@@ -175,6 +177,58 @@ export async function runControlledProfile(
   return result;
 }
 
+export class ProfileCleanupUnconfirmed extends Error {
+  readonly retained: {
+    phase: "cleanup-unconfirmed";
+    control: string;
+    sidecar: string;
+    closed: boolean | null;
+    terminationErrors: string[];
+  };
+  constructor(control: string, result: ControlledProfileResult | undefined) {
+    super(`Owned worker closure is unconfirmed; retain ${control} and its baseline sidecar`);
+    this.name = "ProfileCleanupUnconfirmed";
+    this.retained = {
+      phase: "cleanup-unconfirmed",
+      control,
+      sidecar: path.join(control, "baseline-source"),
+      closed: result?.closed ?? null,
+      terminationErrors: [...(result?.terminationErrors ?? [])],
+    };
+  }
+}
+
+/** Unlink each dependency entry before removing the parent's owned sidecar leaf. */
+export async function removeBaselineSource(
+  control: string,
+  result: ControlledProfileResult | undefined,
+): Promise<void> {
+  if (result?.closed !== true || result.terminationErrors.length !== 0)
+    throw new ProfileCleanupUnconfirmed(control, result);
+  const sidecar = path.join(control, "baseline-source");
+  const own = await lstat(sidecar).catch((error: unknown) => {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return undefined;
+    throw error;
+  });
+  if (own === undefined) return;
+  if (!own.isDirectory() || own.isSymbolicLink())
+    throw new Error("The owned baseline sidecar was replaced; cleanup stopped");
+  for (const link of [
+    path.join(sidecar, "packages", "qfai", "node_modules"),
+    path.join(sidecar, "node_modules"),
+  ]) {
+    const linked = await lstat(link).catch((error: unknown) => {
+      if (error instanceof Error && "code" in error && error.code === "ENOENT") return undefined;
+      throw error;
+    });
+    if (linked !== undefined) {
+      if (!linked.isSymbolicLink()) throw new Error("The baseline dependency link was replaced");
+      await unlink(link);
+    }
+  }
+  await rm(sidecar, { recursive: true });
+}
+
 export class ProfileArtifactError extends Error {
   constructor(
     readonly result: ControlledProfileResult,
@@ -190,6 +244,7 @@ export async function saveProfileArtifact(
   dir: string,
   result: ControlledProfileResult,
   checkpointFile?: string,
+  cleanupFailure?: unknown,
 ): Promise<string> {
   let checkpoint: unknown = null;
   let checkpointRaw: string | null = null;
@@ -216,6 +271,7 @@ export async function saveProfileArtifact(
           node: process.version,
           platform: process.platform,
           process: result,
+          cleanup: cleanupFailure === undefined ? null : retainedProfileFailure(cleanupFailure),
           checkpoint,
           checkpointRaw,
           checkpointError,
@@ -238,6 +294,7 @@ export function retainedProfileFailure(error: unknown) {
     name: error.name,
     message: error.message,
     stack: error.stack,
+    retained: error instanceof ProfileCleanupUnconfirmed ? error.retained : undefined,
     cause:
       cause instanceof Error
         ? {
@@ -252,5 +309,58 @@ export function retainedProfileFailure(error: unknown) {
         : cause === undefined
           ? null
           : String(cause),
+  };
+}
+
+export async function literalFileReceipt(file: string) {
+  const bytes = await readFile(file);
+  return {
+    file: await realpath(file),
+    bytes: bytes.length,
+    nativeSha256: createHash("sha256").update(bytes).digest("hex"),
+  };
+}
+
+/** Controlled fixtures retain their ancestor root when worker closure is unconfirmed. */
+export async function withProfileFixture(
+  run: (root: string, profile: typeof runControlledProfile, retain: () => void) => Promise<void>,
+): Promise<void> {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-profile-failure-"));
+  let retained = false;
+  try {
+    const profile: typeof runControlledProfile = async (...args) => {
+      try {
+        const result = await runControlledProfile(...args);
+        if (!result.closed || result.terminationErrors.length !== 0) retained = true;
+        return result;
+      } catch (error: unknown) {
+        retained = true;
+        throw error;
+      }
+    };
+    await run(root, profile, () => {
+      retained = true;
+    });
+  } finally {
+    if (!retained) await rm(root, { recursive: true, force: true });
+  }
+}
+
+export function comparableValidation(result: ValidationResult) {
+  const snapshot = structuredClone(result);
+  delete snapshot.generatedAt;
+  return {
+    ...snapshot,
+    issues: snapshot.issues.sort((left, right) =>
+      JSON.stringify(left).localeCompare(JSON.stringify(right)),
+    ),
+    timings:
+      snapshot.timings === undefined
+        ? undefined
+        : {
+            ...snapshot.timings,
+            uiuxMs: undefined,
+            htmlMockMs: undefined,
+          },
   };
 }
