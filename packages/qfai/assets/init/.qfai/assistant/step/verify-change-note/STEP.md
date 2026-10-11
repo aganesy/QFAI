@@ -19,6 +19,7 @@ people who use the project, before the gates run over it.
   unreleased changes go under and how entries are grouped and marked.
 - The upgrade or migration notes the project keeps, where it has them.
 - `.agents/rules/version-discipline.md`, before writing anything.
+- `.agents/rules/documentation-clarity.md`, when writing the prose this step produces.
 
 ## Writes
 

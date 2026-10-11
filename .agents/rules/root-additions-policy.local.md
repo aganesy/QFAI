@@ -24,7 +24,7 @@ already is:
 | --------------------------- | --------------------------------------------------------------------------- |
 | A rule to follow            | A rule in `.agents/rules/`, which every entry point routes to               |
 | How to do a thing correctly | The guard that fails when it is done wrong, in its message and its docblock |
-| Where to look next          | The entry point that sent the reader — `AGENTS.md`, `CLAUDE.md`, the skill  |
+| Where to look next          | The entry point that sent the reader — `AGENTS.md`, the skill               |
 
 `scripts/check-tracked-readmes.mjs` fails on a tracked `README.md` outside those
 two, so the rule holds for a contributor who never read it.
@@ -50,22 +50,17 @@ restate, so `qfai init` refreshes the two together.
    Either way it opens with a level-1 heading naming the rule: that heading is
    how the surface suite finds it, so there is no list to keep in step.
 
-2. Link it from `.claude/rules/<name>.md`, and check what you got — `ln -s` in
-   Git Bash copies the target unless the variable above is set, and a copy looks
-   right until the master moves:
+2. If the rule governs particular files, add `.claude/rules/scoped/<name>.md`: a
+   `paths` list of the files it governs and one line that says to read the
+   master before changing them. Claude Code loads it when it touches a matching
+   file. Never put a link or a copy of a rule body directly under
+   `.claude/rules/`, because Claude Code loads everything there at session
+   start. `scopedRules.test.ts` holds both.
 
-   ```sh
-   git add .claude/rules/<name>.md
-   git ls-files -s .claude/rules/<name>.md   # 120000 is a link, 100644 is a copy
-   ```
-
-   `scripts/check-tracked-symlinks.mjs` fails on the copy, and its output
-   carries the rest of what a checkout without symlink support looks like.
-
-3. Cite it from `AGENTS.md`, `CLAUDE.md` and `.github/copilot-instructions.md`.
+3. Cite it from `AGENTS.md` and `.github/copilot-instructions.md`.
    A shipped rule is cited from `root/AGENTS.md` and `root/CLAUDE.md` too, so an
    adopter's entry points name it.
 
 4. Add a block to `agentsRulesSurface.test.ts` naming one token per clause, and
-   each entry point that cites it. The link and the heading are held for every
-   rule already; the clauses are held only by the block you write.
+   each entry point that cites it. The heading and the citation in `AGENTS.md` are held
+   for every rule already; the clauses are held only by the block you write.

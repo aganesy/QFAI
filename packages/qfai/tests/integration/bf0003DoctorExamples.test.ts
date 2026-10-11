@@ -214,7 +214,10 @@ describe("BF-0003 configuration discovery and loading", () => {
     await put(root, "qfai.config.yaml", "paths: {specsDir: topsecret-value\n");
     const load = check(await doctorJson(root), "config.load");
     const issues = (load?.details as { issues?: Array<{ message: string }> } | undefined)?.issues;
-    expect(issues?.some((issue) => issue.message.includes("topsecret-value"))).toBe(true);
+    expect(load?.severity).toBe("error");
+    expect(issues).toHaveLength(1);
+    expect(issues?.[0]?.message).toBe("The configuration file could not be read or parsed.");
+    expect(JSON.stringify(load)).not.toContain("topsecret-value");
     expect(load?.message).not.toContain("topsecret-value");
   });
 
