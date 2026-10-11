@@ -9,7 +9,7 @@ Feature: Choose the graph that answers the exploration question
   Scenario: Route code structure to CodeGraph
     Given a question about symbols, calls, dependencies or change impact
     When I explore the current code scope
-    Then CodeGraph is the first engine and returned exact source paths may be read directly
+    Then CodeGraph is first, exact returned paths may be read, and a second engine is used only for a specific unresolved cross-domain question
 
   # AC-0001-0234-02
   Scenario: Route document concepts to Graphify
