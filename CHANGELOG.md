@@ -6,6 +6,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- Route authorized cleanup of current-task, ignored temporary directories
+  through a bounded triage step. Unsafe or uncertain targets stop before
+  deletion, and completion requires absence and unchanged tracked files and
+  index. Fixes #3286.
+
 - Synchronize the document schema checker copies from the package manifest after
   a frozen dependency install, including the Renovate repin workflow.
 
@@ -351,6 +356,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Check the combined raw bytes of listed AGENTS ancestor chains and report each
+  file's contribution when the chain exceeds the source-byte budget.
+
 - **A released-entry repair moves complete new blocks back to Unreleased.**
   The explicit local-base command refuses mixed historical edits, ambiguous
   blocks and changed input bytes, and names exact source lines and categories.
@@ -432,6 +440,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   run, job, check and purpose evidence with actual counts and logs. Branch
   overviews and cleanup skips cannot replace verification on the current head.
   Fixes #3295.
+
+- Distinguish acceptance annotations, empty bodies, asserted behavior and actual
+  run outcomes in applicable reports. Hand off remaining bodies with their owner
+  and completion criteria while preserving the two-stage acceptance rules.
 
 ## [2.1.1] - 2026-10-08
 
