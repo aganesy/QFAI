@@ -356,10 +356,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
-- Replace obsolete workflow-result field instructions with stage reports and
-  session handoffs, preserving authorization, review and verification evidence.
-  Fixes #3322.
-
 - Include authorized temporary-directory cleanup in the workflow candidate purpose.
   Fixes #3455.
 
@@ -388,6 +384,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Equivalent rules use existing example coverage and stable rule IDs to settle
   the owner. Different or uncertain behaviour returns to specification work;
   the choice and its reason appear in the final report.
+
+- Replace obsolete workflow-result field instructions with stage reports and
+  session handoffs, preserving authorization, review and verification evidence.
+  Fixes #3322.
 
 - **An optional manual Windows diagnostic runs every package test project.**
   It checks the current pull request head, keeps the normal CI unchanged and
