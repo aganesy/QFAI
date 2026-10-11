@@ -6,6 +6,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- Add a workflow route for writing authorized operational procedures.
+  It keeps wording-only edits separate, preserves policy owners and existing
+  verification, and grants no authority to run the documented actions.
+  Fixes #3403.
+
 - Route authorized cleanup of current-task, ignored temporary directories
   through a bounded triage step. Unsafe or uncertain targets stop before
   deletion, and completion requires absence and unchanged tracked files and

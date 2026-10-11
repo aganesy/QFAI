@@ -26,6 +26,7 @@ const VOCABULARY: Record<string, string[]> = {
     "triage-handoff",
   ],
   maintenance: ["maintain-edit"],
+  documentation: ["implement-procedure"],
   diagnose: ["implement-diagnose", "implement-bisect", "implement-minimize", "implement-benchmark"],
   test_fix: ["implement-test-fix"],
   regression_fix: ["implement-regression-fix"],

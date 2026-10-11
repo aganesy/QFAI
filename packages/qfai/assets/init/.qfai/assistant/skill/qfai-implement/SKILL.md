@@ -40,6 +40,7 @@ steps:
   - implement-tooling
   - implement-backport
   - implement-acceptance
+  - implement-procedure
 requires: [common-review-cycle]
 mode: approval-gated
 ---
@@ -135,6 +136,13 @@ follows § 4 on unrequested fixes, including its exception for a necessary fix
 and reporting requirement, and states any assumption it built on
 (`.qfai/assistant/rule/test-layers.md#test-suite-sizing`,
 `.agents/rules/minimal-implementation.md` § 4).
+
+## Route-only procedure authoring
+
+When the plan names `implement-procedure`, read
+`.qfai/assistant/step/implement-procedure/STEP.md` and follow it to write an
+authorized operational procedure. Named business-flow invocations skip this
+step and keep the existing flow steps above.
 
 ## Completion
 

@@ -108,6 +108,7 @@ export const PLAN_ROUTES = [
   "apply-settled",
   "apply-settled-prototype",
   "refactor-code",
+  "write-procedure",
   "edit-text",
   "fix-defect",
   "improve-performance",
