@@ -650,9 +650,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
-
 - **The released-section changelog check reads local tags first.** It asks the
   remote for a release tag only when no local tag exists, so a clone that holds
   the tags passes the lint lane offline (#2961).
@@ -1730,9 +1727,6 @@ its code. Several commands, findings and files go with that.
 
 ### Fixed
 
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
-
 - **Step 3 lists every `routing:` override it writes (#2714).** An
   `agent-routing.yml` entry copied into `qfai.config.yaml` hides the roles the
   2.x skills declare. Step 3 keeps every entry that differs from the installed
@@ -1996,9 +1990,6 @@ its code. Several commands, findings and files go with that.
 
 ### Fixed
 
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
-
 - **Step 3 writes no `routing:` override for an unmodified 1.x manifest entry
   (#2714).** An `agent-routing.yml` entry equal to an entry a 1.x release
   shipped is no longer copied into `qfai.config.yaml`, where it hid the roles
@@ -2215,9 +2206,6 @@ its code. Several commands, findings and files go with that.
   carry a rule for notes published in Japanese.
 
 ### Fixed
-
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
 
 - **Codex hooks run under any shell.** Codex runs a hook through the session's
   shell, which on Windows is often PowerShell rather than `cmd.exe`. Every
@@ -3406,9 +3394,6 @@ its code. Several commands, findings and files go with that.
 
 ### Fixed
 
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
-
 - **`qfai init` no longer writes skill links, agent links or the Copilot
   instructions through a linked host directory** (#2672). With `.codex`,
   `.claude`, `.agents` or `.github` a symbolic link or a junction to a
@@ -3558,9 +3543,6 @@ its code. Several commands, findings and files go with that.
 ## [1.12.3] - 2026-09-24
 
 ### Fixed
-
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
 
 - **spec-0012 states the auto-serve SIGINT path as the runner contract**
   (#2201). `TC-0012-0462` still described iterate killing child server
@@ -4169,9 +4151,6 @@ its code. Several commands, findings and files go with that.
   the options, four weaknesses of the adopted unit and the dissent against it.
 
 ### Fixed
-
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
 
 - **The spec-0012 capture and serve rows name every case their test case
   holds** (#1436). Each row's test case is verified by several `it` blocks —
@@ -5345,9 +5324,6 @@ unadjudicated` on a visible line, and says a response omitting any of them
   now only merges, and `run-pr-merge.ps1` no longer takes `-Tag` or `-NoTag`.
 
 ### Fixed
-
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
 
 - **`Prepare release` opens its pull request again.** The step that pushes the
   release branch and opens the pull request exited 2 with a bash syntax error,
@@ -7594,9 +7570,6 @@ unadjudicated`, read off a Work Orders Summary row the session writes rather
 
 ### Fixed
 
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
-
 - **The autopilot tailoring contract now covers every shipped skill** (#1642).
   It was held against a hardcoded list of seven, so the two grilling skills were
   outside it and nothing reported that they carried no tailoring rule at all.
@@ -8634,9 +8607,6 @@ unadjudicated`, read off a Work Orders Summary row the session writes rather
 
 ### Fixed
 
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
-
 - **A writer that loses the provenance lock keeps its entry** (#1418). Twenty
   writers contend for one lock, and a reclaimer can judge a holder stale and
   take the lock it just published. The holder finds a stranger's object at the
@@ -8849,9 +8819,6 @@ unadjudicated`, read off a Work Orders Summary row the session writes rather
   has decided to keep one does not have that decision undone unattended.
 
 ### Fixed
-
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
 
 - **A filled-in Stage 0 catalog is exempt from the stale rule as well as the
   fork rule** (#1396). `.qfai/assistant/catalog/{manifest,product,structure,tech}.md`
@@ -9415,9 +9382,6 @@ unadjudicated`, read off a Work Orders Summary row the session writes rather
 
 ### Fixed
 
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
-
 - **`check-mdschema --scope changed` no longer reports a document's old
   violations as this branch's** (#1360). The flag selects the documents a branch
   touched and validated each one whole, so a document predating the schema
@@ -9746,9 +9710,6 @@ unadjudicated`, read off a Work Orders Summary row the session writes rather
 
 ### Fixed
 
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
-
 - **The document-schema lane now runs on Windows** (#1294). It launched the
   `node_modules/.bin` shim, and the runnable shim there is `mdschema.cmd`. Node
   has refused to spawn a `.cmd` or `.bat` without a shell since 18.20.2, so
@@ -9782,9 +9743,6 @@ unadjudicated`, read off a Work Orders Summary row the session writes rather
   itself.
 
 ### Fixed
-
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
 
 - **`QFAI-TRACE-003` names the spec directory with one separator** (#1365).
   The finding joined the configured specs directory with the platform's
@@ -9984,9 +9942,6 @@ unadjudicated`, read off a Work Orders Summary row the session writes rather
   the e2e scaffold gate. All 4 places are updated.
 
 ### Fixed
-
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
 
 - **Added the missing `## Evidence Summary` section to
   `.qfai/specs/spec-0010/01_Spec.md`.** The new spec schema caught it, and now
@@ -10407,9 +10362,6 @@ this qfai release generates` keeps appearing from then on **for a file the
   later run. (#1146)
 
 ### Fixed
-
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
 
 - **`QFAI-DRIFT-001` compared two points, so files changed on the `origin/main`
   side were reported as "changed on this branch".** `git diff <base>..HEAD`
@@ -11173,9 +11125,6 @@ release` fails if `## [Unreleased]` explains nothing — not only when it is
   a caller can tell a mistyped command name from a mistyped flag.
 
 ### Fixed
-
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
 
 - **`--force` / `--yes` / `--dry-run` were also accepted by commands that do not
   read them.** This is the remainder of #1143. `validate --dry-run` exited 0
@@ -12756,9 +12705,6 @@ report` as well, which was computing `done: 1 / open: 0` from the same
   and a pack that forgets its marker _after_ the migration is still an error.
 
 ### Fixed
-
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
 
 - **The short-circuit is decided per tree, because the readers differ.** The
   skills tree is `readdir`ed, so a regular file where the directory belongs
@@ -14539,9 +14485,6 @@ advanced` asked for RED/GREEN commands, output and the falsifiability result
   vocabulary can suppress or downgrade it through `.qfai/waivers.yml`.
 
 ### Fixed
-
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
 
 - A waiver's `rule:` now accepts the `code` a finding actually publishes. The
   grammar was `^[A-Z]+-\d{3}$`, which matched none of the identifiers
@@ -17161,9 +17104,6 @@ Backward compatibility is intentionally not preserved.
 
 ### Fixed
 
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
-
 - Copilot code review reviewer assignment migrated from REST
   `requested_reviewers` (silently ignored by GitHub since the
   late-April 2026 Copilot platform tightening) to GraphQL
@@ -17617,9 +17557,6 @@ for the recommended cleanup path.
 
 ### Fixed
 
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
-
 - Numerous late-review integrity findings: `verify-pack` `.github` allow-list (now requires the workflow file as a regular file), V2 evidence record now accepts `runtimeGate` / `uiFidelity` / `completionCertificate` so `writePrototypingEvidenceRecordV2({ completionClaimed: true, … })` cannot produce a self-contradicting record, V1-vs-validator `cycles`/`iterations` mismatch, prettier and markdownlint drift across docs / spec packs, plateau detector test fixtures aligned to the 0..100 scoring scale, downstream `qfai-validate.yml` Node version aligned with `engines: ">=20.0.0"`.
 
 ## [1.8.2] - 2026-04-23
@@ -17728,9 +17665,6 @@ for the recommended cleanup path.
 
 ### Fixed
 
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
-
 - Strict classification validation: semantic contradictions in classification block detected as hard errors
 - Execution hard gates: invalid classification/recommendation immediately rejected
 - readValidatedClassification() enforced in execution path (readClassificationBlock non-strict prohibited)
@@ -17754,9 +17688,6 @@ for the recommended cleanup path.
 - SKILL.md: "not a public CLI command" → "auxiliary generate-side command"
 
 ### Fixed
-
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
 
 - SSOT contradictions across README, SKILL.md, steering, product note
 - Stale filenames in ui-definition-protocol.md (30_comparison→30_option_comparison, etc.)
@@ -17787,9 +17718,6 @@ for the recommended cleanup path.
 
 ### Fixed
 
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
-
 - Aligned the delta/AC migration warning with the error
 - Restricted source_translation validation to bullet lines only
 - Corrected the threeLayer relPath notation to the actual file range (2[0-3]\_design_eval\_\*)
@@ -17808,9 +17736,6 @@ for the recommended cleanup path.
 - TDDLIST backfill: added 43 entries across 9 specs
 
 ### Fixed
-
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
 
 - Fixed the bin path auto-correction warning (`./dist` → `dist`)
 - Fixed a time-dependent bug in the uixDetection phase1 ratchet test
@@ -17893,9 +17818,6 @@ for the recommended cleanup path.
 
 ### Fixed
 
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
-
 - traceability: fixed a missing AC-0026-0014 → TC reference in the spec
 - validate: resolved the immediate blockers for the review summary minimum schema (`QFAI-REVIEW-007`) and the prototyping coverage matrix (`QFAI-PROT-111`)
 - validate: resolved the warning for `status:` leaking into spec decisions (`QFAI-STATUS-001`)
@@ -17945,9 +17867,6 @@ for the recommended cleanup path.
 
 ### Fixed
 
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
-
 - prototyping: with `failOpen` enabled, `renderEvidence` is recorded as `skipped` even when Playwright is absent
 - validate: resolved the blockers for `QFAI-SKILLS-001`, `QFAI-REVIEW-004/005/007`, `QFAI-PROT-111`, `QFAI-ATDD-111/112`, `QFAI-DDP-014` and `QFAI-DDP-019`
 - steering: updated the `v1.7.1` status notation in `product.md` to the current state
@@ -17972,9 +17891,6 @@ for the recommended cleanup path.
 
 ### Fixed
 
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
-
 - validators: redundant Unicode literal em dash in regex character classes (htmlMockBlocks, discussionVisuals)
 
 ## [1.7.2] - 2026-03-27
@@ -17992,9 +17908,6 @@ for the recommended cleanup path.
 
 ### Fixed
 
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
-
 - build: slop patterns JSON now resolved via candidate-path fallback for packaged builds
 - lint: formatted all markdown artifacts and fixed 10_delta.md table column mismatch
 
@@ -18011,9 +17924,6 @@ for the recommended cleanup path.
 - specs: updated the v1.7.1 status notation of the shared policy / steering
 
 ### Fixed
-
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
 
 - validators: resolved the repo-wide validator blockers (historical review/discussion, layered ID false positives, missing traceability)
 
@@ -18124,9 +18034,6 @@ for the recommended cleanup path.
 
 ### Fixed
 
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
-
 - parsers: `trimEdgePipes` now strips all consecutive edge pipes (`||`, `|||`) via regex
 - helpers: `resolveParentTcId` no longer incorrectly strips parent-level TC IDs (e.g., `TC-0001` → `"TC"`)
 
@@ -18211,9 +18118,6 @@ for the recommended cleanup path.
   `1.5.4`
 
 ### Fixed
-
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
 
 - assets/init: Fix the behavior of legacy wrapper cleanup and symlink error
   handling
@@ -20006,9 +19910,6 @@ Next Actions (MUST)` to every canonical skill
 
 ### Fixed
 
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
-
 - remove `rulesDir` from the doctor path checks
 - update the report guidance wording
 
@@ -20116,9 +20017,6 @@ Next Actions (MUST)` to every canonical skill
 ## [0.8.2] - 2026-01-07
 
 ### Fixed
-
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
 
 - docs: make the init/--force behavior description match the implementation
   contract and remove the misleading suggestion that specs/contracts are
@@ -20312,9 +20210,6 @@ Next Actions (MUST)` to every canonical skill
 
 ### Fixed
 
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
-
 - align the README description of `unknownContractIdSeverity` with the contract
   references on the Scenario side (an unknown contract in a Spec is always an
   error)
@@ -20324,9 +20219,6 @@ Next Actions (MUST)` to every canonical skill
 
 ### Fixed
 
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
-
 - make sure dist is always generated on npm pack/publish, preventing broken
   artifacts
 - add @types/node so that the d.ts build works more easily outside the monorepo
@@ -20335,9 +20227,6 @@ Next Actions (MUST)` to every canonical skill
 
 ### Fixed
 
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
-
 - align the traceability text of PromptPack/.instruction with the current
   policy (the ban on Spec -> downstream references is guaranteed by operation,
   and Spec -> Contract is the SSOT)
@@ -20345,9 +20234,6 @@ Next Actions (MUST)` to every canonical skill
 ## [0.4.6] - 2026-01-03
 
 ### Fixed
-
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
 
 - align the contracts README of the init template with the Spec/Contract rules
   (the Spec reference is the SSOT, Scenario -> Contracts is optional)
@@ -20478,9 +20364,6 @@ Next Actions (MUST)` to every canonical skill
 
 ### Fixed
 
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
-
 - remove the OQ checklist from the PR template and replace it with a decision
   check
 - remove past states (OQ continuation/version notation) from the naming
@@ -20503,9 +20386,6 @@ Next Actions (MUST)` to every canonical skill
 - update the version notation in the naming conventions document
 
 ### Fixed
-
-- Check identifier capacity before writing a story batch. Separate incoming
-  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
 
 - clarify the template search path of init and report an error when it is not
   found
