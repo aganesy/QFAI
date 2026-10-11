@@ -359,6 +359,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - Check identifier capacity before writing a story batch. Separate incoming
   overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
 
+- Update compatible dependency resolutions and scoped lint-parser patches while
+  retaining the supported Node floor.
+
 - Check the combined raw bytes of listed AGENTS ancestor chains and report each
   file's contribution when the chain exceeds the source-byte budget.
 
@@ -438,6 +441,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   so the variable is never set. The step that removes the entry ran after
   `pnpm install` and `pnpm rebuild`, and each of them printed a warning. It now
   runs right after `setup-node`. Publishing itself was not affected.
+
+- **CI receipts distinguish verification from closed cleanup.** Guidance records
+  run, job, check and purpose evidence with actual counts and logs. Branch
+  overviews and cleanup skips cannot replace verification on the current head.
+  Fixes #3295.
 
 - Distinguish acceptance annotations, empty bodies, asserted behavior and actual
   run outcomes in applicable reports. Hand off remaining bodies with their owner
