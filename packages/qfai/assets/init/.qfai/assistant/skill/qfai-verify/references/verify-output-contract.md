@@ -25,9 +25,10 @@ Each entry of `gates` is `{ name, status, command }`, plus these optional fields
 | `check`    | string | On a `"DELEGATED"` gate: the CI check that runs it.                                                                               |
 | `ci`       | string | On a `"DELEGATED"` gate: `"green"`, `"red"` or `"pending"`, the state of that check when the file is written.                     |
 
-A gate the project's Standard commands declare `CI only: <check name>` is recorded
-`"DELEGATED"` with that actual `check` and its `ci` state for the candidate being
-evaluated. A `"red"` check makes top-level `status` `"FAIL"` for that candidate.
+A gate the project's Standard commands declare `CI only: <check name>` is
+recorded `"DELEGATED"` with its `check` and `ci` for the candidate being evaluated.
+`check` names the actual CI check and `ci` its observed state.
+A `"red"` check makes the top-level `status` `"FAIL"` for that candidate.
 A `"pending"` one does not, and `summary` names it. A runnable local gate is
 never delegated to avoid running it. Retain an observed FAIL or
 UNRUN; neither becomes PASS or DELEGATED because a verification commit is wanted.

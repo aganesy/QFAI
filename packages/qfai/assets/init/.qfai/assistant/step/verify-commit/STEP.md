@@ -34,8 +34,10 @@ covering that action, target and scope. Commit authority alone covers none of th
    The existing pending-CI allowance applies only when the project declares
    the gate `CI only: <check name>` and a user instruction or project policy
    covers the verification commit and its paths. Record it `DELEGATED`, name
-   the actual check, and retain its pending state. This permits that commit,
-   not a verification-complete claim. Every nondelegated gate must pass.
+   the actual check, and retain its pending state. A gate
+   recorded `DELEGATED` does not stop the commit while its named CI check
+   is pending under that authority; it permits no verification-complete claim.
+   Every nondelegated gate must pass.
    A delegated red check stops transport of the same unchanged candidate.
    Under explicit CI-only delegation covering the transport commit, the
    existing planned fix may produce actual changes addressing that failure.
