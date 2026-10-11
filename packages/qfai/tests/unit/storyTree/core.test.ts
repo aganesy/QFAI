@@ -126,6 +126,50 @@ describe("story-tree core", () => {
     });
   });
 
+  // QFAI:EX-0001-0147-08
+  it("keeps AC and EX allocation scoped and two-digit at the upper boundary", () => {
+    for (const kind of ["AC", "EX"] as const) {
+      expect(nextId(kind, [], "US-0001-0001")).toBe(`${kind}-0001-0001-01`);
+      expect(nextId(kind, [`${kind}-0001-0001-89`, `${kind}-0001-0002-99`], "US-0001-0001")).toBe(
+        `${kind}-0001-0001-90`,
+      );
+      expect(nextId(kind, [`${kind}-0001-0001-98`], "US-0001-0001")).toBe(`${kind}-0001-0001-99`);
+      expect(() => nextId(kind, [`${kind}-0001-0001-99`], "US-0001-0001")).toThrow(RangeError);
+    }
+    expect(() => nextId("DEC", ["DEC-9999"])).toThrow(
+      new RangeError("DEC ID space is exhausted under the tree"),
+    );
+  });
+
+  // QFAI:EX-0001-0008-25
+  it("reports the exhausted EX scope reserved by a retired decision without reusing a gap", () => {
+    const files = new Map(storyFiles);
+    files.set(
+      ".qfai/spec/decisions.md",
+      "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| DEC-0001 | Retired EX-0001-0001-99 | Keep the original case's ID reserved | DONE |\n",
+    );
+    const model = buildStoryTreeModel(files);
+    expect(model.examples.map(({ id }) => id)).toEqual(["EX-0001-0001-01"]);
+    const allocate = (): string => nextStoryTreeId(model, "EX", "US-0001-0001");
+    expect(allocate).toThrow(RangeError);
+    expect(allocate).toThrow(/EX ID space is exhausted under US-0001-0001/u);
+    expect(allocate).toThrow(/upper bound 99.*remaining 0/u);
+    expect(allocate).toThrow(/sdd-triage\.md#capacity-partition/u);
+    expect(model.examples.map(({ id }) => id)).toEqual(["EX-0001-0001-01"]);
+    expect(files.get(".qfai/spec/decisions.md")).toContain("Retired EX-0001-0001-99");
+  });
+
+  it("names AC exhaustion separately from another story's remaining EX capacity", () => {
+    const names = ["AC-0001-0001-99", "EX-0001-0002-99"];
+    const allocate = (): string => nextId("AC", names, "US-0001-0001");
+    expect(allocate).toThrow(RangeError);
+    expect(allocate).toThrow(/AC ID space is exhausted under US-0001-0001/u);
+    expect(allocate).toThrow(/upper bound 99.*remaining 0/u);
+    expect(allocate).toThrow(/sdd-triage\.md#capacity-partition/u);
+    expect(nextId("EX", names, "US-0001-0001")).toBe("EX-0001-0001-01");
+    expect(names).toEqual(["AC-0001-0001-99", "EX-0001-0002-99"]);
+  });
+
   // QFAI:EX-0001-0008-04
   it("reserves IDs named by decision rows when allocating a story ID", () => {
     const files = new Map(storyFiles);
