@@ -409,6 +409,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   retains full-suite counts plus the executed full-flow result and duration.
   Workflow registration alone does not supply Windows execution evidence.
 
+- Refuse bootstrap before starting commands when a dependency path has a file
+  as an ancestor.
+
 - **Published branch-added decision records have a bounded form recovery.**
   A separately approved prefix may restore missing evidence labels while keeping
   the original decision bytes and authority intact. Unsafe or ambiguous records
