@@ -363,6 +363,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the owner. Different or uncertain behaviour returns to specification work;
   the choice and its reason appear in the final report.
 
+- **Published branch-added decision records have a bounded form recovery.**
+  A separately approved prefix may restore missing evidence labels while keeping
+  the original decision bytes and authority intact. Unsafe or ambiguous records
+  stop before writing; inherited records require their own owning decision.
+
 - Clarify when delegated external settings and credential installation may run,
   and distinguish confirmed external effects from repository changes and CI results.
 
