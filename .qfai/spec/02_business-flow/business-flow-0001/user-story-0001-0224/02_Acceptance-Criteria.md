@@ -63,6 +63,7 @@ Feature: Follow a route in the session
     Given a target paused for a named CI check, review result or required answer
     When evidence arrives or the target is resumed
     Then the existing stage reports or handoff messages identify its plan and scope, stage and step, branch and exact head, evidence, open approval or blocker, and resume condition
+    And a CI receipt names that current head, the check and run ID or URL, observed results and executed case counts for test checks, marking unavailable evidence as unverified
     And the session checks that target and head before using the evidence or writing
     And each CI receipt names the workflow run ID, event, confirmed action or purpose, and run attempt for the target and full head SHA
     And job IDs and check IDs are identified separately where present, with workflow or log evidence of actual execution and results, including actual executed cases and counts for test checks
@@ -70,7 +71,7 @@ Feature: Follow a route in the session
     And missing required identity, ambiguous job or check IDs, unknown purpose or missing execution evidence stays unverified
     And a skipped result is not behavioral PASS, and an identified later cleanup skip for the same head and check name does not replace an identified successful verification run
     And an older success cannot hide a later failed attempt of the same required verification
-    And stale or wrong-head CI evidence cannot pass the current head, and pending CI does not complete verification
+    And missing, stale or wrong-head CI evidence cannot pass the current head, and pending CI does not complete verification or justify a merge
     And a red check for the correct target and head resumes its existing planned gate and fix procedure without adding or skipping stages or reviews
     And review evidence remains bound to the commit reviewed, and a head change never relabels an earlier verdict as a new-head review
 
