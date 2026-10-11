@@ -84,6 +84,10 @@ one code review reads the repair, as `qfai-verify`'s `## Review` section says.
 Report the scope, every gate command with its result, the open risks and the
 next actions.
 
+For CI results, keep the full receipt in the stage report as
+`.qfai/assistant/step/common-gate-run/STEP.md#ci-evidence` requires. A branch
+overview and a confirmed closed cleanup SKIP do not replace actual verification.
+
 For a `DELEGATED` gate, record `check` and `ci` (`green`, `red` or `pending`).
 Name pending checks in `summary` and the stage report. Do not claim verification
 complete while a delegated check is pending.

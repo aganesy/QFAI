@@ -360,6 +360,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   apart from process exits, counts and containers. Normal verification reconciles
   full collection membership without adding a full run to each focused cycle.
 
+- Update compatible dependency resolutions and scoped lint-parser patches while
+  retaining the supported Node floor.
+
 - Check the combined raw bytes of listed AGENTS ancestor chains and report each
   file's contribution when the chain exceeds the source-byte budget.
 
@@ -439,6 +442,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   so the variable is never set. The step that removes the entry ran after
   `pnpm install` and `pnpm rebuild`, and each of them printed a warning. It now
   runs right after `setup-node`. Publishing itself was not affected.
+
+- **Dependency guidance limits acceptance of the unresolved glob-matching risk.**
+  Reviewed project inputs and trusted SDK callers remain the accepted scope;
+  untrusted inputs require their own mitigation and security review. Dependencies
+  and runtime behavior are unchanged. Refs #3296.
+
+- **CI receipts distinguish verification from closed cleanup.** Guidance records
+  run, job, check and purpose evidence with actual counts and logs. Branch
+  overviews and cleanup skips cannot replace verification on the current head.
+  Fixes #3295.
 
 - Distinguish acceptance annotations, empty bodies, asserted behavior and actual
   run outcomes in applicable reports. Hand off remaining bodies with their owner
