@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { lstatSync } from "node:fs";
+import { lstatSync, statSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -20,6 +20,23 @@ function bootstrap() {
   }
 
   for (const relative of ["node_modules", "packages/qfai/node_modules"]) {
+    // A missing leaf does not prove its existing parents are directories.
+    let parent = root;
+    for (const component of relative.split("/").slice(0, -1)) {
+      parent = path.join(parent, component);
+      let parentStats;
+      try {
+        parentStats = statSync(parent);
+      } catch (error) {
+        if (error?.code === "ENOENT") break;
+        process.stderr.write(`Cannot inspect dependency path ${relative}.\n`);
+        return 1;
+      }
+      if (!parentStats.isDirectory()) {
+        process.stderr.write(`Cannot inspect dependency path ${relative}.\n`);
+        return 1;
+      }
+    }
     let stats;
     try {
       stats = lstatSync(path.join(root, ...relative.split("/")));
