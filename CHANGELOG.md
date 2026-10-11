@@ -356,6 +356,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Include authorized temporary-directory cleanup in the workflow candidate purpose.
+  Fixes #3455.
+
 - Update compatible dependency resolutions and scoped lint-parser patches while
   retaining the supported Node floor.
 
