@@ -30,9 +30,10 @@ import { HOST_SKILL_DIRS, initQuietly, modeLines, withEmptyRepo } from "./upgrad
 import { assertBuiltCliFresh } from "../../helpers/builtCli.js";
 import { validateIntegrationSurface } from "../../../src/core/validators/integrationSurface.js";
 import { getInitAssetsDir } from "../../../src/shared/assets.js";
-import { coldValidationCli } from "../../helpers/validationInputManifest.js";
+import { coldValidationCli, removeBaselineSource } from "../../helpers/validationInputManifest.js";
 import {
   runControlledProfile,
+  retainedProfileFailure,
   saveProfileArtifact,
   type ControlledProfileResult,
 } from "../../helpers/controlledProfile.js";
@@ -384,6 +385,9 @@ describe("full validation profiling", () => {
       "../../helpers/validationProfileWorker.config.ts",
     );
     let result: ControlledProfileResult | undefined;
+    let cleanupFailure: unknown;
+    let workerFailure: unknown;
+    let workerFailed = false;
     try {
       // Leave time within the inherited budget for owned-tree cleanup and artifact recording.
       result = await runControlledProfile(process.execPath, [runner, "run", "--config", config], {
@@ -391,7 +395,17 @@ describe("full validation profiling", () => {
         env: { ...process.env, QFAI_VALIDATION_PROFILE_CHECKPOINT: checkpoint },
         timeoutMs: DECLARED_TEST_TIMEOUT - 15_000,
       });
+    } catch (error: unknown) {
+      workerFailure = error;
+      workerFailed = true;
     } finally {
+      // The parent removes only its sidecar after the owned worker tree has closed.
+      try {
+        await removeBaselineSource(control);
+      } catch (error: unknown) {
+        cleanupFailure = error;
+        result?.terminationErrors.push(JSON.stringify(retainedProfileFailure(error)));
+      }
       if (result !== undefined) {
         const file = await saveProfileArtifact(
           process.env.QFAI_VALIDATION_PROFILE_ARTIFACT_DIR ?? control,
@@ -401,6 +415,14 @@ describe("full validation profiling", () => {
         process.stdout.write(`Validation profile artifact: ${file}\n`);
       }
     }
+    if (workerFailed && cleanupFailure !== undefined)
+      throw new AggregateError(
+        [workerFailure, cleanupFailure],
+        "Worker and sidecar cleanup both failed",
+      );
+    if (workerFailed) throw workerFailure;
+    if (result === undefined)
+      throw new Error("The profiling worker did not return a process result");
     expect(result.closed, result.stderr).toBe(true);
     expect(result.timedOut, result.stderr).toBe(false);
     expect(result.error, result.stderr).toBeNull();

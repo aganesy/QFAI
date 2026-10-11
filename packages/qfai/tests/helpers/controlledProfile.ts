@@ -230,3 +230,27 @@ export async function saveProfileArtifact(
     throw new ProfileArtifactError(result, error);
   }
 }
+
+export function retainedProfileFailure(error: unknown) {
+  if (!(error instanceof Error)) return { value: String(error) };
+  const cause = error.cause;
+  return {
+    name: error.name,
+    message: error.message,
+    stack: error.stack,
+    cause:
+      cause instanceof Error
+        ? {
+            name: cause.name,
+            message: cause.message,
+            stack: cause.stack,
+            code: "code" in cause ? cause.code : null,
+            signal: "signal" in cause ? cause.signal : null,
+            stdout: "stdout" in cause ? cause.stdout : null,
+            stderr: "stderr" in cause ? cause.stderr : null,
+          }
+        : cause === undefined
+          ? null
+          : String(cause),
+  };
+}
