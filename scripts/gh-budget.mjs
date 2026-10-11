@@ -181,10 +181,12 @@ function saveReading(reading) {
 /**
  * One row per branch, over the runs that share that branch's newest head.
  *
- * A branch usually has several workflows on one commit, and a caller asking
- * whether the branch is green needs them as one answer: a row per workflow hides
- * the red one among the green ones. Runs for an older head are dropped, because
- * a result for a commit the branch has moved past answers nothing.
+ * This is a branch OVERVIEW, not a formal verification receipt. It drops workflow,
+ * event, run attempt, job, check and purpose context. A closed cleanup SKIP can
+ * share a head and check name with verification without proving its behavior.
+ * A check name or workflow event cannot establish cleanup purpose.
+ * Read the individual runs and logs before judging a required verification.
+ * Runs for an older head are dropped; their success cannot verify the new head.
  */
 export function branchRows(runs) {
   const heads = new Map();
