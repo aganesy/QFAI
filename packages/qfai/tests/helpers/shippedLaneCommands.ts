@@ -1369,11 +1369,13 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     //
     // The generated rule list cites action-reversibility, untrusted-content and ai-readable-markdown.
     // This digest covers the bytes produced by the builder strings.
+    // Re-pinned for a read-when line on each rule of the list, worded as in the shipped
+    // `AGENTS.md`. Derived by running `qfai init` into a temp root.
     // Re-pinned for one more bullet on the rules list, naming `.agents/rules/session-feedback.md`.
     // Derived by running `qfai init` into a temp root; dropping that one bullet reproduces
     // `fcdba5a8…` byte for byte.
     ".github/copilot-instructions.md",
-    "6ff4e2e392467072b83532619dbaf7e9f94bcdcbeef652f316b06b3f9716cc1d",
+    "ce757c7214ef2e652f1015997c27622981a5b9ca9b242d93825cb56b38820701",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
