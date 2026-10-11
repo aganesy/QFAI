@@ -89,6 +89,7 @@ describe("BF-0002 layer-separated lanes", () => {
       "release.yml",
       "renovate.yml",
       "tag-release.yml",
+      "windows-full-suite-diagnostic.yml",
     ]);
 
     const verdict = workflowJob("ci.yml", "ci-pass");
