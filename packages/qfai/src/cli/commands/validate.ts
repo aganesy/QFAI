@@ -992,6 +992,10 @@ export const GITHUB_ANNOTATION_LIMIT_PER_LEVEL = 10;
  * here or explicitly recorded as pending, instead of shipping without one.
  */
 export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
+  "QFAI-SECURITY-001":
+    "Tracked names and current file bytes satisfy the configured forbidden-identifier policy.",
+  "QFAI-SECURITY-002":
+    "Every tracked name and current file is safely scanned within the fixed capacity limits.",
   "QFAI-CFG-001":
     "qfai.config.yaml sets no key that has been retired. A retired key is still parsed so an existing config keeps loading, but nothing reads it, so leaving it in place misreports the gate the tool actually runs.",
   "QFAI-FLOW-005": "Every `--flow` value names an existing BF-NNNN business flow.",
@@ -1334,6 +1338,10 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
  * values that failed the check.
  */
 export const ISSUE_FIX_BY_CODE: Record<string, string> = {
+  "QFAI-SECURITY-001":
+    "Remove forbidden values from tracked names and files, or have the policy owner review the configuration, then rerun validate.",
+  "QFAI-SECURITY-002":
+    "Restore a readable Git worktree with regular unlinked files and resolve capacity limits, then rerun validate.",
   "QFAI-CONTRACT-034":
     "Correct the named contract's ID, file name or index row, give a contract that shares a number the next free one, or remove a row that names no contract file, then rerun validate.",
   "QFAI-DRIFT-001":

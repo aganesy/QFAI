@@ -138,6 +138,13 @@
 
   packageRules: [
     {
+      // Both manifests and their lock entries must agree before the repin job's frozen install.
+      // That job synchronizes the checker's derived copies after setup has completed.
+      matchPackageNames: ["@jackchuka/mdschema"],
+      matchFileNames: ["package.json", "packages/qfai/package.json"],
+      groupName: "mdschema checker",
+    },
+    {
       // The shipped workflows under `assets/init/root/.github/workflows/**` are what `qfai init`
       // writes into an adopter's repository. They move with this repository's own — an adopter
       // should not inherit a deprecation the maintainers already fixed for themselves — so they

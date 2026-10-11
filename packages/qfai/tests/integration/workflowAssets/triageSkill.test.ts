@@ -1,5 +1,5 @@
 /**
- * Integration: the `qfai-triage` stage skill `qfai init` ships and its nine steps — what the parent
+ * Integration: the `qfai-triage` stage skill `qfai init` ships and its ten steps — what the parent
  * lists, what each step's front matter and routing entry carry, and what the shipped text says a
  * request that ends without a change leaves behind.
  */
@@ -30,6 +30,7 @@ const TRIAGE_STEPS = [
   "triage-cluster",
   "triage-security-intake",
   "triage-handoff",
+  "triage-owned-cleanup",
 ];
 
 function step(name: string): Promise<string> {
@@ -39,7 +40,12 @@ function step(name: string): Promise<string> {
 describe("qfai-triage as a stage skill", () => {
   // QFAI:AC-0001-0214-04
   // QFAI:EX-0001-0214-05
-  it("lists the nine triage steps, closing last, and opens its description with its trigger", async () => {
+  // QFAI:AC-0001-0211-02
+  // QFAI:AC-0001-0220-06
+  // QFAI:EX-0001-0211-45
+  // QFAI:EX-0001-0211-46
+  // QFAI:EX-0001-0220-49
+  it("lists the ten triage steps, closing last, and opens its description with its trigger", async () => {
     const steps = await skillSteps("qfai-triage");
     expect([...steps].sort()).toEqual([...TRIAGE_STEPS].sort());
     expect(steps.at(-1)).toBe("triage-close");
@@ -63,6 +69,107 @@ describe("qfai-triage as a stage skill", () => {
     expect([...new Set(declared)].sort()).toEqual(
       [...new Set(["orchestrator", ...stepRoles])].sort(),
     );
+    const cleanup = await step("triage-owned-cleanup");
+    const reads = flat(sectionOf(cleanup, "## Reads"));
+    expect(reads).toMatch(/user.*(?:current request|standing instruction).*exact cleanup targets/i);
+    expect(reads).toMatch(/current task.*created.*owns/i);
+    const phases = sectionOf(cleanup, "## Procedure").split(/(?=^\d+\.)/m);
+    const authority = flat(phases.find((phase) => /^1\./.test(phase)) ?? "");
+    expect(authority).toMatch(/exact targets.*authority.*deleting/i);
+    expect(authority).toMatch(/empty artifacts.*ignored paths.*available tool.*not authority/i);
+    expect(authority).toMatch(/no tracked deliverable.*need files/i);
+    expect(authority).toMatch(/host-managed.*external paths.*outside/i);
+
+    const preflight = flat(phases.find((phase) => /^2\./.test(phase)) ?? "");
+    expect(preflight).toMatch(/entire preflight.*every target.*before deleting any/i);
+    expect(preflight).toMatch(
+      /specific directory beneath.*never.*root itself.*workspace root.*Git metadata/i,
+    );
+    expect(preflight).toMatch(/Git ignores.*contents.*no tracked file.*inside/i);
+    expect(preflight).toMatch(/do not change ignore rules/i);
+    expect(preflight).toMatch(/allow only ordinary directories and regular files/i);
+    expect(preflight).toMatch(
+      /required host deletion permissions.*every target.*before the first deletion/i,
+    );
+    expect(preflight).toMatch(/read-only permission inspection.*not proof of deletion permission/i);
+    expect(preflight).toMatch(
+      /missing or unknown permission.*entire cleanup.*without deleting any target/i,
+    );
+    expect(preflight).toMatch(
+      /every descendant.*every path component.*reject.*symbolic links.*junctions.*reparse points.*nested repositories.*special entries/i,
+    );
+    expect(preflight).toMatch(
+      /current-task ownership.*every entry.*no process.*other task.*pending operation.*uses/i,
+    );
+    expect(preflight).toMatch(/unknown ownership or use stops.*do not terminate processes/i);
+    expect(preflight).toMatch(
+      /identity.*contents.*detect replacement.*additions.*changes.*before each deletion/i,
+    );
+    expect(preflight).toMatch(/snapshot tracked contents.*index separately/i);
+
+    const recheck = flat(phases.find((phase) => /^3\./.test(phase)) ?? "");
+    expect(recheck).toMatch(/recheck each target.*immediately before deleting/i);
+    expect(recheck).toMatch(/stop.*path.*identity.*contents or permissions changed.*unknown/i);
+    expect(recheck).toMatch(/literal absolute paths.*one shell/i);
+    expect(recheck).toMatch(
+      /never.*another shell.*follow links.*disable.*guard.*elevate.*bypass.*host denial/i,
+    );
+
+    const deletion = flat(phases.find((phase) => /^4\./.test(phase)) ?? "");
+    expect(deletion).toMatch(/delete only.*approved targets/i);
+    expect(deletion).toMatch(/denial before deletion.*every target untouched/i);
+    expect(deletion).toMatch(
+      /failure after deletion began.*stops further work.*removed.*remains.*could not be confirmed/i,
+    );
+    expect(deletion).toMatch(/do not claim rollback.*completed cleanup.*partial failure/i);
+
+    const verification = flat(phases.find((phase) => /^5\./.test(phase)) ?? "");
+    expect(verification).toMatch(/exact targets.*absent.*tracked contents.*index.*starting state/i);
+    expect(verification).toMatch(/check fails or cannot run.*unfinished.*remaining targets/i);
+    expect(verification).toMatch(/do not record.*cleaned.*start.*closing step.*succeeded/i);
+    const writes = flat(sectionOf(cleanup, "## What it writes"));
+    expect(writes).toMatch(
+      /no tracked file or index entry.*only.*authorized ignored temporary directories/i,
+    );
+    expect(writes).toMatch(
+      /receipt.*stage report.*authority.*ownership evidence.*exact targets.*preflight.*deletion results.*absence checks.*tracked-content.*index comparison/i,
+    );
+    expect(writes).toMatch(
+      /receipt file stays outside.*deletion targets.*artifactRefs.*not.*changedFiles/i,
+    );
+    expect(flat(sectionOf(cleanup, "## Gate"))).toMatch(
+      /every exact target.*absent.*tracked contents.*index.*unchanged.*receipt.*evidence/i,
+    );
+    expect(flat(sectionOf(cleanup, "## Gate"))).toMatch(
+      /missing authority.*uncertain ownership.*unsafe paths.*host denial.*partial failure.*unfinished.*only.*completed gate.*cleaned/i,
+    );
+
+    const extractionReference = await readShipped("skill/qfai-run/references/extraction.md");
+    const eligibility = flat(
+      extractionReference
+        .split(/\r?\n\s*\r?\n/u)
+        .find((paragraph) => /^For `owned-temporary-cleanup`/.test(paragraph)) ?? "",
+    );
+    expect(eligibility).toMatch(
+      /user.*current request.*standing instruction.*ownership evidence.*exact.*temporary scope.*before setting/i,
+    );
+    expect(eligibility).toMatch(
+      /empty artifacts.*ignored files.*available tools.*prove no authority/i,
+    );
+    expect(eligibility).toMatch(
+      /host-managed.*external paths.*other tasks.*tracked files.*outside/i,
+    );
+    expect(eligibility).toMatch(/unknown scope.*ownership.*authority.*use.*does not qualify/i);
+    expect(flat(sectionOf(cleanup, "## Procedure"))).toMatch(
+      /step runs no SDD.*repository-wide gate.*commit.*push/i,
+    );
+    const close = flat(sectionOf(await step("triage-close"), "## Procedure"));
+    expect(close).toMatch(
+      /use.*cleaned.*only after.*triage-owned-cleanup.*gate.*absence.*unchanged-content.*index evidence/i,
+    );
+    expect(close).toMatch(
+      /denial.*partial failure.*missing check.*unfinished.*not closed.*cleaned/i,
+    );
   });
 
   // QFAI:AC-0001-0214-04
@@ -72,6 +179,7 @@ describe("qfai-triage as a stage skill", () => {
     expect(effective.routing?.has("qfai-triage")).toBe(false);
     for (const name of TRIAGE_STEPS) {
       expect(frontMatterOf(await step(name))["routing-profile"], name).toBe("default");
+      expect(effective.routing?.has(name), name).toBe(true);
       expect(stepReview(effective, name).profile, name).toBe("default");
       expect(stepReview(effective, name).alwaysRequired, name).toEqual([]);
     }
@@ -91,7 +199,9 @@ describe("qfai-triage invoked by name", () => {
     expect(flat(sectionOf(skill, "### Reviewer Gate"))).toMatch(
       /A tracked file the stage changed fails the review/,
     );
-    expect(flat(sectionOf(skill, "## Completion"))).toMatch(/never says a change is done/i);
+    expect(flat(sectionOf(skill, "## Completion"))).toMatch(
+      /never says a (?:tracked )?change is done/i,
+    );
 
     const policy = parseAutopilotPolicy(skill, "qfai-triage");
     expect(policy.hardRequiredMissing).toEqual([]);
@@ -102,7 +212,7 @@ describe("qfai-triage invoked by name", () => {
 
     for (const name of TRIAGE_STEPS) {
       expect(flat(sectionOf(await step(name), "## What it writes")), name).toMatch(
-        /No file git tracks/,
+        /No file git tracks|No tracked file or index entry/,
       );
     }
     expect(flat(await step("triage-dedupe"))).toMatch(/does not edit the items it links/);
@@ -150,7 +260,7 @@ describe("a question answered without a change", () => {
 
     const close = await step("triage-close");
     expect(rowOf(close, "| `answered`")).toMatch(/The question was answered/);
-    expect(flat(sectionOf(close, "## Gate"))).toMatch(/never says a change is done/);
+    expect(flat(sectionOf(close, "## Gate"))).toMatch(/never says a (?:tracked )?change is done/);
     expect(flat(sectionOf(await step("triage-answer"), "## What it writes"))).toMatch(
       /No file git tracks/,
     );

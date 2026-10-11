@@ -126,6 +126,50 @@ describe("story-tree core", () => {
     });
   });
 
+  // QFAI:EX-0001-0147-08
+  it("keeps AC and EX allocation scoped and two-digit at the upper boundary", () => {
+    for (const kind of ["AC", "EX"] as const) {
+      expect(nextId(kind, [], "US-0001-0001")).toBe(`${kind}-0001-0001-01`);
+      expect(nextId(kind, [`${kind}-0001-0001-89`, `${kind}-0001-0002-99`], "US-0001-0001")).toBe(
+        `${kind}-0001-0001-90`,
+      );
+      expect(nextId(kind, [`${kind}-0001-0001-98`], "US-0001-0001")).toBe(`${kind}-0001-0001-99`);
+      expect(() => nextId(kind, [`${kind}-0001-0001-99`], "US-0001-0001")).toThrow(RangeError);
+    }
+    expect(() => nextId("DEC", ["DEC-9999"])).toThrow(
+      new RangeError("DEC ID space is exhausted under the tree"),
+    );
+  });
+
+  // QFAI:EX-0001-0008-25
+  it("reports the exhausted EX scope reserved by a retired decision without reusing a gap", () => {
+    const files = new Map(storyFiles);
+    files.set(
+      ".qfai/spec/decisions.md",
+      "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| DEC-0001 | Retired EX-0001-0001-99 | Keep the original case's ID reserved | DONE |\n",
+    );
+    const model = buildStoryTreeModel(files);
+    expect(model.examples.map(({ id }) => id)).toEqual(["EX-0001-0001-01"]);
+    const allocate = (): string => nextStoryTreeId(model, "EX", "US-0001-0001");
+    expect(allocate).toThrow(RangeError);
+    expect(allocate).toThrow(/EX ID space is exhausted under US-0001-0001/u);
+    expect(allocate).toThrow(/upper bound 99.*remaining 0/u);
+    expect(allocate).toThrow(/sdd-triage\.md#capacity-partition/u);
+    expect(model.examples.map(({ id }) => id)).toEqual(["EX-0001-0001-01"]);
+    expect(files.get(".qfai/spec/decisions.md")).toContain("Retired EX-0001-0001-99");
+  });
+
+  it("names AC exhaustion separately from another story's remaining EX capacity", () => {
+    const names = ["AC-0001-0001-99", "EX-0001-0002-99"];
+    const allocate = (): string => nextId("AC", names, "US-0001-0001");
+    expect(allocate).toThrow(RangeError);
+    expect(allocate).toThrow(/AC ID space is exhausted under US-0001-0001/u);
+    expect(allocate).toThrow(/upper bound 99.*remaining 0/u);
+    expect(allocate).toThrow(/sdd-triage\.md#capacity-partition/u);
+    expect(nextId("EX", names, "US-0001-0001")).toBe("EX-0001-0001-01");
+    expect(names).toEqual(["AC-0001-0001-99", "EX-0001-0002-99"]);
+  });
+
   // QFAI:EX-0001-0008-04
   it("reserves IDs named by decision rows when allocating a story ID", () => {
     const files = new Map(storyFiles);
@@ -360,4 +404,147 @@ describe("story-tree core", () => {
       ruleIds: ["BR-0001-0001"],
     });
   });
+});
+
+describe.each([
+  {
+    kind: "decisions" as const,
+    id: "DEC-0001",
+    allowed: [
+      "TODO",
+      "WIP",
+      "DONE",
+      "REJECTED",
+      "SUPERSEDED (by DEC-NNNN)",
+      "PARTLY SUPERSEDED (by DEC-NNNN)",
+    ],
+    wrongKindStatus: "DEFERRED",
+  },
+  {
+    kind: "open-questions" as const,
+    id: "OQ-0001",
+    allowed: ["TODO", "WIP", "DONE", "DEFERRED"],
+    wrongKindStatus: "REJECTED",
+  },
+])("$kind row diagnostics", ({ kind, id, allowed, wrongKindStatus }) => {
+  const header = "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
+  const table = (status: string): string => `${header}| ${id} | Choice | Reason | ${status} |\n`;
+  const diagnostic = (preview: string): string =>
+    `${kind} row ${id} has an invalid Status: "${preview}"; allowed: ${allowed.join(", ")}`;
+
+  // QFAI:EX-0001-0053-13
+  it.each([3, 5])("reports expected four and actual %i cells", (count) => {
+    const cells = [id, "Choice", "Reason", "TODO", "Extra"].slice(0, count);
+    const parsed = parseRecordTable(`${header}| ${cells.join(" | ")} |\n`, kind);
+    const error = parsed.errors.find((message) => /(?:cells|columns)/i.test(message)) ?? "";
+    expect(error).toContain(`${kind} row 1`);
+    expect(error).toMatch(/expected\s+4\b/i);
+    expect(error).toMatch(new RegExp(`(?:actual|got|found)\\s+${count}\\b`, "i"));
+  });
+
+  // QFAI:EX-0001-0053-14
+  it.each(["WAITING", "", wrongKindStatus])(
+    "lists only this kind's allowed values for Status %j",
+    (status) => {
+      const parsed = parseRecordTable(table(status), kind);
+      expect(parsed.errors).toEqual([diagnostic(status)]);
+      expect(parsed.rows[0]?.status).toBe(status);
+    },
+  );
+
+  // QFAI:EX-0001-0053-15
+  it.each([39, 40, 41])(
+    "bounds the preview at forty Unicode characters for a %i-character value",
+    (length) => {
+      const status = "\u{1f680}".repeat(length);
+      const preview = "\u{1f680}".repeat(Math.min(length, 40)) + (length > 40 ? "..." : "");
+      const parsed = parseRecordTable(table(status), kind);
+      expect(parsed.errors).toEqual([diagnostic(preview)]);
+      expect(parsed.rows[0]?.status).toBe(status);
+    },
+  );
+
+  // QFAI:EX-0001-0053-15
+  it("sanitizes control and format runs and Unicode breaks only in the one-line diagnostic", () => {
+    const status = '\u202e\0First  "quoted"\t\u0085\u200dSecond\u2028Third\u2029Fourth\rLast\u2066';
+    const parsed = parseRecordTable(table(status), kind);
+    expect(parsed.errors).toEqual([diagnostic('First  "quoted" Second Third Fourth Last')]);
+    expect(parsed.errors.join("")).not.toMatch(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u);
+    expect(parsed.rows[0]?.status).toBe(status);
+  });
+
+  // QFAI:EX-0001-0053-15
+  it("applies the forty-character limit after sanitizing rather than to the raw value", () => {
+    const status = "A".repeat(20) + "\t\0\u202e\u2028\u2029" + "B".repeat(19);
+    const parsed = parseRecordTable(table(status), kind);
+    expect(parsed.errors).toEqual([diagnostic("A".repeat(20) + " " + "B".repeat(19))]);
+    expect(parsed.rows[0]?.status).toBe(status);
+  });
+
+  // QFAI:EX-0001-0053-02
+  it("continues accepting every existing status without changing its returned value", () => {
+    for (const pattern of allowed) {
+      const status = pattern.replace("DEC-NNNN", "DEC-0042");
+      const parsed = parseRecordTable(table(status), kind);
+      expect(parsed.errors).toEqual([]);
+      expect(parsed.rows[0]?.status).toBe(status);
+    }
+  });
+});
+
+describe.each([
+  ["TODO", false, false],
+  ["WIP", false, true],
+  ["DONE", true, true],
+  ["REJECTED", false, false],
+  ["SUPERSEDED (by DEC-0002)", false, false],
+  ["PARTLY SUPERSEDED (by DEC-0002)", false, true],
+] as const)("decision keyword force at %s", (status, exceptionInForce, changeInForce) => {
+  // QFAI:EX-0001-0056-06
+  it("keeps a test exception in force only at DONE", () => {
+    expect(
+      classifyRecordRow({
+        id: "DEC-0001",
+        content: "Test exception: BF-0001, AC-0001-0001-01, EX-0001-0001-01",
+        approach: "No test environment",
+        status,
+      }),
+    ).toMatchObject({
+      kind: "test-exception",
+      refs: ["BF-0001", "AC-0001-0001-01", "EX-0001-0001-01"],
+      inForce: exceptionInForce,
+    });
+  });
+
+  it("preserves change-request force and leaves ordinary rows inactive", () => {
+    const row = { id: "DEC-0001", approach: "Reason", status };
+    expect(
+      classifyRecordRow({ ...row, content: "Change request: 01_policy/glossary.md" }),
+    ).toMatchObject({
+      kind: "change-request",
+      refs: ["01_policy/glossary.md"],
+      inForce: changeInForce,
+    });
+    expect(classifyRecordRow({ ...row, content: "An ordinary decision" })).toMatchObject({
+      kind: "other",
+      refs: [],
+      inForce: false,
+    });
+  });
+});
+
+it.each([
+  ["TODO", true],
+  ["WIP", true],
+  ["DONE", false],
+  ["DEFERRED", false],
+] as const)("preserves Unadjudicated force at %s", (status, inForce) => {
+  expect(
+    classifyRecordRow({
+      id: "OQ-0001",
+      content: "Unadjudicated: Which path?",
+      approach: "Discuss",
+      status,
+    }),
+  ).toMatchObject({ kind: "unadjudicated", refs: [], inForce });
 });

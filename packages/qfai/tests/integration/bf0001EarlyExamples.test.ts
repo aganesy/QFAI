@@ -62,7 +62,7 @@ describe("BF-0001 project records", () => {
       "decisions",
     );
     expect(rejected.errors).toContain(
-      "decisions row DEC-0001 has an invalid Status: PARTLY SUPERSEDED by DEC-0002",
+      'decisions row DEC-0001 has an invalid Status: "PARTLY SUPERSEDED by DEC-0002"; allowed: TODO, WIP, DONE, REJECTED, SUPERSEDED (by DEC-NNNN), PARTLY SUPERSEDED (by DEC-NNNN)',
     );
   });
 
@@ -72,7 +72,9 @@ describe("BF-0001 project records", () => {
       `${headings}| DEC-0001 | Choice | Reason | DEFERRED |\n`,
       "decisions",
     );
-    expect(result.errors).toContain("decisions row DEC-0001 has an invalid Status: DEFERRED");
+    expect(result.errors).toContain(
+      'decisions row DEC-0001 has an invalid Status: "DEFERRED"; allowed: TODO, WIP, DONE, REJECTED, SUPERSEDED (by DEC-NNNN), PARTLY SUPERSEDED (by DEC-NNNN)',
+    );
   });
 
   // QFAI:EX-0001-0007-05

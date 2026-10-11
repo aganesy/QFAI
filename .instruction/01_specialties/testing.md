@@ -20,6 +20,9 @@ Basic rules for designing and running tests.
 - **Integration**: Behaviour involving external services or a database. Keep contract tests in mind.
 - **E2E**: Cover the main user flows at a minimum. Also check authentication and permissions.
 
+This repository's [test directory mapping](../02_project/development.md#test-directory-mapping)
+lists the current Vitest projects and QFAI coverage classification.
+
 ## Running and Reporting
 
 - Record the command and the result (passed or failed, and a summary of the log on failure).

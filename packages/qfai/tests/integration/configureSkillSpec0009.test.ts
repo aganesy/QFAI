@@ -168,14 +168,18 @@ describe("Config Update Is Minimal", () => {
   // QFAI:EX-0001-0076-03
   it("records one whole routing entry and copies no other default into the config", async () => {
     const content = await readFile(SKILL_PATH, "utf-8");
-    expect(section(content, "Step 4")).toContain(
-      "`routing` or `reviewProfiles` only when the user asks to change one; each matching entry replaces the shipped default as a whole",
+    const update = section(content, "Step 4");
+    expect(update).toMatch(
+      /`routing` or `reviewProfiles`[^.;]*only (?:when|if) the user (?:asks to change one|requests (?:a change|an override))/,
     );
-    expect(section(content, "Step 4")).toContain("Keep all other config keys unchanged.");
-    expect(section(content, "Constraints")).toContain(
-      "Only update `qfai.config.yaml` and project-owned policy and contract files under `.qfai/spec/` unless explicitly asked.",
+    expect(update).toMatch(/each matching entry replaces[^.]*default as a whole/);
+    expect(update).toMatch(/(?:Keep|Preserve) all other config keys unchanged/);
+    expect(section(content, "Constraints")).toMatch(
+      /Only update `qfai\.config\.yaml`[^.]*project-owned policy and contract files under `\.qfai\/spec\/`[^.]*unless explicitly (?:asked|requested)/,
     );
-    expect(flat(content)).toContain("an override replaces a matching entry as a whole");
+    expect(section(content, "Default Autopilot Policy")).toMatch(
+      /an override replaces a matching entry as a whole/,
+    );
 
     // The routing defaults are keyed by step, so the override is keyed by the step it changes.
     const override = {

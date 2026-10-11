@@ -5,17 +5,22 @@
 ```gherkin
 Feature: Decision and open-question table validation
   # AC-0001-0053-01
-  Scenario: A table with the wrong columns is reported
-    Given the story tree, and a `decisions.md` or `open-questions.md` table that has a column other than ID, Content, Approach and Status, or lacks one of those four
+  Scenario: Wrong columns or data-row cell counts are reported
+    Given the story tree, and a `decisions.md` or `open-questions.md` table with a column other than ID, Content, Approach and Status, a missing column, or a data row with other than four cells
     When `qfai validate --profile sdd` runs
-    Then an error names the file and the column
+    Then a wrong header raises an error naming the file and the column
+    And a wrong data-row cell count raises an error naming the file and row number, the expected count of 4 and the actual count
+    And the errors retain code `QFAI-STORY-003`, severity and exit behavior
 
   # AC-0001-0053-02
   Scenario: A Status outside the vocabulary is reported
     Given the story tree, and a row whose Status is outside its table's vocabulary — TODO, WIP or DONE in both tables, plus `SUPERSEDED (by DEC-NNNN)`, `PARTLY SUPERSEDED (by DEC-NNNN)` and REJECTED in `decisions.md`, and DEFERRED in `open-questions.md`
     When `qfai validate --profile sdd` runs
-    Then an error names the file and the row ID
-    And a SUPERSEDED Status not written as `SUPERSEDED (by DEC-NNNN)` is outside the vocabulary
+    Then a `QFAI-STORY-003` error names the file and row ID and retains `has an invalid Status`, followed by a quoted preview of the value and that table's allowed statuses
+    And each superseding DEC reference has exactly four digits, with successor existence checked separately
+    And the display preview replaces each consecutive run of Unicode Cc, Cf, Zl or Zp characters with one space and trims the result
+    And the preview keeps the first 40 Unicode code points and adds ASCII `...` only when the sanitized, trimmed value is longer
+    And other ordinary spaces, parsed rows, Status values, parsing, accepted statuses, severity, file and row identity, and exit behavior remain unchanged
 
   # AC-0001-0053-03
   Scenario: A row ID of the other table's shape is reported

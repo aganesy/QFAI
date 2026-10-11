@@ -88,9 +88,7 @@ describe("every shipped skill and step runs under the AskUserQuestion protocol",
   });
 });
 
-describe("a stage skill's final report ends with the next-action question", () => {
-  // A stage that finishes on a report leaves the next step to the user, and a
-  // session ending on prose sits idle with nothing saying it waits.
+describe("stage completion asks only when its next action requires an answer", () => {
   const STAGES: ReadonlyArray<readonly [string, string]> = [
     ["qfai-discussion", "## Completion Message & Next Actions (MUST)"],
     ["qfai-sdd", "## Completion"],
@@ -100,7 +98,8 @@ describe("a stage skill's final report ends with the next-action question", () =
     ["qfai-maintain", "## Completion"],
   ];
 
-  it.each(STAGES)("%s ends its report with the question", async (skill, heading) => {
+  // QFAI:EX-0001-0196-57
+  it.each(STAGES)("%s preserves its completion question boundary", async (skill, heading) => {
     for (const root of ["packages/qfai/assets/init/.qfai", ".qfai"]) {
       const content = await readFile(
         path.join(repoRoot, root, "assistant", "skill", skill, "SKILL.md"),
@@ -110,14 +109,22 @@ describe("a stage skill's final report ends with the next-action question", () =
       expect(start, `${root}/${skill} has no ${heading}`).toBeGreaterThan(-1);
       const next = content.indexOf("\n## ", start + heading.length + 1);
       const section = content.slice(start, next === -1 ? undefined : next).replace(/\s+/g, " ");
-      expect(section).toMatch(/ends? (?:the turn )?with a question listing (?:every|the|those)/i);
       expect(section).toContain("`.agents/rules/user-questions.md` § 6");
-      // A no-question mode asks nothing, so the report carries the actions.
-      expect(section).toMatch(
-        /under a no-question mode,? (?:it )?lists? them in the report instead/i,
-      );
-      // The adopted decisions are reported, not asked, so the one question the
-      // report ends with is the next-action question.
+      if (skill === "qfai-discussion") {
+        expect(section).toMatch(/ends? (?:the turn )?with a question listing (?:every|the|those)/i);
+        expect(section).toMatch(
+          /under a no-question mode,? (?:it )?lists? them in the report instead/i,
+        );
+      } else {
+        expect(section).toMatch(
+          /ask (?:for|about) .*only when proceeding requires the user's answer|when the next step needs the user's answer,? ask a question listing the next actions/i,
+        );
+        expect(section).toMatch(/completion-only reports? (?:needs? no question|ask nothing)/i);
+        expect(section).toMatch(
+          /under a no-question mode, list (?:any )?remaining actions instead/i,
+        );
+        expect(section).not.toMatch(/the report ends with a question listing the next actions/i);
+      }
       if (skill === "qfai-verify") {
         expect(section).toContain("None of them is put as a question.");
       }

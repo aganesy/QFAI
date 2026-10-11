@@ -6,6 +6,31 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- Route authorized cleanup of current-task, ignored temporary directories
+  through a bounded triage step. Unsafe or uncertain targets stop before
+  deletion, and completion requires absence and unchanged tracked files and
+  index. Fixes #3286.
+
+- Synchronize the document schema checker copies from the package manifest after
+  a frozen dependency install, including the Renovate repin workflow.
+
+- Add a branch catch-up helper that merges the remote default branch, resolves
+  only proven digest conflicts and reseals generated pins without running tests.
+
+- **A workspace bootstrap command prepares this checkout's local launcher.**
+  It runs frozen installs around the package build, stops at the first failed
+  step and rejects shared dependency links. Fixes #3244.
+- **Validation can find forbidden identifiers from hash-only configuration.**
+  The optional policy scans tracked file names and current bytes, including
+  binary and ignored tracked files. Unsafe or incomplete coverage is an error;
+  findings omit matched values and unsafe paths. Fixes #3232.
+
+- **`qfai sdd renumber-decision` repairs a branch-added decision ID.**
+  Explicit source, destination and local base arguments preview exact new
+  references; `--apply` writes after checking fixed commits and original bytes.
+  Inherited references remain unchanged. Unsafe or ambiguous candidates stop
+  the command, and rollback preserves concurrent edits. Fixes #3228.
+
 - **The agent reviews its session for problems in QFAI when all the work is
   done, and asks before filing them.** `qfai init` adds a `Stop` hook to
   `.claude/settings.json` and `.codex/hooks.json`, marked
@@ -22,9 +47,85 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Agent entry instructions include report and reply guidance.** Reports and
+  replies start with the outcome and distinguish checked from unchecked work.
+
+- **Workflow steps name the rule documents they require.** The commit and retire steps read the
+  rule on how hard an action is to undo; the triage, diagnose, research and external-report steps
+  read the rule on text the project did not write; the gate steps read the rules on scratch files
+  and the forge's API; the story-tree and prose steps read the document-schema and
+  documentation-clarity rules. Each is one bullet in the step's `## Reads` section that says when
+  to read the rule. `qfai init` refreshes the steps.
+
+- **Posting guidance explicitly permits numbers and links in pull request and issue bodies.**
+  Source and ordinary Markdown retain the identifier ban and existing exceptions.
+
+- Resolve the optional Playwright dependency to 1.64.0 while keeping its existing supported version range.
+
+- **The writing rule removes unnecessary sentences without requiring needless rewrites.**
+  Its opening deletion test leaves rewriting to the existing clarity clauses.
+- **The release association gate uses Node.js to read pull request branches.**
+  Its two contributor cases require Node.js and Bash, without a jq dependency.
+
+- **Repeated edit reminders use short rule pointers.** The first relevant edit
+  receives the full rules; later edits retain concise guidance. Missing session
+  identity or unavailable counters keep the full reminder. Posting reminders
+  remain unchanged.
+
+- **Worker work orders state the permitted edit boundary.** They name the
+  assigned checkout, owned paths and edit method. A refused edit returns a
+  reviewable diff for coordinator integration without bypassing the refusal.
+
+- **Windows CI covers native assistant mirror links.** Its parity list includes
+  mirror link behavior and prepares owned root links before testing, using the
+  same temp directory as the suites. Healthy worktrees remain healthy cases.
+
+- **Windows link warnings describe the affected wrapper and its existing repair.**
+  Guidance recommends ordinary init without deleting links and distinguishes
+  consumer wrappers from the repository's canonical mirror. Refs #3240.
+
+- **Missing test annotations use grammatical diagnostics.** Messages use
+  "an E2E test", "an integration or API test" and "a test" for the three
+  obligation kinds. Coverage and severity are unchanged. Fixes #3239.
+
+- **Approved specification changes distinguish pending test annotations from completed tests.**
+  An exact AC test exception needs both specification-change and test-deferral
+  authority. Its review date is manual; uncovered changes remain open questions.
+  Fixes #3233.
+- **Test exceptions take effect only at DONE.** A partially superseded exception
+  no longer suppresses a missing-test error. Other decision kinds keep their
+  status behavior. Fixes #3356.
+- **One goal can advance independent targets through their own plans.** Guidance
+  keeps each target's scope, head-bound evidence and approval limits separate.
+  A clean checkout can move to authorized work during remote waits; writers,
+  local gates and reviewers using live files finish first. Fixes #3231.
+
+- **The stale-term example names its current warning code.** The expected
+  diagnostic now agrees with the contract and validator. Runtime behavior is
+  unchanged. Fixes #3353.
+
+- **Questions ask only for answers the next step needs.** Background waiting
+  and completion reports need no question. Dismissed questions and free-text
+  replies preserve prior authorization and pending-step boundaries. Fixes #3230.
+
+- **Selected hook reminders stay visible without repeating their full text.**
+  Claude Code and Codex print the full reminder once per session, agent and
+  message key, then a one-line rule or skill pointer on every relevant trigger.
+  Missing identity or unavailable counter storage retains the full reminder.
+  Free-text reminders distinguish new requests from pending answers and
+  requested operation results. Fixes #3229.
+
+- **API polling uses one watcher across a root task and its descendants.**
+  Workers reuse saved snapshots. The rule includes a two-PR snapshot query,
+  pagination guidance and recovery from actual rate-limit refusals. Fixes #3226.
+
 - **The maintenance step covers procedures people follow.** Changes to actions,
   required values, commands or their order have a semantic effect even when
   only Markdown changes. Fixes #3203.
+
+- **qfai-run checks its local launcher before planning and follows each step's procedure.**
+  Recovery uses this checkout's package manager. A pass-through step records its
+  reason and retains the plan's independent review. Fixes #3211.
 
 - **qfai-run records the required approval before handing an operation to a person.**
   The row is a route record. Triage steps change no tracked file and never
@@ -85,6 +186,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   wrapper with `type` and `tools`; the Firecrawl templates drop their
   `_comment` keys. The default-deny sandbox template now records each denied
   request with its capability, target and time. Part of #2951.
+
+- **Writing reminders allow expressly requested incident, event and work records.**
+  These keep necessary facts and evidence; ordinary specifications and change
+  descriptions omit design history. The posting reminder allows numbers and
+  links in pull request and issue bodies. Fixes #3214.
 
 - **`qfai init` and `qfai validate` stop reading the spec-pack layout and the
   `.gitignore` lines of earlier releases.** The managed `.gitignore` block no
@@ -250,6 +356,95 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Include authorized temporary-directory cleanup in the workflow candidate purpose.
+  Fixes #3455.
+
+- Update compatible dependency resolutions and scoped lint-parser patches while
+  retaining the supported Node floor.
+
+- Check the combined raw bytes of listed AGENTS ancestor chains and report each
+  file's contribution when the chain exceeds the source-byte budget.
+
+- Check identifier capacity before writing a story batch. Separate incoming
+  overflow from approved mapped moves, and report the scope of AC/EX exhaustion.
+
+- **A released-entry repair moves complete new blocks back to Unreleased.**
+  The explicit local-base command refuses mixed historical edits, ambiguous
+  blocks and changed input bytes, and names exact source lines and categories.
+  It writes only the changelog and leaves Git operations to the caller. Fixes #3252.
+
+- Focused TDD reports identify the selected case's actual execution and result,
+  apart from process exits, counts and containers. Normal verification reconciles
+  full collection membership without adding a full run to each focused cycle.
+
+- Include the existing acceptance-body signal in both extraction schema readings.
+
+- Clarify how to report host-blocked temporary-file cleanup, hand off allowed
+  manual steps and verify removal without claiming pending cleanup is complete.
+
+- Keep validation profiling inside an owned, bounded child process and retain
+  measurements or failure evidence from Linux and Windows CI.
+
+- **Story-tree obligations parse example declarations only where they can count.**
+  Selected TDD files with EX annotations use declaration parsing. ATDD coverage
+  and annotation diagnostics retain their existing checks.
+
+- **Question-only work checks authority before repairing tracked files.**
+  Existing permission for the same target is reused. Otherwise the agent offers
+  repair or a report-only stop; an uncovered no-question run reports and stops
+  that target without writing a tracked open question.
+
+- **Missing-pack preflight diagnostics explain how to use existing specifications.**
+  Conditional import guidance preserves the current purpose and request without
+  regenerating past packs. Source selection and validation gates remain unchanged.
+  Fixes #3302.
+
+- **A diagnosed missing example reuses an existing rule for its obligation.**
+  Equivalent rules use existing example coverage and stable rule IDs to settle
+  the owner. Different or uncertain behaviour returns to specification work;
+  the choice and its reason appear in the final report.
+
+- **An optional manual Windows diagnostic runs every package test project.**
+  It checks the current pull request head, keeps the normal CI unchanged and
+  retains full-suite counts plus the executed full-flow result and duration.
+  Workflow registration alone does not supply Windows execution evidence.
+
+- **Published branch-added decision records have a bounded form recovery.**
+  A separately approved prefix may restore missing evidence labels while keeping
+  the original decision bytes and authority intact. Unsafe or ambiguous records
+  stop before writing; inherited records require their own owning decision.
+
+- Clarify when delegated external settings and credential installation may run,
+  and distinguish confirmed external effects from repository changes and CI results.
+
+- Verify steps reject validation errors even when a custom Validate wrapper succeeds.
+- Clarify that the research agent reads the cache TTL extension in the project config; the CLI does not parse it.
+
+- Clarify that story ID candidates are snapshots and require a fresh collision
+  check of the committed changes before publishing the same branch head.
+
+- **Language errors offer an ASCII code-point construction for code samples.**
+  The guard keeps Unicode escape guidance and explains the alternative when
+  an editing tool decodes escapes. Forbidden characters remain rejected.
+  Fixes #3248.
+
+- **Unfinished merges stop the branch ID check.** Finish the merge before
+  comparing branch-owned identifiers or fetching pull-request heads. Fixes #3246.
+
+- Verify assistant link targets can be followed and safely recreate unfollowable
+  directory links to shipped assets. Fixes #3368.
+
+- **Decision and open-question row errors explain what to correct.** Cell-count
+  errors report the expected and actual counts. Invalid Status errors show a
+  quoted preview and the table's allowed values. The preview replaces control
+  and format characters and line breaks with spaces, then keeps the first 40
+  Unicode code points, adding `...` when longer. Parsed values and accepted
+  statuses stay unchanged. Fixes #3224.
+
+- **SQL rules with no examples explain the required comment format.** The error
+  asks for a one-line Rule statement and `-- Examples:` on the immediately
+  following line. Other rule errors and parsing stay unchanged. Fixes #3225.
+
 - **Validation text lists errors before warnings and information.** Groups of
   the same severity retain their first-appearance order. JSON records, counts,
   suppression and exit behavior stay unchanged.
@@ -265,6 +460,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   so the variable is never set. The step that removes the entry ran after
   `pnpm install` and `pnpm rebuild`, and each of them printed a warning. It now
   runs right after `setup-node`. Publishing itself was not affected.
+
+- **Verification commits keep pending CI separate from completed verification.**
+  Guidance records exact-head CI evidence, preserves observed failures and
+  requires separate authority for remote actions. Installed asset refresh uses
+  the verified local package and preserves project-owned files. Fixes #3294.
+
+- **Dependency guidance limits acceptance of the unresolved glob-matching risk.**
+  Reviewed project inputs and trusted SDK callers remain the accepted scope;
+  untrusted inputs require their own mitigation and security review. Dependencies
+  and runtime behavior are unchanged. Refs #3296.
+
+- **CI receipts distinguish verification from closed cleanup.** Guidance records
+  run, job, check and purpose evidence with actual counts and logs. Branch
+  overviews and cleanup skips cannot replace verification on the current head.
+  Fixes #3295.
+
+- Distinguish acceptance annotations, empty bodies, asserted behavior and actual
+  run outcomes in applicable reports. Hand off remaining bodies with their owner
+  and completion criteria while preserving the two-stage acceptance rules.
 
 ## [2.1.1] - 2026-10-08
 

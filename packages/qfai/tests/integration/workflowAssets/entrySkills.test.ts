@@ -37,6 +37,7 @@ const EXTRACTION = "skill/qfai-run/references/extraction.md";
 const STAGE_POINTS = "skill/qfai-run/references/stage-points.md";
 const MAINTAIN = "skill/qfai-maintain/SKILL.md";
 const MAINTAIN_EDIT = "step/maintain-edit/STEP.md";
+const SDD_TRIAGE = "skill/qfai-sdd/references/sdd-triage.md";
 
 const PROFILES = ["architecture-heavy", "default", "runtime-heavy"];
 
@@ -140,6 +141,7 @@ const EXTRACTION_VOCABULARIES: Record<string, string[]> = {
     "removal-requested",
     "visual-open",
     "prototype-requested",
+    "owned-temporary-cleanup",
   ],
   signals: [
     "approved-record-task",
@@ -223,6 +225,69 @@ describe("qfai-run", () => {
     expect(lines.length).toBeLessThanOrEqual(150);
   });
 
+  // QFAI:EX-0001-0216-08
+  it("points stage execution at the step rules and explains pass-through work without skipping its review", async () => {
+    const [run, screens, baseline] = await Promise.all([
+      readShipped(RUN),
+      readShipped(SCREENS),
+      readShipped("rule/shared-skill-operating-baseline.md"),
+    ]);
+    const loop = flat(
+      sectionOf(run, "## The work").split("**Run the stages.**")[1]?.split("**Review.**")[0] ?? "",
+    );
+    expect(baseline).toContain("## Running Steps (Mandatory)");
+    expect(loop).toContain(
+      ".qfai/assistant/rule/shared-skill-operating-baseline.md#running-steps-mandatory",
+    );
+    expect(loop).toMatch(
+      /\b(?:if|when|as needed)\b.*operator-screens\.md|operator-screens\.md.*\b(?:if|when|as needed)\b/i,
+    );
+
+    const guide = flat(screens);
+    expect(guide).toContain("`STEP.md`");
+    expect(guide).toMatch(/\b(?:follow|run|execute)\b.*\bprocedure\b/i);
+    expect(guide).toMatch(/\bonly\b.*\b(?:declared|listed|named)\b.*\bcommands?\b/i);
+    expect(guide).toMatch(/\b(?:pass|satisfy)\b.*\bgate\b/i);
+    expect(guide).toContain("`passThrough`");
+    expect(guide).toMatch(/\bPasses when\b/i);
+    expect(guide).toMatch(/\breason\b.*\bstage report\b|\bstage report\b.*\breason\b/i);
+    expect(guide).toMatch(/\b(?:not|never|do not)\b.*\bskip\b/i);
+    expect(guide).toMatch(/\b(?:independent|independently)\b.*\breview\b/i);
+    expect(guide).toMatch(
+      /\b(?:planned|required|declared|plan's)\b.*\breview\b.*\b(?:still|always)\b/i,
+    );
+  });
+
+  // QFAI:AC-0001-0196-14
+  it("requires launcher preflight before planning and directs a missing install to project recovery", async () => {
+    const [run, screens] = await Promise.all([readShipped(RUN), readShipped(SCREENS)]);
+    const intro = run.split("## What this skill never does")[0] ?? "";
+    const extract = sectionOf(run, "## The work")
+      .split("**Extract.**")[1]
+      ?.split("**Candidates.**")[0];
+    const launcherInstructions = flat(`${intro} ${extract ?? ""}`);
+
+    expect(launcherInstructions).toContain(
+      ".qfai/assistant/rule/shared-skill-operating-baseline.md#canonical-qfai-launcher-mandatory",
+    );
+    expect(launcherInstructions).toMatch(
+      /\bpreflight\b.*\bbefore\b.*\bplan(?:ning)?\b|\bbefore\b.*\bplan(?:ning)?\b.*\bpreflight\b/i,
+    );
+    expect(launcherInstructions).toMatch(
+      /\b(?:if|when)\b.*\b(?:missing|fails?|unavailable|no local)\b.*operator-screens\.md/i,
+    );
+
+    const guide = flat(screens);
+    expect(guide).toMatch(/\b(?:missing|no local)\b.*\b(?:install|dependency|dependencies)\b/i);
+    expect(guide).toMatch(/\bproject(?:'s)?\b.*\b(?:package manager|install command)\b/i);
+    expect(guide).toMatch(/\b(?:rerun|repeat|again)\b.*\bpreflight\b|\bpreflight\b.*\bagain\b/i);
+    expect(guide).toMatch(/\b(?:do not|never|no)\b[^.]*\b(?:published|remote)\b/i);
+    expect(guide).toMatch(/\b(?:do not|never|no)\b[^.]*\b(?:cache|cached)\b/i);
+    expect(guide).not.toMatch(
+      /\bSessionStart`?\s+(?:automatically installs?|installs? automatically)\b/i,
+    );
+  });
+
   // QFAI:EX-0001-0196-43
   it("resumes a waiting step for its requested reply and plans an independent new request", async () => {
     const kinds = flat(sectionOf(await readShipped(RUN), "## Request kinds"));
@@ -250,6 +315,65 @@ describe("qfai-run", () => {
     expect(screens).toMatch(
       /\b(?:plan's branch|branch (?:the )?plan (?:names|gives)|branch (?:as|by|per) (?:the )?plan)\b/i,
     );
+  });
+
+  // QFAI:EX-0001-0196-43
+  // QFAI:EX-0001-0196-59
+  it("accepts requested free text as an answer and separates independent or mixed instructions", async () => {
+    const replies = flat(sectionOf(await readShipped(SCREENS), "## Replies to a waiting step"));
+    expect(replies).toMatch(
+      /free text supplying the requested value.*answer to that waiting step/i,
+    );
+    expect(replies).toMatch(/even if it does not repeat an option label/i);
+    expect(replies).toMatch(/independent new request.*planned/i);
+    expect(replies).toMatch(
+      /if a reply also contains one.*resume the waiting step with its answer.*plan the independent request separately/i,
+    );
+    expect(replies).toMatch(/never treat an unrelated instruction as selection or approval/i);
+    expect(replies).toMatch(/no new plan and no skill invocation/i);
+  });
+
+  // QFAI:EX-0001-0196-58
+  it("does not infer an answer from dismissal and continues only previously authorized work", async () => {
+    const replies = flat(sectionOf(await readShipped(SCREENS), "## Replies to a waiting step"));
+    expect(replies).toMatch(/dismissal or no response is not an answer or permission/i);
+    expect(replies).toMatch(/routine choice only under authorization the user already gave/i);
+    for (const boundary of [
+      /hard-required fact/i,
+      /uncovered mandatory approval/i,
+      /cancellation/i,
+      /explicit tool block/i,
+    ])
+      expect(replies).toMatch(boundary);
+    expect(replies).toMatch(/only independent work that remains authorized/i);
+  });
+
+  // QFAI:EX-0001-0196-57
+  it("reports background waiting with evidence and a resume condition without promising restart", async () => {
+    const replies = flat(sectionOf(await readShipped(SCREENS), "## Replies to a waiting step"));
+    expect(replies).toMatch(/background waiting needs no question/i);
+    expect(replies).toMatch(/current state, awaited evidence or result and resume condition/i);
+    expect(replies).toMatch(/promise no automatic restart unless the host provides it/i);
+    expect(replies).toMatch(/user-questions\.md.*§ 6.*when an answer is needed/i);
+    expect(replies).toMatch(/completion-only final report needs no question/i);
+  });
+
+  // QFAI:EX-0001-0196-57
+  it.each([
+    MAINTAIN,
+    ...["implement", "sdd", "prototyping", "triage", "verify"].map(
+      (skill) => `skill/qfai-${skill}/SKILL.md`,
+    ),
+  ])("%s asks after completion only when another step requires an answer", async (skill) => {
+    const text = flat(await readShipped(skill));
+    expect(text).toMatch(
+      /ask (?:for|about) .*only when proceeding requires the user's answer|when the next step needs the user's answer,? ask a question listing the next actions/i,
+    );
+    expect(text).toMatch(
+      /(?:completion|closure)-only reports? (?:needs? no question|ask nothing)/i,
+    );
+    expect(text).toMatch(/under a no-question mode, list (?:any )?remaining actions instead/i);
+    expect(text).not.toMatch(/the report ends with a question listing the next actions/i);
   });
 
   // QFAI:AC-0001-0211-05
@@ -422,23 +546,59 @@ describe("qfai-run", () => {
   // QFAI:EX-0001-0224-02
   it("writes artifacts itself, delegates only parallel parts and reviews, and never reviews its own work", async () => {
     const work = flat(sectionOf(await readShipped(RUN), "## The work"));
-    expect(work).toMatch(/write any artifact yourself/i);
-    expect(work).toMatch(
-      /give a part to a sub-agent only to run independent parts in parallel, or for a review/i,
-    );
+    expect(work).toMatch(/write (?:any )?artifacts? yourself/i);
+    expect(work).toMatch(/delegate independent parallel work or review/i);
     expect(work).toMatch(/whose `review` is `spec`, `requirements-reviewer` reviews/);
     expect(work).toMatch(/no agent reviews its own work/i);
   });
 
   // QFAI:AC-0001-0224-04
+  // QFAI:AC-0001-0224-10
   // QFAI:EX-0001-0224-05
+  // QFAI:EX-0001-0224-14
   it("moves at a branch point by planning the destination, and asks before the third move", async () => {
-    const work = flat(sectionOf(await readShipped(STAGE_POINTS), "## Branch point"));
+    const branch = sectionOf(await readShipped(STAGE_POINTS), "## Branch point");
+    const work = flat(branch);
     expect(work).toMatch(
       /take the destination's plan with `npx qfai workflow plan --route <route>`/i,
     );
     expect(work).toMatch(
       /before the third move and every one after it, ask the user, naming the destination in plain words; `stop` ends the work/i,
+    );
+    const repairAuthority = flat(
+      branch
+        .split(/\r?\n\s*\r?\n/u)
+        .find(
+          (paragraph) => /question-only/i.test(paragraph) && /tracked[- ]files?/i.test(paragraph),
+        ) ?? "",
+    );
+    expect(repairAuthority, "the question-only branch needs its own repair authority rule").toMatch(
+      /explicit.*repair.*(?:authority|authori[sz]ation)/i,
+    );
+    expect(repairAuthority).toMatch(/same[- ]target/i);
+    expect(repairAuthority).toMatch(/(?:request|user).*project policy/i);
+    expect(repairAuthority).toMatch(
+      /(?:existing|standing|prior|reuse).*without.*(?:duplicate|another|again).*question/i,
+    );
+    expect(repairAuthority).toMatch(
+      /(?:otherwise|(?:without|absent|no).*authority).*ask.*repair.*report.*stop/i,
+    );
+    expect(repairAuthority).toMatch(
+      /no-question.*(?:without|no).*authority.*report.*stop.*target/i,
+    );
+    expect(repairAuthority).toMatch(
+      /\bno tracked\b[^.]*?(?:open[- ]question|`open-questions\.md`)|\b(?:do not|never)\b[^.]*\b(?:write|record)\b[^.]*\btracked\b[^.]*?(?:open[- ]question|`open-questions\.md`)/i,
+    );
+    expect(repairAuthority).toMatch(/no-question.*alone.*(?:no|not).*repair.*authority/i);
+    const repairChoice = flat(
+      sectionOf(await readShipped(SCREENS), "## Repair found by a question-only stage"),
+    );
+    expect(repairChoice).toMatch(/(?:defect|finding).*evidence|evidence.*(?:defect|finding)/i);
+    expect(repairChoice).toMatch(/scope/i);
+    expect(repairChoice).toMatch(/planned.*checks|checks.*planned/i);
+    expect(repairChoice).toMatch(/Repair.*Report and stop/i);
+    expect(repairChoice).toMatch(
+      /(?:no|not|never).*(?:edit|write).*(?:before|until).*answer|(?:edit|write) nothing.*(?:before|until).*answer|before.*answer.*(?:edit|write) nothing/i,
     );
   });
 
@@ -447,7 +607,8 @@ describe("qfai-run", () => {
   it("handles each release, decision and branch point at its step, inside the step loop", async () => {
     const work = sectionOf(await readShipped(RUN), "## The work");
     const loop = flat(work.split("5. **Run the stages.**")[1]?.split("6. **Review.**")[0] ?? "");
-    expect(loop).toMatch(/at each step, handle the points the plan names for it/i);
+    expect(loop).toMatch(/at each step, follow its plan's points/i);
+    expect(loop).toContain("`references/stage-points.md`");
     for (const point of ["release point", "decision point", "branch point"]) {
       expect(loop.toLowerCase()).toContain(`**${point}.**`);
     }
@@ -499,6 +660,7 @@ describe("qfai-run", () => {
 
   // QFAI:AC-0001-0223-02
   // QFAI:EX-0001-0223-03
+  // QFAI:EX-0001-0196-57
   it("takes every other decision itself and lists it with its reason in the final report", async () => {
     const work = flat(sectionOf(await readShipped(STAGE_POINTS), "## Decision point"));
     expect(work).toMatch(
@@ -506,7 +668,13 @@ describe("qfai-run", () => {
     );
     const report = flat(sectionOf(await readShipped(SCREENS), "## Final report"));
     expect(report).toMatch(/every decision taken without the user, with its reason/i);
-    expect(report).toMatch(/the report ends with a question listing the next actions/i);
+    expect(report).toMatch(
+      /ask for the next action only when proceeding requires the user's answer/i,
+    );
+    expect(report).toMatch(
+      /(?:completion-only.*report|report that only states completion) needs no question/i,
+    );
+    expect(report).toMatch(/under a no-question mode.*remaining actions without asking/i);
   });
 
   // QFAI:AC-0001-0223-03
@@ -558,17 +726,81 @@ describe("qfai-run", () => {
     );
   });
 
-  it("stops before a step only a person can take, naming the action, its evidence and the read-only check", async () => {
+  // QFAI:AC-0001-0224-10
+  // QFAI:EX-0001-0224-14
+  it("stops before person-only actions and permits only covered external actions through a safe host channel", async () => {
     const screens = await readShipped(SCREENS);
     const step = flat(sectionOf(screens, "## A step only a person can take"));
     expect(step).toMatch(/what the user must do/i);
     expect(step).toMatch(/what shows it was done/i);
     expect(step).toMatch(/what the agent will read to check it, which changes nothing/i);
-    expect(step).toMatch(/never types a password, token or key/i);
-    expect(step).toMatch(/never changes an account or service setting/i);
+    expect(step).toMatch(/interactive login.*new permission.*expansion.*authority/i);
+    expect(step).toMatch(
+      /user completes.*login.*permission grants.*authority expansion.*service's own page/i,
+    );
+    expect(step).toMatch(/human-run.*triage handoff.*never.*user's operation.*behalf/i);
+    expect(step).toMatch(/no-question mode.*nothing is asked.*does not depend.*goes on.*not done/i);
+
+    const paragraphs = sectionOf(screens, "## Authorized external actions")
+      .split(/\r?\n\s*\r?\n/u)
+      .map(flat);
+    const authority =
+      paragraphs.find((paragraph) => /specific target.*action/i.test(paragraph)) ?? "";
+    expect(authority).toMatch(
+      /only when.*prior user instructions.*project policy.*specific target.*action/i,
+    );
+    expect(authority).toMatch(/host.*allowed.*safe channel/i);
+    expect(authority).toMatch(/connector.*availability alone.*neither authority nor access/i);
+    expect(authority).toMatch(/reuse.*covering authority.*without.*new permission grant/i);
+
+    const credential =
+      paragraphs.find((paragraph) => /credential.*account.*scope.*expiry/i.test(paragraph)) ?? "";
+    expect(credential).toMatch(
+      /actual credential.*account.*project.*scope.*expiry.*fit.*authority/i,
+    );
+    expect(credential).toMatch(/one-time permission.*not continuing access/i);
+    expect(credential).toMatch(
+      /third-party.*ownership.*own authority.*permission.*project.*does not supply/i,
+    );
+    expect(credential).toMatch(/only.*host's actual safe channel.*credential installation/i);
+    expect(credential).toMatch(
+      /never.*password.*token.*key.*chat.*logs.*tracked files.*ask.*paste/i,
+    );
+    expect(credential).toMatch(/login.*permission grants.*authority expansion.*person-only/i);
+
+    const refusal = paragraphs.find((paragraph) => /host denies/i.test(paragraph)) ?? "";
+    expect(refusal).toMatch(
+      /authority.*credential ownership.*safe channel.*absent or unknown.*host denies.*stop.*dependent action/i,
+    );
+    expect(refusal).toMatch(/manual steps.*evidence.*confirm.*read-only.*check/i);
+    expect(refusal).toMatch(
+      /do not bypass.*denial.*infer missing authority.*generic request.*proceed/i,
+    );
+    expect(refusal).toMatch(
+      /human-run.*triage handoff.*handoff.*authorized independent work.*continue/i,
+    );
+
+    const report = paragraphs.find((paragraph) => /existing stage report/i.test(paragraph)) ?? "";
+    expect(report).toMatch(
+      /host access.*CI start.*authorization.*credential installation.*CI results.*merge.*publication.*separately/i,
+    );
+    expect(report).toMatch(/each.*effect.*confirmed.*pending.*unverified.*not requested/i);
+    expect(report).toMatch(
+      /target.*exact.*(?:revision|head).*evidence URL.*blocker.*resume condition/i,
+    );
+    expect(report).toMatch(/missing evidence.*unverified/i);
+    expect(report).toMatch(/green CI.*neither merge nor publication/i);
+    expect(report).toMatch(/repository change.*separately.*unverified external effects/i);
     const extraction = flat(await readShipped(EXTRACTION));
     expect(extraction).toMatch(
       /takes the intent of the repository change, with the entry flag `env`/i,
+    );
+    expect(extraction).toMatch(/`human-run`.*request that is only the operation/i);
+    expect(flat(await readShipped("step/triage-handoff/STEP.md"))).toMatch(
+      /run none of the operation here.*no push.*publication.*tag.*account/i,
+    );
+    expect(await readDefault("workflows/hand-off-operation.yml")).toMatch(
+      /releasePoint: triage-handoff/,
     );
   });
 
@@ -579,6 +811,86 @@ describe("qfai-run", () => {
     expect(text).toMatch(
       /relay it in the user's working language\. the cli's strings are english/i,
     );
+  });
+});
+
+describe("qfai-sdd pending test annotations", () => {
+  async function guidance(): Promise<string> {
+    const text = flat(sectionOf(await readShipped(SDD_TRIAGE), "## Decision and question rows"));
+    expect(text).not.toBe("");
+    return text;
+  }
+
+  // QFAI:AC-0001-0207-07
+  // QFAI:EX-0001-0207-08
+  it("permits an explicit pending annotation only with specification authority and approved test deferral", async () => {
+    const text = await guidance();
+    expect(text).toMatch(/annotations?.*pending|pending.*annotations?/i);
+    expect(text).toContain("Test exception:");
+    expect(text).toMatch(/exact AC\b/i);
+    expect(text).toMatch(/\bDONE\b/);
+    expect(text).toMatch(/(?:authority|permission|approval).*(?:change|edit).*spec/i);
+    expect(text).toMatch(
+      /(?:approval|authorization).*defer.*test|test deferral.*(?:approved|authorized)/i,
+    );
+  });
+
+  // QFAI:AC-0001-0207-07
+  // QFAI:EX-0001-0207-08
+  it("records the reason, untested scope, owner, next decision date and annotation restoration condition", async () => {
+    const text = await guidance();
+    for (const field of [
+      /reason/i,
+      /untested scope/i,
+      /owner/i,
+      /next decision date/i,
+      /restor.*annotation.*condition|condition.*restor.*annotation/i,
+    ])
+      expect(text).toMatch(field);
+  });
+
+  // QFAI:AC-0001-0207-07
+  // QFAI:EX-0001-0207-08
+  it("keeps DONE approval distinct from test completion and limits the exception to its exact AC", async () => {
+    const text = await guidance();
+    expect(text).toMatch(
+      /\bDONE\b.*(?:does not|never|not).*test.*(?:completion|complete|passed|done)/i,
+    );
+    expect(text).toMatch(/exact AC\b/i);
+    expect(text).toMatch(/(?:never|does not|no).*exempt.*descendant/i);
+    expect(text).toMatch(/(?:EX|examples).*BR|BR.*(?:EX|examples)/i);
+  });
+
+  // QFAI:AC-0001-0207-07
+  // QFAI:EX-0001-0207-09
+  it("opens an Unadjudicated record and halts dependent changes when specification permission is absent", async () => {
+    const text = await guidance();
+    expect(text).toMatch(
+      /spec.*(?:forbidden|not permitted|not authorized)|(?:no|missing).*permission.*spec/i,
+    );
+    expect(text).toContain("Unadjudicated:");
+    for (const field of [
+      /expected/i,
+      /actual/i,
+      /\bIDs\b/i,
+      /evidence/i,
+      /owner/i,
+      /required permission/i,
+    ])
+      expect(text).toMatch(field);
+    expect(text).toMatch(/(?:stop|halt).*dependent.*\bAC\b.*\bEX\b.*\bBR\b/i);
+    expect(text).toMatch(
+      /independent.*(?:authorized|permitted).*work.*(?:continue|proceed)|(?:authorized|permitted).*independent.*work.*(?:continue|proceed)/i,
+    );
+  });
+
+  // QFAI:AC-0001-0207-07
+  // QFAI:EX-0001-0207-10
+  it("uses the date for manual follow-up without promising automatic expiry or warnings", async () => {
+    const text = await guidance();
+    expect(text).toMatch(/date.*manual|manual.*date/i);
+    expect(text).toMatch(/(?:no|not|never|does not).*automatic.*expir/i);
+    expect(text).toMatch(/(?:no|not|never|does not).*automatic.*warning/i);
   });
 });
 

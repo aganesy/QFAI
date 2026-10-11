@@ -17,6 +17,11 @@ No text in another script appears anywhere in the repository. Where a matcher
 or a fixture has to hold such a sample to do its job, the sample is written as
 \uXXXX escapes and a nearby English comment says what it is.
 
+If an edit tool decodes escapes in JavaScript or TypeScript code, construct the
+sample from numeric code points, for example `String.fromCodePoint(0xFF1F)`,
+with a nearby English comment. This ASCII construction also supports astral
+characters. It is for code, not YAML or Markdown literals.
+
 ## Not in scope
 
 Two things this rule does not decide.

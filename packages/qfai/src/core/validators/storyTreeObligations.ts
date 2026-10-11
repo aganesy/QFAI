@@ -98,7 +98,11 @@ export function validateStoryTreeObligationsModel(
       if (file.selectedForExample && (file.kind === "integration" || file.kind === "api"))
         covered.AC.add(id);
     }
-    const counted = new Set(parseCountedExampleAnnotations(file.content, file.file));
+    const counted = new Set(
+      profile === "tdd" && countsForExample(file) && annotations.EX.length > 0
+        ? parseCountedExampleAnnotations(file.content, file.file)
+        : [],
+    );
     for (const id of annotations.EX) {
       if (!known.EX.has(id)) {
         issues.push(
@@ -153,20 +157,20 @@ export function validateStoryTreeObligationsModel(
   const owed =
     profile === "atdd"
       ? [
-          ...model.flows.map((entry) => ({ ...entry, kind: "BF" as const, target: "E2E" })),
+          ...model.flows.map((entry) => ({ ...entry, kind: "BF" as const, target: "an E2E test" })),
           ...model.acceptanceCriteria.map((entry) => ({
             ...entry,
             kind: "AC" as const,
-            target: "integration or API",
+            target: "an integration or API test",
           })),
         ]
-      : model.examples.map((entry) => ({ ...entry, kind: "EX" as const, target: "test" }));
+      : model.examples.map((entry) => ({ ...entry, kind: "EX" as const, target: "a test" }));
   for (const entry of owed) {
     if (covered[entry.kind].has(entry.id) || exceptions.has(entry.id)) continue;
     issues.push(
       issue(
         "QFAI-STORY-006",
-        `${entry.id} is missing a ${entry.target} test annotation`,
+        `${entry.id} is missing ${entry.target} annotation`,
         "error",
         entry.file,
         "storyTree.testObligation",

@@ -72,6 +72,22 @@ as before.
 3. **Tag release commit** pushes `vX.Y.Z` automatically, and `release.yml` starts
 4. Approving the `release` environment runs the npm publish
 
+The `release` environment currently names `aganesy` as its required reviewer.
+Recheck the current assignment under Settings → Environments → release before
+relying on that name. A release run awaiting approval shows **Review deployments**
+on its Actions page. These read-only queries show current pending deployments
+and approval history, respectively; replace `RUN_ID` with the run being checked:
+
+```sh
+gh api --method GET "repos/{owner}/{repo}/actions/runs/RUN_ID/pending_deployments"
+gh api --method GET "repos/{owner}/{repo}/actions/runs/RUN_ID/approvals"
+```
+
+An empty approval history does not show whether the run is currently waiting.
+An empty pending list does not prove publication succeeded; check the publishing
+job's result. The endpoint meanings are in the
+[GitHub workflow-run API documentation](https://docs.github.com/en/rest/actions/workflow-runs).
+
 ### What this automation does not do
 
 **It does not write the release text.** Whoever makes each change adds to
@@ -203,6 +219,25 @@ npx qfai init
 npx qfai validate
 npx qfai report --out .qfai/report/report.md
 ```
+
+## Repair misplaced changelog entries
+
+When an old branch adds entries to an already tagged release, the CI diagnostic names
+the source lines and the Unreleased destination category. Run its printed command:
+
+```sh
+node scripts/check-changelog-released-sections.mjs --fix --base <local-base-ref>
+```
+
+The base must resolve locally and be an ancestor of HEAD. Repair moves complete added
+bullet blocks only when removing them restores each released section byte for byte.
+It refuses mixed historical edits, ambiguous headings or fences, duplicate entries,
+and unknown tag answers. Review the diff, then commit it yourself. The command writes
+only `CHANGELOG.md`; it does not stage, commit, push or change a version.
+
+The identity and byte checks are observations before writing, not an atomic
+write guarantee. A write failure may leave partial contents in `CHANGELOG.md`.
+Inspect and recover those contents before retrying.
 
 ## Notes
 

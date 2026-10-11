@@ -353,13 +353,21 @@ async function freeTextHookOutput(root: string): Promise<{ claude: string; codex
     encoding: "utf8",
     shell: true,
   });
+  expect(claude.status, claude.stderr).toBe(0);
+  expect(codex.status, codex.stderr).toBe(0);
+  expect(claude.stderr).toBe("");
+  expect(codex.stderr).toBe("");
   return { claude: claude.stdout.trim(), codex: codex.stdout.trim() };
 }
 
 async function shippedFreeTextReminder(): Promise<string> {
   const parsed: unknown = JSON.parse(await readFile(SHIPPED_REMINDERS, "utf8"));
   if (!isRecord(parsed)) throw new Error("reminders.json is not an object");
-  return JSON.stringify(parsed["free-text-entry"]);
+  const message = parsed["free-text-entry"];
+  if (!isRecord(message)) throw new Error("reminders.json has no free-text entry");
+  return JSON.stringify(
+    Object.fromEntries(Object.entries(message).filter(([key]) => key !== "briefContext")),
+  );
 }
 
 let migrated10 = "";

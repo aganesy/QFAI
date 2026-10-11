@@ -35,14 +35,26 @@ describe("decision row identity", () => {
 
   it("says how an ID two branches both took is renumbered", async () => {
     for (const tree of ["packages/qfai/assets/init/.qfai", ".qfai"]) {
-      const triage = await readFile(path.join(repoRoot, tree, TRIAGE), "utf-8");
+      const triage = (await readFile(path.join(repoRoot, tree, TRIAGE), "utf-8")).replace(
+        /\s+/g,
+        " ",
+      );
       expect(triage, tree).toContain(
         "The merge target's item keeps the ID. Renumber the incoming item",
       );
       expect(triage, tree).toContain(
         "A renumbered BF or US takes its child IDs and its directory names with it",
       );
-      expect(triage, tree).toContain("Change every citation of the old ID in the same commit");
+      expect(triage, tree).toContain(
+        "Change every citation belonging to the incoming item in the same commit",
+      );
+      expect(triage, tree).toMatch(/unique decision added by the incoming branch/i);
+      expect(triage, tree).toContain("--base <local-ref>");
+      expect(triage, tree).toMatch(
+        /base and HEAD must resolve locally and have one common ancestor/i,
+      );
+      expect(triage, tree).toMatch(/only provably branch-added exact references change/i);
+      expect(triage, tree).toMatch(/inherited references stay fixed/i);
       expect(triage, tree).toContain("the renamed record's subject or path in the commit message");
       expect(triage, tree).toContain(
         "A row the incoming branch added takes the next ID of its table",

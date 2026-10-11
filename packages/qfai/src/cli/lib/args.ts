@@ -69,8 +69,12 @@ export type ParsedArgs = {
     discussionFormat?: "text" | "json";
     /** Positional `<id>` for `qfai discussion use <id>`. */
     discussionId?: string;
-    /** Subcommand for `qfai sdd <preflight>`. */
-    sddAction?: "preflight";
+    /** Subcommand for `qfai sdd`. */
+    sddAction?: "preflight" | "renumber-decision";
+    sddFrom?: string;
+    sddTo?: string;
+    sddBase?: string;
+    sddApply?: boolean;
     /** --format <text|json> for `qfai sdd preflight`. */
     sddFormat?: "text" | "json";
     /** Repeatable `--assume <text>` for `qfai sdd preflight` (carry-over open questions). */
@@ -234,11 +238,10 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   const ownedBy = (...commands: string[]): boolean =>
     command !== null && commands.includes(command);
 
-  // `qfai sdd <subcommand>` — currently only `preflight` is supported.
   if (command === "sdd") {
     const candidate = args[0];
     if (isSubcommandToken(candidate)) {
-      if (candidate === "preflight") {
+      if (candidate === "preflight" || candidate === "renumber-decision") {
         options.sddAction = candidate;
       } else {
         markInvalid(subcommandReason("sdd", candidate));
@@ -323,6 +326,28 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       continue;
     }
     switch (arg) {
+      case "--from":
+      case "--to":
+      case "--base": {
+        const next = consumeOptionValue();
+        if (next === null) {
+          markInvalid(missingValue(arg));
+          break;
+        }
+        if (command !== "sdd" || options.sddAction !== "renumber-decision") {
+          markInvalid(notValidHere(arg));
+          break;
+        }
+        if (arg === "--base") options.sddBase = next;
+        else if (!/^DEC-\d{4}$/.test(next)) markInvalid(badValue(arg, next, "DEC-NNNN"));
+        else if (arg === "--from") options.sddFrom = next;
+        else options.sddTo = next;
+        break;
+      }
+      case "--apply":
+        if (command === "sdd" && options.sddAction === "renumber-decision") options.sddApply = true;
+        else markInvalid(notValidHere("--apply"));
+        break;
       case "--root":
         {
           const next = consumeOptionValue();
@@ -401,7 +426,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           }
           break;
         }
-        if (command === "sdd") {
+        if (command === "sdd" && options.sddAction !== "renumber-decision") {
           if (next === "text" || next === "json") {
             options.sddFormat = next;
           } else {
@@ -435,6 +460,10 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         break;
       case "--profile": {
         const next = consumeOptionValue();
+        if (command === "sdd" && options.sddAction === "renumber-decision") {
+          markInvalid(notValidHere("--profile"));
+          break;
+        }
         if (next === null) {
           markInvalid(missingValue("--profile"));
           break;
@@ -479,18 +508,12 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid(missingValue("--fail-on"));
           break;
         }
-        // usage(): validate / report / doctor / sdd
-        // Only preflight reads failOn. report now gates on findings, so it
-        // is on the owning side. On any other command it would not be read,
-        // so it is rejected. `sdd` has only the preflight subcommand, and a
-        // bare `qfai sdd` is already markInvalid()-ed by the trailing guard,
-        // so the command name alone is enough here (runSddPreflightCommand
-        // reads `never` as exit 0).
+        // SDD reads this threshold only for preflight.
         if (
           command !== "validate" &&
           command !== "report" &&
           command !== "doctor" &&
-          command !== "sdd"
+          (command !== "sdd" || options.sddAction === "renumber-decision")
         ) {
           markInvalid(notValidHere("--fail-on"));
           break;
@@ -670,7 +693,8 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid(missingValue("--import"));
           break;
         }
-        if (command === "sdd") options.sddImport = next;
+        if (command === "sdd" && options.sddAction !== "renumber-decision")
+          options.sddImport = next;
         else markInvalid(notValidHere("--import"));
         break;
       }
@@ -680,7 +704,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid(missingValue("--assume"));
           break;
         }
-        if (command === "sdd") {
+        if (command === "sdd" && options.sddAction !== "renumber-decision") {
           // Repeatable: `--assume A --assume B` are listed as they are under
           // `Open Questions (Carry-over)` in the preflight summary.
           options.sddAssumptions.push(next);
@@ -697,10 +721,14 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         if (arg?.startsWith("--")) {
           options.unknownFlags.push(arg);
           markInvalid(`qfai: unknown option: ${arg}`);
-        } else if (command === "workflow" && arg !== undefined) {
-          // `workflow plan` takes no positional, so a stray token is refused rather than ignored.
+        } else if (
+          (command === "workflow" ||
+            (command === "sdd" && options.sddAction === "renumber-decision")) &&
+          arg !== undefined
+        ) {
+          // These subcommands take no positional arguments.
           options.unknownFlags.push(arg);
-          markInvalid(`qfai workflow: unexpected argument: ${arg}`);
+          markInvalid(`${scope()}: unexpected argument: ${arg}`);
         }
         break;
     }
@@ -726,6 +754,22 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   if (command === "sdd" && !options.help && !options.sddAction) {
     markInvalid(subcommandReason("sdd", null));
   }
+  if (
+    command === "sdd" &&
+    options.sddAction === "renumber-decision" &&
+    !options.help &&
+    !options.version
+  ) {
+    for (const [flag, value] of [
+      ["--from", options.sddFrom],
+      ["--to", options.sddTo],
+      ["--base", options.sddBase],
+    ] as const) {
+      if (!value) markInvalid(missingValue(flag));
+    }
+    if (options.sddFrom === options.sddTo)
+      markInvalid("qfai sdd: --from and --to must name different DEC IDs.");
+  }
   // Every command except init reads `--root` as the target directory. init
   // looked only at `--dir`, so passing `--root` dropped the value and
   // initialized the cwd. init now treats `--root` as an alias for the output
@@ -740,7 +784,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
 const SUBCOMMAND_EXPECTATIONS = new Map<string, string>([
   ["discussion", "list|use"],
   ["atdd", "scaffold"],
-  ["sdd", "preflight"],
+  ["sdd", "preflight|renumber-decision"],
   ["workflow", WORKFLOW_OPERATIONS.join("|")],
 ]);
 

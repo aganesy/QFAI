@@ -106,10 +106,11 @@ Questions about this skill's own inputs or settings stay in its own output for
 the user to answer. This skill does not write `open-questions.md`.
 
 The completion message lists each decision the agents adopted, with its
-reason and any disagreeing position. None of them is put as a question. The
-message then ends with a question listing every next action, as
-`.agents/rules/user-questions.md` § 6 sets out; under a no-question mode it lists
-them in the report instead:
+reason and any disagreeing position. None of them is put as a question. Ask for
+the next action only when proceeding requires the user's answer, as
+`.agents/rules/user-questions.md` § 6 sets out. A completion-only report needs
+no question. Under a no-question mode, list any remaining actions instead.
+The applicable next actions are:
 
 - Proceed (recommended): create a PR on your hosting platform, with the
   verification report as its description.

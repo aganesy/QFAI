@@ -86,6 +86,11 @@ design. They are written by the `write-acceptance-tests` route, or by
 `implement-acceptance` run alone, and the report says which BF and AC tests
 still have an empty body.
 
+For that report or a handoff of unfinished BF/AC bodies, read
+`.qfai/assistant/step/verify-repo-gate/STEP.md#acceptance-evidence-and-follow-up`.
+It separates annotation proof, body states, actual behavior and execution,
+and the remaining work's owner and completion criteria.
+
 Each of these runs alone, instead of that order, when the request is not new
 behaviour but a failure, a repair or upkeep:
 
@@ -139,9 +144,10 @@ every finding of its one review is fixed or answered. Invoked by name, it runs
 completion; when that fresh validate result has no test-obligation EX finding
 for this BF, the invocation reports "nothing to do", and reads or writes no
 ledger status. Inside a route it runs no validate: the verify stage does.
-The report ends with a question listing the next actions, `/qfai-verify`
-recommended, as `.agents/rules/user-questions.md` § 6 sets out.
-Under a no-question mode, list them in the report instead.
+When the next step needs the user's answer, ask a question listing the next
+actions, `/qfai-verify` recommended, per `.agents/rules/user-questions.md` § 6.
+Completion-only reports ask nothing. Under a no-question mode, list remaining
+actions instead.
 
 ## Default Autopilot Policy
 

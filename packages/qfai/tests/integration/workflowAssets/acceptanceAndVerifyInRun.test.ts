@@ -153,3 +153,167 @@ describe("qfai-verify loads its inputs from the shipped assistant tree", () => {
     );
   });
 });
+
+describe("acceptance scaffold evidence in the human report", () => {
+  const repoGate = "step/verify-repo-gate/STEP.md";
+  const reportHeading = "### Acceptance evidence and follow-up";
+  const outputContract = "skill/qfai-verify/references/verify-output-contract.md";
+
+  // QFAI:AC-0001-0233-01
+  // QFAI:EX-0001-0233-01
+  it("requires five separate evidence fields when acceptance bodies are in scope", async () => {
+    const report = sectionOf(await readShipped(repoGate), reportHeading);
+    expect(report).not.toBe("");
+    const condition =
+      report
+        .split(/\r?\n\s*\r?\n/u)
+        .map(flat)
+        .find((part) => part.startsWith("When ")) ?? "";
+    for (const term of [
+      "implementation",
+      "verification",
+      "handoff",
+      "scope",
+      "acceptance scaffolds",
+      "unfinished BF/AC acceptance bodies",
+      "human report",
+    ]) {
+      expect(condition).toContain(term);
+    }
+
+    const annotation = rowOf(report, "| Annotation proof");
+    expect(annotation).toContain("BF/AC annotation IDs");
+    expect(annotation).toContain("test files");
+    expect(annotation).toMatch(/inspection or validation result/u);
+
+    const bodies = rowOf(report, "| Acceptance bodies");
+    expect(bodies).toMatch(/Empty, implemented and unclassified body counts/iu);
+    expect(bodies).toContain("counting unit");
+    expect(bodies).toContain("file references");
+    expect(bodies).toMatch(/BF test bodies and AC test bodies separate/u);
+    expect(bodies).toMatch(/test bodies are not unique obligations/u);
+
+    const assertions = rowOf(report, "| Asserted behavior and runs");
+    expect(assertions).toMatch(/actual assertion.*BF or AC/u);
+    expect(assertions).toMatch(/actual run results.*evidence references/u);
+    expect(assertions).toMatch(/annotation alone does not establish.*assertion.*execution/u);
+    expect(rowOf(report, "| Observed outcomes")).toMatch(/logs or evidence references/u);
+
+    const remaining = rowOf(report, "| Remaining work");
+    for (const term of [
+      "unfinished BF/AC bodies",
+      "files",
+      "owner",
+      "completion criteria",
+      "next route",
+      "write-acceptance-tests",
+    ]) {
+      expect(remaining).toContain(term);
+    }
+    const implementation = await section("skill/qfai-implement/SKILL.md", "## Steps");
+    expect(implementation).toContain("verify-repo-gate/STEP.md#acceptance-evidence-and-follow-up");
+  });
+
+  // QFAI:AC-0001-0233-01
+  // QFAI:EX-0001-0233-03
+  it("keeps unknown counts and owners explicit and execution outcomes distinct", async () => {
+    const report = sectionOf(await readShipped(repoGate), reportHeading);
+    expect(report).not.toBe("");
+    const bodies = rowOf(report, "| Acceptance bodies");
+    expect(bodies).toMatch(/UNKNOWN, not zero.*inspection did not establish/u);
+    const remaining = rowOf(report, "| Remaining work");
+    expect(remaining).toMatch(/actual owner or UNASSIGNED/u);
+    expect(remaining).toMatch(/BF\/AC bodies and files.*completion criteria.*next route/u);
+    const unknowns =
+      report
+        .split(/\r?\n\s*\r?\n/u)
+        .map(flat)
+        .find((part) => part.includes("If inspection")) ?? "";
+    expect(unknowns).toMatch(/inspection has not established the count.*UNKNOWN/u);
+    expect(unknowns).toMatch(/no owner has been assigned.*UNASSIGNED/u);
+    expect(unknowns).toMatch(/do not invent an assignment or a successful run/u);
+
+    const outcomes = rowOf(report, "| Observed outcomes");
+    for (const outcome of ["PASS", "FAIL", "skipped", "UNRUN", "pending"]) {
+      expect(outcomes).toContain(outcome);
+    }
+    expect(outcomes).toMatch(/logs or evidence references/u);
+    expect(outcomes).toMatch(/Only an actual run supplies an execution result/u);
+    const exemptions =
+      report
+        .split(/\r?\n\s*\r?\n/u)
+        .map(flat)
+        .find((part) => part.includes("Legitimate empty bodies")) ?? "";
+    expect(exemptions).toMatch(/actual required-check FAIL remains FAIL/u);
+  });
+
+  // QFAI:AC-0001-0233-02
+  // QFAI:EX-0001-0233-02
+  it("does not infer completed acceptance bodies from passing totals or unrelated proof", async () => {
+    const report = await section(repoGate, reportHeading);
+    expect(report).toMatch(/Do not derive completed ACs by subtracting empty bodies.*pass total/u);
+    expect(report).toMatch(/another EX does not complete an empty AC body/u);
+    expect(report).toMatch(/Zero validation errors do not prove BF\/AC behavior/u);
+    expect(report).toMatch(/Guidance fixtures prove.*guidance.*not an adopter.s actual behavior/u);
+    expect(report).toMatch(/Legitimate empty bodies keep their existing exemption/u);
+    expect(report).toMatch(/actual required-check FAIL remains FAIL/u);
+    expect(report).toMatch(/acceptance-writing completion gate is unchanged/u);
+    expect(
+      rowOf(sectionOf(await readShipped(repoGate), reportHeading), "| Observed outcomes"),
+    ).toMatch(/passing empty body establishes no behavioral proof/u);
+
+    const acceptanceGate = await section("step/implement-acceptance/STEP.md", "## Gate");
+    expect(acceptanceGate).toMatch(/every test in scope has a body that asserts its BF or AC/u);
+    expect(acceptanceGate).toMatch(/keeps its annotation and file, passes/u);
+    expect(acceptanceGate).toContain("validate --profile atdd --flow BF-NNNN --fail-on error");
+  });
+
+  // QFAI:AC-0001-0233-02
+  // QFAI:EX-0001-0233-04
+  it("keeps the optional summary short and preserves the closed verdict contract", async () => {
+    const report = await section(repoGate, reportHeading);
+    expect(report).toMatch(/lint-only scope without these bodies needs no acceptance report/u);
+    expect(report).toMatch(/optional `verify\.json` summary.*one or two short sentences/u);
+    expect(report).toMatch(/remaining work.*owner or UNASSIGNED.*detailed report reference/u);
+    expect(report).toMatch(
+      /table in the human report, without new JSON fields, statuses, scopes, gates or routes/u,
+    );
+
+    const contract = await readShipped(outputContract);
+    const summary =
+      contract
+        .split(/\r?\n\s*\r?\n/u)
+        .map(flat)
+        .find((part) => part.startsWith("When the scope includes acceptance scaffolds")) ?? "";
+    expect(summary).toMatch(/unfinished BF\/AC acceptance bodies/u);
+    expect(summary).toMatch(/optional `summary`.*one or two short sentences/u);
+    expect(summary).toMatch(/remaining work.*owner or UNASSIGNED.*human-report reference/u);
+    expect(summary).toMatch(/five-field detail.*`verify-repo-gate`.*`## Report`/u);
+    expect(summary).toMatch(/not a new JSON field or table inside `summary`/u);
+    const fields =
+      contract.split(/\r?\n\s*\r?\n/u).find((part) => part.startsWith("| Field")) ?? "";
+    expect([...fields.matchAll(/^\|\s*`([^`]+)`\s*\|/gmu)].map((match) => match[1])).toEqual([
+      "status",
+      "scope",
+      "flowId",
+      "recordedAt",
+      "summary",
+      "gates",
+    ]);
+    expect(rowOf(fields, "| `summary`")).toMatch(/string\s*\|\s*no/u);
+    const closedStatus =
+      contract
+        .split(/\r?\n\s*\r?\n/u)
+        .map(flat)
+        .find((part) => part.startsWith("`status` is a closed")) ?? "";
+    expect(closedStatus).toContain('two-value enum: `"PASS"` / `"FAIL"`');
+    const scopes =
+      contract.split(/\r?\n\s*\r?\n/u).find((part) => part.startsWith("| `scope`")) ?? "";
+    expect([...scopes.matchAll(/^\|\s*`([^`]+)`\s*\|/gmu)].map((match) => match[1])).toEqual([
+      "scope",
+      "prototyping",
+      "atdd",
+      "full",
+    ]);
+  });
+});

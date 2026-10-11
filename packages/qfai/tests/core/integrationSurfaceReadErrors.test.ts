@@ -229,11 +229,8 @@ describe("a structurally broken target is a finding, not a crash", () => {
   });
 
   it("reports a wrapper the OS will not follow as a warning, not an error", async () => {
-    // The severity is the operator's whole reading of it. `git worktree`
-    // produces this shape on every wrapper, on a tree where every canonical
-    // document is present and readable — so an `error` here made
-    // `validate --fail-on error` unable to exit 0 in the workflow the skills
-    // are written for, and the rule stopped being read as a rule.
+    // A readable canonical and an unfollowable host wrapper are separate
+    // states. The warning must offer the supported repair for the named path.
     await withProject(async (root) => {
       await seedCanonical(root);
       const wrapper = path.join(root, ".claude", "skills", "qfai-implement");
@@ -252,7 +249,16 @@ describe("a structurally broken target is a finding, not a crash", () => {
       // document is in the tree, this path does not reach it.
       expect(unfollowable?.message).toContain("the instructions are in this tree");
       expect(unfollowable?.message).not.toContain("none of them is currently applied");
-      expect(unfollowable?.suggested_action).toContain("git worktree");
+      const remedy = unfollowable?.suggested_action ?? "";
+      expect(remedy).toMatch(/git worktree/i);
+      expect(remedy).toMatch(/\bWindows\b/);
+      expect(remedy).toMatch(/\b(?:can|may|some|sometimes)\b/i);
+      expect(remedy).toContain("`qfai init`");
+      expect(remedy).not.toMatch(/\bevery\s+`?git worktree/i);
+      expect(remedy).not.toMatch(/\bevery\s+(?:skill\s+)?wrapper/i);
+      expect(remedy).not.toMatch(/primary checkout[^.\n]*\bintact\b/i);
+      expect(remedy).not.toMatch(/\bdelete\b/i);
+      expect(remedy).not.toContain("--force");
     });
   });
 

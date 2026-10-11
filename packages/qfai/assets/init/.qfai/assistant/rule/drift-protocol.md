@@ -11,7 +11,18 @@ open-questions.md, and every file under paths.contractsDir. Production code and 
 obligation may change in a later task, but the change must preserve or deliberately reapprove that obligation.
 QFAI-owned files under .qfai/assistant/rule/ are updated through the package, then synchronized by init.
 
-A new change-request row in decisions.md is permitted without an earlier change request. Existing rows are append-only records: a prior row may change its Status cell, while its ID, Content, and Approach stay fixed. A changed obligation needs a new row, even when an older row discusses the same topic.
+A new change-request row in decisions.md is permitted without an earlier change request.
+Existing rows are append-only records: a prior row may change its Status cell,
+while its ID, Content, and Approach stay fixed. The sole ID-change exception is
+explicit local renumbering of a unique branch-added decision absent from the
+unique common ancestor of HEAD and a required local base. That operation changes
+only its ID and provably branch-added exact references. Inherited row cells and
+references stay fixed. A changed obligation needs a new row, even when an older
+row discusses the same topic.
+
+The sole Approach-change exception is the published decision prefix recovery
+below. It preserves the target's ID, Content, Status and complete original
+Approach suffix. It excludes inherited rows and open-question rows.
 
 ## Allowed exceptions (minimal whitelist)
 
@@ -24,6 +35,51 @@ A change that touches no protected file needs no change request. A bugfix whose
 diff changes no file under `01_policy/`, `02_business-flow/` or
 paths.contractsDir appends no `Change request:` row. A row naming a story file
 the bugfix did not touch would state an upstream change that did not happen.
+
+## Published decision prefix recovery
+
+The SDD owner may prepend only an approved Evidence/Grounds prefix to a
+published malformed decision added by the branch. Approval of this protocol
+does not authorize any target. First obtain a separate new in-force recovery
+change request naming the target and its repository-relative file.
+
+1. Fix the explicit base commit and its unique common ancestor with current
+   HEAD. The target ID must be absent from both. The documented published
+   source commit must be an ancestor of current HEAD and expose the unique
+   original row. Inherited records and open-question rows are excluded.
+2. Read the original raw cell bytes. The row must be single-line valid UTF-8,
+   with exactly one ASCII padding space at each Approach delimiter and no
+   additional boundary whitespace. Hash the stored Approach bytes with
+   SHA-256, excluding only the delimiter pipes and those two padding spaces.
+   Do not decode escapes, trim text or normalize it. Ambiguous boundaries,
+   additional padding or invalid UTF-8 stop recovery.
+3. Confirm the original Residual risk and Rollback items already satisfy the
+   required ordered, nonempty form. The new Approach must be exactly
+   `- Evidence: <actual file references> - Grounds: `, including its trailing
+   space, followed by the complete original Approach as a byte-identical
+   suffix. Preserve the original wording, order, facts, authority and scope.
+   The prefixed row must satisfy the existing form checks.
+4. Record the target ID, published source commit, fixed base and common
+   ancestor, old and new Approach digests, exact prefix, actual file evidence,
+   approval authority, recovery reason, residual risk and rollback in the new
+   request. The old digest must match the published source Approach; the new
+   digest must match the exact prefix plus that source value. Record actual
+   authority; do not invent a user answer or approval.
+5. Immediately before writing, recheck the unique current target, its
+   byte-identical ID, Content and Status, and its recorded old Approach digest.
+   Unknown or unavailable provenance, inherited or duplicate targets, stale
+   data or a change beyond the approved prefix stops recovery before writing.
+   Apply only that prefix. Keep every other row byte-identical and run the existing
+   validation without an exemption.
+6. Rollback removes only the recorded prefix when the current new Approach
+   digest still matches. Otherwise preserve the current row and stop. Removal
+   restores the original Approach and its validation failure. Do not reset,
+   amend or force push.
+
+Status changes, supersession and a diagnostic's rewrite suggestion supply no
+recovery authority and clear no form error. Inherited malformed records need a
+separate owning change request; this operation cannot repair them. These are
+owner instructions, not an automatic recovery command or a concurrency guarantee.
 
 ## Drift classes
 
@@ -112,6 +168,6 @@ copy of a locked file before deciding its lock is wrong.
 ## Non-negotiable constraints
 
 - Downstream stages do not patch protected upstream artifacts before an in-force Change request: decision row authorizes the path. The drift profile compares the branch against baseBranch and reports QFAI-DRIFT-001 for an unapproved protected change. The SDD owner may create the request row itself without a prior row.
-- Existing decisions.md and open-questions.md rows retain their ID, Content, and Approach. A former row may change Status; new content is appended as a new row.
+- Existing decisions.md and open-questions.md rows retain their ID, Content, and Approach, except for the explicit branch-added decision renumbering and published decision prefix recovery above. Inherited rows retain those cells without exception. A former row may change Status; new content is appended as a new row.
 - Vendored assistant rules are changed in the package and synchronized into projects by `npx qfai init --force`, which overwrites a local edit. A project rule lives in a `*.local.md` overlay beside the vendored one.
 - When approval is unavailable, keep the affected items stopped and report the decision needed. Continue unrelated work.

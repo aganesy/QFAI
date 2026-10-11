@@ -34,6 +34,26 @@ development tool.
    be run here. Record it as unverified until the next release, and name the
    check that will show it works.
 
+### External actions
+
+Interactive login, new permission grants and authority expansion are
+person-only steps. A human-run or triage handoff never executes them for the
+user. Other account settings or credential installation require prior authority
+for the specific target and action and the host's actual allowed safe channel;
+connector availability alone is not proof. Check the credential's account,
+project, scope, expiry and ownership. One-time permission grants no continuing
+access, and third-party credentials require separate authority. Put no secrets
+in chat, logs or tracked files.
+
+Absent or unknown authority or safe handling, or a host denial, stops the
+dependent action. Give manual steps and the evidence and read-only check that
+would confirm them; never bypass the denial. Record repository changes and
+external effects separately: host access or CI start, authorization, credential
+installation, CI, merge and publication. Each relevant effect is confirmed,
+pending, unverified or not requested, with the target, exact revision, evidence
+URL when available, blocker and resume condition where needed. Green CI is not
+proof of merge or publication.
+
 ## What it writes
 
 - The changed workflows, scripts and tool configuration, listed in

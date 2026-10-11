@@ -91,9 +91,10 @@ Report the source selected, BF and US IDs touched, decision and OQ IDs, contract
 files and index rows, each per-flow validation result and log, independent
 reviewer verdicts, adopted grilling decisions, rejected options still excluded,
 and remaining questions. The next implementation route is `/qfai-implement`; UI work
-may pass through `/qfai-prototyping` first. The report ends with a question
-listing those next actions, as `.agents/rules/user-questions.md` § 6 sets out.
-Under a no-question mode, list them in the report instead.
+may pass through `/qfai-prototyping` first. Ask about those next actions only
+when proceeding requires the user's answer, as `.agents/rules/user-questions.md`
+§ 6 sets out. A completion-only report needs no question. Under a no-question
+mode, list any remaining actions instead.
 
 ## Default Autopilot Policy
 

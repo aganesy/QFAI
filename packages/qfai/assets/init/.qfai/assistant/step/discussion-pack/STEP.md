@@ -33,6 +33,7 @@ nothing to write. The pass names the pack path.
 - `.qfai/assistant/skill/qfai-discussion/references/discussion-artifact-rules.md`
   for the pack's fixed file set and naming.
 - The templates under `.qfai/assistant/skill/qfai-discussion/templates/`.
+- `.agents/rules/documentation-clarity.md`, when writing the prose this step produces.
 
 ## Writes
 

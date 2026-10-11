@@ -10,7 +10,15 @@ For each candidate item, name its production files, test files, contracts, fixtu
 
 Deny parallel dispatch when two items write the same shared fixture or mock file, or mutate the same fixture instance. A shared fixture module that both items only read as-is does not by itself deny parallel dispatch.
 
-Give each worker a separate worktree and an exact file ownership list. Workers do not change another worker's files or the story tree. The orchestrator integrates their results and resolves every overlap before judging either item complete.
+Give each worker an exact file ownership list and a checkout assigned by the host.
+Use separate worktrees when the host supports editing them; otherwise use the
+existing shared-index mode in
+`.qfai/assistant/rule/workflow.md#concurrency-stage-independent-mandatory`.
+Creating a worktree does not grant edit permission. For a refused edit, follow
+`.qfai/assistant/rule/shared-skill-delegation-baseline.md#worker-edit-boundary`.
+Workers do not change another worker's files or the story tree. The orchestrator
+integrates their results and resolves every overlap before judging either item
+complete.
 
 ## Integration gate
 

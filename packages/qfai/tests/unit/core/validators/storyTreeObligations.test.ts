@@ -1,8 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { parseCountedExampleAnnotations } from "../../../../src/core/storyTree/ids.js";
+import * as storyTreeIds from "../../../../src/core/storyTree/ids.js";
 import { buildStoryTreeModel } from "../../../../src/core/storyTree/tree.js";
-import { validateStoryTreeObligationsModel } from "../../../../src/core/validators/storyTreeObligations.js";
+import type { Issue } from "../../../../src/core/types.js";
+import {
+  validateStoryTreeObligationsModel,
+  type StoryObligationProfile,
+  type StoryTestFile,
+} from "../../../../src/core/validators/storyTreeObligations.js";
 
 const specs = ".qfai/spec";
 const story = `${specs}/02_business-flow/business-flow-0001/user-story-0001-0001`;
@@ -17,14 +22,201 @@ const files = new Map<string, string>([
   [`${specs}/decisions.md`, "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |"],
 ]);
 
-function model(decisions?: string) {
+function model(decisions?: string, examples?: string) {
   const entries = new Map(files);
   if (decisions) entries.set(`${specs}/decisions.md`, decisions);
+  if (examples) entries.set(`${story}/03_Example.md`, examples);
   return buildStoryTreeModel(entries, { specsDir: specs, contractsDir: `${specs}/03_contract` });
+}
+
+function expectParsingWork(profile: StoryObligationProfile): void {
+  const unitFile = "tests/unit/checkout.test.ts";
+  const e2eFile = "tests/e2e/checkout.test.ts";
+  const knownTag = ["QFAI", "EX-0001-0001-01"].join(":");
+  const unknownTag = ["QFAI", "EX-0001-0001-99"].join(":");
+  const attached = `// ${knownTag}\nit("pays", () => {});\n`;
+  const unattached = `// ${knownTag}\nimport { it } from "vitest";\n\nit("pays", () => {});\n`;
+  const missingBF: Issue = {
+    code: "QFAI-STORY-006",
+    severity: "error",
+    category: "canonical",
+    message: "BF-0001 is missing an E2E test annotation",
+    file: `${specs}/02_business-flow/business-flow-0001/business-flow.md`,
+    rule: "storyTree.testObligation",
+    refs: ["BF-0001"],
+  };
+  const missingAC: Issue = {
+    code: "QFAI-STORY-006",
+    severity: "error",
+    category: "canonical",
+    message: "AC-0001-0001-01 is missing an integration or API test annotation",
+    file: `${story}/02_Acceptance-Criteria.md`,
+    rule: "storyTree.testObligation",
+    refs: ["AC-0001-0001-01"],
+  };
+  const missingEX: Issue = {
+    code: "QFAI-STORY-006",
+    severity: "error",
+    category: "canonical",
+    message: "EX-0001-0001-01 is missing a test annotation",
+    file: `${story}/03_Example.md`,
+    rule: "storyTree.testObligation",
+    refs: ["EX-0001-0001-01"],
+  };
+  const unknownEX: Issue = {
+    code: "QFAI-STORY-008",
+    severity: "error",
+    category: "canonical",
+    message: `Undeclared annotation EX-0001-0001-99 in ${unitFile}`,
+    file: unitFile,
+    rule: "storyTree.undeclaredAnnotation",
+    refs: ["EX-0001-0001-99"],
+  };
+  const misplacedEX: Issue = {
+    code: "QFAI-STORY-007",
+    severity: "error",
+    category: "canonical",
+    message: `${knownTag} is misplaced in ${e2eFile}; EX requires a test outside E2E`,
+    file: e2eFile,
+    rule: "storyTree.misplacedAnnotation",
+    refs: ["EX-0001-0001-01"],
+  };
+  const exemptEX: Issue = {
+    code: "QFAI-STORY-009",
+    severity: "info",
+    category: "canonical",
+    message: "EX-0001-0001-01 is exempted by DEC-0001",
+    file: `${specs}/decisions.md`,
+    rule: "storyTree.testException",
+    refs: ["EX-0001-0001-01", "DEC-0001"],
+  };
+  const secondMissingEX: Issue = {
+    ...missingEX,
+    message: "EX-0001-0001-02 is missing a test annotation",
+    refs: ["EX-0001-0001-02"],
+  };
+  const ordinary = model();
+  const exception = model(
+    "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n" +
+      "| DEC-0001 | Test exception: EX-0001-0001-01, EX-0001-0001-99 | No test environment | DONE |\n",
+    "| EX-ID | AC-Ref | Example |\n| --- | --- | --- |\n" +
+      "| EX-0001-0001-01 | AC-0001-0001-01 | paid |\n" +
+      "| EX-0001-0001-02 | AC-0001-0001-01 | second payment |\n",
+  );
+  const selectedUnit: StoryTestFile = {
+    file: unitFile,
+    kind: null,
+    selectedForExample: true,
+    content: attached,
+  };
+  const scenarios: {
+    name: string;
+    test: StoryTestFile;
+    tree: ReturnType<typeof model>;
+    tddCalls: number;
+    expected: Record<StoryObligationProfile, Issue[]>;
+  }[] = [
+    {
+      name: "unknown EX remains diagnosed",
+      test: { ...selectedUnit, content: `// ${unknownTag}\nit("pays", () => {});\n` },
+      tree: ordinary,
+      tddCalls: 1,
+      expected: { atdd: [unknownEX, missingBF, missingAC], tdd: [unknownEX, missingEX] },
+    },
+    {
+      name: "E2E EX remains misplaced and uncovered",
+      test: { ...selectedUnit, file: e2eFile, kind: "e2e" },
+      tree: ordinary,
+      tddCalls: 0,
+      expected: { atdd: [missingBF, missingAC], tdd: [misplacedEX, missingEX] },
+    },
+    {
+      name: "unselected EX does not cover but unknown EX is still diagnosed",
+      test: {
+        ...selectedUnit,
+        selectedForExample: false,
+        content: `// ${knownTag}\n// ${unknownTag}\nit("pays", () => {});\n`,
+      },
+      tree: ordinary,
+      tddCalls: 0,
+      expected: { atdd: [unknownEX, missingBF, missingAC], tdd: [unknownEX, missingEX] },
+    },
+    {
+      name: "a selected file with no EX leaves coverage open",
+      test: { ...selectedUnit, content: 'it("pays", () => {});\n' },
+      tree: ordinary,
+      tddCalls: 0,
+      expected: { atdd: [missingBF, missingAC], tdd: [missingEX] },
+    },
+    {
+      name: "selected kind-null declaration covers its EX",
+      test: selectedUnit,
+      tree: ordinary,
+      tddCalls: 1,
+      expected: { atdd: [missingBF, missingAC], tdd: [] },
+    },
+    {
+      name: "a header unattached to the declaration leaves EX uncovered",
+      test: { ...selectedUnit, content: unattached },
+      tree: ordinary,
+      tddCalls: 1,
+      expected: { atdd: [missingBF, missingAC], tdd: [missingEX] },
+    },
+    {
+      name: "DONE exception exempts only its declared EX",
+      test: { ...selectedUnit, content: unattached },
+      tree: exception,
+      tddCalls: 1,
+      expected: { atdd: [exemptEX, missingBF, missingAC], tdd: [exemptEX, secondMissingEX] },
+    },
+  ];
+  const countedParser = vi.spyOn(storyTreeIds, "parseCountedExampleAnnotations");
+  try {
+    for (const scenario of scenarios) {
+      countedParser.mockClear();
+      const findings = validateStoryTreeObligationsModel(scenario.tree, [scenario.test], profile);
+      const calls = profile === "tdd" ? scenario.tddCalls : 0;
+      expect(countedParser, `${profile}: ${scenario.name}`).toHaveBeenCalledTimes(calls);
+      expect(countedParser.mock.calls, scenario.name).toEqual(
+        calls === 1 ? [[scenario.test.content, scenario.test.file]] : [],
+      );
+      expect(findings, `${profile}: ${scenario.name}`).toEqual(scenario.expected[profile]);
+    }
+  } finally {
+    countedParser.mockRestore();
+  }
 }
 
 // QFAI:EX-0004-0001-02
 describe("story-tree test obligations", () => {
+  // QFAI:EX-0001-0056-05
+  it("leaves counted EX parsing unused in ATDD while retaining every diagnostic", () => {
+    expectParsingWork("atdd");
+  });
+
+  // QFAI:EX-0001-0056-03
+  // QFAI:EX-0001-0056-05
+  // QFAI:EX-0001-0056-07
+  // QFAI:EX-0001-0056-14
+  it("parses only selected non-E2E files with raw EX annotations in TDD", () => {
+    expectParsingWork("tdd");
+  });
+
+  it.each([
+    ["atdd", "BF-0001", "an E2E test"],
+    ["atdd", "AC-0001-0001-01", "an integration or API test"],
+    ["tdd", "EX-0001-0001-01", "a test"],
+  ] as const)(
+    "names the missing annotation for %s / %s in natural English",
+    (profile, id, target) => {
+      const findings = validateStoryTreeObligationsModel(model(), [], profile);
+      const finding = findings.find(
+        (item) => item.code === "QFAI-STORY-006" && item.refs?.includes(id),
+      );
+      expect(finding?.message).toBe(`${id} is missing ${target} annotation`);
+    },
+  );
+
   it("requires BF in E2E and AC in integration or API", () => {
     const findings = validateStoryTreeObligationsModel(
       model(),
@@ -205,9 +397,9 @@ describe("story-tree test obligations", () => {
   ] as const)("reads an annotation before %s", (_name, file, template, counted) => {
     const id = "EX-0001-0001-01";
     const tag = ["QFAI", id].join(":");
-    expect(parseCountedExampleAnnotations(template.replaceAll("{tag}", tag), file)).toEqual(
-      counted ? [id] : [],
-    );
+    expect(
+      storyTreeIds.parseCountedExampleAnnotations(template.replaceAll("{tag}", tag), file),
+    ).toEqual(counted ? [id] : []);
   });
 
   it("rejects an EX annotation in E2E and keeps its test obligation open", () => {
@@ -283,3 +475,67 @@ describe("story-tree test obligations", () => {
     ).toBe(true);
   });
 });
+
+describe.each([
+  "DONE",
+  "TODO",
+  "WIP",
+  "REJECTED",
+  "SUPERSEDED (by DEC-0002)",
+  "PARTLY SUPERSEDED (by DEC-0002)",
+] as const)("test exceptions with Status %s", (status) => {
+  // QFAI:EX-0001-0056-06
+  // QFAI:EX-0001-0056-07
+  it.each([
+    ["BF-0001", "atdd"],
+    ["AC-0001-0001-01", "atdd"],
+    ["EX-0001-0001-01", "tdd"],
+  ] as const)("exempts only %s at DONE under %s", (id, profile) => {
+    const decisions =
+      "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n" +
+      `| DEC-0001 | Test exception: ${id} | No test environment | ${status} |\n` +
+      "| DEC-0002 | Successor decision | Keep obligations | DONE |\n";
+    const current = model(decisions);
+    const findings = validateStoryTreeObligationsModel(current, [], profile);
+    expect(
+      findings.filter((finding) => finding.code === "QFAI-STORY-006" && finding.refs?.includes(id)),
+    ).toEqual(
+      status === "DONE" ? [] : [expect.objectContaining({ severity: "error", refs: [id] })],
+    );
+    expect(findings.filter((finding) => finding.code === "QFAI-STORY-009")).toEqual(
+      status === "DONE"
+        ? [expect.objectContaining({ severity: "info", refs: [id, "DEC-0001"] })]
+        : [],
+    );
+    if (id === "BF-0001") {
+      expect(findings).toContainEqual(
+        expect.objectContaining({ code: "QFAI-STORY-006", refs: ["AC-0001-0001-01"] }),
+      );
+    }
+    if (id !== "EX-0001-0001-01") {
+      expect(validateStoryTreeObligationsModel(current, [], "tdd")).toContainEqual(
+        expect.objectContaining({ code: "QFAI-STORY-006", refs: ["EX-0001-0001-01"] }),
+      );
+    }
+  });
+});
+
+// QFAI:EX-0001-0056-07
+it.each(["BF-9999", "AC-9999-0001-01", "EX-0001-0001-99"] as const)(
+  "a DONE exception naming undefined %s exempts nothing",
+  (id) => {
+    const decisions =
+      "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n" +
+      `| DEC-0001 | Test exception: ${id} | No test environment | DONE |\n`;
+    for (const profile of ["atdd", "tdd"] as const) {
+      const findings = validateStoryTreeObligationsModel(model(decisions), [], profile);
+      expect(findings.filter((finding) => finding.code === "QFAI-STORY-006")).toEqual(
+        validateStoryTreeObligationsModel(model(), [], profile).filter(
+          (finding) => finding.code === "QFAI-STORY-006",
+        ),
+      );
+      expect(findings.filter((finding) => finding.code === "QFAI-STORY-009")).toEqual([]);
+      expect(findings.some((finding) => finding.refs?.includes(id))).toBe(false);
+    }
+  },
+);

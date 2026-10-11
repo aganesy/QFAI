@@ -1,6 +1,11 @@
 packages:
   - "packages/qfai"
 
+overrides:
+  "markdownlint-cli2@0.22.1>js-yaml": "4.3.2"
+  "markdownlint-cli2@0.22.1>markdown-it": "14.3.1"
+  "markdownlint-cli2@0.22.1>smol-toml": "1.9.1"
+
 # What may run its own install scripts. `pnpm rebuild` refuses a package this does not name.
 #
 # The decision itself is `.github/actions/setup/dependency-builds.txt`, which travels with the

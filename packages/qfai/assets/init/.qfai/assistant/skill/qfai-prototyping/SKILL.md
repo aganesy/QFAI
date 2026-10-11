@@ -95,9 +95,10 @@ decide completion.
 The invocation completes when the user confirms the prototype and
 `prototyping-handoff` has written the handoff. A blocking finding the latest
 review still lists at that point is named in the final report. Report every
-decision a session adopted, as that step says. The report ends with a question
-listing the actions under Next, as `.agents/rules/user-questions.md` § 6 sets
-out. Under a no-question mode, list them in the report instead.
+decision a session adopted, as that step says. Ask about the actions under Next
+only when proceeding requires the user's answer, as
+`.agents/rules/user-questions.md` § 6 sets out. A completion-only report needs
+no question. Under a no-question mode, list any remaining actions instead.
 
 ## Next
 

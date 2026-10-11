@@ -30,6 +30,11 @@ export type QfaiPaths = {
   migrationsDir?: string;
 };
 
+export type QfaiForbiddenIdentifier = {
+  sha256: string;
+  byteLength: number;
+};
+
 export type QfaiValidationConfig = {
   failOn: FailOn;
   /**
@@ -38,6 +43,8 @@ export type QfaiValidationConfig = {
    * (QFAI-STORY-016). Unset means no term is checked.
    */
   staleTerms?: string[];
+  /** Hash-only identifiers checked against tracked names and current file bytes. */
+  forbiddenIdentifiers?: QfaiForbiddenIdentifier[];
   testStrategy: {
     /**
      * When true (default), `qfai validate` reports the silent-placeholder
@@ -273,7 +280,7 @@ export async function loadConfig(root: string): Promise<ConfigLoadResult> {
     if (isEnoent(error)) {
       return { config: defaultConfig, issues, configPath };
     }
-    issues.push(configIssue(configPath, formatError(error)));
+    issues.push(configIssue(configPath, "The configuration file could not be read or parsed."));
     return { config: defaultConfig, issues, configPath };
   }
 
@@ -507,6 +514,12 @@ function normalizeValidation(
 
   reportRetiredTraceabilityKeys(traceabilityRaw, configPath, issues);
 
+  const forbiddenIdentifiers = normalizeForbiddenIdentifiers(
+    raw.forbiddenIdentifiers,
+    configPath,
+    issues,
+  );
+
   const staleTerms = readStringArray(
     raw.staleTerms,
     [],
@@ -518,6 +531,7 @@ function normalizeValidation(
   return {
     failOn: readFailOn(raw.failOn, base.failOn, "validation.failOn", configPath, issues),
     ...(staleTerms.length > 0 ? { staleTerms } : {}),
+    ...(forbiddenIdentifiers !== undefined ? { forbiddenIdentifiers } : {}),
     testStrategy: {
       forbidTestTodoStubs: readBoolean(
         testStrategyRaw?.forbidTestTodoStubs,
@@ -544,6 +558,55 @@ function normalizeValidation(
       ),
     },
   };
+}
+
+function normalizeForbiddenIdentifiers(
+  raw: unknown,
+  configPath: string,
+  issues: Issue[],
+): QfaiForbiddenIdentifier[] | undefined {
+  if (raw === undefined) return undefined;
+  const invalid = (): undefined => {
+    issues.push(configIssue(configPath, "validation.forbiddenIdentifiers is invalid."));
+    return undefined;
+  };
+  if (!Array.isArray(raw) || raw.length > 64) {
+    invalid();
+    return undefined;
+  }
+
+  const entries: QfaiForbiddenIdentifier[] = [];
+  const pairs = new Set<string>();
+  const lengths = new Set<number>();
+  for (const entry of raw) {
+    if (
+      !isRecord(entry) ||
+      Object.keys(entry).length !== 2 ||
+      Object.keys(entry).some((key) => key !== "sha256" && key !== "byteLength") ||
+      typeof entry.sha256 !== "string" ||
+      !/^[0-9a-f]{64}$/.test(entry.sha256) ||
+      typeof entry.byteLength !== "number" ||
+      !Number.isInteger(entry.byteLength) ||
+      entry.byteLength < 1 ||
+      entry.byteLength > 128
+    ) {
+      invalid();
+      return undefined;
+    }
+    const pair = `${entry.sha256}:${entry.byteLength}`;
+    if (pairs.has(pair)) {
+      invalid();
+      return undefined;
+    }
+    pairs.add(pair);
+    lengths.add(entry.byteLength);
+    if (lengths.size > 8) {
+      invalid();
+      return undefined;
+    }
+    entries.push({ sha256: entry.sha256, byteLength: entry.byteLength });
+  }
+  return entries;
 }
 
 function normalizeOutput(raw: unknown, configPath: string, issues: Issue[]): QfaiOutputConfig {
@@ -1138,13 +1201,6 @@ async function exists(target: string): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-function formatError(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return String(error);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -19,7 +19,7 @@ import {
 import { planOf, type PlanDocument } from "../../../src/core/workflow/plan.js";
 import { isWorkflowRoute } from "../../../src/core/workflow/routes.js";
 import { extraction } from "../../helpers/workflowExtraction.js";
-import { minimalProject, removeProjects } from "./workflowProject.js";
+import { listTree, minimalProject, removeProjects } from "./workflowProject.js";
 
 afterEach(removeProjects);
 
@@ -28,6 +28,11 @@ async function planned(fields: Partial<WorkflowExtraction>): Promise<PlanDocumen
 }
 
 // QFAI:EX-0001-0211-01
+// QFAI:AC-0001-0222-05
+// QFAI:AC-0001-0211-02
+// QFAI:AC-0001-0220-06
+// QFAI:EX-0001-0211-45
+// QFAI:EX-0001-0220-49
 it("An extraction that names no route is routed by the rule that holds", async () => {
   const document = await planned({ intent: "defect", entryFlags: ["repro", "expect"] });
 
@@ -36,10 +41,66 @@ it("An extraction that names no route is routed by the rule that holds", async (
     Reflect.get(document, "route"),
     Reflect.get(document, "rule"),
   ]).toEqual([true, "fix-defect", 27]);
+  const root = await minimalProject();
+  const before = await listTree(root);
+  const cleanup = await planOf(root, {
+    extraction: {
+      ...extraction({ intent: "order", artifacts: [], risks: ["data-loss"] }),
+      qualifiers: ["owned-temporary-cleanup"],
+    },
+  });
+  expect(cleanup).toMatchObject({
+    ok: true,
+    route: "run-owned-cleanup",
+    family: "upkeep",
+    rule: 15,
+    stages: [
+      {
+        id: "cleanup",
+        kind: "triage",
+        steps: [{ name: "triage-owned-cleanup", passThrough: false }],
+      },
+      { id: "close", kind: "triage", steps: [{ name: "triage-close", passThrough: false }] },
+    ],
+    decisionPoints: [],
+    releasePoint: null,
+    branchPoints: [],
+  });
+  const alternative = await planOf(root, {
+    extraction: {
+      ...extraction({ intent: "question-how", confidence: "low", artifacts: [] }),
+      alternatives: [
+        { intent: "order", entryFlags: [], qualifiers: ["owned-temporary-cleanup"], signals: [] },
+      ],
+    },
+  });
+  const candidates = alternative.ok && "candidates" in alternative ? alternative.candidates : [];
+  expect(candidates.map((candidate) => [candidate.route, candidate.rule])).toEqual([
+    ["answer-question", 8],
+    ["run-owned-cleanup", 15],
+  ]);
+  const cleanupCandidate = candidates.find((candidate) => candidate.route === "run-owned-cleanup");
+  expect(cleanupCandidate).toMatchObject({
+    family: "upkeep",
+    recommended: false,
+    scopes: [{ scope: "broad", stages: ["cleanup", "close"], recommended: true }],
+  });
+  expect(cleanupCandidate?.summary).toMatch(/\b(?:remove|clean up|cleanup)\b/i);
+  expect(cleanupCandidate?.summary).toMatch(/\bauthorized\b/i);
+  expect(cleanupCandidate?.summary).toMatch(/\btemporary (?:directories|folders)\b/i);
+  expect(cleanupCandidate?.summary).toMatch(/\b(?:repair|fix)\b/i);
+  for (const subject of ["tests", "CI", "dependencies"]) {
+    expect(cleanupCandidate?.summary).toContain(subject);
+  }
+  expect(cleanupCandidate?.summary).toContain("Stages: cleanup, close.");
+  expect(Object.hasOwn(alternative, "stages")).toBe(false);
+  expect(await listTree(root)).toEqual(before);
 });
 
 // QFAI:AC-0001-0211-02
 // QFAI:EX-0001-0211-04
+// QFAI:EX-0001-0211-46
+// QFAI:EX-0001-0211-48
 it("An extraction two rules could read is routed by the lower-numbered one", async () => {
   const security: Partial<WorkflowExtraction> = {
     intent: "security",
@@ -58,9 +119,37 @@ it("An extraction two rules could read is routed by the lower-numbered one", asy
     ["fix-vulnerability", 1],
     ["fix-vulnerability", 1],
   ]);
+  const root = await minimalProject();
+  const qualified = {
+    ...extraction({ intent: "order", artifacts: [] }),
+    qualifiers: ["owned-temporary-cleanup"],
+  };
+  for (const { fields, route, rule } of [
+    { fields: { qualifiers: [] }, route: "apply-settled", rule: 15 },
+    {
+      fields: { qualifiers: ["owned-temporary-cleanup", "human-run"] },
+      route: "hand-off-operation",
+      rule: 14,
+    },
+    { fields: { signals: ["approved-record-task"] }, route: "apply-settled", rule: 2 },
+    { fields: { signals: ["grilling-required"] }, route: "decide-design", rule: 3 },
+    { fields: { signals: ["disabled-test"] }, route: "quarantine-flaky", rule: 4 },
+    { fields: { intent: "security", qualifiers: [] }, route: "fix-vulnerability", rule: 1 },
+    { fields: { intent: "release", qualifiers: [] }, route: "hand-off-operation", rule: 14 },
+    {
+      fields: { intent: "release", qualifiers: [], signals: ["release-notes"] },
+      route: "draft-release-notes",
+      rule: 5,
+    },
+  ]) {
+    const result = await planOf(root, { extraction: { ...qualified, ...fields } });
+    expect(result, JSON.stringify(fields)).toMatchObject({ ok: true, route, rule });
+  }
 });
 
 // QFAI:EX-0001-0211-03
+// QFAI:AC-0001-0211-02
+// QFAI:EX-0001-0211-47
 it("An extraction value outside its vocabulary is refused, naming the field", async () => {
   const root = await minimalProject();
   const refused = async (fields: Record<string, unknown>) => {
@@ -97,6 +186,35 @@ it("An extraction value outside its vocabulary is refused, naming the field", as
       },
     ],
     [{ reason: "schema", subject: "alternatives", cause: expect.stringMatching(/^invalid: /) }],
+  ]);
+  const cleanup = {
+    ...extraction({ intent: "order", artifacts: [] }),
+    qualifiers: ["owned-temporary-cleanup"],
+  };
+  for (const { sample, subject } of [
+    { sample: { ...cleanup, intent: "defect" }, subject: "intent" },
+    { sample: { ...cleanup, artifacts: ["code"] }, subject: "artifacts" },
+    {
+      sample: {
+        ...extraction({ confidence: "low", artifacts: [] }),
+        alternatives: [{ ...reading, qualifiers: ["owned-temporary-cleanup"] }],
+      },
+      subject: "alternatives[0].intent",
+    },
+    {
+      sample: {
+        ...extraction({ confidence: "low", artifacts: ["docs"] }),
+        alternatives: [{ ...reading, intent: "order", qualifiers: ["owned-temporary-cleanup"] }],
+      },
+      subject: "artifacts",
+    },
+  ]) {
+    expect(await refused(sample), JSON.stringify(sample)).toEqual([
+      { reason: "schema", subject, cause: expect.stringMatching(/^invalid: /) },
+    ]);
+  }
+  expect(await refused({ ...cleanup, qualifiers: ["owned-temporary-cleanup-unknown"] })).toEqual([
+    { reason: "schema", subject: "qualifiers[0]", cause: expect.stringMatching(/^wrong-value: /) },
   ]);
 });
 
