@@ -379,6 +379,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - Include the existing acceptance-body signal in both extraction schema readings.
 
+- Treat quoted decision Approach labels as literal content while retaining
+  structural item and Evidence checks. Fixes #3443.
+
 - Clarify how to report host-blocked temporary-file cleanup, hand off allowed
   manual steps and verify removal without claiming pending cleanup is complete.
 

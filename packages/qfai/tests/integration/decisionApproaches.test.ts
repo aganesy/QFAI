@@ -5,6 +5,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
+import { buildStoryTreeModel } from "../../src/core/storyTree/tree.js";
 import { validateProject } from "../../src/core/validate.js";
 
 let root: string;
@@ -62,6 +63,7 @@ describe("the Approach cell of a decision row above the checked ID", () => {
 
   // QFAI:AC-0001-0053-08
   // QFAI:EX-0001-0053-12
+  // QFAI:EX-0001-0053-23
   it("passes a complete row and leaves an earlier row unread", async () => {
     const findings = await approachFindings([
       "| DEC-0008 | Old | Kept | DONE |",
@@ -69,5 +71,78 @@ describe("the Approach cell of a decision row above the checked ID", () => {
       "| DEC-2098 | Decide | - Evidence: file:a.ts - Grounds: g - Residual risk: none — read-only - Rollback: none — nothing to undo | DONE |",
     ]);
     expect(findings).toEqual([]);
+  });
+});
+
+describe("inline code in a parsed decision Approach", () => {
+  const complete = (grounds: string, evidence = "file:a.ts") =>
+    `- Evidence: ${evidence} - Grounds: ${grounds} - Residual risk: x - Rollback: y`;
+  const row = (approach: string) => `| DEC-2098 | Decide | ${approach} | DONE |`;
+
+  // QFAI:AC-0001-0053-08
+  // QFAI:EX-0001-0053-16
+  it("retains a quoted label prefix and the original parsed Approach value", async () => {
+    const prefix =
+      "- Evidence: file:.qfai/spec/03_contract/cli/cli-0015-qfai-workflow.md; file:.qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0220/02_Acceptance-Criteria.md; file:.qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0220/03_Example.md - Grounds: ";
+    const approach = complete("\u65e5\u672c\u8a9e The stored prefix is `" + prefix + "`.");
+    const markdown = [
+      "| ID | Content | Approach | Status |",
+      "| --- | --- | --- | --- |",
+      row(approach),
+    ].join("\n");
+    const tree = buildStoryTreeModel(new Map([[`${specs}/decisions.md`, markdown]]), {
+      specsDir: specs,
+      contractsDir: `${specs}/03_contract`,
+    });
+    expect(tree.decisions?.rows.map((item) => item.approach)).toEqual([approach]);
+    expect(await approachFindings([row(approach)])).toEqual([]);
+  });
+
+  // QFAI:AC-0001-0053-08
+  // QFAI:EX-0001-0053-17
+  // QFAI:EX-0001-0053-18
+  // QFAI:EX-0001-0053-20
+  // QFAI:EX-0001-0053-23
+  it.each([
+    "` - Grounds: code-only content`",
+    "`` - Evidence: file:quoted.ts ` and ``` - Grounds: literal``",
+    "`unmatched then `` - Evidence: file:quoted.ts - Grounds: literal``",
+    "` - Grounds: literal\\`",
+    "\\\\`` - Grounds: literal``",
+    "\\``` - Grounds: literal``",
+  ])("keeps closed code literal through the Markdown table: %s", async (grounds) => {
+    expect(await approachFindings([row(complete(grounds))])).toEqual([]);
+  });
+
+  // QFAI:AC-0001-0053-08
+  // QFAI:EX-0001-0053-18
+  // QFAI:EX-0001-0053-19
+  // QFAI:EX-0001-0053-21
+  // QFAI:EX-0001-0053-22
+  // QFAI:EX-0001-0053-23
+  it.each([
+    [complete("\\` - Grounds: duplicate`"), "out of order"],
+    [
+      "- Evidence: file:a.ts quotes `text - Grounds: literal` - Residual risk: x - Rollback: y",
+      "lacks the item Grounds",
+    ],
+    [complete("` - Grounds: literal\\` - Rollback: premature"), "out of order"],
+    [complete("`` unmatched ``` - Grounds: duplicate"), "out of order"],
+    [complete("g") + " - Grounds: duplicate", "out of order"],
+    ["- Evidence: file:a.ts - Grounds: g - Rollback: y - Residual risk: x", "out of order"],
+    [complete(""), "empty Grounds item"],
+    [complete("g", "`file:a.ts`"), "neither file: nor command:"],
+    [complete("none — obvious"), '"none —" in its Grounds item'],
+  ])("retains real item failures after table parsing: %s", async (approach, problem) => {
+    const findings = await approachFindings([row(approach)]);
+    expect(findings.map((item) => [item.code, item.severity, item.file, item.refs])).toEqual([
+      [
+        "QFAI-STORY-017",
+        "error",
+        path.join(root, specs, "decisions.md").replaceAll(path.sep, "/"),
+        ["DEC-2098"],
+      ],
+    ]);
+    expect(findings[0]?.message).toContain(problem);
   });
 });
