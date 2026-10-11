@@ -6,6 +6,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- Route authorized cleanup of current-task, ignored temporary directories
+  through a bounded triage step. Unsafe or uncertain targets stop before
+  deletion, and completion requires absence and unchanged tracked files and
+  index. Fixes #3286.
+
 - Synchronize the document schema checker copies from the package manifest after
   a frozen dependency install, including the Renovate repin workflow.
 
@@ -354,6 +359,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - Keep validation profiling inside an owned, bounded child process and retain
   measurements or failure evidence from Linux and Windows CI.
 
+- Update compatible dependency resolutions and scoped lint-parser patches while
+  retaining the supported Node floor.
+
 - Check the combined raw bytes of listed AGENTS ancestor chains and report each
   file's contribution when the chain exceeds the source-byte budget.
 
@@ -437,6 +445,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **Story-tree obligations parse example declarations only where they can count.**
   Selected TDD files with EX annotations use declaration parsing. ATDD coverage
   and annotation diagnostics retain their existing checks.
+
+- **CI receipts distinguish verification from closed cleanup.** Guidance records
+  run, job, check and purpose evidence with actual counts and logs. Branch
+  overviews and cleanup skips cannot replace verification on the current head.
+  Fixes #3295.
 
 - Distinguish acceptance annotations, empty bodies, asserted behavior and actual
   run outcomes in applicable reports. Hand off remaining bodies with their owner
