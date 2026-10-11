@@ -483,7 +483,11 @@ async function unusableAncestor(
     // raises `ENOTDIR`. Reported through the leaf, the remedy named a child the
     // operator cannot reach; the component at fault is this one.
     if (!stats.isDirectory()) {
-      return { relative, detail: `is a ${describeKind(stats)}, not a directory`, notDirectory: true };
+      return {
+        relative,
+        detail: `is a ${describeKind(stats)}, not a directory`,
+        notDirectory: true,
+      };
     }
   }
   return null;
