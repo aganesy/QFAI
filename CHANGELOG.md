@@ -54,6 +54,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   plus any Claude-only notes. A project whose `AGENTS.md` already has the managed section keeps its
   bullets and gains a line only for a rule it did not list before.
 
+- **Agent entry instructions include report and reply guidance.** Reports and
+  replies start with the outcome and distinguish checked from unchecked work.
+
 - **Workflow steps name the rule documents they require.** The commit and retire steps read the
   rule on how hard an action is to undo; the triage, diagnose, research and external-report steps
   read the rule on text the project did not write; the gate steps read the rules on scratch files
@@ -374,6 +377,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Equivalent rules use existing example coverage and stable rule IDs to settle
   the owner. Different or uncertain behaviour returns to specification work;
   the choice and its reason appear in the final report.
+
+- **Published branch-added decision records have a bounded form recovery.**
+  A separately approved prefix may restore missing evidence labels while keeping
+  the original decision bytes and authority intact. Unsafe or ambiguous records
+  stop before writing; inherited records require their own owning decision.
 
 - Clarify when delegated external settings and credential installation may run,
   and distinguish confirmed external effects from repository changes and CI results.

@@ -19,7 +19,7 @@ changes, edit the master rather than this file.
 - `.agents/rules/root-additions-policy.md` — read when you add a file or directory at the repository root: it needs explicit user approval.
 - `.agents/rules/distributed-surface.md` — read when you change a file the project publishes: keep internal identifiers and private version markers out of it.
 - `.agents/rules/version-discipline.md` — read before release, tag or publish work, or a change to a version number: the user decides the version, never you.
-- `.agents/rules/documentation-clarity.md` — read when you write a pull request, an issue, a comment, a Markdown file or a report: plain, minimal writing; no local identifiers, no account of how the work went.
+- `.agents/rules/documentation-clarity.md` — read when you write a pull request, an issue, a comment, a Markdown file, a report or a reply: plain, minimal writing; reports and replies start with the outcome and distinguish what was checked from what was not; no local identifiers in source or Markdown, no account of how the work went.
 - `.agents/rules/minimal-implementation.md` — read when you write or change source, scripts or workflows: the order to try solutions in once a behaviour is agreed; mark a deliberate shortcut with its ceiling and the condition that lifts it.
 - `.agents/rules/interface-clarity.md` — read when you change a screen or terminal output: what may appear there; text explaining how to work a control is a defect report against that control.
 - `.agents/rules/grilling.md` — read when a design, approach or scope decision is about to be fixed: interview the decision tree first; outside the discussion stage agents grill each other, and only a critical decision reaches the user.
