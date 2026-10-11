@@ -73,7 +73,41 @@ const EXTRACTION: Shape = {
 
 // Each place `value` departs from the extraction's shape, none for an extraction.
 export function extractionFaultsOf(value: unknown): ShapeFault[] {
-  return shapeFaults(value, EXTRACTION, "");
+  return [...shapeFaults(value, EXTRACTION, ""), ...ownedCleanupFaults(value)];
+}
+
+// Cleanup is an order without tracked artifacts, in every reading of the shared input.
+function ownedCleanupFaults(value: unknown): ShapeFault[] {
+  if (!isRecord(value)) return [];
+  const readings: { at: string; value: unknown }[] = [{ at: "", value }];
+  if (Array.isArray(value.alternatives)) {
+    value.alternatives.forEach((reading: unknown, index) => {
+      readings.push({ at: `alternatives[${index}].`, value: reading });
+    });
+  }
+  const cleanupReadings = readings.filter(
+    (reading) =>
+      isRecord(reading.value) &&
+      Array.isArray(reading.value.qualifiers) &&
+      reading.value.qualifiers.includes("owned-temporary-cleanup"),
+  );
+  const faults: ShapeFault[] = cleanupReadings.flatMap((reading) =>
+    isRecord(reading.value) && reading.value.intent !== "order"
+      ? [
+          {
+            subject: `${reading.at}intent`,
+            cause: "invalid: owned temporary cleanup requires intent order",
+          },
+        ]
+      : [],
+  );
+  if (cleanupReadings.length > 0 && Array.isArray(value.artifacts) && value.artifacts.length > 0) {
+    faults.push({
+      subject: "artifacts",
+      cause: "invalid: owned temporary cleanup requires empty artifacts",
+    });
+  }
+  return faults;
 }
 
 // The subject of each of those places.
