@@ -691,6 +691,7 @@ jobs:
         env:
           CI_CHECKOUT_SHA: ${{ github.sha }}
           REQUESTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          CI_EVENT_NAME: ${{ github.event_name }}
           CI_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           CI_RUN_ATTEMPT: ${{ github.run_attempt }}
         run: |
@@ -781,6 +782,7 @@ jobs:
             frozenDesignBase: "f705bb5be4be734a7490d4cbfe3ee97d70eaab32",
             checkoutHead, requestedHead: process.env.REQUESTED_HEAD_SHA,
             runUrl: process.env.CI_RUN_URL, runAttempt: process.env.CI_RUN_ATTEMPT,
+            eventName: process.env.CI_EVENT_NAME,
             runtimeVersion: process.version, executable: process.execPath, platform: process.platform,
             cwd: root, launcher: path.relative(root, launcher), launcherSha256: digest(fs.readFileSync(launcher)),
             workflowSha256: digest(fs.readFileSync(path.join(root, ".github", "workflows", "ci.yml"))),
