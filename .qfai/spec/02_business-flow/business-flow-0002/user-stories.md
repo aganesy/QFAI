@@ -29,3 +29,4 @@
 | US-0002-0024 | Run the init suites on Windows                                              | `user-story-0002-0024/` |
 | US-0002-0025 | Safe branch catch-up with CI pin resealing                                  | `user-story-0002-0025/` |
 | US-0002-0026 | Run one pull request test file in manual CI                                 | `user-story-0002-0026/` |
+| US-0002-0027 | Run all package tests in manual Windows CI                                  | `user-story-0002-0027/` |
