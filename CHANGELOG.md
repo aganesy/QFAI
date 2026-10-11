@@ -356,6 +356,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Add a selected-file evidence handover guide with native preflight, retained
+  delivery and independent receipt requirements before session archive. Preserve
+  original outcomes and keep unavailable handover pending. Fixes #3301.
+
 - Include authorized temporary-directory cleanup in the workflow candidate purpose.
   Fixes #3455.
 
