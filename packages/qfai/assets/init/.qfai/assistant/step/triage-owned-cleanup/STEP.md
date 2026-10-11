@@ -76,7 +76,7 @@ tool or permission does not turn this step into a hand-off operation.
   targets, preflight observations, deletion results, absence checks and
   tracked-content and index comparison results. Keep secrets out of it.
 - Any ignored receipt file stays outside the deletion targets and is named
-  in `artifactRefs`, not `changedFiles`.
+  in the stage report. It is evidence, not a tracked-file change.
 
 ## Gate
 
