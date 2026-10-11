@@ -30,10 +30,9 @@ Answers a question about the project from what the project already says.
 
 ## What it writes
 
-- No file git tracks. A record it writes that git ignores is named in
-  `artifactRefs`, not in `changedFiles`.
-- The answer with its citations, and each follow-up found, in the result and
-  the report.
+- No file git tracks. Name any ignored record's location in the stage
+  report, separately from tracked changes.
+- The answer with its citations, and each follow-up found, in the stage report.
 
 ## Gate
 

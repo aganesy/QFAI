@@ -39,7 +39,7 @@ observed differences rather than from reading.
 
 ## What it writes
 
-- The check and its inputs, listed in `changedFiles`. The step changes no
+- The check and its inputs, listed in the stage report. The step changes no
   production code.
 - A record of the reference and its version, and of each difference, in the stage report.
 

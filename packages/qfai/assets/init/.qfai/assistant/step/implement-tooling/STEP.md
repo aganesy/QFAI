@@ -57,7 +57,7 @@ proof of merge or publication.
 ## What it writes
 
 - The changed workflows, scripts and tool configuration, listed in
-  `changedFiles`.
+  the stage report.
 - A record of each command run with its result, the shipped-CI disposition,
   and any release-path check left for the next release, in the stage report.
 

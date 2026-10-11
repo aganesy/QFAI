@@ -37,14 +37,15 @@ investigation. The pass names the documents read.
 4. Where the facts show a defect rather than an answer, report the outcome
    `defect-found` with an extraction of the request as a defect report, so the
    decision rules route it again. The stage ends there: `triage-answer` and
-   `triage-close` do not run, and the result carries no `closure`.
+   `triage-close` do not run, and the request is not closed.
 
 ## What it writes
 
-- No file git tracks. A record it writes that git ignores is named in
-  `artifactRefs`, not in `changedFiles`.
-- The facts and their sources. A found defect carries `branch` as
-  `{ outcome: defect-found, extraction }`.
+- No file git tracks. Name any ignored record's location in the stage
+  report, separately from tracked changes.
+- The facts and their sources in the stage report. For a found defect, keep
+  the plan's `defect-found` branch outcome and the request extraction in the
+  session handoff.
 
 ## Gate
 

@@ -63,12 +63,12 @@ Any other route closes here.
 
 ## What it writes
 
-- No file git tracks. A record it writes that git ignores is named in
-  `artifactRefs`, not in `changedFiles`.
-- Inside a workflow run, the result carries `closure` as
-  `{ outcome, followUps }`, each follow-up `{ goal, reason }`. A re-route
-  carries `branch` as `{ outcome, route, extraction }` instead.
-- Invoked by name, the report states the outcome and lists each follow-up.
+- No file git tracks. Name any ignored record's location in the stage
+  report, separately from tracked changes.
+- The stage report states the outcome and each follow-up's goal and reason.
+  For a re-route, retain the plan's branch outcome, the selected route and
+  the request extraction in the session handoff. A re-route does not close
+  the request.
 
 ## Gate
 

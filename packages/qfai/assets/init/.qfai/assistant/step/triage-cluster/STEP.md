@@ -31,9 +31,9 @@ time and mostly repeat. This step turns them into a few groups.
 
 ## What it writes
 
-- No file git tracks. A record it writes that git ignores is named in
-  `artifactRefs`, not in `changedFiles`.
-- The groups, their counts and their cause, in the result.
+- No file git tracks. Name any ignored record's location in the stage
+  report, separately from tracked changes.
+- The groups, their counts and their cause, in the stage report.
 
 ## Gate
 

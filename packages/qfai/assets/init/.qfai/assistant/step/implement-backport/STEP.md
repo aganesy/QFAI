@@ -41,7 +41,7 @@ route asks for.
 
 ## What it writes
 
-- The backport branch and the files it changes, listed in `changedFiles`.
+- The backport branch and the files it changes, listed in the stage report.
 - A record of the criteria checked, each commit picked, each conflict and how
   it was resolved, and each gate result, in the stage report.
 

@@ -45,8 +45,9 @@ them; it is the procedure that applies them.
    `.qfai/assistant/rule/review-convergence.md#answered-demands-must`.
 2. **Dispatch.** Send each reviewer a work order in the shared template. An
    agent that authored, edited or recommended a decision in the reviewed
-   artifact is not its independent reviewer; inside a run, `actorHistory` says
-   who that is. Each reviewer returns a verdict, `PASS` or `REVISE`, and its
+   artifact is not its independent reviewer. The session report names its
+   authors, editors and decision recommenders, and the independent reviewers.
+   Each reviewer returns a verdict, `PASS` or `REVISE`, and its
    findings, in the shared reviewer response template.
 3. **Address every finding** once: fix it in its owning source with the
    smallest edit that resolves it, or record a reasoned answer beside it, and

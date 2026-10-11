@@ -28,14 +28,15 @@ in the next stages.
    whose side is kept with `-m`.
 2. Resolve a conflict by keeping what later changes did. A conflict that can
    only be resolved by changing behaviour a later change added is not this
-   step's: return `blocked`, listing the conflicting paths with `operator` as
-   the `resolvingOwner`.
+   step's: return `blocked`. List the conflicting paths in the stage report
+   and name the operator as their owner. Resume only after the conflict can
+   be resolved without changing that later behaviour.
 3. Run the bisection's command. It now passes.
 4. Run the relevant suite. It passes.
 
 ## What it writes
 
-- The files the revert changes, listed in `changedFiles`. Nothing else.
+- The files the revert changes, listed in the stage report. Nothing else.
 - Where a flow is bound, a record of the culprit, the revert and each command
   with its result, in the stage report.
 

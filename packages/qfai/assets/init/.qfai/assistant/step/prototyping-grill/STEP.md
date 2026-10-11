@@ -41,9 +41,10 @@ Inside an `npx qfai workflow` run the work order narrows that set:
   `DESIGN.md` and those contracts. It changes no UI contract that serves only
   another flow, and creates no contract.
 - When no UI-bearing contract serves the bound flow, the run writes no
-  `DESIGN.md`, no UI contract and no surface declaration. It returns outcome
-  `blocked` with one `debts` entry naming the missing UI surface, with
-  `owningFlow` the bound flow and `resolvingOwner` `operator`.
+  `DESIGN.md`, no UI contract and no surface declaration. Stop with outcome
+  `blocked`. In the session report, name the missing UI surface, the bound
+  flow and the operator responsible for supplying the UI-bearing contract.
+  Resume only when that contract serves the bound flow.
 
 A standalone invocation still resolves every UI-bearing UI contract.
 

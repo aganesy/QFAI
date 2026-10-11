@@ -356,6 +356,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Replace obsolete workflow-result field instructions with stage reports and
+  session handoffs, preserving authorization, review and verification evidence.
+  Fixes #3322.
+
 - Update compatible dependency resolutions and scoped lint-parser patches while
   retaining the supported Node floor.
 

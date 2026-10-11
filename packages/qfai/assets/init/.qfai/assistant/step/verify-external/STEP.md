@@ -37,8 +37,9 @@ The step sends nothing itself. Contacting the reporter is the operator's.
    Inside a run, return `awaiting_input` with that question.
 3. Record the answer as confirmed, not confirmed with what was observed, or no
    answer.
-4. Not confirmed sends the fix back: inside a run, return `needs_repair` with
-   the observation in `debts`, owned by `qfai-implement`.
+4. Not confirmed sends the fix back: inside a run, return `needs_repair`.
+   Record the observation in the stage report, with `qfai-implement` as the
+   repair owner. Resume confirmation after that repair.
 5. No answer is recorded as unconfirmed, and the report says so.
 
 ## Gate
