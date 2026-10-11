@@ -11,12 +11,12 @@ Use this sequence for /qfai-sdd. The shipped templates under ../templates/spec/ 
 2. Run `npx qfai sdd preflight` and read its `selectedInputPath` and `source`.
    Respect an explicitly selected discussion pack, including one older than the
    newest pack.
-3. Read the selected pack, completed reviews that target it, the current user
-   request, the existing purpose in `<paths.specsDir>/01_policy/objective.md`,
-   and the existing story tree, especially related flows and stories. A pack is
-   reference and provenance material. Disposition its applicable review advice
-   in the SDD report, a decision row, or an open question. A pack discrepancy
-   does not itself block SDD.
+3. Read the selected pack, completed reviews that target it, explicit user
+   requirements, and the existing story tree. A pack is reference and provenance
+   material. Disposition its applicable review advice in the SDD report, a decision
+   row, or an open question. A pack discrepancy does not itself block SDD. For
+   the current request, read the existing purpose in
+   `<paths.specsDir>/01_policy/objective.md` and inspect related flows and stories.
 4. A missing discussion pack does not mean that specifications are missing. If
    an existing readable specification is authoritative for this request, run
    `npx qfai sdd preflight --import <path>` with that file. The fallback does

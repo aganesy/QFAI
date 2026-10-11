@@ -42,13 +42,13 @@ no-argument batch, and its gate runs with `--flow BF-NNNN` for that flow.
    the installed Stage 0 instructions support the procedure being used.
 2. Run `npx qfai sdd preflight` and use its `selectedInputPath`; a selected
    discussion pack may be older than the newest pack.
-3. Read the pack, its completed reviews, the current user request, the existing
-   purpose in `<paths.specsDir>/01_policy/objective.md`, and the existing story
-   tree, especially related flows and stories. A discussion pack is provenance
-   and design input, not a normative SSOT. Record a discrepancy in an SDD-owned
-   row or the SDD report; do not edit the pack to clear this stage. Do not
-   regenerate the existing purpose or a past pack merely because discussion
-   provenance is absent.
+3. Read the pack, its completed reviews, explicit user requirements, and the
+   existing story tree. A discussion pack is provenance and design input, not a
+   normative SSOT. Record a discrepancy in an SDD-owned row or the SDD report; do not
+   edit the pack to clear this stage. For the current request, read the existing
+   purpose in `<paths.specsDir>/01_policy/objective.md` and inspect related flows
+   and stories. Do not regenerate the existing purpose or a past pack merely
+   because discussion provenance is absent.
 4. A missing-pack diagnosis does not mean that specifications are absent. For
    conditional source selection, read
    `.qfai/assistant/skill/qfai-sdd/references/sdd-execution-playbook.md#stage-0-source-inventory`.
