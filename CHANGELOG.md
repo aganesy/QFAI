@@ -47,6 +47,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`qfai init` writes `AGENTS.md` only, and each rule it lists says when to read it.** The
+  managed section of `AGENTS.md` and the generated Copilot instructions now give every rule one
+  line that names the work it applies to, so an agent reads a rule when it matters and not before.
+  `qfai init` no longer writes `CLAUDE.md`: Claude Code reads `AGENTS.md` when the project has no
+  `CLAUDE.md` or `CLAUDE.local.md` (Claude Code v2.1.277 or later; v2.1.281 or later in every
+  session type; see the Claude Code memory documentation). **Migration:** a project that already has
+  a `CLAUDE.md` keeps it, and Claude Code goes on reading it instead of `AGENTS.md`. `qfai init`
+  no longer reads that file, so a managed section in it stays as it was and gains no rule a later
+  release ships. To use `AGENTS.md` alone, delete `CLAUDE.md`, or reduce it to a line `@AGENTS.md`
+  plus any Claude-only notes. A project whose `AGENTS.md` already has the managed section keeps its
+  bullets and gains a line only for a rule it did not list before.
+
 - **Agent entry instructions include report and reply guidance.** Reports and
   replies start with the outcome and distinguish checked from unchecked work.
 
