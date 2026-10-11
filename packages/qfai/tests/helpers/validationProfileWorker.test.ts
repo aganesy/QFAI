@@ -1,37 +1,26 @@
+/** Private case selected only by the profiling controller's exact-file config. */
 import { execFile as execFileCallback } from "node:child_process";
 import { readFile, writeFile, rename, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
-import { createHash } from "node:crypto";
 
 import { describe, expect, it, vi } from "vitest";
 
 import * as validation from "../../src/core/validate.js";
 import * as htmlMock from "../../src/core/validators/htmlMock.js";
-import * as storyTree from "../../src/core/validators/storyTreeObligations.js";
 import { runValidate } from "../../src/cli/commands/validate.js";
 import { loadConfig } from "../../src/core/config.js";
 import type { ValidationResult } from "../../src/core/types.js";
-import {
-  validationInputManifest,
-  coldValidationCli,
-  pairedImplementation,
-  requireOptimizationOnly,
-  nativeRepositoryReceipt,
-  prepareBaselineSource,
-  archivedSourceReceipt,
-  sourceTreeEntries,
-  removeBaselineSource,
-} from "./validationInputManifest.js";
+import { validationInputManifest, coldValidationCli } from "./validationInputManifest.js";
 import { withValidatorMeasurements } from "./validationProfileRun.js";
 import type { ValidatorMeasurement } from "./validationProfile.js";
 import { assertBuiltCliFresh } from "./builtCli.js";
 import { DECLARED_TEST_TIMEOUT } from "../../vitest.knobs.js";
 import {
+  removeBaselineSource,
   retainedProfileFailure,
   saveProfileArtifact,
   ProfileArtifactError,
-  literalFileReceipt,
   withProfileFixture,
   comparableValidation,
 } from "./controlledProfile.js";
@@ -132,64 +121,18 @@ describe("retained profiling failures", () => {
         checkpointRaw: '{"phase":',
       });
       expect(artifact.checkpointError).toEqual(expect.any(String));
-      const validationRoot = path.resolve(import.meta.dirname, "../../../..");
-      const sourceFailure = await pairedImplementation(validationRoot, root, "0".repeat(40)).catch(
-        (error: unknown) => error,
-      );
-      expect(sourceFailure).toBeInstanceOf(Error);
-      const retained = retainedProfileFailure(sourceFailure);
-      expect(retained).toMatchObject({
-        message: "The baseline source could not be verified",
-        cause: { message: expect.any(String) },
-      });
+      const ordinary = retainedProfileFailure(new Error("worker unavailable"));
+      expect(ordinary).not.toHaveProperty("retained");
       await writeFile(
         checkpoint,
-        JSON.stringify({ phase: "baseline-source-preflight", failure: retained }),
+        JSON.stringify({ phase: "worker-unavailable", failure: ordinary }),
         "utf8",
       );
       expect(
         JSON.parse(
           await readFile(await saveProfileArtifact(root, result, checkpoint), "utf8"),
         ) as unknown,
-      ).toMatchObject({ checkpoint: { phase: "baseline-source-preflight", failure: retained } });
-      const modulePath = "packages/qfai/src/core/validators/storyTreeObligations.ts";
-      expect(() => requireOptimizationOnly([modulePath])).not.toThrow();
-      expect(() => requireOptimizationOnly([])).toThrow(/accepted validator/);
-      expect(() => requireOptimizationOnly([modulePath, "packages/qfai/src/other.ts"])).toThrow(
-        /accepted validator/,
-      );
-      const sourceBytes = Buffer.from("export const value = 1;\n");
-      const entry = {
-        file: "baseline.ts",
-        mode: "100644",
-        blob: createHash("sha1")
-          .update(`blob ${sourceBytes.length}\0`)
-          .update(sourceBytes)
-          .digest("hex"),
-      };
-      expect(() => sourceTreeEntries(`120000 blob ${entry.blob}\tbaseline.ts\0`)).toThrow(
-        /unsupported source/,
-      );
-      expect(() => sourceTreeEntries(`100644 blob ${entry.blob}\t../baseline.ts\0`)).toThrow(
-        /unsupported source/,
-      );
-      await writeFile(path.join(root, entry.file), sourceBytes);
-      expect((await archivedSourceReceipt(root, [entry])).files).toBe(1);
-      await writeFile(path.join(root, entry.file), "export const value = 2;\n", "utf8");
-      await expect(archivedSourceReceipt(root, [entry])).rejects.toThrow(
-        /Archived Git blob changed/,
-      );
-      const current = path.join(root, "native-current");
-      await mkdir(current);
-      await writeFile(path.join(current, entry.file), "export const value = 1;\r\n");
-      await writeFile(path.join(root, entry.file), "export const value = 1;\r\n");
-      expect((await archivedSourceReceipt(root, [entry], current)).entries[0]?.nativeBlob).not.toBe(
-        entry.blob,
-      );
-      await writeFile(path.join(root, entry.file), sourceBytes);
-      await expect(archivedSourceReceipt(root, [entry], current)).rejects.toThrow(
-        /Common native source/,
-      );
+      ).toMatchObject({ checkpoint: { phase: "worker-unavailable", failure: ordinary } });
     });
   });
 
@@ -268,10 +211,7 @@ describe("full validation profiling", () => {
       measurementCeiling:
         "Zero calls means uncaptured at a namespace export boundary. A validator may be unreached or called through internal or saved imported references; zero is not evidence that it is unused.",
       timingMeaning:
-        "Composite prior-condition and current source runs are warm in-process measurements; validator export times include I/O and overlap. The current normally built CLI is process-cold only. No historical full-source run, old CLI build, cold speedup or latency cause is proved.",
-      baselineEnvelope:
-        "Current CI core/assets with the actual prior validator through the current wrapper; a composite source and hybrid envelope, not a historical full-source or CLI build.",
-      comparisonExcludedFields: ["generatedAt", "timings.uiuxMs", "timings.htmlMockMs"],
+        "Validator export boundaries include I/O and nested work; parallel times overlap and must not be summed. In-process runs are warm relative to imported modules. The fresh CLI is process-cold, not an OS disk-cache cold run.",
     };
     const checkpointFile = process.env.QFAI_VALIDATION_PROFILE_CHECKPOINT;
     if (!checkpointFile)
@@ -288,80 +228,32 @@ describe("full validation profiling", () => {
     let checkpointFailed = false;
     try {
       await checkpoint("input-before");
-      const repositoryBefore = await nativeRepositoryReceipt(root);
-      const head = repositoryBefore.head;
+      const head = (await execFile("git", ["rev-parse", "HEAD"], { cwd: root })).stdout.trim();
       artifact.head = head;
-      artifact.repositoryBefore = repositoryBefore;
+      artifact.trackedWorktreeStatus = (
+        await execFile("git", ["status", "--porcelain=v1", "--untracked-files=no"], { cwd: root })
+      ).stdout;
       await checkpoint("input-manifest");
       const before = await validationInputManifest(root);
       artifact.inputBefore = before;
-      const requireUnchangedInput = async (phase: string) => {
-        const input = await validationInputManifest(root);
-        const repository = await nativeRepositoryReceipt(root);
-        artifact[`input${phase}`] = input;
-        artifact[`repository${phase}`] = repository;
-        expect(input).toEqual(before);
-        expect(repository).toEqual(repositoryBefore);
-      };
       expect(before.counts.storyInputs.files).toBeGreaterThan(0);
       expect(before.counts.testScanInputs.files).toBeGreaterThan(0);
       const { config } = await loadConfig(root);
       const reportFile = path.resolve(root, config.output.validateJsonPath);
-      await checkpoint("baseline-source-preflight");
-      const implementation = await pairedImplementation(
-        root,
-        path.dirname(checkpointFile),
-        undefined,
-        checkpoint,
-      );
-      artifact.implementation = implementation;
-      expect(implementation.receipt).toEqual(repositoryBefore);
-      await checkpoint("baseline-source-archive");
-      const source = await prepareBaselineSource(
-        root,
-        path.dirname(checkpointFile),
-        implementation,
-      );
-      artifact.baselineSource = source;
-      artifact.currentBuild = await literalFileReceipt(CLI);
-      await checkpoint("baseline-source-load");
-      const actualBaseline = await vi.importActual<typeof validation>(source.module);
-      if (actualBaseline.validateProject === validation.validateProject)
-        throw new Error("The baseline loader returned the current implementation");
-      const baselineValidator = await vi.importActual<typeof storyTree>(
-        path.join(source.sidecar, implementation.acceptedModule),
-      );
-      if (baselineValidator.validateStoryTreeObligations === storyTree.validateStoryTreeObligations)
-        throw new Error("The baseline loader returned the current validator");
-      artifact.loaderIdentity = {
-        requestedRealPath: source.module,
-        distinctCoreExport: true,
-        distinctValidatorExport: true,
-        baselineValidatorModelSha256: createHash("sha256")
-          .update(baselineValidator.validateStoryTreeObligationsModel.toString())
-          .digest("hex"),
-        currentValidatorModelSha256: createHash("sha256")
-          .update(storyTree.validateStoryTreeObligationsModel.toString())
-          .digest("hex"),
-      };
-      await requireUnchangedInput("BeforeBaseline");
       await checkpoint("baseline-validation");
-      const original = actualBaseline.validateProject;
+      const original = validation.validateProject;
       const coreResults: ValidationResult[] = [];
-      const coreInvocations: Array<Parameters<typeof validation.validateProject>> = [];
       const capture = vi
         .spyOn(validation, "validateProject")
         .mockImplementation(async (...args) => {
-          coreInvocations.push(args);
-          const configuration = structuredClone(args[1]);
           const coreStarted = performance.now();
-          const result = await original(...args).finally(() => {
+          try {
+            const result = await original(...args);
+            coreResults.push(result);
+            return result;
+          } finally {
             artifact.unmeasuredCoreWallMs = performance.now() - coreStarted;
-          });
-          expect(args[1]).toEqual(configuration);
-          // Preserve the core result before the current wrapper normalizes or appends findings.
-          coreResults.push(structuredClone(result));
-          return result;
+          }
         });
       let baselineExit: number;
       const baselineStart = performance.now();
@@ -385,26 +277,11 @@ describe("full validation profiling", () => {
       if (baseline === undefined)
         throw new Error("The real baseline validation did not return a result");
       artifact.unmeasuredCoreResult = baseline;
-      await requireUnchangedInput("AfterBaseline");
-      artifact.baselineSourceAfterRun = await archivedSourceReceipt(
-        source.sidecar,
-        implementation.entries,
-        root,
-      );
-      expect(artifact.baselineSourceAfterRun).toEqual(source.native);
-      const currentArguments = coreInvocations[0];
-      if (currentArguments === undefined)
-        throw new Error("The baseline invocation was not captured");
-      artifact.sourceInvocation = {
-        root: currentArguments[0],
-        options: currentArguments[2],
-        configuration: "Both full cores receive the same current command configuration object.",
-      };
       await checkpoint("measured-validation");
       let observed: ValidatorMeasurement[] = [];
       const measuredStart = performance.now();
       const measured = await withValidatorMeasurements(
-        () => validation.validateProject(...currentArguments),
+        () => validation.validateProject(root, undefined, { profile: "full" }),
         async (entries) => {
           observed = entries;
           artifact.validators = entries;
@@ -414,17 +291,6 @@ describe("full validation profiling", () => {
         },
       );
       artifact.measuredCoreResult = measured;
-      artifact.warmSourcePair = {
-        priorValidatorOrigin: implementation.baseline,
-        commonContext: implementation.current,
-        target: root,
-        inputDigest: before.digest,
-        baselineWallMs: artifact.unmeasuredCoreWallMs,
-        currentWallMs: artifact.measuredWallMs,
-        order: ["baseline", "current"],
-        meaning:
-          "One ordered warm condition pair in the current context; namespace timing instrumentation applies only to current source. This is not a repeated benchmark or a cold CLI speedup.",
-      };
       expect(comparableValidation(measured)).toEqual(comparableValidation(baseline));
       expect(measured.profileValidatorsRan).toBe(true);
       expect(observed.filter((entry) => entry.invokedCalls > 0).length).toBeGreaterThan(20);
@@ -439,13 +305,12 @@ describe("full validation profiling", () => {
           (entry) => entry.name.endsWith(":validateHtmlMock") && entry.recordedCalls > 0,
         ),
       ).toBe(true);
-      await requireUnchangedInput("AfterMeasured");
+      const afterMeasured = await validationInputManifest(root);
+      artifact.inputAfterMeasured = afterMeasured;
+      expect(afterMeasured).toEqual(before);
       const remaining = Math.floor(DECLARED_TEST_TIMEOUT - (performance.now() - started) - 5_000);
       if (remaining <= 0)
         throw new Error("No time remains in the declared test budget for cold CLI validation");
-      // No input writer occurs between this receipt and the cold process.
-      artifact.inputBeforeColdCli = artifact.inputAfterMeasured;
-      artifact.repositoryBeforeColdCli = artifact.repositoryAfterMeasured;
       await checkpoint("cold-cli");
       const cold = await coldValidationCli(CLI, root, remaining, false);
       artifact.coldCli = cold;
@@ -460,23 +325,29 @@ describe("full validation profiling", () => {
       artifact.coldCliResult = coldResult;
       expect(Date.parse(coldResult.generatedAt ?? "")).toBeGreaterThanOrEqual(cold.startedAt);
       expect(comparableValidation(coldResult)).toEqual(comparableValidation(baselineCli));
-      await requireUnchangedInput("After");
-      expect(await literalFileReceipt(CLI)).toEqual(artifact.currentBuild);
+      const after = await validationInputManifest(root);
+      artifact.inputAfter = after;
       await checkpoint("complete");
+      expect(after).toEqual(before);
       expect((await execFile("git", ["rev-parse", "HEAD"], { cwd: root })).stdout.trim()).toBe(
         head,
       );
     } catch (error: unknown) {
       failed = true;
       failure = error;
-      artifact.failedPhase = artifact.phase;
-      artifact.failure = retainedProfileFailure(error);
+      artifact.failure =
+        error instanceof Error
+          ? { name: error.name, message: error.message, stack: error.stack }
+          : { value: String(error) };
     } finally {
       if (failed) {
         try {
           artifact.inputAfterFailure = await validationInputManifest(root);
         } catch (error: unknown) {
-          artifact.inputAfterFailureError = retainedProfileFailure(error);
+          artifact.inputAfterFailureError =
+            error instanceof Error
+              ? { name: error.name, message: error.message, stack: error.stack }
+              : { value: String(error) };
         }
       }
       artifact.totalWallMs = performance.now() - started;

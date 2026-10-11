@@ -30,9 +30,10 @@ import { HOST_SKILL_DIRS, initQuietly, modeLines, withEmptyRepo } from "./upgrad
 import { assertBuiltCliFresh } from "../../helpers/builtCli.js";
 import { validateIntegrationSurface } from "../../../src/core/validators/integrationSurface.js";
 import { getInitAssetsDir } from "../../../src/shared/assets.js";
-import { coldValidationCli, removeBaselineSource } from "../../helpers/validationInputManifest.js";
+import { coldValidationCli } from "../../helpers/validationInputManifest.js";
 import {
   runControlledProfile,
+  removeBaselineSource,
   retainedProfileFailure,
   saveProfileArtifact,
   type ControlledProfileResult,
