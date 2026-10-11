@@ -435,6 +435,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - Clarify that story ID candidates are snapshots and require a fresh collision
   check of the committed changes before publishing the same branch head.
 
+- Compare named-test result paths with native absolute path semantics while
+  preserving exact file selection and failure checks. Fixes #3459.
+
 - **Language errors offer an ASCII code-point construction for code samples.**
   The guard keeps Unicode escape guidance and explains the alternative when
   an editing tool decodes escapes. Forbidden characters remain rejected.
