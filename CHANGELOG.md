@@ -4,6 +4,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- UI consistency repairs reach design authoring in the SDD stage. Existing
+  design files change only within a newly authorized request; unrelated brand
+  and tokens are preserved, and unsupported source values stop the repair.
+
+## [2.1.2] - 2026-10-11
+
 ### Added
 
 - Route authorized cleanup of current-task, ignored temporary directories
@@ -46,6 +54,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   last message ends in a question, and nothing is filed under a no-question mode.
 
 ### Changed
+
+- **`qfai init` writes `AGENTS.md` only, and each rule it lists says when to read it.** The
+  managed section of `AGENTS.md` and the generated Copilot instructions now give every rule one
+  line that names the work it applies to, so an agent reads a rule when it matters and not before.
+  `qfai init` no longer writes `CLAUDE.md`: Claude Code reads `AGENTS.md` when the project has no
+  `CLAUDE.md` or `CLAUDE.local.md` (Claude Code v2.1.277 or later; v2.1.281 or later in every
+  session type; see the Claude Code memory documentation). **Migration:** a project that already has
+  a `CLAUDE.md` keeps it, and Claude Code goes on reading it instead of `AGENTS.md`. `qfai init`
+  no longer reads that file, so a managed section in it stays as it was and gains no rule a later
+  release ships. To use `AGENTS.md` alone, delete `CLAUDE.md`, or reduce it to a line `@AGENTS.md`
+  plus any Claude-only notes. A project whose `AGENTS.md` already has the managed section keeps its
+  bullets and gains a line only for a rule it did not list before.
 
 - **Agent entry instructions include report and reply guidance.** Reports and
   replies start with the outcome and distinguish checked from unchecked work.
@@ -356,10 +376,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
-- UI consistency repairs reach design authoring in the SDD stage. Existing
-  design files change only within a newly authorized request; unrelated brand
-  and tokens are preserved, and unsupported source values stop the repair.
-
 - Include authorized temporary-directory cleanup in the workflow candidate purpose.
   Fixes #3455.
 
@@ -449,6 +465,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The guard keeps Unicode escape guidance and explains the alternative when
   an editing tool decodes escapes. Forbidden characters remain rejected.
   Fixes #3248.
+
+- Add a selected-file evidence handover guide with native preflight, retained
+  delivery and independent receipt requirements before session archive. Preserve
+  original outcomes and keep unavailable handover pending. Fixes #3301.
 
 - **Unfinished merges stop the branch ID check.** Finish the merge before
   comparing branch-owned identifiers or fetching pull-request heads. Fixes #3246.
