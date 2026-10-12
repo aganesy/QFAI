@@ -11,7 +11,7 @@ import {
   symlink,
   writeFile,
 } from "node:fs/promises";
-import os, { tmpdir } from "node:os";
+import os from "node:os";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -1156,7 +1156,7 @@ async function withObservationFixture(
   code: string,
   run: (fixture: ObservationFixture) => Promise<void>,
 ): Promise<void> {
-  const root = await mkdtemp(path.join(tmpdir(), "qfai-observation-proof-"));
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-observation-proof-"));
   try {
     const env: NodeJS.ProcessEnv = Object.fromEntries(
       Object.entries(process.env).filter(([key]) => !key.toUpperCase().startsWith("GIT_")),

@@ -12,6 +12,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   applicable authority remain open. Interactive sessions retain actual user
   confirmation.
 
+- Compare reached workflow steps with actual reads, actions, outputs and gate
+  evidence in existing human reports. Missing proof stays unverified; no extra
+  reviewer, gate or execution engine is added. Fixes #3336.
+
 ## [2.1.2] - 2026-10-11
 
 ### Added
@@ -20,10 +24,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   through a bounded triage step. Unsafe or uncertain targets stop before
   deletion, and completion requires absence and unchanged tracked files and
   index. Fixes #3286.
-
-- Compare reached workflow steps with actual reads, actions, outputs and gate
-  evidence in existing human reports. Missing proof stays unverified; no extra
-  reviewer, gate or execution engine is added. Fixes #3336.
 
 - Synchronize the document schema checker copies from the package manifest after
   a frozen dependency install, including the Renovate repin workflow.
