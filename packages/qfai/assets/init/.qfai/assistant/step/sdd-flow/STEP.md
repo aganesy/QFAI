@@ -23,6 +23,8 @@ Stage 2 of the story tree: policy and business flows.
   for what a template cannot show.
 - `.qfai/assistant/skill/qfai-sdd/references/sdd-phase-checklists.md#policy-and-business-flow`
   when editing.
+- `.agents/rules/document-schema.md`, when writing or editing a story-tree document: start from
+  its template and add no section the schema does not name.
 
 ## Writes
 

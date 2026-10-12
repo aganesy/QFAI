@@ -9,7 +9,7 @@ routing-profile: default
 
 # triage-close
 
-The last step of a route that makes no change. It says how the request ended
+The last step of a route that makes no tracked change. It says how the request ended
 and what is left for someone else to do.
 
 ## Reads
@@ -19,24 +19,29 @@ and what is left for someone else to do.
 
 ## Outcomes
 
-| Outcome         | Means                                                                  |
-| --------------- | ---------------------------------------------------------------------- |
-| `no-work`       | The request asks for nothing the project should do                     |
-| `other-owner`   | Only an operator, an upstream project or another project can change it |
-| `answered`      | The question was answered                                              |
-| `duplicate`     | An existing item already covers the request, and is linked             |
-| `awaiting-info` | The missing facts did not arrive                                       |
-| `accepted`      | The proposal was accepted                                              |
-| `declined`      | The proposal was declined                                              |
-| `deferred`      | The proposal was put off, with the reason                              |
-| `decided`       | The design question was decided and recorded                           |
-| `split`         | The request was split into child requests                              |
-| `handed-off`    | A person was given an operation to run, and its result is recorded     |
-| `verified`      | A written test plan was followed and its result is recorded            |
+| Outcome         | Means                                                                                    |
+| --------------- | ---------------------------------------------------------------------------------------- |
+| `no-work`       | The request asks for nothing the project should do                                       |
+| `other-owner`   | Only an operator, an upstream project or another project can change it                   |
+| `answered`      | The question was answered                                                                |
+| `duplicate`     | An existing item already covers the request, and is linked                               |
+| `awaiting-info` | The missing facts did not arrive                                                         |
+| `accepted`      | The proposal was accepted                                                                |
+| `declined`      | The proposal was declined                                                                |
+| `deferred`      | The proposal was put off, with the reason                                                |
+| `decided`       | The design question was decided and recorded                                             |
+| `split`         | The request was split into child requests                                                |
+| `handed-off`    | A person was given an operation to run, and its result is recorded                       |
+| `verified`      | A written test plan was followed and its result is recorded                              |
+| `cleaned`       | Authorized temporary targets are absent and tracked contents and the index are unchanged |
 
 ## Procedure
 
 1. Pick exactly one outcome from the table above.
+   Use `cleaned` only after `triage-owned-cleanup` passed its gate with the
+   absence and unchanged-content and index evidence recorded. A denial,
+   partial failure or missing check leaves cleanup unfinished, not closed as
+   `cleaned`. This outcome says nothing about a product change or test plan.
 2. List each follow-up request: work the route found and does not do, such as
    a gap in the documentation an answer exposed, or each child request of a
    split. Each follow-up states its goal and the reason it exists. A child that
@@ -58,19 +63,20 @@ Any other route closes here.
 
 ## What it writes
 
-- No file git tracks. A record it writes that git ignores is named in
-  `artifactRefs`, not in `changedFiles`.
-- Inside a workflow run, the result carries `closure` as
-  `{ outcome, followUps }`, each follow-up `{ goal, reason }`. A re-route
-  carries `branch` as `{ outcome, route, extraction }` instead.
-- Invoked by name, the report states the outcome and lists each follow-up.
+- No file git tracks. Name any ignored record's location in the stage
+  report, separately from tracked changes.
+- The stage report states the outcome and each follow-up's goal and reason.
+  For a re-route, retain the plan's branch outcome, the selected route and
+  the request extraction in the session handoff. A re-route does not close
+  the request.
 
 ## Gate
 
 The reviewer, or the stage worker where the work order names none, confirms one outcome is recorded with the evidence behind it,
 every follow-up the earlier steps found is listed with its goal and reason,
 no follow-up was routed or started, and no tracked file was changed by any
-triage step. The report never says a change is done.
+triage step. The report never says a tracked change is done. The `cleaned`
+outcome confirms only the temporary cleanup's completed gate.
 
 Outside triage steps, the only tracked-file changes allowed are the records
 the route's discussion stage names and the required approval row that

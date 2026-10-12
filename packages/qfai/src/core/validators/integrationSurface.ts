@@ -91,8 +91,8 @@ type Broken = {
   detail: string;
   /**
    * The canonical path a later `readdir` cannot survive, when this damage is
-   * one of those. Set where the damage is found, from the errno the probe
-   * actually saw — not derived afterwards from the wording, and not from
+   * one of those. Set from an observed non-directory component or the errno
+   * the probe saw — not derived afterwards from the wording, and not from
    * `relative`, which names the wrapper for damage that sits on the canonical.
    */
   unwalkable?: string | undefined;
@@ -208,7 +208,7 @@ function blocksWalk(state: PathState): boolean {
  * to stop after reporting rather than to hide the error.
  *
  * Read from the **whole** damage list, and from a flag each site sets when it
- * sees the errno. Deciding it afterwards from the issue message read a
+ * observes the damage. Deciding it afterwards from the issue message read a
  * 12-entry sample, so a thirteenth entry holding the only unwalkable path
  * decided nothing; deciding it from the wording matched damage on
  * `.claude/skills`, which is read here and walked by nobody afterwards, and
@@ -464,7 +464,7 @@ async function unusableAncestor(
   dir: string,
   realRoot: string | null,
   linksInsideAllowed: boolean,
-): Promise<{ relative: string; detail: string } | null> {
+): Promise<{ relative: string; detail: string; notDirectory?: true } | null> {
   const parts = dir.split("/");
   for (let depth = 1; depth < parts.length; depth += 1) {
     const partial = parts.slice(0, depth);
@@ -483,7 +483,11 @@ async function unusableAncestor(
     // raises `ENOTDIR`. Reported through the leaf, the remedy named a child the
     // operator cannot reach; the component at fault is this one.
     if (!stats.isDirectory()) {
-      return { relative, detail: `is a ${describeKind(stats)}, not a directory` };
+      return {
+        relative,
+        detail: `is a ${describeKind(stats)}, not a directory`,
+        notDirectory: true,
+      };
     }
   }
   return null;
@@ -639,8 +643,10 @@ async function canonicalDamage(
   // *also* flattened reporting the ancestor without marking it unwalkable, and
   // the profile then walked into the same `ENOTDIR` that finding was about.
   const state = await canonicalState(wrapper.canonical);
+  // A descendant can read as absent even when an existing ancestor is a file.
+  // Use that component's metadata rather than relying on the descendant errno.
   const culprit =
-    state.kind === "not-a-directory"
+    state.kind === "not-a-directory" || state.kind === "absent"
       ? await unusableAncestor(root, wrapper.canonicalRelative, realRoot, true)
       : null;
   const relative = culprit?.relative ?? wrapper.canonicalRelative;
@@ -652,7 +658,8 @@ async function canonicalDamage(
   // walks into. What does stop that reader is the **document** being the wrong
   // type or unreadable, which is decided below.
   const ancestorBlocks = wrapper.kind !== "agent" || culprit === null;
-  const unwalkable = blocksWalk(state) && ancestorBlocks ? relative : undefined;
+  const unwalkable =
+    (blocksWalk(state) || culprit?.notDirectory === true) && ancestorBlocks ? relative : undefined;
 
   // A leaf that is itself damaged is described by its state, not by the generic
   // "is a symlink" the link probe would give: a dangling canonical and a

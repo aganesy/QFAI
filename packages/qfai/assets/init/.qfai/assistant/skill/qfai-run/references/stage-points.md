@@ -23,6 +23,16 @@ yourself, ask nothing, and list it with its reason in the final report.
 
 ## Branch point
 
+A question-only request with `artifacts: []` may move to a route that writes
+tracked files only under explicit same-target repair authority from the user's
+request or project policy. Reuse that authority without another repair
+question. Otherwise, show the defect evidence, repair scope and planned checks
+and ask through the structured question tool: repair, or report and stop.
+Write nothing before the answer. Under a no-question mode with no covering
+authority, report the defect and required permission and stop that target;
+write no tracked `open-questions.md` row. Asking for no questions alone grants
+no repair authority.
+
 When a step `branchPoints` names reports an outcome
 paired with one route, move there; with several, to the one the step
 names; with `decision-table`, to the route `plan --in` gives the step's

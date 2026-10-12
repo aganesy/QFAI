@@ -40,7 +40,7 @@ Feature: Send session feedback to QFAI when the work is complete
   # AC-0001-0231-05
   Scenario: The rule ships and the entry points cite it
     Given a project initialised by `qfai init`
-    When an agent reads `AGENTS.md`, `CLAUDE.md` or the Copilot instructions
+    When an agent reads `AGENTS.md` or the Copilot instructions
     Then each cites `.agents/rules/session-feedback.md`
     And the rule master is under `.agents/rules/` with the same text the package carries
 ```

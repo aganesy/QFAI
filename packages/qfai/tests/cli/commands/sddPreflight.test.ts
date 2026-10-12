@@ -83,6 +83,21 @@ describe("qfai sdd preflight", () => {
     });
     expect(summary).toContain("status: blocked");
     expect(summary).toContain("latest discussion-pack");
+    const stdout = sinks.out.join("\n");
+    expect(stdout).toContain("source: discussion-pack");
+    expect(stdout).toContain("selected discussion-pack: (not found)");
+    expect(stdout).toContain("imported REQ count: (n/a)");
+    expect(stdout).toContain("pack gaps (recorded, not blocking):");
+    expect(stdout).toContain(`Missing required files: ${DISCUSSION_PACK_FILES.join(", ")}`);
+    for (const guidance of [
+      ".qfai/assistant/skill/qfai-sdd/references/sdd-execution-playbook.md#stage-0-source-inventory",
+      "--import <path>",
+      "Use `/qfai-discussion` only when no usable",
+    ]) {
+      expect(stdout).toContain(guidance);
+      expect(summary).toContain(guidance);
+    }
+    expect(stdout).not.toContain("(create `");
   });
 
   it("exits 0 and reports the computed REQ count when the latest pack is ready", async () => {
@@ -129,7 +144,102 @@ describe("qfai sdd preflight", () => {
     expect(payload["source"]).toBe("discussion-pack");
     expect(Array.isArray(payload["blockers"])).toBe(true);
     expect(payload["nextCommands"]).toEqual(["/qfai-discussion"]);
+    expect(payload["selectedInputPath"]).toBeNull();
+    expect(payload["importedReqCount"]).toBeNull();
+    expect(payload["packGaps"]).toEqual([
+      `Missing required files: ${DISCUSSION_PACK_FILES.join(", ")}`,
+    ]);
+    expect(payload["openQuestions"]).toEqual([]);
+    const summary = await readFile(
+      path.join(root, ".qfai", "report", "preflight_summary.md"),
+      "utf-8",
+    );
+    for (const guidance of [
+      ".qfai/assistant/skill/qfai-sdd/references/sdd-execution-playbook.md#stage-0-source-inventory",
+      "--import <path>",
+      "Use `/qfai-discussion` only when no usable",
+    ]) {
+      expect(payload["blockers"]).toEqual([expect.stringContaining(guidance)]);
+      expect(summary).toContain(guidance);
+    }
   });
+
+  // AC-0001-0148-01 / EX-0001-0148-03: source selection preserves the existing purpose.
+  it.each(["text", "json"] as const)(
+    "uses an existing story without regenerating its inputs in %s output",
+    async (format) => {
+      const root = await newTempRoot();
+      const inputs = [
+        {
+          relative: path.join(".qfai", "spec", "01_policy", "objective.md"),
+          content: "# Objective\n\nKeep the existing service available.\n",
+        },
+        {
+          relative: path.join(".qfai", "spec", "02_business-flow", "existing-story.md"),
+          content: "# Existing story\r\n\r\nCustomers can find an available service.\r\n",
+        },
+        {
+          relative: path.join("docs", "current-request.md"),
+          content: "# Current request\n\nAdd a detail page while retaining the current purpose.\n",
+        },
+      ] as const;
+      for (const input of inputs) {
+        const file = path.join(root, input.relative);
+        await mkdir(path.dirname(file), { recursive: true });
+        await writeFile(file, input.content, "utf-8");
+      }
+      const before = await Promise.all(
+        inputs.map((input) => readFile(path.join(root, input.relative))),
+      );
+      const blocked = newSinks();
+      expect(
+        await runSddPreflightCommand({
+          root,
+          format,
+          write: blocked.write,
+          writeErr: blocked.writeErr,
+        }),
+      ).toBe(1);
+
+      const imported = newSinks();
+      expect(
+        await runSddPreflightCommand({
+          root,
+          format,
+          importPath: inputs[1].relative,
+          write: imported.write,
+          writeErr: imported.writeErr,
+        }),
+      ).toBe(0);
+      expect(imported.err).toEqual([]);
+      if (format === "json") {
+        const parsed: unknown = JSON.parse(imported.out.join("\n"));
+        expect(parsed).toMatchObject({
+          status: "ready",
+          source: "import-lite",
+          selectedInputPath: path.join(root, inputs[1].relative),
+          importedReqCount: null,
+          blockers: [],
+          packGaps: [],
+          nextCommands: [],
+        });
+      } else {
+        expect(imported.out.join("\n")).toContain("status: ready (source: import-lite)");
+        expect(imported.out.join("\n")).toContain("imported REQ count: (n/a)");
+        expect(imported.out.join("\n")).not.toContain("next commands:");
+      }
+      const summary = await readFile(
+        path.join(root, ".qfai", "report", "preflight_summary.md"),
+        "utf-8",
+      );
+      expect(summary).toContain("source: import-lite");
+      expect(summary).toContain("Imported REQ count: unknown");
+      expect(
+        await Promise.all(inputs.map((input) => readFile(path.join(root, input.relative)))),
+      ).toEqual(before);
+      await expect(stat(path.join(root, ".qfai", "discussion"))).rejects.toThrow();
+    },
+  );
 
   it("does not send a ready result back to /qfai-discussion", async () => {
     // `nextCommands` is the blocker recovery route. Emitting it on a ready
@@ -203,10 +313,14 @@ describe("qfai sdd preflight", () => {
       recursive: true,
     });
     await writeDiscussionCurrentId(root, "discussion-20260216010102003");
+    const imported = path.join(root, "existing-spec.md");
+    await writeFile(imported, "# Existing specification\n", "utf-8");
+    const before = await readFile(imported);
 
     const sinks = newSinks();
     const exitCode = await runSddPreflightCommand({
       root,
+      importPath: imported,
       write: sinks.write,
       writeErr: sinks.writeErr,
     });
@@ -214,6 +328,9 @@ describe("qfai sdd preflight", () => {
     expect(exitCode).toBe(0);
     const stdout = sinks.out.join("\n");
     expect(stdout).toContain("status: ready");
+    expect(stdout).toContain("source: discussion-pack");
+    expect(stdout).not.toContain("source: import-lite");
+    expect(await readFile(imported)).toEqual(before);
     expect(stdout).toContain("discussion-20260216010102003");
     expect(stdout).not.toContain("discussion-20260316010102003");
   });

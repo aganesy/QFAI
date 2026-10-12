@@ -22,6 +22,8 @@ This step carries it out.
 - The recorded decision to retire it, and what it says about anything public:
   a command, a key, an option, an exported name.
 - The commands of `common-gate-run`.
+- `.agents/rules/action-reversibility.md`, before an action that deletes, pushes, publishes or
+  is visible to others.
 
 ## Procedure
 
@@ -32,13 +34,14 @@ This step carries it out.
 3. Add no test asserting that the mechanism is gone. A later change that
    brings it back is reviewed on its own.
 4. Where a story or contract of the project still states the mechanism, the
-   step does not edit it. Return `needs_repair` with a debt naming the file,
-   owned by `qfai-sdd`.
+   step does not edit it. Return `needs_repair` and name the file in the stage
+   report, with `qfai-sdd` as its owner. Resume after that owner resolves the
+   story or contract through its own route.
 5. Run the relevant suite. It passes.
 
 ## What it writes
 
-- The deleted and changed files, listed in `changedFiles`.
+- The deleted and changed files, listed in the stage report.
 - A record of each reference found and what happened to it, in the stage report.
 
 ## Gate

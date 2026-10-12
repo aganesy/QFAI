@@ -86,6 +86,11 @@ design. They are written by the `write-acceptance-tests` route, or by
 `implement-acceptance` run alone, and the report says which BF and AC tests
 still have an empty body.
 
+For that report or a handoff of unfinished BF/AC bodies, read
+`.qfai/assistant/step/verify-repo-gate/STEP.md#acceptance-evidence-and-follow-up`.
+It separates annotation proof, body states, actual behavior and execution,
+and the remaining work's owner and completion criteria.
+
 Each of these runs alone, instead of that order, when the request is not new
 behaviour but a failure, a repair or upkeep:
 

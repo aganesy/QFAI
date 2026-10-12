@@ -14,6 +14,16 @@ Common rules for working with Claude Code.
 - Common quality criteria: [../../00_universal/development-principles-checklist.md](../../00_universal/development-principles-checklist.md)
 - Metrics: [../../01_specialties/development-principles-metrics.md](../../01_specialties/development-principles-metrics.md)
 
+## Instruction files
+
+- This repository has no `CLAUDE.md`. Claude Code reads `AGENTS.md` directly (v2.1.277 or later; in every
+  session type from v2.1.281), and
+  only when no `CLAUDE.md` or `CLAUDE.local.md` is on the path from the working directory upward.
+  A personal `CLAUDE.local.md` therefore hides `AGENTS.md`; set the project-instructions setting to
+  `claude-md-and-agents-md` to keep both.
+- `.claude/rules/scoped/` holds the rules a path scopes; nothing else under `.claude/rules/` loads at start.
+- Source: the Claude Code memory documentation, https://code.claude.com/docs/en/memory (the AGENTS.md section).
+
 ## Tone and Style
 
 - Skip unnecessary preamble and answer the key points in four lines or fewer (code and tool output excepted).
