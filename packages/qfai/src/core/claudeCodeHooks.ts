@@ -8,7 +8,7 @@
  * project. That is the population most likely to have an agent already writing
  * pull requests, which is what the hooks are there to steer. So the entries are
  * merged in as well, by the same shape `ensureAgentEntryPointRules` uses for
- * the rule section in `AGENTS.md` and `CLAUDE.md`.
+ * the rule section in `AGENTS.md`.
  *
  * The merge is narrow. It appends to the arrays under `hooks.<event>`, and it
  * rewrites a group in place only when the group is exactly one an earlier
