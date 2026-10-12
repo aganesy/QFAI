@@ -1230,3 +1230,45 @@ describe("story-tree drift", () => {
     ).toEqual([contract, examples].sort());
   });
 });
+
+describe("relocated inherited raw decision rows", () => {
+  // QFAI:EX-0001-0054-19
+  it.each(["line ending", "stored padding", "authorised Status only"])(
+    "preserves physical row bytes during relocation: %s",
+    async (change) => {
+      git("config", "core.autocrlf", "false");
+      const page = `${specs}/decisions/page-0001.md`;
+      const inherited = "| DEC-0001 | Stored  choice | Keep | DONE |\n";
+      const request = (status: string) =>
+        `| DEC-0002 | Change request: ${decisions}, ${page} | - Date: 2026-10-12 | ${status} |\n`;
+      await put(decisions, table + inherited + request("WIP"));
+      git("add", ".");
+      git("commit", "-m", "fixed inherited raw history and request");
+      git("checkout", "-b", "topic");
+      const moved =
+        change === "line ending"
+          ? inherited.replace("\n", "\r\n")
+          : change === "stored padding"
+            ? inherited.replace("| DEC-0001 |", "|  DEC-0001  |")
+            : inherited;
+      await put(page, table + moved);
+      await put(
+        decisions,
+        table.replace(
+          "## Decisions",
+          "## Decision pages\n\n- decisions/page-0001.md\n\n## Decisions",
+        ) + request(change === "authorised Status only" ? "DONE" : "WIP"),
+      );
+      git("add", ".");
+      git("commit", "-m", "relocate inherited occurrences");
+      const findings = await validateStoryTreeDrift(root, config(), "drift");
+      if (change === "authorised Status only") {
+        expect(findings).toEqual([]);
+      } else {
+        expect(findings).toContainEqual(
+          expect.objectContaining({ code: "QFAI-STORY-010", file: page, refs: ["DEC-0001"] }),
+        );
+      }
+    },
+  );
+});

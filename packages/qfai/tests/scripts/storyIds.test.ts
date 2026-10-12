@@ -13,7 +13,8 @@ import path from "node:path";
 
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { nextStoryTreeId } from "../../src/core/storyTree/tree.js";
+import { defaultConfig } from "../../src/core/config.js";
+import { nextStoryTreeId, readStoryTreeModel } from "../../src/core/storyTree/tree.js";
 import {
   added,
   allocateAll,
@@ -323,6 +324,54 @@ describe("against a repository", () => {
       error.mockRestore();
     }
   });
+
+  async function refusesHistoricalRegisterFault(fault: string): Promise<void> {
+    const target = path.join(work, ".qfai", "spec", "decisions.md");
+    const page = path.join(work, ".qfai", "spec", "decisions", "page-0001.md");
+    const original = readFileSync(target);
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const text = decisions("DEC-0001");
+      const pageText =
+        fault === "duplicate"
+          ? text
+          : text.replace("| DONE |", fault === "fifth cell" ? "| DONE | extra |" : "| UNKNOWN |");
+      write(".qfai/spec/decisions/page-0001.md", pageText);
+      writeFileSync(
+        target,
+        decisions(...(fault === "duplicate" ? ["DEC-0001"] : [])).replace(
+          "## Decisions",
+          "## Decision pages\n\n- decisions/page-0001.md\n\n## Decisions",
+        ),
+      );
+      const current = await readStoryTreeModel(work, defaultConfig);
+      expect(current.decisionRegisterComplete).toBe(true);
+      expect(current.decisions?.errors.length).toBeGreaterThan(0);
+      expect(current.decisionOccurrences[0]?.origin.path).toBe(".qfai/spec/decisions/page-0001.md");
+      expect(await run(["next", "DEC"], { cwd: work, list })).toBe(2);
+      expect(log.mock.calls).toEqual([]);
+      expect(error.mock.calls.flat().join(" ")).toMatch(
+        fault === "duplicate" ? /decisions\.md/ : /decisions\/page-0001\.md/,
+      );
+    } finally {
+      writeFileSync(target, original);
+      rmSync(page, { force: true });
+      rmSync(path.dirname(page), { recursive: true, force: true });
+      log.mockRestore();
+      error.mockRestore();
+    }
+  }
+
+  // QFAI:EX-0001-0053-26
+  it("refuses allocation from a duplicate page/root occurrence", () =>
+    refusesHistoricalRegisterFault("duplicate"));
+
+  // QFAI:EX-0001-0053-31
+  it.each(["fifth cell", "invalid status"])(
+    "refuses allocation from a complete historical page with %s",
+    refusesHistoricalRegisterFault,
+  );
 });
 
 describe("main IDs received through a merge", () => {

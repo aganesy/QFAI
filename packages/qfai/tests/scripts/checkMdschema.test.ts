@@ -17,16 +17,18 @@
  * never the contract they are checked against.
  */
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
+import type * as NodeFs from "node:fs";
 import { link, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { storyTreeMarkdownPatterns } from "../../src/core/storyTree/layout.js";
+import { createSymlinkFixture } from "../helpers/symlinkFixture.js";
 
 // The IMPLEMENTATION, not the repository-root delegator: the delegator exits
 // the process on load, so it exports nothing at all — importing it would end the
@@ -34,6 +36,7 @@ import { storyTreeMarkdownPatterns } from "../../src/core/storyTree/layout.js";
 // because that is the path `pnpm lint:mdschema` and CI invoke.
 // @ts-expect-error -- a plain .mjs guard with no type declarations
 import {
+  main,
   IGNORE_MARKER,
   documentsWithoutOneEntry,
   findMdschemaCommand,
@@ -46,6 +49,33 @@ import {
   sectionDescriptions,
   rootHeadingPattern,
 } from "../../assets/scripts/check-mdschema.mjs";
+
+const unsafeReads = vi.hoisted((): { active: boolean; paths: string[] } => ({
+  active: false,
+  paths: [],
+}));
+
+// Record actual destinations while preserving native filesystem operations.
+vi.mock("node:fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof NodeFs>();
+  return {
+    ...actual,
+    statSync: (...args: Parameters<typeof actual.statSync>) => {
+      if (unsafeReads.active) unsafeReads.paths.push(actual.realpathSync(args[0]));
+      return actual.statSync(...args);
+    },
+    readdirSync: (...args: Parameters<typeof actual.readdirSync>) => {
+      if (unsafeReads.active) unsafeReads.paths.push(actual.realpathSync(args[0]));
+      return actual.readdirSync(...args);
+    },
+    readFileSync: (...args: Parameters<typeof actual.readFileSync>) => {
+      if (unsafeReads.active && typeof args[0] !== "number") {
+        unsafeReads.paths.push(actual.realpathSync(args[0]));
+      }
+      return actual.readFileSync(...args);
+    },
+  };
+});
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // tests/scripts -> tests -> packages/qfai -> packages -> repo root
@@ -1376,4 +1406,141 @@ describe("the configured decision register", () => {
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("page-0002.md");
   });
+});
+
+describe("unsafe decision-register read boundary", () => {
+  // QFAI:EX-0001-0053-29
+  it("stops at a linked specs root configured with backslashes", async (context) => {
+    const root = await newTempDir();
+    const outside = await newTempDir();
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      'paths:\n  specsDir: ".qfai\\\\specs"\n  contractsDir: .qfai/contracts\n',
+      "utf-8",
+    );
+    await mkdir(path.join(root, ".qfai"));
+    await writeFile(
+      path.join(outside, "decisions.md"),
+      "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n",
+      "utf-8",
+    );
+    await writeFile(path.join(outside, "sentinel.md"), "# Outside sentinel must not be graded\n");
+    if (!(await createSymlinkFixture(outside, path.join(root, ".qfai", "specs"), "dir"))) {
+      context.skip();
+      return;
+    }
+
+    const actualOutside = realpathSync(outside);
+    unsafeReads.paths.length = 0;
+    unsafeReads.active = true;
+    try {
+      const result = checkDocuments(root);
+      expect(result.ok).toBe(true);
+      expect(result.checked).toBe(0);
+      expect(result.violations).toEqual([
+        expect.objectContaining({
+          file: ".qfai/specs",
+          rule: "decision-register",
+          message: expect.stringContaining("not links"),
+        }),
+      ]);
+      expect(
+        unsafeReads.paths.filter(
+          (file) => file === actualOutside || file.startsWith(actualOutside + path.sep),
+        ),
+      ).toEqual([]);
+    } finally {
+      unsafeReads.active = false;
+    }
+  });
+
+  // QFAI:EX-0001-0053-29
+  it.each([
+    ["specs root", "API"],
+    ["specs root", "CLI"],
+    ["decisions root", "API"],
+    ["decisions root", "CLI"],
+    ["pages directory", "API"],
+    ["pages directory", "CLI"],
+    ["listed page", "API"],
+    ["listed page", "CLI"],
+  ])(
+    "stops before reading the linked %s destination through the %s",
+    async (kind, consumer, context) => {
+      const root = await newTempDir();
+      const outside = await newTempDir();
+      const specs = path.join(root, ".qfai", "specs");
+      await mkdir(path.dirname(specs), { recursive: true });
+      const sentinel = path.join(outside, "sentinel.md");
+      const table =
+        "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
+      await writeFile(sentinel, "# Outside sentinel must not be graded\n", "utf-8");
+
+      let target = sentinel;
+      let linkPath = path.join(specs, "decisions.md");
+      let directory = false;
+      if (kind === "specs root") {
+        await writeFile(path.join(outside, "decisions.md"), table, "utf-8");
+        target = outside;
+        linkPath = specs;
+        directory = true;
+      } else {
+        await mkdir(specs, { recursive: true });
+        if (kind === "pages directory" || kind === "listed page") {
+          await writeFile(
+            path.join(specs, "decisions.md"),
+            table.replace(
+              "## Decisions",
+              "## Decision pages\n\n- decisions/page-0001.md\n\n## Decisions",
+            ),
+            "utf-8",
+          );
+          if (kind === "pages directory") {
+            await writeFile(path.join(outside, "page-0001.md"), table, "utf-8");
+            target = outside;
+            linkPath = path.join(specs, "decisions");
+            directory = true;
+          } else {
+            await mkdir(path.join(specs, "decisions"));
+            linkPath = path.join(specs, "decisions", "page-0001.md");
+          }
+        }
+      }
+      if (!(await createSymlinkFixture(target, linkPath, directory ? "dir" : "file"))) {
+        context.skip();
+        return;
+      }
+
+      const actualOutside = realpathSync(outside);
+      const argv = process.argv;
+      const stderr = vi.spyOn(console, "error").mockImplementation(() => undefined);
+      const stdout = vi.spyOn(console, "log").mockImplementation(() => undefined);
+      unsafeReads.paths.length = 0;
+      unsafeReads.active = true;
+      try {
+        if (consumer === "API") {
+          const result = checkDocuments(root);
+          expect(result.ok).toBe(true);
+          expect(result.checked).toBe(0);
+          expect(result.violations).toEqual(
+            expect.arrayContaining([expect.objectContaining({ rule: "decision-register" })]),
+          );
+        } else {
+          process.argv = ["node", SCRIPT, "--root", root, "--scope", "all"];
+          expect(main()).toBe(1);
+          expect(stderr.mock.calls.flat().join("\n")).toContain("[decision-register]");
+        }
+        expect(
+          unsafeReads.paths.filter(
+            (file) => file === actualOutside || file.startsWith(actualOutside + path.sep),
+          ),
+        ).toEqual([]);
+      } finally {
+        unsafeReads.active = false;
+        process.argv = argv;
+        stderr.mockRestore();
+        stdout.mockRestore();
+      }
+    },
+  );
 });
