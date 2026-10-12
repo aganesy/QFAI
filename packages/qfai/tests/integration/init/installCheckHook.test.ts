@@ -370,6 +370,10 @@ describe("the generated installer's native process boundary", () => {
       expect(status).not.toBeNull();
       expect(status).not.toBe(0);
       expect(stderr).toMatch(/cwd|input|executable|directory|usage/i);
+      if (malformed === "missing" || malformed === "unreadable") {
+        expect(stderr).toContain(malformed === "missing" ? "ENOENT" : "EACCES");
+        expect(stderr).toMatch(/supply.*readable.*absolute.*checkout directory.*rerun/i);
+      }
       expect(calls).toEqual([]);
       if (malformed === "unreadable")
         expect(confirmations).toEqual(["unreadable directory observed\n"]);
@@ -382,6 +386,7 @@ describe("the generated installer's native process boundary", () => {
       expect(status).not.toBeNull();
       expect(status).not.toBe(0);
       expect(stderr).toContain("ENOENT");
+      expect(stderr).toMatch(/executable.*available.*cwd.*readable.*rerun/i);
       expect(stdout).not.toMatch(/preparation.*succeeded/i);
       expect(calls).toEqual([]);
     });
@@ -431,6 +436,10 @@ describe("the generated installer's native process boundary", () => {
       expect(status).not.toBeNull();
       expect(status).not.toBe(0);
       expect(stderr).toMatch(/canonical|launcher|qfai|confirmation/i);
+      if (launcher === "pnp-corrupt" || launcher === "pnp-missing-manifest") {
+        expect(stderr).toContain(launcher === "pnp-corrupt" ? "SyntaxError" : "ENOENT");
+        expect(stderr).toMatch(/check.*target package\.json.*canonical qfai launcher.*rerun/i);
+      }
       expect(stdout).not.toMatch(/preparation.*succeeded/i);
       expect(calls).toHaveLength(1);
       expect(confirmations).toHaveLength(launcher === "pnp-failed" ? 1 : 0);

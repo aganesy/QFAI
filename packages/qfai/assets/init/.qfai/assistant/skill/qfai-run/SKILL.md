@@ -22,8 +22,7 @@ The CLI plans; this skill follows its steps in order.
 - Release, decision and branch points: `references/stage-points.md`.
 - Run preflight before planning, as `.qfai/assistant/rule/shared-skill-operating-baseline.md#canonical-qfai-launcher-mandatory` says.
   If the launcher is missing or preflight fails, read `references/operator-screens.md` for recovery.
-- Read `references/codex-cloud-install.md` before configuring an environment-owned
-  Install script or Start skill, or preparing dependencies for a fresh checkout.
+- Read `references/codex-cloud-install.md` before configuring an environment-owned Install script or Start skill, or preparing dependencies for a fresh checkout.
   Use the reviewed target's successful preparation and canonical proof before planning.
 
 ## What this skill never does
