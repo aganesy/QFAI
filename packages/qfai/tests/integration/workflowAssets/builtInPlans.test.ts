@@ -32,6 +32,7 @@ const VOCABULARY: Record<string, string[]> = {
     "triage-cluster",
     "triage-security-intake",
     "triage-handoff",
+    "triage-owned-cleanup",
   ],
   maintenance: ["maintain-edit"],
   diagnose: ["implement-diagnose", "implement-bisect", "implement-minimize", "implement-benchmark"],
