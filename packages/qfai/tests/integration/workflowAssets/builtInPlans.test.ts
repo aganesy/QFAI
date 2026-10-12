@@ -5,10 +5,18 @@
  * contract: one file per route, each stage's steps drawn from the ones its kind may run, and every
  * change route ending in the verify block. How the core loads a plan is not this module's.
  */
+import { readdir } from "node:fs/promises";
+import path from "node:path";
+
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 
-import { PLAN_ROUTES, planStageSteps, readDefault } from "../../helpers/shippedAssistant.js";
+import {
+  PACKAGE_DEFAULTS,
+  PLAN_ROUTES,
+  planStageSteps,
+  readDefault,
+} from "../../helpers/shippedAssistant.js";
 
 const VERIFY = ["verify-qfai-gate", "verify-repo-gate", "verify-commit"];
 
@@ -24,6 +32,7 @@ const VOCABULARY: Record<string, string[]> = {
     "triage-cluster",
     "triage-security-intake",
     "triage-handoff",
+    "triage-owned-cleanup",
   ],
   maintenance: ["maintain-edit"],
   diagnose: ["implement-diagnose", "implement-bisect", "implement-minimize", "implement-benchmark"],
@@ -176,6 +185,10 @@ function expectStageInVocabulary(route: string, stage: Stage, ids: string[]) {
 
 describe("the built-in plans", () => {
   it("ship one plan per route, in the plan format and vocabulary", async () => {
+    const shippedRoutes = (await readdir(path.join(PACKAGE_DEFAULTS, "workflows")))
+      .filter((file) => file.endsWith(".yml"))
+      .map((file) => file.slice(0, -4));
+    expect([...PLAN_ROUTES].sort()).toEqual(shippedRoutes.sort());
     for (const route of PLAN_ROUTES) {
       const { raw, keys, stageKeys, route: named, stages } = await plan(route);
       expect(named, `${route}.yml names its route`).toBe(route);
