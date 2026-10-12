@@ -102,6 +102,7 @@ const EXTRACTION_VOCABULARIES: Record<string, string[]> = {
     "behaviour-change",
     "deprecation",
     "refactor",
+    "procedure",
     "docs",
     "flaky-test",
     "test-defect",

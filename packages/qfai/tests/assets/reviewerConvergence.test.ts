@@ -1,9 +1,10 @@
-import { readFile, readdir } from "node:fs/promises";
+import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 import { readRule } from "../helpers/ruleWithReferences.js";
+import { useTempDirPool } from "../helpers/shippedWorkflowFixtures.js";
 
 // Anchored to this file, not to `process.cwd()`. A runner launched from the
 // repo root resolves `../..` to the directory ABOVE the repo, and every read
@@ -49,6 +50,15 @@ const CONVERGENCE = "assistant/rule/review-convergence.md";
 const DELEGATION = "assistant/rule/shared-skill-delegation-baseline.md";
 const OPERATING = "assistant/rule/shared-skill-operating-baseline.md";
 
+async function readOptionalSkill(file: string): Promise<string | undefined> {
+  try {
+    return await readFile(file, "utf-8");
+  } catch (cause) {
+    if (cause instanceof Error && "code" in cause && cause.code === "ENOENT") return undefined;
+    throw new Error(`Cannot read skill file: ${file}`, { cause });
+  }
+}
+
 describe("reviewer convergence", () => {
   for (const tree of QFAI_TREES) {
     it(`${tree}: a stage is reviewed once and the author fixes or answers each finding`, async () => {
@@ -61,7 +71,21 @@ describe("reviewer convergence", () => {
         content,
         "A finding the author cannot fix is reported in the stage's final report",
       );
-      expectPhrase(content, "A critical decision still goes to the user");
+      const review = content.split("## One review")[1]?.split(/^## /m)[0];
+      expect(review, "the one-review section is missing").toBeDefined();
+      expectPhrase(review ?? "", "A critical decision requires actual user authority");
+      expectPhrase(review ?? "", ".agents/rules/grilling.md#explicit-delegation-for-a-discussion");
+      expectPhrase(
+        review ?? "",
+        "Without an actual answer or recorded applicable authorization, it goes to the user when questions are permitted",
+      );
+      for (const critical of [
+        "contradicts a spec, a contract or a recorded decision",
+        "effect cannot be taken back",
+        "rests on product intent nothing written states",
+      ]) {
+        expectPhrase(review ?? "", critical);
+      }
       expectNoPhrase(content, "round N-1");
     });
 
@@ -101,12 +125,8 @@ describe("reviewer convergence", () => {
         .filter((entry) => entry.isDirectory())
         .map((entry) => entry.name);
       for (const skill of skills) {
-        let body: string;
-        try {
-          body = await readFile(path.join(skillsDir, skill, "SKILL.md"), "utf-8");
-        } catch {
-          continue;
-        }
+        const body = await readOptionalSkill(path.join(skillsDir, skill, "SKILL.md"));
+        if (body === undefined) continue;
         if (!body.includes("shared-skill-delegation-baseline")) continue;
         expectPhrase(content, `| \`/${skill}\``);
       }
@@ -121,4 +141,32 @@ describe("reviewer convergence", () => {
       expectNoPhrase(content, "or when a blocking reviewer returns `REVISE`");
     });
   }
+});
+
+describe("optional reviewer-remit skill reads", () => {
+  const createTempDir = useTempDirPool("qfai-remit-read-");
+
+  it("skips only an absent optional SKILL.md", async () => {
+    const root = await createTempDir();
+    const file = path.join(root, "SKILL.md");
+    await expect(readOptionalSkill(file)).resolves.toBeUndefined();
+  });
+
+  it("reads an existing skill without discarding its remit reference", async () => {
+    const root = await createTempDir();
+    const file = path.join(root, "SKILL.md");
+    const body = "Read shared-skill-delegation-baseline.md before reviewing.\n";
+    await writeFile(file, body, "utf-8");
+    await expect(readOptionalSkill(file)).resolves.toBe(body);
+  });
+
+  it("rejects a SKILL.md directory with its full path and original read cause", async () => {
+    const root = await createTempDir();
+    const file = path.join(root, "SKILL.md");
+    await mkdir(file);
+    await expect(readOptionalSkill(file)).rejects.toMatchObject({
+      message: `Cannot read skill file: ${file}`,
+      cause: expect.objectContaining({ code: "EISDIR" }),
+    });
+  });
 });

@@ -2,11 +2,21 @@
 // QFAI:AC-0001-0229-03
 // QFAI:AC-0001-0229-07
 
+import { rm } from "node:fs/promises";
+import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
 
 import type { WorkflowExtraction } from "../../../src/core/workflow/extraction.js";
 import { extraction } from "../../helpers/workflowExtraction.js";
-import { field, minimalProject, removeProjects, workflow, writeJson } from "./workflowProject.js";
+import {
+  field,
+  listTree,
+  minimalProject,
+  removeProjects,
+  workflow,
+  writeJson,
+} from "./workflowProject.js";
 
 afterEach(removeProjects);
 
@@ -241,6 +251,114 @@ it("A request that writes only documentation is never handed over unchecked", as
   expect(field(planned.json, "route")).toBe("edit-text");
   expect(field(planned.json, "scopes")).toEqual(broadOnly(planned.json));
   expect(stageIds(planned.json)).toEqual(["edit", "note", "verify"]);
+});
+
+async function rawProcedurePlan(fields: Record<string, unknown> = {}) {
+  const root = await minimalProject();
+  const file = await writeJson(root, "tmp/procedure.json", {
+    ...extraction({ artifacts: ["docs"] }),
+    intent: "procedure",
+    ...fields,
+  });
+  const before = await listTree(root);
+  const result = workflow(root, ["plan", "--in", file]);
+  expect(await listTree(root)).toEqual(before);
+  expect(result.json).toBeDefined();
+  return result;
+}
+
+// QFAI:AC-0001-0224-13
+// QFAI:EX-0001-0224-43
+// QFAI:EX-0001-0224-50
+it("A docs-only procedure gets its dedicated writer and the full closing checks", async () => {
+  const result = await rawProcedurePlan();
+  expect(result.status).toBe(0);
+  expect(field(result.json, "ok")).toBe(true);
+  expect([
+    field(result.json, "route"),
+    field(result.json, "family"),
+    field(result.json, "rule"),
+  ]).toEqual(["write-procedure", "change", 29]);
+  const step = (name: string, passThrough = false) => ({
+    name,
+    path: ".qfai/assistant/step/" + name + "/STEP.md",
+    mode: null,
+    passThrough,
+  });
+  expect(field(result.json, "stages")).toEqual([
+    { id: "documentation", kind: "documentation", steps: [step("implement-procedure")] },
+    { id: "note", kind: "verify", review: "code", steps: [step("verify-change-note", true)] },
+    {
+      id: "verify",
+      kind: "verify",
+      steps: [step("verify-qfai-gate"), step("verify-repo-gate"), step("verify-commit")],
+    },
+  ]);
+  expect(field(result.json, "decisionPoints")).toEqual([]);
+  expect(field(result.json, "branchPoints")).toEqual([]);
+  expect(field(result.json, "releasePoint")).toBeNull();
+  expect(field(result.json, "scopes")).toEqual([
+    { scope: "broad", stages: ["documentation", "note", "verify"], recommended: true },
+  ]);
+});
+
+// QFAI:AC-0001-0224-13
+// QFAI:EX-0001-0224-46
+it("The public planner rejects procedure as a qualifier with schema exit 2", async () => {
+  const result = await rawProcedurePlan({ qualifiers: ["procedure"] });
+  expect(result.status).toBe(2);
+  expect(field(result.json, "ok")).toBe(false);
+  expect(field(result.json, "reasons")).toEqual([
+    expect.objectContaining({ reason: "schema", subject: "qualifiers[0]" }),
+  ]);
+});
+
+// QFAI:AC-0001-0224-13
+// QFAI:EX-0001-0224-51
+it("A procedure plan cannot serve a code-only request", async () => {
+  const result = await rawProcedurePlan({ artifacts: ["code"] });
+  expect(result.status).toBe(2);
+  expect(field(result.json, "ok")).toBe(false);
+  expect(field(result.json, "reasons")).toEqual([{ reason: "artifact-unserved", subject: "code" }]);
+});
+
+// QFAI:AC-0001-0224-13
+// QFAI:EX-0001-0224-51
+it("A missing installed procedure writer is refused with plan-invalid exit 1", async () => {
+  const root = await minimalProject();
+  await rm(path.join(root, ".qfai", "assistant", "step", "implement-procedure", "STEP.md"), {
+    force: true,
+  });
+  const file = await writeJson(root, "tmp/procedure.json", {
+    ...extraction({ artifacts: ["docs"] }),
+    intent: "procedure",
+  });
+  const before = await listTree(root);
+  const result = workflow(root, ["plan", "--in", file]);
+  expect(result.status).toBe(1);
+  expect(field(result.json, "reasons")).toEqual([
+    {
+      reason: "plan-invalid",
+      subject: "implement-procedure",
+      file: "write-procedure.yml",
+      cause: "step-missing",
+    },
+  ]);
+  expect(await listTree(root)).toEqual(before);
+});
+
+// QFAI:AC-0001-0224-13
+// QFAI:EX-0001-0224-44
+it("Actual mixed implementation and security readings retain their original checks", async () => {
+  const mixed = await planFor(extraction({ intent: "feature", artifacts: ["code", "docs"] }));
+  expect(mixed.status).toBe(0);
+  expect(field(mixed.json, "route")).toBe("add-feature");
+  expect(stageIds(mixed.json)).toEqual(["sdd", "implement", "docs", "note", "verify"]);
+  expect(field(mixed.json, "scopes")).toEqual(broadOnly(mixed.json));
+  const security = await planFor(extraction({ intent: "security", artifacts: ["docs"] }));
+  expect(security.status).toBe(0);
+  expect(field(security.json, "route")).toBe("fix-vulnerability");
+  expect(field(security.json, "scopes")).toEqual(broadOnly(security.json));
 });
 
 // QFAI:AC-0001-0229-01

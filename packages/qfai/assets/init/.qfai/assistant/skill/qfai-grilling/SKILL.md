@@ -28,7 +28,9 @@ where its stage's gate reads it.
 work is the interview holds a user session; every other stage holds a delegated
 one, where a griller interviews the authors and the user is asked only a
 critical decision (`.agents/rules/grilling.md` § Two kinds of session). A stage
-that says nothing holds a delegated session.
+that says nothing holds a delegated session. Read
+`.agents/rules/grilling.md#explicit-delegation-for-a-discussion` before
+delegating a user discussion; record actual authority. No-question alone is not delegation.
 
 **The request bounds the tree** (`.agents/rules/grilling.md`). A decision whose
 only outcome is whether to add something the request did not ask for is left
@@ -53,7 +55,8 @@ least beyond the request.
 | A no-question mode is active        | Run without asking; open every node left over as a question |
 | An ambiguity met while implementing | Not a session — stop under Article IX of the constitution   |
 
-**A no-question mode silences the questions, not the session.** An invocation
+**A no-question mode silences user questions, not the session.** The master's
+explicit-delegation conditions permit author rounds. Otherwise, an invocation
 told not to ask — `--auto`, or whatever the host spells it as — settles what the
 evidence settles, dispatches the lookups, and opens every node left over as
 a question in the register the stage reads, so the stage cannot complete over
@@ -115,19 +118,17 @@ re-opens it.
 1. Recompute the frontier from what is now settled.
 2. Dispatch the fact lookups the remaining decisions wait on. Do not block the
    round on them.
-3. Put the whole frontier at once, so the user sees what is being decided
-   together.
+3. Put the whole frontier at once to the session's answerer: the user by
+   default, or authors in a qualifying delegated session.
 4. Read the answers, then return to step 1.
 
 Two questions never share a round when one depends on the other; the dependent
 one belongs to a later round. The next round is never written ahead of the
 answers it is computed from.
 
-**A no-question mode is read before any of this.** Where the invocation is told
-not to ask — `--auto`, or whatever the host spells it as — no round is put at
-all, so nothing below applies and the no-question section above governs. A mode
-that withholds the tool while still permitting questions is a different thing,
-and is the fallback's case.
+**A no-question mode is read before any of this.** Agent rounds require
+explicit delegation; otherwise the section above governs. A withheld tool with questions still
+permitted uses the fallback.
 
 **Three things send a round to plain text**: the host has no structured question
 tool, the current mode withholds it while still permitting questions, or the
@@ -214,18 +215,22 @@ simple.
 **A delegated session has no condition 2**, because no user is there to
 confirm. A budget bounds its rounds: two, then every decision that is not
 critical takes the griller's recommendation — the ones the agents agreed on and
-the ones still open alike — and every critical decision goes to the user at
-once, without spending a round
+the ones still open alike. An uncovered critical decision goes to the user
+when asking is permitted, without spending a round
 (`.qfai/assistant/rule/review-convergence.md`). It ends `adopted` once
-no node is open and the user has answered every critical decision.
+the master's conditions hold: no open node or lookup, required inputs present,
+and actual authority for critical decisions. Record agent choices as agents'.
 
-**The budget ends the rounds, not the session.** While a critical decision is
-unanswered the session is still open: the user answers it, or ends the session
+**The budget ends the rounds, not the session.** While a critical decision
+lacks an actual answer or applicable recorded authorization, it stays open: the user answers it, or ends the session
 another way — or, under a no-question mode, the register write ends it
 `no-question`. How many went is a count a record carries, never an ending.
 
-**A session under a no-question mode cannot reach condition 2 either**, because
-there is a user and the mode forbids asking them. It ends when nothing on the
+**Only a no-question session meeting the master's explicit-delegation
+conditions ends `adopted`.**
+
+**Any other session under a no-question mode cannot reach condition 2
+either**, because the mode forbids asking the user. It ends when nothing on the
 frontier is still waiting: every decision the evidence settled is settled, and
 every one it did not is opened as a question where the stage's own gate reads it
 (`.qfai/assistant/rule/constitution.md` Article X, rule 6). The register
@@ -349,6 +354,9 @@ Every decision this skill meets falls in one of three named buckets.
 - hard-required:
   - grilling subject (the design to interrogate; a session has no default for
     what it is about)
+
+Explicit delegation is not `auto-decide` or a fact or human answer.
+These user-session entries remain the default.
 
 The asking is what this skill performs, so its `ask-user` entries are its own operations
 rather than an entry added to the prototype.

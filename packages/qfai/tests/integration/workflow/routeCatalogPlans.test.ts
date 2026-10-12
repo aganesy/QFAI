@@ -243,6 +243,16 @@ for (const [route, expected] of CATALOG) {
   });
 }
 
+// QFAI:AC-0001-0224-13
+// QFAI:EX-0001-0224-43
+// QFAI:EX-0001-0224-50
+it("The procedure catalog plan has one documentation writer and the existing closing route", async () => {
+  const plan = (await loadBuiltInPlans()).find((each) => each.route === "write-procedure");
+  expect(plan ? described(plan) : undefined).toBe(
+    "Stages in order — `documentation` (documentation): `implement-procedure`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points none; release point none; branch points none",
+  );
+});
+
 it("The shipped plans end three ways", async () => {
   const plans = await loadBuiltInPlans();
   const names = (plan: WorkflowPlanFile) =>

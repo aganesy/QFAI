@@ -4,11 +4,39 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **Explicit discussion delegation supports adopted agent decisions.**
+  Recorded user authority permits in-scope agent judgment without fictional
+  user confirmation. Missing required inputs and critical decisions without
+  applicable authority remain open. Interactive sessions retain actual user
+  confirmation.
+
+- Generate a native dependency preparation entry for a reviewed executable,
+  arguments and checkout. Installation and same-checkout launcher failures block
+  dependent planning; host setup and execution require separate evidence. Fixes #3338.
+
+- Compare reached workflow steps with actual reads, actions, outputs and gate
+  evidence in existing human reports. Missing proof stays unverified; no extra
+  reviewer, gate or execution engine is added. Fixes #3336.
+
+- Add a workflow route for writing authorized operational procedures.
+  It keeps wording-only edits separate, preserves policy owners and existing
+  verification, and grants no authority to run the documented actions.
+  Fixes #3403.
+
 ### Fixed
 
 - UI consistency repairs reach design authoring in the SDD stage. Existing
   design files change only within a newly authorized request; unrelated brand
   and tokens are preserved, and unsupported source values stop the repair.
+
+- **Discussion completion references point to the existing obligations.**
+  The completion matrix names the All Packs and UI-bearing items it requires.
+
+- **Profiling output retains its complete UTF-8 prefix within the shared 32 MiB limit.**
+  A chunk that crosses the limit keeps the complete characters that fit before
+  owned process termination begins. Output after the limit is discarded. Fixes #3462.
 
 ## [2.1.2] - 2026-10-11
 

@@ -21,6 +21,7 @@ const WRITES: Record<string, readonly Artifact[]> = {
   regression_fix: ["code", "tests"],
   test_fix: ["tests"],
   maintenance: ["docs"],
+  documentation: ["docs"],
 };
 
 // Kinds whose work is never handed over without the closing verification stages.
@@ -86,7 +87,9 @@ function narrowerScopes(
   if (!kept.some((stage) => WRITES_CODE.has(stage.kind))) {
     const medium = ids([...kept, ...gates]);
     // Work that writes only documentation is never handed over unchecked.
-    const onlyDocs = kept.every((stage) => stage.kind === "maintenance");
+    const onlyDocs = kept.every(
+      (stage) => stage.kind === "maintenance" || stage.kind === "documentation",
+    );
     return { narrow: onlyDocs ? medium : ids(kept), medium };
   }
   // Work that writes code takes the gates. The other closing checks verify the fix, so they come
