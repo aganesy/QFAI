@@ -3,6 +3,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { lstat, mkdir, mkdtemp, readFile, realpath, rm, unlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { StringDecoder } from "node:string_decoder";
 
 import { outcomeOf } from "./spawnCaptured.js";
 import type { ValidationResult } from "../../src/core/types.js";
@@ -137,7 +138,14 @@ export async function runControlledProfile(
   });
   let outputBytes = 0;
   const collect = (stream: "stdout" | "stderr", chunk: string) => {
-    outputBytes += Buffer.byteLength(chunk);
+    const remaining = 32 * 1024 * 1024 - outputBytes;
+    const chunkBytes = Buffer.byteLength(chunk);
+    if (chunkBytes <= remaining) {
+      result[stream] += chunk;
+    } else if (remaining > 0) {
+      result[stream] += new StringDecoder("utf8").write(Buffer.from(chunk).subarray(0, remaining));
+    }
+    outputBytes += chunkBytes;
     if (outputBytes > 32 * 1024 * 1024) {
       result.error = {
         name: "ProfileOutputLimit",
@@ -146,7 +154,6 @@ export async function runControlledProfile(
       requestStop();
       return;
     }
-    result[stream] += chunk;
   };
   child.stdout.setEncoding("utf8");
   child.stderr.setEncoding("utf8");
