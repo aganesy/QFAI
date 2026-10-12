@@ -12,6 +12,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   applicable authority remain open. Interactive sessions retain actual user
   confirmation.
 
+- Generate a native dependency preparation entry for a reviewed executable,
+  arguments and checkout. Installation and same-checkout launcher failures block
+  dependent planning; host setup and execution require separate evidence. Fixes #3338.
+
 ## [2.1.2] - 2026-10-11
 
 ### Added
@@ -23,10 +27,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - Synchronize the document schema checker copies from the package manifest after
   a frozen dependency install, including the Renovate repin workflow.
-
-- Generate a native dependency preparation entry for a reviewed executable,
-  arguments and checkout. Installation and same-checkout launcher failures block
-  dependent planning; host setup and execution require separate evidence. Fixes #3338.
 
 - Add a branch catch-up helper that merges the remote default branch, resolves
   only proven digest conflicts and reseals generated pins without running tests.

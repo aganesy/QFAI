@@ -221,7 +221,7 @@ async function withNativeInstall(
       fixture,
       String.raw`
 import { appendFileSync } from "node:fs";
-appendFileSync(process.env.INSTALL_FIXTURE_RECORD, JSON.stringify({ argv: process.argv.slice(2), cwd: process.cwd() }) + "\n");
+appendFileSync(process.env.INSTALL_FIXTURE_RECORD, JSON.stringify({ argv: process.argv.slice(1), cwd: process.cwd() }) + "\n");
 process.exitCode = Number(process.env.INSTALL_FIXTURE_EXIT);
 `,
     );

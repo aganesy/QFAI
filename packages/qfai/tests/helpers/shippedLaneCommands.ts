@@ -1847,8 +1847,15 @@ export const ALLOWED_MIGRATION_SCRIPTS: ReadonlyMap<string, string> = new Map([
   ],
 ]);
 
+const ALLOWED_DEPENDENCY_PREPARATION_SCRIPTS: ReadonlyMap<string, string> = new Map([
+  [
+    ".qfai/assistant/skill/qfai-run/scripts/codex-cloud-install.mjs",
+    "29b700013cfe352fab14ea56366f265fc8e90be0566ce07fb791044cc76b9913",
+  ],
+]);
+
 /**
- * Whether an init-source file is a supported data format or a reviewed migration program.
+ * Whether an init-source file is a supported data format or a reviewed program.
  *
  * It lives here rather than at the call site so the enumerations and the token that is looked up in
  * them cannot drift: adding a name to one of the sets while the caller derives a different token is
@@ -1857,6 +1864,7 @@ export const ALLOWED_MIGRATION_SCRIPTS: ReadonlyMap<string, string> = new Map([
 export function initSourceShipsAsData(relativePath: string): boolean {
   return (
     ALLOWED_MIGRATION_SCRIPTS.has(relativePath) ||
+    ALLOWED_DEPENDENCY_PREPARATION_SCRIPTS.has(relativePath) ||
     ALLOWED_INIT_MARKERS.has(relativePath) ||
     ALLOWED_INIT_SOURCE_EXTENSIONS.has(path.extname(relativePath)) ||
     ALLOWED_INIT_SOURCE_BASENAMES.has(path.basename(relativePath))
@@ -1977,6 +1985,12 @@ export function initMustNotShip(
   const reviewedScript = ALLOWED_MIGRATION_SCRIPTS.get(relativePath);
   if (reviewedScript !== undefined) {
     return fileDigest(contents) === reviewedScript ? undefined : "migration script content differs";
+  }
+  const reviewedPreparation = ALLOWED_DEPENDENCY_PREPARATION_SCRIPTS.get(relativePath);
+  if (reviewedPreparation !== undefined) {
+    return fileDigest(contents) === reviewedPreparation
+      ? undefined
+      : "dependency preparation script content differs";
   }
   if (INIT_MUST_NOT_SHIP.test(relativePath)) return "is a manifest or a script by name";
   return undefined;
