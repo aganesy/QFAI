@@ -351,7 +351,7 @@ jobs:
           done
           sha256sum -c --quiet <<'PINNED_INPUTS'
           2118bc0d10c060bbe25fd4d34785ec024ed46a57e7840252d42519f5bc3b44c9  scripts/check-toolchain-action.sh
-          1f0ac1b73ca4c9b9aa12f43eef78afc439b69d96f2ffbaef3d9e56064ba5da74  .github/pinned-bytes.txt
+          0272bdfd88166bc31039eccb245a9b7e2c5ac2352ead9430417cce47ae91ad95  .github/pinned-bytes.txt
           bb649cb2684f9db02bdbe3872f029571a8e52c4c6e2ab95e8c8fcf804370af41  .github/lifecycle-manifests.txt
           43d2586975550f5062b4af23112223068cc5676f0906c04fce2bc231df471a9e  .github/command-files.txt
           PINNED_INPUTS
