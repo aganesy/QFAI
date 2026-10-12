@@ -16,6 +16,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   arguments and checkout. Installation and same-checkout launcher failures block
   dependent planning; host setup and execution require separate evidence. Fixes #3338.
 
+### Fixed
+
+- **Discussion completion references point to the existing obligations.**
+  The completion matrix names the All Packs and UI-bearing items it requires.
+
 ## [2.1.2] - 2026-10-11
 
 ### Added
