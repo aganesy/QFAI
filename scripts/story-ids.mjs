@@ -81,7 +81,11 @@ export function parseScope(scope) {
  */
 export function allocateAll(scopes, named, allocate) {
   const declarations = [...named.declarations];
-  const model = { declarations, decisions: named.decisions };
+  const model = {
+    declarations,
+    decisions: named.decisions,
+    decisionRegisterComplete: named.decisionRegisterComplete ?? true,
+  };
   const ids = [];
   for (const { kind, parentId } of scopes) {
     let id;

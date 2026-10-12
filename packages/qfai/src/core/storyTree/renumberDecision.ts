@@ -861,7 +861,7 @@ export async function applyDecisionPageMigrationPlan(
             directoryStats.ino !== ownedDirectory.ino ||
             directoryStats.isSymbolicLink()
           )
-            throw new Error("Concurrent destination-directory replacement");
+            throw new Error("Concurrent destination-directory replacement", { cause: failure });
         }
         await sameOwnedInode(state);
         const bytes = await read(target);

@@ -80,15 +80,15 @@ export function parseDecisionRegister(
   rootFile: string,
 ): DecisionRegister {
   const errors: DecisionRegisterError[] = [];
-  let complete = true;
+  const incompleteFiles = new Set<string>();
   const report = (file: string, message: string, incomplete = true) => {
     errors.push({ file, message });
-    if (incomplete) complete = false;
+    if (incomplete) incompleteFiles.add(file);
   };
   const rootText = texts.get(rootFile);
   if (rootText === undefined) {
     report(rootFile, "Missing decisions root");
-    return { table: { rows: [], errors: [] }, files: [], occurrences: [], errors, complete };
+    return { table: { rows: [], errors: [] }, files: [], occurrences: [], errors, complete: false };
   }
   const directory = path.posix.dirname(rootFile);
   const index = decisionPagePaths(rootText);
@@ -175,6 +175,7 @@ export function parseDecisionRegister(
       });
     }
   }
+  const complete = incompleteFiles.size === 0;
   return {
     table: { rows: complete ? rows : [], errors: tableErrors },
     files,

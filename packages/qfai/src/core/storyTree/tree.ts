@@ -92,7 +92,7 @@ export function nextStoryTreeId(
   kind: StoryTreeIdKind,
   parentId?: string,
 ): string {
-  if (model.decisionRegisterComplete === false)
+  if (!model.decisionRegisterComplete)
     throw new Error("The complete decision register is unavailable; ID allocation is refused");
   const named = model.declarations.map(({ id }) => id);
   for (const row of model.decisions?.rows ?? []) {
