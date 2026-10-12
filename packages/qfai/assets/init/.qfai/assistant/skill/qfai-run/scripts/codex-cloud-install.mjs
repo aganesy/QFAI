@@ -18,11 +18,15 @@ function run(command, args, cwd, label) {
       "Check that the executable is available and the target cwd is readable, then rerun dependency preparation.",
     );
   if (result.signal) {
-    process.stderr.write(`${label} ended on signal ${result.signal}.\n`);
+    process.stderr.write(
+      `${label} ended on signal ${result.signal}. Review the failed command output and resolve its cause before rerunning dependency preparation.\n`,
+    );
     return 1;
   }
   if (result.status !== 0) {
-    process.stderr.write(`${label} exited ${result.status ?? "without an exit code"}.\n`);
+    process.stderr.write(
+      `${label} exited ${result.status ?? "without an exit code"}. Review the failed command output and resolve its cause before rerunning dependency preparation.\n`,
+    );
     return result.status ?? 1;
   }
   return 0;
@@ -72,7 +76,9 @@ function prepare() {
         filePresent(path.join(cwd, name)),
       );
       if (!marker) {
-        process.stderr.write("The target checkout has no canonical qfai launcher.\n");
+        process.stderr.write(
+          "The target checkout has no canonical qfai launcher. Check that the reviewed target declares qfai and that the installation prepares its canonical qfai launcher before rerunning dependency preparation.\n",
+        );
         return 1;
       }
       const manifest = JSON.parse(readFileSync(path.join(cwd, "package.json"), "utf8"));

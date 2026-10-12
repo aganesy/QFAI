@@ -1850,7 +1850,7 @@ export const ALLOWED_MIGRATION_SCRIPTS: ReadonlyMap<string, string> = new Map([
 const ALLOWED_DEPENDENCY_PREPARATION_SCRIPTS: ReadonlyMap<string, string> = new Map([
   [
     ".qfai/assistant/skill/qfai-run/scripts/codex-cloud-install.mjs",
-    "87b3b710c74b60da9d753ffdb615d579f452b69471462ea41974917025ab4f74",
+    "6b178632bce287af9fde3eff3f165695eaea499209878d75bc4f212c53fce86c",
   ],
 ]);
 
