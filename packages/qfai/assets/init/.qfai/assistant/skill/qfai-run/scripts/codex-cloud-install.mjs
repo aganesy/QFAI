@@ -3,15 +3,20 @@ import { accessSync, constants, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
-function failure(label, error) {
+function failure(label, error, recovery) {
   const reason = error?.code ?? error?.name ?? "unavailable";
-  process.stderr.write(`${label}: ${reason}.\n`);
+  process.stderr.write(`${label}: ${reason}. ${recovery}\n`);
   return 1;
 }
 
 function run(command, args, cwd, label) {
   const result = spawnSync(command, args, { cwd, shell: false, stdio: "inherit" });
-  if (result.error) return failure(`${label} could not start`, result.error);
+  if (result.error)
+    return failure(
+      `${label} could not start`,
+      result.error,
+      "Check that the executable is available and the target cwd is readable, then rerun dependency preparation.",
+    );
   if (result.signal) {
     process.stderr.write(`${label} ended on signal ${result.signal}.\n`);
     return 1;
@@ -50,7 +55,11 @@ function prepare() {
     }
     accessSync(cwd, constants.R_OK);
   } catch (error) {
-    return failure("Cannot read the cwd directory", error);
+    return failure(
+      "Cannot read the cwd directory",
+      error,
+      "Supply a readable absolute checkout directory, then rerun dependency preparation.",
+    );
   }
 
   const installed = run(args[3], args.slice(4), cwd, "Installation");
@@ -81,7 +90,11 @@ function prepare() {
       proof = "Plug'n'Play";
     }
   } catch (error) {
-    return failure("Canonical qfai launcher proof failed", error);
+    return failure(
+      "Canonical qfai launcher proof failed",
+      error,
+      "Check the target package.json and canonical qfai launcher, then rerun dependency preparation.",
+    );
   }
   process.stdout.write(`Dependency preparation succeeded in ${cwd} (${proof}).\n`);
   return 0;
@@ -90,5 +103,9 @@ function prepare() {
 try {
   process.exitCode = prepare();
 } catch (error) {
-  process.exitCode = failure("Dependency preparation failed", error);
+  process.exitCode = failure(
+    "Dependency preparation failed",
+    error,
+    "Check the target cwd and reviewed installation command, then rerun dependency preparation.",
+  );
 }
