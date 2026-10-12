@@ -137,10 +137,11 @@ When parts ran in parallel, use the summary in `references/operator-screens.md`.
 
 Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#completion-contract-shared`. **Smallest applicable smoke check** (this skill's override): the gates of the `verify-qfai-gate` and `verify-repo-gate` steps the chosen scope holds; a scope holding none runs no gate, and the report says so. A gate that cannot run is UNRUN, not a pass.
 
+At stage boundaries, follow `references/reached-step-observations.md` in the existing report.
+
 When the request requires evidence handover before session archive, read
-`references/evidence-delivery.md` and complete its receiving proof first.
-Missing access keeps the handover pending and originals retained. Ordinary
-completion does not require an unsolicited upload.
+`references/evidence-delivery.md` and complete its receiving proof first. Missing access keeps the
+handover pending and originals retained. Ordinary completion does not require an unsolicited upload.
 
 project_memory:
 
