@@ -229,7 +229,7 @@ Paths in code spans are relative to the repository root.
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Rules shipped to adopters      | [Rule masters][masters] are linked from `.agents/rules/`; a rule tied to paths also has a file under `.claude/rules/scoped/`. [Surface tests][surface] cover links and clauses. |
 | Repository-only rules          | Real files and overlays under `.agents/rules/`; [local rule guidance][local] describes their placement and citations.                                                           |
-| Rule citations                 | `AGENTS.md`, `.github/copilot-instructions.md`, shipped [AGENTS][agents] and [CLAUDE][claude]; [surface tests][surface] cover them.                                             |
+| Rule citations                 | `AGENTS.md`, `.github/copilot-instructions.md`, shipped [AGENTS][agents]; [surface tests][surface] cover them.                                                                  |
 | Init entry-point summaries     | [Init writer][init] and `packages/qfai/src/core/agentEntryPoints.ts` own managed sections, rule citations and generated Copilot guidance.                                       |
 | Reminder messages              | [Message catalog][catalog] supplies the full and brief payloads used by host hooks; `.agents/rules/reminders.json` links to that source.                                        |
 | Hook events, matchers, readers | Shipped [Claude settings][settings] and [Codex hooks][codex]; repository copies are `.claude/settings.json` and `.codex/hooks.json`.                                            |
@@ -246,7 +246,6 @@ Paths in code spans are relative to the repository root.
 [surface]: ../../packages/qfai/tests/integration/agentsRulesSurface.test.ts
 [local]: ../../.agents/rules/root-additions-policy.local.md
 [agents]: ../../packages/qfai/assets/init/root/AGENTS.md
-[claude]: ../../packages/qfai/assets/init/root/CLAUDE.md
 [init]: ../../packages/qfai/src/cli/commands/init.ts
 [catalog]: ../../packages/qfai/assets/init/root/.agents/rules/reminders.json
 [settings]: ../../packages/qfai/assets/init/.claude/settings.json

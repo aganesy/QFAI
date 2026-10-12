@@ -24,6 +24,7 @@ export const INTENTS = [
   "behaviour-change",
   "deprecation",
   "refactor",
+  "procedure",
   "docs",
   "flaky-test",
   "test-defect",
