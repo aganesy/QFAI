@@ -6,10 +6,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **Explicit discussion delegation supports adopted agent decisions.**
+  Recorded user authority permits in-scope agent judgment without fictional
+  user confirmation. Missing required inputs and critical decisions without
+  applicable authority remain open. Interactive sessions retain actual user
+  confirmation.
+
 - Add a workflow route for writing authorized operational procedures.
   It keeps wording-only edits separate, preserves policy owners and existing
   verification, and grants no authority to run the documented actions.
   Fixes #3403.
+
+### Fixed
+
+- **Discussion completion references point to the existing obligations.**
+  The completion matrix names the All Packs and UI-bearing items it requires.
+
+## [2.1.2] - 2026-10-11
+
+### Added
 
 - Route authorized cleanup of current-task, ignored temporary directories
   through a bounded triage step. Unsafe or uncertain targets stop before
@@ -51,6 +66,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   last message ends in a question, and nothing is filed under a no-question mode.
 
 ### Changed
+
+- **`qfai init` writes `AGENTS.md` only, and each rule it lists says when to read it.** The
+  managed section of `AGENTS.md` and the generated Copilot instructions now give every rule one
+  line that names the work it applies to, so an agent reads a rule when it matters and not before.
+  `qfai init` no longer writes `CLAUDE.md`: Claude Code reads `AGENTS.md` when the project has no
+  `CLAUDE.md` or `CLAUDE.local.md` (Claude Code v2.1.277 or later; v2.1.281 or later in every
+  session type; see the Claude Code memory documentation). **Migration:** a project that already has
+  a `CLAUDE.md` keeps it, and Claude Code goes on reading it instead of `AGENTS.md`. `qfai init`
+  no longer reads that file, so a managed section in it stays as it was and gains no rule a later
+  release ships. To use `AGENTS.md` alone, delete `CLAUDE.md`, or reduce it to a line `@AGENTS.md`
+  plus any Claude-only notes. A project whose `AGENTS.md` already has the managed section keeps its
+  bullets and gains a line only for a rule it did not list before.
 
 - **Agent entry instructions include report and reply guidance.** Reports and
   replies start with the outcome and distinguish checked from unchecked work.
@@ -450,6 +477,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The guard keeps Unicode escape guidance and explains the alternative when
   an editing tool decodes escapes. Forbidden characters remain rejected.
   Fixes #3248.
+
+- Add a selected-file evidence handover guide with native preflight, retained
+  delivery and independent receipt requirements before session archive. Preserve
+  original outcomes and keep unavailable handover pending. Fixes #3301.
 
 - **Unfinished merges stop the branch ID check.** Finish the merge before
   comparing branch-owned identifiers or fetching pull-request heads. Fixes #3246.
