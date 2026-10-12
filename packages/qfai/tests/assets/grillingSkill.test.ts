@@ -264,10 +264,9 @@ describe("the primitive carries the master's clauses", () => {
       // plain-text fallback the same document forbids it to use.
       const text = flat(await read(tree));
       expect(text).toMatch(/A no-question mode is read before any of this/);
-      expect(text).toMatch(/no round is put at all/);
-      expect(text).toMatch(
-        /withholds the tool while still permitting questions is a different thing/,
-      );
+      expect(text).toMatch(/A no-question mode silences user questions, not the session/);
+      expect(text).toMatch(/Agent rounds require explicit delegation/);
+      expect(text).toMatch(/A withheld tool with questions still permitted uses the fallback/);
       expect(text).toMatch(/The whole round falls back, not the question that triggered it/);
       expect(text).toMatch(/say which question it could not carry/);
     });
@@ -285,13 +284,18 @@ describe("the primitive carries the master's clauses", () => {
       );
       expect(text).toMatch(/the ones the agents agreed on and the ones still open alike/);
       expect(text).toMatch(
-        /every critical decision goes to the user at once, without spending a round/,
+        /An uncovered critical decision goes to the user when asking is permitted, without spending a round/,
       );
-      expect(text).toMatch(/It ends `adopted` once no node is open/);
+      expect(text).toMatch(/It ends `adopted` once the master's conditions hold/);
+      expect(text).toMatch(/no open node or lookup, required inputs present/);
+      expect(text).toMatch(/actual authority for critical decisions/);
+      expect(text).toMatch(/Record agent choices as agents'/);
       // The budget bounds the rounds; an unanswered critical decision keeps the
       // session open.
       expect(text).toMatch(/The budget ends the rounds, not the session/);
-      expect(text).toMatch(/While a critical decision is unanswered the session is still open/);
+      expect(text).toMatch(
+        /While a critical decision lacks an actual answer or applicable recorded authorization, it stays open/,
+      );
       // Under a no-question mode the register write ends it instead.
       expect(text).toMatch(/under a no-question mode, the register write ends it `no-question`/);
       expect(text).toMatch(/review-convergence\.md/);

@@ -2,7 +2,7 @@ import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
-import { extractH2Sections } from "../parse/markdown.js";
+import { extractH2Sections, inlineCodeSpans } from "../parse/markdown.js";
 import { parseAllMarkdownTables } from "../specPackParsers.js";
 import { architectureProblems, MERMAID_FENCE } from "../storyTree/architecture.js";
 import {
@@ -336,7 +336,17 @@ const NONE_WITH_REASON = /^none\s+—/;
 
 /** What is wrong with the four labelled items of one Approach cell. */
 function approachProblems(approach: string): string[] {
-  const marks = [...approach.matchAll(APPROACH_LABEL)];
+  const spans = inlineCodeSpans(approach);
+  let spanIndex = 0;
+  const marks = [...approach.matchAll(APPROACH_LABEL)].filter((mark) => {
+    const hyphen = mark.index + (mark[0].startsWith("-") ? 0 : 1);
+    let span = spans[spanIndex];
+    while (span && span[1] <= hyphen) {
+      spanIndex += 1;
+      span = spans[spanIndex];
+    }
+    return !span || hyphen < span[0];
+  });
   const labels = marks.map(([, label = ""]) => label);
   const missing = APPROACH_LABELS.filter((label) => !labels.includes(label));
   if (missing.length > 0) return [`lacks the item ${missing.join(", ")}`];

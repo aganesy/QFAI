@@ -85,6 +85,24 @@ Feature: Follow a route in the session
     And an uncovered critical decision or release approval stays open and stops dependent work on that target under the existing question or no-question rules
     And other authorized independent targets may continue, while a goal-wide stop stops all targets
 
+  # AC-0001-0224-11
+  Scenario: Requested evidence is received before a session is archived
+    Given a request that requires evidence handover before session archive
+    When the session prepares the required evidence
+    Then it selects explicit regular files and writes an ignored human index with source, selected byte identity, observed execution facts, original outcomes, exclusions and unresolved work
+    And unknown historical execution facts cannot prove verification, while unknown required selected-file or independent source/archive identity stops delivery
+    And the governing guide's single native fs/crypto preflight checks safe source and staged paths, regular entries, uniqueness, expected sizes and digests; CI executes the same published block
+    And missing, linked, hardlinked, non-regular, unsafe, duplicate, case-colliding or changed selected items stop production before native archive
+    And reviewed or redacted copies are distinguished from originals, delivered bytes are hashed, and secrets or unapproved private data are excluded without an automatic privacy guarantee
+    And standard native tools preserve every selected byte, and the required archive member set and extracted sizes and digests are checked without text normalization
+    And retained destination authority, access and retention are established for the named recipient or receiving role
+    And that independent recipient retrieves every required item and checks archive/source identity against trusted input outside the bundle before extracting a known-safe archive into a fresh directory
+    And the ignored receipt names the recipient, retrieval time, destination and artifact identity, retrieved items, source/digest checks and missing evidence
+    And missing, stale, tampered, expired, denied or unavailable delivery records its blocker and resume condition, retains originals and does not complete the handover or allow archive
+    And prior-source PASS, current FAIL, UNRUN, delegated pending, review identity and excluded attempts keep their original meaning, and required verification failure or nonexecution is not completed
+    And generic capability acceptance requires native Linux and Windows producers and separate Linux and Windows receivers checking both actual retained producer artifacts, without inventing a real successor receipt
+    And ordinary completion causes no unsolicited upload, existing verification and routing contracts remain unchanged, and no new exporter, schema, state engine or atomic filesystem guarantee is claimed
+
   # AC-0001-0224-12
   Scenario: Reached scoped steps have assessable observations
     Given a target following its selected plan scope before a declared stop or termination
