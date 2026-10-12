@@ -83,11 +83,13 @@ describe("BF-0002 layer-separated lanes", () => {
     // changes this list and is read in review.
     expect(files).toEqual([
       "ci.yml",
+      "named-tests.yml",
       "prepare-release.yml",
       "release-notes-drift.yml",
       "release.yml",
       "renovate.yml",
       "tag-release.yml",
+      "windows-full-suite-diagnostic.yml",
     ]);
 
     const verdict = workflowJob("ci.yml", "ci-pass");

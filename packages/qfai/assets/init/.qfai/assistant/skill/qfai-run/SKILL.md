@@ -97,6 +97,8 @@ value but the three below plans nothing.
 ## Under a no-question mode
 
 Nothing is asked. The plan's narrowest scope, or the first candidate and its narrowest scope, is taken and reported as an assumption.
+An uncovered question-only move to tracked-file repair instead stops that target
+with a report and no tracked open question, as `references/stage-points.md` says.
 A critical decision or a release point becomes one `open-questions.md` row,
 the step stops before the change that depends on it, and the report lists the
 decision as open. A third branch move, or one from a scope that leaves stages out, stops the work.
@@ -134,6 +136,11 @@ When parts ran in parallel, use the summary in `references/operator-screens.md`.
 ## Completion Contract (Shared)
 
 Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#completion-contract-shared`. **Smallest applicable smoke check** (this skill's override): the gates of the `verify-qfai-gate` and `verify-repo-gate` steps the chosen scope holds; a scope holding none runs no gate, and the report says so. A gate that cannot run is UNRUN, not a pass.
+
+When the request requires evidence handover before session archive, read
+`references/evidence-delivery.md` and complete its receiving proof first.
+Missing access keeps the handover pending and originals retained. Ordinary
+completion does not require an unsolicited upload.
 
 project_memory:
 

@@ -60,10 +60,20 @@ one kind of content each section holds. `qfai validate` reports a violation as
 - decision and open question: `DEC-0001`, `OQ-0001`
 
 A new ID comes from `node scripts/story-ids.mjs next <scope>...`, for example
-`next DEC EX-0001-0054`. It counts the IDs on main, on every open pull
-request and in the working tree, so parallel branches do not pick the same
-number. `node scripts/story-ids.mjs check` lists each ID the branch adds that
-main or another open pull request adds too.
+`next DEC EX-0001-0054`. It is a candidate, not a reservation. The command
+counts a snapshot of main, the latest 100 updated open pull requests and the
+working tree. It does not guarantee unique allocation for unpublished branches
+or simultaneous checks followed by pushes.
+
+Commit the ID and reference changes before running check, and use a clean index
+and working tree. Run `node scripts/story-ids.mjs check` before push. If it returns
+0, push the same HEAD immediately. On a collision, renumber the ID and references
+with a fresh `next` candidate, commit them, then check again. After any change or
+merge, check again before pushing.
+
+A collision returns 1 and names the ID and published branch that also adds it.
+An unfinished merge returns 2 without comparing IDs. Finish the merge, then
+check again; this refusal is not a successful collision check.
 
 ## Contracts
 

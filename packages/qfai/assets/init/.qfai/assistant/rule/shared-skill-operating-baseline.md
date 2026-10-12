@@ -196,9 +196,9 @@ the policy check. The mode is `workflow.mode` in `qfai.config.yaml`. An absent k
   needs the operator's answer.
 - A QFAI work order binds the stage to its target: one business flow, or one
   new-story slot. The stage works on that target and no other.
-- The stage result names the agent instance that did the work in
-  `actor: { agentInstance }`. The run records that instance as the work's
-  author and never counts it as the work's independent reviewer.
+- The session report names the agent instance that authored the work and
+  each independent reviewer. The author never counts as the work's
+  independent reviewer.
 - These statements add to the constitution. They except no article.
 
 ## Running Steps (Mandatory)
@@ -268,12 +268,12 @@ writes nothing and states why; the stage's review reads that statement.
 
 ## Default Autopilot Policy inside a run
 
-Inside a run, each bucket of a skill's Default Autopilot Policy is
-satisfied by one kind of authorization the run records:
+Inside a run, record the authorization for each bucket in the session report:
 
-- An `ask-user` item is satisfied only by a `human_decision` that answers it.
-- A `hard-required` input is satisfied by `request_scope` or by the run's
-  binding.
+- An `ask-user` item is satisfied only by the operator's answer to it.
+  Name that answer and its source; an agent's choice is not an operator answer.
+- A `hard-required` input is satisfied by the operator's request or by the
+  run's binding. Name the request or work order that supplies it.
 - An `auto-decide` item needs no authorization.
 - `--auto` satisfies nothing. It answers no `ask-user` item and supplies no
   `hard-required` input.

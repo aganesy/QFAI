@@ -24,7 +24,7 @@ const LINTER = path.join(
   "markdownlint-cli2",
   "markdownlint-cli2-bin.mjs",
 );
-const TEMPLATES = ["AGENTS.md", "CLAUDE.md"];
+const TEMPLATES = ["AGENTS.md"];
 
 /** The MD041 findings the shipped configuration raises over `files` written into a temp root. */
 async function firstHeadingFindings(files: Record<string, string>): Promise<string[]> {

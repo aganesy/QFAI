@@ -1,7 +1,7 @@
 ---
 name: verify-commit
 owner: qfai-verify
-purpose: "Commit the run's changes to the current branch, after the gates pass."
+purpose: "Commit the authorized tracked changes after verification is recorded, keeping pending CI visible."
 requires: []
 roles: [orchestrator]
 routing-profile: default
@@ -16,24 +16,42 @@ The last step of a change route. It records the run's work as a local commit.
 - The verify results in the stage report.
 - The paths the run wrote, as its stage reports name them.
 - The project's commit message convention, where it states one.
+- `.agents/rules/action-reversibility.md`, before an action that deletes, pushes, publishes or
+  is visible to others.
 
 ## Writes
 
 - One commit on the current branch holding the run's changes.
 - In the final report: the commit, and the files it holds.
 
-The step never pushes, opens a pull request or merges. Each of those waits for
-the user's own instruction.
+A local commit records work; it does not establish formal verification. Push,
+pull request creation and merge each need a user instruction or project policy
+covering that action, target and scope. Commit authority alone covers none of them.
 
 ## Procedure
 
-1. Stop when a verify gate failed or did not run, and say which. A gate that
+1. Stop at an ordinary FAIL or UNRUN, and say which gate. A gate that
    fails the same way on the base commit is still a failed gate: the final
    report names its baseline, and the commit waits for the user's instruction.
-   A gate recorded `DELEGATED` does not stop the commit while its CI check is
-   pending, because the pull request is where it runs; one whose check is red
-   does.
-2. Stage exactly the tracked deliverables the run wrote, with
+   The existing pending-CI allowance applies only when the project declares
+   the gate `CI only: <check name>` and a user instruction or project policy
+   covers the verification commit and its paths. Record it `DELEGATED`, name
+   the actual check, and retain its pending state. A gate
+   recorded `DELEGATED` does not stop the commit while its named CI check
+   is pending under that authority. This permits that commit, not a
+   verification-complete claim.
+   Every nondelegated gate must pass.
+   A delegated red check stops transport of the same unchanged candidate.
+   Under explicit CI-only delegation covering the transport commit, the
+   existing planned fix may produce actual changes addressing that failure.
+   Commit those changes to obtain the new candidate's CI result even while
+   HEAD still names the failed commit. Preserve the prior head, check, run and
+   observed result as FAIL; never relabel that evidence pending. Report the
+   actual fix and, after the commit, its new head and resume condition. No run
+   yet means no result, and the new candidate remains unverified until its own
+   CI results are observed. This exception covers neither an ordinary FAIL or
+   UNRUN nor a locally runnable gate delegated merely to avoid running it.
+2. Stage exactly the authorized tracked deliverables the run wrote, with
    `git add <those paths>`. Never `git add -A`, `git add .` or `git add -f`,
    and never a file git ignores, such as `.qfai/report/*`. A file that was
    already modified before the run and then written by it is committed whole;
@@ -44,7 +62,17 @@ the user's own instruction.
    Never skip the hook. When the fix changes code or tests, rerun the verify
    gates first, and the code review too when behaviour changed.
 
+## Completion after CI
+
+Before formal verification completion or merge, every required check must have
+actual passing evidence for the current target and head. Pending, missing,
+mismatched or red evidence stops completion; repair needs its own covered authority.
+The verification commit and pending report satisfy this step's gate while CI waits.
+
 ## Gate
 
 - The commit exists and holds exactly the tracked deliverables the run wrote.
-- Nothing was pushed, and no pull request or merge was made.
+- Pending CI is named in the report with the target, current head, run ID or URL
+  when available, check, observed outcome and counts, blocker and resume condition.
+  If no run exists, say so; invent no run ID or result.
+- Nothing was pushed, and no pull request or merge was made by this step.

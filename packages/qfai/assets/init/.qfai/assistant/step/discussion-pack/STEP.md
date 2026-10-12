@@ -16,7 +16,11 @@ conversational summaries, are the handoff.
 
 **Authoring the pack** does not start until the session has ended. This run's
 stage report holds the `## Grilling Session` row, its `Ended at` is written,
-and `Ended` is `confirmed`, `user-closed` or `no-question`. Without that row,
+and `Ended` is `confirmed`, `user-closed`, `no-question`, or `adopted` meeting
+`.agents/rules/grilling.md#explicit-delegation-for-a-discussion`.
+Check the actual delegation and rounds, required inputs, empty tree and
+human authority in the stage evidence; the ending label alone is insufficient.
+Without that row,
 or with `Ended: stopped`, write no pack file and stop. A pack drafted
 mid-session records a design that was still being decided, and the draft is
 what the rest of the run then defends.
@@ -33,6 +37,7 @@ nothing to write. The pass names the pack path.
 - `.qfai/assistant/skill/qfai-discussion/references/discussion-artifact-rules.md`
   for the pack's fixed file set and naming.
 - The templates under `.qfai/assistant/skill/qfai-discussion/templates/`.
+- `.agents/rules/documentation-clarity.md`, when writing the prose this step produces.
 
 ## Writes
 

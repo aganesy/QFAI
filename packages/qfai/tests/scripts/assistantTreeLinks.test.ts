@@ -15,11 +15,11 @@
  * exists here and nowhere in the package.
  */
 import { spawnSync } from "node:child_process";
-import { existsSync, lstatSync, realpathSync } from "node:fs";
+import { existsSync, lstatSync, realpathSync, statSync } from "node:fs";
 import { cp, mkdir, mkdtemp, readFile, readlink, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -59,7 +59,10 @@ function runIsolated(
   checkOnly: boolean,
   preload?: string,
 ): { status: number; output: string } {
-  const args = [...(preload === undefined ? [] : ["--import", preload]), script];
+  const args = [
+    ...(preload === undefined ? [] : ["--import", pathToFileURL(preload).href]),
+    script,
+  ];
   if (checkOnly) args.push("--check");
   const result = spawnSync(process.execPath, args, {
     cwd: root,
@@ -191,6 +194,25 @@ function runCheck(): { status: number; output: string } {
   };
 }
 
+/** Git commands stay inside the disposable repository that owns this fixture. */
+function fixtureGit(root: string, args: string[]): void {
+  if (!fixtureRoots.includes(root)) throw new Error("Git fixture root is not owned by this suite");
+  const result = spawnSync("git", ["-c", "core.fsmonitor=false", ...args], {
+    cwd: root,
+    encoding: "utf-8",
+  });
+  expect(result.status, (result.stdout ?? "") + (result.stderr ?? "")).toBe(0);
+}
+
+function followsDirectory(entry: string): boolean {
+  try {
+    return statSync(entry).isDirectory();
+  } catch {
+    expect(process.platform).toBe("win32");
+    return false;
+  }
+}
+
 describe("link-assistant-tree --check", () => {
   // QFAI:EX-0002-0022-01
   it("keeps the singular assistant links and catalog absence on the SSOT gate path", async () => {
@@ -278,6 +300,112 @@ describe("link-assistant-tree --check", () => {
   });
 
   // QFAI:EX-0002-0022-01
+  it("follows the root mirror after a native Git worktree checkout and preserves its primary", async () => {
+    const { root, script, assistant } = await makeIsolatedTree();
+    const source = path.join(root, "packages", "qfai", "assets", "init", ".qfai", "assistant");
+    await writeFile(path.join(source, "pointer.md"), "# Pointer\n", "utf-8");
+    await writeFile(path.join(root, "sentinel.txt"), "project-owned bytes\n", "utf-8");
+    fixtureGit(root, ["init", "--initial-branch=main"]);
+    fixtureGit(root, ["config", "core.symlinks", "true"]);
+    fixtureGit(root, ["config", "core.autocrlf", "false"]);
+    expect(runIsolated(script, root, false).status).toBe(0);
+    fixtureGit(root, ["add", "--force", "--", "scripts", "packages", ".qfai", "sentinel.txt"]);
+    fixtureGit(root, [
+      "-c",
+      "user.name=Fixture",
+      "-c",
+      "user.email=fixture@example.invalid",
+      "-c",
+      "commit.gpgsign=false",
+      "-c",
+      "core.hooksPath=",
+      "commit",
+      "-m",
+      "Fixture",
+    ]);
+    const original = await readFile(path.join(source, "rule", "quality.md"));
+    const primaryTarget = await readlink(path.join(assistant, "rule"));
+    const linked = path.join(root, "linked checkout");
+    fixtureGit(root, ["worktree", "add", "--detach", linked, "HEAD"]);
+    const linkedScript = path.join(linked, "scripts", "link-assistant-tree.mjs");
+    const entry = path.join(linked, ".qfai", "assistant", "rule");
+    const pointer = path.join(linked, ".qfai", "assistant", "pointer.md");
+    const target = await readlink(entry);
+    const pointerTarget = await readlink(pointer);
+    expect(lstatSync(entry).isSymbolicLink()).toBe(true);
+    expect(lstatSync(pointer).isSymbolicLink()).toBe(true);
+    expect(statSync(pointer).isFile()).toBe(true);
+    const followable = followsDirectory(entry);
+    const beforeCheck = lstatSync(entry);
+
+    const checked = runIsolated(linkedScript, linked, true);
+
+    expect(checked.status, checked.output).toBe(followable ? 0 : 1);
+    if (!followable) expect(checked.output).toContain(".qfai/assistant/rule");
+    expect(await readlink(entry)).toBe(target);
+    expect(lstatSync(entry).ctimeMs).toBe(beforeCheck.ctimeMs);
+    const repaired = runIsolated(linkedScript, linked, false);
+    expect(repaired.status, repaired.output).toBe(0);
+    expect(repaired.output).toContain(`${followable ? 0 : 1} link(s) written`);
+    expect(statSync(entry).isDirectory()).toBe(true);
+    expect((await readFile(path.join(entry, "quality.md"))).equals(original)).toBe(true);
+    expect(await readlink(entry)).toBe(target);
+    expect(await readlink(pointer)).toBe(pointerTarget);
+    expect(await readFile(pointer, "utf-8")).toBe("# Pointer\n");
+    expect(runIsolated(linkedScript, linked, true).status).toBe(0);
+    const repeated = runIsolated(linkedScript, linked, false);
+    expect(repeated.status, repeated.output).toBe(0);
+    expect(repeated.output).toContain("0 link(s) written");
+    expect((await readFile(path.join(source, "rule", "quality.md"))).equals(original)).toBe(true);
+    expect(await readlink(path.join(assistant, "rule"))).toBe(primaryTarget);
+    expect(statSync(path.join(assistant, "rule")).isDirectory()).toBe(true);
+    for (const checkout of [root, linked]) {
+      expect(await readFile(path.join(checkout, "sentinel.txt"), "utf-8")).toBe(
+        "project-owned bytes\n",
+      );
+    }
+    fixtureGit(root, ["diff", "--exit-code", "--", "scripts", "packages", ".qfai", "sentinel.txt"]);
+  });
+
+  // QFAI:EX-0002-0022-01
+  it("repairs a native file-type link to a directory when the OS cannot follow it", async () => {
+    const { root, script, assistant } = await makeIsolatedTree();
+    const source = path.join(root, "packages", "qfai", "assets", "init", ".qfai", "assistant");
+    await writeFile(path.join(source, "pointer.md"), "# Pointer\n", "utf-8");
+    expect(runIsolated(script, root, false).status).toBe(0);
+    const entry = path.join(assistant, "rule");
+    const pointer = path.join(assistant, "pointer.md");
+    const target = await readlink(entry);
+    const pointerTarget = await readlink(pointer);
+    const original = await readFile(path.join(source, "rule", "quality.md"));
+    await rm(entry);
+    await symlink(target, entry, "file");
+    expect(lstatSync(entry).isSymbolicLink()).toBe(true);
+    const followable = followsDirectory(entry);
+    const beforeCheck = lstatSync(entry);
+
+    const checked = runIsolated(script, root, true);
+
+    expect(checked.status, checked.output).toBe(followable ? 0 : 1);
+    if (!followable) expect(checked.output).toContain(".qfai/assistant/rule");
+    expect(await readlink(entry)).toBe(target);
+    expect(lstatSync(entry).ctimeMs).toBe(beforeCheck.ctimeMs);
+    const repaired = runIsolated(script, root, false);
+    expect(repaired.status, repaired.output).toBe(0);
+    expect(repaired.output).toContain(`${followable ? 0 : 1} link(s) written`);
+    expect(statSync(entry).isDirectory()).toBe(true);
+    expect((await readFile(path.join(entry, "quality.md"))).equals(original)).toBe(true);
+    expect((await readFile(path.join(source, "rule", "quality.md"))).equals(original)).toBe(true);
+    expect(await readlink(entry)).toBe(target);
+    expect(await readlink(pointer)).toBe(pointerTarget);
+    expect(await readFile(pointer, "utf-8")).toBe("# Pointer\n");
+    expect(runIsolated(script, root, true).status).toBe(0);
+    const repeated = runIsolated(script, root, false);
+    expect(repeated.status, repeated.output).toBe(0);
+    expect(repeated.output).toContain("0 link(s) written");
+  });
+
+  // QFAI:EX-0002-0022-01
   it("rejects a correctly targeted directory link that cannot be followed without writing", async () => {
     const { root, script, assistant } = await makeIsolatedTree();
     expect(runIsolated(script, root, false).status).toBe(0);
@@ -307,7 +435,9 @@ describe("link-assistant-tree --check", () => {
     expect(repaired.status, repaired.output).toBe(0);
     expect(repaired.output).toContain("1 link(s) written");
     expect(await readlink(entry)).toBe(target);
-    expect(trace.attempts).toEqual([{ target, path: entry, type: "dir" }]);
+    expect(trace.attempts).toEqual([
+      { target: target.replaceAll(path.sep, "/"), path: entry, type: "dir" },
+    ]);
     expect(trace.moves).toHaveLength(1);
     expect(await readFile(path.join(entry, "quality.md"), "utf-8")).toBe("# Quality\n");
     expect(runIsolated(script, root, true).status).toBe(0);

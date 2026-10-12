@@ -7,7 +7,7 @@
  * hold what reaches stdout and what the user's git configuration cannot change.
  */
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -390,5 +390,143 @@ describe("main IDs received through a merge", () => {
       error.mockRestore();
       rmSync(root, { recursive: true, force: true });
     }
+  });
+});
+
+describe("parallel DEC candidates before push", () => {
+  it("reports a published worker's DEC collision before the other worker pushes", async () => {
+    const root = mkdtempSync(path.join(os.tmpdir(), "story-ids-parallel-dec-"));
+    const first = path.join(root, "first");
+    const second = path.join(root, "second");
+    const bare = path.join(root, "origin.git");
+    const hooks = path.join(root, "hooks");
+    const git = (cwd: string, ...args: string[]): string =>
+      execFileSync("git", args, { cwd, encoding: "utf-8" }).trim();
+    const writeDecisions = (cwd: string, ids: string[]): void => {
+      const file = path.join(cwd, ".qfai", "spec", "decisions.md");
+      mkdirSync(path.dirname(file), { recursive: true });
+      writeFileSync(
+        file,
+        [
+          "# Decisions",
+          "",
+          "## Decisions",
+          "",
+          "| ID | Content | Approach | Status |",
+          "| --- | --- | --- | --- |",
+          ...ids.map((id) => `| ${id} | Change request: x | - Date: 2026-09-28 | DONE |`),
+          "",
+        ].join("\n"),
+      );
+    };
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      git(root, "init", "-q", "--bare", "-b", "main", bare);
+      git(root, "init", "-q", "-b", "main", first);
+      git(first, "config", "user.email", "test@example.com");
+      git(first, "config", "user.name", "test");
+      git(first, "config", "commit.gpgsign", "false");
+      git(first, "remote", "add", "origin", bare);
+      writeDecisions(first, ["DEC-0001"]);
+      git(first, "add", ".qfai/spec/decisions.md");
+      git(first, "commit", "-q", "-m", "base");
+      git(first, "push", "-q", "origin", "main");
+      git(root, "clone", "-q", bare, second);
+      git(first, "checkout", "-q", "-b", "first-worker");
+      git(second, "checkout", "-q", "-b", "second-worker");
+
+      mkdirSync(hooks);
+      writeFileSync(
+        path.join(hooks, "pre-push"),
+        "#!/bin/sh\nprintf 'push\\n' >> .git/story-ids-push-attempts\n",
+        { mode: 0o755 },
+      );
+      git(first, "config", "core.hooksPath", hooks);
+      git(second, "config", "core.hooksPath", hooks);
+      const noPulls = () => ({ code: 0, pulls: [] });
+      expect(await run(["next", "DEC"], { cwd: first, list: noPulls })).toBe(0);
+      expect(await run(["next", "DEC"], { cwd: second, list: noPulls })).toBe(0);
+      expect(log.mock.calls).toEqual([["DEC-0002"], ["DEC-0002"]]);
+      log.mockClear();
+      error.mockClear();
+
+      writeDecisions(first, ["DEC-0001", "DEC-0002"]);
+      writeDecisions(second, ["DEC-0001", "DEC-0002"]);
+      git(first, "commit", "-q", "-am", "first worker decision");
+      git(first, "push", "-q", "origin", "HEAD:refs/pull/7/head");
+      expect(readFileSync(path.join(first, ".git", "story-ids-push-attempts"), "utf-8")).toBe(
+        "push\n",
+      );
+      const secondPushCounter = path.join(second, ".git", "story-ids-push-attempts");
+      expect(existsSync(secondPushCounter)).toBe(false);
+      const secondDecision = path.join(second, ".qfai", "spec", "decisions.md");
+      const bytesBefore = readFileSync(secondDecision);
+      const statusBefore = git(second, "status", "--porcelain");
+      const refsBefore = git(bare, "for-each-ref", "--format=%(refname) %(objectname)");
+      expect(refsBefore).not.toContain("refs/heads/second-worker");
+
+      const list = () => ({
+        code: 0,
+        pulls: [{ number: 7, branch: "first-worker" }],
+      });
+      expect(await run(["check"], { cwd: second, list })).toBe(1);
+      expect(log.mock.calls).toEqual([["DEC-0002 is also added by #7 (first-worker)"]]);
+      expect(error.mock.calls.flat().join("\n")).toContain("Renumber these");
+      expect(readFileSync(secondDecision)).toEqual(bytesBefore);
+      expect(git(second, "status", "--porcelain")).toBe(statusBefore);
+      expect(git(bare, "for-each-ref", "--format=%(refname) %(objectname)")).toBe(refsBefore);
+      expect(existsSync(secondPushCounter)).toBe(false);
+
+      log.mockClear();
+      error.mockClear();
+      expect(await run(["next", "DEC"], { cwd: second, list })).toBe(0);
+      expect(log.mock.calls).toEqual([["DEC-0003"]]);
+      writeDecisions(second, ["DEC-0001", "DEC-0003"]);
+      git(second, "config", "user.email", "test@example.com");
+      git(second, "config", "user.name", "test");
+      git(second, "config", "commit.gpgsign", "false");
+      git(second, "commit", "-q", "-am", "renumber second worker decision");
+      const repairedHead = git(second, "rev-parse", "HEAD");
+      const repairedBytes = readFileSync(secondDecision);
+      expect(git(second, "status", "--porcelain")).toBe("");
+      log.mockClear();
+      error.mockClear();
+      expect(await run(["check"], { cwd: second, list })).toBe(0);
+      expect(log.mock.calls).toEqual([["No ID this branch adds is taken elsewhere (1 checked)."]]);
+      expect(error.mock.calls).toEqual([]);
+      expect(git(second, "rev-parse", "HEAD")).toBe(repairedHead);
+      expect(readFileSync(secondDecision)).toEqual(repairedBytes);
+      expect(git(second, "status", "--porcelain")).toBe("");
+      expect(git(bare, "for-each-ref", "--format=%(refname) %(objectname)")).toBe(refsBefore);
+      expect(existsSync(secondPushCounter)).toBe(false);
+    } finally {
+      log.mockRestore();
+      error.mockRestore();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("ID candidate and pre-push guidance", () => {
+  it("requires a fresh collision check without promising a reservation", () => {
+    const naming = readFileSync(
+      new URL("../../../../.instruction/02_project/naming.md", import.meta.url),
+      "utf-8",
+    );
+    const idFormats = naming.split("## ID Formats")[1]?.split("## Contracts")[0] ?? "";
+    const prose = idFormats.replace(/\s+/g, " ");
+    expect(prose).toMatch(/candidate/i);
+    expect(prose).toMatch(/not (?:an? )?reservation/i);
+    expect(prose).toMatch(/check[^.]*before[^.]*push/i);
+    expect(prose).toMatch(/(?:renumber|reallocate)[^.]*check (?:again|once more)/i);
+    expect(prose).toMatch(/commit[^.]*before[^.]*check/i);
+    expect(prose).toMatch(/clean (?:index and )?working tree/i);
+    expect(prose).toMatch(/push[^.]*same[^.]*HEAD/i);
+    expect(prose).toMatch(/after[^.]*change[^.]*check again/i);
+    expect(prose).toMatch(/unpublished/i);
+    expect(prose).toMatch(/simultaneous/i);
+    expect(prose).toMatch(/(?:cannot|does not|no)[^.]*guarantee/i);
+    expect(prose).not.toContain("so parallel branches do not pick the same number");
   });
 });

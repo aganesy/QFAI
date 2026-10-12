@@ -45,6 +45,11 @@ classified by the taxonomy below before any response.
   Writers, local gates and reviews using live files or checkout-dependent
   execution must finish first.
 
+### Worker edit boundary
+
+Before assigning write paths or handling a refused edit, read
+`.qfai/assistant/rule/references/worker-edit-boundary.md`.
+
 ### Capability Probe (MUST)
 
 1. No delegation attempt is required at the start of a stage. The orchestrator
@@ -214,25 +219,8 @@ A blocking review that cannot be delegated because the agent budget is spent is 
 
 ## Work order template
 
-```text
-Task title: <short>
-Role: <sub-agent role>
-Review series: <reviewed artifact> + <reviewer role> + <replacement ordinal>   # review work orders only
-Goal: <what to decide/produce>
-Inputs (refs):
-- <file/section>
-- .qfai/assistant/rule/drift-protocol.md#core-rule  <!-- the protected set, in front of the agent -->
-Constraints:
-- must: enforce Drift Protocol
-- must: follow applicable test-layer or validation policy
-- must_not: patch upstream artifacts directly; every upstream change requires
-  STOP + Change Request + owner rerun per .qfai/assistant/rule/drift-protocol.md
-Output format:
-- <headings / bullet schema>
-Time budget: none | <seconds>   # advisory: nothing stops at it. See .qfai/assistant/rule/stage-cost.md
-Elapsed line: end every message with `elapsed <seconds>s / <budget>s`, or `elapsed <seconds>s` when the budget is none
-Acceptance bar: <accept when ...> | <rework when ...>   # never `PASS`/`REVISE`: that is the reviewer's vocabulary and the completion gate matches on it, so a doer told to report in it emits a verdict on its own work
-```
+When preparing a delegation, use the template in
+`.qfai/assistant/rule/references/worker-edit-boundary.md#work-order-template`.
 
 ## Reviewer response template
 

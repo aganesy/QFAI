@@ -117,6 +117,12 @@ describe("web-research pipeline", () => {
   it("specifies cache staleness with 24h default TTL", async () => {
     const content = await readSkill();
     expect(content).toMatch(/24\s*h(our)?|ttl.*24|staleness/i);
+    const ttlParagraph = content
+      .split(/\r?\n(?:[ \t]*\r?\n|(?=- ))/u)
+      .find((paragraph) => paragraph.includes("`webResearch.cache.ttl`"))
+      ?.replace(/\s+/gu, " ");
+    expect(ttlParagraph).toContain("`qfai.config.yaml` under `webResearch.cache.ttl`");
+    expect(ttlParagraph).toContain("read by the agent; `qfai` does not parse it");
   });
 
   // QFAI:EX-0001-0176-07

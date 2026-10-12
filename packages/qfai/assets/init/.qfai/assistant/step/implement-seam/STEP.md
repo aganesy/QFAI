@@ -35,16 +35,17 @@ waits until the acceptance stage has taken RED.
    `.agents/rules/minimal-implementation.md`, and report the run in the stage
    report.
 
-Inside a workflow run, the result names the target test in
-`seam.targetTestId`.
+Name the target test and the observation it must expose in the stage report.
+Include the changed paths in that report.
 
 ## When the seam cannot be landed or observed
 
 - A cause outside the stage's write areas, such as a missing environment, is
-  returned `blocked`, with the cause listed in `debts` and `operator` as its
-  `resolvingOwner`.
+  returned `blocked`. Record the cause in the stage report, with the operator
+  as its owner and the missing capability that must be available to resume.
 - A cause the stage can repair inside its write areas is returned
-  `needs_repair`, never `blocked`.
+  `needs_repair`, never `blocked`. Record the repair scope and its owner in
+  the stage report.
 - None of these results reports a `pass` observation, and the main
   implementation still waits.
 - A reissued seam request is served as a new attempt of this step.

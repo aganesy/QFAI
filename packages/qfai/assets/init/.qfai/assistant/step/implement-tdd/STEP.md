@@ -92,18 +92,31 @@ makes the failing test pass: the case a `missing-test` diagnosis found, or the
 behaviour a reverted change broke. The EX states what an existing AC already
 requires, so the step asks the user nothing:
 
+- Before appending the EX, select from existing contract rules that cite
+  examples of the matched AC and actually state the diagnosed expected
+  obligation. Prefer the existing owner when it qualifies; otherwise use the
+  sole qualifying rule.
+- When several qualify, choose only among rules proven equivalent in
+  conditions, outcomes, exceptions and authority. Prefer the one citing the
+  most distinct existing EXs of that AC, excluding the new EX; break a tie by
+  ascending BR ID order. Never let a majority choose different expected
+  behaviour.
+  If no rule qualifies, behaviour differs, equivalence is uncertain or an
+  obligation contradicts another, stop dependent work and route it to the
+  owning `/qfai-sdd` under `.qfai/assistant/rule/drift-protocol.md` before
+  changing any AC or EX. Add no rule and change no rule statement to resolve
+  the choice.
 - Append exactly one EX to the `03_Example.md` of the story that owns the AC
   the diagnosis matched. Its ID is the next free EX ID of that story, its
   `AC-Ref` is that AC, and the diagnosis is its reason.
-- Add the new EX ID to the Examples cell of the contract rule the diagnosis
-  names as owning that AC. The rule's Statement is unchanged. Where the
-  diagnosis names no single rule, because several rules cite examples of that
-  AC, stop and ask the user which one; never pick one.
+- Add the new EX ID to the selected rule's Examples cell. Its Statement is
+  unchanged. This choice of equivalent rules asks no extra question.
 - Change no story, AC, rule statement or existing EX.
 - Append no `decisions.md` row: the drift gate needs no `Change request:` row
   for appended example rows and the new EX ID in the citing rule's Examples
   cell.
-- List the EX in the run's final report.
+- List the EX, chosen BR and the reason for choosing it in the run's final
+  report.
 - No concrete-abstract cycle runs.
 
 An EX that would contradict a story, an AC, another EX or a rule is put to the
@@ -149,6 +162,25 @@ still fails.
 
 While implementing, run only the selected test. The full suite, Lint,
 Typecheck, Build and `npx qfai validate` run once, in the verify stage.
+
+### Selected-case execution
+
+Before each focused invocation, link the selected EX to its test declaration
+and full file/parent/case identity. Record observed execution of that case's
+body and its terminal result, apart from process exit, counts, container
+results and static annotation linkage. A passing file or zero selected cases
+cannot close Red, Green or Refactor. Retain the output, correct selection or
+observation and repeat the focused invocation.
+
+Read
+`.qfai/assistant/skill/qfai-implement/references/red-admissibility.md#selected-case-execution`
+for the human receipt, command arguments, cwd, runtime version, reporter, revision,
+raw output and case identity. Ordinary RED needs the selected intended
+assertion or expected-exception failure. A parent, unrelated, import or
+unconditional-throw failure is not that RED. GREEN and Refactor need the same
+selected behavior's observed success on the intended input; skip, TODO,
+cancellation, interruption or an expected-failure inversion does not supply
+ordinary success. Existing approved alternative RED routes remain available.
 
 1. **Red:** Run the Test command from `tech.md` for the selected test alone.
    Observe the assertion fail for the intended behavior before changing
@@ -196,6 +228,8 @@ Change nothing on the surface that owns the truth.
 The stage report gives each example its own `### EX-NNNN-NNNN-NN` section with
 the obligation, test path and selector,
 RED, GREEN, and Refactor commands and observed results, and open findings.
+For each focused phase, include the selected-case execution receipt above;
+command, exit and aggregate counts alone do not establish behavior execution.
 Evidence without a command and result pair does not prove a gate.
 A failing or unrun gate cannot be reported as PASS.
 

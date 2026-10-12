@@ -32,6 +32,7 @@ const DECLARED_SUITES = [
   "tests/unit/cli/repairIntegrationWrappers.test.ts",
   "tests/integration/migrationSpecToStory/steps10to12.test.ts",
   "tests/e2e/bf0004MigrationRerunE2E.test.ts",
+  "tests/scripts/assistantTreeLinks.test.ts",
 ];
 
 function envOf(step: Record<string, unknown>): Record<string, unknown> {
@@ -48,6 +49,27 @@ describe("the Windows job's suite list", () => {
     expect(windows["runs-on"]).toBe("windows-latest");
     expect(testCommands(windows)).toEqual([`pnpm -C packages/qfai ${SCRIPT}`]);
     expect([...suiteList()].sort()).toEqual([...DECLARED_SUITES].sort());
+  });
+
+  // QFAI:AC-0002-0024-01
+  // QFAI:EX-0002-0024-01
+  it("The Windows job prepares the root mirror before running its parity suites", () => {
+    const windows = job(WINDOWS_JOB);
+    const steps = stepsOf(windows);
+    const testAt = firstTestStep(windows);
+    expect(testAt).toBeGreaterThan(0);
+    const prepareAt = steps.findIndex((step) =>
+      runOf(step)
+        .split("\n")
+        .some((line) => line.trim() === "node scripts/link-assistant-tree.mjs"),
+    );
+
+    expect(
+      prepareAt,
+      "the owned root mirror is prepared on the Windows runner",
+    ).toBeGreaterThanOrEqual(0);
+    expect(prepareAt).toBeLessThan(testAt);
+    expect(testCommands(windows)).toEqual([`pnpm -C packages/qfai ${SCRIPT}`]);
   });
 
   // QFAI:EX-0002-0024-02

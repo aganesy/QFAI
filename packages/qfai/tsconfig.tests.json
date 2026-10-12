@@ -287,6 +287,8 @@
     "tests/scripts/trackedScratch.test.ts",
     "tests/scripts/boundedRead.test.ts",
     "tests/scripts/checkDocClarity.test.ts",
+    "tests/scripts/scopedRules.test.ts",
+    "tests/scripts/stepRequiredRules.test.ts",
     "tests/integration/releaseCommandStop.test.ts",
     "tests/scripts/checkInstructionsSize.test.ts",
     "tests/scripts/declaredSampleBandIds.test.ts",
@@ -315,6 +317,7 @@
     "tests/scripts/repinMissingDependencies.test.ts",
     "tests/scripts/scriptEntryGuard.test.ts",
     "tests/scripts/sliceSurfaceAlignment.test.ts",
+    "tests/scripts/syncMdschemaVersion.test.ts",
     "tests/scripts/testTypeCheckEnumeration.test.ts",
     "tests/scripts/typeCheckEnumeration.allowlist.ts",
     "tests/scripts/npmInstallFailure.test.ts",
@@ -474,6 +477,7 @@
     "tests/integration/workflow/shippedAssets.test.ts",
     "tests/integration/workflow/theMissingTestBranch.test.ts",
     "tests/integration/workflow/workflowProject.ts",
+    "tests/helpers/windowsFullSuiteFixture.ts",
     "tests/helpers/workflowExtraction.ts",
     "tests/integration/workflow/theCoreDecidesTheRoute.test.ts",
     "tests/unit/workflow/theDecisionRulesChooseTheRoute.test.ts",
@@ -497,6 +501,12 @@
     "tests/integration/workflow/planOneCommand.test.ts",
     "tests/integration/workflow/planPoints.test.ts",
     "tests/integration/workflow/planScopes.test.ts",
-    "tests/e2e/routingEvalRunnerHostStop.test.ts"
+    "tests/e2e/routingEvalRunnerHostStop.test.ts",
+    "tests/helpers/controlledProfile.ts",
+    "tests/helpers/validationInputManifest.ts",
+    "tests/helpers/validationProfile.ts",
+    "tests/helpers/validationProfileRun.ts",
+    "tests/helpers/validationProfileWorker.config.ts",
+    "tests/helpers/validationProfileWorker.test.ts"
   ]
 }
