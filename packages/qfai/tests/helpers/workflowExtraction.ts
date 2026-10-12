@@ -43,6 +43,7 @@ const BY_ROUTE: Record<string, Partial<WorkflowExtraction>> = {
     artifacts: ["spec", "ui"],
   },
   "refactor-code": { intent: "refactor" },
+  "write-procedure": { intent: "procedure", artifacts: ["docs"] },
   "edit-text": { intent: "docs", artifacts: ["docs"] },
   "fix-defect": { intent: "defect" },
   "improve-performance": { intent: "performance", entryFlags: ["measured"] },

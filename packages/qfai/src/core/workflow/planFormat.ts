@@ -121,6 +121,7 @@ const KINDS: Record<string, string[]> = {
   test_fix: ["implement-test-fix"],
   regression_fix: ["implement-regression-fix"],
   maintenance: ["maintain-edit"],
+  documentation: ["implement-procedure"],
   verify: [
     "verify-change-note",
     ...VERIFY_BLOCK,

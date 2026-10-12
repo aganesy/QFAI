@@ -84,4 +84,51 @@ Feature: Follow a route in the session
     And no-question wording alone supplies no missing approval
     And an uncovered critical decision or release approval stays open and stops dependent work on that target under the existing question or no-question rules
     And other authorized independent targets may continue, while a goal-wide stop stops all targets
+
+  # AC-0001-0224-11
+  Scenario: Requested evidence is received before a session is archived
+    Given a request that requires evidence handover before session archive
+    When the session prepares the required evidence
+    Then it selects explicit regular files and writes an ignored human index with source, selected byte identity, observed execution facts, original outcomes, exclusions and unresolved work
+    And unknown historical execution facts cannot prove verification, while unknown required selected-file or independent source/archive identity stops delivery
+    And the governing guide's single native fs/crypto preflight checks safe source and staged paths, regular entries, uniqueness, expected sizes and digests; CI executes the same published block
+    And missing, linked, hardlinked, non-regular, unsafe, duplicate, case-colliding or changed selected items stop production before native archive
+    And reviewed or redacted copies are distinguished from originals, delivered bytes are hashed, and secrets or unapproved private data are excluded without an automatic privacy guarantee
+    And standard native tools preserve every selected byte, and the required archive member set and extracted sizes and digests are checked without text normalization
+    And retained destination authority, access and retention are established for the named recipient or receiving role
+    And that independent recipient retrieves every required item and checks archive/source identity against trusted input outside the bundle before extracting a known-safe archive into a fresh directory
+    And the ignored receipt names the recipient, retrieval time, destination and artifact identity, retrieved items, source/digest checks and missing evidence
+    And missing, stale, tampered, expired, denied or unavailable delivery records its blocker and resume condition, retains originals and does not complete the handover or allow archive
+    And prior-source PASS, current FAIL, UNRUN, delegated pending, review identity and excluded attempts keep their original meaning, and required verification failure or nonexecution is not completed
+    And generic capability acceptance requires native Linux and Windows producers and separate Linux and Windows receivers checking both actual retained producer artifacts, without inventing a real successor receipt
+    And ordinary completion causes no unsolicited upload, existing verification and routing contracts remain unchanged, and no new exporter, schema, state engine or atomic filesystem guarantee is claimed
+
+  # AC-0001-0224-12
+  Scenario: Reached scoped steps have assessable observations
+    Given a target following its selected plan scope before a declared stop or termination
+    When the session reaches the existing boundary of a stage
+    Then its existing stage report compares the finite set of reached steps with their actual observations and evidence
+    And each entry identifies the plan step, owner, purpose, target and source identity, actual input reads, action or output, and artifact references
+    And applicable Gate observations identify the actual command, purpose, status and observed result, with available exit outcomes and executed case counts for test commands without invented non-test counts
+    And a no-write pass names the actual Passes when inputs and declared reason; writing nothing does not mean the step did not run
+    And scope exclusions and declared termination leave legitimate unreached work outside the comparison, preserving plan order, stops and pass-through
+    And missing, stale, ambiguous or wrong-purpose proof leaves completion UNVERIFIED, distinct from an omission established by actual evidence
+    And plans, declarations, content-read receipts and unrelated green commands cannot establish the required procedural action, understanding or adherence
+    And the session checks target and source identity and inspects existing receipts before obtaining missing proof or resuming only genuinely owed authorized work, without blindly repeating irreversible or external actions
+    And the already-planned independent review assesses the available comparison for the work it reviews without adding a review or gate
+    And actual FAIL, UNRUN and pending results remain visible, required gates still apply, and no engine, command, plan key, runtime schema or report registry is introduced
+
+  # AC-0001-0224-13
+  Scenario: An authorized procedure has its own documentation writer
+    Given a request to author an ordinary operational Markdown procedure within existing policy
+    When the session extracts and plans the request
+    Then it uses intent procedure and the actual docs deliverable without inventing code, tests, specification or contract artifacts
+    And rule 29 selects write-procedure after refactor and before docs, while rules 1 through 28 retain priority
+    And the plan runs implement-procedure in a documentation stage, followed by the existing change-note code review and QFAI, repository and commit verification
+    And every step keeps the existing four output keys and applicable checks; no release point, branch point or extra review is added
+    And qfai-implement owns the route-only step with doc-steward; ordinary named business-flow implementation and wording-only maintenance keep their existing procedures
+    And the writer changes only authorized procedure documents within existing policy, stopping before protected-owner edits or invented required facts
+    And writing the procedure grants no permission to execute its actions or expand external authority
+    And a mixed request retains its actual artifacts and existing checks rather than hiding implementation in a docs-only reading
+    And unavailable required checks remain UNRUN; unobserved procedure execution is not reported as completed
 ```
