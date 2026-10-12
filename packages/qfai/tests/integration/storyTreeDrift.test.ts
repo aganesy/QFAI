@@ -17,13 +17,16 @@ let root: string;
 const specs = ".qfai/spec";
 const decisions = `${specs}/decisions.md`;
 const glossary = `${specs}/01_policy/glossary.md`;
-const table = "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
+const table =
+  "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
 
 function git(...args: string[]): void {
   execFileSync("git", args, { cwd: root, stdio: "ignore" });
 }
 
 async function put(file: string, content: string): Promise<void> {
+  if (file === decisions && content.startsWith("|"))
+    content = "# Decisions\n\n## Decisions\n\n" + content;
   const target = path.join(root, file);
   await mkdir(path.dirname(target), { recursive: true });
   await writeFile(target, content, "utf8");

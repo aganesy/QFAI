@@ -26,6 +26,9 @@ function model(decisions?: string, examples?: string) {
   const entries = new Map(files);
   if (decisions) entries.set(`${specs}/decisions.md`, decisions);
   if (examples) entries.set(`${story}/03_Example.md`, examples);
+  const decisionText = entries.get(`${specs}/decisions.md`);
+  if (decisionText?.startsWith("|"))
+    entries.set(`${specs}/decisions.md`, "# Decisions\n\n## Decisions\n\n" + decisionText);
   return buildStoryTreeModel(entries, { specsDir: specs, contractsDir: `${specs}/03_contract` });
 }
 

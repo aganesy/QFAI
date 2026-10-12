@@ -47,6 +47,9 @@ function model(overrides: Record<string, string> = {}) {
     ],
   ]);
   for (const [file, text] of Object.entries(overrides)) files.set(file, text);
+  const decisionText = files.get(`${specs}/decisions.md`);
+  if (decisionText?.startsWith("|"))
+    files.set(`${specs}/decisions.md`, "# Decisions\n\n## Decisions\n\n" + decisionText);
   return buildStoryTreeModel(files, { specsDir: specs, contractsDir: contracts });
 }
 

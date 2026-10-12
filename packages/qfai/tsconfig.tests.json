@@ -507,6 +507,8 @@
     "tests/helpers/validationProfile.ts",
     "tests/helpers/validationProfileRun.ts",
     "tests/helpers/validationProfileWorker.config.ts",
-    "tests/helpers/validationProfileWorker.test.ts"
+    "tests/helpers/validationProfileWorker.test.ts",
+    "tests/unit/storyTree/decisionRegister.test.ts",
+    "tests/integration/decisionPagesAcceptance.test.ts"
   ]
 }

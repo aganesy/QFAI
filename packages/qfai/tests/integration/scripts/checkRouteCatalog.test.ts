@@ -11,6 +11,9 @@ import { fileURLToPath } from "node:url";
 
 import { expect, it } from "vitest";
 
+import { defaultConfig } from "../../../src/core/config.js";
+import { readStoryTreeModel } from "../../../src/core/storyTree/tree.js";
+
 import {
   CONTRACT,
   DECISIONS,
@@ -24,7 +27,10 @@ import {
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../../..");
 
 const contract = readFileSync(path.join(REPO_ROOT, CONTRACT), "utf8");
-const decisions = readFileSync(path.join(REPO_ROOT, DECISIONS), "utf8");
+const decisionModel = await readStoryTreeModel(REPO_ROOT, defaultConfig);
+if (!decisionModel.decisionRegisterComplete)
+  throw new Error(`Cannot read the complete ${DECISIONS} register`);
+const decisions = decisionModel.decisionOccurrences.map(({ raw }) => raw).join("");
 
 // The contract with one route row's statement changed.
 function withRow(route: string, change: (row: string) => string): string {

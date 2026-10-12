@@ -122,12 +122,41 @@ describe("migration decision table merge", () => {
     const context = await fixture();
     await writeFile(
       path.join(context.specsDir, "decisions.md"),
-      "# Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| DEC-0001 | First | - | DONE |\n| DEC-0001 | Second | - | DONE |\n",
+      "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| DEC-0001 | First | - | DONE |\n| DEC-0001 | Second | - | DONE |\n",
       "utf8",
     );
 
     const result = await run(context);
     expect(result.code).toBe(2);
     expect(result.error).toContain("decisions declares DEC-0001 more than once");
+  });
+  // QFAI:EX-0004-0005-12
+  // QFAI:EX-0004-0005-13
+  it("uses archived origins, maximum and successor while preserving bytes on rerun", async () => {
+    const context = await fixture();
+    const target = path.join(context.specsDir, "decisions.md");
+    const page = path.join(context.specsDir, "decisions", "page-0001.md");
+    await mkdir(path.dirname(page), { recursive: true });
+    const rootText =
+      "# Decisions\r\n\r\n## Decision pages\r\n\r\n- decisions/page-0001.md\r\n\r\n## Decisions\r\n\r\n| ID | Content | Approach | Status |\r\n| --- | --- | --- | --- |\r\n| DEC-0001 | Tail | Keep | DONE |\r\n";
+    const pageText =
+      "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| DEC-0090 | .qfai/spec/_policies/08_Decisions.md#DR-0107: Successor | Keep | DONE |\n";
+    await writeFile(target, rootText);
+    await writeFile(page, pageText);
+    await writeFile(
+      path.join(context.specsDir, "_policies", "08_Decisions.md"),
+      "# Decisions\n\n### DR-0106: Retired\n\n- Status: superseded\n- Superseded by: DR-0107\n\n### DR-0107: Successor\n\n- Status: accepted\n",
+    );
+    expect((await run(context)).code).toBe(0);
+    const result = await readFile(target, "utf8");
+    expect(result.startsWith(rootText)).toBe(true);
+    expect(parseRecordTable(result, "decisions").rows).toContainEqual(
+      expect.objectContaining({ id: "DEC-0091", status: "SUPERSEDED (by DEC-0090)" }),
+    );
+    expect(parseRecordTable(result, "decisions").rows).toHaveLength(2);
+    expect(await readFile(page, "utf8")).toBe(pageText);
+    expect((await run(context)).output).toContain("## Operations\nnone");
+    expect(await readFile(target, "utf8")).toBe(result);
+    expect(await readFile(page, "utf8")).toBe(pageText);
   });
 });

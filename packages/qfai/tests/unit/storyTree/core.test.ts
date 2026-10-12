@@ -26,7 +26,23 @@ import {
   diffRecordTables,
   parseRecordTable,
 } from "../../../src/core/storyTree/tables.js";
-import { buildStoryTreeModel, nextStoryTreeId } from "../../../src/core/storyTree/tree.js";
+import {
+  buildStoryTreeModel as buildModel,
+  nextStoryTreeId,
+  type StoryTreeModelOptions,
+} from "../../../src/core/storyTree/tree.js";
+
+function buildStoryTreeModel(
+  files: ReadonlyMap<string, string>,
+  options: StoryTreeModelOptions = {},
+) {
+  const complete = new Map(files);
+  for (const [file, text] of complete) {
+    if (file.endsWith("/decisions.md") && text.startsWith("|"))
+      complete.set(file, "# Decisions\n\n## Decisions\n\n" + text);
+  }
+  return buildModel(complete, options);
+}
 
 const storyFiles = new Map([
   [".qfai/spec/02_business-flow/business-flow-0001/business-flow.md", "# BF-0001: Checkout\n"],
@@ -76,7 +92,10 @@ describe("story-tree core", () => {
     expect(hasLegacySpecPackEntries(["spec-0001"])).toBe(true);
     expect(hasLegacySpecPackEntries(["_policies"])).toBe(true);
     expect(hasStoryTreeEntries(["01_policy"])).toBe(true);
-    expect(storyTreeMarkdownPatterns("docs/spec", "docs/contracts")).toHaveLength(15);
+    expect(storyTreeMarkdownPatterns("docs/spec", "docs/contracts")).toHaveLength(16);
+    expect(storyTreeMarkdownPatterns("docs/spec", "docs/contracts")).toContain(
+      "docs/spec/decisions/page-????.md",
+    );
     expect(storyTreeMarkdownPatterns("docs/spec", "docs/contracts")).toContain(
       "docs/contracts/contracts.md",
     );
@@ -547,4 +566,35 @@ it.each([
       status,
     }),
   ).toMatchObject({ kind: "unadjudicated", refs: [], inForce });
+});
+
+describe("ordered decision pages in the existing story model", () => {
+  const table = "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
+  const page = "# Decisions\n\n## Decisions\n\n" + table;
+  // QFAI:EX-0001-0008-27
+  it("reserves all historical page row and retired IDs before the root tail", () => {
+    const files = new Map([
+      [
+        "docs/spec/decisions.md",
+        "# Decisions\n\n## Decision pages\n\n- decisions/page-0001.md\n\n## Decisions\n\n" +
+          table +
+          "| DEC-0002 | Tail | Keep | WIP |\n",
+      ],
+      [
+        "docs/spec/decisions/page-0001.md",
+        page + "| DEC-0042 | Retired US-0001-0009 | Keep | DONE |\n",
+      ],
+    ]);
+    const model = buildStoryTreeModel(files, { specsDir: "docs/spec" });
+    expect(model.decisions?.rows.map(({ id }) => id)).toEqual(["DEC-0042", "DEC-0002"]);
+    expect(nextStoryTreeId(model, "DEC")).toBe("DEC-0043");
+    expect(nextStoryTreeId(model, "US", "BF-0001")).toBe("US-0001-0010");
+    expect(model).toMatchObject({
+      decisionFiles: ["docs/spec/decisions/page-0001.md", "docs/spec/decisions.md"],
+      decisionOccurrences: [
+        { origin: { path: "docs/spec/decisions/page-0001.md", actualRow: 7, rawOrdinal: 1 } },
+        { origin: { path: "docs/spec/decisions.md", actualRow: 11, rawOrdinal: 2 } },
+      ],
+    });
+  });
 });

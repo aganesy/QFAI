@@ -289,6 +289,40 @@ describe("against a repository", () => {
       log.mockRestore();
     }
   });
+  // QFAI:EX-0001-0008-27
+  it("allocates from complete listed pages and refuses an ignored unlisted entry", async () => {
+    const target = path.join(work, ".qfai", "spec", "decisions.md");
+    const original = readFileSync(target, "utf8");
+    const directory = path.join(work, ".qfai", "spec", "decisions");
+    const exclude = path.join(work, ".git", "info", "exclude");
+    const originalExclude = readFileSync(exclude, "utf8");
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      write(".qfai/spec/decisions/page-0001.md", decisions("DEC-0001", "DEC-0090"));
+      write(
+        ".qfai/spec/decisions.md",
+        decisions().replace(
+          "## Decisions",
+          "## Decision pages\n\n- decisions/page-0001.md\n\n## Decisions",
+        ),
+      );
+      expect(await run(["next", "DEC"], { cwd: work, list })).toBe(0);
+      expect(log.mock.calls).toEqual([["DEC-0091"]]);
+      log.mockClear();
+      writeFileSync(exclude, `${originalExclude}\n.qfai/spec/decisions/orphan.md\n`);
+      write(".qfai/spec/decisions/orphan.md", decisions("DEC-0990"));
+      expect(await run(["next", "DEC"], { cwd: work, list })).toBe(2);
+      expect(log.mock.calls).toEqual([]);
+      expect(error.mock.calls.flat().join(" ")).toMatch(/complete decision register/i);
+    } finally {
+      writeFileSync(target, original);
+      writeFileSync(exclude, originalExclude);
+      rmSync(directory, { recursive: true, force: true });
+      log.mockRestore();
+      error.mockRestore();
+    }
+  });
 });
 
 describe("main IDs received through a merge", () => {
