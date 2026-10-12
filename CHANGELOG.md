@@ -16,6 +16,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   arguments and checkout. Installation and same-checkout launcher failures block
   dependent planning; host setup and execution require separate evidence. Fixes #3338.
 
+- Compare reached workflow steps with actual reads, actions, outputs and gate
+  evidence in existing human reports. Missing proof stays unverified; no extra
+  reviewer, gate or execution engine is added. Fixes #3336.
+
 ### Fixed
 
 - **Discussion completion references point to the existing obligations.**

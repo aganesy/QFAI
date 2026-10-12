@@ -22,8 +22,7 @@ The CLI plans; this skill follows its steps in order.
 - Release, decision and branch points: `references/stage-points.md`.
 - Run preflight before planning, as `.qfai/assistant/rule/shared-skill-operating-baseline.md#canonical-qfai-launcher-mandatory` says.
   If the launcher is missing or preflight fails, read `references/operator-screens.md` for recovery.
-- Read `references/codex-cloud-install.md` before configuring an environment-owned Install script or Start skill, or preparing dependencies for a fresh checkout.
-  Use the reviewed target's successful preparation and canonical proof before planning.
+- Read `references/codex-cloud-install.md` before configuring an environment-owned Install script or Start skill, or preparing dependencies for a fresh checkout. Use the reviewed target's successful preparation and canonical proof before planning.
 
 ## What this skill never does
 
@@ -139,10 +138,11 @@ When parts ran in parallel, use the summary in `references/operator-screens.md`.
 
 Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#completion-contract-shared`. **Smallest applicable smoke check** (this skill's override): the gates of the `verify-qfai-gate` and `verify-repo-gate` steps the chosen scope holds; a scope holding none runs no gate, and the report says so. A gate that cannot run is UNRUN, not a pass.
 
+At stage boundaries, follow `references/reached-step-observations.md` in the existing report.
+
 When the request requires evidence handover before session archive, read
-`references/evidence-delivery.md` and complete its receiving proof first.
-Missing access keeps the handover pending and originals retained. Ordinary
-completion does not require an unsolicited upload.
+`references/evidence-delivery.md` and complete its receiving proof first. Missing access keeps the
+handover pending and originals retained. Ordinary completion does not require an unsolicited upload.
 
 project_memory:
 
