@@ -14,14 +14,15 @@ mode: execution-focused
 
 [DRIFT-PROTOCOL:REQUIRED]
 
-The CLI plans; this skill follows its steps in order.
+Follow the CLI plan's steps in order.
 
-- Read `references/extraction.md` to extract a request.
+- Read `references/extraction.md` for extraction.
 - Plan command and format: `references/plan.md`.
 - Screens and questions: `references/operator-screens.md`.
 - Release, decision and branch points: `references/stage-points.md`.
 - Run preflight before planning, as `.qfai/assistant/rule/shared-skill-operating-baseline.md#canonical-qfai-launcher-mandatory` says.
   If the launcher is missing or preflight fails, read `references/operator-screens.md` for recovery.
+- Read `references/codex-cloud-install.md` before configuring an environment-owned Install script or Start skill, or preparing dependencies for a fresh checkout. Use the reviewed target's successful preparation and canonical proof before planning.
 
 ## What this skill never does
 
@@ -34,8 +35,8 @@ The CLI plans; this skill follows its steps in order.
 
 ## Mode
 
-Read `workflow.mode` in `qfai.config.yaml` first. No key means `active`; any
-value but the three below plans nothing.
+Read `workflow.mode` in `qfai.config.yaml` first. No key means `active`; unlisted
+values plan nothing.
 
 | Mode     | What this skill does                                                                 |
 | -------- | ------------------------------------------------------------------------------------ |
@@ -47,12 +48,11 @@ value but the three below plans nothing.
 
 - For independent targets under one goal, read `references/operator-screens.md`
   before planning or switching during a wait.
-- A change, a question, a proposal to decide or a report to close is planned.
-  A question plans a route that answers it and changes nothing. Text that is
-  not a request is not planned.
-- A reply with a requested answer or result resumes the same step without a new
-  invocation, including failure. An independent new request is planned. Read
-  `references/operator-screens.md` for replies.
+- Plan changes, questions, proposals to decide and reports to close.
+  Questions plan answers without changes; nonrequests get no plan.
+- Replies with a requested answer or result, including failure, resume the same step without
+  a new invocation. An independent new request is planned; read `references/operator-screens.md`
+  for replies.
 - `stop`: end the work at once and list every open decision as open.
 - A request naming a stage skill: invoke that skill by name.
 
@@ -81,13 +81,11 @@ value but the three below plans nothing.
    - **Release point.** Ask the user to approve the release before the step `releasePoint` names.
    - **Decision point.** Put each critical decision at a step `decisionPoints` names to the user.
    - **Branch point.** Move to the destination a step `branchPoints` names, and plan it at once.
-6. **Review.** After a stage whose `review` is `spec`, `requirements-reviewer`
-   reviews, with `architecture-reviewer` when a contract changed; after one
-   whose `review` is `code`, `implementation-reviewer`.
-   `product-surface-reviewer` joins both where a UI contract with screens
-   serves the flow. No agent reviews its own work, and no step adds a review.
-   Each review returns PASS or REVISE, and each finding is fixed or answered
-   once, with no re-review. A step that would go beyond the request stops.
+6. **Review.** After a stage whose `review` is `spec`, `requirements-reviewer` reviews,
+   with `architecture-reviewer` for changed contracts; for `code`, `implementation-reviewer`.
+   `product-surface-reviewer` joins both for flows served by a UI contract with screens.
+   No agent reviews its own work; no step adds a review. Each returns PASS or REVISE.
+   Fix or answer each finding once, with no re-review. Stop a step that exceeds the request.
 7. **Approvals.** Each approval of a specification change, a critical decision
    or a release is one `decisions.md` row: what was approved, who approved it,
    when, and the chosen option's label. A decision you took appends no row.
@@ -135,13 +133,13 @@ When parts ran in parallel, use the summary in `references/operator-screens.md`.
 
 ## Completion Contract (Shared)
 
-Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#completion-contract-shared`. **Smallest applicable smoke check** (this skill's override): the gates of the `verify-qfai-gate` and `verify-repo-gate` steps the chosen scope holds; a scope holding none runs no gate, and the report says so. A gate that cannot run is UNRUN, not a pass.
+Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#completion-contract-shared`. **Smallest applicable smoke check**: the chosen scope's `verify-qfai-gate` and `verify-repo-gate` gates. With none, run no gate and report it. Unavailable gates are UNRUN, never PASS.
 
 At stage boundaries, follow `references/reached-step-observations.md` in the existing report.
 
-When the request requires evidence handover before session archive, read
-`references/evidence-delivery.md` and complete its receiving proof first. Missing access keeps the
-handover pending and originals retained. Ordinary completion does not require an unsolicited upload.
+If requested evidence handover must precede archive, read `references/evidence-delivery.md`
+and complete receiving proof first. Missing access leaves handover pending and originals
+retained; ordinary completion requires no unsolicited upload.
 
 project_memory:
 

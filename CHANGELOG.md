@@ -12,6 +12,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   applicable authority remain open. Interactive sessions retain actual user
   confirmation.
 
+- Generate a native dependency preparation entry for a reviewed executable,
+  arguments and checkout. Installation and same-checkout launcher failures block
+  dependent planning; host setup and execution require separate evidence. Fixes #3338.
+
 - Compare reached workflow steps with actual reads, actions, outputs and gate
   evidence in existing human reports. Missing proof stays unverified; no extra
   reviewer, gate or execution engine is added. Fixes #3336.
