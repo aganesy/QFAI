@@ -134,7 +134,7 @@ export function validateStoryTreeObligationsModel(
 
   const exceptions = new Map<string, { decision: string; file: string }>();
   for (const { row, origin } of model.decisionOccurrences) {
-    if (!model.decisionRegisterComplete) break;
+    if (!model.decisionRegisterComplete || (model.decisions?.errors.length ?? 0) > 0) break;
     const classified = classifyRecordRow(row);
     if (classified.kind !== "test-exception" || !classified.inForce) continue;
     for (const id of classified.refs) {

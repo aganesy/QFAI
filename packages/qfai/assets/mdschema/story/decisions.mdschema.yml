@@ -21,8 +21,8 @@ structure:
         lists:
           - min: 1
             max: 1
-        forbidden_text:
-          - pattern: '(?m)^(?!- decisions/page-[0-9]{4}\.md$)[^\n]*\S[^\n]*$'
+        required_text:
+          - pattern: '\A(?:[ \t]*\r?\n)*- decisions/page-[0-9]{4}\.md(?:\r?\n(?:[ \t]*\r?\n)*- decisions/page-[0-9]{4}\.md)*(?:\r?\n[ \t]*)*\r?\z'
             regex: true
       - heading:
           pattern: "^## Decisions$"

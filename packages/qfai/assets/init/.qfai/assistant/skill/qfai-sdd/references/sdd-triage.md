@@ -179,10 +179,11 @@ Empty numeric scopes begin at 0001, and AC/EX tails begin at 01. Do not reuse an
 AC and EX tails stay two digits, from 01 through 99. Before writing a planned
 batch, report each affected kind and story, its high-water number H (0 when
 empty), remaining capacity 99-H and the number of requested additions. Count
-valid IDs in the tree and the complete decision register, including retired IDs, plus observed
+valid IDs in the tree and decisions, including retired IDs, plus observed
 published parallel heads and known reservations under the project's existing
 method. Name the fixed observation and what it did not cover. A snapshot
-reserves nothing and cannot cover unpublished concurrent work.
+reserves nothing and cannot cover unpublished concurrent work. Read decisions as
+the complete ordered register: every listed page followed by the root tail.
 
 If requested additions exceed 99-H, stop before any partial allocation or
 invalid declaration. Never fill gaps, reuse retired IDs or emit tail 100.

@@ -1151,10 +1151,11 @@ function checkEntryDocuments(context, entry, violations) {
  *
  * @param {string} root
  * @param {{ specsDir: string, contractsDir: string }} paths
- * @returns {{file: string, line: number, column: number, rule: string, message: string}[]}
+ * @returns {{violations: {file: string, line: number, column: number, rule: string, message: string}[], unsafe: boolean}}
  */
 function decisionRegisterViolations(root, paths) {
-  const found = [];
+  const result = { violations: [], unsafe: false };
+  const found = result.violations;
   const specs = path.resolve(root, paths.specsDir);
   const rootFile = path.join(specs, "decisions.md");
   const pagesDir = path.join(specs, "decisions");
@@ -1172,6 +1173,7 @@ function decisionRegisterViolations(root, paths) {
         file,
         "Cannot inspect this decision-register path; resolve its access before checking.",
       );
+      result.unsafe = true;
       return false;
     }
     if (stats.isSymbolicLink() || (directory ? !stats.isDirectory() : !stats.isFile())) {
@@ -1181,10 +1183,12 @@ function decisionRegisterViolations(root, paths) {
           ? "Decision-register directories must be regular directories, not links."
           : "Decision-register documents must be regular files, not links.",
       );
+      result.unsafe = true;
       return false;
     }
     if (!directory && stats.nlink !== 1) {
       report(file, "Decision-register documents must not share a hard-linked file.");
+      result.unsafe = true;
       return false;
     }
     return true;
@@ -1192,19 +1196,20 @@ function decisionRegisterViolations(root, paths) {
 
   // Preserve configured roots outside the workspace. For roots inside it,
   // inspect every intermediate component as well as the configured directory.
-  if (inspect(specs, true) !== true) return found;
   const relative = path.relative(path.resolve(root), specs);
   if (!path.isAbsolute(relative) && relative !== ".." && !relative.startsWith(".." + path.sep)) {
     let component = path.resolve(root);
     for (const name of relative.split(path.sep).filter(Boolean)) {
       component = path.join(component, name);
-      if (inspect(component, true) !== true) return found;
+      if (inspect(component, true) !== true) return result;
     }
   }
+  if (inspect(specs, true) !== true) return result;
   const rootState = inspect(rootFile, false);
+  if (rootState === false) return result;
   const pageState = inspect(pagesDir, true);
-  if (rootState === false || pageState === false) return found;
-  if (rootState === null && pageState === null) return found;
+  if (pageState === false) return result;
+  if (rootState === null && pageState === null) return result;
 
   const read = (file) => {
     try {
@@ -1218,6 +1223,7 @@ function decisionRegisterViolations(root, paths) {
       }
       return text;
     } catch {
+      result.unsafe = true;
       report(
         file,
         "Cannot read this decision-register document; resolve its access before checking.",
@@ -1230,7 +1236,7 @@ function decisionRegisterViolations(root, paths) {
     report(rootFile, "Decision pages require their decisions.md root and explicit page list.");
   } else {
     const text = read(rootFile);
-    if (text === null) return found;
+    if (text === null) return result;
     const lines = text.split(/\r?\n/);
     const indexes = lines.flatMap((line, index) => (line === "## Decision pages" ? [index] : []));
     const tables = lines.flatMap((line, index) => (line === "## Decisions" ? [index] : []));
@@ -1267,8 +1273,9 @@ function decisionRegisterViolations(root, paths) {
     try {
       names = readdirSync(pagesDir);
     } catch {
+      result.unsafe = true;
       report(pagesDir, "Cannot list decision pages; resolve directory access before checking.");
-      return found;
+      return result;
     }
     for (const name of names) {
       if (!listed.has(name)) {
@@ -1277,6 +1284,7 @@ function decisionRegisterViolations(root, paths) {
           "Every decision-page directory entry must be a direct page listed by decisions.md.",
         );
       }
+      if (inspect(path.join(pagesDir, name), false) === false) return result;
     }
   }
   for (const name of listed) {
@@ -1284,9 +1292,10 @@ function decisionRegisterViolations(root, paths) {
     const state = inspect(file, false);
     if (state === null)
       report(file, "A listed decision page is missing; restore it before checking.");
-    if (state === true) read(file);
+    if (state === false) return result;
+    if (state === true && read(file) === null) return result;
   }
-  return found;
+  return result;
 }
 
 /**
@@ -1306,11 +1315,13 @@ export function checkDocuments(root, paths = configuredPaths(root)) {
   if (mdschema === null) {
     return { ok: false, reason: `no ${MDSCHEMA_PACKAGE} installation was found` };
   }
+  const register = decisionRegisterViolations(root, paths);
+  if (register.unsafe) return { ok: true, checked: 0, violations: register.violations };
   const context = { root, paths, mdschema, universe: documentUniverse(root, paths), checked: 0 };
   const entries = readManifest();
   const violations = [
     ...coverageViolations(entries, context.universe.toSorted(), paths),
-    ...decisionRegisterViolations(root, paths),
+    ...register.violations,
   ];
   for (const entry of entries) {
     const failure = checkEntryDocuments(context, entry, violations);
@@ -1434,8 +1445,6 @@ export function main() {
     return 2;
   }
 
-  const universe = documentUniverse(root, paths);
-
   /** @type {string[] | null} */
   let restrictTo = null;
   if (scope === "files") {
@@ -1474,7 +1483,9 @@ export function main() {
   const registerInScope =
     restrictSet === null ||
     [...restrictSet].some((file) => file === registerRoot || file.startsWith(registerPages));
-  const register = registerInScope ? decisionRegisterViolations(root, paths) : [];
+  // Path safety applies before any traversal, even when only another document is selected.
+  const registerCheck = decisionRegisterViolations(root, paths);
+  const register = registerInScope || registerCheck.unsafe ? registerCheck.violations : [];
   if (register.length > 0) {
     violations++;
     console.error("\n── decision register ──");
@@ -1488,6 +1499,9 @@ export function main() {
     ok: register.length === 0,
     inherited: 0,
   });
+
+  if (registerCheck.unsafe) return 1;
+  const universe = documentUniverse(root, paths);
 
   /** @type {Map<string, string>} */
   const contents = new Map();

@@ -1507,7 +1507,11 @@ export const step04: MigrationStep = {
       },
     });
     if (!tree.decisionRegisterComplete)
-      throw new MigrationInputError("The complete decision register is unavailable");
+      throw new MigrationInputError(
+        `The complete decision register is unavailable: ${tree.decisionRegisterErrors
+          .map(({ file, message }) => `${file}: ${message}`)
+          .join("; ")}`,
+      );
     if (tree.decisions !== null) {
       const table = tree.decisions;
       if (table.errors.length > 0)

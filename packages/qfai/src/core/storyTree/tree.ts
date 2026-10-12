@@ -92,8 +92,15 @@ export function nextStoryTreeId(
   kind: StoryTreeIdKind,
   parentId?: string,
 ): string {
-  if (!model.decisionRegisterComplete)
-    throw new Error("The complete decision register is unavailable; ID allocation is refused");
+  if (!model.decisionRegisterComplete || (model.decisions?.errors.length ?? 0) > 0) {
+    const problems = [
+      ...model.decisionRegisterErrors.map(({ file, message }) => `${file}: ${message}`),
+      ...(model.decisions?.errors ?? []),
+    ];
+    throw new Error(
+      `The complete decision register is unavailable; ID allocation is refused: ${problems.join("; ")}`,
+    );
+  }
   const named = model.declarations.map(({ id }) => id);
   for (const row of model.decisions?.rows ?? []) {
     named.push(
@@ -108,9 +115,10 @@ function recordTableFor(
   name: "decisions.md" | "open-questions.md",
   specsDir?: string,
 ): { file: string; table: ParsedRecordTable } | null {
-  const file = specsDir
-    ? `${normalize(specsDir)}/${name}`
-    : [...files.keys()].find((candidate) => candidate === name || candidate.endsWith(`/${name}`));
+  const file =
+    specsDir !== undefined
+      ? path.posix.join(normalize(specsDir), name)
+      : [...files.keys()].find((candidate) => candidate === name || candidate.endsWith(`/${name}`));
   return file && files.has(file)
     ? {
         file,
@@ -228,13 +236,16 @@ export function buildStoryTreeModel(
   }
   const decisions = recordTableFor(texts, "decisions.md", options.specsDir);
   const questions = recordTableFor(texts, "open-questions.md", options.specsDir);
-  const orphanPage = [...texts.keys()].find((file) => file.includes("/decisions/"));
+  const orphanPage = [...texts.keys()].find((file) => /(?:^|\/)decisions\//.test(file));
   const decisionFile =
     decisions?.file ??
     (orphanPage
-      ? options.specsDir
-        ? path.posix.join(normalize(options.specsDir), "decisions.md")
-        : `${orphanPage.split("/decisions/")[0]}/decisions.md`
+      ? path.posix.join(
+          options.specsDir !== undefined
+            ? normalize(options.specsDir)
+            : (orphanPage.split(/(?:^|\/)decisions\//)[0] ?? ""),
+          "decisions.md",
+        )
       : null);
   const register = decisionFile ? parseDecisionRegister(texts, decisionFile) : null;
   model.decisions = register?.table ?? null;

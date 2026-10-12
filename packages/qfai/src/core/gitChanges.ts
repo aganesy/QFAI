@@ -39,8 +39,10 @@ export function readDecisionFilesAtRevision(
   revision: string,
   directory: string,
 ): Map<string, string> {
+  const normalizedDirectory = path.posix.normalize(normalizeRepoPath(directory));
+  const directoryPath = normalizedDirectory === "." ? "" : normalizedDirectory;
   let component = "";
-  for (const part of normalizeRepoPath(directory).split("/").filter(Boolean)) {
+  for (const part of directoryPath.split("/").filter(Boolean)) {
     component = component ? `${component}/${part}` : part;
     const entry = gitStdout(root, ["ls-tree", "-z", revision, "--", component]);
     if (entry === null) throw new Error(`Git could not read directory: ${component}`);
@@ -52,8 +54,7 @@ export function readDecisionFilesAtRevision(
     "-r",
     "-z",
     revision,
-    "--",
-    normalizeRepoPath(directory),
+    ...(directoryPath === "" ? [] : ["--", directoryPath]),
   ]);
   if (names === null) throw new Error(`Git could not read the inventory at ${revision}`);
   const files = new Map<string, string>();
@@ -62,9 +63,9 @@ export function readDecisionFilesAtRevision(
     if (!candidate?.[4])
       throw new Error(`Git returned an unreadable inventory entry: ${directory}`);
     const file = normalizeRepoPath(candidate[4]);
-    const pageDirectory = path.posix.join(normalizeRepoPath(directory), "decisions");
+    const pageDirectory = path.posix.join(directoryPath, "decisions");
     if (
-      file !== path.posix.join(normalizeRepoPath(directory), "decisions.md") &&
+      file !== path.posix.join(directoryPath, "decisions.md") &&
       file !== pageDirectory &&
       !file.startsWith(`${pageDirectory}/`)
     )

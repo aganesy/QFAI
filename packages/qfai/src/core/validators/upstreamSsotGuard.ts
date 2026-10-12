@@ -126,6 +126,60 @@ export async function validateStoryTreeDrift(
         rows.filter((row) => row.id === id).length === 1 &&
         baseRows.filter((row) => row.id === id).length <= 1,
     );
+  // A path-authorised relocation preserves every inherited physical row occurrence.
+  const headRegisterFiles = headModel.decisionFiles.map((file) =>
+    normalizeRepoPath(path.relative(root, file)),
+  );
+  const relocated =
+    baseModel.decisionFiles.join("\n") !== headRegisterFiles.join("\n") ||
+    baseModel.decisionOccurrences.some((before, index) => {
+      const after = headModel.decisionOccurrences[index];
+      return (
+        after !== undefined &&
+        (before.origin.path !== after.origin.path ||
+          before.origin.actualRow !== after.origin.actualRow)
+      );
+    });
+  if (relocated) {
+    for (const [index, before] of baseModel.decisionOccurrences.entries()) {
+      const after = headModel.decisionOccurrences[index];
+      if (!after) {
+        issues.push(
+          issue(
+            "QFAI-STORY-010",
+            `${before.origin.path}:${before.origin.actualRow}: ${before.row.id} row removed (ID)`,
+            "error",
+            before.origin.path,
+            "storyTree.rowRewritten",
+            [before.row.id],
+          ),
+        );
+        continue;
+      }
+      const statusOnly =
+        before.row.id === after.row.id &&
+        before.row.content === after.row.content &&
+        before.row.approach === after.row.approach &&
+        classifyRecordRow(after.row).kind === "change-request" &&
+        baseRows.filter((row) => row.id === before.row.id).length === 1 &&
+        rows.filter((row) => row.id === after.row.id).length === 1;
+      if (
+        before.raw === after.raw ||
+        (statusOnly && rawWithoutStatusToken(before.raw) === rawWithoutStatusToken(after.raw))
+      )
+        continue;
+      issues.push(
+        issue(
+          "QFAI-STORY-010",
+          `${after.origin.path}:${after.origin.actualRow}: ${before.row.id} inherited raw row changed during relocation`,
+          "error",
+          after.origin.path,
+          "storyTree.rowRewritten",
+          [before.row.id],
+        ),
+      );
+    }
+  }
   if (profile === "drift") {
     for (const [file, kind] of [
       [decisions, "decisions"],
@@ -138,6 +192,8 @@ export async function validateStoryTreeDrift(
         for (const [index, before] of baseModel.decisionOccurrences.entries()) {
           const after = headModel.decisionOccurrences[index];
           if (!after) {
+            // Relocation already diagnosed this missing occurrence under either profile.
+            if (relocated) continue;
             issues.push(
               issue(
                 "QFAI-STORY-010",
@@ -155,7 +211,7 @@ export async function validateStoryTreeDrift(
             issues.push(
               issue(
                 "QFAI-STORY-010",
-                `${after.origin.path}:${after.origin.actualRow}: ${before.row.id} ${cell === "id" ? "ID" : cell} changed`,
+                `${after.origin.path}:${after.origin.actualRow}: ${before.row.id} ${cell} changed`,
                 "error",
                 after.origin.path,
                 "storyTree.rowRewritten",
@@ -324,6 +380,11 @@ function authorisesThisBranch(status: string, statusAtBase: string | undefined):
 /** A row the base holds keeps its Content and Approach, so a rewrite of either grants nothing. */
 function rewritesImmutableCell(base: RecordRow, head: RecordRow): boolean {
   return base.content !== head.content || base.approach !== head.approach;
+}
+
+/** Replace only the final Status token; padding and the stored line ending remain evidence. */
+function rawWithoutStatusToken(raw: string): string {
+  return raw.replace(/(\|[ \t]*)([^|\r\n]*?\S)([ \t]*\|(?:\r\n|\n)?$)/, "$1<Status>$3");
 }
 
 function withoutChangeRequestRows(content: string): string {

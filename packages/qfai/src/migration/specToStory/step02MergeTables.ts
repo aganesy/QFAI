@@ -292,7 +292,11 @@ export async function pendingMergeInput(context: MigrationContext): Promise<stri
     },
   });
   if (!tree.decisionRegisterComplete)
-    throw new MigrationInputError("The complete decision register is unavailable");
+    throw new MigrationInputError(
+      `The complete decision register is unavailable: ${tree.decisionRegisterErrors
+        .map(({ file, message }) => `${file}: ${message}`)
+        .join("; ")}`,
+    );
   const decisions = (tree.decisions?.rows ?? [])
     .map((row) => `${row.content} ${row.approach}`)
     .join("\n");
@@ -353,7 +357,11 @@ export const step02: MigrationStep = {
       },
     });
     if (!tree.decisionRegisterComplete)
-      throw new MigrationInputError("The complete decision register is unavailable");
+      throw new MigrationInputError(
+        `The complete decision register is unavailable: ${tree.decisionRegisterErrors
+          .map(({ file, message }) => `${file}: ${message}`)
+          .join("; ")}`,
+      );
     const existingDecisions = tree.decisions ?? parseRecordTable(decisionsOriginal, "decisions");
     const existingQuestions = parseRecordTable(questionsOriginal, "open-questions");
     if (existingDecisions.errors.length > 0 || existingQuestions.errors.length > 0) {

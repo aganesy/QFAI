@@ -83,7 +83,10 @@ export function allocateAll(scopes, named, allocate) {
   const declarations = [...named.declarations];
   const model = {
     declarations,
-    decisions: named.decisions,
+    decisions: named.decisions
+      ? { ...named.decisions, errors: named.decisions.errors ?? [] }
+      : null,
+    decisionRegisterErrors: named.decisionRegisterErrors ?? [],
     decisionRegisterComplete: named.decisionRegisterComplete ?? true,
   };
   const ids = [];
@@ -213,9 +216,13 @@ class TreeReader {
   /** One complete tree: historical pages and the root form one logical register. */
   parse(texts) {
     const model = this.buildModel(texts, { specsDir: SPEC_DIR });
-    if (model.decisionRegisterComplete === false) {
+    if (model.decisionRegisterComplete === false || (model.decisions?.errors.length ?? 0) > 0) {
+      const problems = [
+        ...(model.decisionRegisterErrors ?? []).map(({ file, message }) => `${file}: ${message}`),
+        ...(model.decisions?.errors ?? []),
+      ];
       throw new Error(
-        "The complete decision register is unavailable; allocation and collision checks are refused.",
+        `The complete decision register is unavailable; allocation and collision checks are refused: ${problems.join("; ")}`,
       );
     }
     return [

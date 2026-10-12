@@ -102,6 +102,7 @@ export function routeRowsOf(contractText) {
 
 /** Each row of the decisions table, by ID. */
 export function decisionRowsOf(decisionsText) {
+  if (Array.isArray(decisionsText)) return new Map(decisionsText.map((row) => [row.id, row]));
   const rows = new Map();
   for (const line of decisionsText.split(/\r?\n/)) {
     if (!line.startsWith("| DEC-")) continue;
@@ -253,12 +254,16 @@ async function baseFaults(head, root) {
   )
     return [];
   const model = buildStoryTreeModel(texts, { specsDir: ".qfai/spec" });
-  if (!model.decisionRegisterComplete)
-    throw new Error("The complete base decision register could not be read safely");
-  return changeFaults(
-    { contract, decisions: model.decisionOccurrences.map(({ raw }) => raw).join("") },
-    head,
-  );
+  if (!model.decisionRegisterComplete || (model.decisions?.errors.length ?? 0) > 0) {
+    const problems = [
+      ...model.decisionRegisterErrors.map(({ file, message }) => `${file}: ${message}`),
+      ...(model.decisions?.errors ?? []),
+    ];
+    throw new Error(
+      `The complete base decision register could not be read safely: ${problems.join("; ")}`,
+    );
+  }
+  return changeFaults({ contract, decisions: model.decisions?.rows ?? [] }, head);
 }
 
 async function main() {
@@ -270,11 +275,18 @@ async function main() {
   const { defaultConfig } = await import("../packages/qfai/src/core/config.ts");
   const { readStoryTreeModel } = await import("../packages/qfai/src/core/storyTree/tree.ts");
   const model = await readStoryTreeModel(root, defaultConfig);
-  if (!model.decisionRegisterComplete)
-    throw new Error("The complete current decision register could not be read safely");
+  if (!model.decisionRegisterComplete || (model.decisions?.errors.length ?? 0) > 0) {
+    const problems = [
+      ...model.decisionRegisterErrors.map(({ file, message }) => `${file}: ${message}`),
+      ...(model.decisions?.errors ?? []),
+    ];
+    throw new Error(
+      `The complete current decision register could not be read safely: ${problems.join("; ")}`,
+    );
+  }
   const head = {
     contract: readFileSync(path.join(root, CONTRACT), "utf8"),
-    decisions: model.decisionOccurrences.map(({ raw }) => raw).join(""),
+    decisions: model.decisions?.rows ?? [],
   };
   const faults = [
     ...citationFaults(head.contract, head.decisions),
