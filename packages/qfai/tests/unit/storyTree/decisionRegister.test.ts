@@ -189,7 +189,7 @@ describe("the complete decision register", () => {
   it.each([499, 500, 501])(
     "counts %i physical lines including headings, blanks and comments",
     (lines) => {
-      const raw = header + "<!-- retained comment -->\n" + "\n".repeat(lines - 8) + row("DEC-0001");
+      const raw = header + row("DEC-0001") + "<!-- retained comment -->\n" + "\n".repeat(lines - 8);
       for (const paged of [false, true]) {
         const file = paged ? firstPage : rootFile;
         const tree = model(
