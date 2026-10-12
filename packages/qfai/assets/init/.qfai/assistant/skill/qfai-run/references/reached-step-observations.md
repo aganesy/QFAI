@@ -4,15 +4,15 @@ Use this procedure at each existing stage boundary to compare reached scoped wor
 
 ## Contents
 
-- [Reach and termination](#reach-and-termination)
-- [The stage comparison](#the-stage-comparison)
-- [Missing proof and observed omission](#missing-proof-and-observed-omission)
-- [Purpose and source binding](#purpose-and-source-binding)
-- [No-write passes](#no-write-passes)
-- [Gate observations](#gate-observations)
-- [Recover existing receipts safely](#recover-existing-receipts-safely)
-- [Native read-only example](#native-read-only-example)
-- [Existing review and limits](#existing-review-and-limits)
+- Reach and termination
+- The stage comparison
+- Missing proof and observed omission
+- Purpose and source binding
+- No-write passes
+- Gate observations
+- Recover existing receipts safely
+- Native read-only example
+- Existing review and limits
 
 ## Reach and termination
 
