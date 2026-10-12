@@ -103,6 +103,30 @@ it("The installed design step preserves an existing file without new authorizati
   expect(step).toMatch(/Once a prototyping loop has started, `DESIGN\.md` is read-only for it/i);
 });
 
+// QFAI:EX-0001-0087-02
+it("The installed instructions scope missing brand direction to initial authoring", async () => {
+  const step = await installed(".qfai/assistant/step/common-design-md/STEP.md");
+  const authoring = await installed(`${SKILLS}/qfai-sdd/references/design-md-authoring.md`);
+
+  for (const instructions of [step, authoring]) {
+    const initialAuthoring = instructions.match(/For initial authoring[^.]*\./i)?.[0];
+    expect(initialAuthoring).toMatch(/pack[^.]*no[^.]*direction[^.]*brand unchosen/i);
+  }
+});
+
+it("The installed instructions keep an established brand for validation and authorized non-brand repairs", async () => {
+  const step = await installed(".qfai/assistant/step/common-design-md/STEP.md");
+  const authoring = await installed(`${SKILLS}/qfai-sdd/references/design-md-authoring.md`);
+
+  for (const instructions of [step, authoring]) {
+    const existingFile = instructions.match(/For an existing valid file,[^.]*\./i)?.[0];
+    expect(existingFile).toMatch(/validat/i);
+    expect(existingFile).toMatch(/authorized repairs/i);
+    expect(existingFile).toMatch(/preserve[^.]*brand[^.]*tokens/i);
+    expect(existingFile).toMatch(/require no new brand selection/i);
+  }
+});
+
 it("The installed design step leaves CLI-only files unchanged and stops on an unchosen brand", async () => {
   const step = await installed(".qfai/assistant/step/common-design-md/STEP.md");
 
