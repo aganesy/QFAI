@@ -371,6 +371,82 @@ describe("scripts/check-doc-clarity.mjs", () => {
     });
   });
 
+  describe("historical story-tree decision records", () => {
+    for (const scope of ["all", "changed"]) {
+      it.each([
+        ".qfai/spec/decisions.md",
+        ".qfai/spec/decisions/page-0001.md",
+        ".qfai/spec/decisions/page-9999.md",
+      ])(`keeps historical provenance in %s under ${scope} scope`, async (recordPath) => {
+        const dir = await newRepoWithHistory({ "src/base.ts": "export const baseline = true;\n" });
+        git(dir, ["checkout", "--quiet", "-b", "topic"]);
+        await writeFiles(dir, {
+          [recordPath]: [
+            "# Decisions",
+            "",
+            "## Decision register",
+            "",
+            "| ID | Content | Approach | Status |",
+            "| --- | --- | --- | --- |",
+            `| DEC-0001 | Change request: src/thing.ts | Historical provenance from #${"1234"}. | DONE |`,
+            "",
+          ].join("\n"),
+        });
+        git(dir, ["add", "--all"]);
+        git(dir, ["commit", "--quiet", "-m", "add historical record"]);
+
+        const result = runGuard(dir, ["--scope", scope]);
+
+        expect(result.status).toBe(0);
+        expect(result.stderr).not.toContain(recordPath);
+        expect(result.stdout).toContain(
+          scope === "changed"
+            ? "no local identifiers in the changed lines"
+            : "no local identifiers found",
+        );
+      });
+    }
+
+    it.each(["all", "changed"])(
+      "still checks lookalike paths, ordinary story prose and source under %s scope",
+      async (scope) => {
+        const paths = [
+          ".qfai/spec/decisions-extra.md",
+          ".qfai/spec/decisions/README.md",
+          ".qfai/spec/decisions/page-0000.md",
+          ".qfai/spec/decisions/page-001.md",
+          ".qfai/spec/decisions/page-00001.md",
+          ".qfai/spec/decisions/page-0001-extra.md",
+          ".qfai/spec/decisions/nested/page-0001.md",
+          ".qfai/spec/decisions-other/page-0001.md",
+          ".qfai/spec/02_business-flow/business-flow-0001/user-stories.md",
+          ".qfai/spec/03_contract/cli/cli-0001-example.md",
+          "src/thing.ts",
+        ];
+        const dir = await newRepoWithHistory({ "src/base.ts": "export const baseline = true;\n" });
+        git(dir, ["checkout", "--quiet", "-b", "topic"]);
+        const files: Record<string, string> = {};
+        for (const relative of paths) {
+          files[relative] = relative.endsWith(".ts")
+            ? `// ${CITATION}, see #${"1234"}\nexport const a = 1;\n`
+            : `${CITATION}, see #${"1234"}.\n`;
+        }
+        await writeFiles(dir, files);
+        git(dir, ["add", "--all"]);
+        git(dir, ["commit", "--quiet", "-m", "add ordinary prose"]);
+
+        const result = runGuard(dir, ["--scope", scope]);
+
+        expect(result.status).toBe(1);
+        expect(result.stderr).toContain("issue-or-pr-number");
+        for (const relative of paths) {
+          expect(result.stderr).toContain(`${relative}:1:`);
+        }
+        expect(result.stderr).toContain(`${paths.length} local identifier(s) found`);
+      },
+    );
+  });
+
   describe("the default scope", () => {
     it("passes on a backlog line no commit on this branch touched", async () => {
       const dir = await newRepoWithHistory({ "src/old.ts": `// legacy note, see #1234\n` });
