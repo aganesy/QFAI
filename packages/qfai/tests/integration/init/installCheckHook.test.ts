@@ -403,6 +403,10 @@ describe("the generated installer's native process boundary", () => {
         expect(stderr).toContain(
           fault === "signal" ? "SIGTERM" : fault === "timeout" ? "ETIMEDOUT" : "EACCES",
         );
+        if (fault === "signal")
+          expect(stderr).toMatch(
+            /Installation ended on signal SIGTERM\..*review.*failed command output.*resolve.*cause.*before rerunning/i,
+          );
         expect(stdout).not.toMatch(/preparation.*succeeded/i);
         expect(calls).toEqual([]);
         expect(confirmations).toHaveLength(1);
@@ -416,6 +420,9 @@ describe("the generated installer's native process boundary", () => {
         expect(signal, stderr).toBeNull();
         expect(status, stderr).toBe(7);
         expect(stderr).toMatch(/install.*7/i);
+        expect(stderr).toMatch(
+          /Installation exited 7\..*review.*failed command output.*resolve.*cause.*before rerunning/i,
+        );
         expect(stdout).not.toMatch(/preparation.*succeeded/i);
         expect(calls).toHaveLength(1);
         expect(confirmations).toEqual([]);
@@ -436,6 +443,14 @@ describe("the generated installer's native process boundary", () => {
       expect(status).not.toBeNull();
       expect(status).not.toBe(0);
       expect(stderr).toMatch(/canonical|launcher|qfai|confirmation/i);
+      if (launcher === "pnp-failed")
+        expect(stderr).toMatch(
+          /Canonical launcher confirmation exited 9\..*review.*failed command output.*resolve.*cause.*before rerunning/i,
+        );
+      if (launcher === "parent" || launcher === "none")
+        expect(stderr).toMatch(
+          /no canonical qfai launcher\..*reviewed target.*declares qfai.*installation.*prepares.*canonical.*before rerunning/i,
+        );
       if (launcher === "pnp-corrupt" || launcher === "pnp-missing-manifest") {
         expect(stderr).toContain(launcher === "pnp-corrupt" ? "SyntaxError" : "ENOENT");
         expect(stderr).toMatch(/check.*target package\.json.*canonical qfai launcher.*rerun/i);
