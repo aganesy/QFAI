@@ -30,6 +30,14 @@ describe("decision row identity", () => {
       expect(triage).toContain("<paths.specsDir>/decisions.md");
       expect(triage).toContain("Use the next highest ID in the table plus one");
       expect(template).not.toContain("DR-NNNN");
+      const page = await readFile(
+        path.join(repoRoot, tree, TEMPLATE.replace("decisions.md", "decisions/page-NNNN.md")),
+        "utf-8",
+      );
+      expect(page).toMatch(/\| ID\s+\| Content \| Approach \| Status \|/);
+      expect(page).not.toContain("## Decision pages");
+      expect(triage).toContain("Read pages in list order, followed by the root table");
+      expect(triage).toContain("Append new rows only to the root table");
     }
   });
 

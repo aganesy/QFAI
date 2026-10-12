@@ -80,6 +80,24 @@ async function readOrNull(filePath: string): Promise<Buffer | null> {
 }
 
 describe("init assets root mirror", () => {
+  it("preserves only the reviewed historical pages outside formatters", async () => {
+    const expected = [
+      ".qfai/spec/decisions/page-0001.md",
+      ".qfai/spec/decisions/page-0002.md",
+      ".qfai/spec/decisions/page-0003.md",
+    ];
+    for (const relative of [".prettierignore", ".markdownlint-cli2.jsonc"]) {
+      const text = await readFile(path.join(repoRoot, relative), "utf-8");
+      expect(text.match(/\.qfai\/spec\/decisions\/[^\s",]+/g), relative).toEqual(expected);
+    }
+    for (const relative of [".gitattributes", "packages/qfai/assets/init/root/.gitattributes"]) {
+      const text = await readFile(path.join(repoRoot, relative), "utf-8");
+      expect(text).toContain("/.qfai/spec/decisions/page-*.md -text merge=union");
+      expect(text).toContain("/.qfai/spec/decisions.md merge=union");
+      expect(text).not.toMatch(/decisions\/page-[^\n]*binary/);
+    }
+  });
+
   it("accounts for every shipped .qfai path as linked, seeded or under the linked tree", async () => {
     const initFiles = await collectFiles(initQfaiDir);
     expect(initFiles.length).toBeGreaterThan(0);
