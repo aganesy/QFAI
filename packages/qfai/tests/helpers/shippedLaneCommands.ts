@@ -532,7 +532,7 @@ function codeMask(body: string): boolean[] {
       (quote !== "'" && ch === "$" && body[i + 1] === "(") ||
       (quote === "" && (ch === "<" || ch === ">"))
     ) {
-      const opensAt = ch === "$" ? i + 1 : i + 1;
+      const opensAt = i + 1;
       if (body[opensAt] === "(") {
         const close = matchingParen(body, opensAt);
         const inner = codeMask(body.slice(opensAt + 1, close));
@@ -828,7 +828,7 @@ export function invocationOf(command: string): string | typeof NOTHING | typeof 
       // allowed. Two comments here said the opposite for three rounds — measured by round 15 —
       // and the shipped tree stays readable because its only prefixed command is `IFS= read`,
       // while its `declared=$( … )` assignment carries no command after it and invokes nothing.
-      if (/^[A-Za-z_]\w*=/.test(token)) prefixNames.push(token.slice(0, token.indexOf("=")));
+      prefixNames.push(token.slice(0, token.indexOf("=")));
       i += 1;
       continue;
     }
