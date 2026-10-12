@@ -843,3 +843,185 @@ describe("separately adopted physical decision-page receipts", () => {
     },
   );
 });
+
+describe("decision relocation publication regressions", () => {
+  // QFAI:EX-0001-0007-22
+  it("preserves an identical competitor after the second exclusive create returns EEXIST", async () => {
+    const { receipt, digest } = await physicalFixture();
+    const plan = await buildPhysical(receipt, digest);
+    const rootBefore = await fs.readFile(path.join(root, ledger));
+    const second = receipt.files[1];
+    if (!second) throw new Error("fixture requires the second historical page");
+    const competingPath = path.join(root, second.file);
+    const competingBytes = Buffer.from(second.replacement);
+    const originalOpen = fs.open;
+    let planted = false;
+    const opens = vi
+      .spyOn(fs, "open")
+      .mockImplementation(async (...args: Parameters<typeof fs.open>) => {
+        if (String(args[0]) === competingPath && args[1] === "wx") {
+          await fs.writeFile(competingPath, competingBytes, { flag: "wx" });
+          planted = true;
+        }
+        return originalOpen(...args);
+      });
+    await expect(applyPhysical(plan, digest)).rejects.toThrow(/EEXIST/);
+    expect(planted).toBe(true);
+    expect(
+      opens.mock.calls.filter((call) => call[1] === "wx").map((call) => String(call[0])),
+    ).toEqual([path.join(root, page), competingPath]);
+    vi.restoreAllMocks();
+    expect(await fs.readFile(competingPath)).toEqual(competingBytes);
+    expect(await fs.readFile(path.join(root, ledger))).toEqual(rootBefore);
+    await expect(fs.lstat(path.join(root, page))).rejects.toMatchObject({ code: "ENOENT" });
+    await expect(
+      fs.lstat(path.join(root, specs, "decisions", "page-0003.md")),
+    ).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  // QFAI:EX-0001-0007-22
+  it("retains and reports unknown owned partial output after a later write hook fails", async () => {
+    const { receipt, digest } = await physicalFixture();
+    const plan = await buildPhysical(receipt, digest);
+    const rootBefore = await fs.readFile(path.join(root, ledger));
+    const second = receipt.files[1];
+    if (!second) throw new Error("fixture requires the second historical page");
+    const partialPath = path.join(root, second.file);
+    const partialBytes = Buffer.from(second.replacement.subarray(0, 17));
+    const writer = vi.fn(async (file: string, bytes: Buffer) => {
+      if (file === partialPath) {
+        await fs.writeFile(file, partialBytes);
+        throw new Error("controlled unknown partial write failure");
+      }
+      await fs.writeFile(file, bytes);
+    });
+    const failure = applyPhysical(plan, digest, { writeFile: writer });
+    await expect(failure).rejects.toThrow(/controlled unknown partial write failure/);
+    await expect(failure).rejects.toThrow(/unrestored/i);
+    await expect(failure).rejects.toThrow(/page-0002/);
+    expect(writer).toHaveBeenCalledTimes(2);
+    expect(await fs.readFile(partialPath)).toEqual(partialBytes);
+    expect(await fs.readFile(path.join(root, ledger))).toEqual(rootBefore);
+    await expect(fs.lstat(path.join(root, page))).rejects.toMatchObject({ code: "ENOENT" });
+    await expect(
+      fs.lstat(path.join(root, specs, "decisions", "page-0003.md")),
+    ).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  // QFAI:EX-0001-0007-19
+  it("rejects a request already DONE in the current base even when the common ancestor has no request", async () => {
+    const { receipt } = await physicalFixture();
+    const topicBytes = await fs.readFile(path.join(root, ledger));
+    const ancestorWithoutRequest = receipt.ancestorSha;
+    git("checkout", "main");
+    await put(ledger, topicBytes.toString().replace("| WIP |", "| DONE |"));
+    commit("base already completed the same immutable request");
+    receipt.baseSha = execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: root,
+      encoding: "utf8",
+    }).trim();
+    git("checkout", "topic");
+    expect(receipt.baseSha).not.toBe(ancestorWithoutRequest);
+    expect(
+      execFileSync("git", ["merge-base", "main", "HEAD"], { cwd: root, encoding: "utf8" }).trim(),
+    ).toBe(ancestorWithoutRequest);
+    expect(
+      execFileSync("git", ["show", `${ancestorWithoutRequest}:${ledger}`], {
+        cwd: root,
+        encoding: "utf8",
+      }),
+    ).not.toContain(receipt.requestId);
+    migrationEntry("buildDecisionPageMigrationPlan");
+    const writer = vi.spyOn(fs, "writeFile");
+    await expect(buildPhysical(receipt, receiptHash(receipt))).rejects.toThrow(
+      /base|DONE|authority|inherited/i,
+    );
+    expect(writer).not.toHaveBeenCalled();
+    expect(await fs.readFile(path.join(root, ledger))).toEqual(topicBytes);
+    for (const file of receipt.files.filter((entry) => entry.original === null))
+      await expect(fs.lstat(path.join(root, file.file))).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  // QFAI:EX-0001-0007-20
+  // QFAI:EX-0001-0007-22
+  it.each([false, true])(
+    "snapshots caller and hook Buffers across awaits and rollback while preserving concurrent bytes: %s",
+    async (concurrent) => {
+      const { receipt, digest } = await physicalFixture();
+      const frozen = receipt.files.map((file) => ({
+        file: file.file,
+        original: file.original === null ? null : Buffer.from(file.original),
+        replacement: Buffer.from(file.replacement),
+      }));
+      const originalRoot = frozen.find((file) => file.file === ledger)?.original;
+      if (originalRoot === null || originalRoot === undefined)
+        throw new Error("fixture requires an original root snapshot");
+      const building = buildPhysical(receipt, digest);
+      for (const file of receipt.files) {
+        file.original?.fill(0);
+        file.replacement.fill(0);
+        file.file = "outside/caller-changed.md";
+      }
+      receipt.root = path.join(root, "caller-other-root");
+      receipt.specsDir = "caller-other-specs";
+      receipt.baseRef = "caller-other-base";
+      const plan = await building;
+      if (plan === null || typeof plan !== "object")
+        throw new Error("fixture requires the production plan");
+      const exposedReceipt: unknown = Reflect.get(plan, "receipt");
+      if (exposedReceipt === null || typeof exposedReceipt !== "object")
+        throw new Error("fixture requires the production receipt");
+      const exposedFiles: unknown = Reflect.get(exposedReceipt, "files");
+      if (!Array.isArray(exposedFiles))
+        throw new Error("fixture requires the production replacement map");
+      const operator = Buffer.from("Concurrent actor owns this first page\n");
+      let rootFailed = false;
+      const writer = vi.fn(async (file: string, bytes: Buffer) => {
+        await fs.writeFile(file, bytes);
+        bytes.fill(0);
+        if (file === path.join(root, ledger) && !rootFailed) {
+          rootFailed = true;
+          if (concurrent) await fs.writeFile(path.join(root, page), operator);
+          throw new Error("controlled failure after full root replacement");
+        }
+      });
+      const failure = applyPhysical(plan, digest, { writeFile: writer });
+      Reflect.set(plan, "root", path.join(root, "plan-other-root"));
+      Reflect.set(plan, "specsDir", "plan-other-specs");
+      Reflect.set(plan, "baseRef", "plan-other-base");
+      Reflect.set(exposedReceipt, "root", path.join(root, "receipt-other-root"));
+      for (const value of exposedFiles) {
+        const file: unknown = value;
+        if (file === null || typeof file !== "object")
+          throw new Error("fixture requires each production file entry");
+        for (const cell of ["original", "replacement"]) {
+          const bytes: unknown = Reflect.get(file, cell);
+          if (Buffer.isBuffer(bytes)) bytes.fill(0);
+        }
+        Reflect.set(file, "file", "outside/plan-changed.md");
+      }
+      await expect(failure).rejects.toThrow(/controlled failure after full root replacement/);
+      expect(rootFailed).toBe(true);
+      expect(writer.mock.calls.slice(0, 4).map((call) => call[0])).toEqual(
+        frozen.map((file) => path.join(root, file.file)),
+      );
+      expect(
+        writer.mock.calls.every((call) =>
+          frozen.some((file) => call[0] === path.join(root, file.file)),
+        ),
+      ).toBe(true);
+      expect(await fs.readFile(path.join(root, ledger))).toEqual(originalRoot);
+      for (const file of frozen.filter((entry) => entry.original === null)) {
+        if (concurrent && file.file === page) {
+          expect(await fs.readFile(path.join(root, file.file))).toEqual(operator);
+          await expect(failure).rejects.toThrow(/unrestored/i);
+          await expect(failure).rejects.toThrow(/page-0001/);
+        } else
+          await expect(fs.lstat(path.join(root, file.file))).rejects.toMatchObject({
+            code: "ENOENT",
+          });
+      }
+      await expect(fs.lstat(path.join(root, "outside"))).rejects.toMatchObject({ code: "ENOENT" });
+    },
+  );
+});
