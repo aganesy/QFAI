@@ -388,7 +388,7 @@
         "still doing the work.",
         "",
         "Separate from `verificationSet` because the property is different, not because the obligation",
-        "is weaker. A `verificationSet` item must be performed UNCONDITIONALLY, and these four sit in",
+        "is weaker. A `verificationSet` item must be performed UNCONDITIONALLY, and these verification lanes sit in",
         "jobs that carry `needs.detect.outputs.full` — which is the arrangement rather than a hole: a",
         "documentation-only pull request legitimately runs none of them, and the verdict accepts the",
         "skip. What must not change without a reviewer reading it is WHAT THEY DO when they run.",
