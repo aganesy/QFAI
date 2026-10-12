@@ -25,6 +25,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   verification, and grants no authority to run the documented actions.
   Fixes #3403.
 
+- **Decision registers support directly listed historical pages.** Updated readers
+  read the complete register in page order, then the root append tail, at head,
+  base and ancestor. Each register document is limited to 500 physical lines.
+  Relocation requires separate reviewed authorization and must preserve every
+  raw occurrence, cell, line ending and order. Malformed or missing pages and unsafe
+  history stop dependent writes. Legacy root-only registers remain readable;
+  oversized input is reported without truncation or automatic rewriting. Older
+  readers need an upgrade or a root-only layout to read the complete history.
+
 ### Fixed
 
 - **Discussion completion references point to the existing obligations.**
