@@ -117,4 +117,18 @@ Feature: Follow a route in the session
     And the session checks target and source identity and inspects existing receipts before obtaining missing proof or resuming only genuinely owed authorized work, without blindly repeating irreversible or external actions
     And the already-planned independent review assesses the available comparison for the work it reviews without adding a review or gate
     And actual FAIL, UNRUN and pending results remain visible, required gates still apply, and no engine, command, plan key, runtime schema or report registry is introduced
+
+  # AC-0001-0224-13
+  Scenario: An authorized procedure has its own documentation writer
+    Given a request to author an ordinary operational Markdown procedure within existing policy
+    When the session extracts and plans the request
+    Then it uses intent procedure and the actual docs deliverable without inventing code, tests, specification or contract artifacts
+    And rule 29 selects write-procedure after refactor and before docs, while rules 1 through 28 retain priority
+    And the plan runs implement-procedure in a documentation stage, followed by the existing change-note code review and QFAI, repository and commit verification
+    And every step keeps the existing four output keys and applicable checks; no release point, branch point or extra review is added
+    And qfai-implement owns the route-only step with doc-steward; ordinary named business-flow implementation and wording-only maintenance keep their existing procedures
+    And the writer changes only authorized procedure documents within existing policy, stopping before protected-owner edits or invented required facts
+    And writing the procedure grants no permission to execute its actions or expand external authority
+    And a mixed request retains its actual artifacts and existing checks rather than hiding implementation in a docs-only reading
+    And unavailable required checks remain UNRUN; unobserved procedure execution is not reported as completed
 ```
