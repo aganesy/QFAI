@@ -35,7 +35,7 @@ const SHIPPED_MESSAGES = "packages/qfai/assets/init/root/.agents/rules/reminders
 /** The skill the reminder sends a request to, and the one list of requests both state. */
 const SHIPPED_RUN_SKILL = "packages/qfai/assets/init/.qfai/assistant/skill/qfai-run/SKILL.md";
 const FREE_TEXT_CASES =
-  "a change, a fix, an investigation of the codebase or a question about the project";
+  "a change, a fix, an investigation of the codebase, a question about the project or an operation on finished work";
 
 /** This repository's own Claude Code hooks, and the copy `qfai init` writes. */
 const OWN_SETTINGS = ".claude/settings.json";
@@ -188,7 +188,7 @@ describe("the free-text entry reminder", () => {
     );
   });
 
-  it("says a question one command answers needs no run", async () => {
+  it("says no request skips the run, the lightest included", async () => {
     const stdout = await runReminderHook(
       {
         command: "node",
@@ -197,8 +197,11 @@ describe("the free-text entry reminder", () => {
       projectDirOf(repoRoot, SHIPPED_SETTINGS),
     );
     expect(contextOf(stdout)).toContain(
-      "A question that one command or one file read answers needs no run: answer it directly.",
+      "No request skips the run: a question that one command or one file read answers is planned too, and takes the lightest route.",
     );
+    expect(contextOf(stdout)).not.toContain("needs no run");
+    const skill = await readFile(path.join(repoRoot, SHIPPED_RUN_SKILL), "utf-8");
+    expect(/^description: "(.*)"$/m.exec(skill)?.[1]).not.toMatch(/needs no (?:run|plan)/);
   });
 
   it("tells the agent to stop and say so when qfai-run cannot start", async () => {

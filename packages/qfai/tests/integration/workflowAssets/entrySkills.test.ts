@@ -143,6 +143,7 @@ const EXTRACTION_VOCABULARIES: Record<string, string[]> = {
     "visual-open",
     "prototype-requested",
     "owned-temporary-cleanup",
+    "session-answerable",
   ],
   signals: [
     "approved-record-task",
@@ -528,6 +529,16 @@ describe("qfai-run", () => {
     expect(flat(sectionOf(reference, "## Entry flags"))).toMatch(
       /acceptance is shown when .* the user asks for the change in the session and names it and its effect/i,
     );
+  });
+
+  // QFAI:AC-0001-0211-05
+  // QFAI:EX-0001-0211-51
+  it("extracts a question the session can answer and an operation from the skill file alone", async () => {
+    const extract = flat(sectionOf(await readShipped(RUN), "## The work"));
+    expect(extract).toMatch(/neither needs a reference/i);
+    expect(extract).toContain("qualifiers: [session-answerable]");
+    expect(extract).toContain("`{ intent: order, artifacts: [] }`");
+    expect(extract).toMatch(/read any other request as `references\/extraction\.md` sets out/i);
   });
 
   // QFAI:AC-0001-0229-06

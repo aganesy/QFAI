@@ -43,9 +43,9 @@ const START_LOAD_BUDGET: Readonly<Record<string, number>> = {
   "qfai-maintain": 31_000,
   "qfai-migration-v1-to-v2": 57_000,
   "qfai-prototyping": 50_000,
-  "qfai-run": 52_000,
+  "qfai-run": 53_000,
   "qfai-sdd": 50_000,
-  "qfai-triage": 50_000,
+  "qfai-triage": 51_000,
   "qfai-verify": 51_000,
   "web-research": 60_000,
 };
