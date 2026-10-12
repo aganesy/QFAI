@@ -12,6 +12,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   applicable authority remain open. Interactive sessions retain actual user
   confirmation.
 
+### Fixed
+
+- **Profiling output retains its complete UTF-8 prefix within the shared 32 MiB limit.**
+  A chunk that crosses the limit keeps the complete characters that fit before
+  owned process termination begins. Output after the limit is discarded. Fixes #3462.
+
 ## [2.1.2] - 2026-10-11
 
 ### Added
