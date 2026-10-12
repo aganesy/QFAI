@@ -104,6 +104,7 @@ afterEach(async () => {
 });
 
 describe("decision pages through supported consumers", () => {
+  // QFAI:AC-0001-0053-09
   // QFAI:EX-0001-0053-25
   it("applies only the DONE AC exception, resolves a cross-page successor and excludes register stale terms", async () => {
     const story = `${specs}/02_business-flow/business-flow-0001/user-story-0001-0053`;
@@ -263,6 +264,7 @@ describe("decision pages through supported consumers", () => {
     for (const [file] of bad) expect(result.stdout + result.stderr).toContain(file);
   });
 
+  // QFAI:AC-0001-0054-09
   // QFAI:EX-0001-0054-17
   it.each(["DONE", "WIP", "WIP to DONE"])(
     "keeps inherited %s permission semantics across physical relocation",
@@ -659,6 +661,7 @@ async function applyPhysical(
 }
 
 describe("separately adopted physical decision-page receipts", () => {
+  // QFAI:AC-0001-0007-04
   // QFAI:EX-0001-0007-17
   it("relocates only adopted historical raw rows and retains the exact root request tail", async () => {
     const { receipt, digest, replacementRoot } = await physicalFixture();
