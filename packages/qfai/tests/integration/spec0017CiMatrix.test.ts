@@ -106,7 +106,6 @@ describe("spec-0017 CI matrix acceptance", () => {
       "node-floor (scripts)",
       "node-floor (unit)",
       "node-floor (validators)",
-      "temporary-worker-benchmark",
       "test (cli)",
       "test (core)",
       "test (e2e)",
@@ -129,7 +128,6 @@ describe("spec-0017 CI matrix acceptance", () => {
       "lint",
       "mirror-surface",
       "node-floor",
-      "temporary-worker-benchmark",
       "test",
       "windows-parity",
     ]);
