@@ -139,10 +139,9 @@ and reporting requirement, and states any assumption it built on
 
 ## Route-only procedure authoring
 
-When the plan names `implement-procedure`, read
-`.qfai/assistant/step/implement-procedure/STEP.md` and follow it to write an
-authorized operational procedure. Named business-flow invocations skip this
-step and keep the existing flow steps above.
+When the plan names `implement-procedure`, follow
+`.qfai/assistant/step/implement-procedure/STEP.md`.
+Business-flow invocations skip it; existing flow steps apply.
 
 ## Completion
 
