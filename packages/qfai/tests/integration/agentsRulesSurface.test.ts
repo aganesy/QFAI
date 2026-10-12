@@ -298,7 +298,7 @@ describe("§ 4 of the minimal-implementation rule bounds unrequested fixes and r
  *
  * The subject is the rules that exist, not the rules a list names. Reading the
  * directory is what makes that true: a master that skips its registration —
- * `README.md` — is still named by the case that finds it
+ * `AGENTS.md` — is still named by the case that finds it
  * missing, because it reached the case from disk rather than from an entry
  * someone had to add.
  *
