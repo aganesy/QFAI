@@ -103,8 +103,7 @@
         "checks — the rule mirror, the skill links, the reviewer vocabulary — is what a change to those",
         "documents breaks, and such a change is exactly the one a detection-derived condition would",
         "route past it. `BR-0015-0011` binds that on review: a lane moved into a job of its own gains",
-        "neither a condition nor an entry above.",
-        "a dependency condition."
+        "neither a condition nor an entry above."
       ],
       "dependencyMatrices": {
         "test": { "slice": ["core", "validators", "integration", "e2e", "cli", "unit", "scripts"] },
