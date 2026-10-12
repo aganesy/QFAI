@@ -574,3 +574,122 @@ describe("serializeClaudeSettings", () => {
     expect(JSON.parse(text)).toEqual({ hooks: { PreToolUse: [] } });
   });
 });
+
+/** Immutable official prompt groups captured before CI-monitor filtering. */
+const PRE_CI_MONITOR_PROMPT_GROUPS = [
+  {
+    key: "structured-question",
+    group: {
+      matcher: "*",
+      hooks: [
+        {
+          type: "command",
+          statusMessage: "QFAI structured-question reminder",
+          command: "node",
+          args: [
+            "-e",
+            "try{const f=require('fs');let i={};try{i=JSON.parse(f.readFileSync(0,'utf8'))||{}}catch{}const p=i.prompt;if(!(typeof p==='string'&&/^[ \\t]*(<(task-notification|wake)[\\s>]|\\[SYSTEM NOTIFICATION)/m.test(p))){let n=1;if(typeof i.session_id==='string'){try{const t=require('path').join(require('os').tmpdir(),['qfai-reminder',i.session_id,i.agent_id||'main',process.argv[2]].join('-').replace(/[^\\w.-]/g,'_'));f.appendFileSync(t,'.');n=f.statSync(t).size}catch{}}const e=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(e!==undefined){const {briefContext,...m}=e;if(n>1&&typeof briefContext==='string')m.hookSpecificOutput.additionalContext=briefContext;console.log(JSON.stringify(m))}}}catch{}",
+            "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
+            "structured-question",
+          ],
+        },
+      ],
+    },
+  },
+  {
+    key: "free-text-entry",
+    group: {
+      matcher: "*",
+      hooks: [
+        {
+          type: "command",
+          statusMessage: "QFAI free-text entry reminder",
+          command: "node",
+          args: [
+            "-e",
+            "try{const f=require('fs');let i={};try{i=JSON.parse(f.readFileSync(0,'utf8'))||{}}catch{}const p=i.prompt;if(!(typeof p==='string'&&/^[ \\t]*(<(task-notification|wake)[\\s>]|\\[SYSTEM NOTIFICATION)/m.test(p))){let n=1;if(typeof i.session_id==='string'){try{const t=require('path').join(require('os').tmpdir(),['qfai-reminder',i.session_id,i.agent_id||'main',process.argv[2]].join('-').replace(/[^\\w.-]/g,'_'));f.appendFileSync(t,'.');n=f.statSync(t).size}catch{}}const e=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(e!==undefined){const {briefContext,...m}=e;if(n>1&&typeof briefContext==='string')m.hookSpecificOutput.additionalContext=briefContext;console.log(JSON.stringify(m))}}}catch{}",
+            "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
+            "free-text-entry",
+          ],
+        },
+      ],
+    },
+  },
+] as const;
+
+describe("the official prompt groups before CI-monitor filtering", () => {
+  // QFAI:EX-0001-0021-09
+  it.each(PRE_CI_MONITOR_PROMPT_GROUPS)(
+    "upgrades the official $key group in place",
+    ({ group }) => {
+      const current = shippedCounterpart("UserPromptSubmit", group);
+      expect(current).toBeDefined();
+      const own = { matcher: "OwnBefore", hooks: [{ type: "command", command: "./own.sh" }] };
+      const after = { matcher: "OwnAfter", hooks: [{ type: "command", command: "./after.sh" }] };
+      const existing = {
+        model: "project-model",
+        extra: { keep: true },
+        permissions: { allow: ["Bash(git status)"], deny: ["Bash(rm:*)"] },
+        hooks: { UserPromptSubmit: [own, group, after] },
+      };
+      const result = mergeDocumentationClarityHooks(JSON.stringify(existing), SHIPPED);
+      expect(result.outcome).toBe("merged");
+      if (result.outcome !== "merged") throw new Error(`expected a merge, got ${result.outcome}`);
+      expect(groupsFor(result.settings, "UserPromptSubmit").slice(0, 3)).toEqual([
+        own,
+        current,
+        after,
+      ]);
+      expect(groupsFor(result.settings, "UserPromptSubmit")[1]).not.toEqual(group);
+      expect(
+        groupsFor(result.settings, "UserPromptSubmit").filter(
+          (candidate) => markersOf(candidate) === markersOf(group),
+        ),
+      ).toEqual([current]);
+      expect(result.edited).toEqual([]);
+      expect(result.settings).toMatchObject({
+        model: existing.model,
+        extra: existing.extra,
+        permissions: { deny: existing.permissions.deny },
+      });
+      const permissions = result.settings.permissions;
+      const allow: unknown =
+        typeof permissions === "object" && permissions !== null
+          ? Reflect.get(permissions, "allow")
+          : undefined;
+      expect(Array.isArray(allow) ? allow[0] : undefined).toBe("Bash(git status)");
+      expectNoEmbeddedReminderText(JSON.stringify(current), MESSAGES);
+      expect(
+        mergeDocumentationClarityHooks(serializeClaudeSettings(result.settings), SHIPPED),
+      ).toEqual({ outcome: "already-present", edited: [] });
+    },
+  );
+
+  // QFAI:EX-0001-0021-09
+  it.each(PRE_CI_MONITOR_PROMPT_GROUPS)(
+    "keeps an edited $key group on every merge",
+    ({ group }) => {
+      const edited = {
+        ...group,
+        hooks: [{ ...group.hooks[0], command: "project-node" }],
+      };
+      const result = mergeDocumentationClarityHooks(
+        JSON.stringify({ hooks: { UserPromptSubmit: [edited] } }),
+        SHIPPED,
+      );
+      expect(result.outcome).toBe("merged");
+      if (result.outcome !== "merged") throw new Error(`expected a merge, got ${result.outcome}`);
+      const note = `UserPromptSubmit "${group.hooks[0].statusMessage}"`;
+      expect(groupsFor(result.settings, "UserPromptSubmit")[0]).toEqual(edited);
+      expect(
+        groupsFor(result.settings, "UserPromptSubmit").filter(
+          (candidate) => markersOf(candidate) === markersOf(group),
+        ),
+      ).toEqual([edited]);
+      expect(result.edited).toEqual([note]);
+      expect(
+        mergeDocumentationClarityHooks(serializeClaudeSettings(result.settings), SHIPPED),
+      ).toEqual({ outcome: "already-present", edited: [note] });
+    },
+  );
+});
