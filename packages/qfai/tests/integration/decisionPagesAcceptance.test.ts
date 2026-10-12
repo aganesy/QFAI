@@ -562,7 +562,7 @@ function migrationEntry(name: string): (...args: unknown[]) => Promise<unknown> 
   const candidate: unknown = Reflect.get(decisionRenumber, name);
   if (typeof candidate !== "function")
     throw new Error(`Decision migration production entry ${name} is unavailable`);
-  return async (...args: unknown[]): Promise<unknown> => candidate(...args);
+  return async (...args: unknown[]): Promise<unknown> => await candidate(...args);
 }
 
 async function physicalFixture(duplicates = false) {
