@@ -714,7 +714,7 @@ describe("published native evidence selection", () => {
       const archive = path.join(root, "selected.tar");
       const packed = deliveryNative(
         "tar",
-        ["-cf", archive, "-C", staged, ...files.map((file) => `./${file.name}`)],
+        ["-cf", path.basename(archive), "-C", staged, ...files.map((file) => `./${file.name}`)],
         root,
       );
       expect(packed.exit, JSON.stringify(packed)).toBe(0);
@@ -722,7 +722,7 @@ describe("published native evidence selection", () => {
       const retrieved = path.join(root, "retrieved.tar");
       await copyFile(archive, retrieved);
       expect(deliveryDigest(await readFile(retrieved))).toBe(expectedArchiveDigest);
-      const listing = deliveryNative("tar", ["-tf", retrieved], root);
+      const listing = deliveryNative("tar", ["-tf", path.basename(retrieved)], root);
       expect(listing.exit, JSON.stringify(listing)).toBe(0);
       const members = listing.stdout
         .split(/\r?\n/u)
@@ -731,7 +731,11 @@ describe("published native evidence selection", () => {
       expect(members.sort()).toEqual(files.map((file) => file.name).sort());
       await mkdir(receiver, { recursive: true });
       await writeFile(path.join(root, "receiver", "unrelated.txt"), "RECEIVER_SENTINEL");
-      const extracted = deliveryNative("tar", ["-xf", retrieved, "-C", receiver], root);
+      const extracted = deliveryNative(
+        "tar",
+        ["-xf", path.basename(retrieved), "-C", receiver],
+        root,
+      );
       expect(extracted.exit, JSON.stringify(extracted)).toBe(0);
       expect(deliveryCheck(script, receiver, files).exit).toBe(0);
       await deliveryOriginals(receiver, files);
@@ -993,7 +997,11 @@ describe("published native evidence selection", () => {
       await deliveryWriteFiles(source, files);
       expect(deliveryCheck(script, source, files).exit).toBe(0);
       const archive = path.join(root, "selected.tar");
-      const packed = deliveryNative("tar", ["-cf", archive, "-C", source, "./required.log"], root);
+      const packed = deliveryNative(
+        "tar",
+        ["-cf", path.basename(archive), "-C", source, "./required.log"],
+        root,
+      );
       expect(packed.exit, JSON.stringify(packed)).toBe(0);
       const trustedArchive = await readFile(archive);
       const receivedRoot = path.join(root, "received");
@@ -1045,9 +1053,13 @@ describe("published native evidence selection", () => {
                 kind === "duplicated" ? "./required.log" : "./unexpected.txt",
               ];
         const archive = path.join(root, "selected.tar");
-        const packed = deliveryNative("tar", ["-cf", archive, "-C", source, ...selection], root);
+        const packed = deliveryNative(
+          "tar",
+          ["-cf", path.basename(archive), "-C", source, ...selection],
+          root,
+        );
         expect(packed.exit, JSON.stringify(packed)).toBe(0);
-        const listing = deliveryNative("tar", ["-tf", archive], root);
+        const listing = deliveryNative("tar", ["-tf", path.basename(archive)], root);
         expect(listing.exit, JSON.stringify(listing)).toBe(0);
         const members = listing.stdout
           .split(/\r?\n/u)
