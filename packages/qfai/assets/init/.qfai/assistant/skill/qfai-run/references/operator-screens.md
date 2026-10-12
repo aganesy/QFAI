@@ -6,11 +6,14 @@ What the user sees while a request is worked, and how a question reaches them.
 
 - Every screen
 - Launcher recovery
+- Refreshing installed instructions
 - Executing a step
 - The scope question
 - The announcement
 - Questions
+- Repair found by a question-only stage
 - A step only a person can take
+- Authorized external actions
 - Replies to a waiting step
 - Independent targets under one goal
 - Halt notice
@@ -38,6 +41,24 @@ Use the project's package manager and declared install command in this checkout:
 - Repeat the launcher preflight. Plan only after it succeeds.
 
 Never use a published, remote or cached QFAI launcher as a fallback.
+
+## Refreshing installed instructions
+
+Read this section before applying corrected guidance to an adopting project.
+
+Install or update its project-local QFAI dependency using the project's package
+manager and approved package source. Verify that the canonical launcher resolves
+that installation, then inspect the installed step and reference files for the
+required guidance. A source fix or package version string alone does not prove
+that a published package contains it.
+
+Preview the refresh with that verified local launcher using
+`npx qfai init --force --dry-run`. Review the managed files it would replace,
+including any direct local edits, before `npx qfai init --force`. Review the
+resulting diff. Force refresh overwrites managed assistant and rule masters;
+project specs, contracts, rule overlays, `skill.local/`, configuration overrides
+and existing entry documents remain project-owned. Keep them intact; do not
+replace them with templates to make the refresh pass.
 
 ## Executing a step
 
@@ -108,12 +129,33 @@ Independent questions go in one round; a dependent one waits for its answer.
 - Under a no-question mode nothing is asked. `SKILL.md` says what is done
   instead.
 
+## Repair found by a question-only stage
+
+Read this section when a question-only request finds a defect and its move to
+tracked-file repair lacks explicit authority for the same target.
+
+Show the defect and its evidence, the proposed repair scope and the planned
+checks. Put one question through the structured question tool in the form
+`.agents/rules/user-questions.md` requires:
+
+- **Repair:** authorize the stated repair and checks for this target.
+- **Report and stop:** report the finding and stop this target without edits.
+
+Write nothing before the answer. Repair permission takes the destination's
+existing plan; add no stage or scope. The guards for a third branch move, a
+scope that leaves stages out and release approval still apply.
+
+Under a no-question mode, report the defect and required repair permission and
+stop that target. Write no tracked `open-questions.md` row for this choice;
+asking for no questions alone supplies no repair authority. Other authorized
+independent targets may continue.
+
 ## A step only a person can take
 
-A change can depend on an action outside the repository that only the user can
-take: a setting in a hosted dashboard, or a credential issued in a service's
-web console. The plan stays the repository change. The work stops before the
-stage that needs the action and says three things:
+A change can depend on a step only a person can take: interactive login, a
+new permission grant or an expansion of authority. The plan stays the
+repository change. The work stops before the stage that needs that action
+and says three things:
 
 - what the user must do, in plain words, and where;
 - what shows it was done;
@@ -124,13 +166,47 @@ Put it as one question that ends the turn, in the form
 `.agents/rules/user-questions.md` sets out. The options are that the user did
 it, and `stop`.
 
-- The agent never types a password, token or key, and never changes an account
-  or service setting. The user does both in the service's own page.
+- The user completes person-only login, new permission grants and authority
+  expansion in the service's own page. A human-run or triage handoff never
+  performs the user's operation on their behalf.
 - The agent reads only the evidence it named. It reports the action as
   confirmed or not confirmed, and goes on after it only when confirmed or the
   user says to go on.
 - Under a no-question mode nothing is asked. The work that does not depend on
   the action goes on, and the final report lists the action as not done.
+
+## Authorized external actions
+
+Read this section when a repository change needs an account setting or a
+credential installed outside the repository.
+
+An agent may perform that action only when prior user instructions or project
+policy cover the specific target and action, and the host provides an allowed
+safe channel. A connector's availability alone proves neither authority nor
+access. Reuse covering authority without inventing a new permission grant.
+
+Check that the actual credential's account, project, scope and expiry fit that
+authority. One-time permission is not continuing access. Third-party credential
+ownership needs its own authority; permission for this project does not supply
+it. Use only the host's actual safe channel for credential installation. Never
+put a password, token or key in chat, logs or tracked files, or ask the user to
+paste it there. Interactive login, new permission grants and authority expansion
+remain person-only actions.
+
+If authority, credential ownership or a safe channel is absent or unknown, or
+the host denies the action, stop the dependent action. Give concrete manual
+steps, the evidence that would confirm them and a read-only verification check.
+Do not bypass the denial or infer missing authority from a generic request to
+proceed. Keep a human-run or triage handoff as a handoff; other authorized
+independent work may continue.
+
+Record host access or CI start, authorization, credential installation, CI
+results, merge and publication separately in the existing stage report. For
+each relevant effect state confirmed, pending, unverified or not requested,
+with its target, exact revision, evidence URL when available, blocker and
+resume condition where needed. Missing evidence stays unverified. A green CI
+result proves neither merge nor publication. Report the implemented repository
+change separately from unverified external effects.
 
 ## Replies to a waiting step
 
@@ -193,8 +269,18 @@ the switch; do not stash, reset or delete them to move on. A reviewer using
 live files or checkout-dependent execution must finish. A read-only reviewer
 using only `git show <fixed SHA>:<path>` may continue across a clean orchestrator switch;
 the reviewer never switches the checkout. CI-only pending gates use the
-existing DELEGATED commit allowance only under explicit user instruction or
-project policy. A wait never authorizes an early commit or skipped gate.
+existing DELEGATED commit allowance only under a user instruction or project
+policy covering that verification commit and its tracked paths. The project
+must declare the gate CI-only and name its actual check. Every nondelegated gate
+must pass. A delegated red check stops transport of the same unchanged candidate.
+Explicit CI-only delegation covering transport may instead carry actual changes
+addressing that failure through the existing planned fix into a new candidate,
+even while HEAD names the failed commit. Keep the prior head, check, run and
+observed result as FAIL; never relabel that evidence pending. Report the actual
+fix and the new head after committing. Its missing or pending CI result leaves
+verification incomplete. Ordinary FAIL or UNRUN still stops the commit. A commit
+grants no push or pull request authority: each remote action needs its own covered
+instruction or policy. Waiting alone never authorizes a commit or skipped gate.
 
 Use standing delegation only for the targets and actions it actually covers.
 Report routine choices as the agent's decisions under that authority, never
@@ -224,7 +310,15 @@ reset, a stash, a branch switch or a worktree removal.
 | At the chosen scope                   | The chosen stages complete, the stages not chosen, and a verdict for each gate that ran, never that a change is done |
 | At a closing step                     | The closure outcome and each follow-up request, never that a change is done                                          |
 | With a gate failing                   | Each failing gate marked pre-existing or new, with its owner. Nothing reads as complete                              |
+| With delegated CI pending             | The verification commit, pending checks and resume condition; verification remains incomplete                        |
 
+- For a CI wait, name the target, current head, run ID or URL when available,
+  check, actual outcome and counts, blocker and resume condition. State when no
+  run exists. Missing, red or mismatched evidence stops formal completion or
+  merge; every required check needs actual passing evidence for the current head.
+- Report repository outcome separately from external publication. A local commit
+  is not a push or pull request, and passing repository checks do not prove a
+  deployment, package publication or other external effect occurred.
 - A gate shows its verdict only.
 - An external effect nobody requested is listed as not requested.
 - The report does not restate the history of the work.

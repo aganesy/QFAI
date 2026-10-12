@@ -24,7 +24,7 @@ already is:
 | --------------------------- | --------------------------------------------------------------------------- |
 | A rule to follow            | A rule in `.agents/rules/`, which every entry point routes to               |
 | How to do a thing correctly | The guard that fails when it is done wrong, in its message and its docblock |
-| Where to look next          | The entry point that sent the reader — `AGENTS.md`, `CLAUDE.md`, the skill  |
+| Where to look next          | The entry point that sent the reader — `AGENTS.md`, the skill               |
 
 `scripts/check-tracked-readmes.mjs` fails on a tracked `README.md` outside those
 two, so the rule holds for a contributor who never read it.
@@ -57,7 +57,7 @@ restate, so `qfai init` refreshes the two together.
    `.claude/rules/`, because Claude Code loads everything there at session
    start. `scopedRules.test.ts` holds both.
 
-3. Cite it from `AGENTS.md`, `CLAUDE.md` and `.github/copilot-instructions.md`.
+3. Cite it from `AGENTS.md` and `.github/copilot-instructions.md`.
    A shipped rule is cited from `root/AGENTS.md` and `root/CLAUDE.md` too, so an
    adopter's entry points name it.
 

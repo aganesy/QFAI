@@ -165,7 +165,7 @@ describe("reviewer stop conditions distinguish named-rule defects from new produ
 });
 
 describe("repository async guidance agrees with the retained-failure test", () => {
-  it.each(["CLAUDE.md", "REVIEW.md", "AGENTS.md"])(
+  it.each(["REVIEW.md", "AGENTS.md"])(
     "%s preserves propagation and the whole floor",
     async (file) => {
       const text = await readFile(path.join(ROOT, file), "utf-8");
@@ -260,8 +260,8 @@ describe("the minimal-implementation rule names the four shapes an addition take
     expect(text).toContain("## 5. What this rule is not");
   });
 
-  it("CLAUDE.md does not ask for extraction by line count", async () => {
-    const flat = (await readFile(path.join(ROOT, "CLAUDE.md"), "utf-8")).replace(/\s+/g, " ");
+  it("AGENTS.md does not ask for extraction by line count", async () => {
+    const flat = (await readFile(path.join(ROOT, "AGENTS.md"), "utf-8")).replace(/\s+/g, " ");
     expect(flat).toContain(
       "Keep each function focused on one job. Length alone is not a reason to extract one.",
     );
@@ -376,30 +376,20 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
   // knows it exists. The directory holds the rules, and AGENTS.md is where an
   // agent finds out which of them to read.
   it.each(RULE_MASTERS)("an entry file names %s", async (fileName) => {
-    const texts = await Promise.all(
-      ["AGENTS.md", "CLAUDE.md"].map((entry) => readFile(path.join(ROOT, entry), "utf-8")),
-    );
-    expect(
-      texts.some((text) => text.includes(fileName)),
-      `neither AGENTS.md nor CLAUDE.md names ${fileName}`,
-    ).toBe(true);
+    const text = await readFile(path.join(ROOT, "AGENTS.md"), "utf-8");
+    expect(text, `AGENTS.md does not name ${fileName}`).toContain(fileName);
   });
 
   it("AGENTS.md references the master rules directory and version-discipline", async () => {
     const text = await readFile(path.join(ROOT, "AGENTS.md"), "utf-8");
     expect(text).toMatch(/Version discipline/);
-    expect(text).toMatch(/\.agents\/rules\/version-discipline\.md/);
+    expect(text).toMatch(/version-discipline.md/);
     expect(text).toMatch(/\.agents\/rules\//);
   });
 
   it(".github/copilot-instructions.md references .agents/rules/", async () => {
     const text = await readFile(path.join(ROOT, ".github/copilot-instructions.md"), "utf-8");
     expect(text).toMatch(/\.agents\/rules\//);
-    expect(text).toMatch(/version-discipline/);
-  });
-
-  it("CLAUDE.md references the version-discipline rule", async () => {
-    const text = await readFile(path.join(ROOT, "CLAUDE.md"), "utf-8");
     expect(text).toMatch(/version-discipline/);
   });
 
@@ -430,7 +420,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
 
     // Copilot reads none of the other two, so a rule the master declares for
     // every agent reaches it only through this file.
-    it.each(["AGENTS.md", "CLAUDE.md", ".github/copilot-instructions.md"])(
+    it.each(["AGENTS.md", ".github/copilot-instructions.md"])(
       "%s cites the rule master",
       async (rel) => {
         const text = await readFile(path.join(ROOT, rel), "utf-8");
@@ -467,8 +457,8 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       }
     });
 
-    it.each(["AGENTS.md", "CLAUDE.md"])("%s cites the rule master", async (rel) => {
-      const text = await readFile(path.join(ROOT, rel), "utf-8");
+    it("AGENTS.md cites the rule master", async () => {
+      const text = await readFile(path.join(ROOT, "AGENTS.md"), "utf-8");
       expect(text).toContain("repository-language.md");
     });
 
@@ -592,10 +582,8 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     it("no entry point enumerates the identifiers without naming the exemption", async () => {
       const entryPoints = [
         "AGENTS.md",
-        "CLAUDE.md",
         ".github/copilot-instructions.md",
         "packages/qfai/assets/init/root/AGENTS.md",
-        "packages/qfai/assets/init/root/CLAUDE.md",
       ];
       const enumerates = /issue or pull request numbers/;
       const contradicting: string[] = [];
@@ -613,6 +601,48 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
           .find((block) => enumerates.test(block));
         if (bullet !== undefined && !/CHANGELOG/i.test(bullet)) contradicting.push(rel);
       }
+      const reminders: Record<string, { hookSpecificOutput: { additionalContext: string } }> =
+        JSON.parse(
+          await readFile(
+            path.join(ROOT, "packages/qfai/assets/init/root/.agents/rules/reminders.json"),
+            "utf-8",
+          ),
+        );
+      const communication = await readFile(
+        path.join(ROOT, "packages/qfai/assets/init/.qfai/assistant/rule/communication.md"),
+        "utf-8",
+      );
+      const communicationBullet =
+        /^- Keep out issue or pull-request numbers[^\r\n]*(?:\r?\n[ \t]+[^\r\n]*)*/m.exec(
+          communication,
+        )?.[0];
+      const shippedSummaries = [
+        {
+          name: "documentation-clarity-before-post",
+          text: reminders["documentation-clarity-before-post"]?.hookSpecificOutput
+            .additionalContext,
+          sourceBan:
+            "No issue or PR numbers, ticket IDs or team-local jargon in source or ordinary Markdown;",
+        },
+        {
+          name: "communication.md identifier bullet",
+          text: communicationBullet,
+          sourceBan:
+            "Keep out issue or pull-request numbers, ticket identifiers and names only this project understands, anywhere in source code or Markdown files.",
+        },
+      ];
+      for (const { name, text, sourceBan } of shippedSummaries) {
+        const clause = text?.replace(/\s+/gu, " ") ?? "";
+        expect(clause, `${name} must keep the source and Markdown identifier ban`).toContain(
+          sourceBan,
+        );
+        expect(
+          clause,
+          `${name} must explicitly permit numbers and links in both kinds of body`,
+        ).toMatch(
+          /(?:^|\. )(?:PR|Pull request) and issue bodies may contain numbers and links\.(?: |$)/u,
+        );
+      }
       expect(
         contradicting,
         "an entry point whose identifier clause does not name the surfaces the master exempts",
@@ -621,8 +651,8 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
 
     it.each(
       [
-        ["AGENTS.md", "CLAUDE.md", ".github/copilot-instructions.md"],
-        ["packages/qfai/assets/init/root/AGENTS.md", "packages/qfai/assets/init/root/CLAUDE.md"],
+        ["AGENTS.md", ".github/copilot-instructions.md"],
+        ["packages/qfai/assets/init/root/AGENTS.md"],
       ].flat(),
     )("%s cites the rule master", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
@@ -726,10 +756,8 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
 
     it.each([
       "AGENTS.md",
-      "CLAUDE.md",
       ".github/copilot-instructions.md",
       "packages/qfai/assets/init/root/AGENTS.md",
-      "packages/qfai/assets/init/root/CLAUDE.md",
       // The list `qfai init` appends to a project that already has an entry
       // point. A project with its own `AGENTS.md` keeps it, so this is the only
       // rule list that population ever sees.
@@ -816,10 +844,8 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
 
     it.each([
       "AGENTS.md",
-      "CLAUDE.md",
       ".github/copilot-instructions.md",
       "packages/qfai/assets/init/root/AGENTS.md",
-      "packages/qfai/assets/init/root/CLAUDE.md",
       // The list `qfai init` appends to a project that already has an entry
       // point, and the only rule list a populated project ever sees.
       "packages/qfai/src/cli/commands/init.ts",
@@ -1026,10 +1052,8 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
 
     it.each([
       "AGENTS.md",
-      "CLAUDE.md",
       ".github/copilot-instructions.md",
       "packages/qfai/assets/init/root/AGENTS.md",
-      "packages/qfai/assets/init/root/CLAUDE.md",
       "packages/qfai/src/cli/commands/init.ts",
     ])("%s cites the rule master", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
@@ -1044,11 +1068,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     });
 
     // QFAI:EX-0001-0196-57
-    it.each([
-      "packages/qfai/assets/init/root/AGENTS.md",
-      "packages/qfai/assets/init/root/CLAUDE.md",
-      "packages/qfai/src/cli/commands/init.ts",
-    ])(
+    it.each(["packages/qfai/assets/init/root/AGENTS.md", "packages/qfai/src/cli/commands/init.ts"])(
       "%s summarizes the required-answer boundary without forcing report questions",
       async (rel) => {
         const text = (await readFile(path.join(ROOT, rel), "utf-8")).replace(/\s+/g, " ");
@@ -1318,10 +1338,8 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
 
     it.each([
       "AGENTS.md",
-      "CLAUDE.md",
       ".github/copilot-instructions.md",
       "packages/qfai/assets/init/root/AGENTS.md",
-      "packages/qfai/assets/init/root/CLAUDE.md",
       // The list `qfai init` appends to a project that already has an entry
       // point. A project with its own `AGENTS.md` keeps it, so this is the only
       // rule list that population ever sees.
@@ -1394,10 +1412,8 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
 
     it.each([
       "AGENTS.md",
-      "CLAUDE.md",
       ".github/copilot-instructions.md",
       "packages/qfai/assets/init/root/AGENTS.md",
-      "packages/qfai/assets/init/root/CLAUDE.md",
       // The list `qfai init` appends to a project that already has an entry
       // point, and the only rule list a populated project ever sees.
       "packages/qfai/src/cli/commands/init.ts",
@@ -1462,10 +1478,8 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
 
     it.each([
       "AGENTS.md",
-      "CLAUDE.md",
       ".github/copilot-instructions.md",
       "packages/qfai/assets/init/root/AGENTS.md",
-      "packages/qfai/assets/init/root/CLAUDE.md",
       // The list `qfai init` appends to a project that already has an entry
       // point, and the only rule list a populated project ever sees.
       "packages/qfai/src/cli/commands/init.ts",
@@ -1541,10 +1555,8 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
 
     it.each([
       "AGENTS.md",
-      "CLAUDE.md",
       ".github/copilot-instructions.md",
       "packages/qfai/assets/init/root/AGENTS.md",
-      "packages/qfai/assets/init/root/CLAUDE.md",
       // The list `qfai init` appends to a project that already has an entry
       // point, and the only rule list a populated project ever sees.
       "packages/qfai/src/cli/commands/init.ts",
@@ -1601,10 +1613,8 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
 
     it.each([
       "AGENTS.md",
-      "CLAUDE.md",
       ".github/copilot-instructions.md",
       "packages/qfai/assets/init/root/AGENTS.md",
-      "packages/qfai/assets/init/root/CLAUDE.md",
       "packages/qfai/src/cli/commands/init.ts",
     ])("%s cites the rule master", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
@@ -1661,10 +1671,8 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
 
     it.each([
       "AGENTS.md",
-      "CLAUDE.md",
       ".github/copilot-instructions.md",
       "packages/qfai/assets/init/root/AGENTS.md",
-      "packages/qfai/assets/init/root/CLAUDE.md",
       "packages/qfai/src/cli/commands/init.ts",
       // The reviewer that reads a pull request's description, shipped and in this repository.
       "packages/qfai/assets/init/.github/instructions/code-review.instructions.md",
@@ -1742,10 +1750,8 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
 
     it.each([
       "AGENTS.md",
-      "CLAUDE.md",
       ".github/copilot-instructions.md",
       "packages/qfai/assets/init/root/AGENTS.md",
-      "packages/qfai/assets/init/root/CLAUDE.md",
       "packages/qfai/src/cli/commands/init.ts",
     ])("%s cites the rule master", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
@@ -1759,8 +1765,11 @@ describe("the question shape has one owner", () => {
   // branch on the answer. The .instruction tree states no rule of its own, so
   // it points instead — a second statement is a copy that drifts, and the drift
   // is invisible until someone follows the copy.
-  it("AGENTS.md branches rows 3 and 4 on the answer", async () => {
-    const text = await readFile(path.join(ROOT, "AGENTS.md"), "utf-8");
+  it(".instruction working-practice.md branches rows 3 and 4 on the answer", async () => {
+    const text = await readFile(
+      path.join(ROOT, ".instruction/00_universal/working-practice.md"),
+      "utf-8",
+    );
     expect(text).toMatch(/where\s+the\s+answer\s+has\s+a\s+listable\s+set\s+of\s+candidates/);
     expect(text).toMatch(/where\s+a\s+choice\s+is\s+being\s+made/);
     expect(text).toContain("user-questions.md");
@@ -1779,7 +1788,7 @@ describe("the question shape has one owner", () => {
 
   // Every shipped surface that summarises the rule uses the same criterion, so
   // an adopter is not told to enumerate a domain nobody can read.
-  it.each(["packages/qfai/assets/init/root/AGENTS.md", "packages/qfai/assets/init/root/CLAUDE.md"])(
+  it.each(["packages/qfai/assets/init/root/AGENTS.md"])(
     "%s summarises it by what can be listed",
     async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
@@ -1812,6 +1821,30 @@ describe("a no-question run opens every node, on every surface that says so", ()
     );
     expect(text).not.toMatch(/(?:every|each)\s+decision\s+left\s+over/);
     expect(text).toMatch(/undefaultable/);
+    if (rel.endsWith("/constitution.md")) {
+      const rule = text
+        .split("6. **A grilling session does not reach the user under `--auto`.**")[1]
+        ?.split("\n## Article XI")[0];
+      expect(rule, "Article X's no-question grilling rule is missing").toBeDefined();
+      const flat = rule?.replace(/\s+/g, " ");
+      expect(flat).toContain(
+        "A critical decision needs an actual user answer or recorded applicable authorization; without it the node stays open",
+      );
+      expect(flat).toContain(
+        "including uncovered critical decisions and unavailable user-held facts",
+      );
+      expect(flat).toContain("stage cannot complete over it");
+      expect(flat).toContain(
+        "A qualifying explicitly delegated session ends `adopted` only with the master's empty-tree, actual-input and authority conditions met",
+      );
+      expect(flat).toContain(
+        "No-question mode alone cannot close a node or authorize a reserved decision",
+      );
+      expect(flat).toContain("a labelled value under an open question is not a settled decision");
+      expect(flat).toContain(
+        "A fact declared undefaultable has no value to write down at all: the run stops and names it",
+      );
+    }
   });
 });
 
@@ -2072,7 +2105,7 @@ describe("rule overlays", () => {
       // Every entry point an agent reads this repository's rules through. A
       // tool whose entry point names only the base master follows a claim the
       // overlay has superseded.
-      ["AGENTS.md", "CLAUDE.md", ".github/copilot-instructions.md"].map((entry) => ({
+      ["AGENTS.md", ".github/copilot-instructions.md"].map((entry) => ({
         entry,
         file,
       })),

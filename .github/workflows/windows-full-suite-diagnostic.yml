@@ -1,0 +1,222 @@
+name: Windows full-suite diagnostic
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: Pull request number
+        required: true
+        type: string
+      sha:
+        description: Current pull request head as a full forty-hex commit SHA
+        required: true
+        type: string
+
+# SHIPPED-CI: not-applicable
+# Because: this optional diagnostic measures this repository's complete Vitest workspace on Windows.
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-full-suite-diagnostic-${{ inputs.pr }}
+  cancel-in-progress: true
+
+jobs:
+  windows-full-suite-diagnostic:
+    name: Windows full-suite diagnostic
+    runs-on: windows-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    env:
+      PR_NUMBER: ${{ inputs.pr }}
+      EXPECTED_SHA: ${{ inputs.sha }}
+      DISPATCH_REF: ${{ github.ref }}
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      WORKFLOW_SHA: ${{ github.workflow_sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check the requested identity before installation
+        run: |
+          set -euo pipefail
+          temp_root="$(cygpath -u "$RUNNER_TEMP")"
+          mkdir -p "${temp_root}/windows-full-suite"
+          cat > "${temp_root}/windows-full-suite-preflight.mjs" <<'PREFLIGHT'
+          import { execFileSync } from "node:child_process";
+          import { mkdirSync, writeFileSync } from "node:fs";
+          import path from "node:path";
+          import process from "node:process";
+
+          try {
+            const pr = process.env.PR_NUMBER ?? "";
+            const sha = process.env.EXPECTED_SHA ?? "";
+            const workflowSha = process.env.WORKFLOW_SHA ?? "";
+            const defaultBranch = process.env.DEFAULT_BRANCH ?? "";
+            if (!/^[1-9][0-9]*$/.test(pr) || !/^[a-f0-9]{40}$/.test(sha) || !/^[a-f0-9]{40}$/.test(workflowSha)) throw new Error("a positive PR number and full forty-hex commits are required");
+            if (!defaultBranch || process.env.DISPATCH_REF !== `refs/heads/${defaultBranch}`) throw new Error("dispatch must select the repository default branch");
+            const git = (...args) => execFileSync("git", args, { encoding: "utf-8", maxBuffer: 1024 * 1024, timeout: 30000, stdio: ["ignore", "pipe", "pipe"] }).trim();
+            const head = git("rev-parse", "HEAD");
+            const reference = `refs/pull/${pr}/head`;
+            const remote = git("ls-remote", "origin", reference).split(/\r?\n/).filter(Boolean);
+            if (remote.length !== 1 || remote[0] !== `${sha}\t${reference}` || head !== sha) throw new Error("the live PR head and checkout must equal the requested commit");
+            const directory = path.join(process.env.RUNNER_TEMP, "windows-full-suite");
+            mkdirSync(directory, { recursive: true });
+            writeFileSync(path.join(directory, "identity.json"), JSON.stringify({ pr, requestedSha: sha, observedSha: head, workflowSha, runId: process.env.GITHUB_RUN_ID ?? null, observedAt: new Date().toISOString() }, null, 2) + "\n");
+            process.stdout.write(`Verified PR ${pr} at ${head}; trusted workflow ${workflowSha}.\n`);
+          } catch {
+            process.stderr.write("Windows diagnostic: identity is invalid, changed or unavailable.\n");
+            process.exitCode = 1;
+          }
+          PREFLIGHT
+          node "${RUNNER_TEMP}/windows-full-suite-preflight.mjs" 2>&1 | tee "${temp_root}/windows-full-suite/preflight.log"
+      # Load setup from the dispatched default-branch workflow, not the PR action.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.workflow_sha }}
+          path: .ci-actions
+          clean: false
+          sparse-checkout: .github/actions
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - uses: ./.ci-actions/.github/actions/setup
+        with:
+          engines-manifest: ./packages/qfai/package.json
+          pin-engines-floor: "true"
+      - name: Build the checkout package
+        run: |
+          set -euo pipefail
+          pnpm -C packages/qfai build 2>&1 | tee "$(cygpath -u "$RUNNER_TEMP")/windows-full-suite/build.log"
+      - name: Prepare checkout-volume temporary directory
+        env:
+          TEMP: ${{ runner.temp }}\qfai tmp
+          TMP: ${{ runner.temp }}\qfai tmp
+        run: mkdir -p "$(cygpath -u "$TEMP")"
+      - name: Prepare repository assistant mirror
+        env:
+          TEMP: ${{ runner.temp }}\qfai tmp
+          TMP: ${{ runner.temp }}\qfai tmp
+        run: |
+          set -euo pipefail
+          node scripts/link-assistant-tree.mjs 2>&1 | tee "$(cygpath -u "$RUNNER_TEMP")/windows-full-suite/mirror.log"
+      - name: Execute and record the complete workspace
+        env:
+          TEMP: ${{ runner.temp }}\qfai tmp
+          TMP: ${{ runner.temp }}\qfai tmp
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'RUNNER' 2>&1 | tee "$(cygpath -u "$RUNNER_TEMP")/windows-full-suite/runner.log"
+          import { execFileSync, spawnSync } from "node:child_process";
+          import { appendFileSync, lstatSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+          import path from "node:path";
+          import process from "node:process";
+
+          const directory = path.join(process.env.RUNNER_TEMP, "windows-full-suite");
+          mkdirSync(directory, { recursive: true });
+          const reportFile = path.join(directory, "vitest-results.json");
+          const evidenceFile = path.join(directory, "evidence.json");
+          const title = "returns findings to their owners, then carries the same flow through acceptance, implementation and report";
+          const evidence = {
+            requestedSha: /^[a-f0-9]{40}$/.test(process.env.EXPECTED_SHA ?? "") ? process.env.EXPECTED_SHA : null,
+            observedSha: null,
+            workflowSha: /^[a-f0-9]{40}$/.test(process.env.WORKFLOW_SHA ?? "") ? process.env.WORKFLOW_SHA : null,
+            runId: process.env.GITHUB_RUN_ID ?? null,
+            status: "unverified",
+            elapsedMs: null,
+            runner: null,
+            suite: null,
+            fullFlow: { title, result: "unverified", durationMs: null },
+            note: "Only an actual dispatched run supplies Windows evidence. No historical cause or duration guarantee is established."
+          };
+          let started;
+          let failure;
+          const count = (value) => Number.isInteger(value) && value >= 0 ? value : null;
+          const record = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+          const verify = () => {
+            const result = spawnSync(process.execPath, [path.join(process.env.RUNNER_TEMP, "windows-full-suite-preflight.mjs")], { stdio: "inherit" });
+            if (result.status !== 0) throw new Error("identity changed or became unavailable");
+            const observed = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf-8", maxBuffer: 1024 * 1024, timeout: 30000 }).trim();
+            if (observed !== process.env.EXPECTED_SHA) throw new Error("checkout changed during identity observation");
+            evidence.observedSha = observed;
+          };
+          try {
+            verify();
+            const cwd = path.resolve("packages/qfai");
+            const cli = path.join(cwd, "node_modules", "vitest", "vitest.mjs");
+            const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !["GH_TOKEN", "GITHUB_TOKEN", "ACTIONS_RUNTIME_TOKEN"].includes(key.toUpperCase())));
+            writeFileSync(reportFile, "", { flag: "wx" });
+            started = Date.now();
+            const result = spawnSync(process.execPath, [cli, "run", "--reporter=default", "--reporter=json", "--outputFile.json", reportFile], { cwd, env, stdio: "inherit" });
+            evidence.elapsedMs = Date.now() - started;
+            evidence.runner = { exitCode: result.status, signal: result.signal, error: result.error ? "runner could not complete" : null };
+            try {
+              // Reports above 64 MiB stay unverified; raise this ceiling only for an observed complete native report.
+              const stat = lstatSync(reportFile);
+              if (!stat.isFile() || stat.nlink !== 1 || stat.size > 64 * 1024 * 1024) throw new Error("report is not a bounded regular file");
+              const report = JSON.parse(readFileSync(reportFile, "utf-8"));
+              if (!record(report) || !Array.isArray(report.testResults)) throw new Error("report is incomplete");
+              const passed = count(report.numPassedTests);
+              const failed = count(report.numFailedTests);
+              evidence.suite = {
+                files: report.testResults.length,
+                total: count(report.numTotalTests),
+                passed,
+                failed,
+                pending: count(report.numPendingTests),
+                todo: count(report.numTodoTests),
+                executed: passed !== null && failed !== null ? passed + failed : null,
+                suites: { total: count(report.numTotalTestSuites), passed: count(report.numPassedTestSuites), failed: count(report.numFailedTestSuites), pending: count(report.numPendingTestSuites) },
+                success: report.success === true
+              };
+              const flowPath = path.join(cwd, "tests", "e2e", "bf0001DevelopVerifyFlowE2E.test.ts");
+              const files = report.testResults.filter((file) => record(file) && typeof file.name === "string" && path.relative(flowPath, path.resolve(file.name)) === "");
+              if (files.length === 1 && Array.isArray(files[0].assertionResults)) {
+                const matches = files[0].assertionResults.filter((test) => record(test) && test.title === title);
+                if (matches.length === 1 && ["passed", "failed"].includes(matches[0].status) && typeof matches[0].duration === "number" && Number.isFinite(matches[0].duration) && matches[0].duration >= 0) {
+                  evidence.fullFlow = { title, result: matches[0].status, durationMs: matches[0].duration };
+                }
+              }
+              if (report.success !== true || evidence.suite.failed !== 0 || evidence.suite.executed === null || evidence.suite.executed === 0 || evidence.suite.total === null || evidence.suite.total < evidence.suite.executed || evidence.fullFlow.result !== "passed") throw new Error("suite or full-flow evidence is incomplete or unsuccessful");
+            } catch {
+              failure = "suite or full-flow evidence is incomplete or unsuccessful";
+            }
+            if (result.error || result.status !== 0) failure = "the native runner failed or was interrupted";
+            verify();
+            if (failure) throw new Error(failure);
+            evidence.status = "passed";
+          } catch (cause) {
+            evidence.status = "failed";
+            failure = cause instanceof Error ? cause.message : "diagnostic could not complete";
+            process.exitCode = 1;
+          } finally {
+            if (started !== undefined && evidence.elapsedMs === null) evidence.elapsedMs = Date.now() - started;
+            writeFileSync(evidenceFile, JSON.stringify(evidence, null, 2) + "\n");
+            const suite = evidence.suite;
+            const summary = [
+              `Windows full-suite diagnostic: ${evidence.status}`,
+              `Requested SHA: ${evidence.requestedSha ?? "unverified"}; observed SHA: ${evidence.observedSha ?? "unverified"}.`,
+              `Trusted workflow: ${evidence.workflowSha ?? "unverified"}; run: ${evidence.runId ?? "unverified"}.`,
+              suite ? `${suite.passed ?? "unverified"} passed; ${suite.failed ?? "unverified"} failed; ${suite.executed ?? "unverified"} executed; ${suite.files} files. Pending: ${suite.pending ?? "unverified"}; todo: ${suite.todo ?? "unverified"}.` : "Whole-suite counts: unverified.",
+              `Observed suite elapsed: ${evidence.elapsedMs ?? "unverified"} ms.`,
+              `${title}: ${evidence.fullFlow.result}; ${evidence.fullFlow.durationMs ?? "unverified"} ms.`,
+              failure ? `Failure: ${failure}.` : "",
+              evidence.note,
+              ""
+            ].filter(Boolean).join("\n") + "\n";
+            process.stdout.write(summary);
+            if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary);
+          }
+          RUNNER
+      - name: Retain available diagnostic evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: windows-full-suite-${{ github.run_id }}
+          path: ${{ runner.temp }}/windows-full-suite/
+          if-no-files-found: ignore
+          retention-days: 7

@@ -26,6 +26,10 @@ Neither is restated here.
   globs.
 - The launcher the preflight established, for a qfai command
   (`.qfai/assistant/rule/shared-skill-operating-baseline.md#canonical-qfai-launcher-mandatory`).
+- `.agents/rules/temporary-files.md`, when this step writes captured output or a script to a
+  file.
+- `.agents/rules/api-budget.md`, when this step reads CI state or the project's items through
+  the forge's API.
 
 ## Procedure
 
@@ -66,6 +70,67 @@ Neither is restated here.
    passed with no change in between is a nondeterministic gate: record every
    run, in order.
 
+## CI evidence
+
+A branch overview locates runs; it is not a formal verification receipt.
+For each required verification, record the following in the stage report:
+
+- Target, current full head SHA, verification and intended purpose.
+- Workflow identity and name, event, run ID or URL containing the run ID, and run attempt.
+- Job identity and name, check identity and name, status and conclusion.
+- For test checks, actual test counts and the executed behavior they cover, with the job log or
+  artifact that proves them. Distinguish missing counts from zero executed tests.
+- For lint, build and other non-test checks, evidence of actual execution and
+  results from their logs or artifacts. Do not invent test counts for these checks.
+- Any closed-pull-request cleanup purpose, with the evidence that confirms the
+  pull request was closed and this run was selected for cleanup rather than verification.
+- Remaining blocker and resume condition, or an explicit statement that neither
+  remains. Record unavailable identity or purpose as unknown and unverified.
+
+Identify job IDs and check IDs separately where present; record their absence
+where the platform provides neither. An ID labelled only as check/job is
+ambiguous: record its identity as unverified until the job and check are distinguished.
+
+Use head, workflow, event, run attempt, job, check and purpose together. The same
+head SHA and check name do not make two runs the same verification. A
+`pull_request` event or later timestamp alone does not prove closed cleanup.
+A confirmed closed cleanup SKIP is neither a behavioral PASS nor an override
+of verification. A matrix job skipped by the declared selection policy may be
+legitimate, but its SKIP does not prove that its behavior ran.
+Retain an identified successful verification for its target and head when a
+later run is confirmed closed cleanup; the cleanup SKIP does not replace it.
+
+A green result for an old SHA does not verify the current head. A later failure
+for the same verification on the current head cannot be replaced by its older
+success. Keep the failure visible until a matching verification actually passes.
+Missing logs or unknown purpose leave execution unverified. For test checks,
+missing counts or zero executed tests do not prove behavioral coverage.
+These receipt details belong in the stage report; do not
+add fields or states to `verify.json`.
+
+### Synthetic worked example
+
+The following receipts are synthetic, not evidence from an actual repository.
+They concern test checks for the required unit suite.
+All target branch `example/topic` at full head
+`aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`, with required verification
+`unit suite` and check name `tests`. Each run, attempt, job, check and log is
+identified separately.
+
+| Receipt              | Workflow identity / name; event  | Run ID / attempt | Job identity / name; check identity / name | Purpose and proof                                                                                 | Status / conclusion     | Actual counts and behavior                             | Log                                                                                          |
+| -------------------- | -------------------------------- | ---------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------- | ----------------------- | ------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| Earlier verification | `71` / `CI`; `push`              | `91001` / `1`    | `81001` / `unit`; `71001` / `tests`        | Run configuration selects the unit suite                                                          | `completed` / `success` | 29 passed, 0 failed, 0 skipped; 29 unit tests executed | `receipts/unit-success.log` contains the test summary                                        |
+| Later verification   | `71` / `CI`; `workflow_dispatch` | `91002` / `2`    | `81002` / `unit`; `71002` / `tests`        | Run configuration selects the same unit suite                                                     | `completed` / `failure` | 28 passed, 1 failed, 0 skipped; 29 unit tests executed | `receipts/unit-failure.log` contains the failing test and summary                            |
+| Closed cleanup       | `72` / `Cleanup`; `pull_request` | `91003` / `3`    | `81003` / `unit`; `71003` / `tests`        | Payload action is `closed`, target state is closed, and a selection job log confirms cleanup only | `completed` / `skipped` | 0 passed, 0 failed, 0 executed; no unit test coverage  | `receipts/cleanup-selection.log` records the selection; the skipped test job has no test log |
+
+The required unit verification remains FAIL after the later verification. The
+cleanup SKIP neither clears it nor proves the unit behavior passed. Resume with
+the actual repair and a matching verification on the resulting current head.
+
+For a test check, if an actual reported run has only a head and check name, its missing workflow,
+event, attempt, job, purpose, counts and logs remain unknown. Record it as
+unverified with those gaps as blockers; the synthetic rows do not fill them.
+
 ## Scope
 
 - A flow-scoped gate covers that flow. A result for another flow or another
@@ -74,6 +139,23 @@ Neither is restated here.
 - A finding attributed to another flow or owner is reported with that owner. It
   is neither repaired here nor counted as this gate's pass.
 - A repository-wide PASS is never claimed from one flow's result.
+
+### Selected-case execution
+
+When the caller selects a focused Test case, record its command arguments,
+cwd, file and case selection, actual runtime version, reporter, revision and raw output.
+Link the EX and source declaration to the full file/parent/case identity and
+observed body execution and terminal result. Keep exit, counts, containers
+and static scanner linkage separate; none proves that selected behavior ran.
+
+Zero selected executions or unidentifiable, skipped, TODO, cancelled or
+interrupted target results cannot close the focused phase. Retain the output,
+name the missing evidence, correct selection or observation and repeat it.
+Read
+`.qfai/assistant/skill/qfai-implement/references/red-admissibility.md#selected-case-execution`
+before judging a focused RED or ordinary success. A focused result establishes
+only its selected case; the existing verify run owns full collection coverage.
+This human receipt changes no gate status or JSON field and adds no runner.
 
 ## Outcomes
 

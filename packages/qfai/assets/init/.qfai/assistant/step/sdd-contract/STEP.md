@@ -24,6 +24,8 @@ Stage 4 of the story tree: contracts and the business rules they enforce.
 - The paired templates under
   `.qfai/assistant/skill/qfai-sdd/templates/spec/03_contract/` and
   `.qfai/assistant/skill/qfai-sdd/templates/contracts/`.
+- `.agents/rules/document-schema.md`, when writing or editing a story-tree document: start from
+  its template and add no section the schema does not name.
 
 ## Writes
 

@@ -80,6 +80,17 @@ import {
   TAGS,
   type ReleaseNeeds,
 } from "../helpers/spec0017Release.js";
+import {
+  FULL_FLOW_TITLE,
+  namedFixture,
+  namedGit,
+  runWindowsPreflight,
+  runWindowsSuite,
+  windowsSuiteJob,
+  windowsSuiteSteps,
+  windowsSuiteWorkflow,
+  type NamedFixture,
+} from "../helpers/windowsFullSuiteFixture.js";
 
 const REPO_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -1686,6 +1697,9 @@ describe("the required-context job and the lint lane both stay unconditional", (
  * and `workflow_dispatch` only. Its check appears on the scheduled runs and nowhere else, so no
  * pull request gains a context and branch protection has nothing to configure.
  *
+ * The optional Windows diagnostic is manual-only and adds no required check. It
+ * runs the complete workspace on the requested head, without splitting PR lanes.
+ *
  * The list stays a literal for the reason it always was: a creation, removal or rename should be
  * a failing test naming which file, not a diff somebody has to interpret. It named each of these.
  */
@@ -1697,6 +1711,7 @@ const OWN_WORKFLOW_FILES = [
   "release.yml",
   "renovate.yml",
   "tag-release.yml",
+  "windows-full-suite-diagnostic.yml",
 ] as const;
 
 // QFAI:EX-0002-0017-03
@@ -2013,7 +2028,7 @@ const VERIFICATION_SET = [
  * Membership without a type assertion.
  *
  * `LIST.includes(value)` on an `as const` tuple rejects a plain `string`, and the usual workaround
- * is `value as (typeof LIST)[number]` — a bare assertion, which `CLAUDE.md` forbids. Widening the
+ * is `value as (typeof LIST)[number]` — a bare assertion, which `AGENTS.md` forbids. Widening the
  * parameter to `readonly string[]` accepts every tuple in this file and needs no assertion at all.
  */
 function listHas(list: readonly string[], value: string): boolean {
@@ -4122,38 +4137,6 @@ function namedProgram(marker: string): string {
   return body.slice(begin, end) + "\n";
 }
 
-type NamedFixture = { root: string; sha: string; file: string };
-
-function namedGit(root: string, ...args: string[]): string {
-  return execFileSync("git", args, {
-    cwd: root,
-    encoding: "utf-8",
-    stdio: ["ignore", "pipe", "pipe"],
-  }).trim();
-}
-
-function namedFixture(file = "packages/qfai/tests/core/one.test.ts", sha256 = false): NamedFixture {
-  const root = mkdtempSync(path.join(tmpdir(), "qfai-named-head-"));
-  mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
-  writeFileSync(path.join(root, file), "export const fixture = true;\n");
-  writeFileSync(
-    path.join(root, "packages", "qfai", "vitest.workspace.ts"),
-    readFileSync(path.join(REPO_ROOT, "packages", "qfai", "vitest.workspace.ts")),
-  );
-  namedGit(root, "init", "-b", "main", ...(sha256 ? ["--object-format=sha256"] : []));
-  namedGit(root, "config", "user.email", "fixture@example.invalid");
-  namedGit(root, "config", "user.name", "Named test fixture");
-  namedGit(root, "config", "core.autocrlf", "false");
-  namedGit(root, "add", "--", file, "packages/qfai/vitest.workspace.ts");
-  namedGit(root, "commit", "-m", "Test fixture");
-  const sha = namedGit(root, "rev-parse", "HEAD");
-  const origin = path.join(root, "origin.git");
-  namedGit(root, "init", "--bare", ...(sha256 ? ["--object-format=sha256"] : []), origin);
-  namedGit(root, "remote", "add", "origin", origin);
-  namedGit(root, "push", "origin", "HEAD:refs/pull/37/head");
-  return { root, sha, file };
-}
-
 function runNamedPreflight(
   fixture: NamedFixture,
   env: Record<string, string> = {},
@@ -4292,6 +4275,8 @@ describe("the optional exact-file diagnostic", () => {
       namedGit(
         fixture.root,
         "clone",
+        "--config",
+        "core.autocrlf=false",
         "--no-checkout",
         path.join(fixture.root, "origin.git"),
         sidecar,
@@ -4445,5 +4430,264 @@ describe("the optional exact-file diagnostic", () => {
     } finally {
       rmSync(fixture.root, { recursive: true, force: true });
     }
+  });
+});
+
+describe("the optional Windows full-suite diagnostic", () => {
+  // QFAI:EX-0002-0027-07
+  it("is manual, bounded, and separate from required PR checks", () => {
+    const workflow = windowsSuiteWorkflow();
+    const triggers = workflow["on"];
+    expect(isRecord(triggers) ? Object.keys(triggers) : []).toEqual(["workflow_dispatch"]);
+    const dispatch = isRecord(triggers) ? triggers["workflow_dispatch"] : undefined;
+    const inputs = isRecord(dispatch) ? dispatch["inputs"] : undefined;
+    expect(isRecord(inputs) ? Object.keys(inputs) : []).toEqual(["pr", "sha"]);
+    if (!isRecord(inputs)) throw new Error("Windows diagnostic inputs are absent");
+    for (const input of Object.values(inputs)) {
+      expect(isRecord(input) ? input["required"] : undefined).toBe(true);
+      expect(isRecord(input) ? input["default"] : undefined).toBeUndefined();
+    }
+    expect(workflow["permissions"]).toEqual({ contents: "read" });
+    const job = windowsSuiteJob();
+    expect(job["runs-on"]).toBe("windows-latest");
+    const timeout = job["timeout-minutes"];
+    expect(typeof timeout === "number" && Number.isInteger(timeout) && timeout > 0).toBe(true);
+    expect(job["strategy"]).toBeUndefined();
+    expect(job["needs"]).toBeUndefined();
+    const jobs = workflow["jobs"];
+    if (!isRecord(jobs)) throw new Error("Windows diagnostic jobs are absent");
+    for (const key of Object.keys(jobs)) expect(verdictNeeds()).not.toContain(key);
+    const contexts = readFileSync(
+      path.join(REPO_ROOT, ".github", "required-status-contexts.json"),
+      "utf-8",
+    );
+    expect(contexts).not.toContain("windows-full-suite-diagnostic.yml");
+    expect(readFileSync(CI_WORKFLOW, "utf-8")).not.toContain("windows-full-suite-diagnostic.yml");
+    expect(
+      ownWorkflowFiles()
+        .filter((file) => "pull_request" in triggersOf(file))
+        .map((file) => path.basename(file)),
+    ).toEqual([path.basename(CI_WORKFLOW)]);
+  });
+
+  // QFAI:EX-0002-0027-03
+  it("keeps action permissions and setup authority outside the requested PR", () => {
+    const steps = windowsSuiteSteps();
+    const checkouts = steps.filter((step) => String(step["uses"]).startsWith("actions/checkout@"));
+    expect(checkouts).toHaveLength(2);
+    for (const checkout of checkouts) {
+      expect(checkout["uses"]).toMatch(/^actions\/checkout@[a-f0-9]{40}$/u);
+      const inputs = checkout["with"];
+      expect(isRecord(inputs) ? inputs["persist-credentials"] : undefined).toBe(false);
+    }
+    const requested = checkouts.find((step) => {
+      const inputs = step["with"];
+      return isRecord(inputs) && inputs["ref"] === "${{ inputs.sha }}";
+    });
+    expect(requested).toBeDefined();
+    const trusted = checkouts.find((step) => {
+      const inputs = step["with"];
+      return isRecord(inputs) && inputs["path"] === ".ci-actions";
+    });
+    const trustedInputs = trusted?.["with"];
+    expect(isRecord(trustedInputs) ? trustedInputs["ref"] : undefined).toBe(
+      "${{ github.workflow_sha }}",
+    );
+    const setupIndex = steps.findIndex(
+      (step) => step["uses"] === "./.ci-actions/.github/actions/setup",
+    );
+    expect(setupIndex).toBeGreaterThan(steps.indexOf(trusted ?? {}));
+    expect(steps.some((step) => step["uses"] === "./.github/actions/setup")).toBe(false);
+    const buildIndex = steps.findIndex((step) =>
+      /^\s*pnpm -C packages\/qfai build(?:[ \t]+2>&1[ \t]+\|[ \t]+tee[ \t]+[^\n]+)?[ \t]*$/mu.test(
+        stepRun(step),
+      ),
+    );
+    expect(buildIndex).toBeGreaterThan(setupIndex);
+    const buildBody = stepRun(steps[buildIndex] ?? {});
+    if (buildBody.includes("|")) expect(buildBody).toMatch(/^\s*set -euo pipefail\s*$/mu);
+    expect(steps.findIndex((step) => stepRun(step).includes("<<'RUNNER'"))).toBeGreaterThan(
+      buildIndex,
+    );
+    const allBodies = steps.map(stepRun).join("\n");
+    expect(allBodies).not.toMatch(/\$\{\{\s*(?:secrets\.|github\.token|inputs\.)/u);
+    const env = windowsSuiteJob()["env"];
+    expect(isRecord(env) ? env["PR_NUMBER"] : undefined).toBe("${{ inputs.pr }}");
+    expect(isRecord(env) ? env["EXPECTED_SHA"] : undefined).toBe("${{ inputs.sha }}");
+  });
+
+  // QFAI:EX-0002-0027-01 QFAI:EX-0002-0027-05 QFAI:EX-0002-0027-06
+  it("rechecks immediately before execution and retains available evidence on failure", () => {
+    const steps = windowsSuiteSteps();
+    const checkIndex = steps.findIndex((step) => stepRun(step).includes("<<'PREFLIGHT'"));
+    const setupIndex = steps.findIndex(
+      (step) => step["uses"] === "./.ci-actions/.github/actions/setup",
+    );
+    expect(checkIndex).toBeGreaterThan(-1);
+    expect(setupIndex).toBeGreaterThan(checkIndex);
+    const runnerIndex = steps.findIndex((step) => stepRun(step).includes("<<'RUNNER'"));
+    expect(runnerIndex).toBeGreaterThan(setupIndex);
+    expect(stepRun(steps[runnerIndex] ?? {})).toContain("windows-full-suite-preflight.mjs");
+    const mirrorIndex = steps.findIndex((step) =>
+      stepRun(step).includes("node scripts/link-assistant-tree.mjs"),
+    );
+    expect(mirrorIndex).toBeGreaterThan(setupIndex);
+    expect(runnerIndex).toBeGreaterThan(mirrorIndex);
+    const tempEnv = {
+      TEMP: "${{ runner.temp }}\\qfai tmp",
+      TMP: "${{ runner.temp }}\\qfai tmp",
+    };
+    const temporaryIndex = steps.findIndex(
+      (step) => step["name"] === "Prepare checkout-volume temporary directory",
+    );
+    expect(temporaryIndex).toBeGreaterThan(setupIndex);
+    expect(mirrorIndex).toBeGreaterThan(temporaryIndex);
+    expect(steps[temporaryIndex]?.["env"]).toEqual(tempEnv);
+    expect(stepRun(steps[temporaryIndex] ?? {}).trim()).toBe('mkdir -p "$(cygpath -u "$TEMP")"');
+    expect(steps[mirrorIndex]?.["env"]).toEqual(tempEnv);
+    expect(steps[runnerIndex]?.["env"]).toEqual(tempEnv);
+    const upload = steps.find((step) =>
+      String(step["uses"]).startsWith("actions/upload-artifact@"),
+    );
+    expect(upload?.["uses"]).toBe(
+      "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+    );
+    expect(String(upload?.["if"])).toMatch(/always\(\)|!cancelled\(\)/u);
+    const inputs = upload?.["with"];
+    if (!isRecord(inputs)) throw new Error("diagnostic artifact inputs are absent");
+    const retention = inputs["retention-days"];
+    expect(
+      typeof retention === "number" &&
+        Number.isInteger(retention) &&
+        retention > 0 &&
+        retention <= 7,
+    ).toBe(true);
+    expect(String(inputs["path"])).toContain("runner.temp");
+  });
+  // QFAI:EX-0002-0027-04
+  it("runs all workspace projects without changing case timeouts or worker settings", () => {
+    const steps = windowsSuiteSteps();
+    const bodies = steps.map(stepRun).join("\n");
+    const hasScript = /(?:^|\n)\s*pnpm -C packages\/qfai test(?:\s|$)/u.test(bodies);
+    const hasNative =
+      /vitest(?:["', /\\]+vitest)?\.mjs/u.test(bodies) &&
+      /\[\s*cli\s*,\s*["']run["']/u.test(bodies);
+    expect(hasScript || hasNative, "execute the unfiltered test script or native Vitest run").toBe(
+      true,
+    );
+    expect(bodies).not.toMatch(
+      /test:e2e|test:windows-parity|--project|--testNamePattern|--exclude|--retry|--testTimeout|--hookTimeout|--maxWorkers|--maxConcurrency|--poolOptions|--passWithNoTests(?:=|\s+)true|--allowOnly(?:=|\s+)true/u,
+    );
+    for (const scope of [windowsSuiteWorkflow(), windowsSuiteJob(), ...steps]) {
+      const env = scope["env"];
+      if (isRecord(env)) {
+        expect(env["QFAI_TEST_MAX_WORKERS"]).toBeUndefined();
+        expect(env["QFAI_TEST_MAX_CONCURRENCY"]).toBeUndefined();
+      }
+    }
+    expect(bodies).not.toMatch(/vitest[^\n]*tests\/e2e\/bf0001DevelopVerifyFlowE2E\.test\.ts/u);
+  });
+});
+
+describe("the Windows diagnostic's actual Node programs", () => {
+  // QFAI:EX-0002-0027-01
+  it("accepts a matching live and checked-out head at each observation", () => {
+    const fixture = namedFixture();
+    try {
+      const first = runWindowsPreflight(fixture);
+      expect(first.status, first.stderr).toBe(0);
+      const second = runWindowsPreflight(fixture);
+      expect(second.status, second.stderr).toBe(0);
+    } finally {
+      rmSync(fixture.root, { recursive: true, force: true });
+    }
+  });
+
+  const invalidRequests: Record<string, string>[] = [
+    { PR_NUMBER: "" },
+    { PR_NUMBER: "0" },
+    { PR_NUMBER: "37; echo unsafe" },
+    { EXPECTED_SHA: "short" },
+    { EXPECTED_SHA: "f".repeat(40) },
+    { DISPATCH_REF: "refs/heads/topic" },
+  ];
+  // QFAI:EX-0002-0027-02 QFAI:EX-0002-0027-03
+  it.each(invalidRequests)("refuses invalid identity or a non-default dispatch: %j", (changes) => {
+    const fixture = namedFixture();
+    try {
+      expect(runWindowsPreflight(fixture, changes).status).not.toBe(0);
+    } finally {
+      rmSync(fixture.root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:EX-0002-0027-02
+  it.each(["live", "checkout", "unavailable"] as const)(
+    "rejects %s identity changing after a matching observation",
+    (change) => {
+      const fixture = namedFixture();
+      try {
+        expect(runWindowsPreflight(fixture).status).toBe(0);
+        if (change === "unavailable") {
+          const unavailable = path.join(fixture.root, "unavailable-origin.git");
+          expect(existsSync(unavailable)).toBe(false);
+          namedGit(fixture.root, "remote", "set-url", "origin", unavailable);
+        } else {
+          writeFileSync(path.join(fixture.root, fixture.file), "export const changed = true;\n");
+          namedGit(fixture.root, "add", "--", fixture.file);
+          namedGit(fixture.root, "commit", "-m", "Changed identity");
+          if (change === "live") {
+            namedGit(fixture.root, "push", "origin", "HEAD:refs/pull/37/head");
+            namedGit(fixture.root, "checkout", "--detach", fixture.sha);
+          }
+        }
+        const result = runWindowsPreflight(fixture);
+        expect(result.status).not.toBe(0);
+        expect(result.stderr).toContain("identity is invalid, changed or unavailable");
+      } finally {
+        rmSync(fixture.root, { recursive: true, force: true });
+      }
+    },
+  );
+
+  // QFAI:EX-0002-0027-02
+  it("does not launch Vitest after HEAD moves between setup and the runner", () => {
+    const result = runWindowsSuite("success", true);
+    expect(result.status, result.stdout + result.stderr).not.toBe(0);
+    expect(result.invocation).toBeUndefined();
+  });
+  // QFAI:EX-0002-0027-04 QFAI:EX-0002-0027-06
+  it("runs the native CLI without selectors and reports the actual full-flow duration", () => {
+    const result = runWindowsSuite("success");
+    expect(result.status, result.stderr).toBe(0);
+    if (!isRecord(result.invocation) || !isStringArray(result.invocation["args"]))
+      throw new Error("native test invocation is missing");
+    const args = result.invocation["args"];
+    expect(args[0]).toBe("run");
+    expect(args).not.toContain("--project");
+    expect(args).not.toContain("--retry");
+    expect(args.every((arg) => !arg.endsWith(".test.ts"))).toBe(true);
+    expect(String(result.invocation["cwd"]).split(path.sep).join("/")).toMatch(
+      /\/packages\/qfai$/u,
+    );
+    const evidence = result.stdout + result.summary;
+    expect(evidence).toContain(result.sha);
+    expect(evidence).toContain("918");
+    expect(evidence).toContain(FULL_FLOW_TITLE);
+    expect(evidence).toMatch(/140(?:\s*ms|\b)/u);
+    expect(evidence).toMatch(/2\s+(?:passed|executed)|(?:passed|executed)\s*[:=]\s*2/u);
+  });
+
+  // QFAI:EX-0002-0027-05
+  it.each([
+    "failed",
+    "zero",
+    "missing-flow",
+    "skipped-flow",
+    "wrong-title",
+    "missing-duration",
+  ] as const)("cannot claim success when the native result is %s", (mode) => {
+    const result = runWindowsSuite(mode);
+    expect(result.status, result.stdout + result.stderr).not.toBe(0);
   });
 });

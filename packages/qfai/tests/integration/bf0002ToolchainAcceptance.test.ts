@@ -7,10 +7,12 @@ import {
   mkdir,
   mkdtemp,
   readFile,
+  readdir,
   rm,
   symlink,
   writeFile,
 } from "node:fs/promises";
+import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -38,6 +40,17 @@ import {
   sorted,
   workflowJobs,
 } from "../helpers/spec0017WorkflowSurfaces.js";
+import {
+  FULL_FLOW_TITLE,
+  namedFixture,
+  namedGit,
+  runWindowsPreflight,
+  runWindowsSuite,
+  windowsSuiteJob,
+  windowsSuiteProgram,
+  windowsSuiteSteps,
+  windowsSuiteWorkflow,
+} from "../helpers/windowsFullSuiteFixture.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 import {
   REPO_ROOT,
@@ -147,10 +160,15 @@ describe("BF-0002 toolchain and release acceptance", () => {
     const uploads = Object.keys(workflowJobs("ci.yml")).flatMap((id) =>
       jobSteps("ci.yml", id).filter(
         (step) =>
-          typeof step["uses"] === "string" && step["uses"].startsWith("actions/upload-artifact@"),
+          typeof step["uses"] === "string" &&
+          step["uses"].startsWith("actions/upload-artifact@") &&
+          stepInputs(step)["name"] === "qfai-report" &&
+          String(stepInputs(step)["path"])
+            .split(/\s+/u)
+            .includes("tmp/pack/sandbox/out/.qfai/report/validate.json"),
       ),
     );
-    expect(uploads.length).toBeGreaterThan(0);
+    expect(uploads).toHaveLength(1);
     for (const upload of uploads) {
       const condition = String(upload["if"]);
       expect(condition).toContain("!cancelled()");
@@ -246,6 +264,14 @@ describe("BF-0002 toolchain and release acceptance", () => {
     expect(surfaces.filter((name) => /\bpr-(?:fix|merge)\b/u.test(name))).toEqual([]);
   });
 });
+
+async function linkFixtureVitest(packageRoot: string): Promise<void> {
+  const require = createRequire(import.meta.url);
+  const installed = path.dirname(require.resolve("vitest/package.json"));
+  const modules = path.join(packageRoot, "node_modules");
+  await mkdir(modules, { recursive: true });
+  await symlink(installed, path.join(modules, "vitest"), "junction");
+}
 
 function namedDiagnosticProgram(marker: string): string {
   const job = workflowJobs("named-tests.yml")["named-test"];
@@ -375,11 +401,7 @@ describe("the optional named diagnostic acceptance", () => {
       const packageRoot = path.join(root, "packages", "qfai");
       const directory = path.join(packageRoot, "tests", "core");
       await mkdir(directory, { recursive: true });
-      await symlink(
-        path.join(REPO_ROOT, "packages", "qfai", "node_modules"),
-        path.join(packageRoot, "node_modules"),
-        "junction",
-      );
+      await linkFixtureVitest(packageRoot);
       await writeFile(
         path.join(packageRoot, "vitest.workspace.ts"),
         readText("packages", "qfai", "vitest.workspace.ts"),
@@ -487,6 +509,80 @@ describe("the optional named diagnostic acceptance", () => {
         expect(git("remote").split(/\r?\n/u)).not.toContain("origin");
         expect(git("rev-parse", "HEAD")).toBe(head);
       }
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+});
+
+describe("named runner returned file identity", () => {
+  // QFAI:AC-0002-0026-02 QFAI:AC-0002-0026-03
+  it.each(
+    (["listing", "report"] as const).flatMap((phase) =>
+      (["missing", "relative", "drive-relative", "wrong-file", "duplicate"] as const).map(
+        (kind) => ({ phase, kind }),
+      ),
+    ),
+  )("refuses $kind identity in the $phase", async ({ phase, kind }) => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-named-returned-"));
+    try {
+      const packageRoot = path.join(root, "packages", "qfai");
+      const target = path.join(packageRoot, "tests", "core", "one.test.ts");
+      const returned =
+        kind === "missing"
+          ? undefined
+          : kind === "relative"
+            ? "tests/core/one.test.ts"
+            : kind === "drive-relative"
+              ? "C:one.test.ts"
+              : kind === "wrong-file"
+                ? path.join(packageRoot, "tests", "core", "other.test.ts")
+                : target;
+      const listedFile = { file: phase === "listing" ? returned : target, projectName: "core" };
+      const listing = [listedFile];
+      const reportedFile = { name: phase === "report" ? returned : target };
+      const report = {
+        testResults: [reportedFile],
+        numPassedTests: 1,
+        numFailedTests: 0,
+      };
+      if (kind === "duplicate") {
+        if (phase === "listing") listing.push(listedFile);
+        else report.testResults.push(reportedFile);
+      }
+      const calls = path.join(root, "calls.txt");
+      const cli = path.join(packageRoot, "node_modules", "vitest", "vitest.mjs");
+      await mkdir(path.dirname(cli), { recursive: true });
+      // This child supplies invalid runner metadata; the original cases still run real Vitest.
+      await writeFile(
+        cli,
+        `import { appendFileSync, writeFileSync } from "node:fs";
+const args = process.argv.slice(2);
+const listing = args[0] === "list";
+appendFileSync(${JSON.stringify(calls)}, args[0] + "\\n");
+const output = args[args.indexOf(listing ? "--json" : "--outputFile.json") + 1];
+writeFileSync(output, JSON.stringify(listing ? ${JSON.stringify(listing)} : ${JSON.stringify(report)}));
+`,
+      );
+      await writeFile(path.join(root, "named-preflight.mjs"), "export {};\n");
+      const runner = path.join(root, "runner.mjs");
+      await writeFile(runner, namedDiagnosticProgram("RUNNER"));
+      const result = spawnSync(process.execPath, [runner], {
+        cwd: root,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          TEST_FILE: "packages/qfai/tests/core/one.test.ts",
+          TEST_PROJECT: "core",
+          RUNNER_TEMP: root,
+        },
+      });
+      expect(result.status, result.stdout + result.stderr).toBe(1);
+      expect(result.stderr).toContain(
+        phase === "listing" ? "exactly the requested file" : "at least one executed test",
+      );
+      expect(result.stdout + result.stderr).not.toContain("Named diagnostic completed:");
+      expect(await readFile(calls, "utf8")).toBe(phase === "listing" ? "list\n" : "list\nrun\n");
     } finally {
       await removeTempTree(root);
     }
@@ -669,7 +765,16 @@ async function withCatchup(run: (fixture: CatchupFixture) => Promise<void>): Pro
     const topic = nativeGit(seed, ["rev-parse", "HEAD"]).stdout.trim();
     nativeGit(seed, ["remote", "add", "origin", origin]);
     nativeGit(seed, ["push", "-q", "origin", "trunk", "topic"]);
-    nativeGit(sandbox, ["clone", "-q", "--branch", "topic", origin, root]);
+    nativeGit(sandbox, [
+      "clone",
+      "--config",
+      "core.autocrlf=false",
+      "-q",
+      "--branch",
+      "topic",
+      origin,
+      root,
+    ]);
     for (const [key, value] of [
       ["user.name", "Fixture"],
       ["user.email", "fixture@example.invalid"],
@@ -870,7 +975,16 @@ function expectedPending(fixture: CatchupFixture): {
   other: Record<string, string>;
 } {
   const control = path.join(fixture.sandbox, "control");
-  nativeGit(fixture.sandbox, ["clone", "-q", "--branch", "topic", fixture.origin, control]);
+  nativeGit(fixture.sandbox, [
+    "clone",
+    "--config",
+    "core.autocrlf=false",
+    "-q",
+    "--branch",
+    "topic",
+    fixture.origin,
+    control,
+  ]);
   // The fixture's topic may contain local commits not published to origin.
   nativeGit(control, ["fetch", "-q", fixture.root, "topic"]);
   nativeGit(control, ["reset", "--hard", "FETCH_HEAD"]);
@@ -1656,5 +1770,286 @@ describe("branch catch-up acceptance", () => {
         ).status,
       ).toBe(boundary === "push" ? 1 : 0);
     });
+  });
+});
+
+describe("the optional Windows full-suite acceptance", () => {
+  // QFAI:AC-0002-0027-01
+  it("accepts matching current identity and stops before running a changed head", async () => {
+    const fixture = namedFixture();
+    try {
+      expect(runWindowsPreflight(fixture).status).toBe(0);
+      expect(runWindowsPreflight(fixture, { PR_NUMBER: "" }).status).not.toBe(0);
+      expect(runWindowsPreflight(fixture, { EXPECTED_SHA: "short" }).status).not.toBe(0);
+      namedGit(fixture.root, "commit", "--allow-empty", "-m", "Advanced live fixture head");
+      namedGit(fixture.root, "push", "origin", "HEAD:refs/pull/37/head");
+      namedGit(fixture.root, "checkout", "--detach", fixture.sha);
+      expect(runWindowsPreflight(fixture).status).not.toBe(0);
+      namedGit(fixture.root, "remote", "remove", "origin");
+      expect(runWindowsPreflight(fixture).status).not.toBe(0);
+    } finally {
+      await removeTempTree(fixture.root);
+    }
+    const changed = runWindowsSuite("success", true);
+    expect(changed.status, changed.stdout + changed.stderr).not.toBe(0);
+    expect(changed.invocation).toBeUndefined();
+  });
+
+  // QFAI:AC-0002-0027-02
+  it("uses trusted read-only setup and refuses command text or a different dispatch branch", async () => {
+    const workflow = windowsSuiteWorkflow();
+    expect(workflow["permissions"]).toEqual({ contents: "read" });
+    const job = windowsSuiteJob();
+    expect(job["runs-on"]).toBe("windows-latest");
+    const timeout = job["timeout-minutes"];
+    expect(typeof timeout === "number" && Number.isInteger(timeout) && timeout > 0).toBe(true);
+    const steps = windowsSuiteSteps();
+    const checkouts = steps.filter((step) => String(step["uses"]).startsWith("actions/checkout@"));
+    expect(checkouts.map((step) => [stepInputs(step)["path"], stepInputs(step)["ref"]])).toEqual([
+      [undefined, "${{ inputs.sha }}"],
+      [".ci-actions", "${{ github.workflow_sha }}"],
+    ]);
+    for (const checkout of checkouts) {
+      expect(checkout["uses"]).toMatch(/^actions\/checkout@[a-f0-9]{40}$/u);
+      expect(stepInputs(checkout)["persist-credentials"]).toBe(false);
+    }
+    const setup = steps.findIndex((step) => step["uses"] === "./.ci-actions/.github/actions/setup");
+    const preflight = steps.findIndex((step) => runText(step).includes("<<'PREFLIGHT'"));
+    expect(preflight).toBeGreaterThan(-1);
+    expect(setup).toBeGreaterThan(preflight);
+    expect(steps.some((step) => step["uses"] === "./.github/actions/setup")).toBe(false);
+    for (const step of steps) {
+      expect(runText(step)).not.toMatch(/\$\{\{\s*(?:inputs\.|secrets\.|github\.token)/u);
+      expect(step["continue-on-error"]).toBeUndefined();
+    }
+    const fixture = namedFixture();
+    try {
+      const invalidRequests: Record<string, string>[] = [
+        { PR_NUMBER: "37; echo unsafe" },
+        { EXPECTED_SHA: "$(echo unsafe)" },
+        { DISPATCH_REF: "refs/heads/topic" },
+      ];
+      for (const changes of invalidRequests) {
+        expect(runWindowsPreflight(fixture, changes).status).not.toBe(0);
+      }
+    } finally {
+      await removeTempTree(fixture.root);
+    }
+    const execution = runWindowsSuite("success");
+    expect(execution.status, execution.stderr).toBe(0);
+    if (!isRecord(execution.invocation)) throw new Error("the child invocation was not captured");
+    expect(execution.invocation["tokenKeys"]).toEqual([]);
+  });
+
+  // QFAI:AC-0002-0027-03
+  it("runs every current workspace project through the unfiltered native runner", async () => {
+    const manifest: unknown = JSON.parse(readText("packages", "qfai", "package.json"));
+    if (!isRecord(manifest) || !isRecord(manifest["scripts"]))
+      throw new Error("the package test script is absent");
+    expect(manifest["scripts"]["test"]).toBe("vitest run");
+    const fixture = namedFixture();
+    try {
+      const packageRoot = path.join(fixture.root, "packages", "qfai");
+      await rm(path.join(fixture.root, fixture.file));
+      const configurations = [
+        "vitest.config.ts",
+        "vitest.workspace.ts",
+        "vitest.knobs.ts",
+        "tests/setup/suppressWorkflowCommands.ts",
+        "tests/setup/disableGitAutoMaintenance.ts",
+        "tests/helpers/gitConfigEnv.ts",
+      ];
+      for (const relative of configurations) {
+        const target = path.join(packageRoot, relative);
+        await mkdir(path.dirname(target), { recursive: true });
+        const source = readText("packages", "qfai", relative);
+        await writeFile(target, source);
+        expect(await readFile(target, "utf8")).toBe(source);
+      }
+      await writeFile(path.join(packageRoot, "package.json"), '{"type":"module"}\n');
+      await linkFixtureVitest(packageRoot);
+      const projects = runnerProjects();
+      const included = declaredIncludeGlobs();
+      const files: string[] = [];
+      for (const project of projects) {
+        const glob = included.find((entry) => entry.project === project)?.glob;
+        if (glob === undefined || !glob.includes("/**/"))
+          throw new Error("project include is missing");
+        const relative =
+          project === "e2e"
+            ? "tests/e2e/bf0001DevelopVerifyFlowE2E.test.ts"
+            : path.join(glob.split("/**/")[0] ?? "", "workspace.test.ts");
+        const title = project === "e2e" ? FULL_FLOW_TITLE : `executed project ${project}`;
+        await mkdir(path.dirname(path.join(packageRoot, relative)), { recursive: true });
+        await writeFile(
+          path.join(packageRoot, relative),
+          `import { expect, it } from "vitest";\nit(${JSON.stringify(title)}, () => { expect(true).toBe(true); });\n`,
+        );
+        files.push(path.resolve(packageRoot, relative));
+      }
+      namedGit(
+        fixture.root,
+        "add",
+        "--",
+        fixture.file,
+        "packages/qfai/package.json",
+        ...configurations.map((relative) => path.join("packages", "qfai", relative)),
+        ...files.map((file) => path.relative(fixture.root, file)),
+      );
+      namedGit(fixture.root, "commit", "-m", "Current workspace integration fixture");
+      fixture.sha = namedGit(fixture.root, "rev-parse", "HEAD");
+      namedGit(fixture.root, "push", "origin", "HEAD:refs/pull/37/head");
+      const preflight = runWindowsPreflight(fixture);
+      expect(preflight.status, preflight.stderr).toBe(0);
+      const runner = path.join(fixture.root, "runner.mjs");
+      await writeFile(runner, windowsSuiteProgram("RUNNER"));
+      const result = spawnSync(process.execPath, [runner], {
+        cwd: fixture.root,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          PR_NUMBER: "37",
+          EXPECTED_SHA: fixture.sha,
+          DISPATCH_REF: "refs/heads/main",
+          DEFAULT_BRANCH: "main",
+          WORKFLOW_SHA: fixture.sha,
+          RUNNER_TEMP: fixture.root,
+          GITHUB_RUN_ID: "918",
+          GITHUB_STEP_SUMMARY: path.join(fixture.root, "summary.md"),
+        },
+      });
+      expect(result.status, result.stdout + result.stderr).toBe(0);
+      const report: unknown = JSON.parse(
+        await readFile(
+          path.join(fixture.root, "windows-full-suite", "vitest-results.json"),
+          "utf8",
+        ),
+      );
+      if (!isRecord(report) || !Array.isArray(report["testResults"]))
+        throw new Error("the native reporter did not produce file results");
+      expect(report["numPassedTests"]).toBe(projects.length);
+      expect(report["numFailedTests"]).toBe(0);
+      const evidence: unknown = JSON.parse(
+        await readFile(path.join(fixture.root, "windows-full-suite", "evidence.json"), "utf8"),
+      );
+      if (!isRecord(evidence) || !isRecord(evidence["suite"]))
+        throw new Error("the real runner did not retain suite evidence");
+      expect(evidence["status"]).toBe("passed");
+      expect(evidence["suite"]["executed"]).toBe(projects.length);
+      const observed = report["testResults"].filter(isRecord).map((file) => file["name"]);
+      expect(observed).toHaveLength(files.length);
+      expect(observed.every((file) => typeof file === "string" && path.isAbsolute(file))).toBe(
+        true,
+      );
+      expect(
+        sorted(
+          observed
+            .filter((file): file is string => typeof file === "string")
+            .map((file) => path.resolve(file)),
+        ),
+      ).toEqual(sorted(files.map((file) => path.resolve(file))));
+      const bodies = windowsSuiteSteps().map(runText).join("\n");
+      expect(bodies).not.toMatch(
+        /--project|--exclude|--retry|--testNamePattern|--testTimeout|--hookTimeout|--maxWorkers|--maxConcurrency|--poolOptions/u,
+      );
+      for (const scope of [windowsSuiteWorkflow(), windowsSuiteJob(), ...windowsSuiteSteps()]) {
+        const env = scope["env"];
+        expect(isRecord(env) ? env["QFAI_TEST_MAX_WORKERS"] : undefined).toBeUndefined();
+        expect(isRecord(env) ? env["QFAI_TEST_MAX_CONCURRENCY"] : undefined).toBeUndefined();
+      }
+    } finally {
+      await removeTempTree(fixture.root);
+    }
+  });
+
+  // QFAI:AC-0002-0027-04
+  it("retains native results while refusing runner failure, zero cases or missing full-flow evidence", () => {
+    for (const mode of ["runner-failed", "zero", "missing-flow"] as const) {
+      const result = runWindowsSuite(mode);
+      expect(result.status, result.stdout + result.stderr).not.toBe(0);
+      expect(result.rawReportExists).toBe(true);
+      if (!isRecord(result.evidence)) throw new Error("failure evidence was not retained");
+      expect(result.evidence["status"]).toBe("failed");
+      expect(result.evidence["requestedSha"]).toBe(result.sha);
+      expect(result.evidence["observedSha"]).toBe(result.sha);
+      expect(result.evidence["workflowSha"]).toBe(result.sha);
+      expect(result.evidence["runId"]).toBe("918");
+      expect(typeof result.evidence["elapsedMs"]).toBe("number");
+      if (!isRecord(result.report) || !isRecord(result.evidence["runner"]))
+        throw new Error("native failure observations were not retained");
+      expect(result.evidence["runner"]["exitCode"]).toBe(mode === "runner-failed" ? 7 : 0);
+      expect(result.report["numPassedTests"]).toBe(
+        mode === "runner-failed" ? 2 : mode === "zero" ? 0 : 1,
+      );
+      if (!isRecord(result.evidence["fullFlow"])) throw new Error("full-flow evidence is absent");
+      expect(result.evidence["fullFlow"]["result"]).toBe(
+        mode === "runner-failed" ? "passed" : "unverified",
+      );
+      expect(result.evidence["fullFlow"]["durationMs"]).toBe(mode === "runner-failed" ? 140 : null);
+    }
+    const upload = windowsSuiteSteps().find((step) =>
+      String(step["uses"]).startsWith("actions/upload-artifact@"),
+    );
+    expect(String(upload?.["if"])).toContain("!cancelled()");
+    expect(String(stepInputs(upload)["path"])).toContain("runner.temp");
+    expect(stepInputs(upload)["retention-days"]).toBeLessThanOrEqual(7);
+  });
+
+  // QFAI:AC-0002-0027-05
+  it("keeps registration pending until execution and leaves normal required CI independent", async () => {
+    const triggers = windowsSuiteWorkflow()["on"];
+    expect(isRecord(triggers) ? Object.keys(triggers) : []).toEqual(["workflow_dispatch"]);
+    const fixture = namedFixture();
+    try {
+      const identity = runWindowsPreflight(fixture);
+      expect(identity.status, identity.stderr).toBe(0);
+      expect(existsSync(path.join(fixture.root, "windows-full-suite", "identity.json"))).toBe(true);
+      expect(existsSync(path.join(fixture.root, "windows-full-suite", "evidence.json"))).toBe(
+        false,
+      );
+      expect(existsSync(path.join(fixture.root, "windows-full-suite", "vitest-results.json"))).toBe(
+        false,
+      );
+    } finally {
+      await removeTempTree(fixture.root);
+    }
+    expect(sorted(matrixSlices("ci.yml", "test"))).toEqual(sorted(runnerProjects()));
+    expect(sorted(matrixSlices("ci.yml", "node-floor"))).toEqual(sorted(runnerProjects()));
+    expect(
+      jobSteps("ci.yml", "windows-parity").some((step) =>
+        runText(step).includes("test:windows-parity"),
+      ),
+    ).toBe(true);
+    const prWorkflows: string[] = [];
+    for (const file of await readdir(path.join(REPO_ROOT, ".github", "workflows"))) {
+      if (!/\.ya?ml$/u.test(file)) continue;
+      const document: unknown = parseYaml(readText(".github", "workflows", file));
+      const on = isRecord(document) ? document["on"] : undefined;
+      if (isRecord(on) && Object.hasOwn(on, "pull_request")) prWorkflows.push(file);
+    }
+    expect(prWorkflows).toEqual(["ci.yml"]);
+    expect(readText(".github", "workflows", "ci.yml")).not.toContain(
+      "windows-full-suite-diagnostic",
+    );
+    expect(readText(".github", "required-status-contexts.json")).not.toContain(
+      "windows-full-suite-diagnostic",
+    );
+    expect(readText(".github", "required-status-contexts.json")).not.toContain(
+      "Windows full-suite diagnostic",
+    );
+    expect(Object.keys(workflowJobs("windows-full-suite-diagnostic.yml"))).toEqual([
+      "windows-full-suite-diagnostic",
+    ]);
+    const job = windowsSuiteJob();
+    expect(job["needs"]).toBeUndefined();
+    expect(job["strategy"]).toBeUndefined();
+    expect(
+      existsSync(
+        path.join(
+          REPO_ROOT,
+          "packages/qfai/assets/init/root/.github/workflows/windows-full-suite-diagnostic.yml",
+        ),
+      ),
+    ).toBe(false);
   });
 });

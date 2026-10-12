@@ -202,15 +202,15 @@
         ".github/actions/setup/action.yml": "38dcdd7ba28a4812ef0719baf5ccfac23bfd3c39a3049e7420fc4caeac7b76ca",
         ".github/actions/setup/dependency-builds.txt": "3230335c2f0bc71bfcec72150d56fd51dc30524ca0fb35405197054709bd13b5",
         ".github/actions/setup/verify-rebuild-sources.mjs": "81c83080bfbae274d46c90cdae9f9ae3dd3af6240fe56fc88aec461799802ae3",
-        "scripts/bootstrap.mjs": "cc87185c6a7824e974c9590f77bf9f3f44690c6f0c04dd78867a8540b8ed437e",
+        "scripts/bootstrap.mjs": "c7e77af42feef0a61951955d0a7b2cb0d0554e0da4ee9870d92145cf84f923ff",
         "scripts/branch-catchup.mjs": "d21a6494add3ec56066a0a756b02060e6082e878cb413c3df812b864518b0497",
         "scripts/check-bidi.mjs": "295f9f9779686435a54d481b740e00b150108525630be3796369403873b70ed5",
         "scripts/check-build-warnings.mjs": "f07d6df10d28a9ffcb4cdf1130e379c4aadfc2a89329e5f66ae23fd117000077",
         "scripts/check-changelog-entries.mjs": "5c4a94118edd783be8609610c9b2c6cfc393ebdeca8f841166307ef6374b78f1",
-        "scripts/check-changelog-released-sections.mjs": "0cf2b5a285e25c80f3127b4fa033308338e209176c7dc15b2ada4aecfad98cf0",
+        "scripts/check-changelog-released-sections.mjs": "0444905629b00b45d459b699e244aaf9de6a2a8ca9a626265e962e69997aad91",
         "scripts/check-conflict-markers.mjs": "9759695e9cf3f2590a046c45640124a09ae4ce9146cf6cf24b2dfaf01e31b0da",
         "scripts/check-doc-clarity.mjs": "3eb53770091a8345a6d47fbf282e464cf3b88a73b160355b466cc2a1b0b90ecf",
-        "scripts/check-instructions-size.mjs": "6b8beb48d4bc2a5eeed152e6518ee014f48338e998caf7b3526d148186467b75",
+        "scripts/check-instructions-size.mjs": "bf025c946e1a31e28aa6d5321175aa85592f7c74085f1f2fc5d49bb563d9a47e",
         "scripts/check-lifecycle-manifests.mjs": "8f3c5e8c814f31ee407165aee369ab26bf8f77574f69755fe45953d9ff881ecd",
         "scripts/check-mdschema.mjs": "4900c69ba7e51c2766ee41579e4b41dd7edc3aaf0915f22b1432a74d8f15bebe",
         "scripts/check-mermaid.mjs": "25ee8a44086d4e2aac81db2e2049363043096ab5865ca0575d4ca184c386222a",
@@ -230,11 +230,11 @@
         "scripts/check-tsc-compiler.mjs": "14811d9aa79ca3988a07f3ee51aeac3a4ee825e793e77af69ff05cf55e39e1f1",
         "scripts/check-types-future.mjs": "21ac82e9a3c97fe245aa2dc9aa39488fe181d9d35c698bf787bb7424a392ec10",
         "scripts/check-workflow-hygiene.mjs": "2d5ab6f19ca9b948fa0022a4961ed29e75d672bad4f62b2e4aaf2d2e1c331e29",
-        "scripts/entry-file-size-pins.json": "27c9352210a0a773ab43613ee7f8dafec3d74ed6eef163d3f5b8969cc7061e32",
+        "scripts/entry-file-size-pins.json": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
         "scripts/fresh-init-findings.json": "a25a8096a268e9d6abca3f0fe25f97411e214a329604451196489397a13009a1",
         "scripts/fresh-init-findings.mjs": "032493d612d6999edef2233ef94718a84d7c21843722c4c5050f2b879d165331",
         "scripts/gen-codex-agents.mjs": "276e9af87f49df9de8332365ea79a4ddfe5d03b72af9666cc58dab7d818ea637",
-        "scripts/gh-budget.mjs": "5d29837f6f3e9d39d9327eeaa5eb5f793cbd50b731a541a266d6078278c21149",
+        "scripts/gh-budget.mjs": "efd6f91da8e050c01b6bfc26816d63b979db03341a45c5709a7f88a58dbfd579",
         "scripts/lib/bounded-read.mjs": "1ca91026cd7016db2ed89d31b397985d5e18fe00a3d018b7cc0cedbbb2578444",
         "scripts/lib/npm-failure.mjs": "cdd3fd00a1ffb02be1b7f4059c96f4a2cb9220d8474336ee276434d85a499413",
         "scripts/lib/pack-github-topology.mjs": "9d41d310d32bc59c6712be5b74610f9de4655f76cc6c29e76fa99c9682a88679",
@@ -280,7 +280,7 @@
       ],
       "closureActions": [
         "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
-        "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
+        "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9"
       ],
       "closureActionsNote": [
         "The EXTERNAL actions a step in this context's closure may invoke directly, as",
@@ -292,9 +292,9 @@
         "makes a reference immutable and says nothing about what it does, and an action running before",
         "the verdict step can write a workflow command file.",
         "",
-        "An allow-list rather than a ban, because the closure legitimately needs two: the checkout every",
-        "job starts with, and the artifact upload the aggregate uses. Pinned to the SHA, so a bump is a",
-        "change read here as well as in the workflow."
+        "The closure needs checkout, the aggregate report upload, and validation profiling uploads.",
+        "Each action version is pinned to its SHA, so a bump is a change read here as well as in the",
+        "workflow."
       ],
       "nestedActions": ["actions/setup-node@820762786026740c76f36085b0efc47a31fe5020"],
       "nestedActionsNote": [
@@ -403,7 +403,7 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "e995414dcbc61032",
-        "Verify the toolchain action before running it": "2e694c8e7643fec3",
+        "Verify the toolchain action before running it": "dc3fb2c5733b8f8a",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "a9e48843fd69e79c",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "5b9cb61d789d7eda",
@@ -411,12 +411,12 @@
         "QFAI self-validate this repo (dogfooding — SDD gates)": "a6335bcba3f91550",
         "QFAI self-validate this repo (dogfooding — full profile)": "96caa9705555e971",
         "Run qfai validate gate (fail on error)": "64fb079758255e4c",
-        "Run lint gate": "7cd28c426d2b7309",
+        "Run lint gate": "80e8104e145eebb5",
         "Run type check": "51c5eeee942920dc",
         "Run future TypeScript compatibility check": "55db3b7f97fd7fad",
-        "Run the package test suite on the floor (${{ matrix.slice }})": "cdce2fa04dd9f130",
-        "Run tests (${{ matrix.slice }})": "cdce2fa04dd9f130",
-        "Run the Windows parity suites": "ad3695a5821b00cb"
+        "Run the package test suite on the floor (${{ matrix.slice }})": "a931991b300a31e2",
+        "Run tests (${{ matrix.slice }})": "a931991b300a31e2",
+        "Run the Windows parity suites": "e9a048160a0b1d29"
       },
       "verificationBodiesNote": [
         "A digest of each verification step's `run` / `uses` / `with` / `env`, and of the package",

@@ -23,8 +23,8 @@ Feature: Install or upgrade and get the free-text entry
     Then no skill directory reached through a host skills directory contains `agents/openai.yaml`
 
   # AC-0001-0196-03
-  Scenario: Init writes no line that sends a request to `qfai-run` into `AGENTS.md` or `CLAUDE.md`
-    Given a fresh project, or a project whose `AGENTS.md` and `CLAUDE.md` exist
+  Scenario: Init writes no line that sends a request to `qfai-run` into `AGENTS.md`
+    Given a fresh project, or a project whose `AGENTS.md` exists
     When `qfai init` runs
     Then the seeded files open with their heading and carry no line that sends a request to `qfai-run`
     And an existing file gains no such line, and its text and line endings are kept

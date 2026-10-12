@@ -56,8 +56,12 @@ Feature: Decision and open-question table validation
     And with no term listed, nothing is checked
   # AC-0001-0053-08
   Scenario: A decision row whose Approach cell breaks the four-item form is reported
-    Given the story tree, and a `decisions.md` row above `DEC-2097` whose Approach cell lacks, empties or reorders `Evidence:`, `Grounds:`, `Residual risk:` or `Rollback:`, takes `none — <reason>` outside the last two, or holds an Evidence entry that is neither `file:` nor `command:`
+    Given the story tree, and a `decisions.md` row above `DEC-2097` whose Approach cell lacks, empties, duplicates or reorders `Evidence:`, `Grounds:`, `Residual risk:` or `Rollback:`, takes `none — <reason>` outside the last two, or holds an Evidence entry that is neither `file:` nor `command:`
     When `qfai validate --profile sdd` runs
     Then `QFAI-STORY-017` is raised at error naming the file, the row ID and the breach
+    And labels whose hyphens lie inside closed equal-length backtick spans are literal content, not structural items
+    And outside code an odd backslash count escapes only the first backtick, leaving a remaining run available, while an even count leaves the whole run available
+    And inside code backslashes are literal, only a complete same-length raw run closes the span, and unmatched openers do not hide later balanced spans
+    And original item values remain intact, code-only content is nonempty, quoted labels do not supply missing items, and Evidence prefix checks still apply
     And a row up to `DEC-2097` is not read
 ```
