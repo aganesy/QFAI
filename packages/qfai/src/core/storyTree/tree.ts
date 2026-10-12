@@ -13,7 +13,13 @@ import {
   markdownOutsideContractForm,
   resolveStoryTreeRoots,
 } from "./layout.js";
-import { parseRecordTable, type ParsedRecordTable } from "./tables.js";
+import {
+  parseDecisionRegister,
+  parseRecordTable,
+  type DecisionOccurrence,
+  type DecisionRegisterError,
+  type ParsedRecordTable,
+} from "./tables.js";
 
 export type StoryTreeDeclaration = { id: string; file: string };
 export type FlowDefinition = StoryTreeDeclaration & { directory: string };
@@ -35,6 +41,10 @@ export type StoryTreeModel = {
   declarations: StoryTreeDeclaration[];
   decisions: ParsedRecordTable | null;
   decisionFile: string | null;
+  decisionFiles: string[];
+  decisionOccurrences: DecisionOccurrence[];
+  decisionRegisterErrors: DecisionRegisterError[];
+  decisionRegisterComplete: boolean;
   openQuestions: ParsedRecordTable | null;
   openQuestionsFile: string | null;
   contractFiles: string[];
@@ -82,6 +92,8 @@ export function nextStoryTreeId(
   kind: StoryTreeIdKind,
   parentId?: string,
 ): string {
+  if (model.decisionRegisterComplete === false)
+    throw new Error("The complete decision register is unavailable; ID allocation is refused");
   const named = model.declarations.map(({ id }) => id);
   for (const row of model.decisions?.rows ?? []) {
     named.push(
@@ -128,6 +140,10 @@ export function buildStoryTreeModel(
     declarations: [],
     decisions: null,
     decisionFile: null,
+    decisionFiles: [],
+    decisionOccurrences: [],
+    decisionRegisterErrors: [],
+    decisionRegisterComplete: true,
     openQuestions: null,
     openQuestionsFile: null,
     contractFiles: [],
@@ -212,8 +228,21 @@ export function buildStoryTreeModel(
   }
   const decisions = recordTableFor(texts, "decisions.md", options.specsDir);
   const questions = recordTableFor(texts, "open-questions.md", options.specsDir);
-  model.decisions = decisions?.table ?? null;
-  model.decisionFile = decisions?.file ?? null;
+  const orphanPage = [...texts.keys()].find((file) => file.includes("/decisions/"));
+  const decisionFile =
+    decisions?.file ??
+    (orphanPage
+      ? options.specsDir
+        ? path.posix.join(normalize(options.specsDir), "decisions.md")
+        : `${orphanPage.split("/decisions/")[0]}/decisions.md`
+      : null);
+  const register = decisionFile ? parseDecisionRegister(texts, decisionFile) : null;
+  model.decisions = register?.table ?? null;
+  model.decisionFile = decisionFile;
+  model.decisionFiles = register?.files ?? [];
+  model.decisionOccurrences = register?.occurrences ?? [];
+  model.decisionRegisterErrors = register?.errors ?? [];
+  model.decisionRegisterComplete = register?.complete ?? true;
   model.openQuestions = questions?.table ?? null;
   model.openQuestionsFile = questions?.file ?? null;
   model.declarations = [
@@ -222,7 +251,7 @@ export function buildStoryTreeModel(
     ...model.acceptanceCriteria,
     ...model.examples,
     ...model.rules.map(({ id, file }) => ({ id, file })),
-    ...(model.decisions?.rows.map(({ id }) => ({ id, file: model.decisionFile ?? "" })) ?? []),
+    ...model.decisionOccurrences.map(({ row, origin }) => ({ id: row.id, file: origin.path })),
     ...(model.openQuestions?.rows.map(({ id }) => ({ id, file: model.openQuestionsFile ?? "" })) ??
       []),
   ].sort((left, right) => left.id.localeCompare(right.id) || left.file.localeCompare(right.file));
@@ -235,18 +264,70 @@ export function buildStoryTreeModel(
   return model;
 }
 
-async function collectTexts(directory: string, files: Map<string, string>): Promise<void> {
+async function collectTexts(
+  directory: string,
+  files: Map<string, string>,
+  specsDir: string,
+  errors: DecisionRegisterError[],
+): Promise<void> {
   let entries;
   try {
     entries = await fs.readdir(directory, { withFileTypes: true });
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return;
+    if (
+      directory === path.join(specsDir, "decisions") ||
+      directory.startsWith(`${path.join(specsDir, "decisions")}${path.sep}`)
+    ) {
+      errors.push({
+        file: directory,
+        message: `Unreadable decision directory: ${error instanceof Error ? error.message : String(error)}`,
+      });
+      return;
+    }
     throw error;
   }
   for (const entry of entries) {
     const file = path.join(directory, entry.name);
-    if (entry.isDirectory()) await collectTexts(file, files);
-    else if (entry.isFile()) files.set(file, await fs.readFile(file, "utf8"));
+    const registerPath =
+      file === path.join(specsDir, "decisions.md") ||
+      file === path.join(specsDir, "decisions") ||
+      file.startsWith(`${path.join(specsDir, "decisions")}${path.sep}`);
+    if (registerPath) {
+      const stat = await fs.lstat(file).catch((error: unknown) => {
+        errors.push({
+          file,
+          message: `Unreadable decision path: ${error instanceof Error ? error.message : String(error)}`,
+        });
+        return undefined;
+      });
+      if (!stat) {
+        files.set(file, "");
+        continue;
+      }
+      if (
+        stat.isSymbolicLink() ||
+        (stat.isFile() && stat.nlink > 1) ||
+        (!stat.isFile() && !stat.isDirectory())
+      ) {
+        files.set(file, "");
+        errors.push({ file, message: "Linked or nonregular decision path" });
+        continue;
+      }
+      if (stat.isDirectory() && file !== path.join(specsDir, "decisions")) files.set(file, "");
+    }
+    if (entry.isDirectory()) await collectTexts(file, files, specsDir, errors);
+    else if (entry.isFile()) {
+      try {
+        files.set(file, await fs.readFile(file, "utf8"));
+      } catch (error) {
+        if (!registerPath) throw error;
+        errors.push({
+          file,
+          message: `Unreadable decision path: ${error instanceof Error ? error.message : String(error)}`,
+        });
+      }
+    }
   }
 }
 
@@ -256,9 +337,46 @@ export async function readStoryTreeModel(
 ): Promise<StoryTreeModel> {
   const roots = resolveStoryTreeRoots(root, config);
   const files = new Map<string, string>();
-  await collectTexts(roots.specsDir, files);
-  if (!roots.contractsDir.startsWith(`${roots.specsDir}${path.sep}`)) {
-    await collectTexts(roots.contractsDir, files);
+  const errors: DecisionRegisterError[] = [];
+  const relative = path.relative(root, roots.specsDir);
+  let current = path.resolve(root);
+  if (relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative)) {
+    for (const component of ["", ...relative.split(path.sep).filter(Boolean)]) {
+      current = path.resolve(current, component);
+      const stats = await fs.lstat(current).catch((error: unknown) => {
+        if (error instanceof Error && "code" in error && error.code === "ENOENT") return undefined;
+        throw error;
+      });
+      if (!stats) break;
+      if (stats.isSymbolicLink() || !stats.isDirectory()) {
+        errors.push({
+          file: current,
+          message: "Linked or non-directory story-tree path component",
+        });
+        break;
+      }
+    }
   }
-  return buildStoryTreeModel(files, roots);
+  const specStat = await fs.lstat(roots.specsDir).catch((error: unknown) => {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return undefined;
+    throw error;
+  });
+  if (specStat?.isSymbolicLink() || (specStat && !specStat.isDirectory())) {
+    errors.push({ file: roots.specsDir, message: "Linked or non-directory story-tree root" });
+  } else if (errors.length === 0) await collectTexts(roots.specsDir, files, roots.specsDir, errors);
+  if (!roots.contractsDir.startsWith(`${roots.specsDir}${path.sep}`)) {
+    await collectTexts(roots.contractsDir, files, roots.specsDir, errors);
+  }
+  const model = buildStoryTreeModel(files, roots);
+  for (const occurrence of model.decisionOccurrences) {
+    occurrence.origin.path = path.relative(root, occurrence.origin.path).split(path.sep).join("/");
+  }
+  model.decisionRegisterErrors.push(...errors);
+  if (errors.length > 0) {
+    model.decisionRegisterComplete = false;
+    model.decisionOccurrences = [];
+    if (model.decisions) model.decisions.rows = [];
+    model.declarations = model.declarations.filter(({ id }) => !id.startsWith("DEC-"));
+  }
+  return model;
 }

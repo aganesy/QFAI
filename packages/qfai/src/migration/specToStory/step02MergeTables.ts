@@ -5,6 +5,7 @@ import { isEnoent } from "../../core/fs/errno.js";
 import { extractH2Sections, parseHeadings } from "../../core/parse/markdown.js";
 import { escapeTableCell, parseAllMarkdownTables } from "../../core/specPackParsers.js";
 import { parseRecordTable } from "../../core/storyTree/tables.js";
+import { readStoryTreeModel } from "../../core/storyTree/tree.js";
 import {
   MigrationInputError,
   type MigrationContext,
@@ -222,13 +223,14 @@ function nextRecordId(kind: "DEC" | "OQ", existing: readonly string[], offset: n
 
 function appendRows(text: string, rows: readonly string[]): string {
   if (rows.length === 0) return text;
-  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const lines = text.match(/[^\n]*\n|[^\n]+$/g) ?? [];
   const header = lines.findIndex((line) => /^\|\s*ID\s*\|\s*Content\s*\|/.test(line));
   if (header < 0) throw new MigrationInputError("Record table is missing its header");
   let end = header + 2;
   while (end < lines.length && /^\s*\|/.test(lines[end] ?? "")) end += 1;
-  lines.splice(end, 0, ...rows);
-  return `${lines.join("\n").trimEnd()}\n`;
+  const prefix = lines.slice(0, end).join("");
+  const ending = (lines[end - 1] ?? "").endsWith("\r\n") ? "\r\n" : "\n";
+  return `${prefix}${prefix.endsWith("\n") ? "" : ending}${rows.join(ending)}${ending}${lines.slice(end).join("")}`;
 }
 
 function origin(record: OldRecord): string {
@@ -281,7 +283,19 @@ export async function pendingMergeInput(context: MigrationContext): Promise<stri
       return candidate.source;
     }
   }
-  const decisions = (await readIfPresent(path.join(context.specsDir, "decisions.md"))) ?? "";
+  const tree = await readStoryTreeModel(context.root, {
+    ...context.config,
+    paths: {
+      ...context.config.paths,
+      specsDir: context.specsDir,
+      contractsDir: context.contractsDir,
+    },
+  });
+  if (!tree.decisionRegisterComplete)
+    throw new MigrationInputError("The complete decision register is unavailable");
+  const decisions = (tree.decisions?.rows ?? [])
+    .map((row) => `${row.content} ${row.approach}`)
+    .join("\n");
   const unmerged = (await retiredPackRecords(context)).find(
     (record) => !decisions.includes(origin(record)),
   );
@@ -330,7 +344,17 @@ export const step02: MigrationStep = {
     const questionsOriginal =
       (await readIfPresent(path.join(context.root, questionsTarget))) ??
       "# Open Questions\n\n## Open Questions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
-    const existingDecisions = parseRecordTable(decisionsOriginal, "decisions");
+    const tree = await readStoryTreeModel(context.root, {
+      ...context.config,
+      paths: {
+        ...context.config.paths,
+        specsDir: context.specsDir,
+        contractsDir: context.contractsDir,
+      },
+    });
+    if (!tree.decisionRegisterComplete)
+      throw new MigrationInputError("The complete decision register is unavailable");
+    const existingDecisions = tree.decisions ?? parseRecordTable(decisionsOriginal, "decisions");
     const existingQuestions = parseRecordTable(questionsOriginal, "open-questions");
     if (existingDecisions.errors.length > 0 || existingQuestions.errors.length > 0) {
       const details = [...existingDecisions.errors, ...existingQuestions.errors].slice(0, 4);

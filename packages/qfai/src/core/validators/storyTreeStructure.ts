@@ -57,6 +57,9 @@ function validateIndex(
 /** Checks relationships in the parsed tree without reading the filesystem again. */
 export function validateStoryTreeStructureModel(model: StoryTreeModel): Issue[] {
   const issues: Issue[] = [];
+  for (const { file, message } of model.decisionRegisterErrors) {
+    issues.push(finding("QFAI-STORY-003", `${file}: ${message}`, file));
+  }
   const flowIndexFile = model.flowIndex?.file ?? "02_business-flow/business-flows.md";
   issues.push(
     ...validateIndex(
@@ -154,7 +157,17 @@ export function validateStoryTreeStructureModel(model: StoryTreeModel): Issue[] 
   ] as const) {
     if (!table || !file) continue;
     for (const error of table.errors) {
-      issues.push(finding("QFAI-STORY-003", `${file}: ${error}`, file));
+      const physicalFile =
+        table === model.decisions
+          ? (model.decisionFiles.find((candidate) => error.startsWith(`${candidate}:`)) ?? file)
+          : file;
+      issues.push(
+        finding(
+          "QFAI-STORY-003",
+          table === model.decisions ? error : `${file}: ${error}`,
+          physicalFile,
+        ),
+      );
     }
   }
   for (const row of model.openQuestions?.rows ?? []) {
@@ -309,8 +322,8 @@ function validateRecordCitations(model: StoryTreeModel): Issue[] {
       );
     }
   }
-  const decisionFile = model.decisionFile ?? "";
-  for (const row of model.decisions?.rows ?? []) {
+  for (const { row, origin } of model.decisionOccurrences) {
+    const decisionFile = origin.path;
     const successor = SUPERSEDED_BY.exec(row.status)?.[1];
     if (successor === undefined || decisions.has(successor)) continue;
     issues.push(
@@ -386,13 +399,18 @@ function approachProblems(approach: string): string[] {
  * Evidence entry a `file:` or `command:` item.
  */
 function validateDecisionApproaches(model: StoryTreeModel): Issue[] {
-  const file = model.decisionFile ?? "";
   const issues: Issue[] = [];
-  for (const row of model.decisions?.rows ?? []) {
+  for (const { row, origin } of model.decisionOccurrences) {
+    const file = origin.path;
     if (!(Number(row.id.slice("DEC-".length)) > APPROACH_CHECKED_AFTER)) continue;
     for (const problem of approachProblems(row.approach)) {
       issues.push(
-        finding("QFAI-STORY-017", `${file}: ${row.id} Approach ${problem}`, file, [row.id]),
+        finding(
+          "QFAI-STORY-017",
+          `${file}:${origin.actualRow}: ${row.id} Approach ${problem}`,
+          file,
+          [row.id],
+        ),
       );
     }
   }

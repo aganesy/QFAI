@@ -22,6 +22,15 @@ the user. Its `Evidence:` still lists what supports the change.
 
 A stage that does not own this file records its decisions in its own final
 report, with the same four items under the same rules.
+A legacy root has only the Decisions section. When reviewed historical pages
+are adopted, insert an optional '## Decision pages' section before '## Decisions',
+with only unique direct '- decisions/page-NNNN.md' entries in read order.
+Each page uses the same closed four-column table and has no page index.
+Read listed pages before this root table; append new rows only to this root.
+Every physical root and page, including comments and blank lines, stays within
+500 lines. Rotation is never automatic; use the separately approved relocation
+procedure in the SDD triage reference.
+
 -->
 
 # Decisions

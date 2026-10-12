@@ -3,15 +3,22 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { DEFAULT_GLOB_FILE_LIMIT } from "../fs.js";
-import { getChangedFilesAgainstBase, normalizeRepoPath, readFileAtBase } from "../gitChanges.js";
+import {
+  getChangedFilesAgainstBase,
+  gitStdout,
+  normalizeRepoPath,
+  readFileAtBase,
+  readDecisionFilesAtRevision,
+} from "../gitChanges.js";
 import { parseAllMarkdownTables } from "../specPackParsers.js";
 import { parseCountedExampleAnnotations } from "../storyTree/ids.js";
 import {
   classifyRecordRow,
   diffRecordTables,
-  parseRecordTable,
+  diffRecordRows,
   type RecordRow,
 } from "../storyTree/tables.js";
+import { buildStoryTreeModel, readStoryTreeModel, type StoryTreeModel } from "../storyTree/tree.js";
 import type { Issue } from "../types.js";
 import { countsForExample, readStoryTests, storyTestScanIssue } from "./storyTreeObligations.js";
 import { issue } from "./utils.js";
@@ -33,24 +40,92 @@ export async function validateStoryTreeDrift(
   ).replace(/\/$/, "");
   const decisions = path.posix.join(specs, "decisions.md");
   const questions = path.posix.join(specs, "open-questions.md");
-  const baseDecisions = readFileAtBase(root, baseBranch, decisions);
-  if (baseDecisions === null) return [];
-
-  const currentDecisions = await readSafePath(path.join(root, decisions));
-  const rows = parseRecordTable(currentDecisions, "decisions").rows;
-  const baseRows = new Map(
-    parseRecordTable(baseDecisions, "decisions").rows.map((row) => [row.id, row]),
-  );
+  const issues: Issue[] = [];
+  let baseModel: StoryTreeModel;
+  let headModel: StoryTreeModel;
+  try {
+    const ancestors = gitStdout(root, ["merge-base", "--all", baseBranch, "HEAD"])
+      ?.trim()
+      .split(/\s+/);
+    if (!ancestors || ancestors.length !== 1 || !ancestors[0])
+      throw new Error("A unique readable common ancestor is required");
+    const files = readDecisionFilesAtRevision(root, ancestors[0], specs);
+    if (
+      !files.has(decisions) &&
+      ![...files.keys()].some((file) => file.startsWith(`${path.posix.join(specs, "decisions")}/`))
+    )
+      return [];
+    baseModel = buildStoryTreeModel(files, { specsDir: specs, contractsDir: contracts });
+    headModel = await readStoryTreeModel(root, config);
+    const problems = [baseModel, headModel].flatMap((model) => [
+      ...(model.decisionRegisterComplete
+        ? []
+        : model.decisionRegisterErrors.map(({ file, message }) => `${file}: ${message}`)),
+      ...(model.decisions?.errors ?? []).filter(
+        (error) => !/declares .+ more than once/.test(error),
+      ),
+    ]);
+    if (
+      !baseModel.decisionRegisterComplete ||
+      !headModel.decisionRegisterComplete ||
+      problems.length > 0
+    )
+      throw new Error(
+        `The complete decision register could not be read safely: ${problems.join("; ")}`,
+      );
+  } catch (error) {
+    return [
+      issue(
+        "QFAI-DRIFT-001",
+        `Decision-register comparison failed: ${error instanceof Error ? error.message : String(error)}`,
+        "error",
+        decisions,
+        "storyTree.upstreamEdit",
+        [decisions],
+      ),
+    ];
+  }
+  const rows = headModel.decisions?.rows ?? [];
+  const baseRows = baseModel.decisions?.rows ?? [];
   const authorised = new Map<string, string>();
   for (const row of rows) {
     const classified = classifyRecordRow(row);
     if (classified.kind !== "change-request" || !classified.inForce) continue;
-    const baseRow = baseRows.get(row.id);
+    const inherited = baseRows.filter((candidate) => candidate.id === row.id);
+    if (inherited.length > 1 || rows.filter((candidate) => candidate.id === row.id).length !== 1)
+      continue;
+    const baseRow = inherited[0];
     if (!authorisesThisBranch(row.status, baseRow?.status)) continue;
     if (baseRow && rewritesImmutableCell(baseRow, row)) continue;
     for (const file of classified.refs) authorised.set(normalizeRepoPath(file), row.id);
   }
-  const issues: Issue[] = [];
+  // Existing duplicate history remains an error, but it does not remove the existing
+  // exemption for a uniquely identified request whose only changed cell is Status.
+  const statusDifference = diffRecordRows(
+    {
+      rows: baseRows,
+      errors: (baseModel.decisions?.errors ?? []).filter(
+        (error) => !/declares .+ more than once/.test(error),
+      ),
+    },
+    {
+      rows,
+      errors: (headModel.decisions?.errors ?? []).filter(
+        (error) => !/declares .+ more than once/.test(error),
+      ),
+    },
+    "decisions",
+  );
+  const onlyRequestStatus =
+    statusDifference.onlyChangeRequestRows &&
+    [
+      ...statusDifference.changed.map(({ id }) => id),
+      ...statusDifference.appended.map(({ id }) => id),
+    ].every(
+      (id) =>
+        rows.filter((row) => row.id === id).length === 1 &&
+        baseRows.filter((row) => row.id === id).length <= 1,
+    );
   if (profile === "drift") {
     for (const [file, kind] of [
       [decisions, "decisions"],
@@ -59,6 +134,38 @@ export async function validateStoryTreeDrift(
       const base = readFileAtBase(root, baseBranch, file);
       if (base === null) continue;
       const head = await readSafePath(path.join(root, file));
+      if (kind === "decisions") {
+        for (const [index, before] of baseModel.decisionOccurrences.entries()) {
+          const after = headModel.decisionOccurrences[index];
+          if (!after) {
+            issues.push(
+              issue(
+                "QFAI-STORY-010",
+                `${before.origin.path}:${before.origin.actualRow}: ${before.row.id} row removed (ID)`,
+                "error",
+                before.origin.path,
+                "storyTree.rowRewritten",
+                [before.row.id],
+              ),
+            );
+            continue;
+          }
+          for (const cell of ["id", "content", "approach"] as const) {
+            if (before.row[cell] === after.row[cell]) continue;
+            issues.push(
+              issue(
+                "QFAI-STORY-010",
+                `${after.origin.path}:${after.origin.actualRow}: ${before.row.id} ${cell === "id" ? "ID" : cell} changed`,
+                "error",
+                after.origin.path,
+                "storyTree.rowRewritten",
+                [before.row.id],
+              ),
+            );
+          }
+        }
+        continue;
+      }
       const difference = diffRecordTables(base, head, kind);
       for (const removed of difference.removed) {
         issues.push(
@@ -86,7 +193,10 @@ export async function validateStoryTreeDrift(
       }
     }
   }
-  const decisionDiff = diffRecordTables(baseDecisions, currentDecisions, "decisions");
+  const registerFiles = new Set([
+    ...baseModel.decisionFiles,
+    ...headModel.decisionFiles.map((file) => normalizeRepoPath(path.relative(root, file))),
+  ]);
   for (const file of changed) {
     const protectedPath =
       file.startsWith(`${path.posix.join(specs, "01_policy")}/`) ||
@@ -94,12 +204,14 @@ export async function validateStoryTreeDrift(
       contracts === "" ||
       file.startsWith(`${contracts}/`) ||
       file === decisions ||
+      file.startsWith(`${path.posix.join(specs, "decisions")}/`) ||
       file === questions;
     if (!protectedPath || authorised.has(file)) continue;
     if (
-      file === decisions &&
-      decisionDiff.onlyChangeRequestRows &&
-      withoutChangeRequestRows(baseDecisions) === withoutChangeRequestRows(currentDecisions)
+      registerFiles.has(file) &&
+      onlyRequestStatus &&
+      withoutChangeRequestRows(readFileAtBase(root, baseBranch, file) ?? "") ===
+        withoutChangeRequestRows(await readSafePath(path.join(root, file)))
     )
       continue;
     if (file.endsWith("/03_Example.md") && (await onlyAppendsExamples(root, baseBranch, file)))

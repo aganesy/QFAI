@@ -7,6 +7,7 @@
  * to shell out twice or to keep two copies of the failure handling.
  */
 import { execFileSync } from "node:child_process";
+import path from "node:path";
 
 /** Repo-relative, forward-slashed, with any leading `./` removed. */
 export function normalizeRepoPath(p: string): string {
@@ -17,7 +18,64 @@ export function normalizeRepoPath(p: string): string {
 export function readFileAtBase(root: string, baseBranch: string, file: string): string | null {
   const revision = gitStdout(root, ["merge-base", baseBranch, "HEAD"])?.trim();
   if (!revision) return null;
-  return gitStdout(root, ["show", `${revision}:${normalizeRepoPath(file)}`]);
+  return readFileAtRevision(root, revision, file);
+}
+
+/** Only a confirmed absent path is null; a failed existing-blob read is not absent history. */
+export function readFileAtRevision(root: string, revision: string, file: string): string | null {
+  const names = gitStdout(root, ["ls-tree", "-z", revision, "--", normalizeRepoPath(file)]);
+  if (names === null) throw new Error(`Git could not read the file inventory at ${revision}`);
+  if (names === "") return null;
+  const object = /^100[0-7]{3} blob ([a-f0-9]+)\t/.exec(names)?.[1];
+  if (!object) throw new Error(`Git path is not a regular tracked file: ${file}`);
+  const contents = gitStdout(root, ["cat-file", "blob", object]);
+  if (contents === null) throw new Error(`Git could not read existing file: ${file}`);
+  return contents;
+}
+
+/** Complete root and decision-directory inventory, with no failed register blob omitted. */
+export function readDecisionFilesAtRevision(
+  root: string,
+  revision: string,
+  directory: string,
+): Map<string, string> {
+  let component = "";
+  for (const part of normalizeRepoPath(directory).split("/").filter(Boolean)) {
+    component = component ? `${component}/${part}` : part;
+    const entry = gitStdout(root, ["ls-tree", "-z", revision, "--", component]);
+    if (entry === null) throw new Error(`Git could not read directory: ${component}`);
+    if (entry !== "" && !/^040000 tree [a-f0-9]+\t/.test(entry))
+      throw new Error(`Git directory is linked or nonregular: ${component}`);
+  }
+  const names = gitStdout(root, [
+    "ls-tree",
+    "-r",
+    "-z",
+    revision,
+    "--",
+    normalizeRepoPath(directory),
+  ]);
+  if (names === null) throw new Error(`Git could not read the inventory at ${revision}`);
+  const files = new Map<string, string>();
+  for (const entry of names.split("\0").filter(Boolean)) {
+    const candidate = /^(\d+) (\w+) ([a-f0-9]+)\t(.+)$/.exec(entry);
+    if (!candidate?.[4])
+      throw new Error(`Git returned an unreadable inventory entry: ${directory}`);
+    const file = normalizeRepoPath(candidate[4]);
+    const pageDirectory = path.posix.join(normalizeRepoPath(directory), "decisions");
+    if (
+      file !== path.posix.join(normalizeRepoPath(directory), "decisions.md") &&
+      file !== pageDirectory &&
+      !file.startsWith(`${pageDirectory}/`)
+    )
+      continue;
+    if (!/^100[0-7]{3}$/.test(candidate[1] ?? "") || candidate[2] !== "blob" || !candidate[3])
+      throw new Error(`Git register contains a linked or nonregular entry: ${file}`);
+    const contents = gitStdout(root, ["cat-file", "blob", candidate[3]]);
+    if (contents === null) throw new Error(`Git could not read existing file: ${file}`);
+    files.set(file, contents);
+  }
+  return files;
 }
 
 /** Runs git for its stdout, or returns `null` when the command cannot run. */
@@ -26,6 +84,8 @@ export function gitStdout(root: string, args: readonly string[]): string | null 
     return execFileSync("git", [...args], {
       cwd: root,
       encoding: "utf-8",
+      // Same bounded candidate size used by the decision renumber reader.
+      maxBuffer: 16 * 1024 * 1024 + 1024 * 1024,
       stdio: ["ignore", "pipe", "ignore"],
     });
   } catch {

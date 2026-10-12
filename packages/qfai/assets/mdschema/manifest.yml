@@ -20,6 +20,9 @@ documents:
   - id: story-decisions
     schema: story/decisions.mdschema.yml
     pattern: "{specsDir}/decisions.md"
+  - id: story-decision-page
+    schema: story/decisions/page-NNNN.mdschema.yml
+    pattern: "{specsDir}/decisions/page-*.md"
 
   - id: story-open-questions
     schema: story/open-questions.mdschema.yml

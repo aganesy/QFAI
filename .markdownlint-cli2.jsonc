@@ -54,6 +54,9 @@
     // record.
     ".qfai/evidence/**",
     ".qfai/spec/decisions.md",
+    ".qfai/spec/decisions/page-0001.md",
+    ".qfai/spec/decisions/page-0002.md",
+    ".qfai/spec/decisions/page-0003.md",
     ".qfai/report/atdd-traceability/**",
     ".qfai/report/preflight_summary.md",
     ".qfai/report/preflight/**",

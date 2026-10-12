@@ -9,7 +9,7 @@ import { escapeTableCell, parseAllMarkdownTables } from "../../core/specPackPars
 import { declaredContractId } from "../../core/contractsDecl.js";
 import { CONTRACT_KIND_BY_DIR, nextId } from "../../core/storyTree/ids.js";
 import { storyPaths } from "../../core/storyTree/layout.js";
-import { parseRecordTable } from "../../core/storyTree/tables.js";
+import { readStoryTreeModel } from "../../core/storyTree/tree.js";
 import { getInitAssetsDir } from "../../shared/assets.js";
 import { notAContract, OLD_CONTRACT_TOKEN } from "./contractIds.js";
 import {
@@ -1498,9 +1498,18 @@ export const step04: MigrationStep = {
       }
     }
     const retiredPacks: Record<string, string> = {};
-    const decisionText = await readOptional(path.join(context.specsDir, "decisions.md"));
-    if (decisionText !== null) {
-      const table = parseRecordTable(decisionText, "decisions");
+    const tree = await readStoryTreeModel(context.root, {
+      ...context.config,
+      paths: {
+        ...context.config.paths,
+        specsDir: context.specsDir,
+        contractsDir: context.contractsDir,
+      },
+    });
+    if (!tree.decisionRegisterComplete)
+      throw new MigrationInputError("The complete decision register is unavailable");
+    if (tree.decisions !== null) {
+      const table = tree.decisions;
       if (table.errors.length > 0)
         throw new MigrationInputError("decisions.md has an invalid table");
       for (const pack of packs.filter((item) => item.retired)) {

@@ -25,12 +25,12 @@
  * Exit codes: 0 clean / 1 a fault / 2 an unknown argument.
  */
 import { readdirSync, readFileSync } from "node:fs";
-import { createRequire } from "node:module";
+import { createRequire, register } from "node:module";
 import path from "node:path";
 import { argv, cwd, exit, stderr, stdout } from "node:process";
 import { pathToFileURL } from "node:url";
 
-import { blobAt, resolveRange } from "./check-shipped-ci-parity.mjs";
+import { resolveRange } from "./check-shipped-ci-parity.mjs";
 
 // `yaml` is installed under the package workspace only; see `check-workflow-hygiene.mjs`.
 const require = createRequire(import.meta.url);
@@ -233,7 +233,7 @@ export function readPlans(root) {
   return plans;
 }
 
-function baseFaults(head) {
+async function baseFaults(head, root) {
   const range = resolveRange(undefined);
   if (range.unresolvable) {
     stderr.write(
@@ -241,26 +241,45 @@ function baseFaults(head) {
     );
     return [];
   }
-  const contract = blobAt(range.baseRev, CONTRACT);
-  const decisions = blobAt(range.baseRev, DECISIONS);
-  if (contract === null || decisions === null) return [];
-  return changeFaults({ contract, decisions }, head);
+  const { readFileAtRevision, readDecisionFilesAtRevision } =
+    await import("../packages/qfai/src/core/gitChanges.ts");
+  const { buildStoryTreeModel } = await import("../packages/qfai/src/core/storyTree/tree.ts");
+  const contract = readFileAtRevision(root, range.baseRev, CONTRACT);
+  const texts = readDecisionFilesAtRevision(root, range.baseRev, ".qfai/spec");
+  if (contract === null) return [];
+  if (
+    !texts.has(DECISIONS) &&
+    ![...texts.keys()].some((file) => file.startsWith(".qfai/spec/decisions/"))
+  )
+    return [];
+  const model = buildStoryTreeModel(texts, { specsDir: ".qfai/spec" });
+  if (!model.decisionRegisterComplete)
+    throw new Error("The complete base decision register could not be read safely");
+  return changeFaults(
+    { contract, decisions: model.decisionOccurrences.map(({ raw }) => raw).join("") },
+    head,
+  );
 }
 
-function main() {
+async function main() {
   if (argv.length > 2) {
     stderr.write("check-route-catalog: takes no argument.\n");
     return 2;
   }
   const root = cwd();
+  const { defaultConfig } = await import("../packages/qfai/src/core/config.ts");
+  const { readStoryTreeModel } = await import("../packages/qfai/src/core/storyTree/tree.ts");
+  const model = await readStoryTreeModel(root, defaultConfig);
+  if (!model.decisionRegisterComplete)
+    throw new Error("The complete current decision register could not be read safely");
   const head = {
     contract: readFileSync(path.join(root, CONTRACT), "utf8"),
-    decisions: readFileSync(path.join(root, DECISIONS), "utf8"),
+    decisions: model.decisionOccurrences.map(({ raw }) => raw).join(""),
   };
   const faults = [
     ...citationFaults(head.contract, head.decisions),
     ...planFaults(head.contract, readPlans(root)),
-    ...baseFaults(head),
+    ...(await baseFaults(head, root)),
   ];
   if (faults.length === 0) {
     const count = routeRowsOf(head.contract).size;
@@ -276,5 +295,13 @@ function main() {
 }
 
 if (argv[1] !== undefined && import.meta.url === pathToFileURL(argv[1]).href) {
-  exit(main());
+  register("./lib/ts-specifier-hook.mjs", import.meta.url);
+  try {
+    exit(await main());
+  } catch (error) {
+    stderr.write(
+      `check-route-catalog: ${error instanceof Error ? error.message : String(error)}\n`,
+    );
+    exit(1);
+  }
 }

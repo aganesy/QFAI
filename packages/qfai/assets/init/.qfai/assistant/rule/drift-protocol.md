@@ -2,6 +2,24 @@
 
 This rule governs changes discovered after a specification or contract has been approved.
 
+## Decision-register pages
+
+Listed decision pages and their root index are protected project artifacts.
+Read pages in list order, followed by the root table, before interpreting a
+request. A page preserves the same row identity and Status permissions as the
+root. New rows are appended only to the root table. Missing, unsafe or unreadable
+members stop permission decisions; a partial history grants no authority.
+
+A historical DONE row is not permission to relocate the register again.
+Physical relocation requires a separately adopted execution change request and
+a reviewed raw-byte receipt for the exact source and target. Preserve every row
+occurrence, cell, Status, order and line ending, plus the current root tail.
+Relocation does not permit duplicate cleanup, Status repair or normalization of
+inherited cells. Relocation changes physical home only; it neither adds nor removes
+a logical row. A migration projection grants no write authority. Never rotate
+automatically. Each physical file still meets the inclusive 500-line limit;
+formatting exclusions preserve bytes and never waive schema or semantic checks.
+
 ## Core rule
 
 A downstream skill does not edit an approved specification, policy, contract, or QFAI-owned rule on its own authority. It records the discrepancy and returns the affected artifact to its owner. A discussion pack is discovery material; the story tree and contracts are the current specification.

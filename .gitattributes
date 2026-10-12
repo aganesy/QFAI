@@ -19,4 +19,6 @@
 
 # Keep both branches' appended register lines; validation still detects duplicate IDs.
 /.qfai/spec/decisions.md merge=union
+# Preserve reviewed page bytes; schema and duplicate checks still apply.
+/.qfai/spec/decisions/page-*.md -text merge=union
 /.qfai/spec/open-questions.md merge=union
