@@ -2199,7 +2199,7 @@ export const ALLOWED_ACTION_INPUTS: ReadonlyMap<string, ReadonlySet<string>> = n
 ]);
 
 /**
- * The `node -e` payloads a shipped lane may carry, as SHA-256 of their exact text.
+ * The `node -e` payloads a shipped lane may carry, as SHA-256 hashes of their exact text.
  *
  * Hashes rather than the text itself, because the two payloads are 630 and 1039 characters of multi-line
  * JavaScript and a literal copy here would break on every reflow of the shipped file. A reflow IS a change
@@ -2244,10 +2244,10 @@ export function payloadDigest(payload: string): string {
 }
 
 /**
- * The digest of a step body, without normalization.
+ * The SHA-256 digest of a step body, using its exact text without normalization.
  *
- * Like `payloadDigest`, this hashes exact text. Whitespace changes can change shell or JavaScript
- * behavior. A newline inside `$( … )` is the difference between one
+ * Like `payloadDigest`, this hashes exact text without normalization. Collapsing whitespace erases
+ * the difference between a space and a NEWLINE. A newline inside `$( … )` is the difference between one
  * command and two: `$(git rev-parse --is-shallow-repository)` and `$(git` + `rev-parse
  * --is-shallow-repository)` collapse to the same string, and the shipped tree contains that exact
  * substitution. Two bodies that behave differently must not share a digest.
