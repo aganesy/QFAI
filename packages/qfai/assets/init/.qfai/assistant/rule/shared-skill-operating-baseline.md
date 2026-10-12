@@ -255,6 +255,11 @@ stage, and no other.
 4. A finding another owner must repair is reported with that owner, not an
    edit made here.
 
+At each existing stage boundary, read
+`.qfai/assistant/skill/qfai-run/references/reached-step-observations.md`
+for the reached-step comparison in the existing stage report. Preserve the
+plan's scope, termination, pass-through and planned review.
+
 ### A pass-through step
 
 A step the plan marks `passThrough` always runs. It first reads what its
