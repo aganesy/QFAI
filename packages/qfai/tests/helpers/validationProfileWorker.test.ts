@@ -1,10 +1,10 @@
 /** Private case selected only by the profiling controller's exact-file config. */
 import childProcess, { execFile as execFileCallback } from "node:child_process";
 import { createHash } from "node:crypto";
-import { syncBuiltinESMExports } from "node:module";
-import { PassThrough } from "node:stream";
 import { readFile, writeFile, rename, mkdir } from "node:fs/promises";
+import { syncBuiltinESMExports } from "node:module";
 import path from "node:path";
+import { PassThrough } from "node:stream";
 import { promisify } from "node:util";
 
 import { describe, expect, it, vi } from "vitest";
