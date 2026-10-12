@@ -1286,7 +1286,7 @@ export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
  * And the CONTENT of the files that are not workflows.
  *
  * The path pin says which files arrive; it says nothing about what is in them, so a line planted in
- * a file pinned by name alone is invisible. The two workflows are byte-pinned by
+ * a file pinned by name alone is invisible. The workflows are byte-pinned by
  * `ALLOWED_WORKFLOW_FILES`; the rest are byte-pinned here, and between them every adopter-facing file
  * this tree writes is pinned by content.
  *
@@ -2199,7 +2199,7 @@ export const ALLOWED_ACTION_INPUTS: ReadonlyMap<string, ReadonlySet<string>> = n
 ]);
 
 /**
- * The `node -e` payloads a shipped lane may carry, as sha256 of their whitespace-collapsed text.
+ * The `node -e` payloads a shipped lane may carry, as SHA-256 of their exact text.
  *
  * Hashes rather than the text itself, because the two payloads are 630 and 1039 characters of multi-line
  * JavaScript and a literal copy here would break on every reflow of the shipped file. A reflow IS a change
@@ -2244,11 +2244,10 @@ export function payloadDigest(payload: string): string {
 }
 
 /**
- * The digest of a step BODY, normalized only where YAML itself is free to vary.
+ * The digest of a step body, without normalization.
  *
- * Deliberately not `payloadDigest`. Collapsing every whitespace run to one space is right for a
- * `node -e` payload, which is a single argument — and wrong for a body, because it erases the
- * difference between a space and a NEWLINE. A newline inside `$( … )` is the difference between one
+ * Like `payloadDigest`, this hashes exact text. Whitespace changes can change shell or JavaScript
+ * behavior. A newline inside `$( … )` is the difference between one
  * command and two: `$(git rev-parse --is-shallow-repository)` and `$(git` + `rev-parse
  * --is-shallow-repository)` collapse to the same string, and the shipped tree contains that exact
  * substitution. Two bodies that behave differently must not share a digest.
