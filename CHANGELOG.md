@@ -27,6 +27,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Skip Claude Code prompt reminders for `ci-monitor-event` notification lines
+  before counting eligible prompts. `qfai init` refreshes the previous official
+  prompt readers while retaining project edits and existing counter fallbacks.
+  Real host injection, scheduled-prompt classification and the reported SYSTEM
+  notice cause remain unverified; see the
+  [host diagnosis](https://github.com/aganesy/QFAI/issues/3461).
+
 - **Discussion completion references point to the existing obligations.**
   The completion matrix names the All Packs and UI-bearing items it requires.
 
