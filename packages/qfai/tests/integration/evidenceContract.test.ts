@@ -750,7 +750,12 @@ describe("published native evidence selection", () => {
       await writeFile(path.join(root, "receiver", "unrelated.txt"), "RECEIVER_SENTINEL");
       const extracted = deliveryNative(
         "tar",
-        ["-xf", path.basename(retrieved), "-C", receiver],
+        [
+          "-xf",
+          path.basename(retrieved),
+          "-C",
+          path.relative(root, receiver).split(path.sep).join("/"),
+        ],
         root,
       );
       expect(extracted.exit, JSON.stringify(extracted)).toBe(0);
