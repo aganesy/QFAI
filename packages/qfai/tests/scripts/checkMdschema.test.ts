@@ -18,7 +18,7 @@
  */
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { link, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
@@ -138,6 +138,7 @@ describe("check-mdschema driver", () => {
     const files = [
       ...storyTreeMarkdownPatterns("docs/spec", "docs/contracts"),
       "docs/contracts/cli/example.md",
+      "docs/spec/decisions/page-0001.md",
     ];
 
     expect(
@@ -1264,5 +1265,115 @@ describe("a forbidden-text finding", () => {
     expect(messages).toEqual([
       `Section 'Dependencies' does not hold what the schema requires: ${DESCRIPTION}`,
     ]);
+  });
+});
+
+describe("the configured decision register", () => {
+  const table =
+    "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
+  const indexed = table.replace(
+    "## Decisions",
+    "## Decision pages\n\n- decisions/page-0001.md\n\n## Decisions",
+  );
+
+  // QFAI:EX-0001-0011-17
+  it("routes a listed page and its append tail through the configured root", async () => {
+    const root = await newTempDir();
+    await mkdir(path.join(root, ".qfai", "specs", "decisions"), { recursive: true });
+    await writeFile(path.join(root, ".qfai", "specs", "decisions.md"), indexed, "utf-8");
+    await writeFile(path.join(root, ".qfai", "specs", "decisions", "page-0001.md"), table, "utf-8");
+    const result = runDriver(["--root", root, "--scope", "all"]);
+    expect(result.status, result.stderr).toBe(0);
+    expect(checkDocuments(root)).toEqual({ ok: true, checked: 2, violations: [] });
+  });
+
+  // QFAI:EX-0001-0011-18
+  it.each([
+    ["duplicate", "- decisions/page-0001.md\n- decisions/page-0001.md"],
+    ["traversal", "- decisions/../page-0001.md"],
+    ["nested", "- decisions/nested/page-0001.md"],
+    ["backslash", "- decisions\\page-0001.md"],
+    ["annotation", "- decisions/page-0001.md retained"],
+    ["prose", "Read the archived page below."],
+  ])("refuses a %s page-list entry", async (_, entry) => {
+    const root = await newTempDir();
+    await mkdir(path.join(root, ".qfai", "specs", "decisions"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai", "specs", "decisions.md"),
+      indexed.replace("- decisions/page-0001.md", entry),
+      "utf-8",
+    );
+    await writeFile(path.join(root, ".qfai", "specs", "decisions", "page-0001.md"), table, "utf-8");
+    const result = runDriver(["--root", root, "--scope", "all"]);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("[decision-register]");
+    expect(checkDocuments(root).violations).toContainEqual(
+      expect.objectContaining({ rule: "decision-register" }),
+    );
+  });
+
+  it.each(["missing", "unlisted", "hard-linked"])("refuses a %s physical page", async (kind) => {
+    const root = await newTempDir();
+    const dir = path.join(root, ".qfai", "specs", "decisions");
+    await mkdir(dir, { recursive: true });
+    await writeFile(path.join(root, ".qfai", "specs", "decisions.md"), indexed, "utf-8");
+    if (kind !== "missing") await writeFile(path.join(dir, "page-0001.md"), table, "utf-8");
+    if (kind === "unlisted") await writeFile(path.join(dir, "page-0002.md"), table, "utf-8");
+    if (kind === "hard-linked") {
+      await link(path.join(dir, "page-0001.md"), path.join(root, "page-copy.md"));
+    }
+    const result = runDriver(["--root", root, "--scope", "all"]);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("[decision-register]");
+    expect(checkDocuments(root).violations).toContainEqual(
+      expect.objectContaining({ rule: "decision-register" }),
+    );
+  });
+
+  it.each<[string, number, boolean]>([
+    ["root", 500, true],
+    ["root", 501, true],
+    ["root", 500, false],
+    ["page", 500, true],
+    ["page", 501, true],
+    ["page", 500, false],
+  ])(
+    "counts %s %i physical lines with final newline %s inclusively",
+    async (kind, count, finalNewline) => {
+      const root = await newTempDir();
+      const dir = path.join(root, ".qfai", "specs", "decisions");
+      await mkdir(dir, { recursive: true });
+      const document = table + "\n".repeat(count - 6);
+      const bytes = finalNewline ? document : document.slice(0, -1) + " ";
+      await writeFile(
+        path.join(root, ".qfai", "specs", "decisions.md"),
+        kind === "root" ? bytes : indexed,
+        "utf-8",
+      );
+      if (kind === "page") await writeFile(path.join(dir, "page-0001.md"), bytes, "utf-8");
+      const result = runDriver(["--root", root, "--scope", "all"]);
+      const findings = checkDocuments(root).violations;
+      expect(result.status, result.stderr).toBe(count > 500 ? 1 : 0);
+      if (count > 500) {
+        expect(result.stderr).toContain("at most 500 physical lines; found 501");
+        expect(findings).toContainEqual(expect.objectContaining({ rule: "decision-register" }));
+      } else {
+        expect(findings).toEqual([]);
+      }
+    },
+  );
+
+  it("checks the complete inventory only when the register is in scope", async () => {
+    const root = await newTempDir();
+    const dir = path.join(root, ".qfai", "specs", "decisions");
+    await mkdir(dir, { recursive: true });
+    await writeFile(path.join(root, ".qfai", "specs", "decisions.md"), indexed, "utf-8");
+    await writeFile(path.join(dir, "page-0001.md"), table, "utf-8");
+    await writeFile(path.join(dir, "page-0002.md"), table, "utf-8");
+    const flow = await writeFlow(root, "business-flow-0001", CONFORMING_FLOW);
+    expect(runDriver(["--root", root, "--scope", "files", flow]).status).toBe(0);
+    const result = runDriver(["--root", root, "--scope", "files", ".qfai/specs/decisions.md"]);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("page-0002.md");
   });
 });

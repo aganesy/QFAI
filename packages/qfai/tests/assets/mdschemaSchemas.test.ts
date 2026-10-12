@@ -369,13 +369,63 @@ describe("a table-only section holds its template's columns and nothing above th
     }
   }
 
+  const decisionTable =
+    "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
+
+  // QFAI:EX-0001-0011-17
+  it.each([
+    ["decisions", decisionTable],
+    [
+      "decisions",
+      decisionTable.replace(
+        "## Decisions",
+        "## Decision pages\n\n- decisions/page-0001.md\n\n## Decisions",
+      ),
+    ],
+    ["decisions/page-NNNN", decisionTable],
+  ])("accepts the closed register form in %s", (name, text) => {
+    const result = check(name, text);
+    expect(result.status, result.output).toBe(0);
+  });
+
+  // QFAI:EX-0001-0011-18
+  it.each([
+    ["decisions", decisionTable + "\n## Extra\n"],
+    [
+      "decisions",
+      decisionTable.replace(
+        "## Decisions",
+        "## Decision pages\n\nRead these pages.\n\n## Decisions",
+      ),
+    ],
+    [
+      "decisions",
+      decisionTable.replace(
+        "## Decisions",
+        "## Decision pages\n\n- decisions/nested/page-0001.md\n\n## Decisions",
+      ),
+    ],
+    [
+      "decisions/page-NNNN",
+      decisionTable.replace(
+        "## Decisions",
+        "## Decision pages\n\n- decisions/page-0001.md\n\n## Decisions",
+      ),
+    ],
+    ["decisions/page-NNNN", decisionTable + "\n## Extra\n"],
+    ["decisions/page-NNNN", decisionTable.replace("| ID", "Unrelated prose.\n\n| ID")],
+  ])("refuses open register structure in %s", (name, text) => {
+    const result = check(name, text);
+    expect(result.status, result.output).not.toBe(0);
+  });
+
   const extraColumn = variants((table) =>
     table.map((line, index) => `${line} ${index === 1 ? "---" : "Extra"} |`),
   );
   const noteAbove = variants((table) => ["| explanatory note", ...table]);
 
   it("finds every table of every template", () => {
-    expect(extraColumn.length).toBe(16);
+    expect(extraColumn.length).toBe(17);
   });
 
   // QFAI:EX-0001-0011-10
