@@ -42,11 +42,10 @@ first.
 This skill answers, closes, splits or hands over a request, and changes no
 file git tracks. Work the request needs is recorded as a follow-up request,
 never done here except the exact current-task temporary cleanup that
-`triage-owned-cleanup` permits and the operation on finished work that
-`triage-operate` runs. That step rechecks existing user authority and
-repository-local scope before any deletion. `triage-operate` runs the operation
-the user named on finished work and changes no tracked file. No other triage step
-executes an operation, and `triage-handoff` still waits for the person's reported result.
+`triage-owned-cleanup` permits, after rechecking existing user authority and
+repository-local scope, and the named operation `triage-operate` runs. No other
+triage step executes an operation, and `triage-handoff` still waits for the
+person's reported result.
 
 ## Inputs
 
@@ -118,7 +117,7 @@ list any remaining actions instead.
 
 project_memory:
 
-- Triage changes no tracked file; `triage-owned-cleanup` executes its bounded cleanup and `triage-operate` the operation the user named.
+- Triage changes no tracked file; only `triage-owned-cleanup` and `triage-operate` execute an operation.
 - Other work it finds is a follow-up request.
 - A follow-up is recorded, never routed inside the run that found it.
 - A security report stays private until the fix is ready to disclose.

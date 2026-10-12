@@ -58,12 +58,10 @@ values plan nothing.
 
 ## The work
 
-1. **Extract.** A question the session or one command or file read answers is
-   `{ intent: question-why, qualifiers: [session-answerable] }`, or `question-how` or
-   `question-help`; an operation on finished work is `{ intent: order, artifacts: [] }`.
-   Neither needs a reference. Read any other request into an extraction as
-   `references/extraction.md` sets out, using its definition of acceptance, and pass
-   it to `npx qfai workflow plan --in <file>`, or `--in -` on standard input.
+1. **Extract.** A question one read answers is `{ intent: question-why, qualifiers: [session-answerable] }`
+   (or `question-how`, `question-help`), and an operation on finished work `{ intent: order, artifacts: [] }`;
+   neither needs a reference. Read any other request as `references/extraction.md` sets out, and pass
+   the extraction to `npx qfai workflow plan --in <file>`, or `--in -` on standard input.
 2. **Candidates.** When `plan` returns `candidates`, put one single-select
    question, each option saying in the user's words what that route will do,
    then run `npx qfai workflow plan --route <route>` for the chosen one.
@@ -71,9 +69,9 @@ values plan nothing.
    and run only its stages. With one scope, no scopes, or a branch destination's plan, ask
    nothing and run every stage.
 4. **Announce.** Before the first stage, give the goal, the chosen stages in order in plain words,
-   and the files the work may change. Ask nothing. Then run `common-policy-check` once, except on
-   a plan whose one step is `triage-answer` or `triage-operate`. On a route that changes no file,
-   one that closes, answers or asks, it reads and reports and writes nothing.
+   and the files the work may change. Ask nothing. Then run `common-policy-check` once, unless the
+   plan's one step is `triage-answer` or `triage-operate`. On a route that changes no file, one that
+   closes, answers or asks, it reads and reports and writes nothing.
 5. **Run the stages.** Run each stage in plan order, and each of its steps in
    order, as `.qfai/assistant/rule/shared-skill-operating-baseline.md#running-steps-mandatory` says.
    When a step is short or passes without edits, read `references/operator-screens.md`.

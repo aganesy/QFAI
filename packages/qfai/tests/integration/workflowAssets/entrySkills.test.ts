@@ -538,9 +538,7 @@ describe("qfai-run", () => {
     expect(extract).toMatch(/neither needs a reference/i);
     expect(extract).toContain("qualifiers: [session-answerable]");
     expect(extract).toContain("`{ intent: order, artifacts: [] }`");
-    expect(extract).toMatch(
-      /read any other request into an extraction as `references\/extraction\.md`/i,
-    );
+    expect(extract).toMatch(/read any other request as `references\/extraction\.md` sets out/i);
   });
 
   // QFAI:AC-0001-0229-06

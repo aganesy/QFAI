@@ -169,8 +169,7 @@ The `common-gate-run` step runs a gate from this section and records it.
 ## Policy check (mandatory)
 
 A run starts with the policy check, once, and does not continue affected work
-on stale policy. The ultra-light routes `answer-in-session` and `run-operation`
-run without it. The contract is
+on stale policy. The contract is
 `.qfai/assistant/rule/workflow.md#policy-check-mandatory`.
 The procedure — which files, what counts as incomplete, how a fact is filled
 and where an unverifiable one goes — is the `common-policy-check` step. A
