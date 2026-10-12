@@ -41,9 +41,13 @@ any existing file unchanged; skip this step for it.
 
 ## Author and validate
 
-1. **Stop on an unchosen brand.** A pack that records no design direction
-   leaves the brand unchosen. Brand intent is `hard-required`: ask for it, and
-   under `--auto` stop and name it. Never adopt the sample design.
+1. **Stop on an unchosen brand for initial authoring.** For initial authoring
+   of a missing file, a pack that records no design direction leaves the brand
+   unchosen. Brand intent is `hard-required`: ask for it, and under `--auto`
+   stop and name it. Never adopt the sample design. For an existing valid file,
+   validation and authorized repairs that preserve its brand and tokens
+   require no new brand selection. A brand or token change needs the
+   authorization and source values in step 2.
 2. **Bound an existing-file repair.** Write a missing file from the recorded
    direction. For an existing file, SDD triage must name its exact path and the
    requested change, and a new WIP change request must authorize both. Apply
@@ -52,13 +56,15 @@ any existing file unchanged; skip this step for it.
    values. Stop without writing unsupported values. Without that authorization,
    validate the existing file without an overwrite; an inherited DONE row
    authorizes no new change. An unreplaced sample is refused.
-3. **Author from the direction**, following
+3. **Author a missing file or the authorized fields of an existing file**,
+   following
    `.qfai/assistant/skill/qfai-sdd/references/design-md-authoring.md#output-mapping`:
    the intent fields first, then the archetype, then `brand.theme`, then the
    `visual.*` tokens taken from the named theme's published values
    (`.qfai/assistant/skill/qfai-sdd/references/design-md-authoring.md#taking-the-values-from-the-theme`).
    Do not compose token values by taste. For a repair, record the source of each
-   changed value and leave unrelated content unchanged.
+   changed value and leave unrelated content unchanged. Validation without an
+   authorized change writes nothing and does not repeat brand selection.
 4. **Parse and validate.** `parseDesignMd(text)` must succeed; pass its `data`
    to `validateDesignMd` and halt on any issue. Both are exported from the
    `qfai` package entry.

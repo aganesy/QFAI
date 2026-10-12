@@ -25,9 +25,10 @@ this flow's provenance names:
 | `uiux/00_index.md`, `uiux/40_screen_contracts.md` | the screen-level sidecars                     |
 
 `01_Context.md#Design Direction` is the decision the user made: the adopted
-theme, what departs from it, and what stays ordinary. A UI-bearing pack that
-records none leaves the brand unchosen — stop and ask rather than pick one,
-which is the same rule an imported specification gets.
+theme, what departs from it, and what stays ordinary. For initial authoring of
+a missing file, a UI-bearing pack that records no design direction leaves the
+brand unchosen — stop and ask rather than pick one, which is the same rule an
+imported specification gets.
 
 Each registry entry carries what was adopted, what was rejected, and how it
 was translated. The competitor registry feeds brand and tokens; the component
@@ -126,3 +127,8 @@ values. Record the source of each changed value and leave unrelated content
 unchanged. Stop without writing a value neither source supplies. Without that
 authorization, validate the existing file without an overwrite; an inherited
 DONE row authorizes no new change. An unreplaced sample is refused.
+
+For an existing valid file, validation and authorized repairs that preserve
+its brand and tokens require no new brand selection. An authorized brand or
+token change still needs recorded direction or named theme values for each
+changed value; without either source, stop without writing the change.
