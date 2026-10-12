@@ -104,7 +104,7 @@ async function expectSymlinkTarget(linkPath: string, expectedFragment: string): 
 }
 
 describe("qfai init", () => {
-  it("treats a dangling symlink at the destination as occupied", async () => {
+  it("treats a dangling symlink at the destination as occupied", async (ctx) => {
     // `access` follows the link, so a dangling one answered "free" and the copy
     // that followed wrote through it — `copyFile` resolves the symlink and
     // creates the target, turning a create-only init into a writer of fixed
@@ -115,11 +115,8 @@ describe("qfai init", () => {
     try {
       await writeFile(path.join(sourceRoot, "README.md"), "shipped\n", "utf-8");
       const escapee = path.join(outside, "written-through.md");
-      try {
-        await symlink(escapee, path.join(destRoot, "README.md"), "file");
-      } catch {
-        return; // No symlinks here (Windows without Developer Mode).
-      }
+      const linked = await createSymlinkFixture(escapee, path.join(destRoot, "README.md"), "file");
+      if (!linked) ctx.skip();
 
       await expect(
         copyTemplateTree(sourceRoot, destRoot, { force: false, dryRun: false }),
@@ -1502,7 +1499,7 @@ describe("qfai init", () => {
   });
 
   // QFAI:EX-0001-0031-03
-  it("--force replaces an instructions symlink instead of writing through it", async () => {
+  it("--force replaces an instructions symlink instead of writing through it", async (ctx) => {
     // `writeFile` follows a symlink, so refreshing without unlinking first
     // would rewrite the link's target — a file outside the project that init
     // was never asked to touch.
@@ -1514,11 +1511,8 @@ describe("qfai init", () => {
       const escapee = path.join(outside, "shared-review-rules.md");
       await writeFile(escapee, "someone-elses-file\n", "utf-8");
       const linked = path.join(instrDir, "code-review.instructions.md");
-      try {
-        await symlink(escapee, linked, "file");
-      } catch {
-        return; // No symlinks here (Windows without Developer Mode).
-      }
+      const fixtureCreated = await createSymlinkFixture(escapee, linked, "file");
+      if (!fixtureCreated) ctx.skip();
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
@@ -1692,7 +1686,7 @@ describe("qfai init", () => {
   });
 
   // QFAI:EX-0001-0031-01
-  it("--force refreshes instructions linked to an in-project dir whose name starts with dots", async () => {
+  it("--force refreshes instructions linked to an in-project dir whose name starts with dots", async (ctx) => {
     // The escape check compared `path.relative(...)` with a `startsWith("..")`
     // prefix, which also matches a directory merely *named* `..rules`. Link
     // `.github/instructions` at one and the relative path is `..rules` — a
@@ -1706,11 +1700,12 @@ describe("qfai init", () => {
       await mkdir(inProject, { recursive: true });
       await writeFile(path.join(inProject, "code-review.instructions.md"), "stale-cr\n", "utf-8");
       await mkdir(path.join(root, ".github"), { recursive: true });
-      try {
-        await symlink(inProject, path.join(root, ".github", "instructions"), "dir");
-      } catch {
-        return; // No symlinks here (Windows without Developer Mode).
-      }
+      const linked = await createSymlinkFixture(
+        inProject,
+        path.join(root, ".github", "instructions"),
+        "dir",
+      );
+      if (!linked) ctx.skip();
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
