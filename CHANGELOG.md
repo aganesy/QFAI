@@ -12,6 +12,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   applicable authority remain open. Interactive sessions retain actual user
   confirmation.
 
+### Fixed
+
+- **Discussion completion references point to the existing obligations.**
+  The completion matrix names the All Packs and UI-bearing items it requires.
+
 ## [2.1.2] - 2026-10-11
 
 ### Added
