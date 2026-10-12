@@ -722,7 +722,10 @@ describe("published native evidence selection", () => {
       const retrieved = path.join(root, "retrieved.tar");
       await copyFile(archive, retrieved);
       expect(deliveryDigest(await readFile(retrieved))).toBe(expectedArchiveDigest);
-      const listing = deliveryNative("tar", ["-tf", path.basename(retrieved)], root);
+      const listingArgs = ["-tf", path.basename(retrieved)];
+      if (/\bGNU tar\b/u.test(tarVersion.stdout + tarVersion.stderr))
+        listingArgs.unshift("--quoting-style=literal");
+      const listing = deliveryNative("tar", listingArgs, root);
       expect(listing.exit, JSON.stringify(listing)).toBe(0);
       const members = listing.stdout
         .split(/\r?\n/u)
