@@ -25,6 +25,7 @@ steps:
   - triage-security-intake
   - triage-handoff
   - triage-owned-cleanup
+  - triage-operate
   - triage-close
 requires: []
 mode: execution-focused
@@ -41,9 +42,11 @@ first.
 This skill answers, closes, splits or hands over a request, and changes no
 file git tracks. Work the request needs is recorded as a follow-up request,
 never done here except the exact current-task temporary cleanup that
-`triage-owned-cleanup` permits. That step rechecks existing user authority and
-repository-local scope before any deletion. No other triage step executes an
-operation, and `triage-handoff` still waits for the person's reported result.
+`triage-owned-cleanup` permits and the operation on finished work that
+`triage-operate` runs. That step rechecks existing user authority and
+repository-local scope before any deletion. `triage-operate` runs the operation
+the user named on finished work and changes no tracked file. No other triage step
+executes an operation, and `triage-handoff` still waits for the person's reported result.
 
 ## Inputs
 
@@ -74,6 +77,7 @@ run it, then move to the next.
 | `triage-security-intake` | Takes a vulnerability report in privately                                  | The request reports no exploitable weakness                                      |
 | `triage-handoff`         | Gives a person the steps of an operation only they can run                 | The request needs no operation that only a person can run                        |
 | `triage-owned-cleanup`   | Removes authorized current-task temporary directories and verifies absence | The request is not the specific repository-local cleanup the step permits        |
+| `triage-operate`         | Runs the operation the user named on finished work, and reports its result | The request names no operation                                                   |
 | `triage-close`           | Records the outcome and each follow-up, and closes                         | Only `triage-security-intake` ran: the fix follows it, so the request stays open |
 
 Invoked by name, the skill ends at this stage. It starts no other stage and
@@ -114,7 +118,7 @@ list any remaining actions instead.
 
 project_memory:
 
-- Triage changes no tracked file; only `triage-owned-cleanup` executes its bounded cleanup.
+- Triage changes no tracked file; `triage-owned-cleanup` executes its bounded cleanup and `triage-operate` the operation the user named.
 - Other work it finds is a follow-up request.
 - A follow-up is recorded, never routed inside the run that found it.
 - A security report stays private until the fix is ready to disclose.

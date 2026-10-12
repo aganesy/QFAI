@@ -16,6 +16,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   evidence in existing human reports. Missing proof stays unverified; no extra
   reviewer, gate or execution engine is added. Fixes #3336.
 
+- **No request skips `qfai-run`; the lightest requests get one-step routes.**
+  A question the session can answer routes `answer-in-session`, and an
+  operation on finished work, such as a merge or a deploy, routes
+  `run-operation`. Neither runs the policy check or needs the extraction
+  reference. An order that names artifacts still applies its settled change.
+  Fixes #3574.
+
 - Add a workflow route for writing authorized operational procedures.
   It keeps wording-only edits separate, preserves policy owners and existing
   verification, and grants no authority to run the documented actions.
