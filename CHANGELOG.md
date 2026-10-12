@@ -12,6 +12,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   applicable authority remain open. Interactive sessions retain actual user
   confirmation.
 
+- Compare reached workflow steps with actual reads, actions, outputs and gate
+  evidence in existing human reports. Missing proof stays unverified; no extra
+  reviewer, gate or execution engine is added. Fixes #3336.
+
 - Add a workflow route for writing authorized operational procedures.
   It keeps wording-only edits separate, preserves policy owners and existing
   verification, and grants no authority to run the documented actions.
