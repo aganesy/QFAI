@@ -1847,8 +1847,15 @@ export const ALLOWED_MIGRATION_SCRIPTS: ReadonlyMap<string, string> = new Map([
   ],
 ]);
 
+const ALLOWED_DEPENDENCY_PREPARATION_SCRIPTS: ReadonlyMap<string, string> = new Map([
+  [
+    ".qfai/assistant/skill/qfai-run/scripts/codex-cloud-install.mjs",
+    "6b178632bce287af9fde3eff3f165695eaea499209878d75bc4f212c53fce86c",
+  ],
+]);
+
 /**
- * Whether an init-source file is a supported data format or a reviewed migration program.
+ * Whether an init-source file is a supported data format or a reviewed program.
  *
  * It lives here rather than at the call site so the enumerations and the token that is looked up in
  * them cannot drift: adding a name to one of the sets while the caller derives a different token is
@@ -1857,6 +1864,7 @@ export const ALLOWED_MIGRATION_SCRIPTS: ReadonlyMap<string, string> = new Map([
 export function initSourceShipsAsData(relativePath: string): boolean {
   return (
     ALLOWED_MIGRATION_SCRIPTS.has(relativePath) ||
+    ALLOWED_DEPENDENCY_PREPARATION_SCRIPTS.has(relativePath) ||
     ALLOWED_INIT_MARKERS.has(relativePath) ||
     ALLOWED_INIT_SOURCE_EXTENSIONS.has(path.extname(relativePath)) ||
     ALLOWED_INIT_SOURCE_BASENAMES.has(path.basename(relativePath))
@@ -1880,7 +1888,7 @@ export const INIT_INSTRUCTION_TREES: ReadonlyArray<string> = [
  *
  * A kind rather than a list of paths, because the danger is not which file it is but who runs it: a
  * package manager reads a manifest and a shell reads a script, and neither asks where it came from.
- * The migration programs are the sole exception, with exact path and byte pins.
+ * Reviewed migration and dependency preparation programs have exact path and byte pins.
  * `EXECUTED_ON_INSTALL` names the same class for a lane's redirect targets one level in, and this is the
  * same claim about the tree the lane runs in.
  *
@@ -1977,6 +1985,12 @@ export function initMustNotShip(
   const reviewedScript = ALLOWED_MIGRATION_SCRIPTS.get(relativePath);
   if (reviewedScript !== undefined) {
     return fileDigest(contents) === reviewedScript ? undefined : "migration script content differs";
+  }
+  const reviewedPreparation = ALLOWED_DEPENDENCY_PREPARATION_SCRIPTS.get(relativePath);
+  if (reviewedPreparation !== undefined) {
+    return fileDigest(contents) === reviewedPreparation
+      ? undefined
+      : "dependency preparation script content differs";
   }
   if (INIT_MUST_NOT_SHIP.test(relativePath)) return "is a manifest or a script by name";
   return undefined;

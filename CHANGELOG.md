@@ -12,6 +12,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   applicable authority remain open. Interactive sessions retain actual user
   confirmation.
 
+- Generate a native dependency preparation entry for a reviewed executable,
+  arguments and checkout. Installation and same-checkout launcher failures block
+  dependent planning; host setup and execution require separate evidence. Fixes #3338.
+
 - Compare reached workflow steps with actual reads, actions, outputs and gate
   evidence in existing human reports. Missing proof stays unverified; no extra
   reviewer, gate or execution engine is added. Fixes #3336.
@@ -32,6 +36,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - **Discussion completion references point to the existing obligations.**
   The completion matrix names the All Packs and UI-bearing items it requires.
+
+- **Profiling output retains its complete UTF-8 prefix within the shared 32 MiB limit.**
+  A chunk that crosses the limit keeps the complete characters that fit before
+  owned process termination begins. Output after the limit is discarded. Fixes #3462.
 
 ## [2.1.2] - 2026-10-11
 
