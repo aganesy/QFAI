@@ -388,6 +388,21 @@ describe("a table-only section holds its template's columns and nothing above th
     expect(result.status, result.output).toBe(0);
   });
 
+  // QFAI:EX-0001-0011-17
+  it.each([
+    ["with a blank line before Decisions", "\n\n"],
+    ["without a blank line before Decisions", "\n"],
+  ])("accepts a CRLF decision-page index %s", (_label, boundary) => {
+    const text = decisionTable
+      .replace(
+        "## Decisions",
+        `## Decision pages\n\n- decisions/page-0001.md${boundary}## Decisions`,
+      )
+      .replace(/\n/g, "\r\n");
+    const result = check("decisions", text);
+    expect(result.status, result.output).toBe(0);
+  });
+
   // QFAI:EX-0001-0011-18
   it.each([
     ["decisions", decisionTable + "\n## Extra\n"],
