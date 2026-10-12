@@ -70,7 +70,8 @@ Ask in this order and stop at the first yes.
 3. Does the requester want an answer, not a change? A question.
 4. Is the subject the project's own operation: a test, a CI job, the build or
    repository tooling, a dependency, a release artifact, or a named procedure or
-   list of leftovers to carry out? An operation.
+   list of leftovers to carry out? An operation. Writing an ordinary procedure
+   within existing policy is a change, not carrying out that operation.
 5. Is the subject a written normative surface, such as a specification, a
    contract, a schema, a template, a rule or a check, while running behaviour is
    not what is reported wrong? A consistency intent.
@@ -78,6 +79,12 @@ Ask in this order and stop at the first yes.
    defect.
 7. Otherwise something should be added, changed, removed, restructured or
    documented. A change.
+
+An operational document that gives actions within existing policy takes
+`procedure`. A change to policy, a story, a contract or QFAI assistant
+instructions keeps its owning consistency intent; Markdown is not permission
+to change those surfaces. A request for actual code changes keeps its code
+artifacts and checks, even when it also asks for instructions.
 
 Labels on an issue are hints, not evidence: `bug` and `enhancement` do not
 separate intents.
@@ -128,6 +135,7 @@ a request that is only the operation.
 | `behaviour-change` | A deliberate, documented behaviour should change, including feedback asking to revisit a decision. Removing a published surface is `deprecation`                                             |
 | `deprecation`      | A published surface is deprecated, removed, given a new default or given a migration path                                                                                                    |
 | `refactor`         | Structure changes and intended behaviour does not: move, split, deduplicate, delete code nothing declares. A measured speed-up as the point is `performance`                                 |
+| `procedure`        | Operational instructions within existing policy: inputs, actions, commands, required values and order. Authoring them does not execute their actions                                         |
 | `docs`             | Explanatory text that is not normative, such as user documentation, comments, a README or an example, is wrong, missing or unclear. Normative text is a consistency intent                   |
 
 ### Operations
@@ -151,7 +159,7 @@ the other as an alternative:
 `defect-regression`, `defect-silent`, `defect-crash`, `defect-conformance`,
 `model-gap`, `surface-contradiction`, `unenforced`, `defect`, `performance`,
 `flaky-test`, `test-defect`, `ci`, `deprecation`, `behaviour-change`,
-`feature`, `stale-record`, `dependency`, `release`, `refactor`, `docs`,
+`feature`, `stale-record`, `dependency`, `release`, `refactor`, `procedure`, `docs`,
 `question-hosted`, `question-help`, `question-why`, `question-how`.
 
 ## Entry flags
@@ -240,20 +248,20 @@ ends without a change. List `code` and `tests` only when the request asks for
 the change to be implemented: a request that ends at the specification or a
 prototype lists neither. The artifacts decide how far the work goes.
 
-| Artifact    | Covers                                                                                                                         |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `code`      | Product source and its runtime behaviour, CLI output and error text included                                                   |
-| `tests`     | Tests, fixtures and snapshots                                                                                                  |
-| `spec`      | The project's written requirements and records: the story tree and the decision and question registers                         |
-| `contract`  | A machine-facing interface: API signatures, CLI flags and exit codes, file and wire formats, configuration keys, finding codes |
-| `ui`        | Screens, visual design, interaction, `DESIGN.md`, prototypes                                                                   |
-| `docs`      | User documentation, a README, comments, examples, help pages                                                                   |
-| `config`    | Shipped default configuration and project configuration files                                                                  |
-| `ci`        | CI workflows, lint lanes, build configuration, repository scripts, the test harness                                            |
-| `deps`      | Dependency manifests, lockfiles, toolchain versions                                                                            |
-| `data`      | Persisted user data or state, stored formats, migrations                                                                       |
-| `release`   | The changelog, release notes, the version field, release branches, signing, packages                                           |
-| `assistant` | The assistant instructions the project keeps: skills, rules, templates, agent definitions                                      |
+| Artifact    | Covers                                                                                                                                              |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `code`      | Product source and its runtime behaviour, CLI output and error text included                                                                        |
+| `tests`     | Tests, fixtures and snapshots                                                                                                                       |
+| `spec`      | The project's written requirements and records: the story tree and the decision and question registers                                              |
+| `contract`  | A machine-facing interface: API signatures, CLI flags and exit codes, file and wire formats, configuration keys, finding codes                      |
+| `ui`        | Screens, visual design, interaction, `DESIGN.md`, prototypes                                                                                        |
+| `docs`      | Explanatory text and authorized operational procedures within existing policy; protected policy and assistant instructions keep their own artifacts |
+| `config`    | Shipped default configuration and project configuration files                                                                                       |
+| `ci`        | CI workflows, lint lanes, build configuration, repository scripts, the test harness                                                                 |
+| `deps`      | Dependency manifests, lockfiles, toolchain versions                                                                                                 |
+| `data`      | Persisted user data or state, stored formats, migrations                                                                                            |
+| `release`   | The changelog, release notes, the version field, release branches, signing, packages                                                                |
+| `assistant` | The assistant instructions the project keeps: skills, rules, templates, agent definitions                                                           |
 
 ## Risks
 

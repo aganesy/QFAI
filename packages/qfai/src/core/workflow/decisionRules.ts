@@ -202,7 +202,12 @@ export const DECISION_RULES: readonly DecisionRule[] = [
     clause((input) => is("feature")(input) && qualified(input, "visual-open"), "prototype-feature"),
     clause(is("feature"), "add-feature"),
   ),
-  rule(29, clause(is("refactor"), "refactor-code"), clause(is("docs"), "edit-text")),
+  rule(
+    29,
+    clause(is("refactor"), "refactor-code"),
+    clause(is("procedure"), "write-procedure"),
+    clause(is("docs"), "edit-text"),
+  ),
 ];
 
 // The first rule that holds, with the clause that held.

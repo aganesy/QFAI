@@ -532,7 +532,7 @@ function codeMask(body: string): boolean[] {
       (quote !== "'" && ch === "$" && body[i + 1] === "(") ||
       (quote === "" && (ch === "<" || ch === ">"))
     ) {
-      const opensAt = ch === "$" ? i + 1 : i + 1;
+      const opensAt = i + 1;
       if (body[opensAt] === "(") {
         const close = matchingParen(body, opensAt);
         const inner = codeMask(body.slice(opensAt + 1, close));
@@ -828,7 +828,7 @@ export function invocationOf(command: string): string | typeof NOTHING | typeof 
       // allowed. Two comments here said the opposite for three rounds — measured by round 15 —
       // and the shipped tree stays readable because its only prefixed command is `IFS= read`,
       // while its `declared=$( … )` assignment carries no command after it and invokes nothing.
-      if (/^[A-Za-z_]\w*=/.test(token)) prefixNames.push(token.slice(0, token.indexOf("=")));
+      prefixNames.push(token.slice(0, token.indexOf("=")));
       i += 1;
       continue;
     }
@@ -1279,7 +1279,6 @@ export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
   ".gitattributes",
   ".gitignore",
   "AGENTS.md",
-  "CLAUDE.md",
   "qfai.config.yaml",
 ]);
 
@@ -1287,7 +1286,7 @@ export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
  * And the CONTENT of the files that are not workflows.
  *
  * The path pin says which files arrive; it says nothing about what is in them, so a line planted in
- * a file pinned by name alone is invisible. The two workflows are byte-pinned by
+ * a file pinned by name alone is invisible. The workflows are byte-pinned by
  * `ALLOWED_WORKFLOW_FILES`; the rest are byte-pinned here, and between them every adopter-facing file
  * this tree writes is pinned by content.
  *
@@ -1299,7 +1298,7 @@ export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
  * rather than drift. It moved a second time when the workflow's run state arrived: `.qfai/run/`
  * joined the ignore lines, and that line is the whole delta.
  *
- * `AGENTS.md` and `CLAUDE.md` are the entry points Codex and Claude Code load, seeded create-only so
+ * `AGENTS.md` is the entry point Codex and Claude Code load, seeded create-only so
  * that the `.agents/rules/` masters this run writes are cited by something. They belong here for the
  * same reason `.github/copilot-instructions.md` does: an adopter's agent reads them as instructions,
  * so their bytes are the reviewed surface. Each opens with its level-1 heading; the line that once
@@ -1370,11 +1369,13 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     //
     // The generated rule list cites action-reversibility, untrusted-content and ai-readable-markdown.
     // This digest covers the bytes produced by the builder strings.
+    // Re-pinned for a read-when line on each rule of the list, worded as in the shipped
+    // `AGENTS.md`. Derived by running `qfai init` into a temp root.
     // Re-pinned for one more bullet on the rules list, naming `.agents/rules/session-feedback.md`.
     // Derived by running `qfai init` into a temp root; dropping that one bullet reproduces
     // `fcdba5a8…` byte for byte.
     ".github/copilot-instructions.md",
-    "3a7378f9562e03819a632f7a1f08f8d721aadf78a7cd7cf63296b6d7c0ef1c7f",
+    "b756eb95a096958e188a406f275d4a31a3128336c58ca50a9e002c2d2e503d4d",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1406,10 +1407,6 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   [
     "AGENTS.md",
     fileDigest(readFileSync(new URL("../fixtures/shipped-entry/agents.txt", import.meta.url))),
-  ],
-  [
-    "CLAUDE.md",
-    fileDigest(readFileSync(new URL("../fixtures/shipped-entry/claude.txt", import.meta.url))),
   ],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
@@ -1725,7 +1722,6 @@ export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
   "root/.github/workflows/qfai-tests.yml",
   "root/.github/workflows/qfai-validate.yml",
   "root/AGENTS.md",
-  "root/CLAUDE.md",
   "root/qfai.config.yaml",
   ".claude/settings.json",
   ".codex/hooks.json",
@@ -1851,8 +1847,15 @@ export const ALLOWED_MIGRATION_SCRIPTS: ReadonlyMap<string, string> = new Map([
   ],
 ]);
 
+const ALLOWED_DEPENDENCY_PREPARATION_SCRIPTS: ReadonlyMap<string, string> = new Map([
+  [
+    ".qfai/assistant/skill/qfai-run/scripts/codex-cloud-install.mjs",
+    "6b178632bce287af9fde3eff3f165695eaea499209878d75bc4f212c53fce86c",
+  ],
+]);
+
 /**
- * Whether an init-source file is a supported data format or a reviewed migration program.
+ * Whether an init-source file is a supported data format or a reviewed program.
  *
  * It lives here rather than at the call site so the enumerations and the token that is looked up in
  * them cannot drift: adding a name to one of the sets while the caller derives a different token is
@@ -1861,6 +1864,7 @@ export const ALLOWED_MIGRATION_SCRIPTS: ReadonlyMap<string, string> = new Map([
 export function initSourceShipsAsData(relativePath: string): boolean {
   return (
     ALLOWED_MIGRATION_SCRIPTS.has(relativePath) ||
+    ALLOWED_DEPENDENCY_PREPARATION_SCRIPTS.has(relativePath) ||
     ALLOWED_INIT_MARKERS.has(relativePath) ||
     ALLOWED_INIT_SOURCE_EXTENSIONS.has(path.extname(relativePath)) ||
     ALLOWED_INIT_SOURCE_BASENAMES.has(path.basename(relativePath))
@@ -1884,7 +1888,7 @@ export const INIT_INSTRUCTION_TREES: ReadonlyArray<string> = [
  *
  * A kind rather than a list of paths, because the danger is not which file it is but who runs it: a
  * package manager reads a manifest and a shell reads a script, and neither asks where it came from.
- * The migration programs are the sole exception, with exact path and byte pins.
+ * Reviewed migration and dependency preparation programs have exact path and byte pins.
  * `EXECUTED_ON_INSTALL` names the same class for a lane's redirect targets one level in, and this is the
  * same claim about the tree the lane runs in.
  *
@@ -1981,6 +1985,12 @@ export function initMustNotShip(
   const reviewedScript = ALLOWED_MIGRATION_SCRIPTS.get(relativePath);
   if (reviewedScript !== undefined) {
     return fileDigest(contents) === reviewedScript ? undefined : "migration script content differs";
+  }
+  const reviewedPreparation = ALLOWED_DEPENDENCY_PREPARATION_SCRIPTS.get(relativePath);
+  if (reviewedPreparation !== undefined) {
+    return fileDigest(contents) === reviewedPreparation
+      ? undefined
+      : "dependency preparation script content differs";
   }
   if (INIT_MUST_NOT_SHIP.test(relativePath)) return "is a manifest or a script by name";
   return undefined;
@@ -2203,10 +2213,10 @@ export const ALLOWED_ACTION_INPUTS: ReadonlyMap<string, ReadonlySet<string>> = n
 ]);
 
 /**
- * The `node -e` payloads a shipped lane may carry, as sha256 of their whitespace-collapsed text.
+ * The `node -e` payloads a shipped lane may carry, as SHA-256 hashes of their exact text.
  *
- * Hashes rather than the text itself, because the two payloads are 630 and 1039 characters of multi-line
- * JavaScript and a literal copy here would break on every reflow of the shipped file. A reflow IS a change
+ * Hashes rather than the text itself, because the payloads contain multi-line JavaScript and a literal
+ * copy here would break on every reflow of the shipped file. A reflow IS a change
  * someone should read, so the hash failing is the intended behaviour and the fix is to re-measure and
  * re-record — not to loosen the comparison.
  *
@@ -2238,8 +2248,8 @@ export const ALLOWED_NODE_PAYLOADS: ReadonlySet<string> = new Set([
 
 /**
  * The payload of a `node -e`, hashed. **Nothing is normalized**, for the reason `bodyDigest` gives
- * three times over and one this payload adds: a `//` line comment is terminated by a NEWLINE, and
- * both enumerated payloads are full of them. Collapsing whitespace moves the statement after the last
+ * three times over and one this payload adds: a `//` line comment is terminated by a NEWLINE.
+ * Enumerated payloads contain such comments. Collapsing whitespace moves the statement after the last
  * comment line INSIDE the comment, and round 15 demonstrated it against a currently enumerated
  * payload whose digest did not move — so the scan cleared a payload nobody had reviewed.
  */
@@ -2248,11 +2258,10 @@ export function payloadDigest(payload: string): string {
 }
 
 /**
- * The digest of a step BODY, normalized only where YAML itself is free to vary.
+ * The SHA-256 digest of a step body, using its exact text without normalization.
  *
- * Deliberately not `payloadDigest`. Collapsing every whitespace run to one space is right for a
- * `node -e` payload, which is a single argument — and wrong for a body, because it erases the
- * difference between a space and a NEWLINE. A newline inside `$( … )` is the difference between one
+ * Like `payloadDigest`, this hashes exact text without normalization. Collapsing whitespace erases
+ * the difference between a space and a NEWLINE. A newline inside `$( … )` is the difference between one
  * command and two: `$(git rev-parse --is-shallow-repository)` and `$(git` + `rev-parse
  * --is-shallow-repository)` collapse to the same string, and the shipped tree contains that exact
  * substitution. Two bodies that behave differently must not share a digest.

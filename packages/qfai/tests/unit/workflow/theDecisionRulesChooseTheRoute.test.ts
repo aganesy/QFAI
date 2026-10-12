@@ -2,7 +2,7 @@ import { expect, it } from "vitest";
 
 import { decideRoute } from "../../../src/core/workflow/decisionRules.js";
 import type { WorkflowExtraction } from "../../../src/core/workflow/extraction.js";
-import { extractionFaults } from "../../../src/core/workflow/extractionShape.js";
+import { extractionFaults, isExtraction } from "../../../src/core/workflow/extractionShape.js";
 import { extraction } from "../../helpers/workflowExtraction.js";
 
 type Facts = Partial<WorkflowExtraction>;
@@ -348,6 +348,38 @@ it("A refactor and a documentation change", async () => {
 function refused(fields: Record<string, unknown>) {
   return extractionFaults({ ...extraction(), ...fields }).map((subject) => `schema:${subject}`);
 }
+
+function procedureChoice(fields: Record<string, unknown>) {
+  const value: unknown = { ...extraction({ artifacts: ["docs"] }), intent: "procedure", ...fields };
+  expect(isExtraction(value)).toBe(true);
+  if (!isExtraction(value)) throw new Error("The procedure reading was refused.");
+  return decideRoute(value);
+}
+
+// QFAI:EX-0001-0224-43
+// QFAI:EX-0001-0224-44
+// QFAI:EX-0001-0224-45
+it("Rule 29 separates procedure authoring from refactoring and explanatory text", () => {
+  expect(procedureChoice({})).toEqual({ route: "write-procedure", rule: 29, clause: 2 });
+  expect(decideRoute(extraction({ intent: "refactor" }))).toEqual({
+    route: "refactor-code",
+    rule: 29,
+    clause: 1,
+  });
+  expect(decideRoute(extraction({ intent: "docs" }))).toEqual({
+    route: "edit-text",
+    rule: 29,
+    clause: 3,
+  });
+});
+
+// QFAI:EX-0001-0224-44
+it.each([
+  [{ signals: ["approved-record-task"] }, "apply-settled", 2],
+  [{ entryFlags: ["bundle"], qualifiers: ["mixed-bundle"] }, "retriage-bundle", 12],
+] as const)("A procedure reading preserves the earlier route for %j", (fields, route, rule) => {
+  expect(procedureChoice(fields)).toMatchObject({ route, rule });
+});
 
 // QFAI:EX-0001-0211-03
 it("An extraction value outside its vocabulary is refused as a shape, naming the field", () => {
