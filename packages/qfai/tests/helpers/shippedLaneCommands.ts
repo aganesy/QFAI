@@ -2201,8 +2201,8 @@ export const ALLOWED_ACTION_INPUTS: ReadonlyMap<string, ReadonlySet<string>> = n
 /**
  * The `node -e` payloads a shipped lane may carry, as sha256 of their whitespace-collapsed text.
  *
- * Hashes rather than the text itself, because the two payloads are 630 and 1039 characters of multi-line
- * JavaScript and a literal copy here would break on every reflow of the shipped file. A reflow IS a change
+ * Hashes rather than the text itself, because the payloads contain multi-line JavaScript and a literal
+ * copy here would break on every reflow of the shipped file. A reflow IS a change
  * someone should read, so the hash failing is the intended behaviour and the fix is to re-measure and
  * re-record — not to loosen the comparison.
  *
@@ -2234,8 +2234,8 @@ export const ALLOWED_NODE_PAYLOADS: ReadonlySet<string> = new Set([
 
 /**
  * The payload of a `node -e`, hashed. **Nothing is normalized**, for the reason `bodyDigest` gives
- * three times over and one this payload adds: a `//` line comment is terminated by a NEWLINE, and
- * both enumerated payloads are full of them. Collapsing whitespace moves the statement after the last
+ * three times over and one this payload adds: a `//` line comment is terminated by a NEWLINE.
+ * Enumerated payloads contain such comments. Collapsing whitespace moves the statement after the last
  * comment line INSIDE the comment, and round 15 demonstrated it against a currently enumerated
  * payload whose digest did not move — so the scan cleared a payload nobody had reviewed.
  */
