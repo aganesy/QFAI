@@ -598,3 +598,39 @@ describe("ordered decision pages in the existing story model", () => {
     });
   });
 });
+
+// Supplementary root-origin regression: the missing object is the root itself, not a named page.
+it.each([".", "./", ""])(
+  "normalizes configured root %j and refuses orphan page history",
+  (specsDir) => {
+    const header =
+      "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
+    const page = "decisions/page-0001.md";
+    const history = header + "| DEC-0001 | Historical choice | Keep | DONE |\n";
+    const tail =
+      header.replace(
+        "## Decisions",
+        "## Decision pages\n\n- decisions/page-0001.md\n\n## Decisions",
+      ) + "| DEC-0002 | Append tail | Keep | WIP |\n";
+    const valid = buildModel(
+      new Map([
+        ["decisions.md", tail],
+        [page, history],
+      ]),
+      { specsDir },
+    );
+    expect(valid.decisionRegisterComplete).toBe(true);
+    expect(valid.decisionFile).toBe("decisions.md");
+    expect(valid.decisionOccurrences.map(({ row }) => row.id)).toEqual(["DEC-0001", "DEC-0002"]);
+    expect(nextStoryTreeId(valid, "DEC")).toBe("DEC-0003");
+    const orphan = buildModel(new Map([[page, history]]), { specsDir });
+    expect(orphan.decisionRegisterComplete).toBe(false);
+    expect(orphan.decisionRegisterErrors).toContainEqual({
+      file: "decisions.md",
+      message: "Missing decisions root",
+    });
+    expect(nextStoryTreeId.bind(null, orphan, "DEC")).toThrow(
+      /complete decision register.*unavailable/i,
+    );
+  },
+);
