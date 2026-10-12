@@ -18,6 +18,7 @@ export const WORKFLOW_ROUTES = [
   "apply-settled-prototype",
   "run-owned-cleanup",
   "refactor-code",
+  "write-procedure",
   "edit-text",
   "fix-defect",
   "improve-performance",

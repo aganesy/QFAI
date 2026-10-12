@@ -16,6 +16,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   evidence in existing human reports. Missing proof stays unverified; no extra
   reviewer, gate or execution engine is added. Fixes #3336.
 
+- Add a workflow route for writing authorized operational procedures.
+  It keeps wording-only edits separate, preserves policy owners and existing
+  verification, and grants no authority to run the documented actions.
+  Fixes #3403.
+
 ### Fixed
 
 - **Discussion completion references point to the existing obligations.**
