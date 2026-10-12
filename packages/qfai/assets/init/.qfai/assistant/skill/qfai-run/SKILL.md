@@ -14,9 +14,9 @@ mode: execution-focused
 
 [DRIFT-PROTOCOL:REQUIRED]
 
-The CLI plans; this skill follows its steps in order.
+Follow the CLI plan's steps in order.
 
-- Read `references/extraction.md` to extract a request.
+- Read `references/extraction.md` for extraction.
 - Plan command and format: `references/plan.md`.
 - Screens and questions: `references/operator-screens.md`.
 - Release, decision and branch points: `references/stage-points.md`.
@@ -35,8 +35,8 @@ The CLI plans; this skill follows its steps in order.
 
 ## Mode
 
-Read `workflow.mode` in `qfai.config.yaml` first. No key means `active`; any
-value but the three below plans nothing.
+Read `workflow.mode` in `qfai.config.yaml` first. No key means `active`; unlisted
+values plan nothing.
 
 | Mode     | What this skill does                                                                 |
 | -------- | ------------------------------------------------------------------------------------ |
@@ -50,8 +50,9 @@ value but the three below plans nothing.
   before planning or switching during a wait.
 - Plan changes, questions, proposals to decide and reports to close.
   Questions plan answers without changes; nonrequests get no plan.
-- Requested answers or results, including failure, resume the same step without
-  re-invocation. Plan independent requests; read `references/operator-screens.md` for replies.
+- Replies with a requested answer or result, including failure, resume the same step without
+  a new invocation. An independent new request is planned; read `references/operator-screens.md`
+  for replies.
 - `stop`: end the work at once and list every open decision as open.
 - A request naming a stage skill: invoke that skill by name.
 
