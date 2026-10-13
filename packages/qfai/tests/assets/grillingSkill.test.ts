@@ -5,11 +5,6 @@
  * asks questions nothing can answer yet, without the fact/decision split the
  * round spends the user's attention on what the repository already states, and
  * without the end condition the whole skill is advice.
- *
- * The skill states the method rather than citing the cross-AI rule master that
- * also states it. `qfai init` does not write that master into an adopter's tree,
- * so a citation would resolve to nothing there — which is what the pointer case
- * below measures rather than assumes.
  */
 
 import { readFile, stat } from "node:fs/promises";
@@ -125,9 +120,7 @@ describe("the grilling primitive", () => {
     });
 
     it(`${tree}: every tree path it cites exists in that tree`, async () => {
-      // The body states the method instead of citing the rule master precisely
-      // so that an adopter reads no dead pointer. That only holds while the
-      // pointers it does carry resolve.
+      // An adopter must be able to open every tree path the body cites.
       const raw = await read(tree);
       // The group is optional to the type checker even though the pattern
       // cannot match without it, so narrow rather than assert.
