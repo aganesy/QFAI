@@ -43,6 +43,7 @@ import {
   runReminderHook,
 } from "../helpers/reminderHooks.js";
 import { flat, sectionOf } from "../helpers/shippedAssistant.js";
+import { reminderSettings } from "../helpers/reminderSettings.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 /** Where every entry reads its message, as the settings file names it. */
@@ -172,7 +173,8 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
   let catalog: unknown;
 
   beforeAll(async () => {
-    hooks = readHooks(await readFile(path.join(repoRoot, rel), "utf-8"));
+    const text = await readFile(path.join(repoRoot, rel), "utf-8");
+    hooks = readHooks(rel === ".claude/settings.json" ? reminderSettings(text, "claude") : text);
     catalog = JSON.parse(await readFile(path.join(repoRoot, SHIPPED_MESSAGES), "utf-8"));
   });
 
@@ -653,6 +655,6 @@ describe("shipped template and this repository agree", () => {
       };
     };
 
-    expect(shared(own ?? "")).toEqual(shared(shipped ?? ""));
+    expect(shared(reminderSettings(own ?? "", "claude"))).toEqual(shared(shipped ?? ""));
   });
 });

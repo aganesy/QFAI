@@ -166,6 +166,17 @@
             ]
           }
         ]
+      },
+      {
+        "matcher": "Bash|PowerShell|Grep",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "QFAI graph exploration",
+            "command": "node",
+            "args": ["${CLAUDE_PROJECT_DIR}/.qfai/tools/graph-hook.mjs", "claude"]
+          }
+        ]
       }
     ],
     "PostToolUse": [

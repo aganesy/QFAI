@@ -650,14 +650,12 @@ async function canonicalDamage(
       ? await unusableAncestor(root, wrapper.canonicalRelative, realRoot, true)
       : null;
   const relative = culprit?.relative ?? wrapper.canonicalRelative;
-  // **Per tree, because the readers differ.** The skills tree is `readdir`ed —
-  // a regular file where the directory belongs raises `ENOTDIR` there and takes
-  // the run with it. The agents tree is not: `validateAgentDefinition` opens
-  // each document by path and its `access` probe answers "absent" for the same
-  // shape, so stopping on it hid every unrelated finding for damage nothing
-  // walks into. What does stop that reader is the **document** being the wrong
-  // type or unreadable, which is decided below.
-  const ancestorBlocks = wrapper.kind !== "agent" || culprit === null;
+  // The agent reader skips an unreachable parent, but lists an existing agent
+  // directory. A file at that exact directory passes access and breaks readdir.
+  const ancestorBlocks =
+    wrapper.kind !== "agent" ||
+    culprit === null ||
+    relative === path.posix.dirname(wrapper.canonicalRelative);
   const unwalkable =
     (blocksWalk(state) || culprit?.notDirectory === true) && ancestorBlocks ? relative : undefined;
 
@@ -698,7 +696,7 @@ async function canonicalDamage(
     // `validateSkillDocReferences` an `ELOOP` on the same pathname, so ask the
     // document itself rather than inheriting an answer about its directory.
     return {
-      relative: wrapper.canonicalRelative,
+      relative: culprit?.notDirectory === true ? relative : wrapper.canonicalRelative,
       detail: link,
       unwalkable: (await documentBlocksWalk(wrapper)) ? wrapper.canonicalRelative : unwalkable,
     };

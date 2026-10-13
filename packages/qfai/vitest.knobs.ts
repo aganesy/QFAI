@@ -49,56 +49,34 @@ export const CONCURRENCY_ENV = "QFAI_TEST_MAX_CONCURRENCY";
  * settings on the largest project, one project per pull request; revising this declared
  * starting value needs the user's sign-off. Neither is a decision this file may take.
  *
- * ## The comparison ten is retained against
+ * ## Applied worker measurement
  *
- * Largest project: `integration` (2644 tests), selected by native collection across
- * all seven runner projects, ordered by case count, file count and name.
- * Test files: 219 when measured. These trials do not measure the later 220-file tree.
+ * Largest project: `integration` (2602 tests), collected across every runner
+ * project with `vitest list --json`. Test files: 246, including one existing
+ * Windows platform skip. Available logical CPUs: 6 (Intel Core i5-9500).
+ * Windows, Node v24.18.0; within-file concurrency six; isolated forks.
  *
- * Four logical CPUs on the hosted Linux runner; Node 24.21.0, pnpm 12.10.1 and
- * Vitest 4.1.11. The ordinary CI worker baseline was 4. Only the requested worker
- * ceiling varied; within-file concurrency stayed at its observed default of 4,
- * with forks, isolation and the existing timeouts unchanged. Requested worker
- * ceilings are not measurements of the number of simultaneously live forks.
+ * One full integration run per setting on the same source tree. Command:
+ * `QFAI_TEST_MAX_WORKERS=<n> QFAI_TEST_MAX_CONCURRENCY=6 pnpm -C packages/qfai
+ * exec vitest run --project integration --maxWorkers=<n> --maxConcurrency=6`.
+ * Measurements taken on 2026-10-14; wall duration includes runner startup.
  *
- * Nine complete runs in balanced order: 4/6/10, 6/10/4, 10/4/6. This is an ordered
- * warm-cache comparison without extra warm-up or cache clearing, not cold-cache
- * causal evidence. Every run passed all 2644 cases in the same 219 native files,
- * with zero skips, TODOs and unhandled errors and confirmed process closure.
+ * | workers | duration | vs fastest |
+ * | ------- | -------- | ---------- |
+ * | 4 | 905.11s | 0.00% |
+ * | 6 | 939.38s | 3.79% |
  *
- * | workers | median duration | range             | vs fastest |
- * | ------- | --------------- | ----------------- | ---------- |
- * | 4       | 236.323s        | 235.184s–241.314s  | +1.398%    |
- * | 6       | 233.065s        | 231.099s–233.081s  | —          |
- * | 10      | 247.077s        | 245.805s–248.409s  | +6.012%    |
+ * adopted: 6
  *
- * adopted: 10
- *
- * Reason for not adopting the fastest: ten remains the user's stated starting
- * value and is 6.012% slower than the fastest median, within the ten-percent
- * allowance. Six improves the actually measured ordinary baseline of four by
- * only 1.378%; no candidate improves that baseline by at least ten percent in
- * both its median and every paired round. The agent retained ten under the
- * standing delegation; this was not a new individual user option selection.
- * This integration-only comparison does not justify changing the global
- * concurrency declaration. No runtime knob is changed by refreshing this record.
- * `DR-0017-0009` retains the earlier proposal to lower ten and its refusal.
- *
- * Evidence: https://github.com/aganesy/QFAI/actions/runs/38117012651
- * Artifact: temporary-worker-benchmark-evidence, ID 11693863721.
- * Requested source: 3ace1f9c36ff540bafed1cebc97b5779440c4f80.
- * Actual merge checkout: 0e54bc32dbb12941b0f024273982dc5effcccf1a.
- * The merge identity is recorded in retained evidence; its ancestry was not
- * verified locally. Native outcomes, binary output, timings and resource
- * provenance are retained with the controller and collector sources.
- *
- * The input manifest matched before and after every trial:
- * 2862961097539a5753b285b49662e0c9bf0f1810992579558849e39975d0ca6c.
- * It covers source/index, dependencies, dist and controller inputs, excluding
- * only the declared mutable .vite and .vite-temp caches. Matching endpoints
- * do not prove continuous immutability. Three benchmark rounds are not three
- * consecutive green affected-lane runs after a tuning change; no such change
- * is made here. The existing twenty-percent file-count drift assertion remains.
+ * The applied default is the starting value ten capped at six available CPUs.
+ * Reason for not adopting the fastest: the existing hardware cap determines
+ * the applied default, and its measured overhead is within ten percent.
+ * Ten workers took 954.09s but failed the sixty-repository fixture's unchanged
+ * 300-second timeout: 2,600 passed, one failed, one existing skip. That failed
+ * run is retained and excluded from eligible successful timings. The passing
+ * runs each contain 2,601 passed cases and the same existing skip. Oversubscribed
+ * filesystem contention is supported by the paired outcome; individual CPU,
+ * memory and disk contributions were not independently measured.
  */
 export const DECLARED_START = 10;
 

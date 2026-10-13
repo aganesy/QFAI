@@ -211,11 +211,15 @@ describe("the grilling reminder fires where a decision gets made quietly", () =>
   });
 
   it("both settings files carry the same reminders", async () => {
-    // One is the other's source. A reminder in this repository and not in the
-    // shipped copy reaches nobody who installed QFAI.
+    // Compare reminders separately from enforcement hooks installed by init.
+    // A reminder missing from the shipped copy reaches no adopting project.
     const shapes = await Promise.all(
       SETTINGS.map(async (rel) =>
-        JSON.stringify(groups(await readSettings(rel)).map((m) => m.matcher)),
+        JSON.stringify(
+          groups(await readSettings(rel))
+            .filter((m) => m.hooks.some((hook) => hook.statusMessage?.includes("reminder")))
+            .map((m) => m.matcher),
+        ),
       ),
     );
     expect(new Set(shapes).size, "the two copies list different matchers").toBe(1);

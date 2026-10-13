@@ -23,6 +23,7 @@ import {
   STRUCTURED_QUESTION_HOOK_MARKER,
 } from "../../src/core/claudeCodeHooks.js";
 import { projectDirOf, runReminderHook } from "../helpers/reminderHooks.js";
+import { reminderSettings } from "../helpers/reminderSettings.js";
 import { runOnEveryShell } from "../helpers/codexHookShells.js";
 import { EXIT_ZERO, spawnCaptured } from "../helpers/spawnCaptured.js";
 import { removeTempTree } from "../helpers/tempTree.js";
@@ -269,7 +270,7 @@ describe("the Codex hook file", () => {
     const [shipped, own] = await Promise.all(
       [SHIPPED_CODEX, OWN_CODEX].map((rel) => readFile(path.join(repoRoot, rel), "utf-8")),
     );
-    expect(own).toBe(shipped);
+    expect(reminderSettings(own ?? "", "codex")).toBe(shipped);
   });
 
   it("carries the three prompt-time reminders", async () => {

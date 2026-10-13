@@ -23,7 +23,7 @@ flowchart TD
   Ready -->|No| Repair[Resolve finding in owning artifact]
   Repair --> Validate
   Ready -->|Yes| SpecReview[Review the specification change]
-  SpecReview --> UI{UI contracts declare screens?}
+  SpecReview --> UI{Visual prototyping required?}
   UI -->|Yes| Prototype[Prototype until the user confirms it]
   UI -->|No| Implement[Make the planned change, with acceptance tests and EX-scoped TDD cycles where the plan holds them]
   Prototype --> Implement
@@ -38,8 +38,10 @@ flowchart TD
 
 - Missing usable discussion source stops SDD until the source is supplied.
 - An open product decision returns to discussion and SDD before implementation.
-- UI work requires its declared screen contracts and root `DESIGN.md`;
-  prototyping completes when the user confirms the prototype.
+- UI-bearing work, including CLI-only interactions, requires screen contracts.
+  A visual prototyping surface also requires root `DESIGN.md` and a
+  user-confirmed prototype. A CLI-only surface requires neither `DESIGN.md`
+  nor a visual prototype.
 - A failed validation, review or gate returns to the artifact that owns the
   finding. Completion is reported only after the relevant gate passes.
 - A free-text change request in mode `active` is planned by `qfai-run` with
@@ -55,3 +57,6 @@ flowchart TD
   route, which writes the bodies of the empty acceptance tests.
 - A scope change discovered after an accepted implementation item follows the
   drift protocol through SDD before another item is selected.
+- Graph exploration uses project-local CodeGraph and Graphify CLIs. Their
+  integration registers and launches no MCP server; unrelated project MCP
+  settings remain intact.

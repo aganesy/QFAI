@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { runInit } from "../../src/cli/commands/init.js";
+import { runInit } from "../helpers/legacyInit.js";
 import { IMPLEMENT_FLOW_STEPS, readImplementFlowSteps } from "../helpers/implementSteps.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");

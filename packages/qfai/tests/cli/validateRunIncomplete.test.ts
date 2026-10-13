@@ -23,6 +23,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type * as CoreValidateModule from "../../src/core/validate.js";
+import { graphProcessFixture } from "../helpers/graphProcess.js";
 
 const { validateProjectSpy, runReportSpy } = vi.hoisted(() => ({
   validateProjectSpy: vi.fn(),
@@ -77,7 +78,11 @@ async function project(): Promise<string> {
   const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-incomplete-"));
   dirs.push(dir);
   const { runInit } = await import("../../src/cli/commands/init.js");
-  await runInit({ dir, force: false, dryRun: false, yes: true });
+  await runInit(
+    { dir, force: false, dryRun: false, yes: true },
+    undefined,
+    graphProcessFixture().run,
+  );
   return dir;
 }
 

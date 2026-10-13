@@ -9,7 +9,7 @@ import path from "node:path";
 import { parse as parseYaml } from "yaml";
 import { describe, expect, it } from "vitest";
 
-import { runInit } from "../../src/cli/commands/init.js";
+import { runInit } from "../helpers/legacyInit.js";
 import { loadConfig, routingEntryName } from "../../src/core/config.js";
 import {
   ASSISTANT_ASSET_MAX_LINE_CHARS,

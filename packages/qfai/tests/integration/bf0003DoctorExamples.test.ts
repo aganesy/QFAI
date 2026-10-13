@@ -10,7 +10,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { runDoctor } from "../../src/cli/commands/doctor.js";
-import { runInit } from "../../src/cli/commands/init.js";
+import { runInit } from "../helpers/legacyInit.js";
 import { createDoctorData } from "../../src/core/doctor.js";
 import type { DoctorData } from "../../src/core/doctor.js";
 import { quietUnrelatedWarnings, useAdopterTreePool } from "../helpers/doctorFixtures.js";

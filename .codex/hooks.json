@@ -76,6 +76,16 @@
             "timeout": 10
           }
         ]
+      },
+      {
+        "matcher": "^(Bash|PowerShell|exec_command|Grep|grep|rg|grep_search|search_files|file_search)$",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "QFAI graph exploration",
+            "command": "node .qfai/tools/graph-hook.mjs codex"
+          }
+        ]
       }
     ],
     "PostToolUse": [

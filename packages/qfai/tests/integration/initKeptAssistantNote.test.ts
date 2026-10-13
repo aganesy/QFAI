@@ -11,13 +11,16 @@ import { describe, expect, it } from "vitest";
 import { runInit } from "../../src/cli/commands/init.js";
 import { copyTemplateTree } from "../../src/core/fs/templateCopy.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
+import { graphProcessFixture } from "../helpers/graphProcess.js";
 import { useTempDirPool } from "../helpers/shippedWorkflowFixtures.js";
 import { captureStdout } from "../helpers/stdout.js";
 
 const newTempDir = useTempDirPool("qfai-init-kept-");
 
 async function init(dir: string, force = false, dryRun = false): Promise<string> {
-  return captureStdout(() => runInit({ dir, force, dryRun, yes: true }));
+  return captureStdout(() =>
+    runInit({ dir, force, dryRun, yes: true }, undefined, graphProcessFixture().run),
+  );
 }
 
 const assistantFile = (dir: string, ...relative: string[]): string =>

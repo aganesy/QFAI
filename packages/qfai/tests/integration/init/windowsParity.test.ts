@@ -1,3 +1,4 @@
+import { legacyInitArguments } from "../../helpers/legacyInitArguments.js";
 /**
  * Integration: init and upgrade give the same result through the built CLI under a root whose
  * name contains a space as they do in process.
@@ -66,7 +67,7 @@ describe("windows parity", () => {
     const spawned: RunView[] = [];
     await withEmptyRepo(async (root) => {
       for (let run = 0; run < 2; run += 1) {
-        const result = spawnSync(process.execPath, [CLI, "init", "--yes"], {
+        const result = spawnSync(process.execPath, legacyInitArguments(CLI, ["init", "--yes"]), {
           cwd: root,
           encoding: "utf-8",
         });
@@ -185,7 +186,9 @@ describe("native linked worktree skill wrappers", () => {
       await git(["config", "--local", "core.symlinks", "true"]);
       await git(["config", "--local", "core.autocrlf", "false"]);
       const primaryAssets = await snapshot(path.join(primary, assets));
-      await execFile(process.execPath, [CLI, "init", "--yes"], { cwd: primary });
+      await execFile(process.execPath, legacyInitArguments(CLI, ["init", "--yes"]), {
+        cwd: primary,
+      });
       expect(await validateIntegrationSurface(primary)).toEqual([]);
       expect(await snapshot(path.join(primary, assets))).toEqual(primaryAssets);
       const claudeSkills = await readdir(path.join(primary, ".claude", "skills"), {
@@ -243,7 +246,9 @@ describe("native linked worktree skill wrappers", () => {
       expect(findings.flatMap((issue) => issue.refs ?? []).sort()).toEqual(unfollowable.sort());
       const packagedBefore = await snapshot(path.join(linked, assets));
 
-      await execFile(process.execPath, [CLI, "init", "--yes"], { cwd: linked });
+      await execFile(process.execPath, legacyInitArguments(CLI, ["init", "--yes"]), {
+        cwd: linked,
+      });
 
       expect(await validateIntegrationSurface(linked)).toEqual([]);
       expect((await lstat(path.join(linked, assistant))).isSymbolicLink()).toBe(false);
@@ -265,7 +270,9 @@ describe("native linked worktree skill wrappers", () => {
       const statusBefore = (
         await git(["status", "--porcelain=v1", "--untracked-files=all"], linked)
       ).stdout;
-      await execFile(process.execPath, [CLI, "init", "--yes"], { cwd: linked });
+      await execFile(process.execPath, legacyInitArguments(CLI, ["init", "--yes"]), {
+        cwd: linked,
+      });
       expect(await snapshot(linked)).toEqual(initialized);
       expect(
         (await git(["status", "--porcelain=v1", "--untracked-files=all"], linked)).stdout,

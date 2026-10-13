@@ -16,6 +16,8 @@ export default defineConfig({
   entry: {
     index: "src/index.ts",
     "cli/index": "src/cli/index.ts",
+    "graph/hook": "src/cli/graphHook.ts",
+    "graph/cli": "src/cli/graphCli.ts",
   },
   format: ["esm", "cjs"],
   // SIMPLIFIED: silences one deprecation, and only inside the declaration rollup.

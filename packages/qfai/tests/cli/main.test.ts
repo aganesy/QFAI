@@ -2,12 +2,25 @@ import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promis
 import os from "node:os";
 import path from "node:path";
 
-import { describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import * as graphProcess from "../../src/core/graph/process.js";
+import { createLegacyGraphProcess } from "../helpers/legacyInit.js";
 
-import { runInit } from "../../src/cli/commands/init.js";
+import { runInit } from "../helpers/legacyInit.js";
 import { run } from "../../src/cli/main.js";
 import { resolveToolPackageDir, resolveToolVersion } from "../../src/core/version.js";
 import { captureStdout } from "../helpers/stdout.js";
+
+const externalProcess = graphProcess.runGraphProcess;
+let acquisitionPort: ReturnType<typeof vi.spyOn>;
+beforeAll(() => {
+  acquisitionPort = vi
+    .spyOn(graphProcess, "runGraphProcess")
+    .mockImplementation(createLegacyGraphProcess(externalProcess));
+});
+afterAll(() => {
+  acquisitionPort.mockRestore();
+});
 
 describe("cli root discovery", () => {
   it("dispatches story-tree scaffold options and refuses the retired spec option", async () => {

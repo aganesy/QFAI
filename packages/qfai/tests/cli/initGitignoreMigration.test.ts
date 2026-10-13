@@ -19,7 +19,7 @@ import path from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
-import { runInit } from "../../src/cli/commands/init.js";
+import { runInit } from "../helpers/legacyInit.js";
 import { captureStdout } from "../helpers/stdout.js";
 import {
   QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,

@@ -509,23 +509,23 @@ function expectPointer(context: string, full: string, reference: string): void {
 
 // QFAI:EX-0001-0196-40
 describe("the Codex tool-time reminders that repeat", () => {
-  // QFAI:EX-0001-0196-56
-  it.each(POINTERS)(
-    "prints %s/%s in full once, then a pointer under every shell",
-    async (event, key, tool, command, reference) => {
-      const entry = await codexEntry(event, key);
-      const full = await fullContext(key);
-      await withProject(async (cwd) => {
-        for (const shell of CODEX_SHELLS) {
+  describe.each(CODEX_SHELLS)("through %s", (shell) => {
+    // QFAI:EX-0001-0196-56
+    it.each(POINTERS)(
+      "prints %s/%s in full once, then a pointer",
+      async (event, key, tool, command, reference) => {
+        const entry = await codexEntry(event, key);
+        const full = await fullContext(key);
+        await withProject(async (cwd) => {
           const input = inSession(codexInput(event, tool, command), newSession());
           expect(await firedContext(entry, shell, cwd, input, event)).toBe(full);
           for (let call = 2; call <= PERIOD + 1; call += 1) {
             expectPointer(await firedContext(entry, shell, cwd, input, event), full, reference);
           }
-        }
-      });
-    },
-  );
+        });
+      },
+    );
+  });
 
   // QFAI:EX-0001-0196-56
   it("isolates selected counters by session, agent and message key", async () => {

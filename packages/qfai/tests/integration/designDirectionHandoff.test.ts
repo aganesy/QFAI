@@ -1,3 +1,4 @@
+import { legacyInitArguments } from "../helpers/legacyInitArguments.js";
 // QFAI:AC-0001-0087-01
 // QFAI:AC-0001-0087-02
 
@@ -27,7 +28,10 @@ let root = "";
 
 beforeAll(async () => {
   root = await mkdtemp(path.join(os.tmpdir(), "qfai-design-direction-"));
-  const init = spawnSync(process.execPath, [CLI, "init", "--yes"], { cwd: root, encoding: "utf8" });
+  const init = spawnSync(process.execPath, legacyInitArguments(CLI, ["init", "--yes"]), {
+    cwd: root,
+    encoding: "utf8",
+  });
   if (init.status !== 0) throw new Error(`qfai init: ${init.stderr}`);
 }, 180_000);
 

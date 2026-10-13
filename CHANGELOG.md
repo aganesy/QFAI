@@ -6,6 +6,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- `qfai init` installs isolated CodeGraph and Graphify runtimes with managed
+  graph CLIs and search-denial hooks. Code questions use CodeGraph; document
+  questions use Graphify. Document processing needs explicit configuration.
+  Completed local analysis can be reused across compatible worktrees through
+  independent copies. AI-decided fallback permits only the observed search scope.
+
 - **`qfai validate` says when the drift checks do not cover an uncommitted edit.**
   A protected story-tree file that is edited or added in the working tree and
   not committed is outside the `<base>...HEAD` comparison, so the `tdd` and
@@ -304,6 +310,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Executed regression evidence for a verified ordinary cause can make them
   unnecessary. The steps record their proof and reason without claiming runs
   they did not perform; races, uncertainty and quarantine still require runs.
+
+- Graph hook composition retains unreadable or malformed optional host settings
+  and reports recovery without stopping the rest of init.
+
+- Validation reports a canonical directory replaced by a file on Windows
+  before profile scans run, preserving integration and security findings.
+
+- Repository bootstrap rejects a file in place of a dependency directory's
+  parent on Windows before starting pnpm.
 
 ## [2.1.2] - 2026-10-11
 

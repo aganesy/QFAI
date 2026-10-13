@@ -1273,6 +1273,7 @@ export function fileDigest(raw: Buffer): string {
  */
 export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
   ".github/copilot-instructions.md",
+  ".github/hooks/qfai-graph.json",
   ".github/workflows/qfai-docs.yml",
   ".github/workflows/qfai-tests.yml",
   ".github/workflows/qfai-validate.yml",
@@ -1310,6 +1311,11 @@ export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
  * silent edit to it changes how every other pinned file is checked out.
  */
 export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
+  // The generated shared denial hook is pinned independently of workflow templates.
+  [
+    ".github/hooks/qfai-graph.json",
+    "e807d0caa761867301c9a8d08e70d07ccd537cca17b811cd2dc6cb4a1e89be20",
+  ],
   [
     // Re-pinned when the cross-AI rules block was restated for the tree it is written into. Three
     // prose lines now say the masters are seeded by `qfai init` rather than assumed to exist, and the
@@ -1375,7 +1381,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // Derived by running `qfai init` into a temp root; dropping that one bullet reproduces
     // `fcdba5a8…` byte for byte.
     ".github/copilot-instructions.md",
-    "b756eb95a096958e188a406f275d4a31a3128336c58ca50a9e002c2d2e503d4d",
+    "3cc78e107fdc002d7ed334fc99f915816793f40bd60f2660bed9131aac19fed2",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1401,7 +1407,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   //
   // To re-pin: run `qfai init` into a temp root and hash the `.gitignore` it
   // wrote — never copy a value out of a failure message.
-  [".gitignore", "b3dfe9b2704c0ae54ef8347cd23ed2a714c5966f38050932611a6ad326b597c4"],
+  [".gitignore", "bf131d12f076182939b21e2df2c21d66888e1a62ae448c72b78198702eb20cf8"],
   // Independent golden files pin the reviewed entry instructions. Update them only after
   // independent review, preserving exact bytes without trimming or newline normalization.
   [
@@ -1498,7 +1504,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // Re-pinned for the `Stop` group marked `QFAI session feedback reminder`, and again when it was
   // removed: the file has no `Stop` event, and restoring that group reproduces `f751cc6e…` byte
   // for byte. Derived the same way.
-  [".claude/settings.json", "4b7ecd6f82a412aa6050b05a6b631f30b77ff3f548231711470c348cc29554ee"],
+  [".claude/settings.json", "396c26ac251f5a15dece062a75f75f5fc04c1d72eca708ce1721765a8cd77dd6"],
   // Inside `.codex/`, and pinned for the reason `.claude/settings.json` is: its commands are a
   // program an adopter's agent runs. Two `UserPromptSubmit` groups, structured-question and
   // free-text entry. Codex takes one command string, so each runs the same `node -e` reader
@@ -1541,7 +1547,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // merge refreshes them. Derived the same way.
   // Re-pinned for the same `Stop` group, and again when it was removed: restoring that group
   // reproduces `e973ebb8…` byte for byte. Derived the same way.
-  [".codex/hooks.json", "524381d3026af9295c3706d59dd0018f24508cfc290e4cb3a8873c1f6f1c9938"],
+  [".codex/hooks.json", "252e94e4a2d0f08c155dcf5b85321c783da67a45bde82ac8c0b59f28234655f7"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`
@@ -1709,6 +1715,7 @@ export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
   "root/.agents/rules/document-schema.md",
   "root/.agents/rules/documentation-clarity.md",
   "root/.agents/rules/grilling.md",
+  "root/.agents/rules/graph-exploration.md",
   "root/.agents/rules/interface-clarity.md",
   "root/.agents/rules/minimal-implementation.md",
   "root/.agents/rules/reminders.json",

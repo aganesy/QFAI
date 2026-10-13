@@ -17,7 +17,7 @@ import path from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
-import { runInit } from "../../src/cli/commands/init.js";
+import { runInit } from "../helpers/legacyInit.js";
 import {
   AGENT_ENTRY_POINT_FILES,
   CROSS_AI_RULES_HEADING,

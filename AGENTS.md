@@ -120,3 +120,5 @@ with what is specific to this repository; read it with its master.
 Read `.instruction/01_specialties/work-scenarios.md` when the task matches one of its scenarios (a feature,
 a bug fix, a refactor, a security change, a release check and so on) and you need the order to read the
 documents in. It is not needed when the task is already clear.
+
+- Read `.agents/rules/graph-exploration.md` before exploring code or documents; use the matching graph CLI, current analysis and supported search protection.

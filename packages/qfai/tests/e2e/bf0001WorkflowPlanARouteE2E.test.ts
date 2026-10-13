@@ -1,3 +1,4 @@
+import { legacyInitArguments } from "../helpers/legacyInitArguments.js";
 // QFAI:BF-0001
 /**
  * E2E: a request's extraction is planned on a fresh `qfai init` project.
@@ -27,7 +28,7 @@ afterEach(async () => {
 });
 
 function qfai(root: string, args: string[], input?: string) {
-  const result = spawnSync(process.execPath, [CLI, ...args], {
+  const result = spawnSync(process.execPath, legacyInitArguments(CLI, args), {
     cwd: root,
     encoding: "utf8",
     ...(input === undefined ? {} : { input }),
