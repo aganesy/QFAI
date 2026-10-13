@@ -193,7 +193,7 @@ export function validateStoryTreeObligationsModel(
         "QFAI-STORY-006",
         `${entry.id} is missing ${entry.target} annotation` +
           (placement
-            ? `; QFAI:${entry.id} is at ${placement}, which is not the comment line directly before an \`it(\`, \`test(\` or \`describe(\`, so it counts for nothing`
+            ? `; QFAI:${entry.id} at ${placement} is not on a comment line before a test declaration (for example \`it(\` or \`test(\`), so it counts for nothing. Move it to a comment line above the test it covers, with only blank or comment lines between`
             : ""),
         "error",
         entry.file,
