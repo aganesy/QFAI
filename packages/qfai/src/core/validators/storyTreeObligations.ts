@@ -23,6 +23,20 @@ export type StoryTestFile = {
 
 export type StoryObligationProfile = "atdd" | "tdd";
 
+/** The shipped rule that says which annotation belongs to which test layer. */
+const TEST_LAYERS_RULE = ".qfai/assistant/rule/test-layers.md";
+
+/**
+ * The message of a trace mark placed in a layer that cannot hold it.
+ *
+ * It names the file, the annotation and the layer it needs, then says what to do about it: the
+ * annotation is removed from this test, not the test moved, and the rule that explains the layers is
+ * named.
+ */
+function misplacedMessage(id: string, file: string, requires: string, belongsIn: string): string {
+  return `QFAI:${id} is misplaced in ${file}; ${requires}. Keep this annotation only in ${belongsIn} and remove it from this test (layer rules: ${TEST_LAYERS_RULE})`;
+}
+
 /** Whether an EX annotation in this file covers its example: a selected test outside E2E. */
 export function countsForExample(file: StoryTestFile): boolean {
   return file.selectedForExample && file.kind !== "e2e";
@@ -60,7 +74,7 @@ export function validateStoryTreeObligationsModel(
         issues.push(
           issue(
             "QFAI-STORY-007",
-            `QFAI:${id} is misplaced in ${file.file}; BF requires E2E`,
+            misplacedMessage(id, file.file, "BF requires E2E", "a test under the E2E layer"),
             "error",
             file.file,
             "storyTree.misplacedAnnotation",
@@ -87,7 +101,12 @@ export function validateStoryTreeObligationsModel(
         issues.push(
           issue(
             "QFAI-STORY-007",
-            `QFAI:${id} is misplaced in ${file.file}; AC requires integration or API`,
+            misplacedMessage(
+              id,
+              file.file,
+              "AC requires integration or API",
+              "a test under the integration or API layer",
+            ),
             "error",
             file.file,
             "storyTree.misplacedAnnotation",
@@ -120,7 +139,12 @@ export function validateStoryTreeObligationsModel(
         issues.push(
           issue(
             "QFAI-STORY-007",
-            `QFAI:${id} is misplaced in ${file.file}; EX requires a test outside E2E`,
+            misplacedMessage(
+              id,
+              file.file,
+              "EX requires a test outside E2E",
+              "a test outside the E2E layer",
+            ),
             "error",
             file.file,
             "storyTree.misplacedAnnotation",

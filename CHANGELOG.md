@@ -54,6 +54,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **A misplaced trace mark says how to repair it.** The `QFAI-STORY-007` error
+  for a `QFAI:BF-`, `QFAI:AC-` or `QFAI:EX-` annotation in a test of the wrong
+  layer now says to keep the annotation only in a test of the layer it belongs
+  to, to remove it from this test, and where the layer rules are
+  (`.qfai/assistant/rule/test-layers.md`). The finding's code, file and
+  annotation are unchanged. Fixes #3544.
+
 - **The shipped rules name `AGENTS.md` as the only entry file.** The wording
   in `documentation-clarity.md` and `untrusted-content.md` no longer mentions
   `CLAUDE.md`, which `qfai init` stopped writing.

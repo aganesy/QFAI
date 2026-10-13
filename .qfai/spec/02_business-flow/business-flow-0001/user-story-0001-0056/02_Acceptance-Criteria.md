@@ -30,6 +30,7 @@ Feature: Layer-specific test obligations
     Given the story tree, and a `QFAI:BF-NNNN` annotation in a file outside the E2E layer, or a `QFAI:AC-NNNN-NNNN-NN` annotation in a file outside the integration and API layers
     When `qfai validate --profile atdd` runs
     Then an error names the file and the annotation
+    And the error says to keep that annotation only in a test of the layer it belongs to and to remove it from this one, and names the shipped layer rule
 
   # AC-0001-0056-05
   Scenario: An annotation naming an undefined ID is reported
