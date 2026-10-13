@@ -88,6 +88,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Skip Claude Code prompt reminders for `ci-monitor-event` notification lines
+  before counting eligible prompts. `qfai init` refreshes the previous official
+  prompt readers while retaining project edits and existing counter fallbacks.
+  Real host injection, scheduled-prompt classification and the reported SYSTEM
+  notice cause remain unverified; see the
+  [host diagnosis](https://github.com/aganesy/QFAI/issues/3461).
+
 - The SDD design authoring guide no longer says `npx qfai init` seeds a sample
   `DESIGN.md` at the project root. Init writes none; the sample ships only as a
   skill template, and a root file that exists was authored by
@@ -129,6 +136,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **Profiling output retains its complete UTF-8 prefix within the shared 32 MiB limit.**
   A chunk that crosses the limit keeps the complete characters that fit before
   owned process termination begins. Output after the limit is discarded. Fixes #3462.
+
+- **Intermittent-fix steps check whether pressure and repeats are applicable.**
+  Executed regression evidence for a verified ordinary cause can make them
+  unnecessary. The steps record their proof and reason without claiming runs
+  they did not perform; races, uncertainty and quarantine still require runs.
 
 ## [2.1.2] - 2026-10-11
 
