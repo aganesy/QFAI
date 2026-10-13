@@ -532,7 +532,7 @@ function codeMask(body: string): boolean[] {
       (quote !== "'" && ch === "$" && body[i + 1] === "(") ||
       (quote === "" && (ch === "<" || ch === ">"))
     ) {
-      const opensAt = ch === "$" ? i + 1 : i + 1;
+      const opensAt = i + 1;
       if (body[opensAt] === "(") {
         const close = matchingParen(body, opensAt);
         const inner = codeMask(body.slice(opensAt + 1, close));
@@ -828,7 +828,7 @@ export function invocationOf(command: string): string | typeof NOTHING | typeof 
       // allowed. Two comments here said the opposite for three rounds — measured by round 15 —
       // and the shipped tree stays readable because its only prefixed command is `IFS= read`,
       // while its `declared=$( … )` assignment carries no command after it and invokes nothing.
-      if (/^[A-Za-z_]\w*=/.test(token)) prefixNames.push(token.slice(0, token.indexOf("=")));
+      prefixNames.push(token.slice(0, token.indexOf("=")));
       i += 1;
       continue;
     }
@@ -1153,7 +1153,7 @@ export const ALLOWED_ACTIONS: ReadonlySet<string> = new Set([
  */
 export const ALLOWED_ACTION_COMMITS: ReadonlyMap<string, string> = new Map([
   ["actions/checkout", "3d3c42e5aac5ba805825da76410c181273ba90b1"],
-  ["actions/setup-node", "820762786026740c76f36085b0efc47a31fe5020"],
+  ["actions/setup-node", "949feb2413d6458794dcd2491c4babbbce0c15c1"],
   ["pnpm/action-setup", "fc06bc1257f339d1d5d8b3a19a8cae5388b55320"],
 ]);
 
@@ -1240,9 +1240,9 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
-  ["qfai-docs.yml", "44ec24d550811e8a74a366c8a855669f8c2779d52dd1745358e758d3d50ecdc7"],
-  ["qfai-tests.yml", "d0eac08104ee1fab05c97d544459cedf4fad3a4dd2a3701904a16fc4ced6da15"],
-  ["qfai-validate.yml", "d544c784615c28d884152ba68856d742ee3368b32a639a874cb3ee80bd104f7f"],
+  ["qfai-docs.yml", "b462b2489e102a1992beec58c45195eeb2371e5ded3d10e28964e7a3af8ff082"],
+  ["qfai-tests.yml", "c2616e56b9812f30b3c1af630f0936835349815fb7a2a1f8c297a6566b4c6bd2"],
+  ["qfai-validate.yml", "a1407c67a98f053fd544b5a78b17b4c63c64be349c4483b55d647ef03c22145c"],
 ]);
 
 /** The bytes of a shipped file. Nothing is normalized, and the parameter is a Buffer for that reason. */
@@ -1286,7 +1286,7 @@ export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
  * And the CONTENT of the files that are not workflows.
  *
  * The path pin says which files arrive; it says nothing about what is in them, so a line planted in
- * a file pinned by name alone is invisible. The two workflows are byte-pinned by
+ * a file pinned by name alone is invisible. The workflows are byte-pinned by
  * `ALLOWED_WORKFLOW_FILES`; the rest are byte-pinned here, and between them every adopter-facing file
  * this tree writes is pinned by content.
  *
@@ -1390,7 +1390,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // asks for, and a project reads them in the language and the spelling its
   // neighbours in the same seeded tree use.
   //
-  // This digest covers the seed's raw UTF-8/LF bytes, including both union rules.
+  // This digest covers the seed's raw UTF-8/LF bytes, including all union rules.
   // `qfai init` copies those bytes only when the destination does not exist.
   [".gitattributes", "495f9358f92c82ebebea3f5c9d6f391f6cea6b540749593fc47339c62340dbaf"],
   // The shipped `.gitignore` IS the generated managed block, so every line of it
@@ -1495,9 +1495,10 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // call. Events, matchers, markers and message keys are unchanged; the previous group is listed
   // as superseded so the merge refreshes it. Derived by running `qfai init` into a temp root and
   // hashing what it wrote.
-  // Re-pinned for the `Stop` group marked `QFAI session feedback reminder`. Removing the `Stop`
-  // event from the file reproduces `03325965…` byte for byte.
-  [".claude/settings.json", "f751cc6e4587be65e1341bb30fc8172b2506df805b5a256ebf151bc427fce730"],
+  // Re-pinned for the `Stop` group marked `QFAI session feedback reminder`, and again when it was
+  // removed: the file has no `Stop` event, and restoring that group reproduces `f751cc6e…` byte
+  // for byte. Derived the same way.
+  [".claude/settings.json", "da0e726996c0ec7306930b094eb6717afe5f9b76e6e8c1b378331e0f00b16ae6"],
   // Inside `.codex/`, and pinned for the reason `.claude/settings.json` is: its commands are a
   // program an adopter's agent runs. Two `UserPromptSubmit` groups, structured-question and
   // free-text entry. Codex takes one command string, so each runs the same `node -e` reader
@@ -1538,9 +1539,9 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // `node -e "<program>" <key>` line with no character a hook shell expands. Events, matchers,
   // markers and message keys are unchanged; the previous groups are listed as superseded so the
   // merge refreshes them. Derived the same way.
-  // Re-pinned for the same `Stop` group. Removing the `Stop` event reproduces `4eb4c36d…` byte
-  // for byte.
-  [".codex/hooks.json", "e973ebb8f2047f6a3e901b9adbe3e6299cda7cad77dfb12cccfab933cd936904"],
+  // Re-pinned for the same `Stop` group, and again when it was removed: restoring that group
+  // reproduces `e973ebb8…` byte for byte. Derived the same way.
+  [".codex/hooks.json", "524381d3026af9295c3706d59dd0018f24508cfc290e4cb3a8873c1f6f1c9938"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`
@@ -1847,8 +1848,15 @@ export const ALLOWED_MIGRATION_SCRIPTS: ReadonlyMap<string, string> = new Map([
   ],
 ]);
 
+const ALLOWED_DEPENDENCY_PREPARATION_SCRIPTS: ReadonlyMap<string, string> = new Map([
+  [
+    ".qfai/assistant/skill/qfai-run/scripts/codex-cloud-install.mjs",
+    "6b178632bce287af9fde3eff3f165695eaea499209878d75bc4f212c53fce86c",
+  ],
+]);
+
 /**
- * Whether an init-source file is a supported data format or a reviewed migration program.
+ * Whether an init-source file is a supported data format or a reviewed program.
  *
  * It lives here rather than at the call site so the enumerations and the token that is looked up in
  * them cannot drift: adding a name to one of the sets while the caller derives a different token is
@@ -1857,6 +1865,7 @@ export const ALLOWED_MIGRATION_SCRIPTS: ReadonlyMap<string, string> = new Map([
 export function initSourceShipsAsData(relativePath: string): boolean {
   return (
     ALLOWED_MIGRATION_SCRIPTS.has(relativePath) ||
+    ALLOWED_DEPENDENCY_PREPARATION_SCRIPTS.has(relativePath) ||
     ALLOWED_INIT_MARKERS.has(relativePath) ||
     ALLOWED_INIT_SOURCE_EXTENSIONS.has(path.extname(relativePath)) ||
     ALLOWED_INIT_SOURCE_BASENAMES.has(path.basename(relativePath))
@@ -1880,7 +1889,7 @@ export const INIT_INSTRUCTION_TREES: ReadonlyArray<string> = [
  *
  * A kind rather than a list of paths, because the danger is not which file it is but who runs it: a
  * package manager reads a manifest and a shell reads a script, and neither asks where it came from.
- * The migration programs are the sole exception, with exact path and byte pins.
+ * Reviewed migration and dependency preparation programs have exact path and byte pins.
  * `EXECUTED_ON_INSTALL` names the same class for a lane's redirect targets one level in, and this is the
  * same claim about the tree the lane runs in.
  *
@@ -1978,6 +1987,12 @@ export function initMustNotShip(
   if (reviewedScript !== undefined) {
     return fileDigest(contents) === reviewedScript ? undefined : "migration script content differs";
   }
+  const reviewedPreparation = ALLOWED_DEPENDENCY_PREPARATION_SCRIPTS.get(relativePath);
+  if (reviewedPreparation !== undefined) {
+    return fileDigest(contents) === reviewedPreparation
+      ? undefined
+      : "dependency preparation script content differs";
+  }
   if (INIT_MUST_NOT_SHIP.test(relativePath)) return "is a manifest or a script by name";
   return undefined;
 }
@@ -2029,7 +2044,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-docs.yml#checks",
-    '{"name":"Set up Node via actions/setup-node 7.0.0","uses":"actions/setup-node@820762786026740c76f36085b0efc47a31fe5020","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
+    '{"name":"Set up Node via actions/setup-node 7.1.0","uses":"actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
   ],
   [
     "qfai-docs.yml#checks",
@@ -2089,7 +2104,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-tests.yml#tests",
-    '{"name":"Set up Node via actions/setup-node 7.0.0","uses":"actions/setup-node@820762786026740c76f36085b0efc47a31fe5020","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
+    '{"name":"Set up Node via actions/setup-node 7.1.0","uses":"actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
   ],
   [
     "qfai-tests.yml#tests",
@@ -2125,7 +2140,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-validate.yml#validate",
-    '{"name":"Set up Node via actions/setup-node 7.0.0","uses":"actions/setup-node@820762786026740c76f36085b0efc47a31fe5020","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
+    '{"name":"Set up Node via actions/setup-node 7.1.0","uses":"actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
   ],
   [
     "qfai-validate.yml#validate",
@@ -2199,10 +2214,10 @@ export const ALLOWED_ACTION_INPUTS: ReadonlyMap<string, ReadonlySet<string>> = n
 ]);
 
 /**
- * The `node -e` payloads a shipped lane may carry, as sha256 of their whitespace-collapsed text.
+ * The `node -e` payloads a shipped lane may carry, as SHA-256 hashes of their exact text.
  *
- * Hashes rather than the text itself, because the two payloads are 630 and 1039 characters of multi-line
- * JavaScript and a literal copy here would break on every reflow of the shipped file. A reflow IS a change
+ * Hashes rather than the text itself, because the payloads contain multi-line JavaScript and a literal
+ * copy here would break on every reflow of the shipped file. A reflow IS a change
  * someone should read, so the hash failing is the intended behaviour and the fix is to re-measure and
  * re-record — not to loosen the comparison.
  *
@@ -2234,8 +2249,8 @@ export const ALLOWED_NODE_PAYLOADS: ReadonlySet<string> = new Set([
 
 /**
  * The payload of a `node -e`, hashed. **Nothing is normalized**, for the reason `bodyDigest` gives
- * three times over and one this payload adds: a `//` line comment is terminated by a NEWLINE, and
- * both enumerated payloads are full of them. Collapsing whitespace moves the statement after the last
+ * three times over and one this payload adds: a `//` line comment is terminated by a NEWLINE.
+ * Enumerated payloads contain such comments. Collapsing whitespace moves the statement after the last
  * comment line INSIDE the comment, and round 15 demonstrated it against a currently enumerated
  * payload whose digest did not move — so the scan cleared a payload nobody had reviewed.
  */
@@ -2244,11 +2259,10 @@ export function payloadDigest(payload: string): string {
 }
 
 /**
- * The digest of a step BODY, normalized only where YAML itself is free to vary.
+ * The SHA-256 digest of a step body, using its exact text without normalization.
  *
- * Deliberately not `payloadDigest`. Collapsing every whitespace run to one space is right for a
- * `node -e` payload, which is a single argument — and wrong for a body, because it erases the
- * difference between a space and a NEWLINE. A newline inside `$( … )` is the difference between one
+ * Like `payloadDigest`, this hashes exact text without normalization. Collapsing whitespace erases
+ * the difference between a space and a NEWLINE. A newline inside `$( … )` is the difference between one
  * command and two: `$(git rev-parse --is-shallow-repository)` and `$(git` + `rev-parse
  * --is-shallow-repository)` collapse to the same string, and the shipped tree contains that exact
  * substitution. Two bodies that behave differently must not share a digest.

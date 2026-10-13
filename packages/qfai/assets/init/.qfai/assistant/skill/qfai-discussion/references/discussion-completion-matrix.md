@@ -58,7 +58,7 @@ Blocking for every pack, UI-bearing or not:
    Here rather than under one pack shape. It is what a no-question run is blocked by, and a run is
    `--auto` or not independently of whether it has a surface — listed only under `## UI-bearing
 Packs`, it let a non-UI `--auto` pack complete with its decisions still open.
-   Item 7 below does that work instead — an open count above zero closes nothing.
+   All Packs item 3 does that work — an open count above zero closes nothing.
 
 ## UI-bearing Packs
 
@@ -99,7 +99,7 @@ so conditions 1 and 5 above do not apply to it:
   `validators/designContractReadiness.ts` skips `QFAI-DCON-030`/`-033`/`-034` for it.
 - No design direction either: nothing downstream reads a theme for a surface that renders
   no tokens.
-- Conditions 2, 3, 4 and 7 apply unchanged: all three canonical `uiux/` sidecars, the
+- UI-bearing items 2, 3 and 4 and All Packs item 3 apply unchanged: all three canonical `uiux/` sidecars, the
   full screen-contract schema, unranked exploration directions, and zero open OQs.
 - `route:` on a `cli` screen contract names the command invocation, not a web path, as the `cli` section of the UI-bearing playbook sets out.
 - No `prototyping.yaml`: `cli` is not a valid prototyping execution surface.
