@@ -584,6 +584,101 @@ describe("a global install names where the package comes from", () => {
     }
   });
 
+  for (const [label, flags] of [
+    [
+      "a later --ignore-scripts=false that overrides an earlier true",
+      "--ignore-scripts --ignore-scripts=false",
+    ],
+    ["an earlier false followed by a true", "--ignore-scripts=false --ignore-scripts"],
+    ["the same flag twice", "--ignore-scripts --ignore-scripts"],
+    ["a negated flag after the flag", "--ignore-scripts --no-ignore-scripts"],
+    ["a negated flag before the flag", "--no-ignore-scripts --ignore-scripts"],
+    ["the flag and then its spaced false", "--ignore-scripts --ignore-scripts false"],
+  ] as const) {
+    it(`reports a repeated --ignore-scripts, because npm takes the last one: ${label}`, () => {
+      // The first occurrence is not the effective value. A check that reads only it accepts
+      // `--ignore-scripts --ignore-scripts=false`, which npm resolves to scripts enabled. A
+      // repeat is refused rather than resolved, as a repeated `--registry` is.
+      const dir = plantedTree((d) => {
+        editWorkflow(d, firstContext(d).workflow, (text) => {
+          const anchor = "      - name: Run build & pack verification\n";
+          if (!text.includes(anchor)) throw new Error("the build-verify step anchor is stale");
+          return text.replace(
+            anchor,
+            `      - name: Bootstrap something\n        run: npm install --global ${flags} --registry https://registry.npmjs.org/ corepack@0.35.0\n` +
+              anchor,
+          );
+        });
+      });
+      try {
+        const run = runLane(dir);
+        expect.soft(run.exitCode, `${label} must exit 1:\n${run.output}`).toBe(1);
+        expect.soft(run.output, "the finding must name the rule").toContain("global-install-pin");
+        expect
+          .soft(run.output, "the finding must say npm takes the last one")
+          .toMatch(/one --ignore-scripts \(found 2, and npm takes the last/);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+  }
+
+  for (const [label, flags] of [
+    ["--no-ignore-scripts alone", "--no-ignore-scripts"],
+    ["a double-quoted false", '--ignore-scripts="false"'],
+    ["a single-quoted false", "--ignore-scripts='false'"],
+    ["a spaced false", "--ignore-scripts false"],
+    ["a zero", "--ignore-scripts=0"],
+  ] as const) {
+    it(`reports a single flag that does not ignore scripts: ${label}`, () => {
+      const dir = plantedTree((d) => {
+        editWorkflow(d, firstContext(d).workflow, (text) => {
+          const anchor = "      - name: Run build & pack verification\n";
+          if (!text.includes(anchor)) throw new Error("the build-verify step anchor is stale");
+          return text.replace(
+            anchor,
+            `      - name: Bootstrap something\n        run: npm install --global ${flags} --registry https://registry.npmjs.org/ corepack@0.35.0\n` +
+              anchor,
+          );
+        });
+      });
+      try {
+        const run = runLane(dir);
+        expect.soft(run.exitCode, `${label} must exit 1:\n${run.output}`).toBe(1);
+        expect.soft(run.output, "the finding must name the rule").toContain("global-install-pin");
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+  }
+
+  for (const [label, flags] of [
+    ["a single --ignore-scripts", "--ignore-scripts"],
+    ["--ignore-scripts=true", "--ignore-scripts=true"],
+    ["a spaced true", "--ignore-scripts true"],
+    ["a quoted true", '--ignore-scripts="true"'],
+  ] as const) {
+    it(`accepts ${label}`, () => {
+      const dir = plantedTree((d) => {
+        editWorkflow(d, firstContext(d).workflow, (text) => {
+          const anchor = "      - name: Run build & pack verification\n";
+          if (!text.includes(anchor)) throw new Error("the build-verify step anchor is stale");
+          return text.replace(
+            anchor,
+            `      - name: Bootstrap something\n        run: npm install --global ${flags} --registry https://registry.npmjs.org/ corepack@0.35.0\n` +
+              anchor,
+          );
+        });
+      });
+      try {
+        const run = runLane(dir);
+        expect.soft(run.exitCode, `${label} must not be a finding:\n${run.output}`).toBe(0);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+  }
+
   it("accepts the trusted registry in either spelling, and a trailing slash either way", () => {
     // The control, in the two forms a shell writer actually uses. A rule accepting only one
     // of `--registry x` and `--registry=x` would be a rule this repository could not carry,
