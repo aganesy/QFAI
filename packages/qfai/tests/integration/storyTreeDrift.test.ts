@@ -985,6 +985,79 @@ describe("story-tree drift", () => {
     expect(findings.some((item) => item.code === "QFAI-STORY-010")).toBe(false);
   });
 
+  // QFAI:AC-0001-0007-05
+  // QFAI:EX-0001-0007-28
+  it("keeps every normal consumer in force around a surplus-copy correction", async () => {
+    const original = "| DEC-0001 | Original choice | Reason | DONE |\n";
+    const second = "| DEC-0002 | Second choice | Reason | TODO |\n";
+    const authority = `| DEC-0003 | Change request: ${decisions} | Approved | WIP |\n`;
+    const structureFindings = (rows: string) =>
+      validateStoryTreeStructureModel(
+        buildStoryTreeModel(
+          new Map([
+            [
+              `${specs}/02_business-flow/business-flows.md`,
+              "| BF-ID | Flow | Path |\n| --- | --- | --- |\n",
+            ],
+            [decisions, `${table}${rows}`],
+            [`${specs}/open-questions.md`, table],
+          ]),
+          { specsDir: specs, contractsDir: `${specs}/03_contract` },
+        ),
+      );
+    const driftMessages = async () =>
+      (await validateStoryTreeDrift(root, config(), "drift")).map(({ code, message }) => ({
+        code,
+        message,
+      }));
+
+    // The duplicate check still rejects the merge-added copy; nothing exempts it.
+    const duplicate = structureFindings(original + original + second);
+    expect(duplicate).toContainEqual(
+      expect.objectContaining({
+        code: "QFAI-STORY-002",
+        message: expect.stringContaining("DEC-0001 is defined more than once"),
+      }),
+    );
+    expect(structureFindings(original + second)).toEqual([]);
+
+    await put(decisions, `${table}${original}${second}`);
+    git("add", ".");
+    git("commit", "-m", "base");
+    git("checkout", "-b", "topic");
+
+    // With the surplus copy present, the positional comparison still reports the shifted row.
+    await put(decisions, `${table}${original}${original}${second}${authority}`);
+    git("add", ".");
+    git("commit", "-m", "merge-added copy");
+    expect(await driftMessages()).toContainEqual(
+      expect.objectContaining({
+        code: "QFAI-STORY-010",
+        message: expect.stringContaining("DEC-0002 id changed"),
+      }),
+    );
+
+    // One retained original leaves nothing to report, and a Status-only change stays valid.
+    await put(decisions, `${table}${original}${second.replace("TODO", "DONE")}${authority}`);
+    git("add", ".");
+    git("commit", "-m", "surplus removed and status advanced");
+    expect(await driftMessages()).toEqual([]);
+
+    // Unrelated drift is still diagnosed after the correction; it is no waiver.
+    await put(
+      decisions,
+      `${table}${original}${second.replace("Second choice", "Reworded choice")}${authority}`,
+    );
+    git("add", ".");
+    git("commit", "-m", "unrelated rewrite");
+    expect(await driftMessages()).toContainEqual(
+      expect.objectContaining({
+        code: "QFAI-STORY-010",
+        message: expect.stringContaining("DEC-0002 content changed"),
+      }),
+    );
+  });
+
   // QFAI:AC-0001-0007-02
   // QFAI:AC-0001-0054-01
   // QFAI:EX-0001-0007-08
