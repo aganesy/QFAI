@@ -89,6 +89,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The verify gate says which Validate command wins.** When a project's
+  `Validate` entry runs a partial profile (its output carries
+  `QFAI-PROFILE-001`), `verify-qfai-gate` no longer treats it as the gate: it
+  records the entry's result as a signal, runs
+  `npx qfai validate --profile verify --fail-on error` as well, and passes or
+  fails on that run. Fixes #3555.
+
 - **A misplaced trace mark says how to repair it.** The `QFAI-STORY-007` error
   for a `QFAI:BF-`, `QFAI:AC-` or `QFAI:EX-` annotation in a test of the wrong
   layer now says to keep the annotation only in a test of the layer it belongs
