@@ -29,6 +29,9 @@ stages:
     after: [note]
 decisionPoints: []
 branchPoints:
+  - step: implement-quarantine
+    outcomes:
+      - { outcome: failing-consistently, routes: decision-table }
   - step: implement-diagnose
     outcomes:
       - { outcome: product-race, routes: [fix-intermittent] }
