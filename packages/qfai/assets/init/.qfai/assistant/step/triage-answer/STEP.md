@@ -25,8 +25,8 @@ Answers a question about the project from what the project already says.
 2. Cite each source it rests on: a document section, a file and line, or an
    evidence record. An answer with no source is a guess, and is not given.
 3. Where a source is missing or wrong, such as an option the documentation
-   never mentions, record it as a follow-up for `triage-close`. Do not fix it
-   here.
+   never mentions, record it as a follow-up for `triage-close`, or for the
+   final report where no close step follows. Do not fix it here.
 
 ## What it writes
 

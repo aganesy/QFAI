@@ -1,0 +1,11 @@
+route: run-operation
+family: upkeep
+stages:
+  - id: operate
+    kind: triage
+    steps: [triage-operate]
+decisionPoints: []
+branchPoints:
+  - step: triage-operate
+    outcomes:
+      - { outcome: needs-change, routes: decision-table }

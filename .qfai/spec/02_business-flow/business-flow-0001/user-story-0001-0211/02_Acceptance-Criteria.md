@@ -20,7 +20,8 @@ Feature: Route a request through a fixed decision table
     And `owned-temporary-cleanup` is accepted only on an `order` reading with no shared artifacts, including every alternative
     And the qualifier records existing authority for named repository-local Git-ignored temporary directories with current task ownership, authorized bounds and all required permissions; empty artifacts, ignored status or tool availability alone do not establish it
     And valid qualified orders reach the owned-cleanup route only after the existing safety, fixed-signal, human-run and release priorities
-    And ordinary orders without that qualifier keep their existing settled-action route, even with empty artifacts
+    And ordinary orders without that qualifier and with no artifacts route the operation route, and an order that names artifacts keeps the settled-action route
+    And a question the session can answer, marked `session-answerable`, routes the session-answer route
 
   # AC-0001-0211-03
   Scenario: Every extraction reaches exactly one route

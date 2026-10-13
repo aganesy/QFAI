@@ -23,8 +23,8 @@ Feature: Install or upgrade and get the free-text entry
     Then no skill directory reached through a host skills directory contains `agents/openai.yaml`
 
   # AC-0001-0196-03
-  Scenario: Init writes no line that sends a request to `qfai-run` into `AGENTS.md` or `CLAUDE.md`
-    Given a fresh project, or a project whose `AGENTS.md` and `CLAUDE.md` exist
+  Scenario: Init writes no line that sends a request to `qfai-run` into `AGENTS.md`
+    Given a fresh project, or a project whose `AGENTS.md` exists
     When `qfai init` runs
     Then the seeded files open with their heading and carry no line that sends a request to `qfai-run`
     And an existing file gains no such line, and its text and line endings are kept
@@ -100,6 +100,7 @@ Feature: Install or upgrade and get the free-text entry
     And the API-budget reminder fires only for a shell command that names the forge's CLI or its API host
     And in each host that supports their event, the API-budget, three grilling, minimal-implementation and documentation-clarity after-write/edit keys print the full message on their first eligible invocation and a one-line reminder on every later invocation, using the existing counter for each session, optional agent and key
     And the brief implementation reminder points to the implementation rule, its non-removable floor and the interface rule, and the brief documentation reminder points to the writing rule
+    And no brief reminder tells the agent to read its file again, and a full reminder that asks for its rule or skill to be read asks for it once per session
     And command filters run before counting, so a skipped call consumes no first display
     And a new session, agent or key starts its own sequence; missing session identity or counter-storage failure prints the full message and exits 0
     And the documentation-clarity reminder before a post prints in full on every eligible post, and the other reminder schedules, hook envelopes and exit behavior stay unchanged
@@ -133,4 +134,37 @@ Feature: Install or upgrade and get the free-text entry
     When `qfai init` runs
     Then `.gitattributes` sets `merge=union` on `.qfai/spec/decisions.md` and `.qfai/spec/open-questions.md`, and on no other path
     And an existing `.gitattributes` is left as it is
+
+  # AC-0001-0196-16
+  Scenario: Init generates a preparation entry without operating the environment
+    Given a fresh project or an upgrade with an edited assistant-tree entry
+    When `qfai init` runs normally, with `--force` or with `--dry-run`
+    Then it supplies `.qfai/assistant/skill/qfai-run/scripts/codex-cloud-install.mjs` and supported setup instructions through the existing assistant-tree rules
+    And the plain upgrade keeps project edits, the forced upgrade uses the existing replacement rules and the dry run writes nothing
+    And no run executes installation, configures a host or publishes an environment
+    And no generic SessionStart installation group is added
+
+  # AC-0001-0196-17
+  Scenario: Explicit native preparation gates planning in the intended checkout
+    Given covered authority for the project-declared command and its lifecycle scripts
+    When the generated entry is invoked as `node .qfai/assistant/skill/qfai-run/scripts/codex-cloud-install.mjs --cwd <absolute-checkout> -- <executable> [argument...]`
+    Then it requires the explicit absolute intended-checkout cwd, separator and native executable, refusing missing or malformed inputs and unknown options before spawning
+    And the executable receives its separate argv at that cwd without shell or Markdown parsing, manager inference or a substituted install command
+    And successful installation requires the existing canonical launcher proof in that same checkout, including the existing declared-qfai PnP confirmation where applicable
+    And unavailable tools, spawn errors, signals, nonzero installation, observed timeout and unavailable or failed canonical proof retain the actual failure reason and block dependent planning
+    And a pre-existing launcher cannot erase an install failure and no remote, cached or parent-checkout launcher replaces the target proof
+    And only successful installation and canonical proof permit an exit-0 preparation result
+    And the entry starts no plan, while the Start skill checks preparation and canonical proof before dependent planning without an implied retry
+    And missing covered authority stops execution under the existing rules, and readiness proves neither global validation nor formal workflow completion
+
+  # AC-0001-0196-18
+  Scenario: Setup guidance keeps lifecycle, evidence and trust boundaries explicit
+    Given generated preparation assets and native CI receipts without actual Cloud setup receipts
+    When the operator follows the setup guidance or reports preparation evidence
+    Then current support for the environment-owned Install script and Start skill is checked before real configuration
+    And saving configuration, preparing and publishing a filesystem for new tasks, refresh without rerunning installation or startup, and existing tasks keeping their own state remain distinct
+    And generation, actual controlled native CI and actual Cloud configuration, publication or task execution are separate proof scopes
+    And native CI exercises the actual generated entry and records its actual command, argv, cwd and exit or signal and canonical outcome without exposing secrets
+    And fixture success cannot prove actual host startup, which remains unobserved without its own receipts
+    And existing reminder-only exit-0 behavior, user-edited hook merges, linked-path and unreadable-file handling, review and trust guidance and all command, network, secret and publication authority remain unchanged
 ```
