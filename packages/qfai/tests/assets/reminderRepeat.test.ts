@@ -301,9 +301,18 @@ describe.each(SETTINGS)("%s sends full context first and pointers on later tool 
         "<task-notification>Done</task-notification>",
         '<wake reason="external-event">CI finished</wake>',
         "[SYSTEM NOTIFICATION - NOT USER INPUT]\nCI finished",
+        "<ci-monitor-event>\nbuild passed</ci-monitor-event>",
+        // A marker on a later line of a CRLF-separated prompt is still a line-opening marker.
+        "Status follows.\r\n<ci-monitor-event>\r\nbuild passed",
       ]) {
         expect(await call(rel, entry, { session_id, prompt })).toBe("");
       }
+      // The markers are case-sensitive: a differently cased wrapper is an ordinary prompt.
+      const cased = await call(rel, entry, {
+        session_id: newSession(),
+        prompt: "<CI-Monitor-Event>\nbuild",
+      });
+      expect(contextOf(cased)).toBe(await fullContext(key));
       expect(
         contextOf(await call(rel, entry, { session_id, prompt: "Fix the failing test" })),
       ).toBe(await fullContext(key));
