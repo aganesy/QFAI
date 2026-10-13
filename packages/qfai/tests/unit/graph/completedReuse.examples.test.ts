@@ -5,6 +5,7 @@ import { expect, it } from "vitest";
 import { restoreCompletedCodeAnalysis } from "../../../src/core/graph/reuse.js";
 import {
   completedCodeSnapshotFixture,
+  completedDocumentSnapshotFixture,
   localCodeGenerationProcess,
 } from "../../helpers/graphReuse.js";
 import { prepareCodeAnalysis } from "../../../src/core/graph/codePreparation.js";
@@ -12,6 +13,26 @@ import { graphAnalysisRoot } from "../../../src/core/graph/layout.js";
 import { documentAnalysisFixture, graphifyExtractionFixture } from "../../helpers/graphAnalysis.js";
 import { prepareDocumentAnalysis } from "../../../src/core/graph/documents.js";
 import { graphReuseEnvironment } from "../../../src/core/graph/reuse.js";
+
+// QFAI:EX-0001-0236-03
+it("retains completed local document analysis when snapshot restoration is unsupported", async () => {
+  const fixture = await completedDocumentSnapshotFixture({
+    ...graphReuseEnvironment(),
+    platform: "linux",
+    architecture: "x64",
+  });
+  try {
+    expect(fixture.preparedReuse).toBe("unavailable");
+    expect(
+      JSON.parse(
+        await readFile(path.join(fixture.documentAnalysis, "graphify-out", "graph.json"), "utf8"),
+      ),
+    ).toMatchObject({ nodes: [{ id: "requirement" }], edges: [] });
+    expect(fixture.observed).toEqual([]);
+  } finally {
+    await fixture.dispose();
+  }
+});
 
 // QFAI:EX-0001-0236-01
 // Mutation: packages/qfai/src/core/graph/documentReuse.ts `if (await inspect(staged, true)) {` -> `if (!(await inspect(staged, true))) {` fails "publishes and independently restores a completed document graph after native freshness checks"
