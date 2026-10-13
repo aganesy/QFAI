@@ -1805,7 +1805,7 @@ function instancesOf(job) {
 /**
  * What a code-path pull request costs: every job runs, so this counts the whole tree.
  *
- * Three figures, and each is derivable by READING the tree rather than by evaluating a GitHub
+ * Four figures, and each is derivable by READING the tree rather than by evaluating a GitHub
  * expression — which is the property that makes them enforceable here, because this lane
  * deliberately evaluates none:
  *
@@ -1815,7 +1815,7 @@ function instancesOf(job) {
  * - `installInstances`, the instances that run the toolchain action, which performs one
  *   frozen-lockfile install each.
  * - `buildJobs`, the jobs that DECLARE a build step. Jobs rather than instances, and that is a
- *   limit stated rather than hidden: two of the three condition their build step on the matrix
+ *   limit stated rather than hidden: two jobs condition their build step on the matrix
  *   leg, so an instance count needs `matrix.slice == 'e2e' || matrix.slice == 'integration'`
  *   evaluated, and this lane evaluates no expression. The jobs figure still moves when a build
  *   is added to or removed from a job, which is the change a pin has to catch.

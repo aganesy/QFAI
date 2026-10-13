@@ -2,11 +2,11 @@
 // order and takes the route of the first that holds, so the same extraction always gives the
 // same route. Within a rule, the clauses are tried in order too.
 
-import type { RoutingReading } from "./extraction.js";
+import type { Artifact, RoutingReading } from "./extraction.js";
 import type { WorkflowRoute } from "./routes.js";
 
-// A reading as the rules read it.
-export type RuleInput = RoutingReading;
+// A reading as the rules read it, with the artifacts every reading shares.
+export type RuleInput = RoutingReading & { artifacts: readonly Artifact[] };
 
 interface Clause {
   holds: (input: RuleInput) => boolean;
@@ -88,6 +88,12 @@ export const DECISION_RULES: readonly DecisionRule[] = [
     8,
     clause(
       (input) =>
+        is("question-how", "question-why", "question-help")(input) &&
+        qualified(input, "session-answerable"),
+      "answer-in-session",
+    ),
+    clause(
+      (input) =>
         is("question-how")(input) ||
         (is("question-help")(input) && qualified(input, "docs-answerable")),
       "answer-question",
@@ -126,6 +132,8 @@ export const DECISION_RULES: readonly DecisionRule[] = [
         flag(input, "upstream") && qualified(input, "settled-design") && prototypeChange(input),
       "apply-settled-prototype",
     ),
+    // An order that names nothing to change only carries out an operation.
+    clause((input) => is("order")(input) && input.artifacts.length === 0, "run-operation"),
     clause(
       (input) =>
         is("order")(input) || (flag(input, "upstream") && qualified(input, "settled-design")),
