@@ -88,7 +88,8 @@ Feature: Unified SDD Workflow
   Scenario: A Pre-draft Grilling Checkpoint Precedes Each Design Write
     Given an invocation of `/qfai-sdd` about to write in a design-writing stage,
     When the stage makes its first story-tree write,
-    Then a delegated grilling checkpoint has settled that stage's open decisions, a critical one by the user's answer.
+    Then a grilling checkpoint has gathered that stage's open decisions, and a delegated session has settled each one the repository cannot settle, a critical one by the user's answer.
+    And a checkpoint that finds no open decision holds no session and starts no griller.
     And the final report lists each decision the checkpoint adopted, with its reason.
 
   # AC-0001-0147-16
