@@ -130,7 +130,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   conditions of the compared run, to count a chain of failures once, and to run
   alone the files that hold a new failure, leaving a failure that passes alone
   out of the comparison. The baseline stays `same`, `different` or `unrun` and
-  the verdict stays `FAIL`; no state or field is added.
+  the verdict stays `FAIL`; no state or field is added. Refs #3653: the
+  guidance half only.
 
 - **The prototyping preflight says what `qfai doctor` probes at the target URL.**
   `prototyping-preflight` now states that doctor sends one `GET` to exactly the
