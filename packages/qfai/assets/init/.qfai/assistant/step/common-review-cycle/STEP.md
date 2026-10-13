@@ -33,13 +33,13 @@ them; it is the procedure that applies them.
     to the code, tests or styles that render one;
   - no other reviewer. A stage the plan marks with no review gets none.
 
-  A merge or a branch update whose only edits resolve conflicts between sides
-  that were each already reviewed gets no reviewer at any review. A side is
-  reviewed when it is on the default branch or a review of this route or its
-  pull request covered its commits. A resolution that adds content neither side
-  had is not conflict-only. The stage report names the merge and why no
-  reviewer ran. A parent skill invoked by name uses the reviewers its own
-  `## Review` section names, such as `qfai-discussion`'s.
+  A review whose target's only edits resolve the conflicts of a merge or a
+  branch update between sides that were each already reviewed gets no
+  reviewer. A side is reviewed when it is on the default branch or a review of
+  this route or its pull request covered its commits. A resolution that adds
+  content neither side had is not conflict-only. The stage report names the
+  merge and why no reviewer ran. A parent skill invoked by name uses the
+  reviewers its own `## Review` section names, such as `qfai-discussion`'s.
 
 - **The review target.** The specification review: every path and ID the
   stage it follows wrote or changed, and the source it was written from. The

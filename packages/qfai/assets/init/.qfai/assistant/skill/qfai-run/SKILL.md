@@ -84,7 +84,8 @@ values plan nothing.
 6. **Review.** After a stage whose `review` is `spec`, `requirements-reviewer` reviews; for `code`,
    `implementation-reviewer`. Only a contract or screen change no earlier review read adds
    `architecture-reviewer` or `product-surface-reviewer`, as `common-review-cycle` lists; no one else
-   joins. A merge or branch update whose only edits resolve conflicts between reviewed sides gets no reviewer.
+   joins. A review whose target's only edits resolve the conflicts of a merge or branch update between
+   reviewed sides gets no reviewer.
    No agent reviews its own work; no step adds a review. Each returns PASS or REVISE.
    Fix or answer each finding once, with no re-review. Stop a step that exceeds the request.
 7. **Approvals.** Each approval of a specification change, a critical decision

@@ -50,9 +50,9 @@ Feature: Review a change twice: the specification before the code, and the code 
     And each reviewer reviews once in each review it joins, and none is rerun after a finding is fixed
 
   # AC-0001-0225-06
-  Scenario: A merge that only resolves conflicts between reviewed sides gets no review
-    Given a merge or a branch update whose only edits resolve conflicts between sides that were each already reviewed
-    When a review its route names is reached
+  Scenario: A review whose target only resolves conflicts between reviewed sides gets no reviewer
+    Given a review its route names whose target's only edits resolve the conflicts of a merge or a branch update between sides that were each already reviewed
+    When the review is reached
     Then no reviewer is dispatched
     And the review is still held, and the stage report names the merge and says no reviewer ran because the edits only resolve conflicts
     And a resolution that adds content neither side had is not conflict-only, and its reviews dispatch their reviewers

@@ -191,13 +191,13 @@ it("The surface reviewer joins only a review that reads a changed screen, not ev
 });
 
 // QFAI:EX-0001-0225-13
-it("A merge or branch update that only resolves conflicts between reviewed sides gets no reviewer, and the report says so", async () => {
+it("A review whose target only resolves conflicts between reviewed sides gets no reviewer, and the report says so", async () => {
   const { after } = await reviewerSet();
   const step = await shipped("step/common-review-cycle/STEP.md");
   const gate = flat(/## Gate([\s\S]*)$/.exec(step)?.[1] ?? "");
 
   expect(after).toMatch(
-    /^A merge or a branch update whose only edits resolve conflicts between sides that were each already reviewed gets no reviewer at any review\./,
+    /^A review whose target's only edits resolve the conflicts of a merge or a branch update between sides that were each already reviewed gets no reviewer\./,
   );
   expect(after).toContain("A resolution that adds content neither side had is not conflict-only.");
   expect(after).toContain("The stage report names the merge and why no reviewer ran.");
@@ -218,7 +218,7 @@ it("The entry skill's review step states the same count as the review step", asy
     "Only a contract or screen change no earlier review read adds `architecture-reviewer` or `product-surface-reviewer`, as `common-review-cycle` lists; no one else joins.",
   );
   expect(run).toContain(
-    "A merge or branch update whose only edits resolve conflicts between reviewed sides gets no reviewer.",
+    "A review whose target's only edits resolve the conflicts of a merge or branch update between reviewed sides gets no reviewer.",
   );
   expect(run).not.toMatch(/flows served by a UI contract/);
 });

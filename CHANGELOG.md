@@ -41,8 +41,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **The reviewer count follows what the change touched.** Each review of a
   route takes one reviewer for its kind. `architecture-reviewer` joins only
   for a contract change, and `product-surface-reviewer` only for a screen
-  change, that no earlier review read. A merge or branch update that only
-  resolves conflicts between already-reviewed sides gets no reviewer.
+  change, that no earlier review read. A review whose target only resolves
+  the conflicts of a merge or branch update between already-reviewed sides
+  gets no reviewer.
   Fixes #3578.
 
 ### Fixed
