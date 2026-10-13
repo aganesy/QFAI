@@ -21,7 +21,7 @@
  * that distinction, which is why both directions are exercised against a real
  * git history rather than a fixture.
  */
-import { spawnSync } from "node:child_process";
+import { spawnSync, type SpawnSyncReturns } from "node:child_process";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -40,9 +40,25 @@ interface RunResult {
   stderr: string;
 }
 
-function runGuard(cwd: string, args: readonly string[] = []): RunResult {
-  const child = spawnSync("node", [SCRIPT, ...args], { cwd, encoding: "utf-8" });
+/**
+ * What a finished guard process reports, or a thrown error naming why it has no verdict.
+ *
+ * A process that never started (`error`) or was ended by a signal comes back with a null
+ * status, which reads as a failure with no cause. Either is thrown with its actual cause
+ * before the usual status, stdout and stderr shape is returned.
+ */
+function guardResultOf(child: SpawnSyncReturns<string>): RunResult {
+  if (child.error !== undefined) {
+    throw new Error(`the guard did not run: ${child.error.message}`, { cause: child.error });
+  }
+  if (child.signal !== null) {
+    throw new Error(`the guard was ended by ${child.signal} before it gave a verdict`);
+  }
   return { status: child.status, stdout: child.stdout ?? "", stderr: child.stderr ?? "" };
+}
+
+function runGuard(cwd: string, args: readonly string[] = []): RunResult {
+  return guardResultOf(spawnSync("node", [SCRIPT, ...args], { cwd, encoding: "utf-8" }));
 }
 
 const tempDirs: string[] = [];
@@ -97,6 +113,40 @@ const CITATION = "an issue number a consuming repository cannot resolve";
  */
 const REVIEW_ID = `codex ${"AG08r"}`;
 const WRAPPED_REVIEW_ID = ["// as raised in the codex", `// ${"r3264500818"} thread`].join("\n");
+
+describe("the guard runner's diagnostics", () => {
+  it("names the launch failure instead of returning a cause-less null status", () => {
+    const missing = path.join(os.tmpdir(), "qfai-clarity-missing-directory");
+
+    expect(() => runGuard(missing)).toThrow(/the guard did not run: .*ENOENT/);
+  });
+
+  it("names the signal that ended the guard", () => {
+    const ended: SpawnSyncReturns<string> = {
+      pid: 0,
+      output: [null, "", ""],
+      stdout: "",
+      stderr: "",
+      status: null,
+      signal: "SIGKILL",
+    };
+
+    expect(() => guardResultOf(ended)).toThrow(/ended by SIGKILL/);
+  });
+
+  it("returns the usual shape for a guard that gave a verdict", () => {
+    const finished: SpawnSyncReturns<string> = {
+      pid: 1,
+      output: [null, "out", "err"],
+      stdout: "out",
+      stderr: "err",
+      status: 1,
+      signal: null,
+    };
+
+    expect(guardResultOf(finished)).toEqual({ status: 1, stdout: "out", stderr: "err" });
+  });
+});
 
 describe("scripts/check-doc-clarity.mjs", () => {
   it("reports an issue number in a source comment", async () => {
@@ -404,13 +454,46 @@ describe("scripts/check-doc-clarity.mjs", () => {
   });
 });
 
+/**
+ * The result of a guard run that reached a verdict: exit 0 (clean) or 1 (findings).
+ *
+ * Any other status is a usage or git error, or no run at all, and its output carries no
+ * findings to filter. Reading such a run as "no shipped finding" would pass a guard that
+ * never judged the tree, so it is thrown instead. A legitimate backlog failure (1) is kept.
+ */
+function requireVerdict(result: RunResult): RunResult {
+  if (result.status !== 0 && result.status !== 1) {
+    throw new Error(
+      `the guard gave no verdict (exit ${String(result.status)}): ${result.stderr.trim()}`,
+    );
+  }
+  return result;
+}
+
+describe("the guard verdict the shipped-surface check relies on", () => {
+  it("refuses a usage error as if it were a clean tree", () => {
+    const usageError = runGuard(REPO_ROOT, ["--scope", "no-such-scope"]);
+
+    expect(usageError.status).toBe(2);
+    expect(() => requireVerdict(usageError)).toThrow(/no verdict \(exit 2\)/);
+  });
+
+  it("accepts a clean verdict and a findings verdict", () => {
+    const clean: RunResult = { status: 0, stdout: "", stderr: "" };
+    const findings: RunResult = { status: 1, stdout: "", stderr: "a finding" };
+
+    expect(requireVerdict(clean)).toBe(clean);
+    expect(requireVerdict(findings)).toBe(findings);
+  });
+});
+
 describe("the shipped surface", () => {
   it("carries no identifier that resolves to nothing in a consuming repository", () => {
     // The rule's stated harm lands here and only here: everything under
     // `assets/init/**` is copied into a project that cannot resolve any of
     // these numbers. `src/**` and `tests/**` have the same rule and a backlog
     // the default scope handles; this surface is held at zero.
-    const result = runGuard(REPO_ROOT, ["--scope", "all"]);
+    const result = requireVerdict(runGuard(REPO_ROOT, ["--scope", "all"]));
 
     const shipped = [...result.stderr.split("\n"), ...result.stdout.split("\n")].filter((line) =>
       line.startsWith("packages/qfai/assets/"),
