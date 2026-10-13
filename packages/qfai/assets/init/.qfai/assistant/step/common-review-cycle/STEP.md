@@ -30,7 +30,9 @@ them; it is the procedure that applies them.
     no earlier review of the route read;
   - `product-surface-reviewer` too, only when the target holds a screen change
     no earlier review of the route read: an edit to a UI contract's screen, or
-    to the code, tests or styles that render one;
+    to the code, tests or styles that render one, or to a path `uiux.surfacePaths`
+    declares. An uncertain case counts as a screen change
+    (`.qfai/assistant/skill/qfai-implement/references/ui-affecting.md#routing`);
   - no other reviewer. A stage the plan marks with no review gets none.
 
   A review whose target's only edits resolve the conflicts of a merge or a

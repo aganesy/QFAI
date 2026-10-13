@@ -27,19 +27,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reference. An order that names artifacts still applies its settled change.
   Fixes #3574.
 
-- **The delegation baseline has notes for Codex sub-agents.** Under Codex,
-  the orchestrator reads them before it delegates: it gives a sub-agent a
-  self-contained brief with `fork_turns: "none"`, asks for one final answer and
-  no interim messages, waits with a `wait_agent` timeout of minutes, and never
-  polls with `sleep`, short `wait_agent` loops or `list_agents`. The notes live
-  in a reference file, so other hosts load nothing more. Fixes #3579.
+- **The delegation baseline has notes for Codex sub-agents.** Under Codex, the
+  orchestrator reads them before it delegates: it gives a sub-agent a
+  self-contained brief with `fork_turns: "none"`, asks for one final answer
+  and no interim messages, waits with a `wait_agent` timeout of minutes within
+  the tool's maximum, and never polls with `sleep`, short `wait_agent` loops
+  or `list_agents`. The notes live in a reference file, so other hosts load
+  nothing more. Fixes #3579.
 
 - The short extractions in `qfai-run` now state every field `plan` needs, and
   an operation only a person can run or a deletion goes through the full
   extraction reference again, so it keeps its hand-off or bounded cleanup.
-
-- `qfai-run` reads no reference up front: each pointer says when its reference
-  is read, so a run reads only what its request needs. Fixes #3575.
 
 - Add a workflow route for writing authorized operational procedures.
   It keeps wording-only edits separate, preserves policy owners and existing
@@ -51,10 +49,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **The reviewer count follows what the change touched.** Each review of a
   route takes one reviewer for its kind. `architecture-reviewer` joins only
   for a contract change, and `product-surface-reviewer` only for a screen
-  change, that no earlier review read. A review whose target only resolves
-  the conflicts of a merge or branch update between already-reviewed sides
-  gets no reviewer.
-  Fixes #3578.
+  change, that no earlier review read. A screen change covers a path
+  `uiux.surfacePaths` declares and a change whose effect on a screen is
+  uncertain. A review whose target only resolves the conflicts of a merge or
+  branch update between already-reviewed sides gets no reviewer. Fixes #3578.
 
 - **Generated Codex reviewer agents run at medium reasoning effort.** `qfai init` now writes
   `model_reasoning_effort = "medium"` into each `.codex/agents/<name>.toml` of `kind: reviewer`,
@@ -62,6 +60,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   parent session's, so a reviewer no longer inherits a high orchestrator effort. Worker profiles
   leave it unset and still inherit, and no profile sets `model`. Run `qfai init --force` to
   regenerate existing profiles. Fixes #3580.
+
+- `qfai-run` reads no reference up front: each pointer says when its reference
+  is read, so a run reads only what its request needs. Fixes #3575.
 
 ### Fixed
 

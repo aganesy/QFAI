@@ -53,6 +53,7 @@ describe.each(trees)("%s — Codex delegation notes", (tree) => {
     const brief = notes.get("Self-contained brief.") ?? "";
     expect(brief).toContain('Call `spawn_agent` with `fork_turns: "none"` and a `message`');
     expect(brief).toContain('`fork_turns` defaults to `"all"`');
+    expect(brief).toContain("`fork_context`");
 
     const answer = notes.get("One final answer, no interim messages.") ?? "";
     expect(answer).toContain("send no `send_message` updates");
@@ -60,12 +61,16 @@ describe.each(trees)("%s — Codex delegation notes", (tree) => {
 
     const wait = notes.get("Long wait.") ?? "";
     expect(wait).toContain("calls `wait_agent` with a `timeout_ms` of minutes");
-    expect(wait).toContain("not 10 to 60 seconds");
+    expect(wait).toContain("With no work of its own left");
+    expect(wait).toContain(
+      "of minutes within the maximum the tool states, such as `600000`, not 10 to 60 seconds.",
+    );
 
     const polling = notes.get("No polling.") ?? "";
     for (const forbidden of ["`sleep`", "short `wait_agent` calls", "`list_agents` calls"]) {
       expect(polling).toContain(forbidden);
     }
+    expect(polling).toContain("`followup_task`");
     expect(polling).toMatch(/^- \*\*No polling\.\*\* Never wait with /);
   });
 });

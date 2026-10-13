@@ -178,5 +178,10 @@ describe("a step with no open design decision starts no griller", () => {
       /\| Delegated +\| Any other stage, when it meets a design decision the request needs and the repository cannot settle +\| The authors, interviewed by a griller +\| Critical decisions only +\|/,
     );
     expect(text).toContain("A critical decision met on the way still goes to the user.");
+    // `sdd-triage` names no kind of session, so the default decides it.
+    expect(text).toContain("**Delegated is the default where a session is held.**");
+    expect(flat(await read("skill/qfai-grilling/SKILL.md"))).toContain(
+      "A stage that says nothing holds a delegated session where one is held.",
+    );
   });
 });

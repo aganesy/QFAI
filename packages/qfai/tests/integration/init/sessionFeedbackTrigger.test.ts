@@ -96,8 +96,13 @@ describe("the end of the run triggers the review", () => {
     );
   });
 
-  it("a report that pauses, or follows a review already run, runs no review", async () => {
+  it("a report with a task unfinished, the turn waiting on the user, or a review already run, runs no review", async () => {
     const report = flat(sectionOf(await readShipped(SCREENS), "## Final report"));
+    const trigger = /When the report (.+?), follow /.exec(report)?.[1] ?? "";
+    expect(trigger, "a task is unfinished").toContain("closes the user's last task");
+    expect(trigger, "the turn waits on the user").toContain(
+      "nothing waits on the user, with no question, approval or choice open",
+    );
     const pause = /A report (.+?) is a pause and runs no review/.exec(report)?.[1] ?? "";
     for (const kind of [
       "at a chosen scope",

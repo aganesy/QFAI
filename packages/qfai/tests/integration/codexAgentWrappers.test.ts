@@ -175,6 +175,7 @@ describe("qfai init generates the Codex agent profiles", () => {
       if (kind) kinds.add(kind);
       const profile = parseTomlDocument(await readFile(codexAgentPath(root, name), "utf-8"));
       expect("model" in profile, `${name}: no profile pins a model`).toBe(false);
+      expect(kind, `${name}: kind`).not.toBeNull();
       if (kind === "reviewer") {
         expect(profile["model_reasoning_effort"], `${name}: reviewer effort`).toBe("medium");
       } else {
