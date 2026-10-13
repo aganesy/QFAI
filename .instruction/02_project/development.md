@@ -235,7 +235,7 @@ Paths in code spans are relative to the repository root.
 | Hook events, matchers, readers | Shipped [Claude settings][settings] and [Codex hooks][codex]; repository copies are `.claude/settings.json` and `.codex/hooks.json`.                                            |
 | Hook identity and upgrades     | [Hook merge][merge] owns markers and earlier-group recognition; `packages/qfai/src/core/init/reminderHooks.ts` owns per-host write plans.                                       |
 | Reader payloads and filtering  | [Payload tests][payload] cover the current reader set; adjacent freeTextEntryHook, structuredQuestionHook, codexToolHooks and reminderRepeat tests cover delivery.              |
-| Stop-time session feedback     | [Feedback tests][feedback] cover reader filtering with synthetic input; [upgrade tests][upgrades] cover template upgrades.                                                      |
+| Session feedback trigger       | [Trigger tests][feedback] cover the hook files without a stop group and the final report that triggers the review; [upgrade tests][upgrades] cover template upgrades.           |
 | Shipped asset paths and bytes  | [Lane helper][lane] owns `ALLOWED_INIT_SOURCE_ASSETS` and `ALLOWED_INIT_CONTENT`; the layered scaffold E2E test reads those declarations.                                       |
 | A pinned guard or CI body      | `scripts/pin-guard-bytes.mjs` and `scripts/pin-verification-bodies.mjs` own resealing; `AGENTS.md` names the pinned files and recorded outputs.                                 |
 | A new TypeScript test file     | `packages/qfai/tsconfig.tests.json` owns the checked-file enumeration. Existing test files retain their nearby coverage.                                                        |
@@ -255,7 +255,7 @@ Paths in code spans are relative to the repository root.
 [lane]: ../../packages/qfai/tests/helpers/shippedLaneCommands.ts
 [contract]: ../../.qfai/spec/03_contract/cli/cli-0009-qfai-init.md
 [readmes]: ../../scripts/check-tracked-readmes.mjs
-[feedback]: ../../packages/qfai/tests/integration/init/sessionFeedbackHook.test.ts
+[feedback]: ../../packages/qfai/tests/integration/init/sessionFeedbackTrigger.test.ts
 [upgrades]: ../../packages/qfai/tests/cli/initClaudeCodeHooks.test.ts
 [workflow]: ../../.qfai/spec/03_contract/cli/cli-0015-qfai-workflow.md
 [clarity]: ../../scripts/check-doc-clarity.mjs

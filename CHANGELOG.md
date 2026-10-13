@@ -52,6 +52,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   fire. The brief form says what to do, and the full form asks for a rule to be
   read once per session. Fixes #3576.
 
+- **An ordinary turn end no longer costs an extra model call for the session
+  review.** `qfai init` no longer ships the `Stop` group marked
+  `QFAI session feedback reminder` in `.claude/settings.json` and
+  `.codex/hooks.json`, and `.agents/rules/reminders.json` no longer carries the
+  `session-feedback` message. The review now runs once, from `qfai-run`'s final
+  report, when it closes the user's last task and nothing waits on the user.
+  A project that installed the group keeps it after `qfai init`; delete it by
+  hand to stop the hook running. Fixes #3581.
+
 - **Discussion completion references point to the existing obligations.**
   The completion matrix names the All Packs and UI-bearing items it requires.
 

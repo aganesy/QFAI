@@ -1495,9 +1495,10 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // call. Events, matchers, markers and message keys are unchanged; the previous group is listed
   // as superseded so the merge refreshes it. Derived by running `qfai init` into a temp root and
   // hashing what it wrote.
-  // Re-pinned for the `Stop` group marked `QFAI session feedback reminder`. Removing the `Stop`
-  // event from the file reproduces `03325965…` byte for byte.
-  [".claude/settings.json", "f751cc6e4587be65e1341bb30fc8172b2506df805b5a256ebf151bc427fce730"],
+  // Re-pinned for the `Stop` group marked `QFAI session feedback reminder`, and again when it was
+  // removed: the file has no `Stop` event, and restoring that group reproduces `f751cc6e…` byte
+  // for byte. Derived the same way.
+  [".claude/settings.json", "da0e726996c0ec7306930b094eb6717afe5f9b76e6e8c1b378331e0f00b16ae6"],
   // Inside `.codex/`, and pinned for the reason `.claude/settings.json` is: its commands are a
   // program an adopter's agent runs. Two `UserPromptSubmit` groups, structured-question and
   // free-text entry. Codex takes one command string, so each runs the same `node -e` reader
@@ -1538,9 +1539,9 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // `node -e "<program>" <key>` line with no character a hook shell expands. Events, matchers,
   // markers and message keys are unchanged; the previous groups are listed as superseded so the
   // merge refreshes them. Derived the same way.
-  // Re-pinned for the same `Stop` group. Removing the `Stop` event reproduces `4eb4c36d…` byte
-  // for byte.
-  [".codex/hooks.json", "e973ebb8f2047f6a3e901b9adbe3e6299cda7cad77dfb12cccfab933cd936904"],
+  // Re-pinned for the same `Stop` group, and again when it was removed: restoring that group
+  // reproduces `e973ebb8…` byte for byte. Derived the same way.
+  [".codex/hooks.json", "524381d3026af9295c3706d59dd0018f24508cfc290e4cb3a8873c1f6f1c9938"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`

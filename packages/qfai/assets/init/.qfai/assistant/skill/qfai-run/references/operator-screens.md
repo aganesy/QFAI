@@ -327,6 +327,12 @@ reset, a stash, a branch switch or a worktree removal.
   in the shape `.agents/rules/user-questions.md` § 6 requires. A report that
   only states completion needs no question. Under a no-question mode, list any
   remaining actions without asking.
+- When the report closes the user's last task and nothing waits on the user,
+  with no question, approval or choice open, follow
+  `.agents/rules/session-feedback.md` once, after the report. A report at a
+  chosen scope, at a halt, with a gate failing or CI pending, or with a question
+  is a pause and runs no review, and neither does a report after the review
+  already ran for the user's latest instruction.
 
 ## Work orders summary
 
