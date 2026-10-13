@@ -1335,17 +1335,34 @@ function expansionAt(text, at) {
       : { end: close + 2, terminated: true };
   }
   if (two === "${") {
+    // The text between the braces is returned as `inner` as well: a parameter expansion runs the
+    // commands in its default and substitute words (`${X:-$(npm i -g …)}`), so they are commands
+    // of the line. Reading too much as a command can only add a finding.
     let depth = 1;
     for (let i = at + 2; i < text.length; i += 1) {
       const c = text.charAt(i);
-      if (c === "\\") i += 1;
-      else if (c === "{") depth += 1;
-      else if (c === "}") {
+      if (c === "\\") {
+        i += 1;
+      } else if (c === "'") {
+        const close = text.indexOf("'", i + 1);
+        if (close === -1) break;
+        i = close;
+      } else if (c === '"') {
+        for (i += 1; i < text.length && text.charAt(i) !== '"'; i += 1) {
+          if (text.charAt(i) === "\\") i += 1;
+        }
+      } else if ((c === "$" && text.charAt(i + 1) === "(") || c === "`") {
+        // Skipped whole, so a brace inside a substitution does not close this expansion early.
+        const nested = expansionAt(text, i);
+        if (nested !== undefined) i = nested.end - 1;
+      } else if (c === "{") {
+        depth += 1;
+      } else if (c === "}") {
         depth -= 1;
-        if (depth === 0) return { end: i + 1, terminated: true };
+        if (depth === 0) return { end: i + 1, terminated: true, inner: text.slice(at + 2, i) };
       }
     }
-    return { end: text.length, terminated: false };
+    return { end: text.length, terminated: false, inner: text.slice(at + 2) };
   }
   if (two === "$(" || two === "<(" || two === ">(") {
     let depth = 1;
@@ -1388,6 +1405,15 @@ function expansionAt(text, at) {
 }
 
 /**
+ * How many substitutions deep `commandSegments` reads. Past it the line is not read further and
+ * `commandSegments` returns `NESTING_LIMIT`, which the global-install rule reports as a finding:
+ * a line nested deeper than this is not one this lane can vouch for, and recursing without a bound
+ * lets a hostile line exhaust the stack instead of producing a finding.
+ */
+const MAX_SUBSTITUTION_DEPTH = 32;
+const NESTING_LIMIT = "\u0000nesting-limit";
+
+/**
  * Every command in one command line: the text between `&&`, `||`, `;`, `&` and pipes, and the
  * commands inside the command substitutions, process substitutions and backticks of each.
  *
@@ -1403,7 +1429,11 @@ function expansionAt(text, at) {
  */
 function commandSegments(line) {
   const out = [];
-  const visit = (text) => {
+  const visit = (text, depth) => {
+    if (depth > MAX_SUBSTITUTION_DEPTH) {
+      out.push(NESTING_LIMIT);
+      return;
+    }
     let current = "";
     const flush = () => {
       if (current.trim() !== "") out.push(current.trim());
@@ -1432,7 +1462,7 @@ function commandSegments(line) {
             end += 1;
             continue;
           }
-          if (expansion.inner !== undefined) visit(expansion.inner);
+          if (expansion.inner !== undefined) visit(expansion.inner, depth + 1);
           end = expansion.end;
         }
         end = Math.min(end + 1, text.length);
@@ -1441,7 +1471,7 @@ function commandSegments(line) {
       } else {
         const expansion = expansionAt(text, at);
         if (expansion !== undefined) {
-          if (expansion.inner !== undefined) visit(expansion.inner);
+          if (expansion.inner !== undefined) visit(expansion.inner, depth + 1);
           current += text.slice(at, expansion.end);
           at = expansion.end;
         } else if (text.startsWith("&&", at) || text.startsWith("||", at)) {
@@ -1458,7 +1488,7 @@ function commandSegments(line) {
     }
     flush();
   };
-  visit(line);
+  visit(line, 0);
   return out;
 }
 
@@ -1766,6 +1796,9 @@ function flagOccurrences(options, flag, shortest, takesSpacedValue) {
  * reader of the diff can see where the package came from. A body that reaches a registry some
  * other way — `curl | sh`, a vendored tarball — is outside what this rule can see and inside what
  * the verification-body digest already pins.
+ *
+ * Known limits: a command run through `sh -c`, `bash -c` or `eval`, a `case` pattern list, and
+ * anything after a `#` inside a quoted string (the comment strip is line-based) are not read.
  */
 function checkGlobalInstallPins(root, jobs) {
   const findings = [];
@@ -1774,6 +1807,15 @@ function checkGlobalInstallPins(root, jobs) {
       if (!isRecord(step)) continue;
       const body = typeof step.run === "string" ? step.run : "";
       for (const line of shellCommandLines(body).flatMap(commandSegments)) {
+        if (line === NESTING_LIMIT) {
+          findings.push({
+            rule: "global-install-pin",
+            file: site.file,
+            job: site.job,
+            detail: `nests command substitutions more than ${String(MAX_SUBSTITUTION_DEPTH)} levels deep, which this lane does not read — an install inside could run unpinned, and a line that deep is not one a reviewer can vouch for either`,
+          });
+          continue;
+        }
         const options = globalInstallOptions(line);
         if (options === undefined) continue;
         const missing = [];

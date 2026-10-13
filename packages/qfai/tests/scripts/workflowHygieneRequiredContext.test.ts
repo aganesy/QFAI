@@ -950,6 +950,63 @@ describe("a global install names where the package comes from", () => {
       "FOO=$(x y) npm -g i corepack@0.35.0",
       /without --registry and --ignore-scripts/,
     ],
+    // A parameter expansion runs the commands in its default and substitute words.
+    [
+      "an install in the default word of a parameter expansion",
+      "echo ${X:-$(npm i -g corepack@0.35.0)}",
+      /without --registry and --ignore-scripts/,
+    ],
+    [
+      "an install in the default word of a double-quoted parameter expansion",
+      'echo "${X:-$(npm i -g corepack@0.35.0)}"',
+      /without --registry and --ignore-scripts/,
+    ],
+    [
+      "an install in the assigned word of a parameter expansion",
+      "x=${X:=$(npm i -g corepack@0.35.0)}",
+      /without --registry and --ignore-scripts/,
+    ],
+    [
+      "an install in the substitute word of a parameter expansion",
+      "echo ${X:+$(npm i -g corepack@0.35.0)}",
+      /without --registry and --ignore-scripts/,
+    ],
+    [
+      "an install in the pattern of a parameter expansion",
+      "echo ${X%$(npm i -g corepack@0.35.0)}",
+      /without --registry and --ignore-scripts/,
+    ],
+    [
+      "an install in nested parameter expansions",
+      "echo ${X:-${Y:-$(npm i -g corepack@0.35.0)}}",
+      /without --registry and --ignore-scripts/,
+    ],
+    [
+      "an install in backticks inside a parameter expansion",
+      "echo ${X:-`npm i -g corepack@0.35.0`}",
+      /without --registry and --ignore-scripts/,
+    ],
+    [
+      "an install after a brace that sits inside a substitution in a parameter expansion",
+      "echo ${X:-$(echo }; npm i -g corepack@0.35.0)}",
+      /without --registry and --ignore-scripts/,
+    ],
+    // Nesting is bounded: past the bound the lane reports it instead of recursing until the stack ends.
+    [
+      "a very long run of unterminated command substitutions",
+      `echo ${"$(".repeat(5000)}`,
+      /nests command substitutions/,
+    ],
+    [
+      "a very long run of unterminated quoted command substitutions",
+      `echo ${'"$('.repeat(5000)}`,
+      /nests command substitutions/,
+    ],
+    [
+      "a very long run of unterminated process substitutions",
+      `echo ${"<(".repeat(5000)}`,
+      /nests command substitutions/,
+    ],
     // A value the shell computes can be `false`, however it is written.
     [
       "a command substitution as the spaced --ignore-scripts value",
@@ -1029,6 +1086,11 @@ describe("a global install names where the package comes from", () => {
     ["a message that quotes an unpinned install", 'echo "run npm i -g corepack@0.35.0"'],
     ["a single-quoted command substitution, which is data", "echo '$(npm i -g corepack@0.35.0)'"],
     ["a pinned install in a command substitution", `x=$(npm i -g ${PINNED} corepack@0.35.0)`],
+    [
+      "a pinned install in the default word of a parameter expansion",
+      `echo \${X:-$(npm i -g ${PINNED} corepack@0.35.0)}`,
+    ],
+    ["a plain parameter expansion", "echo ${X} ${Y:-fallback}"],
     [
       "a long package argument built from variables, which must not stall the lane",
       `npm i -g ${PINNED} ${"$X-".repeat(5000)}`,
