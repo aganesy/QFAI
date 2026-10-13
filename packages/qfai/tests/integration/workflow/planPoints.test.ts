@@ -180,6 +180,14 @@ it("quarantine-flaky moves on a product race and continues on a defective test",
   ]).toEqual([["fix-intermittent"], undefined]);
 });
 
+// QFAI:EX-0001-0215-17
+it("quarantine-flaky plans a test that fails every run through the decision rules, which give repair-test", async () => {
+  expect([
+    destinations(await planned("quarantine-flaky"), "implement-quarantine", "failing-consistently"),
+    await routeOf({ intent: "test-defect" }),
+  ]).toEqual(["decision-table", "repair-test"]);
+});
+
 // QFAI:EX-0001-0215-07
 it("refactor-code moves on a behaviour change only to the destinations it declares", async () => {
   const routes = destinations(
