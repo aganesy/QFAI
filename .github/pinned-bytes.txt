@@ -14,11 +14,11 @@
 #
 # `sha256sum -c` format, so the pre-flight needs no parser: two spaces between the digest and
 # the path, paths relative to the repository root.
-38dcdd7ba28a4812ef0719baf5ccfac23bfd3c39a3049e7420fc4caeac7b76ca  .github/actions/setup/action.yml
+870813bb20aadb817b3496f70f6bdb8bb2e8142f1e5e621efe0751b0eacfed19  .github/actions/setup/action.yml
 3230335c2f0bc71bfcec72150d56fd51dc30524ca0fb35405197054709bd13b5  .github/actions/setup/dependency-builds.txt
 81c83080bfbae274d46c90cdae9f9ae3dd3af6240fe56fc88aec461799802ae3  .github/actions/setup/verify-rebuild-sources.mjs
 c7e77af42feef0a61951955d0a7b2cb0d0554e0da4ee9870d92145cf84f923ff  scripts/bootstrap.mjs
-d21a6494add3ec56066a0a756b02060e6082e878cb413c3df812b864518b0497  scripts/branch-catchup.mjs
+488bd38a3f143e6613e4db48223e9256c7bbd40d2e5c482cd60ba28e9751921c  scripts/branch-catchup.mjs
 295f9f9779686435a54d481b740e00b150108525630be3796369403873b70ed5  scripts/check-bidi.mjs
 f07d6df10d28a9ffcb4cdf1130e379c4aadfc2a89329e5f66ae23fd117000077  scripts/check-build-warnings.mjs
 5c4a94118edd783be8609610c9b2c6cfc393ebdeca8f841166307ef6374b78f1  scripts/check-changelog-entries.mjs
@@ -32,6 +32,7 @@ bf025c946e1a31e28aa6d5321175aa85592f7c74085f1f2fc5d49bb563d9a47e  scripts/check-
 143c233de8b95a1bd09594e80906f50f1bad9ecebd742ae354873aef78977a32  scripts/check-not-a-dependency.mjs
 b668f5756bdc362faee523800f1e2997f03115f7905af782d88d526578f9de72  scripts/check-publish-dry-run.mjs
 ad982d88d3e28a82dc0ddd0465fccaec2aa077c2a9c6eac9dd7072c454a629b8  scripts/check-readme-alignment.mjs
+643e55c00862008450b3a29d0cfd94a549dbebe62240bdd8c73ecdaec6a9b9ad  scripts/check-register-duplicates.mjs
 304074ce8cf683c134b75cecf28c5471e908b7b122fae78f7b38cdcf138b02fb  scripts/check-release-notes.mjs
 389f0ce5c927624e74030db15a0ce15361da18fe954787f34c4c7a8b584578b9  scripts/check-repository-language.mjs
 53bd53cb0afb03e616372768bd034f915f386a973a997fa9ed8152a3632a0ba2  scripts/check-review-profile-consistency.mjs
@@ -44,7 +45,7 @@ a2082c592c42561684a04b8e845d04e837afa006585c302b408e89593446a84a  scripts/check-
 1769fe9351bb11fa3c2a1e11a45e665cf46fec970cb6b5abebd63519ba2136b2  scripts/check-tracked-symlinks.mjs
 14811d9aa79ca3988a07f3ee51aeac3a4ee825e793e77af69ff05cf55e39e1f1  scripts/check-tsc-compiler.mjs
 21ac82e9a3c97fe245aa2dc9aa39488fe181d9d35c698bf787bb7424a392ec10  scripts/check-types-future.mjs
-2d5ab6f19ca9b948fa0022a4961ed29e75d672bad4f62b2e4aaf2d2e1c331e29  scripts/check-workflow-hygiene.mjs
+6b4ef022d2feba3b40fd436691fd23cd06393fed07c75f040411e56d3a86d418  scripts/check-workflow-hygiene.mjs
 ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356  scripts/entry-file-size-pins.json
 a25a8096a268e9d6abca3f0fe25f97411e214a329604451196489397a13009a1  scripts/fresh-init-findings.json
 032493d612d6999edef2233ef94718a84d7c21843722c4c5050f2b879d165331  scripts/fresh-init-findings.mjs

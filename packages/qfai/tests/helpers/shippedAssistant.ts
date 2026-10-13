@@ -128,6 +128,8 @@ export const PLAN_ROUTES = [
   "draft-release-notes",
   "verify-manually",
   "run-owned-cleanup",
+  "answer-in-session",
+  "run-operation",
 ] as const;
 
 /** One step of a built-in plan stage, whether the plan marks it pass-through, and its mode. */

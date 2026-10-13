@@ -11,11 +11,15 @@ export type RoutingOutcome =
   // main reading's route, which the candidate question recommends.
   | { candidates: RouteChoice[]; recommended: WorkflowRoute };
 
-// The main reading's route first, then each other reading's that differs.
-function choicesOf(readings: readonly RoutingReading[]): RouteChoice[] {
+// The main reading's route first, then each other reading's that differs. Every reading shares
+// the extraction's artifacts.
+function choicesOf(
+  readings: readonly RoutingReading[],
+  artifacts: WorkflowExtraction["artifacts"],
+): RouteChoice[] {
   const choices: RouteChoice[] = [];
   for (const reading of readings) {
-    const choice = decideRoute(reading);
+    const choice = decideRoute({ ...reading, artifacts });
     if (!choices.some((each) => each.route === choice.route)) choices.push(choice);
   }
   return choices;
@@ -29,7 +33,7 @@ export function routingOutcome(extraction: WorkflowExtraction): RoutingOutcome {
     extraction.confidence === "low"
       ? [extraction, ...(extraction.alternatives ?? [])]
       : [extraction];
-  const [main, ...others] = choicesOf(readings);
+  const [main, ...others] = choicesOf(readings, extraction.artifacts);
   if (!main) throw new Error("A reading always reaches a route.");
   if (extraction.confidence !== "low") return { taken: main };
   return { candidates: [main, ...others].sort(reachedFirst), recommended: main.route };
