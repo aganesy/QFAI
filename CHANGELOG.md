@@ -6,6 +6,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- The document-schema rule `qfai init` writes shows how to run the document
+  lane's two checks before pushing: the schema checker and the Mermaid checker,
+  with the scripts and arguments the `qfai-docs.yml` lane uses. The rule points
+  to the lane's install step for the pinned versions and restates none of them.
+  Fixes #3539.
+
 - **`qfai validate` tells a reader which base the drift checks compared with.**
   A repository whose `baseBranch` has no merge base with HEAD now gets one
   `QFAI-DRIFT-003` warning that names the base and says to fetch it or set
