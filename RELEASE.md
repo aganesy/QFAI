@@ -212,10 +212,12 @@ New-Item -ItemType Directory -Force -Path tmp/qfai-release-smoke
 Set-Location tmp/qfai-release-smoke
 ```
 
-Install the exact version you released, not `qfai` alone. The registry can lag the
-publish job by a minute or two, and until it catches up `npm i -D qfai` installs the
-previous version and the check passes without testing the new one. First confirm the
-registry serves the new version, and repeat the command until it prints `X.Y.Z`:
+The registry can lag the publish job by a minute or two, and `npm i -D qfai` would then
+install the previous version, so the check would pass without testing the new one.
+Install `qfai@X.Y.Z`, never `qfai` alone, and only after `npm view` prints `X.Y.Z`.
+`--prefer-online` refreshes the cache that the install reads, so an old answer is not
+reused. Until the registry catches up, `npm view` fails with E404 or prints the previous
+version, so repeat it:
 
 ```sh
 npm view qfai@X.Y.Z version --prefer-online

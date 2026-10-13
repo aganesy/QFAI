@@ -117,6 +117,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The self-update route names what `doctor` and `validate` report, and the intermittent-fix steps say what shows a constructed failing state.**
+  The `dependency` row of the request extraction now reads as a request to
+  update `qfai` itself and run `init`. The `implement-dep-bump` step names a
+  new required key in `qfai.config.yaml` and a spec-contract edit with its
+  change request as part of a `qfai` update. `verify-repeat-run` and
+  `implement-stress-harness` ask for the recorded Red results, or a stated
+  reason why the failing state is deterministic, instead of "fails on every
+  run". Refs #3676 and #3678.
+
 - **A verify gate that fails the same way on the base commit records why.**
   The `reason` of such a gate in `verify.json` names the failing test
   identifiers and the environment, the stage report adds the base result and

@@ -44,9 +44,11 @@ the current exact revision, can make repetitions unnecessary. A matching
 Green is the same test, run with the same command as that Red, passing at the
 current exact revision; a different test, a wider suite or another command
 does not match. A verified ordinary cause is one the diagnosis demonstrates
-with fixed inputs and a directly constructed failing state: the test fails on
-every run before the fix, and that state is set up by the test, not waited
-for or reached by chance. The cause must have no clock, operation order,
+with fixed inputs and a directly constructed failing state: the test sets
+that state up itself and fails on it before the fix, instead of waiting for
+it or reaching it by chance. One recorded Red cannot show a failure on every
+run, so cite the recorded Red results, or state why the failing state is
+deterministic. The cause must have no clock, operation order,
 parallelism, load, timing or race dependence or uncertainty. A fixed seed or
 deterministic schedule exposing a race does not qualify. Quarantine never
 uses this case: lifting one always requires the actual consecutive runs

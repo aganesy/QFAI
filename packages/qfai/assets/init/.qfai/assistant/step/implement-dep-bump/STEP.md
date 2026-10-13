@@ -45,7 +45,10 @@ into the repository, so steps 5 and 6 are replaced by the upgrade procedure in
 the section "Keeping QFAI itself up to date" of `node_modules/qfai/README.md`:
 `init --force`, the retired files the release notes list, then `doctor` and
 `validate`. `init --force` replaces the skills and steps in use, so read the
-next step from disk after it runs.
+next step from disk after it runs. What `doctor` and `validate` report is part
+of the update: a new required key in `qfai.config.yaml`, and an edit to a spec
+contract, which needs its change request in `.qfai/spec/decisions.md` under
+`.qfai/assistant/rule/drift-protocol.md` before the contract file changes.
 
 ## What it writes
 
