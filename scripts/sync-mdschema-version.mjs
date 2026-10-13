@@ -64,8 +64,11 @@ export function syncMdschemaVersion(root) {
       }
     }
     let parseYaml;
+    let parseYamlDocuments;
     try {
-      ({ parse: parseYaml } = createRequire(import.meta.url)("../packages/qfai/node_modules/yaml"));
+      ({ parse: parseYaml, parseAllDocuments: parseYamlDocuments } = createRequire(import.meta.url)(
+        "../packages/qfai/node_modules/yaml",
+      ));
     } catch {
       throw new Error("yaml is not installed in this checkout; install dependencies first");
     }
@@ -75,6 +78,27 @@ export function syncMdschemaVersion(root) {
       } catch {
         throw new Error(`cannot read YAML from ${relative}`);
       }
+    }
+    /** pnpm 12 writes an environment document before the project one; the project one declares `packages/qfai`. */
+    function projectLock(relative) {
+      let documents;
+      try {
+        documents = parseYamlDocuments(read(relative));
+      } catch {
+        throw new Error(`cannot read YAML from ${relative}`);
+      }
+      requireCondition(
+        documents.every((document) => document.errors.length === 0),
+        `cannot read YAML from ${relative}`,
+      );
+      const projects = documents
+        .map((document) => document.toJS())
+        .filter((document) => document?.importers?.["packages/qfai"] !== undefined);
+      requireCondition(
+        projects.length === 1,
+        `${relative} must hold exactly one project lockfile document`,
+      );
+      return projects[0];
     }
 
     const canonical = json("packages/qfai/package.json")?.dependencies?.[PACKAGE];
@@ -86,7 +110,7 @@ export function syncMdschemaVersion(root) {
       json("package.json")?.devDependencies?.[PACKAGE] === canonical,
       "package.json and packages/qfai/package.json checker versions disagree",
     );
-    const lock = yaml("pnpm-lock.yaml");
+    const lock = projectLock("pnpm-lock.yaml");
     for (const [importer, kind] of [
       [".", "devDependencies"],
       ["packages/qfai", "dependencies"],
