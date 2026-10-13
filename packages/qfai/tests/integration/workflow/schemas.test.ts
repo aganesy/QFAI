@@ -11,12 +11,42 @@ import { afterEach, expect, it } from "vitest";
 import { SIGNALS, type RoutingReading } from "../../../src/core/workflow/extraction.js";
 import { extractionFaults } from "../../../src/core/workflow/extractionShape.js";
 import { planOf } from "../../../src/core/workflow/plan.js";
+import { parsePlan } from "../../../src/core/workflow/plans.js";
 import { WORKFLOW_ROUTES } from "../../../src/core/workflow/routes.js";
 import { getInitAssetsDir } from "../../../src/shared/assets.js";
 import { extraction } from "../../helpers/workflowExtraction.js";
 import { minimalProject, removeProjects } from "./workflowProject.js";
 
 afterEach(removeProjects);
+
+// QFAI:AC-0001-0224-13
+// QFAI:EX-0001-0224-46
+it("Procedure is an intent in each reading and never an added qualifier or field", async () => {
+  const validate = await loadValidator();
+  const procedure = { ...extraction({ artifacts: ["docs"] }), intent: "procedure" };
+  const reading = { intent: "procedure", entryFlags: [], qualifiers: [], signals: [] };
+  const samples = [
+    procedure,
+    { ...extraction({ confidence: "low", artifacts: ["docs"] }), alternatives: [reading] },
+    { ...procedure, qualifiers: ["procedure"] },
+    {
+      ...extraction({ confidence: "low" }),
+      alternatives: [{ ...reading, qualifiers: ["procedure"] }],
+    },
+    { ...procedure, procedure: true },
+    { ...procedure, intent: "procedure-execute" },
+  ];
+  expect(
+    samples.map((sample) => [validate(EXTRACTION, sample), extractionFaults(sample).length === 0]),
+  ).toEqual([
+    [true, true],
+    [true, true],
+    [false, false],
+    [false, false],
+    [false, false],
+    [false, false],
+  ]);
+});
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const schemaDir = path.join(packageRoot, "assets", "schemas", "workflow");
@@ -248,4 +278,42 @@ it("The plan schema refuses scopes whose recommendation is not the narrowest alo
     validate(PLAN, { ...document, scopes: flipped }),
     validate(PLAN, { ...document, scopes: twice }),
   ]).toEqual([true, false, false]);
+});
+
+// QFAI:AC-0001-0224-13
+// QFAI:EX-0001-0224-46
+it("Only documentation kind may own the procedure step", () => {
+  const text = [
+    "route: write-procedure",
+    "family: change",
+    "stages:",
+    "  - id: documentation",
+    "    kind: documentation",
+    "    steps: [implement-procedure]",
+    "  - id: note",
+    "    kind: verify",
+    "    steps: [{ step: verify-change-note, passThrough: true }]",
+    "    after: [documentation]",
+    "    review: code",
+    "  - id: verify",
+    "    kind: verify",
+    "    steps: [verify-qfai-gate, verify-repo-gate, verify-commit]",
+    "    after: [note]",
+    "decisionPoints: []",
+    "branchPoints: []",
+    "",
+  ].join("\n");
+  const loaded = parsePlan(text, "write-procedure");
+  expect(loaded.ok).toBe(true);
+  const mismatched = parsePlan(
+    text.replace("kind: documentation", "kind: implement"),
+    "write-procedure",
+  );
+  expect(mismatched.ok).toBe(false);
+  if (mismatched.ok) throw new Error("The procedure step accepted implementation kind.");
+  expect(mismatched.refusals).toContainEqual({
+    route: "write-procedure",
+    reason: "kind-mismatch",
+    subject: "documentation",
+  });
 });

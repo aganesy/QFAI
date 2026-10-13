@@ -6,11 +6,107 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A merge that duplicated a decision has a bounded manual recovery.**
+  When a bad two-parent merge adds a second byte-identical copy of an inherited
+  decision, the SDD owner may remove only that surplus copy under a separate
+  target change request and independently reviewed fresh proof. One original,
+  every other row and reference, and Git history stay. Duplicate checks, drift
+  and Status rules still apply, and no command or validator waiver is added.
+  Fixes #3464.
+
 - **Explicit discussion delegation supports adopted agent decisions.**
   Recorded user authority permits in-scope agent judgment without fictional
   user confirmation. Missing required inputs and critical decisions without
   applicable authority remain open. Interactive sessions retain actual user
   confirmation.
+
+- Generate a native dependency preparation entry for a reviewed executable,
+  arguments and checkout. Installation and same-checkout launcher failures block
+  dependent planning; host setup and execution require separate evidence. Fixes #3338.
+
+- Compare reached workflow steps with actual reads, actions, outputs and gate
+  evidence in existing human reports. Missing proof stays unverified; no extra
+  reviewer, gate or execution engine is added. Fixes #3336.
+
+- **No request skips `qfai-run`; the lightest requests get one-step routes.**
+  A question the session can answer routes `answer-in-session`, and an
+  operation on finished work, such as a merge or a deploy, routes
+  `run-operation`. Neither runs the policy check or needs the extraction
+  reference. An order that names artifacts still applies its settled change.
+  Fixes #3574.
+
+- **The delegation baseline has notes for Codex sub-agents.** Under Codex, the
+  orchestrator reads them before it delegates: it gives a sub-agent a
+  self-contained brief with `fork_turns: "none"`, asks for one final answer
+  and no interim messages, waits with a `wait_agent` timeout of minutes within
+  the tool's maximum, and never polls with `sleep`, short `wait_agent` loops
+  or `list_agents`. The notes live in a reference file, so other hosts load
+  nothing more. Fixes #3579.
+
+- The short extractions in `qfai-run` now state every field `plan` needs, and
+  an operation only a person can run or a deletion goes through the full
+  extraction reference again, so it keeps its hand-off or bounded cleanup.
+
+- Add a workflow route for writing authorized operational procedures.
+  It keeps wording-only edits separate, preserves policy owners and existing
+  verification, and grants no authority to run the documented actions.
+  Fixes #3403.
+
+### Changed
+
+- **A test that fails every run leaves the quarantine route.** `implement-quarantine`
+  quarantines nothing for a test whose recorded runs all fail. It records the runs and reports
+  the outcome `failing-consistently` with an extraction of the report, and the decision rules
+  route that extraction (for example a wrong test goes to `repair-test`) while its
+  diagnosis and repair steps run. Fixes #3493.
+
+- **The shipped workflows pin `actions/setup-node` 7.1.0.** The three
+  templates written by `qfai init` use the same commit as this repository.
+
+- **The reviewer count follows what the change touched.** Each review of a
+  route takes one reviewer for its kind. `architecture-reviewer` joins only
+  for a contract change, and `product-surface-reviewer` only for a screen
+  change, that no earlier review read. A screen change covers a path
+  `uiux.surfacePaths` declares and a change whose effect on a screen is
+  uncertain. A review whose target only resolves the conflicts of a merge or
+  branch update between already-reviewed sides gets no reviewer. Fixes #3578.
+
+- **Generated Codex reviewer agents run at medium reasoning effort.** `qfai init` now writes
+  `model_reasoning_effort = "medium"` into each `.codex/agents/<name>.toml` of `kind: reviewer`,
+  beside `sandbox_mode = "read-only"`. Codex lets a value in an agent file take precedence over the
+  parent session's, so a reviewer no longer inherits a high orchestrator effort. Worker profiles
+  leave it unset and still inherit, and no profile sets `model`. Run `qfai init --force` to
+  regenerate existing profiles. Fixes #3580.
+
+- `qfai-run` reads no reference up front: each pointer says when its reference
+  is read, so a run reads only what its request needs. Fixes #3575.
+
+### Fixed
+
+- Agents no longer start a griller sub-agent for routine work. The grilling rule
+  and its reminders hold a griller session only for a design decision the
+  repository cannot settle; an operation, a routine step, a settled decision or
+  a fix the story tree already states starts none. Fixes #3577.
+
+- Hook reminders no longer send the agent back to the rule file each time they
+  fire. The brief form says what to do, and the full form asks for a rule to be
+  read once per session. Fixes #3576.
+
+- **An ordinary turn end no longer costs an extra model call for the session
+  review.** `qfai init` no longer ships the `Stop` group marked
+  `QFAI session feedback reminder` in `.claude/settings.json` and
+  `.codex/hooks.json`, and `.agents/rules/reminders.json` no longer carries the
+  `session-feedback` message. The review now runs once, from `qfai-run`'s final
+  report, when it closes the user's last task and nothing waits on the user.
+  A project that installed the group keeps it after `qfai init`; delete it by
+  hand to stop the hook running. Fixes #3581.
+
+- **Discussion completion references point to the existing obligations.**
+  The completion matrix names the All Packs and UI-bearing items it requires.
+
+- **Profiling output retains its complete UTF-8 prefix within the shared 32 MiB limit.**
+  A chunk that crosses the limit keeps the complete characters that fit before
+  owned process termination begins. Output after the limit is discarded. Fixes #3462.
 
 ## [2.1.2] - 2026-10-11
 

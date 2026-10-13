@@ -25,13 +25,25 @@ it.
 ## Procedure
 
 1. Show the flakiness: run the test a recorded number of times at one
-   revision and count the failures. A test that fails every time is not
-   flaky; stop and report it as failing.
+   revision and count the failures. A test that fails every run is not
+   flaky: see [A test that fails every run](#a-test-that-fails-every-run).
 2. Quarantine it with the project's own mechanism. Add one only where the
    project has none.
 3. Keep it running where it blocks nothing, such as a non-gating job, where
    the project can.
 4. Change neither what it asserts nor the code it tests. Delete nothing.
+
+## A test that fails every run
+
+When every recorded run fails, nothing is quarantined, no marker is written and
+no non-gating job is added: a skip would hide a failure that is real, and a
+failure rate the runs do not show cannot be invented. Record the runs, their
+count and the failure's signature in the stage report, then report the outcome
+`failing-consistently` with an extraction of the report as a test that fails
+every run, so the decision rules route it again. The
+stage ends there: the stages after it do not run, and the next route's
+diagnosis and test repair take over. Keep the record of the runs in the
+session handoff for that route.
 
 ## What it writes
 
@@ -43,4 +55,6 @@ it.
 ## Gate
 
 The step is done when the flakiness is shown by a recorded failure rate, the
-test no longer gates, and its quarantine entry states what lifts it.
+test no longer gates, and its quarantine entry states what lifts it. It is also
+done when a test that fails every run is recorded with its runs and reported
+as `failing-consistently`, with nothing quarantined.
