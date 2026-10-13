@@ -13,6 +13,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   can tell a stale copy from a deliberate change. A way to accept a known
   difference is not part of this change. Refs #3534.
 
+- **The UI contract guide says where each rendered text goes.** `structure` is
+  optional only for a screen that shows no heading beyond its title, and a table
+  maps headings, eyebrow lines, labels, link text, column headers, captions, list
+  items and product text to the key that holds them. Fixes #3530.
+
 - **`qfai validate` says when the installed qfai is older than the one the project
   declares.** When the nearest `package.json` declares a `qfai` range and the
   running copy is below its lowest version, `QFAI-TOOL-003` (warning) is the first
