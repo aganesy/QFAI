@@ -104,7 +104,8 @@ Once the plan and its scope are known, and before the first stage:
 - the files the work may change.
 
 The announcement asks nothing and lists no skipped stage. Continue with the
-policy check and the first stage in the same turn without waiting for a reply.
+policy check, where the route runs one, and the first stage in the same turn
+without waiting for a reply.
 Text that is not a request gets no plan and no announcement.
 
 ## Questions

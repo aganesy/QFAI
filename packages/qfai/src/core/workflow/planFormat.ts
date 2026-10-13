@@ -345,19 +345,22 @@ function verifyBlockRefusals(stages: PlanStage[], refuse: Refuse) {
   }
 }
 
-// The one-stage plans that end without `triage-close`: drafting release notes, answering from the
-// session and carrying out a named operation.
-const SINGLE_STEP_ENDINGS = ["verify-release-notes", "triage-answer", "triage-operate"];
+// The one-stage plans that end without `triage-close`, each with the one step its route runs.
+const ONE_STEP_PLANS: Readonly<Record<string, string>> = {
+  "draft-release-notes": "verify-release-notes",
+  "answer-in-session": "triage-answer",
+  "run-operation": "triage-operate",
+};
 
 // A route with no verify block ends at one stage running `triage-close`, or is one of the
-// one-stage plans above.
-function terminalRefusals(stages: PlanStage[], refuse: Refuse) {
+// one-stage plans above, running its own step.
+function terminalRefusals(route: string, stages: PlanStage[], refuse: Refuse) {
   if (stages.some((stage) => runs(stage, "verify-repo-gate"))) {
     verifyBlockRefusals(stages, refuse);
     return;
   }
   const [only] = stages;
-  if (stages.length === 1 && only && SINGLE_STEP_ENDINGS.includes(namesOf(only).join(","))) return;
+  if (stages.length === 1 && only && ONE_STEP_PLANS[route] === namesOf(only).join(",")) return;
   const ends = stages.filter((stage) => followersOf(stages, stage.id).length === 0);
   const [end] = ends;
   if (ends.length !== 1 || !end || !runs(end, "triage-close")) {
@@ -449,7 +452,7 @@ function shapeRefusals(plan: WorkflowPlanFile, refuse: Refuse) {
   };
   graphRefusals(plan.stages, counted);
   if (found.length === 0) pointRefusals(plan, counted);
-  if (found.length === 0) terminalRefusals(plan.stages, counted);
+  if (found.length === 0) terminalRefusals(plan.route, plan.stages, counted);
 }
 
 // Parse one plan file's text, refusing whatever the plan format does not admit.
