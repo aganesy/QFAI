@@ -6,6 +6,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`qfai validate` says when the installed qfai is older than the one the project
+  declares.** When the nearest `package.json` declares a `qfai` range and the
+  running copy is below its lowest version, `QFAI-TOOL-003` (warning) is the first
+  finding in the JSON report, and names both versions and the install command.
+  The text format prints error groups before warning groups, so there it follows
+  the errors. While it is raised, `QFAI-SKILLS-010` names the version difference
+  and gives the install as its suggested action, instead of inviting an edit to
+  files nobody touched.
+  Fixes #3468.
+
 - **A merge that duplicated a decision has a bounded manual recovery.**
   When a bad two-parent merge adds a second byte-identical copy of an inherited
   decision, the SDD owner may remove only that surplus copy under a separate
@@ -53,6 +63,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Fixes #3403.
 
 ### Changed
+
+- **`qfai-run` reads a request to raise QFAI itself as a dependency change.**
+  The extraction guide's `dependency` row now names it, so the request takes
+  the dependency route, whose step already carries the upgrade procedure for
+  `qfai`. Fixes #3549.
 
 - **The shipped rules name `AGENTS.md` as the only entry file.** The wording
   in `documentation-clarity.md` and `untrusted-content.md` no longer mentions
