@@ -50,6 +50,7 @@ const REQUIRED: Readonly<Record<string, readonly string[]>> = {
   "triage-decompose": ["untrusted-content"],
   "triage-dedupe": ["untrusted-content", "api-budget"],
   "triage-handoff": ["untrusted-content", "action-reversibility"],
+  "triage-operate": ["untrusted-content", "action-reversibility", "api-budget"],
   "triage-investigate": ["untrusted-content"],
   "triage-request-info": ["untrusted-content"],
   "triage-security-intake": ["untrusted-content"],

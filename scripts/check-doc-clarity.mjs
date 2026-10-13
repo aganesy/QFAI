@@ -91,6 +91,18 @@ const EXCLUDE_EXACT = new Set([
  */
 const EXCLUDE_BASENAME_RE = /_delta\.md$/;
 
+/**
+ * The story tree's decision register: the root `.qfai/spec/decisions.md` and its
+ * ordered pages `.qfai/spec/decisions/page-0001.md` to `page-9999.md`.
+ *
+ * Its rows are immutable historical records, the successor of the legacy
+ * `.qfai/decisions/` tree excluded above, and a row cites the change request it
+ * came from. Matched as exact paths rather than by prefix, so a lookalike such as
+ * `decisions-extra.md`, a nested folder or a `page-0000.md` is ordinary prose.
+ */
+const HISTORICAL_REGISTER_RE =
+  /^\.qfai\/spec\/(?:decisions\.md|decisions\/page-(?!0000\.md)\d{4}\.md)$/;
+
 const SOURCE_EXTENSIONS = new Set([".ts", ".mts", ".mjs", ".cjs", ".js"]);
 const SHELL_EXTENSIONS = new Set([".sh", ".ps1"]);
 const MARKDOWN_EXTENSIONS = new Set([".md"]);
@@ -143,6 +155,7 @@ function inScope(rel) {
   if (EXCLUDE_EXACT.has(rel)) return false;
   if (EXCLUDE_PREFIX.some((p) => rel.startsWith(p))) return false;
   if (EXCLUDE_BASENAME_RE.test(path.basename(rel))) return false;
+  if (HISTORICAL_REGISTER_RE.test(rel)) return false;
   const ext = path.extname(rel);
   return SOURCE_EXTENSIONS.has(ext) || SHELL_EXTENSIONS.has(ext) || MARKDOWN_EXTENSIONS.has(ext);
 }

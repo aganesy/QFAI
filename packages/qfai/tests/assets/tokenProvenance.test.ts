@@ -48,8 +48,9 @@ describe("the design tokens name their source", () => {
     });
 
     it(`${tree}: the sample carries the field`, async () => {
-      // A field absent from the sample is one nobody fills: the sample is what
-      // `npx qfai init` drops at the project root.
+      // A field absent from the sample is one nobody fills: the sample is the
+      // `templates/DESIGN.md.sample` file of the shipped `qfai-prototyping` skill,
+      // the template a project's own `DESIGN.md` is authored from.
       expect(await read(tree, SAMPLE)).toContain("theme:");
     });
 

@@ -1,0 +1,8 @@
+route: answer-in-session
+family: close
+stages:
+  - id: answer
+    kind: triage
+    steps: [triage-answer]
+decisionPoints: []
+branchPoints: []
