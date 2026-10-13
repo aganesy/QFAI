@@ -563,6 +563,24 @@ describe("qfai-run", () => {
   });
 
   // QFAI:AC-0001-0211-05
+  it("reads no reference up front, and says when each one is read", async () => {
+    const skill = await readShipped(RUN);
+    const head = skill.slice(0, skill.indexOf("## What this skill never does"));
+    expect(head).toMatch(/read no reference up front/i);
+    const pointers = head.split("\n").filter((line) => /^- `references\//.test(line));
+    expect(pointers.map((line) => /`references\/([\w-]+)\.md`/.exec(line)?.[1])).toEqual([
+      "extraction",
+      "plan",
+      "operator-screens",
+      "stage-points",
+    ]);
+    expect(head).toContain(
+      "`references/plan.md`: for a plan field this file does not name, or a refused plan.",
+    );
+    for (const line of pointers) expect(line).toMatch(/`: (?:for|when|at) /);
+  });
+
+  // QFAI:AC-0001-0211-05
   // QFAI:EX-0001-0211-52
   it("keeps person-only operations and deletions on the extraction reference", async () => {
     const extract = flat(sectionOf(await readShipped(RUN), "## The work"));
@@ -662,7 +680,7 @@ describe("qfai-run", () => {
   it("handles each release, decision and branch point at its step, inside the step loop", async () => {
     const work = sectionOf(await readShipped(RUN), "## The work");
     const loop = flat(work.split("5. **Run the stages.**")[1]?.split("6. **Review.**")[0] ?? "");
-    expect(loop).toMatch(/at each step, follow its plan's points/i);
+    expect(loop).toMatch(/at a step the plan marks with a point, follow/i);
     expect(loop).toContain("`references/stage-points.md`");
     for (const point of ["release point", "decision point", "branch point"]) {
       expect(loop.toLowerCase()).toContain(`**${point}.**`);
