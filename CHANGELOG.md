@@ -89,6 +89,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`qfai-run` points to the form of an approval row.** Step 7 names the
+  decisions template, whose header sets out the four items of the Approach
+  cell, and the template gains an example of a release approval's cells.
+  Refs #3551.
+
 - **A test that fails every run leaves the quarantine route.** `implement-quarantine`
   quarantines nothing for a test that fails all of at least five recorded runs. It records the runs and reports
   the outcome `failing-consistently` with an extraction of the report, and the decision rules
