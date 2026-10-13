@@ -81,6 +81,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- The shipped `qfai-tests.yml` fails closed on an unreadable `package.json`. A
+  manifest that is not valid JSON or not an object, a `scripts` field that is
+  not an object, a layer-named script that is not a string, and a malformed
+  lane or script list now stop change detection with an error annotation, so the
+  verdict is red. Before, each was read as "no test script declared": every lane
+  was skipped and the required check went green over no tests. A repository
+  without a `package.json`, or with no layer-named script, is still a valid
+  empty set. Fixes #3533.
+
 - A register ID that the union merge driver left on two rows of
   `decisions.md` or `open-questions.md` now fails the repository's scans lane,
   which runs early in the pull request lint job. Before, only the full
