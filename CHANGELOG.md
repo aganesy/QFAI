@@ -54,6 +54,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The final report of a run names the policy check.** The `qfai-run` final
+  report now says whether `common-policy-check` ran and its outcome, or that
+  it did not run and why. The plan lists no such step, so before this a run
+  that skipped the check left no trace of it. Fixes #3557.
+
 - **The shipped rules name `AGENTS.md` as the only entry file.** The wording
   in `documentation-clarity.md` and `untrusted-content.md` no longer mentions
   `CLAUDE.md`, which `qfai init` stopped writing.
