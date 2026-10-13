@@ -27,12 +27,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reference. An order that names artifacts still applies its settled change.
   Fixes #3574.
 
+<<<<<<< HEAD
 - **The delegation baseline has notes for Codex sub-agents.** Under Codex,
   the orchestrator reads them before it delegates: it gives a sub-agent a
   self-contained brief with `fork_turns: "none"`, asks for one final answer and
   no interim messages, waits with a `wait_agent` timeout of minutes, and never
   polls with `sleep`, short `wait_agent` loops or `list_agents`. The notes live
   in a reference file, so other hosts load nothing more. Fixes #3579.
+=======
+- The short extractions in `qfai-run` now state every field `plan` needs, and
+  an operation only a person can run or a deletion goes through the full
+  extraction reference again, so it keeps its hand-off or bounded cleanup.
+>>>>>>> origin/main
 
 - Add a workflow route for writing authorized operational procedures.
   It keeps wording-only edits separate, preserves policy owners and existing
