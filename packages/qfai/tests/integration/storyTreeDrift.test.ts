@@ -14,7 +14,7 @@ import { validateStoryTreeDrift } from "../../src/core/validators/upstreamSsotGu
 import type * as GitChanges from "../../src/core/gitChanges.js";
 import { createSymlinkFixture } from "../helpers/symlinkFixture.js";
 
-const baseRead = vi.hoisted(() => ({ unreadable: false }));
+const baseRead = vi.hoisted(() => ({ unreadable: false, statusFails: false }));
 
 // A base file git cannot show (past the output ceiling) cannot be built cheaply, so the read
 // of the base is made to fail for the one test that needs it.
@@ -24,6 +24,8 @@ vi.mock("../../src/core/gitChanges.js", async (importOriginal) => {
     ...original,
     readFileAtBase: (...args: Parameters<typeof original.readFileAtBase>) =>
       baseRead.unreadable ? null : original.readFileAtBase(...args),
+    uncommittedContentPaths: (...args: Parameters<typeof original.uncommittedContentPaths>) =>
+      baseRead.statusFails ? null : original.uncommittedContentPaths(...args),
   };
 });
 
@@ -53,6 +55,7 @@ function config() {
 
 beforeEach(async () => {
   baseRead.unreadable = false;
+  baseRead.statusFails = false;
   root = await mkdtemp(path.join(os.tmpdir(), "qfai-story-drift-"));
   git("init", "-b", "main");
   git("config", "user.email", "test@example.test");
@@ -1093,6 +1096,163 @@ describe("story-tree drift", () => {
           item.message.includes("DEC-0001"),
       ),
     ).toBe(true);
+  });
+
+  describe("an edit that is not committed", () => {
+    const contractFile = `${specs}/03_contract/cli/command.md`;
+    const uncommitted = (findings: readonly { code: string }[]) =>
+      findings.filter((item) => item.code === "QFAI-DRIFT-004");
+
+    async function baseWithProtectedFiles(): Promise<void> {
+      await put(decisions, table);
+      await put(glossary, "# Terms\n");
+      await put(contractFile, "# Command\n");
+      git("add", ".");
+      git("commit", "-m", "base");
+      git("checkout", "-b", "topic");
+    }
+
+    // QFAI:AC-0001-0054-11
+    // QFAI:EX-0001-0054-22
+    it.each(["tdd", "drift"] as const)(
+      "is named in %s as not compared, and the committed edit is then reported",
+      async (profile) => {
+        await baseWithProtectedFiles();
+        await put(glossary, "# Terms\nUpdated\n");
+        await put(contractFile, "# Command\nUpdated\n");
+        const before = await validateStoryTreeDrift(root, config(), profile);
+        expect(before.some((item) => item.code === "QFAI-DRIFT-001")).toBe(false);
+        expect(uncommitted(before)).toEqual([
+          expect.objectContaining({
+            severity: "warning",
+            message: `2 uncommitted changes to protected story-tree files are not compared with the base: ${glossary}, ${contractFile}.`,
+            refs: [glossary, contractFile],
+          }),
+        ]);
+
+        git("add", ".");
+        git("commit", "-m", "edit the protected files");
+        const after = await validateStoryTreeDrift(root, config(), profile);
+        expect(after.filter((item) => item.code === "QFAI-DRIFT-001").map((i) => i.file)).toEqual([
+          glossary,
+          contractFile,
+        ]);
+        expect(uncommitted(after)).toEqual([]);
+      },
+    );
+
+    // QFAI:AC-0001-0054-11
+    // QFAI:EX-0001-0054-22
+    it("names a new untracked protected file, and no more than five paths", async () => {
+      await baseWithProtectedFiles();
+      for (let index = 0; index < 7; index += 1) {
+        await put(`${specs}/03_contract/cli/new-${index}.md`, "# New\n");
+      }
+      const findings = uncommitted(await validateStoryTreeDrift(root, config(), "drift"));
+      expect(findings).toEqual([
+        expect.objectContaining({
+          message: expect.stringMatching(
+            /^7 uncommitted changes to protected story-tree files are not compared with the base: .*new-4\.md and 2 more\.$/,
+          ),
+        }),
+      ]);
+      expect(findings[0]).toHaveProperty("refs.length", 5);
+    });
+
+    // QFAI:AC-0001-0054-11
+    // QFAI:EX-0001-0054-22
+    it("names a deleted file, a staged-only edit and both ends of a rename", async () => {
+      await baseWithProtectedFiles();
+      await rm(path.join(root, contractFile));
+      expect(uncommitted(await validateStoryTreeDrift(root, config(), "drift"))).toEqual([
+        expect.objectContaining({ refs: [contractFile] }),
+      ]);
+
+      git("checkout", "--", contractFile);
+      await put(glossary, "# Terms\nStaged\n");
+      git("add", glossary);
+      expect(uncommitted(await validateStoryTreeDrift(root, config(), "drift"))).toEqual([
+        expect.objectContaining({ refs: [glossary] }),
+      ]);
+
+      git("reset", "--hard");
+      const renamed = `${specs}/01_policy/renamed.md`;
+      git("mv", glossary, renamed);
+      expect(uncommitted(await validateStoryTreeDrift(root, config(), "drift"))).toEqual([
+        expect.objectContaining({ refs: [glossary, renamed] }),
+      ]);
+    });
+
+    // QFAI:AC-0001-0054-11
+    // QFAI:EX-0001-0054-22
+    it("passes the edits a commit would pass without a change request", async () => {
+      const examples = `${specs}/02_business-flow/business-flow-0001/user-story-0001-0001/03_Example.md`;
+      const citing = `${specs}/03_contract/cli/cli-0001-sample.md`;
+      const exampleTable = "| EX-ID | AC-Ref | Input | Expected |\n| --- | --- | --- | --- |\n";
+      const rule = (examplesCell: string) => `| BR-0001-0001 | A rule | ${examplesCell} |\n`;
+      await put(decisions, table);
+      await put(examples, `${exampleTable}| EX-0001-0001-01 | AC-0001-0001-01 | in | out |\n`);
+      await put(citing, `# Sample\n\n${rule("EX-0001-0001-01")}`);
+      git("add", ".");
+      git("commit", "-m", "base");
+      git("checkout", "-b", "topic");
+
+      await put(
+        examples,
+        `${exampleTable}| EX-0001-0001-01 | AC-0001-0001-01 | in | out |\n| EX-0001-0001-02 | AC-0001-0001-01 | in2 | out2 |\n`,
+      );
+      await put(citing, `# Sample\n\n${rule("EX-0001-0001-01, EX-0001-0001-02")}`);
+
+      expect(uncommitted(await validateStoryTreeDrift(root, config(), "drift"))).toEqual([]);
+    });
+
+    // QFAI:AC-0001-0054-11
+    // QFAI:EX-0001-0054-22
+    it("reports a file edited again after it was committed as the committed edit, once", async () => {
+      await baseWithProtectedFiles();
+      await put(glossary, "# Terms\nFirst\n");
+      git("add", ".");
+      git("commit", "-m", "first edit");
+      await put(glossary, "# Terms\nFirst\nSecond\n");
+      const findings = await validateStoryTreeDrift(root, config(), "drift");
+      expect(findings.filter((item) => item.code === "QFAI-DRIFT-001").map((i) => i.file)).toEqual([
+        glossary,
+      ]);
+      expect(uncommitted(findings)).toEqual([]);
+    });
+
+    // QFAI:AC-0001-0054-11
+    // QFAI:EX-0001-0054-22
+    it("says nothing was compared when git cannot list the working tree", async () => {
+      await baseWithProtectedFiles();
+      baseRead.statusFails = true;
+      const findings = await validateStoryTreeDrift(root, config(), "drift");
+      expect(findings).toContainEqual(
+        expect.objectContaining({
+          code: "QFAI-DRIFT-003",
+          severity: "warning",
+          message: "Nothing was compared: git could not list the uncommitted changes.",
+        }),
+      );
+    });
+
+    // QFAI:AC-0001-0054-11
+    // QFAI:EX-0001-0054-22
+    it("does not name a file whose only change is its line endings", async () => {
+      await baseWithProtectedFiles();
+      await put(glossary, "# Terms\r\n");
+      expect(uncommitted(await validateStoryTreeDrift(root, config(), "drift"))).toEqual([]);
+    });
+
+    // QFAI:AC-0001-0054-11
+    // QFAI:EX-0001-0054-22
+    it("stays silent for a change request row, an authorised file and an unprotected file", async () => {
+      await baseWithProtectedFiles();
+      await put(decisions, `${table}| DEC-0001 | Change request: ${glossary} | Reason | WIP |\n`);
+      await put(glossary, "# Terms\nUpdated\n");
+      await put("src/app.ts", "export const app = 1;\n");
+      expect(uncommitted(await validateStoryTreeDrift(root, config(), "drift"))).toEqual([]);
+    });
   });
 
   it("does not accuse the migration branch when the base has no story tree", async () => {

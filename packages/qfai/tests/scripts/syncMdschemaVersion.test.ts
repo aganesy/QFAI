@@ -259,6 +259,54 @@ describe("syncing the schema checker's declared version", () => {
     await refusesWithoutWrites(root, LOCK);
   });
 
+  describe("a lockfile of several YAML documents", () => {
+    const ENVIRONMENT_DOCUMENT = [
+      "---",
+      "lockfileVersion: '9.0'",
+      "",
+      "importers:",
+      "",
+      "  .:",
+      "    configDependencies: {}",
+      "    packageManagerDependencies:",
+      "      pnpm:",
+      "        specifier: 12.11.2",
+      "        version: 12.11.2",
+      "",
+      "---",
+      "",
+    ].join("\n");
+
+    it("reads the project document that follows the pnpm environment document", async () => {
+      const root = await fixture();
+      await put(root, LOCK, `${ENVIRONMENT_DOCUMENT}${await text(root, LOCK)}`);
+      const result = run(root);
+      expect(result.error).toBeUndefined();
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.stdout).toContain(`updated ${WORKFLOW}`);
+    });
+
+    it("still checks the project document's importer entries", async () => {
+      const root = await fixture();
+      const lock = (await text(root, LOCK)).replaceAll(NEXT_VERSION, "0.16.124");
+      await put(root, LOCK, `${ENVIRONMENT_DOCUMENT}${lock}`);
+      await refusesWithoutWrites(root, LOCK);
+    });
+
+    it("refuses a lockfile with two project documents", async () => {
+      const root = await fixture();
+      const project = await text(root, LOCK);
+      await put(root, LOCK, `${project}---\n${project}`);
+      await refusesWithoutWrites(root, LOCK);
+    });
+
+    it("refuses a lockfile with no project document", async () => {
+      const root = await fixture();
+      await put(root, LOCK, ENVIRONMENT_DOCUMENT.replace(/---\n$/, ""));
+      await refusesWithoutWrites(root, LOCK);
+    });
+  });
+
   it.each(INSTALLED)("refuses a stale installed checker at %s", async (file) => {
     const root = await fixture();
     await put(root, file, JSON.stringify({ name: PACKAGE, version: "0.16.124" }));
