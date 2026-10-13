@@ -398,6 +398,20 @@ describe("where qfai-run runs the policy check and the commit", () => {
     expect(work.indexOf("**Extract.**")).toBeLessThan(work.indexOf("common-policy-check"));
   });
 
+  // QFAI:AC-0001-0223-07
+  // QFAI:EX-0001-0223-14
+  it("has the final report name the policy check, or say it did not run", async () => {
+    const report = flat(
+      sectionOf(
+        await readShipped("skill/qfai-run/references/operator-screens.md"),
+        "## Final report",
+      ),
+    );
+    expect(report).toContain(
+      "Name `common-policy-check` and its outcome, or that it did not run and why.",
+    );
+  });
+
   it("commits after an end release point, so the commit holds the approval", async () => {
     const work = flat(
       sectionOf(await readShipped("skill/qfai-run/references/stage-points.md"), "## Release point"),
@@ -444,5 +458,28 @@ describe("a verify gate that fails on the base commit or cannot run", () => {
     expect(contract).toMatch(/`"PASS"`, `"FAIL"`, `"UNRUN"` or `"DELEGATED"`/);
     expect(contract).toMatch(/`baseline` \| string/);
     expect(contract).toMatch(/still makes the top-level `status` `"FAIL"`/);
+  });
+
+  it("records why a failure predates the run and asks the user before any commit", async () => {
+    const text = await section("verify-repo-gate", "## A failure the run did not cause");
+    expect(text).toMatch(/baseline `same`, `reason` names the failing test identifiers/i);
+    expect(text).toMatch(/the environment they fail in/i);
+    expect(text).toMatch(/result of the same gate in CI/i);
+    expect(text).toMatch(/not observed is written as unknown, never as a pass/i);
+    expect(text).toMatch(/asking the user whether to commit with those gates open/i);
+    expect(text).toMatch(
+      /observed failing in the base commit's run, executed as `common-gate-run`/i,
+    );
+    expect(text).toMatch(/never assumed/i);
+    expect(text).toMatch(
+      /no-question mode, or with no question tool, the report lists those gates as open and stops without committing/i,
+    );
+
+    const contract = flat(
+      await readShipped("skill/qfai-verify/references/verify-output-contract.md"),
+    );
+    expect(contract).toMatch(
+      /On a `baseline` of `"same"`: the failing test identifiers and the environment, in one or two sentences \(see `verify-repo-gate`\)/,
+    );
   });
 });

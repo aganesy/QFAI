@@ -368,6 +368,7 @@ export function comparableValidation(result: ValidationResult) {
             ...snapshot.timings,
             uiuxMs: undefined,
             htmlMockMs: undefined,
+            uiuxParts: undefined,
           },
   };
 }

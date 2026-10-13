@@ -33,4 +33,11 @@ Feature: A layer-separated, credential-free shipped workflow set
     And a project with its own `node_modules/qfai` keeps that copy, which supplies the schemas, and a project without one gets QFAI in that same directory by the same install, with the schema checker that release depends on
     And the install runs no package's install script, because the schema checker's platform binary arrives as an optional dependency
     And each checker script takes the directory as `--tools` and resolves its tools from it first, then the way it resolved them before
+
+  # AC-0002-0003-05
+  Scenario: A project can run the document lane's checks before it pushes
+    Given the document-schema rule that `qfai init` writes into a project
+    When a person or an agent reads how to run the document checks
+    Then the rule shows the two commands the lane runs, with the same scripts and arguments and the tools directory the lane installs into, and sends the reader to the lane's install step for the pinned versions instead of restating them
+    And it says which of the two checks `npx qfai validate` already reports
 ```

@@ -82,7 +82,7 @@ function expectParsingWork(profile: StoryObligationProfile): void {
     code: "QFAI-STORY-007",
     severity: "error",
     category: "canonical",
-    message: `${knownTag} is misplaced in ${e2eFile}; EX requires a test outside E2E`,
+    message: `${knownTag} is misplaced in ${e2eFile}; EX requires a test outside E2E. Remove it from this test (layer rules: .qfai/assistant/rule/test-layers.md)`,
     file: e2eFile,
     rule: "storyTree.misplacedAnnotation",
     refs: ["EX-0001-0001-01"],
