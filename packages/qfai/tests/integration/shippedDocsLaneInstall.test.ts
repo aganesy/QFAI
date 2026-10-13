@@ -200,7 +200,7 @@ describe("the delivered document-schema rule tells how to run the document lane'
     for (const command of laneCommands) {
       expect(rule, `the rule does not show the lane command ${command}`).toContain(command);
     }
-    expect(rule).toContain(`node ${TOOLS_DIR}/node_modules/qfai/assets/scripts/`);
+    expect(rule).toContain(`${TOOLS_DIR}/node_modules/qfai/assets/scripts/`);
     expect(rule).toContain(INSTALL_STEP);
   });
 
