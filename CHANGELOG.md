@@ -6,6 +6,31 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`qfai validate` tells a reader which base the drift checks compared with.**
+  A repository whose `baseBranch` has no merge base with HEAD now gets one
+  `QFAI-DRIFT-003` warning that names the base and says to fetch it or set
+  `baseBranch`, where the run used to pass as if nothing had changed. The
+  `drift` profile also reports at info the merge base commit and the number of
+  changed files it compared, so a worktree whose base ref lags the pull
+  request's base shows it. A repository with commits but no `origin/main` (no
+  remote, or a `master` branch) warns until `baseBranch` is set; a directory
+  that is not a repository is still silent.
+  The drift checks also stop turning themselves off when a file at the base,
+  such as a long decision ledger, is larger than 1 MiB: reading it failed
+  like a missing file, and the run passed without comparing anything.
+  Fixes #3532.
+
+- **`QFAI-STORY-006` says where an annotation that counts for nothing sits.**
+  When an example's `QFAI:EX-` annotation is in a selected test file but not on
+  a comment line before a test declaration, the finding now names the file and
+  line and tells you to move it to a comment line above the test. The remedy
+  text says the same. Fixes #3531.
+
+- **The UI contract guide says where each rendered text goes.** `structure` is
+  optional only for a screen that shows no heading beyond its title, and a table
+  maps headings, eyebrow lines, labels, link text, column headers, captions, list
+  items and product text to the key that holds them. Fixes #3530.
+
 - **`qfai validate` says when the installed qfai is older than the one the project
   declares.** When the nearest `package.json` declares a `qfai` range and the
   running copy is below its lowest version, `QFAI-TOOL-003` (warning) is the first
@@ -64,6 +89,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`qfai-run` points to the form of an approval row.** Step 7 names the
+  decisions template, whose header sets out the four items of the Approach
+  cell, and the template gains an example of a release approval's cells.
+  Refs #3551.
+
+- **A test that fails every run leaves the quarantine route.** `implement-quarantine`
+  quarantines nothing for a test that fails all of at least five recorded runs. It records the runs and reports
+  the outcome `failing-consistently` with an extraction of the report, and the decision rules
+  route that extraction (for example a wrong test goes to `repair-test`) while its
+  diagnosis and repair steps run. Fixes #3493.
+
 - **`qfai-run` reads a request to raise QFAI itself as a dependency change.**
   The extraction guide's `dependency` row now names it, so the request takes
   the dependency route, whose step already carries the upgrade procedure for
@@ -104,6 +140,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   was skipped and the required check went green over no tests. A repository
   without a `package.json`, or with no layer-named script, is still a valid
   empty set. Fixes #3533.
+
+- **The Markdown-schema check no longer passes over a document directory it
+  cannot read.** A directory that fails to list for a reason other than being
+  absent (permission, I/O, descriptor exhaustion) is reported with its path and
+  cause, and the run fails instead of treating the documents beneath it as
+  conforming. Fixes #3626.
 
 - Skip Claude Code prompt reminders for `ci-monitor-event` notification lines
   before counting eligible prompts. `qfai init` refreshes the previous official
