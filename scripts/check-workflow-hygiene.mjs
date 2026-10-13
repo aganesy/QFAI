@@ -1269,6 +1269,77 @@ function shellCommandLines(body) {
   return out;
 }
 /**
+ * The command segments of one command line: the text between `&&`, `||`, `;` and pipes.
+ *
+ * Flags belong to the command they sit in. Reading a whole line as one invocation let
+ * `npm i -g --ignore-scripts --registry <trusted> a && npm i -g b` count the first install's flags
+ * for the second. Splitting inside a quoted string can only lose flags and produce a finding,
+ * which is the safe direction.
+ *
+ * @param {string} line one command line from `shellCommandLines`
+ * @returns {string[]} the segments, trimmed, without empty ones
+ */
+function commandSegments(line) {
+  return line
+    .split(/&&|\|\||[;|&]/)
+    .map((segment) => segment.trim())
+    .filter((segment) => segment !== "");
+}
+
+/**
+ * The part of a global install that npm reads as options: from the install to the first bare `--`.
+ *
+ * After a bare `--` npm treats every word as a positional argument, so
+ * `npm i -g -- --ignore-scripts pkg` installs a package called `--ignore-scripts` with scripts on.
+ *
+ * @param {string} segment one command segment
+ * @param {number} from where the install begins in `segment`
+ * @returns {string} the text whose flags npm applies
+ */
+function flagsBeforeTerminator(segment, from) {
+  const rest = segment.slice(from);
+  const end = rest.search(/\s--(?:\s|$)/);
+  return end === -1 ? rest : rest.slice(0, end);
+}
+
+/** A value with the quotes the shell would remove taken off. */
+function unquoted(value) {
+  return value.replace(/^["']|["']$/g, "");
+}
+
+/**
+ * Every occurrence of an npm flag in `text`, abbreviations included.
+ *
+ * npm accepts any unambiguous prefix of a flag name, so `--ignore-script=false`, `--ignore-s` and
+ * `--no-ignore-scr` are the real flag. `shortest` is the shortest prefix that names this flag
+ * alone; a shorter one is ambiguous, and npm refuses it. Counting more than npm resolves can only
+ * produce a finding.
+ *
+ * @param {string} text the options of one install
+ * @param {string} flag the flag name without dashes
+ * @param {number} shortest the fewest letters of the name that still resolve to it
+ * @returns {{text: string, negated: boolean, abbreviated: boolean, value: string | undefined, attached: string | undefined}[]}
+ *   `value` is what follows, joined by `=` or a space and never starting with a dash;
+ *   `attached` is the `=` form alone
+ */
+function flagOccurrences(text, flag, shortest) {
+  const found = [];
+  for (const match of text.matchAll(/--(no-)?([a-z][a-z-]*)(?![\w-])/g)) {
+    const name = match[2] ?? "";
+    if (name.length < shortest || !flag.startsWith(name)) continue;
+    const after = /^(?:=(\S*)|\s+(?!-)(\S+))/.exec(text.slice(match.index + match[0].length));
+    found.push({
+      text: `${match[0]}${after?.[0] ?? ""}`.trim(),
+      negated: match[1] !== undefined,
+      abbreviated: name !== flag,
+      value: after?.[1] ?? after?.[2],
+      attached: after?.[1],
+    });
+  }
+  return found;
+}
+
+/**
  * Every global package install names where the package comes from.
  *
  * A SIXTH scope, deliberately, and not a sixth structural rule. `BR-0016-0037` closes the set over
@@ -1297,8 +1368,10 @@ function checkGlobalInstallPins(root, jobs) {
     for (const step of site.steps) {
       if (!isRecord(step)) continue;
       const body = typeof step.run === "string" ? step.run : "";
-      for (const line of shellCommandLines(body)) {
-        if (!GLOBAL_INSTALL.test(line)) continue;
+      for (const line of shellCommandLines(body).flatMap(commandSegments)) {
+        const install = GLOBAL_INSTALL.exec(line);
+        if (install === null) continue;
+        const flagText = flagsBeforeTerminator(line, install.index);
         const missing = [];
         // The VALUE, not the presence. `--registry=https://attacker.example` carries the flag and
         // answers a different registry, which is the whole of what the flag was added to stop.
@@ -1309,19 +1382,24 @@ function checkGlobalInstallPins(root, jobs) {
         // attacker (verified against `npm config get registry` carrying both). A duplicate is
         // refused outright rather than resolved: two answers to one question is not a pin,
         // whichever end this lane were to read from.
-        const registries = [...line.matchAll(/--registry[=\s]+(\S+)/g)].map((m) =>
-          (m[1] ?? "").replace(/^["']|["']$/g, ""),
-        );
+        //
+        // Abbreviations count as occurrences (`--regis=<attacker>` is `--registry` to npm), and a
+        // lone abbreviation is refused all the same: npm warns that abbreviations stop working in
+        // its next major version, so a pin spelled that way is a pin with an expiry date.
+        const registries = flagOccurrences(flagText, "registry", 3);
         if (registries.length > 1) {
           missing.push(
             `one --registry (found ${String(registries.length)}, and npm takes the last: ${registries
-              .map((r) => JSON.stringify(r))
+              .map((r) => JSON.stringify(unquoted(r.value ?? "")))
               .join(", ")})`,
           );
         } else {
-          const registry = registries[0] ?? "";
+          const only = registries[0];
+          const registry = unquoted(only?.value ?? "");
           const resolved = registry.replace(/\/+$/, "");
-          if (!TRUSTED_REGISTRIES.includes(resolved)) {
+          if (only?.abbreviated === true) {
+            missing.push("--registry spelled in full");
+          } else if (only?.negated === true || !TRUSTED_REGISTRIES.includes(resolved)) {
             missing.push(
               registry === ""
                 ? "--registry"
@@ -1337,24 +1415,37 @@ function checkGlobalInstallPins(root, jobs) {
         // repeated `--registry` is, rather than resolved to its last value.
         // The value never starts with a dash, so a following flag is its own occurrence and not
         // swallowed as the first one's value. `--no-ignore-scripts` is the same option spelled
-        // negated, and npm applies it in order like any other occurrence, so it counts too.
-        const ignores = [...line.matchAll(/--(no-)?ignore-scripts(?![\w-])(?:[=\s]+(?!-)(\S+))?/g)];
+        // negated, and npm applies it in order like any other occurrence, so it counts too, and so
+        // does every abbreviation of either spelling (`--ignore-script=false`, `--no-ignore-s`).
+        const ignores = flagOccurrences(flagText, "ignore-scripts", 2);
         if (ignores.length > 1) {
           missing.push(
             `one --ignore-scripts (found ${String(ignores.length)}, and npm takes the last: ${ignores
-              .map((m) => JSON.stringify(m[0].trim()))
+              .map((m) => JSON.stringify(m.text))
               .join(", ")})`,
           );
         } else {
           const only = ignores[0];
           // Quotes come off the value as they do for `--registry`: the shell strips them before
           // npm reads it, so `--ignore-scripts="false"` is a false.
-          const ignoreValue = only?.[2]?.replace(/^["']|["']$/g, "");
-          const ignoresScripts =
-            only !== undefined &&
-            only[1] === undefined &&
-            (ignoreValue === undefined || !/^(?:false|0|no)$/i.test(ignoreValue));
-          if (!ignoresScripts) missing.push("--ignore-scripts");
+          const ignoreValue = only?.value === undefined ? undefined : unquoted(only.value);
+          if (only?.abbreviated === true) {
+            missing.push("--ignore-scripts spelled in full");
+          } else if (only?.attached !== undefined && /[$`]/.test(only.attached)) {
+            // The shell or the workflow expression decides this value after the text is read, and
+            // a textual check cannot see what it becomes: `--ignore-scripts=$X` may be false. A
+            // spaced value is not read this way, since `--ignore-scripts $PACKAGE` is as likely a
+            // package as a value. A variable that carries a whole flag is outside what this sees.
+            missing.push(
+              `a literal --ignore-scripts value (found ${JSON.stringify(only.attached)})`,
+            );
+          } else if (
+            only === undefined ||
+            only.negated ||
+            (ignoreValue !== undefined && /^(?:false|0|no)$/i.test(ignoreValue))
+          ) {
+            missing.push("--ignore-scripts");
+          }
         }
         if (missing.length === 0) continue;
         findings.push({

