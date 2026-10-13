@@ -201,6 +201,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- The `QFAI-LINK-001` warning for skill wrappers the operating system will not
+  follow, over canonical documents that read fine, is now one finding with a
+  one-line message and a one-line suggested action. Before, a Windows checkout
+  printed about 2 KB of it on every `qfai validate` run, which buried the counts
+  line. The message gives the count, the first path and how many more there are;
+  the finding still lists every path in its references, and its severity is
+  unchanged. Fixes #3652. Refs #3469: the single-line half only; a repair by
+  `validate` or a lower severity is not part of this change.
 - The shipped `qfai-tests.yml` fails closed on an unreadable `package.json`. A
   manifest that is not valid JSON or not an object, a `scripts` field that is
   not an object, a layer-named script that is not a string, and a malformed
