@@ -980,10 +980,16 @@ export function rootIsRefused(root, rel) {
  * that walk: a linked root or a linked entry is a door out of the tree and is not taken.
  *
  * @param {string} root repository root
+ * Past `MAX_WALKED_ENTRIES` the walk stops, and the result is a prefix of the tree. `truncated`
+ * receives `rel` when that happened, so the caller can report a partial inventory instead of
+ * comparing it as if it were whole: a file past the ceiling is otherwise never seen.
+ *
+ * @param {string} root repository root
  * @param {string} rel directory to walk, repo-relative
+ * @param {string[]} [truncated] receives `rel` when the walk stopped at its ceiling
  * @returns {string[]} repo-relative POSIX paths
  */
-function filesUnder(root, rel) {
+function filesUnder(root, rel, truncated) {
   const abs = path.join(root, rel);
   let inspected;
   try {
@@ -996,7 +1002,10 @@ function filesUnder(root, rel) {
   let seen = 0;
   const walk = (dir) => {
     for (const e of readdirSync(dir, { withFileTypes: true })) {
-      if (seen >= MAX_WALKED_ENTRIES) return;
+      if (seen >= MAX_WALKED_ENTRIES) {
+        if (truncated !== undefined && !truncated.includes(rel)) truncated.push(rel);
+        return;
+      }
       seen += 1;
       const p = path.join(dir, e.name);
       if (e.isSymbolicLink()) continue;
@@ -2596,7 +2605,18 @@ function checkRequiredContexts(root, jobs) {
       // that never reached the runner.
       const present = new Set();
       for (const pinnedRoot of [ACTIONS_ROOT_REL, "scripts"]) {
-        for (const rel_ of filesUnder(root, pinnedRoot)) present.add(rel_);
+        const inventoryTruncated = [];
+        for (const rel_ of filesUnder(root, pinnedRoot, inventoryTruncated)) present.add(rel_);
+        if (inventoryTruncated.length > 0) {
+          // Reported, not resolved: the set below is a prefix, so an unregistered file past the
+          // ceiling is invisible to the comparison and the run cannot call the tree whole.
+          findings.push({
+            rule: "required-context",
+            file: pinnedRoot.replace(/\\/g, "/"),
+            job: declaredJob,
+            detail: `holds more than ${String(MAX_WALKED_ENTRIES)} entries, so this lane stopped walking the pinned-file inventory — a file past the ceiling is never compared with the pinned list, and an unregistered local action or script there would go unseen`,
+          });
+        }
       }
       for (const [rel_, digest] of Object.entries(pinnedActions)) {
         const bytes = readBoundedText(path.join(root, rel_), MAX_WORKFLOW_BYTES);
