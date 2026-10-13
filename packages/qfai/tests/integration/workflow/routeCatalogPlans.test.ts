@@ -27,6 +27,17 @@ const CATALOG: [string, string][] = [
     "answer-question",
     "Stages in order — `answer` (triage): `triage-investigate°`, `triage-answer`, `triage-close`; decision points none; release point none; branch points `triage-investigate`, `defect-found` to the route the decision rules give",
   ],
+  // QFAI:EX-0001-0220-50
+  [
+    "answer-in-session",
+    "Stages in order — `answer` (triage): `triage-answer`; decision points none; release point none; branch points none",
+  ],
+  // QFAI:EX-0001-0220-51
+  // QFAI:EX-0001-0215-16
+  [
+    "run-operation",
+    "Stages in order — `operate` (triage): `triage-operate`; decision points none; release point none; branch points `triage-operate`, `needs-change` to the route the decision rules give",
+  ],
   [
     "request-info",
     "Stages in order — `ask` (triage): `triage-request-info`; `close` (triage): `triage-close`; decision points none; release point none; branch points `triage-close`, `info-received` to the route the decision rules give",
@@ -253,6 +264,8 @@ it("The procedure catalog plan has one documentation writer and the existing clo
   );
 });
 
+// QFAI:EX-0001-0220-50
+// QFAI:EX-0001-0220-51
 it("The shipped plans end three ways", async () => {
   const plans = await loadBuiltInPlans();
   const names = (plan: WorkflowPlanFile) =>
@@ -276,7 +289,14 @@ it("The shipped plans end three ways", async () => {
     releaseNotes: counts["verify-release-notes"],
   }).toEqual({
     total: WORKFLOW_ROUTES.length,
-    endings: ["triage-close", "verify", "verify then verify-external", "verify-release-notes"],
+    endings: [
+      "triage-answer",
+      "triage-close",
+      "triage-operate",
+      "verify",
+      "verify then verify-external",
+      "verify-release-notes",
+    ],
     external: ["fix-env-bound"],
     releaseNotes: ["draft-release-notes"],
   });
