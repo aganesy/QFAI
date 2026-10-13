@@ -63,6 +63,10 @@ function expectParsingWork(profile: StoryObligationProfile): void {
     rule: "storyTree.testObligation",
     refs: ["EX-0001-0001-01"],
   };
+  const unplacedEX: Issue = {
+    ...missingEX,
+    message: `EX-0001-0001-01 is missing a test annotation; ${knownTag} is at ${unitFile}:1, which is not the comment line directly before an \`it(\`, \`test(\` or \`describe(\`, so it counts for nothing`,
+  };
   const unknownEX: Issue = {
     code: "QFAI-STORY-008",
     severity: "error",
@@ -160,7 +164,7 @@ function expectParsingWork(profile: StoryObligationProfile): void {
       test: { ...selectedUnit, content: unattached },
       tree: ordinary,
       tddCalls: 1,
-      expected: { atdd: [missingBF, missingAC], tdd: [missingEX] },
+      expected: { atdd: [missingBF, missingAC], tdd: [unplacedEX] },
     },
     {
       name: "DONE exception exempts only its declared EX",

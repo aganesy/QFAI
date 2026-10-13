@@ -6,6 +6,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`QFAI-STORY-006` says where an annotation that counts for nothing sits.**
+  When an example's `QFAI:EX-` annotation is in a selected test file but not on
+  the comment line directly before an `it(`, `test(` or `describe(`, the finding
+  now names the file and line and the required placement. Fixes #3531.
+
 - **A merge that duplicated a decision has a bounded manual recovery.**
   When a bad two-parent merge adds a second byte-identical copy of an inherited
   decision, the SDD owner may remove only that surplus copy under a separate
