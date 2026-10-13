@@ -268,61 +268,6 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
     expect(text).toContain(".agents/rules/interface-clarity.md");
   });
 
-  // QFAI:EX-0001-0196-70
-  it("asks for a rule to be read once per session, and never from a brief", () => {
-    if (typeof catalog !== "object" || catalog === null) throw new Error("no reminder catalog");
-    for (const [key, message] of Object.entries(catalog)) {
-      if (typeof message !== "object" || message === null) continue;
-      const brief: unknown = Reflect.get(message, "briefContext");
-      if (typeof brief === "string") {
-        expect(brief, `${key} brief sends the agent back to the file`).not.toMatch(/\bread\b/i);
-        expect(brief, `${key} brief names no rule or skill`).toMatch(/\.agents\/rules\/|qfai-run/);
-      }
-      const output: unknown = Reflect.get(message, "hookSpecificOutput");
-      const full: unknown =
-        typeof output === "object" && output !== null
-          ? Reflect.get(output, "additionalContext")
-          : undefined;
-      if (typeof full === "string") {
-        // A full form that asks for its rule or skill to be read asks for it once per session.
-        if (/\bread the (?:rule|skill)\b/i.test(full)) {
-          expect(full, `${key} asks for a reread`).toMatch(
-            /\bRead the (?:rule|skill) once per session\b/,
-          );
-        }
-      }
-    }
-  });
-
-  // QFAI:EX-0001-0196-53
-  // QFAI:EX-0001-0196-56
-  it("keeps compact editing pointers in the shared catalog with their required rules", () => {
-    if (typeof catalog !== "object" || catalog === null) throw new Error("no reminder catalog");
-    for (const [key, rule] of [
-      ["minimal-implementation", ".agents/rules/minimal-implementation.md"],
-      ["documentation-clarity-after-write", ".agents/rules/documentation-clarity.md"],
-      ["documentation-clarity-after-edit", ".agents/rules/documentation-clarity.md"],
-    ] as const) {
-      const message: unknown = Reflect.get(catalog, key);
-      if (typeof message !== "object" || message === null) throw new Error(`no ${key}`);
-      const brief: unknown = Reflect.get(message, "briefContext");
-      expect(typeof brief, `${key} has a repeat pointer`).toBe("string");
-      if (typeof brief !== "string") throw new Error(`no ${key} pointer`);
-      expect(brief).toContain(rule);
-      expect(brief).not.toMatch(/[\r\n\u2028\u2029]/);
-      const output: unknown = Reflect.get(message, "hookSpecificOutput");
-      if (typeof output !== "object" || output === null) throw new Error("no hook output");
-      const full: unknown = Reflect.get(output, "additionalContext");
-      if (typeof full !== "string") throw new Error("no full context");
-      expect(brief.trim().length).toBeGreaterThan(0);
-      expect(brief.length).toBeLessThan(full.length);
-      if (key === "minimal-implementation") {
-        expect(brief).toMatch(/§\s*2|\b(?:floor|non-removable)\b/i);
-        expect(brief).toContain(".agents/rules/interface-clarity.md");
-      }
-    }
-  });
-
   it("runs a program directly, with no shell and no message of its own", () => {
     const readers = new Set<string>();
     for (const [, groups] of hooks) {
@@ -482,6 +427,70 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
 
 // QFAI:SPEC-REF: AC-0001-0196-12, EX-0001-0196-37
 // These guards cover the shared instruction payload, not an agent's judgment.
+// The shipped catalog is one file, whichever settings file wires it.
+describe("the shipped reminder catalog", () => {
+  let catalog: unknown;
+
+  beforeAll(async () => {
+    catalog = JSON.parse(await readFile(path.join(repoRoot, SHIPPED_MESSAGES), "utf-8"));
+  });
+
+  // QFAI:EX-0001-0196-70
+  it("asks for a rule to be read once per session, and never from a brief", () => {
+    if (typeof catalog !== "object" || catalog === null) throw new Error("no reminder catalog");
+    for (const [key, message] of Object.entries(catalog)) {
+      if (typeof message !== "object" || message === null) continue;
+      const brief: unknown = Reflect.get(message, "briefContext");
+      if (typeof brief === "string") {
+        expect(brief, `${key} brief sends the agent back to the file`).not.toMatch(/\bread\b/i);
+        expect(brief, `${key} brief names no rule or skill`).toMatch(/\.agents\/rules\/|qfai-run/);
+      }
+      const output: unknown = Reflect.get(message, "hookSpecificOutput");
+      const full: unknown =
+        typeof output === "object" && output !== null
+          ? Reflect.get(output, "additionalContext")
+          : undefined;
+      if (typeof full === "string") {
+        // A full form that asks for its rule or skill to be read asks for it once per session.
+        if (/\bread the (?:rule|skill)\b/i.test(full)) {
+          expect(full, `${key} asks for a reread`).toMatch(
+            /\bRead the (?:rule|skill) once per session\b/,
+          );
+        }
+      }
+    }
+  });
+
+  // QFAI:EX-0001-0196-53
+  // QFAI:EX-0001-0196-56
+  it("keeps compact editing pointers in the shared catalog with their required rules", () => {
+    if (typeof catalog !== "object" || catalog === null) throw new Error("no reminder catalog");
+    for (const [key, rule] of [
+      ["minimal-implementation", ".agents/rules/minimal-implementation.md"],
+      ["documentation-clarity-after-write", ".agents/rules/documentation-clarity.md"],
+      ["documentation-clarity-after-edit", ".agents/rules/documentation-clarity.md"],
+    ] as const) {
+      const message: unknown = Reflect.get(catalog, key);
+      if (typeof message !== "object" || message === null) throw new Error(`no ${key}`);
+      const brief: unknown = Reflect.get(message, "briefContext");
+      expect(typeof brief, `${key} has a repeat pointer`).toBe("string");
+      if (typeof brief !== "string") throw new Error(`no ${key} pointer`);
+      expect(brief).toContain(rule);
+      expect(brief).not.toMatch(/[\r\n\u2028\u2029]/);
+      const output: unknown = Reflect.get(message, "hookSpecificOutput");
+      if (typeof output !== "object" || output === null) throw new Error("no hook output");
+      const full: unknown = Reflect.get(output, "additionalContext");
+      if (typeof full !== "string") throw new Error("no full context");
+      expect(brief.trim().length).toBeGreaterThan(0);
+      expect(brief.length).toBeLessThan(full.length);
+      if (key === "minimal-implementation") {
+        expect(brief).toMatch(/§\s*2|\b(?:floor|non-removable)\b/i);
+        expect(brief).toContain(".agents/rules/interface-clarity.md");
+      }
+    }
+  });
+});
+
 describe("documentation clarity reminder scope", () => {
   const keys = [
     "documentation-clarity-before-post",

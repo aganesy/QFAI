@@ -86,6 +86,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the tool states. Codex refuses a timeout above a lowered maximum, which the
   example of `600000` could exceed.
 
+- `qfai-grilling` states its default again: a stage that says nothing holds a
+  delegated session where one is held.
+
 ## [2.1.2] - 2026-10-11
 
 ### Added
