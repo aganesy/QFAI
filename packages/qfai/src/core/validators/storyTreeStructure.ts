@@ -236,16 +236,32 @@ export function validateStoryTreeStructureModel(model: StoryTreeModel): Issue[] 
       }
     }
   }
-  for (const example of model.examples) {
-    if (!citedExamples.has(example.id)) {
-      issues.push(
-        finding(
-          "QFAI-STORY-005",
-          `${example.id} is not cited by a rule in ${example.file}`,
-          example.file,
-          [example.id],
-        ),
-      );
+  if (model.unloadedContractFiles.length > 0) {
+    // The rules of a file that did not load are unknown, so an example none of
+    // the loaded rules cites may be cited by them. Reporting each as uncited
+    // listed one broken file as dozens of errors on unrelated stories.
+    issues.push(
+      issue(
+        "QFAI-STORY-005",
+        `Examples are not checked for a citing rule because ${model.unloadedContractFiles.join(", ")} did not load any rule. Repair the error reported for it first.`,
+        "info",
+        model.unloadedContractFiles[0],
+        "storyTree.structure",
+        [],
+      ),
+    );
+  } else {
+    for (const example of model.examples) {
+      if (!citedExamples.has(example.id)) {
+        issues.push(
+          finding(
+            "QFAI-STORY-005",
+            `${example.id} is not cited by a rule in ${example.file}`,
+            example.file,
+            [example.id],
+          ),
+        );
+      }
     }
   }
   for (const error of model.errors) {

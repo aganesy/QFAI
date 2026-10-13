@@ -216,8 +216,7 @@ The registry can lag the publish job by a minute or two, and `npm i -D qfai` wou
 install the previous version, so the check would pass without testing the new one.
 Install `qfai@X.Y.Z`, never `qfai` alone, and only after `npm view` prints `X.Y.Z`.
 `--prefer-online` refreshes the cache that the install reads, so an old answer is not
-reused. Until the registry catches up, `npm view` fails with E404 or prints the previous
-version, so repeat it:
+reused. `npm view` fails with E404 until the registry serves `X.Y.Z`, so repeat it:
 
 ```sh
 npm view qfai@X.Y.Z version --prefer-online

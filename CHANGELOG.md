@@ -134,6 +134,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reason why the failing state is deterministic, instead of "fails on every
   run". Refs #3676 and #3678.
 
+- **The base-commit comparison of a timing-dependent suite is made under the
+  same load.** `common-gate-run` says to run the base commit under the
+  conditions of the compared run and to record both loads, to count a chain of
+  failures once, and to run alone the files that hold a new failure. A failure
+  that passes alone but fails in the suite on the changed branch is reported as
+  a possible order or shared-state effect of the change, and is left out only
+  after a full-suite rerun that does not show it; each failure left out is
+  listed in the final report. The baseline stays `same`, `different` or
+  `unrun` and the verdict stays `FAIL`; no state or field is added. Refs #3653:
+  the guidance half only.
+
 - **The prototyping preflight says what `qfai doctor` probes at the target URL.**
   `prototyping-preflight` now states that doctor sends one `GET` to exactly the
   URL it is given, accepts a status from 200 to 399, and does not follow a
@@ -210,6 +221,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- A contract file that raises an error and produces no rule no longer makes
+  `qfai validate` report every example as named by no rule. Before, one API
+  contract with a YAML error printed the parse error plus dozens of
+  `QFAI-STORY-005` errors on unrelated stories. The check for an uncited example
+  is now skipped while such a file exists, and one info finding names the file
+  and says the examples were not checked. The error for the file is reported as
+  before. Fixes #3665.
 - The `QFAI-LINK-001` warning for skill wrappers the operating system will not
   follow, over canonical documents that read fine, is now one finding with a
   one-line message and a one-line suggested action. Before, a Windows checkout
