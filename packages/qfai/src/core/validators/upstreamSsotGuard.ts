@@ -10,7 +10,7 @@ import {
   getChangedFilesAgainstBase,
   normalizeRepoPath,
   readFileAtBase,
-  uncommittedPaths,
+  uncommittedContentPaths,
   type BaseComparison,
 } from "../gitChanges.js";
 import { parseAllMarkdownTables } from "../specPackParsers.js";
@@ -145,14 +145,21 @@ export async function validateStoryTreeDrift(
     );
   }
   issues.push(...(await examplesWithoutTestChange(root, config, changed, specs, baseBranch)));
-  const uncommitted = (uncommittedPaths(root) ?? []).filter(
-    (file) =>
-      isProtected(file) &&
-      !changed.has(file) &&
-      !authorised.has(file) &&
-      !(file === decisions && onlyChangeRequestRowsChanged),
-  );
-  if (uncommitted.length > 0) issues.push(uncommittedNotCompared(uncommitted));
+  // A path already in the committed comparison is not named again, even when the working tree
+  // changes it further: the checks read the file as it is on disk.
+  const working = uncommittedContentPaths(root);
+  if (working === null) {
+    issues.push(notCompared("git could not list the uncommitted changes.", RERUN_ACTION));
+  } else {
+    const uncommitted = working.filter(
+      (file) =>
+        isProtected(file) &&
+        !changed.has(file) &&
+        !authorised.has(file) &&
+        !(file === decisions && onlyChangeRequestRowsChanged),
+    );
+    if (uncommitted.length > 0) issues.push(uncommittedNotCompared(uncommitted));
+  }
   if (profile === "drift" && comparison.kind === "resolved") {
     issues.push(comparedAgainst(baseBranch, comparison, changed.size));
   }

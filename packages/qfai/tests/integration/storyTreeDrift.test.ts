@@ -1158,6 +1158,40 @@ describe("story-tree drift", () => {
 
     // QFAI:AC-0001-0054-11
     // QFAI:EX-0001-0054-22
+    // QFAI:AC-0001-0054-11
+    // QFAI:EX-0001-0054-22
+    it("names a deleted file, a staged-only edit and both ends of a rename", async () => {
+      await baseWithProtectedFiles();
+      await rm(path.join(root, contractFile));
+      expect(uncommitted(await validateStoryTreeDrift(root, config(), "drift"))).toEqual([
+        expect.objectContaining({ refs: [contractFile] }),
+      ]);
+
+      git("checkout", "--", contractFile);
+      await put(glossary, "# Terms\nStaged\n");
+      git("add", glossary);
+      expect(uncommitted(await validateStoryTreeDrift(root, config(), "drift"))).toEqual([
+        expect.objectContaining({ refs: [glossary] }),
+      ]);
+
+      git("reset", "--hard");
+      const renamed = `${specs}/01_policy/renamed.md`;
+      git("mv", glossary, renamed);
+      expect(uncommitted(await validateStoryTreeDrift(root, config(), "drift"))).toEqual([
+        expect.objectContaining({ refs: [glossary, renamed] }),
+      ]);
+    });
+
+    // QFAI:AC-0001-0054-11
+    // QFAI:EX-0001-0054-22
+    it("does not name a file whose only change is its line endings", async () => {
+      await baseWithProtectedFiles();
+      await put(glossary, "# Terms\r\n");
+      expect(uncommitted(await validateStoryTreeDrift(root, config(), "drift"))).toEqual([]);
+    });
+
+    // QFAI:AC-0001-0054-11
+    // QFAI:EX-0001-0054-22
     it("stays silent for a change request row, an authorised file and an unprotected file", async () => {
       await baseWithProtectedFiles();
       await put(decisions, `${table}| DEC-0001 | Change request: ${glossary} | Reason | WIP |\n`);
