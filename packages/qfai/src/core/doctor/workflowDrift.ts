@@ -95,7 +95,9 @@ export function describeWorkflowDifference(installed: string, packaged: string):
   const lines = `${changed} ${changed === 1 ? "line" : "lines"} (${onlyHere} only in the installed file, ${onlyShipped} only in the shipped copy)`;
   const hereJobs = jobsOf(installed);
   const shippedJobs = jobsOf(packaged);
-  if (hereJobs === undefined || shippedJobs === undefined) return lines;
+  if (hereJobs === undefined || shippedJobs === undefined) {
+    return `${lines}; jobs not compared: ${hereJobs === undefined ? "the installed file does" : "the shipped copy does"} not parse`;
+  }
   const names = [...new Set([...Object.keys(hereJobs), ...Object.keys(shippedJobs)])].sort();
   const jobs = names.filter((name) => hereJobs[name] !== shippedJobs[name]);
   return jobs.length === 0 ? lines : `${lines}; jobs that differ: ${jobs.join(", ")}`;

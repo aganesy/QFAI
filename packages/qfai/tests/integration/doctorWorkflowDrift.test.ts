@@ -97,6 +97,12 @@ describe("qfai doctor reports a shipped workflow that differs from the shipped t
   it("names every shipped job when the installed file defines none of them", async () => {
     // QFAI:AC-0003-0011-14
     const root = await project({ "qfai-tests.yml": "name: edited\n" });
+    const shipped = await readFile(packagedPath("qfai-tests.yml"), "utf-8");
+    const afterJobs = shipped.split(/^jobs:\s*$/m)[1] ?? "";
+    const names = [...afterJobs.matchAll(/^ {2}([A-Za-z0-9_-]+):\s*$/gm)]
+      .map((match) => match[1] ?? "")
+      .sort();
+    expect(names.length).toBeGreaterThan(0);
 
     const [found] = await driftFindings(root);
 
@@ -104,7 +110,22 @@ describe("qfai doctor reports a shipped workflow that differs from the shipped t
     expect(found?.message).toMatch(
       /\(1 only in the installed file, \d+ only in the shipped copy\)/,
     );
-    expect(found?.message).toContain("jobs that differ: ");
+    expect(found?.message).toContain(
+      `jobs that differ: ${names.join(", ")}. Doctor changes nothing.`,
+    );
+  });
+
+  // QFAI:EX-0003-0011-31
+  it("says the jobs were not compared when the installed file does not parse", async () => {
+    // QFAI:AC-0003-0011-14
+    const root = await project({ "qfai-tests.yml": "name: [unterminated\n" });
+
+    const [found] = await driftFindings(root);
+
+    expect(found?.message).toContain(
+      "; jobs not compared: the installed file does not parse. Doctor",
+    );
+    expect(found?.message).not.toContain("jobs that differ");
   });
 
   // QFAI:EX-0003-0011-25
