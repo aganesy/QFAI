@@ -6,16 +6,7 @@
 // QFAI:AC-0001-0196-01
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
-import {
-  mkdir,
-  mkdtemp,
-  readFile,
-  readdir,
-  realpath,
-  rm,
-  symlink,
-  writeFile,
-} from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -23,6 +14,7 @@ import { parse as parseYaml } from "yaml";
 import { describe, expect, it } from "vitest";
 
 import { packagePlansDir, WORKFLOW_ROUTES } from "../../../src/core/workflow/plans.js";
+import { createSymlinkFixture } from "../../helpers/symlinkFixture.js";
 import {
   ENTRY_SKILLS,
   HOST_SKILL_DIRS,
@@ -33,6 +25,9 @@ import {
 } from "./upgradeStates.js";
 
 const PLANS = WORKFLOW_ROUTES.map((route) => `${route}.yml`);
+
+const CLOUD_INSTALLER = path.join(SKILLS, "qfai-run", "scripts", "codex-cloud-install.mjs");
+const CLOUD_SETUP = path.join(SKILLS, "qfai-run", "references", "codex-cloud-install.md");
 
 /** The steps the packaged plans name, read from the plans themselves. */
 async function planSteps(): Promise<string[]> {
@@ -135,14 +130,61 @@ describe("the workflow entry install set", () => {
   });
 });
 
-/** Links `at` to `outside`; false where the platform cannot make the link. */
-async function linkOutside(outside: string, at: string): Promise<boolean> {
-  try {
-    await symlink(outside, at, process.platform === "win32" ? "junction" : "dir");
-    return true;
-  } catch {
-    return false;
-  }
+// QFAI:AC-0001-0196-16
+describe("the generated native preparation entry", () => {
+  // QFAI:EX-0001-0196-60
+  it("writes the standalone installer and setup instructions without preparing dependencies", async () => {
+    await withEmptyRepo(async (root) => {
+      await initQuietly(root);
+      expect(existsSync(path.join(root, CLOUD_INSTALLER)), "init generates the installer").toBe(
+        true,
+      );
+      expect(existsSync(path.join(root, CLOUD_SETUP)), "init generates setup instructions").toBe(
+        true,
+      );
+      const setup = await readFile(path.join(root, CLOUD_SETUP), "utf8");
+      expect(setup).toContain(
+        "node .qfai/assistant/skill/qfai-run/scripts/codex-cloud-install.mjs --cwd <absolute-checkout> -- <executable> [argument...]",
+      );
+      expect(existsSync(path.join(root, "node_modules")), "generation is not installation").toBe(
+        false,
+      );
+      for (const file of [".claude/settings.json", ".codex/hooks.json"]) {
+        const hooks = await readFile(path.join(root, file), "utf8");
+        expect(hooks).not.toContain("codex-cloud-install.mjs");
+      }
+    });
+  });
+
+  // QFAI:EX-0001-0196-61
+  it("preserves an edited entry, restores it under force, and writes nothing in a dry run", async () => {
+    await withEmptyRepo(async (root) => {
+      await initQuietly(root);
+      const installer = path.join(root, CLOUD_INSTALLER);
+      expect(existsSync(installer), "init generates the installer").toBe(true);
+      const shipped = await readFile(installer);
+      const edited = Buffer.from("throw new Error('project entry must not run during init');\n");
+      const sentinel = path.join(root, "project-owned.txt");
+      await writeFile(sentinel, "preserved\n");
+      await writeFile(installer, edited);
+      await initQuietly(root);
+      expect(await readFile(installer)).toEqual(edited);
+      await initQuietly(root, true, true, true);
+      expect(await readFile(installer)).toEqual(edited);
+      await initQuietly(root, true);
+      expect(await readFile(installer)).toEqual(shipped);
+      expect(await readFile(sentinel, "utf8")).toBe("preserved\n");
+      expect(existsSync(path.join(root, "node_modules"))).toBe(false);
+    });
+  });
+});
+
+/**
+ * Links `at` to `outside`; false only where Windows refuses symlinks. Every other failure is
+ * rethrown with its code and path, so a broken setup is not reported as an unsupported platform.
+ */
+function linkOutside(outside: string, at: string): Promise<boolean> {
+  return createSymlinkFixture(outside, at, process.platform === "win32" ? "junction" : "dir");
 }
 
 describe("a host directory reached through a link", () => {
