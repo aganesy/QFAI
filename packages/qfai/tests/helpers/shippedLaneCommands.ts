@@ -1153,7 +1153,7 @@ export const ALLOWED_ACTIONS: ReadonlySet<string> = new Set([
  */
 export const ALLOWED_ACTION_COMMITS: ReadonlyMap<string, string> = new Map([
   ["actions/checkout", "3d3c42e5aac5ba805825da76410c181273ba90b1"],
-  ["actions/setup-node", "820762786026740c76f36085b0efc47a31fe5020"],
+  ["actions/setup-node", "949feb2413d6458794dcd2491c4babbbce0c15c1"],
   ["pnpm/action-setup", "fc06bc1257f339d1d5d8b3a19a8cae5388b55320"],
 ]);
 
@@ -2044,7 +2044,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-docs.yml#checks",
-    '{"name":"Set up Node via actions/setup-node 7.0.0","uses":"actions/setup-node@820762786026740c76f36085b0efc47a31fe5020","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
+    '{"name":"Set up Node via actions/setup-node 7.1.0","uses":"actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
   ],
   [
     "qfai-docs.yml#checks",
@@ -2104,7 +2104,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-tests.yml#tests",
-    '{"name":"Set up Node via actions/setup-node 7.0.0","uses":"actions/setup-node@820762786026740c76f36085b0efc47a31fe5020","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
+    '{"name":"Set up Node via actions/setup-node 7.1.0","uses":"actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
   ],
   [
     "qfai-tests.yml#tests",
@@ -2140,7 +2140,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-validate.yml#validate",
-    '{"name":"Set up Node via actions/setup-node 7.0.0","uses":"actions/setup-node@820762786026740c76f36085b0efc47a31fe5020","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
+    '{"name":"Set up Node via actions/setup-node 7.1.0","uses":"actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
   ],
   [
     "qfai-validate.yml#validate",
