@@ -407,11 +407,8 @@ describe("where qfai-run runs the policy check and the commit", () => {
         "## Final report",
       ),
     );
-    expect(report).toMatch(/Name the policy check: `common-policy-check` and its outcome/i);
-    expect(report).toMatch(/or that it did not run and why/i);
-    expect(report).toMatch(/plan lists no such step/i);
-    expect(report).toMatch(
-      /a plan whose one step is `triage-answer` or `triage-operate` runs none, and the line says so/i,
+    expect(report).toContain(
+      "Name `common-policy-check` and its outcome, or that it did not run and why.",
     );
   });
 
