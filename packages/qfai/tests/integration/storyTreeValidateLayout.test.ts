@@ -164,7 +164,10 @@ describe("story-tree layout dispatch", () => {
       `${specs}/01_policy/principle.md`,
       "Read `docs/guide.md` and https://example.com/a.md\n",
     );
-    await put(`${specs}/decisions.md`, "| DEC-0001 | See `.qfai/spec/decisions.md` | - | DONE |\n");
+    await put(
+      `${specs}/decisions.md`,
+      "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| DEC-0001 | See `.qfai/spec/decisions.md` | - | DONE |\n",
+    );
     await put(".qfai/discussion/discussion-x/notes.md", "Cites `src/b.ts`.\n");
 
     const counted = await validateProject(root, configured(), { profile: "sdd" });
@@ -178,7 +181,7 @@ describe("story-tree layout dispatch", () => {
   // QFAI:EX-0001-0053-07
   it("reports a cited decision and a superseding decision that no row declares", async () => {
     const register = (rows: string): string =>
-      `| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n${rows}`;
+      `# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n${rows}`;
     await put(
       `${specs}/03_contract/cli/check.md`,
       "# CLI-0001: Check\n\n## Business rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0001-0001 | Approved by DEC-0008 | EX-0001-0001-01 |\n",
@@ -210,7 +213,7 @@ describe("story-tree layout dispatch", () => {
   it("names the extra column of decisions.md and the missing column of open-questions.md", async () => {
     await put(
       `${specs}/decisions.md`,
-      "| ID | Content | Approach | Status | Date |\n| --- | --- | --- | --- | --- |\n",
+      "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status | Date |\n| --- | --- | --- | --- | --- |\n",
     );
     await put(`${specs}/open-questions.md`, "| ID | Content | Status |\n| --- | --- | --- |\n");
 

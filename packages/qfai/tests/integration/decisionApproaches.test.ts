@@ -86,6 +86,10 @@ describe("inline code in a parsed decision Approach", () => {
       "- Evidence: file:.qfai/spec/03_contract/cli/cli-0015-qfai-workflow.md; file:.qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0220/02_Acceptance-Criteria.md; file:.qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0220/03_Example.md - Grounds: ";
     const approach = complete("\u65e5\u672c\u8a9e The stored prefix is `" + prefix + "`.");
     const markdown = [
+      "# Decisions",
+      "",
+      "## Decisions",
+      "",
       "| ID | Content | Approach | Status |",
       "| --- | --- | --- | --- |",
       row(approach),
@@ -136,12 +140,7 @@ describe("inline code in a parsed decision Approach", () => {
   ])("retains real item failures after table parsing: %s", async (approach, problem) => {
     const findings = await approachFindings([row(approach)]);
     expect(findings.map((item) => [item.code, item.severity, item.file, item.refs])).toEqual([
-      [
-        "QFAI-STORY-017",
-        "error",
-        path.join(root, specs, "decisions.md").replaceAll(path.sep, "/"),
-        ["DEC-2098"],
-      ],
+      ["QFAI-STORY-017", "error", `${specs}/decisions.md`, ["DEC-2098"]],
     ]);
     expect(findings[0]?.message).toContain(problem);
   });

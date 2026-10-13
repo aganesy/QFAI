@@ -28,9 +28,16 @@ const testOf = (...ids: string[]) =>
 
 /** Counts a Markdown table row under the decisions heading the tree reads. */
 function decisions(...rows: string[]): string {
-  return ["| ID | Content | Approach | Status |", "| --- | --- | --- | --- |", ...rows, ""].join(
-    "\n",
-  );
+  return [
+    "# Decisions",
+    "",
+    "## Decisions",
+    "",
+    "| ID | Content | Approach | Status |",
+    "| --- | --- | --- | --- |",
+    ...rows,
+    "",
+  ].join("\n");
 }
 
 /**

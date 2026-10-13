@@ -121,7 +121,7 @@ describe("BF-0001 story-tree acceptance", () => {
 
     files.set(
       `${spec}/decisions.md`,
-      "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| DEC-0001 | Retired US-0001-0003 | Keep its ID reserved | DONE |\n",
+      "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| DEC-0001 | Retired US-0001-0003 | Keep its ID reserved | DONE |\n",
     );
     expect(nextStoryTreeId(buildStoryTreeModel(files), "US", "BF-0001")).toBe("US-0001-0004");
   });

@@ -218,6 +218,10 @@ describe("qfai report", () => {
     await writeFile(
       path.join(root, ".qfai/spec/decisions.md"),
       [
+        "# Decisions",
+        "",
+        "## Decisions",
+        "",
         "| ID | Content | Approach | Status |",
         "| --- | --- | --- | --- |",
         "| DEC-0001 | Test exception: BF-0001, AC-0001-0001-01 | No tests yet | DONE |",
