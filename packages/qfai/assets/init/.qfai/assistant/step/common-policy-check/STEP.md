@@ -12,6 +12,7 @@ Design, tests and code fit a project only when its facts are current. The
 contract this step serves is
 `.qfai/assistant/rule/workflow.md#policy-check-mandatory`:
 it runs once per run, at the start, and no affected work continues on stale policy.
+The ultra-light routes `answer-in-session` and `run-operation` do not run it.
 
 ## Reads
 

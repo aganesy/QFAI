@@ -289,12 +289,7 @@ describe("qfai init", () => {
           });
           return stdout.trim();
         } catch (error: unknown) {
-          if (
-            typeof error === "object" &&
-            error !== null &&
-            "code" in error &&
-            (error as { code?: number }).code === 1
-          ) {
+          if (typeof error === "object" && error !== null && "code" in error && error.code === 1) {
             return null;
           }
           throw error;
@@ -865,9 +860,16 @@ describe("qfai init", () => {
       await execFile("git", ["init"], { cwd: repo });
       // Git for Windows may seed a local value at init time; clear it so the
       // only `true` in play comes from the global config above.
+      // `--unset-all` exits 5 when the key is absent, the one outcome this
+      // fixture accepts; any other failure is a real setup failure.
       await execFile("git", ["config", "--local", "--unset-all", "core.symlinks"], {
         cwd: repo,
-      }).catch(() => undefined);
+      }).catch((error: unknown) => {
+        if (typeof error === "object" && error !== null && "code" in error && error.code === 5) {
+          return;
+        }
+        throw error;
+      });
 
       const output = await captureStdout(async () => {
         await runInit({ dir: repo, force: false, dryRun: false, yes: true });
@@ -1073,7 +1075,7 @@ describe("qfai init", () => {
   });
 
   // QFAI:EX-0001-0028-03
-  it("stays silent about core.symlinks outside a git repository", async () => {
+  it("stays silent about core.symlinks outside a git repository", async (ctx) => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
       const insideRepo = await execFile("git", ["rev-parse", "--git-dir"], { cwd: root }).then(
@@ -1081,7 +1083,8 @@ describe("qfai init", () => {
         () => false,
       );
       if (insideRepo) {
-        return; // The temp dir happens to sit inside a repository.
+        // The temp dir happens to sit inside a repository.
+        ctx.skip();
       }
 
       const output = await captureStdout(async () => {
@@ -1595,7 +1598,7 @@ describe("qfai init", () => {
     }
   });
 
-  it("--force does not replace a FIFO standing where an instructions file goes", async () => {
+  it("--force does not replace a FIFO standing where an instructions file goes", async (ctx) => {
     // The refusal was written as "not a directory", and `lstat` calls a FIFO,
     // a socket and a device node none of those — so `rename` replaced the
     // entry outright. Create-only kept every one of them; the allowlist keeps
@@ -1615,10 +1618,19 @@ describe("qfai init", () => {
       let planted = false;
       try {
         planted = (await lstat(fifo)).isFIFO();
-      } catch {
-        planted = false;
+      } catch (error: unknown) {
+        // ENOENT is the known "no FIFO this process can see" outcome; any other
+        // failure is a real I/O problem and must not be reported as unsupported.
+        if (
+          typeof error !== "object" ||
+          error === null ||
+          !("code" in error) ||
+          error.code !== "ENOENT"
+        ) {
+          throw error;
+        }
       }
-      if (!planted) return; // no FIFO this process can see — nothing to assert
+      if (!planted) ctx.skip(); // no FIFO this process can see — nothing to assert
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
@@ -2131,10 +2143,8 @@ describe("qfai init", () => {
 
   // TC-1.4.1 — fresh init writes no DESIGN.md at root
   it("writes no DESIGN.md at root (TC-1.4.1)", async () => {
-    // `/qfai-discussion` emits the brand SSOT, and only for a
-    // visual-prototyping surface. Seeding it here put the file in every
-    // project — the cli-only and non-UI ones that skill exempts included —
-    // and the next `qfai validate` then reported the tool's own seed.
+    // `/qfai-sdd` authors the brand SSOT for visual prototyping surfaces.
+    // CLI-only and non-UI projects do not require it.
     // `tests/cli/initNoDesignSeed.test.ts` holds the rest of that contract.
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-design-"));
     try {

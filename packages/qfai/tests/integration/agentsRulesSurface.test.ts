@@ -298,7 +298,7 @@ describe("§ 4 of the minimal-implementation rule bounds unrequested fixes and r
  *
  * The subject is the rules that exist, not the rules a list names. Reading the
  * directory is what makes that true: a master that skips its registration —
- * `README.md` — is still named by the case that finds it
+ * `AGENTS.md` — is still named by the case that finds it
  * missing, because it reached the case from disk rather than from an entry
  * someone had to add.
  *
@@ -1428,6 +1428,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
   // QFAI:AC-0001-0231-03
   // QFAI:AC-0001-0231-04
   // QFAI:AC-0001-0231-05
+  // QFAI:EX-0001-0231-09
   // QFAI:EX-0001-0231-10
   // QFAI:EX-0001-0231-11
   // QFAI:EX-0001-0231-12
@@ -1443,26 +1444,29 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       // One token per clause that no other clause in the file carries, so a
       // clause cannot be dropped and still leave the master looking complete.
       for (const clause of [
-        // When it runs, and the pauses it never runs at.
+        // When it runs, what triggers it, and the pauses it never runs at.
         /Every\s+task\s+the\s+user\s+gave\s+is\s+complete/,
         /Nothing\s+waits\s+on\s+the\s+user/,
-        /replies\s+with\s+one\s+short\s+line\s+and\s+stops/,
+        /`qfai-run`'s\s+final\s+report,\s+when\s+it\s+closes\s+the\s+user's\s+last\s+task/,
+        /No\s+hook\s+triggers\s+it/,
+        /already\s+ran\s+after\s+the\s+user's\s+latest\s+instruction,\s+the\s+agent\s+does\s+not\s+run\s+it/,
         /If\s+the\s+user's\s+next\s+answer\s+would\s+start\s+more\s+work/,
         /In\s+doubt,\s+the\s+work\s+is\s+not\s+complete/,
         // What is reviewed.
+        /review\s+the\s+whole\s+session\s+for\s+problems\s+in\s+QFAI\s+itself/,
         /\*\*Tokens\s+against\s+output\.\*\*/,
         /\*\*Over-work\.\*\*/,
         /A\s+feeling\s+without\s+evidence\s+is\s+not\s+a\s+finding/,
         // What a draft may not carry.
         /the\s+name\s+of\s+the\s+project\s+or\s+its\s+organisation/,
         // Nothing is filed without a yes, and where.
+        /through\s+the\s+host's\s+structured\s+question\s+tool/,
         /choosing\s+none\s+files\s+nothing/,
+        /For\s+each\s+approved\s+draft/,
         /gh\s+issue\s+create\s+--repo\s+aganesy\/QFAI/,
         /Never\s+ask\s+for,\s+read\s+or\s+enter\s+a\s+credential/,
         // A mode that asks nothing files nothing.
         /Nothing\s+is\s+asked\s+and\s+nothing\s+is\s+filed/,
-        // The shortcut's ceiling and the condition that lifts it.
-        /Lift\s+when:\s+the\s+host\s+reports\s+whether\s+the\s+user's\s+work\s+is\s+complete/,
       ]) {
         expect(text).toMatch(clause);
       }

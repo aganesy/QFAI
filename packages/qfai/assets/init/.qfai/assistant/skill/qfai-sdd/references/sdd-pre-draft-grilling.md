@@ -1,6 +1,9 @@
 # Pre-draft Grilling
 
-Before an SDD stage makes a design decision, the session agent gathers the stage's open decisions into one frontier and settles them in a delegated grilling session under `.qfai/assistant/rule/review-convergence.md#agent-to-agent-grilling-must`, using the `qfai-grilling` method. It asks the user each critical decision the frontier holds.
+Before an SDD stage makes a design decision, the session agent gathers the stage's open decisions into one frontier.
+When the frontier holds a design decision the repository cannot settle, the agent settles the frontier in a delegated grilling session under `.qfai/assistant/rule/review-convergence.md#agent-to-agent-grilling-must`, using the `qfai-grilling` method. It asks the user each critical decision the frontier holds.
+
+When the request, the story tree, the contracts and the recorded decisions already settle every decision of the stage, the frontier is empty. Then no session is held and no griller starts. The stage writes what is settled, and its final report lists no adopted decision for the checkpoint.
 
 ## Checkpoints
 
