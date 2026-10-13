@@ -33,6 +33,14 @@ Feature: Get one fixed plan for every kind of request
     Given a route of the `fix` family
     When its plan is issued
     Then it prepares what its kind of defect needs, diagnoses, fixes and verifies
+    And the harness and soak steps of `fix-intermittent` still run and record an evidence applicability check
+    And harness construction is unnecessary only with preexisting executed Red matching the failure signature and a verified ordinary cause with no clock, operation order, parallelism, load, timing or race dependence
+    And a verified ordinary cause is demonstrated with fixed inputs and a directly constructed failing state, and the intermittent report itself is not that proof
+    And repetitions are unnecessary only after diagnosis verifies that cause, with prior executed Red and a matching executed Green, the same test run with the same command as the Red, at the exact current revision and no timing or load uncertainty
+    And unknown causes or controlled races require the real procedures
+    And missing or mismatched Red cannot establish either exception; a Green of another test or command, stale Green or pending CI cannot establish the repetition exception
+    And a report names the evidence and why stress or repetitions are unnecessary without claiming they ran or passed
+    And the route, step order, false pass-through flags and diagnosis verdict vocabulary are unchanged
 
   # AC-0001-0220-06
   Scenario: The upkeep family maintains the project, clears owned temporary targets or carries out a named operation
@@ -43,6 +51,7 @@ Feature: Get one fixed plan for every kind of request
     And it checks authority, current ownership and every target before deletion, then verifies target absence and unchanged tracked files and index
     And denial, unsafe or changed targets, busy targets or partial deletion keep it unfinished instead of reporting cleaned
     And `run-operation` carries out the operation the user named in one step, writes no tracked file, and moves to a newly decided route when the operation needs a tracked change
+    And `quarantine-flaky` lifts its quarantine only after the recorded real repetitions, whatever the evidence of an ordinary cause
 
   # AC-0001-0220-07
   Scenario: The release family prepares a release or hands work to a person
