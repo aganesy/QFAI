@@ -187,9 +187,16 @@ describe("the skills a workflow run's steps belong to", () => {
         "implement-scaffold",
         "implement-credentials",
         "implement-acceptance",
+        "implement-procedure",
       ].sort(),
     );
-    const implement = await kindSteps(["diagnose", "implement", "test_fix", "regression_fix"]);
+    const implement = await kindSteps([
+      "diagnose",
+      "implement",
+      "documentation",
+      "test_fix",
+      "regression_fix",
+    ]);
     expect(implement.names.filter((step) => !owned.includes(step))).toEqual([]);
     expect((await stageNames("repair-test", "test_fix")).flat()).toContain("implement-test-fix");
     const every = await kindSteps(Object.keys(await everyKind()));

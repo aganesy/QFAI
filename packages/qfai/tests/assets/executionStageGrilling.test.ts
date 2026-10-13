@@ -40,6 +40,12 @@ describe.each(TREES)("%s — the execution stages stop on detection", (tree) => 
     expectPhrase(text, "**Stop on detection.**");
     expectPhrase(text, "stop rather than deciding alone");
     expectPhrase(text, "A contradiction with the spec is critical.");
+    expectPhrase(
+      text,
+      "A critical decision needs an actual user answer or recorded applicable authorization",
+    );
+    expectPhrase(text, ".agents/rules/grilling.md#explicit-delegation-for-a-discussion");
+    expectPhrase(text, "without it, ask when permitted or register it open");
     expectPhrase(text, "Nothing is recorded beyond the stage's final report.");
     expect(unwrap(text)).not.toContain("grilling session");
   });
@@ -51,7 +57,10 @@ describe.each(TREES)("%s — the execution stages stop on detection", (tree) => 
     const text = await article();
     expectPhrase(text, "Only one outcome is the Drift Protocol's");
     expectPhrase(text, "Settled input must change");
-    expectPhrase(text, "stop the dependent work, raise the Change Request, wait for approval");
+    expectPhrase(
+      text,
+      "stop dependent work, raise the Change Request, record actual applicable user authority before changing it",
+    );
     expectPhrase(
       text,
       "The run solves it. Nothing upstream changes, so there is nothing to approve",
@@ -68,15 +77,30 @@ describe.each(TREES)("%s — the execution stages stop on detection", (tree) => 
     expectPhrase(text, "`Approved option: -`");
   });
 
-  it("ends a no-question session on the register write", async () => {
-    // Under `--auto` there is a user and the mode forbids asking them, so the
-    // confirmation can never arrive. Without another ending, a stage that
-    // resolved its whole frontier by inspection waits forever.
+  it("ends an undelegated no-question session on the register write", async () => {
+    // No-question mode supplies no delegation or confirmation. A separately
+    // authorized session may end adopted only after the master's conditions.
     const primitive = await read("assistant/skill/qfai-grilling/SKILL.md");
     expectPhrase(
       primitive,
-      "**A session under a no-question mode cannot reach condition 2 either**",
+      "**Any other session under a no-question mode cannot reach condition 2 either**",
     );
+    expectPhrase(
+      primitive,
+      "**Only a no-question session meeting the master's explicit-delegation conditions ends `adopted`.**",
+    );
+    expectPhrase(primitive, "No-question alone is not delegation");
+    expectPhrase(
+      primitive,
+      "no open node or lookup, required inputs present, and actual authority for critical decisions",
+    );
+    expectPhrase(primitive, "Record agent choices as agents'.");
+    expectPhrase(
+      primitive,
+      "While a critical decision lacks an actual answer or applicable recorded authorization, it stays open",
+    );
+    expectPhrase(primitive, "The user confirms the understanding is shared.");
+    expectPhrase(primitive, "the agent never confirms on the user's behalf");
     expectPhrase(primitive, "The register write is the ending");
     expectPhrase(primitive, "would wait forever for a confirmation nobody may give");
   });
