@@ -31,6 +31,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reference. An order that names artifacts still applies its settled change.
   Fixes #3574.
 
+- The short extractions in `qfai-run` now state every field `plan` needs, and
+  an operation only a person can run or a deletion goes through the full
+  extraction reference again, so it keeps its hand-off or bounded cleanup.
+
 - Add a workflow route for writing authorized operational procedures.
   It keeps wording-only edits separate, preserves policy owners and existing
   verification, and grants no authority to run the documented actions.
