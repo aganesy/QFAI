@@ -86,6 +86,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Skip Claude Code prompt reminders for `ci-monitor-event` notification lines
+  before counting eligible prompts. `qfai init` refreshes the previous official
+  prompt readers while retaining project edits and existing counter fallbacks.
+  Real host injection, scheduled-prompt classification and the reported SYSTEM
+  notice cause remain unverified; see the
+  [host diagnosis](https://github.com/aganesy/QFAI/issues/3461).
+
+- The SDD design authoring guide no longer says `npx qfai init` seeds a sample
+  `DESIGN.md` at the project root. Init writes none; the sample ships only as a
+  skill template, and a root file that exists was authored by
+  `common-design-md` or copied from that template on purpose. Fixes #3622.
+
 - A register ID that the union merge driver left on two rows of
   `decisions.md` or `open-questions.md` now fails the repository's scans lane,
   which runs early in the pull request lint job. Before, only the full
