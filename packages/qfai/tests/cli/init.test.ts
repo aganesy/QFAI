@@ -1079,9 +1079,22 @@ describe("qfai init", () => {
   it("stays silent about core.symlinks outside a git repository", async (ctx) => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
+      // Only git's own "not a git repository" exit means outside; any other failure surfaces.
       const insideRepo = await execFile("git", ["rev-parse", "--git-dir"], { cwd: root }).then(
         () => true,
-        () => false,
+        (error: unknown) => {
+          if (
+            error instanceof Error &&
+            "code" in error &&
+            error.code === 128 &&
+            "stderr" in error &&
+            typeof error.stderr === "string" &&
+            error.stderr.includes("not a git repository")
+          ) {
+            return false;
+          }
+          throw error;
+        },
       );
       if (insideRepo) {
         // The temp dir happens to sit inside a repository.
