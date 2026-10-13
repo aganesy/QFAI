@@ -610,13 +610,45 @@ export function patternToRegExp(pattern) {
 }
 
 /**
+ * Whether a filesystem failure says the path does not exist.
+ *
+ * @param {unknown} error
+ * @returns {boolean}
+ */
+function isMissing(error) {
+  return error instanceof Error && "code" in error && error.code === "ENOENT";
+}
+
+/**
+ * A filesystem failure as one line that keeps its code, so EACCES, EIO and
+ * EMFILE can be told apart.
+ *
+ * @param {unknown} error
+ * @returns {string}
+ */
+function describeFailure(error) {
+  if (!(error instanceof Error)) return String(error);
+  const code = "code" in error && typeof error.code === "string" ? error.code : "";
+  return code === "" || error.message.startsWith(code)
+    ? error.message
+    : `${code}: ${error.message}`;
+}
+
+/**
  * Every file under `dir`, repository-root-relative and forward-slashed.
+ *
+ * A directory that vanishes between being listed and being read is skipped, as
+ * the race it is. Any other failure to list one (permission, I/O, descriptor
+ * exhaustion) leaves its documents unchecked, so it is recorded in `unreadable`
+ * rather than dropped: a tree whose subtree cannot be read has not been shown to
+ * conform.
  *
  * @param {string} dir Absolute directory to walk.
  * @param {string} root The tree the returned paths are relative to.
+ * @param {{ dir: string, cause: string }[]} unreadable Receives each directory that could not be listed.
  * @returns {string[]}
  */
-function walk(dir, root) {
+function walk(dir, root, unreadable) {
   const out = [];
   const pending = [dir];
   while (pending.length > 0) {
@@ -624,7 +656,13 @@ function walk(dir, root) {
     let entries;
     try {
       entries = readdirSync(current, { withFileTypes: true });
-    } catch {
+    } catch (error) {
+      if (!isMissing(error)) {
+        unreadable.push({
+          dir: path.relative(root, current).split(path.sep).join("/") || ".",
+          cause: describeFailure(error),
+        });
+      }
       continue;
     }
     // Another repository checked out inside this one — a clone, a submodule, or a
@@ -888,19 +926,36 @@ export function configuredPaths(root) {
  * Each configured tree is walked once. A contract directory nested in the spec
  * tree is deduplicated before any document is routed to a schema.
  *
+ * A directory that could not be listed comes back as a violation of its own, so
+ * a subtree that vanished from the universe fails the run instead of passing it.
+ *
  * @param {string} root
  * @param {{ specsDir: string, contractsDir: string }} paths
- * @returns {string[]}
+ * @returns {{ files: string[], unreadable: { file: string, line: number, column: number, rule: string, message: string }[] }}
  */
 function documentUniverse(root, paths) {
-  return [
+  /** @type {{ dir: string, cause: string }[]} */
+  const failed = [];
+  const files = [
     ...new Set(
       [paths.specsDir, paths.contractsDir].flatMap((dir) => {
         const absolute = path.resolve(root, dir);
-        return existsSync(absolute) && statSync(absolute).isDirectory() ? walk(absolute, root) : [];
+        return existsSync(absolute) && statSync(absolute).isDirectory()
+          ? walk(absolute, root, failed)
+          : [];
       }),
     ),
   ];
+  const unreadable = [...new Map(failed.map((found) => [found.dir, found])).values()].map(
+    ({ dir, cause }) => ({
+      file: dir,
+      line: 1,
+      column: 1,
+      rule: "inventory",
+      message: `this directory could not be listed (${cause}); the documents beneath it were not checked`,
+    }),
+  );
+  return { files, unreadable };
 }
 
 /**
@@ -1161,9 +1216,10 @@ export function checkDocuments(root, paths = configuredPaths(root)) {
   if (mdschema === null) {
     return { ok: false, reason: `no ${MDSCHEMA_PACKAGE} installation was found` };
   }
-  const context = { root, paths, mdschema, universe: documentUniverse(root, paths), checked: 0 };
+  const { files, unreadable } = documentUniverse(root, paths);
+  const context = { root, paths, mdschema, universe: files, checked: 0 };
   const entries = readManifest();
-  const violations = coverageViolations(entries, context.universe.toSorted(), paths);
+  const violations = [...unreadable, ...coverageViolations(entries, files.toSorted(), paths)];
   for (const entry of entries) {
     const failure = checkEntryDocuments(context, entry, violations);
     if (failure !== null) return { ok: false, reason: failure };
@@ -1286,7 +1342,7 @@ export function main() {
     return 2;
   }
 
-  const universe = documentUniverse(root, paths);
+  const { files: universe, unreadable } = documentUniverse(root, paths);
 
   /** @type {string[] | null} */
   let restrictTo = null;
@@ -1335,6 +1391,19 @@ export function main() {
   // this run's failure under every scope that includes it, whatever the merge
   // base held: there is no earlier grade to compare against.
   const inScope = universe.filter((file) => restrictSet === null || restrictSet.has(file)).sort();
+
+  // A directory that could not be listed hides every document beneath it, and a
+  // changed file there is hidden with the rest, so this fails the run whatever
+  // the scope: the documents it holds were not shown to conform.
+  if (unreadable.length > 0) {
+    violations++;
+    console.error("\n── inventory (document directories) ──");
+    for (const found of unreadable) {
+      console.error([found.file, `  ✗ 1:1  [${found.rule}] ${found.message}`].join("\n"));
+    }
+    perEntry.push({ id: "inventory", files: unreadable.length, ok: false, inherited: 0 });
+  }
+
   const uncovered = coverageViolations(entries, inScope, paths);
   checked += uncovered.length;
   if (uncovered.length > 0) {
