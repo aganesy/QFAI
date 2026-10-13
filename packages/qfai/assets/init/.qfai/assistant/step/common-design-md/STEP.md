@@ -41,7 +41,7 @@ any existing file unchanged; skip this step for it.
 
 ## Author and validate
 
-1. **Stop on an unchosen brand for initial authoring.** For initial authoring
+1. **Stop on an unchosen brand.** For initial authoring
    of a missing file, a pack that records no design direction leaves the brand
    unchosen. Brand intent is `hard-required`: ask for it, and under `--auto`
    stop and name it. Never adopt the sample design. For an existing valid file,
