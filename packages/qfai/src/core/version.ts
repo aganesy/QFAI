@@ -215,11 +215,22 @@ function isOutside(base: string, target: string): boolean {
  * statement but still a statement.
  */
 export async function findDeclaringDir(root: string): Promise<string | null> {
+  return (await findDeclaringManifest(root))?.dir ?? null;
+}
+
+/**
+ * The manifest {@link findDeclaringDir} stops at, with the directory it sits in.
+ * One walk and one parse serve both the directory and the range read off it.
+ */
+async function findDeclaringManifest(
+  root: string,
+): Promise<{ dir: string; manifest: unknown } | null> {
   let dir = path.resolve(root);
   for (let depth = 0; depth < 16; depth += 1) {
     try {
       const raw = await readFile(path.join(dir, "package.json"), "utf-8");
-      if (declaresQfai(JSON.parse(raw))) return await toRealPath(dir);
+      const manifest: unknown = JSON.parse(raw);
+      if (declaresQfai(manifest)) return { dir: await toRealPath(dir), manifest };
     } catch {
       // Absent, unreadable, or not JSON: keep walking. A manifest that does not
       // declare the tool is not a stopping point either — a workspace package
@@ -236,31 +247,28 @@ export async function findDeclaringDir(root: string): Promise<string | null> {
  * The range the nearest `package.json` declaring qfai gives it, or `null` when
  * no manifest at or above `root` declares it with a text range.
  *
- * Read from the same manifest {@link findDeclaringDir} stops at, so the range
- * and the directory it is compared against are one declaration.
+ * Read from the manifest {@link findDeclaringDir} stops at, so the range and the
+ * directory it is compared against are one declaration.
  */
 export async function readDeclaredQfaiRange(root: string): Promise<string | null> {
-  const declaringDir = await findDeclaringDir(root);
-  if (declaringDir === null) return null;
-  try {
-    const manifest: unknown = JSON.parse(
-      await readFile(path.join(declaringDir, "package.json"), "utf-8"),
-    );
-    if (typeof manifest !== "object" || manifest === null) return null;
-    const record: Record<string, unknown> = manifest as Record<string, unknown>;
-    for (const field of DEPENDENCY_FIELDS) {
-      const deps = record[field];
-      if (typeof deps !== "object" || deps === null) continue;
-      const range = (deps as Record<string, unknown>)[PACKAGE_NAME];
-      if (typeof range === "string") return range;
-    }
-  } catch {
-    // Unreadable between the walk and this read: nothing to compare against.
+  const declaring = await findDeclaringManifest(root);
+  if (declaring === null) return null;
+  for (const field of DEPENDENCY_FIELDS) {
+    const deps: unknown = Reflect.get(Object(declaring.manifest), field);
+    if (typeof deps !== "object" || deps === null) continue;
+    const range: unknown = Reflect.get(deps, PACKAGE_NAME);
+    if (typeof range === "string") return range;
   }
   return null;
 }
 
-/** `major.minor.patch` read off the front of a version or range, or `null`. */
+/**
+ * `major.minor.patch` read off the front of a version or range, or `null`.
+ *
+ * SIMPLIFIED: a prerelease or build suffix is not read, so an installed
+ * `2.1.1-rc.1` is not older than `^2.1.1`, and `2.1.1abc` parses as `2.1.1`.
+ * Lift when: a project declares a prerelease range and needs it compared.
+ */
 function leadingTriple(text: string): [number, number, number] | null {
   const match = /^(\d+)\.(\d+)\.(\d+)/.exec(text);
   if (match === null) return null;

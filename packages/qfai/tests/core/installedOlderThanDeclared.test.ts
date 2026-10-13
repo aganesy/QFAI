@@ -9,8 +9,8 @@
  */
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
@@ -21,23 +21,25 @@ import {
   lowestVersionOfRange,
 } from "../../src/core/version.js";
 
-// tests/core/<this file> -> packages/qfai -> repo root
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
-
 /**
- * Scratch trees go under the repository-root `tmp/`, the sanctioned staging
- * area (`.agents/rules/temporary-files.md`). The project holds one skill that
- * lacks the drift-protocol marker, and a `package.json` declaring qfai as
- * `declared`, or declaring nothing when `declared` is `null`.
+ * The project sits under the operating system's temporary directory, not under
+ * this repository: a tree below the repository would inherit the repository
+ * root's own `package.json`, which declares qfai, and the case that declares
+ * nothing would not be tested. The project holds one skill that lacks the
+ * drift-protocol marker, and a `package.json` declaring qfai as `declared`, or
+ * declaring nothing when `declared` is `null`. `oldLayout` adds a spec-pack
+ * directory, which ends the run before the profile's validators.
  */
 async function withProject(
   declared: string | null,
   task: (root: string) => Promise<void>,
+  oldLayout = false,
 ): Promise<void> {
-  const scratchRoot = path.join(repoRoot, "tmp");
-  await mkdir(scratchRoot, { recursive: true });
-  const root = await mkdtemp(path.join(scratchRoot, "qfai-older-declared-"));
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-older-declared-"));
   try {
+    if (oldLayout) {
+      await mkdir(path.join(root, ".qfai", "specs", "spec-0001"), { recursive: true });
+    }
     const skillDir = path.join(root, ".qfai", "assistant", "skill", "qfai-example");
     await mkdir(skillDir, { recursive: true });
     await writeFile(
@@ -93,6 +95,18 @@ describe("the installed qfai is older than the declared one", () => {
       expect(marker[0]?.suggested_action).toContain("^9.0.0");
       expect(marker[0]?.suggested_action).toContain("before editing this file");
     });
+  });
+
+  // QFAI:EX-0001-0039-17
+  it("raises QFAI-TOOL-003 first on a tree the old-layout check stops", async () => {
+    await withProject(
+      "^9.0.0",
+      async (root) => {
+        const issues = await findings(root);
+        expect(issues.map((found) => found.code)).toEqual(["QFAI-TOOL-003", "QFAI-LAYOUT-001"]);
+      },
+      true,
+    );
   });
 
   // QFAI:EX-0001-0039-17

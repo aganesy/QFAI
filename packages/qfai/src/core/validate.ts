@@ -106,6 +106,11 @@ export async function validateProject(
   const resolved = configResult ?? (await loadConfig(root));
   const { config, issues: configIssues } = resolved;
   const profile: ValidationProfile = options.profile ?? "full";
+  // A property of the invocation, raised around the validator run so that every
+  // profile and the old-layout early return carry it, ahead of the config and
+  // validator findings in the report.
+  const olderThanDeclared = await detectInstalledOlderThanDeclared(root);
+  const versionIssues = buildInstalledOlderIssues(olderThanDeclared);
   const forbiddenIdentifiers = config.validation.forbiddenIdentifiers ?? [];
   const securityIssues =
     forbiddenIdentifiers.length > 0
@@ -135,7 +140,7 @@ export async function validateProject(
       oldLayoutRoot,
       "storyTree.oldLayout",
     );
-    const layoutIssues = [layoutIssue, ...securityIssues];
+    const layoutIssues = [...versionIssues, layoutIssue, ...securityIssues];
     return {
       toolVersion: await resolveToolVersion(),
       generatedAt: new Date().toISOString(),
@@ -168,7 +173,10 @@ export async function validateProject(
     options.platform,
     storyModel,
   );
-  const findings = [...configIssues, ...securityIssues, ...scopeIssues, ...profileRun.issues];
+  const findings = explainVersionMismatch(
+    [...versionIssues, ...configIssues, ...securityIssues, ...scopeIssues, ...profileRun.issues],
+    olderThanDeclared,
+  );
   const scopedFindings = findings.filter((finding) => isFindingInFlowScope(finding, flowScope));
   const { issues, waivers } = await applyWaivers(root, scopedFindings);
 
@@ -385,7 +393,7 @@ async function buildToolProvenanceIssues(root: string): Promise<Issue[]> {
  * installed copy below the lowest version that declaration admits is what a
  * lockfile that moved after the last install leaves, and a rule that reads a
  * generated file then reports the file as wrong when the checker is. This is
- * said once, ahead of every other finding, so the line to act on is not one of
+ * said once, first in the report, so the line to act on is not one of
  * thirteen file-level errors that point at the wrong repair.
  *
  * `warning`, not `error`: the declaration and the running copy disagree, which
@@ -505,10 +513,6 @@ async function runProfileValidators(
   // worth keeping when the tree turns out to be damaged — a validate run
   // against another checkout's qfai explains a whole class of confusing damage.
   const toolProvenance = await buildToolProvenanceIssues(root);
-  // Ahead of every other finding, and of the provenance one: the version
-  // difference is what the findings after it may be a symptom of.
-  const olderThanDeclared = await detectInstalledOlderThanDeclared(root);
-  const toolVersion = buildInstalledOlderIssues(olderThanDeclared);
   // Damage on a path the profile validators themselves walk stops here. One of
   // them reading the same tree raises `ENOTDIR` / `ELOOP` from its own
   // `readdir`, and one rejection took the whole run down — losing the finding
@@ -542,25 +546,18 @@ async function runProfileValidators(
   const anchorIssues = await validateAssistantAnchorReferences(root, config);
   if (surface.unwalkable.some((damaged) => walked.some((base) => isUnder(base, damaged)))) {
     return {
-      issues: explainVersionMismatch(
-        [...toolVersion, ...toolProvenance, ...unusedPlatform, ...surface.issues, ...anchorIssues],
-        olderThanDeclared,
-      ),
+      issues: [...toolProvenance, ...unusedPlatform, ...surface.issues, ...anchorIssues],
       ranProfileValidators: false,
     };
   }
   return {
-    issues: explainVersionMismatch(
-      [
-        ...toolVersion,
-        ...toolProvenance,
-        ...unusedPlatform,
-        ...surface.issues,
-        ...anchorIssues,
-        ...(await runProfileOwnValidators()),
-      ],
-      olderThanDeclared,
-    ),
+    issues: [
+      ...toolProvenance,
+      ...unusedPlatform,
+      ...surface.issues,
+      ...anchorIssues,
+      ...(await runProfileOwnValidators()),
+    ],
     ranProfileValidators: true,
   };
 

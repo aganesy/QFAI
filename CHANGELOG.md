@@ -9,7 +9,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **`qfai validate` says when the installed qfai is older than the one the project
   declares.** When the nearest `package.json` declares a `qfai` range and the
   running copy is below its lowest version, `QFAI-TOOL-003` (warning) is the first
-  finding and names both versions and the install command. While it is raised,
+  finding in the JSON report, and names both versions and the install command.
+  The text format prints error groups before warning groups, so there it follows
+  the errors. While it is raised,
   `QFAI-SKILLS-010` names the version difference and gives the install as its
   suggested action, instead of inviting an edit to files nobody touched.
   Fixes #3468.
