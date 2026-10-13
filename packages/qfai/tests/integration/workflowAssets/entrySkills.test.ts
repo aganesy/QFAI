@@ -563,7 +563,6 @@ describe("qfai-run", () => {
   });
 
   // QFAI:AC-0001-0211-05
-  // QFAI:EX-0001-0211-51
   it("reads no reference up front, and says when each one is read", async () => {
     const skill = await readShipped(RUN);
     const head = skill.slice(0, skill.indexOf("## What this skill never does"));
@@ -575,7 +574,10 @@ describe("qfai-run", () => {
       "operator-screens",
       "stage-points",
     ]);
-    for (const line of pointers) expect(line).toMatch(/: only /);
+    expect(head).toContain(
+      "`references/plan.md`: for a plan field this file does not name, or a refused plan.",
+    );
+    for (const line of pointers) expect(line).toMatch(/`: (?:for|when|at) /);
   });
 
   // QFAI:AC-0001-0211-05
