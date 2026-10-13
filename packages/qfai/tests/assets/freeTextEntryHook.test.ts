@@ -165,7 +165,9 @@ describe("the free-text entry reminder", () => {
       const context = contextOf(stdout);
       expect(context).toContain("names no skill, invoke the `qfai-run` skill");
       expect(context).toContain("A message that names a skill goes to that skill.");
-      expect(context).toContain("Read the skill rather than working from this line.");
+      expect(context).toContain(
+        "Read the skill once per session rather than working from this line.",
+      );
       expect(context).toContain("In a git worktree, read `.claude/skills/qfai-run/SKILL.md`");
       expect(context.length).toBeLessThan(1000);
     },
@@ -276,7 +278,7 @@ describe("the Codex hook file", () => {
 
   it("carries the three prompt-time reminders", async () => {
     const groups = await readGroups(SHIPPED_CODEX);
-    expect([...groups.keys()]).toEqual(["UserPromptSubmit", "PreToolUse", "PostToolUse", "Stop"]);
+    expect([...groups.keys()]).toEqual(["UserPromptSubmit", "PreToolUse", "PostToolUse"]);
     const markers = (groups.get("UserPromptSubmit") ?? []).map((group) =>
       group.hooks.map((entry) => entry.statusMessage),
     );
