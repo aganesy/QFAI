@@ -2,7 +2,7 @@
 
 ## User Story
 
-As a developer, I want to restore compatible completed analysis into an independent worktree, so that I reuse analysis without sharing writable state or trusting stale results.
+As a developer, I want graph CLI operations to restore compatible completed analysis into an independent worktree, so that I reuse analysis without sharing writable state or trusting stale results.
 
 ## Non-goals
 

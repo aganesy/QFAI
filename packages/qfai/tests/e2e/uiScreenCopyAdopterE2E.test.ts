@@ -13,7 +13,7 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { runInit } from "../../src/cli/commands/init.js";
+import { runInit } from "../helpers/legacyInit.js";
 import { runValidate } from "../../src/cli/commands/validate.js";
 import { captureStdout } from "../helpers/stdout.js";
 

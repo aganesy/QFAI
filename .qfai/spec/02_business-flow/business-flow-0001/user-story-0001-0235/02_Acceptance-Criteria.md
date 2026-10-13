@@ -9,7 +9,7 @@ Feature: Redirect observable exploratory searches through hooks
   Scenario: Deny direct exploration before execution
     Given a supported host with an active denial adapter
     When an agent invokes a direct exploratory shell or native search
-    Then the search effect is prevented and a relevant graph operation is suggested
+    Then the search effect is prevented and a relevant graph CLI command and bounded pending attempt ID are shown
 
   # AC-0001-0235-02
   Scenario: Classify command positions and supported compositions
@@ -24,10 +24,10 @@ Feature: Redirect observable exploratory searches through hooks
     Then it remains usable without permitting general exploration
 
   # AC-0001-0235-04
-  Scenario: Limit human-approved exceptions
-    Given an exception specifying target, operation, reason, worktree, session and expiry
-    When the adapter evaluates a search
-    Then only explicitly human-approved matching scope is permitted before expiry
+  Scenario: Limit AI-decided search fallback
+    Given a valid pending denial attempt and the AI's unresolved question and reason
+    When the fallback CLI attempts the relevant graph and the adapter evaluates a subsequent search
+    Then only the observed target, operation, worktree and session are permitted for 60 seconds without human approval, with no external document authorization or manual scope override
 
   # AC-0001-0235-05
   Scenario: Distinguish configuration from verified protection
@@ -39,5 +39,5 @@ Feature: Redirect observable exploratory searches through hooks
   Scenario: Fail safely without analysis in hooks
     Given a supported pre-tool event
     When the hook denies search or cannot apply valid enforcement
-    Then direct exploration is not automatically allowed and the hook does not process analysis
+    Then direct exploration is not automatically allowed, invalid fallback state grants nothing and the hook performs no graph query, preparation, network or model call
 ```

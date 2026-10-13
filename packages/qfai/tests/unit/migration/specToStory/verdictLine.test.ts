@@ -5,7 +5,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { runInit } from "../../../../src/cli/commands/init.js";
+import { runInit } from "../../../helpers/legacyInit.js";
 import { runStep } from "../../../../src/migration/specToStory/harness.js";
 import { captureStdout } from "../../../helpers/stdout.js";
 

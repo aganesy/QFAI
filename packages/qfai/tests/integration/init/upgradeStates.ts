@@ -12,7 +12,7 @@ import path from "node:path";
 
 import { vi } from "vitest";
 
-import { runInit } from "../../../src/cli/commands/init.js";
+import { runInit } from "../../helpers/legacyInit.js";
 import { QFAI_GITIGNORE_GOVERNANCE_NEGATIONS } from "../../../src/core/gitignore.js";
 import { captureStdout } from "../../helpers/stdout.js";
 

@@ -46,3 +46,11 @@ export type {
   ParseResult,
   ValidationIssue,
 } from "./design/designMd.js";
+export { prepareGraphIntegration } from "./graph/integration.js";
+export { renderGraphPreparation } from "./graph/presentation.js";
+export { prepareDocumentAnalysis } from "./graph/documents.js";
+export type {
+  ApproveExternalProcessing,
+  ExternalProcessingRequest,
+  DocumentPreparation,
+} from "./graph/documents.js";

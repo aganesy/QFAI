@@ -11,7 +11,7 @@ import { createServer, type Server } from "node:http";
 import { chmod, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { runInit } from "../../src/cli/commands/init.js";
+import { runInit } from "./legacyInit.js";
 
 /** The UI contract the fixture declares: one screen with one primary task. */
 export const PASSING_UI_CONTRACT = [

@@ -97,6 +97,8 @@ version heading, read `.agents/rules/version-discipline.md`, then
 
 The masters under `.agents/rules/` are the single source of truth for the rules every AI working in the repository follows.
 
+- `graph-exploration.md` (use CodeGraph for code structure and Graphify for document concepts; configure local processing and use scoped AI-decided search fallback)
+
 - `version-discipline.md` (see "Version discipline" above)
 - `version-discipline.local.md` (this repository has adopted the pin convention, and the guards that read it)
 - `distributed-surface.md` (no internal ID or version leaks in the npm distribution)

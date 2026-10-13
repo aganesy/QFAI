@@ -1273,6 +1273,7 @@ export function fileDigest(raw: Buffer): string {
  */
 export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
   ".github/copilot-instructions.md",
+  ".github/hooks/qfai-graph.json",
   ".github/workflows/qfai-docs.yml",
   ".github/workflows/qfai-tests.yml",
   ".github/workflows/qfai-validate.yml",
@@ -1311,6 +1312,11 @@ export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
  * silent edit to it changes how every other pinned file is checked out.
  */
 export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
+  // The generated shared denial hook is pinned independently of workflow templates.
+  [
+    ".github/hooks/qfai-graph.json",
+    "e807d0caa761867301c9a8d08e70d07ccd537cca17b811cd2dc6cb4a1e89be20",
+  ],
   [
     // Re-pinned when the cross-AI rules block was restated for the tree it is written into. Three
     // prose lines now say the masters are seeded by `qfai init` rather than assumed to exist, and the
@@ -1374,7 +1380,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // Derived by running `qfai init` into a temp root; dropping that one bullet reproduces
     // `fcdba5a8…` byte for byte.
     ".github/copilot-instructions.md",
-    "6ff4e2e392467072b83532619dbaf7e9f94bcdcbeef652f316b06b3f9716cc1d",
+    "dfcc9629b30ea42cb643b71c0a158902d388a1e5500a7eefe50a61cce705ae33",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1400,7 +1406,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   //
   // To re-pin: run `qfai init` into a temp root and hash the `.gitignore` it
   // wrote — never copy a value out of a failure message.
-  [".gitignore", "b3dfe9b2704c0ae54ef8347cd23ed2a714c5966f38050932611a6ad326b597c4"],
+  [".gitignore", "bf131d12f076182939b21e2df2c21d66888e1a62ae448c72b78198702eb20cf8"],
   // Independent golden files pin the reviewed entry instructions. Update them only after
   // independent review, preserving exact bytes without trimming or newline normalization.
   [
@@ -1500,7 +1506,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // hashing what it wrote.
   // Re-pinned for the `Stop` group marked `QFAI session feedback reminder`. Removing the `Stop`
   // event from the file reproduces `03325965…` byte for byte.
-  [".claude/settings.json", "f751cc6e4587be65e1341bb30fc8172b2506df805b5a256ebf151bc427fce730"],
+  [".claude/settings.json", "244826d22bb504e416a84f41944661ee271a040ff31d6ac4a937e334b7e48e5e"],
   // Inside `.codex/`, and pinned for the reason `.claude/settings.json` is: its commands are a
   // program an adopter's agent runs. Two `UserPromptSubmit` groups, structured-question and
   // free-text entry. Codex takes one command string, so each runs the same `node -e` reader
@@ -1543,7 +1549,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // merge refreshes them. Derived the same way.
   // Re-pinned for the same `Stop` group. Removing the `Stop` event reproduces `4eb4c36d…` byte
   // for byte.
-  [".codex/hooks.json", "e973ebb8f2047f6a3e901b9adbe3e6299cda7cad77dfb12cccfab933cd936904"],
+  [".codex/hooks.json", "d21f7e86358708d0189df9101a4d71432a9ff8be2f71f83eb64cbf0b238a2cc1"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`
@@ -1711,6 +1717,7 @@ export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
   "root/.agents/rules/document-schema.md",
   "root/.agents/rules/documentation-clarity.md",
   "root/.agents/rules/grilling.md",
+  "root/.agents/rules/graph-exploration.md",
   "root/.agents/rules/interface-clarity.md",
   "root/.agents/rules/minimal-implementation.md",
   "root/.agents/rules/reminders.json",

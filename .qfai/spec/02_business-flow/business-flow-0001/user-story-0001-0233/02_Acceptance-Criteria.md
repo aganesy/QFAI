@@ -3,19 +3,19 @@
 ## Criteria
 
 ```gherkin
-Feature: Prepare project-local graph tools through init
+Feature: Prepare project-local graph CLIs through init
 
   # AC-0001-0233-01
   Scenario: Prepare the selected runtimes
     Given a fresh or upgraded adopter with supported prerequisites
     When I run qfai init
-    Then both selected tools are prepared locally or their failed preparation step is reported
+    Then both selected runtimes and the managed CLI are prepared locally or their failed preparation step is reported without registering or launching a graph MCP server
 
   # AC-0001-0233-02
   Scenario: Preserve project settings and reminders
     Given existing project-local host settings
     When init composes graph integration
-    Then unrelated settings and existing reminder behavior are preserved
+    Then existing MCP settings and unrelated settings are preserved with existing reminder behavior and no graph MCP entry is added
 
   # AC-0001-0233-03
   Scenario: Repeat preparation safely

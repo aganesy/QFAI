@@ -11,9 +11,11 @@ import { lstat, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises
 import path from "node:path";
 import { promisify } from "node:util";
 
-import { describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 
 import { run } from "../../src/cli/main.js";
+import * as graphProcess from "../../src/core/graph/process.js";
+import { createLegacyGraphProcess } from "../helpers/legacyInit.js";
 import { loadConfig, resolvePath } from "../../src/core/config.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { pathExists } from "../helpers/pathExists.js";
@@ -23,6 +25,9 @@ import { captureStdout } from "../helpers/stdout.js";
 
 const newTempDir = useTempDirPool("qfai-bf1-init-tree-");
 const execFileAsync = promisify(execFile);
+const acquisition = createLegacyGraphProcess(graphProcess.runGraphProcess);
+const acquisitionSpy = vi.spyOn(graphProcess, "runGraphProcess").mockImplementation(acquisition);
+afterAll(() => acquisitionSpy.mockRestore());
 
 const SEEDS = [
   "decisions.md",

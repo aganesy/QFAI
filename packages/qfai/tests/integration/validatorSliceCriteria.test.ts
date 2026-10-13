@@ -9,7 +9,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { runInit } from "../../src/cli/commands/init.js";
+import { runInit } from "../helpers/legacyInit.js";
 import { run } from "../../src/cli/main.js";
 import { loadConfig } from "../../src/core/config.js";
 import { validateProject } from "../../src/core/validate.js";

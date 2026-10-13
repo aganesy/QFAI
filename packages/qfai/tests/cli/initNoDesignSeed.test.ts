@@ -28,7 +28,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { runInit } from "../../src/cli/commands/init.js";
+import { runInit } from "../helpers/legacyInit.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { validateDesignContractReadiness } from "../../src/core/validators/designContractReadiness.js";
 import { loadConfig } from "../../src/core/config.js";

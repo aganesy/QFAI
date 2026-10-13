@@ -30,7 +30,14 @@ export default [
     // disk and outside this tree. Linted from here, every finding in that branch
     // is reported against this one, and the same commit passes in CI — which
     // clones fresh and has no worktrees — while failing locally.
-    ignores: ["**/dist/**", "**/node_modules/**", "tmp/**", "**/tmp/**", ".claude/worktrees/**"],
+    ignores: [
+      "**/dist/**",
+      "**/node_modules/**",
+      "tmp/**",
+      "**/tmp/**",
+      ".claude/worktrees/**",
+      ".qfai/tools/**",
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.strictTypeChecked,

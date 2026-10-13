@@ -11,7 +11,7 @@ import path from "node:path";
 
 import { describe, expect, it, beforeAll, afterAll } from "vitest";
 
-import { runInit } from "../../src/cli/commands/init.js";
+import { runInit } from "../helpers/legacyInit.js";
 import { captureStdout } from "../helpers/stdout.js";
 
 let projectRoot = "";

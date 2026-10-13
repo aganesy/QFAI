@@ -15,7 +15,7 @@ Feature: Reuse completed analysis safely across worktrees
   Scenario: Keep worktrees independently writable
     Given two worktrees or Windows and WSL environments
     When they use analysis concurrently
-    Then no live database, graph, daemon, PID, socket or lock is shared
+    Then no live database, graph, daemon, PID, socket or lock is shared and each worktree serializes its CLI queries and preparation with its own lock
 
   # AC-0001-0236-03
   Scenario: Check native freshness after input changes
@@ -33,7 +33,7 @@ Feature: Reuse completed analysis safely across worktrees
   Scenario: Retain prior usable analysis after failure
     Given a valid prior working copy
     When freshness checking or replacement generation fails
-    Then prior state is preserved and stale requested scope is not reported as current
+    Then prior state is preserved and stale requested scope is not reported as current, while contention or an abandoned lock reports retry or manual recovery without deleting another operation's lock
 
   # AC-0001-0236-06
   Scenario: Keep generated state outside Git

@@ -15,6 +15,7 @@ import { describeIncompleteRun } from "./lib/warnings.js";
 import { error, info, warn } from "../core/logger.js";
 import { findConfigRoot } from "../core/config.js";
 import { resolveToolPackageDir, resolveToolVersion } from "../core/version.js";
+import { isFileSystemError } from "../core/fs.js";
 
 /**
  * Exit code for a command name nothing recognizes.
@@ -121,11 +122,40 @@ export async function run(argv: string[], cwd: string): Promise<void> {
   try {
     await dispatch(command, options);
   } catch (thrown: unknown) {
+    if (command === "init" && requiredFileFailure(thrown)) {
+      const failure = describeIncompleteRun(thrown, command) ?? thrown;
+      error(
+        failure instanceof Error
+          ? failure.message
+          : "Init could not read or write a required file.",
+      );
+      process.exitCode = EXIT_CODES.requiredIo;
+      return;
+    }
     // Bound as `thrown`, not `error`: this module imports a logger named
     // `error`, and shadowing it inside the one block that must not log is a
     // trap for the next edit.
     throw describeIncompleteRun(thrown, command) ?? thrown;
   }
+}
+
+function requiredFileFailure(thrown: unknown): boolean {
+  const seen = new Set<unknown>();
+  let current: unknown = thrown;
+  while (current instanceof Error && !seen.has(current)) {
+    seen.add(current);
+    if (
+      isFileSystemError(current) &&
+      "syscall" in current &&
+      typeof current.syscall === "string" &&
+      /^(?:access|open|read|write|stat|lstat|realpath|mkdir|readdir|copyfile|rename|unlink|rmdir|symlink|readlink)/.test(
+        current.syscall,
+      )
+    )
+      return true;
+    current = current.cause;
+  }
+  return false;
 }
 
 async function dispatch(command: string, options: ParsedArgs["options"]): Promise<void> {

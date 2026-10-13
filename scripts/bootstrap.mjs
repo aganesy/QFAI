@@ -1,10 +1,22 @@
 import { spawnSync } from "node:child_process";
-import { lstatSync } from "node:fs";
+import { lstatSync, statSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+function hasBlockingAncestor(relative) {
+  const parts = relative.split("/");
+  for (let end = 1; end < parts.length; end++) {
+    try {
+      if (!statSync(path.join(root, ...parts.slice(0, end))).isDirectory()) return true;
+    } catch (error) {
+      return error?.code !== "ENOENT";
+    }
+  }
+  return false;
+}
 
 function bootstrap() {
   const cli = process.env.npm_execpath;
@@ -24,7 +36,8 @@ function bootstrap() {
     try {
       stats = lstatSync(path.join(root, ...relative.split("/")));
     } catch (error) {
-      if (error?.code === "ENOENT") continue;
+      // Windows reports a child below a file as ENOENT, so inspect its parents first.
+      if (error?.code === "ENOENT" && !hasBlockingAncestor(relative)) continue;
       process.stderr.write(`Cannot inspect dependency path ${relative}.\n`);
       return 1;
     }

@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { runInit } from "../../src/cli/commands/init.js";
+import { runInit } from "../helpers/legacyInit.js";
 import {
   DOCUMENTATION_CLARITY_HOOK_MARKER,
   GRILLING_DELEGATION_HOOK_MARKER,
@@ -17,6 +17,7 @@ import {
 } from "../../src/core/claudeCodeHooks.js";
 import { captureStderr } from "../helpers/stderr.js";
 import { captureStdout } from "../helpers/stdout.js";
+import { reminderSettings } from "../helpers/reminderSettings.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const SETTINGS = path.join(".claude", "settings.json");
@@ -446,7 +447,7 @@ describe("qfai init and the reminder hooks", () => {
       );
       if (typeof messages !== "object" || messages === null) throw new Error("no message table");
       expectNoEmbeddedReminderText(text, messages);
-      const entries = entriesOf(JSON.parse(text));
+      const entries = entriesOf(JSON.parse(reminderSettings(text, "claude")));
       expect(entries.length).toBeGreaterThan(0);
       for (const { entry } of entries) {
         const args: unknown = entry.args;
@@ -474,7 +475,9 @@ describe("qfai init and the reminder hooks", () => {
       const shipped = entriesOf(
         JSON.parse(await readFile(path.join(assetsRoot, ".claude", "settings.json"), "utf-8")),
       ).map(({ event, entry }) => JSON.stringify({ event, entry }));
-      for (const { event, entry } of entriesOf(settings)) {
+      for (const { event, entry } of entriesOf(
+        JSON.parse(reminderSettings(JSON.stringify(settings), "claude")),
+      )) {
         expect(shipped).toContain(JSON.stringify({ event, entry }));
       }
       expect(stdout).toContain("updated: .claude/settings.json");
@@ -548,7 +551,9 @@ describe("qfai init and the reminder hooks", () => {
       await initInto(root);
 
       const settings = await readSettings(root);
-      const merged = readHookGroups(settings);
+      const merged = readHookGroups(
+        JSON.parse(reminderSettings(JSON.stringify(settings), "claude")),
+      );
       expect(merged.length).toBe(preToolUse.length);
       for (const marker of [
         GRILLING_DESIGN_ARTIFACT_HOOK_MARKER,

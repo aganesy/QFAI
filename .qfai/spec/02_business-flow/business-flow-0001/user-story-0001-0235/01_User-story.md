@@ -2,9 +2,10 @@
 
 ## User Story
 
-As a project maintainer, I want to deny agents' observable direct exploratory searches while permitting necessary reads and quality checks, so that agents follow the code and document exploration policy.
+As a project maintainer, I want hooks to redirect exploration to graph CLIs and allow scoped ordinary search when the AI judges that a graph cannot answer, so that agents can continue without human search approval while known reads and quality checks remain usable.
 
 ## Non-goals
 
 - Complete detection inside arbitrary scripts, aliases or continuing shell input.
 - Changing a notification reminder into a denial hook.
+- Graph queries or preparation inside denial hooks.

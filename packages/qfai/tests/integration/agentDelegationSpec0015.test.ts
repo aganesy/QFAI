@@ -10,7 +10,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 
-import { runInit } from "../../src/cli/commands/init.js";
+import { runInit } from "../helpers/legacyInit.js";
 import { parseAgentFrontmatter } from "../../src/core/agentFrontmatter.js";
 import { CODEX_AGENT_WRAPPER_DIR, renderCodexAgentToml } from "../../src/core/codexAgentToml.js";
 import { loadConfig } from "../../src/core/config.js";

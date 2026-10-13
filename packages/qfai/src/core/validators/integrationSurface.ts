@@ -640,19 +640,23 @@ async function canonicalDamage(
   // the profile then walked into the same `ENOTDIR` that finding was about.
   const state = await canonicalState(wrapper.canonical);
   const culprit =
-    state.kind === "not-a-directory"
+    state.kind === "not-a-directory" || state.kind === "absent"
       ? await unusableAncestor(root, wrapper.canonicalRelative, realRoot, true)
       : null;
+  const culpritState =
+    culprit === null ? null : await canonicalState(path.join(root, ...culprit.relative.split("/")));
+  const nonDirectoryAncestor =
+    culpritState?.kind === "present" && !culpritState.stats.isDirectory();
   const relative = culprit?.relative ?? wrapper.canonicalRelative;
-  // **Per tree, because the readers differ.** The skills tree is `readdir`ed —
-  // a regular file where the directory belongs raises `ENOTDIR` there and takes
-  // the run with it. The agents tree is not: `validateAgentDefinition` opens
-  // each document by path and its `access` probe answers "absent" for the same
-  // shape, so stopping on it hid every unrelated finding for damage nothing
-  // walks into. What does stop that reader is the **document** being the wrong
-  // type or unreadable, which is decided below.
-  const ancestorBlocks = wrapper.kind !== "agent" || culprit === null;
-  const unwalkable = blocksWalk(state) && ancestorBlocks ? relative : undefined;
+  // The agent reader skips an unreachable directory, but lists an existing one.
+  // A file at that directory passes its existence check and makes the listing fail.
+  const ancestorBlocks =
+    wrapper.kind !== "agent" ||
+    culprit === null ||
+    relative === path.posix.dirname(wrapper.canonicalRelative);
+  // Windows reports an unreachable child as ENOENT even when its parent is a file.
+  const unwalkable =
+    ancestorBlocks && (blocksWalk(state) || nonDirectoryAncestor) ? relative : undefined;
 
   // A leaf that is itself damaged is described by its state, not by the generic
   // "is a symlink" the link probe would give: a dangling canonical and a
@@ -691,7 +695,7 @@ async function canonicalDamage(
     // `validateSkillDocReferences` an `ELOOP` on the same pathname, so ask the
     // document itself rather than inheriting an answer about its directory.
     return {
-      relative: wrapper.canonicalRelative,
+      relative: nonDirectoryAncestor ? relative : wrapper.canonicalRelative,
       detail: link,
       unwalkable: (await documentBlocksWalk(wrapper)) ? wrapper.canonicalRelative : unwalkable,
     };
@@ -1358,18 +1362,8 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
                 : unfollowable
                   ? `resolves through a symlink the OS will not follow -> ${toPosix(wrapper.target)}`
                   : `dangling -> ${toPosix(wrapper.target)}`,
-        // `ENOTDIR` alone, and named at the component that is not a directory
-        // rather than at the leaf. That errno says a component above the leaf
-        // is a regular file, which is the one shape a later `readdir` cannot
-        // survive. `ELOOP` is a symlink: the walks over this tree list it with
-        // `withFileTypes` and never descend into it, and one at the walk root
-        // answers "absent" through their `access` probe. `ENOENT` is absence,
-        // which they already handle.
-        unwalkable:
-          code === "ENOTDIR"
-            ? ((await unusableAncestor(root, wrapper.canonicalRelative, realRoot, true))
-                ?.relative ?? wrapper.canonicalRelative)
-            : undefined,
+        // Probe the canonical path: Windows folds a file ancestor into ENOENT.
+        unwalkable: (await canonicalDamage(root, realRoot, wrapper))?.unwalkable,
       });
       continue;
     }

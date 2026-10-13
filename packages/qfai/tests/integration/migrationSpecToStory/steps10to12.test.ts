@@ -20,7 +20,7 @@ import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 
-import { runInit } from "../../../src/cli/commands/init.js";
+import { runInit } from "../../helpers/legacyInit.js";
 import { ensureRootGitignoreEntries } from "../../../src/core/init/rootGitignore.js";
 import { collectTemplateFiles } from "../../../src/core/fs/templateCopy.js";
 import { loadConfig, readWorkflowMode } from "../../../src/core/config.js";
@@ -31,6 +31,7 @@ import { getInitAssetsDir } from "../../../src/shared/assets.js";
 import { deleteE2eCaseAnnotation } from "../../helpers/migrationE2eAnnotation.js";
 import { defaultRoutingEntries } from "../../helpers/shippedAssistant.js";
 import { captureStdout } from "../../helpers/stdout.js";
+import { reminderSettings } from "../../helpers/reminderSettings.js";
 import { removeTempTree } from "../../helpers/tempTree.js";
 
 const PACKAGE_ROOT = path.resolve(__dirname, "../../..");
@@ -684,7 +685,7 @@ describe("migration steps 11 and 12: the free-text entry", () => {
       `${REMINDERS}: write from the package`,
     ]);
     for (const file of HOOK_FILES) {
-      expect(await textOrNull(root, file), file).toBe(await textOrNull(initialised, file));
+      expect(await textOrNull(root, file), file).toBe(await textOrNull(getInitAssetsDir(), file));
     }
   });
 
@@ -723,7 +724,12 @@ describe("migration steps 11 and 12: the free-text entry", () => {
       `${REMINDERS}: write from the package`,
     ]);
     const merged = await readFile(path.join(root, ".claude/settings.json"), "utf8");
-    expect(merged).toBe(await readFile(path.join(byInit, ".claude/settings.json"), "utf8"));
+    expect(merged).toBe(
+      reminderSettings(
+        await readFile(path.join(byInit, ".claude/settings.json"), "utf8"),
+        "claude",
+      ),
+    );
     expect(merged).toContain('"our-own-question"');
     expect(merged).toContain("QFAI free-text entry reminder");
     expect(merged).toContain('"Bash(ls)"');
@@ -755,7 +761,7 @@ describe("migration steps 11 and 12: the free-text entry", () => {
     expect(await readlink(path.join(root, ".codex/hooks.json"))).toBe(outside);
     expect(await readFile(outside, "utf8")).toBe("{}\n");
     expect(await textOrNull(root, ".claude/settings.json")).toBe(
-      await textOrNull(initialised, ".claude/settings.json"),
+      await textOrNull(getInitAssetsDir(), ".claude/settings.json"),
     );
   });
 
@@ -782,7 +788,7 @@ describe("migration steps 11 and 12: the free-text entry", () => {
       "!.qfai/assistant/**\n",
     );
     for (const file of HOOK_FILES) {
-      expect(await textOrNull(root, file), file).toBe(await textOrNull(initialised, file));
+      expect(await textOrNull(root, file), file).toBe(await textOrNull(getInitAssetsDir(), file));
     }
     expect(await textOrNull(root, REMINDERS)).toBe(await readFile(SHIPPED_REMINDERS, "utf8"));
     git(root, ["init", "-q"]);
@@ -905,7 +911,7 @@ describe("migration steps 1 to 12 on a project an earlier 2.x release migrated",
         expect(changed, `pass ${pass}`).toEqual(pass === 1 ? [REMINDERS, ...HOOK_FILES] : []);
       }
       for (const file of HOOK_FILES) {
-        expect(await textOrNull(root, file), file).toBe(await textOrNull(initialised, file));
+        expect(await textOrNull(root, file), file).toBe(await textOrNull(getInitAssetsDir(), file));
       }
       expect(await textOrNull(root, REMINDERS)).toBe(await readFile(SHIPPED_REMINDERS, "utf8"));
 

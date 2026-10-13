@@ -57,3 +57,6 @@ flowchart TD
   route, which writes the bodies of the empty acceptance tests.
 - A scope change discovered after an accepted implementation item follows the
   drift protocol through SDD before another item is selected.
+- Graph exploration uses project-local CodeGraph and Graphify CLIs. Their
+  integration registers and launches no MCP server; unrelated project MCP
+  settings remain intact.

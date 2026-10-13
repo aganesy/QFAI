@@ -49,194 +49,166 @@ async function withDamagedCanonical(task: (root: string) => Promise<boolean>): P
 }
 
 describe("the short-circuit follows the configured skills directory", () => {
-  it.skipIf(process.platform === "win32")(
-    "does not stop `full` for damage outside the tree it walks",
-    async () => {
-      // `validateSkillsIntegrity` and `validateAssistantAssets` open the tree the
-      // configuration names. A project that moved `paths.skillsDir` has its old
-      // canonical walked by nobody, so pinning `.qfai/assistant` stopped `full`
-      // for damage sitting outside every walk it performs.
-      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-surface-scope-"));
-      try {
-        const moved = path.join(root, "assistant-tree", "skill");
-        await mkdir(moved, { recursive: true });
-        await writeFile(
-          path.join(root, "qfai.config.yaml"),
-          ["paths:", "  skillsDir: assistant-tree/skill", ""].join("\n"),
-          "utf-8",
-        );
-        // The abandoned default location holds the damage.
-        const stale = path.join(root, ".qfai", "assistant", "skill");
-        await mkdir(path.dirname(stale), { recursive: true });
-        await writeFile(stale, "not a directory\n", "utf-8");
-        await mkdir(path.join(root, ".qfai"), { recursive: true });
-        await writeFile(
-          path.join(root, ".qfai", "waivers.yml"),
-          "version: 1\nwaivers: []\n",
-          "utf-8",
-        );
+  it("does not stop `full` for damage outside the tree it walks", async () => {
+    // `validateSkillsIntegrity` and `validateAssistantAssets` open the tree the
+    // configuration names. A project that moved `paths.skillsDir` has its old
+    // canonical walked by nobody, so pinning `.qfai/assistant` stopped `full`
+    // for damage sitting outside every walk it performs.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-surface-scope-"));
+    try {
+      const moved = path.join(root, "assistant-tree", "skill");
+      await mkdir(moved, { recursive: true });
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        ["paths:", "  skillsDir: assistant-tree/skill", ""].join("\n"),
+        "utf-8",
+      );
+      // The abandoned default location holds the damage.
+      const stale = path.join(root, ".qfai", "assistant", "skill");
+      await mkdir(path.dirname(stale), { recursive: true });
+      await writeFile(stale, "not a directory\n", "utf-8");
+      await mkdir(path.join(root, ".qfai"), { recursive: true });
+      await writeFile(
+        path.join(root, ".qfai", "waivers.yml"),
+        "version: 1\nwaivers: []\n",
+        "utf-8",
+      );
 
-        const result = await validateProject(root, undefined, { profile: "full" });
-        const codes = new Set(result.issues.map((entry) => entry.code));
+      const result = await validateProject(root, undefined, { profile: "full" });
+      const codes = new Set(result.issues.map((entry) => entry.code));
 
-        // The surface finding is still reported; it is just no longer a reason to
-        // say nothing about everything else.
-        expect(codes.has("QFAI-LINK-001")).toBe(true);
-        expect(codes.size).toBeGreaterThan(1);
-      } finally {
-        await rm(root, { recursive: true, force: true });
-      }
-    },
-  );
+      // The surface finding is still reported; it is just no longer a reason to
+      // say nothing about everything else.
+      expect(codes.has("QFAI-LINK-001")).toBe(true);
+      expect(codes.size).toBeGreaterThan(1);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("the short-circuit covers the agent directory read by full", () => {
-  // POSIX only: the ENOTDIR shape, which Windows folds into ENOENT.
-  it.skipIf(process.platform === "win32")(
-    "stops `full` when the agent directory is a regular file",
-    async () => {
-      // `validateAgentDefinition` lists the agent directory under `full`.
-      // A file at that path must surface as a repairable link finding before
-      // the profile reaches its own `readdir`.
-      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-surface-scope-"));
-      try {
-        await mkdir(path.join(root, ".qfai", "assistant", "skill"), { recursive: true });
-        await writeFile(
-          path.join(root, ".qfai", "assistant", "agent"),
-          "not a directory\n",
-          "utf-8",
-        );
-        const wrapper = path.join(root, ".claude", "agents", "completion-reviewer.md");
-        await mkdir(path.dirname(wrapper), { recursive: true });
-        await symlink(
-          path.join("..", "..", ".qfai", "assistant", "agent", "completion-reviewer.md"),
-          wrapper,
-        );
-        await mkdir(path.join(root, ".qfai"), { recursive: true });
-        await writeFile(
-          path.join(root, ".qfai", "waivers.yml"),
-          "version: 1\nwaivers: []\n",
-          "utf-8",
-        );
+  it("stops `full` when the agent directory is a regular file", async () => {
+    // `validateAgentDefinition` lists the agent directory under `full`.
+    // A file at that path must surface as a repairable link finding before
+    // the profile reaches its own `readdir`.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-surface-scope-"));
+    try {
+      await mkdir(path.join(root, ".qfai", "assistant", "skill"), { recursive: true });
+      await writeFile(path.join(root, ".qfai", "assistant", "agent"), "not a directory\n", "utf-8");
+      const wrapper = path.join(root, ".claude", "agents", "completion-reviewer.md");
+      await mkdir(path.dirname(wrapper), { recursive: true });
+      await symlink(
+        path.join("..", "..", ".qfai", "assistant", "agent", "completion-reviewer.md"),
+        wrapper,
+      );
+      await mkdir(path.join(root, ".qfai"), { recursive: true });
+      await writeFile(
+        path.join(root, ".qfai", "waivers.yml"),
+        "version: 1\nwaivers: []\n",
+        "utf-8",
+      );
 
-        const result = await validateProject(root, undefined, { profile: "full" });
-        const codes = new Set(result.issues.map((entry) => entry.code));
+      const result = await validateProject(root, undefined, { profile: "full" });
+      const codes = new Set(result.issues.map((entry) => entry.code));
 
-        expect(codes.has("QFAI-LINK-001")).toBe(true);
-        expect([...codes]).toEqual(["QFAI-LINK-001"]);
-      } finally {
-        await rm(root, { recursive: true, force: true });
-      }
-    },
-  );
+      expect(codes.has("QFAI-LINK-001")).toBe(true);
+      expect([...codes]).toEqual(["QFAI-LINK-001"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("the agents tree is walked by the profiles that read it", () => {
-  it.skipIf(process.platform === "win32")(
-    "stops `full` when a canonical agent is not a regular file",
-    async () => {
-      // `validateAgentDefinition` opens the agent pathname directly, so a
-      // directory gives it `EISDIR` and a FIFO blocks it — either way taking the
-      // repairable finding down with the run.
-      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-surface-agents-"));
-      try {
-        await mkdir(path.join(root, ".qfai", "assistant", "skill"), { recursive: true });
-        const agents = path.join(root, ".qfai", "assistant", "agent");
-        await mkdir(agents, { recursive: true });
-        await writeFile(path.join(agents, "README.md"), "# readme\n", "utf-8");
-        // The document the roster names, replaced by a directory.
-        await mkdir(path.join(agents, "completion-reviewer.md"), { recursive: true });
-        const wrapper = path.join(root, ".claude", "agents", "completion-reviewer.md");
-        await mkdir(path.dirname(wrapper), { recursive: true });
-        await symlink(
-          path.join("..", "..", ".qfai", "assistant", "agent", "completion-reviewer.md"),
-          wrapper,
-        );
-        await mkdir(path.join(root, ".qfai"), { recursive: true });
-        await writeFile(
-          path.join(root, ".qfai", "waivers.yml"),
-          "version: 1\nwaivers: []\n",
-          "utf-8",
-        );
+  it("stops `full` when a canonical agent is not a regular file", async () => {
+    // `validateAgentDefinition` opens the agent pathname directly, so a
+    // directory gives it `EISDIR` and a FIFO blocks it — either way taking the
+    // repairable finding down with the run.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-surface-agents-"));
+    try {
+      await mkdir(path.join(root, ".qfai", "assistant", "skill"), { recursive: true });
+      const agents = path.join(root, ".qfai", "assistant", "agent");
+      await mkdir(agents, { recursive: true });
+      await writeFile(path.join(agents, "README.md"), "# readme\n", "utf-8");
+      // The document the roster names, replaced by a directory.
+      await mkdir(path.join(agents, "completion-reviewer.md"), { recursive: true });
+      const wrapper = path.join(root, ".claude", "agents", "completion-reviewer.md");
+      await mkdir(path.dirname(wrapper), { recursive: true });
+      await symlink(
+        path.join("..", "..", ".qfai", "assistant", "agent", "completion-reviewer.md"),
+        wrapper,
+      );
+      await mkdir(path.join(root, ".qfai"), { recursive: true });
+      await writeFile(
+        path.join(root, ".qfai", "waivers.yml"),
+        "version: 1\nwaivers: []\n",
+        "utf-8",
+      );
 
-        const result = await validateProject(root, undefined, { profile: "full" });
-        const codes = new Set(result.issues.map((entry) => entry.code));
+      const result = await validateProject(root, undefined, { profile: "full" });
+      const codes = new Set(result.issues.map((entry) => entry.code));
 
-        expect([...codes]).toEqual(["QFAI-LINK-001"]);
-      } finally {
-        await rm(root, { recursive: true, force: true });
-      }
-    },
-  );
+      expect([...codes]).toEqual(["QFAI-LINK-001"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("the short-circuit is scoped to the profiles that walk the damage", () => {
-  // POSIX only: the scenario is the ENOTDIR shape, and Windows folds that
-  // errno into ENOENT, which reads as absence. CI runs the ubuntu lane.
-  it.skipIf(process.platform === "win32")(
-    "stops `full`, which opens the canonical tree",
-    async () => {
-      await withDamagedCanonical(async (root) => {
-        const result = await validateProject(root, undefined, { profile: "full" });
-        const codes = new Set(result.issues.map((entry) => entry.code));
+  it("stops `full`, which opens the canonical tree", async () => {
+    await withDamagedCanonical(async (root) => {
+      const result = await validateProject(root, undefined, { profile: "full" });
+      const codes = new Set(result.issues.map((entry) => entry.code));
 
-        expect(codes.has("QFAI-LINK-001")).toBe(true);
-        // Nothing else ran: the finding that names the path and the repair is the
-        // whole output, rather than a stack trace from somebody else's `readdir`.
-        expect([...codes]).toEqual(["QFAI-LINK-001"]);
-        return true;
-      });
-    },
-  );
+      expect(codes.has("QFAI-LINK-001")).toBe(true);
+      // Nothing else ran: the finding that names the path and the repair is the
+      // whole output, rather than a stack trace from somebody else's `readdir`.
+      expect([...codes]).toEqual(["QFAI-LINK-001"]);
+      return true;
+    });
+  });
 
-  it.skipIf(process.platform === "win32")(
-    "stops `sdd`, whose own validators read the skills directory",
-    async () => {
-      // `validateSkillDocReferences` and `validateAutopilotPolicy` both
-      // `readdir` the configured skills directory,
-      // so excluding `sdd` by name left one of them raising `ELOOP` and losing
-      // the finding that names the path and the repair.
-      await withDamagedCanonical(async (root) => {
-        const result = await validateProject(root, undefined, { profile: "sdd" });
-        const codes = new Set(result.issues.map((entry) => entry.code));
+  it("stops `sdd`, whose own validators read the skills directory", async () => {
+    // `validateSkillDocReferences` and `validateAutopilotPolicy` both
+    // `readdir` the configured skills directory,
+    // so excluding `sdd` by name left one of them raising `ELOOP` and losing
+    // the finding that names the path and the repair.
+    await withDamagedCanonical(async (root) => {
+      const result = await validateProject(root, undefined, { profile: "sdd" });
+      const codes = new Set(result.issues.map((entry) => entry.code));
 
-        expect([...codes]).toEqual(["QFAI-LINK-001"]);
-        return true;
-      });
-    },
-  );
+      expect([...codes]).toEqual(["QFAI-LINK-001"]);
+      return true;
+    });
+  });
 
-  it.skipIf(process.platform === "win32")(
-    "stops `prototyping`, whose agent-definition validator reads the skills tree",
-    async () => {
-      // `validateAgentDefinition` gained `QFAI-AGENT-019` / `QFAI-AGENT-015`,
-      // which read every routed skill's `SKILL.md` and `readdir` the configured
-      // skills directory. Listing only the agents tree for this profile left
-      // that read raising `ENOTDIR` — or blocking forever on a FIFO — with the
-      // finding that names the path already in hand.
-      await withDamagedCanonical(async (root) => {
-        const result = await validateProject(root, undefined, { profile: "prototyping" });
-        const codes = new Set(result.issues.map((entry) => entry.code));
+  it("stops `prototyping`, whose agent-definition validator reads the skills tree", async () => {
+    // `validateAgentDefinition` gained `QFAI-AGENT-019` / `QFAI-AGENT-015`,
+    // which read every routed skill's `SKILL.md` and `readdir` the configured
+    // skills directory. Listing only the agents tree for this profile left
+    // that read raising `ENOTDIR` — or blocking forever on a FIFO — with the
+    // finding that names the path already in hand.
+    await withDamagedCanonical(async (root) => {
+      const result = await validateProject(root, undefined, { profile: "prototyping" });
+      const codes = new Set(result.issues.map((entry) => entry.code));
 
-        expect([...codes]).toEqual(["QFAI-LINK-001"]);
-        return true;
-      });
-    },
-  );
+      expect([...codes]).toEqual(["QFAI-LINK-001"]);
+      return true;
+    });
+  });
 
-  it.skipIf(process.platform === "win32")(
-    "lets `atdd` report its own findings, which do not touch that tree",
-    async () => {
-      await withDamagedCanonical(async (root) => {
-        const result = await validateProject(root, undefined, { profile: "atdd" });
-        const codes = new Set(result.issues.map((entry) => entry.code));
+  it("lets `atdd` report its own findings, which do not touch that tree", async () => {
+    await withDamagedCanonical(async (root) => {
+      const result = await validateProject(root, undefined, { profile: "atdd" });
+      const codes = new Set(result.issues.map((entry) => entry.code));
 
-        expect(codes.has("QFAI-LINK-001")).toBe(true);
-        // The surface is still reported — it is just no longer a reason to say
-        // nothing about the story tree and the ledger.
-        expect(codes.size).toBeGreaterThan(1);
-        return true;
-      });
-    },
-  );
+      expect(codes.has("QFAI-LINK-001")).toBe(true);
+      // The surface is still reported — it is just no longer a reason to say
+      // nothing about the story tree and the ledger.
+      expect(codes.size).toBeGreaterThan(1);
+      return true;
+    });
+  });
 });

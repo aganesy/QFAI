@@ -49,24 +49,34 @@ export const CONCURRENCY_ENV = "QFAI_TEST_MAX_CONCURRENCY";
  * settings on the largest project, one project per pull request; revising this declared
  * starting value needs the user's sign-off. Neither is a decision this file may take.
  *
- * ## The comparison ten was adopted against
+ * ## Applied worker measurement
  *
- * Largest project: `integration` (1944 tests), found with `vitest list --json` across every
- * runner project. Its include globs held test files: 183 when it was measured.
+ * Largest project: `integration` (2602 tests), collected across every runner
+ * project with `vitest list --json`. Test files: 246, including one existing
+ * Windows platform skip. Available logical CPUs: 6 (Intel Core i5-9500).
+ * Windows, Node v24.18.0; within-file concurrency six; isolated forks.
  *
- * Six logical CPUs, `QFAI_TEST_MAX_WORKERS=<n> pnpm -C packages/qfai exec vitest run --project
- * integration`, one full run per setting, on a machine other work was also using:
+ * One full integration run per setting on the same source tree. Command:
+ * `QFAI_TEST_MAX_WORKERS=<n> QFAI_TEST_MAX_CONCURRENCY=6 pnpm -C packages/qfai
+ * exec vitest run --project integration --maxWorkers=<n> --maxConcurrency=6`.
+ * Measurements taken on 2026-10-14; wall duration includes runner startup.
  *
  * | workers | duration | vs fastest |
  * | ------- | -------- | ---------- |
- * | 4       | 476.46s  | +25.70%    |
- * | 6       | 384.15s  | +1.35%     |
- * | 10      | 379.05s  | —          |
+ * | 4 | 905.11s | 0.00% |
+ * | 6 | 939.38s | 3.79% |
  *
- * adopted: 10
+ * adopted: 6
  *
- * Ten is the user's instruction and the fastest setting measured. `DR-0017-0009` records a
- * proposal to lower it and its refusal.
+ * The applied default is the starting value ten capped at six available CPUs.
+ * Reason for not adopting the fastest: the existing hardware cap determines
+ * the applied default, and its measured overhead is within ten percent.
+ * Ten workers took 954.09s but failed the sixty-repository fixture's unchanged
+ * 300-second timeout: 2,600 passed, one failed, one existing skip. That failed
+ * run is retained and excluded from eligible successful timings. The passing
+ * runs each contain 2,601 passed cases and the same existing skip. Oversubscribed
+ * filesystem contention is supported by the paired outcome; individual CPU,
+ * memory and disk contributions were not independently measured.
  */
 export const DECLARED_START = 10;
 

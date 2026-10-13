@@ -6,6 +6,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- `qfai init` installs isolated CodeGraph and Graphify runtimes with managed
+  graph CLIs and search-denial hooks. Code questions use CodeGraph; document
+  questions use Graphify. Document processing needs explicit configuration.
+  Completed local analysis can be reused across compatible worktrees through
+  independent copies. AI-decided fallback permits only the observed search scope.
+
 - Synchronize the document schema checker copies from the package manifest after
   a frozen dependency install, including the Renovate repin workflow.
 
@@ -333,6 +339,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   constitution's Article V. Part of #2951.
 
 ### Fixed
+
+- Graph hook composition retains unreadable or malformed optional host settings
+  and reports recovery without stopping the rest of init.
+
+- Validation reports a canonical directory replaced by a file on Windows
+  before profile scans run, preserving integration and security findings.
+- Repository bootstrap rejects a file in place of a dependency directory's
+  parent on Windows before starting pnpm.
 
 - Verify steps reject validation errors even when a custom Validate wrapper succeeds.
 - Clarify that the research agent reads the cache TTL extension in the project config; the CLI does not parse it.

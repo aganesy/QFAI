@@ -167,7 +167,7 @@
 | US-0001-0230 | Purposeful copy in a screen's UI contract                                              | `user-story-0001-0230/` |
 | US-0001-0231 | Send session feedback to QFAI when the work is complete                                | `user-story-0001-0231/` |
 | US-0001-0232 | Find forbidden identifiers in the tracked worktree                                     | `user-story-0001-0232/` |
-| US-0001-0233 | Prepare project-local graph tools through init                                         | `user-story-0001-0233/` |
-| US-0001-0234 | Choose the graph that answers the exploration question                                 | `user-story-0001-0234/` |
+| US-0001-0233 | Prepare project-local graph CLIs through init                                          | `user-story-0001-0233/` |
+| US-0001-0234 | Choose the graph CLI that answers the exploration question                             | `user-story-0001-0234/` |
 | US-0001-0235 | Redirect observable exploratory searches through hooks                                 | `user-story-0001-0235/` |
 | US-0001-0236 | Reuse completed analysis safely across worktrees                                       | `user-story-0001-0236/` |

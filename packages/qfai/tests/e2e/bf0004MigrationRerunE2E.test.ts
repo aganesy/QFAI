@@ -25,6 +25,7 @@ import { deleteE2eCaseAnnotation } from "../helpers/migrationE2eAnnotation.js";
 import { assertBuiltCliFresh } from "../helpers/builtCli.js";
 import { expectLinkToCanonicalSkill } from "../helpers/skillLink.js";
 import { removeTempTree } from "../helpers/tempTree.js";
+import { legacyInitArguments } from "../helpers/legacyInitArguments.js";
 
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");
 const FIXTURE = path.join(PACKAGE_ROOT, "tests/fixtures/migration-spec-to-story/old-layout");
@@ -77,7 +78,11 @@ type Result = { status: number | null; stdout: string; stderr: string };
 type Journey = { root: string; preview: Result[]; applied: Result[]; initialised: string };
 
 function run(root: string, command: string, args: string[]): Result {
-  const child = spawnSync(command, args, { cwd: root, encoding: "utf8", timeout: 60_000 });
+  const invocation =
+    command === process.execPath && args[0] === CLI
+      ? legacyInitArguments(CLI, args.slice(1))
+      : args;
+  const child = spawnSync(command, invocation, { cwd: root, encoding: "utf8", timeout: 60_000 });
   return { status: child.status, stdout: child.stdout ?? "", stderr: child.stderr ?? "" };
 }
 
@@ -269,8 +274,11 @@ describe("BF-0004: the migration from a 1.x project, and again on a migrated one
     expect((await textOrNull(root, "AGENTS.md")) ?? "").not.toContain("`qfai-run`");
     expect(await textOrNull(root, ".gitignore")).toContain("!.qfai/assistant/**\n");
     for (const file of HOOK_FILES) {
-      expect(await textOrNull(root, file), file).toBe(await textOrNull(initialised, file));
+      expect(await textOrNull(root, file), file).toBe(
+        await textOrNull(path.join(PACKAGE_ROOT, "assets/init"), file),
+      );
     }
+    expect(await textOrNull(root, REMINDERS)).toBe(await textOrNull(initialised, REMINDERS));
   });
 
   it("finds no 1.x layout on a project 2.0.0 migrated and brings only the hooks and their text up to date", async () => {
@@ -328,7 +336,9 @@ describe("BF-0004: the migration from a 1.x project, and again on a migrated one
       );
     }
     for (const file of HOOK_FILES) {
-      expect(await textOrNull(root, file), file).toBe(await textOrNull(journey.initialised, file));
+      expect(await textOrNull(root, file), file).toBe(
+        await textOrNull(path.join(PACKAGE_ROOT, "assets/init"), file),
+      );
     }
     expect(await textOrNull(root, ".codex/hooks.json")).toBe(
       await textOrNull(path.join(PACKAGE_ROOT, "assets/init"), ".codex/hooks.json"),

@@ -110,7 +110,7 @@ type BootstrapOptions = {
   unsafeModules?: { relative: string; kind: "link" | "file" };
   realModules?: boolean;
   invalidNode?: boolean;
-  filePackageParent?: boolean;
+  packageParent?: { relative: "packages" | "packages/qfai"; kind: "file" | "absent" };
   signal?: boolean;
 };
 
@@ -125,10 +125,12 @@ async function runBootstrap(options: BootstrapOptions = {}) {
       mkdir(dir, { recursive: true }),
     ),
   );
-  if (options.filePackageParent) {
-    const parent = path.join(root, "packages/qfai");
-    await rmdir(parent);
-    await writeFile(parent, "keep package parent");
+  if (options.packageParent) {
+    await rmdir(path.join(root, "packages", "qfai"));
+    if (options.packageParent.relative === "packages") await rmdir(path.join(root, "packages"));
+    if (options.packageParent.kind === "file") {
+      await writeFile(path.join(root, options.packageParent.relative), "keep package parent");
+    }
   }
   const entry = path.join(scripts, "bootstrap.mjs");
   const source = path.join(REPO_ROOT, "scripts/bootstrap.mjs");
@@ -273,15 +275,25 @@ describe("the repository bootstrap entry", () => {
     expect(result.calls).toEqual([]);
   });
 
-  it("retains a non-directory dependency parent and starts no command", async () => {
-    const result = await runBootstrap({ filePackageParent: true });
-    expect(result.status).toBe(1);
-    expect(result.stderr).toContain("Cannot inspect dependency path packages/qfai/node_modules.");
-    expect(result.calls).toEqual([]);
-    expect(await readFile(path.join(result.root, "packages/qfai"), "utf8")).toBe(
-      "keep package parent",
-    );
-  });
+  it.each(["packages", "packages/qfai"] as const)(
+    "retains a non-directory dependency parent %s and starts no command",
+    async (relative) => {
+      const result = await runBootstrap({ packageParent: { relative, kind: "file" } });
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("Cannot inspect dependency path packages/qfai/node_modules.");
+      expect(result.calls).toEqual([]);
+      expect(await readFile(path.join(result.root, relative), "utf8")).toBe("keep package parent");
+    },
+  );
+
+  it.each(["packages", "packages/qfai"] as const)(
+    "allows an absent dependency parent %s before installing",
+    async (relative) => {
+      const result = await runBootstrap({ packageParent: { relative, kind: "absent" } });
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.calls).toEqual(bootstrapSteps.map((argv) => ({ argv, cwd: result.root })));
+    },
+  );
 
   it("reports a signalled child and starts no later stage", async () => {
     const result = await runBootstrap({ signal: true });

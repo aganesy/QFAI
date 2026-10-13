@@ -4,6 +4,8 @@ Quality-First AI (QFAI) — a verification framework and CLI for specification-d
 
 ## Project Rules
 
+- Follow `.agents/rules/graph-exploration.md` for graph selection, document processing and scoped AI-decided search fallback.
+
 - Follow existing code conventions and patterns in the repository.
 - All source changes must have corresponding test coverage.
 - TypeScript: avoid bare `as` type assertions; prefer type narrowing.

@@ -3,19 +3,19 @@
 ## Criteria
 
 ```gherkin
-Feature: Choose the graph that answers the exploration question
+Feature: Choose the graph CLI that answers the exploration question
 
   # AC-0001-0234-01
   Scenario: Route code structure to CodeGraph
     Given a question about symbols, calls, dependencies or change impact
     When I explore the current code scope
-    Then CodeGraph is first, exact returned paths may be read, and a second engine is used only for a specific unresolved cross-domain question
+    Then the managed code CLI queries CodeGraph first, exact returned paths may be read, and a second engine is used only for a specific unresolved cross-domain question
 
   # AC-0001-0234-02
   Scenario: Route document concepts to Graphify
     Given a question about requirements, rationale or document relationships
     When I explore the current ready document scope
-    Then Graphify is first and a second engine is used only for a specific unresolved cross-domain question
+    Then the managed documents CLI queries Graphify first and a second engine is used only for a specific unresolved cross-domain question
 
   # AC-0001-0234-03
   Scenario: Require an explicit processing destination
@@ -39,7 +39,7 @@ Feature: Choose the graph that answers the exploration question
   Scenario: Recover without automatic raw search
     Given missing or stale required analysis
     When I attempt exploration
-    Then preparation guidance or a narrowly human-approved exception is required
+    Then the short-lived CLI attempts native preparation where needed and reports recovery, and the AI may use the fallback CLI with a pending attempt and unresolved reason without human approval
 
   # AC-0001-0234-07
   Scenario: Exclude secrets from analysis and its outputs

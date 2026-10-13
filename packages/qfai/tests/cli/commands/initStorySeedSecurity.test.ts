@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { runInit } from "../../../src/cli/commands/init.js";
+import { runInit } from "../../helpers/legacyInit.js";
 
 describe("init story-tree seed destination", () => {
   it.each(["spec", "spec/03_contract/api"])(
