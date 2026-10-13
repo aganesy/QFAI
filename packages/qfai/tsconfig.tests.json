@@ -160,6 +160,7 @@
     "tests/core/validators/utilsReadErrors.test.ts",
     "tests/core/htmlMockBudgetClock.test.ts",
     "tests/core/htmlMockLazyLoad.test.ts",
+    "tests/core/installedOlderThanDeclared.test.ts",
     "tests/core/platformOptionProfileScope.test.ts",
     "tests/core/prototyping/specResolution.test.ts",
     "tests/core/skillRegistrationContract.test.ts",
