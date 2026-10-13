@@ -23,19 +23,22 @@ them; it is the procedure that applies them.
 ## Reads
 
 - **The reviewer set.** In a route, each review takes exactly these reviewers,
-  each once, with no threshold to judge:
+  each once in that review, with no threshold to judge:
   - one reviewer for its kind: `requirements-reviewer` for the specification
     review, `implementation-reviewer` for the code review of the whole diff;
-  - `architecture-reviewer` too, only when the target changed a contract that
+  - `architecture-reviewer` too, only when the target holds a contract change
     no earlier review of the route read;
-  - `product-surface-reviewer` too, only when the target changed a screen that
-    no earlier review of the route read: a UI contract's screen, or the code or
-    tests that render one;
+  - `product-surface-reviewer` too, only when the target holds a screen change
+    no earlier review of the route read: an edit to a UI contract's screen, or
+    to the code, tests or styles that render one;
   - no other reviewer. A stage the plan marks with no review gets none.
 
   A merge or a branch update whose only edits resolve conflicts between sides
-  that were each already reviewed gets no reviewer at any review; the stage
-  report says so. A parent skill invoked by name uses the reviewers its own
+  that were each already reviewed gets no reviewer at any review. A side is
+  reviewed when it is on the default branch or a review of this route or its
+  pull request covered its commits. A resolution that adds content neither side
+  had is not conflict-only. The stage report names the merge and why no
+  reviewer ran. A parent skill invoked by name uses the reviewers its own
   `## Review` section names, such as `qfai-discussion`'s.
 
 - **The review target.** The specification review: every path and ID the

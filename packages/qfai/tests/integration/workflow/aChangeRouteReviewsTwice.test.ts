@@ -149,11 +149,12 @@ async function runReviewStep(): Promise<string> {
 
 // QFAI:EX-0001-0225-01
 // QFAI:EX-0001-0225-14
+// QFAI:EX-0001-0225-15
 it("Each review takes one reviewer for its kind, the architect only for an unread contract change, and no one else", async () => {
   const { intro, items } = await reviewerSet();
 
   expect(intro).toBe(
-    "In a route, each review takes exactly these reviewers, each once, with no threshold to judge:",
+    "In a route, each review takes exactly these reviewers, each once in that review, with no threshold to judge:",
   );
   expect(items.map((item) => roles(item).join(" "))).toEqual([
     "`requirements-reviewer` `implementation-reviewer`",
@@ -165,10 +166,14 @@ it("Each review takes one reviewer for its kind, the architect only for an unrea
     "one reviewer for its kind: `requirements-reviewer` for the specification review, `implementation-reviewer` for the code review of the whole diff;",
   );
   expect(items[1]).toBe(
-    "`architecture-reviewer` too, only when the target changed a contract that no earlier review of the route read;",
+    "`architecture-reviewer` too, only when the target holds a contract change no earlier review of the route read;",
   );
   expect(items[3]).toBe("no other reviewer. A stage the plan marks with no review gets none.");
+  expect(flat(await shipped("step/common-review-cycle/STEP.md"))).toContain(
+    "No reviewer is rerun.",
+  );
   expect(reviews(await planOf("add-feature"))).toEqual(["sdd:spec", "note:code"]);
+  expect(reviews(await planOf("fix-defect"))).toEqual(["note:code"]);
 });
 
 // QFAI:EX-0001-0225-06
@@ -178,9 +183,10 @@ it("The surface reviewer joins only a review that reads a changed screen, not ev
   const step = flat(await shipped("step/common-review-cycle/STEP.md"));
 
   expect(items[2]).toBe(
-    "`product-surface-reviewer` too, only when the target changed a screen that no earlier review of the route read: a UI contract's screen, or the code or tests that render one;",
+    "`product-surface-reviewer` too, only when the target holds a screen change no earlier review of the route read: an edit to a UI contract's screen, or to the code, tests or styles that render one;",
   );
   expect(step).not.toContain("On a flow a UI contract with screens serves");
+  expect(reviews(await planOf("prototype-feature"))).toEqual(["sdd:spec", "note:code"]);
   expect(reviews(await planOf("fix-defect"))).toEqual(["note:code"]);
 });
 
@@ -191,8 +197,10 @@ it("A merge or branch update that only resolves conflicts between reviewed sides
   const gate = flat(/## Gate([\s\S]*)$/.exec(step)?.[1] ?? "");
 
   expect(after).toMatch(
-    /^A merge or a branch update whose only edits resolve conflicts between sides that were each already reviewed gets no reviewer at any review; the stage report says so\./,
+    /^A merge or a branch update whose only edits resolve conflicts between sides that were each already reviewed gets no reviewer at any review\./,
   );
+  expect(after).toContain("A resolution that adds content neither side had is not conflict-only.");
+  expect(after).toContain("The stage report names the merge and why no reviewer ran.");
   expect(gate).toContain(
     "the stage report names each verdict and each answer, or says why the review dispatched no reviewer.",
   );
@@ -207,7 +215,7 @@ it("The entry skill's review step states the same count as the review step", asy
     "whose `review` is `spec`, `requirements-reviewer` reviews; for `code`, `implementation-reviewer`.",
   );
   expect(run).toContain(
-    "Only a contract or a screen no earlier review read adds `architecture-reviewer` or `product-surface-reviewer`, as `common-review-cycle` lists; no one else joins.",
+    "Only a contract or screen change no earlier review read adds `architecture-reviewer` or `product-surface-reviewer`, as `common-review-cycle` lists; no one else joins.",
   );
   expect(run).toContain(
     "A merge or branch update whose only edits resolve conflicts between reviewed sides gets no reviewer.",

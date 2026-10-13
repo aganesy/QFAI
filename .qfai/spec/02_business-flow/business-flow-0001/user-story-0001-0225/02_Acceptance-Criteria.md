@@ -35,7 +35,7 @@ Feature: Review a change twice: the specification before the code, and the code 
 
   # AC-0001-0225-04
   Scenario: A changed screen adds the surface reviewer
-    Given a change route whose change alters a screen: a UI contract's screen, or the code or tests that render one
+    Given a change route whose change alters a screen: an edit to a UI contract's screen, or to the code, tests or styles that render one
     When the first review that reads that screen change runs
     Then `product-surface-reviewer` joins it
     And a review whose target changes no screen runs without it, even on a flow a UI contract with screens serves
@@ -45,14 +45,15 @@ Feature: Review a change twice: the specification before the code, and the code 
     Given a stage its plan marks for the specification review or the code review
     When that review runs
     Then one reviewer reviews for its kind: `requirements-reviewer` for the specification review, `implementation-reviewer` for the code review
-    And `architecture-reviewer` joins only when the target changed a contract that no earlier review of the route read
-    And no other reviewer joins, each reviewer reviews once, and no reviewer is rerun
-    And a stage the plan marks with no review gets no reviewer
+    And `architecture-reviewer` joins only when the target holds a contract change that no earlier review of the route read
+    And no reviewer joins but these and `product-surface-reviewer` for a screen change
+    And each reviewer reviews once in each review it joins, and none is rerun after a finding is fixed
 
   # AC-0001-0225-06
   Scenario: A merge that only resolves conflicts between reviewed sides gets no review
     Given a merge or a branch update whose only edits resolve conflicts between sides that were each already reviewed
     When a review its route names is reached
     Then no reviewer is dispatched
-    And the stage report says the review dispatched no reviewer because the edits only resolve conflicts
+    And the review is still held, and the stage report names the merge and says no reviewer ran because the edits only resolve conflicts
+    And a resolution that adds content neither side had is not conflict-only, and its reviews dispatch their reviewers
 ```
