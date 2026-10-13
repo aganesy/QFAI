@@ -71,10 +71,9 @@ export const GRILLING_PLAN_HOOK_MARKER = "QFAI grilling reminder: plan";
  * long session starts skipping it.
  *
  * Its program reads the prompt out of the hook's input and stays silent when a
- * line of it opens with a task-notification or wake-up wrapper, or a system
- * notification header. Those turns are automated rather than typed, and no
- * question to the user forms on them. Any other input, including none, prints
- * the reminder.
+ * line of it opens with a task-notification, wake-up or CI-monitor wrapper, or
+ * a system notification header. The filter recognizes supplied prompt markers,
+ * not their origin. Any other input, including none, prints the reminder.
  */
 export const STRUCTURED_QUESTION_HOOK_MARKER = "QFAI structured-question reminder";
 
@@ -86,8 +85,7 @@ export const STRUCTURED_QUESTION_HOOK_MARKER = "QFAI structured-question reminde
  * or none. The hook is the one place the rule is stated, and it states it with
  * each message so that it does not fade as a session grows.
  *
- * It skips the same automated turns as the question-form group: with no user
- * message on them there is no request to route.
+ * It uses the same supplied prompt markers as the question-form group.
  */
 export const FREE_TEXT_ENTRY_HOOK_MARKER = "QFAI free-text entry reminder";
 
@@ -216,6 +214,9 @@ const SUPERSEDED_HOOK_GROUPS: ReadonlySet<string> = new Set([
   "26119b735d6ae96ce9fffd4a7d4b2bb1a5dba536503880122eadc059b59381df",
   "5ffb70d0579c16a473619d3fc2fe668a668406bd2e30f465f672eed42914d738",
   "2e28aee8fc1aa408e661a6cf565c9fdfea3ea26dad6509f3d37142217edf7d20",
+  // Claude prompt groups before CI-monitor notifications were excluded.
+  "d667a61872533a4d1313ac4b4422842c800eb620736a1de98f1eb74bff156d9a",
+  "efe8ac5d03228600cd80eb832c8be192d4350e6080e2e794b2708d69ba2e2666",
 ]);
 
 export type HookMergeResult =
