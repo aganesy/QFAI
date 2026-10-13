@@ -18,6 +18,7 @@ Feature: Follow a route in the session
     When the session does its work
     Then it writes the artifact itself, or gives independent parts to sub-agents to run in parallel
     And a review is done by an agent that did not author what it reviews
+    And on Codex a sub-agent costs one self-contained brief and one final answer, with no polling between them
 
   # AC-0001-0224-04
   Scenario: A branch point moves the work to its destination route
