@@ -146,7 +146,7 @@ describe("an asserted regression with no numbers is not accepting", () => {
 });
 
 describe("the extractor reads this repository's own decision record, not only its fixtures", () => {
-  it("finds the one measured pair that exists and none in the record that only describes the rule", async () => {
+  it("finds the one measured pair that exists and none in the record that only describes the rule", () => {
     const text = readRepositoryDecisions(REPO_ROOT);
     // Keyed by the imported decision each row carries, `…/07_Decisions.md#DR-NNNN-NNNN: title`.
     const sections = new Map<string, string>();
