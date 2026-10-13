@@ -1390,7 +1390,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // asks for, and a project reads them in the language and the spelling its
   // neighbours in the same seeded tree use.
   //
-  // This digest covers the seed's raw UTF-8/LF bytes, including both union rules.
+  // This digest covers the seed's raw UTF-8/LF bytes, including all union rules.
   // `qfai init` copies those bytes only when the destination does not exist.
   [".gitattributes", "495f9358f92c82ebebea3f5c9d6f391f6cea6b540749593fc47339c62340dbaf"],
   // The shipped `.gitignore` IS the generated managed block, so every line of it
