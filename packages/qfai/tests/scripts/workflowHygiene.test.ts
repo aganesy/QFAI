@@ -2922,6 +2922,35 @@ describe("the workflow walk refuses a root it did not open, and is bounded", () 
       }
     }, 240_000);
   }
+
+  it("reports a truncated walk of the pinned-file inventory instead of comparing a prefix", () => {
+    // The present-set check compares the files on disk with the pinned list, and it can only
+    // name an unregistered file it has seen. A walk that stops at its ceiling and returns the
+    // prefix leaves a file past the ceiling unseen, and the check then passes over it. The walk
+    // has to say it stopped, the way the YAML walk does.
+    //
+    // The padding is named `zz-…` and is not pinned, so the lane fails on it either way; what
+    // only the ceiling finding can supply is the statement that the walk stopped, and the name
+    // of the tree it stopped in.
+    const dir = plantedTree((d) => {
+      const pad = path.join(d, "scripts");
+      mkdirSync(pad, { recursive: true });
+      for (let i = 0; i < 1_001; i += 1) {
+        writeFileSync(path.join(pad, `zz-pad-${String(i).padStart(5, "0")}.txt`), "");
+      }
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(run.exitCode, `a partial inventory is not a pass:\n${run.output.slice(0, 4000)}`)
+        .toBe(1);
+      expect
+        .soft(run.output, "the finding must say the inventory walk stopped, and in which tree")
+        .toMatch(/scripts[^\n]*stopped walking the pinned-file inventory/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 240_000);
 });
 
 // QFAI:EX-0002-0018-01
