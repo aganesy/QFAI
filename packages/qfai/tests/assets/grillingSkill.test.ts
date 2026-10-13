@@ -5,11 +5,6 @@
  * asks questions nothing can answer yet, without the fact/decision split the
  * round spends the user's attention on what the repository already states, and
  * without the end condition the whole skill is advice.
- *
- * The skill states the method rather than citing the cross-AI rule master that
- * also states it. `qfai init` does not write that master into an adopter's tree,
- * so a citation would resolve to nothing there — which is what the pointer case
- * below measures rather than assumes.
  */
 
 import { readFile, stat } from "node:fs/promises";
@@ -125,9 +120,7 @@ describe("the grilling primitive", () => {
     });
 
     it(`${tree}: every tree path it cites exists in that tree`, async () => {
-      // The body states the method instead of citing the rule master precisely
-      // so that an adopter reads no dead pointer. That only holds while the
-      // pointers it does carry resolve.
+      // An adopter must be able to open every tree path the body cites.
       const raw = await read(tree);
       // The group is optional to the type checker even though the pattern
       // cannot match without it, so narrow rather than assert.
@@ -264,10 +257,9 @@ describe("the primitive carries the master's clauses", () => {
       // plain-text fallback the same document forbids it to use.
       const text = flat(await read(tree));
       expect(text).toMatch(/A no-question mode is read before any of this/);
-      expect(text).toMatch(/no round is put at all/);
-      expect(text).toMatch(
-        /withholds the tool while still permitting questions is a different thing/,
-      );
+      expect(text).toMatch(/A no-question mode silences user questions, not the session/);
+      expect(text).toMatch(/Agent rounds require explicit delegation/);
+      expect(text).toMatch(/A withheld tool with questions still permitted uses the fallback/);
       expect(text).toMatch(/The whole round falls back, not the question that triggered it/);
       expect(text).toMatch(/say which question it could not carry/);
     });
@@ -285,13 +277,18 @@ describe("the primitive carries the master's clauses", () => {
       );
       expect(text).toMatch(/the ones the agents agreed on and the ones still open alike/);
       expect(text).toMatch(
-        /every critical decision goes to the user at once, without spending a round/,
+        /An uncovered critical decision goes to the user when asking is permitted, without spending a round/,
       );
-      expect(text).toMatch(/It ends `adopted` once no node is open/);
+      expect(text).toMatch(/It ends `adopted` once the master's conditions hold/);
+      expect(text).toMatch(/no open node or lookup, required inputs present/);
+      expect(text).toMatch(/actual authority for critical decisions/);
+      expect(text).toMatch(/Record agent choices as agents'/);
       // The budget bounds the rounds; an unanswered critical decision keeps the
       // session open.
       expect(text).toMatch(/The budget ends the rounds, not the session/);
-      expect(text).toMatch(/While a critical decision is unanswered the session is still open/);
+      expect(text).toMatch(
+        /While a critical decision lacks an actual answer or applicable recorded authorization, it stays open/,
+      );
       // Under a no-question mode the register write ends it instead.
       expect(text).toMatch(/under a no-question mode, the register write ends it `no-question`/);
       expect(text).toMatch(/review-convergence\.md/);

@@ -24,6 +24,7 @@ export const INTENTS = [
   "behaviour-change",
   "deprecation",
   "refactor",
+  "procedure",
   "docs",
   "flaky-test",
   "test-defect",
@@ -66,6 +67,7 @@ export const QUALIFIERS = [
   "visual-open",
   "prototype-requested",
   "owned-temporary-cleanup",
+  "session-answerable",
 ] as const;
 
 export const SIGNALS = [

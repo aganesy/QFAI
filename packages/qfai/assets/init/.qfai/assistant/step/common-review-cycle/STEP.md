@@ -22,12 +22,27 @@ them; it is the procedure that applies them.
 
 ## Reads
 
-- **The reviewer set.** In a route, the specification review:
-  `requirements-reviewer`, joined by `architecture-reviewer` when a contract
-  changed; the code review of the whole diff: `implementation-reviewer`. On a
-  flow a UI contract with screens serves, `product-surface-reviewer` joins
-  either review. A parent skill invoked by name uses the reviewers its own
-  `## Review` section names, such as `qfai-discussion`'s.
+- **The reviewer set.** In a route, each review takes exactly these reviewers,
+  each once in that review, with no threshold to judge:
+  - one reviewer for its kind: `requirements-reviewer` for the specification
+    review, `implementation-reviewer` for the code review of the whole diff;
+  - `architecture-reviewer` too, only when the target holds a contract change
+    no earlier review of the route read;
+  - `product-surface-reviewer` too, only when the target holds a screen change
+    no earlier review of the route read: an edit to a UI contract's screen, or
+    to the code, tests or styles that render one, or to a path `uiux.surfacePaths`
+    declares. An uncertain case counts as a screen change
+    (`.qfai/assistant/skill/qfai-implement/references/ui-affecting.md#routing`);
+  - no other reviewer. A stage the plan marks with no review gets none.
+
+  A review whose target's only edits resolve the conflicts of a merge or a
+  branch update between sides that were each already reviewed gets no
+  reviewer. A side is reviewed when it is on the default branch or a review of
+  this route or its pull request covered its commits. A resolution that adds
+  content neither side had is not conflict-only. The stage report names the
+  merge and why no reviewer ran. A parent skill invoked by name uses the
+  reviewers its own `## Review` section names, such as `qfai-discussion`'s.
+
 - **The review target.** The specification review: every path and ID the
   stage it follows wrote or changed, and the source it was written from. The
   code review: the route's whole diff against the revision the route started
@@ -66,6 +81,7 @@ them; it is the procedure that applies them.
 ## Gate
 
 Every routed reviewer responded once, every finding is fixed or answered, and
-the stage report names each verdict and each answer. A finding the author
+the stage report names each verdict and each answer, or says why the review
+dispatched no reviewer. A finding the author
 cannot fix is in the stage's final report, and a critical decision has gone to
 the user.

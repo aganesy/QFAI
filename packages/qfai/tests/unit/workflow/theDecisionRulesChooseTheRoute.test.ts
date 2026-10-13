@@ -2,7 +2,7 @@ import { expect, it } from "vitest";
 
 import { decideRoute } from "../../../src/core/workflow/decisionRules.js";
 import type { WorkflowExtraction } from "../../../src/core/workflow/extraction.js";
-import { extractionFaults } from "../../../src/core/workflow/extractionShape.js";
+import { extractionFaults, isExtraction } from "../../../src/core/workflow/extractionShape.js";
 import { extraction } from "../../helpers/workflowExtraction.js";
 
 type Facts = Partial<WorkflowExtraction>;
@@ -124,6 +124,36 @@ it("Every question is answered", async () => {
       { intent: "question-help" },
     ),
   ).toEqual(["answer-question", "answer-question", "answer-question", "answer-question"]);
+});
+
+// QFAI:EX-0001-0211-49
+it("A question the session can answer takes the one-step answer route", async () => {
+  expect([
+    await decided({ intent: "question-how", qualifiers: ["session-answerable"], artifacts: [] }),
+    await decided({ intent: "question-why", qualifiers: ["session-answerable"], artifacts: [] }),
+    await decided({
+      intent: "question-help",
+      qualifiers: ["session-answerable", "docs-answerable"],
+      artifacts: [],
+    }),
+  ]).toEqual([
+    ["answer-in-session", 8],
+    ["answer-in-session", 8],
+    ["answer-in-session", 8],
+  ]);
+});
+
+// QFAI:EX-0001-0211-50
+it("An order that names nothing to change carries out an operation", async () => {
+  expect([
+    await decided({ intent: "order", artifacts: [] }),
+    await decided({ intent: "order", artifacts: ["spec"] }),
+    await decided({ intent: "order", qualifiers: ["human-run"], artifacts: [] }),
+  ]).toEqual([
+    ["run-operation", 15],
+    ["apply-settled", 15],
+    ["hand-off-operation", 14],
+  ]);
 });
 
 // QFAI:EX-0001-0211-13
@@ -348,6 +378,38 @@ it("A refactor and a documentation change", async () => {
 function refused(fields: Record<string, unknown>) {
   return extractionFaults({ ...extraction(), ...fields }).map((subject) => `schema:${subject}`);
 }
+
+function procedureChoice(fields: Record<string, unknown>) {
+  const value: unknown = { ...extraction({ artifacts: ["docs"] }), intent: "procedure", ...fields };
+  expect(isExtraction(value)).toBe(true);
+  if (!isExtraction(value)) throw new Error("The procedure reading was refused.");
+  return decideRoute(value);
+}
+
+// QFAI:EX-0001-0224-43
+// QFAI:EX-0001-0224-44
+// QFAI:EX-0001-0224-45
+it("Rule 29 separates procedure authoring from refactoring and explanatory text", () => {
+  expect(procedureChoice({})).toEqual({ route: "write-procedure", rule: 29, clause: 2 });
+  expect(decideRoute(extraction({ intent: "refactor" }))).toEqual({
+    route: "refactor-code",
+    rule: 29,
+    clause: 1,
+  });
+  expect(decideRoute(extraction({ intent: "docs" }))).toEqual({
+    route: "edit-text",
+    rule: 29,
+    clause: 3,
+  });
+});
+
+// QFAI:EX-0001-0224-44
+it.each([
+  [{ signals: ["approved-record-task"] }, "apply-settled", 2],
+  [{ entryFlags: ["bundle"], qualifiers: ["mixed-bundle"] }, "retriage-bundle", 12],
+] as const)("A procedure reading preserves the earlier route for %j", (fields, route, rule) => {
+  expect(procedureChoice(fields)).toMatchObject({ route, rule });
+});
 
 // QFAI:EX-0001-0211-03
 it("An extraction value outside its vocabulary is refused as a shape, naming the field", () => {

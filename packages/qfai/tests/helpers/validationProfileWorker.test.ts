@@ -1,7 +1,10 @@
 /** Private case selected only by the profiling controller's exact-file config. */
-import { execFile as execFileCallback } from "node:child_process";
+import childProcess, { execFile as execFileCallback } from "node:child_process";
+import { createHash } from "node:crypto";
 import { readFile, writeFile, rename, mkdir } from "node:fs/promises";
+import { syncBuiltinESMExports } from "node:module";
 import path from "node:path";
+import { PassThrough } from "node:stream";
 import { promisify } from "node:util";
 
 import { describe, expect, it, vi } from "vitest";
@@ -17,6 +20,7 @@ import type { ValidatorMeasurement } from "./validationProfile.js";
 import { assertBuiltCliFresh } from "./builtCli.js";
 import { DECLARED_TEST_TIMEOUT } from "../../vitest.knobs.js";
 import {
+  runControlledProfile,
   removeBaselineSource,
   retainedProfileFailure,
   saveProfileArtifact,
@@ -28,6 +32,115 @@ import {
 const CLI = path.resolve(import.meta.dirname, "../../dist/cli/index.mjs");
 assertBuiltCliFresh(CLI);
 const execFile = promisify(execFileCallback);
+
+/** Controlled events exercise capture only; native cases retain process-ownership proof. */
+async function controlledOutput(
+  chunks: readonly { stream: "stdout" | "stderr"; text: string }[],
+  code = 7,
+) {
+  const child = new childProcess.ChildProcess();
+  const streams = { stdout: new PassThrough(), stderr: new PassThrough() };
+  child.stdout = streams.stdout;
+  child.stderr = streams.stderr;
+  const spawn = vi.spyOn(childProcess, "spawn").mockImplementation(() => {
+    queueMicrotask(() => {
+      for (const chunk of chunks) streams[chunk.stream].emit("data", chunk.text);
+      child.emit("close", code, null);
+    });
+    return child;
+  });
+  syncBuiltinESMExports();
+  try {
+    const result = await runControlledProfile("controlled-output-fixture", [], {
+      cwd: process.cwd(),
+      timeoutMs: 5_000,
+      ownGroup: false,
+    });
+    expect(spawn).toHaveBeenCalledTimes(1);
+    expect(result.closed).toBe(true);
+    expect(result.code).toBe(code);
+    return result;
+  } finally {
+    spawn.mockRestore();
+    syncBuiltinESMExports();
+    streams.stdout.destroy();
+    streams.stderr.destroy();
+  }
+}
+
+describe("controlled profiling output events", () => {
+  const limit = 32 * 1024 * 1024;
+  const digest = (text: string) => createHash("sha256").update(text).digest("hex");
+
+  it("retains the exact bounded prefix of an initial oversized stdout event", async () => {
+    const result = await controlledOutput([{ stream: "stdout", text: "x".repeat(limit + 1) }]);
+    expect(result.stdout.length).toBe(limit);
+    expect(digest(result.stdout)).toBe(digest("x".repeat(limit)));
+    expect(result.stderr).toBe("");
+    expect(result.pid).toBeNull();
+    expect(result.closed).toBe(true);
+    expect(result.timedOut).toBe(false);
+    expect(result.error).toMatchObject({ name: "ProfileOutputLimit" });
+    expect(result.outcome).toBe("exit 7");
+    expect(result.signal).toBeNull();
+    expect(result.terminationErrors).toEqual([]);
+  });
+
+  it("shares the byte budget between stdout and stderr without moving retained bytes", async () => {
+    const prefix = "retained error";
+    const result = await controlledOutput([
+      { stream: "stderr", text: prefix },
+      { stream: "stdout", text: "x".repeat(limit) },
+    ]);
+    expect(result.stderr).toBe(prefix);
+    expect(Buffer.byteLength(result.stdout) + Buffer.byteLength(result.stderr)).toBe(limit);
+    expect(digest(result.stdout)).toBe(digest("x".repeat(limit - Buffer.byteLength(prefix))));
+    expect(result.error).toMatchObject({ name: "ProfileOutputLimit" });
+    expect(result.outcome).toBe("exit 7");
+  });
+
+  it("retains complete actual UTF-8 characters without adding boundary replacement bytes", async () => {
+    const prefix = "x".repeat(limit - 5);
+    const symbol = String.fromCodePoint(0x1f600);
+    const result = await controlledOutput([
+      { stream: "stdout", text: prefix },
+      { stream: "stdout", text: symbol + symbol },
+      { stream: "stderr", text: "z" },
+      { stream: "stdout", text: "later output" },
+    ]);
+    expect(Buffer.byteLength(result.stdout)).toBe(limit - 1);
+    expect(result.stderr).toBe("");
+    expect(digest(result.stdout)).toBe(digest(prefix + symbol));
+    expect(result.stdout.endsWith(symbol)).toBe(true);
+    expect(result.stdout.includes(String.fromCodePoint(0xfffd))).toBe(false);
+    expect(result.error).toMatchObject({ name: "ProfileOutputLimit" });
+    expect(result.outcome).toBe("exit 7");
+  });
+
+  it("preserves normal completion at exactly the shared output limit", async () => {
+    const result = await controlledOutput([{ stream: "stdout", text: "x".repeat(limit) }], 0);
+    expect(Buffer.byteLength(result.stdout)).toBe(limit);
+    expect(digest(result.stdout)).toBe(digest("x".repeat(limit)));
+    expect(result.stderr).toBe("");
+    expect(result.closed).toBe(true);
+    expect(result.timedOut).toBe(false);
+    expect(result.error).toBeNull();
+    expect(result.outcome).toBe("exit 0");
+  });
+
+  it("keeps later events out of the retained streams after the output limit", async () => {
+    const result = await controlledOutput([
+      { stream: "stdout", text: "x".repeat(limit + 1) },
+      { stream: "stderr", text: "later error" },
+      { stream: "stdout", text: "later output" },
+    ]);
+    expect(result.stdout.length).toBe(limit);
+    expect(digest(result.stdout)).toBe(digest("x".repeat(limit)));
+    expect(result.stderr).toBe("");
+    expect(result.error).toMatchObject({ name: "ProfileOutputLimit" });
+    expect(result.outcome).toBe("exit 7");
+  });
+});
 
 describe("retained profiling failures", () => {
   it("terminates a hanging measurement and preserves its checkpoint and partial output", async () => {

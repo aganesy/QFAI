@@ -298,7 +298,7 @@ describe("§ 4 of the minimal-implementation rule bounds unrequested fixes and r
  *
  * The subject is the rules that exist, not the rules a list names. Reading the
  * directory is what makes that true: a master that skips its registration —
- * `README.md` — is still named by the case that finds it
+ * `AGENTS.md` — is still named by the case that finds it
  * missing, because it reached the case from disk rather than from an entry
  * someone had to add.
  *
@@ -584,7 +584,6 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         "AGENTS.md",
         ".github/copilot-instructions.md",
         "packages/qfai/assets/init/root/AGENTS.md",
-        "packages/qfai/assets/init/root/CLAUDE.md",
       ];
       const enumerates = /issue or pull request numbers/;
       const contradicting: string[] = [];
@@ -653,7 +652,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     it.each(
       [
         ["AGENTS.md", ".github/copilot-instructions.md"],
-        ["packages/qfai/assets/init/root/AGENTS.md", "packages/qfai/assets/init/root/CLAUDE.md"],
+        ["packages/qfai/assets/init/root/AGENTS.md"],
       ].flat(),
     )("%s cites the rule master", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
@@ -759,7 +758,6 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       "AGENTS.md",
       ".github/copilot-instructions.md",
       "packages/qfai/assets/init/root/AGENTS.md",
-      "packages/qfai/assets/init/root/CLAUDE.md",
       // The list `qfai init` appends to a project that already has an entry
       // point. A project with its own `AGENTS.md` keeps it, so this is the only
       // rule list that population ever sees.
@@ -848,7 +846,6 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       "AGENTS.md",
       ".github/copilot-instructions.md",
       "packages/qfai/assets/init/root/AGENTS.md",
-      "packages/qfai/assets/init/root/CLAUDE.md",
       // The list `qfai init` appends to a project that already has an entry
       // point, and the only rule list a populated project ever sees.
       "packages/qfai/src/cli/commands/init.ts",
@@ -1057,7 +1054,6 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       "AGENTS.md",
       ".github/copilot-instructions.md",
       "packages/qfai/assets/init/root/AGENTS.md",
-      "packages/qfai/assets/init/root/CLAUDE.md",
       "packages/qfai/src/cli/commands/init.ts",
     ])("%s cites the rule master", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
@@ -1072,11 +1068,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     });
 
     // QFAI:EX-0001-0196-57
-    it.each([
-      "packages/qfai/assets/init/root/AGENTS.md",
-      "packages/qfai/assets/init/root/CLAUDE.md",
-      "packages/qfai/src/cli/commands/init.ts",
-    ])(
+    it.each(["packages/qfai/assets/init/root/AGENTS.md", "packages/qfai/src/cli/commands/init.ts"])(
       "%s summarizes the required-answer boundary without forcing report questions",
       async (rel) => {
         const text = (await readFile(path.join(ROOT, rel), "utf-8")).replace(/\s+/g, " ");
@@ -1348,7 +1340,6 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       "AGENTS.md",
       ".github/copilot-instructions.md",
       "packages/qfai/assets/init/root/AGENTS.md",
-      "packages/qfai/assets/init/root/CLAUDE.md",
       // The list `qfai init` appends to a project that already has an entry
       // point. A project with its own `AGENTS.md` keeps it, so this is the only
       // rule list that population ever sees.
@@ -1423,7 +1414,6 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       "AGENTS.md",
       ".github/copilot-instructions.md",
       "packages/qfai/assets/init/root/AGENTS.md",
-      "packages/qfai/assets/init/root/CLAUDE.md",
       // The list `qfai init` appends to a project that already has an entry
       // point, and the only rule list a populated project ever sees.
       "packages/qfai/src/cli/commands/init.ts",
@@ -1438,6 +1428,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
   // QFAI:AC-0001-0231-03
   // QFAI:AC-0001-0231-04
   // QFAI:AC-0001-0231-05
+  // QFAI:EX-0001-0231-09
   // QFAI:EX-0001-0231-10
   // QFAI:EX-0001-0231-11
   // QFAI:EX-0001-0231-12
@@ -1453,26 +1444,29 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       // One token per clause that no other clause in the file carries, so a
       // clause cannot be dropped and still leave the master looking complete.
       for (const clause of [
-        // When it runs, and the pauses it never runs at.
+        // When it runs, what triggers it, and the pauses it never runs at.
         /Every\s+task\s+the\s+user\s+gave\s+is\s+complete/,
         /Nothing\s+waits\s+on\s+the\s+user/,
-        /replies\s+with\s+one\s+short\s+line\s+and\s+stops/,
+        /`qfai-run`'s\s+final\s+report,\s+when\s+it\s+closes\s+the\s+user's\s+last\s+task/,
+        /No\s+hook\s+triggers\s+it/,
+        /already\s+ran\s+after\s+the\s+user's\s+latest\s+instruction,\s+the\s+agent\s+does\s+not\s+run\s+it/,
         /If\s+the\s+user's\s+next\s+answer\s+would\s+start\s+more\s+work/,
         /In\s+doubt,\s+the\s+work\s+is\s+not\s+complete/,
         // What is reviewed.
+        /review\s+the\s+whole\s+session\s+for\s+problems\s+in\s+QFAI\s+itself/,
         /\*\*Tokens\s+against\s+output\.\*\*/,
         /\*\*Over-work\.\*\*/,
         /A\s+feeling\s+without\s+evidence\s+is\s+not\s+a\s+finding/,
         // What a draft may not carry.
         /the\s+name\s+of\s+the\s+project\s+or\s+its\s+organisation/,
         // Nothing is filed without a yes, and where.
+        /through\s+the\s+host's\s+structured\s+question\s+tool/,
         /choosing\s+none\s+files\s+nothing/,
+        /For\s+each\s+approved\s+draft/,
         /gh\s+issue\s+create\s+--repo\s+aganesy\/QFAI/,
         /Never\s+ask\s+for,\s+read\s+or\s+enter\s+a\s+credential/,
         // A mode that asks nothing files nothing.
         /Nothing\s+is\s+asked\s+and\s+nothing\s+is\s+filed/,
-        // The shortcut's ceiling and the condition that lifts it.
-        /Lift\s+when:\s+the\s+host\s+reports\s+whether\s+the\s+user's\s+work\s+is\s+complete/,
       ]) {
         expect(text).toMatch(clause);
       }
@@ -1490,7 +1484,6 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       "AGENTS.md",
       ".github/copilot-instructions.md",
       "packages/qfai/assets/init/root/AGENTS.md",
-      "packages/qfai/assets/init/root/CLAUDE.md",
       // The list `qfai init` appends to a project that already has an entry
       // point, and the only rule list a populated project ever sees.
       "packages/qfai/src/cli/commands/init.ts",
@@ -1568,7 +1561,6 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       "AGENTS.md",
       ".github/copilot-instructions.md",
       "packages/qfai/assets/init/root/AGENTS.md",
-      "packages/qfai/assets/init/root/CLAUDE.md",
       // The list `qfai init` appends to a project that already has an entry
       // point, and the only rule list a populated project ever sees.
       "packages/qfai/src/cli/commands/init.ts",
@@ -1627,7 +1619,6 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       "AGENTS.md",
       ".github/copilot-instructions.md",
       "packages/qfai/assets/init/root/AGENTS.md",
-      "packages/qfai/assets/init/root/CLAUDE.md",
       "packages/qfai/src/cli/commands/init.ts",
     ])("%s cites the rule master", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
@@ -1686,7 +1677,6 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       "AGENTS.md",
       ".github/copilot-instructions.md",
       "packages/qfai/assets/init/root/AGENTS.md",
-      "packages/qfai/assets/init/root/CLAUDE.md",
       "packages/qfai/src/cli/commands/init.ts",
       // The reviewer that reads a pull request's description, shipped and in this repository.
       "packages/qfai/assets/init/.github/instructions/code-review.instructions.md",
@@ -1766,7 +1756,6 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       "AGENTS.md",
       ".github/copilot-instructions.md",
       "packages/qfai/assets/init/root/AGENTS.md",
-      "packages/qfai/assets/init/root/CLAUDE.md",
       "packages/qfai/src/cli/commands/init.ts",
     ])("%s cites the rule master", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
@@ -1803,7 +1792,7 @@ describe("the question shape has one owner", () => {
 
   // Every shipped surface that summarises the rule uses the same criterion, so
   // an adopter is not told to enumerate a domain nobody can read.
-  it.each(["packages/qfai/assets/init/root/AGENTS.md", "packages/qfai/assets/init/root/CLAUDE.md"])(
+  it.each(["packages/qfai/assets/init/root/AGENTS.md"])(
     "%s summarises it by what can be listed",
     async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
@@ -1836,6 +1825,30 @@ describe("a no-question run opens every node, on every surface that says so", ()
     );
     expect(text).not.toMatch(/(?:every|each)\s+decision\s+left\s+over/);
     expect(text).toMatch(/undefaultable/);
+    if (rel.endsWith("/constitution.md")) {
+      const rule = text
+        .split("6. **A grilling session does not reach the user under `--auto`.**")[1]
+        ?.split("\n## Article XI")[0];
+      expect(rule, "Article X's no-question grilling rule is missing").toBeDefined();
+      const flat = rule?.replace(/\s+/g, " ");
+      expect(flat).toContain(
+        "A critical decision needs an actual user answer or recorded applicable authorization; without it the node stays open",
+      );
+      expect(flat).toContain(
+        "including uncovered critical decisions and unavailable user-held facts",
+      );
+      expect(flat).toContain("stage cannot complete over it");
+      expect(flat).toContain(
+        "A qualifying explicitly delegated session ends `adopted` only with the master's empty-tree, actual-input and authority conditions met",
+      );
+      expect(flat).toContain(
+        "No-question mode alone cannot close a node or authorize a reserved decision",
+      );
+      expect(flat).toContain("a labelled value under an open question is not a settled decision");
+      expect(flat).toContain(
+        "A fact declared undefaultable has no value to write down at all: the run stops and names it",
+      );
+    }
   });
 });
 

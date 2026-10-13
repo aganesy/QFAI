@@ -23,6 +23,7 @@ export function extraction(fields: Partial<WorkflowExtraction> = {}): WorkflowEx
 const BY_ROUTE: Record<string, Partial<WorkflowExtraction>> = {
   "close-no-change": { intent: "no-work" },
   "answer-question": { intent: "question-how" },
+  "answer-in-session": { intent: "question-how", qualifiers: ["session-answerable"] },
   "request-info": { intent: "defect", entryFlags: ["vague"] },
   "close-duplicate": { intent: "defect", entryFlags: ["stale"] },
   "cluster-reports": { intent: "defect-crash", entryFlags: ["bot"] },
@@ -43,6 +44,7 @@ const BY_ROUTE: Record<string, Partial<WorkflowExtraction>> = {
     artifacts: ["spec", "ui"],
   },
   "refactor-code": { intent: "refactor" },
+  "write-procedure": { intent: "procedure", artifacts: ["docs"] },
   "edit-text": { intent: "docs", artifacts: ["docs"] },
   "fix-defect": { intent: "defect" },
   "improve-performance": { intent: "performance", entryFlags: ["measured"] },
@@ -61,6 +63,7 @@ const BY_ROUTE: Record<string, Partial<WorkflowExtraction>> = {
     artifacts: ["tests"],
   },
   "hand-off-operation": { intent: "order", qualifiers: ["human-run"] },
+  "run-operation": { intent: "order", artifacts: [] },
   "backport-fix": { intent: "release", signals: ["backport"] },
   "draft-release-notes": { intent: "release", signals: ["release-notes"] },
   "verify-manually": { intent: "release", signals: ["test-plan"] },
