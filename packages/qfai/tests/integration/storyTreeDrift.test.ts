@@ -11,7 +11,21 @@ import { defaultConfig } from "../../src/core/config.js";
 import { buildStoryTreeModel } from "../../src/core/storyTree/tree.js";
 import { validateStoryTreeStructureModel } from "../../src/core/validators/storyTreeStructure.js";
 import { validateStoryTreeDrift } from "../../src/core/validators/upstreamSsotGuard.js";
+import type * as GitChanges from "../../src/core/gitChanges.js";
 import { createSymlinkFixture } from "../helpers/symlinkFixture.js";
+
+const baseRead = vi.hoisted(() => ({ unreadable: false }));
+
+// A base file git cannot show (past the output ceiling) cannot be built cheaply, so the read
+// of the base is made to fail for the one test that needs it.
+vi.mock("../../src/core/gitChanges.js", async (importOriginal) => {
+  const original = await importOriginal<typeof GitChanges>();
+  return {
+    ...original,
+    readFileAtBase: (...args: Parameters<typeof original.readFileAtBase>) =>
+      baseRead.unreadable ? null : original.readFileAtBase(...args),
+  };
+});
 
 let root: string;
 const specs = ".qfai/spec";
@@ -38,6 +52,7 @@ function config() {
 }
 
 beforeEach(async () => {
+  baseRead.unreadable = false;
   root = await mkdtemp(path.join(os.tmpdir(), "qfai-story-drift-"));
   git("init", "-b", "main");
   git("config", "user.email", "test@example.test");
@@ -1250,6 +1265,37 @@ describe("story-tree drift", () => {
         );
       },
     );
+
+    it.each(["tdd", "drift"] as const)(
+      "warns in %s when the base holds decisions.md and it cannot be read",
+      async (profile) => {
+        await branchedFromBase();
+        await put(glossary, "# Terms\nUpdated\n");
+        git("add", ".");
+        git("commit", "-m", "edit the glossary");
+        baseRead.unreadable = true;
+        const findings = await validateStoryTreeDrift(root, config(), profile);
+        expect(findings).toEqual([
+          expect.objectContaining({
+            code: "QFAI-DRIFT-003",
+            severity: "warning",
+            message: `Nothing was compared: ${decisions} at "main" could not be read.`,
+          }),
+        ]);
+      },
+    );
+
+    it("stays silent when the base holds no decisions.md at all", async () => {
+      await put("README.md", "base\n");
+      git("add", ".");
+      git("commit", "-m", "base without a story tree");
+      git("checkout", "-b", "topic");
+      await put(decisions, table);
+      git("add", ".");
+      git("commit", "-m", "add the story tree");
+      baseRead.unreadable = true;
+      expect(await validateStoryTreeDrift(root, config(), "drift")).toEqual([]);
+    });
 
     it("names no base in the tdd profile once the comparison ran", async () => {
       await branchedFromBase();

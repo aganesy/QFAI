@@ -52,6 +52,11 @@ export function describeBaseComparison(root: string, baseBranch: string): BaseCo
  */
 const GIT_STDOUT_MAX_BYTES = 256 * 1024 * 1024;
 
+/** Whether `revision` holds `file`, whatever its size: a file git cannot show may still be there. */
+export function existsAtRevision(root: string, revision: string, file: string): boolean {
+  return gitStdout(root, ["cat-file", "-e", `${revision}:${normalizeRepoPath(file)}`]) !== null;
+}
+
 /** Runs git for its stdout, or returns `null` when the command cannot run. */
 export function gitStdout(root: string, args: readonly string[]): string | null {
   try {

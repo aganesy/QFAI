@@ -12,7 +12,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `baseBranch`, where the run used to pass as if nothing had changed. The
   `drift` profile also reports at info the merge base commit and the number of
   changed files it compared, so a worktree whose base ref lags the pull
-  request's base shows it. A directory that is not a repository is still silent.
+  request's base shows it. A repository with commits but no `origin/main` (no
+  remote, or a `master` branch) warns until `baseBranch` is set; a directory
+  that is not a repository is still silent.
   The drift checks also stop turning themselves off when a file at the base,
   such as a long decision ledger, is larger than 1 MiB: reading it failed
   like a missing file, and the run passed without comparing anything.
