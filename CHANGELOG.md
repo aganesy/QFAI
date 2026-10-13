@@ -48,6 +48,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The shipped workflows pin `actions/setup-node` 7.1.0.** The three
+  templates written by `qfai init` use the same commit as this repository.
+
 - **The reviewer count follows what the change touched.** Each review of a
   route takes one reviewer for its kind. `architecture-reviewer` joins only
   for a contract change, and `product-surface-reviewer` only for a screen
