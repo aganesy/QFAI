@@ -6,16 +6,7 @@
 // QFAI:AC-0001-0196-01
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
-import {
-  mkdir,
-  mkdtemp,
-  readFile,
-  readdir,
-  realpath,
-  rm,
-  symlink,
-  writeFile,
-} from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -23,6 +14,7 @@ import { parse as parseYaml } from "yaml";
 import { describe, expect, it } from "vitest";
 
 import { packagePlansDir, WORKFLOW_ROUTES } from "../../../src/core/workflow/plans.js";
+import { createSymlinkFixture } from "../../helpers/symlinkFixture.js";
 import {
   ENTRY_SKILLS,
   HOST_SKILL_DIRS,
@@ -187,14 +179,12 @@ describe("the generated native preparation entry", () => {
   });
 });
 
-/** Links `at` to `outside`; false where the platform cannot make the link. */
-async function linkOutside(outside: string, at: string): Promise<boolean> {
-  try {
-    await symlink(outside, at, process.platform === "win32" ? "junction" : "dir");
-    return true;
-  } catch {
-    return false;
-  }
+/**
+ * Links `at` to `outside`; false only where Windows refuses symlinks. Every other failure is
+ * rethrown with its code and path, so a broken setup is not reported as an unsupported platform.
+ */
+function linkOutside(outside: string, at: string): Promise<boolean> {
+  return createSymlinkFixture(outside, at, process.platform === "win32" ? "junction" : "dir");
 }
 
 describe("a host directory reached through a link", () => {

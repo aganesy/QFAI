@@ -81,6 +81,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- The SDD design authoring guide no longer says `npx qfai init` seeds a sample
+  `DESIGN.md` at the project root. Init writes none; the sample ships only as a
+  skill template, and a root file that exists was authored by
+  `common-design-md` or copied from that template on purpose. Fixes #3622.
+
 - A register ID that the union merge driver left on two rows of
   `decisions.md` or `open-questions.md` now fails the repository's scans lane,
   which runs early in the pull request lint job. Before, only the full
