@@ -398,6 +398,20 @@ describe("where qfai-run runs the policy check and the commit", () => {
     expect(work.indexOf("**Extract.**")).toBeLessThan(work.indexOf("common-policy-check"));
   });
 
+  // QFAI:AC-0001-0223-07
+  // QFAI:EX-0001-0223-14
+  it("has the final report name the policy check, or say it did not run", async () => {
+    const report = flat(
+      sectionOf(
+        await readShipped("skill/qfai-run/references/operator-screens.md"),
+        "## Final report",
+      ),
+    );
+    expect(report).toContain(
+      "Name `common-policy-check` and its outcome, or that it did not run and why.",
+    );
+  });
+
   it("commits after an end release point, so the commit holds the approval", async () => {
     const work = flat(
       sectionOf(await readShipped("skill/qfai-run/references/stage-points.md"), "## Release point"),

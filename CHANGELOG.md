@@ -89,6 +89,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The final report of a run names the policy check.** The `qfai-run` final
+  report now says whether `common-policy-check` ran and its outcome, or that
+  it did not run and why. The plan lists no such step, so before this a run
+  that skipped the check left no trace of it. Fixes #3557.
+
 - **The verify gate says which Validate command wins.** When a project's
   `Validate` entry runs a partial profile (its output carries
   `QFAI-PROFILE-001`), `verify-qfai-gate` no longer treats it as the gate: it
