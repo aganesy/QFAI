@@ -39,7 +39,6 @@ vi.mock("node:fs", async () => {
   };
 });
 
-// @ts-expect-error -- a plain .mjs guard with no type declarations
 const { checkDocuments, main } = await import("../../assets/scripts/check-mdschema.mjs");
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -92,7 +91,7 @@ function runMain(root: string): { status: number; stdout: string; stderr: string
   });
   process.argv = [argv[0] ?? "node", "check-mdschema", "--root", root, "--scope", "all"];
   try {
-    const status = main() as number;
+    const status = main();
     return { status, stdout: out.join("\n"), stderr: err.join("\n") };
   } finally {
     process.argv = argv;
@@ -110,15 +109,18 @@ describe("a document directory the lane cannot list", () => {
 
       const result = checkDocuments(root);
 
-      expect(result.ok).toBe(true);
-      expect(result.violations).toEqual([
-        expect.objectContaining({
-          file: HIDDEN,
-          rule: "inventory",
-          line: 1,
-          message: expect.stringContaining(code) as unknown,
-        }),
-      ]);
+      expect(result).toEqual({
+        ok: true,
+        checked: 1,
+        violations: [
+          expect.objectContaining({
+            file: HIDDEN,
+            rule: "inventory",
+            line: 1,
+            message: expect.stringContaining(code) as unknown,
+          }),
+        ],
+      });
     },
   );
 
