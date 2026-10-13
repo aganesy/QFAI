@@ -44,7 +44,9 @@ async function newTree(files: Record<string, string>): Promise<string> {
 }
 
 function report(root: string): Report {
-  const child = spawnSync("node", [SCRIPT, "--root", root, "--json"], { encoding: "utf-8" });
+  const child = spawnSync(process.execPath, [SCRIPT, "--root", root, "--json"], {
+    encoding: "utf-8",
+  });
   expect(child.status, child.stderr).toBe(0);
   return JSON.parse(child.stdout) as Report;
 }
@@ -132,13 +134,103 @@ describe("list-startup-context", () => {
     ]);
   });
 
+  it("lists AGENTS.md only when neither CLAUDE.md nor CLAUDE.local.md is present", async () => {
+    const both = await newTree({ "CLAUDE.md": "c\n", "AGENTS.md": "a\n" });
+    expect(report(both).listed.map((item) => item.path)).toEqual(["CLAUDE.md"]);
+
+    const local = await newTree({ "CLAUDE.local.md": "c\n", "AGENTS.md": "a\n" });
+    expect(report(local).listed.map((item) => item.path)).toEqual(["CLAUDE.local.md"]);
+
+    const nested = await newTree({ ".claude/CLAUDE.md": "c\n", "AGENTS.md": "a\n" });
+    expect(report(nested).listed.map((item) => item.path)).toEqual([".claude/CLAUDE.md"]);
+
+    // A CLAUDE.md that imports AGENTS.md lists it, as an import.
+    const imported = await newTree({ "CLAUDE.md": "@AGENTS.md\n", "AGENTS.md": "a\n" });
+    expect(report(imported).listed.map((item) => [item.path, item.how])).toEqual([
+      ["CLAUDE.md", "entry"],
+      ["AGENTS.md", "import from CLAUDE.md"],
+    ]);
+  });
+
+  it("lists CLAUDE.local.md and .claude/CLAUDE.md as entry files", async () => {
+    const root = await newTree({
+      "CLAUDE.md": "a\n",
+      "CLAUDE.local.md": "b\n",
+      ".claude/CLAUDE.md": "c\n",
+    });
+    expect(report(root).listed.map((item) => [item.path, item.how])).toEqual([
+      ["CLAUDE.md", "entry"],
+      ["CLAUDE.local.md", "entry"],
+      [".claude/CLAUDE.md", "entry"],
+    ]);
+  });
+
+  it("counts lines and imports in a file with CRLF line ends", async () => {
+    const root = await newTree({
+      "CLAUDE.md": "one\r\n@docs/a.md\r\n```\r\n@docs/skipped.md\r\n```\r\n",
+      "docs/a.md": "A\r\nB\r\n",
+      "docs/skipped.md": "never\r\n",
+    });
+    const { listed } = report(root);
+    expect(listed.map((item) => [item.path, item.lines, item.bytes])).toEqual([
+      ["CLAUDE.md", 5, 45],
+      ["docs/a.md", 2, 6],
+    ]);
+  });
+
+  it("follows imports five levels deep and no further", async () => {
+    const files: Record<string, string> = { "CLAUDE.md": "@f1.md\n" };
+    for (let level = 1; level <= 6; level += 1)
+      files[`f${String(level)}.md`] = `@f${String(level + 1)}.md\n`;
+    files["f7.md"] = "end\n";
+    const { listed } = report(await newTree(files));
+    expect(listed.map((item) => item.path)).toEqual([
+      "CLAUDE.md",
+      "f1.md",
+      "f2.md",
+      "f3.md",
+      "f4.md",
+      "f5.md",
+    ]);
+  });
+
+  it("reads a rule behind a symbolic link to a directory", async (ctx) => {
+    const root = await newTree({
+      "AGENTS.md": "x\n",
+      "shared/linked.md": "l\n",
+    });
+    await mkdir(path.join(root, ".claude", "rules"), { recursive: true });
+    try {
+      await symlink(
+        path.join(root, "shared"),
+        path.join(root, ".claude", "rules", "team"),
+        "junction",
+      );
+    } catch {
+      ctx.skip();
+    }
+    const { listed } = report(root);
+    expect(listed.map((item) => item.path)).toEqual(["AGENTS.md", ".claude/rules/team/linked.md"]);
+  });
+
+  it("counts an empty file as no lines", async () => {
+    const root = await newTree({ "CLAUDE.md": "" });
+    expect(report(root).listed).toEqual([{ path: "CLAUDE.md", how: "entry", lines: 0, bytes: 0 }]);
+  });
+
   it("lists nothing for a tree with no instruction files", async () => {
     const root = await newTree({ "README.md": "x\n" });
     expect(report(root).listed).toEqual([]);
   });
 
+  it("says a directory is needed when --root has none", () => {
+    const child = spawnSync(process.execPath, [SCRIPT, "--root"], { encoding: "utf-8" });
+    expect(child.status).toBe(2);
+    expect(child.stderr).toContain("--root needs a directory");
+  });
+
   it("rejects an unknown argument", () => {
-    const child = spawnSync("node", [SCRIPT, "--nope"], { encoding: "utf-8" });
+    const child = spawnSync(process.execPath, [SCRIPT, "--nope"], { encoding: "utf-8" });
     expect(child.status).toBe(2);
   });
 });

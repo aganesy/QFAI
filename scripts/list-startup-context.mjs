@@ -11,12 +11,18 @@
  *
  * | Reached as | Files                                                              |
  * | ---------- | ------------------------------------------------------------------ |
- * | entry      | `CLAUDE.md`, `CLAUDE.local.md`, `.claude/CLAUDE.md`, `AGENTS.md`   |
+ * | entry      | `CLAUDE.md`, `CLAUDE.local.md`, `.claude/CLAUDE.md`                |
+ * | entry      | `AGENTS.md`, only when none of the three above exists              |
  * | rule       | every `.md` under `.claude/rules/` with no `paths` front matter     |
  * | import     | a file named by `@path` in a listed file, to a depth of five        |
  *
- * `AGENTS.md` is listed because this repository's hosts read it as an entry
- * file; a host that reads only `CLAUDE.md` loads it when `CLAUDE.md` imports it.
+ * `AGENTS.md` is read directly only when no `CLAUDE.md` or `CLAUDE.local.md` is
+ * on the path from the working directory upward (see
+ * `.instruction/03_ai-agents/claude-code/best-practices.md`). This script looks
+ * at the checkout root only, so a `CLAUDE.md` in a parent directory, or the
+ * project-instructions setting that keeps both files, can change the answer for
+ * `AGENTS.md`; a file `CLAUDE.md` imports is listed whatever its name.
+ *
  * A rule with `paths` front matter is loaded when a matching file is touched,
  * so it is printed apart and left out of the total. An import is read from a
  * line outside fenced code and inline code, relative to the file that names
@@ -24,22 +30,30 @@
  *
  * A symbolic link is followed and printed with its target, and the counts are
  * the target's. On Windows without `core.symlinks` a link is stored as a file
- * holding one line, the path; that is followed the same way and printed as a
- * flattened link, because a plain size count would read the one line.
+ * holding one line, the path. It is followed the same way and printed as a
+ * flattened link, so its counts are the target's; a host reading that checkout
+ * loads only the stored line, so the total is then larger than what is loaded.
  *
  * Not listed: the user's own files in the home directory, managed policy files,
  * parent directories of the checkout, auto memory, skill descriptions, tool and
- * MCP definitions, and the system prompt. The total is therefore a floor.
+ * MCP definitions, text that a hook adds to the prompt (for example a
+ * `UserPromptSubmit` hook in `.claude/settings.json`), and the system prompt.
+ * The total is therefore a floor for those and a ceiling for the rule above.
  */
-import { lstatSync, readdirSync, readFileSync, realpathSync } from "node:fs";
+import { lstatSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
 const MAX_IMPORT_DEPTH = 5;
 
-const ENTRY_FILES = ["CLAUDE.md", "CLAUDE.local.md", ".claude/CLAUDE.md", "AGENTS.md"];
+const CLAUDE_ENTRY_FILES = ["CLAUDE.md", "CLAUDE.local.md", ".claude/CLAUDE.md"];
 
-const lineCount = (text) => text.split("\n").length - (text.endsWith("\n") ? 1 : 0);
+/** Read when no `CLAUDE.md` or `CLAUDE.local.md` is present. */
+const FALLBACK_ENTRY_FILE = "AGENTS.md";
+
+/** The number of lines in a text: none for an empty one, and a trailing newline ends a line. */
+const lineCount = (text) =>
+  text.length === 0 ? 0 : text.split("\n").length - (text.endsWith("\n") ? 1 : 0);
 
 const toPosix = (value) => value.split(path.sep).join("/");
 
@@ -49,7 +63,11 @@ function parseArgs(argv) {
     const argument = argv[index];
     if (argument === "--json") {
       options.json = true;
-    } else if (argument === "--root" && argv[index + 1] !== undefined) {
+    } else if (argument === "--root") {
+      if (argv[index + 1] === undefined) {
+        console.error("list-startup-context: --root needs a directory");
+        process.exit(2);
+      }
       options.root = path.resolve(argv[index + 1]);
       index += 1;
     } else {
@@ -93,15 +111,16 @@ function resolveLink(file, bytes) {
   const text = bytes.toString("utf-8").trim();
   if (text.length === 0 || text.length > 260 || /[\r\n]/.test(text)) return undefined;
   const target = path.resolve(path.dirname(file), text);
-  const stored = readBytes(target);
-  return stored === undefined ? undefined : { target: realOrSelf(target), kind: "flattened link" };
+  return readBytes(target) === undefined
+    ? undefined
+    : { target: realOrSelf(target), kind: "flattened link" };
 }
 
 /** The text of a Markdown file with fenced code and inline code blanked out. */
 function proseOnly(text) {
   let fence = null;
   return text
-    .split("\n")
+    .split(/\r?\n/)
     .map((line) => {
       const opening = /^ {0,3}(`{3,}|~{3,})/.exec(line);
       if (fence === null && opening !== null) {
@@ -134,10 +153,26 @@ function isPathScoped(text) {
   return match !== null && /^paths\s*:/m.test(match[1]);
 }
 
+/** Whether a directory entry is a directory, a link to one included. */
+function isDirectoryEntry(directory, entry) {
+  if (entry.isDirectory()) return true;
+  if (!entry.isSymbolicLink()) return false;
+  try {
+    return statSync(path.join(directory, entry.name)).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
 /** Every Markdown file under `.claude/rules/`, in name order. */
 function rulesUnder(root) {
   const found = [];
+  const visited = new Set();
   const walk = (directory) => {
+    // A link back to an ancestor would never end.
+    const identity = realOrSelf(directory);
+    if (visited.has(identity)) return;
+    visited.add(identity);
     let entries;
     try {
       entries = readdirSync(directory, { withFileTypes: true });
@@ -146,7 +181,7 @@ function rulesUnder(root) {
     }
     for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
       const full = path.join(directory, entry.name);
-      if (entry.isDirectory()) walk(full);
+      if (isDirectoryEntry(directory, entry)) walk(full);
       else if (entry.name.endsWith(".md")) found.push(full);
     }
   };
@@ -202,14 +237,20 @@ function collect(root) {
     }
   };
 
-  for (const entry of ENTRY_FILES) add(path.join(root, entry), "entry", 0);
+  for (const entry of CLAUDE_ENTRY_FILES) add(path.join(root, entry), "entry", 0);
+  // Any of the three hides it: `.claude/CLAUDE.md` is a `CLAUDE.md` as well.
+  const hidesFallback = CLAUDE_ENTRY_FILES.some(
+    (name) => readBytes(path.join(root, name)) !== undefined,
+  );
+  if (!hidesFallback) add(path.join(root, FALLBACK_ENTRY_FILE), "entry", 0);
   for (const rule of rulesUnder(root)) {
     const content = read(rule);
     if (content === undefined) continue;
-    if (isPathScoped(content.bytes.toString("utf-8"))) {
+    const text = content.bytes.toString("utf-8");
+    if (isPathScoped(text)) {
       scoped.push({
         path: toPosix(path.relative(root, rule)),
-        lines: lineCount(content.bytes.toString("utf-8")),
+        lines: lineCount(text),
         bytes: content.bytes.length,
       });
     } else {
@@ -230,7 +271,7 @@ function render({ listed, scoped, unresolved }) {
       (item) =>
         `${counts(item)}  ${item.how}  ${item.path}${item.link === undefined ? "" : ` (${item.link})`}`,
     ),
-    `${counts({ lines: sum(listed, "lines"), bytes: sum(listed, "bytes") })}  total of ${String(listed.length)} files; a floor, see the header of this script for what is not counted`,
+    `${counts({ lines: sum(listed, "lines"), bytes: sum(listed, "bytes") })}  total of ${String(listed.length)} files; see the header of this script for what it leaves out`,
   ];
   if (scoped.length > 0) {
     rows.push("", "path-scoped rules, loaded when a matching file is touched (not in the total):");
