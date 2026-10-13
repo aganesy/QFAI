@@ -63,8 +63,10 @@ switched off in `qfai.config.yaml`.
 
 To run the lane's two checks before you push, install the checkers into
 `tmp/qfai-docs-tools` with the `npm install` line of the step
-"Install the document-shape and diagram checkers" in `qfai-docs.yml`. That line
-pins the versions the lane uses. Then run the two commands the lane runs:
+"Install the document-shape and diagram checkers" in `qfai-docs.yml` that
+matches your project: the line for a project with its own `node_modules/qfai`,
+or the line for one without it. That line pins the versions the lane uses. Then
+run the two commands the lane runs:
 
 ```bash
 node node_modules/qfai/assets/scripts/check-mdschema.mjs --tools tmp/qfai-docs-tools --scope all --summary
