@@ -14,12 +14,12 @@ mode: execution-focused
 
 [DRIFT-PROTOCOL:REQUIRED]
 
-Follow the CLI plan's steps in order.
+Follow the CLI plan's steps in order. Read no reference up front; each line says when.
 
-- Read `references/extraction.md` for extraction.
-- Plan command and format: `references/plan.md`.
-- Screens and questions: `references/operator-screens.md`.
-- Release, decision and branch points: `references/stage-points.md`.
+- `references/extraction.md`: only for an extraction step 1 does not give.
+- `references/plan.md`: only for a plan field this file does not name.
+- `references/operator-screens.md`: only to put a question or a halt, or report.
+- `references/stage-points.md`: only at a step the plan marks with a point.
 - Run preflight before planning, as `.qfai/assistant/rule/shared-skill-operating-baseline.md#canonical-qfai-launcher-mandatory` says.
   If the launcher is missing or preflight fails, read `references/operator-screens.md` for recovery.
 - Read `references/codex-cloud-install.md` before configuring an environment-owned Install script or Start skill, or preparing dependencies for a fresh checkout. Use the reviewed target's successful preparation and canonical proof before planning.
@@ -77,7 +77,7 @@ values plan nothing.
    order, as `.qfai/assistant/rule/shared-skill-operating-baseline.md#running-steps-mandatory` says.
    When a step is short or passes without edits, read `references/operator-screens.md`.
    Write artifacts yourself or delegate independent parallel work or review.
-   At each step, follow its plan's points in `references/stage-points.md`:
+   At a step the plan marks with a point, follow `references/stage-points.md`:
    - **Release point.** Ask the user to approve the release before the step `releasePoint` names.
    - **Decision point.** Put each critical decision at a step `decisionPoints` names to the user.
    - **Branch point.** Move to the destination a step `branchPoints` names, and plan it at once.

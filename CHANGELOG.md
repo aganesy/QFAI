@@ -31,6 +31,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   an operation only a person can run or a deletion goes through the full
   extraction reference again, so it keeps its hand-off or bounded cleanup.
 
+- `qfai-run` reads no reference up front: each pointer says when its reference
+  is read, so a run reads only what its request needs. Fixes #3575.
+
 - Add a workflow route for writing authorized operational procedures.
   It keeps wording-only edits separate, preserves policy owners and existing
   verification, and grants no authority to run the documented actions.
