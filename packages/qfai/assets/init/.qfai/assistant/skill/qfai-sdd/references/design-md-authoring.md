@@ -25,9 +25,10 @@ this flow's provenance names:
 | `uiux/00_index.md`, `uiux/40_screen_contracts.md` | the screen-level sidecars                     |
 
 `01_Context.md#Design Direction` is the decision the user made: the adopted
-theme, what departs from it, and what stays ordinary. A UI-bearing pack that
-records none leaves the brand unchosen — stop and ask rather than pick one,
-which is the same rule an imported specification gets.
+theme, what departs from it, and what stays ordinary. For initial authoring of
+a missing file, a UI-bearing pack that records no design direction leaves the
+brand unchosen — stop and ask rather than pick one, which is the same rule an
+imported specification gets.
 
 Each registry entry carries what was adopted, what was rejected, and how it
 was translated. The competitor registry feeds brand and tokens; the component
@@ -117,6 +118,17 @@ to touch a colour has nothing to be consistent with.
 ## When the file already exists
 
 `npx qfai init` seeds the sample at the project root and never overwrites it,
-and a project may have authored its own. Write only when the file is missing.
-An existing file is validated as it stands, except that an unreplaced sample
-is refused.
+and a project may have authored its own. Write a missing file from the recorded
+direction. Repair an existing file only when SDD triage names its exact path
+and the requested change, and a new WIP change request authorizes both. Apply
+only the authorized change; preserve existing brand and tokens unless their
+change is authorized and supported by recorded direction or named theme
+values. Record the source of each changed value and leave unrelated content
+unchanged. Stop without writing a value neither source supplies. Without that
+authorization, validate the existing file without an overwrite; an inherited
+DONE row authorizes no new change. An unreplaced sample is refused.
+
+For an existing valid file, validation and authorized repairs that preserve
+its brand and tokens require no new brand selection. An authorized brand or
+token change still needs recorded direction or named theme values for each
+changed value; without either source, stop without writing the change.

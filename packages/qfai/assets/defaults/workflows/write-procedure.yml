@@ -1,0 +1,18 @@
+route: write-procedure
+family: change
+stages:
+  - id: documentation
+    kind: documentation
+    steps: [implement-procedure]
+  - id: note
+    kind: verify
+    steps:
+      - { step: verify-change-note, passThrough: true }
+    after: [documentation]
+    review: code
+  - id: verify
+    kind: verify
+    steps: [verify-qfai-gate, verify-repo-gate, verify-commit]
+    after: [note]
+decisionPoints: []
+branchPoints: []
