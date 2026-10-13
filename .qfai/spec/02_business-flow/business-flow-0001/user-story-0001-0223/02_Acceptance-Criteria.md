@@ -50,4 +50,10 @@ Feature: Answer only the critical decisions, and approve each release
     And the agent decides from what is written, and the final report lists nothing for the user
     And a step that meets such a decision outside the discussion stage still holds a delegated session, and a critical decision still goes to the user
     And the grilling rule and its reminders say when a session is held and when none is
+
+  # AC-0001-0223-07
+  Scenario: The final report states the policy check
+    Given a run of any route
+    When the final report is written
+    Then it says whether `common-policy-check` ran and its outcome, or that it did not run and why
 ```

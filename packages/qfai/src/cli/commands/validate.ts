@@ -1379,7 +1379,7 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   "QFAI-STORY-006":
     "Add a real test in the required layer with a QFAI annotation for the named BF, AC, or EX; an EX annotation goes on a comment line above the test declaration it covers.",
   "QFAI-STORY-007":
-    "Move the named test annotation to its required E2E, integration, API, or unit layer.",
+    "Remove the named annotation from this test and keep it only in a test of its own layer: BF in E2E, AC in integration or API, EX outside E2E.",
   "QFAI-STORY-008":
     "Correct the annotation to a declared BF, AC, or EX ID, or remove a stale annotation.",
   "QFAI-STORY-010":

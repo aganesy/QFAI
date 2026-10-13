@@ -91,6 +91,43 @@ describe("BF-0001 story annotation layers", () => {
     }
   });
 
+  // QFAI:AC-0001-0056-04
+  // QFAI:EX-0001-0056-15
+  it.each([
+    {
+      label: "a BF annotation in an integration test",
+      kind: "integration",
+      id: flow,
+      profile: "atdd",
+      requires: "BF requires E2E",
+    },
+    {
+      label: "an AC annotation in a unit test",
+      kind: null,
+      id: criterion,
+      profile: "atdd",
+      requires: "AC requires integration or API",
+    },
+    {
+      label: "an EX annotation in an E2E test",
+      kind: "e2e",
+      id: example,
+      profile: "tdd",
+      requires: "EX requires a test outside E2E",
+    },
+  ] as const)(
+    "tells how to repair $label and names the layer rules",
+    ({ kind, id, profile, requires }) => {
+      const misplaced = file(kind, id);
+      const message = validateStoryTreeObligationsModel(model, [misplaced], profile).find(
+        (finding) => finding.code === "QFAI-STORY-007",
+      )?.message;
+      expect(message).toBe(
+        `QFAI:${id} is misplaced in ${misplaced.file}; ${requires}. Remove it from this test (layer rules: .qfai/assistant/rule/test-layers.md)`,
+      );
+    },
+  );
+
   // QFAI:AC-0001-0010-02
   // QFAI:EX-0001-0010-04
   // QFAI:EX-0001-0010-05

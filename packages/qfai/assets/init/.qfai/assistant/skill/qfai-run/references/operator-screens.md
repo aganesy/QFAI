@@ -320,6 +320,7 @@ reset, a stash, a branch switch or a worktree removal.
 - Report repository outcome separately from external publication. A local commit
   is not a push or pull request, and passing repository checks do not prove a
   deployment, package publication or other external effect occurred.
+- Name `common-policy-check` and its outcome, or that it did not run and why.
 - A gate shows its verdict only.
 - An external effect nobody requested is listed as not requested.
 - The report does not restate the history of the work.
