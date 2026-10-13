@@ -80,9 +80,8 @@ describe("the installed qfai is older than the declared one", () => {
     await withProject("^9.0.0", async (root) => {
       const issues = await findings(root);
 
-      // Ahead of every finding the run's validators raised; only the config
-      // read, which precedes the validators, may come before it.
-      const first = issues.find((found) => !found.code.startsWith("QFAI-CFG-"));
+      // Ahead of every other finding, the config read's included.
+      const first = issues[0];
       expect(first?.code).toBe("QFAI-TOOL-003");
       expect(first?.severity).toBe("warning");
       expect(first?.message).toContain("9.0.0");

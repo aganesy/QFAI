@@ -224,13 +224,13 @@ export async function findDeclaringDir(root: string): Promise<string | null> {
  */
 async function findDeclaringManifest(
   root: string,
-): Promise<{ dir: string; manifest: unknown } | null> {
+): Promise<{ dir: string; range: unknown } | null> {
   let dir = path.resolve(root);
   for (let depth = 0; depth < 16; depth += 1) {
     try {
       const raw = await readFile(path.join(dir, "package.json"), "utf-8");
-      const manifest: unknown = JSON.parse(raw);
-      if (declaresQfai(manifest)) return { dir: await toRealPath(dir), manifest };
+      const declaration = qfaiDeclaration(JSON.parse(raw));
+      if (declaration !== null) return { dir: await toRealPath(dir), range: declaration.range };
     } catch {
       // Absent, unreadable, or not JSON: keep walking. A manifest that does not
       // declare the tool is not a stopping point either — a workspace package
@@ -251,15 +251,8 @@ async function findDeclaringManifest(
  * directory it is compared against are one declaration.
  */
 export async function readDeclaredQfaiRange(root: string): Promise<string | null> {
-  const declaring = await findDeclaringManifest(root);
-  if (declaring === null) return null;
-  for (const field of DEPENDENCY_FIELDS) {
-    const deps: unknown = Reflect.get(Object(declaring.manifest), field);
-    if (typeof deps !== "object" || deps === null) continue;
-    const range: unknown = Reflect.get(deps, PACKAGE_NAME);
-    if (typeof range === "string") return range;
-  }
-  return null;
+  const range = (await findDeclaringManifest(root))?.range;
+  return typeof range === "string" ? range : null;
 }
 
 /**
@@ -339,15 +332,19 @@ const DEPENDENCY_FIELDS = [
   "peerDependencies",
 ] as const;
 
-/** Whether `manifest` names {@link PACKAGE_NAME} in any dependency field. */
-function declaresQfai(manifest: unknown): boolean {
-  if (typeof manifest !== "object" || manifest === null) return false;
-  const record: Record<string, unknown> = manifest as Record<string, unknown>;
+/**
+ * What `manifest` declares for {@link PACKAGE_NAME} in the first dependency field
+ * that names it, or `null` when no field does. `range` is the value as written.
+ */
+function qfaiDeclaration(manifest: unknown): { range: unknown } | null {
+  if (typeof manifest !== "object" || manifest === null) return null;
   for (const field of DEPENDENCY_FIELDS) {
-    const deps = record[field];
-    if (typeof deps === "object" && deps !== null && PACKAGE_NAME in deps) return true;
+    const deps: unknown = Reflect.get(manifest, field);
+    if (typeof deps === "object" && deps !== null && PACKAGE_NAME in deps) {
+      return { range: Reflect.get(deps, PACKAGE_NAME) };
+    }
   }
-  return false;
+  return null;
 }
 
 /**
