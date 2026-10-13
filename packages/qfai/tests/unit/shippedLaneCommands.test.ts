@@ -813,6 +813,9 @@ describe("the shipped-lane allowlist", () => {
   });
 });
 
+const REGENERATE_ENTRY_HINT =
+  "After an independent review of the entry-point edit, run `pnpm build` and `pnpm pins:entry` to regenerate the fixture and the Copilot digest";
+
 describe("reviewed init entry content", () => {
   it.each([["AGENTS.md", "agents.txt"]])(
     "keeps the reviewed bytes for %s in an independent fixture",
@@ -821,14 +824,20 @@ describe("reviewed init entry content", () => {
         new URL(`../fixtures/shipped-entry/${fixture}`, import.meta.url),
       );
       expect(expected.length).toBeGreaterThan(0);
-      expect(ALLOWED_INIT_CONTENT.get(entry)).toBe(fileDigest(expected));
+      expect(
+        ALLOWED_INIT_CONTENT.get(entry),
+        `${REGENERATE_ENTRY_HINT}: the fixture ${fixture} is not the digest ${entry} is pinned to`,
+      ).toBe(fileDigest(expected));
     },
   );
 
   it.each(["AGENTS.md"])("rejects unreviewed byte changes to %s", async (entry) => {
     const actual = await readFile(new URL(`../../assets/init/root/${entry}`, import.meta.url));
     const digest = ALLOWED_INIT_CONTENT.get(entry);
-    expect(digest).toBe(fileDigest(actual));
+    expect(
+      digest,
+      `${REGENERATE_ENTRY_HINT}: the shipped ${entry} no longer matches its pinned digest`,
+    ).toBe(fileDigest(actual));
     expect(fileDigest(Buffer.concat([actual, Buffer.from("Unreviewed instruction.\n")]))).not.toBe(
       digest,
     );
