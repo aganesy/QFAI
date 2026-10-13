@@ -8,11 +8,11 @@ when asking stops.
 
 ## Scope
 
-A **grilling session** is a mode entered deliberately. An invocation declares
-a user session, and a stage that meets a design decision the request needs and
-the repository cannot settle holds a delegated one; nothing else starts one. An
+A **grilling session** is a mode entered deliberately. An invocation declares a
+user session, and a stage that meets a design decision the request needs and the
+repository cannot settle holds a delegated one; nothing else starts one. An
 unfixed design the request does not need starts none, and neither does an
-ambiguity the written specification settles.
+ambiguity found while implementing that the written specification settles.
 
 | Target                                            | Applies                                                            |
 | ------------------------------------------------- | ------------------------------------------------------------------ |
