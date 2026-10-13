@@ -454,13 +454,46 @@ describe("scripts/check-doc-clarity.mjs", () => {
   });
 });
 
+/**
+ * The result of a guard run that reached a verdict: exit 0 (clean) or 1 (findings).
+ *
+ * Any other status is a usage or git error, or no run at all, and its output carries no
+ * findings to filter. Reading such a run as "no shipped finding" would pass a guard that
+ * never judged the tree, so it is thrown instead. A legitimate backlog failure (1) is kept.
+ */
+function requireVerdict(result: RunResult): RunResult {
+  if (result.status !== 0 && result.status !== 1) {
+    throw new Error(
+      `the guard gave no verdict (exit ${String(result.status)}): ${result.stderr.trim()}`,
+    );
+  }
+  return result;
+}
+
+describe("the guard verdict the shipped-surface check relies on", () => {
+  it("refuses a usage error as if it were a clean tree", () => {
+    const usageError = runGuard(REPO_ROOT, ["--scope", "no-such-scope"]);
+
+    expect(usageError.status).toBe(2);
+    expect(() => requireVerdict(usageError)).toThrow(/no verdict \(exit 2\)/);
+  });
+
+  it("accepts a clean verdict and a findings verdict", () => {
+    const clean: RunResult = { status: 0, stdout: "", stderr: "" };
+    const findings: RunResult = { status: 1, stdout: "", stderr: "a finding" };
+
+    expect(requireVerdict(clean)).toBe(clean);
+    expect(requireVerdict(findings)).toBe(findings);
+  });
+});
+
 describe("the shipped surface", () => {
   it("carries no identifier that resolves to nothing in a consuming repository", () => {
     // The rule's stated harm lands here and only here: everything under
     // `assets/init/**` is copied into a project that cannot resolve any of
     // these numbers. `src/**` and `tests/**` have the same rule and a backlog
     // the default scope handles; this surface is held at zero.
-    const result = runGuard(REPO_ROOT, ["--scope", "all"]);
+    const result = requireVerdict(runGuard(REPO_ROOT, ["--scope", "all"]));
 
     const shipped = [...result.stderr.split("\n"), ...result.stdout.split("\n")].filter((line) =>
       line.startsWith("packages/qfai/assets/"),
