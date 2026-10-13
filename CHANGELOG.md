@@ -85,6 +85,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- A register ID that the union merge driver left on two rows of
+  `decisions.md` or `open-questions.md` now fails the repository's scans lane,
+  which runs early in the pull request lint job. Before, only the full
+  validation in the build job reported it, minutes into the run.
+  `pnpm branch:catchup` runs the same check after its merge and stops before it
+  commits or pushes. The union merge seed `qfai init` writes is unchanged.
+  Fixes #3671.
+
 - UI consistency repairs reach design authoring in the SDD stage. Existing
   design files change only within a newly authorized request; unrelated brand
   and tokens are preserved, and unsupported source values stop the repair.
