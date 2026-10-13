@@ -425,8 +425,6 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
   });
 });
 
-// QFAI:SPEC-REF: AC-0001-0196-12, EX-0001-0196-37
-// These guards cover the shared instruction payload, not an agent's judgment.
 // The shipped catalog is one file, whichever settings file wires it.
 describe("the shipped reminder catalog", () => {
   let catalog: unknown;
@@ -491,6 +489,8 @@ describe("the shipped reminder catalog", () => {
   });
 });
 
+// QFAI:SPEC-REF: AC-0001-0196-12, EX-0001-0196-37
+// These guards cover the shared instruction payload, not an agent's judgment.
 describe("documentation clarity reminder scope", () => {
   const keys = [
     "documentation-clarity-before-post",

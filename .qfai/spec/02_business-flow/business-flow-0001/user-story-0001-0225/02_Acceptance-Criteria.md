@@ -35,7 +35,7 @@ Feature: Review a change twice: the specification before the code, and the code 
 
   # AC-0001-0225-04
   Scenario: A changed screen adds the surface reviewer
-    Given a change route whose change alters a screen: an edit to a UI contract's screen, or to the code, tests or styles that render one, a path `uiux.surfacePaths` declares included, or a change whose effect on a screen is uncertain
+    Given a change route whose change counts as a screen change: an edit to a UI contract's screen, or to the code, tests or styles that render one, or to a path `uiux.surfacePaths` declares, or a change whose effect on a screen is uncertain
     When the first review that reads that screen change runs
     Then `product-surface-reviewer` joins it
     And a review whose target changes no screen runs without it, even on a flow a UI contract with screens serves

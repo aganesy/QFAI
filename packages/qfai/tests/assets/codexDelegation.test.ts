@@ -62,7 +62,9 @@ describe.each(trees)("%s — Codex delegation notes", (tree) => {
     const wait = notes.get("Long wait.") ?? "";
     expect(wait).toContain("calls `wait_agent` with a `timeout_ms` of minutes");
     expect(wait).toContain("With no work of its own left");
-    expect(wait).toContain("not 10 to 60 seconds, within the maximum the tool states");
+    expect(wait).toContain(
+      "of minutes within the maximum the tool states, such as `600000`, not 10 to 60 seconds.",
+    );
 
     const polling = notes.get("No polling.") ?? "";
     for (const forbidden of ["`sleep`", "short `wait_agent` calls", "`list_agents` calls"]) {

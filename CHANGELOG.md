@@ -27,12 +27,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reference. An order that names artifacts still applies its settled change.
   Fixes #3574.
 
-- **The delegation baseline has notes for Codex sub-agents.** Under Codex,
-  the orchestrator reads them before it delegates: it gives a sub-agent a
-  self-contained brief with `fork_turns: "none"`, asks for one final answer and
-  no interim messages, waits with a `wait_agent` timeout of minutes, and never
-  polls with `sleep`, short `wait_agent` loops or `list_agents`. The notes live
-  in a reference file, so other hosts load nothing more. Fixes #3579.
+- **The delegation baseline has notes for Codex sub-agents.** Under Codex, the
+  orchestrator reads them before it delegates: it gives a sub-agent a
+  self-contained brief with `fork_turns: "none"`, asks for one final answer
+  and no interim messages, waits with a `wait_agent` timeout of minutes within
+  the tool's maximum, and never polls with `sleep`, short `wait_agent` loops
+  or `list_agents`. The notes live in a reference file, so other hosts load
+  nothing more. Fixes #3579.
 
 - The short extractions in `qfai-run` now state every field `plan` needs, and
   an operation only a person can run or a deletion goes through the full
@@ -48,10 +49,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **The reviewer count follows what the change touched.** Each review of a
   route takes one reviewer for its kind. `architecture-reviewer` joins only
   for a contract change, and `product-surface-reviewer` only for a screen
-  change, that no earlier review read. A review whose target only resolves
-  the conflicts of a merge or branch update between already-reviewed sides
-  gets no reviewer.
-  Fixes #3578.
+  change, that no earlier review read. A screen change covers a path
+  `uiux.surfacePaths` declares and a change whose effect on a screen is
+  uncertain. A review whose target only resolves the conflicts of a merge or
+  branch update between already-reviewed sides gets no reviewer. Fixes #3578.
 
 - **Generated Codex reviewer agents run at medium reasoning effort.** `qfai init` now writes
   `model_reasoning_effort = "medium"` into each `.codex/agents/<name>.toml` of `kind: reviewer`,
@@ -89,18 +90,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **Profiling output retains its complete UTF-8 prefix within the shared 32 MiB limit.**
   A chunk that crosses the limit keeps the complete characters that fit before
   owned process termination begins. Output after the limit is discarded. Fixes #3462.
-
-- The Codex delegation notes now keep a `wait_agent` timeout within the maximum
-  the tool states. Codex refuses a timeout above a lowered maximum, which the
-  example of `600000` could exceed.
-
-- `qfai-grilling` states its default again: a stage that says nothing holds a
-  delegated session where one is held.
-
-- A screen change that adds `product-surface-reviewer` now also covers a path
-  `uiux.surfacePaths` declares and a change whose effect on a screen is
-  uncertain, as the UI routing reference already did. That reference no longer
-  asks for a second review after a fix.
 
 ## [2.1.2] - 2026-10-11
 

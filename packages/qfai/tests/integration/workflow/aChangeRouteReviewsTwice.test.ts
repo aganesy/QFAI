@@ -188,7 +188,7 @@ it("The surface reviewer joins only a review that reads a changed screen, not ev
   const step = flat(await shipped("step/common-review-cycle/STEP.md"));
 
   expect(items[2]).toBe(
-    "`product-surface-reviewer` too, only when the target holds a screen change no earlier review of the route read: an edit to a UI contract's screen, or to the code, tests or styles that render one, a path `uiux.surfacePaths` declares included. An uncertain case counts as a screen change (`.qfai/assistant/skill/qfai-implement/references/ui-affecting.md#routing`);",
+    "`product-surface-reviewer` too, only when the target holds a screen change no earlier review of the route read: an edit to a UI contract's screen, or to the code, tests or styles that render one, or to a path `uiux.surfacePaths` declares. An uncertain case counts as a screen change (`.qfai/assistant/skill/qfai-implement/references/ui-affecting.md#routing`);",
   );
   expect(step).not.toContain("On a flow a UI contract with screens serves");
   // A parent skill invoked by name keeps its own reviewers; the rule binds a route.
@@ -208,7 +208,7 @@ it("A declared surface path and an uncertain case both count as a screen change,
     )?.[1] ?? "",
   );
 
-  expect(items[2]).toContain("a path `uiux.surfacePaths` declares included");
+  expect(items[2]).toContain("or to a path `uiux.surfacePaths` declares");
   expect(items[2]).toContain("An uncertain case counts as a screen change");
   expect(items[2]).toContain("references/ui-affecting.md#routing");
   expect(routing).toContain("a changed path matches a declared UI surface path");

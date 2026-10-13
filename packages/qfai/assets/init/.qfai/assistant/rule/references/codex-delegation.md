@@ -19,8 +19,8 @@ is one more model call, so the orchestrator makes none.
   answer. Where `wait_agent` takes no `targets`, every queued message ends the
   orchestrator's wait early.
 - **Long wait.** With no work of its own left, the orchestrator calls
-  `wait_agent` with a `timeout_ms` of minutes, such as `600000`, not 10 to 60
-  seconds, within the maximum the tool states. A wait that times out is
+  `wait_agent` with a `timeout_ms` of minutes within the maximum the tool states,
+  such as `600000`, not 10 to 60 seconds. A wait that times out is
   followed by another long wait.
 - **No polling.** Never wait with `sleep`, a loop of short `wait_agent` calls or
   repeated `list_agents` calls. `followup_task` gives a sub-agent a new task; it
