@@ -46,6 +46,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   verification, and grants no authority to run the documented actions.
   Fixes #3403.
 
+### Changed
+
+- **The reviewer count follows what the change touched.** Each review of a
+  route takes one reviewer for its kind. `architecture-reviewer` joins only
+  for a contract change, and `product-surface-reviewer` only for a screen
+  change, that no earlier review read. A review whose target only resolves
+  the conflicts of a merge or branch update between already-reviewed sides
+  gets no reviewer.
+  Fixes #3578.
+
+- **Generated Codex reviewer agents run at medium reasoning effort.** `qfai init` now writes
+  `model_reasoning_effort = "medium"` into each `.codex/agents/<name>.toml` of `kind: reviewer`,
+  beside `sandbox_mode = "read-only"`. Codex lets a value in an agent file take precedence over the
+  parent session's, so a reviewer no longer inherits a high orchestrator effort. Worker profiles
+  leave it unset and still inherit, and no profile sets `model`. Run `qfai init --force` to
+  regenerate existing profiles. Fixes #3580.
+
 ### Fixed
 
 - Agents no longer start a griller sub-agent for routine work. The grilling rule
@@ -72,15 +89,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **Profiling output retains its complete UTF-8 prefix within the shared 32 MiB limit.**
   A chunk that crosses the limit keeps the complete characters that fit before
   owned process termination begins. Output after the limit is discarded. Fixes #3462.
-
-### Changed
-
-- **Generated Codex reviewer agents run at medium reasoning effort.** `qfai init` now writes
-  `model_reasoning_effort = "medium"` into each `.codex/agents/<name>.toml` of `kind: reviewer`,
-  beside `sandbox_mode = "read-only"`. Codex lets a value in an agent file take precedence over the
-  parent session's, so a reviewer no longer inherits a high orchestrator effort. Worker profiles
-  leave it unset and still inherit, and no profile sets `model`. Run `qfai init --force` to
-  regenerate existing profiles. Fixes #3580.
 
 ## [2.1.2] - 2026-10-11
 
