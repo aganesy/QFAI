@@ -731,12 +731,53 @@ describe("story-tree validation acceptance", () => {
       expect(notice).toHaveLength(1);
       expect(notice[0]?.message).toContain(posix(path.join(root, file)));
       expect(notice[0]?.message).toContain("not checked");
-      // The failure itself is still reported, as an error.
-      expect(
-        only(issues, "QFAI-STORY-005").filter((found) => found.severity === "error").length,
-      ).toBeGreaterThan(0);
+      // The failure itself is still reported, as an error naming the file.
+      const errors = only(issues, "QFAI-STORY-005").filter((found) => found.severity === "error");
+      expect(errors.some((found) => found.message.includes(posix(path.join(root, file))))).toBe(
+        true,
+      );
     },
   );
+
+  // QFAI:AC-0001-0055-07
+  // QFAI:EX-0001-0055-13
+  it("names every contract file that loaded no rule in one note", async () => {
+    const yaml = `${contract}/api/api-0001-orders.yaml`;
+    const markdown = `${contract}/cli/cli-0001-check.md`;
+    const { root, issues } = await validateTree(
+      changed({
+        [yaml]: "key: [unclosed\n",
+        [markdown]: "# CLI-0001: Check\n\n## Business rules\n\nnone yet\n",
+      }),
+    );
+
+    expect(errorsNaming(issues, "QFAI-STORY-005", "EX-0001-0001-01")).toEqual([]);
+    const notice = only(issues, "QFAI-STORY-005").filter((found) => found.severity === "info");
+    expect(notice).toHaveLength(1);
+    expect(notice[0]?.message).toContain(posix(path.join(root, yaml)));
+    expect(notice[0]?.message).toContain(posix(path.join(root, markdown)));
+  });
+
+  // QFAI:AC-0001-0055-07
+  // QFAI:EX-0001-0055-13
+  it("reads a contract file that produced a rule even when it also raised an error", async () => {
+    // The rule's examples are a string, not a list: the file reports a field
+    // error but still declares the rule, so it is loaded and the check applies.
+    const yaml = `${contract}/api/api-0001-orders.yaml`;
+    const { issues } = await validateTree(
+      changed({
+        [`${contract}/cli/cli-0001-check.md`]: null,
+        [yaml]:
+          "x-qfai-rules:\n  - id: BR-0001-0001\n    statement: A rule\n    examples: EX-0001-0001-01\n",
+      }),
+    );
+
+    expect(
+      only(issues, "QFAI-STORY-005").some((found) => found.message.includes("Invalid rule fields")),
+    ).toBe(true);
+    expect(errorsNaming(issues, "QFAI-STORY-005", "EX-0001-0001-01")).toHaveLength(1);
+    expect(only(issues, "QFAI-STORY-005").filter((found) => found.severity === "info")).toEqual([]);
+  });
 
   // QFAI:AC-0001-0055-05
   // QFAI:EX-0001-0055-07

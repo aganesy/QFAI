@@ -125,6 +125,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The prototyping preflight says what `qfai doctor` probes at the target URL.**
+  `prototyping-preflight` now states that doctor sends one `GET` to exactly the
+  URL it is given, accepts a status from 200 to 399, and does not follow a
+  redirect. A static server with no `index.html` at its root can answer 404 on
+  `/`, so the step tells the reader to pass a URL that answers 200.
+  Doctor itself is unchanged. Fixes #3667.
+
 - **A verify gate that fails the same way on the base commit records why.**
   The `reason` of such a gate in `verify.json` names the failing test
   identifiers and the environment, the stage report adds the base result and
@@ -200,7 +207,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `QFAI-STORY-005` errors on unrelated stories. The check for an uncited example
   is now skipped while such a file exists, and one info finding names the file
   and says the examples were not checked. The error for the file is reported as
-  before.
+  before. Fixes #3665.
+- The `QFAI-LINK-001` warning for skill wrappers the operating system will not
+  follow, over canonical documents that read fine, is now one finding with a
+  one-line message and a one-line suggested action. Before, a Windows checkout
+  printed about 2 KB of it on every `qfai validate` run, which buried the counts
+  line. The message gives the count, the first path and how many more there are;
+  the finding still lists every path in its references, and its severity is
+  unchanged. Fixes #3652. Refs #3469: the single-line half only; a repair by
+  `validate` or a lower severity is not part of this change.
 - The shipped `qfai-tests.yml` fails closed on an unreadable `package.json`. A
   manifest that is not valid JSON or not an object, a `scripts` field that is
   not an object, a layer-named script that is not a string, and a malformed

@@ -1593,20 +1593,22 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
     );
   }
   if (reachable.length > 0) {
+    // One line each for the message and the action: this is a standing state on
+    // every Windows `git worktree`, and a long text printed on every run buries
+    // the counts line. The `refs` keep every path for the report and for the
+    // repair.
+    const [first] = reachable;
+    const rest = reachable.length - 1;
     issues.push(
       issue(
         "QFAI-LINK-001",
-        `${String(reachable.length)} wrapper(s) in the assistant integration directories cannot be followed. The canonical documents behind them read fine, so the instructions are in this tree — this path does not reach them: ${describe(reachable)}`,
+        `${String(reachable.length)} wrapper(s) in the assistant integration directories resolve through a symlink the OS will not follow: ${first?.relative ?? ""}${rest > 0 ? ` (and ${String(rest)} more)` : ""}. The canonical documents behind them read fine, so the instructions are in this tree; only this path does not reach them.`,
         "warning",
-        reachable[0]?.relative,
+        first?.relative,
         "integrationSurface.links",
         reachable.map((entry) => entry.relative),
         "change",
-        [
-          "On Windows, a directory wrapper may be stored as a file symlink. Its target text can be correct while the OS cannot follow it; this can occur during a Git worktree checkout.",
-          "Run `qfai init` with its default non-force behavior in this checkout to repair owned directory wrappers that already name the expected target. Link creation may require Windows Developer Mode or suitable permissions. Canonical links maintained by a project's separate setup are outside that wrapper repair.",
-          "The affected wrapper paths do not reach the skills or agents. Their canonical documents remain readable under `.qfai/assistant/**`.",
-        ].join("\n"),
+        "On Windows, a Git worktree checkout can store a directory wrapper as a file symlink. Run `qfai init` in this checkout to relink the wrappers it owns; creating links may need Windows Developer Mode.",
         { relatedFiles: reachable.slice(1).map((entry) => entry.relative) },
       ),
     );
