@@ -80,9 +80,10 @@ values plan nothing.
    - **Release point.** Ask the user to approve the release before the step `releasePoint` names.
    - **Decision point.** Put each critical decision at a step `decisionPoints` names to the user.
    - **Branch point.** Move to the destination a step `branchPoints` names, and plan it at once.
-6. **Review.** After a stage whose `review` is `spec`, `requirements-reviewer` reviews,
-   with `architecture-reviewer` for changed contracts; for `code`, `implementation-reviewer`.
-   `product-surface-reviewer` joins both for flows served by a UI contract with screens.
+6. **Review.** After a stage whose `review` is `spec`, `requirements-reviewer` reviews; for `code`,
+   `implementation-reviewer`. Only a contract or a screen no earlier review read adds
+   `architecture-reviewer` or `product-surface-reviewer`, as `common-review-cycle` lists; no one else
+   joins. A merge or branch update whose only edits resolve conflicts between reviewed sides gets no reviewer.
    No agent reviews its own work; no step adds a review. Each returns PASS or REVISE.
    Fix or answer each finding once, with no re-review. Stop a step that exceeds the request.
 7. **Approvals.** Each approval of a specification change, a critical decision

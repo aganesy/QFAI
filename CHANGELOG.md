@@ -32,6 +32,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   verification, and grants no authority to run the documented actions.
   Fixes #3403.
 
+### Changed
+
+- **The reviewer count follows what the change touched.** Each review of a
+  route takes one reviewer for its kind. `architecture-reviewer` joins only
+  for a changed contract and `product-surface-reviewer` only for a changed
+  screen that no earlier review read. A merge or branch update that only
+  resolves conflicts between already-reviewed sides gets no reviewer.
+  Fixes #3578.
+
 ### Fixed
 
 - **Discussion completion references point to the existing obligations.**
