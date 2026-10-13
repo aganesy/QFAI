@@ -230,6 +230,13 @@ its `reason`. The top-level `status` stays `"FAIL"`, so the run stops before
 `verify-commit`. The final report lists each such gate apart from the failures
 the run caused, so the user can decide whether to commit.
 
+For a gate with baseline `same`, `reason` names the failing test identifiers
+and the environment they fail in. The stage report adds how to confirm it: the
+base commit's result, and the result of the same gate in CI when a check covers
+it, with the run or check named. A CI result that was not observed is written
+as unknown, never as a pass. The report ends by asking the user whether to
+commit with those gates open; nothing is committed before the answer.
+
 ## Gate
 
 The step is done when:

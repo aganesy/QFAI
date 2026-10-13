@@ -297,4 +297,20 @@ describe("a verify gate that fails on the base commit or cannot run", () => {
     expect(contract).toMatch(/`baseline` \| string/);
     expect(contract).toMatch(/still makes the top-level `status` `"FAIL"`/);
   });
+
+  it("records why a failure predates the run and asks the user before any commit", async () => {
+    const text = await section("verify-repo-gate", "## A failure the run did not cause");
+    expect(text).toMatch(/baseline `same`, `reason` names the failing test identifiers/i);
+    expect(text).toMatch(/the environment they fail in/i);
+    expect(text).toMatch(/result of the same gate in CI/i);
+    expect(text).toMatch(/not observed is written as unknown, never as a pass/i);
+    expect(text).toMatch(/asking the user whether to commit with those gates open/i);
+
+    const contract = flat(
+      await readShipped("skill/qfai-verify/references/verify-output-contract.md"),
+    );
+    expect(contract).toMatch(
+      /On a `baseline` of `"same"`: the failing test identifiers and the environment/,
+    );
+  });
 });

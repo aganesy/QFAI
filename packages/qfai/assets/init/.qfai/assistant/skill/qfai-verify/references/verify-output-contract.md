@@ -36,13 +36,13 @@ completion rules stay unchanged.
 
 Each entry of `gates` is `{ name, status, command }`, plus these optional fields:
 
-| Field      | Type   | Meaning                                                                                                                           |
-| ---------- | ------ | --------------------------------------------------------------------------------------------------------------------------------- |
-| `status`   | string | `"PASS"`, `"FAIL"`, `"UNRUN"` or `"DELEGATED"`. `"UNRUN"` is a gate with no command, launcher or environment; it is never a pass. |
-| `baseline` | string | On a `"FAIL"`: `"same"` when the base commit fails identically, `"different"` when it does not, `"unrun"` when it cannot run.     |
-| `reason`   | string | On an `"UNRUN"` gate, or a `baseline` of `"unrun"`: what is missing.                                                              |
-| `check`    | string | On a `"DELEGATED"` gate: the CI check that runs it.                                                                               |
-| `ci`       | string | On a `"DELEGATED"` gate: `"green"`, `"red"` or `"pending"`, the state of that check when the file is written.                     |
+| Field      | Type   | Meaning                                                                                                                                                                      |
+| ---------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `status`   | string | `"PASS"`, `"FAIL"`, `"UNRUN"` or `"DELEGATED"`. `"UNRUN"` is a gate with no command, launcher or environment; it is never a pass.                                            |
+| `baseline` | string | On a `"FAIL"`: `"same"` when the base commit fails identically, `"different"` when it does not, `"unrun"` when it cannot run.                                                |
+| `reason`   | string | On an `"UNRUN"` gate, or a `baseline` of `"unrun"`: what is missing. On a `baseline` of `"same"`: the failing test identifiers and the environment, in one or two sentences. |
+| `check`    | string | On a `"DELEGATED"` gate: the CI check that runs it.                                                                                                                          |
+| `ci`       | string | On a `"DELEGATED"` gate: `"green"`, `"red"` or `"pending"`, the state of that check when the file is written.                                                                |
 
 ## CI-only checks
 

@@ -54,6 +54,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **A verify gate that fails the same way on the base commit records why.**
+  The `reason` of such a gate in `verify.json` names the failing test
+  identifiers and the environment, the stage report adds the base result and
+  the same gate's CI result (or says it is unknown), and the run asks the user
+  whether to commit with those gates open. The verdict stays `FAIL` and gains
+  no field. Fixes #3543.
+
 - **The shipped rules name `AGENTS.md` as the only entry file.** The wording
   in `documentation-clarity.md` and `untrusted-content.md` no longer mentions
   `CLAUDE.md`, which `qfai init` stopped writing.
