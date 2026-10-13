@@ -77,6 +77,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- UI consistency repairs reach design authoring in the SDD stage. Existing
+  design files change only within a newly authorized request; unrelated brand
+  and tokens are preserved, and unsupported source values stop the repair.
+
 - Agents no longer start a griller sub-agent for routine work. The grilling rule
   and its reminders hold a griller session only for a design decision the
   repository cannot settle; an operation, a routine step, a settled decision or
