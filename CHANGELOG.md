@@ -6,6 +6,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- The document-schema rule `qfai init` writes shows how to run the document
+  lane's two checks before pushing: the schema checker and the Mermaid checker,
+  with the scripts and arguments the `qfai-docs.yml` lane uses. The rule points
+  to the lane's install step for the pinned versions and restates none of them.
+  Fixes #3539.
+
 - **A merge that duplicated a decision has a bounded manual recovery.**
   When a bad two-parent merge adds a second byte-identical copy of an inherited
   decision, the SDD owner may remove only that surplus copy under a separate

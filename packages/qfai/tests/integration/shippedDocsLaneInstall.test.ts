@@ -176,3 +176,40 @@ describe("the delivered document lane installs its checkers outside the project'
     ]);
   });
 });
+
+describe("the delivered document-schema rule tells how to run the document lane's checks locally", () => {
+  /** The rule `qfai init` writes into the project. */
+  async function deliveredRule(): Promise<string> {
+    const file = path.join(await initialised(), ".agents", "rules", "document-schema.md");
+    return readFile(file, "utf-8");
+  }
+
+  // QFAI:AC-0002-0003-05
+  // QFAI:EX-0002-0003-10
+  it("shows the commands the lane runs, with the tools directory the lane installs into", async () => {
+    const rule = await deliveredRule();
+    const laneCommands = (await checkSteps())
+      .map((step) => String(step["run"] ?? ""))
+      .flatMap((body) => body.split(/\r?\n/))
+      .map((line) => line.trim())
+      .filter((line) => line.startsWith("node node_modules/qfai/"));
+
+    // Non-vacuity: the lane has one command per check, so a lane that changed shape cannot
+    // empty the comparison below.
+    expect(laneCommands).toHaveLength(2);
+    for (const command of laneCommands) {
+      expect(rule, `the rule does not show the lane command ${command}`).toContain(command);
+    }
+    expect(rule).toContain(`node ${TOOLS_DIR}/node_modules/qfai/assets/scripts/`);
+    expect(rule).toContain(INSTALL_STEP);
+  });
+
+  // QFAI:EX-0002-0003-10
+  it("leaves the pinned versions to the lane, so the rule cannot drift from them", async () => {
+    const rule = await deliveredRule();
+
+    expect(rule).not.toContain(MDSCHEMA_VERSION);
+    expect(rule).not.toMatch(/mermaid@\d/);
+    expect(rule).not.toMatch(/jsdom@\d/);
+  });
+});

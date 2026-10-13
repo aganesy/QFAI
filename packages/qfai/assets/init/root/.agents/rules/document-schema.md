@@ -61,6 +61,21 @@ Both run the checker the installed package carries, against its schemas, with
 the `@jackchuka/mdschema` version the package depends on. Neither can be
 switched off in `qfai.config.yaml`.
 
+To run the lane's two checks before you push, install the checkers into
+`tmp/qfai-docs-tools` with the `npm install` line of the step
+"Install the document-shape and diagram checkers" in `qfai-docs.yml`. That line
+pins the versions the lane uses. Then run the two commands the lane runs:
+
+```bash
+node node_modules/qfai/assets/scripts/check-mdschema.mjs --tools tmp/qfai-docs-tools --scope all --summary
+node node_modules/qfai/assets/scripts/check-mermaid.mjs --tools tmp/qfai-docs-tools
+```
+
+A project with no `node_modules/qfai` of its own runs the script from
+`tmp/qfai-docs-tools/node_modules/qfai/assets/scripts/` instead, as the lane
+does. `npx qfai validate` already reports the shape violations; the Mermaid
+check is the one only this install provides.
+
 ## 8. What a schema cannot say
 
 A schema reads structure. A cell's value, the content of a fenced block, and
