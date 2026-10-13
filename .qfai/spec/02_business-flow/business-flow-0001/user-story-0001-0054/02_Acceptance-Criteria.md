@@ -52,4 +52,10 @@ Feature: Append-only drift and change-request authorization
     Then one warning names the uncommitted protected paths, the first five, and counts the rest, and says they are not compared with the base
     And once the change is committed the upstream-edit error of AC-0001-0054-03 applies to it, and the warning is gone
     And an edit to `decisions.md` confined to `Change request:` rows, a file a change request names and a file outside the protected set raise no such warning
+  # AC-0001-0054-10
+  Scenario: A base that cannot be compared with is reported, and the base that was used is named
+    Given the story tree in a git repository
+    When `qfai validate --profile tdd` or `qfai validate --profile drift` runs and `baseBranch` has no merge base with HEAD
+    Then one warning names `baseBranch` and the way to make it resolve, instead of the run passing as if nothing changed
+    And when the base resolves, `qfai validate --profile drift` reports at info the merge base commit and the number of changed files it compared, saying so when HEAD is that commit
 ```

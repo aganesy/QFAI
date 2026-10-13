@@ -49,6 +49,7 @@ export const SAAS_PACKAGE_SKIPPED_GATE_FAMILIES: Record<SaasPackageSkippedGate, 
     validateStoryTreeDrift: [
       "QFAI-DRIFT-001",
       "QFAI-DRIFT-002",
+      "QFAI-DRIFT-003",
       "QFAI-DRIFT-004",
       "QFAI-STORY-010",
       "QFAI-SCAN-002",

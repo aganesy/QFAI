@@ -14,6 +14,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   fix text of `QFAI-DRIFT-001` says the change request row is needed before the
   commit. Fixes #3546.
 
+- **`qfai validate` tells a reader which base the drift checks compared with.**
+  A repository whose `baseBranch` has no merge base with HEAD now gets one
+  `QFAI-DRIFT-003` warning that names the base and says to fetch it or set
+  `baseBranch`, where the run used to pass as if nothing had changed. The
+  `drift` profile also reports at info the merge base commit and the number of
+  changed files it compared, so a worktree whose base ref lags the pull
+  request's base shows it. A repository with commits but no `origin/main` (no
+  remote, or a `master` branch) warns until `baseBranch` is set; a directory
+  that is not a repository is still silent.
+  The drift checks also stop turning themselves off when a file at the base,
+  such as a long decision ledger, is larger than 1 MiB: reading it failed
+  like a missing file, and the run passed without comparing anything.
+  Fixes #3532.
+
 - **`QFAI-STORY-006` says where an annotation that counts for nothing sits.**
   When an example's `QFAI:EX-` annotation is in a selected test file but not on
   a comment line before a test declaration, the finding now names the file and

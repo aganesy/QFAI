@@ -22,6 +22,8 @@ Common rules for working with Claude Code.
   A personal `CLAUDE.local.md` therefore hides `AGENTS.md`; set the project-instructions setting to
   `claude-md-and-agents-md` to keep both.
 - `.claude/rules/scoped/` holds the rules a path scopes; nothing else under `.claude/rules/` loads at start.
+- `node scripts/list-startup-context.mjs` lists these files for a checkout with line and byte counts,
+  so a size comparison before and after a change can be repeated. It reads files and measures no session.
 - Source: the Claude Code memory documentation, https://code.claude.com/docs/en/memory (the AGENTS.md section).
 
 ## Tone and Style

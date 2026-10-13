@@ -1154,6 +1154,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "An example whose row changed since the base branch has a test annotating it that changed too.",
   "QFAI-DRIFT-004":
     "A protected story-tree file is committed before the drift checks run on it; an uncommitted edit is not compared with the base branch.",
+  "QFAI-DRIFT-003":
+    "The base branch resolves to a merge base with HEAD, so the drift checks compare against it; the drift profile names the commit it compared with.",
   "QFAI-RESEARCH-013":
     "A UI-bearing discussion pack registers at least `uiux.competitive_refs_min` complete competitive references (default 3) in `04_Sources.md`.",
   "QFAI-RESEARCH-014":
@@ -1354,6 +1356,8 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
     "Commit the change together with the change request row that names it, then rerun validate.",
   "QFAI-DRIFT-002":
     "Update the tests annotating the named example to its new row, or confirm they already assert it.",
+  "QFAI-DRIFT-003":
+    "Fetch the base branch so it resolves, or set baseBranch in qfai.config.yaml to a ref this checkout has, then rerun validate.",
   "QFAI-FLOW-005": "Use an existing BF-NNNN ID for --flow, or create the flow before selecting it.",
   "QFAI-LAYOUT-001":
     "Invoke the `/qfai-migration-v1-to-v2` skill in your AI assistant to move the old spec packs to the story tree, then rerun validate.",
