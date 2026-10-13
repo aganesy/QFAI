@@ -295,6 +295,7 @@
     "tests/scripts/stepRequiredRules.test.ts",
     "tests/integration/releaseCommandStop.test.ts",
     "tests/scripts/checkInstructionsSize.test.ts",
+    "tests/scripts/regenShippedEntry.test.ts",
     "tests/scripts/declaredSampleBandIds.test.ts",
     "tests/scripts/checkTrackedReadmes.test.ts",
     "tests/scripts/assistantTreeLinks.test.ts",
