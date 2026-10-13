@@ -4,7 +4,14 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { isEnoent } from "../fs/errno.js";
 import { DEFAULT_GLOB_FILE_LIMIT } from "../fs.js";
-import { getChangedFilesAgainstBase, normalizeRepoPath, readFileAtBase } from "../gitChanges.js";
+import {
+  describeBaseComparison,
+  existsAtRevision,
+  getChangedFilesAgainstBase,
+  normalizeRepoPath,
+  readFileAtBase,
+  type BaseComparison,
+} from "../gitChanges.js";
 import { parseAllMarkdownTables } from "../specPackParsers.js";
 import { parseCountedExampleAnnotations } from "../storyTree/ids.js";
 import {
@@ -24,8 +31,22 @@ export async function validateStoryTreeDrift(
   profile: "tdd" | "drift",
 ): Promise<Issue[]> {
   const baseBranch = config.baseBranch ?? "origin/main";
+  const comparison = describeBaseComparison(root, baseBranch);
+  if (comparison.kind === "unresolved") {
+    return [
+      notCompared(
+        `"${baseBranch}" has no merge base with HEAD.`,
+        "Fetch that ref, or set baseBranch in qfai.config.yaml to one this checkout has, then rerun validate.",
+      ),
+    ];
+  }
   const changed = getChangedFilesAgainstBase(root, baseBranch);
-  if (changed === null) return [];
+  if (changed === null) {
+    // In a repository whose base resolves, the listing itself failed.
+    return comparison.kind === "resolved"
+      ? [notCompared(`git could not list the changes since "${baseBranch}".`, RERUN_ACTION)]
+      : [];
+  }
   const specs = normalizeRepoPath(
     path.relative(root, path.resolve(root, config.paths.specsDir)),
   ).replace(/\/$/, "");
@@ -35,7 +56,13 @@ export async function validateStoryTreeDrift(
   const decisions = path.posix.join(specs, "decisions.md");
   const questions = path.posix.join(specs, "open-questions.md");
   const baseDecisions = readFileAtBase(root, baseBranch, decisions);
-  if (baseDecisions === null) return [];
+  if (baseDecisions === null) {
+    // A base without decisions.md is a project before its story tree. A base that has it and
+    // could not be read is not, and passing on it is the failure this warning exists for.
+    return comparison.kind === "resolved" && existsAtRevision(root, comparison.mergeBase, decisions)
+      ? [notCompared(`${decisions} at "${baseBranch}" could not be read.`, RERUN_ACTION)]
+      : [];
+  }
 
   const currentDecisions = await readSafePath(path.join(root, decisions));
   const rows = parseRecordTable(currentDecisions, "decisions").rows;
@@ -119,7 +146,44 @@ export async function validateStoryTreeDrift(
     );
   }
   issues.push(...(await examplesWithoutTestChange(root, config, changed, specs, baseBranch)));
+  if (profile === "drift" && comparison.kind === "resolved") {
+    issues.push(comparedAgainst(baseBranch, comparison, changed.size));
+  }
   return issues;
+}
+
+const RERUN_ACTION =
+  "Check that git can read the repository and that the file is smaller than 256 MiB, then rerun validate.";
+
+/** The warning for a run that compared nothing, so a pass is not read as a comparison. */
+function notCompared(reason: string, action: string): Issue {
+  return issue(
+    "QFAI-DRIFT-003",
+    `Nothing was compared: ${reason}`,
+    "warning",
+    undefined,
+    "storyTree.notCompared",
+    undefined,
+    "canonical",
+    action,
+  );
+}
+
+/**
+ * Names the commit the drift profile compared with, so a pass can be checked against the base the
+ * reader expects: a worktree whose base ref lags the pull request's base passes silently otherwise.
+ */
+function comparedAgainst(
+  baseBranch: string,
+  comparison: Extract<BaseComparison, { kind: "resolved" }>,
+  changedCount: number,
+): Issue {
+  const mergeBase = comparison.mergeBase.slice(0, 12);
+  const compared = `Compared ${changedCount} changed ${changedCount === 1 ? "file" : "files"} with "${baseBranch}" at merge base ${mergeBase}`;
+  const message = comparison.atHead
+    ? `${compared}; HEAD is that commit, so the branch has no commit of its own.`
+    : `${compared}.`;
+  return issue("QFAI-DRIFT-003", message, "info", undefined, "storyTree.baseCompared");
 }
 
 /**

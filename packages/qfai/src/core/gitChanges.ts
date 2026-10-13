@@ -20,6 +20,43 @@ export function readFileAtBase(root: string, baseBranch: string, file: string): 
   return gitStdout(root, ["show", `${revision}:${normalizeRepoPath(file)}`]);
 }
 
+/**
+ * What a comparison against `baseBranch` can be made from, so a caller can say which commit it
+ * compared with instead of passing silently on a base it could not use.
+ *
+ * - `not-a-repository`: git has no commit to compare from `root` (a tarball export, a directory
+ *   outside any repository, or a repository with no commit yet). Nothing could have been compared,
+ *   and nothing was expected to be.
+ * - `unresolved`: `root` is a repository, and `baseBranch` has no merge base with HEAD. A missing
+ *   or unfetched ref, a stale worktree and a shallow clone all land here.
+ * - `resolved`: the commit the comparison starts from. `atHead` holds when that commit is HEAD
+ *   itself, so the branch has no commit of its own.
+ */
+export type BaseComparison =
+  | { readonly kind: "not-a-repository" }
+  | { readonly kind: "unresolved" }
+  | { readonly kind: "resolved"; readonly mergeBase: string; readonly atHead: boolean };
+
+export function describeBaseComparison(root: string, baseBranch: string): BaseComparison {
+  const head = gitStdout(root, ["rev-parse", "--verify", "HEAD^{commit}"])?.trim();
+  if (!head) return { kind: "not-a-repository" };
+  const mergeBase = gitStdout(root, ["merge-base", baseBranch, "HEAD"])?.trim();
+  if (!mergeBase) return { kind: "unresolved" };
+  return { kind: "resolved", mergeBase, atHead: mergeBase === head };
+}
+
+/**
+ * The most stdout `gitStdout` reads. Node's default is 1 MiB, and a `git show` of a decision
+ * ledger past that size failed like a missing file, which turned the drift checks off without a
+ * word. A tree whose single file is larger than this is not a spec tree.
+ */
+const GIT_STDOUT_MAX_BYTES = 256 * 1024 * 1024;
+
+/** Whether `revision` holds `file`, whatever its size: a file git cannot show may still be there. */
+export function existsAtRevision(root: string, revision: string, file: string): boolean {
+  return gitStdout(root, ["cat-file", "-e", `${revision}:${normalizeRepoPath(file)}`]) !== null;
+}
+
 /** Runs git for its stdout, or returns `null` when the command cannot run. */
 export function gitStdout(root: string, args: readonly string[]): string | null {
   try {
@@ -27,6 +64,7 @@ export function gitStdout(root: string, args: readonly string[]): string | null 
       cwd: root,
       encoding: "utf-8",
       stdio: ["ignore", "pipe", "ignore"],
+      maxBuffer: GIT_STDOUT_MAX_BYTES,
     });
   } catch {
     return null;
