@@ -10,6 +10,7 @@ import {
   getChangedFilesAgainstBase,
   normalizeRepoPath,
   readFileAtBase,
+  uncommittedContentPaths,
   type BaseComparison,
 } from "../gitChanges.js";
 import { parseAllMarkdownTables } from "../specPackParsers.js";
@@ -115,21 +116,19 @@ export async function validateStoryTreeDrift(
     }
   }
   const decisionDiff = diffRecordTables(baseDecisions, currentDecisions, "decisions");
+  const onlyChangeRequestRowsChanged =
+    decisionDiff.onlyChangeRequestRows &&
+    withoutChangeRequestRows(baseDecisions) === withoutChangeRequestRows(currentDecisions);
+  const isProtected = (file: string): boolean =>
+    file.startsWith(`${path.posix.join(specs, "01_policy")}/`) ||
+    file.startsWith(`${path.posix.join(specs, "02_business-flow")}/`) ||
+    contracts === "" ||
+    file.startsWith(`${contracts}/`) ||
+    file === decisions ||
+    file === questions;
   for (const file of changed) {
-    const protectedPath =
-      file.startsWith(`${path.posix.join(specs, "01_policy")}/`) ||
-      file.startsWith(`${path.posix.join(specs, "02_business-flow")}/`) ||
-      contracts === "" ||
-      file.startsWith(`${contracts}/`) ||
-      file === decisions ||
-      file === questions;
-    if (!protectedPath || authorised.has(file)) continue;
-    if (
-      file === decisions &&
-      decisionDiff.onlyChangeRequestRows &&
-      withoutChangeRequestRows(baseDecisions) === withoutChangeRequestRows(currentDecisions)
-    )
-      continue;
+    if (!isProtected(file) || authorised.has(file)) continue;
+    if (file === decisions && onlyChangeRequestRowsChanged) continue;
     if (file.endsWith("/03_Example.md") && (await onlyAppendsExamples(root, baseBranch, file)))
       continue;
     if (file.startsWith(`${contracts}/`) && (await onlyCitesExamples(root, baseBranch, file)))
@@ -146,10 +145,57 @@ export async function validateStoryTreeDrift(
     );
   }
   issues.push(...(await examplesWithoutTestChange(root, config, changed, specs, baseBranch)));
+  // A path already in the committed comparison is not named again, even when the working tree
+  // changes it further: the checks read the file as it is on disk.
+  const working = uncommittedContentPaths(
+    root,
+    (file) =>
+      isProtected(file) &&
+      !changed.has(file) &&
+      !authorised.has(file) &&
+      !(file === decisions && onlyChangeRequestRowsChanged),
+  );
+  if (working === null) {
+    issues.push(notCompared("git could not list the uncommitted changes.", RERUN_ACTION));
+  } else {
+    // The same two edits a commit would pass without a change request pass uncommitted too.
+    const uncommitted: string[] = [];
+    for (const file of working) {
+      if (file.endsWith("/03_Example.md") && (await onlyAppendsExamples(root, baseBranch, file)))
+        continue;
+      if (file.startsWith(`${contracts}/`) && (await onlyCitesExamples(root, baseBranch, file)))
+        continue;
+      uncommitted.push(file);
+    }
+    if (uncommitted.length > 0) issues.push(uncommittedNotCompared(uncommitted));
+  }
   if (profile === "drift" && comparison.kind === "resolved") {
     issues.push(comparedAgainst(baseBranch, comparison, changed.size));
   }
   return issues;
+}
+
+/** The most uncommitted paths the finding names; the count says how many there are. */
+const UNCOMMITTED_LISTED = 5;
+
+/**
+ * The comparison is `<base>...HEAD`, so an edit that is not committed yet is not in it and the
+ * checks pass on it. Said once, so a green run is not read as covering the working tree.
+ */
+function uncommittedNotCompared(uncommitted: readonly string[]): Issue {
+  const listed = uncommitted.slice(0, UNCOMMITTED_LISTED);
+  const rest = uncommitted.length - listed.length;
+  const single = uncommitted.length === 1;
+  return issue(
+    "QFAI-DRIFT-004",
+    `${uncommitted.length} uncommitted ${single ? "change" : "changes"} to protected story-tree ${single ? "file is" : "files are"} not compared with the base: ${listed.join(", ")}${rest > 0 ? ` and ${rest} more` : ""}.`,
+    "warning",
+    undefined,
+    "storyTree.uncommittedNotCompared",
+    listed,
+    "canonical",
+    "Commit the change together with the change request row that names it, then rerun validate.",
+  );
 }
 
 const RERUN_ACTION =

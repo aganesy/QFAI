@@ -67,11 +67,27 @@ afterEach(async () => {
   await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
 });
 
-function git(cwd: string, args: readonly string[]): void {
-  const child = spawnSync("git", args, { cwd, encoding: "utf-8" });
-  if (child.status !== 0) {
-    throw new Error(`git ${args.join(" ")} failed: ${child.stderr ?? ""}`);
+/**
+ * Throws unless a finished git process exited with status 0, and names the real cause.
+ *
+ * A git binary that cannot start (`error`) or is ended by a signal has a null status and
+ * an empty stderr, which would read as an empty failure. Either is thrown with its cause.
+ */
+function requireGitSuccess(child: SpawnSyncReturns<string>, args: readonly string[]): void {
+  const command = `git ${args.join(" ")}`;
+  if (child.error !== undefined) {
+    throw new Error(`${command} did not run: ${child.error.message}`, { cause: child.error });
   }
+  if (child.signal !== null) {
+    throw new Error(`${command} was ended by ${child.signal}`);
+  }
+  if (child.status !== 0) {
+    throw new Error(`${command} failed: ${child.stderr ?? ""}`);
+  }
+}
+
+function git(cwd: string, args: readonly string[]): void {
+  requireGitSuccess(spawnSync("git", args, { cwd, encoding: "utf-8" }), args);
 }
 
 async function writeFiles(dir: string, files: Record<string, string>): Promise<void> {
@@ -145,6 +161,49 @@ describe("the guard runner's diagnostics", () => {
     };
 
     expect(guardResultOf(finished)).toEqual({ status: 1, stdout: "out", stderr: "err" });
+  });
+});
+
+describe("the git fixture helper's diagnostics", () => {
+  it("names a launch failure and keeps it as the cause", () => {
+    const missing = path.join(os.tmpdir(), "qfai-clarity-missing-directory");
+
+    let thrown: unknown;
+    try {
+      git(missing, ["status"]);
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(Error);
+    expect(thrown instanceof Error && thrown.message).toMatch(/git status did not run: .*ENOENT/);
+    expect(thrown instanceof Error && thrown.cause).toBeInstanceOf(Error);
+  });
+
+  it("names the signal that ended git", () => {
+    const ended: SpawnSyncReturns<string> = {
+      pid: 0,
+      output: [null, "", ""],
+      stdout: "",
+      stderr: "",
+      status: null,
+      signal: "SIGKILL",
+    };
+
+    expect(() => requireGitSuccess(ended, ["gc"])).toThrow(/git gc was ended by SIGKILL/);
+  });
+
+  it("reports the stderr of a git command that exited non-zero", () => {
+    const failed: SpawnSyncReturns<string> = {
+      pid: 1,
+      output: [null, "", "fatal: nope"],
+      stdout: "",
+      stderr: "fatal: nope",
+      status: 128,
+      signal: null,
+    };
+
+    expect(() => requireGitSuccess(failed, ["add", "x"])).toThrow(/git add x failed: fatal: nope/);
   });
 });
 

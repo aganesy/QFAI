@@ -6,6 +6,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`qfai validate` says when the drift checks do not cover an uncommitted edit.**
+  A protected story-tree file that is edited or added in the working tree and
+  not committed is outside the `<base>...HEAD` comparison, so the `tdd` and
+  `drift` profiles passed on it and failed only once it was committed. They now
+  raise a `QFAI-DRIFT-004` warning that names the uncommitted paths, and the
+  fix text of `QFAI-DRIFT-001` says the change request row is needed before the
+  commit. Fixes #3546.
+
 - **`qfai init` says when it kept an assistant file that a new file depends on.**
   A run without `--force` that writes a new file under `.qfai/assistant/` and
   keeps a file there that differs from this release's copy now prints one line
