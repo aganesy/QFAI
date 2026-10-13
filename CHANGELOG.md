@@ -77,6 +77,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The Markdown-schema check no longer passes over a document directory it
+  cannot read.** A directory that fails to list for a reason other than being
+  absent (permission, I/O, descriptor exhaustion) is reported with its path and
+  cause, and the run fails instead of treating the documents beneath it as
+  conforming. Fixes #3626.
+
 - UI consistency repairs reach design authoring in the SDD stage. Existing
   design files change only within a newly authorized request; unrelated brand
   and tokens are preserved, and unsupported source values stop the repair.
