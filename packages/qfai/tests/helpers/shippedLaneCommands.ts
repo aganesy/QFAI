@@ -1329,10 +1329,10 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // and hashing what it wrote; dropping that bullet reproduces `2a264d5e…`.
     //
     // Every later bullet on that list moves this digest the same way. To re-pin one: run
-    // `qfai init` into a temp root and hash what it wrote — never copy a value out of a failure
-    // message — then drop the added bullet and confirm the previous digest comes back byte for
-    // byte. That check is what keeps a re-pin a review of one line rather than a re-blessing of
-    // the whole file.
+    // `pnpm build` and `pnpm pins:entry`, which hashes what `qfai init` writes into a temp root
+    // — never copy a value out of a failure message — then drop the added bullet and confirm
+    // the previous digest comes back byte for byte. That check is what keeps a re-pin a review
+    // of one line rather than a re-blessing of the whole file.
     //
     // Re-pinned for the grilling bullet, which now says a session ends in one of four named
     // endings instead of on an empty frontier and the user's confirmation. Derived by running
