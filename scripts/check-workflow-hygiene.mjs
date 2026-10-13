@@ -1318,11 +1318,27 @@ function checkGlobalInstallPins(root, jobs) {
           }
         }
         // …and `--ignore-scripts=false` is the flag present and turned off.
-        const ignore = /--ignore-scripts(?:[=\s]+(\S+))?/.exec(line);
-        const ignoreValue = ignore?.[1];
-        const ignoresScripts =
-          ignore !== null && (ignoreValue === undefined || !/^(?:false|0|no)$/i.test(ignoreValue));
-        if (!ignoresScripts) missing.push("--ignore-scripts");
+        //
+        // EVERY occurrence here too: npm assigns a repeated boolean flag in order, so a later
+        // `--ignore-scripts=false` overrides an earlier `--ignore-scripts` and the lifecycle scripts
+        // run. Reading only the first would accept that command. A repeat is refused outright, as a
+        // repeated `--registry` is, rather than resolved to its last value.
+        // The value never starts with a dash, so a following `--ignore-scripts=false` is its own
+        // occurrence and not swallowed as the first one's value.
+        const ignores = [...line.matchAll(/--ignore-scripts(?:[=\s]+(?!-)(\S+))?/g)];
+        if (ignores.length > 1) {
+          missing.push(
+            `one --ignore-scripts (found ${String(ignores.length)}, and npm takes the last: ${ignores
+              .map((m) => JSON.stringify(m[0].trim()))
+              .join(", ")})`,
+          );
+        } else {
+          const ignoreValue = ignores[0]?.[1];
+          const ignoresScripts =
+            ignores.length === 1 &&
+            (ignoreValue === undefined || !/^(?:false|0|no)$/i.test(ignoreValue));
+          if (!ignoresScripts) missing.push("--ignore-scripts");
+        }
         if (missing.length === 0) continue;
         findings.push({
           rule: "global-install-pin",
