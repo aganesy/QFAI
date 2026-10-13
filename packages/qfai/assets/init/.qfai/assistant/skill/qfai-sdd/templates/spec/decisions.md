@@ -16,6 +16,15 @@ correction, goes inside these items. Write a `|` inside a cell as `\|`.
 Use this form for every new row. A passing validation result does not prove
 that every decision row follows it.
 
+A release approval, with `<...>` standing for the project's values, has this
+Content cell:
+
+Release <X.Y.Z> approved by <name> on <date>, option "<label>"
+
+and this Approach cell, written on one line and without backticks around it:
+
+- Evidence: file:CHANGELOG.md; command:<the release checks> → <result> - Grounds: <why the checks support the release> - Residual risk: none — <reason> - Rollback: <the steps that retract the release>
+
 A row that records a spec change following from an earlier approval may name
 that earlier decision by its ID in `Grounds:`, in place of a new answer from
 the user. Its `Evidence:` still lists what supports the change.

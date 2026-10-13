@@ -684,9 +684,14 @@ export function formatTimingOverruns(timings: ValidationTimings | undefined): st
   }
   const parts: string[] = [];
   if (timings.uiuxMs > timings.uiuxBudgetMs) {
+    // The group's validators run side by side, so the slowest two are the ones to look at.
+    const slowest = timings.uiuxParts
+      .slice(0, 2)
+      .map((part) => `${part.name} ${Math.round(part.ms)}ms`);
+    const where = slowest.length > 0 ? `; slowest, overlapping: ${slowest.join(", ")}` : "";
     parts.push(
       `uiux=${formatOverrunMs(timings.uiuxMs, timings.uiuxBudgetMs)}ms ` +
-        `(budget ${timings.uiuxBudgetMs}ms)`,
+        `(budget ${timings.uiuxBudgetMs}ms${where})`,
     );
   }
   if (timings.htmlMockMs > timings.htmlMockBudgetMs) {
@@ -695,7 +700,10 @@ export function formatTimingOverruns(timings: ValidationTimings | undefined): st
         `(budget ${timings.htmlMockBudgetMs}ms)`,
     );
   }
-  return parts.length > 0 ? `timings: over budget ${parts.join(" ")}` : null;
+  // A budget is a target. Said on the line itself, because nothing else is printed for it.
+  return parts.length > 0
+    ? `timings: over budget ${parts.join(" ")}; a target, not a gate: no finding is raised`
+    : null;
 }
 
 const MAX_OVERRUN_DECIMALS = 9;
@@ -1371,7 +1379,7 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   "QFAI-STORY-006":
     "Add a real test in the required layer with a QFAI annotation for the named BF, AC, or EX; an EX annotation goes on a comment line above the test declaration it covers.",
   "QFAI-STORY-007":
-    "Move the named test annotation to its required E2E, integration, API, or unit layer.",
+    "Remove the named annotation from this test and keep it only in a test of its own layer: BF in E2E, AC in integration or API, EX outside E2E.",
   "QFAI-STORY-008":
     "Correct the annotation to a declared BF, AC, or EX ID, or remove a stale annotation.",
   "QFAI-STORY-010":

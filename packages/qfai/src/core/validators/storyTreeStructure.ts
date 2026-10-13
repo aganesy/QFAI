@@ -335,7 +335,7 @@ const EVIDENCE_ENTRY = /^(?:file:\S|command:\s*\S)/;
 const NONE_WITH_REASON = /^none\s+—/;
 
 /** What is wrong with the four labelled items of one Approach cell. */
-function approachProblems(approach: string): string[] {
+export function approachProblems(approach: string): string[] {
   const spans = inlineCodeSpans(approach);
   let spanIndex = 0;
   const marks = [...approach.matchAll(APPROACH_LABEL)].filter((mark) => {
