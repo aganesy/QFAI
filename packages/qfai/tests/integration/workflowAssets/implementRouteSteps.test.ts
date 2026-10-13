@@ -113,6 +113,10 @@ describe("the steps the routes add to qfai-implement", () => {
 
     const quarantine = flat(await stepText("implement-quarantine"));
     expect(quarantine).toMatch(/a recorded number of consecutive passing runs/i);
+    expect(quarantine).toMatch(
+      /When all of at least five recorded runs fail, nothing is quarantined/i,
+    );
+    expect(quarantine).toMatch(/report the outcome `failing-consistently` with an extraction/i);
 
     const bump = flat(await stepText("implement-dep-bump"));
     expect(bump).toMatch(/such as the `engines` field/i);

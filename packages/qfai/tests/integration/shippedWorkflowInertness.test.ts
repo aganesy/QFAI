@@ -593,3 +593,97 @@ describe("TC-0003-0037 (TDD-0037): three installing job declarations, eight exec
     expect(violations).toEqual([]);
   });
 });
+
+// QFAI:AC-0002-0004-03
+// QFAI:EX-0002-0004-08
+describe("a manifest or an input the detection job cannot read stops it instead of selecting no lane", () => {
+  // A skipped job satisfies a required check, so reading an unreadable package.json as "declares no
+  // test script" would turn a broken manifest into a green check over no tests. Only a valid empty
+  // set may select no lane; anything else stops the step, so the job publishes no selection and the
+  // verdict is red.
+
+  /** The probe and the selection bodies of the init-written orchestrator. */
+  async function bodies(): Promise<{ probe: string; selection: string }> {
+    const { doc } = await initScriptlessTree();
+    const probe = scriptsProbeBody(doc);
+    const selection = selectionStepBody(doc);
+    if (typeof probe !== "string" || typeof selection !== "string") {
+      throw new Error("the init-written orchestrator lacks the script probe or the selection step");
+    }
+    return { probe, selection };
+  }
+
+  /** Runs the probe in a directory holding this package.json text (or none when undefined). */
+  async function probeWith(manifest: string | undefined): Promise<ShellRun> {
+    const { probe } = await bodies();
+    const dir = await newTempDir();
+    if (manifest !== undefined) {
+      await writeFile(path.join(dir, "package.json"), manifest, "utf-8");
+    }
+    return runShell(probe, dir);
+  }
+
+  it.each([
+    { label: "text that is not JSON", manifest: "{ not json" },
+    { label: "an empty file", manifest: "" },
+    { label: "a JSON array", manifest: "[]" },
+    { label: "JSON null", manifest: "null" },
+    { label: "a scripts field that is an array", manifest: '{"scripts": []}' },
+    { label: "a scripts field that is null", manifest: '{"scripts": null}' },
+    { label: "a scripts field that is a string", manifest: '{"scripts": "vitest"}' },
+    { label: "a layer script that is a number", manifest: '{"scripts": {"test:unit": 1}}' },
+    { label: "a layer script that is null", manifest: '{"scripts": {"test:e2e": null}}' },
+  ])(
+    "the probe stops, publishes no script list and names the error for $label",
+    async ({ manifest }) => {
+      const run = await probeWith(manifest);
+      expect(run.status).toBe(1);
+      expect(run.outputs["scripts"]).toBeUndefined();
+      expect(run.stdout).toMatch(/::error file=package\.json::qfai tests:/);
+    },
+  );
+
+  it.each([
+    { label: "no package.json at all", manifest: undefined, expected: [] },
+    { label: "an object without scripts", manifest: "{}", expected: [] },
+    { label: "an empty scripts object", manifest: '{"scripts": {}}', expected: [] },
+    {
+      label: "a script that is not named for a layer, whatever its value",
+      manifest: '{"scripts": {"test:other": 1, "test:unit": "echo unit"}}',
+      expected: ["unit"],
+    },
+  ])("the probe still publishes a valid answer for $label", async ({ manifest, expected }) => {
+    const run = await probeWith(manifest);
+    expect(run.status).toBe(0);
+    expect(JSON.parse(run.outputs["scripts"] ?? "null")).toEqual(expected);
+  });
+
+  it.each([
+    { label: "an unset script list", scripts: "", lanes: FULL_LANES_JSON },
+    { label: "a script list that is not JSON", scripts: "unit", lanes: FULL_LANES_JSON },
+    { label: "a script list that is not an array", scripts: "{}", lanes: FULL_LANES_JSON },
+    { label: "a script list naming an unknown layer", scripts: '["nope"]', lanes: FULL_LANES_JSON },
+    { label: "a script list holding a non-string", scripts: "[1]", lanes: FULL_LANES_JSON },
+    { label: "an unset lane list", scripts: '["unit"]', lanes: "" },
+    { label: "a lane list naming an unknown layer", scripts: '["unit"]', lanes: '["nope"]' },
+  ])("the selection stops and publishes none for $label", async ({ scripts, lanes }) => {
+    const { selection } = await bodies();
+    const run = await runShell(selection, await newTempDir(), {
+      QFAI_SCRIPTS: scripts,
+      QFAI_LANES: lanes,
+    });
+    expect(run.status).toBe(1);
+    expect(run.outputs["selected"]).toBeUndefined();
+    expect(run.stdout).toMatch(/::error::qfai tests:/);
+  });
+
+  it("the selection still publishes an empty selection for a valid empty script list", async () => {
+    const { selection } = await bodies();
+    const run = await runShell(selection, await newTempDir(), {
+      QFAI_SCRIPTS: "[]",
+      QFAI_LANES: FULL_LANES_JSON,
+    });
+    expect(run.status).toBe(0);
+    expect(run.outputs["selected"]).toBe("[]");
+  });
+});
