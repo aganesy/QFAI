@@ -51,11 +51,11 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { readRepositoryDecisions } from "../helpers/decisionRegister.js";
 import { declaredIncludeGlobs, testFileCount } from "../helpers/runnerProjects.js";
 
 const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const REPO_ROOT = path.resolve(PACKAGE_ROOT, "..", "..");
-const DECISIONS = path.join(REPO_ROOT, ".qfai", "spec", "decisions.md");
 
 /** The decision this pair of rows reads. */
 const RETIREMENT_DR = "DR-0017-0007";
@@ -101,7 +101,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * satisfy a claim about this decision.
  */
 function decisionSection(id: string): string {
-  const source = readFileSync(DECISIONS, "utf-8");
+  const source = readRepositoryDecisions(REPO_ROOT);
   return (
     source.split(/\r?\n/).find((line) => /^\| DEC-\d+ \|/.test(line) && line.includes(`#${id}:`)) ??
     ""

@@ -435,7 +435,7 @@ describe("the document schema entries of the story tree", () => {
       entry.pattern
         .replace("{specsDir}/", "")
         .replace("{contractsDir}/", "03_contract/")
-        .replace("page-????", "page-NNNN")
+        .replace("page-*", "page-NNNN")
         .replace("business-flow-*", "business-flow-NNNN")
         .replace("user-story-*", "user-story-NNNN-NNNN")
         .replace("cli/*.md", "cli/cli-NNNN-title.md"),

@@ -24,7 +24,7 @@
  * `tmp/plant-tuning.py` moves projects and checks both rules redden.
  */
 
-import { readFile, readdir } from "node:fs/promises";
+import { readdir } from "node:fs/promises";
 import type { Dirent } from "node:fs";
 import { availableParallelism } from "node:os";
 import path from "node:path";
@@ -32,6 +32,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CONCURRENCY_ENV, DECLARED_START, WORKERS_ENV } from "../../vitest.knobs";
+import { readRepositoryDecisions } from "../helpers/decisionRegister.js";
 
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");
 const REPO_ROOT = path.resolve(PACKAGE_ROOT, "../..");
@@ -42,9 +43,6 @@ const REPO_ROOT = path.resolve(PACKAGE_ROOT, "../..");
  * measurement behind the cap sits on the declaration itself.
  */
 const DECLARED_CONCURRENCY = Math.min(DECLARED_START, availableParallelism());
-/** The decision register, one table row per decision. */
-const DECISIONS = path.join(REPO_ROOT, ".qfai", "spec", "decisions.md");
-
 /** Every decision row in the register. */
 const decisionRows = (text: string): string[] =>
   text.split(/\r?\n/).filter((line) => /^\| DEC-\d+ \|/.test(line));
@@ -218,7 +216,7 @@ describe("a moved project carries the run identifiers that justify the move", ()
     const projects = await readProjects();
     const moved = projects.filter((project) => project.departures.length > 0);
 
-    const text = await readFile(DECISIONS, "utf8");
+    const text = readRepositoryDecisions(REPO_ROOT);
     const rows = decisionRows(text);
     expect(
       rows.length,
@@ -317,7 +315,7 @@ describe("a rerun-to-green rate above one in twenty reopens the setting", () => 
     // The antecedent, read rather than assumed: a merged tuning change would be recorded, because
     // `BR-0016-0052` requires the record. None is, so nothing is owed — and the enumeration says that
     // positively instead of leaving an empty loop to stand for it.
-    const text = await readFile(DECISIONS, "utf8");
+    const text = readRepositoryDecisions(REPO_ROOT);
     const sections = decisionRows(text);
     const projectNames = (await readProjects()).map((project) => project.name);
     const tuningRecords = sections.filter((section) =>
