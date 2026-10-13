@@ -1330,11 +1330,32 @@ function checkGlobalInstallPins(root, jobs) {
           }
         }
         // …and `--ignore-scripts=false` is the flag present and turned off.
-        const ignore = /--ignore-scripts(?:[=\s]+(\S+))?/.exec(line);
-        const ignoreValue = ignore?.[1];
-        const ignoresScripts =
-          ignore !== null && (ignoreValue === undefined || !/^(?:false|0|no)$/i.test(ignoreValue));
-        if (!ignoresScripts) missing.push("--ignore-scripts");
+        //
+        // EVERY occurrence here too: npm assigns a repeated boolean flag in order, so a later
+        // `--ignore-scripts=false` overrides an earlier `--ignore-scripts` and the lifecycle scripts
+        // run. Reading only the first would accept that command. A repeat is refused outright, as a
+        // repeated `--registry` is, rather than resolved to its last value.
+        // The value never starts with a dash, so a following flag is its own occurrence and not
+        // swallowed as the first one's value. `--no-ignore-scripts` is the same option spelled
+        // negated, and npm applies it in order like any other occurrence, so it counts too.
+        const ignores = [...line.matchAll(/--(no-)?ignore-scripts(?![\w-])(?:[=\s]+(?!-)(\S+))?/g)];
+        if (ignores.length > 1) {
+          missing.push(
+            `one --ignore-scripts (found ${String(ignores.length)}, and npm takes the last: ${ignores
+              .map((m) => JSON.stringify(m[0].trim()))
+              .join(", ")})`,
+          );
+        } else {
+          const only = ignores[0];
+          // Quotes come off the value as they do for `--registry`: the shell strips them before
+          // npm reads it, so `--ignore-scripts="false"` is a false.
+          const ignoreValue = only?.[2]?.replace(/^["']|["']$/g, "");
+          const ignoresScripts =
+            only !== undefined &&
+            only[1] === undefined &&
+            (ignoreValue === undefined || !/^(?:false|0|no)$/i.test(ignoreValue));
+          if (!ignoresScripts) missing.push("--ignore-scripts");
+        }
         if (missing.length === 0) continue;
         findings.push({
           rule: "global-install-pin",
