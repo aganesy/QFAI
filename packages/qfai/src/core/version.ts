@@ -215,11 +215,22 @@ function isOutside(base: string, target: string): boolean {
  * statement but still a statement.
  */
 export async function findDeclaringDir(root: string): Promise<string | null> {
+  return (await findDeclaringManifest(root))?.dir ?? null;
+}
+
+/**
+ * The manifest {@link findDeclaringDir} stops at, with the directory it sits in.
+ * One walk and one parse serve both the directory and the range read off it.
+ */
+async function findDeclaringManifest(
+  root: string,
+): Promise<{ dir: string; range: unknown } | null> {
   let dir = path.resolve(root);
   for (let depth = 0; depth < 16; depth += 1) {
     try {
       const raw = await readFile(path.join(dir, "package.json"), "utf-8");
-      if (declaresQfai(JSON.parse(raw))) return await toRealPath(dir);
+      const declaration = qfaiDeclaration(JSON.parse(raw));
+      if (declaration !== null) return { dir: await toRealPath(dir), range: declaration.range };
     } catch {
       // Absent, unreadable, or not JSON: keep walking. A manifest that does not
       // declare the tool is not a stopping point either — a workspace package
@@ -232,21 +243,108 @@ export async function findDeclaringDir(root: string): Promise<string | null> {
   return null;
 }
 
-/** Whether `manifest` names {@link PACKAGE_NAME} in any dependency field. */
-function declaresQfai(manifest: unknown): boolean {
-  if (typeof manifest !== "object" || manifest === null) return false;
-  const fields = [
-    "dependencies",
-    "devDependencies",
-    "optionalDependencies",
-    "peerDependencies",
-  ] as const;
-  const record: Record<string, unknown> = manifest as Record<string, unknown>;
-  for (const field of fields) {
-    const deps = record[field];
-    if (typeof deps === "object" && deps !== null && PACKAGE_NAME in deps) return true;
+/**
+ * The range the nearest `package.json` declaring qfai gives it, or `null` when
+ * no manifest at or above `root` declares it with a text range.
+ *
+ * Read from the manifest {@link findDeclaringDir} stops at, so the range and the
+ * directory it is compared against are one declaration.
+ */
+export async function readDeclaredQfaiRange(root: string): Promise<string | null> {
+  const range = (await findDeclaringManifest(root))?.range;
+  return typeof range === "string" ? range : null;
+}
+
+/**
+ * `major.minor.patch` read off the front of a version or range, or `null`.
+ *
+ * SIMPLIFIED: a prerelease or build suffix is not read, so an installed
+ * `2.1.1-rc.1` is not older than `^2.1.1`, and `2.1.1abc` parses as `2.1.1`.
+ * Lift when: a project declares a prerelease range and needs it compared.
+ */
+function leadingTriple(text: string): [number, number, number] | null {
+  const match = /^(\d+)\.(\d+)\.(\d+)/.exec(text);
+  if (match === null) return null;
+  return [Number(match[1]), Number(match[2]), Number(match[3])];
+}
+
+/**
+ * The lowest version a dependency range admits, as `x.y.z`, or `null` when the
+ * range does not state one this reads.
+ *
+ * Only the forms a project writes for a pinned dependency are read: an exact
+ * version, and a caret, tilde or `>=` range, each optionally followed by more
+ * comparators (`>=2.1.1 <3`). A tag (`latest`), a wildcard (`2.x`), an
+ * alternative (`||`), a protocol (`workspace:`, `file:`, `github:`) and a
+ * partial version (`^2.1`) answer `null`, so nothing is compared against them.
+ */
+export function lowestVersionOfRange(range: string): string | null {
+  const first = range.trim().split(/\s+/)[0] ?? "";
+  if (range.includes("||")) return null;
+  const triple = leadingTriple(first.replace(/^(?:\^|~|>=|=|v)/, ""));
+  return triple === null ? null : triple.join(".");
+}
+
+/** Whether `version` is strictly older than `other`; `false` where either is unreadable. */
+export function isOlderVersion(version: string, other: string): boolean {
+  const a = leadingTriple(version);
+  const b = leadingTriple(other);
+  if (a === null || b === null) return false;
+  for (let index = 0; index < 3; index += 1) {
+    const left = a[index] ?? 0;
+    const right = b[index] ?? 0;
+    if (left !== right) return left < right;
   }
   return false;
+}
+
+/** An installed qfai that is older than the version the project declares. */
+export type InstalledOlderThanDeclared = {
+  readonly installed: string;
+  readonly declaredRange: string;
+  readonly declaredLowest: string;
+};
+
+/**
+ * Whether the running qfai is older than the lowest version this project's
+ * dependency declaration admits.
+ *
+ * The declaration is the only record of "the qfai this tree was written for"
+ * that a project keeps: the files `qfai init` writes carry no version. An
+ * installed copy below that floor is the state a lockfile that moved after the
+ * last install leaves, and every rule whose input is a generated file can then
+ * disagree with the tree for a reason that is not in the tree.
+ */
+export function compareInstalledToDeclared(
+  installed: string,
+  declaredRange: string | null,
+): InstalledOlderThanDeclared | null {
+  if (declaredRange === null) return null;
+  const lowest = lowestVersionOfRange(declaredRange);
+  if (lowest === null || !isOlderVersion(installed, lowest)) return null;
+  return { installed, declaredRange, declaredLowest: lowest };
+}
+
+const DEPENDENCY_FIELDS = [
+  "dependencies",
+  "devDependencies",
+  "optionalDependencies",
+  "peerDependencies",
+] as const;
+
+/**
+ * What `manifest` declares for {@link PACKAGE_NAME} in the first dependency field
+ * that names it, or `null` when no field does. `range` is the value as written.
+ */
+function qfaiDeclaration(manifest: unknown): { range: unknown } | null {
+  if (typeof manifest !== "object" || manifest === null) return null;
+  for (const field of DEPENDENCY_FIELDS) {
+    const deps: unknown = Reflect.get(manifest, field);
+    if (typeof deps === "object" && deps !== null && PACKAGE_NAME in deps) {
+      return { range: Reflect.get(deps, PACKAGE_NAME) };
+    }
+  }
+  return null;
 }
 
 /**
