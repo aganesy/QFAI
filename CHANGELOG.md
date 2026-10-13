@@ -11,7 +11,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   keeps a file there that differs from this release's copy now prints one line
   with the two counts, the kept `SKILL.md` and `STEP.md` owners, and the way to
   refresh them with `--force`. `qfai validate` otherwise reports the new file
-  under an unrelated code. Fixes #3545.
+  under an unrelated code. On Windows the first `.qfai` copy now leaves out the
+  assistant layers it is meant to exclude, so the layers are written once.
+  Fixes #3545 and #3677.
 
 - **`qfai validate` tells a reader which base the drift checks compared with.**
   A repository whose `baseBranch` has no merge base with HEAD now gets one

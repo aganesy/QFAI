@@ -344,7 +344,12 @@ export async function runInit(
         rulesCreated.skipped.map((dest) => path.relative(destRoot, dest)),
         { force: true, dryRun: options.dryRun },
       )
-    : { copied: [] as string[], skipped: [] as string[], refused: [] as string[] };
+    : {
+        copied: [] as string[],
+        skipped: [] as string[],
+        refused: [] as string[],
+        kept: [] as string[],
+      };
   rootResult.copied = [
     ...workflowResult.copied,
     ...rootResult.copied,
@@ -391,7 +396,12 @@ export async function runInit(
     exclude: ["spec", ...STANDARD_ASSET_PATHS],
   });
   const storyTreeResult = oldSpecLayout
-    ? { copied: [] as string[], skipped: [] as string[], refused: [] as string[] }
+    ? {
+        copied: [] as string[],
+        skipped: [] as string[],
+        refused: [] as string[],
+        kept: [] as string[],
+      }
     : await seedStoryTree(destRoot, qfaiAssets, options.dryRun);
   const skillsResult = await copyTemplatePaths(qfaiAssets, destQfai, [...STANDARD_ASSET_PATHS], {
     force: options.force,
@@ -494,8 +504,8 @@ export async function runInit(
     destRoot,
     options.force,
     options.dryRun,
-    [...qfaiResult.copied, ...skillsResult.copied],
-    [...(qfaiResult.kept ?? []), ...(skillsResult.kept ?? [])],
+    skillsResult.copied,
+    skillsResult.kept,
   );
   if (keptNote !== undefined) info(keptNote);
 
@@ -532,18 +542,9 @@ function keptAssistantNote(
   destRoot: string,
   force: boolean,
   dryRun: boolean,
-  allCopied: readonly string[],
-  allKept: readonly string[],
+  copied: readonly string[],
+  kept: readonly string[],
 ): string | undefined {
-  const assistantDir = path.join(destRoot, ASSISTANT_DIR);
-  const underAssistant = (file: string): boolean => {
-    const relative = path.relative(assistantDir, file);
-    return relative !== "" && !relative.startsWith("..") && !path.isAbsolute(relative);
-  };
-  // Two copies can both see a file: on Windows the first one's exclusion of the layers does not
-  // match, so the layers are reached twice.
-  const copied = [...new Set(allCopied.filter(underAssistant))];
-  const kept = [...new Set(allKept.filter(underAssistant))];
   if (force || copied.length === 0 || kept.length === 0) return undefined;
   const plural = (count: number): string => (count === 1 ? "file" : "files");
   const owners = kept
