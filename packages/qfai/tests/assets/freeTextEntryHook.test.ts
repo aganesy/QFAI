@@ -161,7 +161,9 @@ describe("the free-text entry reminder", () => {
       const context = contextOf(stdout);
       expect(context).toContain("names no skill, invoke the `qfai-run` skill");
       expect(context).toContain("A message that names a skill goes to that skill.");
-      expect(context).toContain("Read the skill rather than working from this line.");
+      expect(context).toContain(
+        "Read the skill once per session rather than working from this line.",
+      );
       expect(context).toContain("In a git worktree, read `.claude/skills/qfai-run/SKILL.md`");
       expect(context.length).toBeLessThan(1000);
     },

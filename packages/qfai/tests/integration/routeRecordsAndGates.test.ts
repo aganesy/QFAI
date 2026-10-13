@@ -2,14 +2,16 @@
  * What a route records and runs outside the discussion stage: no grilling
  * record, the gates once in verify, and the reviews its plan names.
  */
-import { readdir } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
+import { planOf } from "../../src/core/workflow/plan.js";
 import { defaultRoutingEntries } from "../helpers/shippedAssistant.js";
 import { readRule } from "../helpers/ruleWithReferences.js";
+import { minimalProject, removeProjects } from "./workflow/workflowProject.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const assistant = path.join(repoRoot, "packages/qfai/assets/init/.qfai/assistant");
@@ -107,5 +109,74 @@ describe("implement invoked by name validates its flow once", () => {
       "Invoked by name, it runs `npx qfai validate --profile tdd --fail-on error --flow BF-NNNN` once, at completion",
     );
     expect(skill).toContain("Inside a route it runs no validate: the verify stage does.");
+  });
+});
+
+describe("a step with no open design decision starts no griller", () => {
+  // QFAI:AC-0001-0223-06
+  afterEach(removeProjects);
+
+  const rule = async (): Promise<string> =>
+    flat(
+      await readFile(
+        path.join(repoRoot, "packages/qfai/assets/init/root/.agents/rules/grilling.md"),
+        "utf-8",
+      ),
+    );
+
+  /** The steps `npx qfai workflow plan --route <route>` runs, in order. */
+  async function plannedSteps(route: string): Promise<string[]> {
+    const document = await planOf(await minimalProject(), { route });
+    if (!document.ok || !("stages" in document)) throw new Error(`${route} does not plan`);
+    return document.stages.flatMap((stage) => stage.steps.map((step) => step.name));
+  }
+
+  /** The planned steps whose own text calls for a grilling session or a griller. */
+  async function grillingSteps(route: string): Promise<string[]> {
+    const steps = await plannedSteps(route);
+    expect(steps.length, route).toBeGreaterThan(0);
+    const texts = await Promise.all(
+      steps.map((step) => readFile(path.join(assistant, "step", step, "STEP.md"), "utf-8")),
+    );
+    return steps.filter((_, index) => /grill/i.test(texts[index] ?? ""));
+  }
+
+  // QFAI:EX-0001-0223-10
+  it("plans a merge with no step that starts a griller, and the rule holds no session for it", async () => {
+    expect(await grillingSteps("run-operation")).toEqual([]);
+    const text = await rule();
+    expect(text).toContain(
+      "**Most steps hold no session.** An operation such as a merge or a push,",
+    );
+    expect(text).toContain("Start no griller for them.");
+    expect(text).toContain(
+      "Decide from what is written, write no session record, and list nothing for the user.",
+    );
+  });
+
+  // QFAI:EX-0001-0223-11
+  it("plans a fix the story tree states with no step that starts a griller", async () => {
+    expect(await grillingSteps("fix-defect")).toEqual([]);
+    expect(await rule()).toContain(
+      "a fix whose expected behaviour the story tree already states have no open design decision.",
+    );
+  });
+
+  // QFAI:EX-0001-0223-12
+  it("still grills a design decision the repository cannot settle, and only a critical one reaches the user", async () => {
+    const steps = await plannedSteps("add-feature");
+    expect(steps[0]).toBe("sdd-triage");
+    const triage = flat(await read("step/sdd-triage/STEP.md"));
+    expect(triage).toContain("references/sdd-pre-draft-grilling.md");
+    const checkpoint = flat(await read("skill/qfai-sdd/references/sdd-pre-draft-grilling.md"));
+    expect(checkpoint).toContain(
+      "When the frontier holds a design decision the repository cannot settle, the agent settles the frontier in a delegated grilling session",
+    );
+    expect(checkpoint).toContain("It asks the user each critical decision the frontier holds.");
+    const text = await rule();
+    expect(text).toMatch(
+      /\| Delegated +\| Any other stage, when it meets a design decision the request needs and the repository cannot settle +\| The authors, interviewed by a griller +\| Critical decisions only +\|/,
+    );
+    expect(text).toContain("A critical decision met on the way still goes to the user.");
   });
 });
