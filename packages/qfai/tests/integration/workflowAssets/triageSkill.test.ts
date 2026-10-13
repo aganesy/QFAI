@@ -1,5 +1,5 @@
 /**
- * Integration: the `qfai-triage` stage skill `qfai init` ships and its ten steps — what the parent
+ * Integration: the `qfai-triage` stage skill `qfai init` ships and its eleven steps — what the parent
  * lists, what each step's front matter and routing entry carry, and what the shipped text says a
  * request that ends without a change leaves behind.
  */
@@ -31,6 +31,7 @@ const TRIAGE_STEPS = [
   "triage-security-intake",
   "triage-handoff",
   "triage-owned-cleanup",
+  "triage-operate",
 ];
 
 function step(name: string): Promise<string> {
@@ -45,7 +46,7 @@ describe("qfai-triage as a stage skill", () => {
   // QFAI:EX-0001-0211-45
   // QFAI:EX-0001-0211-46
   // QFAI:EX-0001-0220-49
-  it("lists the ten triage steps, closing last, and opens its description with its trigger", async () => {
+  it("lists the eleven triage steps, closing last, and opens its description with its trigger", async () => {
     const steps = await skillSteps("qfai-triage");
     expect([...steps].sort()).toEqual([...TRIAGE_STEPS].sort());
     expect(steps.at(-1)).toBe("triage-close");
@@ -264,11 +265,35 @@ describe("a question answered without a change", () => {
     );
   });
 
+  // QFAI:AC-0001-0214-04
+  // QFAI:EX-0001-0214-05
+  // QFAI:AC-0001-0220-06
+  // QFAI:EX-0001-0220-51
+  // QFAI:AC-0001-0215-02
+  // QFAI:EX-0001-0215-16
+  it("runs the named operation, changes no tracked file, and stops at needs-change for a tracked change", async () => {
+    const operate = await step("triage-operate");
+    const procedure = flat(sectionOf(operate, "## Procedure"));
+    expect(procedure).toMatch(/user's own instruction, or a project policy, names the\s*operation/);
+    expect(procedure).toMatch(
+      /needs a tracked file to change.*report the outcome `needs-change` with an extraction of the request as the change it needs, naming the artifacts that change, so the decision rules route it again/,
+    );
+    expect(procedure).toMatch(/Change nothing to make the operation pass/);
+    expect(procedure).toMatch(
+      /List each follow-up in the final report, since no close step follows/,
+    );
+    expect(flat(sectionOf(operate, "## What it writes"))).toMatch(/No file git tracks/);
+    expect(flat(sectionOf(operate, "## Gate"))).toMatch(/no tracked file changed/);
+    expect(flat(sectionOf(await readShipped(SKILL), "## Steps"))).toMatch(
+      /`triage-operate` +\| Runs the operation the user named on finished work/,
+    );
+  });
+
   // QFAI:AC-0001-0214-02
   // QFAI:EX-0001-0214-03
   it("records a documentation gap the answer shows as a follow-up, and plans nothing for it", async () => {
     expect(flat(sectionOf(await step("triage-answer"), "## Procedure"))).toMatch(
-      /such as an option the documentation never mentions, record it as a follow-up for `triage-close`\. Do not fix it here/,
+      /such as an option the documentation never mentions, record it as a follow-up for `triage-close`, or for the final report where no close step follows\. Do not fix it here/,
     );
     const close = await step("triage-close");
     const procedure = flat(sectionOf(close, "## Procedure"));
