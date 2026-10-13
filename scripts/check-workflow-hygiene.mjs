@@ -1312,21 +1312,154 @@ function shellCommandLines(body) {
   return out;
 }
 /**
- * The command segments of one command line: the text between `&&`, `||`, `;` and pipes.
+ * The expansion that starts at `at` in `text`, if one does: `${{ … }}`, `${ … }`, `$( … )`,
+ * `<( … )`, `>( … )`, a backtick pair, or a plain `$NAME`.
+ *
+ * Every span is read to its END, nesting and quotes included, so the callers can keep it whole: a
+ * space or an `&&` inside one is not a word or a command boundary. A span that never closes runs to
+ * the end of the text and reports `terminated: false`; callers treat that as an expansion they
+ * cannot read, never as plain text.
+ *
+ * @param {string} text the text being read
+ * @param {number} at where to look
+ * @returns {{end: number, terminated: boolean, inner?: string} | undefined} `end` is exclusive;
+ *   `inner` is the command text of a command or process substitution
+ */
+function expansionAt(text, at) {
+  const char = text.charAt(at);
+  const two = text.slice(at, at + 2);
+  if (text.startsWith("${{", at)) {
+    const close = text.indexOf("}}", at + 3);
+    return close === -1
+      ? { end: text.length, terminated: false }
+      : { end: close + 2, terminated: true };
+  }
+  if (two === "${") {
+    let depth = 1;
+    for (let i = at + 2; i < text.length; i += 1) {
+      const c = text.charAt(i);
+      if (c === "\\") i += 1;
+      else if (c === "{") depth += 1;
+      else if (c === "}") {
+        depth -= 1;
+        if (depth === 0) return { end: i + 1, terminated: true };
+      }
+    }
+    return { end: text.length, terminated: false };
+  }
+  if (two === "$(" || two === "<(" || two === ">(") {
+    let depth = 1;
+    for (let i = at + 2; i < text.length; i += 1) {
+      const c = text.charAt(i);
+      if (c === "\\") {
+        i += 1;
+      } else if (c === "'") {
+        const close = text.indexOf("'", i + 1);
+        if (close === -1) break;
+        i = close;
+      } else if (c === '"') {
+        for (i += 1; i < text.length && text.charAt(i) !== '"'; i += 1) {
+          if (text.charAt(i) === "\\") i += 1;
+        }
+      } else if (c === "(") {
+        depth += 1;
+      } else if (c === ")") {
+        depth -= 1;
+        if (depth === 0) return { end: i + 1, terminated: true, inner: text.slice(at + 2, i) };
+      }
+    }
+    return { end: text.length, terminated: false, inner: text.slice(at + 2) };
+  }
+  if (char === "`") {
+    for (let i = at + 1; i < text.length; i += 1) {
+      const c = text.charAt(i);
+      if (c === "\\") i += 1;
+      else if (c === "`") return { end: i + 1, terminated: true, inner: text.slice(at + 1, i) };
+    }
+    return { end: text.length, terminated: false, inner: text.slice(at + 1) };
+  }
+  if (char === "$") {
+    const name = /\$(?:[A-Za-z_][A-Za-z0-9_]*|[0-9@*#?!$-])/y;
+    name.lastIndex = at;
+    const match = name.exec(text);
+    if (match !== null) return { end: at + match[0].length, terminated: true };
+  }
+  return undefined;
+}
+
+/**
+ * Every command in one command line: the text between `&&`, `||`, `;`, `&` and pipes, and the
+ * commands inside the command substitutions, process substitutions and backticks of each.
  *
  * Flags belong to the command they sit in. Reading a whole line as one invocation let
  * `npm i -g --ignore-scripts --registry <trusted> a && npm i -g b` count the first install's flags
- * for the second. Splitting inside a quoted string can only lose flags and produce a finding,
- * which is the safe direction.
+ * for the second. An operator inside a quote or inside an expansion does not end a command, so
+ * `${{ a && b }}` stays whole; an install INSIDE `$( … )` is a command of its own and is returned
+ * as one, whatever surrounds it (`x=$(npm i -g …)`, `echo "$(npm i -g …)"`, `cat <(npm i -g …)`).
+ * Text inside single quotes is data and is not read as commands.
  *
  * @param {string} line one command line from `shellCommandLines`
  * @returns {string[]} the segments, trimmed, without empty ones
  */
 function commandSegments(line) {
-  return line
-    .split(/&&|\|\||[;|&]/)
-    .map((segment) => segment.trim())
-    .filter((segment) => segment !== "");
+  const out = [];
+  const visit = (text) => {
+    let current = "";
+    const flush = () => {
+      if (current.trim() !== "") out.push(current.trim());
+      current = "";
+    };
+    let at = 0;
+    while (at < text.length) {
+      const char = text.charAt(at);
+      if (char === "\\") {
+        current += text.slice(at, at + 2);
+        at += 2;
+      } else if (char === "'") {
+        const close = text.indexOf("'", at + 1);
+        const end = close === -1 ? text.length : close + 1;
+        current += text.slice(at, end);
+        at = end;
+      } else if (char === '"') {
+        let end = at + 1;
+        while (end < text.length && text.charAt(end) !== '"') {
+          if (text.charAt(end) === "\\") {
+            end += 2;
+            continue;
+          }
+          const expansion = expansionAt(text, end);
+          if (expansion === undefined) {
+            end += 1;
+            continue;
+          }
+          if (expansion.inner !== undefined) visit(expansion.inner);
+          end = expansion.end;
+        }
+        end = Math.min(end + 1, text.length);
+        current += text.slice(at, end);
+        at = end;
+      } else {
+        const expansion = expansionAt(text, at);
+        if (expansion !== undefined) {
+          if (expansion.inner !== undefined) visit(expansion.inner);
+          current += text.slice(at, expansion.end);
+          at = expansion.end;
+        } else if (text.startsWith("&&", at) || text.startsWith("||", at)) {
+          flush();
+          at += 2;
+        } else if (";|&".includes(char)) {
+          flush();
+          at += 1;
+        } else {
+          current += char;
+          at += 1;
+        }
+      }
+    }
+    flush();
+  };
+  visit(line);
+  return out;
 }
 
 /** A value with the quotes and backslashes the shell would remove taken off. */
@@ -1337,12 +1470,14 @@ function unquoted(value) {
 /**
  * The words of one command segment, split where the shell splits them.
  *
- * Whitespace inside a quoted string, behind a backslash, or inside a `${{ … }}` expression does
- * not end a word, so `"--ignore-scripts"=false` is one word and so is `corepack@${{ env.V }}`.
- * The words come back RAW, quotes included; `unquoted` turns one into what the program receives.
+ * Whitespace inside a quoted string, behind a backslash, or inside an expansion (`${{ … }}`,
+ * `${ … }`, `$( … )`, a backtick pair) does not end a word, so `"--ignore-scripts"=false` is one
+ * word and so are `corepack@${{ env.V }}` and `$(echo false)`. The words come back RAW, quotes
+ * included; `unquoted` turns one into what the program receives.
  *
- * Not a shell parser: a command substitution with spaces in it splits like plain words, which can
- * only lose flags and produce a finding — the safe direction.
+ * Not a shell parser. Where it cannot read a construct it keeps the text together as one word,
+ * which `couldExpandToBoolean` then treats as a value it cannot see; splitting it instead would
+ * hand the rest of the construct to the install as if it were a package name.
  *
  * @param {string} segment one command segment
  * @returns {string[]} the raw words
@@ -1354,14 +1489,9 @@ function shellWords(segment) {
   let quote = "";
   for (let at = 0; at < segment.length; at += 1) {
     const char = segment.charAt(at);
-    if (quote !== "") {
+    if (quote === "'") {
       current += char;
-      if (char === "\\" && quote === '"' && at + 1 < segment.length) {
-        at += 1;
-        current += segment.charAt(at);
-      } else if (char === quote) {
-        quote = "";
-      }
+      if (char === "'") quote = "";
       continue;
     }
     if (char === "\\" && at + 1 < segment.length) {
@@ -1370,18 +1500,26 @@ function shellWords(segment) {
       started = true;
       continue;
     }
-    if (char === "'" || char === '"') {
+    if (quote === '"' && char === '"') {
+      quote = "";
+      current += char;
+      continue;
+    }
+    if (quote === "" && (char === "'" || char === '"')) {
       quote = char;
       current += char;
       started = true;
       continue;
     }
-    if (segment.startsWith("${{", at)) {
-      const close = segment.indexOf("}}", at + 3);
-      const end = close === -1 ? segment.length : close + 2;
-      current += segment.slice(at, end);
+    const expansion = expansionAt(segment, at);
+    if (expansion !== undefined) {
+      current += segment.slice(at, expansion.end);
       started = true;
-      at = end - 1;
+      at = expansion.end - 1;
+      continue;
+    }
+    if (quote !== "") {
+      current += char;
       continue;
     }
     if (/\s/.test(char)) {
@@ -1433,17 +1571,42 @@ function isFalseValue(value) {
  * difference is what lets a pinned install be followed by an expression-bearing package argument
  * without the argument being read as the value of `--ignore-scripts`.
  *
+ * An expansion that never closes is one this lane cannot read, so it counts as one that could be a
+ * boolean. The literal pieces are compared directly (prefix, suffix, the rest in order) and never
+ * compiled into a pattern, so a long word costs time in proportion to its length.
+ *
  * @param {string} word an unquoted word
  * @returns {boolean} true when the word has an expansion and could equal a boolean value
  */
 function couldExpandToBoolean(word) {
-  const expansion = /\$\{\{[\s\S]*?\}\}|\$\{[^}]*\}|\$\([^)]*\)|\$[A-Za-z_][A-Za-z0-9_]*|`[^`]*`/g;
-  const parts = word.split(expansion);
-  if (parts.length === 1) return false;
-  const shape = new RegExp(
-    `^${parts.map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(".*")}$`,
-  );
-  return ["true", "false", "0", "1", "yes", "no"].some((value) => shape.test(value));
+  const literals = [""];
+  let unterminated = false;
+  for (let at = 0; at < word.length;) {
+    const expansion = expansionAt(word, at);
+    if (expansion === undefined) {
+      literals[literals.length - 1] += word.charAt(at);
+      at += 1;
+      continue;
+    }
+    if (!expansion.terminated) unterminated = true;
+    literals.push("");
+    at = expansion.end;
+  }
+  if (literals.length === 1) return false;
+  if (unterminated) return true;
+  const first = literals[0] ?? "";
+  const last = literals[literals.length - 1] ?? "";
+  return ["true", "false", "0", "1", "yes", "no"].some((value) => {
+    const end = value.length - last.length;
+    if (!value.startsWith(first) || !value.endsWith(last) || end < first.length) return false;
+    let from = first.length;
+    for (const middle of literals.slice(1, -1)) {
+      const found = value.indexOf(middle, from);
+      if (found === -1 || found + middle.length > end) return false;
+      from = found + middle.length;
+    }
+    return true;
+  });
 }
 
 /**

