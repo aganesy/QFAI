@@ -942,6 +942,53 @@ export function rootIsRefused(root, rel) {
 }
 
 /**
+ * Every FILE under `rel`, repo-relative and POSIX-separated, links refused.
+ *
+ * `yamlFilesUnder` answers only `.yml` and `.yaml`, and the local-action pin covers whatever the
+ * tree holds — an `index.js`, a shell helper, anything a composite action reads. Same refusals as
+ * that walk: a linked root or a linked entry is a door out of the tree and is not taken.
+ *
+ * Past `limit` entries the walk stops, and the result is a prefix of the tree. `truncated`
+ * receives `rel` when that happened, so the caller can report a partial inventory instead of
+ * comparing it as if it were whole: a file past the ceiling is otherwise never seen. A tree of
+ * exactly `limit` entries is whole and is not reported. The ceiling is a PARAMETER with the
+ * production value as its default, as it is for `yamlFilesUnder`, so a row can reach the boundary.
+ *
+ * @param {string} root repository root
+ * @param {string} rel directory to walk, repo-relative
+ * @param {number} [limit] entry ceiling
+ * @param {string[]} [truncated] receives `rel` when the walk stopped at its ceiling
+ * @returns {string[]} repo-relative POSIX paths
+ */
+export function filesUnder(root, rel, limit = MAX_WALKED_ENTRIES, truncated) {
+  const abs = path.join(root, rel);
+  let inspected;
+  try {
+    inspected = lstatSync(abs);
+  } catch {
+    return [];
+  }
+  if (inspected.isSymbolicLink() || !inspected.isDirectory()) return [];
+  const out = [];
+  let seen = 0;
+  const walk = (dir) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      if (seen >= limit) {
+        if (truncated !== undefined && !truncated.includes(rel)) truncated.push(rel);
+        return;
+      }
+      seen += 1;
+      const p = path.join(dir, e.name);
+      if (e.isSymbolicLink()) continue;
+      if (e.isDirectory()) walk(p);
+      else if (e.isFile()) out.push(path.relative(root, p).replace(/\\/g, "/"));
+    }
+  };
+  walk(abs);
+  return out;
+}
+
+/**
  * Every `*.yml` / `*.yaml` under a directory, recursively, repo-relative.
  *
  * The ROOT is `lstat`ed and refused unless it is a real directory, and no directory ENTRY is
@@ -972,41 +1019,6 @@ export function rootIsRefused(root, rel) {
  * caller pushes the root's name into `truncated` and turns it into a fatal finding beside its
  * other whole-tree checks.
  */
-/**
- * Every FILE under `rel`, repo-relative and POSIX-separated, links refused.
- *
- * `yamlFilesUnder` answers only `.yml` and `.yaml`, and the local-action pin covers whatever the
- * tree holds — an `index.js`, a shell helper, anything a composite action reads. Same refusals as
- * that walk: a linked root or a linked entry is a door out of the tree and is not taken.
- *
- * @param {string} root repository root
- * @param {string} rel directory to walk, repo-relative
- * @returns {string[]} repo-relative POSIX paths
- */
-function filesUnder(root, rel) {
-  const abs = path.join(root, rel);
-  let inspected;
-  try {
-    inspected = lstatSync(abs);
-  } catch {
-    return [];
-  }
-  if (inspected.isSymbolicLink() || !inspected.isDirectory()) return [];
-  const out = [];
-  let seen = 0;
-  const walk = (dir) => {
-    for (const e of readdirSync(dir, { withFileTypes: true })) {
-      if (seen >= MAX_WALKED_ENTRIES) return;
-      seen += 1;
-      const p = path.join(dir, e.name);
-      if (e.isSymbolicLink()) continue;
-      if (e.isDirectory()) walk(p);
-      else if (e.isFile()) out.push(path.relative(root, p).replace(/\\/g, "/"));
-    }
-  };
-  walk(abs);
-  return out;
-}
 export function yamlFilesUnder(root, rel, limit = MAX_WALKED_ENTRIES, truncated) {
   const abs = path.join(root, rel);
   let inspected;
@@ -1318,11 +1330,32 @@ function checkGlobalInstallPins(root, jobs) {
           }
         }
         // …and `--ignore-scripts=false` is the flag present and turned off.
-        const ignore = /--ignore-scripts(?:[=\s]+(\S+))?/.exec(line);
-        const ignoreValue = ignore?.[1];
-        const ignoresScripts =
-          ignore !== null && (ignoreValue === undefined || !/^(?:false|0|no)$/i.test(ignoreValue));
-        if (!ignoresScripts) missing.push("--ignore-scripts");
+        //
+        // EVERY occurrence here too: npm assigns a repeated boolean flag in order, so a later
+        // `--ignore-scripts=false` overrides an earlier `--ignore-scripts` and the lifecycle scripts
+        // run. Reading only the first would accept that command. A repeat is refused outright, as a
+        // repeated `--registry` is, rather than resolved to its last value.
+        // The value never starts with a dash, so a following flag is its own occurrence and not
+        // swallowed as the first one's value. `--no-ignore-scripts` is the same option spelled
+        // negated, and npm applies it in order like any other occurrence, so it counts too.
+        const ignores = [...line.matchAll(/--(no-)?ignore-scripts(?![\w-])(?:[=\s]+(?!-)(\S+))?/g)];
+        if (ignores.length > 1) {
+          missing.push(
+            `one --ignore-scripts (found ${String(ignores.length)}, and npm takes the last: ${ignores
+              .map((m) => JSON.stringify(m[0].trim()))
+              .join(", ")})`,
+          );
+        } else {
+          const only = ignores[0];
+          // Quotes come off the value as they do for `--registry`: the shell strips them before
+          // npm reads it, so `--ignore-scripts="false"` is a false.
+          const ignoreValue = only?.[2]?.replace(/^["']|["']$/g, "");
+          const ignoresScripts =
+            only !== undefined &&
+            only[1] === undefined &&
+            (ignoreValue === undefined || !/^(?:false|0|no)$/i.test(ignoreValue));
+          if (!ignoresScripts) missing.push("--ignore-scripts");
+        }
         if (missing.length === 0) continue;
         findings.push({
           rule: "global-install-pin",
@@ -2596,7 +2629,19 @@ function checkRequiredContexts(root, jobs) {
       // that never reached the runner.
       const present = new Set();
       for (const pinnedRoot of [ACTIONS_ROOT_REL, "scripts"]) {
-        for (const rel_ of filesUnder(root, pinnedRoot)) present.add(rel_);
+        const inventoryTruncated = [];
+        for (const rel_ of filesUnder(root, pinnedRoot, MAX_WALKED_ENTRIES, inventoryTruncated))
+          present.add(rel_);
+        if (inventoryTruncated.length > 0) {
+          // Reported, not resolved: the set below is a prefix, so an unregistered file past the
+          // ceiling is invisible to the comparison and the run cannot call the tree whole.
+          findings.push({
+            rule: "required-context",
+            file: pinnedRoot.replace(/\\/g, "/"),
+            job: declaredJob,
+            detail: `holds more than ${String(MAX_WALKED_ENTRIES)} entries, so this lane stopped walking the pinned-file inventory — a file past the ceiling is never compared with the pinned list, and an unregistered local action or script there would go unseen`,
+          });
+        }
       }
       for (const [rel_, digest] of Object.entries(pinnedActions)) {
         const bytes = readBoundedText(path.join(root, rel_), MAX_WORKFLOW_BYTES);
