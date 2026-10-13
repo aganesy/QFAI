@@ -1117,8 +1117,10 @@ const STATIC_RULE_SEVERITY: ReadonlyArray<{
   { keys: ["QFAI-TEST-003"], severity: "error" },
   // The story-tree structure validator uses a local wrapper with a fixed error
   // severity. The generated scanner sees its code-first calls but cannot read
-  // through the wrapper to prove that severity. Pin its error-only status so a
-  // quiet run cannot accept an unsafe waiver.
+  // through the wrapper to prove that severity. Pin the error severity so a
+  // quiet run cannot accept an unsafe waiver. `QFAI-STORY-005` also has one info
+  // note (examples not checked because a contract file loaded no rule); the pin
+  // stays at its error, the highest severity the code carries.
   ...[
     "QFAI-STORY-001",
     "QFAI-STORY-002",

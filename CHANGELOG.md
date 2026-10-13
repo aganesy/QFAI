@@ -201,6 +201,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- A contract file that raises an error and produces no rule no longer makes
+  `qfai validate` report every example as named by no rule. Before, one API
+  contract with a YAML error printed the parse error plus dozens of
+  `QFAI-STORY-005` errors on unrelated stories. The check for an uncited example
+  is now skipped while such a file exists, and one info finding names the file
+  and says the examples were not checked. The error for the file is reported as
+  before. Fixes #3665.
 - The `QFAI-LINK-001` warning for skill wrappers the operating system will not
   follow, over canonical documents that read fine, is now one finding with a
   one-line message and a one-line suggested action. Before, a Windows checkout

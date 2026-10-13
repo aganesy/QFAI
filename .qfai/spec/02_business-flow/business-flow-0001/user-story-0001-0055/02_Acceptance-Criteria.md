@@ -41,4 +41,11 @@ Feature: Example, criterion, and rule links
     When `qfai validate --profile sdd` runs
     Then its table is read with the columns BR-ID, Statement and Examples
     And a table with other columns is an error naming the contract file
+
+  # AC-0001-0055-07
+  Scenario: A contract file that loaded no rule does not turn the examples into errors
+    Given the story tree, and a contract file that raised an error and produced no rule
+    When `qfai validate --profile sdd` runs
+    Then no EX is reported as named by no rule
+    And an info finding names the file and says the EXs were not checked
 ```
