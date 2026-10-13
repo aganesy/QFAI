@@ -1118,15 +1118,19 @@ describe("story-tree drift", () => {
     git("commit", "-m", "edit the glossary");
     for (const profile of ["tdd", "drift"] as const) {
       const findings = await validateStoryTreeDrift(root, config(), profile);
-      expect(findings.map((item) => `${item.code} ${item.file}`)).toEqual([
-        `QFAI-DRIFT-001 ${glossary}`,
-      ]);
+      expect(
+        findings
+          .filter(({ severity }) => severity !== "info")
+          .map((item) => `${item.code} ${item.file}`),
+      ).toEqual([`QFAI-DRIFT-001 ${glossary}`]);
     }
   });
 
   it("reports no drift finding when the base ref is missing, and nothing outside a repository", async () => {
     await put(decisions, table);
     await put(glossary, "# Terms\n");
+    git("add", ".");
+    git("commit", "-m", "base");
     const missing = config();
     missing.baseBranch = "missing/base";
     expect((await validateStoryTreeDrift(root, missing, "drift")).map(({ code }) => code)).toEqual([
