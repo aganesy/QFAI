@@ -45,6 +45,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The reviewer count follows what the change touched.** Each review of a
+  route takes one reviewer for its kind. `architecture-reviewer` joins only
+  for a contract change, and `product-surface-reviewer` only for a screen
+  change, that no earlier review read. A review whose target only resolves
+  the conflicts of a merge or branch update between already-reviewed sides
+  gets no reviewer.
+  Fixes #3578.
+
 - **Generated Codex reviewer agents run at medium reasoning effort.** `qfai init` now writes
   `model_reasoning_effort = "medium"` into each `.codex/agents/<name>.toml` of `kind: reviewer`,
   beside `sandbox_mode = "read-only"`. Codex lets a value in an agent file take precedence over the
