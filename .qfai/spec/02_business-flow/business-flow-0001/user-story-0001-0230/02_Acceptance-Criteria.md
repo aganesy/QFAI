@@ -45,4 +45,11 @@ Feature: Purposeful copy in a screen's UI contract
     Then the SDD contract step, the UI definition protocol, the implementation guidance and the reviewer instructions each name `supplements` and `structure` as the input to read
     And the design anti-patterns carry the three meaning patterns apart from the brand patterns, and the prototype reviewer applies them
     And a word or character count is never a verdict
+
+  # AC-0001-0230-07
+  Scenario: The guide says which key holds each rendered text and when structure is required
+    Given a project initialised by `qfai init`
+    When an author reads the shipped UI contract guide for a screen that renders several headings, an eyebrow line, a caption or a table
+    Then the guide says `structure` is optional only for a screen that shows no heading beyond its title
+    And a table maps each kind of rendered text to the one key that holds it
 ```

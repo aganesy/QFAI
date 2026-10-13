@@ -185,6 +185,33 @@ describe.each(TREES)("%s: the guidance that reads the copy keys", (tree) => {
   });
 });
 
+// QFAI:AC-0001-0230-07
+describe.each(TREES)("%s: the guide's placement of rendered text", (tree) => {
+  // QFAI:EX-0001-0230-13
+  it("makes structure optional only without a heading beyond the title, and maps each kind of text to its key", async () => {
+    const guide = flat(await read(tree, GUIDE));
+    expect(guide).toContain("`structure` is optional only for a screen that shows no heading");
+    expect(guide).toContain("a screen with several `h2` headings writes `structure`");
+    expect(guide).not.toContain("Keep `structure` out until a group heading is wanted");
+
+    const start = guide.indexOf("### Which key holds which text");
+    expect(start).toBeGreaterThan(0);
+    const section = guide.slice(start, guide.indexOf("### A worked example"));
+    for (const kind of [
+      "The one page heading",
+      "A heading over a group",
+      "eyebrow, kicker",
+      "A figure caption",
+      "A table column header",
+      "Link text",
+      "An item of a list",
+      "Product or site-identity text",
+    ]) {
+      expect(section, kind).toContain(kind);
+    }
+  });
+});
+
 describe("a project with no UI contract", () => {
   it("acquires no copy obligation", async () => {
     const apiDir = path.join(root, ".qfai", "spec", "03_contract", "api");
