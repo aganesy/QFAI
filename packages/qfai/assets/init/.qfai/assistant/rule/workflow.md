@@ -132,7 +132,8 @@ from the skills and baselines that cite it.
 ### Policy check (mandatory)
 
 Once per run, at the start, before the first stage. A stage invoked by name on
-its own is a run of its own.
+its own is a run of its own. The ultra-light routes `answer-in-session` and
+`run-operation`, each one step that changes no tracked file, run without it.
 
 1. Check the current story-tree policy files under `<paths.specsDir>`:
    - `01_policy/objective.md` and `01_policy/initiative.md`
