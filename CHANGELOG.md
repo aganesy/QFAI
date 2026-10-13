@@ -48,6 +48,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Hook reminders no longer send the agent back to the rule file each time they
+  fire. The brief form says what to do, and the full form asks for a rule to be
+  read once per session. Fixes #3576.
+
 - **An ordinary turn end no longer costs an extra model call for the session
   review.** `qfai init` no longer ships the `Stop` group marked
   `QFAI session feedback reminder` in `.claude/settings.json` and

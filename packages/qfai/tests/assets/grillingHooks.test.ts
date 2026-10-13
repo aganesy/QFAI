@@ -126,7 +126,7 @@ describe("the grilling reminder fires where a decision gets made quietly", () =>
       const payload = await printed(rel, preToolUse(settings, matcher));
       expect(payload, `${matcher} does not name the master`).toContain(".agents/rules/grilling.md");
       expect(payload, `${matcher} invites working from the line`).toContain(
-        "Read the rule rather than working from this line.",
+        "Read the rule once per session rather than working from this line.",
       );
       // Who answers is the one thing the reminder carries: the moment it fires
       // is when an agent decides whether to stop for the user, and asking the
