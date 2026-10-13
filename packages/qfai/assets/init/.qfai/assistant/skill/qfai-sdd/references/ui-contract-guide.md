@@ -196,11 +196,43 @@ The groups the screen is read in, in reading order. Each is an entry with exactl
 | `heading` | the displayed heading; leave the key out when the group shows none |
 
 An id belongs to one group, and an element or action may be left out of every
-group. Without `structure` the screen shows no heading beyond its `title`, so a
-heading that appears on the rendered screen has a group here. A group heading is
+group. `structure` is optional only for a screen that shows no heading beyond its
+`title`. A screen that shows any other heading, at any level, has one group with a
+`heading` for each, so a screen with several `h2` headings writes `structure`.
+Leaving the key out says the screen shows no such heading; it never says the
+screen may show one without a group. A group needs a task and a member, so the
+heading must head something the user reads or acts on: declare the table or list
+that shows data as an element, and the group holds it. A heading over prose or
+supplements alone has neither a task nor a member, and does not belong on the
+screen. `npx qfai validate` does not check this, so the
+reviewer compares the rendered headings with the groups. A group heading is
 not the screen title: a second heading above or beside the real one repeats it.
 A group that serves no task does not belong on the screen; name the task it
 enables, or leave the heading and the group out.
+
+### Which key holds which text
+
+Every text the screen shows has one home. The table applies the definitions above
+to the text authors and reviewers most often disagree about:
+
+| Rendered text                                              | Home                                                                                            |
+| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| The one page heading (`h1`)                                | `title`                                                                                         |
+| A heading over a group of elements or actions (`h2`, `h3`) | `structure[].heading` of that group                                                             |
+| A small line above or beside a heading (eyebrow, kicker)   | a supplement with `near` set to the group; it is not a heading and not a label                  |
+| The text of a field, button or other control               | `label` of that element or action                                                               |
+| Link text                                                  | `label` of a `navigate` action                                                                  |
+| A table column header                                      | recommended: `label` of an element declared for that column, as elements are the display fields |
+| A figure caption                                           | a supplement with `near` set to the element it describes                                        |
+| An item of a list the product writes (a fixed checklist)   | a supplement                                                                                    |
+| An item of a list made of data the product shows           | outside the contract: data is not copy the contract authors                                     |
+| Product or site-identity text (a name, a tagline)          | `label` when it is a link or control, otherwise a supplement                                    |
+| The message of a field rule                                | `validations` of that element                                                                   |
+
+Nothing is outside the contract merely because it repeats across screens. Text that
+repeats on every screen is listed on each, and when no `why` that names a decision
+can be written for it, the text is a candidate for removal from the screen rather
+than a reason to leave it unlisted.
 
 ### A worked example
 
@@ -241,8 +273,8 @@ only.
 
 A contract written before these keys was valid without them. Add
 `supplements` to each screen: `supplements: []` is the answer for a screen that
-shows nothing beyond its title and labels. Keep `structure` out until a group
-heading is wanted.
+shows nothing beyond its title and labels. Keep `structure` out while the screen
+shows no heading beyond its title; the first such heading needs its group.
 
 Two contracts that state the same screen `id` each hold their own `supplements`
 and `structure`; the project-wide screen list compares `title`, `route` and
