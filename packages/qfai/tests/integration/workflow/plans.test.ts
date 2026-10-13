@@ -321,6 +321,15 @@ it("A split verify block, and an answer-question whose last stage answers", asyn
 });
 
 // QFAI:EX-0001-0218-04
+it("A one-step ending belongs to its own route", async () => {
+  expect(
+    await refusalsOf("close-no-change", (text) =>
+      text.replace("steps: [triage-close]", "steps: [triage-answer]"),
+    ),
+  ).toEqual([{ reason: "terminal", subject: "close" }]);
+});
+
+// QFAI:EX-0001-0218-04
 it("A verify block without verify-commit, and one that commits before the gates", async () => {
   const block = "steps: [verify-qfai-gate, verify-repo-gate, verify-commit]";
   expect({
