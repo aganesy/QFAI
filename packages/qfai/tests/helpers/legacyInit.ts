@@ -5,7 +5,7 @@ import { GRAPH_VERSIONS } from "../../src/core/graph/layout.js";
 import { graphProcessFixture } from "./graphProcess.js";
 
 // Legacy init suites exercise QFAI behavior with only acquisition/version ports replaced.
-// Native installation and managed graph acceptance retain the production process port.
+// Native provisioning proof is separate; managed acceptance uses dedicated process fixtures.
 export function createLegacyGraphProcess(actual: GraphProcess = runGraphProcess): GraphProcess {
   return async (command, args, options) => {
     if (command === "git") return actual(command, args, options);

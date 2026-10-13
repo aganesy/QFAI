@@ -185,6 +185,7 @@ it("denies AI fallback reuse outside its exact operation path worktree or sessio
       { ...event, tool_input: { command: "rg auth packages/; grep -R policy docs/" } },
       { ...event, tool_input: { command: "cd ../other-worktree; rg auth packages/" } },
       { ...event, tool_input: { command: "command cd ../other-worktree; rg auth packages/" } },
+      { ...event, tool_input: { command: "builtin cd ../other-worktree; rg auth packages/" } },
       {
         ...event,
         tool_input: { command: "QFAI_TEST=value cd ../other-worktree; rg auth packages/" },

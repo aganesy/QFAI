@@ -5,13 +5,14 @@ import path from "node:path";
 import { expect, it, vi } from "vitest";
 import { runInit } from "../../src/cli/commands/init.js";
 import { readKnownGraphFile } from "../../src/core/graph/query.js";
+import { graphReuseEnvironment } from "../../src/core/graph/reuse.js";
 import { completedDocumentSnapshotFixture } from "../helpers/graphReuse.js";
 import { graphProcessFixture } from "../helpers/graphProcess.js";
 import { graphCliResult, installedGraphHookResult } from "../helpers/graphCli.js";
 import { captureStdout } from "../helpers/stdout.js";
 
 it("initializes managed graph tools and completes graph-first exploration with an AI-decided fallback", async () => {
-  const fixture = await completedDocumentSnapshotFixture();
+  const fixture = await completedDocumentSnapshotFixture(graphReuseEnvironment());
   const runtime = graphProcessFixture();
   let now = 1000;
   const clock = vi.spyOn(Date, "now").mockImplementation(() => now);

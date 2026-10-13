@@ -148,7 +148,7 @@ function requiredFileFailure(thrown: unknown): boolean {
       isFileSystemError(current) &&
       "syscall" in current &&
       typeof current.syscall === "string" &&
-      /^(?:access|open|read|write|stat|lstat|realpath|mkdir|readdir|copyfile|rename|unlink|rmdir|symlink|readlink)/.test(
+      /^(?:access|open|read|write|stat|lstat|realpath|mkdir|readdir|scandir|copyfile|rename|unlink|rmdir|symlink|readlink)/.test(
         current.syscall,
       )
     )

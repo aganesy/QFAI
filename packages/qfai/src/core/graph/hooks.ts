@@ -85,7 +85,7 @@ function changesGraphDirectory(words: string[]): boolean {
       offset += 1;
       continue;
     }
-    if (words[offset]?.toLowerCase() !== "command") break;
+    if (!["command", "builtin", "env"].includes(words[offset]?.toLowerCase() ?? "")) break;
     offset += 1;
     if (words[offset] === "-v" || words[offset] === "-V") return false;
     while (words[offset]?.startsWith("-")) offset += 1;
@@ -101,12 +101,15 @@ function classifyCommand(
   depth = 0,
 ): GraphHookDecision | undefined {
   if (depth > 16) return failedGraphHook();
+  let offset = 0;
+  while (/^[A-Za-z_][A-Za-z0-9_]*=/.test(words[offset] ?? "")) offset += 1;
+  if (offset > 0) return classifyCommand(words.slice(offset), authorize, depth + 1);
   const operation = words[0]
     ?.split(/[\\/]/)
     .at(-1)
     ?.replace(/\.exe$/i, "")
     .toLowerCase();
-  if (operation === "env" || operation === "command") {
+  if (operation === "env" || operation === "command" || operation === "builtin") {
     let offset = 1;
     while (words[offset]?.startsWith("-") || /^[A-Za-z_][A-Za-z0-9_]*=/.test(words[offset] ?? "")) {
       offset += 1;

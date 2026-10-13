@@ -11,10 +11,11 @@ import { graphReuseEnvironment } from "../../src/core/graph/reuse.js";
 import type { GraphProcess } from "../../src/core/graph/process.js";
 import { prepareDocumentAnalysis } from "../../src/core/graph/documents.js";
 
-export async function completedDocumentSnapshotFixture() {
+export async function completedDocumentSnapshotFixture(
+  environment = { ...graphReuseEnvironment(), platform: "win32", architecture: "x64" },
+) {
   const fixture = await documentAnalysisFixture();
   const common = await mkdtemp(path.join(os.tmpdir(), "qfai-document-acceptance-cache-"));
-  const environment = { ...graphReuseEnvironment(), platform: "win32", architecture: "x64" };
   const native = graphifyExtractionFixture(fixture);
   const observed: string[][] = [];
   const run: GraphProcess = async (command, args, options) => {

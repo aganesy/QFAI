@@ -311,6 +311,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   unnecessary. The steps record their proof and reason without claiming runs
   they did not perform; races, uncertainty and quarantine still require runs.
 
+- Graph hook composition retains unreadable or malformed optional host settings
+  and reports recovery without stopping the rest of init.
+
+- Validation reports a canonical directory replaced by a file on Windows
+  before profile scans run, preserving integration and security findings.
+
+- Repository bootstrap rejects a file in place of a dependency directory's
+  parent on Windows before starting pnpm.
+
 ## [2.1.2] - 2026-10-11
 
 ### Added
@@ -676,14 +685,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   constitution's Article V. Part of #2951.
 
 ### Fixed
-
-- Graph hook composition retains unreadable or malformed optional host settings
-  and reports recovery without stopping the rest of init.
-
-- Validation reports a canonical directory replaced by a file on Windows
-  before profile scans run, preserving integration and security findings.
-- Repository bootstrap rejects a file in place of a dependency directory's
-  parent on Windows before starting pnpm.
 
 - Include authorized temporary-directory cleanup in the workflow candidate purpose.
   Fixes #3455.

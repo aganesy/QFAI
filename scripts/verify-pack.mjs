@@ -14,7 +14,7 @@ import {
 } from "node:fs";
 import path from "node:path";
 import process from "node:process";
-import { fileURLToPath, URL } from "node:url";
+import { fileURLToPath, pathToFileURL, URL } from "node:url";
 
 import {
   BASELINE_PATH,
@@ -214,7 +214,12 @@ removePackTree(outputDir);
 mkdirSync(outputDir, { recursive: true });
 
 const cliPath = path.join(sandboxDir, "node_modules", "qfai", "dist", "cli", "index.mjs");
-execFileSync("node", [cliPath, "init", "--dir", outputDir], {
+// Package checks run the installed CLI; acquisition uses the same strict fixture as legacy init.
+// Native graph installation is verified separately from these distribution checks.
+const initPreload = pathToFileURL(
+  path.join(pkgDir, "tests", "helpers", "legacyInitProcess.mjs"),
+).href;
+execFileSync("node", ["--import", initPreload, cliPath, "init", "--dir", outputDir], {
   stdio: "inherit",
 });
 
@@ -683,7 +688,7 @@ writeFileSync(
   ) + "\n",
 );
 
-execFileSync("node", [cliPath, "init", "--dir", outputDir, "--force"], {
+execFileSync("node", ["--import", initPreload, cliPath, "init", "--dir", outputDir, "--force"], {
   stdio: "inherit",
 });
 

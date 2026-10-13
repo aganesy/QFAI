@@ -126,6 +126,9 @@ it("denies separate exploration following a quality command", () => {
 // Mutation: packages/qfai/src/core/graph/hooks.ts `function denyExploration(operation: string, target: string): GraphHookDecision {` -> `function denyExploration(operation: string, target: string): GraphHookDecision { return { decision: "allow", state: "configured", operation, target, message: "Exploration allowed." };` fails "denies direct exploration inside supported command wrappers"
 it("denies direct exploration inside supported command wrappers", () => {
   const commands = [
+    "LC_ALL=C grep -R policy .qfai/spec",
+    "LC_ALL=C LANG=C command grep -R policy .qfai/spec",
+    "builtin grep -R policy .qfai/spec",
     "env LC_ALL=C grep -R policy .qfai/spec",
     "command grep -R policy .qfai/spec",
     "bash -lc 'grep -R policy .qfai/spec'",

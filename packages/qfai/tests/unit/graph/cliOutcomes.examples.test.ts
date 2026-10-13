@@ -1,11 +1,31 @@
 import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
+import * as initCommand from "../../../src/cli/commands/init.js";
 import { run } from "../../../src/cli/main.js";
 import { captureStdout } from "../../helpers/stdout.js";
 import { runInit } from "../../../src/cli/commands/init.js";
 import { graphProcessFixture } from "../../helpers/graphProcess.js";
+
+// QFAI:EX-0001-0237-16
+it("classifies the native scandir failure as required-file IO", async () => {
+  const failure = Object.assign(new Error("ENOTDIR: not a directory, scandir"), {
+    code: "ENOTDIR",
+    syscall: "scandir",
+    path: "destination.txt/.qfai/spec",
+  });
+  const initialize = vi.spyOn(initCommand, "runInit").mockRejectedValue(failure);
+  const previousExit = process.exitCode;
+  try {
+    process.exitCode = undefined;
+    await expect(captureStdout(() => run(["init"], process.cwd()))).resolves.toBeTypeOf("string");
+    expect(process.exitCode).toBe(64);
+  } finally {
+    initialize.mockRestore();
+    process.exitCode = previousExit;
+  }
+});
 
 // QFAI:EX-0001-0237-16
 // Mutation: packages/qfai/src/cli/main.ts `isFileSystemError(current) &&` -> `false &&` fails "returns the required-file IO exit code when the destination is a file"

@@ -1,1 +1,0 @@
-../../.agents/rules/graph-exploration.md
