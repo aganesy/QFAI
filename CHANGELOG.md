@@ -54,6 +54,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`qfai-run` states the form of an approval row.** Step 7 points to the
+  header of the decisions template, which sets out the four items of the
+  Approach cell, and says a row names no pull request or issue number. The
+  template gains an example of a release approval's cells. Refs #3551.
+
 - **The shipped rules name `AGENTS.md` as the only entry file.** The wording
   in `documentation-clarity.md` and `untrusted-content.md` no longer mentions
   `CLAUDE.md`, which `qfai init` stopped writing.

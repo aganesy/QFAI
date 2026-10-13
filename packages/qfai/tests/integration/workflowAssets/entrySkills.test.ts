@@ -773,6 +773,12 @@ describe("qfai-run", () => {
       /each approval of a specification change, a critical decision or a release is one `decisions\.md` row: what was approved, who approved it, when, and the chosen option's label/i,
     );
     expect(work).toMatch(/a decision you took appends no row/i);
+    expect(work).toMatch(
+      /in the form the header of `\.qfai\/assistant\/skill\/qfai-sdd\/templates\/spec\/decisions\.md` sets out, and name no pull request or issue number in it/i,
+    );
+    const template = flat(await readShipped("skill/qfai-sdd/templates/spec/decisions.md"));
+    expect(template).toMatch(/a row names no pull request or issue number/i);
+    expect(template).toMatch(/a release approval, .* has this content cell and approach cell/i);
     expect(release).toMatch(/which authorizes no push, merge, tag or publication/i);
     expect(release).toMatch(
       /`qfai-run`.*\b(?:records|writes)\b.*`decisions\.md`.*\bbefore\b.*`triage-handoff`/i,
