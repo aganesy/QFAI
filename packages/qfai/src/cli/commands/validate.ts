@@ -1160,6 +1160,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Upstream SSOT files are unchanged relative to the base branch, or the change carries an approved Change Request.",
   "QFAI-DRIFT-002":
     "An example whose row changed since the base branch has a test annotating it that changed too.",
+  "QFAI-DRIFT-004":
+    "A protected story-tree file is committed before the drift checks run on it; an uncommitted edit is not compared with the base branch.",
   "QFAI-DRIFT-003":
     "The base branch resolves to a merge base with HEAD, so the drift checks compare against it; the drift profile names the commit it compared with.",
   "QFAI-RESEARCH-013":
@@ -1357,7 +1359,9 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   "QFAI-CONTRACT-034":
     "Correct the named contract's ID, file name or index row, give a contract that shares a number the next free one, or remove a row that names no contract file, then rerun validate.",
   "QFAI-DRIFT-001":
-    "Restore the protected file or record an in-force change request authorizing the named change.",
+    "Restore the protected file, or record an in-force change request that names it before the change is committed: an uncommitted edit is not compared.",
+  "QFAI-DRIFT-004":
+    "Commit the change together with the change request row that names it, then rerun validate.",
   "QFAI-DRIFT-002":
     "Update the tests annotating the named example to its new row, or confirm they already assert it.",
   "QFAI-DRIFT-003":

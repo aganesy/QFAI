@@ -6,6 +6,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`qfai validate` says when the drift checks do not cover an uncommitted edit.**
+  A protected story-tree file that is edited or added in the working tree and
+  not committed is outside the `<base>...HEAD` comparison, so the `tdd` and
+  `drift` profiles passed on it and failed only once it was committed. They now
+  raise a `QFAI-DRIFT-004` warning that names the uncommitted paths, and the
+  fix text of `QFAI-DRIFT-001` says the change request row is needed before the
+  commit. Fixes #3546.
+
 - **`qfai init` says when it kept an assistant file that a new file depends on.**
   A run without `--force` that writes a new file under `.qfai/assistant/` and
   keeps a file there that differs from this release's copy now prints one line
@@ -126,6 +134,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reason why the failing state is deterministic, instead of "fails on every
   run". Refs #3676 and #3678.
 
+- **The prototyping preflight says what `qfai doctor` probes at the target URL.**
+  `prototyping-preflight` now states that doctor sends one `GET` to exactly the
+  URL it is given, accepts a status from 200 to 399, and does not follow a
+  redirect. A static server with no `index.html` at its root can answer 404 on
+  `/`, so the step tells the reader to pass a URL that answers 200.
+  Doctor itself is unchanged. Fixes #3667.
+
 - **A verify gate that fails the same way on the base commit records why.**
   The `reason` of such a gate in `verify.json` names the failing test
   identifiers and the environment, the stage report adds the base result and
@@ -195,6 +210,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- The `QFAI-LINK-001` warning for skill wrappers the operating system will not
+  follow, over canonical documents that read fine, is now one finding with a
+  one-line message and a one-line suggested action. Before, a Windows checkout
+  printed about 2 KB of it on every `qfai validate` run, which buried the counts
+  line. The message gives the count, the first path and how many more there are;
+  the finding still lists every path in its references, and its severity is
+  unchanged. Fixes #3652. Refs #3469: the single-line half only; a repair by
+  `validate` or a lower severity is not part of this change.
 - The shipped `qfai-tests.yml` fails closed on an unreadable `package.json`. A
   manifest that is not valid JSON or not an object, a `scripts` field that is
   not an object, a layer-named script that is not a string, and a malformed
