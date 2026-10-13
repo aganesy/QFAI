@@ -67,6 +67,7 @@ export const QUALIFIERS = [
   "visual-open",
   "prototype-requested",
   "owned-temporary-cleanup",
+  "session-answerable",
 ] as const;
 
 export const SIGNALS = [
