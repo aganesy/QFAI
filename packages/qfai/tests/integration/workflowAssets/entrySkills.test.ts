@@ -774,7 +774,7 @@ describe("qfai-run", () => {
     );
     expect(work).toMatch(/a decision you took appends no row/i);
     expect(work).toMatch(
-      /in the form the header of `\.qfai\/assistant\/skill\/qfai-sdd\/templates\/spec\/decisions\.md` sets out, and name no pull request or issue number in it/i,
+      /use the `qfai-sdd` decisions template's form; name no pull request or issue number/i,
     );
     const template = flat(await readShipped("skill/qfai-sdd/templates/spec/decisions.md"));
     expect(template).toMatch(/a row names no pull request or issue number/i);
