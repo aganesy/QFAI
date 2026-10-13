@@ -126,6 +126,36 @@ it("Every question is answered", async () => {
   ).toEqual(["answer-question", "answer-question", "answer-question", "answer-question"]);
 });
 
+// QFAI:EX-0001-0211-49
+it("A question the session can answer takes the one-step answer route", async () => {
+  expect([
+    await decided({ intent: "question-how", qualifiers: ["session-answerable"], artifacts: [] }),
+    await decided({ intent: "question-why", qualifiers: ["session-answerable"], artifacts: [] }),
+    await decided({
+      intent: "question-help",
+      qualifiers: ["session-answerable", "docs-answerable"],
+      artifacts: [],
+    }),
+  ]).toEqual([
+    ["answer-in-session", 8],
+    ["answer-in-session", 8],
+    ["answer-in-session", 8],
+  ]);
+});
+
+// QFAI:EX-0001-0211-50
+it("An order that names nothing to change carries out an operation", async () => {
+  expect([
+    await decided({ intent: "order", artifacts: [] }),
+    await decided({ intent: "order", artifacts: ["spec"] }),
+    await decided({ intent: "order", qualifiers: ["human-run"], artifacts: [] }),
+  ]).toEqual([
+    ["run-operation", 15],
+    ["apply-settled", 15],
+    ["hand-off-operation", 14],
+  ]);
+});
+
 // QFAI:EX-0001-0211-13
 // QFAI:EX-0001-0211-14
 // QFAI:EX-0001-0211-15

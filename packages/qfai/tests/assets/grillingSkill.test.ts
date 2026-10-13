@@ -5,11 +5,6 @@
  * asks questions nothing can answer yet, without the fact/decision split the
  * round spends the user's attention on what the repository already states, and
  * without the end condition the whole skill is advice.
- *
- * The skill states the method rather than citing the cross-AI rule master that
- * also states it. `qfai init` does not write that master into an adopter's tree,
- * so a citation would resolve to nothing there — which is what the pointer case
- * below measures rather than assumes.
  */
 
 import { readFile, stat } from "node:fs/promises";
@@ -17,6 +12,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
+
+import { isEnoent } from "../../src/core/fs/errno.js";
 
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
@@ -27,6 +24,19 @@ const ENTRY = "assistant/skill/qfai-grill/SKILL.md";
 const readSkill = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
 const read = (tree: string): Promise<string> => readSkill(tree, SKILL);
+
+/**
+ * Whether `target` is a regular file. Only a missing path counts as absent; EACCES, EIO and the
+ * like reject, so they cannot pass for a cited path that does not exist.
+ */
+const isFile = async (target: string): Promise<boolean> => {
+  try {
+    return (await stat(target)).isFile();
+  } catch (error: unknown) {
+    if (isEnoent(error)) return false;
+    throw error;
+  }
+};
 
 /** The front matter block, which is where a host reads a skill's offer from. */
 const frontMatter = (raw: string): string => raw.slice(0, raw.indexOf("\n---", 4));
@@ -125,9 +135,7 @@ describe("the grilling primitive", () => {
     });
 
     it(`${tree}: every tree path it cites exists in that tree`, async () => {
-      // The body states the method instead of citing the rule master precisely
-      // so that an adopter reads no dead pointer. That only holds while the
-      // pointers it does carry resolve.
+      // An adopter must be able to open every tree path the body cites.
       const raw = await read(tree);
       // The group is optional to the type checker even though the pattern
       // cannot match without it, so narrow rather than assert.
@@ -141,8 +149,7 @@ describe("the grilling primitive", () => {
         // Read against the tree under test: the shipped copy resolves inside
         // `assets/init/.qfai`, the mirror inside the repository's own `.qfai`.
         const target = path.join(repoRoot, tree, rel.replace(/^\.qfai\//, ""));
-        const stats = await stat(target).catch(() => null);
-        if (stats?.isFile() !== true) missing.push(rel);
+        if (!(await isFile(target))) missing.push(rel);
       }
       expect(missing, "cited path that does not exist in this tree").toEqual([]);
     });
@@ -215,8 +222,7 @@ describe("the grill entry point", () => {
       const missing: string[] = [];
       for (const rel of [...new Set(cited)]) {
         const target = path.join(repoRoot, tree, rel.replace(/^\.qfai\//, ""));
-        const stats = await stat(target).catch(() => null);
-        if (stats?.isFile() !== true) missing.push(rel);
+        if (!(await isFile(target))) missing.push(rel);
       }
       expect(missing, "cited path that does not exist in this tree").toEqual([]);
     });

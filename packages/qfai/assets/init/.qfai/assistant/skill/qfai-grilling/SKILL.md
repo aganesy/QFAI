@@ -24,13 +24,15 @@ shared, closes the asking, or stops the session, a delegated session adopts the
 griller's recommendations, or a run that may not ask writes every node left
 where its stage's gate reads it.
 
-**Which kind of session runs is the invoking stage's to say.** A stage whose
-work is the interview holds a user session; every other stage holds a delegated
-one, where a griller interviews the authors and the user is asked only a
-critical decision (`.agents/rules/grilling.md` § Two kinds of session). A stage
-that says nothing holds a delegated session. Read
+**The invoking stage picks the session.** A stage whose work is the
+interview holds a user session; any other holds a delegated one, where a griller
+interviews the authors and only a critical decision reaches the user, and only
+for a decision the repository cannot settle (`.agents/rules/grilling.md` § When
+a session is held). Without one, no griller starts. A stage that says nothing
+holds a delegated session where one is held. Read
 `.agents/rules/grilling.md#explicit-delegation-for-a-discussion` before
-delegating a user discussion; record actual authority. No-question alone is not delegation.
+delegating a user discussion; record actual authority. No-question alone is not
+delegation.
 
 **The request bounds the tree** (`.agents/rules/grilling.md`). A decision whose
 only outcome is whether to add something the request did not ask for is left
