@@ -78,8 +78,16 @@ async function newRoot(helper = helperSource(STALE_DIGEST)): Promise<string> {
 }
 
 function run(root: string, extra: string[] = []): { status: number | null; output: string } {
-  const child = spawnSync("node", [SCRIPT, "--root", root, ...extra], { encoding: "utf-8" });
+  const child = spawnSync(process.execPath, [SCRIPT, "--root", root, ...extra], {
+    encoding: "utf-8",
+  });
   return { status: child.status, output: `${child.stdout ?? ""}${child.stderr ?? ""}` };
+}
+
+/** Asserts that the fixture and the helper stand-in hold the bytes `newRoot` wrote. */
+async function expectNothingWritten(root: string, helper: string): Promise<void> {
+  expect(await readFile(path.join(root, ...FIXTURE_REL.split("/")), "utf-8")).toBe("# Old\n");
+  expect(await readFile(path.join(root, ...HELPER_REL.split("/")), "utf-8")).toBe(helper);
 }
 
 describe("regen-shipped-entry", () => {
@@ -109,11 +117,21 @@ describe("regen-shipped-entry", () => {
   });
 
   it("writes nothing when the digest line cannot be found", async () => {
-    const root = await newRoot("export const ALLOWED_INIT_CONTENT = new Map([]);\n");
+    const helper = "export const ALLOWED_INIT_CONTENT = new Map([]);\n";
+    const root = await newRoot(helper);
     const result = run(root);
     expect(result.status).toBe(1);
-    expect(result.output).toMatch(/expected one digest/);
-    expect(await readFile(path.join(root, ...FIXTURE_REL.split("/")), "utf-8")).toBe("# Old\n");
+    expect(result.output).toMatch(/expected one digest after .*, found 0/);
+    await expectNothingWritten(root, helper);
+  });
+
+  it("refuses two digest lines and writes nothing", async () => {
+    const helper = helperSource(STALE_DIGEST) + helperSource(STALE_DIGEST);
+    const root = await newRoot(helper);
+    const result = run(root);
+    expect(result.status).toBe(1);
+    expect(result.output).toMatch(/expected one digest after .*, found 2/);
+    await expectNothingWritten(root, helper);
   });
 
   it("names the build when the CLI does not exist", async () => {
@@ -121,6 +139,24 @@ describe("regen-shipped-entry", () => {
     const result = run(root, ["--cli", path.join(root, "missing.mjs")]);
     expect(result.status).toBe(1);
     expect(result.output).toMatch(/run `pnpm build`/);
-    expect(await readFile(path.join(root, ...FIXTURE_REL.split("/")), "utf-8")).toBe("# Old\n");
+    await expectNothingWritten(root, helperSource(STALE_DIGEST));
+  });
+
+  it("writes nothing when init exits non-zero", async () => {
+    const root = await newRoot();
+    const failing = path.join(root, "failing.mjs");
+    await writeFile(failing, "process.exit(3);\n");
+    const result = run(root, ["--cli", failing]);
+    expect(result.status).toBe(1);
+    expect(result.output).toMatch(/qfai init exited 3/);
+    await expectNothingWritten(root, helperSource(STALE_DIGEST));
+  });
+
+  it("refuses an unknown option and writes nothing", async () => {
+    const root = await newRoot();
+    const result = run(root, ["--rot", root]);
+    expect(result.status).toBe(1);
+    expect(result.output).toMatch(/unknown option --rot/);
+    await expectNothingWritten(root, helperSource(STALE_DIGEST));
   });
 });

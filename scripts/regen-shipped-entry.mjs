@@ -90,6 +90,9 @@ function regenerate(root, cli) {
     throw new Error(`${cli} does not exist; run \`pnpm build\` so the CLI exists`);
   const digest = sha256(generatedCopilotBytes(cli));
 
+  // Everything that can fail has run. The two writes are not atomic: if the second throws, the
+  // first has landed and the digest is stale until the tool runs again, which repairs it because
+  // each file is compared on its own.
   const report = [];
   const fixture = existsSync(fixturePath) ? readFileSync(fixturePath) : undefined;
   if (fixture === undefined || !fixture.equals(template)) {
@@ -111,6 +114,8 @@ const invokedDirectly = fileURLToPath(import.meta.url) === path.resolve(process.
 if (invokedDirectly) {
   try {
     const args = process.argv.slice(2);
+    const unknown = args.find((arg) => arg.startsWith("--") && !["--root", "--cli"].includes(arg));
+    if (unknown !== undefined) throw new Error(`unknown option ${unknown}`);
     const root =
       optionValue(args, "--root") ??
       path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
