@@ -62,6 +62,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The shipped rules name `AGENTS.md` as the only entry file.** The wording
+  in `documentation-clarity.md` and `untrusted-content.md` no longer mentions
+  `CLAUDE.md`, which `qfai init` stopped writing.
+
 - **The shipped workflows pin `actions/setup-node` 7.1.0.** The three
   templates written by `qfai init` use the same commit as this repository.
 
@@ -84,6 +88,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   is read, so a run reads only what its request needs. Fixes #3575.
 
 ### Fixed
+
+- The SDD design authoring guide no longer says `npx qfai init` seeds a sample
+  `DESIGN.md` at the project root. Init writes none; the sample ships only as a
+  skill template, and a root file that exists was authored by
+  `common-design-md` or copied from that template on purpose. Fixes #3622.
 
 - A register ID that the union merge driver left on two rows of
   `decisions.md` or `open-questions.md` now fails the repository's scans lane,
