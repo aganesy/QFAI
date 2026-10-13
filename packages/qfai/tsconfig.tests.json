@@ -358,6 +358,7 @@
     "tests/unit/core/validators/brokenWrapperRemedy.test.ts",
     "tests/unit/core/validators/externalReferences.test.ts",
     "tests/unit/core/validators/markdownTableArity.test.ts",
+    "tests/unit/core/validators/upstreamSsotGuardReadFailure.test.ts",
     "tests/validators/configReferenceIntegrity.test.ts",
     "tests/validators/dbContractApplyOrder.test.ts",
     "tests/helpers/typescriptSourceScan.ts",
