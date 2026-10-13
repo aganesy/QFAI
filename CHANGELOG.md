@@ -13,6 +13,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   can tell a stale copy from a deliberate change. A way to accept a known
   difference is not part of this change. Refs #3534.
 
+- The document-schema rule `qfai init` writes shows how to run the document
+  lane's two checks before pushing: the schema checker and the Mermaid checker,
+  with the scripts and arguments the `qfai-docs.yml` lane uses. The rule points
+  to the lane's install step for the pinned versions and restates none of them.
+  Fixes #3539.
+
 - **`qfai validate` tells a reader which base the drift checks compared with.**
   A repository whose `baseBranch` has no merge base with HEAD now gets one
   `QFAI-DRIFT-003` warning that names the base and says to fetch it or set
@@ -96,6 +102,37 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **A verify gate that fails the same way on the base commit records why.**
+  The `reason` of such a gate in `verify.json` names the failing test
+  identifiers and the environment, the stage report adds the base result and
+  the same gate's CI result (or says it is unknown), and the run asks the user
+  whether to commit with those gates open. The verdict stays `FAIL` and gains
+  no field. Fixes #3543.
+
+- **The final report of a run names the policy check.** The `qfai-run` final
+  report now says whether `common-policy-check` ran and its outcome, or that
+  it did not run and why. The plan lists no such step, so before this a run
+  that skipped the check left no trace of it. Fixes #3557.
+
+- **The verify gate says which Validate command wins.** When a project's
+  `Validate` entry runs a partial profile (its output carries
+  `QFAI-PROFILE-001`), `verify-qfai-gate` no longer treats it as the gate: it
+  records the entry's result as a signal, runs
+  `npx qfai validate --profile verify --fail-on error` as well, and passes or
+  fails on that run. Fixes #3555.
+
+- **A misplaced trace mark says how to repair it.** The `QFAI-STORY-007` error
+  for a `QFAI:BF-`, `QFAI:AC-` or `QFAI:EX-` annotation in a test of the wrong
+  layer now says to keep the annotation only in a test of the layer it belongs
+  to, to remove it from this test, and where the layer rules are
+  (`.qfai/assistant/rule/test-layers.md`). The finding's code, file and
+  annotation are unchanged. Fixes #3544.
+
+- **`qfai-run` points to the form of an approval row.** Step 7 names the
+  decisions template, whose header sets out the four items of the Approach
+  cell, and the template gains an example of a release approval's cells.
+  Refs #3551.
+
 - **A test that fails every run leaves the quarantine route.** `implement-quarantine`
   quarantines nothing for a test that fails all of at least five recorded runs. It records the runs and reports
   the outcome `failing-consistently` with an extraction of the report, and the decision rules
@@ -133,6 +170,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   is read, so a run reads only what its request needs. Fixes #3575.
 
 ### Fixed
+
+- The shipped `qfai-tests.yml` fails closed on an unreadable `package.json`. A
+  manifest that is not valid JSON or not an object, a `scripts` field that is
+  not an object, a layer-named script that is not a string, and a malformed
+  lane or script list now stop change detection with an error annotation, so the
+  verdict is red. Before, each was read as "no test script declared": every lane
+  was skipped and the required check went green over no tests. A repository
+  without a `package.json`, or with no layer-named script, is still a valid
+  empty set. Fixes #3533.
 
 - **The Markdown-schema check no longer passes over a document directory it
   cannot read.** A directory that fails to list for a reason other than being

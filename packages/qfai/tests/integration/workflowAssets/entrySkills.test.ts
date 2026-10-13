@@ -17,6 +17,7 @@ import {
   assistantLineCeiling,
 } from "../../../src/core/doctor/assetLineBudget.js";
 import { validateAgentDefinition } from "../../../src/core/validators/agentDefinition.js";
+import { approachProblems } from "../../../src/core/validators/storyTreeStructure.js";
 import type { WorkflowExtraction } from "../../../src/core/workflow/extraction.js";
 import { extractionFaults } from "../../../src/core/workflow/extractionShape.js";
 import { routingOutcome } from "../../../src/core/workflow/routeDecision.js";
@@ -787,6 +788,12 @@ describe("qfai-run", () => {
       /each approval of a specification change, a critical decision or a release is one `decisions\.md` row: what was approved, who approved it, when, and the chosen option's label/i,
     );
     expect(work).toMatch(/a decision you took appends no row/i);
+    expect(work).toMatch(/, in the `qfai-sdd` decisions template's form\./i);
+    // The template's release-approval example is a valid Approach cell as it stands.
+    const template = await readShipped("skill/qfai-sdd/templates/spec/decisions.md");
+    const example = template.split("\n").find((line) => line.startsWith("- Evidence:"));
+    expect(example).toBeDefined();
+    expect(approachProblems(example ?? "")).toEqual([]);
     expect(release).toMatch(/which authorizes no push, merge, tag or publication/i);
     expect(release).toMatch(
       /`qfai-run`.*\b(?:records|writes)\b.*`decisions\.md`.*\bbefore\b.*`triage-handoff`/i,
