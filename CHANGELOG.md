@@ -18,6 +18,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   like a missing file, and the run passed without comparing anything.
   Fixes #3532.
 
+- **`QFAI-STORY-006` says where an annotation that counts for nothing sits.**
+  When an example's `QFAI:EX-` annotation is in a selected test file but not on
+  a comment line before a test declaration, the finding now names the file and
+  line and tells you to move it to a comment line above the test. The remedy
+  text says the same. Fixes #3531.
+
 - **The UI contract guide says where each rendered text goes.** `structure` is
   optional only for a screen that shows no heading beyond its title, and a table
   maps headings, eyebrow lines, labels, link text, column headers, captions, list
