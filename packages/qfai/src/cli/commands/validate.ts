@@ -1040,6 +1040,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "`validate` runs to completion, so its output is a verdict; a run that could not finish reports that as a finding rather than as a bare stderr line with no counts, no run-log and no validate.json.",
   "QFAI-TOOL-002":
     "The qfai a project's gates run through is the one its own dependency declaration installs, so the gating version is pinned by its own lockfile rather than by whichever checkout `npx` reached first.",
+  "QFAI-TOOL-003":
+    "The qfai that runs a project's gates is not older than the version the project declares, so a rule that reads a generated file is not judging it by a checker older than the tree.",
   "QFAI-TOOL-001":
     "The qfai that runs a project's gates is resolved from inside that project, so the gating version is pinned by its own lockfile; a global install or a monorepo-root hoist is a benign reading of the same path test.",
   "QFAI-PLATFORM-003":
