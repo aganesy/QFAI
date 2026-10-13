@@ -125,6 +125,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The prototyping preflight says what `qfai doctor` probes at the target URL.**
+  `prototyping-preflight` now states that doctor sends one `GET` to exactly the
+  URL it is given, accepts a status from 200 to 399, and does not follow a
+  redirect. A static server with no `index.html` at its root can answer 404 on
+  `/`, so the step tells the reader to pass a URL that answers 200.
+  Doctor itself is unchanged. Fixes #3667.
+
 - **A verify gate that fails the same way on the base commit records why.**
   The `reason` of such a gate in `verify.json` names the failing test
   identifiers and the environment, the stage report adds the base result and
