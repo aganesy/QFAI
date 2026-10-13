@@ -125,7 +125,7 @@ it("An extraction two rules could read is routed by the lower-numbered one", asy
     qualifiers: ["owned-temporary-cleanup"],
   };
   for (const { fields, route, rule } of [
-    { fields: { qualifiers: [] }, route: "apply-settled", rule: 15 },
+    { fields: { qualifiers: [] }, route: "run-operation", rule: 15 },
     {
       fields: { qualifiers: ["owned-temporary-cleanup", "human-run"] },
       route: "hand-off-operation",
@@ -278,10 +278,13 @@ it("Every extraction reaches exactly one catalog route by a rule, an unsignalled
   let decided = 0;
   for (const intent of INTENTS) {
     for (const reading of readingsOf(intent, 3)) {
-      const choice = decideRoute(reading);
-      decided += 1;
-      if (!isWorkflowRoute(choice.route)) outside.push(choice.route);
-      if (choice.rule === null) unrouted.push(JSON.stringify(reading));
+      // The rules read whether any artifact is named, so both cases are decided.
+      for (const artifacts of [[], ["code", "tests"]] satisfies WorkflowExtraction["artifacts"][]) {
+        const choice = decideRoute({ ...reading, artifacts });
+        decided += 1;
+        if (!isWorkflowRoute(choice.route)) outside.push(choice.route);
+        if (choice.rule === null) unrouted.push(JSON.stringify({ ...reading, artifacts }));
+      }
     }
   }
   const bareRelease = decideRoute(extraction({ intent: "release" }));
