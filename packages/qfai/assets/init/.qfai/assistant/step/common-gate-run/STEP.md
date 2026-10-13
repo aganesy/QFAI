@@ -157,6 +157,25 @@ before judging a focused RED or ordinary success. A focused result establishes
 only its selected case; the existing verify run owns full collection coverage.
 This human receipt changes no gate status or JSON field and adds no runner.
 
+### A focused run where the Test command is CI only
+
+When the Test command entry of the Standard commands section reads
+`CI only: <check name>`, no focused run is made here. The phase the run would
+have closed, Red, Green or Refactor, is recorded `DELEGATED`. The same two
+conditions as `verify-commit` apply: the project declares the entry
+`CI only: <check name>`, and a user instruction or project policy covers the
+commit that carries the test.
+
+- The report names the check, the test's file and case, and the phase, and says
+  the phase was not observed here. It records the `ci` state as `pending` until
+  that check's result for the head that holds the test is read, and `green` or
+  `red` after.
+- The test is still written before the production code it checks.
+- A `DELEGATED` phase is not an observed one. The report never calls it an
+  observed Red, Green or Refactor, and a check that stays red is a failed phase.
+- This covers a Test command the project runs only in CI. It does not cover a
+  test that can run here and is delegated merely to avoid running it.
+
 ## Outcomes
 
 | Outcome     | Means                                                              |

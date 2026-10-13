@@ -162,6 +162,9 @@ still fails.
 
 While implementing, run only the selected test. The full suite, Lint,
 Typecheck, Build and `npx qfai validate` run once, in the verify stage.
+Where the Test command is `CI only: <check name>`, run no test here and record
+Red, Green and Refactor `DELEGATED`, as `common-gate-run` states in
+`A focused run where the Test command is CI only`.
 
 ### Selected-case execution
 
@@ -236,5 +239,6 @@ A failing or unrun gate cannot be reported as PASS.
 ## Gate
 
 The step is done for an example when its RED, GREEN and Refactor results are
-observed and recorded. It is done for the flow when every example the
+observed and recorded, or, where the Test command is CI only, recorded
+`DELEGATED` with the check named and its `ci` state. It is done for the flow when every example the
 selection listed is done.

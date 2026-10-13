@@ -71,8 +71,11 @@ test that should have caught it, before any production code changes:
    `implement-tdd`, which appends the EX and annotates the test.
 2. Run that test alone and observe its assertion fail for the reported
    behaviour (Red). A load error, a missing dependency or a broken fixture is
-   not a Red.
-3. Record the test path, the command and the failure in the stage report.
+   not a Red. Where the Test command is `CI only: <check name>`, run nothing
+   and record the Red `DELEGATED`, as `common-gate-run` states in
+   `A focused run where the Test command is CI only`.
+3. Record the test path, the command and the failure in the stage report. A
+   `DELEGATED` Red records the test path, the check and the `ci` state instead.
 
 A verdict that moves the work to another route leaves no new test behind:
 remove the test written here.
@@ -125,5 +128,6 @@ Inside a workflow run, the result carries:
 
 The step is done when one verdict is recorded with the observation that
 supports it, and no tracked file changed but the failing test. That
-observation is the reproduction: on a `fix` route the test's observed Red, and
-for `needs-info` the attempts that could not reproduce it.
+observation is the reproduction: on a `fix` route the test's observed Red, or
+its `DELEGATED` Red where the Test command is CI only, and for `needs-info` the
+attempts that could not reproduce it.

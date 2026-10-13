@@ -117,6 +117,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **A project that runs tests only in CI can record Red, Green and Refactor as delegated.**
+  When the Test command in the Standard commands section reads
+  `CI only: <check name>`, `implement-diagnose` and `implement-tdd` run no test
+  and record the phase `DELEGATED`, naming the check and its `ci` state. The
+  conditions are the ones `verify-commit` states for a delegated gate. A
+  delegated phase is never reported as an observed one. How a plan that spans
+  several flows runs the per-flow steps is not part of this change. Refs #3668.
+
 - **A verify gate that fails the same way on the base commit records why.**
   The `reason` of such a gate in `verify.json` names the failing test
   identifiers and the environment, the stage report adds the base result and

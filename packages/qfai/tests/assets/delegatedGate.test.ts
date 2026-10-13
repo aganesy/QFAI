@@ -86,5 +86,27 @@ describe("a gate the project runs in CI only is recorded as delegated", () => {
       expect(contract).toContain('recorded `"DELEGATED"` with its `check` and `ci`');
       expect(contract).toContain('A `"red"` check makes the top-level `status` `"FAIL"`');
     });
+
+    it(`${tree}: the implement steps record a Red, Green or Refactor as DELEGATED where the Test command is CI only`, async () => {
+      const [gateRun, diagnose, tdd] = await Promise.all([
+        read(tree, "assistant/step/common-gate-run/STEP.md"),
+        read(tree, "assistant/step/implement-diagnose/STEP.md"),
+        read(tree, "assistant/step/implement-tdd/STEP.md"),
+      ]);
+      const section = flat(
+        sectionOf(gateRun, "### A focused run where the Test command is CI only"),
+      );
+
+      expect(section).toContain("`CI only: <check name>`");
+      expect(section).toContain("is recorded `DELEGATED`");
+      expect(section).toContain("The same two conditions as `verify-commit` apply");
+      expect(section).toContain("says the phase was not observed here");
+      expect(section).toContain("never calls it an observed Red, Green or Refactor");
+      for (const step of [diagnose, tdd]) {
+        const text = flat(step);
+        expect(text).toContain("`A focused run where the Test command is CI only`");
+        expect(text).toContain("`DELEGATED`");
+      }
+    });
   }
 });
