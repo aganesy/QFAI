@@ -33,6 +33,12 @@ export type CopyResult = {
   skipped: string[];
   /** Destinations not written because an entry above them is a link or not a directory. */
   refused: string[];
+  /**
+   * The skipped destinations, among those a copy without `force` found already there, whose
+   * content is not the template's. A later release's template can differ from the one the
+   * project holds, and these are the files only `force` brings up to date.
+   */
+  kept?: string[];
 };
 
 export async function copyTemplateTree(
@@ -69,6 +75,7 @@ async function copyFiles(
   const copied: string[] = [];
   const skipped: string[] = [];
   const refused: string[] = [];
+  const kept: string[] = [];
   const conflicts: string[] = [];
 
   const excludePrefixes = (options.exclude ?? [])
@@ -126,6 +133,7 @@ async function copyFiles(
 
     if (!(await shouldWrite(dest, options.force))) {
       skipped.push(dest);
+      if (!(await holdsSameBytes(file, dest))) kept.push(dest);
       continue;
     }
     // A forced copy over a file that already holds the template's bytes changes
@@ -172,7 +180,7 @@ async function copyFiles(
     copied.push(dest);
   }
 
-  return { copied, skipped, refused };
+  return { copied, skipped, refused, kept };
 }
 
 /**

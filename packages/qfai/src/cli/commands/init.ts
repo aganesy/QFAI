@@ -490,6 +490,15 @@ export async function runInit(
     options.verbose ?? false,
   );
 
+  const keptNote = keptAssistantNote(
+    destRoot,
+    options.force,
+    options.dryRun,
+    [...qfaiResult.copied, ...skillsResult.copied],
+    [...(qfaiResult.kept ?? []), ...(skillsResult.kept ?? [])],
+  );
+  if (keptNote !== undefined) info(keptNote);
+
   if (oldSpecLayout) {
     info(
       `Old spec layout at ${formatReportPath(oldSpecLayout)}; migrate with /qfai-migration-v1-to-v2.`,
@@ -507,6 +516,51 @@ export async function runInit(
   if (codexHooksResult.copied.length > 0 && !options.dryRun) {
     info(CODEX_HOOKS_TRUST_NOTE);
   }
+}
+
+/** The owner files a note names, at most; the rest are counted. */
+const KEPT_OWNERS_LISTED = 8;
+
+/**
+ * A note for a run without `--force` that wrote new assistant files and kept others that differ
+ * from this release's copy. A new file is listed or cited by a skill's `SKILL.md` or a step's
+ * `STEP.md`; when that owner is one of the kept files, `qfai validate` reports the new file as an
+ * unrelated finding, and only `--force` refreshes the owner. `undefined` when there is nothing to
+ * say: with `--force`, with no new file, or with no kept file.
+ */
+function keptAssistantNote(
+  destRoot: string,
+  force: boolean,
+  dryRun: boolean,
+  allCopied: readonly string[],
+  allKept: readonly string[],
+): string | undefined {
+  const assistantDir = path.join(destRoot, ASSISTANT_DIR);
+  const underAssistant = (file: string): boolean => {
+    const relative = path.relative(assistantDir, file);
+    return relative !== "" && !relative.startsWith("..") && !path.isAbsolute(relative);
+  };
+  // Two copies can both see a file: on Windows the first one's exclusion of the layers does not
+  // match, so the layers are reached twice.
+  const copied = [...new Set(allCopied.filter(underAssistant))];
+  const kept = [...new Set(allKept.filter(underAssistant))];
+  if (force || copied.length === 0 || kept.length === 0) return undefined;
+  const plural = (count: number): string => (count === 1 ? "file" : "files");
+  const owners = kept
+    .filter((file) => ["SKILL.md", "STEP.md"].includes(path.basename(file)))
+    .map((file) => formatReportPath(path.relative(destRoot, file)));
+  const listed = owners.slice(0, KEPT_OWNERS_LISTED).join(", ");
+  const more =
+    owners.length > KEPT_OWNERS_LISTED ? ` and ${owners.length - KEPT_OWNERS_LISTED} more` : "";
+  const ownerSentence =
+    owners.length === 0
+      ? ""
+      : ` A new file that one of these lists or cites is reported by qfai validate until the owner is refreshed: ${listed}${more}.`;
+  return (
+    `${dryRun ? "Would write" : "Wrote"} ${copied.length} new ${plural(copied.length)} under .qfai/assistant ` +
+    `and kept ${kept.length} ${plural(kept.length)} differing from this release's copy.` +
+    `${ownerSentence} qfai init --force rewrites all ${kept.length} kept ${plural(kept.length)}.`
+  );
 }
 
 /**

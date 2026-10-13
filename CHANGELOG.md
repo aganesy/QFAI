@@ -6,6 +6,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`qfai init` says when it kept an assistant file that a new file depends on.**
+  A run without `--force` that writes a new file under `.qfai/assistant/` and
+  keeps a file there that differs from this release's copy now prints one line
+  with the two counts, the kept `SKILL.md` and `STEP.md` owners, and the way to
+  refresh them with `--force`. `qfai validate` otherwise reports the new file
+  under an unrelated code. Fixes #3545.
+
 - **A merge that duplicated a decision has a bounded manual recovery.**
   When a bad two-parent merge adds a second byte-identical copy of an inherited
   decision, the SDD owner may remove only that surplus copy under a separate
