@@ -93,6 +93,7 @@ values plan nothing.
    when, and the chosen option's label. A decision you took appends no row.
 8. **A finding no stage serves.** Stop, and name the finding, its owner and the stage skill to invoke by name.
 9. **Commit.** `verify-commit` runs last, after any release point; never pushes.
+10. **Session feedback.** When the final report closes the user's last task and nothing waits on them, follow `.agents/rules/session-feedback.md` once.
 
 ## Under a no-question mode
 
