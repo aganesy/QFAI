@@ -229,6 +229,67 @@ describe.each(SETTINGS)("%s sends full context first and pointers on later tool 
     }
   });
 
+  const promptCall = (entry: Entry, input: Record<string, unknown>): Promise<string> =>
+    runReminderHook(
+      entry,
+      projectDirOf(repoRoot, rel),
+      JSON.stringify({ hook_event_name: "UserPromptSubmit", ...input }),
+    );
+
+  // QFAI:EX-0001-0196-26
+  // QFAI:EX-0001-0196-55
+  it("filters CI-monitor prompt lines before each session, agent and key counter", async () => {
+    const byKey = await entries(rel);
+    const session_id = newSession();
+    for (const [key, reference] of [
+      ["free-text-entry", "qfai-run"],
+      ["structured-question", ".agents/rules/user-questions.md"],
+    ] as const) {
+      const entry = byKey.get(key);
+      if (entry === undefined) throw new Error(`no entry carries ${key}`);
+      const full = await fullContext(key);
+      for (const identity of [{ session_id }, { session_id, agent_id: "helper" }]) {
+        for (const prompt of [
+          "<ci-monitor-event>CI finished</ci-monitor-event>",
+          ' \t<ci-monitor-event status="completed">CI finished</ci-monitor-event>',
+          'Host notification\n\t<ci-monitor-event\nstatus="completed">CI finished</ci-monitor-event>',
+        ]) {
+          expect(await promptCall(entry, { ...identity, prompt }), `${key}: ${prompt}`).toBe("");
+        }
+        const first = await promptCall(entry, { ...identity, prompt: "Fix the failing test" });
+        expect(contextOf(first)).toBe(full);
+        expect(JSON.parse(first)).toMatchObject({
+          hookSpecificOutput: { hookEventName: "UserPromptSubmit" },
+        });
+        const second = await promptCall(entry, { ...identity, prompt: "Continue the same fix" });
+        expectPointer(contextOf(second), full, reference);
+        expect(JSON.parse(second)).toMatchObject({
+          hookSpecificOutput: { hookEventName: "UserPromptSubmit" },
+        });
+      }
+    }
+  });
+
+  // QFAI:EX-0001-0196-26
+  it("keeps ordinary CI-marker mentions and other tag names eligible", async () => {
+    const byKey = await entries(rel);
+    for (const key of ["free-text-entry", "structured-question"]) {
+      const entry = byKey.get(key);
+      if (entry === undefined) throw new Error(`no entry carries ${key}`);
+      const full = await fullContext(key);
+      for (const prompt of [
+        "Explain <ci-monitor-event> for this watcher",
+        "<ci-monitor-eventual>Fix the failing test</ci-monitor-eventual>",
+        "<ci-monitor-event/> Fix the failing test",
+      ]) {
+        expect(
+          contextOf(await promptCall(entry, { session_id: newSession(), prompt })),
+          `${key}: ${prompt}`,
+        ).toBe(full);
+      }
+    }
+  });
+
   // QFAI:EX-0001-0196-55
   it("filters known Claude notification prompts before counting either prompt reminder", async () => {
     const byKey = await entries(rel);
@@ -240,9 +301,18 @@ describe.each(SETTINGS)("%s sends full context first and pointers on later tool 
         "<task-notification>Done</task-notification>",
         '<wake reason="external-event">CI finished</wake>',
         "[SYSTEM NOTIFICATION - NOT USER INPUT]\nCI finished",
+        "<ci-monitor-event>\nbuild passed</ci-monitor-event>",
+        // A marker on a later line of a CRLF-separated prompt is still a line-opening marker.
+        "Status follows.\r\n<ci-monitor-event>\r\nbuild passed",
       ]) {
         expect(await call(rel, entry, { session_id, prompt })).toBe("");
       }
+      // The markers are case-sensitive: a differently cased wrapper is an ordinary prompt.
+      const cased = await call(rel, entry, {
+        session_id: newSession(),
+        prompt: "<CI-Monitor-Event>\nbuild",
+      });
+      expect(contextOf(cased)).toBe(await fullContext(key));
       expect(
         contextOf(await call(rel, entry, { session_id, prompt: "Fix the failing test" })),
       ).toBe(await fullContext(key));
