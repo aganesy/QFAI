@@ -4,6 +4,7 @@ import path from "node:path";
 import { createTestLayerRoots, resolveTestKind, type AtddTestKind } from "../atddTraceability.js";
 import { resolvePath, type QfaiConfig } from "../config.js";
 import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "../fs.js";
+import { assistantLayerDir } from "../paths/assistantPaths.js";
 import { parseCountedExampleAnnotations, parseStoryTestAnnotations } from "../storyTree/ids.js";
 import { classifyRecordRow } from "../storyTree/tables.js";
 import { readStoryTreeModel, type StoryTreeModel } from "../storyTree/tree.js";
@@ -24,7 +25,7 @@ export type StoryTestFile = {
 export type StoryObligationProfile = "atdd" | "tdd";
 
 /** The shipped rule that says which annotation belongs to which test layer. */
-const TEST_LAYERS_RULE = ".qfai/assistant/rule/test-layers.md";
+const TEST_LAYERS_RULE = `${assistantLayerDir("rule")}/test-layers.md`;
 
 /**
  * The message of a trace mark placed in a layer that cannot hold it.
