@@ -27,6 +27,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reference. An order that names artifacts still applies its settled change.
   Fixes #3574.
 
+- **The delegation baseline has notes for Codex sub-agents.** Under Codex,
+  the orchestrator reads them before it delegates: it gives a sub-agent a
+  self-contained brief with `fork_turns: "none"`, asks for one final answer and
+  no interim messages, waits with a `wait_agent` timeout of minutes, and never
+  polls with `sleep`, short `wait_agent` loops or `list_agents`. The notes live
+  in a reference file, so other hosts load nothing more. Fixes #3579.
+
 - Add a workflow route for writing authorized operational procedures.
   It keeps wording-only edits separate, preserves policy owners and existing
   verification, and grants no authority to run the documented actions.
