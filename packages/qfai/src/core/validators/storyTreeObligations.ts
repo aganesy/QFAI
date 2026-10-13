@@ -34,8 +34,8 @@ const TEST_LAYERS_RULE = `${assistantLayerDir("rule")}/test-layers.md`;
  * annotation is removed from this test, not the test moved, and the rule that explains the layers is
  * named.
  */
-function misplacedMessage(id: string, file: string, requires: string, belongsIn: string): string {
-  return `QFAI:${id} is misplaced in ${file}; ${requires}. Keep this annotation only in ${belongsIn} and remove it from this test (layer rules: ${TEST_LAYERS_RULE})`;
+function misplacedMessage(id: string, file: string, requires: string): string {
+  return `QFAI:${id} is misplaced in ${file}; ${requires}. Remove it from this test (layer rules: ${TEST_LAYERS_RULE})`;
 }
 
 /** Whether an EX annotation in this file covers its example: a selected test outside E2E. */
@@ -75,7 +75,7 @@ export function validateStoryTreeObligationsModel(
         issues.push(
           issue(
             "QFAI-STORY-007",
-            misplacedMessage(id, file.file, "BF requires E2E", "a test under the E2E layer"),
+            misplacedMessage(id, file.file, "BF requires E2E"),
             "error",
             file.file,
             "storyTree.misplacedAnnotation",
@@ -102,12 +102,7 @@ export function validateStoryTreeObligationsModel(
         issues.push(
           issue(
             "QFAI-STORY-007",
-            misplacedMessage(
-              id,
-              file.file,
-              "AC requires integration or API",
-              "a test under the integration or API layer",
-            ),
+            misplacedMessage(id, file.file, "AC requires integration or API"),
             "error",
             file.file,
             "storyTree.misplacedAnnotation",
@@ -140,12 +135,7 @@ export function validateStoryTreeObligationsModel(
         issues.push(
           issue(
             "QFAI-STORY-007",
-            misplacedMessage(
-              id,
-              file.file,
-              "EX requires a test outside E2E",
-              "a test outside the E2E layer",
-            ),
+            misplacedMessage(id, file.file, "EX requires a test outside E2E"),
             "error",
             file.file,
             "storyTree.misplacedAnnotation",
