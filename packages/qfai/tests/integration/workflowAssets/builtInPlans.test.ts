@@ -33,6 +33,7 @@ const VOCABULARY: Record<string, string[]> = {
     "triage-security-intake",
     "triage-handoff",
     "triage-owned-cleanup",
+    "triage-operate",
   ],
   maintenance: ["maintain-edit"],
   documentation: ["implement-procedure"],
