@@ -11,6 +11,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   maps headings, eyebrow lines, labels, link text, column headers, captions, list
   items and product text to the key that holds them. Fixes #3530.
 
+- **`qfai validate` says when the installed qfai is older than the one the project
+  declares.** When the nearest `package.json` declares a `qfai` range and the
+  running copy is below its lowest version, `QFAI-TOOL-003` (warning) is the first
+  finding in the JSON report, and names both versions and the install command.
+  The text format prints error groups before warning groups, so there it follows
+  the errors. While it is raised, `QFAI-SKILLS-010` names the version difference
+  and gives the install as its suggested action, instead of inviting an edit to
+  files nobody touched.
+  Fixes #3468.
+
 - **A merge that duplicated a decision has a bounded manual recovery.**
   When a bad two-parent merge adds a second byte-identical copy of an inherited
   decision, the SDD owner may remove only that surplus copy under a separate
@@ -59,6 +69,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **A test that fails every run leaves the quarantine route.** `implement-quarantine`
+  quarantines nothing for a test that fails all of at least five recorded runs. It records the runs and reports
+  the outcome `failing-consistently` with an extraction of the report, and the decision rules
+  route that extraction (for example a wrong test goes to `repair-test`) while its
+  diagnosis and repair steps run. Fixes #3493.
+
+- **`qfai-run` reads a request to raise QFAI itself as a dependency change.**
+  The extraction guide's `dependency` row now names it, so the request takes
+  the dependency route, whose step already carries the upgrade procedure for
+  `qfai`. Fixes #3549.
+
 - **The shipped rules name `AGENTS.md` as the only entry file.** The wording
   in `documentation-clarity.md` and `untrusted-content.md` no longer mentions
   `CLAUDE.md`, which `qfai init` stopped writing.
@@ -85,6 +106,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   is read, so a run reads only what its request needs. Fixes #3575.
 
 ### Fixed
+
+- **The Markdown-schema check no longer passes over a document directory it
+  cannot read.** A directory that fails to list for a reason other than being
+  absent (permission, I/O, descriptor exhaustion) is reported with its path and
+  cause, and the run fails instead of treating the documents beneath it as
+  conforming. Fixes #3626.
 
 - Skip Claude Code prompt reminders for `ci-monitor-event` notification lines
   before counting eligible prompts. `qfai init` refreshes the previous official

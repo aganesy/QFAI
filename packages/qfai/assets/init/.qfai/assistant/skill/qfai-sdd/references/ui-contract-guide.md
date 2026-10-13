@@ -215,19 +215,19 @@ enables, or leave the heading and the group out.
 Every text the screen shows has one home. The table applies the definitions above
 to the text authors and reviewers most often disagree about:
 
-| Rendered text                                            | Home                                                                                            |
-| -------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| The one page heading (`h1`)                              | `title`                                                                                         |
-| A heading over a group of fields or actions (`h2`, `h3`) | `structure[].heading` of that group                                                             |
-| A small line above or beside a heading (eyebrow, kicker) | a supplement with `near` set to the group; it is not a heading and not a label                  |
-| The text of a field, button or other control             | `label` of that element or action                                                               |
-| Link text                                                | `label` of a `navigate` action                                                                  |
-| A table column header                                    | recommended: `label` of an element declared for that column, as elements are the display fields |
-| A figure caption                                         | a supplement with `near` set to the element it describes                                        |
-| An item of a list the product writes (a fixed checklist) | a supplement                                                                                    |
-| An item of a list made of data the product shows         | outside the contract: data is not copy the contract authors                                     |
-| Product or site-identity text (a name, a tagline)        | `label` when it is a link or control, otherwise a supplement                                    |
-| The message of a field rule                              | `validations` of that element                                                                   |
+| Rendered text                                              | Home                                                                                            |
+| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| The one page heading (`h1`)                                | `title`                                                                                         |
+| A heading over a group of elements or actions (`h2`, `h3`) | `structure[].heading` of that group                                                             |
+| A small line above or beside a heading (eyebrow, kicker)   | a supplement with `near` set to the group; it is not a heading and not a label                  |
+| The text of a field, button or other control               | `label` of that element or action                                                               |
+| Link text                                                  | `label` of a `navigate` action                                                                  |
+| A table column header                                      | recommended: `label` of an element declared for that column, as elements are the display fields |
+| A figure caption                                           | a supplement with `near` set to the element it describes                                        |
+| An item of a list the product writes (a fixed checklist)   | a supplement                                                                                    |
+| An item of a list made of data the product shows           | outside the contract: data is not copy the contract authors                                     |
+| Product or site-identity text (a name, a tagline)          | `label` when it is a link or control, otherwise a supplement                                    |
+| The message of a field rule                                | `validations` of that element                                                                   |
 
 Nothing is outside the contract merely because it repeats across screens. Text that
 repeats on every screen is listed on each, and when no `why` that names a decision
