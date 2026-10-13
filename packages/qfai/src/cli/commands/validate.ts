@@ -1160,6 +1160,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Upstream SSOT files are unchanged relative to the base branch, or the change carries an approved Change Request.",
   "QFAI-DRIFT-002":
     "An example whose row changed since the base branch has a test annotating it that changed too.",
+  "QFAI-DRIFT-003":
+    "The base branch resolves to a merge base with HEAD, so the drift checks compare against it; the drift profile names the commit it compared with.",
   "QFAI-RESEARCH-013":
     "A UI-bearing discussion pack registers at least `uiux.competitive_refs_min` complete competitive references (default 3) in `04_Sources.md`.",
   "QFAI-RESEARCH-014":
@@ -1358,6 +1360,8 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
     "Restore the protected file or record an in-force change request authorizing the named change.",
   "QFAI-DRIFT-002":
     "Update the tests annotating the named example to its new row, or confirm they already assert it.",
+  "QFAI-DRIFT-003":
+    "Fetch the base branch so it resolves, or set baseBranch in qfai.config.yaml to a ref this checkout has, then rerun validate.",
   "QFAI-FLOW-005": "Use an existing BF-NNNN ID for --flow, or create the flow before selecting it.",
   "QFAI-LAYOUT-001":
     "Invoke the `/qfai-migration-v1-to-v2` skill in your AI assistant to move the old spec packs to the story tree, then rerun validate.",
@@ -1373,7 +1377,7 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   "QFAI-STORY-005":
     "Define the missing business rule or contract, correct the cited reference, or renumber the rule after the contract that declares it.",
   "QFAI-STORY-006":
-    "Add a real test in the required layer with a QFAI annotation for the named BF, AC, or EX.",
+    "Add a real test in the required layer with a QFAI annotation for the named BF, AC, or EX; an EX annotation goes on a comment line above the test declaration it covers.",
   "QFAI-STORY-007":
     "Move the named test annotation to its required E2E, integration, API, or unit layer.",
   "QFAI-STORY-008":

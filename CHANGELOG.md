@@ -12,6 +12,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   target, not a gate, and raises no finding. The check itself is not faster;
   making it scale with the size of a contract is still open. Refs #3537.
 
+- **`qfai validate` tells a reader which base the drift checks compared with.**
+  A repository whose `baseBranch` has no merge base with HEAD now gets one
+  `QFAI-DRIFT-003` warning that names the base and says to fetch it or set
+  `baseBranch`, where the run used to pass as if nothing had changed. The
+  `drift` profile also reports at info the merge base commit and the number of
+  changed files it compared, so a worktree whose base ref lags the pull
+  request's base shows it. A repository with commits but no `origin/main` (no
+  remote, or a `master` branch) warns until `baseBranch` is set; a directory
+  that is not a repository is still silent.
+  The drift checks also stop turning themselves off when a file at the base,
+  such as a long decision ledger, is larger than 1 MiB: reading it failed
+  like a missing file, and the run passed without comparing anything.
+  Fixes #3532.
+
+- **`QFAI-STORY-006` says where an annotation that counts for nothing sits.**
+  When an example's `QFAI:EX-` annotation is in a selected test file but not on
+  a comment line before a test declaration, the finding now names the file and
+  line and tells you to move it to a comment line above the test. The remedy
+  text says the same. Fixes #3531.
+
 - **The UI contract guide says where each rendered text goes.** `structure` is
   optional only for a screen that shows no heading beyond its title, and a table
   maps headings, eyebrow lines, labels, link text, column headers, captions, list
