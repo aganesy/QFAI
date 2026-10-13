@@ -1080,7 +1080,11 @@ describe("qfai init", () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
       // Only git's own "not a git repository" exit means outside; any other failure surfaces.
-      const insideRepo = await execFile("git", ["rev-parse", "--git-dir"], { cwd: root }).then(
+      // `LC_ALL=C` keeps git's message in English, which the match below reads.
+      const insideRepo = await execFile("git", ["rev-parse", "--git-dir"], {
+        cwd: root,
+        env: { ...process.env, LC_ALL: "C" },
+      }).then(
         () => true,
         (error: unknown) => {
           if (

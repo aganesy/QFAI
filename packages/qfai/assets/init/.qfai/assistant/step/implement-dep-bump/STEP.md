@@ -45,12 +45,18 @@ into the repository, so steps 5 and 6 are replaced by the upgrade procedure in
 the section "Keeping QFAI itself up to date" of `node_modules/qfai/README.md`:
 `init --force`, the retired files the release notes list, then `doctor` and
 `validate`. `init --force` replaces the skills and steps in use, so read the
-next step from disk after it runs.
+next step from disk after it runs. What `doctor` and `validate` report is part
+of the update: a new required key in `qfai.config.yaml`, and an edit to a spec
+contract, which needs its change request in `decisions.md` under
+`paths.specsDir`, as `.qfai/assistant/rule/drift-protocol.md` describes, before
+the contract file changes.
 
 ## What it writes
 
 - The actual changed paths for the manifest, lockfile and any adapted call,
-  listed in the stage report.
+  listed in the stage report. When the dependency is `qfai` itself, they also
+  include a new key in `qfai.config.yaml` and a spec-contract edit with its
+  change request.
 - A record of the versions, the breaking changes read and how each was met, in the stage report.
 
 ## Gate

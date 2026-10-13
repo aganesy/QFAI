@@ -607,7 +607,7 @@ describe("qfai-run", () => {
   // QFAI:EX-0001-0211-35
   it("reads a request to raise qfai itself as a dependency change, whose step carries the upgrade", async () => {
     const intents = sectionOf(await readShipped(EXTRACTION), "## Intent");
-    expect(rowOf(intents, "| `dependency`")).toMatch(/raising `qfai` itself/i);
+    expect(rowOf(intents, "| `dependency`")).toMatch(/update `qfai` itself and run `init`/i);
     const outcome = routingOutcome(
       extraction({ intent: "dependency", artifacts: ["deps"], confidence: "high" }),
     );
