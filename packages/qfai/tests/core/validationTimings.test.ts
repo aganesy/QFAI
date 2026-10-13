@@ -52,7 +52,7 @@ describe("validation timings", () => {
       expect(timings.uiuxBudgetMs).toBe(2000);
       expect(timings.htmlMockMs).toBeGreaterThan(timings.htmlMockBudgetMs);
       expect(timings.uiuxMs).toBeGreaterThanOrEqual(timings.htmlMockMs);
-      const parts = (timings.uiuxParts ?? []).map((part) => part.ms);
+      const parts = timings.uiuxParts.map((part) => part.ms);
       expect(parts).toHaveLength(8);
       expect(parts).toEqual([...parts].sort((left, right) => right - left));
     });
@@ -80,6 +80,7 @@ describe("formatTimingOverruns", () => {
         uiuxBudgetMs: 2000,
         htmlMockMs: 4,
         htmlMockBudgetMs: 2000,
+        uiuxParts: [],
       }),
     ).toBeNull();
   });
@@ -91,6 +92,7 @@ describe("formatTimingOverruns", () => {
         uiuxBudgetMs: 2000,
         htmlMockMs: 4,
         htmlMockBudgetMs: 2000,
+        uiuxParts: [],
       }),
     ).toBe(
       "timings: over budget uiux=2500ms (budget 2000ms); a target, not a gate: no finding is raised",
@@ -101,6 +103,7 @@ describe("formatTimingOverruns", () => {
         uiuxBudgetMs: 2000,
         htmlMockMs: 2100.6,
         htmlMockBudgetMs: 2000,
+        uiuxParts: [],
       }),
     ).toBe(
       "timings: over budget uiux=2500ms (budget 2000ms) htmlMock=2101ms (budget 2000ms); a target, not a gate: no finding is raised",
@@ -116,6 +119,7 @@ describe("formatTimingOverruns", () => {
         uiuxBudgetMs: 2000,
         htmlMockMs: 4,
         htmlMockBudgetMs: 2000,
+        uiuxParts: [],
       }),
     ).toBe(
       "timings: over budget uiux=2000.1ms (budget 2000ms); a target, not a gate: no finding is raised",
@@ -126,6 +130,7 @@ describe("formatTimingOverruns", () => {
         uiuxBudgetMs: 2000,
         htmlMockMs: 0.05,
         htmlMockBudgetMs: 0.000001,
+        uiuxParts: [],
       }),
     ).toBe(
       "timings: over budget htmlMock=0.1ms (budget 0.000001ms); a target, not a gate: no finding is raised",

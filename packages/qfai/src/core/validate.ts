@@ -784,6 +784,19 @@ function dedupeStubFindings(issues: Issue[]): Issue[] {
   });
 }
 
+/**
+ * The parts of the UI/UX group, slowest first. The html-mock part leaves out the one-off load of
+ * its parser, as the group's own time does.
+ */
+export function orderUiuxParts(
+  parts: readonly { name: string; ms: number }[],
+  htmlMockLoadMs: number,
+): { name: string; ms: number }[] {
+  return parts
+    .map((part) => (part.name === "html mock" ? { ...part, ms: part.ms - htmlMockLoadMs } : part))
+    .sort((left, right) => right.ms - left.ms);
+}
+
 async function runUiuxValidators(
   root: string,
   config: ConfigLoadResult["config"],
@@ -834,11 +847,7 @@ async function runUiuxValidators(
     htmlMockMs: htmlMockTiming.parseMs,
     htmlMockBudgetMs: config.uiux?.htmlMockTimeout ?? HTML_MOCK_VALIDATION_BUDGET_MS,
     // The html-mock part leaves out the one-off load of its parser, as `uiuxMs` does.
-    uiuxParts: uiuxParts
-      .map((part) =>
-        part.name === "html mock" ? { ...part, ms: part.ms - htmlMockTiming.loadMs } : part,
-      )
-      .sort((left, right) => right.ms - left.ms),
+    uiuxParts: orderUiuxParts(uiuxParts, htmlMockTiming.loadMs),
   };
   return uiuxIssues;
 }

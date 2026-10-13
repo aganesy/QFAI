@@ -685,10 +685,10 @@ export function formatTimingOverruns(timings: ValidationTimings | undefined): st
   const parts: string[] = [];
   if (timings.uiuxMs > timings.uiuxBudgetMs) {
     // The group's validators run side by side, so the slowest two are the ones to look at.
-    const slowest = (timings.uiuxParts ?? [])
+    const slowest = timings.uiuxParts
       .slice(0, 2)
       .map((part) => `${part.name} ${Math.round(part.ms)}ms`);
-    const where = slowest.length > 0 ? `; slowest: ${slowest.join(", ")}` : "";
+    const where = slowest.length > 0 ? `; slowest, overlapping: ${slowest.join(", ")}` : "";
     parts.push(
       `uiux=${formatOverrunMs(timings.uiuxMs, timings.uiuxBudgetMs)}ms ` +
         `(budget ${timings.uiuxBudgetMs}ms${where})`,

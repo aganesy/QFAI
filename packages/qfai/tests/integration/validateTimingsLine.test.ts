@@ -5,7 +5,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { formatTimingOverruns } from "../../src/cli/commands/validate.js";
-import { validateProject } from "../../src/core/validate.js";
+import { orderUiuxParts, validateProject } from "../../src/core/validate.js";
 
 describe("the timings line of a UI/UX group over its budget", () => {
   // QFAI:AC-0001-0039-02
@@ -24,7 +24,7 @@ describe("the timings line of a UI/UX group over its budget", () => {
         ],
       }),
     ).toBe(
-      "timings: over budget uiux=10120ms (budget 2000ms; slowest: UI definition consistency 8300ms, design audit 1101ms); a target, not a gate: no finding is raised",
+      "timings: over budget uiux=10120ms (budget 2000ms; slowest, overlapping: UI definition consistency 8300ms, design audit 1101ms); a target, not a gate: no finding is raised",
     );
   });
 
@@ -40,6 +40,41 @@ describe("the timings line of a UI/UX group over its budget", () => {
         uiuxParts: [{ name: "design audit", ms: 9 }],
       }),
     ).toBeNull();
+  });
+
+  // QFAI:AC-0001-0039-02
+  // QFAI:EX-0001-0039-18
+  it("names no validator when the result carries no parts", () => {
+    expect(
+      formatTimingOverruns({
+        uiuxMs: 2500,
+        uiuxBudgetMs: 2000,
+        htmlMockMs: 4,
+        htmlMockBudgetMs: 2000,
+        uiuxParts: [],
+      }),
+    ).toBe(
+      "timings: over budget uiux=2500ms (budget 2000ms); a target, not a gate: no finding is raised",
+    );
+  });
+
+  // QFAI:AC-0001-0039-02
+  // QFAI:EX-0001-0039-18
+  it("orders the parts slowest first and leaves the parser load out of the html mock part", () => {
+    expect(
+      orderUiuxParts(
+        [
+          { name: "design audit", ms: 40 },
+          { name: "html mock", ms: 1000 },
+          { name: "agent definition", ms: 300 },
+        ],
+        900,
+      ),
+    ).toEqual([
+      { name: "agent definition", ms: 300 },
+      { name: "design audit", ms: 40 },
+      { name: "html mock", ms: 100 },
+    ]);
   });
 
   // QFAI:AC-0001-0039-02
