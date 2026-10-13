@@ -28,23 +28,23 @@
   "grilling-design-artifact": {
     "hookSpecificOutput": {
       "hookEventName": "PreToolUse",
-      "additionalContext": "QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be fixed that the request needs and the repository cannot settle? Outside the discussion stage, settle it between agents and take the griller's recommendation; ask the user only a critical decision — one that contradicts a spec, a contract or a recorded decision, one whose effect cannot be taken back, or product intent nothing written states. Do not ask about, or add, what the request did not need. Read the rule once per session rather than working from this line."
+      "additionalContext": "QFAI grilling (.agents/rules/grilling.md). Before this: is a design decision about to be fixed that the request needs and the repository cannot settle? If not (an operation, a routine step, a settled decision being applied, or a fix whose expected behaviour the story tree states), start no griller, decide from what is written and list nothing for the user. If so, outside the discussion stage, settle it between agents and take the griller's recommendation. Either way, ask the user only a critical decision — one that contradicts a spec, a contract or a recorded decision, one whose effect cannot be taken back, or product intent nothing written states. Do not ask about, or add, what the request did not need. Read the rule once per session rather than working from this line."
     },
-    "briefContext": "QFAI grilling (.agents/rules/grilling.md): before fixing a required decision, consult agents and bring only critical decisions to the user."
+    "briefContext": "QFAI grilling (.agents/rules/grilling.md): start a griller only for a design decision the repository cannot settle, never for an operation or a routine step; bring only critical decisions to the user."
   },
   "grilling-delegation": {
     "hookSpecificOutput": {
       "hookEventName": "PreToolUse",
-      "additionalContext": "QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be fixed that the request needs and the repository cannot settle? Outside the discussion stage, settle it between agents and take the griller's recommendation; ask the user only a critical decision — one that contradicts a spec, a contract or a recorded decision, one whose effect cannot be taken back, or product intent nothing written states. Do not ask about, or add, what the request did not need. Read the rule once per session rather than working from this line."
+      "additionalContext": "QFAI grilling (.agents/rules/grilling.md). Before this: is a design decision about to be fixed that the request needs and the repository cannot settle? If not (an operation, a routine step, a settled decision being applied, or a fix whose expected behaviour the story tree states), start no griller, decide from what is written and list nothing for the user. If so, outside the discussion stage, settle it between agents and take the griller's recommendation. Either way, ask the user only a critical decision — one that contradicts a spec, a contract or a recorded decision, one whose effect cannot be taken back, or product intent nothing written states. Do not ask about, or add, what the request did not need. Read the rule once per session rather than working from this line."
     },
-    "briefContext": "QFAI grilling (.agents/rules/grilling.md): before fixing a required decision, consult agents and bring only critical decisions to the user."
+    "briefContext": "QFAI grilling (.agents/rules/grilling.md): start a griller only for a design decision the repository cannot settle, never for an operation or a routine step; bring only critical decisions to the user."
   },
   "grilling-plan": {
     "hookSpecificOutput": {
       "hookEventName": "PreToolUse",
-      "additionalContext": "QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be fixed that the request needs and the repository cannot settle? Outside the discussion stage, settle it between agents and take the griller's recommendation; ask the user only a critical decision — one that contradicts a spec, a contract or a recorded decision, one whose effect cannot be taken back, or product intent nothing written states. Do not ask about, or add, what the request did not need. Read the rule once per session rather than working from this line."
+      "additionalContext": "QFAI grilling (.agents/rules/grilling.md). Before this: is a design decision about to be fixed that the request needs and the repository cannot settle? If not (an operation, a routine step, a settled decision being applied, or a fix whose expected behaviour the story tree states), start no griller, decide from what is written and list nothing for the user. If so, outside the discussion stage, settle it between agents and take the griller's recommendation. Either way, ask the user only a critical decision — one that contradicts a spec, a contract or a recorded decision, one whose effect cannot be taken back, or product intent nothing written states. Do not ask about, or add, what the request did not need. Read the rule once per session rather than working from this line."
     },
-    "briefContext": "QFAI grilling (.agents/rules/grilling.md): before fixing a required decision, consult agents and bring only critical decisions to the user."
+    "briefContext": "QFAI grilling (.agents/rules/grilling.md): start a griller only for a design decision the repository cannot settle, never for an operation or a routine step; bring only critical decisions to the user."
   },
   "documentation-clarity-after-write": {
     "hookSpecificOutput": {
