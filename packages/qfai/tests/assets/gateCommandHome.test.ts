@@ -49,7 +49,6 @@ describe("the story-tree contract owns quality-gate commands", () => {
       }
     });
 
-    // QFAI:AC-0001-0156-01
     // QFAI:EX-0001-0156-03
     it(`${tree}: a Validate entry that runs a partial profile is not the gate, and the full scan runs as well`, async () => {
       const qfaiGate = flat(await read(tree, "assistant/step/verify-qfai-gate/STEP.md"));
