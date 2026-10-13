@@ -942,6 +942,53 @@ export function rootIsRefused(root, rel) {
 }
 
 /**
+ * Every FILE under `rel`, repo-relative and POSIX-separated, links refused.
+ *
+ * `yamlFilesUnder` answers only `.yml` and `.yaml`, and the local-action pin covers whatever the
+ * tree holds — an `index.js`, a shell helper, anything a composite action reads. Same refusals as
+ * that walk: a linked root or a linked entry is a door out of the tree and is not taken.
+ *
+ * Past `limit` entries the walk stops, and the result is a prefix of the tree. `truncated`
+ * receives `rel` when that happened, so the caller can report a partial inventory instead of
+ * comparing it as if it were whole: a file past the ceiling is otherwise never seen. A tree of
+ * exactly `limit` entries is whole and is not reported. The ceiling is a PARAMETER with the
+ * production value as its default, as it is for `yamlFilesUnder`, so a row can reach the boundary.
+ *
+ * @param {string} root repository root
+ * @param {string} rel directory to walk, repo-relative
+ * @param {number} [limit] entry ceiling
+ * @param {string[]} [truncated] receives `rel` when the walk stopped at its ceiling
+ * @returns {string[]} repo-relative POSIX paths
+ */
+export function filesUnder(root, rel, limit = MAX_WALKED_ENTRIES, truncated) {
+  const abs = path.join(root, rel);
+  let inspected;
+  try {
+    inspected = lstatSync(abs);
+  } catch {
+    return [];
+  }
+  if (inspected.isSymbolicLink() || !inspected.isDirectory()) return [];
+  const out = [];
+  let seen = 0;
+  const walk = (dir) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      if (seen >= limit) {
+        if (truncated !== undefined && !truncated.includes(rel)) truncated.push(rel);
+        return;
+      }
+      seen += 1;
+      const p = path.join(dir, e.name);
+      if (e.isSymbolicLink()) continue;
+      if (e.isDirectory()) walk(p);
+      else if (e.isFile()) out.push(path.relative(root, p).replace(/\\/g, "/"));
+    }
+  };
+  walk(abs);
+  return out;
+}
+
+/**
  * Every `*.yml` / `*.yaml` under a directory, recursively, repo-relative.
  *
  * The ROOT is `lstat`ed and refused unless it is a real directory, and no directory ENTRY is
@@ -972,50 +1019,6 @@ export function rootIsRefused(root, rel) {
  * caller pushes the root's name into `truncated` and turns it into a fatal finding beside its
  * other whole-tree checks.
  */
-/**
- * Every FILE under `rel`, repo-relative and POSIX-separated, links refused.
- *
- * `yamlFilesUnder` answers only `.yml` and `.yaml`, and the local-action pin covers whatever the
- * tree holds — an `index.js`, a shell helper, anything a composite action reads. Same refusals as
- * that walk: a linked root or a linked entry is a door out of the tree and is not taken.
- *
- * @param {string} root repository root
- * Past `MAX_WALKED_ENTRIES` the walk stops, and the result is a prefix of the tree. `truncated`
- * receives `rel` when that happened, so the caller can report a partial inventory instead of
- * comparing it as if it were whole: a file past the ceiling is otherwise never seen.
- *
- * @param {string} root repository root
- * @param {string} rel directory to walk, repo-relative
- * @param {string[]} [truncated] receives `rel` when the walk stopped at its ceiling
- * @returns {string[]} repo-relative POSIX paths
- */
-function filesUnder(root, rel, truncated) {
-  const abs = path.join(root, rel);
-  let inspected;
-  try {
-    inspected = lstatSync(abs);
-  } catch {
-    return [];
-  }
-  if (inspected.isSymbolicLink() || !inspected.isDirectory()) return [];
-  const out = [];
-  let seen = 0;
-  const walk = (dir) => {
-    for (const e of readdirSync(dir, { withFileTypes: true })) {
-      if (seen >= MAX_WALKED_ENTRIES) {
-        if (truncated !== undefined && !truncated.includes(rel)) truncated.push(rel);
-        return;
-      }
-      seen += 1;
-      const p = path.join(dir, e.name);
-      if (e.isSymbolicLink()) continue;
-      if (e.isDirectory()) walk(p);
-      else if (e.isFile()) out.push(path.relative(root, p).replace(/\\/g, "/"));
-    }
-  };
-  walk(abs);
-  return out;
-}
 export function yamlFilesUnder(root, rel, limit = MAX_WALKED_ENTRIES, truncated) {
   const abs = path.join(root, rel);
   let inspected;
@@ -2606,7 +2609,8 @@ function checkRequiredContexts(root, jobs) {
       const present = new Set();
       for (const pinnedRoot of [ACTIONS_ROOT_REL, "scripts"]) {
         const inventoryTruncated = [];
-        for (const rel_ of filesUnder(root, pinnedRoot, inventoryTruncated)) present.add(rel_);
+        for (const rel_ of filesUnder(root, pinnedRoot, MAX_WALKED_ENTRIES, inventoryTruncated))
+          present.add(rel_);
         if (inventoryTruncated.length > 0) {
           // Reported, not resolved: the set below is a prefix, so an unregistered file past the
           // ceiling is invisible to the comparison and the run cannot call the tree whole.

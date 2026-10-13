@@ -60,6 +60,7 @@ import {
   invokedFileDigests,
   invokedScriptBodies,
   verificationBodyDigest,
+  filesUnder,
   yamlFilesUnder,
 } from "../../../../scripts/check-workflow-hygiene.mjs";
 
@@ -2874,6 +2875,33 @@ describe("the workflow walk refuses a root it did not open, and is bounded", () 
         short,
         "a walk that stopped at its ceiling must name the root it stopped in",
       ).toContain("root");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("walks a tree of exactly the ceiling whole, and reports one entry more", () => {
+    // The boundary the ceiling is judged at: a tree holding exactly as many entries as the
+    // ceiling is whole and must not be reported, because the check is "more than the ceiling",
+    // and the first entry past it is the one that makes the inventory a prefix.
+    const dir = mkdtempSync(path.join(tmpdir(), "qfai-inventory-boundary-"));
+    try {
+      mkdirSync(path.join(dir, "root"), { recursive: true });
+      for (const name of ["a", "b", "c"]) {
+        writeFileSync(path.join(dir, "root", `${name}.txt`), "", "utf-8");
+      }
+
+      const exact: string[] = [];
+      expect(
+        filesUnder(dir, "root", 3, exact).length,
+        "a tree of exactly the ceiling is walked whole",
+      ).toBe(3);
+      expect(exact, "and exactly the ceiling is not a truncation").toEqual([]);
+
+      writeFileSync(path.join(dir, "root", "d.txt"), "", "utf-8");
+      const over: string[] = [];
+      expect(filesUnder(dir, "root", 3, over).length, "one more entry stops the walk").toBe(3);
+      expect(over, "and names the tree it stopped in").toEqual(["root"]);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
