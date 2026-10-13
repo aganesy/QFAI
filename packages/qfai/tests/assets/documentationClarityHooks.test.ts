@@ -35,7 +35,6 @@ import {
   GRILLING_PLAN_HOOK_MARKER,
   INSTALL_CHECK_HOOK_MARKER,
   MINIMAL_IMPLEMENTATION_HOOK_MARKER,
-  SESSION_FEEDBACK_HOOK_MARKER,
   STRUCTURED_QUESTION_HOOK_MARKER,
 } from "../../src/core/claudeCodeHooks.js";
 import {
@@ -98,7 +97,6 @@ const RESTATES: ReadonlyMap<string, string> = new Map([
   [GRILLING_PLAN_HOOK_MARKER, "grilling.md"],
   [STRUCTURED_QUESTION_HOOK_MARKER, "user-questions.md"],
   [API_BUDGET_HOOK_MARKER, "api-budget.md"],
-  [SESSION_FEEDBACK_HOOK_MARKER, "session-feedback.md"],
   // A skill rather than a rule master: the entry the request is sent to.
   [FREE_TEXT_ENTRY_HOOK_MARKER, "qfai-run"],
   [INSTALL_CHECK_HOOK_MARKER, "npm i -D qfai"],
@@ -183,12 +181,7 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
   });
 
   it("wires the reminder to a GitHub post and to a Markdown edit", () => {
-    expect([...hooks.keys()].sort()).toEqual([
-      "PostToolUse",
-      "PreToolUse",
-      "Stop",
-      "UserPromptSubmit",
-    ]);
+    expect([...hooks.keys()].sort()).toEqual(["PostToolUse", "PreToolUse", "UserPromptSubmit"]);
 
     // Selected by matcher rather than by position: other reminders share the
     // event, and asserting this one is the only entry made every later hook a
@@ -279,6 +272,32 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
     expect(text).toContain(".agents/rules/interface-clarity.md");
   });
 
+  // QFAI:EX-0001-0196-70
+  it("asks for a rule to be read once per session, and never from a brief", () => {
+    if (typeof catalog !== "object" || catalog === null) throw new Error("no reminder catalog");
+    for (const [key, message] of Object.entries(catalog)) {
+      if (typeof message !== "object" || message === null) continue;
+      const brief: unknown = Reflect.get(message, "briefContext");
+      if (typeof brief === "string") {
+        expect(brief, `${key} brief sends the agent back to the file`).not.toMatch(/\bread\b/i);
+        expect(brief, `${key} brief names no rule or skill`).toMatch(/\.agents\/rules\/|qfai-run/);
+      }
+      const output: unknown = Reflect.get(message, "hookSpecificOutput");
+      const full: unknown =
+        typeof output === "object" && output !== null
+          ? Reflect.get(output, "additionalContext")
+          : undefined;
+      if (typeof full === "string") {
+        // A full form that asks for its rule or skill to be read asks for it once per session.
+        if (/\bread the (?:rule|skill)\b/i.test(full)) {
+          expect(full, `${key} asks for a reread`).toMatch(
+            /\bRead the (?:rule|skill) once per session\b/,
+          );
+        }
+      }
+    }
+  });
+
   // QFAI:EX-0001-0196-53
   // QFAI:EX-0001-0196-56
   it("keeps compact editing pointers in the shared catalog with their required rules", () => {
@@ -328,9 +347,9 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
         }
       }
     }
-    // Eight shared readers cover prompt and tool filters, full/brief delivery,
-    // posting, the install check and the Stop reminder.
-    expect(readers.size, "each entry uses one of the eight shared readers").toBe(8);
+    // Seven shared readers cover prompt and tool filters, full/brief delivery,
+    // posting and the install check.
+    expect(readers.size, "each entry uses one of the seven shared readers").toBe(7);
     for (const reader of readers) {
       expect(reader).toContain("process.argv[1]");
       expect(reader).toContain("process.argv[2]");
@@ -444,15 +463,6 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
           const payload: unknown = JSON.parse(stdout);
           if (typeof payload !== "object" || payload === null) {
             throw new Error("hook printed something other than an object");
-          }
-          // A stop is answered by a decision that blocks it, not by context added to the turn.
-          if (event === "Stop") {
-            expect(Reflect.get(payload, "decision")).toBe("block");
-            const reason: unknown = Reflect.get(payload, "reason");
-            expect(reason).toEqual(
-              expect.stringContaining(RESTATES.get(entry.statusMessage) ?? ""),
-            );
-            continue;
           }
           const output: unknown = Reflect.get(payload, "hookSpecificOutput");
           if (typeof output !== "object" || output === null) {
