@@ -20,8 +20,8 @@ product-surface-reviewer. Do not infer that a change has no UI effect from its d
 
 ## Evidence
 
-For a UI affecting example, report the screen state, action, expected and observed result, and a capture or rendered artifact. The artifact must identify the source revision. In the stage review, product-surface-reviewer judges each UI affecting example, its UI contracts, and its captured state. The review verdict refers to that revision.
+For a UI affecting example, report the screen state, action, expected and observed result, and a capture or rendered artifact. The artifact must identify the source revision. In the review that reads the change, product-surface-reviewer judges each UI affecting example, its UI contracts, and its captured state. The review verdict refers to that revision.
 
-If the implementation or capture changes after the verdict, refresh the capture and review. A passing code test cannot substitute for the visual and interaction evidence that the acceptance criterion requires.
+A fix made for a finding of that review refreshes the capture it changes and is not reviewed again (`.qfai/assistant/rule/review-convergence.md#one-review`). A passing code test cannot substitute for the visual and interaction evidence that the acceptance criterion requires.
 
 Capture each declared task at a desktop width and a narrow width, in the normal state and in every declared empty, error, loading and success state the screen has. A text the contract declares that the capture lacks, or a text the capture shows that the contract does not declare, is a finding.

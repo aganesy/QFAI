@@ -17,6 +17,9 @@ import {
   assistantLineCeiling,
 } from "../../../src/core/doctor/assetLineBudget.js";
 import { validateAgentDefinition } from "../../../src/core/validators/agentDefinition.js";
+import type { WorkflowExtraction } from "../../../src/core/workflow/extraction.js";
+import { extractionFaults } from "../../../src/core/workflow/extractionShape.js";
+import { routingOutcome } from "../../../src/core/workflow/routeDecision.js";
 import { WORKFLOW_ROUTES } from "../../../src/core/workflow/routes.js";
 import {
   PACKAGE_DEFAULTS,
@@ -29,6 +32,7 @@ import {
   rowOf,
   sectionOf,
 } from "../../helpers/shippedAssistant.js";
+import { extraction } from "../../helpers/workflowExtraction.js";
 
 const RUN = "skill/qfai-run/SKILL.md";
 const PLAN = "skill/qfai-run/references/plan.md";
@@ -102,6 +106,7 @@ const EXTRACTION_VOCABULARIES: Record<string, string[]> = {
     "behaviour-change",
     "deprecation",
     "refactor",
+    "procedure",
     "docs",
     "flaky-test",
     "test-defect",
@@ -142,6 +147,7 @@ const EXTRACTION_VOCABULARIES: Record<string, string[]> = {
     "visual-open",
     "prototype-requested",
     "owned-temporary-cleanup",
+    "session-answerable",
   ],
   signals: [
     "approved-record-task",
@@ -529,6 +535,73 @@ describe("qfai-run", () => {
     );
   });
 
+  // QFAI:AC-0001-0211-05
+  // QFAI:EX-0001-0211-51
+  it("extracts a question the session can answer and an operation from the skill file alone", async () => {
+    const extract = flat(sectionOf(await readShipped(RUN), "## The work"));
+    expect(extract).toMatch(/neither needs a reference/i);
+    expect(extract).toContain("qualifiers: [session-answerable]");
+    expect(extract).toContain("`{ intent: order, artifacts: [] }`");
+    expect(extract).toMatch(/read any other request as `references\/extraction\.md`/i);
+    expect(extract).toMatch(/every other field is empty, with `confidence: high`/i);
+    const full = (fields: Partial<WorkflowExtraction>) =>
+      ({
+        ...extraction({ artifacts: [], confidence: "high" }),
+        ...fields,
+      }) satisfies WorkflowExtraction;
+    const shapes = [
+      full({ intent: "question-why", qualifiers: ["session-answerable"] }),
+      full({ intent: "order" }),
+    ];
+    // The same check `plan` runs before routing: a missing field would be refused here.
+    expect(shapes.map((each) => extractionFaults(each))).toEqual([[], []]);
+    const routed = shapes.map((each) => routingOutcome(each));
+    expect(routed.map((each) => ("taken" in each ? each.taken.route : undefined))).toEqual([
+      "answer-in-session",
+      "run-operation",
+    ]);
+  });
+
+  // QFAI:AC-0001-0211-05
+  it("reads no reference up front, and says when each one is read", async () => {
+    const skill = await readShipped(RUN);
+    const head = skill.slice(0, skill.indexOf("## What this skill never does"));
+    expect(head).toMatch(/read no reference up front/i);
+    const pointers = head.split("\n").filter((line) => /^- `references\//.test(line));
+    expect(pointers.map((line) => /`references\/([\w-]+)\.md`/.exec(line)?.[1])).toEqual([
+      "extraction",
+      "plan",
+      "operator-screens",
+      "stage-points",
+    ]);
+    expect(head).toContain(
+      "`references/plan.md`: for a plan field this file does not name, or a refused plan.",
+    );
+    for (const line of pointers) expect(line).toMatch(/`: (?:for|when|at) /);
+  });
+
+  // QFAI:AC-0001-0211-05
+  // QFAI:EX-0001-0211-52
+  it("keeps person-only operations and deletions on the extraction reference", async () => {
+    const extract = flat(sectionOf(await readShipped(RUN), "## The work"));
+    expect(extract).toMatch(
+      /an operation on finished work that the session runs itself and that deletes nothing is `\{ intent: order, artifacts: \[\] \}`/i,
+    );
+    const qualifiers = sectionOf(await readShipped(EXTRACTION), "## Qualifiers");
+    expect(rowOf(qualifiers, "| `human-run`")).toMatch(/\| `order` +\| only a person can run/i);
+    expect(rowOf(qualifiers, "| `owned-temporary-cleanup`")).toMatch(/\| `order` +\| .*deleting/i);
+    const order = (qualifier: WorkflowExtraction["qualifiers"][number]) =>
+      routingOutcome({
+        ...extraction({ intent: "order", artifacts: [], confidence: "high" }),
+        qualifiers: [qualifier],
+      });
+    expect(
+      [order("human-run"), order("owned-temporary-cleanup")].map((each) =>
+        "taken" in each ? each.taken.route : undefined,
+      ),
+    ).toEqual(["hand-off-operation", "run-owned-cleanup"]);
+  });
+
   // QFAI:AC-0001-0229-06
   // QFAI:EX-0001-0229-10
   it("lists code and tests only when the request asks for the change to be implemented", async () => {
@@ -607,7 +680,7 @@ describe("qfai-run", () => {
   it("handles each release, decision and branch point at its step, inside the step loop", async () => {
     const work = sectionOf(await readShipped(RUN), "## The work");
     const loop = flat(work.split("5. **Run the stages.**")[1]?.split("6. **Review.**")[0] ?? "");
-    expect(loop).toMatch(/at each step, follow its plan's points/i);
+    expect(loop).toMatch(/at a step the plan marks with a point, follow/i);
     expect(loop).toContain("`references/stage-points.md`");
     for (const point of ["release point", "decision point", "branch point"]) {
       expect(loop.toLowerCase()).toContain(`**${point}.**`);

@@ -1,7 +1,7 @@
 ---
 name: qfai-triage
 title: QFAI Triage (Requests that end without a tracked change)
-description: "Use when invoked by name or handed a QFAI work order for a request that ends without a tracked change: a question, a duplicate, missing information, a split, automated reports, a security report, an operation only a person can run, or authorized cleanup of current-task temporary directories."
+description: "Use when invoked by name or handed a QFAI work order for a request that ends without a tracked change: a question, a duplicate, missing information, a split, automated reports, a security report, an operation only a person can run, an operation the user named on finished work, or authorized cleanup of current-task temporary directories."
 argument-hint: "<the request, as it was reported>"
 allowed-tools: [Read, Glob, Grep, Write, Bash, TodoWrite, Task, Agent]
 roles:
@@ -25,6 +25,7 @@ steps:
   - triage-security-intake
   - triage-handoff
   - triage-owned-cleanup
+  - triage-operate
   - triage-close
 requires: []
 mode: execution-focused
@@ -38,12 +39,13 @@ Run the entry check of
 `.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`
 first.
 
-This skill answers, closes, splits or hands over a request, and changes no
-file git tracks. Work the request needs is recorded as a follow-up request,
+This skill answers, closes, splits or hands over a request, or carries out an
+operation the user named, and changes no file git tracks. Work the request needs is recorded as a follow-up request,
 never done here except the exact current-task temporary cleanup that
-`triage-owned-cleanup` permits. That step rechecks existing user authority and
-repository-local scope before any deletion. No other triage step executes an
-operation, and `triage-handoff` still waits for the person's reported result.
+`triage-owned-cleanup` permits, after rechecking existing user authority and
+repository-local scope, and the named operation `triage-operate` runs. No other
+triage step executes an operation, and `triage-handoff` still waits for the
+person's reported result.
 
 ## Inputs
 
@@ -74,6 +76,7 @@ run it, then move to the next.
 | `triage-security-intake` | Takes a vulnerability report in privately                                  | The request reports no exploitable weakness                                      |
 | `triage-handoff`         | Gives a person the steps of an operation only they can run                 | The request needs no operation that only a person can run                        |
 | `triage-owned-cleanup`   | Removes authorized current-task temporary directories and verifies absence | The request is not the specific repository-local cleanup the step permits        |
+| `triage-operate`         | Runs the operation the user named on finished work, and reports its result | The request names no operation                                                   |
 | `triage-close`           | Records the outcome and each follow-up, and closes                         | Only `triage-security-intake` ran: the fix follows it, so the request stays open |
 
 Invoked by name, the skill ends at this stage. It starts no other stage and
@@ -114,7 +117,7 @@ list any remaining actions instead.
 
 project_memory:
 
-- Triage changes no tracked file; only `triage-owned-cleanup` executes its bounded cleanup.
+- Triage changes no tracked file; only `triage-owned-cleanup` and `triage-operate` execute an operation.
 - Other work it finds is a follow-up request.
 - A follow-up is recorded, never routed inside the run that found it.
 - A security report stays private until the fix is ready to disclose.
