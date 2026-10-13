@@ -200,7 +200,7 @@ group. `structure` is optional only for a screen that shows no heading beyond it
 `title`. A screen that shows any other heading, at any level, has one group with a
 `heading` for each, so a screen with several `h2` headings writes `structure`.
 Leaving the key out says the screen shows no such heading; it never says the
-screen may show one without a group. `qfai validate` does not check this, so the
+screen may show one without a group. `npx qfai validate` does not check this, so the
 reviewer compares the rendered headings with the groups. A group heading is
 not the screen title: a second heading above or beside the real one repeats it.
 A group that serves no task does not belong on the screen; name the task it

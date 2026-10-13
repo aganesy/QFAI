@@ -185,9 +185,7 @@ describe.each(TREES)("%s: the guidance that reads the copy keys", (tree) => {
   });
 });
 
-// QFAI:AC-0001-0230-07
 describe.each(TREES)("%s: the guide's placement of rendered text", (tree) => {
-  // QFAI:EX-0001-0230-13
   it("makes structure optional only without a heading beyond the title, and maps each kind of text to its key", async () => {
     const guide = flat(await read(tree, GUIDE));
     expect(guide).toContain("`structure` is optional only for a screen that shows no heading");
