@@ -9,6 +9,8 @@ import {
   type StoryTestFile,
 } from "../../../../src/core/validators/storyTreeObligations.js";
 
+// Spelled in two parts so this file declares no annotation of its own.
+const exTag = ["QFAI", "EX-0001-0001-01"].join(":");
 const specs = ".qfai/spec";
 const story = `${specs}/02_business-flow/business-flow-0001/user-story-0001-0001`;
 const files = new Map<string, string>([
@@ -62,6 +64,10 @@ function expectParsingWork(profile: StoryObligationProfile): void {
     file: `${story}/03_Example.md`,
     rule: "storyTree.testObligation",
     refs: ["EX-0001-0001-01"],
+  };
+  const unplacedEX: Issue = {
+    ...missingEX,
+    message: `EX-0001-0001-01 is missing a test annotation; ${knownTag} at ${unitFile}:1 is not on a comment line before a test declaration (for example \`it(\` or \`test(\`), so it counts for nothing. Move it to a comment line above the test it covers, with only blank or comment lines between`,
   };
   const unknownEX: Issue = {
     code: "QFAI-STORY-008",
@@ -160,7 +166,7 @@ function expectParsingWork(profile: StoryObligationProfile): void {
       test: { ...selectedUnit, content: unattached },
       tree: ordinary,
       tddCalls: 1,
-      expected: { atdd: [missingBF, missingAC], tdd: [missingEX] },
+      expected: { atdd: [missingBF, missingAC], tdd: [unplacedEX] },
     },
     {
       name: "DONE exception exempts only its declared EX",
@@ -216,6 +222,40 @@ describe("story-tree test obligations", () => {
       expect(finding?.message).toBe(`${id} is missing ${target} annotation`);
     },
   );
+
+  // QFAI:EX-0001-0056-14
+  it.each([
+    {
+      name: "a CRLF header annotation names its own line",
+      content: `import { it } from "vitest";\r\n\r\n// ${exTag}\r\nimport { x } from "./x";\r\n\r\nit("pays", () => {});\r\n`,
+      line: 3,
+    },
+    {
+      name: "an annotation inside a test body",
+      content: `it("pays", () => {\n  // ${exTag}\n});\n`,
+      line: 2,
+    },
+    {
+      name: "an annotation trailing a code line",
+      content: `it("pays", () => {}); // ${exTag}\n`,
+      line: 1,
+    },
+    {
+      name: "the same id annotated twice names the first line",
+      content: `// ${exTag}\nimport { x } from "./x";\nconst y = 1;\n// ${exTag}\nconst z = 2;\nit("pays", () => {});\n`,
+      line: 1,
+    },
+  ])("tells where an EX annotation that counts for nothing is: $name", ({ content, line }) => {
+    const file = "tests/unit/checkout.test.ts";
+    const findings = validateStoryTreeObligationsModel(
+      model(),
+      [{ file, kind: null, selectedForExample: true, content }],
+      "tdd",
+    );
+    expect(findings.map((finding) => finding.message)).toEqual([
+      `EX-0001-0001-01 is missing a test annotation; ${exTag} at ${file}:${String(line)} is not on a comment line before a test declaration (for example \`it(\` or \`test(\`), so it counts for nothing. Move it to a comment line above the test it covers, with only blank or comment lines between`,
+    ]);
+  });
 
   it("requires BF in E2E and AC in integration or API", () => {
     const findings = validateStoryTreeObligationsModel(
