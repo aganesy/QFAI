@@ -1210,21 +1210,64 @@ function checkJobGuardrails(jobs) {
 const TRUSTED_REGISTRIES = ["https://registry.npmjs.org"];
 
 /**
- * Every spelling of `npm install` that npm itself accepts, with a global flag.
+ * Every spelling of `npm install` that npm itself accepts.
  *
  * Enumerating only `install`, `i` and `add` would miss most of them: npm's own
  * `install --help` lists `in`, `ins`, `inst`, `insta`, `instal`, `isnt`, `isnta`, `isntal` and
  * `isntall` besides, and `npm in -g corepack` is a global install a narrower rule would not
  * catch. A partial enumeration of an alias table is the same defect as a partial enumeration of
- * the ways a shell can spell a variable, one file over.
- *
- * The flag can sit anywhere after the subcommand, and `-g` is the same request as `--global`.
- * The optional group ENDS in whitespace, so the flag is always matched at a token start:
- * measured, the first version anchored `-g` on `(?:^|\s)` after a `\s+` that had already eaten
- * the separator, so `npm i -g corepack` matched nothing at all.
+ * the ways a shell can spell a variable, one file over. `install-test` installs the same way.
  */
-const GLOBAL_INSTALL =
-  /(?:^|[;&|(]\s*)npm\s+(?:install|add|i|in|ins|inst|insta|instal|isnt|isnta|isntal|isntall)\s+(?:[^\n]*\s)?(?:--global|-g)(?:\s|$)/;
+const INSTALL_SUBCOMMANDS = new Set([
+  "install",
+  "add",
+  "i",
+  "in",
+  "ins",
+  "inst",
+  "insta",
+  "instal",
+  "isnt",
+  "isnta",
+  "isntal",
+  "isntall",
+  "install-test",
+  "it",
+]);
+
+/**
+ * Commands that run another command: `sudo npm i -g x` is the same install as `npm i -g x`.
+ *
+ * A closed list. The first command of a segment has to be `npm` or one of these before the
+ * segment counts as an npm invocation, so a message that merely quotes an install
+ * (`echo "run npm i -g x"`) is not read as one.
+ */
+const COMMAND_WRAPPERS = new Set([
+  "sudo",
+  "doas",
+  "env",
+  "command",
+  "exec",
+  "nohup",
+  "time",
+  "nice",
+  "ionice",
+  "timeout",
+  "xargs",
+  "stdbuf",
+  "setsid",
+  "builtin",
+  "corepack",
+]);
+
+/** Words that start a command inside a compound statement and are not a command themselves. */
+const SHELL_KEYWORDS = new Set(["then", "do", "else", "elif", "if", "while", "until"]);
+
+const ASSIGNMENT_WORD = /^[A-Za-z_][A-Za-z0-9_]*=/;
+const NPM_COMMAND = /(?:^|\/)npm(?:\.cmd)?$/i;
+
+/** Punctuation that can stand in front of a command word: `(npm`, `$(npm`, `{npm`, `!npm`. */
+const LEADING_SHELL_SYNTAX = /^(?:\$\(|[({`!])+/;
 
 /**
  * A step body's command lines: comments dropped, continuations joined.
@@ -1286,56 +1329,255 @@ function commandSegments(line) {
     .filter((segment) => segment !== "");
 }
 
-/**
- * The part of a global install that npm reads as options: from the install to the first bare `--`.
- *
- * After a bare `--` npm treats every word as a positional argument, so
- * `npm i -g -- --ignore-scripts pkg` installs a package called `--ignore-scripts` with scripts on.
- *
- * @param {string} segment one command segment
- * @param {number} from where the install begins in `segment`
- * @returns {string} the text whose flags npm applies
- */
-function flagsBeforeTerminator(segment, from) {
-  const rest = segment.slice(from);
-  const end = rest.search(/\s--(?:\s|$)/);
-  return end === -1 ? rest : rest.slice(0, end);
-}
-
 /** A value with the quotes and backslashes the shell would remove taken off. */
 function unquoted(value) {
   return value.replace(/["'\\]/g, "");
 }
 
 /**
- * Every occurrence of an npm flag in `text`, abbreviations included.
+ * The words of one command segment, split where the shell splits them.
+ *
+ * Whitespace inside a quoted string, behind a backslash, or inside a `${{ … }}` expression does
+ * not end a word, so `"--ignore-scripts"=false` is one word and so is `corepack@${{ env.V }}`.
+ * The words come back RAW, quotes included; `unquoted` turns one into what the program receives.
+ *
+ * Not a shell parser: a command substitution with spaces in it splits like plain words, which can
+ * only lose flags and produce a finding — the safe direction.
+ *
+ * @param {string} segment one command segment
+ * @returns {string[]} the raw words
+ */
+function shellWords(segment) {
+  const words = [];
+  let current = "";
+  let started = false;
+  let quote = "";
+  for (let at = 0; at < segment.length; at += 1) {
+    const char = segment.charAt(at);
+    if (quote !== "") {
+      current += char;
+      if (char === "\\" && quote === '"' && at + 1 < segment.length) {
+        at += 1;
+        current += segment.charAt(at);
+      } else if (char === quote) {
+        quote = "";
+      }
+      continue;
+    }
+    if (char === "\\" && at + 1 < segment.length) {
+      at += 1;
+      current += char + segment.charAt(at);
+      started = true;
+      continue;
+    }
+    if (char === "'" || char === '"') {
+      quote = char;
+      current += char;
+      started = true;
+      continue;
+    }
+    if (segment.startsWith("${{", at)) {
+      const close = segment.indexOf("}}", at + 3);
+      const end = close === -1 ? segment.length : close + 2;
+      current += segment.slice(at, end);
+      started = true;
+      at = end - 1;
+      continue;
+    }
+    if (/\s/.test(char)) {
+      if (started) words.push(current);
+      current = "";
+      started = false;
+      continue;
+    }
+    current += char;
+    started = true;
+  }
+  if (started) words.push(current);
+  return words;
+}
+
+/**
+ * One option word as npm reads it: `--name`, `--no-name`, `--name=value`.
+ *
+ * @param {string} word an unquoted word
+ * @returns {{name: string, negated: boolean, attached: string | undefined} | undefined}
+ */
+function parseOption(word) {
+  const match = /^--(no-)?([a-z][a-z-]*)(?:=([\s\S]*))?$/.exec(word);
+  if (match === null) return undefined;
+  return { name: match[2] ?? "", negated: match[1] !== undefined, attached: match[3] };
+}
+
+/**
+ * Whether an option names `flag`: its full name, or any unambiguous prefix npm resolves to it.
+ *
+ * @param {{name: string} | undefined} option from `parseOption`
+ * @param {string} flag the flag name without dashes
+ * @param {number} shortest the fewest letters of the name that still resolve to it
+ */
+function namesFlag(option, flag, shortest) {
+  return option !== undefined && option.name.length >= shortest && flag.startsWith(option.name);
+}
+
+/** The words an `=` value of a boolean flag may hold and still mean "off". */
+function isFalseValue(value) {
+  return /^(?:false|0)$/i.test(value);
+}
+
+/**
+ * Whether `word` is a shell or workflow expansion that could expand to a boolean's value.
+ *
+ * Each expansion stands for any text, so `$X`, `f${X}` and `${{ inputs.ignore }}` can all become
+ * `false`, while `corepack@${{ env.V }}` cannot: its literal front keeps it a package name. That
+ * difference is what lets a pinned install be followed by an expression-bearing package argument
+ * without the argument being read as the value of `--ignore-scripts`.
+ *
+ * @param {string} word an unquoted word
+ * @returns {boolean} true when the word has an expansion and could equal a boolean value
+ */
+function couldExpandToBoolean(word) {
+  const expansion = /\$\{\{[\s\S]*?\}\}|\$\{[^}]*\}|\$\([^)]*\)|\$[A-Za-z_][A-Za-z0-9_]*|`[^`]*`/g;
+  const parts = word.split(expansion);
+  if (parts.length === 1) return false;
+  const shape = new RegExp(
+    `^${parts.map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(".*")}$`,
+  );
+  return ["true", "false", "0", "1", "yes", "no"].some((value) => shape.test(value));
+}
+
+/**
+ * Whether a word following `--ignore-scripts` is taken by npm as the flag's value.
+ *
+ * npm reads a boolean flag's value from the next word only when that word is a boolean. Anything
+ * else is a positional argument, such as the package. A word the shell could turn into a boolean
+ * counts as a value, because it may well become one.
+ */
+function isSpacedBooleanValue(word) {
+  return /^(?:true|false|0|1|yes|no)$/i.test(word) || couldExpandToBoolean(word);
+}
+
+/**
+ * The options of a command segment that is a GLOBAL npm install, else `undefined`.
+ *
+ * The command is `npm` itself, or `npm` behind a command prefix: variable assignments
+ * (`FOO=1 npm …`), a compound-statement keyword (`then npm …`, `do npm …`), a subshell or negation
+ * (`(npm …`, `! npm …`), or a wrapper from `COMMAND_WRAPPERS` (`sudo npm …`). Options may stand on
+ * either side of the subcommand: `npm -g i pkg`, `npm --ignore-scripts=false i -g pkg`.
+ *
+ * Global means any of `--global`, `--global=true`, a short cluster that carries `g` (`-g`, `-gf`,
+ * `-fg`), `--location=global` or `--location global`, or `npm_config_global` /
+ * `npm_config_location` set for this one command. The LAST of them wins, as in npm, and a value
+ * this lane cannot read (`--global=$X`) counts as global.
+ *
+ * After a bare `--` npm treats every word as a positional argument, so
+ * `npm i -g -- --ignore-scripts pkg` installs a package called `--ignore-scripts` with scripts on:
+ * the returned options end there.
+ *
+ * @param {string} segment one command segment
+ * @returns {string[] | undefined} the unquoted option and positional words npm applies options to
+ */
+function globalInstallOptions(segment) {
+  const words = shellWords(segment).map(unquoted);
+  const assignments = [];
+  let at = 0;
+  let command;
+  for (; at < words.length; at += 1) {
+    const word = (words[at] ?? "").replace(LEADING_SHELL_SYNTAX, "");
+    if (word === "" || SHELL_KEYWORDS.has(word)) continue;
+    if (ASSIGNMENT_WORD.test(word)) {
+      assignments.push(word);
+      continue;
+    }
+    command = word;
+    break;
+  }
+  if (command === undefined) return undefined;
+  if (!NPM_COMMAND.test(command)) {
+    if (!COMMAND_WRAPPERS.has(command.replace(/^.*\//, ""))) return undefined;
+    for (at += 1; at < words.length && !NPM_COMMAND.test(words[at] ?? ""); at += 1) {
+      if (ASSIGNMENT_WORD.test(words[at] ?? "")) assignments.push(words[at] ?? "");
+    }
+    if (at >= words.length) return undefined;
+  }
+  const rest = words.slice(at + 1);
+  const last = rest.length - 1;
+  if (last >= 0 && !(rest[last] ?? "").includes("(")) {
+    rest[last] = (rest[last] ?? "").replace(/[)`]+$/, "");
+  }
+  const end = rest.indexOf("--");
+  const options = end === -1 ? rest : rest.slice(0, end);
+
+  let global = false;
+  for (const assignment of assignments) {
+    const config = /^npm_config_(global|location)=([\s\S]*)$/i.exec(assignment);
+    if (config === null) continue;
+    const value = config[2] ?? "";
+    global = config[1]?.toLowerCase() === "global" ? !isFalseValue(value) : value === "global";
+  }
+  let install = false;
+  for (let index = 0; index < options.length; index += 1) {
+    const word = options[index] ?? "";
+    if (!word.startsWith("-")) {
+      if (INSTALL_SUBCOMMANDS.has(word)) install = true;
+      continue;
+    }
+    const option = parseOption(word);
+    if (namesFlag(option, "global", 6) && option !== undefined) {
+      global =
+        option.attached === undefined
+          ? !option.negated
+          : !option.negated && !isFalseValue(option.attached);
+    } else if (namesFlag(option, "location", 5) && option !== undefined) {
+      const next = options[index + 1];
+      const value = option.attached ?? (next !== undefined && !next.startsWith("-") ? next : "");
+      if (option.attached === undefined && value !== "") index += 1;
+      if (value === "global" || /[$`]/.test(value)) global = true;
+    } else if (/^-[A-Za-z]+$/.test(word) && word.includes("g")) {
+      global = true;
+    }
+  }
+  return install && global ? options : undefined;
+}
+
+/**
+ * Every occurrence of an npm flag among `options`, abbreviations included.
  *
  * npm accepts any unambiguous prefix of a flag name, so `--ignore-script=false`, `--ignore-s` and
  * `--no-ignore-scr` are the real flag. `shortest` is the shortest prefix that names this flag
  * alone; a shorter one is ambiguous, and npm refuses it. Counting more than npm resolves can only
  * produce a finding.
  *
- * @param {string} text the options of one install
+ * @param {string[]} options the unquoted words of one install
  * @param {string} flag the flag name without dashes
  * @param {number} shortest the fewest letters of the name that still resolve to it
+ * @param {(word: string) => boolean} takesSpacedValue whether a following word that does not start
+ *   with a dash is this flag's value
  * @returns {{text: string, negated: boolean, abbreviated: boolean, value: string | undefined, attached: string | undefined}[]}
  *   `value` is what follows, joined by `=` or a space and never starting with a dash;
  *   `attached` is the `=` form alone
  */
-function flagOccurrences(text, flag, shortest) {
+function flagOccurrences(options, flag, shortest, takesSpacedValue) {
   const found = [];
-  for (const match of text.matchAll(/--(no-)?([a-z][a-z-]*)(?![\w-])/g)) {
-    const name = match[2] ?? "";
-    if (name.length < shortest || !flag.startsWith(name)) continue;
-    const after = /^(?:=(\S*)|\s+(?!-)(\S+))/.exec(text.slice(match.index + match[0].length));
+  options.forEach((word, index) => {
+    const option = parseOption(word);
+    if (option === undefined || !namesFlag(option, flag, shortest)) return;
+    const next = options[index + 1];
+    const spaced =
+      option.attached === undefined &&
+      next !== undefined &&
+      !next.startsWith("-") &&
+      takesSpacedValue(next)
+        ? next
+        : undefined;
     found.push({
-      text: `${match[0]}${after?.[0] ?? ""}`.trim(),
-      negated: match[1] !== undefined,
-      abbreviated: name !== flag,
-      value: after?.[1] ?? after?.[2],
-      attached: after?.[1],
+      text: spaced === undefined ? word : `${word} ${spaced}`,
+      negated: option.negated,
+      abbreviated: option.name !== flag,
+      value: option.attached ?? spaced,
+      attached: option.attached,
     });
-  }
+  });
   return found;
 }
 
@@ -1369,9 +1611,8 @@ function checkGlobalInstallPins(root, jobs) {
       if (!isRecord(step)) continue;
       const body = typeof step.run === "string" ? step.run : "";
       for (const line of shellCommandLines(body).flatMap(commandSegments)) {
-        const install = GLOBAL_INSTALL.exec(line);
-        if (install === null) continue;
-        const flagText = flagsBeforeTerminator(line, install.index);
+        const options = globalInstallOptions(line);
+        if (options === undefined) continue;
         const missing = [];
         // The VALUE, not the presence. `--registry=https://attacker.example` carries the flag and
         // answers a different registry, which is the whole of what the flag was added to stop.
@@ -1386,7 +1627,7 @@ function checkGlobalInstallPins(root, jobs) {
         // Abbreviations count as occurrences (`--regis=<attacker>` is `--registry` to npm), and a
         // lone abbreviation is refused all the same: npm warns that abbreviations stop working in
         // its next major version, so a pin spelled that way is a pin with an expiry date.
-        const registries = flagOccurrences(flagText, "registry", 3);
+        const registries = flagOccurrences(options, "registry", 3, () => true);
         if (registries.length > 1) {
           missing.push(
             `one --registry (found ${String(registries.length)}, and npm takes the last: ${registries
@@ -1417,7 +1658,7 @@ function checkGlobalInstallPins(root, jobs) {
         // swallowed as the first one's value. `--no-ignore-scripts` is the same option spelled
         // negated, and npm applies it in order like any other occurrence, so it counts too, and so
         // does every abbreviation of either spelling (`--ignore-script=false`, `--no-ignore-s`).
-        const ignores = flagOccurrences(flagText, "ignore-scripts", 2);
+        const ignores = flagOccurrences(options, "ignore-scripts", 2, isSpacedBooleanValue);
         if (ignores.length > 1) {
           missing.push(
             `one --ignore-scripts (found ${String(ignores.length)}, and npm takes the last: ${ignores

