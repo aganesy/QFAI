@@ -100,7 +100,7 @@ Feature: Install or upgrade and get the free-text entry
     And the API-budget reminder fires only for a shell command that names the forge's CLI or its API host
     And in each host that supports their event, the API-budget, three grilling, minimal-implementation and documentation-clarity after-write/edit keys print the full message on their first eligible invocation and a one-line reminder on every later invocation, using the existing counter for each session, optional agent and key
     And the brief implementation reminder points to the implementation rule, its non-removable floor and the interface rule, and the brief documentation reminder points to the writing rule
-    And no brief reminder tells the agent to read its file again, and a full reminder asks for its rule or skill to be read once per session
+    And no brief reminder tells the agent to read its file again, and a full reminder that asks for its rule or skill to be read asks for it once per session
     And command filters run before counting, so a skipped call consumes no first display
     And a new session, agent or key starts its own sequence; missing session identity or counter-storage failure prints the full message and exits 0
     And the documentation-clarity reminder before a post prints in full on every eligible post, and the other reminder schedules, hook envelopes and exit behavior stay unchanged
