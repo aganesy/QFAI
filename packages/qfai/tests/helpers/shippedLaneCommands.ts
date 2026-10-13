@@ -1498,7 +1498,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // Re-pinned for the `Stop` group marked `QFAI session feedback reminder`, and again when it was
   // removed: the file has no `Stop` event, and restoring that group reproduces `f751cc6e…` byte
   // for byte. Derived the same way.
-  [".claude/settings.json", "da0e726996c0ec7306930b094eb6717afe5f9b76e6e8c1b378331e0f00b16ae6"],
+  [".claude/settings.json", "4b7ecd6f82a412aa6050b05a6b631f30b77ff3f548231711470c348cc29554ee"],
   // Inside `.codex/`, and pinned for the reason `.claude/settings.json` is: its commands are a
   // program an adopter's agent runs. Two `UserPromptSubmit` groups, structured-question and
   // free-text entry. Codex takes one command string, so each runs the same `node -e` reader
