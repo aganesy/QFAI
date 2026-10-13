@@ -602,6 +602,20 @@ describe("qfai-run", () => {
     ).toEqual(["hand-off-operation", "run-owned-cleanup"]);
   });
 
+  // QFAI:AC-0001-0211-05
+  // QFAI:EX-0001-0211-35
+  it("reads a request to raise qfai itself as a dependency change, whose step carries the upgrade", async () => {
+    const intents = sectionOf(await readShipped(EXTRACTION), "## Intent");
+    expect(rowOf(intents, "| `dependency`")).toMatch(/raising `qfai` itself/i);
+    const outcome = routingOutcome(
+      extraction({ intent: "dependency", artifacts: ["deps"], confidence: "high" }),
+    );
+    expect("taken" in outcome ? outcome.taken.route : undefined).toBe("bump-dependency");
+    expect(flat(await readShipped("step/implement-dep-bump/STEP.md"))).toMatch(
+      /when the dependency is `qfai` itself/i,
+    );
+  });
+
   // QFAI:AC-0001-0229-06
   // QFAI:EX-0001-0229-10
   it("lists code and tests only when the request asks for the change to be implemented", async () => {

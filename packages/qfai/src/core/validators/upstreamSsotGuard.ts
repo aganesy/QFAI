@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
+import { isEnoent } from "../fs/errno.js";
 import { DEFAULT_GLOB_FILE_LIMIT } from "../fs.js";
 import {
   describeBaseComparison,
@@ -334,7 +335,7 @@ async function readSafePath(file: string): Promise<string> {
   try {
     return await readFile(file, "utf8");
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return "";
+    if (isEnoent(error)) return "";
     throw error;
   }
 }
