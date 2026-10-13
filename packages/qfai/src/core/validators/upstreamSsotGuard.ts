@@ -147,17 +147,26 @@ export async function validateStoryTreeDrift(
   issues.push(...(await examplesWithoutTestChange(root, config, changed, specs, baseBranch)));
   // A path already in the committed comparison is not named again, even when the working tree
   // changes it further: the checks read the file as it is on disk.
-  const working = uncommittedContentPaths(root);
+  const working = uncommittedContentPaths(
+    root,
+    (file) =>
+      isProtected(file) &&
+      !changed.has(file) &&
+      !authorised.has(file) &&
+      !(file === decisions && onlyChangeRequestRowsChanged),
+  );
   if (working === null) {
     issues.push(notCompared("git could not list the uncommitted changes.", RERUN_ACTION));
   } else {
-    const uncommitted = working.filter(
-      (file) =>
-        isProtected(file) &&
-        !changed.has(file) &&
-        !authorised.has(file) &&
-        !(file === decisions && onlyChangeRequestRowsChanged),
-    );
+    // The same two edits a commit would pass without a change request pass uncommitted too.
+    const uncommitted: string[] = [];
+    for (const file of working) {
+      if (file.endsWith("/03_Example.md") && (await onlyAppendsExamples(root, baseBranch, file)))
+        continue;
+      if (file.startsWith(`${contracts}/`) && (await onlyCitesExamples(root, baseBranch, file)))
+        continue;
+      uncommitted.push(file);
+    }
     if (uncommitted.length > 0) issues.push(uncommittedNotCompared(uncommitted));
   }
   if (profile === "drift" && comparison.kind === "resolved") {
@@ -176,10 +185,10 @@ const UNCOMMITTED_LISTED = 5;
 function uncommittedNotCompared(uncommitted: readonly string[]): Issue {
   const listed = uncommitted.slice(0, UNCOMMITTED_LISTED);
   const rest = uncommitted.length - listed.length;
-  const many = uncommitted.length === 1;
+  const single = uncommitted.length === 1;
   return issue(
     "QFAI-DRIFT-004",
-    `${uncommitted.length} uncommitted ${many ? "change" : "changes"} to protected story-tree ${many ? "file is" : "files are"} not compared with the base: ${listed.join(", ")}${rest > 0 ? ` and ${rest} more` : ""}.`,
+    `${uncommitted.length} uncommitted ${single ? "change" : "changes"} to protected story-tree ${single ? "file is" : "files are"} not compared with the base: ${listed.join(", ")}${rest > 0 ? ` and ${rest} more` : ""}.`,
     "warning",
     undefined,
     "storyTree.uncommittedNotCompared",

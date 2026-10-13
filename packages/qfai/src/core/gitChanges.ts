@@ -95,7 +95,7 @@ function differsIgnoringEol(root: string, baseBranch: string, file: string): boo
   try {
     execFileSync(
       "git",
-      ["diff", "--ignore-cr-at-eol", "--quiet", `${baseBranch}...HEAD`, "--", file],
+      ["diff", "--ignore-cr-at-eol", "--quiet", `${baseBranch}...HEAD`, "--", `:(literal)${file}`],
       { cwd: root, encoding: "utf-8", stdio: ["ignore", "ignore", "ignore"] },
     );
     return false;
@@ -260,45 +260,35 @@ export function changedFilesSince(
   }
 }
 
-const STATUS_ARGS = [
-  "status",
-  "--porcelain=v1",
-  "-z",
-  "--untracked-files=all",
-  "--no-renames",
-] as const;
-
 /**
- * Every path the working tree holds uncommitted: tracked changes, staged or not, and untracked
- * files git does not ignore. `null` when `root` is not inside a git repository.
+ * The paths the working tree holds uncommitted that `include` accepts: tracked changes, staged or
+ * not, and untracked files git does not ignore. `null` when git cannot list them.
+ *
+ * A tracked file whose only difference from HEAD is a line ending is left out, as
+ * {@link getChangedFilesAgainstBase} drops it from the committed comparison: such an edit carries
+ * no content, so it must not be warned about now and then never reported once committed.
+ * `include` runs first, so only the paths a caller cares about cost a `git diff`.
  *
  * `-z` keeps a path with a space or a non-ASCII name as git wrote it, and `--no-renames` makes a
  * move report both of its paths.
  */
-export function uncommittedPaths(root: string): string[] | null {
-  const output = gitStdout(root, STATUS_ARGS);
-  if (output === null) return null;
-  return output
-    .split("\0")
-    .filter((entry) => entry.length > 3)
-    .map((entry) => normalizeRepoPath(entry.slice(3)))
-    .sort();
-}
-
-/**
- * {@link uncommittedPaths} without the tracked files whose only difference from HEAD is a line
- * ending, which {@link getChangedFilesAgainstBase} drops from the committed comparison for the
- * same reason: such an edit carries no content, so it must not be warned about now and then
- * never reported once committed. Untracked and deleted paths stay. `null` when git cannot list
- * them.
- */
-export function uncommittedContentPaths(root: string): string[] | null {
-  const output = gitStdout(root, STATUS_ARGS);
+export function uncommittedContentPaths(
+  root: string,
+  include: (file: string) => boolean,
+): string[] | null {
+  const output = gitStdout(root, [
+    "status",
+    "--porcelain=v1",
+    "-z",
+    "--untracked-files=all",
+    "--no-renames",
+  ]);
   if (output === null) return null;
   const paths: string[] = [];
   for (const entry of output.split("\0")) {
     if (entry.length <= 3) continue;
     const file = normalizeRepoPath(entry.slice(3));
+    if (!include(file)) continue;
     const code = entry.slice(0, 2);
     const modifiedInPlace = !code.includes("?") && !code.includes("D") && !code.includes("A");
     if (modifiedInPlace && !differsFromHeadIgnoringEol(root, file)) continue;
@@ -310,11 +300,11 @@ export function uncommittedContentPaths(root: string): string[] | null {
 /** Whether `file` differs from HEAD, in the index or the working tree, beyond line endings. */
 function differsFromHeadIgnoringEol(root: string, file: string): boolean {
   try {
-    execFileSync("git", ["diff", "--ignore-cr-at-eol", "--quiet", "HEAD", "--", file], {
-      cwd: root,
-      encoding: "utf-8",
-      stdio: ["ignore", "ignore", "ignore"],
-    });
+    execFileSync(
+      "git",
+      ["diff", "--ignore-cr-at-eol", "--quiet", "HEAD", "--", `:(literal)${file}`],
+      { cwd: root, encoding: "utf-8", stdio: ["ignore", "ignore", "ignore"] },
+    );
     return false;
   } catch {
     // A git failure is read as "changed", as in `differsIgnoringEol`.
