@@ -40,6 +40,7 @@ steps:
   - implement-tooling
   - implement-backport
   - implement-acceptance
+  - implement-procedure
 requires: [common-review-cycle]
 mode: approval-gated
 ---
@@ -86,6 +87,11 @@ design. They are written by the `write-acceptance-tests` route, or by
 `implement-acceptance` run alone, and the report says which BF and AC tests
 still have an empty body.
 
+For that report or a handoff of unfinished BF/AC bodies, read
+`.qfai/assistant/step/verify-repo-gate/STEP.md#acceptance-evidence-and-follow-up`.
+It separates annotation proof, body states, actual behavior and execution,
+and the remaining work's owner and completion criteria.
+
 Each of these runs alone, instead of that order, when the request is not new
 behaviour but a failure, a repair or upkeep:
 
@@ -130,6 +136,12 @@ follows § 4 on unrequested fixes, including its exception for a necessary fix
 and reporting requirement, and states any assumption it built on
 (`.qfai/assistant/rule/test-layers.md#test-suite-sizing`,
 `.agents/rules/minimal-implementation.md` § 4).
+
+## Route-only procedure authoring
+
+When the plan names `implement-procedure`, follow
+`.qfai/assistant/step/implement-procedure/STEP.md`.
+Business-flow invocations skip it; existing flow steps apply.
 
 ## Completion
 

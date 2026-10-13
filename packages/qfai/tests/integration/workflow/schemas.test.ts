@@ -8,14 +8,45 @@ import { fileURLToPath } from "node:url";
 import Ajv2020 from "ajv/dist/2020";
 import { afterEach, expect, it } from "vitest";
 
+import { SIGNALS, type RoutingReading } from "../../../src/core/workflow/extraction.js";
 import { extractionFaults } from "../../../src/core/workflow/extractionShape.js";
 import { planOf } from "../../../src/core/workflow/plan.js";
+import { parsePlan } from "../../../src/core/workflow/plans.js";
 import { WORKFLOW_ROUTES } from "../../../src/core/workflow/routes.js";
 import { getInitAssetsDir } from "../../../src/shared/assets.js";
 import { extraction } from "../../helpers/workflowExtraction.js";
 import { minimalProject, removeProjects } from "./workflowProject.js";
 
 afterEach(removeProjects);
+
+// QFAI:AC-0001-0224-13
+// QFAI:EX-0001-0224-46
+it("Procedure is an intent in each reading and never an added qualifier or field", async () => {
+  const validate = await loadValidator();
+  const procedure = { ...extraction({ artifacts: ["docs"] }), intent: "procedure" };
+  const reading = { intent: "procedure", entryFlags: [], qualifiers: [], signals: [] };
+  const samples = [
+    procedure,
+    { ...extraction({ confidence: "low", artifacts: ["docs"] }), alternatives: [reading] },
+    { ...procedure, qualifiers: ["procedure"] },
+    {
+      ...extraction({ confidence: "low" }),
+      alternatives: [{ ...reading, qualifiers: ["procedure"] }],
+    },
+    { ...procedure, procedure: true },
+    { ...procedure, intent: "procedure-execute" },
+  ];
+  expect(
+    samples.map((sample) => [validate(EXTRACTION, sample), extractionFaults(sample).length === 0]),
+  ).toEqual([
+    [true, true],
+    [true, true],
+    [false, false],
+    [false, false],
+    [false, false],
+    [false, false],
+  ]);
+});
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const schemaDir = path.join(packageRoot, "assets", "schemas", "workflow");
@@ -93,9 +124,13 @@ it("Every example in the qfai-run plan reference validates against its schema", 
   });
 });
 
+// QFAI:AC-0001-0211-02
+// QFAI:EX-0001-0211-47
+
+// QFAI:AC-0001-0211-01
 it("The extraction schema and the parser accept and refuse the same extractions", async () => {
   const validate = await loadValidator();
-  const reading = { intent: "design", entryFlags: [], qualifiers: [], signals: [] };
+  const reading: RoutingReading = { intent: "design", entryFlags: [], qualifiers: [], signals: [] };
   const samples = [
     extraction(),
     extraction({ intent: null }),
@@ -111,6 +146,78 @@ it("The extraction schema and the parser accept and refuse the same extractions"
   expect(samples.map((sample) => validate(EXTRACTION, sample))).toEqual(
     samples.map((sample) => extractionFaults(sample).length === 0),
   );
+  const cleanupReading = { ...reading, intent: "order", qualifiers: ["owned-temporary-cleanup"] };
+  const mainCleanup = {
+    ...extraction({ intent: "order", artifacts: [] }),
+    qualifiers: ["owned-temporary-cleanup"],
+  };
+  const alternativeCleanup = {
+    ...extraction({ confidence: "low", artifacts: [] }),
+    alternatives: [cleanupReading],
+  };
+  const cleanupSamples = [
+    mainCleanup,
+    alternativeCleanup,
+    { ...mainCleanup, intent: "feature" },
+    { ...alternativeCleanup, alternatives: [{ ...cleanupReading, intent: "feature" }] },
+    { ...mainCleanup, artifacts: ["code"] },
+    { ...alternativeCleanup, artifacts: ["docs"] },
+  ];
+  expect(
+    cleanupSamples.map((sample) => [
+      validate(EXTRACTION, sample),
+      extractionFaults(sample).length === 0,
+    ]),
+  ).toEqual([
+    [true, true],
+    [true, true],
+    [false, false],
+    [false, false],
+    [false, false],
+    [false, false],
+  ]);
+
+  const schema: {
+    properties: { signals: { items: { enum: string[] } } };
+    $defs: { reading: { properties: { signals: { items: { enum: string[] } } } } };
+  } = JSON.parse(await readFile(path.join(schemaDir, "extraction.schema.json"), "utf8"));
+  expect([
+    schema.properties.signals.items.enum,
+    schema.$defs.reading.properties.signals.items.enum,
+  ]).toEqual([SIGNALS, SIGNALS]);
+
+  for (const signal of SIGNALS) {
+    const primary = extraction({ signals: [signal] });
+    const alternative = extraction({
+      confidence: "low",
+      alternatives: [{ ...reading, signals: [signal] }],
+    });
+    expect(
+      [
+        validate(EXTRACTION, primary),
+        extractionFaults(primary),
+        validate(EXTRACTION, alternative),
+        extractionFaults(alternative),
+      ],
+      `registered signal ${signal} is valid in each reading`,
+    ).toEqual([true, [], true, []]);
+  }
+
+  for (const { sample, field } of [
+    { sample: { ...extraction(), signals: ["unregistered-signal"] }, field: "signals[0]" },
+    {
+      sample: {
+        ...extraction({ confidence: "low" }),
+        alternatives: [{ ...reading, signals: ["unregistered-signal"] }],
+      },
+      field: "alternatives[0].signals[0]",
+    },
+  ]) {
+    expect([validate(EXTRACTION, sample), extractionFaults(sample)], field).toEqual([
+      false,
+      [field],
+    ]);
+  }
 });
 
 it("The plan of every route validates against the plan schema", async () => {
@@ -171,4 +278,42 @@ it("The plan schema refuses scopes whose recommendation is not the narrowest alo
     validate(PLAN, { ...document, scopes: flipped }),
     validate(PLAN, { ...document, scopes: twice }),
   ]).toEqual([true, false, false]);
+});
+
+// QFAI:AC-0001-0224-13
+// QFAI:EX-0001-0224-46
+it("Only documentation kind may own the procedure step", () => {
+  const text = [
+    "route: write-procedure",
+    "family: change",
+    "stages:",
+    "  - id: documentation",
+    "    kind: documentation",
+    "    steps: [implement-procedure]",
+    "  - id: note",
+    "    kind: verify",
+    "    steps: [{ step: verify-change-note, passThrough: true }]",
+    "    after: [documentation]",
+    "    review: code",
+    "  - id: verify",
+    "    kind: verify",
+    "    steps: [verify-qfai-gate, verify-repo-gate, verify-commit]",
+    "    after: [note]",
+    "decisionPoints: []",
+    "branchPoints: []",
+    "",
+  ].join("\n");
+  const loaded = parsePlan(text, "write-procedure");
+  expect(loaded.ok).toBe(true);
+  const mismatched = parsePlan(
+    text.replace("kind: documentation", "kind: implement"),
+    "write-procedure",
+  );
+  expect(mismatched.ok).toBe(false);
+  if (mismatched.ok) throw new Error("The procedure step accepted implementation kind.");
+  expect(mismatched.refusals).toContainEqual({
+    route: "write-procedure",
+    reason: "kind-mismatch",
+    subject: "documentation",
+  });
 });

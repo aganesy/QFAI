@@ -36,16 +36,27 @@ no-argument batch, and its gate runs with `--flow BF-NNNN` for that flow.
 
 ## Stage 0: source and preflight
 
-1. Run `npx qfai sdd preflight` and use its `selectedInputPath`; a selected
+1. Use the launcher established by
+   `.qfai/assistant/rule/shared-skill-operating-baseline.md#canonical-qfai-launcher-mandatory`.
+   Record its resolved package path and version in the SDD report. Check that
+   the installed Stage 0 instructions support the procedure being used.
+2. Run `npx qfai sdd preflight` and use its `selectedInputPath`; a selected
    discussion pack may be older than the newest pack.
-2. Read the pack, its completed reviews, explicit user requirements, and the
+3. Read the pack, its completed reviews, explicit user requirements, and the
    existing story tree. A discussion pack is provenance and design input, not a
    normative SSOT. Record a discrepancy in an SDD-owned row or the SDD report; do not
-   edit the pack to clear this stage.
-3. Stop if no usable source exists or a product decision cannot be inferred
-   safely. An imported tree without a discussion pack takes its source as
-   `.qfai/assistant/skill/qfai-sdd/references/sdd-execution-playbook.md#stage-0-source-inventory`
-   says.
+   edit the pack to clear this stage. For the current request, read the existing
+   purpose in `<paths.specsDir>/01_policy/objective.md` and inspect related flows
+   and stories. Do not regenerate the existing purpose or a past pack merely
+   because discussion provenance is absent.
+4. A missing-pack diagnosis does not mean that specifications are absent. For
+   conditional source selection, read
+   `.qfai/assistant/skill/qfai-sdd/references/sdd-execution-playbook.md#stage-0-source-inventory`.
+   Use an existing readable authoritative specification with `--import <path>`;
+   use an explicit user requirement as supplied, without inventing an import
+   file. Stop if no usable source exists or a product decision cannot be
+   inferred safely. Import-lite readiness does not establish complete
+   requirements or a validation PASS.
 
 ## Stage 1: triage and records
 
@@ -60,13 +71,24 @@ change request the user approved or declined, and each critical decision the
 user made. Record unresolved
 questions in `<paths.specsDir>/open-questions.md`. Every row has exactly
 `ID | Content | Approach | Status`. Append rows only; afterwards change only
-Status. A change request Content begins `Change request:` and names the
+Status, except for explicit branch-added decision renumbering or the bounded
+published decision prefix recovery in the drift protocol. A change request
+Content begins `Change request:` and names the
 affected repository-relative paths; its Approach names the operation, the affected BF or US,
 its source as `discussion-<id>#REQ-NNNN` when that source exists, and who
 approved it, when, and the option chosen. A declined change request is appended at
 REJECTED, recording who declined it and when. A decision the agent took
 appends no row. Do not write a second decision-record
 directory or a retired story file.
+
+For a published malformed branch-added decision, follow
+`.qfai/assistant/rule/drift-protocol.md#published-decision-prefix-recovery`
+before any write. A separate new target-specific approved recovery change
+request must bind the original source, base, ancestor, raw cell bytes, digests
+and exact prefix. Preserve ID, Content, Status and the entire original suffix.
+Inherited rows, unknown provenance and stale data stop recovery. A diagnostic
+suggestion does not authorize a rewrite. Record the pre-write checks and the
+existing validation result; this step provides no recovery executor.
 
 Put each approval-required operation to the user before anything depends on
 it. A request from the user in the session that names the operation and its
@@ -79,8 +101,10 @@ before the dependent write and report pending approvals.
 UI-bearing is a property of the affected flow, not of the files this run
 happened to edit. Resolve it from the source's surface classification and the UI
 contracts linked to that flow, and record it for each affected flow. Route
-`product-experience-architect` during design and `product-surface-reviewer`
-during review whenever either signal identifies the flow as UI-bearing.
+`product-experience-architect` during design whenever either signal identifies
+the flow as UI-bearing. `product-surface-reviewer` joins a review in a route
+only for a screen change, as `common-review-cycle`'s reviewer set says;
+`qfai-sdd` invoked by name keeps the reviewers its own `## Review` section names.
 
 ## Which surface owns the truth
 

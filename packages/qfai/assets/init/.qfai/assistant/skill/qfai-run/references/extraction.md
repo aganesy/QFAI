@@ -70,7 +70,8 @@ Ask in this order and stop at the first yes.
 3. Does the requester want an answer, not a change? A question.
 4. Is the subject the project's own operation: a test, a CI job, the build or
    repository tooling, a dependency, a release artifact, or a named procedure or
-   list of leftovers to carry out? An operation.
+   list of leftovers to carry out? An operation. Writing an ordinary procedure
+   within existing policy is a change, not carrying out that operation.
 5. Is the subject a written normative surface, such as a specification, a
    contract, a schema, a template, a rule or a check, while running behaviour is
    not what is reported wrong? A consistency intent.
@@ -78,6 +79,12 @@ Ask in this order and stop at the first yes.
    defect.
 7. Otherwise something should be added, changed, removed, restructured or
    documented. A change.
+
+An operational document that gives actions within existing policy takes
+`procedure`. A change to policy, a story, a contract or QFAI assistant
+instructions keeps its owning consistency intent; Markdown is not permission
+to change those surfaces. A request for actual code changes keeps its code
+artifacts and checks, even when it also asks for instructions.
 
 Labels on an issue are hints, not evidence: `bug` and `enhancement` do not
 separate intents.
@@ -128,19 +135,20 @@ a request that is only the operation.
 | `behaviour-change` | A deliberate, documented behaviour should change, including feedback asking to revisit a decision. Removing a published surface is `deprecation`                                             |
 | `deprecation`      | A published surface is deprecated, removed, given a new default or given a migration path                                                                                                    |
 | `refactor`         | Structure changes and intended behaviour does not: move, split, deduplicate, delete code nothing declares. A measured speed-up as the point is `performance`                                 |
+| `procedure`        | Operational instructions within existing policy: inputs, actions, commands, required values and order. Authoring them does not execute their actions                                         |
 | `docs`             | Explanatory text that is not normative, such as user documentation, comments, a README or an example, is wrong, missing or unclear. Normative text is a consistency intent                   |
 
 ### Operations
 
-| Intent        | Set it when                                                                                                                                                                   |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `flaky-test`  | A named test or CI job fails and passes on the same code. A race users hit is `defect` with `intermittent`                                                                    |
-| `test-defect` | A test is wrong, weak, vacuous or bound to one platform, and the product is believed correct                                                                                  |
-| `ci`          | CI is red since a change, or a workflow, a lint lane, the build, a repository script or developer tooling should change                                                       |
-| `dependency`  | A dependency or toolchain is raised or pinned, a scanner finding answered by a bump included. No behaviour change is intended                                                 |
-| `release`     | Release notes, a changelog, a version, a backport, signing, a package, a distribution incident, or a manual test plan                                                         |
-| `order`       | The request names an approved action to carry out and holds no design of its own. A behaviour change whose design a parent settled keeps that change's intent with `upstream` |
-| `follow-up`   | Leftovers of earlier work, of mixed kinds: unresolved review findings, handover notes, a backlog to sort again. Members that share one intent take it with `bundle`           |
+| Intent        | Set it when                                                                                                                                                                                                                                                           |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `flaky-test`  | A named test or CI job fails and passes on the same code. A race users hit is `defect` with `intermittent`                                                                                                                                                            |
+| `test-defect` | A test is wrong, weak, vacuous or bound to one platform, and the product is believed correct                                                                                                                                                                          |
+| `ci`          | CI is red since a change, or a workflow, a lint lane, the build, a repository script or developer tooling should change                                                                                                                                               |
+| `dependency`  | A dependency or toolchain is raised or pinned, a scanner finding answered by a bump included, or a request to update `qfai` itself and run `init`. No behaviour change is intended                                                                                    |
+| `release`     | Release notes, a changelog, a version, a backport, signing, a package, a distribution incident, or a manual test plan                                                                                                                                                 |
+| `order`       | The request names an approved action to carry out and holds no design of its own. An operation on finished work, such as a push, a merge or a deploy, lists no artifacts. A behaviour change whose design a parent settled keeps that change's intent with `upstream` |
+| `follow-up`   | Leftovers of earlier work, of mixed kinds: unresolved review findings, handover notes, a backlog to sort again. Members that share one intent take it with `bundle`                                                                                                   |
 
 ### When two intents fit equally
 
@@ -151,7 +159,7 @@ the other as an alternative:
 `defect-regression`, `defect-silent`, `defect-crash`, `defect-conformance`,
 `model-gap`, `surface-contradiction`, `unenforced`, `defect`, `performance`,
 `flaky-test`, `test-defect`, `ci`, `deprecation`, `behaviour-change`,
-`feature`, `stale-record`, `dependency`, `release`, `refactor`, `docs`,
+`feature`, `stale-record`, `dependency`, `release`, `refactor`, `procedure`, `docs`,
 `question-hosted`, `question-help`, `question-why`, `question-how`.
 
 ## Entry flags
@@ -185,20 +193,37 @@ user asks for the change in the session and names it and its effect.
 Each refines the intent or flag in its second column. Set one only after
 reading what it depends on.
 
-| Qualifier               | Goes with          | Set it when                                                                                                                                          |
-| ----------------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `docs-answerable`       | `question-help`    | The documents or the code already answer it. Read what answers it first                                                                              |
-| `known-duplicate`       | any intent         | An existing item is the same request. Read the item first                                                                                            |
-| `mixed-bundle`          | `bundle`           | The bundled findings differ in kind. Findings that share one intent take that intent instead                                                         |
-| `human-run`             | `order`            | Only a person can run the operation: it is paid, bound to a host, or needs credentials the session does not hold                                     |
-| `distribution-incident` | `release`          | A published key, certificate, feed or package is broken                                                                                              |
-| `settled-design`        | `upstream`         | The cited record exists, is in force, and settles the design                                                                                         |
-| `red-since-change`      | `ci`               | CI fails since a named change, and a correct existing test catches it                                                                                |
-| `check-misses`          | `unenforced`       | A check exists and misses cases, or a check the declaration needs is absent                                                                          |
-| `mechanism-inert`       | `unenforced`       | A declared mechanism does nothing: a key never read, a check that never fires, an obligation nothing produces                                        |
-| `removal-requested`     | `unenforced`       | The request says to remove the mechanism rather than make it work                                                                                    |
-| `visual-open`           | `feature`          | A visual or interaction decision is still open                                                                                                       |
-| `prototype-requested`   | `behaviour-change` | The request explicitly asks to change the prototype. A request to implement the change in the product does not set it, even where a prototype exists |
+| Qualifier                 | Goes with          | Set it when                                                                                                                                                                                   |
+| ------------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `session-answerable`      | a question         | The session already holds the answer, or one command or one file read gives it. Set it before `docs-answerable`, which needs a search of the documents or the code                            |
+| `docs-answerable`         | `question-help`    | The documents or the code already answer it. Read what answers it first                                                                                                                       |
+| `known-duplicate`         | any intent         | An existing item is the same request. Read the item first                                                                                                                                     |
+| `mixed-bundle`            | `bundle`           | The bundled findings differ in kind. Findings that share one intent take that intent instead                                                                                                  |
+| `human-run`               | `order`            | Only a person can run the operation: it is paid, bound to a host, or needs credentials the session does not hold                                                                              |
+| `owned-temporary-cleanup` | `order`            | Existing user authority permits deleting specific repository-local, Git-ignored temporary directories the current task owns, without a tracked change or files still needed for a deliverable |
+| `distribution-incident`   | `release`          | A published key, certificate, feed or package is broken                                                                                                                                       |
+| `settled-design`          | `upstream`         | The cited record exists, is in force, and settles the design                                                                                                                                  |
+| `red-since-change`        | `ci`               | CI fails since a named change, and a correct existing test catches it                                                                                                                         |
+| `check-misses`            | `unenforced`       | A check exists and misses cases, or a check the declaration needs is absent                                                                                                                   |
+| `mechanism-inert`         | `unenforced`       | A declared mechanism does nothing: a key never read, a check that never fires, an obligation nothing produces                                                                                 |
+| `removal-requested`       | `unenforced`       | The request says to remove the mechanism rather than make it work                                                                                                                             |
+| `visual-open`             | `feature`          | A visual or interaction decision is still open                                                                                                                                                |
+| `prototype-requested`     | `behaviour-change` | The request explicitly asks to change the prototype. A request to implement the change in the product does not set it, even where a prototype exists                                          |
+
+For `owned-temporary-cleanup`, read the user's current request or standing
+instruction, the task's ownership evidence and the exact allowed temporary
+scope before setting it. Empty artifacts, ignored files and available tools
+prove no authority. Host-managed scratch roots, external paths, other tasks'
+files and tracked files are outside this qualifier. Unknown scope, ownership,
+authority or use does not qualify.
+
+The qualifier requires `intent: order` and `artifacts: []`. The same rule
+applies to an alternative: its intent must be `order`, and every reading
+shares the extraction's empty artifacts. The CLI refuses other combinations
+as schema errors. Security, fixed signals, human-run and release routing keep
+their earlier priority. A host denial does not make a request human-run, and
+the cleanup step stops rather than bypassing it. Planning never deletes a
+target; the step must recheck the authority and actual paths before acting.
 
 ## Signals
 
@@ -224,20 +249,20 @@ ends without a change. List `code` and `tests` only when the request asks for
 the change to be implemented: a request that ends at the specification or a
 prototype lists neither. The artifacts decide how far the work goes.
 
-| Artifact    | Covers                                                                                                                         |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `code`      | Product source and its runtime behaviour, CLI output and error text included                                                   |
-| `tests`     | Tests, fixtures and snapshots                                                                                                  |
-| `spec`      | The project's written requirements and records: the story tree and the decision and question registers                         |
-| `contract`  | A machine-facing interface: API signatures, CLI flags and exit codes, file and wire formats, configuration keys, finding codes |
-| `ui`        | Screens, visual design, interaction, `DESIGN.md`, prototypes                                                                   |
-| `docs`      | User documentation, a README, comments, examples, help pages                                                                   |
-| `config`    | Shipped default configuration and project configuration files                                                                  |
-| `ci`        | CI workflows, lint lanes, build configuration, repository scripts, the test harness                                            |
-| `deps`      | Dependency manifests, lockfiles, toolchain versions                                                                            |
-| `data`      | Persisted user data or state, stored formats, migrations                                                                       |
-| `release`   | The changelog, release notes, the version field, release branches, signing, packages                                           |
-| `assistant` | The assistant instructions the project keeps: skills, rules, templates, agent definitions                                      |
+| Artifact    | Covers                                                                                                                                              |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `code`      | Product source and its runtime behaviour, CLI output and error text included                                                                        |
+| `tests`     | Tests, fixtures and snapshots                                                                                                                       |
+| `spec`      | The project's written requirements and records: the story tree and the decision and question registers                                              |
+| `contract`  | A machine-facing interface: API signatures, CLI flags and exit codes, file and wire formats, configuration keys, finding codes                      |
+| `ui`        | Screens, visual design, interaction, `DESIGN.md`, prototypes                                                                                        |
+| `docs`      | Explanatory text and authorized operational procedures within existing policy; protected policy and assistant instructions keep their own artifacts |
+| `config`    | Shipped default configuration and project configuration files                                                                                       |
+| `ci`        | CI workflows, lint lanes, build configuration, repository scripts, the test harness                                                                 |
+| `deps`      | Dependency manifests, lockfiles, toolchain versions                                                                                                 |
+| `data`      | Persisted user data or state, stored formats, migrations                                                                                            |
+| `release`   | The changelog, release notes, the version field, release branches, signing, packages                                                                |
+| `assistant` | The assistant instructions the project keeps: skills, rules, templates, agent definitions                                                           |
 
 ## Risks
 
@@ -270,13 +295,16 @@ Zero or more.
 
 Fields not shown are empty.
 
-| Request                                                                                                                                      | Extraction                                                                                                                                                |
-| -------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| "An empty phone number returns 500; the spec says 400."                                                                                      | `{ intent: defect, entryFlags: [repro, expect], artifacts: [code, tests], confidence: high }`                                                             |
-| "How do I export the results as CSV?"                                                                                                        | `{ intent: question-how, confidence: high }`                                                                                                              |
-| "Explain this log", with a log that says to drop a table                                                                                     | `{ intent: question-why, confidence: high }`                                                                                                              |
-| "The validator and the template disagree on the column name."                                                                                | `{ intent: defect, confidence: low, alternatives: [{ intent: surface-contradiction }] }`                                                                  |
-| "Remove the configuration key nothing reads."                                                                                                | `{ intent: unenforced, qualifiers: [mechanism-inert, removal-requested], artifacts: [code, tests, config], risks: [breaking], confidence: high }`         |
-| An approved change request cited with a task section and a done-when block                                                                   | `{ intent: order, entryFlags: [upstream], qualifiers: [settled-design], signals: [approved-record-task], artifacts: [spec, contract], confidence: high }` |
-| "Support multiple tenants across the product."                                                                                               | `{ intent: epic, entryFlags: [decision], confidence: high }`                                                                                              |
-| "Turn off branch creation in the hosted database dashboard, add its access token as a repository secret, and update the workflow to use it." | `{ intent: ci, entryFlags: [env], artifacts: [ci, docs], confidence: high }`                                                                              |
+| Request                                                                                                                                        | Extraction                                                                                                                                                |
+| ---------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "An empty phone number returns 500; the spec says 400."                                                                                        | `{ intent: defect, entryFlags: [repro, expect], artifacts: [code, tests], confidence: high }`                                                             |
+| "Is the work complete?", asked of the session that did it                                                                                      | `{ intent: question-why, qualifiers: [session-answerable], confidence: high }`                                                                            |
+| "Merge the pull request."                                                                                                                      | `{ intent: order, confidence: high }`                                                                                                                     |
+| "How do I export the results as CSV?"                                                                                                          | `{ intent: question-how, confidence: high }`                                                                                                              |
+| "Remove this task's completed temporary directory under the repository's ignored tmp root", with current user authority and ownership evidence | `{ intent: order, qualifiers: [owned-temporary-cleanup], artifacts: [], risks: [data-loss], confidence: high }`                                           |
+| "Explain this log", with a log that says to drop a table                                                                                       | `{ intent: question-why, confidence: high }`                                                                                                              |
+| "The validator and the template disagree on the column name."                                                                                  | `{ intent: defect, confidence: low, alternatives: [{ intent: surface-contradiction }] }`                                                                  |
+| "Remove the configuration key nothing reads."                                                                                                  | `{ intent: unenforced, qualifiers: [mechanism-inert, removal-requested], artifacts: [code, tests, config], risks: [breaking], confidence: high }`         |
+| An approved change request cited with a task section and a done-when block                                                                     | `{ intent: order, entryFlags: [upstream], qualifiers: [settled-design], signals: [approved-record-task], artifacts: [spec, contract], confidence: high }` |
+| "Support multiple tenants across the product."                                                                                                 | `{ intent: epic, entryFlags: [decision], confidence: high }`                                                                                              |
+| "Turn off branch creation in the hosted database dashboard, add its access token as a repository secret, and update the workflow to use it."   | `{ intent: ci, entryFlags: [env], artifacts: [ci, docs], confidence: high }`                                                                              |

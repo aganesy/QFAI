@@ -5,8 +5,8 @@ pull requests, issues, source-code comments, Markdown files, and the reports
 and replies an agent writes.
 
 Write for a reader who knows neither the background of the change nor the
-habits of this team. One test decides every clause below: if deleting or
-changing a sentence leaves that reader no worse off, delete or change it.
+habits of this team. One test decides every clause below: if deleting a
+sentence leaves that reader no worse off, delete it.
 
 The clauses describe patterns of structure and meaning, not word lists. They
 hold in any language: the examples are English, and in another language the
@@ -255,7 +255,7 @@ rule still applies.
 The `gh` command line is out of scope. A shell-argument condition also matches
 compound commands that have nothing to do with GitHub, which would put the
 reminder in front of unrelated work. The standard reaches the agent through
-`CLAUDE.md` and `AGENTS.md` either way.
+`AGENTS.md` either way.
 
 ## Scope of this file
 

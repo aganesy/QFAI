@@ -31,9 +31,9 @@ else.
 3. Re-run the same test. The same test turning GREEN again confirms the fix.
 4. The fix and the re-run are reported in the stage report.
 
-The route's code review judges the fix. A UI-affecting fix, as
-`.qfai/assistant/skill/qfai-implement/references/ui-affecting.md` defines it,
-adds the product-surface-reviewer to that review. The full suite and the
+The route's code review judges the fix. A fix that changes a screen, as
+`common-review-cycle`'s reviewer set defines it, adds `product-surface-reviewer`
+to that review. The full suite and the
 project gates run once, in the verify stage.
 
 The example stays annotated by the same test. No `Change request:` row is
@@ -41,9 +41,10 @@ appended and no evidence entry is removed. A contradiction or obstacle found
 here stops the work under Article IX of
 `.qfai/assistant/rule/constitution.md`.
 
-Inside a workflow run, the stage result carries the `regressionFix` receipt:
-`testId` names that test, `rerunRef` its GREEN re-run, `reviewRef` its
-independent review.
+The stage report names the same test, its GREEN re-run evidence, and the
+independent reviewer with the review verdict and evidence reference. Include
+the changed production paths in that report. Keep these references in the
+session handoff so the next stage can verify them.
 
 ## Gate
 

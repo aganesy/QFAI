@@ -31,6 +31,7 @@
 # | `packageManager` precondition | a `pnpm-lock.yaml` needs `"packageManager": "pnpm@<version>"` in package.json, or the lane stops CLOSED   |
 # | Inert when                    | your package.json declares no `test:<layer>` script, or the diff did not select the lane                  |
 # | Fail-open behaviour           | degraded detection (unreachable base, shallow clone, failed diff, unknown path): warning, then every lane |
+# | Fail-closed behaviour         | an unreadable package.json or a malformed layer script: detection fails and the verdict is red           |
 # | Node version                  | your `.nvmrc` / `.node-version` wins; with neither, a warning annotation, Node 20, and the lane continues |
 # | Dependency install            | follows your lockfile: pnpm / yarn Berry / yarn Classic / npm, else `npm install`                        |
 # | Default-branch push           | runs the lanes the push selects; with `vars.QFAI_CI_PUSH_POLICY` set to `protected` or `none`, runs none  |
@@ -247,35 +248,62 @@ jobs:
           # test:component, test:integration, test:api, test:e2e) exists
           # in package.json, as a JSON array. Every lane below keys its
           # run condition on membership in this output: no declared
-          # script, no executing lane. A missing or unparsable
-          # package.json declares nothing, so every lane stays skipped -
-          # the safe default for an opt-in, because running a lane
-          # without its script could only fail. The probe uses the
-          # runner's preinstalled node and installs nothing.
+          # script, no executing lane.
+          #
+          # This step FAILS CLOSED. Two different answers look alike here
+          # and must stay apart: "nothing is declared" is a valid empty
+          # list, and "the manifest could not be read" is an error. A
+          # repository without a package.json, or whose package.json has
+          # no scripts, declares nothing and every lane stays skipped. A
+          # package.json that is not valid JSON, is not an object, has a
+          # scripts field that is not an object, or declares a layer-named
+          # script that is not a string stops the step instead: reading
+          # any of them as an empty list would leave every lane skipped
+          # and the required check green over tests nobody selected. The
+          # probe uses the runner's preinstalled node and installs
+          # nothing.
           declared="[]"
           if [ -f package.json ]; then
-            declared="$(node -e '
+            if ! declared="$(node -e '
               const { readFileSync } = require("node:fs");
-              let scripts = {};
+              const stop = (reason) => {
+                process.stderr.write("qfai tests: " + reason + "\n");
+                process.exit(1);
+              };
+              let parsed;
               try {
-                const parsed = JSON.parse(readFileSync("package.json", "utf8"));
-                if (
-                  parsed !== null &&
-                  typeof parsed === "object" &&
-                  parsed.scripts !== null &&
-                  typeof parsed.scripts === "object"
-                ) {
-                  scripts = parsed.scripts;
-                }
+                parsed = JSON.parse(readFileSync("package.json", "utf8"));
               } catch {
-                scripts = {};
+                stop("package.json cannot be read as JSON");
+              }
+              if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+                stop("package.json is not a JSON object");
+              }
+              const scripts = parsed.scripts;
+              if (scripts === undefined) {
+                process.stdout.write("[]");
+                process.exit(0);
+              }
+              if (scripts === null || typeof scripts !== "object" || Array.isArray(scripts)) {
+                stop("the scripts field of package.json is not an object");
               }
               const layers = ["unit", "component", "integration", "api", "e2e"];
-              const declared = layers.filter(
-                (layer) => typeof scripts["test:" + layer] === "string",
-              );
+              const declared = [];
+              for (const layer of layers) {
+                const script = scripts["test:" + layer];
+                if (script === undefined) {
+                  continue;
+                }
+                if (typeof script !== "string") {
+                  stop("the test:" + layer + " script is not a string");
+                }
+                declared.push(layer);
+              }
               process.stdout.write(JSON.stringify(declared));
-            ')" || declared="[]"
+            ')"; then
+              echo "::error file=package.json::qfai tests: package.json could not be read as a manifest (the reason is in the line above), so the declared test layers are unknown. Fix package.json: this check stops here instead of reporting green over tests it could not select."
+              exit 1
+            fi
           fi
           echo "scripts=${declared}" >> "$GITHUB_OUTPUT"
       - name: Intersect the selected lanes with the declared scripts
@@ -296,25 +324,50 @@ jobs:
           # An empty result is a legal matrix: GitHub skips the job, and the
           # verdict below reads a skipped lane as green because it claims
           # nothing.
-          selected="$(node -e '
-            const parse = (raw) => {
-              try {
-                const value = JSON.parse(raw);
-                return Array.isArray(value) ? value.filter((entry) => typeof entry === "string") : [];
-              } catch {
-                return [];
-              }
+          #
+          # Only an EMPTY RESULT is legal. A lane list or a script list that
+          # is missing, is not a JSON array, or names anything but one of
+          # the five layers is an error, not an empty list: this step FAILS
+          # CLOSED, the job publishes no selection, and the verdict is red.
+          # Reading such an input as empty would skip every lane and let the
+          # required check go green over tests nobody selected.
+          if ! selected="$(node -e '
+            const layers = ["unit", "component", "integration", "api", "e2e"];
+            const stop = (reason) => {
+              process.stderr.write("qfai tests: " + reason + "\n");
+              process.exit(1);
             };
-            const lanes = parse(process.env.QFAI_LANES ?? "[]");
-            const scripts = parse(process.env.QFAI_SCRIPTS ?? "[]");
+            const parse = (name, raw) => {
+              let value;
+              try {
+                value = JSON.parse(raw ?? "");
+              } catch {
+                stop(name + " is missing or is not valid JSON");
+              }
+              if (!Array.isArray(value)) {
+                stop(name + " is not a JSON array");
+              }
+              for (const entry of value) {
+                if (typeof entry !== "string" || !layers.includes(entry)) {
+                  stop(name + " names something other than " + layers.join(", "));
+                }
+              }
+              return value;
+            };
+            const lanes = parse("the lane list from change detection", process.env.QFAI_LANES);
+            const scripts = parse("the declared script list", process.env.QFAI_SCRIPTS);
             process.stdout.write(JSON.stringify(lanes.filter((lane) => scripts.includes(lane))));
-          ')" || selected="[]"
+          ')"; then
+            echo "::error::qfai tests: the lanes to run could not be computed (the reason is in the line above). This check stops here instead of reporting green over tests it did not select."
+            exit 1
+          fi
           # The matrix reads this through `fromJSON`, and `fromJSON("")` is an
-          # error rather than an empty list — an error with no repair path in an
-          # adopter's repository. Nothing above can produce an empty value, and
-          # this line is what keeps that true of whatever is written next.
+          # error rather than an empty list. The program above always writes a
+          # JSON array, so an empty value means it did not run as written: stop
+          # rather than invent an empty selection.
           if [ -z "$selected" ]; then
-            selected="[]"
+            echo "::error::qfai tests: the lane selection came back empty-handed, which is not a selection. This check stops here instead of reporting green over tests it did not select."
+            exit 1
           fi
           echo "selected=${selected}" >> "$GITHUB_OUTPUT"
           echo "qfai tests: lanes to run ${selected}"
@@ -610,8 +663,8 @@ jobs:
           else
             echo "cache=" >> "$GITHUB_OUTPUT"
           fi
-      - name: Set up Node via actions/setup-node 7.0.0
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+      - name: Set up Node via actions/setup-node 7.1.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           # The version resolved by the step above: the adopter's own
           # version file when they have one, else the documented fallback

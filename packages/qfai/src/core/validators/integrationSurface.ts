@@ -91,8 +91,8 @@ type Broken = {
   detail: string;
   /**
    * The canonical path a later `readdir` cannot survive, when this damage is
-   * one of those. Set where the damage is found, from the errno the probe
-   * actually saw — not derived afterwards from the wording, and not from
+   * one of those. Set from an observed non-directory component or the errno
+   * the probe saw — not derived afterwards from the wording, and not from
    * `relative`, which names the wrapper for damage that sits on the canonical.
    */
   unwalkable?: string | undefined;
@@ -208,7 +208,7 @@ function blocksWalk(state: PathState): boolean {
  * to stop after reporting rather than to hide the error.
  *
  * Read from the **whole** damage list, and from a flag each site sets when it
- * sees the errno. Deciding it afterwards from the issue message read a
+ * observes the damage. Deciding it afterwards from the issue message read a
  * 12-entry sample, so a thirteenth entry holding the only unwalkable path
  * decided nothing; deciding it from the wording matched damage on
  * `.claude/skills`, which is read here and walked by nobody afterwards, and
@@ -464,7 +464,7 @@ async function unusableAncestor(
   dir: string,
   realRoot: string | null,
   linksInsideAllowed: boolean,
-): Promise<{ relative: string; detail: string } | null> {
+): Promise<{ relative: string; detail: string; notDirectory?: true } | null> {
   const parts = dir.split("/");
   for (let depth = 1; depth < parts.length; depth += 1) {
     const partial = parts.slice(0, depth);
@@ -483,7 +483,11 @@ async function unusableAncestor(
     // raises `ENOTDIR`. Reported through the leaf, the remedy named a child the
     // operator cannot reach; the component at fault is this one.
     if (!stats.isDirectory()) {
-      return { relative, detail: `is a ${describeKind(stats)}, not a directory` };
+      return {
+        relative,
+        detail: `is a ${describeKind(stats)}, not a directory`,
+        notDirectory: true,
+      };
     }
   }
   return null;
@@ -639,24 +643,21 @@ async function canonicalDamage(
   // *also* flattened reporting the ancestor without marking it unwalkable, and
   // the profile then walked into the same `ENOTDIR` that finding was about.
   const state = await canonicalState(wrapper.canonical);
+  // A descendant can read as absent even when an existing ancestor is a file.
+  // Use that component's metadata rather than relying on the descendant errno.
   const culprit =
     state.kind === "not-a-directory" || state.kind === "absent"
       ? await unusableAncestor(root, wrapper.canonicalRelative, realRoot, true)
       : null;
-  const culpritState =
-    culprit === null ? null : await canonicalState(path.join(root, ...culprit.relative.split("/")));
-  const nonDirectoryAncestor =
-    culpritState?.kind === "present" && !culpritState.stats.isDirectory();
   const relative = culprit?.relative ?? wrapper.canonicalRelative;
-  // The agent reader skips an unreachable directory, but lists an existing one.
-  // A file at that directory passes its existence check and makes the listing fail.
+  // The agent reader skips an unreachable parent, but lists an existing agent
+  // directory. A file at that exact directory passes access and breaks readdir.
   const ancestorBlocks =
     wrapper.kind !== "agent" ||
     culprit === null ||
     relative === path.posix.dirname(wrapper.canonicalRelative);
-  // Windows reports an unreachable child as ENOENT even when its parent is a file.
   const unwalkable =
-    ancestorBlocks && (blocksWalk(state) || nonDirectoryAncestor) ? relative : undefined;
+    (blocksWalk(state) || culprit?.notDirectory === true) && ancestorBlocks ? relative : undefined;
 
   // A leaf that is itself damaged is described by its state, not by the generic
   // "is a symlink" the link probe would give: a dangling canonical and a
@@ -695,7 +696,7 @@ async function canonicalDamage(
     // `validateSkillDocReferences` an `ELOOP` on the same pathname, so ask the
     // document itself rather than inheriting an answer about its directory.
     return {
-      relative: nonDirectoryAncestor ? relative : wrapper.canonicalRelative,
+      relative: culprit?.notDirectory === true ? relative : wrapper.canonicalRelative,
       detail: link,
       unwalkable: (await documentBlocksWalk(wrapper)) ? wrapper.canonicalRelative : unwalkable,
     };
@@ -1362,8 +1363,18 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
                 : unfollowable
                   ? `resolves through a symlink the OS will not follow -> ${toPosix(wrapper.target)}`
                   : `dangling -> ${toPosix(wrapper.target)}`,
-        // Probe the canonical path: Windows folds a file ancestor into ENOENT.
-        unwalkable: (await canonicalDamage(root, realRoot, wrapper))?.unwalkable,
+        // `ENOTDIR` alone, and named at the component that is not a directory
+        // rather than at the leaf. That errno says a component above the leaf
+        // is a regular file, which is the one shape a later `readdir` cannot
+        // survive. `ELOOP` is a symlink: the walks over this tree list it with
+        // `withFileTypes` and never descend into it, and one at the walk root
+        // answers "absent" through their `access` probe. `ENOENT` is absence,
+        // which they already handle.
+        unwalkable:
+          code === "ENOTDIR"
+            ? ((await unusableAncestor(root, wrapper.canonicalRelative, realRoot, true))
+                ?.relative ?? wrapper.canonicalRelative)
+            : undefined,
       });
       continue;
     }
@@ -1580,20 +1591,22 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
     );
   }
   if (reachable.length > 0) {
+    // One line each for the message and the action: this is a standing state on
+    // every Windows `git worktree`, and a long text printed on every run buries
+    // the counts line. The `refs` keep every path for the report and for the
+    // repair.
+    const [first] = reachable;
+    const rest = reachable.length - 1;
     issues.push(
       issue(
         "QFAI-LINK-001",
-        `${String(reachable.length)} wrapper(s) in the assistant integration directories cannot be followed. The canonical documents behind them read fine, so the instructions are in this tree — this path does not reach them: ${describe(reachable)}`,
+        `${String(reachable.length)} wrapper(s) in the assistant integration directories resolve through a symlink the OS will not follow: ${first?.relative ?? ""}${rest > 0 ? ` (and ${String(rest)} more)` : ""}. The canonical documents behind them read fine, so the instructions are in this tree; only this path does not reach them.`,
         "warning",
-        reachable[0]?.relative,
+        first?.relative,
         "integrationSurface.links",
         reachable.map((entry) => entry.relative),
         "change",
-        [
-          "On Windows, a directory wrapper may be stored as a file symlink. Its target text can be correct while the OS cannot follow it; this can occur during a Git worktree checkout.",
-          "Run `qfai init` with its default non-force behavior in this checkout to repair owned directory wrappers that already name the expected target. Link creation may require Windows Developer Mode or suitable permissions. Canonical links maintained by a project's separate setup are outside that wrapper repair.",
-          "The affected wrapper paths do not reach the skills or agents. Their canonical documents remain readable under `.qfai/assistant/**`.",
-        ].join("\n"),
+        "On Windows, a Git worktree checkout can store a directory wrapper as a file symlink. Run `qfai init` in this checkout to relink the wrappers it owns; creating links may need Windows Developer Mode.",
         { relatedFiles: reachable.slice(1).map((entry) => entry.relative) },
       ),
     );

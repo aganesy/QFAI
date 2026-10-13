@@ -40,11 +40,7 @@ function expectNoEmbeddedReminderText(program: string, messages: unknown): void 
       typeof output === "object" && output !== null
         ? Reflect.get(output, "additionalContext")
         : undefined;
-    for (const context of [
-      full,
-      Reflect.get(message, "reason"),
-      Reflect.get(message, "briefContext"),
-    ]) {
+    for (const context of [full, Reflect.get(message, "briefContext")]) {
       if (typeof context !== "string") continue;
       expect(program).not.toContain(context);
       expect(program).not.toContain(JSON.stringify(context).slice(1, -1));
@@ -649,4 +645,136 @@ describe("qfai init and the reminder hooks", () => {
       );
     });
   });
+});
+
+/** Immutable official prompt groups captured before CI-monitor filtering. */
+const PRE_CI_MONITOR_PROMPT_GROUPS = [
+  {
+    key: "structured-question",
+    group: {
+      matcher: "*",
+      hooks: [
+        {
+          type: "command",
+          statusMessage: "QFAI structured-question reminder",
+          command: "node",
+          args: [
+            "-e",
+            "try{const f=require('fs');let i={};try{i=JSON.parse(f.readFileSync(0,'utf8'))||{}}catch{}const p=i.prompt;if(!(typeof p==='string'&&/^[ \\t]*(<(task-notification|wake)[\\s>]|\\[SYSTEM NOTIFICATION)/m.test(p))){let n=1;if(typeof i.session_id==='string'){try{const t=require('path').join(require('os').tmpdir(),['qfai-reminder',i.session_id,i.agent_id||'main',process.argv[2]].join('-').replace(/[^\\w.-]/g,'_'));f.appendFileSync(t,'.');n=f.statSync(t).size}catch{}}const e=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(e!==undefined){const {briefContext,...m}=e;if(n>1&&typeof briefContext==='string')m.hookSpecificOutput.additionalContext=briefContext;console.log(JSON.stringify(m))}}}catch{}",
+            "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
+            "structured-question",
+          ],
+        },
+      ],
+    },
+  },
+  {
+    key: "free-text-entry",
+    group: {
+      matcher: "*",
+      hooks: [
+        {
+          type: "command",
+          statusMessage: "QFAI free-text entry reminder",
+          command: "node",
+          args: [
+            "-e",
+            "try{const f=require('fs');let i={};try{i=JSON.parse(f.readFileSync(0,'utf8'))||{}}catch{}const p=i.prompt;if(!(typeof p==='string'&&/^[ \\t]*(<(task-notification|wake)[\\s>]|\\[SYSTEM NOTIFICATION)/m.test(p))){let n=1;if(typeof i.session_id==='string'){try{const t=require('path').join(require('os').tmpdir(),['qfai-reminder',i.session_id,i.agent_id||'main',process.argv[2]].join('-').replace(/[^\\w.-]/g,'_'));f.appendFileSync(t,'.');n=f.statSync(t).size}catch{}}const e=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(e!==undefined){const {briefContext,...m}=e;if(n>1&&typeof briefContext==='string')m.hookSpecificOutput.additionalContext=briefContext;console.log(JSON.stringify(m))}}}catch{}",
+            "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
+            "free-text-entry",
+          ],
+        },
+      ],
+    },
+  },
+] as const;
+
+describe("init upgrades the official prompt groups before CI-monitor filtering", () => {
+  // QFAI:EX-0001-0021-09
+  it.each([false, true])("replaces both official groups in place with force=%s", async (force) => {
+    await withTempRoot(async (root) => {
+      const own = [
+        { matcher: "OwnBefore", hooks: [{ type: "command", command: "./before.sh" }] },
+        { matcher: "OwnBetween", hooks: [{ type: "command", command: "./between.sh" }] },
+        { matcher: "OwnAfter", hooks: [{ type: "command", command: "./after.sh" }] },
+      ];
+      const custom = { model: "project-model", extra: { keep: true } };
+      const oldGroups = PRE_CI_MONITOR_PROMPT_GROUPS.map(({ group }) => group);
+      const template = readHookGroups(await readSettings(assetsRoot), "UserPromptSubmit");
+      const replacements = oldGroups.map((group) => {
+        const matching = template.filter((candidate) =>
+          JSON.stringify(candidate).includes(group.hooks[0].statusMessage),
+        );
+        expect(matching).toHaveLength(1);
+        return matching[0];
+      });
+      await seedSettings(root, {
+        ...custom,
+        permissions: { allow: ["Bash(git status)"], deny: ["Bash(rm:*)"] },
+        hooks: { UserPromptSubmit: [own[0], oldGroups[0], own[1], oldGroups[1], own[2]] },
+      });
+      const stdout = await initReporting(root, force);
+      const settings = await readSettings(root);
+      const groups = readHookGroups(settings, "UserPromptSubmit");
+      expect(groups.slice(0, 5)).toEqual([
+        own[0],
+        replacements[0],
+        own[1],
+        replacements[1],
+        own[2],
+      ]);
+      for (const [index, group] of oldGroups.entries()) {
+        expect(groups[1 + index * 2]).not.toEqual(group);
+        expect(
+          groups.filter((candidate) =>
+            JSON.stringify(candidate).includes(group.hooks[0].statusMessage),
+          ),
+        ).toEqual([replacements[index]]);
+      }
+      expect(settings).toMatchObject({ ...custom, permissions: { deny: ["Bash(rm:*)"] } });
+      expectOwnPermissionFirst(settings);
+      expect(stdout).toContain("updated: .claude/settings.json");
+      expect(stdout).not.toContain("(edited here)");
+      const messages: unknown = JSON.parse(
+        await readFile(path.join(root, ".agents", "rules", "reminders.json"), "utf-8"),
+      );
+      expectNoEmbeddedReminderText(JSON.stringify(groups), messages);
+      const updated = await readFile(path.join(root, SETTINGS), "utf-8");
+      for (const repeatedForce of [false, true]) {
+        await initInto(root, repeatedForce);
+        expect(await readFile(path.join(root, SETTINGS), "utf-8")).toBe(updated);
+      }
+    });
+  });
+
+  // QFAI:EX-0001-0021-09
+  it.each(PRE_CI_MONITOR_PROMPT_GROUPS)(
+    "retains an edited $key group even with force",
+    async ({ group }) => {
+      await withTempRoot(async (root) => {
+        const edited = {
+          ...group,
+          hooks: [{ ...group.hooks[0], command: "project-node" }],
+        };
+        await seedSettings(root, { hooks: { UserPromptSubmit: [edited] } });
+        let previous: string | undefined;
+        for (const force of [false, true, false]) {
+          const stdout = await initReporting(root, force);
+          const groups = readHookGroups(await readSettings(root), "UserPromptSubmit");
+          expect(groups[0]).toEqual(edited);
+          expect(
+            groups.filter((candidate) =>
+              JSON.stringify(candidate).includes(group.hooks[0].statusMessage),
+            ),
+          ).toEqual([edited]);
+          expect(stdout).toContain(
+            `kept: .claude/settings.json hook group UserPromptSubmit "${group.hooks[0].statusMessage}" (edited here)`,
+          );
+          const current = await readFile(path.join(root, SETTINGS), "utf-8");
+          if (previous !== undefined) expect(current).toBe(previous);
+          previous = current;
+        }
+      });
+    },
+  );
 });

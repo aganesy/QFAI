@@ -40,6 +40,23 @@ const REQUIRED_SKILLS = [
   "qfai-verify",
 ];
 
+const DISCUSSION_AUTHORITY_ASSETS = [
+  ".agents/rules/grilling.md",
+  ".qfai/assistant/step/common-grilling-record/STEP.md",
+  ".qfai/assistant/step/discussion-interview/STEP.md",
+  ".qfai/assistant/step/discussion-pack/STEP.md",
+  ".qfai/assistant/step/discussion-oq/STEP.md",
+  ".qfai/assistant/step/discussion-uiux/STEP.md",
+  ".qfai/assistant/skill/qfai-discussion/SKILL.md",
+  ".qfai/assistant/skill/qfai-discussion/references/discussion-completion-matrix.md",
+  ".qfai/assistant/skill/qfai-grilling/SKILL.md",
+  ".qfai/assistant/skill/qfai-grilling/references/delegated-session.md",
+  ".qfai/assistant/skill/qfai-grilling/references/session-record.md",
+  ".qfai/assistant/rule/references/griller-recommendations.md",
+  ".qfai/assistant/rule/review-convergence.md",
+  ".qfai/assistant/rule/constitution.md",
+] as const;
+
 const execFile = promisify(execFileCb);
 
 async function expectSymlink(linkPath: string): Promise<void> {
@@ -87,7 +104,7 @@ async function expectSymlinkTarget(linkPath: string, expectedFragment: string): 
 }
 
 describe("qfai init", () => {
-  it("treats a dangling symlink at the destination as occupied", async () => {
+  it("treats a dangling symlink at the destination as occupied", async (ctx) => {
     // `access` follows the link, so a dangling one answered "free" and the copy
     // that followed wrote through it — `copyFile` resolves the symlink and
     // creates the target, turning a create-only init into a writer of fixed
@@ -98,11 +115,8 @@ describe("qfai init", () => {
     try {
       await writeFile(path.join(sourceRoot, "README.md"), "shipped\n", "utf-8");
       const escapee = path.join(outside, "written-through.md");
-      try {
-        await symlink(escapee, path.join(destRoot, "README.md"), "file");
-      } catch {
-        return; // No symlinks here (Windows without Developer Mode).
-      }
+      const linked = await createSymlinkFixture(escapee, path.join(destRoot, "README.md"), "file");
+      if (!linked) ctx.skip();
 
       await expect(
         copyTemplateTree(sourceRoot, destRoot, { force: false, dryRun: false }),
@@ -156,6 +170,7 @@ describe("qfai init", () => {
           copied: [],
           skipped: [],
           refused: [dest],
+          kept: [],
         });
       }
       expect(await readFile(path.join(destRoot, "nested"), "utf-8")).toBe(
@@ -275,12 +290,7 @@ describe("qfai init", () => {
           });
           return stdout.trim();
         } catch (error: unknown) {
-          if (
-            typeof error === "object" &&
-            error !== null &&
-            "code" in error &&
-            (error as { code?: number }).code === 1
-          ) {
+          if (typeof error === "object" && error !== null && "code" in error && error.code === 1) {
             return null;
           }
           throw error;
@@ -541,6 +551,85 @@ describe("qfai init", () => {
     }
   });
 
+  // QFAI:EX-0001-0024-02
+  it("refreshes discussion authority assets and preserves project inputs", async () => {
+    const assets = getInitAssetsDir();
+    const shipped = await Promise.all(
+      DISCUSSION_AUTHORITY_ASSETS.map(async (relative) => {
+        const segments = relative.split("/");
+        const source = path.join(
+          assets,
+          ...(relative.startsWith(".agents/") ? ["root", ...segments] : segments),
+        );
+        return { relative, source, bytes: await readFile(source) };
+      }),
+    );
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-authority-"));
+    async function expectDiscussionLinks(): Promise<void> {
+      for (const host of [".agents", ".claude", ".codex", ".github"]) {
+        for (const skill of ["qfai-discussion", "qfai-grilling"]) {
+          const link = path.join(root, host, "skills", skill);
+          await expectSymlink(link);
+          expect((await readlink(link)).replace(/\\/g, "/")).toBe(
+            `../../.qfai/assistant/skill/${skill}`,
+          );
+          expect(await readFile(path.join(link, "SKILL.md"))).toEqual(
+            await readFile(path.join(assets, ".qfai", "assistant", "skill", skill, "SKILL.md")),
+          );
+        }
+      }
+    }
+    try {
+      await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+      for (const { relative, bytes } of shipped) {
+        expect(await readFile(path.join(root, relative)), relative).toEqual(bytes);
+      }
+      await expectDiscussionLinks();
+
+      const projectInputs = [
+        [
+          "qfai.config.yaml",
+          `${await readFile(path.join(root, "qfai.config.yaml"), "utf-8")}\n# Project configuration\n`,
+        ],
+        [".qfai/spec/01_policy/objective.md", "Project objective\n"],
+        [".qfai/spec/03_contract/api/api-0001-project.yaml", "Project API contract\n"],
+        [".qfai/assistant/rule/quality.local.md", "Project rule overlay\n"],
+        [".qfai/assistant/skill.local/project-skill/SKILL.md", "Project skill\n"],
+        [".codex/skills/custom-skill/SKILL.md", "Custom host skill\n"],
+      ] as const;
+      for (const [relative, content] of projectInputs) {
+        const target = path.join(root, relative);
+        await mkdir(path.dirname(target), { recursive: true });
+        await writeFile(target, content, "utf-8");
+      }
+      for (const { relative } of shipped) {
+        await writeFile(path.join(root, relative), `Stale supplier asset: ${relative}\n`, "utf-8");
+      }
+
+      await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+      for (const { relative } of shipped) {
+        expect(await readFile(path.join(root, relative), "utf-8"), relative).toBe(
+          `Stale supplier asset: ${relative}\n`,
+        );
+      }
+      for (const [relative, content] of projectInputs) {
+        expect(await readFile(path.join(root, relative), "utf-8"), relative).toBe(content);
+      }
+
+      await captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true }));
+      for (const { relative, source, bytes } of shipped) {
+        expect(await readFile(path.join(root, relative)), relative).toEqual(bytes);
+        expect(await readFile(source), source).toEqual(bytes);
+      }
+      for (const [relative, content] of projectInputs) {
+        expect(await readFile(path.join(root, relative), "utf-8"), relative).toBe(content);
+      }
+      await expectDiscussionLinks();
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
   it("overwrites skills only when --force is provided", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -772,9 +861,16 @@ describe("qfai init", () => {
       await execFile("git", ["init"], { cwd: repo });
       // Git for Windows may seed a local value at init time; clear it so the
       // only `true` in play comes from the global config above.
+      // `--unset-all` exits 5 when the key is absent, the one outcome this
+      // fixture accepts; any other failure is a real setup failure.
       await execFile("git", ["config", "--local", "--unset-all", "core.symlinks"], {
         cwd: repo,
-      }).catch(() => undefined);
+      }).catch((error: unknown) => {
+        if (typeof error === "object" && error !== null && "code" in error && error.code === 5) {
+          return;
+        }
+        throw error;
+      });
 
       const output = await captureStdout(async () => {
         await runInit({ dir: repo, force: false, dryRun: false, yes: true });
@@ -980,15 +1076,33 @@ describe("qfai init", () => {
   });
 
   // QFAI:EX-0001-0028-03
-  it("stays silent about core.symlinks outside a git repository", async () => {
+  it("stays silent about core.symlinks outside a git repository", async (ctx) => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
-      const insideRepo = await execFile("git", ["rev-parse", "--git-dir"], { cwd: root }).then(
+      // Only git's own "not a git repository" exit means outside; any other failure surfaces.
+      // `LC_ALL=C` keeps git's message in English, which the match below reads.
+      const insideRepo = await execFile("git", ["rev-parse", "--git-dir"], {
+        cwd: root,
+        env: { ...process.env, LC_ALL: "C" },
+      }).then(
         () => true,
-        () => false,
+        (error: unknown) => {
+          if (
+            error instanceof Error &&
+            "code" in error &&
+            error.code === 128 &&
+            "stderr" in error &&
+            typeof error.stderr === "string" &&
+            error.stderr.includes("not a git repository")
+          ) {
+            return false;
+          }
+          throw error;
+        },
       );
       if (insideRepo) {
-        return; // The temp dir happens to sit inside a repository.
+        // The temp dir happens to sit inside a repository.
+        ctx.skip();
       }
 
       const output = await captureStdout(async () => {
@@ -1256,7 +1370,6 @@ describe("qfai init", () => {
       const entryPoints = [
         path.join(root, ".github", "copilot-instructions.md"),
         path.join(root, "AGENTS.md"),
-        path.join(root, "CLAUDE.md"),
       ];
       // ... plus the whole instruction surface they hand the agent:
       // constitution, catalog contracts, skills and their references.
@@ -1407,7 +1520,7 @@ describe("qfai init", () => {
   });
 
   // QFAI:EX-0001-0031-03
-  it("--force replaces an instructions symlink instead of writing through it", async () => {
+  it("--force replaces an instructions symlink instead of writing through it", async (ctx) => {
     // `writeFile` follows a symlink, so refreshing without unlinking first
     // would rewrite the link's target — a file outside the project that init
     // was never asked to touch.
@@ -1419,11 +1532,8 @@ describe("qfai init", () => {
       const escapee = path.join(outside, "shared-review-rules.md");
       await writeFile(escapee, "someone-elses-file\n", "utf-8");
       const linked = path.join(instrDir, "code-review.instructions.md");
-      try {
-        await symlink(escapee, linked, "file");
-      } catch {
-        return; // No symlinks here (Windows without Developer Mode).
-      }
+      const fixtureCreated = await createSymlinkFixture(escapee, linked, "file");
+      if (!fixtureCreated) ctx.skip();
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
@@ -1506,7 +1616,7 @@ describe("qfai init", () => {
     }
   });
 
-  it("--force does not replace a FIFO standing where an instructions file goes", async () => {
+  it("--force does not replace a FIFO standing where an instructions file goes", async (ctx) => {
     // The refusal was written as "not a directory", and `lstat` calls a FIFO,
     // a socket and a device node none of those — so `rename` replaced the
     // entry outright. Create-only kept every one of them; the allowlist keeps
@@ -1526,10 +1636,19 @@ describe("qfai init", () => {
       let planted = false;
       try {
         planted = (await lstat(fifo)).isFIFO();
-      } catch {
-        planted = false;
+      } catch (error: unknown) {
+        // ENOENT is the known "no FIFO this process can see" outcome; any other
+        // failure is a real I/O problem and must not be reported as unsupported.
+        if (
+          typeof error !== "object" ||
+          error === null ||
+          !("code" in error) ||
+          error.code !== "ENOENT"
+        ) {
+          throw error;
+        }
       }
-      if (!planted) return; // no FIFO this process can see — nothing to assert
+      if (!planted) ctx.skip(); // no FIFO this process can see — nothing to assert
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
@@ -1597,7 +1716,7 @@ describe("qfai init", () => {
   });
 
   // QFAI:EX-0001-0031-01
-  it("--force refreshes instructions linked to an in-project dir whose name starts with dots", async () => {
+  it("--force refreshes instructions linked to an in-project dir whose name starts with dots", async (ctx) => {
     // The escape check compared `path.relative(...)` with a `startsWith("..")`
     // prefix, which also matches a directory merely *named* `..rules`. Link
     // `.github/instructions` at one and the relative path is `..rules` — a
@@ -1611,11 +1730,12 @@ describe("qfai init", () => {
       await mkdir(inProject, { recursive: true });
       await writeFile(path.join(inProject, "code-review.instructions.md"), "stale-cr\n", "utf-8");
       await mkdir(path.join(root, ".github"), { recursive: true });
-      try {
-        await symlink(inProject, path.join(root, ".github", "instructions"), "dir");
-      } catch {
-        return; // No symlinks here (Windows without Developer Mode).
-      }
+      const linked = await createSymlinkFixture(
+        inProject,
+        path.join(root, ".github", "instructions"),
+        "dir",
+      );
+      if (!linked) ctx.skip();
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
@@ -1830,7 +1950,6 @@ describe("qfai init", () => {
         path.join(root, ".qfai", "assistant", "agent", "delivery-planner.md"),
         path.join(root, ".github", "copilot-instructions.md"),
         path.join(root, "AGENTS.md"),
-        path.join(root, "CLAUDE.md"),
       ];
 
       for (const filePath of expectedRegularFiles) {
@@ -2042,10 +2161,8 @@ describe("qfai init", () => {
 
   // TC-1.4.1 — fresh init writes no DESIGN.md at root
   it("writes no DESIGN.md at root (TC-1.4.1)", async () => {
-    // `/qfai-discussion` emits the brand SSOT, and only for a
-    // visual-prototyping surface. Seeding it here put the file in every
-    // project — the cli-only and non-UI ones that skill exempts included —
-    // and the next `qfai validate` then reported the tool's own seed.
+    // `/qfai-sdd` authors the brand SSOT for visual prototyping surfaces.
+    // CLI-only and non-UI projects do not require it.
     // `tests/cli/initNoDesignSeed.test.ts` holds the rest of that contract.
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-design-"));
     try {
@@ -2161,28 +2278,6 @@ describe("qfai init", () => {
       expect(output).toContain(header);
       // The disclosure comes before any work, so the target stays visible even when a run is interrupted or fails.
       expect(output.indexOf(opening)).toBeLessThan(output.indexOf(header));
-    } finally {
-      await removeTempTree(root);
-    }
-  });
-
-  // TC-1.4.5 — init reports DESIGN.md as created on first run, skipped on second run
-  it("reports DESIGN.md as created on first run and skipped on second run (TC-1.4.5)", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-design-"));
-    try {
-      const firstRun = await captureStdout(async () => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      });
-      // The heading is `written` (the list also carries overwrites), not `created`.
-      expect(firstRun).toMatch(/written:\s*\d+/);
-      expect(firstRun).toContain("DESIGN.md");
-
-      // --verbose expands the skipped list; without it the re-run reports counts only.
-      const secondRun = await captureStdout(async () => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true, verbose: true });
-      });
-      expect(secondRun).toContain("skipped paths:");
-      expect(secondRun).toContain("DESIGN.md");
     } finally {
       await removeTempTree(root);
     }

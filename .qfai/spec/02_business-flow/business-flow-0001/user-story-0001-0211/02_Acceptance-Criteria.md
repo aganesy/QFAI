@@ -17,10 +17,15 @@ Feature: Route a request through a fixed decision table
     Given an extraction that more than one decision rule could read
     When the core decides the route
     Then the route is the one the lowest-numbered rule that holds gives
+    And `owned-temporary-cleanup` is accepted only on an `order` reading with no shared artifacts, including every alternative
+    And the qualifier records existing authority for named repository-local Git-ignored temporary directories with current task ownership, authorized bounds and all required permissions; empty artifacts, ignored status or tool availability alone do not establish it
+    And valid qualified orders reach the owned-cleanup route only after the existing safety, fixed-signal, human-run and release priorities
+    And ordinary orders without that qualifier and with no artifacts route the operation route, and an order that names artifacts keeps the settled-action route
+    And a question the session can answer, marked `session-answerable`, routes the session-answer route
 
   # AC-0001-0211-03
   Scenario: Every extraction reaches exactly one route
-    Given every combination of intent, entry flags, qualifiers and signals the rules read
+    Given every valid combination of intent, entry flags, qualifiers and signals the rules read
     When each is decided
     Then each reaches exactly one catalog route
     And an extraction no rule holds for routes the question route that changes nothing

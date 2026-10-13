@@ -7,10 +7,11 @@
  * project where the adopter had not yet had the chance to do anything wrong.
  *
  * The rest of the workflow already says the file should not be there yet.
- * `/qfai-discussion` emits the draft, and only when a classified surface is
- * `web`, `mobile`, `desktop` or `mixed` — a cli-only or non-UI pack authors no
- * root `DESIGN.md` at all. Seeding it put the file in every project, including
- * the ones that skill deliberately exempts.
+ * `/qfai-sdd` authors it from the design direction the discussion pack
+ * records, and only when a classified surface is `web`, `mobile`, `desktop`
+ * or `mixed` — a cli-only or non-UI pack authors no root `DESIGN.md` at all.
+ * Seeding it put the file in every project, including the ones that skill
+ * deliberately exempts.
  *
  * Removing the seed also removes the hazard the check exists for: an
  * unreplaced sample satisfies every content-agnostic gate, gets sha256-frozen

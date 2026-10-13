@@ -106,7 +106,7 @@ async function entryDirectives(file: string): Promise<string[]> {
 }
 
 const HOSTS: [string, string, string][] = [
-  ["claude-code", ".claude/skills", "CLAUDE.md"],
+  ["claude-code", ".claude/skills", "AGENTS.md"],
   ["codex", ".agents/skills", "AGENTS.md"],
 ];
 

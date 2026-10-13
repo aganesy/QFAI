@@ -100,8 +100,8 @@ export const DECLARED_START = 10;
  *
  * The summed figures are what the wall clock understates: most of each fork's measured
  * time at ten was spent waiting rather than working. A machine with ten cores or more is
- * unaffected, and the comparison on {@link DECLARED_START} is where ten was
- * adopted in the first place — this cap never lowers the value on a machine that can hold it. `DR-0017-0010`
+ * unaffected, and the comparison on {@link DECLARED_START} records why ten is retained — this cap never
+ * lowers the value on a machine that can hold it. `DR-0017-0010`
  * carries the decision and the rest of the numbers.
  */
 export const DECLARED_WORKERS = Math.min(DECLARED_START, availableParallelism());

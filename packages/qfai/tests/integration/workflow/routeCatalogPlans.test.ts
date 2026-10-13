@@ -27,6 +27,17 @@ const CATALOG: [string, string][] = [
     "answer-question",
     "Stages in order — `answer` (triage): `triage-investigate°`, `triage-answer`, `triage-close`; decision points none; release point none; branch points `triage-investigate`, `defect-found` to the route the decision rules give",
   ],
+  // QFAI:EX-0001-0220-50
+  [
+    "answer-in-session",
+    "Stages in order — `answer` (triage): `triage-answer`; decision points none; release point none; branch points none",
+  ],
+  // QFAI:EX-0001-0220-51
+  // QFAI:EX-0001-0215-16
+  [
+    "run-operation",
+    "Stages in order — `operate` (triage): `triage-operate`; decision points none; release point none; branch points `triage-operate`, `needs-change` to the route the decision rules give",
+  ],
   [
     "request-info",
     "Stages in order — `ask` (triage): `triage-request-info`; `close` (triage): `triage-close`; decision points none; release point none; branch points `triage-close`, `info-received` to the route the decision rules give",
@@ -53,7 +64,7 @@ const CATALOG: [string, string][] = [
   ],
   [
     "repair-consistency",
-    "Stages in order — `diagnose` (diagnose): `implement-diagnose`; `sdd` (sdd, then the specification review): `sdd-triage`, `sdd-flow°`, `sdd-story°`, `sdd-contract°`, `sdd-cycle°`; `implement` (implement): `implement-scaffold`, `implement-tdd`, `implement-sweep°`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`, `implement-sweep`; release point none; branch points `sdd-triage`, `retire` to `retire-mechanism`",
+    "Stages in order — `diagnose` (diagnose): `implement-diagnose`; `sdd` (sdd, then the specification review): `sdd-triage`, `sdd-flow°`, `sdd-story°`, `sdd-contract°`, `common-design-md°`, `sdd-cycle°`; `implement` (implement): `implement-scaffold`, `implement-tdd`, `implement-sweep°`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`, `implement-sweep`; release point none; branch points `sdd-triage`, `retire` to `retire-mechanism`",
   ],
   [
     "retire-mechanism",
@@ -112,7 +123,7 @@ const CATALOG: [string, string][] = [
   ],
   [
     "quarantine-flaky",
-    "Stages in order — `isolate` (implement): `implement-quarantine`; `diagnose` (diagnose): `implement-diagnose`; `fix` (test_fix): `implement-test-fix°`; `reenable` (verify): `verify-repeat-run`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points none; release point none; branch points `implement-diagnose`, `product-race` to `fix-intermittent`",
+    "Stages in order — `isolate` (implement): `implement-quarantine`; `diagnose` (diagnose): `implement-diagnose`; `fix` (test_fix): `implement-test-fix°`; `reenable` (verify): `verify-repeat-run`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points none; release point none; branch points `implement-quarantine`, `failing-consistently` to the route the decision rules give; `implement-diagnose`, `product-race` to `fix-intermittent`",
   ],
   [
     "repair-test",
@@ -243,6 +254,18 @@ for (const [route, expected] of CATALOG) {
   });
 }
 
+// QFAI:AC-0001-0224-13
+// QFAI:EX-0001-0224-43
+// QFAI:EX-0001-0224-50
+it("The procedure catalog plan has one documentation writer and the existing closing route", async () => {
+  const plan = (await loadBuiltInPlans()).find((each) => each.route === "write-procedure");
+  expect(plan ? described(plan) : undefined).toBe(
+    "Stages in order — `documentation` (documentation): `implement-procedure`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points none; release point none; branch points none",
+  );
+});
+
+// QFAI:EX-0001-0220-50
+// QFAI:EX-0001-0220-51
 it("The shipped plans end three ways", async () => {
   const plans = await loadBuiltInPlans();
   const names = (plan: WorkflowPlanFile) =>
@@ -266,7 +289,14 @@ it("The shipped plans end three ways", async () => {
     releaseNotes: counts["verify-release-notes"],
   }).toEqual({
     total: WORKFLOW_ROUTES.length,
-    endings: ["triage-close", "verify", "verify then verify-external", "verify-release-notes"],
+    endings: [
+      "triage-answer",
+      "triage-close",
+      "triage-operate",
+      "verify",
+      "verify then verify-external",
+      "verify-release-notes",
+    ],
     external: ["fix-env-bound"],
     releaseNotes: ["draft-release-notes"],
   });

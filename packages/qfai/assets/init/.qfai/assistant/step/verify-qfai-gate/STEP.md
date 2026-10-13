@@ -33,7 +33,8 @@ signals; this one decides. It records failures and repairs none of them:
 1. Run the validation of the scope through `common-gate-run`:
    - `full`: the project's `Validate` entry, where it has one; otherwise
      `npx qfai validate --profile verify --fail-on error`, or the default
-     `npx qfai validate --fail-on error`;
+     `npx qfai validate --fail-on error`; a `Validate` entry that runs a
+     partial profile is not the gate, as `## A custom Validate entry` says;
    - `prototyping`: `npx qfai validate --profile prototyping --fail-on error`.
 2. Run `npx qfai report` when the repository uses it.
 3. Report each result in the stage report.
@@ -55,6 +56,12 @@ A project's `Validate` entry may wrap validation with project-specific checks.
 It must run a full scan in the declared profile. Record the command's exit code
 and the validation findings. A successful wrapper exit does not waive a
 validation error: any validation error prevents a pass.
+
+When the entry runs a partial profile, its output carries `QFAI-PROFILE-001`
+saying the profile is partial. The full-scan rule above wins over the entry: the
+entry is not the gate. Record its exit code and findings as a signal, then run
+`npx qfai validate --profile verify --fail-on error` as well. The gate passes
+or fails on that second run, and the report names both commands.
 
 ## Findings
 

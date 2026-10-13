@@ -43,7 +43,7 @@ asks nothing and records explicit assumptions in its stage report.
   asked for nor a blocker. Neither exhaustion nor a user's `proceed` / `done` answer is `--auto`, so these questions survive both. Under an explicit `--auto` the question is not asked at all — that run stops and names the missing input instead of inventing one. See `.qfai/assistant/rule/constitution.md` Article VI.
 - **Grilling questions are exempt too, and unbounded.** A question asked inside the interview `.agents/rules/grilling.md` defines spends no budget, and a session runs to its own end condition — for a user session an empty frontier and the user's confirmation, which is itself in the exempt class, and for a delegated one no open node and an answer to every critical decision — rather than to a count.
   An exhausted budget does not close one, because its questions never opened it. A
-  session is entered deliberately: an invocation declares one and nothing else starts one, so a question asked outside a declared session is an ordinary clarification and spends a unit, whatever its subject.
+  session is entered deliberately, only as that rule's § Scope says, so a question asked outside a declared session is an ordinary clarification and spends a unit, whatever its subject.
   Under an explicit `--auto` the session asks nothing, a delegated one still adopts every decision that is not critical, and each node it could not settle is opened as a question in the register the stage reads. Each node, not each decision: a fact only
   the user holds cannot be settled from evidence either, and a fact declared undefaultable stops the run rather than taking a value nobody has. Where a document requires the field to hold something, write the defaulted value and label it an assumption beside that open question; what is forbidden is the assumption with no open question against it (Article X, rule 6).
 
@@ -168,8 +168,8 @@ The `common-gate-run` step runs a gate from this section and records it.
 
 ## Policy check (mandatory)
 
-A run starts with the policy check, once, and does not continue affected work
-on stale policy. The contract is
+A run, an exempt route aside, starts with the policy check once and does not
+continue affected work on stale policy. The contract is
 `.qfai/assistant/rule/workflow.md#policy-check-mandatory`.
 The procedure — which files, what counts as incomplete, how a fact is filled
 and where an unverifiable one goes — is the `common-policy-check` step. A
@@ -196,9 +196,9 @@ the policy check. The mode is `workflow.mode` in `qfai.config.yaml`. An absent k
   needs the operator's answer.
 - A QFAI work order binds the stage to its target: one business flow, or one
   new-story slot. The stage works on that target and no other.
-- The stage result names the agent instance that did the work in
-  `actor: { agentInstance }`. The run records that instance as the work's
-  author and never counts it as the work's independent reviewer.
+- The session report names the agent instance that authored the work and
+  each independent reviewer. The author never counts as the work's
+  independent reviewer.
 - These statements add to the constitution. They except no article.
 
 ## Running Steps (Mandatory)
@@ -255,6 +255,11 @@ stage, and no other.
 4. A finding another owner must repair is reported with that owner, not an
    edit made here.
 
+At each existing stage boundary, read
+`.qfai/assistant/skill/qfai-run/references/reached-step-observations.md`
+for the reached-step comparison in the existing stage report. Preserve the
+plan's scope, termination, pass-through and planned review.
+
 ### A pass-through step
 
 A step the plan marks `passThrough` always runs. It first reads what its
@@ -268,12 +273,12 @@ writes nothing and states why; the stage's review reads that statement.
 
 ## Default Autopilot Policy inside a run
 
-Inside a run, each bucket of a skill's Default Autopilot Policy is
-satisfied by one kind of authorization the run records:
+Inside a run, record the authorization for each bucket in the session report:
 
-- An `ask-user` item is satisfied only by a `human_decision` that answers it.
-- A `hard-required` input is satisfied by `request_scope` or by the run's
-  binding.
+- An `ask-user` item is satisfied only by the operator's answer to it.
+  Name that answer and its source; an agent's choice is not an operator answer.
+- A `hard-required` input is satisfied by the operator's request or by the
+  run's binding. Name the request or work order that supplies it.
 - An `auto-decide` item needs no authorization.
 - `--auto` satisfies nothing. It answers no `ask-user` item and supplies no
   `hard-required` input.

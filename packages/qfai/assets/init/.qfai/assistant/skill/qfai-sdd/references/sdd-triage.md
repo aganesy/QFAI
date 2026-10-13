@@ -7,6 +7,8 @@ Triage selects the smallest story-tree change that answers each incoming require
 - Inputs
 - Operation choice
 - Decision and question rows
+- Published decision prefix recovery
+- Merge-added identical decision copy recovery
 - Approval and no-question mode
 - Retiring an EX, AC or BR
 - ID allocation
@@ -34,7 +36,9 @@ Inspect the impact cascade: policy → BF → US → AC → EX → enforcing con
 ## Decision and question rows
 
 Use <paths.specsDir>/decisions.md and <paths.specsDir>/open-questions.md, each with exactly ID, Content, Approach, Status. Append a row; later only Status may change, including to `PARTLY SUPERSEDED (by DEC-NNNN)` when a later row narrows a decision without replacing it.
-Do not edit the first three cells or remove the row, except for explicit branch-added decision renumbering under ID allocation below. Inherited rows retain those cells. Use the next highest ID in the table plus one. A retired item still reserves its BF or US ID.
+Do not edit the first three cells or remove the row, except for explicit branch-added decision renumbering under ID allocation below
+or the bounded published decision prefix recovery below, and remove a row only as a proven surplus copy under the merge-added
+identical decision copy recovery below. Inherited rows retain those cells. Use the next highest ID in the table plus one. A retired item still reserves its BF or US ID.
 
 decisions.md records only what the user decided: each change request the user approved or declined,
 and each critical decision the user made. A row is appended once the user has decided what it records.
@@ -78,6 +82,49 @@ append an `Unadjudicated:` OQ at TODO. Name the affected IDs, expected versus
 actual behavior, implementation-change evidence, owner and required permission.
 Stop dependent AC, EX and BR edits; independent authorized work may continue.
 
+## Published decision prefix recovery
+
+When an approved request names a published malformed decision added by the
+branch, read `.qfai/assistant/rule/drift-protocol.md#published-decision-prefix-recovery`.
+That rule defines the source, byte boundaries, exact prefix and stop conditions.
+Approval of the generic protocol alone authorizes no target; append a separate
+new target-specific recovery change request using `templates/change-request.md`.
+
+Record the fixed base and unique common ancestor, absence of the target in both,
+the published source commit's ancestry, raw Approach digests and the exact
+approved prefix. Immediately before writing, recheck the unique current row,
+its original ID, Content and Status, and its old digest. Preserve every original
+Approach byte as the suffix and leave every other row unchanged. Recheck the
+existing form and validation; status or supersession clears no malformed form.
+Record actual results, including any stopped recovery, without claiming an
+automatic repair. Inherited records and open-question rows remain excluded.
+Rollback follows the recorded new-digest check and restores the original form
+failure; it never resets, amends or force pushes.
+
+## Merge-added identical decision copy recovery
+
+When a merge left a second byte-identical copy of an inherited decision and the
+duplicate-ID check rejects it, read
+`.qfai/assistant/rule/drift-protocol.md#merge-added-identical-decision-copy-recovery`.
+That rule defines the lineage, the raw-row proof and the stop conditions.
+Approval of the generic protocol alone authorizes no target; append a separate
+new target-specific change request using `templates/change-request.md`.
+
+The request names the exact path, the ID, the bad merge, both parents, the
+common ancestor, the base and its comparison ancestor, each occurrence's
+location, the raw SHA-256 including the line ending and the retain/remove
+mapping. Fresh evidence, reviewed independently after the request is appended,
+fixes the actual write HEAD, the complete preimage and replacement hashes and
+the current authority. Immediately before writing, recheck refs, path,
+authority, counts, mapping and bytes; stale or changed proof stops the
+recovery. Remove only the mapped surplus copies. Keep one original and every
+other row, reference and byte. Open-question rows, rows that differ in any cell,
+padding or line ending, and surplus the base already holds stay excluded.
+Duplicate, drift and Status rules apply as before. The result is no whole-target
+PASS, and the request stays WIP while any named action or required check is
+unfinished. Rollback restores the recorded preimage only while the file still
+equals the replacement; it never resets, amends or force pushes.
+
 ## Approval and no-question mode
 
 Use the shared user-question protocol for CREATE, DELETE, SPLIT, MERGE, SUPERSEDE, and UPDATE:REMOVE. Present the target and rationale. Do not self-approve. A request from the user in the session that names the operation and its effect is the approval, and no second question is asked.
@@ -101,7 +148,7 @@ A story-tree or contract file changes only on the user's approval:
    records who approved it, when, and the label of the option chosen.
 3. Move the row to DONE once every change it names is written.
 
-A row present before the stage started keeps its ID, Content and Approach, except for explicit branch-added decision renumbering under ID allocation below. Inherited rows keep those cells without exception.
+A row present before the stage started keeps its ID, Content and Approach, except for explicit branch-added decision renumbering under ID allocation below or published decision prefix recovery above. Inherited rows keep those cells without exception; the merge-added identical decision copy recovery above removes only surplus copies and keeps the original.
 Only a row this stage appended changes its Status.
 
 ## Retiring an EX, AC or BR
@@ -123,6 +170,67 @@ A retirement touches every place the ID is written. Do all of them in one change
 Read all IDs of the kind in the relevant scope, including IDs named by retirement rows. The next ID is the highest plus one. A project that also counts the IDs its open pull requests add takes the highest across the tree and those pull requests, so a gap above the tree's own highest is allowed. BF spans the project. US is inside its BF. AC and EX are inside their US.
 A contract number spans every contract kind, and a BR is numbered inside its contract. DEC and OQ each span their table.
 Empty numeric scopes begin at 0001, and AC/EX tails begin at 01. Do not reuse an ID because its file was removed or a row was rejected.
+
+### Capacity before writing
+
+AC and EX tails stay two digits, from 01 through 99. Before writing a planned
+batch, report each affected kind and story, its high-water number H (0 when
+empty), remaining capacity 99-H and the number of requested additions. Count
+valid IDs in the tree and decisions, including retired IDs, plus observed
+published parallel heads and known reservations under the project's existing
+method. Name the fixed observation and what it did not cover. A snapshot
+reserves nothing and cannot cover unpublished concurrent work.
+
+If requested additions exceed 99-H, stop before any partial allocation or
+invalid declaration. Never fill gaps, reuse retired IDs or emit tail 100.
+An empty scope has capacity 99. H = 98 allows one addition at tail 99, not two;
+a retired 99 still exhausts the scope. Recheck newly published claims or
+collisions before publication.
+
+### Capacity partition
+
+Only additions exceeding an actual AC or EX scope's remaining 99-H qualify for
+a capacity-only story partition. Record the source story, affected kind, H,
+remainder and requested count first. Prefer leaving every published case and ID
+in place and putting a cohesive incoming group in a capacity-checked sibling
+under the same BF and actual actor goal. An in-force owning change request must
+explicitly approve this partition and its affected paths before writing.
+
+State the sibling's truthful cohesive scope and settle each criterion's owner;
+do not invent a new product outcome, duplicate an obligation or weaken it.
+A different actor, goal, flow or intended behavior needs its existing owning
+approval path. Additions that fit the original scope do not qualify. Missing
+authority, insufficient destination capacity or no truthful partition stops
+the dependent write. This prospective split places new overflow cases; moving
+an existing case also needs the complete map below. These instructions approve
+no future specific creation, move or split.
+
+### Actual moves and incoming collisions
+
+Before an approved actual AC/EX move or incoming collision repair, make a
+complete one-to-one map of:
+
+- the fixed source commit and declaration path;
+- each original BF/US/AC/EX identity and its case meaning;
+- destination story, AC/EX IDs and paths;
+- every affected active BR citation and counted adjacent test declaration;
+- unaffected cases and the input, expected outcome and executable assertion
+  each mapped case preserves.
+
+Check both scopes' retired-inclusive capacity. Each destination EX needs one
+existing destination AC; each AC needs an EX. Preserve every moved EX's
+owning BR link and counted test obligation. An ID change alone proves no
+coverage. Retire old moved IDs in a new approved record and never refill them.
+Inherited published DEC ID, Content and Approach cells and their old-ID
+references remain historical and unchanged; update only approved active
+references.
+
+Keep unaffected published cases and IDs. Identify same-number branch cases by
+fixed provenance and meaning, and change only the provably incoming item,
+without blanket replacement. Unknown ownership, ambiguous collisions,
+uncovered declarations, missing counted test links, changed assertions or an
+incomplete map stops the move without a completion claim. This is a manual
+approval and mapping procedure, not a relocation executor or mapping schema.
 
 Two branches can take the same next ID. When a merge leaves one ID on two items:
 
@@ -165,7 +273,7 @@ Rollback restores a changed file only if its bytes still match this invocation's
 replacement, preserving concurrent changes and naming any unrestored path.
 These checks guarantee neither atomic concurrency nor power-loss safety.
 
-A move to another BF changes the story's US ID and all child AC and EX IDs. Record the old IDs as retired, allocate new IDs in the destination scope, and update every citation before the move is complete.
+A move to another BF changes the story's US ID and all child AC and EX IDs. It follows the existing approval path, not the same-BF capacity exception. Apply the complete map above to approved active citations and retire old IDs in a new approved record; inherited DEC cells and their historical references stay unchanged.
 
 ## Completion of triage
 

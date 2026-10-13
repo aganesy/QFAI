@@ -45,7 +45,7 @@ describe("a fix route from the diagnosis to the commit", () => {
     );
     expect(text).toMatch(/the behaviour a reverted change broke/i);
     expect(text).toMatch(/the step asks the user nothing/i);
-    expect(text).toMatch(/list the EX in the run's final report/i);
+    expect(text).toMatch(/list the EX\b.*\bin the run's final report/i);
   });
 
   // QFAI:EX-0001-0094-02
@@ -68,20 +68,108 @@ describe("a fix route from the diagnosis to the commit", () => {
   it("commits exactly the paths the run wrote, and pushes nothing", async () => {
     const step = flat(await readShipped("step/verify-commit/STEP.md"));
     expect(step).toMatch(
-      /stage exactly the tracked deliverables the run wrote, with `git add <those paths>`/i,
+      /stage exactly the (?:authorized )?tracked deliverables the run wrote, with `git add <those paths>`/i,
     );
     expect(step).toMatch(/never `git add -A`/i);
     expect(step).toMatch(
       /already modified before the run and then written by it is committed whole; the final report names it/i,
     );
     expect(step).toMatch(/in the final report: the commit, and the files it holds/i);
-    expect(step).toMatch(/the step never pushes, opens a pull request or merges/i);
+    const gate = flat(sectionOf(await readShipped("step/verify-commit/STEP.md"), "## Gate"));
+    expect(gate).toMatch(/nothing was pushed, and no pull request or merge was made/i);
   });
 
   // QFAI:EX-0001-0225-08
   it("makes no commit when a verify gate failed", async () => {
     const procedure = await section("verify-commit", "## Procedure");
-    expect(procedure).toMatch(/stop when a verify gate failed or did not run, and say which/i);
+    expect(procedure).toMatch(
+      /stop (?:when a verify gate failed or did not run, and say which|at an ordinary FAIL or UNRUN, and say which gate)/i,
+    );
+  });
+
+  // QFAI:EX-0001-0225-10
+  it("transports only qualified CI candidates while retaining prior failures", async () => {
+    const firstGate = flat(
+      sectionOf(await readShipped("step/verify-commit/STEP.md"), "## Procedure").split(
+        /\n2\. /,
+      )[0] ?? "",
+    );
+    expect(firstGate).toMatch(
+      /allowance applies only when.*project declares.*CI only: <check name>/i,
+    );
+    expect(firstGate).toMatch(
+      /user instruction or project policy.*verification commit and its paths/i,
+    );
+    expect(firstGate).toMatch(/DELEGATED.*actual check.*pending state/i);
+    expect(firstGate).toMatch(/permits that commit.*not.*verification-complete claim/i);
+    expect(firstGate).toMatch(/stop at an ordinary FAIL or UNRUN.*which gate/i);
+    expect(firstGate).toMatch(/every nondelegated gate.*(?:pass|passed)/i);
+    expect(firstGate).toMatch(/red.*(?:stop|block).*same.*unchanged.*candidate/i);
+    expect(firstGate).toMatch(/explicit(?:ly)?.*CI-only delegat.*covering.*transport commit/i);
+    expect(firstGate).toMatch(/existing planned fix.*(?:procedure|changes)/i);
+    expect(firstGate).toMatch(/actual.*(?:uncommitted )?changes.*address.*failure/i);
+    expect(firstGate).toMatch(/HEAD still names the failed commit/i);
+    expect(firstGate).toMatch(/(?:prior|failing).*head.*check.*run.*(?:result|outcome).*FAIL/i);
+    expect(firstGate).toMatch(/actual fix.*after the commit.*new head and resume condition/i);
+    expect(firstGate).toMatch(/never.*(?:relabel|rebadge).*(?:failure|evidence|FAIL).*pending/i);
+    expect(firstGate).toMatch(
+      /(?:new|changed).*candidate.*unverified.*(?:own|its).*CI.*(?:observed|results)/i,
+    );
+    const writes = await section("verify-commit", "## Writes");
+    expect(writes).toMatch(/local commit.*does not establish formal verification/i);
+    expect(writes).toMatch(
+      /push.*pull request.*merge.*user instruction or project policy.*action, target and scope/i,
+    );
+    expect(writes).toMatch(/commit authority alone covers none/i);
+    const completion = await section("verify-commit", "## Completion after CI");
+    expect(completion).toMatch(
+      /every required check.*actual passing evidence.*current target and head/i,
+    );
+    expect(completion).toMatch(/pending, missing, mismatched or red evidence stops completion/i);
+    expect(completion).toMatch(/verification commit and pending report.*step's gate.*CI waits/i);
+  });
+
+  // QFAI:EX-0001-0225-11
+  it("keeps ordinary failures and unrun gates outside the CI-only allowance", async () => {
+    const firstGate = flat(
+      sectionOf(await readShipped("step/verify-commit/STEP.md"), "## Procedure").split(
+        /\n2\. /,
+      )[0] ?? "",
+    );
+    expect(firstGate).toMatch(
+      /exception covers neither an ordinary FAIL or UNRUN.*locally runnable gate.*avoid running/i,
+    );
+    expect(firstGate).toMatch(/red.*(?:stop|block).*same.*unchanged.*candidate/i);
+    expect(firstGate).toMatch(/never.*(?:relabel|rebadge).*(?:failure|evidence|FAIL).*pending/i);
+    expect(firstGate).toMatch(/fails the same way on the base commit.*still a failed gate/i);
+    const repoGates = await section("verify-repo-gate", "## Repository gates");
+    expect(repoGates).toMatch(/actual CI check.*same gate and scope/i);
+    expect(repoGates).toMatch(/local environment failure alone creates no delegation/i);
+    expect(repoGates).toMatch(/retain observed FAIL or UNRUN/i);
+    expect(repoGates).toMatch(/environment cannot run any other command.*user.*output/i);
+    const contract = flat(
+      await readShipped("skill/qfai-verify/references/verify-output-contract.md"),
+    );
+    const delegation =
+      contract
+        .split("A gate the project's Standard commands declare")[1]
+        ?.split('A `"PASS"` verdict')[0] ?? "";
+    expect(delegation).toMatch(/CI only: <check name>.*DELEGATED.*actual.*check/i);
+    expect(delegation).toMatch(/red.*status.*FAIL/i);
+    expect(delegation).toMatch(/runnable local gate.*never delegated to avoid running/i);
+    expect(delegation).toMatch(/observed FAIL or UNRUN.*neither becomes PASS or DELEGATED/i);
+    expect(contract).toMatch(
+      /fails identically on the base.*did not run and is not delegated.*status.*FAIL/i,
+    );
+    expect(contract).toMatch(/status.*closed two-value enum.*PASS.*FAIL/i);
+    expect(contract).toMatch(/scope.*closed enum/i);
+    expect(contract).toMatch(/no.*implement.*value.*closed at these three/i);
+    expect(contract).toMatch(/PASS gate needs actual command output or matching CI evidence/i);
+    expect(contract).toMatch(
+      /delegation never claims.*profile already ran.*check.*required scan and profile/i,
+    );
+    expect(contract).toMatch(/whole-repository scope.*requires full validation/i);
+    expect(contract).toMatch(/stage report.*summary.*add no verdict fields or states/i);
   });
 
   // QFAI:EX-0001-0225-07
@@ -109,10 +197,194 @@ describe("a fix route from the diagnosis to the commit", () => {
     expect(text).toMatch(/opening `Test exception:` names, with Status DONE, is exempt/i);
   });
 
-  it("asks which rule owns the AC when several cite its examples", async () => {
-    const text = await section("implement-tdd", "## A diagnosed missing example");
-    expect(text).toMatch(/the contract rule the diagnosis names as owning that AC/i);
-    expect(text).toMatch(/stop and ask the user which one; never pick one/i);
+  // QFAI:AC-0001-0206-01
+  // QFAI:AC-0001-0206-03
+  // QFAI:EX-0001-0206-01
+  // QFAI:EX-0001-0206-03
+  it("selects an equivalent existing owner and stops unresolved obligations before writing", async () => {
+    const diagnosed = sectionOf(
+      await readShipped("step/implement-tdd/STEP.md"),
+      "## A diagnosed missing example",
+    );
+    const ownership = flat(
+      diagnosed.split("- Before appending the EX")[1]?.split("- Append exactly one EX")[0] ?? "",
+    );
+    expect(ownership, "owner selection needs its own eligibility and equivalence policy").toMatch(
+      /existing.*rules.*cite.*matched AC.*state.*expected obligation/i,
+    );
+    expect(ownership).toMatch(/(?:prefer|retain|use).*existing owner.*(?:qualif|eligible)/i);
+    expect(ownership).toMatch(/(?:sole|only).*qualifying rule/i);
+    expect(ownership).toMatch(/only.*rules.*(?:proven|confirmed|demonstrably).*equivalent/i);
+    expect(ownership).toMatch(
+      /conditions.*(?:outcomes|results).*exceptions.*(?:authority|authorization)/i,
+    );
+    expect(ownership).toMatch(/(?:most|greatest|highest).*distinct.*existing EXs?.*that AC/i);
+    expect(ownership).toMatch(/(?:exclud|without|not count).*new EX/i);
+    expect(ownership).toMatch(/tie.*(?:ascending|stable|lowest).*BR ID/i);
+    expect(ownership).toMatch(/(?:never|do not|not).*majority.*different.*(?:behaviour|behavior)/i);
+    expect(ownership).toMatch(/no rule qualifies.*stop/i);
+    expect(ownership).toMatch(/(?:behaviour|behavior) differs.*equivalence.*uncertain.*stop/i);
+    expect(ownership).toMatch(
+      /stop dependent work.*qfai-sdd.*drift-protocol\.md.*before changing.*AC.*EX/i,
+    );
+    expect(ownership).toMatch(/add no rule.*change no rule statement/i);
+    const bullets = diagnosed.split(/\r?\n(?=- )/u);
+    const citingRule = flat(
+      bullets.find((bullet) => bullet.startsWith("- Add the new EX ID")) ?? "",
+    );
+    expect(citingRule).toMatch(/new EX ID.*selected rule.*Examples cell/i);
+    expect(citingRule).toMatch(/(?:the rule's|its) Statement is unchanged/i);
+    expect(citingRule).toMatch(/(?:asks? no|no extra).*question/i);
+    const report = flat(bullets.find((bullet) => bullet.startsWith("- List the EX")) ?? "");
+    expect(report).toMatch(/chosen BR.*reason.*final report/i);
+  });
+});
+
+describe("the evidence gates on a fix-intermittent route", () => {
+  // QFAI:AC-0001-0220-05
+  // QFAI:EX-0001-0220-43
+  // QFAI:EX-0001-0220-45
+  // QFAI:EX-0001-0220-46
+  // QFAI:EX-0001-0220-47
+  it("checks an existing ordinary Red on entry and otherwise retains the real stress harness", async () => {
+    const step = await readShipped("step/implement-stress-harness/STEP.md");
+    const paragraphs = sectionOf(step, "### Applicability on entry")
+      .split(/\r?\n\s*\r?\n/u)
+      .map(flat);
+    const eligibility =
+      paragraphs.find((paragraph) => /ordinary/i.test(paragraph) && /Red/.test(paragraph)) ?? "";
+    expect(eligibility, "the stress step must inspect prior evidence on entry").toMatch(
+      /(?:always|still).*check.*evidence.*on entry/i,
+    );
+    const qualifyingProof = /only when ([^.]+)/i.exec(eligibility)?.[1] ?? "";
+    expect(qualifyingProof).toMatch(/(?:prior|previous).*executed.*Red/i);
+    expect(qualifyingProof).toMatch(/(?:same|matching).*failure signature/i);
+    expect(qualifyingProof).toMatch(/(?:verified|established|confirmed).*ordinary cause/i);
+    expect(qualifyingProof, "a qualifying harness check does not require Green").not.toMatch(
+      /\bGreen\b/,
+    );
+    expect(
+      eligibility,
+      "an ordinary cause is shown with fixed inputs and a constructed state",
+    ).toMatch(
+      /verified ordinary cause is one demonstrated with fixed inputs and a directly constructed failing state/i,
+    );
+    expect(eligibility, "the intermittent report itself is not proof of the cause").toMatch(
+      /original report of an intermittent failure.*single observed failure.*fails only sometimes.*not that proof/i,
+    );
+    const independence = /without ([^.]+) dependence/i.exec(qualifyingProof)?.[1] ?? "";
+    for (const dependency of ["clock", "order", "parallelism", "load", "timing", "race"]) {
+      expect(independence).toMatch(new RegExp(`\\b${dependency}\\b`, "i"));
+    }
+    const refusal = paragraphs.find((paragraph) => /unknown|missing/i.test(paragraph)) ?? "";
+    const missingProofs = /([^.]*)cannot justify omitting pressure/i.exec(refusal)?.[1] ?? "";
+    expect(missingProofs).toMatch(/missing.*(?:unrun|unexecuted).*Red/i);
+    expect(missingProofs).toMatch(/(?:another|wrong|different|mismatch).*signature/i);
+    expect(missingProofs).toMatch(/(?:unknown|uncertain).*cause/i);
+    expect(refusal).toMatch(/controlled schedule.*race.*not.*ordinary cause/i);
+    expect(refusal).toMatch(/uncertainty.*requires.*real harness/i);
+    expect(refusal).toMatch(/tools.*waits.*time.*do not supply.*proof/i);
+    expect(refusal).toMatch(/cause found later.*cannot justify.*earlier harness.*unnecessary/i);
+    const record = paragraphs.find((paragraph) => /stage report/i.test(paragraph)) ?? "";
+    expect(record).toMatch(/cite.*inspected Red.*cause evidence/i);
+    expect(record).toMatch(/record why.*(?:load|soak).*unnecessary/i);
+    expect(record).toMatch(/stress run.*not performed/i);
+    expect(record).toMatch(/gate checks.*applicability reason.*proof/i);
+    expect(record).toMatch(/report no stress PASS/i);
+    const actual = flat(sectionOf(step, "### When a harness is required"));
+    expect(actual).toMatch(/deterministic schedule.*fixed seed.*injected clock.*controlled order/i);
+    expect(actual).toMatch(/write the harness beside the project's tests/i);
+    expect(actual).toMatch(/run it a recorded number of times at the current revision/i);
+    expect(actual).toMatch(/failure appears at least once.*reported signature/i);
+    expect(flat(sectionOf(step, "## Gate"))).toMatch(
+      /when a harness is required.*reproduces.*reported failure.*recorded rate/i,
+    );
+    expect(flat(sectionOf(step, "## Gate"))).toMatch(/no unperformed stress run counts.*passed/i);
+  });
+
+  // QFAI:AC-0001-0220-05
+  // QFAI:AC-0001-0220-06
+  // QFAI:EX-0001-0220-44
+  // QFAI:EX-0001-0220-45
+  // QFAI:EX-0001-0220-46
+  // QFAI:EX-0001-0220-47
+  // QFAI:EX-0001-0220-48
+  it("checks prior Red and current Green only for an ordinary fix and never exempts quarantine", async () => {
+    const step = await readShipped("step/verify-repeat-run/STEP.md");
+    const paragraphs = sectionOf(step, "### Applicability on entry")
+      .split(/\r?\n\s*\r?\n/u)
+      .map(flat);
+    const eligibility =
+      paragraphs.find((paragraph) => /ordinary/i.test(paragraph) && /Red/.test(paragraph)) ?? "";
+    expect(eligibility).toMatch(/(?:always|still).*check.*diagnosis.*evidence/i);
+    const qualifyingProof =
+      /Only ([^.]+) can make repetitions unnecessary/i.exec(eligibility)?.[1] ?? "";
+    expect(
+      qualifyingProof,
+      "repeat applicability must be limited to the ordinary fix route",
+    ).toMatch(/fix-intermittent.*diagnosis.*verified ordinary cause/i);
+    expect(qualifyingProof).toMatch(/(?:prior|previous).*executed.*Red/i);
+    expect(qualifyingProof).toMatch(/(?:same|matching).*failure signature/i);
+    expect(qualifyingProof).toMatch(
+      /(?:observed|executed).*Green.*(?:exact.*current|current.*exact).*revision/i,
+    );
+    expect(eligibility, "the Green must be the same test and command as the Red").toMatch(
+      /matching Green is the same test, run with the same command as that Red, passing at the current exact revision/i,
+    );
+    expect(eligibility).toMatch(/different test, a wider suite or another command does not match/i);
+    expect(
+      eligibility,
+      "an ordinary cause is shown with fixed inputs and a constructed state",
+    ).toMatch(
+      /verified ordinary cause is one the diagnosis demonstrates with fixed inputs and a directly constructed failing state/i,
+    );
+    const independence = /cause must have no ([^.]+)/i.exec(eligibility)?.[1] ?? "";
+    for (const dependency of [
+      "clock",
+      "order",
+      "parallelism",
+      "load",
+      "timing",
+      "race",
+      "uncertainty",
+    ]) {
+      expect(independence).toMatch(new RegExp(`\\b${dependency}\\b`, "i"));
+    }
+    expect(eligibility).toMatch(/deterministic schedule.*race.*does not qualify/i);
+    const refusal = paragraphs.find((paragraph) => /unknown|missing/i.test(paragraph)) ?? "";
+    const missingProofs = /([^.]*)require the real runs/i.exec(refusal)?.[1] ?? "";
+    expect(missingProofs).toMatch(/missing.*(?:unrun|unexecuted).*Red/i);
+    expect(missingProofs).toMatch(/(?:another|wrong|different|mismatch).*signature/i);
+    expect(missingProofs).toMatch(/Green that is not the same test and command/i);
+    expect(missingProofs).toMatch(/(?:stale|older).*Green/i);
+    expect(missingProofs).toMatch(/pending.*CI/i);
+    expect(missingProofs).toMatch(/(?:unknown|uncertain).*cause/i);
+    expect(missingProofs).toMatch(/unresolved.*timing.*load.*uncertainty/i);
+    expect(refusal).toMatch(/tools.*waits.*time.*do not.*repetitions unnecessary/i);
+    expect(eligibility).toMatch(
+      /quarantine.*never uses.*always requires.*actual consecutive runs/i,
+    );
+    const record = paragraphs.find((paragraph) => /stage report/i.test(paragraph)) ?? "";
+    expect(record).toMatch(/cite.*inspected diagnosis.*prior Red.*current Green.*stage report/i);
+    expect(record).toMatch(/commands.*results.*revisions.*stage report/i);
+    expect(record).toMatch(/applicability reason.*why.*(?:load|soak).*unnecessary/i);
+    expect(record).toMatch(/repeat runs.*not performed/i);
+    expect(record).toMatch(/gate checks.*proof.*reason/i);
+    expect(record).toMatch(/report no repeat-run PASS/i);
+    const actual = flat(sectionOf(step, "### When repeated runs are required"));
+    expect(actual).toMatch(/fix the number of runs before the first one/i);
+    expect(actual).toMatch(/record every run in order/i);
+    expect(actual).toMatch(
+      /run the tests.*one revision.*the way the diagnosis exposed the failure/i,
+    );
+    expect(actual).toMatch(/one failure ends the step/i);
+    expect(actual).toMatch(/when every run passed, lift the quarantine/i);
+    expect(flat(sectionOf(step, "## Gate"))).toMatch(
+      /every run is recorded.*all of them passed on the same revision/i,
+    );
+    expect(flat(sectionOf(step, "## Gate"))).toMatch(
+      /no unperformed repetitions count.*passed.*no quarantine is lifted/i,
+    );
   });
 });
 
@@ -124,6 +396,20 @@ describe("where qfai-run runs the policy check and the commit", () => {
       /on a route that changes no file, one that closes, answers or asks, it reads and reports and writes nothing/i,
     );
     expect(work.indexOf("**Extract.**")).toBeLessThan(work.indexOf("common-policy-check"));
+  });
+
+  // QFAI:AC-0001-0223-07
+  // QFAI:EX-0001-0223-14
+  it("has the final report name the policy check, or say it did not run", async () => {
+    const report = flat(
+      sectionOf(
+        await readShipped("skill/qfai-run/references/operator-screens.md"),
+        "## Final report",
+      ),
+    );
+    expect(report).toContain(
+      "Name `common-policy-check` and its outcome, or that it did not run and why.",
+    );
   });
 
   it("commits after an end release point, so the commit holds the approval", async () => {
@@ -154,6 +440,28 @@ describe("a verify gate that fails on the base commit or cannot run", () => {
     expect(text).toMatch(/never turns it into a pass/i);
   });
 
+  it("compares a timing-dependent suite under the same load and adds no recorded state", async () => {
+    const text = await section(
+      "common-gate-run",
+      "### A suite whose result depends on timing or load",
+    );
+    expect(text).toMatch(/under the conditions of the run it is compared with/i);
+    expect(text).toMatch(/count a chain of failures once/i);
+    expect(text).toMatch(/run alone the files that hold a failure the base run did not show/i);
+    expect(text).toMatch(/record the parallelism and the load of both runs/i);
+    expect(text).toMatch(
+      /folded into a chain only when it follows an earlier failure of the same file/i,
+    );
+    expect(text).toMatch(/possible order or shared-state effect of the change/i);
+    expect(text).toContain("gate-failure-autorepair.md#nondeterministic-gates");
+    expect(text).toMatch(/left out of the comparison only after a full-suite rerun/i);
+    expect(text).toMatch(/list each one with its result run alone and in the full-suite rerun/i);
+    expect(text).toMatch(
+      /baseline is still `same`, `different` or `unrun`, and the result is still `FAIL`/i,
+    );
+    expect(text).not.toMatch(/`flaky`/i);
+  });
+
   it("keeps the stop before the commit and lists such gates apart", async () => {
     const text = await section("verify-repo-gate", "## A failure the run did not cause");
     expect(text).toMatch(
@@ -172,5 +480,28 @@ describe("a verify gate that fails on the base commit or cannot run", () => {
     expect(contract).toMatch(/`"PASS"`, `"FAIL"`, `"UNRUN"` or `"DELEGATED"`/);
     expect(contract).toMatch(/`baseline` \| string/);
     expect(contract).toMatch(/still makes the top-level `status` `"FAIL"`/);
+  });
+
+  it("records why a failure predates the run and asks the user before any commit", async () => {
+    const text = await section("verify-repo-gate", "## A failure the run did not cause");
+    expect(text).toMatch(/baseline `same`, `reason` names the failing test identifiers/i);
+    expect(text).toMatch(/the environment they fail in/i);
+    expect(text).toMatch(/result of the same gate in CI/i);
+    expect(text).toMatch(/not observed is written as unknown, never as a pass/i);
+    expect(text).toMatch(/asking the user whether to commit with those gates open/i);
+    expect(text).toMatch(
+      /observed failing in the base commit's run, executed as `common-gate-run`/i,
+    );
+    expect(text).toMatch(/never assumed/i);
+    expect(text).toMatch(
+      /no-question mode, or with no question tool, the report lists those gates as open and stops without committing/i,
+    );
+
+    const contract = flat(
+      await readShipped("skill/qfai-verify/references/verify-output-contract.md"),
+    );
+    expect(contract).toMatch(
+      /On a `baseline` of `"same"`: the failing test identifiers and the environment, in one or two sentences \(see `verify-repo-gate`\)/,
+    );
   });
 });

@@ -7,7 +7,7 @@ import { renderGraphPreparation } from "../../../src/core/graph/presentation.js"
 import { graphProcessFixture } from "../../helpers/graphProcess.js";
 import { graphAnalysisRoot } from "../../../src/core/graph/analysis.js";
 
-// QFAI:EX-0001-0233-05
+// QFAI:EX-0001-0237-05
 // Mutation: packages/qfai/src/core/graph/prepare.ts `recovery: "Install Python 3.10 or later and uv, then run qfai init again."` -> `recovery: "Install Python 3.9 and uv, then run qfai init again."` fails "reports an unmet interpreter prerequisite with a recovery action"
 it("reports an unmet interpreter prerequisite with a recovery action", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-prerequisite-"));
@@ -28,7 +28,7 @@ it("reports an unmet interpreter prerequisite with a recovery action", async () 
   }
 });
 
-// QFAI:EX-0001-0233-21
+// QFAI:EX-0001-0237-21
 // Mutation: packages/qfai/src/core/graph/prepare.ts `(await inspectCurrentCodeAnalysis(root, run)) ? "code-ready" : "code-not-ready"` -> `(await inspectCurrentCodeAnalysis(root, run)) ? "code-not-ready" : "code-ready"` fails "reports current code analysis without starting another analysis or document model"
 it("reports current code analysis without starting another analysis or document model", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-current-"));
@@ -86,7 +86,7 @@ it("reports current code analysis without starting another analysis or document 
   }
 });
 
-// QFAI:EX-0001-0233-20
+// QFAI:EX-0001-0237-20
 // Mutation: packages/qfai/src/core/graph/presentation.ts `${preparation.documents}` -> `${preparation.code}` fails "distinguishes installed tools from unset document processing"
 it("distinguishes installed tools from unset document processing", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-readiness-"));
@@ -111,7 +111,7 @@ it("distinguishes installed tools from unset document processing", async () => {
   }
 });
 
-// QFAI:EX-0001-0233-15
+// QFAI:EX-0001-0237-15
 // Mutation: packages/qfai/src/core/graph/prepare.ts `graphifyVersion.stdout.trim() !== GRAPH_VERSIONS.graphify` -> `false` fails "does not activate a replacement with an unsupported version"
 it("does not activate a replacement with an unsupported version", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-incompatible-"));
@@ -134,7 +134,7 @@ it("does not activate a replacement with an unsupported version", async () => {
   }
 });
 
-// QFAI:EX-0001-0233-14
+// QFAI:EX-0001-0237-14
 // Mutation: packages/qfai/src/core/graph/prepare.ts `previousInstallation: codegraphReady || graphifyReady ? "retained" : "none",` -> `previousInstallation: "none",` fails "retains the prior installation after an interrupted replacement download"
 it("retains the prior installation after an interrupted replacement download", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-download-"));

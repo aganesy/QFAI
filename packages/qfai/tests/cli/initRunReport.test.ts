@@ -27,6 +27,12 @@ import { collectTemplateFiles } from "../../src/core/fs/templateCopy.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { captureStdout } from "../helpers/stdout.js";
 
+/**
+ * The only shipped `DESIGN.md` path the report names: init no longer writes a root `DESIGN.md`,
+ * so a report that merely contains the text "DESIGN.md" would pass on this sample path alone.
+ */
+const DESIGN_SAMPLE = ".qfai/assistant/skill/qfai-prototyping/templates/DESIGN.md.sample";
+
 /** The `    - <relative path>` entries under a given report heading. */
 function pathsUnder(output: string, heading: string): string[] {
   const lines = output.split("\n");
@@ -88,7 +94,8 @@ describe("qfai init run report", () => {
 
       expect(output).toMatch(/ {2}would write:\s*\d+/);
       expect(output).toContain("  would write paths:");
-      expect(output).toContain("DESIGN.md");
+      expect(output).toContain(`    - ${DESIGN_SAMPLE}`);
+      expect(output).not.toContain("    - DESIGN.md");
       // The past-tense heading must not appear under a dry-run header.
       expect(output).not.toMatch(/ {2}written:\s*\d+/);
     } finally {
@@ -105,7 +112,8 @@ describe("qfai init run report", () => {
 
       expect(output).toMatch(/ {2}written:\s*\d+/);
       expect(output).toContain("  written paths:");
-      expect(output).toContain("DESIGN.md");
+      expect(output).toContain(`    - ${DESIGN_SAMPLE}`);
+      expect(output).not.toContain("    - DESIGN.md");
       expect(output).not.toContain("would write");
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -141,7 +149,8 @@ describe("qfai init run report", () => {
       });
 
       expect(secondRun).toContain("  skipped paths:");
-      expect(secondRun).toContain("DESIGN.md");
+      expect(secondRun).toContain(`    - ${DESIGN_SAMPLE}`);
+      expect(secondRun).not.toContain("    - DESIGN.md");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

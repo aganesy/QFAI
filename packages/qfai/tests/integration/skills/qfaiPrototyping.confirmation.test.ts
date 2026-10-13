@@ -270,6 +270,14 @@ describe.each(TREES)("%s", (tree) => {
     );
   });
 
+  it("says that doctor probes the one URL it is given and what status passes", async () => {
+    const preflight = flat(await read(tree, "step/prototyping-preflight/STEP.md"));
+    expect(preflight).toContain(
+      "Doctor sends one `GET` to exactly the URL it is given, without following a redirect, and waits 3 seconds. A status from 200 to 399 passes;",
+    );
+    expect(preflight).toContain("can answer 404 on `/`, so pass a URL that answers 200");
+  });
+
   it("serves the iteration it reviews and checks each payload before writing it", async () => {
     const loop = flat(await read(tree, "step/prototyping-loop/STEP.md"));
     expect(loop).toContain(

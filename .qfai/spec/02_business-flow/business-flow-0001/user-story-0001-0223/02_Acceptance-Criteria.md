@@ -41,4 +41,19 @@ Feature: Answer only the critical decisions, and approve each release
     Then nothing is asked
     And an `open-questions.md` row names the decision
     And the step stops before the change that depends on it
+
+  # AC-0001-0223-06
+  Scenario: A step with no open design decision starts no griller
+    Given a step that meets no design decision the request needs and the repository cannot settle, such as an operation, a routine step, applying a settled decision, or a fix whose expected behaviour the story tree states
+    When the step runs
+    Then no griller starts and no grilling session is held
+    And the agent decides from what is written, and the final report lists nothing for the user
+    And a step that meets such a decision outside the discussion stage still holds a delegated session, and a critical decision still goes to the user
+    And the grilling rule and its reminders say when a session is held and when none is
+
+  # AC-0001-0223-07
+  Scenario: The final report states the policy check
+    Given a run of any route
+    When the final report is written
+    Then it says whether `common-policy-check` ran and its outcome, or that it did not run and why
 ```

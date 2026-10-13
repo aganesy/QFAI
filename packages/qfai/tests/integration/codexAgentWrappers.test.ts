@@ -162,6 +162,29 @@ describe("qfai init generates the Codex agent profiles", () => {
     expect(kinds).toEqual(new Set(["reviewer", "worker"]));
   });
 
+  // QFAI:EX-0001-0025-05
+  it("lowers the reasoning effort of reviewers only, and lets workers inherit", async () => {
+    const root = await initProject();
+    const kinds = new Set<string>();
+    for (const name of await canonicalAgentNames()) {
+      const canonical = await readFile(
+        path.join(root, ".qfai", "assistant", "agent", `${name}.md`),
+        "utf-8",
+      );
+      const kind = parseAgentCardKind(canonical, name);
+      if (kind) kinds.add(kind);
+      const profile = parseTomlDocument(await readFile(codexAgentPath(root, name), "utf-8"));
+      expect("model" in profile, `${name}: no profile pins a model`).toBe(false);
+      expect(kind, `${name}: kind`).not.toBeNull();
+      if (kind === "reviewer") {
+        expect(profile["model_reasoning_effort"], `${name}: reviewer effort`).toBe("medium");
+      } else {
+        expect("model_reasoning_effort" in profile, `${name}: worker inherits effort`).toBe(false);
+      }
+    }
+    expect(kinds).toEqual(new Set(["reviewer", "worker"]));
+  });
+
   it("leaves an existing profile alone, and --force regenerates the stale one", async () => {
     const root = await initProject();
     const target = codexAgentPath(root, "qa-gatekeeper");

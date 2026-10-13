@@ -3,13 +3,13 @@ x-qfai-depends-on: []
 x-qfai-rules:
   - id: BR-0022-0001
     statement: The preparation summary names each tool, runtime readiness, analysis readiness and host protection state separately; installation is never presented as verified analysis or protection.
-    examples: [EX-0001-0233-01, EX-0001-0233-20, EX-0001-0233-21, EX-0001-0235-19, EX-0001-0235-20, EX-0001-0235-21]
+    examples: [EX-0001-0237-01, EX-0001-0237-20, EX-0001-0237-21, EX-0001-0235-19, EX-0001-0235-20, EX-0001-0235-21]
   - id: BR-0022-0002
     statement: A preparation failure names the failed step and a recovery action and states whether a prior usable installation was retained; an absent document backend is shown as documents-not-ready with the configuration action.
-    examples: [EX-0001-0233-05, EX-0001-0233-14, EX-0001-0233-20, EX-0001-0234-07]
+    examples: [EX-0001-0237-05, EX-0001-0237-14, EX-0001-0237-20, EX-0001-0234-07]
   - id: BR-0022-0003
     statement: A dry-run displays the proposed tool actions and observed states under a preview title with an explicit no-changes notice; it does not label planned installation as completed.
-    examples: [EX-0001-0233-17]
+    examples: [EX-0001-0237-17]
   - id: BR-0022-0004
     statement: A denied exploration message names the attempted action, the reason, the relevant graph CLI command, the bounded pending attempt UUID and preparation or AI-decided scoped fallback; failed and unsupported protection are distinguished visibly.
     examples: [EX-0001-0235-01, EX-0001-0235-02, EX-0001-0235-21, EX-0001-0235-22, EX-0001-0234-15]

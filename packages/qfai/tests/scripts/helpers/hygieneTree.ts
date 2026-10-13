@@ -162,7 +162,7 @@ export interface Declaration {
 /**
  * One declared context, narrowed without an assertion.
  *
- * A predicate rather than a shape check followed by `as`: `CLAUDE.md` forbids the assertion, and
+ * A predicate rather than a shape check followed by `as`: `AGENTS.md` forbids the assertion, and
  * `filter` over a predicate is what lets the parsed objects through unchanged.
  *
  * It verifies exactly what the type claims, which the first version did not: it admitted a MISSING

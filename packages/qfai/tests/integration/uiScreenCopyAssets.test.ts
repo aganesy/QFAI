@@ -185,6 +185,41 @@ describe.each(TREES)("%s: the guidance that reads the copy keys", (tree) => {
   });
 });
 
+describe.each(TREES)("%s: the guide's placement of rendered text", (tree) => {
+  it("makes structure optional only without a heading beyond the title, and maps each kind of text to its key", async () => {
+    const source = await read(tree, GUIDE);
+    const guide = flat(source);
+    expect(guide).toContain("`structure` is optional only for a screen that shows no heading");
+    expect(guide).toContain("a screen with several `h2` headings writes `structure`");
+
+    const start = source.indexOf("### Which key holds which text");
+    expect(start).toBeGreaterThan(0);
+    const section = source.slice(start, source.indexOf("### A worked example"));
+    const rows = section
+      .split(/\r?\n/)
+      .filter((line) => line.startsWith("|"))
+      .map((line) => line.split("|").map((cell) => cell.trim()));
+    const homeOf = (kind: string): string | undefined =>
+      rows.find((cells) => cells[1]?.includes(kind))?.[2];
+    const homes: Array<[string, string]> = [
+      ["The one page heading", "`title`"],
+      ["A heading over a group", "`structure[].heading`"],
+      ["eyebrow, kicker", "a supplement"],
+      ["The text of a field", "`label` of that element or action"],
+      ["Link text", "`label` of a `navigate` action"],
+      ["A table column header", "`label` of an element"],
+      ["A figure caption", "a supplement"],
+      ["An item of a list the product writes", "a supplement"],
+      ["An item of a list made of data", "outside the contract"],
+      ["Product or site-identity text", "`label` when it is a link or control"],
+      ["The message of a field rule", "`validations`"],
+    ];
+    for (const [kind, home] of homes) {
+      expect(homeOf(kind), kind).toContain(home);
+    }
+  });
+});
+
 describe("a project with no UI contract", () => {
   it("acquires no copy obligation", async () => {
     const apiDir = path.join(root, ".qfai", "spec", "03_contract", "api");

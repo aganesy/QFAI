@@ -11,6 +11,13 @@ Feature: TDD Micro-Cycle Execution
     Then it runs Red, Green and Refactor observing the result of each phase
     And the test it writes carries `QFAI:EX-NNNN-NNNN-NN`
     And no ledger status is written
+    And each focused phase reports exact command arguments, cwd, file selection, case selector, runtime version, reporter, input revision and raw output reference
+    And it links the target EX to its source declaration and full file/parent/case identity, with observed execution and terminal result apart from exit, counts, file/container results and static scanner linkage
+    And zero selected executions, missing identifiable observations, skip, TODO, cancellation or interruption do not close the phase; the output is retained and selection or observation is corrected before repeating it
+    And ordinary RED reaches the selected intended assertion or expected exception and fails on its stated behavior; parent, unrelated, import or unconditional-throw failures do not establish that RED, and existing approved alternative RED routes remain available
+    And GREEN and Refactor observe the same selected behavior succeeding on the intended input; an expected-failure inversion is reported separately and is not ordinary behavior success
+    And the normal verify run records the full intended collection and actual execution, reconciles comparable case membership and intentional input differences, leaves unknown expected counts unknown and refuses unexplained omissions as full-scope proof
+    And Standard Test quoting is preserved, no extra full run is required per focused cycle, and no evidence ledger, JSON field, gate status, runtime parser or runner is introduced
 
   # AC-0001-0091-02
   Scenario: Minimal Code In Phase Green

@@ -323,16 +323,16 @@ flowchart LR
     (`assistant/rule/`, `skill/`, `agent/` and `prompt/`), plus `qfai.config.yaml`.
   - Options:
 
-    | Flag              | Effect                                                                                                                                                                                                                                                                                                                                                                                                 |
-    | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-    | `--dir <path>`    | Output directory (default: the current directory). Wins over `--root` when both are given.                                                                                                                                                                                                                                                                                                             |
-    | `--root <path>`   | Every other command reads this as the target directory; `init` reads it as the output directory too, but only when `--dir` is omitted.                                                                                                                                                                                                                                                                 |
-    | `--force`         | Overwrite the shipped skills, steps, agents and rules, the rule masters under `.agents/rules/`, their host wrappers, and generated Copilot instructions, whether or not you edited them. Project content, `qfai.config.yaml`, `DESIGN.md`, `AGENTS.md`, `CLAUDE.md` and routing overrides are preserved. The managed `.gitignore` block and `core.symlinks` setting are repaired on every non-dry-run. |
-    | `--dry-run`       | Report what would change and write nothing.                                                                                                                                                                                                                                                                                                                                                            |
-    | `--yes`           | Reserved for a future interactive mode; no behavioural difference today.                                                                                                                                                                                                                                                                                                                               |
-    | `--verbose`       | Expand the run report's `skipped` list to the full path listing. Off by default, so a no-op re-run prints the skip count and a pointer to this flag instead of every shipped asset path. It does not gate the written or removed listings: those are printed whenever they have entries, with or without this flag.                                                                                    |
-    | `--help`, `-h`    | Print the CLI usage banner and exit without writing anything. Accepted by every command, `init` included, and handled before the command runs.                                                                                                                                                                                                                                                         |
-    | `--version`, `-V` | Print the installed QFAI version to stdout and exit 0. Accepted by every command, `init` included, and handled before the command runs, so it works outside a project too.                                                                                                                                                                                                                             |
+    | Flag              | Effect                                                                                                                                                                                                                                                                                                                                                                                    |
+    | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+    | `--dir <path>`    | Output directory (default: the current directory). Wins over `--root` when both are given.                                                                                                                                                                                                                                                                                                |
+    | `--root <path>`   | Every other command reads this as the target directory; `init` reads it as the output directory too, but only when `--dir` is omitted.                                                                                                                                                                                                                                                    |
+    | `--force`         | Overwrite the shipped skills, steps, agents and rules, the rule masters under `.agents/rules/`, their host wrappers, and generated Copilot instructions, whether or not you edited them. Project content, `qfai.config.yaml`, `DESIGN.md`, `AGENTS.md` and routing overrides are preserved. The managed `.gitignore` block and `core.symlinks` setting are repaired on every non-dry-run. |
+    | `--dry-run`       | Report what would change and write nothing.                                                                                                                                                                                                                                                                                                                                               |
+    | `--yes`           | Reserved for a future interactive mode; no behavioural difference today.                                                                                                                                                                                                                                                                                                                  |
+    | `--verbose`       | Expand the run report's `skipped` list to the full path listing. Off by default, so a no-op re-run prints the skip count and a pointer to this flag instead of every shipped asset path. It does not gate the written or removed listings: those are printed whenever they have entries, with or without this flag.                                                                       |
+    | `--help`, `-h`    | Print the CLI usage banner and exit without writing anything. Accepted by every command, `init` included, and handled before the command runs.                                                                                                                                                                                                                                            |
+    | `--version`, `-V` | Print the installed QFAI version to stdout and exit 0. Accepted by every command, `init` included, and handled before the command runs, so it works outside a project too.                                                                                                                                                                                                                |
 
 - `npx qfai validate`
   - Validates the story tree, contracts and test obligations, writes `.qfai/report/validate.json`,
@@ -430,6 +430,30 @@ Notes.
   `.qfai/assistant/rule/change-classification.md`. The `message` text and
   issue order are not stable; match on `issues[].code`.
 - `report.json`, `doctor.json`, and `run-*` JSON logs are internal exports and are not a stable external contract; prefer `report.md` for integrations that must survive tool upgrades.
+
+## Dependency security
+
+The glob-matching dependency `braces` has an unresolved
+[stack-exhaustion denial-of-service advisory](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm).
+QFAI accepts this residual risk only for reviewed project patterns and paths,
+trusted configuration and trusted SDK callers. This is risk acceptance, not a
+clean audit or proof that QFAI is unaffected. Reproduction and exploitation in
+QFAI remain unverified.
+
+Review include, ignore and negative patterns, constructed paths and SDK inputs.
+`validateProject` accepts a caller-supplied `ConfigLoadResult` without invoking
+the configuration loader; the caller must review those values too. Catching
+errors and limiting results after glob expansion do not defend against stack
+exhaustion during expansion.
+
+Untrusted pull requests, externally supplied configuration and service request
+inputs are outside this acceptance. Review those inputs and restrict access;
+do not expose glob processing to them until your mitigation and security review
+cover them.
+
+Reassess the risk when a compatible patch becomes available or untrusted input
+is needed. A forced downgrade to `qfai@0.4.0` is not a compatible fix for the
+current major API; do not apply it through `npm audit fix --force`.
 
 ## FAQ
 
@@ -935,7 +959,6 @@ commit that bumps the package, and to keep the two from being merged separately.
 │   │   └── open-questions.md
 │   └── waivers.yml
 ├── AGENTS.md
-├── CLAUDE.md
 └── qfai.config.yaml
 ```
 
@@ -981,7 +1004,9 @@ No host is declared supported in this release.
 ### Cross-AI rules and the writing reminder
 
 `npx qfai init` seeds `.agents/rules/**`, the rule set every AI coding agent in
-the project shares, and points `AGENTS.md` and `CLAUDE.md` at it. One of those
+the project shares, and points `AGENTS.md` at it, with a line for each rule that says when
+to read it. Claude Code reads `AGENTS.md` when the project has no `CLAUDE.md` (Claude Code
+2.1.277 or later). One of those
 rules, `documentation-clarity.md`, sets the writing standard for pull requests,
 issues, code comments and Markdown: no project-local identifiers, no account of
 how the work went, cut to what a reader outside the team can follow.

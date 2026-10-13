@@ -7,7 +7,7 @@ import { captureStdout } from "../../helpers/stdout.js";
 import { runInit } from "../../../src/cli/commands/init.js";
 import { graphProcessFixture } from "../../helpers/graphProcess.js";
 
-// QFAI:EX-0001-0233-16
+// QFAI:EX-0001-0237-16
 // Mutation: packages/qfai/src/cli/main.ts `isFileSystemError(current) &&` -> `false &&` fails "returns the required-file IO exit code when the destination is a file"
 it("returns the required-file IO exit code when the destination is a file", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-io-"));
@@ -26,7 +26,7 @@ it("returns the required-file IO exit code when the destination is a file", asyn
   }
 });
 
-// QFAI:EX-0001-0233-18
+// QFAI:EX-0001-0237-18
 // Mutation: packages/qfai/src/cli/lib/args.ts `invalidExitCode: 2,` -> `invalidExitCode: 3,` fails "refuses invalid init arguments with exit two before provisioning"
 it("refuses invalid init arguments with exit two before provisioning", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-arguments-"));
@@ -42,7 +42,7 @@ it("refuses invalid init arguments with exit two before provisioning", async () 
   }
 });
 
-// QFAI:EX-0001-0233-17
+// QFAI:EX-0001-0237-17
 // Mutation: packages/qfai/src/core/graph/presentation.ts `"Graph tools preview",` -> `"Graph tools",` fails "previews graph preparation without writes or graph processes"
 it("previews graph preparation without writes or graph processes", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-preview-"));

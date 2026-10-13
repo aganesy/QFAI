@@ -9,7 +9,7 @@ import { graphProcessFixture } from "../../helpers/graphProcess.js";
 import { prepareGraphIntegration } from "../../../src/index.js";
 import { getInitAssetsDir } from "../../../src/cli/lib/assets.js";
 
-// QFAI:EX-0001-0233-01
+// QFAI:EX-0001-0237-01
 // Mutation: packages/qfai/src/core/graph/prepare.ts `return { runtime: "installed", code: "code-not-ready", documents: "documents-not-ready" };` -> `return { runtime: "not-ready", code: "code-not-ready", documents: "documents-not-ready" };` fails "prepares both project-local runtimes"
 it("prepares both project-local runtimes", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-prepare-"));
@@ -30,7 +30,7 @@ it("prepares both project-local runtimes", async () => {
   }
 });
 
-// QFAI:EX-0001-0233-19
+// QFAI:EX-0001-0237-19
 // Mutation: packages/qfai/src/core/graph/integration.ts `const entries = await installGraphEntrypoints(root);` -> `const entries = { files: [], conflicts: [] };` fails "prepares through the package API without overwriting a package-owned assistant tree"
 it("prepares through the package API without overwriting a package-owned assistant tree", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-dogfood-"));
@@ -71,7 +71,7 @@ it("prepares through the package API without overwriting a package-owned assista
   }
 });
 
-// QFAI:EX-0001-0233-13
+// QFAI:EX-0001-0237-13
 // Mutation: packages/qfai/src/cli/commands/init.ts `copyTemplatePaths(source, destination, [...STORY_SEED_PATHS], {` -> `((...args: Parameters<typeof copyTemplatePaths>) => copyTemplatePaths(args[0], args[1], args[2], { ...args[3], force: true }))(source, destination, [...STORY_SEED_PATHS], {` fails "retains processing choices and story content during forced initialization"
 it("retains processing choices and story content during forced initialization", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-force-"));
@@ -97,7 +97,7 @@ it("retains processing choices and story content during forced initialization", 
   }
 });
 
-// QFAI:EX-0001-0233-12
+// QFAI:EX-0001-0237-12
 // Mutation: packages/qfai/src/core/graph/prepare.ts `result.stdout.trim() === version` -> `result.stdout.trim() !== version` fails "reuses compatible local runtimes when installation is offline"
 it("reuses compatible local runtimes when installation is offline", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-offline-"));
@@ -120,7 +120,7 @@ it("reuses compatible local runtimes when installation is offline", async () => 
   }
 });
 
-// QFAI:EX-0001-0233-11
+// QFAI:EX-0001-0237-11
 // Mutation: packages/qfai/src/core/graph/prepare.ts `if (codegraphReady) {` -> `if (false) {` fails "repairs only a missing runtime component and retains unrelated settings"
 it("repairs only a missing runtime component and retains unrelated settings", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-partial-"));
@@ -148,7 +148,7 @@ it("repairs only a missing runtime component and retains unrelated settings", as
   }
 });
 
-// QFAI:EX-0001-0233-10
+// QFAI:EX-0001-0237-10
 // Mutation: packages/qfai/src/core/graph/prepare.ts `result.stdout.trim() === version` -> `result.stdout.trim() !== version` fails "reuses complete compatible runtimes on repeated preparation"
 it("reuses complete compatible runtimes on repeated preparation", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-repeat-"));
@@ -174,7 +174,7 @@ it("reuses complete compatible runtimes on repeated preparation", async () => {
   }
 });
 
-// QFAI:EX-0001-0233-09
+// QFAI:EX-0001-0237-09
 // Mutation: packages/qfai/src/core/graph/prepare.ts `"--ignore-scripts",` -> `"--global",` fails "keeps installation targets project-local and preserves the caller environment"
 it("keeps installation targets project-local and preserves the caller environment", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-local-"));
@@ -209,7 +209,7 @@ it("keeps installation targets project-local and preserves the caller environmen
   }
 });
 
-// QFAI:EX-0001-0233-03
+// QFAI:EX-0001-0237-03
 // Mutation: packages/qfai/src/cli/commands/init.ts `info(renderGraphPreparation(preparation, preparation.hosts));` -> `info(renderGraphPreparation(preparation, []));` fails "prepares graph tools when an older adopter reruns init"
 it("prepares graph tools when an older adopter reruns init", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-upgrade-"));
@@ -235,7 +235,7 @@ it("prepares graph tools when an older adopter reruns init", async () => {
   }
 });
 
-// QFAI:EX-0001-0233-02
+// QFAI:EX-0001-0237-02
 // Mutation: packages/qfai/src/core/graph/prepare.ts `return { runtime: "installed", code: "code-not-ready", documents: "documents-not-ready" };` -> `return { runtime: "not-ready", code: "code-not-ready", documents: "documents-not-ready" };` fails "prepares pinned tools in a project path containing spaces"
 it("prepares pinned tools in a project path containing spaces", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai graph prepare "));

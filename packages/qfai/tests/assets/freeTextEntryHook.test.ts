@@ -36,7 +36,7 @@ const SHIPPED_MESSAGES = "packages/qfai/assets/init/root/.agents/rules/reminders
 /** The skill the reminder sends a request to, and the one list of requests both state. */
 const SHIPPED_RUN_SKILL = "packages/qfai/assets/init/.qfai/assistant/skill/qfai-run/SKILL.md";
 const FREE_TEXT_CASES =
-  "a change, a fix, an investigation of the codebase or a question about the project";
+  "a change, a fix, an investigation of the codebase, a question about the project or an operation on finished work";
 
 /** This repository's own Claude Code hooks, and the copy `qfai init` writes. */
 const OWN_SETTINGS = ".claude/settings.json";
@@ -58,11 +58,7 @@ function expectNoEmbeddedReminderText(program: string, messages: unknown): void 
       typeof output === "object" && output !== null
         ? Reflect.get(output, "additionalContext")
         : undefined;
-    for (const context of [
-      full,
-      Reflect.get(message, "reason"),
-      Reflect.get(message, "briefContext"),
-    ]) {
+    for (const context of [full, Reflect.get(message, "briefContext")]) {
       if (typeof context !== "string") continue;
       expect(program).not.toContain(context);
       expect(program).not.toContain(JSON.stringify(context).slice(1, -1));
@@ -166,7 +162,9 @@ describe("the free-text entry reminder", () => {
       const context = contextOf(stdout);
       expect(context).toContain("names no skill, invoke the `qfai-run` skill");
       expect(context).toContain("A message that names a skill goes to that skill.");
-      expect(context).toContain("Read the skill rather than working from this line.");
+      expect(context).toContain(
+        "Read the skill once per session rather than working from this line.",
+      );
       expect(context).toContain("In a git worktree, read `.claude/skills/qfai-run/SKILL.md`");
       expect(context.length).toBeLessThan(1000);
     },
@@ -189,7 +187,7 @@ describe("the free-text entry reminder", () => {
     );
   });
 
-  it("says a question one command answers needs no run", async () => {
+  it("says no request skips the run, the lightest included", async () => {
     const stdout = await runReminderHook(
       {
         command: "node",
@@ -198,8 +196,11 @@ describe("the free-text entry reminder", () => {
       projectDirOf(repoRoot, SHIPPED_SETTINGS),
     );
     expect(contextOf(stdout)).toContain(
-      "A question that one command or one file read answers needs no run: answer it directly.",
+      "No request skips the run: a question that one command or one file read answers is planned too, and takes the lightest route.",
     );
+    expect(contextOf(stdout)).not.toContain("needs no run");
+    const skill = await readFile(path.join(repoRoot, SHIPPED_RUN_SKILL), "utf-8");
+    expect(/^description: "(.*)"$/m.exec(skill)?.[1]).not.toMatch(/needs no (?:run|plan)/);
   });
 
   it("tells the agent to stop and say so when qfai-run cannot start", async () => {
@@ -274,7 +275,7 @@ describe("the Codex hook file", () => {
 
   it("carries the three prompt-time reminders", async () => {
     const groups = await readGroups(SHIPPED_CODEX);
-    expect([...groups.keys()]).toEqual(["UserPromptSubmit", "PreToolUse", "PostToolUse", "Stop"]);
+    expect([...groups.keys()]).toEqual(["UserPromptSubmit", "PreToolUse", "PostToolUse"]);
     const markers = (groups.get("UserPromptSubmit") ?? []).map((group) =>
       group.hooks.map((entry) => entry.statusMessage),
     );

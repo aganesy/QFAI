@@ -31,7 +31,7 @@ Feature: Close, answer or hand back a request without a change
   Scenario: qfai-triage is a stage skill that owns the triage steps
     Given the skills `qfai init` installs
     When `qfai-triage` is read or invoked by name
-    Then it lists the nine triage steps and is covered by the stage-skill rules
+    Then it lists the eleven triage steps, including bounded `triage-owned-cleanup` and `triage-operate`, and is covered by the stage-skill rules
     And invoked by name it changes no tracked file and ends at its stage
 
   # AC-0001-0214-05

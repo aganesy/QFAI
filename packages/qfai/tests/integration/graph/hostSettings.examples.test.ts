@@ -7,7 +7,7 @@ import { parse } from "smol-toml";
 import { prepareGraphIntegration } from "../../../src/core/graph/integration.js";
 import { graphProcessFixture } from "../../helpers/graphProcess.js";
 
-// QFAI:EX-0001-0233-06
+// QFAI:EX-0001-0237-06
 // Mutation: packages/qfai/src/core/graph/integration.ts `const entries = await installGraphEntrypoints(root);` -> `const entries = { files: [], conflicts: [] };` fails "prepares a portable CLI without changing unrelated Codex and MCP settings"
 it("prepares a portable CLI without changing unrelated Codex and MCP settings", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-codex-mcp-"));
@@ -41,7 +41,7 @@ it("prepares a portable CLI without changing unrelated Codex and MCP settings", 
   }
 });
 
-// QFAI:EX-0001-0233-06
+// QFAI:EX-0001-0237-06
 // Mutation: packages/qfai/src/core/graph/integration.ts `const entries = await installGraphEntrypoints(root);` -> `const entries = { files: [], conflicts: [] };` fails "prepares CLI and denial hooks without creating MCP registration"
 it("prepares CLI and denial hooks without creating MCP registration", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-settings-"));
@@ -78,7 +78,7 @@ it("prepares CLI and denial hooks without creating MCP registration", async () =
   }
 });
 
-// QFAI:EX-0001-0233-08
+// QFAI:EX-0001-0237-08
 // Mutation: packages/qfai/src/core/graph/hostSettings.ts `PreToolUse: [...currentGroups, managed]` -> `PreToolUse: [managed]` fails "adds a separate denial hook after an unchanged notification reminder"
 it("adds a separate denial hook after an unchanged notification reminder", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-reminder-"));
@@ -118,7 +118,7 @@ it("adds a separate denial hook after an unchanged notification reminder", async
   }
 });
 
-// QFAI:EX-0001-0233-07
+// QFAI:EX-0001-0237-07
 // Mutation: packages/qfai/src/core/graph/entrypoints.ts `if (text !== source && text !== previous[name]) return conflict();` -> `if (false) return conflict();` fails "preserves malformed hooks and adopter-edited CLI entrypoints with manual recovery"
 it("preserves malformed hooks and adopter-edited CLI entrypoints with manual recovery", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-settings-conflict-"));

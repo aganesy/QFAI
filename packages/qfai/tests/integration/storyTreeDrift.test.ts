@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { link, mkdir, mkdtemp, readFile, readlink, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -7,8 +8,26 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { run } from "../../src/cli/main.js";
 import { defaultConfig } from "../../src/core/config.js";
+import { buildStoryTreeModel } from "../../src/core/storyTree/tree.js";
+import { validateStoryTreeStructureModel } from "../../src/core/validators/storyTreeStructure.js";
 import { validateStoryTreeDrift } from "../../src/core/validators/upstreamSsotGuard.js";
+import type * as GitChanges from "../../src/core/gitChanges.js";
 import { createSymlinkFixture } from "../helpers/symlinkFixture.js";
+
+const baseRead = vi.hoisted(() => ({ unreadable: false, statusFails: false }));
+
+// A base file git cannot show (past the output ceiling) cannot be built cheaply, so the read
+// of the base is made to fail for the one test that needs it.
+vi.mock("../../src/core/gitChanges.js", async (importOriginal) => {
+  const original = await importOriginal<typeof GitChanges>();
+  return {
+    ...original,
+    readFileAtBase: (...args: Parameters<typeof original.readFileAtBase>) =>
+      baseRead.unreadable ? null : original.readFileAtBase(...args),
+    uncommittedContentPaths: (...args: Parameters<typeof original.uncommittedContentPaths>) =>
+      baseRead.statusFails ? null : original.uncommittedContentPaths(...args),
+  };
+});
 
 let root: string;
 const specs = ".qfai/spec";
@@ -35,6 +54,8 @@ function config() {
 }
 
 beforeEach(async () => {
+  baseRead.unreadable = false;
+  baseRead.statusFails = false;
   root = await mkdtemp(path.join(os.tmpdir(), "qfai-story-drift-"));
   git("init", "-b", "main");
   git("config", "user.email", "test@example.test");
@@ -576,6 +597,87 @@ afterEach(async () => {
 });
 
 describe("story-tree drift", () => {
+  // QFAI:AC-0001-0007-02
+  // QFAI:EX-0001-0007-13
+  // QFAI:EX-0001-0007-14
+  // QFAI:EX-0001-0007-16
+  it("validates the exact prefixed Approach without exempting status or supersession", () => {
+    const original =
+      "Keep  the published café wording and literal\\n. - Residual risk: bounded observation. - Rollback: restore the prior bytes.";
+    const prefix = "- Evidence: file:src/choice.ts - Grounds: ";
+    const proposed = prefix + original;
+    const originalBytes = Buffer.from(original, "utf8");
+    const proposedRow = `| DEC-2098 | Published choice | ${proposed} | DONE |`;
+    const rowBytes = Buffer.from(proposedRow, "utf8");
+    const originalRowBytes = Buffer.from(
+      `| DEC-2098 | Published choice | ${original} | DONE |`,
+      "utf8",
+    );
+    const start = Buffer.byteLength("| DEC-2098 | Published choice | ", "utf8");
+    const end = rowBytes.length - Buffer.byteLength(" | DONE |", "utf8");
+    const proposedBytes = rowBytes.subarray(start, end);
+    expect(rowBytes.subarray(0, start)).toEqual(originalRowBytes.subarray(0, start));
+    expect(rowBytes.subarray(end)).toEqual(
+      originalRowBytes.subarray(originalRowBytes.length - Buffer.byteLength(" | DONE |", "utf8")),
+    );
+    expect(proposedBytes.subarray(Buffer.byteLength(prefix, "utf8"))).toEqual(originalBytes);
+    expect(createHash("sha256").update(originalBytes).digest("hex")).toBe(
+      "220945b840f088df65b61b8fc98ff0525517027f9f459a1ef0616d69a9de8aa4",
+    );
+    expect(createHash("sha256").update(proposedBytes).digest("hex")).toBe(
+      "74f80c15409342ea7c905854fa063ee8ac4b08d814935fe95835c31249b89cf1",
+    );
+    const findings = (approach: string, status: string) => {
+      const model = buildStoryTreeModel(
+        new Map([
+          [
+            `${specs}/02_business-flow/business-flows.md`,
+            "| BF-ID | Flow | Path |\n| --- | --- | --- |\n",
+          ],
+          [
+            decisions,
+            `${table}| DEC-2098 | Published choice | ${approach} | ${status} |\n| DEC-0001 | Successor | Keep | DONE |\n`,
+          ],
+          [`${specs}/open-questions.md`, table],
+        ]),
+        { specsDir: specs, contractsDir: `${specs}/03_contract` },
+      );
+      return validateStoryTreeStructureModel(model);
+    };
+    expect(findings(proposed, "DONE")).toEqual([]);
+    expect(findings(proposed, "SUPERSEDED (by DEC-0001)")).toEqual([]);
+    for (const status of [
+      "TODO",
+      "WIP",
+      "DONE",
+      "REJECTED",
+      "SUPERSEDED (by DEC-0001)",
+      "PARTLY SUPERSEDED (by DEC-0001)",
+    ]) {
+      const invalid = findings(original, status);
+      expect(
+        invalid.map(({ code }) => code),
+        status,
+      ).toEqual(["QFAI-STORY-017"]);
+      expect(invalid[0]).toMatchObject({ file: decisions, refs: ["DEC-2098"] });
+      expect(invalid[0]?.message).toMatch(/Evidence.*Grounds/);
+    }
+    for (const suffix of [
+      "Published reason. - Rollback: restore bytes. - Residual risk: bounded.",
+      "Published reason. - Residual risk: bounded. - Rollback:",
+    ]) {
+      const invalidSuffix = findings(prefix + suffix, "DONE");
+      expect(invalidSuffix.map(({ code }) => code)).toEqual(["QFAI-STORY-017"]);
+      expect(invalidSuffix[0]).toMatchObject({ file: decisions, refs: ["DEC-2098"] });
+    }
+    const invalidStatus = findings(proposed, "APPROVED");
+    expect(invalidStatus.map(({ code }) => code)).toEqual(["QFAI-STORY-003"]);
+    expect(invalidStatus[0]?.message).toMatch(/DEC-2098.*invalid Status/);
+    const absentSuccessor = findings(proposed, "SUPERSEDED (by DEC-0009)");
+    expect(absentSuccessor.map(({ code }) => code)).toEqual(["QFAI-STORY-003"]);
+    expect(absentSuccessor[0]).toMatchObject({ file: decisions, refs: ["DEC-2098", "DEC-0009"] });
+  });
+
   // QFAI:AC-0001-0054-03
   // QFAI:EX-0001-0002-04
   // QFAI:EX-0001-0054-04
@@ -847,12 +949,13 @@ describe("story-tree drift", () => {
   // QFAI:AC-0001-0054-01
   // QFAI:EX-0001-0007-07
   // QFAI:EX-0001-0054-02
+  // QFAI:EX-0001-0007-14
   it("reports a rewritten decision row in drift even when a change request names the file", async () => {
     const questions = `${specs}/open-questions.md`;
     const questionTable = "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
     await put(
       decisions,
-      `${table}| DEC-0001 | Choice A | Reason | DONE |\n| DEC-0002 | Choice X | Reason | DONE |\n`,
+      `${table}| DEC-0001 | Choice A | Reason | DONE |\n| DEC-0002 | Choice X | Reason | DONE |\n| DEC-2098 | Published choice | Published reason. - Residual risk: bounded. - Rollback: restore bytes. | DONE |\n`,
     );
     await put(questions, `${questionTable}| OQ-0001 | Which layout | Pending | TODO |\n`);
     git("add", ".");
@@ -860,7 +963,7 @@ describe("story-tree drift", () => {
     git("checkout", "-b", "topic");
     await put(
       decisions,
-      `${table}| DEC-0001 | Choice B | Reason | DONE |\n| DEC-0009 | Choice X | Reason | DONE |\n| DEC-0003 | Change request: ${decisions} | Approved | DONE |\n`,
+      `${table}| DEC-0001 | Choice B | Reason | DONE |\n| DEC-0009 | Choice X | Reason | DONE |\n| DEC-2098 | Published choice | - Evidence: file:src/choice.ts - Grounds: Published reason. - Residual risk: bounded. - Rollback: restore bytes. | DONE |\n| DEC-0003 | Change request: ${decisions} | Approved | DONE |\n`,
     );
     await put(questions, `${questionTable}| OQ-0001 | Which layout | Pending | DONE |\n`);
     git("add", ".");
@@ -874,6 +977,11 @@ describe("story-tree drift", () => {
     ).toBe(true);
     expect(
       rewritten.some((item) => item.file === decisions && item.message.includes("DEC-0002 id")),
+    ).toBe(true);
+    expect(
+      rewritten.some(
+        (item) => item.file === decisions && item.message.includes("DEC-2098 approach"),
+      ),
     ).toBe(true);
     expect(rewritten.some((item) => item.file === questions)).toBe(false);
   });
@@ -893,6 +1001,78 @@ describe("story-tree drift", () => {
     git("commit", "-m", "advance and append");
     const findings = await validateStoryTreeDrift(root, config(), "drift");
     expect(findings.some((item) => item.code === "QFAI-STORY-010")).toBe(false);
+  });
+
+  // QFAI:AC-0001-0007-05
+  // QFAI:EX-0001-0007-28
+  it("keeps every normal consumer in force around a surplus-copy correction", async () => {
+    const original = "| DEC-0001 | Original choice | Reason | DONE |\n";
+    const second = "| DEC-0002 | Second choice | Reason | TODO |\n";
+    const authority = `| DEC-0003 | Change request: ${decisions} | Approved | WIP |\n`;
+    const structureFindings = (rows: string) =>
+      validateStoryTreeStructureModel(
+        buildStoryTreeModel(
+          new Map([
+            [
+              `${specs}/02_business-flow/business-flows.md`,
+              "| BF-ID | Flow | Path |\n| --- | --- | --- |\n",
+            ],
+            [decisions, `${table}${rows}`],
+            [`${specs}/open-questions.md`, table],
+          ]),
+          { specsDir: specs, contractsDir: `${specs}/03_contract` },
+        ),
+      );
+    const driftMessages = async () =>
+      (await validateStoryTreeDrift(root, config(), "drift"))
+        .filter(({ code }) => code !== "QFAI-DRIFT-003")
+        .map(({ code, message }) => ({ code, message }));
+
+    // The duplicate check still rejects the merge-added copy; nothing exempts it.
+    const duplicate = structureFindings(original + original + second);
+    expect(duplicate).toContainEqual(
+      expect.objectContaining({
+        code: "QFAI-STORY-002",
+        message: expect.stringContaining("DEC-0001 is defined more than once"),
+      }),
+    );
+    expect(structureFindings(original + second)).toEqual([]);
+
+    await put(decisions, `${table}${original}${second}`);
+    git("add", ".");
+    git("commit", "-m", "base");
+    git("checkout", "-b", "topic");
+
+    // With the surplus copy present, the positional comparison still reports the shifted row.
+    await put(decisions, `${table}${original}${original}${second}${authority}`);
+    git("add", ".");
+    git("commit", "-m", "merge-added copy");
+    expect(await driftMessages()).toContainEqual(
+      expect.objectContaining({
+        code: "QFAI-STORY-010",
+        message: expect.stringContaining("DEC-0002 id changed"),
+      }),
+    );
+
+    // One retained original leaves nothing to report, and a Status-only change stays valid.
+    await put(decisions, `${table}${original}${second.replace("TODO", "DONE")}${authority}`);
+    git("add", ".");
+    git("commit", "-m", "surplus removed and status advanced");
+    expect(await driftMessages()).toEqual([]);
+
+    // Unrelated drift is still diagnosed after the correction; it is no waiver.
+    await put(
+      decisions,
+      `${table}${original}${second.replace("Second choice", "Reworded choice")}${authority}`,
+    );
+    git("add", ".");
+    git("commit", "-m", "unrelated rewrite");
+    expect(await driftMessages()).toContainEqual(
+      expect.objectContaining({
+        code: "QFAI-STORY-010",
+        message: expect.stringContaining("DEC-0002 content changed"),
+      }),
+    );
   });
 
   // QFAI:AC-0001-0007-02
@@ -916,6 +1096,163 @@ describe("story-tree drift", () => {
           item.message.includes("DEC-0001"),
       ),
     ).toBe(true);
+  });
+
+  describe("an edit that is not committed", () => {
+    const contractFile = `${specs}/03_contract/cli/command.md`;
+    const uncommitted = (findings: readonly { code: string }[]) =>
+      findings.filter((item) => item.code === "QFAI-DRIFT-004");
+
+    async function baseWithProtectedFiles(): Promise<void> {
+      await put(decisions, table);
+      await put(glossary, "# Terms\n");
+      await put(contractFile, "# Command\n");
+      git("add", ".");
+      git("commit", "-m", "base");
+      git("checkout", "-b", "topic");
+    }
+
+    // QFAI:AC-0001-0054-11
+    // QFAI:EX-0001-0054-22
+    it.each(["tdd", "drift"] as const)(
+      "is named in %s as not compared, and the committed edit is then reported",
+      async (profile) => {
+        await baseWithProtectedFiles();
+        await put(glossary, "# Terms\nUpdated\n");
+        await put(contractFile, "# Command\nUpdated\n");
+        const before = await validateStoryTreeDrift(root, config(), profile);
+        expect(before.some((item) => item.code === "QFAI-DRIFT-001")).toBe(false);
+        expect(uncommitted(before)).toEqual([
+          expect.objectContaining({
+            severity: "warning",
+            message: `2 uncommitted changes to protected story-tree files are not compared with the base: ${glossary}, ${contractFile}.`,
+            refs: [glossary, contractFile],
+          }),
+        ]);
+
+        git("add", ".");
+        git("commit", "-m", "edit the protected files");
+        const after = await validateStoryTreeDrift(root, config(), profile);
+        expect(after.filter((item) => item.code === "QFAI-DRIFT-001").map((i) => i.file)).toEqual([
+          glossary,
+          contractFile,
+        ]);
+        expect(uncommitted(after)).toEqual([]);
+      },
+    );
+
+    // QFAI:AC-0001-0054-11
+    // QFAI:EX-0001-0054-22
+    it("names a new untracked protected file, and no more than five paths", async () => {
+      await baseWithProtectedFiles();
+      for (let index = 0; index < 7; index += 1) {
+        await put(`${specs}/03_contract/cli/new-${index}.md`, "# New\n");
+      }
+      const findings = uncommitted(await validateStoryTreeDrift(root, config(), "drift"));
+      expect(findings).toEqual([
+        expect.objectContaining({
+          message: expect.stringMatching(
+            /^7 uncommitted changes to protected story-tree files are not compared with the base: .*new-4\.md and 2 more\.$/,
+          ),
+        }),
+      ]);
+      expect(findings[0]).toHaveProperty("refs.length", 5);
+    });
+
+    // QFAI:AC-0001-0054-11
+    // QFAI:EX-0001-0054-22
+    it("names a deleted file, a staged-only edit and both ends of a rename", async () => {
+      await baseWithProtectedFiles();
+      await rm(path.join(root, contractFile));
+      expect(uncommitted(await validateStoryTreeDrift(root, config(), "drift"))).toEqual([
+        expect.objectContaining({ refs: [contractFile] }),
+      ]);
+
+      git("checkout", "--", contractFile);
+      await put(glossary, "# Terms\nStaged\n");
+      git("add", glossary);
+      expect(uncommitted(await validateStoryTreeDrift(root, config(), "drift"))).toEqual([
+        expect.objectContaining({ refs: [glossary] }),
+      ]);
+
+      git("reset", "--hard");
+      const renamed = `${specs}/01_policy/renamed.md`;
+      git("mv", glossary, renamed);
+      expect(uncommitted(await validateStoryTreeDrift(root, config(), "drift"))).toEqual([
+        expect.objectContaining({ refs: [glossary, renamed] }),
+      ]);
+    });
+
+    // QFAI:AC-0001-0054-11
+    // QFAI:EX-0001-0054-22
+    it("passes the edits a commit would pass without a change request", async () => {
+      const examples = `${specs}/02_business-flow/business-flow-0001/user-story-0001-0001/03_Example.md`;
+      const citing = `${specs}/03_contract/cli/cli-0001-sample.md`;
+      const exampleTable = "| EX-ID | AC-Ref | Input | Expected |\n| --- | --- | --- | --- |\n";
+      const rule = (examplesCell: string) => `| BR-0001-0001 | A rule | ${examplesCell} |\n`;
+      await put(decisions, table);
+      await put(examples, `${exampleTable}| EX-0001-0001-01 | AC-0001-0001-01 | in | out |\n`);
+      await put(citing, `# Sample\n\n${rule("EX-0001-0001-01")}`);
+      git("add", ".");
+      git("commit", "-m", "base");
+      git("checkout", "-b", "topic");
+
+      await put(
+        examples,
+        `${exampleTable}| EX-0001-0001-01 | AC-0001-0001-01 | in | out |\n| EX-0001-0001-02 | AC-0001-0001-01 | in2 | out2 |\n`,
+      );
+      await put(citing, `# Sample\n\n${rule("EX-0001-0001-01, EX-0001-0001-02")}`);
+
+      expect(uncommitted(await validateStoryTreeDrift(root, config(), "drift"))).toEqual([]);
+    });
+
+    // QFAI:AC-0001-0054-11
+    // QFAI:EX-0001-0054-22
+    it("reports a file edited again after it was committed as the committed edit, once", async () => {
+      await baseWithProtectedFiles();
+      await put(glossary, "# Terms\nFirst\n");
+      git("add", ".");
+      git("commit", "-m", "first edit");
+      await put(glossary, "# Terms\nFirst\nSecond\n");
+      const findings = await validateStoryTreeDrift(root, config(), "drift");
+      expect(findings.filter((item) => item.code === "QFAI-DRIFT-001").map((i) => i.file)).toEqual([
+        glossary,
+      ]);
+      expect(uncommitted(findings)).toEqual([]);
+    });
+
+    // QFAI:AC-0001-0054-11
+    // QFAI:EX-0001-0054-22
+    it("says nothing was compared when git cannot list the working tree", async () => {
+      await baseWithProtectedFiles();
+      baseRead.statusFails = true;
+      const findings = await validateStoryTreeDrift(root, config(), "drift");
+      expect(findings).toContainEqual(
+        expect.objectContaining({
+          code: "QFAI-DRIFT-003",
+          severity: "warning",
+          message: "Nothing was compared: git could not list the uncommitted changes.",
+        }),
+      );
+    });
+
+    // QFAI:AC-0001-0054-11
+    // QFAI:EX-0001-0054-22
+    it("does not name a file whose only change is its line endings", async () => {
+      await baseWithProtectedFiles();
+      await put(glossary, "# Terms\r\n");
+      expect(uncommitted(await validateStoryTreeDrift(root, config(), "drift"))).toEqual([]);
+    });
+
+    // QFAI:AC-0001-0054-11
+    // QFAI:EX-0001-0054-22
+    it("stays silent for a change request row, an authorised file and an unprotected file", async () => {
+      await baseWithProtectedFiles();
+      await put(decisions, `${table}| DEC-0001 | Change request: ${glossary} | Reason | WIP |\n`);
+      await put(glossary, "# Terms\nUpdated\n");
+      await put("src/app.ts", "export const app = 1;\n");
+      expect(uncommitted(await validateStoryTreeDrift(root, config(), "drift"))).toEqual([]);
+    });
   });
 
   it("does not accuse the migration branch when the base has no story tree", async () => {
@@ -944,7 +1281,8 @@ describe("story-tree drift", () => {
     git("add", ".");
     git("commit", "-m", "add the story tree");
     for (const profile of ["tdd", "drift"] as const) {
-      expect(await validateStoryTreeDrift(root, config(), profile)).toEqual([]);
+      const findings = await validateStoryTreeDrift(root, config(), profile);
+      expect(findings.filter(({ severity }) => severity !== "info")).toEqual([]);
     }
 
     git("checkout", "main");
@@ -955,18 +1293,24 @@ describe("story-tree drift", () => {
     git("commit", "-m", "edit the glossary");
     for (const profile of ["tdd", "drift"] as const) {
       const findings = await validateStoryTreeDrift(root, config(), profile);
-      expect(findings.map((item) => `${item.code} ${item.file}`)).toEqual([
-        `QFAI-DRIFT-001 ${glossary}`,
-      ]);
+      expect(
+        findings
+          .filter(({ severity }) => severity !== "info")
+          .map((item) => `${item.code} ${item.file}`),
+      ).toEqual([`QFAI-DRIFT-001 ${glossary}`]);
     }
   });
 
-  it("does not report drift when the base ref or git repository is unavailable", async () => {
+  it("reports no drift finding when the base ref is missing, and nothing outside a repository", async () => {
     await put(decisions, table);
     await put(glossary, "# Terms\n");
+    git("add", ".");
+    git("commit", "-m", "base");
     const missing = config();
     missing.baseBranch = "missing/base";
-    expect(await validateStoryTreeDrift(root, missing, "drift")).toEqual([]);
+    expect((await validateStoryTreeDrift(root, missing, "drift")).map(({ code }) => code)).toEqual([
+      "QFAI-DRIFT-003",
+    ]);
     const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-story-no-git-"));
     try {
       expect(await validateStoryTreeDrift(outside, config(), "drift")).toEqual([]);
@@ -998,9 +1342,126 @@ describe("story-tree drift", () => {
 
       const missing = config();
       missing.baseBranch = "missing/base";
-      expect(await validateStoryTreeDrift(root, missing, profile)).toEqual([]);
+      const findings = await validateStoryTreeDrift(root, missing, profile);
+      expect(findings.map(({ code }) => code)).toEqual(["QFAI-DRIFT-003"]);
     },
   );
+
+  // QFAI:AC-0001-0054-10
+  // QFAI:EX-0001-0054-21
+  describe("the base the drift checks compare with", () => {
+    async function branchedFromBase(): Promise<string> {
+      await put(decisions, table);
+      await put(glossary, "# Terms\n");
+      git("add", ".");
+      git("commit", "-m", "base");
+      const base = execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: root,
+        encoding: "utf8",
+      }).trim();
+      git("checkout", "-b", "topic");
+      return base;
+    }
+
+    it.each(["tdd", "drift"] as const)(
+      "warns in %s, naming the base, when it has no merge base with HEAD",
+      async (profile) => {
+        await branchedFromBase();
+        const missing = config();
+        missing.baseBranch = "missing/base";
+        const findings = await validateStoryTreeDrift(root, missing, profile);
+        expect(findings).toEqual([
+          expect.objectContaining({
+            code: "QFAI-DRIFT-003",
+            severity: "warning",
+            message: expect.stringContaining('"missing/base"'),
+            suggested_action: expect.stringContaining("baseBranch"),
+          }),
+        ]);
+      },
+    );
+
+    it("names the merge base and the changed file count in the drift profile", async () => {
+      const base = await branchedFromBase();
+      await put(glossary, "# Terms\nUpdated\n");
+      git("add", ".");
+      git("commit", "-m", "edit the glossary");
+      const findings = await validateStoryTreeDrift(root, config(), "drift");
+      expect(findings).toContainEqual(
+        expect.objectContaining({
+          code: "QFAI-DRIFT-003",
+          severity: "info",
+          message: `Compared 1 changed file with "main" at merge base ${base.slice(0, 12)}.`,
+        }),
+      );
+    });
+
+    it("says the branch has no commit of its own when HEAD is the merge base", async () => {
+      const base = await branchedFromBase();
+      const findings = await validateStoryTreeDrift(root, config(), "drift");
+      expect(findings).toEqual([
+        expect.objectContaining({
+          code: "QFAI-DRIFT-003",
+          severity: "info",
+          message: `Compared 0 changed files with "main" at merge base ${base.slice(0, 12)}; HEAD is that commit, so the branch has no commit of its own.`,
+        }),
+      ]);
+    });
+
+    it.each(["tdd", "drift"] as const)(
+      "still compares in %s when the base decision ledger is over one mebibyte",
+      async (profile) => {
+        await put(decisions, `${table}| DEC-0001 | ${"x".repeat(1_100_000)} | Reason | DONE |\n`);
+        await put(glossary, "# Terms\n");
+        git("add", ".");
+        git("commit", "-m", "base with a large ledger");
+        git("checkout", "-b", "topic");
+        await put(glossary, "# Terms\nUpdated\n");
+        git("add", ".");
+        git("commit", "-m", "edit the glossary");
+        const findings = await validateStoryTreeDrift(root, config(), profile);
+        expect(findings).toContainEqual(
+          expect.objectContaining({ code: "QFAI-DRIFT-001", file: glossary }),
+        );
+      },
+    );
+
+    it.each(["tdd", "drift"] as const)(
+      "warns in %s when the base holds decisions.md and it cannot be read",
+      async (profile) => {
+        await branchedFromBase();
+        await put(glossary, "# Terms\nUpdated\n");
+        git("add", ".");
+        git("commit", "-m", "edit the glossary");
+        baseRead.unreadable = true;
+        const findings = await validateStoryTreeDrift(root, config(), profile);
+        expect(findings).toEqual([
+          expect.objectContaining({
+            code: "QFAI-DRIFT-003",
+            severity: "warning",
+            message: `Nothing was compared: ${decisions} at "main" could not be read.`,
+          }),
+        ]);
+      },
+    );
+
+    it("stays silent when the base holds no decisions.md at all", async () => {
+      await put("README.md", "base\n");
+      git("add", ".");
+      git("commit", "-m", "base without a story tree");
+      git("checkout", "-b", "topic");
+      await put(decisions, table);
+      git("add", ".");
+      git("commit", "-m", "add the story tree");
+      baseRead.unreadable = true;
+      expect(await validateStoryTreeDrift(root, config(), "drift")).toEqual([]);
+    });
+
+    it("names no base in the tdd profile once the comparison ran", async () => {
+      await branchedFromBase();
+      expect(await validateStoryTreeDrift(root, config(), "tdd")).toEqual([]);
+    });
+  });
 
   // QFAI:EX-0001-0054-04
   // QFAI:EX-0001-0054-05

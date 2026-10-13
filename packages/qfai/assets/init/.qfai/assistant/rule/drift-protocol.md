@@ -20,6 +20,14 @@ only its ID and provably branch-added exact references. Inherited row cells and
 references stay fixed. A changed obligation needs a new row, even when an older
 row discusses the same topic.
 
+The sole Approach-change exception is the published decision prefix recovery
+below. It preserves the target's ID, Content, Status and complete original
+Approach suffix. It excludes inherited rows and open-question rows.
+
+The sole row-removal exception is the merge-added identical decision copy
+recovery below. It removes only proven raw-identical surplus copies of a
+decision and keeps one original. It excludes open-question rows.
+
 ## Allowed exceptions (minimal whitelist)
 
 - A project may add a local overlay beside a shipped rule. The overlay adds project guidance; it does not repeal a shipped rule.
@@ -31,6 +39,105 @@ A change that touches no protected file needs no change request. A bugfix whose
 diff changes no file under `01_policy/`, `02_business-flow/` or
 paths.contractsDir appends no `Change request:` row. A row naming a story file
 the bugfix did not touch would state an upstream change that did not happen.
+
+## Published decision prefix recovery
+
+The SDD owner may prepend only an approved Evidence/Grounds prefix to a
+published malformed decision added by the branch. Approval of this protocol
+does not authorize any target. First obtain a separate new in-force recovery
+change request naming the target and its repository-relative file.
+
+1. Fix the explicit base commit and its unique common ancestor with current
+   HEAD. The target ID must be absent from both. The documented published
+   source commit must be an ancestor of current HEAD and expose the unique
+   original row. Inherited records and open-question rows are excluded.
+2. Read the original raw cell bytes. The row must be single-line valid UTF-8,
+   with exactly one ASCII padding space at each Approach delimiter and no
+   additional boundary whitespace. Hash the stored Approach bytes with
+   SHA-256, excluding only the delimiter pipes and those two padding spaces.
+   Do not decode escapes, trim text or normalize it. Ambiguous boundaries,
+   additional padding or invalid UTF-8 stop recovery.
+3. Confirm the original Residual risk and Rollback items already satisfy the
+   required ordered, nonempty form. The new Approach must be exactly
+   `- Evidence: <actual file references> - Grounds: `, including its trailing
+   space, followed by the complete original Approach as a byte-identical
+   suffix. Preserve the original wording, order, facts, authority and scope.
+   The prefixed row must satisfy the existing form checks.
+4. Record the target ID, published source commit, fixed base and common
+   ancestor, old and new Approach digests, exact prefix, actual file evidence,
+   approval authority, recovery reason, residual risk and rollback in the new
+   request. The old digest must match the published source Approach; the new
+   digest must match the exact prefix plus that source value. Record actual
+   authority; do not invent a user answer or approval.
+5. Immediately before writing, recheck the unique current target, its
+   byte-identical ID, Content and Status, and its recorded old Approach digest.
+   Unknown or unavailable provenance, inherited or duplicate targets, stale
+   data or a change beyond the approved prefix stops recovery before writing.
+   Apply only that prefix. Keep every other row byte-identical and run the existing
+   validation without an exemption.
+6. Rollback removes only the recorded prefix when the current new Approach
+   digest still matches. Otherwise preserve the current row and stop. Removal
+   restores the original Approach and its validation failure. Do not reset,
+   amend or force push.
+
+Status changes, supersession and a diagnostic's rewrite suggestion supply no
+recovery authority and clear no form error. Inherited malformed records need a
+separate owning change request; this operation cannot repair them. These are
+owner instructions, not an automatic recovery command or a concurrency guarantee.
+
+## Merge-added identical decision copy recovery
+
+The SDD owner may manually remove only raw-identical surplus copies of a
+decision row that an exact two-parent bad merge introduced. Approval of this
+protocol authorizes no target. First append a separate new in-force change
+request that names the exact `decisions.md` path and the decision ID.
+
+1. Name the bad merge. It must be an available ancestor of current HEAD with
+   exactly two parents, and it must expose the introduced surplus. Name both
+   parents and their unique common ancestor. Each of the three must hold exactly
+   one byte-identical original of the row. Fix the explicit base and its unique
+   comparison ancestor; both must hold one original and no surplus selected for
+   removal. A missing or non-ancestor merge, a third parent, a non-unique
+   ancestor or a source that does not hold exactly one original stops recovery.
+2. Read the complete stored UTF-8 raw row of every selected current occurrence:
+   all four cells, delimiters, padding and line ending. Hash each with SHA-256,
+   including the line ending. Do not trim, decode escapes or normalize endings.
+   Nonidentical cells, padding or endings are a different collision and are
+   outside this recovery.
+3. Record in the request the path, the ID, the bad merge, both parents, the
+   ancestor, the base and its comparison ancestor, the location of each
+   occurrence, the raw hash, the retain/remove mapping, the actual authority,
+   the residual risk and the rollback. Record actual authority; invent no
+   answer. The request fixes input lineage only.
+4. After the request is appended, have the evidence for the write reviewed
+   independently and adopted. It fixes the actual write HEAD, base and
+   comparison ancestor, the complete preimage and replacement bytes and hashes,
+   the mapping and the current authority. The request does not name its own
+   commit, so the actual write revision stays distinct from the lineage above.
+   This adds no receipt grammar and no validator input.
+5. Immediately before writing, recheck the refs, their availability, the path,
+   the authority, the occurrence count, the mapping and the bytes. Stale,
+   missing, ambiguous, conflicting or changed proof stops before writing.
+   Changed observations need refreshed reviewed evidence. A changed target or
+   operation needs a new request; do not rewrite the cells of an earlier one.
+6. Remove only the mapped surplus occurrences. Keep one complete original, every
+   distinct decision and reference, every unrelated current byte and the Git
+   history. Do not change a Status, rewrite a reference or reorder other
+   history. Open-question rows, nonidentical collisions, ordinary duplicate
+   cleanup and surplus that the base or its comparison ancestor already holds
+   are excluded.
+7. Rollback restores the recorded complete preimage only while the current file
+   is byte-identical to its owned replacement. Otherwise keep the current bytes,
+   stop and name the unrestored path. Restoring brings back the duplicate
+   failure. Do not reset, amend or force push.
+
+The existing duplicate check, positional drift, consumed-DONE authorization and
+valid Status-only rules keep applying without an exemption. Other drift that
+the file already has stays diagnosed; it is not a prerequisite for this
+correction. An actual required stage gate still stops dependent work. Correcting
+the copies is not a whole-target PASS, and the request stays at WIP while a named
+action or required check is unfinished. These are owner instructions, not a
+command, an executor or a concurrency, atomicity or power-loss guarantee.
 
 ## Drift classes
 
@@ -119,6 +226,9 @@ copy of a locked file before deciding its lock is wrong.
 ## Non-negotiable constraints
 
 - Downstream stages do not patch protected upstream artifacts before an in-force Change request: decision row authorizes the path. The drift profile compares the branch against baseBranch and reports QFAI-DRIFT-001 for an unapproved protected change. The SDD owner may create the request row itself without a prior row.
-- Existing decisions.md and open-questions.md rows retain their ID, Content, and Approach, except for the explicit branch-added decision renumbering above. Inherited rows retain those cells without exception. A former row may change Status; new content is appended as a new row.
+  QFAI-DRIFT-003 is a warning that nothing was compared, because baseBranch does not resolve.
+  QFAI-DRIFT-004 is a warning that an uncommitted edit to a protected file is not compared:
+  record the Change request row before you commit the change.
+- Existing decisions.md and open-questions.md rows retain their ID, Content, and Approach, except for the explicit branch-added decision renumbering, published decision prefix recovery and merge-added identical decision copy recovery above. Inherited rows retain those cells without exception. A former row may change Status; new content is appended as a new row.
 - Vendored assistant rules are changed in the package and synchronized into projects by `npx qfai init --force`, which overwrites a local edit. A project rule lives in a `*.local.md` overlay beside the vendored one.
 - When approval is unavailable, keep the affected items stopped and report the decision needed. Continue unrelated work.

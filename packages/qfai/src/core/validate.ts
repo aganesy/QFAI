@@ -31,7 +31,13 @@ import type {
   ValidationResult,
   ValidationTimings,
 } from "./types.js";
-import { locateToolAgainstProject, resolveToolVersion } from "./version.js";
+import {
+  compareInstalledToDeclared,
+  locateToolAgainstProject,
+  readDeclaredQfaiRange,
+  resolveToolVersion,
+  type InstalledOlderThanDeclared,
+} from "./version.js";
 import { applyWaivers } from "./waivers.js";
 import { validateContracts, validateUiContractParse } from "./validators/contracts.js";
 import { validateUiScreenCopy } from "./validators/uiScreenCopy.js";
@@ -100,6 +106,11 @@ export async function validateProject(
   const resolved = configResult ?? (await loadConfig(root));
   const { config, issues: configIssues } = resolved;
   const profile: ValidationProfile = options.profile ?? "full";
+  // A property of the invocation, raised around the validator run so that every
+  // profile and the old-layout early return carry it, ahead of the config and
+  // validator findings in the report.
+  const olderThanDeclared = await detectInstalledOlderThanDeclared(root);
+  const versionIssues = buildInstalledOlderIssues(olderThanDeclared);
   const forbiddenIdentifiers = config.validation.forbiddenIdentifiers ?? [];
   const securityIssues =
     forbiddenIdentifiers.length > 0
@@ -129,7 +140,7 @@ export async function validateProject(
       oldLayoutRoot,
       "storyTree.oldLayout",
     );
-    const layoutIssues = [layoutIssue, ...securityIssues];
+    const layoutIssues = [...versionIssues, layoutIssue, ...securityIssues];
     return {
       toolVersion: await resolveToolVersion(),
       generatedAt: new Date().toISOString(),
@@ -162,7 +173,10 @@ export async function validateProject(
     options.platform,
     storyModel,
   );
-  const findings = [...configIssues, ...securityIssues, ...scopeIssues, ...profileRun.issues];
+  const findings = explainVersionMismatch(
+    [...versionIssues, ...configIssues, ...securityIssues, ...scopeIssues, ...profileRun.issues],
+    olderThanDeclared,
+  );
   const scopedFindings = findings.filter((finding) => isFindingInFlowScope(finding, flowScope));
   const { issues, waivers } = await applyWaivers(root, scopedFindings);
 
@@ -369,6 +383,77 @@ async function buildToolProvenanceIssues(root: string): Promise<Issue[]> {
         "run again.",
     ),
   ];
+}
+
+/**
+ * The running qfai is older than the version this project declares.
+ *
+ * The files `qfai init` writes carry no version, so the project's dependency
+ * declaration is the record of which qfai the tree was written for. An
+ * installed copy below the lowest version that declaration admits is what a
+ * lockfile that moved after the last install leaves, and a rule that reads a
+ * generated file then reports the file as wrong when the checker is. This is
+ * said once, first in the report, so the line to act on is not one of
+ * thirteen file-level errors that point at the wrong repair.
+ *
+ * `warning`, not `error`: the declaration and the running copy disagree, which
+ * says nothing certain about the tree, and an `error` would fail a project
+ * whose generated files are fine with no waiver available.
+ */
+async function detectInstalledOlderThanDeclared(
+  root: string,
+): Promise<InstalledOlderThanDeclared | null> {
+  return compareInstalledToDeclared(await resolveToolVersion(), await readDeclaredQfaiRange(root));
+}
+
+function buildInstalledOlderIssues(older: InstalledOlderThanDeclared | null): Issue[] {
+  if (older === null) return [];
+  return [
+    issue(
+      "QFAI-TOOL-003",
+      `The installed qfai is ${older.installed}, older than the ${older.declaredLowest} this project ` +
+        `declares (${older.declaredRange}). Files written by the declared version can read as ` +
+        `wrong to this older one; a finding below about a generated file may come from the ` +
+        `version difference and not from the file.`,
+      "warning",
+      undefined,
+      "toolProvenance.installedOlderThanDeclared",
+      undefined,
+      "canonical",
+      "Run the install command (`npm ci` / `pnpm install`) in this working tree so the " +
+        "installed qfai satisfies the declaration, then run again. Do not edit generated " +
+        "files to clear a finding before that.",
+    ),
+  ];
+}
+
+/**
+ * Rules whose input is a file `qfai init` generated. Under
+ * {@link detectInstalledOlderThanDeclared} each is reported as the version
+ * difference it may be, with the install as the repair, instead of as a fault in
+ * the file that invites an edit to files nobody touched.
+ */
+const GENERATED_FILE_RULES: ReadonlySet<string> = new Set(["QFAI-SKILLS-010"]);
+
+function explainVersionMismatch(
+  issues: Issue[],
+  older: InstalledOlderThanDeclared | null,
+): Issue[] {
+  if (older === null) return issues;
+  return issues.map((entry) =>
+    GENERATED_FILE_RULES.has(entry.code)
+      ? {
+          ...entry,
+          message:
+            `${entry.message} The installed qfai ${older.installed} is older than the ` +
+            `${older.declaredLowest} this project declares, so this may be a version ` +
+            `difference and not a fault in the file (QFAI-TOOL-003).`,
+          suggested_action:
+            "Run the install command (`npm ci` / `pnpm install`) so the installed qfai " +
+            `satisfies ${older.declaredRange}, and run again before editing this file.`,
+        }
+      : entry,
+  );
 }
 
 function buildUnusedPlatformIssues(
@@ -699,6 +784,19 @@ function dedupeStubFindings(issues: Issue[]): Issue[] {
   });
 }
 
+/**
+ * The parts of the UI/UX group, slowest first. The html-mock part leaves out the one-off load of
+ * its parser, as the group's own time does.
+ */
+export function orderUiuxParts(
+  parts: readonly { name: string; ms: number }[],
+  htmlMockLoadMs: number,
+): { name: string; ms: number }[] {
+  return parts
+    .map((part) => (part.name === "html mock" ? { ...part, ms: part.ms - htmlMockLoadMs } : part))
+    .sort((left, right) => right.ms - left.ms);
+}
+
 async function runUiuxValidators(
   root: string,
   config: ConfigLoadResult["config"],
@@ -722,17 +820,25 @@ async function runUiuxValidators(
   // paid once per process, and on a cold disk cache it alone outran the whole
   // group's budget.
   const htmlMockTiming: HtmlMockTiming = { parseMs: 0, loadMs: 0 };
-  const uiuxValidators: Array<() => Promise<Issue[]>> = [
-    () => validateDesignToken(root, config),
-    () => validateHtmlMock(root, platform, config, htmlMockTiming),
-    () => validateMermaidScreenFlow(root, config),
-    () => validateUiDefinitionConsistency(root, config),
-    () => validateResearchSummary(root, config),
-    () => validateAgentDefinition(root, config),
-    () => validateDesignAudit(root, config),
-    () => runCanonicalUixValidators(root, config),
+  const uiuxValidators: Array<[name: string, run: () => Promise<Issue[]>]> = [
+    ["design tokens", () => validateDesignToken(root, config)],
+    ["html mock", () => validateHtmlMock(root, platform, config, htmlMockTiming)],
+    ["mermaid screen flow", () => validateMermaidScreenFlow(root, config)],
+    ["UI definition consistency", () => validateUiDefinitionConsistency(root, config)],
+    ["research summary", () => validateResearchSummary(root, config)],
+    ["agent definition", () => validateAgentDefinition(root, config)],
+    ["design audit", () => validateDesignAudit(root, config)],
+    ["canonical UIX", () => runCanonicalUixValidators(root, config)],
   ];
-  const uiuxIssueGroups = await Promise.all(uiuxValidators.map((validator) => validator()));
+  const uiuxParts: { name: string; ms: number }[] = [];
+  const uiuxIssueGroups = await Promise.all(
+    uiuxValidators.map(async ([name, run]) => {
+      const start = performance.now();
+      const found = await run();
+      uiuxParts.push({ name, ms: performance.now() - start });
+      return found;
+    }),
+  );
   const uiuxIssues: Issue[] = [...platformResult.issues, ...uiuxIssueGroups.flat()];
 
   timings.timings = {
@@ -740,6 +846,8 @@ async function runUiuxValidators(
     uiuxBudgetMs: UIUX_VALIDATION_BUDGET_MS,
     htmlMockMs: htmlMockTiming.parseMs,
     htmlMockBudgetMs: config.uiux?.htmlMockTimeout ?? HTML_MOCK_VALIDATION_BUDGET_MS,
+    // The html-mock part leaves out the one-off load of its parser, as `uiuxMs` does.
+    uiuxParts: orderUiuxParts(uiuxParts, htmlMockTiming.loadMs),
   };
   return uiuxIssues;
 }

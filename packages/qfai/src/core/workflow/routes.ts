@@ -2,6 +2,7 @@
 export const WORKFLOW_ROUTES = [
   "close-no-change",
   "answer-question",
+  "answer-in-session",
   "request-info",
   "close-duplicate",
   "cluster-reports",
@@ -16,7 +17,10 @@ export const WORKFLOW_ROUTES = [
   "change-compatibility",
   "apply-settled",
   "apply-settled-prototype",
+  "run-owned-cleanup",
+  "run-operation",
   "refactor-code",
+  "write-procedure",
   "edit-text",
   "fix-defect",
   "improve-performance",
