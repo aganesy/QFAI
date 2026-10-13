@@ -48,6 +48,8 @@ document often exists in two trees. **Edit the one the package carries.**
   `.github/pinned-bytes.txt`) changes digests in `.github/pinned-bytes.txt`,
   `.github/required-status-contexts.json` and `.github/workflows/ci.yml`. Run `pnpm pins:reseal`
   afterwards, with the dependencies installed, and commit the files it rewrites in the same change.
+- Editing the shipped `AGENTS.md` template or the generated Copilot instructions: run `pnpm build`,
+  then `pnpm pins:entry`, which rewrites the test fixture and digest that pin them.
 - `.qfai/spec/03_contract/cli/` holds the contracts for QFAI's own command surface and for the files
   QFAI writes into a consuming project; `api/`, `db/` and `ui/` beside it belong to the shipped
   `qfai-sdd` skill (`packages/qfai/assets/init/.qfai/assistant/skill/qfai-sdd/references/contract-artifact-rules.md`). Each contract is Markdown with no `QFAI-CONTRACT-ID`, declares `# CLI-NNNN: <title>`

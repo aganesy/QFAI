@@ -17,4 +17,11 @@ Feature: Shipped change detection and a green-on-skip verdict
     Then the test workflow starts its detection job alone and says in a notice annotation why no lane ran, because the verdict declines an explicitly empty selection and starts for a missing one
     And the document workflow starts its scope job alone and says in a notice annotation why it skipped the checks, because the aggregate declines a scope that answered `false` and starts for a missing answer
     And the validation job declines a default-branch push only where the push policy is `none`, so `protected` keeps the post-merge check
+
+  # AC-0002-0004-03
+  Scenario: A manifest or input detection cannot read stops it instead of selecting no lane
+    Given the script probe and the lane selection of the shipped detection job
+    When the probe reads a package.json that is not valid JSON, is not an object, has a scripts field that is not an object or declares a layer-named script that is not a string, and the selection reads a script list or a lane list that is unset, is not a JSON array or names something other than the five layers
+    Then each step exits non-zero with an error annotation and publishes no output, so the verdict is red
+    And a repository without a package.json, a package.json without scripts and a scripts object without a layer-named script are valid empty sets that publish an empty selection
 ```

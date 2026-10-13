@@ -44,4 +44,11 @@ Feature: Append-only drift and change-request authorization
     When `qfai validate --profile tdd` or `qfai validate --profile drift` runs
     Then a warning names the EX ID and its `03_Example.md` unless a non-E2E test file selected by the configured test globs and annotating that EX also changed since the base
     And an EX row whose cells are unchanged raises no such warning
+
+  # AC-0001-0054-10
+  Scenario: A base that cannot be compared with is reported, and the base that was used is named
+    Given the story tree in a git repository
+    When `qfai validate --profile tdd` or `qfai validate --profile drift` runs and `baseBranch` has no merge base with HEAD
+    Then one warning names `baseBranch` and the way to make it resolve, instead of the run passing as if nothing changed
+    And when the base resolves, `qfai validate --profile drift` reports at info the merge base commit and the number of changed files it compared, saying so when HEAD is that commit
 ```

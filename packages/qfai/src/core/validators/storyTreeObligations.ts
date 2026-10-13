@@ -5,7 +5,11 @@ import { createTestLayerRoots, resolveTestKind, type AtddTestKind } from "../atd
 import { resolvePath, type QfaiConfig } from "../config.js";
 import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "../fs.js";
 import { assistantLayerDir } from "../paths/assistantPaths.js";
-import { parseCountedExampleAnnotations, parseStoryTestAnnotations } from "../storyTree/ids.js";
+import {
+  parseCountedExampleAnnotations,
+  parseStoryTestAnnotations,
+  STORY_TEST_ANNOTATIONS,
+} from "../storyTree/ids.js";
 import { classifyRecordRow } from "../storyTree/tables.js";
 import { readStoryTreeModel, type StoryTreeModel } from "../storyTree/tree.js";
 import { toRelativePath } from "../paths.js";
@@ -43,6 +47,16 @@ export function countsForExample(file: StoryTestFile): boolean {
   return file.selectedForExample && file.kind !== "e2e";
 }
 
+/** The 1-based line of the first EX annotation naming `id`, or `undefined` when none does. */
+function exampleAnnotationLine(content: string, id: string): number | undefined {
+  const index = content
+    .split("\n")
+    .findIndex((line) =>
+      [...line.matchAll(STORY_TEST_ANNOTATIONS.EX)].some((match) => match[1] === id),
+    );
+  return index < 0 ? undefined : index + 1;
+}
+
 /** Evaluates coverage using the layer assigned by the existing ATDD crosswalk. */
 export function validateStoryTreeObligationsModel(
   model: StoryTreeModel,
@@ -56,6 +70,8 @@ export function validateStoryTreeObligationsModel(
     EX: new Set(model.examples.map(({ id }) => id)),
   };
   const covered = { BF: new Set<string>(), AC: new Set<string>(), EX: new Set<string>() };
+  // Where an EX annotation sits in a file that would count it, but not directly before a test.
+  const unplaced = new Map<string, string>();
   for (const file of files) {
     const annotations = parseStoryTestAnnotations(file.content);
     for (const id of annotations.BF) {
@@ -144,6 +160,10 @@ export function validateStoryTreeObligationsModel(
         );
       }
       if (countsForExample(file) && counted.has(id)) covered.EX.add(id);
+      else if (profile === "tdd" && countsForExample(file) && !unplaced.has(id)) {
+        const line = exampleAnnotationLine(file.content, id);
+        if (line !== undefined) unplaced.set(id, `${file.file}:${String(line)}`);
+      }
     }
   }
 
@@ -182,10 +202,14 @@ export function validateStoryTreeObligationsModel(
       : model.examples.map((entry) => ({ ...entry, kind: "EX" as const, target: "a test" }));
   for (const entry of owed) {
     if (covered[entry.kind].has(entry.id) || exceptions.has(entry.id)) continue;
+    const placement = entry.kind === "EX" ? unplaced.get(entry.id) : undefined;
     issues.push(
       issue(
         "QFAI-STORY-006",
-        `${entry.id} is missing ${entry.target} annotation`,
+        `${entry.id} is missing ${entry.target} annotation` +
+          (placement
+            ? `; QFAI:${entry.id} at ${placement} is not on a comment line before a test declaration (for example \`it(\` or \`test(\`), so it counts for nothing. Move it to a comment line above the test it covers, with only blank or comment lines between`
+            : ""),
         "error",
         entry.file,
         "storyTree.testObligation",
