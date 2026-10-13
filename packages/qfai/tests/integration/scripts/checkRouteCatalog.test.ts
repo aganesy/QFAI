@@ -237,18 +237,27 @@ async function checksHistoricalCatalogRegister(fault: string): Promise<void> {
   }
 }
 
+/**
+ * The script loads the package's TypeScript sources, which only a Node.js that strips types can
+ * run. The cases below are skipped on a runtime without it, such as the engines floor;
+ * lift when the engines floor reaches Node.js 22.18.
+ */
+const runsTypeScript = Boolean(process.features.typescript);
+
 // QFAI:EX-0001-0053-26
-it.each(["duplicate head", "duplicate base"])(
+it.skipIf(!runsTypeScript).each(["duplicate head", "duplicate base"])(
   "checks the actual route-catalog CLI with %s page/root occurrences",
   checksHistoricalCatalogRegister,
 );
 
 // QFAI:EX-0001-0053-31
-it.each(["malformed head", "malformed base"])(
+it.skipIf(!runsTypeScript).each(["malformed head", "malformed base"])(
   "checks the actual route-catalog CLI with a %s historical page",
   checksHistoricalCatalogRegister,
 );
 
 // Supplementary EOF regression: no existing EX specifically names this evaluation separator.
-it("reads a page EOF without newline followed by a valid root route approval", () =>
-  checksHistoricalCatalogRegister("EOF without newline"));
+it.skipIf(!runsTypeScript)(
+  "reads a page EOF without newline followed by a valid root route approval",
+  () => checksHistoricalCatalogRegister("EOF without newline"),
+);
