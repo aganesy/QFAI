@@ -684,9 +684,14 @@ export function formatTimingOverruns(timings: ValidationTimings | undefined): st
   }
   const parts: string[] = [];
   if (timings.uiuxMs > timings.uiuxBudgetMs) {
+    // The group's validators run side by side, so the slowest two are the ones to look at.
+    const slowest = timings.uiuxParts
+      .slice(0, 2)
+      .map((part) => `${part.name} ${Math.round(part.ms)}ms`);
+    const where = slowest.length > 0 ? `; slowest, overlapping: ${slowest.join(", ")}` : "";
     parts.push(
       `uiux=${formatOverrunMs(timings.uiuxMs, timings.uiuxBudgetMs)}ms ` +
-        `(budget ${timings.uiuxBudgetMs}ms)`,
+        `(budget ${timings.uiuxBudgetMs}ms${where})`,
     );
   }
   if (timings.htmlMockMs > timings.htmlMockBudgetMs) {
@@ -695,7 +700,10 @@ export function formatTimingOverruns(timings: ValidationTimings | undefined): st
         `(budget ${timings.htmlMockBudgetMs}ms)`,
     );
   }
-  return parts.length > 0 ? `timings: over budget ${parts.join(" ")}` : null;
+  // A budget is a target. Said on the line itself, because nothing else is printed for it.
+  return parts.length > 0
+    ? `timings: over budget ${parts.join(" ")}; a target, not a gate: no finding is raised`
+    : null;
 }
 
 const MAX_OVERRUN_DECIMALS = 9;

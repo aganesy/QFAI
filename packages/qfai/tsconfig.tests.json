@@ -250,6 +250,7 @@
     "tests/integration/shippedWorkflowOwnership.test.ts",
     "tests/integration/routeRecordsAndGates.test.ts",
     "tests/integration/initForceNoLock.test.ts",
+    "tests/integration/validateTimingsLine.test.ts",
     "tests/helpers/doctorFixtures.ts",
     "tests/integration/shippedWorkflowPins.test.ts",
     "tests/integration/shippedWorkflowPortability.test.ts",
