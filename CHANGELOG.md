@@ -117,6 +117,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The base-commit comparison of a timing-dependent suite is made under the
+  same load.** `common-gate-run` says to run the base commit under the
+  conditions of the compared run, to count a chain of failures once, and to run
+  alone the files that hold a new failure, leaving a failure that passes alone
+  out of the comparison. The baseline stays `same`, `different` or `unrun` and
+  the verdict stays `FAIL`; no state or field is added.
 - **A verify gate that fails the same way on the base commit records why.**
   The `reason` of such a gate in `verify.json` names the failing test
   identifiers and the environment, the stage report adds the base result and

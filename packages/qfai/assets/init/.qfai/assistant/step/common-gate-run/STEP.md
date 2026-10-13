@@ -188,3 +188,22 @@ not read from a stale one.
 The comparison is between the failing tests or findings, not the exit code.
 The result stays `FAIL`; a baseline of `same` explains it and never turns it
 into a pass. The run did not cause it, so it is reported and not repaired.
+
+### A suite whose result depends on timing or load
+
+A browser suite or another timing-dependent suite can fail differently from run
+to run, so one base run made under other conditions is not a fair comparison.
+
+- Run the gate on the base commit under the conditions of the run it is
+  compared with: the same parallelism, and no other heavy work on the machine.
+- Count a chain of failures once. A timeout that closes the browser and makes
+  later tests of the same file fail with "closed" is one failure, the first of
+  that file.
+- Run alone the files that hold a failure the base run did not show. A failure
+  that passes alone is nondeterministic: record every run in order, as step 7
+  of the procedure says, and leave it out of the comparison. Compare the
+  failures that fail alone.
+- The baseline is still `same`, `different` or `unrun`, and the result is still
+  `FAIL`. A baseline of `same` is written with the runs that led to it, so the
+  user sees which failures were left out of the comparison and why. No other
+  state is recorded.

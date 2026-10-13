@@ -440,6 +440,21 @@ describe("a verify gate that fails on the base commit or cannot run", () => {
     expect(text).toMatch(/never turns it into a pass/i);
   });
 
+  it("compares a timing-dependent suite under the same load and adds no recorded state", async () => {
+    const text = await section(
+      "common-gate-run",
+      "### A suite whose result depends on timing or load",
+    );
+    expect(text).toMatch(/under the conditions of the run it is compared with/i);
+    expect(text).toMatch(/count a chain of failures once/i);
+    expect(text).toMatch(/run alone the files that hold a failure the base run did not show/i);
+    expect(text).toMatch(/a failure that passes alone is nondeterministic/i);
+    expect(text).toMatch(
+      /baseline is still `same`, `different` or `unrun`, and the result is still `FAIL`/i,
+    );
+    expect(text).not.toMatch(/`flaky`/i);
+  });
+
   it("keeps the stop before the commit and lists such gates apart", async () => {
     const text = await section("verify-repo-gate", "## A failure the run did not cause");
     expect(text).toMatch(
