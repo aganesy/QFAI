@@ -31,17 +31,12 @@ A turn that ends with a question, a plan awaiting approval or a list of next
 actions is a pause. So is the end of one stage of several. If the user's next
 answer would start more work, the work is not complete.
 
-The `Stop` hook puts the question at the end of a turn, because no hook can see
-whether the user's work is done. The agent answers it from the session. When the
-work is not complete, or the review already ran after the user's latest
-instruction, the agent replies with one short line and stops. In doubt, the work
-is not complete.
-
-> SIMPLIFIED: the hook fires at every end of turn that does not end in a
-> question mark, a statement-style pause included, and the agent declines it
-> when the work is not complete, which costs one short extra turn and the
-> message each time.
-> Lift when: the host reports whether the user's work is complete.
+The end of the run triggers the review: `qfai-run`'s final report, when it
+closes the user's last task and nothing waits on the user, has the agent follow
+this rule once, after the report. No hook triggers it, so an ordinary end of a
+turn costs nothing. When the work is not complete, or the review already ran
+after the user's latest instruction, the agent does not run it. In doubt, the
+work is not complete.
 
 ## 2. What to review
 

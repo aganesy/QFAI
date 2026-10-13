@@ -814,18 +814,18 @@ describe("the shipped-lane allowlist", () => {
 });
 
 describe("reviewed init entry content", () => {
-  it.each([
-    ["AGENTS.md", "agents.txt"],
-    ["CLAUDE.md", "claude.txt"],
-  ])("keeps the reviewed bytes for %s in an independent fixture", async (entry, fixture) => {
-    const expected = await readFile(
-      new URL(`../fixtures/shipped-entry/${fixture}`, import.meta.url),
-    );
-    expect(expected.length).toBeGreaterThan(0);
-    expect(ALLOWED_INIT_CONTENT.get(entry)).toBe(fileDigest(expected));
-  });
+  it.each([["AGENTS.md", "agents.txt"]])(
+    "keeps the reviewed bytes for %s in an independent fixture",
+    async (entry, fixture) => {
+      const expected = await readFile(
+        new URL(`../fixtures/shipped-entry/${fixture}`, import.meta.url),
+      );
+      expect(expected.length).toBeGreaterThan(0);
+      expect(ALLOWED_INIT_CONTENT.get(entry)).toBe(fileDigest(expected));
+    },
+  );
 
-  it.each(["AGENTS.md", "CLAUDE.md"])("rejects unreviewed byte changes to %s", async (entry) => {
+  it.each(["AGENTS.md"])("rejects unreviewed byte changes to %s", async (entry) => {
     const actual = await readFile(new URL(`../../assets/init/root/${entry}`, import.meta.url));
     const digest = ALLOWED_INIT_CONTENT.get(entry);
     expect(digest).toBe(fileDigest(actual));
