@@ -28,7 +28,7 @@ where its stage's gate reads it.
 work is the interview holds a user session; every other stage holds a delegated
 one only for a decision the repository cannot settle, where a griller
 interviews the authors and the user is asked only a critical decision
-(`.agents/rules/grilling.md` § Two kinds of session). A step with no such
+(`.agents/rules/grilling.md` § When a session is held). A step with no such
 decision holds none and starts no griller. Read
 `.agents/rules/grilling.md#explicit-delegation-for-a-discussion` before
 delegating a user discussion; record actual authority. No-question alone is not delegation.

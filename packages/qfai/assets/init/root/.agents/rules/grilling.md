@@ -9,8 +9,10 @@ when asking stops.
 ## Scope
 
 A **grilling session** is a mode entered deliberately. An invocation declares
-one; nothing else starts one. Meeting an unfixed design does not, and neither
-does an ambiguity found while implementing.
+a user session, and a stage that meets a design decision the request needs and
+the repository cannot settle holds a delegated one; nothing else starts one. An
+unfixed design the request does not need starts none, and neither does an
+ambiguity the written specification settles.
 
 | Target                                            | Applies                                                            |
 | ------------------------------------------------- | ------------------------------------------------------------------ |
@@ -37,7 +39,7 @@ ends the need is the decision being settled, not the subject being easy to
 state: a choice between two fully specified options is precise and still open,
 and precision is no help whatever in making it.
 
-## Two kinds of session
+## When a session is held
 
 | Kind      | Held by                                                                                             | Who answers                             | What reaches the user   |
 | --------- | --------------------------------------------------------------------------------------------------- | --------------------------------------- | ----------------------- |

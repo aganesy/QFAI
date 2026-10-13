@@ -92,7 +92,7 @@ describe.each(TREES)("%s", (rel) => {
     // Asked every design question of a routine stage, a user answers most by
     // accepting the recommendation. The default spends their attention only
     // where their answer can differ from it.
-    expectPhrase(master, "## Two kinds of session");
+    expectPhrase(master, "## When a session is held");
     expectPhrase(master, "**Delegated is the default where a session is held.**");
     expectPhrase(master, "The discussion stage is that stage: there the interview is\nthe work.");
     expectPhrase(
