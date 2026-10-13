@@ -17,6 +17,8 @@
 *.ttf binary
 *.eot binary
 
-# Keep both branches' appended register lines; validation still detects duplicate IDs.
+# Keep both branches' appended register lines. The driver also keeps both versions of a row both
+# sides edited; `pnpm ci:lint:scans` and `pnpm branch:catchup` report that duplicate ID. GitHub's
+# merge ignores the driver, so a pull request can show a conflict that a local merge does not.
 /.qfai/spec/decisions.md merge=union
 /.qfai/spec/open-questions.md merge=union
