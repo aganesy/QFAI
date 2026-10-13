@@ -170,6 +170,7 @@ describe("qfai init", () => {
           copied: [],
           skipped: [],
           refused: [dest],
+          kept: [],
         });
       }
       expect(await readFile(path.join(destRoot, "nested"), "utf-8")).toBe(
