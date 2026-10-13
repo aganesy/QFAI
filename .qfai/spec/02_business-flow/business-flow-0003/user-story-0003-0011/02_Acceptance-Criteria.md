@@ -61,4 +61,11 @@ Feature: Shipped workflow checks
     Then each file that cannot be parsed is a `warning` and never an `error`, naming the file, the line of the first error and its reason
     And a valid file, a file with another extension and a file outside those directories raise no finding
     And doctor writes no file
+
+  # AC-0003-0011-14
+  Scenario: A differing shipped workflow says how it differs
+    Given a project whose `.github/workflows/` holds a shipped workflow whose text differs from the copy in the package
+    When `qfai doctor` runs
+    Then the warning gives the number of lines on only one side, split into the installed file and the shipped copy, and names the jobs whose definition differs
+    And a difference outside the jobs names no job, and the message says that copying the shipped file over the installed one replaces every local change
 ```

@@ -6,6 +6,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`qfai doctor` says how a shipped workflow differs from the shipped text.**
+  The `workflows.drift.*` warning now gives the number of lines that differ on
+  each side and the jobs whose definition differs, and says that copying the
+  shipped file over the installed one replaces every local change, so a reader
+  can tell a stale copy from a deliberate change. A way to accept a known
+  difference is not part of this change. Refs #3534.
+
 - The document-schema rule `qfai init` writes shows how to run the document
   lane's two checks before pushing: the schema checker and the Mermaid checker,
   with the scripts and arguments the `qfai-docs.yml` lane uses. The rule points
