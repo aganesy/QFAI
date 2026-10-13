@@ -342,6 +342,35 @@ it("A low-confidence extraction whose readings reach one route returns that rout
   }).toEqual({ status: 0, candidates: [["answer-question", true]], stages: undefined });
 });
 
+// QFAI:EX-0001-0222-15
+it("A low-confidence order with no artifacts offers the operation route as a candidate", async () => {
+  const { root, file } = await withRequest(
+    extraction({
+      intent: "order",
+      artifacts: [],
+      confidence: "low",
+      alternatives: [{ intent: "question-how", entryFlags: [], qualifiers: [], signals: [] }],
+    }),
+  );
+  const planned = workflow(root, ["plan", "--in", file]);
+  const candidates = field(planned.json, "candidates");
+
+  expect({
+    status: planned.status,
+    candidates: Array.isArray(candidates)
+      ? candidates.map((each) => [field(each, "route"), field(each, "recommended")])
+      : candidates,
+    stages: field(planned.json, "stages"),
+  }).toEqual({
+    status: 0,
+    candidates: [
+      ["answer-question", false],
+      ["run-operation", true],
+    ],
+    stages: undefined,
+  });
+});
+
 // QFAI:EX-0001-0222-08
 it("An input option given twice is refused, naming it", async () => {
   const root = await minimalProject();

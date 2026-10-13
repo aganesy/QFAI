@@ -34,6 +34,7 @@ classified by the taxonomy below before any response.
   `.qfai/assistant/skill/qfai-implement/references/parallelization-policy.md`.
   Where the stage's ledger or a seam makes an ordering mandatory, carrying on
   does not override it.
+- On Codex, read `.qfai/assistant/rule/references/codex-delegation.md` before delegating.
 - A review is done by an agent that did not author what it reviews. The
   orchestrator never reviews its own work and never approves it for
   convenience.

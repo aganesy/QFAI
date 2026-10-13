@@ -22,6 +22,7 @@ const RUN = "skill/qfai-run/SKILL.md";
 const EXTRACTION = "skill/qfai-run/references/extraction.md";
 const SCREENS = "skill/qfai-run/references/operator-screens.md";
 const TARGETS = "## Independent targets under one goal";
+const CLOUD_PREPARATION = "skill/qfai-run/references/codex-cloud-install.md";
 
 const REACHED_OBSERVATIONS = "skill/qfai-run/references/reached-step-observations.md";
 
@@ -38,6 +39,13 @@ async function passage(file: string, heading: string): Promise<string> {
   const text = flat(sectionOf(await readShipped(file), heading));
   expect(text, `${file} has ${heading}`).not.toBe("");
   return text;
+}
+
+async function cloudPassage(heading: string): Promise<string> {
+  expect(shippedExists(CLOUD_PREPARATION), "the generated installation guide is shipped").toBe(
+    true,
+  );
+  return passage(CLOUD_PREPARATION, heading);
 }
 
 describe("the stage-skill entry check", () => {
@@ -94,6 +102,42 @@ describe("the stage-skill entry check", () => {
       /invoked by name, `\/qfai-sdd` runs standalone, ends at sdd and creates no run/i,
     );
     expect(sdd).toMatch(/a request to go to the end is handed to a whole run through `qfai-run`/i);
+  });
+});
+
+// QFAI:AC-0001-0196-18
+describe("supported native preparation and host evidence", () => {
+  // QFAI:EX-0001-0196-68
+  it("preserves reminder-only behavior and covered command, lifecycle and trust authority", async () => {
+    const authority = await cloudPassage("## Before execution");
+    expect(authority).toMatch(/review.*project.declared executable.*argv.*absolute.*cwd/i);
+    expect(authority).toMatch(/covered authority.*command.*lifecycle scripts/i);
+    expect(authority).toMatch(/network.*secret.*trust.*publication/i);
+    const reminders = await cloudPassage("## Reminders and trust");
+    expect(reminders).toMatch(/reminder.*exit.0/i);
+    expect(reminders).toMatch(/edited.*hook.*merge|hook.*merge.*edited/i);
+    expect(reminders).toMatch(/linked.*unreadable/i);
+    expect(reminders).toMatch(/no.*SessionStart.*install/i);
+    expect(reminders).toMatch(/does not grant.*trust/i);
+  });
+  // QFAI:EX-0001-0196-69
+  it("keeps supported host setup and actual startup separate from generated native proof", async () => {
+    const setup = await cloudPassage("## Environment setup");
+    expect(setup).toMatch(/confirm.*current.*support.*Install script.*Start skill/i);
+    expect(setup).toMatch(/saving.*configuration.*preparing.*publishing.*new tasks/i);
+    expect(setup).toMatch(/refresh.*does not rerun.*installation.*startup/i);
+    expect(setup).toMatch(/existing tasks.*own state/i);
+    const start = await cloudPassage("## Start skill");
+    expect(start).toMatch(/successful preparation.*canonical.*same.*cwd.*before.*planning/i);
+    expect(start).toMatch(/failure.*missing.*authority.*block.*planning/i);
+    expect(start).toMatch(/entry.*starts no plan/i);
+    const evidence = await cloudPassage("## Evidence limits");
+    expect(evidence).toMatch(/generated assets.*controlled native CI.*actual Cloud/i);
+    expect(evidence).toMatch(/argv.*cwd.*exit.*signal.*canonical/i);
+    expect(evidence).toMatch(/without.*secret/i);
+    expect(evidence).toMatch(/cannot prove.*host.*startup/i);
+    expect(evidence).toMatch(/unobserved.*own.*receipts/i);
+    expect(flat(await readShipped(RUN))).toContain("references/codex-cloud-install.md");
   });
 });
 
