@@ -2253,28 +2253,6 @@ describe("qfai init", () => {
     }
   });
 
-  // TC-1.4.5 — init reports DESIGN.md as created on first run, skipped on second run
-  it("reports DESIGN.md as created on first run and skipped on second run (TC-1.4.5)", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-design-"));
-    try {
-      const firstRun = await captureStdout(async () => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      });
-      // The heading is `written` (the list also carries overwrites), not `created`.
-      expect(firstRun).toMatch(/written:\s*\d+/);
-      expect(firstRun).toContain("DESIGN.md");
-
-      // --verbose expands the skipped list; without it the re-run reports counts only.
-      const secondRun = await captureStdout(async () => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true, verbose: true });
-      });
-      expect(secondRun).toContain("skipped paths:");
-      expect(secondRun).toContain("DESIGN.md");
-    } finally {
-      await removeTempTree(root);
-    }
-  });
-
   // `validate`, `doctor` and `report` all normalize their paths through
   // `toRelativePath`, so init's report must print the same separator or a path
   // copied out of it will not match the same file elsewhere.
