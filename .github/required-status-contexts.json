@@ -198,11 +198,11 @@
         "workspace package's lifecycle exactly as it runs the root's."
       ],
       "pinnedBytes": {
-        ".github/actions/setup/action.yml": "38dcdd7ba28a4812ef0719baf5ccfac23bfd3c39a3049e7420fc4caeac7b76ca",
+        ".github/actions/setup/action.yml": "870813bb20aadb817b3496f70f6bdb8bb2e8142f1e5e621efe0751b0eacfed19",
         ".github/actions/setup/dependency-builds.txt": "3230335c2f0bc71bfcec72150d56fd51dc30524ca0fb35405197054709bd13b5",
         ".github/actions/setup/verify-rebuild-sources.mjs": "81c83080bfbae274d46c90cdae9f9ae3dd3af6240fe56fc88aec461799802ae3",
         "scripts/bootstrap.mjs": "c7e77af42feef0a61951955d0a7b2cb0d0554e0da4ee9870d92145cf84f923ff",
-        "scripts/branch-catchup.mjs": "d21a6494add3ec56066a0a756b02060e6082e878cb413c3df812b864518b0497",
+        "scripts/branch-catchup.mjs": "488bd38a3f143e6613e4db48223e9256c7bbd40d2e5c482cd60ba28e9751921c",
         "scripts/check-bidi.mjs": "295f9f9779686435a54d481b740e00b150108525630be3796369403873b70ed5",
         "scripts/check-build-warnings.mjs": "f07d6df10d28a9ffcb4cdf1130e379c4aadfc2a89329e5f66ae23fd117000077",
         "scripts/check-changelog-entries.mjs": "5c4a94118edd783be8609610c9b2c6cfc393ebdeca8f841166307ef6374b78f1",
@@ -216,6 +216,7 @@
         "scripts/check-not-a-dependency.mjs": "143c233de8b95a1bd09594e80906f50f1bad9ecebd742ae354873aef78977a32",
         "scripts/check-publish-dry-run.mjs": "b668f5756bdc362faee523800f1e2997f03115f7905af782d88d526578f9de72",
         "scripts/check-readme-alignment.mjs": "ad982d88d3e28a82dc0ddd0465fccaec2aa077c2a9c6eac9dd7072c454a629b8",
+        "scripts/check-register-duplicates.mjs": "643e55c00862008450b3a29d0cfd94a549dbebe62240bdd8c73ecdaec6a9b9ad",
         "scripts/check-release-notes.mjs": "304074ce8cf683c134b75cecf28c5471e908b7b122fae78f7b38cdcf138b02fb",
         "scripts/check-repository-language.mjs": "389f0ce5c927624e74030db15a0ce15361da18fe954787f34c4c7a8b584578b9",
         "scripts/check-review-profile-consistency.mjs": "53bd53cb0afb03e616372768bd034f915f386a973a997fa9ed8152a3632a0ba2",
@@ -295,7 +296,7 @@
         "Each action version is pinned to its SHA, so a bump is a change read here as well as in the",
         "workflow."
       ],
-      "nestedActions": ["actions/setup-node@820762786026740c76f36085b0efc47a31fe5020"],
+      "nestedActions": ["actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1"],
       "nestedActionsNote": [
         "The EXTERNAL actions a local composite action reached from this context's closure may invoke,",
         "as `owner/repo@<40-hex sha>`, exactly.",
@@ -402,7 +403,7 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "e995414dcbc61032",
-        "Verify the toolchain action before running it": "a36f9467ff4df4b9",
+        "Verify the toolchain action before running it": "9182463e675e9a4a",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "a9e48843fd69e79c",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "5b9cb61d789d7eda",
@@ -410,7 +411,7 @@
         "QFAI self-validate this repo (dogfooding — SDD gates)": "a6335bcba3f91550",
         "QFAI self-validate this repo (dogfooding — full profile)": "96caa9705555e971",
         "Run qfai validate gate (fail on error)": "64fb079758255e4c",
-        "Run lint gate": "895115fd94aeaf8e",
+        "Run lint gate": "b3f342d15fa9f176",
         "Run type check": "51c5eeee942920dc",
         "Run future TypeScript compatibility check": "55db3b7f97fd7fad",
         "Run the package test suite on the floor (${{ matrix.slice }})": "a931991b300a31e2",

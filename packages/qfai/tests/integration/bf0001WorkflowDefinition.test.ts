@@ -140,6 +140,9 @@ describe("BF-0001 workflow definition", () => {
     expect(stages[4]?.label).toContain("AC integration tests with empty bodies");
     expect(stages[5]?.label).toContain("Verify:");
     expect(workflow).toContain("Once per run, at the start, before the first stage.");
+    expect(workflow).toMatch(
+      /ultra-light routes `answer-in-session` and\s+`run-operation`, each one step that changes no tracked file, run without it/,
+    );
     expect(workflow).toContain("implements one EX at a time through Red, Green, Refactor");
     const configure = await readFile(skill("qfai-configure"), "utf8");
     expect(configure).toContain("Configure QFAI for this repository");

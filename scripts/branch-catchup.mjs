@@ -10,6 +10,7 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { readBoundedText } from "./lib/bounded-read.mjs";
+import { describeFindings, registerFindings } from "./check-register-duplicates.mjs";
 
 const OUTPUTS = [
   ".github/pinned-bytes.txt",
@@ -465,6 +466,14 @@ export function main(args = process.argv.slice(2)) {
       }
       accepted = staged;
       unchanged(accepted);
+      // The union driver keeps both versions of a register row both sides edited, conflict-free.
+      const registers = describeFindings(registerFindings(root));
+      if (registers.length > 0) {
+        refuse(
+          `${registers.join(" ")} Merge and staged outputs retained without a commit: repair ` +
+            "the registers, stage them, commit the merge, then push.",
+        );
+      }
       const changes = git(["diff", "--cached", "--quiet"], [0, 1]);
       if (changes.status !== 0) {
         unchanged(accepted);
