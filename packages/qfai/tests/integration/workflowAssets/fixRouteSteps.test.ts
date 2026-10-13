@@ -453,12 +453,19 @@ describe("a verify gate that fails on the base commit or cannot run", () => {
     expect(text).toMatch(/result of the same gate in CI/i);
     expect(text).toMatch(/not observed is written as unknown, never as a pass/i);
     expect(text).toMatch(/asking the user whether to commit with those gates open/i);
+    expect(text).toMatch(
+      /observed failing in the base commit's run, executed as `common-gate-run`/i,
+    );
+    expect(text).toMatch(/never assumed/i);
+    expect(text).toMatch(
+      /no-question mode, or with no question tool, the report lists those gates as open and stops without committing/i,
+    );
 
     const contract = flat(
       await readShipped("skill/qfai-verify/references/verify-output-contract.md"),
     );
     expect(contract).toMatch(
-      /On a `baseline` of `"same"`: the failing test identifiers and the environment/,
+      /On a `baseline` of `"same"`: the failing test identifiers and the environment, in one or two sentences \(see `verify-repo-gate`\)/,
     );
   });
 });

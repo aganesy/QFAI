@@ -231,11 +231,16 @@ its `reason`. The top-level `status` stays `"FAIL"`, so the run stops before
 the run caused, so the user can decide whether to commit.
 
 For a gate with baseline `same`, `reason` names the failing test identifiers
-and the environment they fail in. The stage report adds how to confirm it: the
-base commit's result, and the result of the same gate in CI when a check covers
-it, with the run or check named. A CI result that was not observed is written
-as unknown, never as a pass. The report ends by asking the user whether to
-commit with those gates open; nothing is committed before the answer.
+and the environment they fail in. The identifiers are the ones observed failing
+in the base commit's run, executed as `common-gate-run`'s
+`## A failure that predates the change` says, never assumed. The stage report
+adds how to confirm it: the base commit's result, and the result of the same
+gate in CI when a check covers it, with the run or check named. A CI result that
+was not observed is written as unknown, never as a pass. The report ends by
+asking the user whether to commit with those gates open, as
+`.agents/rules/user-questions.md` says; nothing is committed before the answer.
+Under a no-question mode, or with no question tool, the report lists those gates
+as open and stops without committing.
 
 ## Gate
 
