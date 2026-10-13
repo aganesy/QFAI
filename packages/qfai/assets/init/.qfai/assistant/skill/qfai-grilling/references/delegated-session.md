@@ -53,6 +53,7 @@ decisions belonging to different drafting roles.
   report lists it; nothing waits for the user to read it.
 
   A critical decision is the exception: agreement closes its node for the
-  round, and only the user's answer settles it. Recording an agreed critical
-  decision as settled is how a choice nobody with the standing made reaches a
-  draft.
+  round, but only an actual user answer or an explicit applicable authorization
+  under `.agents/rules/grilling.md#explicit-delegation-for-a-discussion` settles
+  it. Record that authority separately from the agents' positions. Agreement
+  alone does not settle it, and an unknown user-held fact still stays open.

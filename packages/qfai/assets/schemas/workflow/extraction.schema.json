@@ -32,6 +32,7 @@
         "behaviour-change",
         "deprecation",
         "refactor",
+        "procedure",
         "docs",
         "flaky-test",
         "test-defect",
@@ -81,7 +82,8 @@
           "removal-requested",
           "visual-open",
           "prototype-requested",
-          "owned-temporary-cleanup"
+          "owned-temporary-cleanup",
+          "session-answerable"
         ]
       }
     },
@@ -260,6 +262,7 @@
             "behaviour-change",
             "deprecation",
             "refactor",
+            "procedure",
             "docs",
             "flaky-test",
             "test-defect",
@@ -309,7 +312,8 @@
               "removal-requested",
               "visual-open",
               "prototype-requested",
-              "owned-temporary-cleanup"
+              "owned-temporary-cleanup",
+              "session-answerable"
             ]
           }
         },

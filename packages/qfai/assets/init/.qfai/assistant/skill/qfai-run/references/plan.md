@@ -154,6 +154,8 @@ the ids of the stages it runs in plan order, and `true` for the narrowest.
   that writes code, every verify stage that ends the route follows.
 - `medium` adds the change note and the gates to those stages; where `narrow`
   already holds implementation, it equals `narrow`.
+- Documentation-only maintenance or procedure writing keeps the change note
+  and closing gates. A procedure plan therefore gets `broad` alone.
 - A security intake plan gets `broad` alone.
 - `broad` runs every stage.
 
