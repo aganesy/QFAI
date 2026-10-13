@@ -1006,10 +1006,9 @@ describe("story-tree drift", () => {
         ),
       );
     const driftMessages = async () =>
-      (await validateStoryTreeDrift(root, config(), "drift")).map(({ code, message }) => ({
-        code,
-        message,
-      }));
+      (await validateStoryTreeDrift(root, config(), "drift"))
+        .filter(({ code }) => code !== "QFAI-DRIFT-003")
+        .map(({ code, message }) => ({ code, message }));
 
     // The duplicate check still rejects the merge-added copy; nothing exempts it.
     const duplicate = structureFindings(original + original + second);
@@ -1107,7 +1106,8 @@ describe("story-tree drift", () => {
     git("add", ".");
     git("commit", "-m", "add the story tree");
     for (const profile of ["tdd", "drift"] as const) {
-      expect(await validateStoryTreeDrift(root, config(), profile)).toEqual([]);
+      const findings = await validateStoryTreeDrift(root, config(), profile);
+      expect(findings.filter(({ severity }) => severity !== "info")).toEqual([]);
     }
 
     git("checkout", "main");
@@ -1124,12 +1124,14 @@ describe("story-tree drift", () => {
     }
   });
 
-  it("does not report drift when the base ref or git repository is unavailable", async () => {
+  it("reports no drift finding when the base ref is missing, and nothing outside a repository", async () => {
     await put(decisions, table);
     await put(glossary, "# Terms\n");
     const missing = config();
     missing.baseBranch = "missing/base";
-    expect(await validateStoryTreeDrift(root, missing, "drift")).toEqual([]);
+    expect((await validateStoryTreeDrift(root, missing, "drift")).map(({ code }) => code)).toEqual([
+      "QFAI-DRIFT-003",
+    ]);
     const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-story-no-git-"));
     try {
       expect(await validateStoryTreeDrift(outside, config(), "drift")).toEqual([]);
@@ -1161,9 +1163,95 @@ describe("story-tree drift", () => {
 
       const missing = config();
       missing.baseBranch = "missing/base";
-      expect(await validateStoryTreeDrift(root, missing, profile)).toEqual([]);
+      const findings = await validateStoryTreeDrift(root, missing, profile);
+      expect(findings.map(({ code }) => code)).toEqual(["QFAI-DRIFT-003"]);
     },
   );
+
+  // QFAI:AC-0001-0054-10
+  // QFAI:EX-0001-0054-21
+  describe("the base the drift checks compare with", () => {
+    async function branchedFromBase(): Promise<string> {
+      await put(decisions, table);
+      await put(glossary, "# Terms\n");
+      git("add", ".");
+      git("commit", "-m", "base");
+      const base = execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: root,
+        encoding: "utf8",
+      }).trim();
+      git("checkout", "-b", "topic");
+      return base;
+    }
+
+    it.each(["tdd", "drift"] as const)(
+      "warns in %s, naming the base, when it has no merge base with HEAD",
+      async (profile) => {
+        await branchedFromBase();
+        const missing = config();
+        missing.baseBranch = "missing/base";
+        const findings = await validateStoryTreeDrift(root, missing, profile);
+        expect(findings).toEqual([
+          expect.objectContaining({
+            code: "QFAI-DRIFT-003",
+            severity: "warning",
+            message: expect.stringContaining('"missing/base"'),
+            suggested_action: expect.stringContaining("baseBranch"),
+          }),
+        ]);
+      },
+    );
+
+    it("names the merge base and the changed file count in the drift profile", async () => {
+      const base = await branchedFromBase();
+      await put(glossary, "# Terms\nUpdated\n");
+      git("add", ".");
+      git("commit", "-m", "edit the glossary");
+      const findings = await validateStoryTreeDrift(root, config(), "drift");
+      expect(findings).toContainEqual(
+        expect.objectContaining({
+          code: "QFAI-DRIFT-003",
+          severity: "info",
+          message: `Compared 1 changed file with "main" at merge base ${base.slice(0, 12)}.`,
+        }),
+      );
+    });
+
+    it("says the branch has no commit of its own when HEAD is the merge base", async () => {
+      const base = await branchedFromBase();
+      const findings = await validateStoryTreeDrift(root, config(), "drift");
+      expect(findings).toEqual([
+        expect.objectContaining({
+          code: "QFAI-DRIFT-003",
+          severity: "info",
+          message: `Compared 0 changed files with "main" at merge base ${base.slice(0, 12)}; HEAD is that commit, so the branch has no commit of its own.`,
+        }),
+      ]);
+    });
+
+    it.each(["tdd", "drift"] as const)(
+      "still compares in %s when the base decision ledger is over one mebibyte",
+      async (profile) => {
+        await put(decisions, `${table}| DEC-0001 | ${"x".repeat(1_100_000)} | Reason | DONE |\n`);
+        await put(glossary, "# Terms\n");
+        git("add", ".");
+        git("commit", "-m", "base with a large ledger");
+        git("checkout", "-b", "topic");
+        await put(glossary, "# Terms\nUpdated\n");
+        git("add", ".");
+        git("commit", "-m", "edit the glossary");
+        const findings = await validateStoryTreeDrift(root, config(), profile);
+        expect(findings).toContainEqual(
+          expect.objectContaining({ code: "QFAI-DRIFT-001", file: glossary }),
+        );
+      },
+    );
+
+    it("names no base in the tdd profile once the comparison ran", async () => {
+      await branchedFromBase();
+      expect(await validateStoryTreeDrift(root, config(), "tdd")).toEqual([]);
+    });
+  });
 
   // QFAI:EX-0001-0054-04
   // QFAI:EX-0001-0054-05

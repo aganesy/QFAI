@@ -6,6 +6,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`qfai validate` tells a reader which base the drift checks compared with.**
+  A repository whose `baseBranch` has no merge base with HEAD now gets one
+  `QFAI-DRIFT-003` warning that names the base and says to fetch it or set
+  `baseBranch`, where the run used to pass as if nothing had changed. The
+  `drift` profile also reports at info the merge base commit and the number of
+  changed files it compared, so a worktree whose base ref lags the pull
+  request's base shows it. A directory that is not a repository is still silent.
+  The drift checks also stop turning themselves off when a file at the base,
+  such as a long decision ledger, is larger than 1 MiB: reading it failed
+  like a missing file, and the run passed without comparing anything.
+  Fixes #3532.
+
 - **A merge that duplicated a decision has a bounded manual recovery.**
   When a bad two-parent merge adds a second byte-identical copy of an inherited
   decision, the SDD owner may remove only that surplus copy under a separate

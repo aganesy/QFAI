@@ -3,7 +3,13 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { DEFAULT_GLOB_FILE_LIMIT } from "../fs.js";
-import { getChangedFilesAgainstBase, normalizeRepoPath, readFileAtBase } from "../gitChanges.js";
+import {
+  describeBaseComparison,
+  getChangedFilesAgainstBase,
+  normalizeRepoPath,
+  readFileAtBase,
+  type BaseComparison,
+} from "../gitChanges.js";
 import { parseAllMarkdownTables } from "../specPackParsers.js";
 import { parseCountedExampleAnnotations } from "../storyTree/ids.js";
 import {
@@ -23,6 +29,21 @@ export async function validateStoryTreeDrift(
   profile: "tdd" | "drift",
 ): Promise<Issue[]> {
   const baseBranch = config.baseBranch ?? "origin/main";
+  const comparison = describeBaseComparison(root, baseBranch);
+  if (comparison.kind === "unresolved") {
+    return [
+      issue(
+        "QFAI-DRIFT-003",
+        `Nothing was compared: "${baseBranch}" has no merge base with HEAD.`,
+        "warning",
+        undefined,
+        "storyTree.baseUnresolved",
+        undefined,
+        "canonical",
+        `Fetch "${baseBranch}" so it resolves, or set baseBranch in qfai.config.yaml to a ref this checkout has, then rerun validate.`,
+      ),
+    ];
+  }
   const changed = getChangedFilesAgainstBase(root, baseBranch);
   if (changed === null) return [];
   const specs = normalizeRepoPath(
@@ -118,7 +139,27 @@ export async function validateStoryTreeDrift(
     );
   }
   issues.push(...(await examplesWithoutTestChange(root, config, changed, specs, baseBranch)));
+  if (profile === "drift" && comparison.kind === "resolved") {
+    issues.push(comparedAgainst(baseBranch, comparison, changed.size));
+  }
   return issues;
+}
+
+/**
+ * Names the commit the drift profile compared with, so a pass can be checked against the base the
+ * reader expects: a worktree whose base ref lags the pull request's base passes silently otherwise.
+ */
+function comparedAgainst(
+  baseBranch: string,
+  comparison: Extract<BaseComparison, { kind: "resolved" }>,
+  changedCount: number,
+): Issue {
+  const mergeBase = comparison.mergeBase.slice(0, 12);
+  const compared = `Compared ${changedCount} changed ${changedCount === 1 ? "file" : "files"} with "${baseBranch}" at merge base ${mergeBase}`;
+  const message = comparison.atHead
+    ? `${compared}; HEAD is that commit, so the branch has no commit of its own.`
+    : `${compared}.`;
+  return issue("QFAI-DRIFT-003", message, "info", undefined, "storyTree.baseCompared");
 }
 
 /**
