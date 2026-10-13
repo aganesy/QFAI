@@ -597,12 +597,26 @@ const CATCHUP_OUTPUTS = [
   ".github/lifecycle-manifests.txt",
 ] as const;
 const PIN_PATHS = ["scripts/check-toolchain-action.sh", "scripts/example.mjs"] as const;
+const REGISTER_CHECK = "scripts/check-register-duplicates.mjs";
+const REGISTERS = [".qfai/spec/decisions.md", ".qfai/spec/open-questions.md"] as const;
 const WORKFLOW_INPUTS = [
   PIN_PATHS[0],
   CATCHUP_OUTPUTS[0],
   CATCHUP_OUTPUTS[3],
   ".github/command-files.txt",
 ];
+
+/** A register whose rows carry the prefix's IDs from 0001, one row per last-column value. */
+function registerText(prefix: "DEC" | "OQ", values: string[]): string {
+  return (
+    "# Register\n\n| ID | Content | Status |\n| --- | --- | --- |\n" +
+    values
+      .map(
+        (value, index) => `| ${prefix}-${String(index + 1).padStart(4, "0")} | row | ${value} |\n`,
+      )
+      .join("")
+  );
+}
 type CatchupFixture = {
   sandbox: string;
   root: string;
@@ -747,12 +761,16 @@ async function withCatchup(run: (fixture: CatchupFixture) => Promise<void>): Pro
     await put(seed, ".github/command-files.txt", "# command files\n");
     await put(seed, PIN_PATHS[0] ?? "", "#!/bin/sh\nexit 0\n");
     await put(seed, PIN_PATHS[1] ?? "", "export {};\n");
+    await put(seed, ".gitattributes", REGISTERS.map((file) => `/${file} merge=union\n`).join(""));
+    await put(seed, REGISTERS[0], registerText("DEC", ["WIP", "WIP"]));
+    await put(seed, REGISTERS[1], registerText("OQ", ["open"]));
     await cp(path.join(REPO_ROOT, "scripts/lib"), path.join(seed, "scripts/lib"), {
       recursive: true,
     });
     // The fixture invokes the repository helper without supplying a replacement.
-    if (existsSync(path.join(REPO_ROOT, CATCHUP)))
-      await cp(path.join(REPO_ROOT, CATCHUP), path.join(seed, CATCHUP));
+    for (const helper of [CATCHUP, REGISTER_CHECK])
+      if (existsSync(path.join(REPO_ROOT, helper)))
+        await cp(path.join(REPO_ROOT, helper), path.join(seed, helper));
     await put(seed, "scripts/pin-guard-bytes.mjs", writerProgram("guard"));
     await put(seed, "scripts/pin-verification-bodies.mjs", writerProgram("verification"));
     nativeGit(seed, ["add", "--all"]);
@@ -1197,6 +1215,66 @@ describe("branch catch-up acceptance", () => {
       ).toBe(false);
     });
   });
+
+  // QFAI:AC-0002-0025-07
+  // QFAI:EX-0002-0025-25
+  it.each(["duplicate", "missing"] as const)(
+    "stops before its commit when the merged registers hold a %s register",
+    async (kind) => {
+      await withCatchup(async (fixture) => {
+        await commitChanges(fixture.root, {
+          [REGISTERS[0]]: registerText("DEC", ["WIP", "DONE"]),
+        });
+        const head = nativeGit(fixture.root, ["rev-parse", "HEAD"]).stdout.trim();
+        let defaultTip: string;
+        if (kind === "duplicate") {
+          defaultTip = await advanceOrigin(fixture, {
+            [REGISTERS[0]]: registerText("DEC", ["WIP", "DROPPED"]),
+          });
+        } else {
+          nativeGit(fixture.seed, ["rm", "-q", REGISTERS[1]]);
+          defaultTip = await advanceOrigin(fixture, { "upstream.txt": "default bytes\n" });
+        }
+        const remote = nativeGit(fixture.sandbox, ["--git-dir", fixture.origin, "show-ref"]).stdout;
+
+        const run = invokeCatchup(fixture, ["--push"], await catchupPreload(fixture));
+
+        expect(run.status, run.output).toBe(1);
+        expect(run.output).toContain("Merge and staged outputs retained without a commit");
+        expect(nativeGit(fixture.root, ["rev-parse", "HEAD"]).stdout.trim()).toBe(head);
+        expect(nativeGit(fixture.root, ["rev-parse", "--verify", "MERGE_HEAD"]).stdout.trim()).toBe(
+          defaultTip,
+        );
+        expect(nativeGit(fixture.root, ["ls-files", "--unmerged"]).stdout).toBe("");
+        const staged = nativeGit(fixture.root, ["diff", "--cached", "--name-only"]).stdout;
+        if (kind === "duplicate") {
+          expect(run.output).toContain(`${REGISTERS[0]}:6,7: DEC-0002 is defined more than once`);
+          expect(staged.split("\n")).toContain(REGISTERS[0]);
+          expect(readFileSync(path.join(fixture.root, REGISTERS[0]), "utf-8")).toContain(
+            "| DEC-0002 | row | DONE |\n| DEC-0002 | row | DROPPED |\n",
+          );
+        } else {
+          expect(run.output).toContain(`${REGISTERS[1]} could not be read`);
+          expect(staged.split("\n")).toContain(REGISTERS[1]);
+          expect(existsSync(path.join(fixture.root, REGISTERS[1]))).toBe(false);
+        }
+        expect(writerRecords(fixture.root).map(({ kind }) => kind)).toEqual([
+          "guard",
+          "verification",
+        ]);
+        const commands = commandRecords(fixture.root).filter(({ program }) => program === "git");
+        expect(commands.find(({ args }) => args[0] === "add")?.args).toEqual([
+          "add",
+          "--",
+          ...CATCHUP_OUTPUTS,
+        ]);
+        expect(commands.some(({ args }) => ["commit", "push"].includes(args[0] ?? ""))).toBe(false);
+        expect(nativeGit(fixture.sandbox, ["--git-dir", fixture.origin, "show-ref"]).stdout).toBe(
+          remote,
+        );
+      });
+    },
+  );
 
   // QFAI:AC-0002-0025-01
   // QFAI:EX-0002-0025-02

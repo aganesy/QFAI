@@ -53,3 +53,5 @@ the next one against.
   Because: the two guards this change removes checked a scanner and a prompt only this repository had, and the shipped templates ran neither.
 - SHIPPED-CI: not-applicable for package.json
   Because: the lane this entry adds holds this repository's own `CHANGELOG.md` entries against the base, and an adopter's changelog is not one QFAI writes or releases.
+- SHIPPED-CI: not-applicable for package.json
+  Because: an adopter's shipped validate workflow runs `qfai validate` as its own job, which reports a duplicate register ID; only this repository runs it late, in the build job.

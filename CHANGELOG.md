@@ -66,6 +66,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- A register ID that the union merge driver left on two rows of
+  `decisions.md` or `open-questions.md` now fails the repository's scans lane,
+  which runs early in the pull request lint job. Before, only the full
+  validation in the build job reported it, minutes into the run.
+  `pnpm branch:catchup` runs the same check after its merge and stops before it
+  commits or pushes. The union merge seed `qfai init` writes is unchanged.
+  Fixes #3671.
+
 - Agents no longer start a griller sub-agent for routine work. The grilling rule
   and its reminders hold a griller session only for a design decision the
   repository cannot settle; an operation, a routine step, a settled decision or
