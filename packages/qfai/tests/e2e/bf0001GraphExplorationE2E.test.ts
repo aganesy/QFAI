@@ -11,8 +11,30 @@ import { graphProcessFixture } from "../helpers/graphProcess.js";
 import { graphCliResult, installedGraphHookResult } from "../helpers/graphCli.js";
 import { captureStdout } from "../helpers/stdout.js";
 
+it("retains completed local document analysis when snapshot restoration is unsupported", async () => {
+  const fixture = await completedDocumentSnapshotFixture({
+    ...graphReuseEnvironment(),
+    platform: "linux",
+    architecture: "x64",
+  });
+  try {
+    expect(fixture.preparedReuse).toBe("unavailable");
+    expect(
+      JSON.parse(
+        await readFile(path.join(fixture.documentAnalysis, "graphify-out", "graph.json"), "utf8"),
+      ),
+    ).toMatchObject({ nodes: [{ id: "requirement" }], edges: [] });
+    expect(fixture.observed).toEqual([]);
+  } finally {
+    await fixture.dispose();
+  }
+});
+
 it("initializes managed graph tools and completes graph-first exploration with an AI-decided fallback", async () => {
   const fixture = await completedDocumentSnapshotFixture(graphReuseEnvironment());
+  expect(fixture.preparedReuse).toBe(
+    process.platform === "win32" && process.arch === "x64" ? "published" : "unavailable",
+  );
   const runtime = graphProcessFixture();
   let now = 1000;
   const clock = vi.spyOn(Date, "now").mockImplementation(() => now);

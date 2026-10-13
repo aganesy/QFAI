@@ -29,15 +29,19 @@ export async function completedDocumentSnapshotFixture(
   try {
     await rm(fixture.documentAnalysis, { recursive: true });
     const prepared = await prepareDocumentAnalysis(fixture.root, run, undefined, environment);
-    if (prepared.status !== "prepared" || prepared.reuse !== "published")
-      throw new Error("Completed document fixture was not published");
-    await rm(fixture.documentAnalysis, { recursive: true });
+    if (prepared.status !== "prepared") throw new Error("Document fixture was not prepared");
+    const restoreFromCache = environment.platform === "win32" && environment.architecture === "x64";
+    if (prepared.reuse !== (restoreFromCache ? "published" : "unavailable"))
+      throw new Error("Document fixture did not retain its supported reuse boundary");
+    // Unsupported restoration combinations retain independent, completed local analysis.
+    if (restoreFromCache) await rm(fixture.documentAnalysis, { recursive: true });
     observed.length = 0;
     fixture.calls.length = 0;
     return {
       ...fixture,
       common,
       environment,
+      preparedReuse: prepared.reuse,
       observed,
       run,
       dispose: async () => {
