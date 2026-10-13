@@ -38,13 +38,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   an operation only a person can run or a deletion goes through the full
   extraction reference again, so it keeps its hand-off or bounded cleanup.
 
-- `qfai-run` reads no reference up front: each pointer says when its reference
-  is read, so a run reads only what its request needs. Fixes #3575.
-
 - Add a workflow route for writing authorized operational procedures.
   It keeps wording-only edits separate, preserves policy owners and existing
   verification, and grants no authority to run the documented actions.
   Fixes #3403.
+
+### Changed
+
+- **Generated Codex reviewer agents run at medium reasoning effort.** `qfai init` now writes
+  `model_reasoning_effort = "medium"` into each `.codex/agents/<name>.toml` of `kind: reviewer`,
+  beside `sandbox_mode = "read-only"`. Codex lets a value in an agent file take precedence over the
+  parent session's, so a reviewer no longer inherits a high orchestrator effort. Worker profiles
+  leave it unset and still inherit, and no profile sets `model`. Run `qfai init --force` to
+  regenerate existing profiles. Fixes #3580.
+
+- `qfai-run` reads no reference up front: each pointer says when its reference
+  is read, so a run reads only what its request needs. Fixes #3575.
 
 ### Fixed
 
@@ -64,14 +73,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   A chunk that crosses the limit keeps the complete characters that fit before
   owned process termination begins. Output after the limit is discarded. Fixes #3462.
 
-### Changed
-
-- **Generated Codex reviewer agents run at medium reasoning effort.** `qfai init` now writes
-  `model_reasoning_effort = "medium"` into each `.codex/agents/<name>.toml` of `kind: reviewer`,
-  beside `sandbox_mode = "read-only"`. Codex lets a value in an agent file take precedence over the
-  parent session's, so a reviewer no longer inherits a high orchestrator effort. Worker profiles
-  leave it unset and still inherit, and no profile sets `model`. Run `qfai init --force` to
-  regenerate existing profiles. Fixes #3580.
+- The Codex delegation notes now keep a `wait_agent` timeout within the maximum
+  the tool states. Codex refuses a timeout above a lowered maximum, which the
+  example of `600000` could exceed.
 
 ## [2.1.2] - 2026-10-11
 

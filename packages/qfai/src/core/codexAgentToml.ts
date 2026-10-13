@@ -28,9 +28,9 @@ export type CodexAgentKind = "worker" | "reviewer";
 const REVIEWER_SANDBOX_MODE = "read-only";
 
 /**
- * A reviewer reads and reports, so it runs below the orchestrator's usual
- * high effort. A value in the agent file takes precedence over the parent
- * session's; a worker leaves it unset and inherits the parent's effort.
+ * A reviewer reads and reports, so it gets a fixed medium effort. A value in
+ * the agent file takes precedence over the parent session's, whatever that
+ * is; a worker leaves it unset and inherits the parent's effort.
  * No profile sets `model`, so every agent keeps the parent's model.
  */
 const REVIEWER_REASONING_EFFORT = "medium";
