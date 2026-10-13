@@ -12,6 +12,31 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   to the lane's install step for the pinned versions and restates none of them.
   Fixes #3539.
 
+- **`qfai validate` tells a reader which base the drift checks compared with.**
+  A repository whose `baseBranch` has no merge base with HEAD now gets one
+  `QFAI-DRIFT-003` warning that names the base and says to fetch it or set
+  `baseBranch`, where the run used to pass as if nothing had changed. The
+  `drift` profile also reports at info the merge base commit and the number of
+  changed files it compared, so a worktree whose base ref lags the pull
+  request's base shows it. A repository with commits but no `origin/main` (no
+  remote, or a `master` branch) warns until `baseBranch` is set; a directory
+  that is not a repository is still silent.
+  The drift checks also stop turning themselves off when a file at the base,
+  such as a long decision ledger, is larger than 1 MiB: reading it failed
+  like a missing file, and the run passed without comparing anything.
+  Fixes #3532.
+
+- **`QFAI-STORY-006` says where an annotation that counts for nothing sits.**
+  When an example's `QFAI:EX-` annotation is in a selected test file but not on
+  a comment line before a test declaration, the finding now names the file and
+  line and tells you to move it to a comment line above the test. The remedy
+  text says the same. Fixes #3531.
+
+- **The UI contract guide says where each rendered text goes.** `structure` is
+  optional only for a screen that shows no heading beyond its title, and a table
+  maps headings, eyebrow lines, labels, link text, column headers, captions, list
+  items and product text to the key that holds them. Fixes #3530.
+
 - **`qfai validate` says when the installed qfai is older than the one the project
   declares.** When the nearest `package.json` declares a `qfai` range and the
   running copy is below its lowest version, `QFAI-TOOL-003` (warning) is the first
@@ -70,6 +95,30 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The final report of a run names the policy check.** The `qfai-run` final
+  report now says whether `common-policy-check` ran and its outcome, or that
+  it did not run and why. The plan lists no such step, so before this a run
+  that skipped the check left no trace of it. Fixes #3557.
+
+- **The verify gate says which Validate command wins.** When a project's
+  `Validate` entry runs a partial profile (its output carries
+  `QFAI-PROFILE-001`), `verify-qfai-gate` no longer treats it as the gate: it
+  records the entry's result as a signal, runs
+  `npx qfai validate --profile verify --fail-on error` as well, and passes or
+  fails on that run. Fixes #3555.
+
+- **A misplaced trace mark says how to repair it.** The `QFAI-STORY-007` error
+  for a `QFAI:BF-`, `QFAI:AC-` or `QFAI:EX-` annotation in a test of the wrong
+  layer now says to keep the annotation only in a test of the layer it belongs
+  to, to remove it from this test, and where the layer rules are
+  (`.qfai/assistant/rule/test-layers.md`). The finding's code, file and
+  annotation are unchanged. Fixes #3544.
+
+- **`qfai-run` points to the form of an approval row.** Step 7 names the
+  decisions template, whose header sets out the four items of the Approach
+  cell, and the template gains an example of a release approval's cells.
+  Refs #3551.
+
 - **A test that fails every run leaves the quarantine route.** `implement-quarantine`
   quarantines nothing for a test that fails all of at least five recorded runs. It records the runs and reports
   the outcome `failing-consistently` with an extraction of the report, and the decision rules
@@ -107,6 +156,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   is read, so a run reads only what its request needs. Fixes #3575.
 
 ### Fixed
+
+- The shipped `qfai-tests.yml` fails closed on an unreadable `package.json`. A
+  manifest that is not valid JSON or not an object, a `scripts` field that is
+  not an object, a layer-named script that is not a string, and a malformed
+  lane or script list now stop change detection with an error annotation, so the
+  verdict is red. Before, each was read as "no test script declared": every lane
+  was skipped and the required check went green over no tests. A repository
+  without a `package.json`, or with no layer-named script, is still a valid
+  empty set. Fixes #3533.
 
 - **The Markdown-schema check no longer passes over a document directory it
   cannot read.** A directory that fails to list for a reason other than being
