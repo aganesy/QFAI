@@ -97,6 +97,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - `qfai-grilling` states its default again: a stage that says nothing holds a
   delegated session where one is held.
 
+- A screen change that adds `product-surface-reviewer` now also covers a path
+  `uiux.surfacePaths` declares and a change whose effect on a screen is
+  uncertain, as the UI routing reference already did. That reference no longer
+  asks for a second review after a fix.
+
 ## [2.1.2] - 2026-10-11
 
 ### Added

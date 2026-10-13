@@ -102,8 +102,9 @@ UI-bearing is a property of the affected flow, not of the files this run
 happened to edit. Resolve it from the source's surface classification and the UI
 contracts linked to that flow, and record it for each affected flow. Route
 `product-experience-architect` during design whenever either signal identifies
-the flow as UI-bearing. `product-surface-reviewer` joins a review only for a
-screen change, as `common-review-cycle`'s reviewer set says.
+the flow as UI-bearing. `product-surface-reviewer` joins a review in a route
+only for a screen change, as `common-review-cycle`'s reviewer set says;
+`qfai-sdd` invoked by name keeps the reviewers its own `## Review` section names.
 
 ## Which surface owns the truth
 
