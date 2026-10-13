@@ -218,6 +218,7 @@ describe("the structured-question reminder", () => {
     for (const prompt of [
       "<task-notification>\n<task-id>b1</task-id>\n<status>completed</status>",
       '<wake reason="external-event">CI finished</wake>',
+      "<ci-monitor-event>\nbuild passed",
       "[SYSTEM NOTIFICATION]\n\n<task-notification>\n<task-id>b1</task-id>",
       "[SYSTEM NOTIFICATION - NOT USER INPUT]\n\nActivity on a subscribed pull request.",
     ]) {
@@ -259,7 +260,11 @@ describe("the structured-question reminder", () => {
     expect(master).toMatch(/no shell and\s+no\s+network/);
     expect(master).toContain("`.agents/rules/reminders.json`");
     // Which turns it stays silent on, so a missing reminder there reads as intended.
-    expect(master).toContain("`<task-notification>`");
+    // Every wrapper the hook skips is named, so the rule and the hook cannot drift apart.
+    for (const wrapper of ["<task-notification>", "<wake>", "<ci-monitor-event>"]) {
+      expect(master, wrapper).toContain(`\`${wrapper}\``);
+    }
+    expect(master).toContain("`[SYSTEM NOTIFICATION`");
   });
 
   it("both settings files carry it", async () => {

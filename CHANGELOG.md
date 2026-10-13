@@ -12,6 +12,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   target, not a gate, and raises no finding. The check itself is not faster;
   making it scale with the size of a contract is still open. Refs #3537.
 
+- **`qfai validate` says when the installed qfai is older than the one the project
+  declares.** When the nearest `package.json` declares a `qfai` range and the
+  running copy is below its lowest version, `QFAI-TOOL-003` (warning) is the first
+  finding in the JSON report, and names both versions and the install command.
+  The text format prints error groups before warning groups, so there it follows
+  the errors. While it is raised, `QFAI-SKILLS-010` names the version difference
+  and gives the install as its suggested action, instead of inviting an edit to
+  files nobody touched.
+  Fixes #3468.
+
 - **A merge that duplicated a decision has a bounded manual recovery.**
   When a bad two-parent merge adds a second byte-identical copy of an inherited
   decision, the SDD owner may remove only that surplus copy under a separate
@@ -60,6 +70,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`qfai-run` reads a request to raise QFAI itself as a dependency change.**
+  The extraction guide's `dependency` row now names it, so the request takes
+  the dependency route, whose step already carries the upgrade procedure for
+  `qfai`. Fixes #3549.
+
 - **The shipped rules name `AGENTS.md` as the only entry file.** The wording
   in `documentation-clarity.md` and `untrusted-content.md` no longer mentions
   `CLAUDE.md`, which `qfai init` stopped writing.
@@ -86,6 +101,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   is read, so a run reads only what its request needs. Fixes #3575.
 
 ### Fixed
+
+- Skip Claude Code prompt reminders for `ci-monitor-event` notification lines
+  before counting eligible prompts. `qfai init` refreshes the previous official
+  prompt readers while retaining project edits and existing counter fallbacks.
+  Real host injection, scheduled-prompt classification and the reported SYSTEM
+  notice cause remain unverified; see the
+  [host diagnosis](https://github.com/aganesy/QFAI/issues/3461).
 
 - The SDD design authoring guide no longer says `npx qfai init` seeds a sample
   `DESIGN.md` at the project root. Init writes none; the sample ships only as a
@@ -128,6 +150,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **Profiling output retains its complete UTF-8 prefix within the shared 32 MiB limit.**
   A chunk that crosses the limit keeps the complete characters that fit before
   owned process termination begins. Output after the limit is discarded. Fixes #3462.
+
+- **Intermittent-fix steps check whether pressure and repeats are applicable.**
+  Executed regression evidence for a verified ordinary cause can make them
+  unnecessary. The steps record their proof and reason without claiming runs
+  they did not perform; races, uncertainty and quarantine still require runs.
 
 ## [2.1.2] - 2026-10-11
 
