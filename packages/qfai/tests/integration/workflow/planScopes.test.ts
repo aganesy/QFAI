@@ -360,3 +360,50 @@ it("Actual mixed implementation and security readings retain their original chec
   expect(field(security.json, "route")).toBe("fix-vulnerability");
   expect(field(security.json, "scopes")).toEqual(broadOnly(security.json));
 });
+
+// QFAI:AC-0001-0229-01
+// QFAI:EX-0001-0229-29
+it("A UI-only consistency repair reaches its actual design authoring step", async () => {
+  const planned = await planFor(extraction({ intent: "surface-contradiction", artifacts: ["ui"] }));
+
+  expect({
+    status: planned.status,
+    ok: field(planned.json, "ok"),
+    route: field(planned.json, "route"),
+  }).toEqual({ status: 0, ok: true, route: "repair-consistency" });
+  const stages = field(planned.json, "stages");
+  const sdd = (Array.isArray(stages) ? stages : []).find((stage) => field(stage, "id") === "sdd");
+  const steps = field(sdd, "steps");
+  expect(
+    (Array.isArray(steps) ? steps : []).map((step) => [
+      field(step, "name"),
+      field(step, "passThrough"),
+    ]),
+  ).toEqual([
+    ["sdd-triage", false],
+    ["sdd-flow", true],
+    ["sdd-story", true],
+    ["sdd-contract", true],
+    ["common-design-md", true],
+    ["sdd-cycle", true],
+  ]);
+  expect(field(planned.json, "scopes")).toEqual([
+    { scope: "narrow", stages: ["diagnose", "sdd"], recommended: true },
+    { scope: "medium", stages: ["diagnose", "sdd", "note", "verify"], recommended: false },
+    {
+      scope: "broad",
+      stages: ["diagnose", "sdd", "implement", "note", "verify"],
+      recommended: false,
+    },
+  ]);
+});
+
+// QFAI:AC-0001-0229-07
+// QFAI:EX-0001-0229-30
+it("An SDD route without a design authoring step still refuses UI-only work", async () => {
+  const planned = await planFor(extraction({ intent: "behaviour-change", artifacts: ["ui"] }));
+
+  expect(planned.status).toBe(2);
+  expect(field(planned.json, "ok")).toBe(false);
+  expect(reasonsOf(planned.json)).toEqual([{ reason: "artifact-unserved", subject: "ui" }]);
+});
