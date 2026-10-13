@@ -668,7 +668,10 @@ describe(
         if (actual !== digest) contentDrift.push(`${file}: ${actual}`);
       }
       expect
-        .soft(contentDrift, "a reviewed init file whose content is not the reviewed content")
+        .soft(
+          contentDrift,
+          "a reviewed init file whose content is not the reviewed content; for AGENTS.md and .github/copilot-instructions.md, run `pnpm build` and `pnpm pins:entry` after the independent review",
+        )
         .toEqual([]);
     });
 

@@ -1369,7 +1369,7 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   "QFAI-STORY-005":
     "Define the missing business rule or contract, correct the cited reference, or renumber the rule after the contract that declares it.",
   "QFAI-STORY-006":
-    "Add a real test in the required layer with a QFAI annotation for the named BF, AC, or EX.",
+    "Add a real test in the required layer with a QFAI annotation for the named BF, AC, or EX; an EX annotation goes on a comment line above the test declaration it covers.",
   "QFAI-STORY-007":
     "Move the named test annotation to its required E2E, integration, API, or unit layer.",
   "QFAI-STORY-008":
