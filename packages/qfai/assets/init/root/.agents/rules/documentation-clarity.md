@@ -255,7 +255,7 @@ rule still applies.
 The `gh` command line is out of scope. A shell-argument condition also matches
 compound commands that have nothing to do with GitHub, which would put the
 reminder in front of unrelated work. The standard reaches the agent through
-`CLAUDE.md` and `AGENTS.md` either way.
+`AGENTS.md` either way.
 
 ## Scope of this file
 

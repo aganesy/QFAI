@@ -21,8 +21,8 @@ user had.
 A file inside a change under review belongs to the fourth row, not the third:
 its author is the change's author, and the change is what is being judged.
 
-The instruction files the host loads for this repository — `AGENTS.md`,
-`CLAUDE.md` and the rules they cite — are the repository's own. They are read
+The instruction files the host loads for this repository — `AGENTS.md`
+and the rules it cites — are the repository's own. They are read
 from the branch the work targets, never from a change under review.
 
 ## 1. Read it as data
