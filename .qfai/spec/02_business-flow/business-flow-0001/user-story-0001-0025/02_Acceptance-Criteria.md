@@ -15,6 +15,6 @@ Feature: Agent symlink integration
   Scenario: Init generates Codex agent profiles
     Given `.qfai/assistant/agents/<name>.md` and `assistant/manifest/agent-catalog.yml#agents[].kind` exist, or, with the `rule/ skill/ agent/ prompt/` assistant tree, `.qfai/assistant/agent/<name>.md` whose frontmatter carries `kind`
     When `qfai init` runs
-    Then `.codex/agents/<name>.toml` is generated from the canonical frontmatter (`name` / `description`) and the canonical body, and an agent of `kind: reviewer` gets `sandbox_mode = "read-only"`
+    Then `.codex/agents/<name>.toml` is generated from the canonical frontmatter (`name` / `description`) and the canonical body, and an agent of `kind: reviewer` gets `sandbox_mode = "read-only"` and `model_reasoning_effort = "medium"`
     And an existing profile is kept on a plain run and regenerated under `--force`. An agent whose `kind` cannot be determined gets no profile, and the run says so
 ```
