@@ -1,11 +1,12 @@
 /** Agent-loaded instructions retain project text and gain template-owned rules and review guidance. */
 
 /**
- * Files an agent reads on its own: Codex loads `AGENTS.md`, Claude Code loads
- * `CLAUDE.md`. Copilot's instruction file is generated whole by
- * `syncIntegrationWrappers`, so it needs no managed section.
+ * Files an agent reads on its own: Codex and Claude Code load `AGENTS.md`
+ * (Claude Code reads it when the project has no `CLAUDE.md`). Copilot's
+ * instruction file is generated whole by `syncIntegrationWrappers`, so it needs no
+ * managed section.
  */
-export const AGENT_ENTRY_POINT_FILES = ["AGENTS.md", "CLAUDE.md"] as const;
+export const AGENT_ENTRY_POINT_FILES = ["AGENTS.md"] as const;
 
 export type AgentEntryPointFile = (typeof AGENT_ENTRY_POINT_FILES)[number];
 
