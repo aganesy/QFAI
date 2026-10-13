@@ -287,10 +287,12 @@ describe("a structurally broken target is a finding, not a crash", () => {
 
       const issues = await validateIntegrationSurface(root);
 
-      expect(issues).toHaveLength(1);
-      const [finding] = issues;
+      // The directories this project never got are a separate error; the three
+      // wrappers are one warning, not three.
+      const warnings = issues.filter((entry) => entry.severity === "warning");
+      expect(warnings).toHaveLength(1);
+      const [finding] = warnings;
       expect(finding?.code).toBe("QFAI-LINK-001");
-      expect(finding?.severity).toBe("warning");
       // One line each, and short: the standing state must not bury the counts.
       expect(finding?.message).not.toContain("\n");
       expect(finding?.message.length).toBeLessThan(500);
