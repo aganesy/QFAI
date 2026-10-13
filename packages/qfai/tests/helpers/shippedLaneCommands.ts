@@ -1153,7 +1153,7 @@ export const ALLOWED_ACTIONS: ReadonlySet<string> = new Set([
  */
 export const ALLOWED_ACTION_COMMITS: ReadonlyMap<string, string> = new Map([
   ["actions/checkout", "3d3c42e5aac5ba805825da76410c181273ba90b1"],
-  ["actions/setup-node", "820762786026740c76f36085b0efc47a31fe5020"],
+  ["actions/setup-node", "949feb2413d6458794dcd2491c4babbbce0c15c1"],
   ["pnpm/action-setup", "fc06bc1257f339d1d5d8b3a19a8cae5388b55320"],
 ]);
 
@@ -1240,9 +1240,9 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
-  ["qfai-docs.yml", "44ec24d550811e8a74a366c8a855669f8c2779d52dd1745358e758d3d50ecdc7"],
-  ["qfai-tests.yml", "d0eac08104ee1fab05c97d544459cedf4fad3a4dd2a3701904a16fc4ced6da15"],
-  ["qfai-validate.yml", "d544c784615c28d884152ba68856d742ee3368b32a639a874cb3ee80bd104f7f"],
+  ["qfai-docs.yml", "b462b2489e102a1992beec58c45195eeb2371e5ded3d10e28964e7a3af8ff082"],
+  ["qfai-tests.yml", "c2616e56b9812f30b3c1af630f0936835349815fb7a2a1f8c297a6566b4c6bd2"],
+  ["qfai-validate.yml", "a1407c67a98f053fd544b5a78b17b4c63c64be349c4483b55d647ef03c22145c"],
 ]);
 
 /** The bytes of a shipped file. Nothing is normalized, and the parameter is a Buffer for that reason. */
@@ -2044,7 +2044,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-docs.yml#checks",
-    '{"name":"Set up Node via actions/setup-node 7.0.0","uses":"actions/setup-node@820762786026740c76f36085b0efc47a31fe5020","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
+    '{"name":"Set up Node via actions/setup-node 7.1.0","uses":"actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
   ],
   [
     "qfai-docs.yml#checks",
@@ -2104,7 +2104,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-tests.yml#tests",
-    '{"name":"Set up Node via actions/setup-node 7.0.0","uses":"actions/setup-node@820762786026740c76f36085b0efc47a31fe5020","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
+    '{"name":"Set up Node via actions/setup-node 7.1.0","uses":"actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
   ],
   [
     "qfai-tests.yml#tests",
@@ -2140,7 +2140,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-validate.yml#validate",
-    '{"name":"Set up Node via actions/setup-node 7.0.0","uses":"actions/setup-node@820762786026740c76f36085b0efc47a31fe5020","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
+    '{"name":"Set up Node via actions/setup-node 7.1.0","uses":"actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
   ],
   [
     "qfai-validate.yml#validate",
