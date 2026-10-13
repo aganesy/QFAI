@@ -435,7 +435,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         ROOT,
         "packages/qfai/assets/init/root/.agents/rules/shipped-ci-parity.md",
       );
-      await expect(lstat(shipped)).rejects.toThrow();
+      await expect(lstat(shipped)).rejects.toMatchObject({ code: "ENOENT" });
     });
   });
 
@@ -467,7 +467,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         ROOT,
         "packages/qfai/assets/init/root/.agents/rules/repository-language.md",
       );
-      await expect(lstat(shipped)).rejects.toThrow();
+      await expect(lstat(shipped)).rejects.toMatchObject({ code: "ENOENT" });
     });
   });
 
