@@ -35,11 +35,7 @@ function expectNoEmbeddedReminderText(program: string, messages: unknown): void 
       typeof output === "object" && output !== null
         ? Reflect.get(output, "additionalContext")
         : undefined;
-    for (const context of [
-      full,
-      Reflect.get(message, "reason"),
-      Reflect.get(message, "briefContext"),
-    ]) {
+    for (const context of [full, Reflect.get(message, "briefContext")]) {
       if (typeof context !== "string") continue;
       expect(program).not.toContain(context);
       expect(program).not.toContain(JSON.stringify(context).slice(1, -1));

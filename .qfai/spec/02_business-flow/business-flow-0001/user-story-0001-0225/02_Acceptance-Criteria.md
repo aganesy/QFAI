@@ -34,8 +34,26 @@ Feature: Review a change twice: the specification before the code, and the code 
     And missing or refused execution outside that delegation, or an ordinary FAIL or UNRUN including a base failure, still stops the commit; locally runnable gates are not delegated merely to avoid running them
 
   # AC-0001-0225-04
-  Scenario: A UI-bearing flow adds the surface reviewer
-    Given a change route on a flow a UI contract with screens serves
-    When either review runs
+  Scenario: A changed screen adds the surface reviewer
+    Given a change route whose change counts as a screen change: an edit to a UI contract's screen, or to the code, tests or styles that render one, or to a path `uiux.surfacePaths` declares, or a change whose effect on a screen is uncertain
+    When the first review that reads that screen change runs
     Then `product-surface-reviewer` joins it
+    And a review whose target changes no screen runs without it, even on a flow a UI contract with screens serves
+
+  # AC-0001-0225-05
+  Scenario: Each review takes one reviewer for its kind, and a specialist only for its change
+    Given a stage its plan marks for the specification review or the code review
+    When that review runs
+    Then one reviewer reviews for its kind: `requirements-reviewer` for the specification review, `implementation-reviewer` for the code review
+    And `architecture-reviewer` joins only when the target holds a contract change that no earlier review of the route read
+    And no reviewer joins but these and `product-surface-reviewer` for a screen change
+    And each reviewer reviews once in each review it joins, and none is rerun after a finding is fixed
+
+  # AC-0001-0225-06
+  Scenario: A review whose target only resolves conflicts between reviewed sides gets no reviewer
+    Given a review its route names whose target's only edits resolve the conflicts of a merge or a branch update between sides that were each already reviewed
+    When the review is reached
+    Then no reviewer is dispatched
+    And the review is still held, and the stage report names the merge and says no reviewer ran because the edits only resolve conflicts
+    And a resolution that adds content neither side had is not conflict-only, and its reviews dispatch their reviewers
 ```
