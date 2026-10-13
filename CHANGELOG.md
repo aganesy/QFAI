@@ -54,6 +54,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **A test that fails every run leaves the quarantine route.** `implement-quarantine`
+  quarantines nothing for a test whose recorded runs all fail. It records the runs and reports
+  the outcome `failing-consistently` with an extraction of the report, and the decision rules
+  route that extraction (for example a wrong test goes to `repair-test`) while its
+  diagnosis and repair steps run. Fixes #3493.
+
 - **The shipped workflows pin `actions/setup-node` 7.1.0.** The three
   templates written by `qfai init` use the same commit as this repository.
 
