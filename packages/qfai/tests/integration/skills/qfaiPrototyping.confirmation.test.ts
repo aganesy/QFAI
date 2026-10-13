@@ -275,7 +275,7 @@ describe.each(TREES)("%s", (tree) => {
     expect(preflight).toContain(
       "Doctor sends one `GET` to exactly the URL it is given, without following a redirect, and waits 3 seconds. A status from 200 to 399 passes;",
     );
-    expect(preflight).toContain("answers 404 on `/`");
+    expect(preflight).toContain("can answer 404 on `/`, so pass a URL that answers 200");
   });
 
   it("serves the iteration it reviews and checks each payload before writing it", async () => {
