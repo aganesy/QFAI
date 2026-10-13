@@ -268,9 +268,9 @@ neither the question rules nor what an answer means.
 Every turn the user types, that is. A turn the host starts on its own — a
 background task's notification, a scheduled wake-up, a sub-agent's report — is
 not one where a question to the user forms. The Claude Code hook reads the prompt
-from its input and stays silent when a line of it opens with a `<task-notification>`
-or `<wake>` wrapper, or a `[SYSTEM NOTIFICATION` header. Any other prompt, and input
-it cannot read, gets the reminder. The hook that sends a request to `qfai-run` skips
+from its input and stays silent when a line of it opens with a `<task-notification>`,
+`<wake>` or `<ci-monitor-event>` wrapper, or a `[SYSTEM NOTIFICATION` header. Any
+other prompt, and input it cannot read, gets the reminder. The hook that sends a request to `qfai-run` skips
 the same turns. These exclusions run before counting, so a skipped notification
 does not consume the first full display. The Codex hook prints on every turn
 without these notification exclusions.

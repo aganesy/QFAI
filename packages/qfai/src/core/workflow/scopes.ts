@@ -44,7 +44,13 @@ function hasPrivateIntake(stages: readonly PlanStage[]): boolean {
 }
 
 function writesRequested(stage: PlanStage, artifacts: readonly Artifact[]): boolean {
-  return artifacts.some((artifact) => WRITES[stage.kind]?.includes(artifact));
+  return artifacts.some(
+    (artifact) =>
+      WRITES[stage.kind]?.includes(artifact) ||
+      (artifact === "ui" &&
+        stage.kind === "sdd" &&
+        stage.steps.some((step) => step.name === "common-design-md")),
+  );
 }
 
 // The index of the last stage of `stages` that `holds`, or -1.

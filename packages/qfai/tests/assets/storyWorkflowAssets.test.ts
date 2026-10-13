@@ -59,7 +59,7 @@ describe("story-tree acceptance and implementation assets", () => {
     expect(ui).toContain("UI contracts");
     expect(ui).toContain("rendered surface");
     expect(ui).toContain("product-surface-reviewer");
-    expect(ui).toContain("If the implementation or capture changes after the verdict");
+    expect(ui).toContain("refreshes the capture it changes and is not reviewed again");
     expect(gatekeeper).toContain("For UI work, inspect the rendered surface");
   });
 
