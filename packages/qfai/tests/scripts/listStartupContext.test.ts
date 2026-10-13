@@ -213,6 +213,37 @@ describe("list-startup-context", () => {
     expect(listed.map((item) => item.path)).toEqual(["AGENTS.md", ".claude/rules/team/linked.md"]);
   });
 
+  it("ends on a rules directory linked back to an ancestor or to itself", async (ctx) => {
+    const root = await newTree({ ".claude/rules/one.md": "one\n" });
+    const rules = path.join(root, ".claude", "rules");
+    try {
+      await symlink(rules, path.join(rules, "up"), "junction");
+    } catch {
+      ctx.skip();
+    }
+    try {
+      await symlink(path.join(rules, "self"), path.join(rules, "self"), "junction");
+    } catch {
+      // Not every file system lets a link name itself; the ancestor link is the case.
+    }
+    const { listed } = report(root);
+    expect(listed.map((item) => item.path)).toEqual([".claude/rules/one.md"]);
+  });
+
+  it("lists a path-scoped rule reached through two links once", async (ctx) => {
+    const root = await newTree({ "shared/s.md": "---\npaths:\n  - 'src/**'\n---\nscoped\n" });
+    await mkdir(path.join(root, ".claude", "rules"), { recursive: true });
+    try {
+      await symlink(path.join(root, "shared", "s.md"), path.join(root, ".claude", "rules", "a.md"));
+      await symlink(path.join(root, "shared", "s.md"), path.join(root, ".claude", "rules", "b.md"));
+    } catch {
+      ctx.skip();
+    }
+    const { listed, scoped } = report(root);
+    expect(listed).toEqual([]);
+    expect(scoped).toHaveLength(1);
+  });
+
   it("counts an empty file as no lines", async () => {
     const root = await newTree({ "CLAUDE.md": "" });
     expect(report(root).listed).toEqual([{ path: "CLAUDE.md", how: "entry", lines: 0, bytes: 0 }]);

@@ -34,6 +34,10 @@
  * flattened link, so its counts are the target's; a host reading that checkout
  * loads only the stored line, so the total is then larger than what is loaded.
  *
+ * The walk of `.claude/rules/` follows a link to a directory wherever it points,
+ * on or off the checkout, and visits each real directory once, so a link back to
+ * an ancestor ends; a link to a large tree lists every Markdown file in it.
+ *
  * Not listed: the user's own files in the home directory, managed policy files,
  * parent directories of the checkout, auto memory, skill descriptions, tool and
  * MCP definitions, text that a hook adds to the prompt (for example a
@@ -194,6 +198,7 @@ function collect(root) {
   const scoped = [];
   const unresolved = [];
   const seen = new Set();
+  const scopedSeen = new Set();
 
   /** What the host reads for `file`: the target of a link, else the file itself. */
   const read = (file) => {
@@ -248,6 +253,10 @@ function collect(root) {
     if (content === undefined) continue;
     const text = content.bytes.toString("utf-8");
     if (isPathScoped(text)) {
+      // One file reached through two links is one rule.
+      const identity = content.link === undefined ? realOrSelf(rule) : content.link.target;
+      if (scopedSeen.has(identity)) continue;
+      scopedSeen.add(identity);
       scoped.push({
         path: toPosix(path.relative(root, rule)),
         lines: lineCount(text),
