@@ -32,7 +32,11 @@ be checked against something more than one lucky run.
 This step always checks the evidence on entry. Pressure is unnecessary only
 when a prior executed Red reproduces the same failure signature and a verified
 ordinary cause explains it without clock, operation order, parallelism, load,
-timing or race dependence. A fixed
+timing or race dependence. A verified ordinary cause is one demonstrated with
+fixed inputs and a directly constructed failing state: the Red fails on every
+run, and the test sets up that state itself instead of waiting for it. The
+original report of an intermittent failure, a single observed failure or a
+Red that fails only sometimes is not that proof. A fixed
 seed or controlled schedule that exposes a race is not an ordinary cause.
 Uncertainty requires the real harness below. Missing or unexecuted Red,
 another signature or an unknown cause cannot justify omitting pressure.

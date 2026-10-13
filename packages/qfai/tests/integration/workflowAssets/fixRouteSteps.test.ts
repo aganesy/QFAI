@@ -263,6 +263,15 @@ describe("the evidence gates on a fix-intermittent route", () => {
     expect(qualifyingProof, "a qualifying harness check does not require Green").not.toMatch(
       /\bGreen\b/,
     );
+    expect(
+      eligibility,
+      "an ordinary cause is shown with fixed inputs and a constructed state",
+    ).toMatch(
+      /verified ordinary cause is one demonstrated with fixed inputs and a directly constructed failing state/i,
+    );
+    expect(eligibility, "the intermittent report itself is not proof of the cause").toMatch(
+      /original report of an intermittent failure.*single observed failure.*fails only sometimes.*not that proof/i,
+    );
     const independence = /without ([^.]+) dependence/i.exec(qualifyingProof)?.[1] ?? "";
     for (const dependency of ["clock", "order", "parallelism", "load", "timing", "race"]) {
       expect(independence).toMatch(new RegExp(`\\b${dependency}\\b`, "i"));
@@ -319,6 +328,16 @@ describe("the evidence gates on a fix-intermittent route", () => {
     expect(qualifyingProof).toMatch(
       /(?:observed|executed).*Green.*(?:exact.*current|current.*exact).*revision/i,
     );
+    expect(eligibility, "the Green must be the same test and command as the Red").toMatch(
+      /matching Green is the same test, run with the same command as that Red, passing at the current exact revision/i,
+    );
+    expect(eligibility).toMatch(/different test, a wider suite or another command does not match/i);
+    expect(
+      eligibility,
+      "an ordinary cause is shown with fixed inputs and a constructed state",
+    ).toMatch(
+      /verified ordinary cause is one the diagnosis demonstrates with fixed inputs and a directly constructed failing state/i,
+    );
     const independence = /cause must have no ([^.]+)/i.exec(eligibility)?.[1] ?? "";
     for (const dependency of [
       "clock",
@@ -336,6 +355,7 @@ describe("the evidence gates on a fix-intermittent route", () => {
     const missingProofs = /([^.]*)require the real runs/i.exec(refusal)?.[1] ?? "";
     expect(missingProofs).toMatch(/missing.*(?:unrun|unexecuted).*Red/i);
     expect(missingProofs).toMatch(/(?:another|wrong|different|mismatch).*signature/i);
+    expect(missingProofs).toMatch(/Green that is not the same test and command/i);
     expect(missingProofs).toMatch(/(?:stale|older).*Green/i);
     expect(missingProofs).toMatch(/pending.*CI/i);
     expect(missingProofs).toMatch(/(?:unknown|uncertain).*cause/i);

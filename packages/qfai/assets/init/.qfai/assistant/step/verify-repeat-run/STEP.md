@@ -22,8 +22,8 @@ run.
 - The number of runs the quarantine record or the work order names, where one
   does.
 - The Test command, through `common-gate-run`.
-- The diagnosis and its executed same-signature Red, and observed Green
-  evidence for the current exact revision.
+- The diagnosis and its executed same-signature Red, and the matching Green (same test and command)
+  for the current exact revision.
 
 ## Writes
 
@@ -39,15 +39,22 @@ run.
 
 This step always checks the diagnosis and test evidence. Only a
 `fix-intermittent` diagnosis of a verified ordinary cause, with a prior
-executed Red of the same failure signature and observed Green for the current
-exact revision, can make repetitions unnecessary. The cause must have no
-clock, operation order, parallelism, load, timing or race dependence or
-uncertainty. A fixed seed or deterministic schedule exposing a race does not
-qualify. Quarantine never uses this case: lifting one always requires the
-actual consecutive runs below.
+executed Red of the same failure signature and a matching executed Green for
+the current exact revision, can make repetitions unnecessary. A matching
+Green is the same test, run with the same command as that Red, passing at the
+current exact revision; a different test, a wider suite or another command
+does not match. A verified ordinary cause is one the diagnosis demonstrates
+with fixed inputs and a directly constructed failing state: the test fails on
+every run before the fix, and that state is set up by the test, not waited
+for or reached by chance. The cause must have no clock, operation order,
+parallelism, load, timing or race dependence or uncertainty. A fixed seed or
+deterministic schedule exposing a race does not qualify. Quarantine never
+uses this case: lifting one always requires the actual consecutive runs
+below.
 
-Missing or unexecuted Red, another signature, stale Green, pending CI, an
-unknown cause or unresolved timing or load uncertainty require the real runs.
+Missing or unexecuted Red, another signature, a Green that is not the same
+test and command, stale Green, pending CI, an unknown cause or unresolved
+timing or load uncertainty require the real runs.
 Unavailable tools, waits or limited time do not make repetitions unnecessary.
 When the evidence qualifies, cite the inspected diagnosis, prior Red and
 current Green, including their commands, results and revisions, in the stage
