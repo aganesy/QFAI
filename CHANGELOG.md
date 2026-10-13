@@ -38,6 +38,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Agents no longer start a griller sub-agent for routine work. The grilling rule
+  and its reminders hold a griller session only for a design decision the
+  repository cannot settle; an operation, a routine step, a settled decision or
+  a fix the story tree already states starts none. Fixes #3577.
+
 - **Discussion completion references point to the existing obligations.**
   The completion matrix names the All Packs and UI-bearing items it requires.
 

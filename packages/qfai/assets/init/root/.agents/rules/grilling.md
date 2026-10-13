@@ -39,14 +39,22 @@ and precision is no help whatever in making it.
 
 ## Two kinds of session
 
-| Kind      | Held by                                                       | Who answers                           | What reaches the user   |
-| --------- | ------------------------------------------------------------- | ------------------------------------- | ----------------------- |
-| User      | A stage whose work is the interview, or the user invoking one | The user                              | Every decision          |
-| Delegated | Every other stage                                             | The authors, interviewed by a griller | Critical decisions only |
+| Kind      | Held by                                                                                             | Who answers                             | What reaches the user   |
+| --------- | --------------------------------------------------------------------------------------------------- | --------------------------------------- | ----------------------- |
+| User      | A stage whose work is the interview, or the user invoking one                                       | The user                                | Every decision          |
+| Delegated | Any other stage, when it meets a design decision the request needs and the repository cannot settle | The authors, interviewed by a griller   | Critical decisions only |
+| None      | A step with no such decision                                                                        | Nobody; the agent reads what is written | Critical decisions only |
 
-**Delegated is the default.** A stage holds a user session only where its own
-definition says so. The discussion stage is that stage: there the interview is
-the work.
+**Delegated is the default where a session is held.** A stage holds a user
+session only where its own definition says so. The discussion stage is that
+stage: there the interview is the work.
+
+**Most steps hold no session.** An operation such as a merge or a push, a
+routine step, applying a decision already settled, and a fix whose expected
+behaviour the story tree already states have no open design decision. Start no
+griller for them. Decide from what is written, write no session record, and
+list nothing for the user. A critical decision met on the way still goes to the
+user.
 
 A user asked every design question of a routine stage answers most of them by
 accepting the recommendation. Each round trip costs their time and settles
@@ -437,6 +445,7 @@ uncertainty.
   authority; an uncovered one was asked when permitted or remains open. Every
   adopted decision is in the record and the final report.
 - Nothing entered the tree that the request did not need.
+- No griller started for a step with no open design decision.
 - Later rounds ask what the first round could not have asked.
 - Facts were looked up rather than asked for.
 - Work running in the background did not stall the round — only the questions
