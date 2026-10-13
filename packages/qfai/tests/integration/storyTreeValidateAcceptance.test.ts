@@ -706,6 +706,49 @@ describe("story-tree validation acceptance", () => {
     expect(reported[0]?.message).toContain("is not cited");
   });
 
+  // QFAI:AC-0001-0055-07
+  // QFAI:EX-0001-0055-13
+  it.each([
+    ["a structured contract that does not parse", "api/api-0001-orders.yaml", "key: [unclosed\n"],
+    [
+      "a Markdown contract with no rules table",
+      "cli/cli-0001-check.md",
+      "# CLI-0001: Check\n\n## Business rules\n\nnone yet\n",
+    ],
+  ])(
+    "does not report an example as uncited when %s loaded no rule, and says so",
+    async (_title, relative, text) => {
+      const file = `${contract}/${relative}`;
+      const { root, issues } = await validateTree(
+        changed({
+          [`${contract}/cli/cli-0001-check.md`]: null,
+          [file]: text,
+        }),
+      );
+
+      expect(errorsNaming(issues, "QFAI-STORY-005", "EX-0001-0001-01")).toEqual([]);
+      const notice = only(issues, "QFAI-STORY-005").filter((found) => found.severity === "info");
+      expect(notice).toHaveLength(1);
+      expect(notice[0]?.message).toContain(posix(path.join(root, file)));
+      expect(notice[0]?.message).toContain("not checked");
+      // The failure itself is still reported, as an error.
+      expect(
+        only(issues, "QFAI-STORY-005").filter((found) => found.severity === "error").length,
+      ).toBeGreaterThan(0);
+    },
+  );
+
+  // QFAI:AC-0001-0055-05
+  // QFAI:EX-0001-0055-07
+  it("still reports an uncited example when every contract file loaded its rules", async () => {
+    const { issues } = await validateTree(
+      changed({ [`${contract}/cli/cli-0001-check.md`]: rules(["BR-0001-0001", ""]) }),
+    );
+
+    expect(errorsNaming(issues, "QFAI-STORY-005", "EX-0001-0001-01")).toHaveLength(1);
+    expect(only(issues, "QFAI-STORY-005").filter((found) => found.severity === "info")).toEqual([]);
+  });
+
   // QFAI:AC-0001-0005-02
   // QFAI:EX-0001-0005-03
   it("holds the business-flow layer to its two indexes and a diagram in each flow", async () => {

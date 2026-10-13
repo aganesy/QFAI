@@ -186,6 +186,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- A contract file that raises an error and produces no rule no longer makes
+  `qfai validate` report every example as named by no rule. Before, one API
+  contract with a YAML error printed the parse error plus dozens of
+  `QFAI-STORY-005` errors on unrelated stories. The check for an uncited example
+  is now skipped while such a file exists, and one info finding names the file
+  and says the examples were not checked. The error for the file is reported as
+  before.
 - The shipped `qfai-tests.yml` fails closed on an unreadable `package.json`. A
   manifest that is not valid JSON or not an object, a `scripts` field that is
   not an object, a layer-named script that is not a string, and a malformed
