@@ -33,6 +33,12 @@ export type CopyResult = {
   skipped: string[];
   /** Destinations not written because an entry above them is a link or not a directory. */
   refused: string[];
+  /**
+   * The skipped destinations, among those a copy without `force` found already there, whose
+   * content is not the template's. A later release's template can differ from the one the
+   * project holds, and these are the files only `force` brings up to date.
+   */
+  kept: string[];
 };
 
 export async function copyTemplateTree(
@@ -69,12 +75,15 @@ async function copyFiles(
   const copied: string[] = [];
   const skipped: string[] = [];
   const refused: string[] = [];
+  const kept: string[] = [];
   const conflicts: string[] = [];
 
   const excludePrefixes = (options.exclude ?? [])
     .map((p) => p.replace(/^[\\/]+/, "").replace(/[\\/]+$/, ""))
     .filter((p) => p.length > 0)
-    .map((p) => p + path.sep);
+    // Spelled with the platform separator, as the relative paths are compared: a prefix that
+    // keeps an inner `/` never matches on Windows.
+    .map((p) => p.replace(/[\\/]+/g, path.sep) + path.sep);
 
   const isExcludedRelative = (relative: string): boolean => {
     if (excludePrefixes.length === 0) {
@@ -126,6 +135,7 @@ async function copyFiles(
 
     if (!(await shouldWrite(dest, options.force))) {
       skipped.push(dest);
+      if (!(await holdsSameText(file, dest))) kept.push(dest);
       continue;
     }
     // A forced copy over a file that already holds the template's bytes changes
@@ -172,7 +182,7 @@ async function copyFiles(
     copied.push(dest);
   }
 
-  return { copied, skipped, refused };
+  return { copied, skipped, refused, kept };
 }
 
 /**
@@ -187,6 +197,20 @@ async function holdsSameBytes(source: string, dest: string): Promise<boolean> {
   }
   const [wanted, present] = await Promise.all([readFile(source), readFile(dest)]);
   return wanted.equals(present);
+}
+
+/**
+ * Whether `dest` holds `source`'s text once line endings are read as `\n`: a checkout that
+ * converts them is not an edit. A link, a shared inode or a file that is not regular counts as
+ * different, as it does for a forced copy. Reads each skipped file once per plain run, which is
+ * bounded by the size of the shipped tree.
+ */
+async function holdsSameText(source: string, dest: string): Promise<boolean> {
+  if (await holdsSameBytes(source, dest)) return true;
+  const existing = await lstatOrUndefined(dest);
+  if (existing === undefined || !existing.isFile() || existing.nlink > 1) return false;
+  const [wanted, present] = await Promise.all([readFile(source, "utf-8"), readFile(dest, "utf-8")]);
+  return wanted.replace(/\r\n?/g, "\n") === present.replace(/\r\n?/g, "\n");
 }
 
 /** `lstat`, or `undefined` when nothing is at `target`. Other faults propagate. */

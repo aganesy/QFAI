@@ -6,6 +6,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`qfai init` says when it kept an assistant file that a new file depends on.**
+  A run without `--force` that writes a new file under `.qfai/assistant/` and
+  keeps a file there that differs from this release's copy now prints one line
+  with the two counts, the kept `SKILL.md` and `STEP.md` owners, and the way to
+  refresh them with `--force`. `qfai validate` otherwise reports the new file
+  under an unrelated code. On Windows the first `.qfai` copy now leaves out the
+  assistant layers it is meant to exclude, so the layers are written once.
+  Fixes #3545 and #3677.
+
 - **The `timings:` line of `qfai validate` names the slow validators and says the budget is not a gate.**
   When the UI/UX group runs over its budget, the line now names the two slowest
   validators of the group with their time, and says that the budget is a
