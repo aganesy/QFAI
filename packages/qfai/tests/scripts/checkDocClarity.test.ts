@@ -21,7 +21,7 @@
  * that distinction, which is why both directions are exercised against a real
  * git history rather than a fixture.
  */
-import { spawnSync } from "node:child_process";
+import { spawnSync, type SpawnSyncReturns } from "node:child_process";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -40,9 +40,25 @@ interface RunResult {
   stderr: string;
 }
 
-function runGuard(cwd: string, args: readonly string[] = []): RunResult {
-  const child = spawnSync("node", [SCRIPT, ...args], { cwd, encoding: "utf-8" });
+/**
+ * What a finished guard process reports, or a thrown error naming why it has no verdict.
+ *
+ * A process that never started (`error`) or was ended by a signal comes back with a null
+ * status, which reads as a failure with no cause. Either is thrown with its actual cause
+ * before the usual status, stdout and stderr shape is returned.
+ */
+function guardResultOf(child: SpawnSyncReturns<string>): RunResult {
+  if (child.error !== undefined) {
+    throw new Error(`the guard did not run: ${child.error.message}`, { cause: child.error });
+  }
+  if (child.signal !== null) {
+    throw new Error(`the guard was ended by ${child.signal} before it gave a verdict`);
+  }
   return { status: child.status, stdout: child.stdout ?? "", stderr: child.stderr ?? "" };
+}
+
+function runGuard(cwd: string, args: readonly string[] = []): RunResult {
+  return guardResultOf(spawnSync("node", [SCRIPT, ...args], { cwd, encoding: "utf-8" }));
 }
 
 const tempDirs: string[] = [];
@@ -97,6 +113,40 @@ const CITATION = "an issue number a consuming repository cannot resolve";
  */
 const REVIEW_ID = `codex ${"AG08r"}`;
 const WRAPPED_REVIEW_ID = ["// as raised in the codex", `// ${"r3264500818"} thread`].join("\n");
+
+describe("the guard runner's diagnostics", () => {
+  it("names the launch failure instead of returning a cause-less null status", () => {
+    const missing = path.join(os.tmpdir(), "qfai-clarity-missing-directory");
+
+    expect(() => runGuard(missing)).toThrow(/the guard did not run: .*ENOENT/);
+  });
+
+  it("names the signal that ended the guard", () => {
+    const ended: SpawnSyncReturns<string> = {
+      pid: 0,
+      output: [null, "", ""],
+      stdout: "",
+      stderr: "",
+      status: null,
+      signal: "SIGKILL",
+    };
+
+    expect(() => guardResultOf(ended)).toThrow(/ended by SIGKILL/);
+  });
+
+  it("returns the usual shape for a guard that gave a verdict", () => {
+    const finished: SpawnSyncReturns<string> = {
+      pid: 1,
+      output: [null, "out", "err"],
+      stdout: "out",
+      stderr: "err",
+      status: 1,
+      signal: null,
+    };
+
+    expect(guardResultOf(finished)).toEqual({ status: 1, stdout: "out", stderr: "err" });
+  });
+});
 
 describe("scripts/check-doc-clarity.mjs", () => {
   it("reports an issue number in a source comment", async () => {
