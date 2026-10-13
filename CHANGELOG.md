@@ -6,6 +6,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- Hook reminders no longer send the agent back to the rule file each time they
+  fire. The brief form says what to do, and the full form asks for a rule to be
+  read once per session. Fixes #3576.
+
 - **Explicit discussion delegation supports adopted agent decisions.**
   Recorded user authority permits in-scope agent judgment without fictional
   user confirmation. Missing required inputs and critical decisions without

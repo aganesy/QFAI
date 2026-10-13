@@ -279,6 +279,29 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
     expect(text).toContain(".agents/rules/interface-clarity.md");
   });
 
+  // QFAI:EX-0001-0196-70
+  it("asks for a rule to be read only when the session has not read it", () => {
+    if (typeof catalog !== "object" || catalog === null) throw new Error("no reminder catalog");
+    for (const [key, message] of Object.entries(catalog)) {
+      if (typeof message !== "object" || message === null) continue;
+      const brief: unknown = Reflect.get(message, "briefContext");
+      if (typeof brief === "string") {
+        expect(brief, `${key} brief sends the agent back to the file`).not.toMatch(/\bread\b/i);
+        expect(brief, `${key} brief names no rule or skill`).toMatch(/\.agents\/rules\/|qfai-run/);
+      }
+      const output: unknown = Reflect.get(message, "hookSpecificOutput");
+      const full: unknown =
+        typeof output === "object" && output !== null
+          ? Reflect.get(output, "additionalContext")
+          : undefined;
+      if (typeof full === "string") {
+        expect(full, `${key} asks for a reread`).not.toMatch(
+          /Read the (?:rule|skill)(?! once per session)/,
+        );
+      }
+    }
+  });
+
   // QFAI:EX-0001-0196-53
   // QFAI:EX-0001-0196-56
   it("keeps compact editing pointers in the shared catalog with their required rules", () => {
