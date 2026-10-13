@@ -212,8 +212,19 @@ New-Item -ItemType Directory -Force -Path tmp/qfai-release-smoke
 Set-Location tmp/qfai-release-smoke
 ```
 
+Install the exact version you released, not `qfai` alone. The registry can lag the
+publish job by a minute or two, and until it catches up `npm i -D qfai` installs the
+previous version and the check passes without testing the new one. First confirm the
+registry serves the new version, and repeat the command until it prints `X.Y.Z`:
+
 ```sh
-npm i -D qfai
+npm view qfai@X.Y.Z version --prefer-online
+```
+
+Then run the check:
+
+```sh
+npm i -D qfai@X.Y.Z
 npx qfai init
 # validate generates validate.json
 npx qfai validate
