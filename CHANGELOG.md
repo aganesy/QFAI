@@ -94,6 +94,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   A chunk that crosses the limit keeps the complete characters that fit before
   owned process termination begins. Output after the limit is discarded. Fixes #3462.
 
+- **Intermittent-fix steps check whether pressure and repeats are applicable.**
+  Executed regression evidence for a verified ordinary cause can make them
+  unnecessary. The steps record their proof and reason without claiming runs
+  they did not perform; races, uncertainty and quarantine still require runs.
+
 ## [2.1.2] - 2026-10-11
 
 ### Added
@@ -459,11 +464,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   constitution's Article V. Part of #2951.
 
 ### Fixed
-
-- **Intermittent-fix steps check whether pressure and repeats are applicable.**
-  Executed regression evidence for a verified ordinary cause can make them
-  unnecessary. The steps record their proof and reason without claiming runs
-  they did not perform; races, uncertainty and quarantine still require runs.
 
 - Include authorized temporary-directory cleanup in the workflow candidate purpose.
   Fixes #3455.
