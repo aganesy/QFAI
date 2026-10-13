@@ -82,7 +82,8 @@
           "removal-requested",
           "visual-open",
           "prototype-requested",
-          "owned-temporary-cleanup"
+          "owned-temporary-cleanup",
+          "session-answerable"
         ]
       }
     },
@@ -311,7 +312,8 @@
               "removal-requested",
               "visual-open",
               "prototype-requested",
-              "owned-temporary-cleanup"
+              "owned-temporary-cleanup",
+              "session-answerable"
             ]
           }
         },

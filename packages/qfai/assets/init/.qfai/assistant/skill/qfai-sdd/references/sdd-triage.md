@@ -8,6 +8,7 @@ Triage selects the smallest story-tree change that answers each incoming require
 - Operation choice
 - Decision and question rows
 - Published decision prefix recovery
+- Merge-added identical decision copy recovery
 - Approval and no-question mode
 - Retiring an EX, AC or BR
 - ID allocation
@@ -35,7 +36,9 @@ Inspect the impact cascade: policy → BF → US → AC → EX → enforcing con
 ## Decision and question rows
 
 Use <paths.specsDir>/decisions.md and <paths.specsDir>/open-questions.md, each with exactly ID, Content, Approach, Status. Append a row; later only Status may change, including to `PARTLY SUPERSEDED (by DEC-NNNN)` when a later row narrows a decision without replacing it.
-Do not edit the first three cells or remove the row, except for explicit branch-added decision renumbering under ID allocation below or the bounded published decision prefix recovery below. Inherited rows retain those cells. Use the next highest ID in the table plus one. A retired item still reserves its BF or US ID.
+Do not edit the first three cells or remove the row, except for explicit branch-added decision renumbering under ID allocation below
+or the bounded published decision prefix recovery below, and remove a row only as a proven surplus copy under the merge-added
+identical decision copy recovery below. Inherited rows retain those cells. Use the next highest ID in the table plus one. A retired item still reserves its BF or US ID.
 
 decisions.md records only what the user decided: each change request the user approved or declined,
 and each critical decision the user made. A row is appended once the user has decided what it records.
@@ -98,6 +101,30 @@ automatic repair. Inherited records and open-question rows remain excluded.
 Rollback follows the recorded new-digest check and restores the original form
 failure; it never resets, amends or force pushes.
 
+## Merge-added identical decision copy recovery
+
+When a merge left a second byte-identical copy of an inherited decision and the
+duplicate-ID check rejects it, read
+`.qfai/assistant/rule/drift-protocol.md#merge-added-identical-decision-copy-recovery`.
+That rule defines the lineage, the raw-row proof and the stop conditions.
+Approval of the generic protocol alone authorizes no target; append a separate
+new target-specific change request using `templates/change-request.md`.
+
+The request names the exact path, the ID, the bad merge, both parents, the
+common ancestor, the base and its comparison ancestor, each occurrence's
+location, the raw SHA-256 including the line ending and the retain/remove
+mapping. Fresh evidence, reviewed independently after the request is appended,
+fixes the actual write HEAD, the complete preimage and replacement hashes and
+the current authority. Immediately before writing, recheck refs, path,
+authority, counts, mapping and bytes; stale or changed proof stops the
+recovery. Remove only the mapped surplus copies. Keep one original and every
+other row, reference and byte. Open-question rows, rows that differ in any cell,
+padding or line ending, and surplus the base already holds stay excluded.
+Duplicate, drift and Status rules apply as before. The result is no whole-target
+PASS, and the request stays WIP while any named action or required check is
+unfinished. Rollback restores the recorded preimage only while the file still
+equals the replacement; it never resets, amends or force pushes.
+
 ## Approval and no-question mode
 
 Use the shared user-question protocol for CREATE, DELETE, SPLIT, MERGE, SUPERSEDE, and UPDATE:REMOVE. Present the target and rationale. Do not self-approve. A request from the user in the session that names the operation and its effect is the approval, and no second question is asked.
@@ -121,7 +148,7 @@ A story-tree or contract file changes only on the user's approval:
    records who approved it, when, and the label of the option chosen.
 3. Move the row to DONE once every change it names is written.
 
-A row present before the stage started keeps its ID, Content and Approach, except for explicit branch-added decision renumbering under ID allocation below or published decision prefix recovery above. Inherited rows keep those cells without exception.
+A row present before the stage started keeps its ID, Content and Approach, except for explicit branch-added decision renumbering under ID allocation below or published decision prefix recovery above. Inherited rows keep those cells without exception; the merge-added identical decision copy recovery above removes only surplus copies and keeps the original.
 Only a row this stage appended changes its Status.
 
 ## Retiring an EX, AC or BR
