@@ -1302,9 +1302,9 @@ function flagsBeforeTerminator(segment, from) {
   return end === -1 ? rest : rest.slice(0, end);
 }
 
-/** A value with the quotes the shell would remove taken off. */
+/** A value with the quotes and backslashes the shell would remove taken off. */
 function unquoted(value) {
-  return value.replace(/^["']|["']$/g, "");
+  return value.replace(/["'\\]/g, "");
 }
 
 /**
@@ -1428,21 +1428,26 @@ function checkGlobalInstallPins(root, jobs) {
           const only = ignores[0];
           // Quotes come off the value as they do for `--registry`: the shell strips them before
           // npm reads it, so `--ignore-scripts="false"` is a false.
-          const ignoreValue = only?.value === undefined ? undefined : unquoted(only.value);
+          // Stripping every quote and backslash gives the word the shell hands to npm for the
+          // spellings that matter here: `f''alse`, `"fa""lse"` and `fal\se` are all `false`.
+          const shellValue = only?.value === undefined ? undefined : unquoted(only.value);
           if (only?.abbreviated === true) {
             missing.push("--ignore-scripts spelled in full");
-          } else if (only?.attached !== undefined && /[$`]/.test(only.attached)) {
+          } else if (only?.value !== undefined && /[$`]/.test(only.value)) {
             // The shell or the workflow expression decides this value after the text is read, and
-            // a textual check cannot see what it becomes: `--ignore-scripts=$X` may be false. A
-            // spaced value is not read this way, since `--ignore-scripts $PACKAGE` is as likely a
-            // package as a value. A variable that carries a whole flag is outside what this sees.
-            missing.push(
-              `a literal --ignore-scripts value (found ${JSON.stringify(only.attached)})`,
-            );
+            // a textual check cannot see what it becomes: `--ignore-scripts=$X` and
+            // `--ignore-scripts $X` may both be false. A variable that carries a whole flag is
+            // outside what this sees.
+            missing.push(`a literal --ignore-scripts value (found ${JSON.stringify(only.value)})`);
+          } else if (only?.attached !== undefined && !/^(?:true|1)$/.test(shellValue ?? "")) {
+            // An allowlist: after `=` the value is the flag's answer, and the only literals worth
+            // accepting are the ones that mean true. A denylist of false spellings misses every
+            // one the shell can assemble.
+            missing.push(`--ignore-scripts set to true (found ${JSON.stringify(only.attached)})`);
           } else if (
             only === undefined ||
             only.negated ||
-            (ignoreValue !== undefined && /^(?:false|0|no)$/i.test(ignoreValue))
+            (shellValue !== undefined && /^(?:false|0|no)$/i.test(shellValue))
           ) {
             missing.push("--ignore-scripts");
           }

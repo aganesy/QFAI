@@ -762,6 +762,41 @@ describe("a global install names where the package comes from", () => {
       /literal --ignore-scripts value/,
     ],
     [
+      "a shell variable as a spaced --ignore-scripts value",
+      `npm install --global --ignore-scripts $IGNORE --registry https://registry.npmjs.org/ corepack@0.35.0`,
+      /literal --ignore-scripts value/,
+    ],
+    [
+      "an expression as a spaced --ignore-scripts value",
+      "npm install --global --ignore-scripts ${{ env.IGNORE }} --registry https://registry.npmjs.org/ corepack@0.35.0",
+      /literal --ignore-scripts value/,
+    ],
+    [
+      "a false the shell assembles from adjacent empty quotes",
+      `npm install --global --ignore-scripts=f''alse --registry https://registry.npmjs.org/ corepack@0.35.0`,
+      /--ignore-scripts set to true/,
+    ],
+    [
+      "a false the shell assembles from adjacent quoted halves",
+      `npm install --global --ignore-scripts="fa""lse" --registry https://registry.npmjs.org/ corepack@0.35.0`,
+      /--ignore-scripts set to true/,
+    ],
+    [
+      "a false the shell assembles from a backslash",
+      "npm install --global --ignore-scripts=fal\\se --registry https://registry.npmjs.org/ corepack@0.35.0",
+      /--ignore-scripts set to true/,
+    ],
+    [
+      "a spaced false the shell assembles from empty quotes",
+      `npm install --global --ignore-scripts f''alse --registry https://registry.npmjs.org/ corepack@0.35.0`,
+      /without --ignore-scripts/,
+    ],
+    [
+      "a value that is neither true nor 1",
+      `npm install --global --ignore-scripts=yes --registry https://registry.npmjs.org/ corepack@0.35.0`,
+      /--ignore-scripts set to true/,
+    ],
+    [
       "a second install on the same line that carries no flags",
       `npm install --global ${PINNED} corepack@0.35.0 && npm install --global pnpm@10.0.0`,
       /without --registry and --ignore-scripts|without --ignore-scripts and --registry/,
