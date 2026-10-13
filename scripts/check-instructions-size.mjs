@@ -36,7 +36,6 @@ const ENTRY_FILES = [
   "CLAUDE.md",
   ".github/copilot-instructions.md",
   "packages/qfai/assets/init/root/AGENTS.md",
-  "packages/qfai/assets/init/root/CLAUDE.md",
 ];
 
 const PINS_FILE = path.resolve("scripts", "entry-file-size-pins.json");
