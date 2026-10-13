@@ -72,8 +72,8 @@ describe("the timings line of a UI/UX group over its budget", () => {
       ),
     ).toEqual([
       { name: "agent definition", ms: 300 },
-      { name: "design audit", ms: 40 },
       { name: "html mock", ms: 100 },
+      { name: "design audit", ms: 40 },
     ]);
   });
 
