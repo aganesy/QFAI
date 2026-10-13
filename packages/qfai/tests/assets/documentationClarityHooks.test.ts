@@ -280,7 +280,7 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
   });
 
   // QFAI:EX-0001-0196-70
-  it("asks for a rule to be read only when the session has not read it", () => {
+  it("asks for a rule to be read once per session, and never from a brief", () => {
     if (typeof catalog !== "object" || catalog === null) throw new Error("no reminder catalog");
     for (const [key, message] of Object.entries(catalog)) {
       if (typeof message !== "object" || message === null) continue;
@@ -295,9 +295,12 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
           ? Reflect.get(output, "additionalContext")
           : undefined;
       if (typeof full === "string") {
-        expect(full, `${key} asks for a reread`).not.toMatch(
-          /Read the (?:rule|skill)(?! once per session)/,
-        );
+        // A full form that asks for its rule or skill to be read asks for it once per session.
+        if (/\bread the (?:rule|skill)\b/i.test(full)) {
+          expect(full, `${key} asks for a reread`).toMatch(
+            /\bRead the (?:rule|skill) once per session\b/,
+          );
+        }
       }
     }
   });

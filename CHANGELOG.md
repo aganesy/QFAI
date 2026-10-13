@@ -6,10 +6,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
-- Hook reminders no longer send the agent back to the rule file each time they
-  fire. The brief form says what to do, and the full form asks for a rule to be
-  read once per session. Fixes #3576.
-
 - **Explicit discussion delegation supports adopted agent decisions.**
   Recorded user authority permits in-scope agent judgment without fictional
   user confirmation. Missing required inputs and critical decisions without
@@ -31,6 +27,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reference. An order that names artifacts still applies its settled change.
   Fixes #3574.
 
+- The short extractions in `qfai-run` now state every field `plan` needs, and
+  an operation only a person can run or a deletion goes through the full
+  extraction reference again, so it keeps its hand-off or bounded cleanup.
+
 - Add a workflow route for writing authorized operational procedures.
   It keeps wording-only edits separate, preserves policy owners and existing
   verification, and grants no authority to run the documented actions.
@@ -42,6 +42,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and its reminders hold a griller session only for a design decision the
   repository cannot settle; an operation, a routine step, a settled decision or
   a fix the story tree already states starts none. Fixes #3577.
+
+- Hook reminders no longer send the agent back to the rule file each time they
+  fire. The brief form says what to do, and the full form asks for a rule to be
+  read once per session. Fixes #3576.
 
 - **Discussion completion references point to the existing obligations.**
   The completion matrix names the All Packs and UI-bearing items it requires.
