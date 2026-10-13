@@ -188,3 +188,29 @@ not read from a stale one.
 The comparison is between the failing tests or findings, not the exit code.
 The result stays `FAIL`; a baseline of `same` explains it and never turns it
 into a pass. The run did not cause it, so it is reported and not repaired.
+
+### A suite whose result depends on timing or load
+
+A browser suite or another timing-dependent suite can fail differently from run
+to run, so one base run made under other conditions is not a fair comparison.
+
+- Run the gate on the base commit under the conditions of the run it is
+  compared with, and record the parallelism and the load of both runs in the
+  stage report. A comparison whose conditions are not recorded is not made.
+- Count a chain of failures once. A failure is folded into a chain only when
+  it follows an earlier failure of the same file and reads as a consequence of
+  it, such as a closed browser or a timeout. Match a failure with the base by
+  test identity, and a folded chain by its file.
+- Run alone the files that hold a failure the base run did not show. A failure
+  that passes alone but fails in the suite on the changed branch, and not on the
+  base under the same conditions, is reported as a possible order or
+  shared-state effect of the change, with a suspected cause, as
+  `.qfai/assistant/rule/references/gate-failure-autorepair.md#nondeterministic-gates`
+  says. It is left out of the comparison only after a full-suite rerun of the
+  changed branch under the same conditions that does not show it. Record every
+  run in order.
+- The baseline is still `same`, `different` or `unrun`, and the result is still
+  `FAIL`. A failure left out is not in the base set, so the `reason` of the gate
+  and the final report list each one with its result run alone and in the
+  full-suite rerun, and the user who decides whether to commit sees that list.
+  No other state or field is recorded.

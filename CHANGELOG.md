@@ -125,6 +125,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The base-commit comparison of a timing-dependent suite is made under the
+  same load.** `common-gate-run` says to run the base commit under the
+  conditions of the compared run and to record both loads, to count a chain of
+  failures once, and to run alone the files that hold a new failure. A failure
+  that passes alone but fails in the suite on the changed branch is reported as
+  a possible order or shared-state effect of the change, and is left out only
+  after a full-suite rerun that does not show it; each failure left out is
+  listed in the final report. The baseline stays `same`, `different` or
+  `unrun` and the verdict stays `FAIL`; no state or field is added. Refs #3653:
+  the guidance half only.
+
 - **The prototyping preflight says what `qfai doctor` probes at the target URL.**
   `prototyping-preflight` now states that doctor sends one `GET` to exactly the
   URL it is given, accepts a status from 200 to 399, and does not follow a
