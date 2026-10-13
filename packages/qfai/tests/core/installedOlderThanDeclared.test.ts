@@ -1,0 +1,167 @@
+/**
+ * An installed qfai older than the one the tree was written for.
+ *
+ * The files `qfai init` writes carry no version, so a checkout whose lockfile
+ * moved after the last install ran an older qfai over newer files and was told,
+ * thirteen times, that a skill lacked a marker it had. The only record of the
+ * version the tree expects is the project's own dependency declaration, so the
+ * run compares the two and says so once, first.
+ */
+
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { describe, expect, it } from "vitest";
+
+import { validateProject } from "../../src/core/validate.js";
+import {
+  compareInstalledToDeclared,
+  isOlderVersion,
+  lowestVersionOfRange,
+} from "../../src/core/version.js";
+
+// tests/core/<this file> -> packages/qfai -> repo root
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
+
+/**
+ * Scratch trees go under the repository-root `tmp/`, the sanctioned staging
+ * area (`.agents/rules/temporary-files.md`). The project holds one skill that
+ * lacks the drift-protocol marker, and a `package.json` declaring qfai as
+ * `declared`, or declaring nothing when `declared` is `null`.
+ */
+async function withProject(
+  declared: string | null,
+  task: (root: string) => Promise<void>,
+): Promise<void> {
+  const scratchRoot = path.join(repoRoot, "tmp");
+  await mkdir(scratchRoot, { recursive: true });
+  const root = await mkdtemp(path.join(scratchRoot, "qfai-older-declared-"));
+  try {
+    const skillDir = path.join(root, ".qfai", "assistant", "skill", "qfai-example");
+    await mkdir(skillDir, { recursive: true });
+    await writeFile(
+      path.join(skillDir, "SKILL.md"),
+      [
+        "---",
+        "name: qfai-example",
+        "description: An example skill.",
+        "---",
+        "",
+        "# Example",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(root, "package.json"),
+      JSON.stringify({
+        name: "older-declared-fixture",
+        private: true,
+        ...(declared === null ? {} : { devDependencies: { qfai: declared } }),
+      }),
+      "utf-8",
+    );
+    await task(root);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}
+
+async function findings(root: string) {
+  return (await validateProject(root, undefined, { profile: "full" })).issues;
+}
+
+describe("the installed qfai is older than the declared one", () => {
+  // QFAI:EX-0001-0039-17
+  it("raises QFAI-TOOL-003 first and explains the skill-marker error as a version difference", async () => {
+    await withProject("^9.0.0", async (root) => {
+      const issues = await findings(root);
+
+      // Ahead of every finding the run's validators raised; only the config
+      // read, which precedes the validators, may come before it.
+      const first = issues.find((found) => !found.code.startsWith("QFAI-CFG-"));
+      expect(first?.code).toBe("QFAI-TOOL-003");
+      expect(first?.severity).toBe("warning");
+      expect(first?.message).toContain("9.0.0");
+      expect(first?.suggested_action).toContain("npm ci");
+
+      const marker = issues.filter((found) => found.code === "QFAI-SKILLS-010");
+      expect(marker).toHaveLength(1);
+      expect(marker[0]?.severity).toBe("error");
+      expect(marker[0]?.message).toContain("QFAI-TOOL-003");
+      expect(marker[0]?.suggested_action).toContain("^9.0.0");
+      expect(marker[0]?.suggested_action).toContain("before editing this file");
+    });
+  });
+
+  // QFAI:EX-0001-0039-17
+  it.each(["^0.0.1", "latest", "workspace:*", null])(
+    "raises nothing about the version under the declaration %s",
+    async (declared) => {
+      await withProject(declared, async (root) => {
+        const issues = await findings(root);
+
+        expect(issues.some((found) => found.code === "QFAI-TOOL-003")).toBe(false);
+        const marker = issues.find((found) => found.code === "QFAI-SKILLS-010");
+        expect(marker?.message).toBe(
+          "SKILL.md is missing the required marker [DRIFT-PROTOCOL:REQUIRED].",
+        );
+        expect(marker?.suggested_action).toBeUndefined();
+      });
+    },
+  );
+});
+
+describe("lowestVersionOfRange", () => {
+  it.each([
+    ["2.1.1", "2.1.1"],
+    ["^2.1.1", "2.1.1"],
+    ["~2.1.1", "2.1.1"],
+    [">=2.1.1 <3", "2.1.1"],
+    ["=2.1.1", "2.1.1"],
+    ["v2.1.1", "2.1.1"],
+  ])("reads %s as %s", (range, lowest) => {
+    expect(lowestVersionOfRange(range)).toBe(lowest);
+  });
+
+  it.each(["latest", "*", "2.x", "^2.1", "workspace:*", "file:../qfai", "^1.0.0 || ^2.0.0", ""])(
+    "states no lowest version for %s",
+    (range) => {
+      expect(lowestVersionOfRange(range)).toBeNull();
+    },
+  );
+});
+
+describe("isOlderVersion", () => {
+  it("compares major, then minor, then patch as numbers", () => {
+    expect(isOlderVersion("2.1.0", "2.1.1")).toBe(true);
+    expect(isOlderVersion("2.9.0", "2.10.0")).toBe(true);
+    expect(isOlderVersion("1.99.99", "2.0.0")).toBe(true);
+    expect(isOlderVersion("2.1.1", "2.1.1")).toBe(false);
+    expect(isOlderVersion("2.1.2", "2.1.1")).toBe(false);
+  });
+
+  it("answers false where either side is not a version", () => {
+    expect(isOlderVersion("unknown", "2.1.1")).toBe(false);
+    expect(isOlderVersion("2.1.0", "latest")).toBe(false);
+  });
+});
+
+describe("compareInstalledToDeclared", () => {
+  it("names both versions and the range when the installed copy is older", () => {
+    expect(compareInstalledToDeclared("2.1.0", "^2.1.1")).toEqual({
+      installed: "2.1.0",
+      declaredRange: "^2.1.1",
+      declaredLowest: "2.1.1",
+    });
+  });
+
+  it("answers null for an equal or newer copy, no declaration, or an unreadable range", () => {
+    expect(compareInstalledToDeclared("2.1.1", "^2.1.1")).toBeNull();
+    expect(compareInstalledToDeclared("2.2.0", "^2.1.1")).toBeNull();
+    expect(compareInstalledToDeclared("2.1.0", null)).toBeNull();
+    expect(compareInstalledToDeclared("2.1.0", "workspace:*")).toBeNull();
+    expect(compareInstalledToDeclared("unknown", "^2.1.1")).toBeNull();
+  });
+});

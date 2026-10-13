@@ -31,7 +31,13 @@ import type {
   ValidationResult,
   ValidationTimings,
 } from "./types.js";
-import { locateToolAgainstProject, resolveToolVersion } from "./version.js";
+import {
+  compareInstalledToDeclared,
+  locateToolAgainstProject,
+  readDeclaredQfaiRange,
+  resolveToolVersion,
+  type InstalledOlderThanDeclared,
+} from "./version.js";
 import { applyWaivers } from "./waivers.js";
 import { validateContracts, validateUiContractParse } from "./validators/contracts.js";
 import { validateUiScreenCopy } from "./validators/uiScreenCopy.js";
@@ -371,6 +377,77 @@ async function buildToolProvenanceIssues(root: string): Promise<Issue[]> {
   ];
 }
 
+/**
+ * The running qfai is older than the version this project declares.
+ *
+ * The files `qfai init` writes carry no version, so the project's dependency
+ * declaration is the record of which qfai the tree was written for. An
+ * installed copy below the lowest version that declaration admits is what a
+ * lockfile that moved after the last install leaves, and a rule that reads a
+ * generated file then reports the file as wrong when the checker is. This is
+ * said once, ahead of every other finding, so the line to act on is not one of
+ * thirteen file-level errors that point at the wrong repair.
+ *
+ * `warning`, not `error`: the declaration and the running copy disagree, which
+ * says nothing certain about the tree, and an `error` would fail a project
+ * whose generated files are fine with no waiver available.
+ */
+async function detectInstalledOlderThanDeclared(
+  root: string,
+): Promise<InstalledOlderThanDeclared | null> {
+  return compareInstalledToDeclared(await resolveToolVersion(), await readDeclaredQfaiRange(root));
+}
+
+function buildInstalledOlderIssues(older: InstalledOlderThanDeclared | null): Issue[] {
+  if (older === null) return [];
+  return [
+    issue(
+      "QFAI-TOOL-003",
+      `The installed qfai is ${older.installed}, older than the ${older.declaredLowest} this project ` +
+        `declares (${older.declaredRange}). Files written by the declared version can read as ` +
+        `wrong to this older one; a finding below about a generated file may come from the ` +
+        `version difference and not from the file.`,
+      "warning",
+      undefined,
+      "toolProvenance.installedOlderThanDeclared",
+      undefined,
+      "canonical",
+      "Run the install command (`npm ci` / `pnpm install`) in this working tree so the " +
+        "installed qfai satisfies the declaration, then run again. Do not edit generated " +
+        "files to clear a finding before that.",
+    ),
+  ];
+}
+
+/**
+ * Rules whose input is a file `qfai init` generated. Under
+ * {@link detectInstalledOlderThanDeclared} each is reported as the version
+ * difference it may be, with the install as the repair, instead of as a fault in
+ * the file that invites an edit to files nobody touched.
+ */
+const GENERATED_FILE_RULES: ReadonlySet<string> = new Set(["QFAI-SKILLS-010"]);
+
+function explainVersionMismatch(
+  issues: Issue[],
+  older: InstalledOlderThanDeclared | null,
+): Issue[] {
+  if (older === null) return issues;
+  return issues.map((entry) =>
+    GENERATED_FILE_RULES.has(entry.code)
+      ? {
+          ...entry,
+          message:
+            `${entry.message} The installed qfai ${older.installed} is older than the ` +
+            `${older.declaredLowest} this project declares, so this may be a version ` +
+            `difference and not a fault in the file (QFAI-TOOL-003).`,
+          suggested_action:
+            "Run the install command (`npm ci` / `pnpm install`) so the installed qfai " +
+            `satisfies ${older.declaredRange}, and run again before editing this file.`,
+        }
+      : entry,
+  );
+}
+
 function buildUnusedPlatformIssues(
   profile: ValidationProfile,
   platformOption: string | undefined,
@@ -428,6 +505,10 @@ async function runProfileValidators(
   // worth keeping when the tree turns out to be damaged — a validate run
   // against another checkout's qfai explains a whole class of confusing damage.
   const toolProvenance = await buildToolProvenanceIssues(root);
+  // Ahead of every other finding, and of the provenance one: the version
+  // difference is what the findings after it may be a symptom of.
+  const olderThanDeclared = await detectInstalledOlderThanDeclared(root);
+  const toolVersion = buildInstalledOlderIssues(olderThanDeclared);
   // Damage on a path the profile validators themselves walk stops here. One of
   // them reading the same tree raises `ENOTDIR` / `ELOOP` from its own
   // `readdir`, and one rejection took the whole run down — losing the finding
@@ -461,18 +542,25 @@ async function runProfileValidators(
   const anchorIssues = await validateAssistantAnchorReferences(root, config);
   if (surface.unwalkable.some((damaged) => walked.some((base) => isUnder(base, damaged)))) {
     return {
-      issues: [...toolProvenance, ...unusedPlatform, ...surface.issues, ...anchorIssues],
+      issues: explainVersionMismatch(
+        [...toolVersion, ...toolProvenance, ...unusedPlatform, ...surface.issues, ...anchorIssues],
+        olderThanDeclared,
+      ),
       ranProfileValidators: false,
     };
   }
   return {
-    issues: [
-      ...toolProvenance,
-      ...unusedPlatform,
-      ...surface.issues,
-      ...anchorIssues,
-      ...(await runProfileOwnValidators()),
-    ],
+    issues: explainVersionMismatch(
+      [
+        ...toolVersion,
+        ...toolProvenance,
+        ...unusedPlatform,
+        ...surface.issues,
+        ...anchorIssues,
+        ...(await runProfileOwnValidators()),
+      ],
+      olderThanDeclared,
+    ),
     ranProfileValidators: true,
   };
 
