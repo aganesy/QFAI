@@ -4,7 +4,12 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { isEnoent } from "../fs/errno.js";
 import { DEFAULT_GLOB_FILE_LIMIT } from "../fs.js";
-import { getChangedFilesAgainstBase, normalizeRepoPath, readFileAtBase } from "../gitChanges.js";
+import {
+  getChangedFilesAgainstBase,
+  normalizeRepoPath,
+  readFileAtBase,
+  uncommittedPaths,
+} from "../gitChanges.js";
 import { parseAllMarkdownTables } from "../specPackParsers.js";
 import { parseCountedExampleAnnotations } from "../storyTree/ids.js";
 import {
@@ -88,21 +93,19 @@ export async function validateStoryTreeDrift(
     }
   }
   const decisionDiff = diffRecordTables(baseDecisions, currentDecisions, "decisions");
+  const onlyChangeRequestRowsChanged =
+    decisionDiff.onlyChangeRequestRows &&
+    withoutChangeRequestRows(baseDecisions) === withoutChangeRequestRows(currentDecisions);
+  const isProtected = (file: string): boolean =>
+    file.startsWith(`${path.posix.join(specs, "01_policy")}/`) ||
+    file.startsWith(`${path.posix.join(specs, "02_business-flow")}/`) ||
+    contracts === "" ||
+    file.startsWith(`${contracts}/`) ||
+    file === decisions ||
+    file === questions;
   for (const file of changed) {
-    const protectedPath =
-      file.startsWith(`${path.posix.join(specs, "01_policy")}/`) ||
-      file.startsWith(`${path.posix.join(specs, "02_business-flow")}/`) ||
-      contracts === "" ||
-      file.startsWith(`${contracts}/`) ||
-      file === decisions ||
-      file === questions;
-    if (!protectedPath || authorised.has(file)) continue;
-    if (
-      file === decisions &&
-      decisionDiff.onlyChangeRequestRows &&
-      withoutChangeRequestRows(baseDecisions) === withoutChangeRequestRows(currentDecisions)
-    )
-      continue;
+    if (!isProtected(file) || authorised.has(file)) continue;
+    if (file === decisions && onlyChangeRequestRowsChanged) continue;
     if (file.endsWith("/03_Example.md") && (await onlyAppendsExamples(root, baseBranch, file)))
       continue;
     if (file.startsWith(`${contracts}/`) && (await onlyCitesExamples(root, baseBranch, file)))
@@ -119,7 +122,38 @@ export async function validateStoryTreeDrift(
     );
   }
   issues.push(...(await examplesWithoutTestChange(root, config, changed, specs, baseBranch)));
+  const uncommitted = (uncommittedPaths(root) ?? []).filter(
+    (file) =>
+      isProtected(file) &&
+      !changed.has(file) &&
+      !authorised.has(file) &&
+      !(file === decisions && onlyChangeRequestRowsChanged),
+  );
+  if (uncommitted.length > 0) issues.push(uncommittedNotCompared(uncommitted));
   return issues;
+}
+
+/** The most uncommitted paths the finding names; the count says how many there are. */
+const UNCOMMITTED_LISTED = 5;
+
+/**
+ * The comparison is `<base>...HEAD`, so an edit that is not committed yet is not in it and the
+ * checks pass on it. Said once, so a green run is not read as covering the working tree.
+ */
+function uncommittedNotCompared(uncommitted: readonly string[]): Issue {
+  const listed = uncommitted.slice(0, UNCOMMITTED_LISTED);
+  const rest = uncommitted.length - listed.length;
+  const many = uncommitted.length === 1;
+  return issue(
+    "QFAI-DRIFT-004",
+    `${uncommitted.length} uncommitted ${many ? "change" : "changes"} to protected story-tree ${many ? "file is" : "files are"} not compared with the base: ${listed.join(", ")}${rest > 0 ? ` and ${rest} more` : ""}.`,
+    "warning",
+    undefined,
+    "storyTree.uncommittedNotCompared",
+    listed,
+    "canonical",
+    "Commit the change together with the change request row that names it, then rerun validate.",
+  );
 }
 
 /**

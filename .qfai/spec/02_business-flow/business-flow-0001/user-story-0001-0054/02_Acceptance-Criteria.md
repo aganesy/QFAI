@@ -44,4 +44,12 @@ Feature: Append-only drift and change-request authorization
     When `qfai validate --profile tdd` or `qfai validate --profile drift` runs
     Then a warning names the EX ID and its `03_Example.md` unless a non-E2E test file selected by the configured test globs and annotating that EX also changed since the base
     And an EX row whose cells are unchanged raises no such warning
+
+  # AC-0001-0054-11
+  Scenario: An edit that is not committed is said not to be compared
+    Given the story tree, and a protected file edited or added in the working tree and not committed, that no in-force change request names
+    When `qfai validate --profile tdd` or `qfai validate --profile drift` runs
+    Then one warning names the uncommitted protected paths, the first five, and counts the rest, and says they are not compared with the base
+    And once the change is committed the upstream-edit error of AC-0001-0054-03 applies to it, and the warning is gone
+    And an edit to `decisions.md` confined to `Change request:` rows, a file a change request names and a file outside the protected set raise no such warning
 ```

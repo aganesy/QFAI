@@ -108,6 +108,7 @@ describe("TC-0004-0068: saas-package profile rejects a missing design-system att
       "QFAI-TEST-*",
       "QFAI-DRIFT-001",
       "QFAI-DRIFT-002",
+      "QFAI-DRIFT-004",
       "QFAI-STORY-010",
     ]);
   });

@@ -6,6 +6,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`qfai validate` says when the drift checks do not cover an uncommitted edit.**
+  A protected story-tree file that is edited or added in the working tree and
+  not committed is outside the `<base>...HEAD` comparison, so the `tdd` and
+  `drift` profiles passed on it and failed only once it was committed. They now
+  raise a `QFAI-DRIFT-004` warning that names the uncommitted paths, and the
+  fix text of `QFAI-DRIFT-001` says the change request row is needed before the
+  commit. Fixes #3546.
+
 - **A merge that duplicated a decision has a bounded manual recovery.**
   When a bad two-parent merge adds a second byte-identical copy of an inherited
   decision, the SDD owner may remove only that surplus copy under a separate
