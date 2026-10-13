@@ -117,9 +117,10 @@ to touch a colour has nothing to be consistent with.
 
 ## When the file already exists
 
-`npx qfai init` seeds the sample at the project root and never overwrites it,
-and a project may have authored its own. Write a missing file from the recorded
-direction. Repair an existing file only when SDD triage names its exact path
+`npx qfai init` writes no root `DESIGN.md`; the sample is shipped only as a
+skill template. A root file that exists was authored by `common-design-md` or
+copied from that template on purpose, and a project may have authored its own.
+Write a missing file from the recorded direction. Repair an existing file only when SDD triage names its exact path
 and the requested change, and a new WIP change request authorizes both. Apply
 only the authorized change; preserve existing brand and tokens unless their
 change is authorized and supported by recorded direction or named theme
