@@ -9,6 +9,8 @@ const TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const read = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
 
+const flat = (text: string): string => text.replace(/\s+/g, " ");
+
 describe("the story-tree contract owns quality-gate commands", () => {
   for (const tree of TREES) {
     it(`${tree}: configure, the shared rule and the gate step name the same Standard commands home`, async () => {
@@ -34,7 +36,6 @@ describe("the story-tree contract owns quality-gate commands", () => {
     it(`${tree}: custom Validate commands keep the full scan and cannot pass validation errors`, async () => {
       const qfaiGate = await read(tree, "assistant/step/verify-qfai-gate/STEP.md");
       const repoGate = await read(tree, "assistant/step/verify-repo-gate/STEP.md");
-      const flat = (text: string): string => text.replace(/\s+/g, " ");
       expect(flat(qfaiGate)).toContain("the project's `Validate` entry, where it has one");
       expect(flat(qfaiGate)).toMatch(/full scan in the declared profile/i);
       expect(flat(qfaiGate)).toMatch(/any validation error prevents a pass/i);
@@ -46,6 +47,18 @@ describe("the story-tree contract owns quality-gate commands", () => {
       for (const step of [qfaiGate, repoGate]) {
         expect(step).not.toMatch(/ratchet|recorded backlog/i);
       }
+    });
+
+    // QFAI:AC-0001-0156-01
+    // QFAI:EX-0001-0156-03
+    it(`${tree}: a Validate entry that runs a partial profile is not the gate, and the full scan runs as well`, async () => {
+      const qfaiGate = flat(await read(tree, "assistant/step/verify-qfai-gate/STEP.md"));
+      expect(qfaiGate).toContain("the project's `Validate` entry, where it has one");
+      expect(qfaiGate).toMatch(/a `Validate` entry that runs a partial profile is not the gate/i);
+      expect(qfaiGate).toMatch(/output carries `QFAI-PROFILE-001` saying the profile is partial/i);
+      expect(qfaiGate).toMatch(/full-scan rule above wins over the entry/i);
+      expect(qfaiGate).toMatch(/run `npx qfai validate --profile verify --fail-on error` as well/i);
+      expect(qfaiGate).toMatch(/names both commands/i);
     });
   }
 
