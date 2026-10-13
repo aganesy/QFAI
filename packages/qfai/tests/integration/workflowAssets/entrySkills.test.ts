@@ -17,6 +17,9 @@ import {
   assistantLineCeiling,
 } from "../../../src/core/doctor/assetLineBudget.js";
 import { validateAgentDefinition } from "../../../src/core/validators/agentDefinition.js";
+import type { WorkflowExtraction } from "../../../src/core/workflow/extraction.js";
+import { extractionFaults } from "../../../src/core/workflow/extractionShape.js";
+import { routingOutcome } from "../../../src/core/workflow/routeDecision.js";
 import { WORKFLOW_ROUTES } from "../../../src/core/workflow/routes.js";
 import {
   PACKAGE_DEFAULTS,
@@ -29,6 +32,7 @@ import {
   rowOf,
   sectionOf,
 } from "../../helpers/shippedAssistant.js";
+import { extraction } from "../../helpers/workflowExtraction.js";
 
 const RUN = "skill/qfai-run/SKILL.md";
 const PLAN = "skill/qfai-run/references/plan.md";
@@ -538,7 +542,46 @@ describe("qfai-run", () => {
     expect(extract).toMatch(/neither needs a reference/i);
     expect(extract).toContain("qualifiers: [session-answerable]");
     expect(extract).toContain("`{ intent: order, artifacts: [] }`");
-    expect(extract).toMatch(/read any other request as `references\/extraction\.md` sets out/i);
+    expect(extract).toMatch(/read any other request as `references\/extraction\.md`/i);
+    expect(extract).toMatch(/every other field is empty, with `confidence: high`/i);
+    const full = (fields: Partial<WorkflowExtraction>) =>
+      ({
+        ...extraction({ artifacts: [], confidence: "high" }),
+        ...fields,
+      }) satisfies WorkflowExtraction;
+    const shapes = [
+      full({ intent: "question-why", qualifiers: ["session-answerable"] }),
+      full({ intent: "order" }),
+    ];
+    // The same check `plan` runs before routing: a missing field would be refused here.
+    expect(shapes.map((each) => extractionFaults(each))).toEqual([[], []]);
+    const routed = shapes.map((each) => routingOutcome(each));
+    expect(routed.map((each) => ("taken" in each ? each.taken.route : undefined))).toEqual([
+      "answer-in-session",
+      "run-operation",
+    ]);
+  });
+
+  // QFAI:AC-0001-0211-05
+  // QFAI:EX-0001-0211-52
+  it("keeps person-only operations and deletions on the extraction reference", async () => {
+    const extract = flat(sectionOf(await readShipped(RUN), "## The work"));
+    expect(extract).toMatch(
+      /an operation on finished work that the session runs itself and that deletes nothing is `\{ intent: order, artifacts: \[\] \}`/i,
+    );
+    const qualifiers = sectionOf(await readShipped(EXTRACTION), "## Qualifiers");
+    expect(rowOf(qualifiers, "| `human-run`")).toMatch(/\| `order` +\| only a person can run/i);
+    expect(rowOf(qualifiers, "| `owned-temporary-cleanup`")).toMatch(/\| `order` +\| .*deleting/i);
+    const order = (qualifier: WorkflowExtraction["qualifiers"][number]) =>
+      routingOutcome({
+        ...extraction({ intent: "order", artifacts: [], confidence: "high" }),
+        qualifiers: [qualifier],
+      });
+    expect(
+      [order("human-run"), order("owned-temporary-cleanup")].map((each) =>
+        "taken" in each ? each.taken.route : undefined,
+      ),
+    ).toEqual(["hand-off-operation", "run-owned-cleanup"]);
   });
 
   // QFAI:AC-0001-0229-06
