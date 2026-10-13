@@ -1153,7 +1153,7 @@ export const ALLOWED_ACTIONS: ReadonlySet<string> = new Set([
  */
 export const ALLOWED_ACTION_COMMITS: ReadonlyMap<string, string> = new Map([
   ["actions/checkout", "3d3c42e5aac5ba805825da76410c181273ba90b1"],
-  ["actions/setup-node", "820762786026740c76f36085b0efc47a31fe5020"],
+  ["actions/setup-node", "949feb2413d6458794dcd2491c4babbbce0c15c1"],
   ["pnpm/action-setup", "fc06bc1257f339d1d5d8b3a19a8cae5388b55320"],
 ]);
 
@@ -1240,9 +1240,9 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
-  ["qfai-docs.yml", "44ec24d550811e8a74a366c8a855669f8c2779d52dd1745358e758d3d50ecdc7"],
-  ["qfai-tests.yml", "d0eac08104ee1fab05c97d544459cedf4fad3a4dd2a3701904a16fc4ced6da15"],
-  ["qfai-validate.yml", "d544c784615c28d884152ba68856d742ee3368b32a639a874cb3ee80bd104f7f"],
+  ["qfai-docs.yml", "b462b2489e102a1992beec58c45195eeb2371e5ded3d10e28964e7a3af8ff082"],
+  ["qfai-tests.yml", "c2616e56b9812f30b3c1af630f0936835349815fb7a2a1f8c297a6566b4c6bd2"],
+  ["qfai-validate.yml", "a1407c67a98f053fd544b5a78b17b4c63c64be349c4483b55d647ef03c22145c"],
 ]);
 
 /** The bytes of a shipped file. Nothing is normalized, and the parameter is a Buffer for that reason. */
@@ -1390,7 +1390,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // asks for, and a project reads them in the language and the spelling its
   // neighbours in the same seeded tree use.
   //
-  // This digest covers the seed's raw UTF-8/LF bytes, including both union rules.
+  // This digest covers the seed's raw UTF-8/LF bytes, including all union rules.
   // `qfai init` copies those bytes only when the destination does not exist.
   [".gitattributes", "495f9358f92c82ebebea3f5c9d6f391f6cea6b540749593fc47339c62340dbaf"],
   // The shipped `.gitignore` IS the generated managed block, so every line of it
@@ -1495,9 +1495,10 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // call. Events, matchers, markers and message keys are unchanged; the previous group is listed
   // as superseded so the merge refreshes it. Derived by running `qfai init` into a temp root and
   // hashing what it wrote.
-  // Re-pinned for the `Stop` group marked `QFAI session feedback reminder`. Removing the `Stop`
-  // event from the file reproduces `03325965…` byte for byte.
-  [".claude/settings.json", "f751cc6e4587be65e1341bb30fc8172b2506df805b5a256ebf151bc427fce730"],
+  // Re-pinned for the `Stop` group marked `QFAI session feedback reminder`, and again when it was
+  // removed: the file has no `Stop` event, and restoring that group reproduces `f751cc6e…` byte
+  // for byte. Derived the same way.
+  [".claude/settings.json", "4b7ecd6f82a412aa6050b05a6b631f30b77ff3f548231711470c348cc29554ee"],
   // Inside `.codex/`, and pinned for the reason `.claude/settings.json` is: its commands are a
   // program an adopter's agent runs. Two `UserPromptSubmit` groups, structured-question and
   // free-text entry. Codex takes one command string, so each runs the same `node -e` reader
@@ -1538,9 +1539,9 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // `node -e "<program>" <key>` line with no character a hook shell expands. Events, matchers,
   // markers and message keys are unchanged; the previous groups are listed as superseded so the
   // merge refreshes them. Derived the same way.
-  // Re-pinned for the same `Stop` group. Removing the `Stop` event reproduces `4eb4c36d…` byte
-  // for byte.
-  [".codex/hooks.json", "e973ebb8f2047f6a3e901b9adbe3e6299cda7cad77dfb12cccfab933cd936904"],
+  // Re-pinned for the same `Stop` group, and again when it was removed: restoring that group
+  // reproduces `e973ebb8…` byte for byte. Derived the same way.
+  [".codex/hooks.json", "524381d3026af9295c3706d59dd0018f24508cfc290e4cb3a8873c1f6f1c9938"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`
@@ -2043,7 +2044,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-docs.yml#checks",
-    '{"name":"Set up Node via actions/setup-node 7.0.0","uses":"actions/setup-node@820762786026740c76f36085b0efc47a31fe5020","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
+    '{"name":"Set up Node via actions/setup-node 7.1.0","uses":"actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
   ],
   [
     "qfai-docs.yml#checks",
@@ -2103,7 +2104,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-tests.yml#tests",
-    '{"name":"Set up Node via actions/setup-node 7.0.0","uses":"actions/setup-node@820762786026740c76f36085b0efc47a31fe5020","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
+    '{"name":"Set up Node via actions/setup-node 7.1.0","uses":"actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
   ],
   [
     "qfai-tests.yml#tests",
@@ -2139,7 +2140,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-validate.yml#validate",
-    '{"name":"Set up Node via actions/setup-node 7.0.0","uses":"actions/setup-node@820762786026740c76f36085b0efc47a31fe5020","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
+    '{"name":"Set up Node via actions/setup-node 7.1.0","uses":"actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
   ],
   [
     "qfai-validate.yml#validate",

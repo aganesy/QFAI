@@ -146,7 +146,6 @@ describe("check-instructions-size entry files", () => {
     "CLAUDE.md",
     ".github/copilot-instructions.md",
     "packages/qfai/assets/init/root/AGENTS.md",
-    "packages/qfai/assets/init/root/CLAUDE.md",
   ])("holds %s to the ceiling", async (file) => {
     const dir = await newTree({ [file]: lines(201) });
     const result = run(dir);
