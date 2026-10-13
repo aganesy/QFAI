@@ -54,6 +54,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The shipped rules name `AGENTS.md` as the only entry file.** The wording
+  in `documentation-clarity.md` and `untrusted-content.md` no longer mentions
+  `CLAUDE.md`, which `qfai init` stopped writing.
+
 - **The shipped workflows pin `actions/setup-node` 7.1.0.** The three
   templates written by `qfai init` use the same commit as this repository.
 
