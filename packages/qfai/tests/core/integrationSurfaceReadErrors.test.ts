@@ -262,6 +262,51 @@ describe("a structurally broken target is a finding, not a crash", () => {
     });
   });
 
+  // QFAI:EX-0001-0039-19
+  it("shows the warning for several such wrappers once, in one line, with every path in refs", async () => {
+    await withProject(async (root) => {
+      const names = ["qfai-implement", "qfai-verify", "qfai-sdd"];
+      const wrappers = names.map((name) => path.join(root, ".claude", "skills", name));
+      await mkdir(path.join(root, ".claude", "skills"), { recursive: true });
+      for (const name of names) {
+        const dir = path.join(root, ".qfai", "assistant", "skill", name);
+        await mkdir(dir, { recursive: true });
+        await writeFile(path.join(dir, "SKILL.md"), "# skill\n", "utf-8");
+        await symlink(
+          `../../.qfai/assistant/skill/${name}`,
+          path.join(root, ".claude", "skills", name),
+          "dir",
+        );
+      }
+      const unfollowable = new Set(wrappers.map((wrapper) => path.resolve(wrapper)));
+      statSpy.mockImplementation((actual: FsPromises, target: string, ...rest: never[]) =>
+        unfollowable.has(path.resolve(String(target)))
+          ? Promise.reject(errno("EPERM"))
+          : actual.stat(target, ...rest),
+      );
+
+      const issues = await validateIntegrationSurface(root);
+
+      expect(issues).toHaveLength(1);
+      const [finding] = issues;
+      expect(finding?.code).toBe("QFAI-LINK-001");
+      expect(finding?.severity).toBe("warning");
+      // One line each, and short: the standing state must not bury the counts.
+      expect(finding?.message).not.toContain("\n");
+      expect(finding?.message.length).toBeLessThan(500);
+      expect(finding?.message).toContain("3 wrapper(s)");
+      expect(finding?.message).toContain("(and 2 more)");
+      expect(finding?.message).not.toContain("->");
+      expect(finding?.suggested_action).not.toContain("\n");
+      expect(finding?.suggested_action?.length).toBeLessThan(300);
+      expect(finding?.suggested_action).toContain("`qfai init`");
+      // The paths the report and the repair read are all still there.
+      expect([...(finding?.refs ?? [])].sort()).toEqual(
+        names.map((name) => `.claude/skills/${name}`).sort(),
+      );
+    });
+  });
+
   it("keeps the error when the canonical behind such a wrapper is gone", async () => {
     // The over-correction pin. Unreadable behind the link is the case the
     // original claim describes exactly — the instructions are not in this tree
