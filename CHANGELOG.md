@@ -65,6 +65,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Agents no longer start a griller sub-agent for routine work. The grilling rule
+  and its reminders hold a griller session only for a design decision the
+  repository cannot settle; an operation, a routine step, a settled decision or
+  a fix the story tree already states starts none. Fixes #3577.
+
 - Hook reminders no longer send the agent back to the rule file each time they
   fire. The brief form says what to do, and the full form asks for a rule to be
   read once per session. Fixes #3576.
