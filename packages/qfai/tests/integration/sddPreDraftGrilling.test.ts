@@ -41,5 +41,31 @@ describe("qfai-sdd pre-draft grilling", () => {
         "The final report lists each decision a checkpoint adopted, with its reason.",
       );
     });
+
+    // QFAI:AC-0001-0147-15
+    // QFAI:EX-0001-0147-45
+    it(`${tree}: holds no session when the checkpoint finds no open decision`, async () => {
+      const loop = await read(
+        tree,
+        "assistant/skill/qfai-sdd/references/sdd-pre-draft-grilling.md",
+      );
+      const gate = await read(tree, "assistant/skill/qfai-sdd/references/sdd-quality-gate.md");
+      const checklist = await read(
+        tree,
+        "assistant/skill/qfai-sdd/references/sdd-phase-checklists.md",
+      );
+      expect(loop).toContain(
+        "When the request, the story tree, the contracts and the recorded decisions already settle every decision of the stage, the frontier is empty. Then no session is held and no griller starts.",
+      );
+      expect(loop).toContain(
+        "The stage writes what is settled, and its final report lists no adopted decision for the checkpoint.",
+      );
+      expect(gate).toContain(
+        "It held a grilling session only where it found a decision the repository cannot settle",
+      );
+      expect(checklist).toContain("A checkpoint that finds no open decision holds no session.");
+      const sddContract = await read(tree, "assistant/step/sdd-contract/STEP.md");
+      expect(sddContract).toContain("references/sdd-pre-draft-grilling.md");
+    });
   }
 });
