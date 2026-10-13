@@ -60,6 +60,7 @@ import {
   invokedFileDigests,
   invokedScriptBodies,
   verificationBodyDigest,
+  filesUnder,
   yamlFilesUnder,
 } from "../../../../scripts/check-workflow-hygiene.mjs";
 
@@ -2879,6 +2880,33 @@ describe("the workflow walk refuses a root it did not open, and is bounded", () 
     }
   });
 
+  it("walks a tree of exactly the ceiling whole, and reports one entry more", () => {
+    // The boundary the ceiling is judged at: a tree holding exactly as many entries as the
+    // ceiling is whole and must not be reported, because the check is "more than the ceiling",
+    // and the first entry past it is the one that makes the inventory a prefix.
+    const dir = mkdtempSync(path.join(tmpdir(), "qfai-inventory-boundary-"));
+    try {
+      mkdirSync(path.join(dir, "root"), { recursive: true });
+      for (const name of ["a", "b", "c"]) {
+        writeFileSync(path.join(dir, "root", `${name}.txt`), "", "utf-8");
+      }
+
+      const exact: string[] = [];
+      expect(
+        filesUnder(dir, "root", 3, exact).length,
+        "a tree of exactly the ceiling is walked whole",
+      ).toBe(3);
+      expect(exact, "and exactly the ceiling is not a truncation").toEqual([]);
+
+      writeFileSync(path.join(dir, "root", "d.txt"), "", "utf-8");
+      const over: string[] = [];
+      expect(filesUnder(dir, "root", 3, over).length, "one more entry stops the walk").toBe(3);
+      expect(over, "and names the tree it stopped in").toEqual(["root"]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   for (const [label, rel] of [
     ["the own workflow root", path.join(".github", "workflows")],
     ["the composite-action root", path.join(".github", "actions")],
@@ -2922,6 +2950,35 @@ describe("the workflow walk refuses a root it did not open, and is bounded", () 
       }
     }, 240_000);
   }
+
+  it("reports a truncated walk of the pinned-file inventory instead of comparing a prefix", () => {
+    // The present-set check compares the files on disk with the pinned list, and it can only
+    // name an unregistered file it has seen. A walk that stops at its ceiling and returns the
+    // prefix leaves a file past the ceiling unseen, and the check then passes over it. The walk
+    // has to say it stopped, the way the YAML walk does.
+    //
+    // The padding is named `zz-…` and is not pinned, so the lane fails on it either way; what
+    // only the ceiling finding can supply is the statement that the walk stopped, and the name
+    // of the tree it stopped in.
+    const dir = plantedTree((d) => {
+      const pad = path.join(d, "scripts");
+      mkdirSync(pad, { recursive: true });
+      for (let i = 0; i < 1_001; i += 1) {
+        writeFileSync(path.join(pad, `zz-pad-${String(i).padStart(5, "0")}.txt`), "");
+      }
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(run.exitCode, `a partial inventory is not a pass:\n${run.output.slice(0, 4000)}`)
+        .toBe(1);
+      expect
+        .soft(run.output, "the finding must say the inventory walk stopped, and in which tree")
+        .toMatch(/scripts[^\n]*stopped walking the pinned-file inventory/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 240_000);
 });
 
 // QFAI:EX-0002-0018-01
