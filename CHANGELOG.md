@@ -6,6 +6,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **The `timings:` line of `qfai validate` names the slow validators and says the budget is not a gate.**
+  When the UI/UX group runs over its budget, the line now names the two slowest
+  validators of the group with their time, and says that the budget is a
+  target, not a gate, and raises no finding. The check itself is not faster;
+  making it scale with the size of a contract is still open. Refs #3537.
+
 - **A merge that duplicated a decision has a bounded manual recovery.**
   When a bad two-parent merge adds a second byte-identical copy of an inherited
   decision, the SDD owner may remove only that surplus copy under a separate

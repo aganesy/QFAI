@@ -722,17 +722,25 @@ async function runUiuxValidators(
   // paid once per process, and on a cold disk cache it alone outran the whole
   // group's budget.
   const htmlMockTiming: HtmlMockTiming = { parseMs: 0, loadMs: 0 };
-  const uiuxValidators: Array<() => Promise<Issue[]>> = [
-    () => validateDesignToken(root, config),
-    () => validateHtmlMock(root, platform, config, htmlMockTiming),
-    () => validateMermaidScreenFlow(root, config),
-    () => validateUiDefinitionConsistency(root, config),
-    () => validateResearchSummary(root, config),
-    () => validateAgentDefinition(root, config),
-    () => validateDesignAudit(root, config),
-    () => runCanonicalUixValidators(root, config),
+  const uiuxValidators: Array<[name: string, run: () => Promise<Issue[]>]> = [
+    ["design tokens", () => validateDesignToken(root, config)],
+    ["html mock", () => validateHtmlMock(root, platform, config, htmlMockTiming)],
+    ["mermaid screen flow", () => validateMermaidScreenFlow(root, config)],
+    ["UI definition consistency", () => validateUiDefinitionConsistency(root, config)],
+    ["research summary", () => validateResearchSummary(root, config)],
+    ["agent definition", () => validateAgentDefinition(root, config)],
+    ["design audit", () => validateDesignAudit(root, config)],
+    ["canonical UIX", () => runCanonicalUixValidators(root, config)],
   ];
-  const uiuxIssueGroups = await Promise.all(uiuxValidators.map((validator) => validator()));
+  const uiuxParts: { name: string; ms: number }[] = [];
+  const uiuxIssueGroups = await Promise.all(
+    uiuxValidators.map(async ([name, run]) => {
+      const start = performance.now();
+      const found = await run();
+      uiuxParts.push({ name, ms: performance.now() - start });
+      return found;
+    }),
+  );
   const uiuxIssues: Issue[] = [...platformResult.issues, ...uiuxIssueGroups.flat()];
 
   timings.timings = {
@@ -740,6 +748,12 @@ async function runUiuxValidators(
     uiuxBudgetMs: UIUX_VALIDATION_BUDGET_MS,
     htmlMockMs: htmlMockTiming.parseMs,
     htmlMockBudgetMs: config.uiux?.htmlMockTimeout ?? HTML_MOCK_VALIDATION_BUDGET_MS,
+    // The html-mock part leaves out the one-off load of its parser, as `uiuxMs` does.
+    uiuxParts: uiuxParts
+      .map((part) =>
+        part.name === "html mock" ? { ...part, ms: part.ms - htmlMockTiming.loadMs } : part,
+      )
+      .sort((left, right) => right.ms - left.ms),
   };
   return uiuxIssues;
 }

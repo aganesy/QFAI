@@ -121,6 +121,11 @@ export type ValidationTimings = {
   uiuxBudgetMs: number;
   htmlMockMs: number;
   htmlMockBudgetMs: number;
+  /**
+   * What each validator of the UI/UX group took, slowest first. The validators run side by side,
+   * so the parts overlap and do not add up to `uiuxMs`; they say which one to look at.
+   */
+  uiuxParts?: readonly { name: string; ms: number }[];
 };
 
 export type ValidationResult = {
