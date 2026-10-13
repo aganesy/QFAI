@@ -68,4 +68,12 @@ Feature: Safe branch catch-up with CI pin resealing
     And an unexpected observed difference stops further mutation, completion commit and push
     And concurrent edits and the current merge state are preserved without abort or reset
     And these checks promise neither an atomic snapshot nor detection of every race
+
+  # AC-0002-0025-07
+  Scenario: A register ID the union merge duplicated stops before commit and push
+    Given `decisions.md` and `open-questions.md` merge with the union merge driver
+    When a merge leaves one register ID on two rows
+    Then the register check fails, naming the ID, the register and both lines
+    And the pull request lint lane runs that check, so the lint job fails rather than only the build job's full validation
+    And the helper stops after staging its outputs and before its commit, retaining the merge, committing nothing and pushing nothing
 ```
