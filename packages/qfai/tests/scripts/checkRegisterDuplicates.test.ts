@@ -138,6 +138,95 @@ describe("check-register-duplicates", () => {
     expect(run.output).toContain(".qfai/spec/open-questions.md could not be read");
   });
 
+  describe("with decision pages", () => {
+    const PAGE_ONE = path.join(".qfai", "spec", "decisions", "page-0001.md");
+    const PAGE_TWO = path.join(".qfai", "spec", "decisions", "page-0002.md");
+    const row = (id: string): string => `| ${id} | text | - Approach | DONE |`;
+
+    // QFAI:EX-0002-0025-24
+    it("fails on an ID defined in two pages, naming both pages and lines", async () => {
+      const root = await treeWith({
+        [DECISIONS]: decisions([row("DEC-0003")]),
+        [QUESTIONS]: questions(["| OQ-0001 | open |"]),
+        [PAGE_ONE]: decisions([row("DEC-0001"), row("DEC-0002")]),
+        [PAGE_TWO]: decisions([row("DEC-0004"), row("DEC-0001")]),
+      });
+
+      const run = check(root);
+
+      expect(run.status, run.output).toBe(1);
+      expect(run.output).toContain(
+        ".qfai/spec/decisions/page-0001.md:7 and .qfai/spec/decisions/page-0002.md:8: DEC-0001 is defined more than once",
+      );
+      expect(run.output).not.toContain("DEC-0002");
+      expect(run.output).not.toContain("DEC-0003");
+    });
+
+    // QFAI:EX-0002-0025-24
+    it("fails on an ID defined in a page and in the root tail", async () => {
+      const root = await treeWith({
+        [DECISIONS]: decisions([row("DEC-0009"), row("DEC-0002")]),
+        [QUESTIONS]: questions(["| OQ-0001 | open |"]),
+        [PAGE_ONE]: decisions([row("DEC-0001"), row("DEC-0002")]),
+      });
+
+      const run = check(root);
+
+      expect(run.status, run.output).toBe(1);
+      expect(run.output).toContain(
+        ".qfai/spec/decisions.md:8 and .qfai/spec/decisions/page-0001.md:8: DEC-0002 is defined more than once",
+      );
+    });
+
+    // QFAI:EX-0002-0025-24
+    it("fails on an ID defined twice in one page, naming both lines", async () => {
+      const root = await treeWith({
+        [DECISIONS]: decisions([row("DEC-0009")]),
+        [QUESTIONS]: questions(["| OQ-0001 | open |"]),
+        [PAGE_ONE]: decisions([row("DEC-0001"), row("DEC-0001")]),
+      });
+
+      const run = check(root);
+
+      expect(run.status, run.output).toBe(1);
+      expect(run.output).toContain(
+        ".qfai/spec/decisions/page-0001.md:7,8: DEC-0001 is defined more than once",
+      );
+    });
+
+    // QFAI:EX-0002-0025-24
+    it("passes unique IDs across the pages and the root, counting every row", async () => {
+      const root = await treeWith({
+        [DECISIONS]: decisions([row("DEC-0003")]),
+        [QUESTIONS]: questions(["| OQ-0001 | open |"]),
+        [PAGE_ONE]: decisions([row("DEC-0001")]),
+        [PAGE_TWO]: decisions([row("DEC-0002")]),
+        [path.join(".qfai", "spec", "decisions", "notes.md")]: decisions([row("DEC-0001")]),
+      });
+
+      const run = check(root);
+
+      expect(run.status, run.output).toBe(0);
+      expect(run.output).toContain(
+        "No register ID is defined more than once (4 rows in 2 registers).",
+      );
+    });
+
+    // QFAI:EX-0002-0025-24
+    it("fails closed when a page cannot be read", async () => {
+      const root = await treeWith({
+        [DECISIONS]: decisions([row("DEC-0003")]),
+        [QUESTIONS]: questions(["| OQ-0001 | open |"]),
+      });
+      await mkdir(path.join(root, PAGE_ONE), { recursive: true });
+
+      const run = check(root);
+
+      expect(run.status, run.output).toBe(2);
+      expect(run.output).toContain(".qfai/spec/decisions/page-0001.md could not be read");
+    });
+  });
+
   // QFAI:EX-0002-0025-24
   it("runs in the scans lane of the pull request lint job", async () => {
     const manifest = JSON.parse(await readFile(path.join(repoRoot, "package.json"), "utf-8")) as {
