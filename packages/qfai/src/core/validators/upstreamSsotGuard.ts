@@ -6,6 +6,7 @@ import { isEnoent } from "../fs/errno.js";
 import { DEFAULT_GLOB_FILE_LIMIT } from "../fs.js";
 import {
   describeBaseComparison,
+  existsAtRevision,
   getChangedFilesAgainstBase,
   gitStdout,
   normalizeRepoPath,
@@ -59,20 +60,35 @@ export async function validateStoryTreeDrift(
   const decisions = path.posix.join(specs, "decisions.md");
   const questions = path.posix.join(specs, "open-questions.md");
   const issues: Issue[] = [];
+  const baseDecisions = readFileAtBase(root, baseBranch, decisions);
+  // Read first: a failure that is not a missing file stops the run instead of being compared.
+  const headRoot = await readSafePath(path.join(root, decisions));
   let baseModel: StoryTreeModel;
   let headModel: StoryTreeModel;
   try {
-    const ancestors = gitStdout(root, ["merge-base", "--all", baseBranch, "HEAD"])
-      ?.trim()
-      .split(/\s+/);
-    if (!ancestors || ancestors.length !== 1 || !ancestors[0])
-      throw new Error("A unique readable common ancestor is required");
-    const files = readDecisionFilesAtRevision(root, ancestors[0], specs);
-    if (
-      !files.has(decisions) &&
-      ![...files.keys()].some((file) => file.startsWith(`${path.posix.join(specs, "decisions")}/`))
-    )
-      return [];
+    let files: Map<string, string>;
+    if (comparison.kind === "resolved") {
+      const ancestors = gitStdout(root, ["merge-base", "--all", baseBranch, "HEAD"])
+        ?.trim()
+        .split(/\s+/);
+      if (!ancestors || ancestors.length !== 1 || !ancestors[0])
+        throw new Error("A unique readable common ancestor is required");
+      files = readDecisionFilesAtRevision(root, ancestors[0], specs);
+    } else {
+      files = new Map(baseDecisions === null ? [] : [[decisions, baseDecisions]]);
+    }
+    const hasPages = [...files.keys()].some((file) =>
+      file.startsWith(`${path.posix.join(specs, "decisions")}/`),
+    );
+    if (baseDecisions === null && !hasPages) {
+      // A base without decisions.md is a project before its story tree. A base that has it and
+      // could not be read is not, and passing on it is the failure this warning exists for.
+      return comparison.kind === "resolved" &&
+        existsAtRevision(root, comparison.mergeBase, decisions)
+        ? [notCompared(`${decisions} at "${baseBranch}" could not be read.`, RERUN_ACTION)]
+        : [];
+    }
+    if (!files.has(decisions) && !hasPages) return [];
     baseModel = buildStoryTreeModel(files, { specsDir: specs, contractsDir: contracts });
     headModel = await readStoryTreeModel(root, config);
     const problems = [baseModel, headModel].flatMap((model) => [
@@ -285,7 +301,9 @@ export async function validateStoryTreeDrift(
     for (const file of registerFiles) {
       if (
         withoutChangeRequestRows(readFileAtBase(root, baseBranch, file) ?? "") ===
-        withoutChangeRequestRows(await readSafePath(path.join(root, file)))
+        withoutChangeRequestRows(
+          file === decisions ? headRoot : await readSafePath(path.join(root, file)),
+        )
       )
         requestOnly.add(file);
     }

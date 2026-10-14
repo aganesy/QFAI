@@ -1634,7 +1634,8 @@ describe("relocated inherited raw decision rows", () => {
       git("commit", "-m", "relocate inherited occurrences");
       const findings = await validateStoryTreeDrift(root, config(), "drift");
       if (change === "authorised Status only") {
-        expect(findings).toEqual([]);
+        // The drift profile also names the base it compared with, at info.
+        expect(findings.filter((found) => found.severity !== "info")).toEqual([]);
       } else {
         expect(findings).toContainEqual(
           expect.objectContaining({ code: "QFAI-STORY-010", file: page, refs: ["DEC-0001"] }),
