@@ -1223,10 +1223,10 @@ function decisionRegisterViolations(root, paths) {
     try {
       stats = lstatSync(file);
     } catch (error) {
-      if (error instanceof Error && "code" in error && error.code === "ENOENT") return null;
+      if (isMissing(error)) return null;
       report(
         file,
-        "Cannot inspect this decision-register path; resolve its access before checking.",
+        `Cannot inspect this decision-register path (${describeFailure(error)}); resolve its access before checking.`,
       );
       result.unsafe = true;
       return false;
@@ -1277,11 +1277,11 @@ function decisionRegisterViolations(root, paths) {
         );
       }
       return text;
-    } catch {
+    } catch (error) {
       result.unsafe = true;
       report(
         file,
-        "Cannot read this decision-register document; resolve its access before checking.",
+        `Cannot read this decision-register document (${describeFailure(error)}); resolve its access before checking.`,
       );
       return null;
     }
@@ -1327,9 +1327,12 @@ function decisionRegisterViolations(root, paths) {
     let names;
     try {
       names = readdirSync(pagesDir);
-    } catch {
+    } catch (error) {
       result.unsafe = true;
-      report(pagesDir, "Cannot list decision pages; resolve directory access before checking.");
+      report(
+        pagesDir,
+        `Cannot list decision pages (${describeFailure(error)}); resolve directory access before checking.`,
+      );
       return result;
     }
     for (const name of names) {

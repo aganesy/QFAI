@@ -4,6 +4,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **The Markdown-schema check names the filesystem failure it met in the decision
+  register.** When it cannot inspect a register path, read a register document or
+  list the decision pages, the finding now carries the failure code and message,
+  so a denied read (`EACCES`), an I/O failure (`EIO`) and descriptor exhaustion
+  (`EMFILE`) are no longer the same line. The check still stops and still treats
+  the register as unverified. Fixes #3628.
+
 ## [2.2.0] - 2026-10-14
 
 ### Added
