@@ -50,25 +50,57 @@ import {
   rootHeadingPattern,
 } from "../../assets/scripts/check-mdschema.mjs";
 
-const unsafeReads = vi.hoisted((): { active: boolean; paths: string[] } => ({
-  active: false,
-  paths: [],
-}));
+type FaultOperation = "lstat" | "readdir" | "readFile";
 
-// Record actual destinations while preserving native filesystem operations.
+const unsafeReads = vi.hoisted(
+  (): {
+    active: boolean;
+    paths: string[];
+    faults: { operation: FaultOperation; file: string; code: string }[];
+  } => ({
+    active: false,
+    paths: [],
+    faults: [],
+  }),
+);
+
+// Record actual destinations while preserving native filesystem operations. A
+// registered fault makes one operation on one path fail with the given code, the
+// way the operating system reports a denied, failing or exhausted read.
 vi.mock("node:fs", async (importOriginal) => {
   const actual = await importOriginal<typeof NodeFs>();
+  const failWhenFaulted = (operation: FaultOperation, target: unknown): void => {
+    const fault = unsafeReads.faults.find(
+      (candidate) =>
+        candidate.operation === operation &&
+        typeof target === "string" &&
+        path.resolve(candidate.file) === path.resolve(target),
+    );
+    if (fault === undefined) return;
+    throw Object.assign(
+      new Error(`${fault.code}: injected failure, ${operation} '${fault.file}'`),
+      {
+        code: fault.code,
+      },
+    );
+  };
   return {
     ...actual,
+    lstatSync: (...args: Parameters<typeof actual.lstatSync>) => {
+      failWhenFaulted("lstat", args[0]);
+      return actual.lstatSync(...args);
+    },
     statSync: (...args: Parameters<typeof actual.statSync>) => {
       if (unsafeReads.active) unsafeReads.paths.push(actual.realpathSync(args[0]));
       return actual.statSync(...args);
     },
     readdirSync: (...args: Parameters<typeof actual.readdirSync>) => {
+      failWhenFaulted("readdir", args[0]);
       if (unsafeReads.active) unsafeReads.paths.push(actual.realpathSync(args[0]));
       return actual.readdirSync(...args);
     },
     readFileSync: (...args: Parameters<typeof actual.readFileSync>) => {
+      failWhenFaulted("readFile", args[0]);
       if (unsafeReads.active && typeof args[0] !== "number") {
         unsafeReads.paths.push(actual.realpathSync(args[0]));
       }
@@ -1543,4 +1575,90 @@ describe("unsafe decision-register read boundary", () => {
       }
     },
   );
+});
+
+describe("decision-register filesystem causes", () => {
+  const table =
+    "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
+  const indexed = table.replace(
+    "## Decisions",
+    "## Decision pages\n\n- decisions/page-0001.md\n\n## Decisions",
+  );
+  const codes = ["EACCES", "EIO", "EMFILE"];
+
+  async function paged(): Promise<{ root: string; page: string }> {
+    const root = await newTempDir();
+    const specs = path.join(root, ".qfai", "specs");
+    const pagesDir = path.join(specs, "decisions");
+    await mkdir(pagesDir, { recursive: true });
+    await writeFile(path.join(specs, "decisions.md"), indexed, "utf-8");
+    await writeFile(path.join(pagesDir, "page-0001.md"), table, "utf-8");
+    return { root, page: path.join(pagesDir, "page-0001.md") };
+  }
+
+  afterEach(() => {
+    unsafeReads.faults.length = 0;
+  });
+
+  const failures: [string, FaultOperation, string, string][] = [
+    ["inspect the root document", "lstat", "Cannot inspect", ".qfai/specs/decisions.md"],
+    ["read the root document", "readFile", "Cannot read", ".qfai/specs/decisions.md"],
+    ["list the pages directory", "readdir", "Cannot list", ".qfai/specs/decisions"],
+    ["read a listed page", "readFile", "Cannot read", ".qfai/specs/decisions/page-0001.md"],
+    ["inspect a listed page", "lstat", "Cannot inspect", ".qfai/specs/decisions/page-0001.md"],
+  ];
+
+  // QFAI:EX-0001-0053-29
+  it.each(
+    failures.flatMap((failure) =>
+      codes.map((code): [...typeof failure, string] => [...failure, code]),
+    ),
+  )(
+    "names the failure when it cannot %s (%s, %s, %s, %s)",
+    async (_, operation, prefix, relative, code) => {
+      const { root } = await paged();
+      unsafeReads.faults.push({ operation, file: path.join(root, ...relative.split("/")), code });
+      const result = checkDocuments(root);
+      expect(result.ok).toBe(true);
+      expect(result.checked).toBe(0);
+      expect(result.violations).toEqual([
+        expect.objectContaining({
+          file: relative,
+          rule: "decision-register",
+          message: expect.stringContaining(prefix),
+        }),
+      ]);
+      const message: string = result.violations[0].message;
+      expect(message).toContain(`${code}: injected failure`);
+      for (const other of codes.filter((candidate) => candidate !== code)) {
+        expect(message).not.toContain(other);
+      }
+    },
+  );
+
+  it("tells a denied read from a failing one in the command's output", async () => {
+    const { root, page } = await paged();
+    const argv = process.argv;
+    const stderr = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const stdout = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    try {
+      process.argv = ["node", SCRIPT, "--root", root, "--scope", "all"];
+      const output: string[] = [];
+      for (const code of ["EACCES", "EIO"]) {
+        unsafeReads.faults.length = 0;
+        unsafeReads.faults.push({ operation: "readFile", file: page, code });
+        expect(main()).toBe(1);
+        output.push(stderr.mock.calls.flat().join("\n"));
+        stderr.mockClear();
+      }
+      expect(output[0]).toContain("EACCES: injected failure");
+      expect(output[0]).not.toContain("EIO");
+      expect(output[1]).toContain("EIO: injected failure");
+      expect(output[1]).not.toContain("EACCES");
+    } finally {
+      process.argv = argv;
+      stderr.mockRestore();
+      stdout.mockRestore();
+    }
+  });
 });
