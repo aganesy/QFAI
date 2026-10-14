@@ -22,7 +22,7 @@ changes, and record that decision before anything depends on it.
 - `.qfai/assistant/rule/change-classification.md`, the classification
   authority.
 - The existing story tree: `01_policy/`, `02_business-flow/`, `03_contract/`,
-  `decisions.md` and `open-questions.md` under `<paths.specsDir>`.
+  `decisions.md`, every page it lists in order, and `open-questions.md` under `<paths.specsDir>`; read decision pages before the root tail.
 
 ## Scope of the request
 
@@ -66,6 +66,13 @@ descendants when it still represents the requirement. Create a flow or story
 only when the existing tree cannot represent it. Trace impact through BF → US →
 AC → EX and every enforcing contract.
 
+Read the complete decision register using the Decision pages rules in the triage
+reference before allocating IDs or relying on an in-force decision. Append new
+rows only to the root table. Listed pages preserve the same row identity and
+Status permissions; an unreadable or incomplete register stops this stage.
+No automatic rotation is permitted. A physical relocation requires a separately
+adopted execution change request and reviewed raw-byte receipt.
+
 Record in `<paths.specsDir>/decisions.md` only what the user decided: each
 change request the user approved or declined, and each critical decision the
 user made. Record unresolved
@@ -79,7 +86,7 @@ its source as `discussion-<id>#REQ-NNNN` when that source exists, and who
 approved it, when, and the option chosen. A declined change request is appended at
 REJECTED, recording who declined it and when. A decision the agent took
 appends no row. Do not write a second decision-record
-directory or a retired story file.
+directory or a retired story file. Listed pages are members of the same register, not a second decision home.
 
 For a published malformed branch-added decision, follow
 `.qfai/assistant/rule/drift-protocol.md#published-decision-prefix-recovery`
@@ -181,7 +188,7 @@ IDs its open pull requests add takes the highest across the tree and those pull
 requests, so a gap above the tree's own highest is allowed. BF scope is project-wide; US
 scope is its BF; AC and EX scope is their US; a contract number's scope is every
 contract of every kind; BR scope is its contract, whose number the BR carries
-(`BR-0006-0001` belongs to `API-0006`); DEC and OQ scope is their own table.
+(`BR-0006-0001` belongs to `API-0006`); DEC scope is the complete ordered register; OQ scope is its own table.
 Empty scopes begin at `0001`, or `01` for AC and EX tails. This is a reading
 rule over the tree, not a new command.
 

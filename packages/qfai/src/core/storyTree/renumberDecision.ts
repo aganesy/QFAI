@@ -1,12 +1,29 @@
 import { execFile } from "node:child_process";
-import { lstat, readlink, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import fs, {
+  lstat,
+  mkdir,
+  readlink,
+  readdir,
+  rmdir,
+  unlink,
+  writeFile,
+  type FileHandle,
+} from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 
 import { readBoundedRegularFile } from "../../shared/boundedRead.js";
+import { defaultConfig } from "../config.js";
 import { isStoryTreeId } from "./ids.js";
-import { parseRecordTable } from "./tables.js";
-import { buildStoryTreeModel, nextStoryTreeId } from "./tree.js";
+import {
+  classifyRecordRow,
+  decisionPagePaths,
+  diffRecordRows,
+  parseDecisionRegister,
+  type DecisionRegister,
+} from "./tables.js";
+import { buildStoryTreeModel, nextStoryTreeId, readStoryTreeModel } from "./tree.js";
 
 const execute = promisify(execFile);
 const MAX_BYTES = 16 * 1024 * 1024;
@@ -198,11 +215,13 @@ async function matchingFiles(root: string, id: string, sha?: string): Promise<st
     .map((file) => (sha ? file.slice(sha.length + 1) : file.replace(/^\.\//, "")));
 }
 
-function records(source: string, file: string) {
-  const parsed = parseRecordTable(source, "decisions");
-  if (parsed.errors.length)
-    throw new Error(`Malformed or duplicate decisions in ${file}: ${parsed.errors.join("; ")}`);
-  return parsed.rows;
+function records(files: ReadonlyMap<string, string>, file: string) {
+  const parsed = parseDecisionRegister(files, file);
+  if (!parsed.complete || parsed.table.errors.length)
+    throw new Error(
+      `Malformed or duplicate decisions in ${file}: ${[...parsed.table.errors, ...parsed.errors.map(({ message }) => message)].join("; ")}`,
+    );
+  return parsed.table.rows;
 }
 
 async function fixedSpecTexts(
@@ -210,6 +229,13 @@ async function fixedSpecTexts(
   sha: string,
   specs: string,
 ): Promise<Map<string, string>> {
+  let component = "";
+  for (const part of specs.split("/").filter(Boolean)) {
+    component = component ? path.posix.join(component, part) : part;
+    const entry = await git(root, ["ls-tree", "-z", sha, "--", component]);
+    if (entry.length > 0 && !/^040000 tree [a-f0-9]+\t/.test(entry.toString()))
+      throw new Error(`Unsafe fixed story-tree directory: ${component}`);
+  }
   const listing = await git(root, ["ls-tree", "-r", "-z", sha, "--", specs]);
   const entries = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(listing);
   const files = new Map<string, string>();
@@ -217,10 +243,674 @@ async function fixedSpecTexts(
     const match = /^[0-7]+ blob ([a-f0-9]+)\t(.+)$/.exec(entry);
     if (!match?.[1] || !match[2]) throw new Error(`The fixed story tree has a non-blob: ${specs}`);
     const file = match[2];
-    if (!SUFFIXES.has(path.extname(file).toLowerCase())) continue;
+    if (
+      (file === path.posix.join(specs, "decisions.md") ||
+        file.startsWith(`${path.posix.join(specs, "decisions")}/`)) &&
+      !/^100[0-7]{3} /.test(entry)
+    )
+      throw new Error(`Linked decision path in fixed tree: ${file}`);
+    if (
+      !SUFFIXES.has(path.extname(file).toLowerCase()) &&
+      !file.startsWith(`${path.posix.join(specs, "decisions")}/`)
+    )
+      continue;
     files.set(file, text(await git(root, ["cat-file", "blob", match[1]]), file));
   }
   return files;
+}
+
+/** Invocation-bound evidence supplied only after an independent receipt review and adoption. */
+export type DecisionPageMigrationReceipt = {
+  root: string;
+  specsDir: string;
+  baseRef: string;
+  sourceBaselineSha: string;
+  headSha: string;
+  baseSha: string;
+  ancestorSha: string;
+  requestId: string;
+  requestFirstThreeCellsSha256: string;
+  historicalSource: { commit: string; path: string; sha256: string };
+  occurrences: {
+    originalOrdinal: number;
+    originalPath: string;
+    originalLine: number;
+    raw: Buffer;
+    destinationPath: string;
+    destinationLine: number;
+  }[];
+  files: { file: string; original: Buffer | null; replacement: Buffer }[];
+};
+export type DecisionPageMigrationOptions = {
+  root: string;
+  specsDir: string;
+  base: string;
+  receipt: DecisionPageMigrationReceipt;
+  adoptedReceiptSha256: string;
+};
+export type DecisionPageMigrationPlan = {
+  root: string;
+  specsDir: string;
+  baseRef: string;
+  receipt: DecisionPageMigrationReceipt;
+  receiptSha256: string;
+};
+export type DecisionPageMigrationIO = {
+  readFile?: (file: string) => Promise<Buffer>;
+  writeFile?: (file: string, contents: Buffer) => Promise<void>;
+  removeFile?: (file: string) => Promise<void>;
+};
+
+function sha256(value: string | Buffer): string {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function closedKeys(value: object, keys: readonly string[]): void {
+  if (Object.keys(value).sort().join("\n") !== [...keys].sort().join("\n"))
+    throw new Error("The adopted receipt has unknown or missing fields");
+}
+
+/** The externally adopted digest covers context as well as every input and replacement byte. */
+function pageReceiptHash(receipt: DecisionPageMigrationReceipt): string {
+  closedKeys(receipt, [
+    "root",
+    "specsDir",
+    "baseRef",
+    "sourceBaselineSha",
+    "headSha",
+    "baseSha",
+    "ancestorSha",
+    "requestId",
+    "requestFirstThreeCellsSha256",
+    "historicalSource",
+    "occurrences",
+    "files",
+  ]);
+  closedKeys(receipt.historicalSource, ["commit", "path", "sha256"]);
+  const occurrences = receipt.occurrences.map((item) => {
+    closedKeys(item, [
+      "originalOrdinal",
+      "originalPath",
+      "originalLine",
+      "raw",
+      "destinationPath",
+      "destinationLine",
+    ]);
+    if (!Buffer.isBuffer(item.raw)) throw new Error("Historical occurrence bytes are missing");
+    return {
+      originalOrdinal: item.originalOrdinal,
+      originalPath: item.originalPath,
+      originalLine: item.originalLine,
+      raw: item.raw.toString("base64"),
+      destinationPath: item.destinationPath,
+      destinationLine: item.destinationLine,
+    };
+  });
+  const files = receipt.files.map((file) => {
+    closedKeys(file, ["file", "original", "replacement"]);
+    if (
+      (file.original !== null && !Buffer.isBuffer(file.original)) ||
+      !Buffer.isBuffer(file.replacement)
+    )
+      throw new Error("Receipt file bytes are missing");
+    return {
+      file: file.file,
+      original: file.original === null ? null : file.original.toString("base64"),
+      replacement: file.replacement.toString("base64"),
+    };
+  });
+  return sha256(
+    JSON.stringify({
+      root: receipt.root,
+      specsDir: receipt.specsDir,
+      baseRef: receipt.baseRef,
+      sourceBaselineSha: receipt.sourceBaselineSha,
+      headSha: receipt.headSha,
+      baseSha: receipt.baseSha,
+      ancestorSha: receipt.ancestorSha,
+      requestId: receipt.requestId,
+      requestFirstThreeCellsSha256: receipt.requestFirstThreeCellsSha256,
+      historicalSource: {
+        commit: receipt.historicalSource.commit,
+        path: receipt.historicalSource.path,
+        sha256: receipt.historicalSource.sha256,
+      },
+      occurrences,
+      files,
+    }),
+  );
+}
+
+/** Copy every authority byte synchronously, before any caller-controlled await. */
+function snapshotPageReceipt(input: DecisionPageMigrationReceipt): DecisionPageMigrationReceipt {
+  const digest = pageReceiptHash(input);
+  const receipt: DecisionPageMigrationReceipt = {
+    root: input.root,
+    specsDir: input.specsDir,
+    baseRef: input.baseRef,
+    sourceBaselineSha: input.sourceBaselineSha,
+    headSha: input.headSha,
+    baseSha: input.baseSha,
+    ancestorSha: input.ancestorSha,
+    requestId: input.requestId,
+    requestFirstThreeCellsSha256: input.requestFirstThreeCellsSha256,
+    historicalSource: {
+      commit: input.historicalSource.commit,
+      path: input.historicalSource.path,
+      sha256: input.historicalSource.sha256,
+    },
+    occurrences: input.occurrences.map((item) => ({
+      originalOrdinal: item.originalOrdinal,
+      originalPath: item.originalPath,
+      originalLine: item.originalLine,
+      raw: Buffer.from(item.raw),
+      destinationPath: item.destinationPath,
+      destinationLine: item.destinationLine,
+    })),
+    files: input.files.map((file) => ({
+      file: file.file,
+      original: file.original === null ? null : Buffer.from(file.original),
+      replacement: Buffer.from(file.replacement),
+    })),
+  };
+  if (pageReceiptHash(receipt) !== digest)
+    throw new Error("Receipt mutated while taking its local snapshot");
+  return receipt;
+}
+
+function readableRegister(files: ReadonlyMap<string, string>, rootFile: string): DecisionRegister {
+  const register = parseDecisionRegister(files, rootFile);
+  // Duplicate diagnostics stay active. Moving every duplicate occurrence is permitted;
+  // invalid cells or an incomplete inventory are not.
+  const invalid = register.table.errors.filter(
+    (error) => !/declares DEC-\d{4} more than once/.test(error),
+  );
+  if (!register.complete || invalid.length > 0)
+    throw new Error(
+      `Incomplete or invalid decision register: ${[...invalid, ...register.errors.map(({ message }) => message)].join("; ")}`,
+    );
+  return register;
+}
+
+async function absentDecisionPage(root: string, file: string): Promise<void> {
+  const relative = path.relative(root, path.resolve(root, file));
+  if (relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative))
+    throw new Error(`Unsafe destination: ${file}`);
+  let current = root;
+  for (const [index, part] of relative.split(path.sep).entries()) {
+    current = path.join(current, part);
+    const stats = await lstat(current).catch((failure: unknown) => {
+      if (failure instanceof Error && "code" in failure && failure.code === "ENOENT")
+        return undefined;
+      throw failure;
+    });
+    if (!stats) return;
+    if (stats.isSymbolicLink() || !stats.isDirectory()) {
+      if (index === relative.split(path.sep).length - 1)
+        throw new Error(`Unexpected existing destination: ${file}`);
+      throw new Error(`Linked or non-directory destination component: ${file}`);
+    }
+    if (index === relative.split(path.sep).length - 1)
+      throw new Error(`Unexpected existing destination: ${file}`);
+  }
+}
+
+async function pageReceiptRefs(
+  root: string,
+  baseRef: string,
+  receipt: DecisionPageMigrationReceipt,
+): Promise<void> {
+  if (
+    (await commit(root, "HEAD")) !== receipt.headSha ||
+    (await commit(root, baseRef)) !== receipt.baseSha
+  )
+    throw new Error("Stale receipt: HEAD or base changed");
+  const ancestors = (await git(root, ["merge-base", "--all", receipt.headSha, receipt.baseSha]))
+    .toString()
+    .trim()
+    .split(/\s+/);
+  if (ancestors.length !== 1 || ancestors[0] !== receipt.ancestorSha)
+    throw new Error("The receipt requires its exact unique common ancestor");
+}
+
+/** Validates this closed four-path operation without writing or inventing review approval. */
+export async function buildDecisionPageMigrationPlan(
+  input: DecisionPageMigrationOptions,
+): Promise<DecisionPageMigrationPlan> {
+  const options: DecisionPageMigrationOptions = {
+    root: input.root,
+    specsDir: input.specsDir,
+    base: input.base,
+    adoptedReceiptSha256: input.adoptedReceiptSha256,
+    receipt: snapshotPageReceipt(input.receipt),
+  };
+  const { receipt } = options;
+  const digest = pageReceiptHash(receipt);
+  if (
+    !/^[a-f0-9]{64}$/.test(options.adoptedReceiptSha256) ||
+    digest !== options.adoptedReceiptSha256
+  )
+    throw new Error("An explicit independently adopted receipt SHA-256 is required");
+  const root = path.resolve(options.root);
+  const specsDir = path
+    .relative(root, path.resolve(root, options.specsDir))
+    .split(path.sep)
+    .join("/");
+  if (
+    specsDir === ".." ||
+    specsDir.startsWith("../") ||
+    path.isAbsolute(specsDir) ||
+    receipt.root !== root ||
+    receipt.specsDir !== specsDir ||
+    receipt.baseRef !== options.base
+  )
+    throw new Error("The receipt context does not match this repository operation");
+  const rootFile = path.posix.join(specsDir, "decisions.md");
+  const pages = [1, 2, 3].map((number) =>
+    path.posix.join(specsDir, "decisions", `page-${String(number).padStart(4, "0")}.md`),
+  );
+  if (receipt.files.map(({ file }) => file).join("\n") !== [...pages, rootFile].join("\n"))
+    throw new Error("The receipt requires exactly its three historical pages followed by the root");
+  if (receipt.historicalSource.path !== rootFile || !isStoryTreeId(receipt.requestId, "DEC"))
+    throw new Error("Invalid historical source or execution request");
+  await regular(root, rootFile);
+  await pageReceiptRefs(root, options.base, receipt);
+  for (const revision of [receipt.sourceBaselineSha, receipt.historicalSource.commit]) {
+    if ((await commit(root, revision)) !== revision)
+      throw new Error("Receipt source must name a fixed commit");
+    await git(root, ["merge-base", "--is-ancestor", revision, receipt.headSha]);
+  }
+  const directory = path.join(root, specsDir, "decisions");
+  const existingDirectory = await lstat(directory).catch((error: unknown) => {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return undefined;
+    throw error;
+  });
+  if (existingDirectory)
+    throw new Error("The separately adopted new decision-directory destination must be absent");
+  const originals = new Map<string, string>();
+  const replacements = new Map<string, string>();
+  for (const file of receipt.files) {
+    replacements.set(file.file, text(file.replacement, file.file));
+    const committed = await blob(root, receipt.headSha, file.file);
+    if (file.file === rootFile) {
+      if (
+        !file.original ||
+        !committed ||
+        !committed.equals(file.original) ||
+        !(await original(root, file.file)).equals(file.original)
+      )
+        throw new Error(`Stale or missing source bytes: ${file.file}`);
+      originals.set(file.file, text(file.original, file.file));
+    } else {
+      if (file.original !== null || committed !== undefined)
+        throw new Error(`Destination must be absent: ${file.file}`);
+      await absentDecisionPage(root, file.file);
+    }
+    if (
+      (await git(root, ["diff", "--cached", "--name-only", receipt.headSha, "--", file.file]))
+        .length
+    )
+      throw new Error(`Stale receipt index: ${file.file}`);
+  }
+  const current = readableRegister(originals, rootFile);
+  const working = await readStoryTreeModel(root, {
+    ...defaultConfig,
+    paths: {
+      ...defaultConfig.paths,
+      specsDir,
+      contractsDir: path.posix.join(specsDir, "03_contract"),
+    },
+  });
+  if (
+    !working.decisionRegisterComplete ||
+    working.decisionOccurrences.map(({ raw }) => raw).join("") !==
+      current.occurrences.map(({ raw }) => raw).join("")
+  )
+    throw new Error("The complete working register is unreadable or stale");
+  const proposed = readableRegister(replacements, rootFile);
+  if (proposed.errors.length > 0)
+    throw new Error(
+      "Every proposed physical decision document must remain within 500 inclusive lines",
+    );
+  const rootReplacement = replacements.get(rootFile);
+  if (
+    rootReplacement === undefined ||
+    decisionPagePaths(rootReplacement).paths.join("\n") !==
+      pages.map((page) => path.posix.relative(specsDir, page)).join("\n")
+  )
+    throw new Error(
+      "Replacement root must list exactly the three direct historical pages in order",
+    );
+  const baseline = readableRegister(
+    await fixedSpecTexts(root, receipt.sourceBaselineSha, specsDir),
+    rootFile,
+  );
+  const difference = diffRecordRows(baseline.table, current.table, "decisions");
+  if (difference.removed.length > 0 || difference.rewritten.length > 0)
+    throw new Error("Inherited first-three decision cells changed");
+  const requestRows = current.table.rows.filter(({ id }) => id === receipt.requestId);
+  const request = requestRows[0];
+  if (
+    requestRows.length !== 1 ||
+    !request ||
+    sha256(JSON.stringify([request.id, request.content, request.approach])) !==
+      receipt.requestFirstThreeCellsSha256
+  )
+    throw new Error("Execution request immutable cells do not match the adopted receipt");
+  const classified = classifyRecordRow(request);
+  const authorityAtBase = readableRegister(
+    await fixedSpecTexts(root, receipt.ancestorSha, specsDir),
+    rootFile,
+  ).table.rows.filter(({ id }) => id === request.id);
+  const inheritedRequest = authorityAtBase[0];
+  const authorisesBranch =
+    request.status === "WIP" || inheritedRequest === undefined || inheritedRequest.status === "WIP";
+  if (
+    classified.kind !== "change-request" ||
+    !classified.inForce ||
+    !authorisesBranch ||
+    authorityAtBase.length > 1 ||
+    authorityAtBase.some(
+      (row) =>
+        row.status === "DONE" ||
+        row.content !== request.content ||
+        row.approach !== request.approach,
+    )
+  )
+    throw new Error("No in-force immutable execution request authorizes this operation");
+  const currentBase = readableRegister(
+    await fixedSpecTexts(root, receipt.baseSha, specsDir),
+    rootFile,
+  );
+  const baseRequests = currentBase.table.rows.filter(({ id }) => id === request.id);
+  if (
+    baseRequests.length > 1 ||
+    baseRequests.some(
+      (row) =>
+        row.status === "DONE" ||
+        row.content !== request.content ||
+        row.approach !== request.approach,
+    )
+  )
+    throw new Error("Current base already consumed or changed the immutable execution request");
+  if (!receipt.files.every(({ file }) => classified.refs.includes(file)))
+    throw new Error("Execution request does not name every exact physical path");
+  const historicalBytes = await blob(root, receipt.historicalSource.commit, rootFile);
+  if (!historicalBytes || sha256(historicalBytes) !== receipt.historicalSource.sha256)
+    throw new Error("Historical source bytes do not match the adopted receipt");
+  const historical = readableRegister(
+    new Map([[rootFile, text(historicalBytes, rootFile)]]),
+    rootFile,
+  );
+  if (
+    receipt.occurrences.length !== historical.occurrences.length ||
+    historical.occurrences.length === 0
+  )
+    throw new Error("Historical occurrence map is incomplete");
+  for (const [index, source] of historical.occurrences.entries()) {
+    const item = receipt.occurrences[index];
+    const before = current.occurrences[index];
+    const after = proposed.occurrences[index];
+    if (
+      !item ||
+      !before ||
+      !after ||
+      item.originalOrdinal !== index + 1 ||
+      item.originalPath !== rootFile ||
+      item.originalLine !== source.origin.actualRow ||
+      !item.raw.equals(Buffer.from(source.raw)) ||
+      before.raw !== source.raw ||
+      after.raw !== source.raw ||
+      !pages.includes(item.destinationPath) ||
+      item.destinationPath !== after.origin.path ||
+      item.destinationLine !== after.origin.actualRow
+    )
+      throw new Error("Historical raw occurrence, ending, order or destination changed");
+  }
+  if (current.occurrences.length !== proposed.occurrences.length)
+    throw new Error("The complete logical register lost or gained an occurrence");
+  for (const [index, occurrence] of current.occurrences.entries()) {
+    const after = proposed.occurrences[index];
+    if (
+      !after ||
+      after.raw !== occurrence.raw ||
+      (index >= historical.occurrences.length && after.origin.path !== rootFile)
+    )
+      throw new Error("Original root-tail bytes or Status changed through relocation");
+  }
+  await pageReceiptRefs(root, options.base, receipt);
+  return { root, specsDir, baseRef: options.base, receipt, receiptSha256: digest };
+}
+
+type OwnedPageWrite = {
+  file: DecisionPageMigrationReceipt["files"][number];
+  handle: FileHandle;
+  dev: bigint;
+  ino: bigint;
+  /** Last exact state proved by our completed writes, never an observed competitor state. */
+  expected: Buffer;
+};
+
+/** Writes through the opened inode, retaining exact progress if a later write fails. */
+async function writeOwnedPage(state: OwnedPageWrite, replacement: Buffer): Promise<void> {
+  const initial = state.expected;
+  const writeBytes = Buffer.from(replacement);
+  let offset = 0;
+  while (offset < replacement.length) {
+    const { bytesWritten } = await state.handle.write(
+      writeBytes,
+      offset,
+      writeBytes.length - offset,
+      offset,
+    );
+    if (bytesWritten <= 0) throw new Error("Owned write made no progress");
+    offset += bytesWritten;
+    const proved = Buffer.alloc(Math.max(initial.length, offset));
+    initial.copy(proved);
+    replacement.copy(proved, 0, 0, offset);
+    state.expected = proved;
+  }
+  await state.handle.truncate(replacement.length);
+  state.expected = Buffer.from(replacement);
+}
+
+/** Applies only the externally adopted bytes; a mutable or fabricated plan grants no authority. */
+export async function applyDecisionPageMigrationPlan(
+  input: DecisionPageMigrationPlan,
+  adoptedReceiptSha256: string,
+  io: DecisionPageMigrationIO = {},
+): Promise<void> {
+  closedKeys(input, ["root", "specsDir", "baseRef", "receipt", "receiptSha256"]);
+  const plan: DecisionPageMigrationPlan = {
+    root: input.root,
+    specsDir: input.specsDir,
+    baseRef: input.baseRef,
+    receiptSha256: input.receiptSha256,
+    receipt: snapshotPageReceipt(input.receipt),
+  };
+  const readHook = io.readFile;
+  const writeHook = io.writeFile;
+  const removeHook = io.removeFile;
+  if (plan.receiptSha256 !== adoptedReceiptSha256)
+    throw new Error("Plan does not match the externally adopted receipt");
+  await buildDecisionPageMigrationPlan({
+    root: plan.root,
+    specsDir: plan.specsDir,
+    base: plan.baseRef,
+    receipt: plan.receipt,
+    adoptedReceiptSha256,
+  });
+  const read = async (file: string): Promise<Buffer> => {
+    const bytes = readHook
+      ? await readHook(file)
+      : await original(plan.root, path.relative(plan.root, file));
+    if (!Buffer.isBuffer(bytes)) throw new Error("The read callback did not return file bytes");
+    return Buffer.from(bytes);
+  };
+  const directory = path.join(plan.root, plan.specsDir, "decisions");
+  const owned: OwnedPageWrite[] = [];
+  const handles: { handle: FileHandle; file: string }[] = [];
+  const indeterminate: string[] = [];
+  let ownedDirectory: { dev: bigint; ino: bigint } | undefined;
+  let failureToReport: Error | undefined;
+  const sameOwnedInode = async (state: OwnedPageWrite): Promise<void> => {
+    const target = path.resolve(plan.root, state.file.file);
+    await regular(plan.root, state.file.file);
+    const stats = await lstat(target, { bigint: true });
+    const handleStats = await state.handle.stat({ bigint: true });
+    if (
+      stats.dev !== state.dev ||
+      stats.ino !== state.ino ||
+      handleStats.dev !== state.dev ||
+      handleStats.ino !== state.ino
+    )
+      throw new Error(`Concurrent candidate inode replacement: ${state.file.file}`);
+  };
+  const check = async () => {
+    if (
+      pageReceiptHash(plan.receipt) !== adoptedReceiptSha256 ||
+      plan.root !== plan.receipt.root ||
+      plan.specsDir !== plan.receipt.specsDir ||
+      plan.baseRef !== plan.receipt.baseRef
+    )
+      throw new Error("Stale adopted receipt context");
+    await pageReceiptRefs(plan.root, plan.baseRef, plan.receipt);
+    if (ownedDirectory) {
+      const stats = await lstat(directory, { bigint: true });
+      if (
+        !stats.isDirectory() ||
+        stats.isSymbolicLink() ||
+        stats.dev !== ownedDirectory.dev ||
+        stats.ino !== ownedDirectory.ino
+      )
+        throw new Error("Concurrent decision-directory replacement");
+      const expected = new Set(
+        owned
+          .filter(({ file }) => file.original === null)
+          .map(({ file }) => path.basename(file.file)),
+      );
+      if ((await readdir(directory)).some((file) => !expected.has(file)))
+        throw new Error("Unexpected concurrent decision-directory entry");
+    }
+    for (const file of plan.receipt.files) {
+      const state = owned.find((candidate) => candidate.file === file);
+      const expected = state ? file.replacement : file.original;
+      if (expected === null) await absentDecisionPage(plan.root, file.file);
+      else {
+        if (state) await sameOwnedInode(state);
+        else await regular(plan.root, file.file);
+        if (!(await read(path.resolve(plan.root, file.file))).equals(expected))
+          throw new Error(`Stale candidate bytes: ${file.file}`);
+      }
+      if (
+        (
+          await git(plan.root, [
+            "diff",
+            "--cached",
+            "--name-only",
+            plan.receipt.headSha,
+            "--",
+            file.file,
+          ])
+        ).length
+      )
+        throw new Error(`Stale candidate index: ${file.file}`);
+    }
+  };
+  await check();
+  try {
+    await mkdir(directory);
+    const stats = await lstat(directory, { bigint: true });
+    ownedDirectory = { dev: stats.dev, ino: stats.ino };
+    for (const file of plan.receipt.files) {
+      await check();
+      const target = path.resolve(plan.root, file.file);
+      // EEXIST grants no ownership and never enters the rollback set.
+      const handle = await fs.open(target, file.original === null ? "wx" : "r+");
+      handles.push({ handle, file: file.file });
+      indeterminate.push(file.file);
+      const handleStats = await handle.stat({ bigint: true });
+      const state: OwnedPageWrite = {
+        file,
+        handle,
+        dev: handleStats.dev,
+        ino: handleStats.ino,
+        expected: file.original === null ? Buffer.alloc(0) : Buffer.from(file.original),
+      };
+      owned.push(state);
+      indeterminate.pop();
+      await sameOwnedInode(state);
+      if (!(await read(target)).equals(state.expected))
+        throw new Error(`Concurrent change after opening candidate: ${file.file}`);
+      if (writeHook) {
+        await writeHook(target, Buffer.from(file.replacement));
+        state.expected = Buffer.from(file.replacement);
+      } else await writeOwnedPage(state, file.replacement);
+    }
+    await check();
+  } catch (failure) {
+    const unrestored = [...indeterminate];
+    for (const state of [...owned].reverse()) {
+      const { file } = state;
+      try {
+        const target = path.resolve(plan.root, file.file);
+        if (file.original === null && ownedDirectory) {
+          const directoryStats = await lstat(directory, { bigint: true });
+          if (
+            directoryStats.dev !== ownedDirectory.dev ||
+            directoryStats.ino !== ownedDirectory.ino ||
+            directoryStats.isSymbolicLink()
+          )
+            throw new Error("Concurrent destination-directory replacement", { cause: failure });
+        }
+        await sameOwnedInode(state);
+        const bytes = await read(target);
+        if (file.original !== null && bytes.equals(file.original)) continue;
+        if (!bytes.equals(file.replacement) && !bytes.equals(state.expected)) {
+          unrestored.push(file.file);
+          continue;
+        }
+        await sameOwnedInode(state);
+        if (file.original === null) {
+          if (removeHook) await removeHook(target);
+          else await unlink(target);
+        } else if (writeHook) await writeHook(target, Buffer.from(file.original));
+        else await writeOwnedPage(state, file.original);
+      } catch {
+        unrestored.push(file.file);
+      }
+    }
+    if (ownedDirectory) {
+      try {
+        const stats = await lstat(directory, { bigint: true });
+        if (
+          stats.dev === ownedDirectory.dev &&
+          stats.ino === ownedDirectory.ino &&
+          !stats.isSymbolicLink() &&
+          (await readdir(directory)).length === 0
+        )
+          await rmdir(directory);
+      } catch {
+        unrestored.push(path.relative(plan.root, directory));
+      }
+    }
+    failureToReport = new Error(
+      `Apply failed: ${failure instanceof Error ? failure.message : String(failure)}; ${unrestored.length ? `unrestored paths: ${unrestored.join(", ")}` : "owned replacement bytes restored"}`,
+      { cause: failure },
+    );
+  } finally {
+    for (const { handle, file } of handles) {
+      try {
+        await handle.close();
+      } catch (failure) {
+        failureToReport = new Error(
+          `${failureToReport?.message ?? "Applied bytes but closing an owned handle failed"}; close failure for ${file}: ${failure instanceof Error ? failure.message : String(failure)}`,
+          { cause: failureToReport ?? failure },
+        );
+      }
+    }
+  }
+  if (failureToReport) throw failureToReport;
 }
 
 export async function buildDecisionRenumberPlan(
@@ -268,10 +958,16 @@ export async function buildDecisionRenumberPlan(
   const headBytes = await blob(root, headSha, decisionFile);
   const ancestorBytes = await blob(root, ancestorSha, decisionFile);
   if (!headBytes) throw new Error("The current story tree has no decisions.md.");
-  const headRows = records(text(headBytes, decisionFile), decisionFile);
-  const ancestorRows = ancestorBytes
-    ? records(text(ancestorBytes, decisionFile), decisionFile)
-    : [];
+  const headTexts = await fixedSpecTexts(root, headSha, specs);
+  const headRows = records(headTexts, decisionFile);
+  const ancestorTexts = await fixedSpecTexts(root, ancestorSha, specs);
+  const ancestorRows =
+    ancestorBytes ||
+    [...ancestorTexts.keys()].some((file) =>
+      file.startsWith(`${path.posix.join(specs, "decisions")}/`),
+    )
+      ? records(ancestorTexts, decisionFile)
+      : [];
   if (headRows.filter((row) => row.id === options.from).length !== 1)
     throw new Error("The source must be one unique current DEC row.");
   if (ancestorRows.some((row) => row.id === options.from))
@@ -291,7 +987,7 @@ export async function buildDecisionRenumberPlan(
         );
     }
     const ledger = specTexts.get(decisionFile);
-    if (ledger !== undefined) records(ledger, decisionFile);
+    if (ledger !== undefined) records(specTexts, decisionFile);
     const model = buildStoryTreeModel(specTexts, { specsDir: specs });
     highest = Math.max(highest, Number(nextStoryTreeId(model, "DEC").slice(4)) - 1);
     for (const rule of model.rules) {
@@ -401,7 +1097,10 @@ export async function buildDecisionRenumberPlan(
     if (count)
       changes.push({ file, original: bytes, replacement: Buffer.from(replacement, "utf8"), count });
   }
-  if (!changes.some((change) => change.file === decisionFile))
+  const sourceFile = parseDecisionRegister(headTexts, decisionFile).occurrences.find(
+    ({ row }) => row.id === options.from,
+  )?.origin.path;
+  if (!changes.some((change) => change.file === sourceFile))
     throw new Error("The branch-added decision row could not be identified safely.");
   return {
     root,

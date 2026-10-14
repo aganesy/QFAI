@@ -28,6 +28,9 @@ function model(decisions?: string, examples?: string) {
   const entries = new Map(files);
   if (decisions) entries.set(`${specs}/decisions.md`, decisions);
   if (examples) entries.set(`${story}/03_Example.md`, examples);
+  const decisionText = entries.get(`${specs}/decisions.md`);
+  if (decisionText?.startsWith("|"))
+    entries.set(`${specs}/decisions.md`, "# Decisions\n\n## Decisions\n\n" + decisionText);
   return buildStoryTreeModel(entries, { specsDir: specs, contractsDir: `${specs}/03_contract` });
 }
 
@@ -579,3 +582,46 @@ it.each(["BF-9999", "AC-9999-0001-01", "EX-0001-0001-99"] as const)(
     }
   },
 );
+
+function refusesInvalidHistoricalException(fault: string): void {
+  const header =
+    "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
+  const row = "| DEC-0001 | Test exception: EX-0001-0001-01 | No environment | DONE |\n";
+  const entries = new Map(files);
+  entries.set(
+    `${specs}/decisions.md`,
+    header.replace(
+      "## Decisions",
+      "## Decision pages\n\n- decisions/page-0001.md\n\n## Decisions",
+    ) + (fault === "duplicate exception" ? row : ""),
+  );
+  entries.set(
+    `${specs}/decisions/page-0001.md`,
+    header +
+      (fault === "fifth cell" ? row.replace("| DONE |", "| DONE | extra |") : row) +
+      (fault === "invalid sibling status" ? "| DEC-0002 | Other | Keep | UNKNOWN |\n" : ""),
+  );
+  const current = buildStoryTreeModel(entries, {
+    specsDir: specs,
+    contractsDir: `${specs}/03_contract`,
+  });
+  expect(current.decisionRegisterComplete).toBe(true);
+  expect(current.decisions?.errors.length).toBeGreaterThan(0);
+  const findings = validateStoryTreeObligationsModel(current, [], "tdd");
+  expect(findings).toContainEqual(
+    expect.objectContaining({ code: "QFAI-STORY-006", refs: ["EX-0001-0001-01"] }),
+  );
+  expect(findings.filter((finding) => finding.code === "QFAI-STORY-009")).toEqual([]);
+  expect(current.decisionOccurrences[0]?.row.id).toBe("DEC-0001");
+  expect(current.decisionOccurrences[0]?.origin.path).toBe(`${specs}/decisions/page-0001.md`);
+}
+
+// QFAI:EX-0001-0053-31
+it.each(["fifth cell", "invalid sibling status"])(
+  "does not grant a DONE Test exception from an invalid historical page: %s",
+  refusesInvalidHistoricalException,
+);
+
+// QFAI:EX-0001-0053-26
+it("does not grant a DONE Test exception from duplicate page/root occurrences", () =>
+  refusesInvalidHistoricalException("duplicate exception"));

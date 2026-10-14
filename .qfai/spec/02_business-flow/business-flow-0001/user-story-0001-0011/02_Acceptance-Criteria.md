@@ -8,7 +8,7 @@ Feature: Story-tree layout described by mdschema
   Scenario: Every story-tree Markdown file has one schema entry and one template
     Given the mdschema manifest and the `qfai-sdd` templates
     When each Markdown file of the story tree is matched against them
-    Then each of the fifteen fixed files and the Markdown CLI contract matches exactly one manifest entry, paired with one template
+    Then each of the fifteen fixed files, every optional decision page and the Markdown CLI contract matches exactly one manifest entry, paired with one template
     And `documentsWithoutOneEntry` in `check-mdschema.mjs` reports no file
 
   # AC-0001-0011-02
@@ -27,7 +27,7 @@ Feature: Story-tree layout described by mdschema
 
   # AC-0001-0011-04
   Scenario: A table-only section holds its template's table and nothing else
-    Given a story-tree document whose section holds only a table
+    Given a story-tree document whose section holds only a table, including a historical decision page
     When the document is checked against its schema
     Then a column the template's table does not have is a violation
     And a pipe line directly above the table's header row is a violation

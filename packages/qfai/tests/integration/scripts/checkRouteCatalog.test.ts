@@ -5,11 +5,17 @@
  * The route catalog lane: the contract's route rows, the change requests they cite and the plans
  * the package ships, held together on the tree and against the base of a change.
  */
-import { readFileSync } from "node:fs";
+import { execFileSync, spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { expect, it } from "vitest";
+
+import { defaultConfig } from "../../../src/core/config.js";
+import { readDecisionFilesAtRevision } from "../../../src/core/gitChanges.js";
+import { buildStoryTreeModel, readStoryTreeModel } from "../../../src/core/storyTree/tree.js";
 
 import {
   CONTRACT,
@@ -24,7 +30,10 @@ import {
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../../..");
 
 const contract = readFileSync(path.join(REPO_ROOT, CONTRACT), "utf8");
-const decisions = readFileSync(path.join(REPO_ROOT, DECISIONS), "utf8");
+const decisionModel = await readStoryTreeModel(REPO_ROOT, defaultConfig);
+if (!decisionModel.decisionRegisterComplete)
+  throw new Error(`Cannot read the complete ${DECISIONS} register`);
+const decisions = decisionModel.decisionOccurrences.map(({ raw }) => raw).join("");
 
 // The contract with one route row's statement changed.
 function withRow(route: string, change: (row: string) => string): string {
@@ -145,3 +154,110 @@ it("A route row removed with no change request naming it", () => {
     "verify-manually: the route row was removed, and no appended change request names it",
   ]);
 });
+
+async function checksHistoricalCatalogRegister(fault: string): Promise<void> {
+  const root = mkdtempSync(path.join(os.tmpdir(), "qfai-route-register-"));
+  const git = (...args: string[]): void => {
+    execFileSync("git", args, { cwd: root, stdio: "ignore" });
+  };
+  const put = (file: string, text: string): void => {
+    const target = path.join(root, file);
+    mkdirSync(path.dirname(target), { recursive: true });
+    writeFileSync(target, text);
+  };
+  const header =
+    "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
+  const page = ".qfai/spec/decisions/page-0001.md";
+  const historical = "| DEC-0001 | Historical choice | Keep | DONE |\n";
+  const request = `| DEC-0002 | Change request: ${CONTRACT} | - Date: 2026-10-12 - Approval: user approved triage-stale | DONE |\n`;
+  const tail =
+    header.replace(
+      "## Decisions",
+      "## Decision pages\n\n- decisions/page-0001.md\n\n## Decisions",
+    ) + request;
+  const valid = header + historical;
+  const invalid = fault.startsWith("duplicate")
+    ? valid + request
+    : valid.replace("| DONE |", "| DONE | extra |");
+  try {
+    git("init", "-b", "main");
+    git("config", "user.email", "test@example.test");
+    git("config", "user.name", "Test");
+    git("config", "commit.gpgsign", "false");
+    git("config", "core.autocrlf", "false");
+    put(
+      CONTRACT,
+      "# CLI-0015: Workflow\n\n## Business rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n" +
+        "| BR-0015-0001 | Route `triage-stale` — family `close`. Plan: `close[triage-close]`. Decision points: none. Release point: none. Branch points: none. Approved by DEC-0002. | EX-0001-0217-01 |\n",
+    );
+    put(
+      "packages/qfai/assets/defaults/workflows/triage-stale.yml",
+      "family: close\nstages:\n  - id: close\n    steps: [triage-close]\n",
+    );
+    put(DECISIONS, tail);
+    put(page, fault.endsWith("base") ? invalid : valid);
+    git("add", ".");
+    git("commit", "-m", "base register");
+    git("checkout", "-b", "topic");
+    put(page, fault.endsWith("head") ? invalid : fault.endsWith("base") ? valid : valid.trimEnd());
+    git("add", ".");
+    git("commit", "-m", "head register");
+    const headModel = await readStoryTreeModel(root, defaultConfig);
+    const baseModel = buildStoryTreeModel(readDecisionFilesAtRevision(root, "main", ".qfai/spec"), {
+      specsDir: ".qfai/spec",
+    });
+    expect(headModel.decisionRegisterComplete).toBe(true);
+    expect(baseModel.decisionRegisterComplete).toBe(true);
+    if (fault !== "EOF without newline") {
+      const invalidModel = fault.endsWith("base") ? baseModel : headModel;
+      expect(invalidModel.decisions?.errors.length).toBeGreaterThan(0);
+      expect(invalidModel.decisionOccurrences[0]?.origin.path).toBe(page);
+    }
+    const result = spawnSync(
+      process.execPath,
+      [path.join(REPO_ROOT, "scripts", "check-route-catalog.mjs")],
+      {
+        cwd: root,
+        encoding: "utf8",
+        env: { ...process.env, BASE_REF: "main", GITHUB_EVENT_NAME: "pull_request" },
+      },
+    );
+    if (fault === "EOF without newline") {
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.stdout).toContain("1 routes, each approved");
+    } else {
+      expect(result.status).toBe(1);
+      expect(result.stderr).toMatch(/decision register.*safely/i);
+      expect(result.stderr).toMatch(
+        fault.startsWith("duplicate") ? /decisions\.md/ : /decisions\/page-0001\.md/,
+      );
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+}
+
+/**
+ * The script loads the package's TypeScript sources, which only a Node.js that strips types can
+ * run. The cases below are skipped on a runtime without it, such as the engines floor;
+ * lift when the engines floor reaches Node.js 22.18.
+ */
+const runsTypeScript = Boolean(process.features.typescript);
+
+// QFAI:EX-0001-0053-26
+it.skipIf(!runsTypeScript).each(["duplicate head", "duplicate base"])(
+  "checks the actual route-catalog CLI with %s page/root occurrences",
+  checksHistoricalCatalogRegister,
+);
+
+// QFAI:EX-0001-0053-31
+it.skipIf(!runsTypeScript).each(["malformed head", "malformed base"])(
+  "checks the actual route-catalog CLI with a %s historical page",
+  checksHistoricalCatalogRegister,
+);
+
+// Supplementary EOF regression: no existing EX specifically names this evaluation separator.
+it.skipIf(!runsTypeScript)(
+  "reads a page EOF without newline followed by a valid root route approval",
+  () => checksHistoricalCatalogRegister("EOF without newline"),
+);

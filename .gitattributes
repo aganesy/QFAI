@@ -21,4 +21,6 @@
 # sides edited; `pnpm ci:lint:scans` and `pnpm branch:catchup` report that duplicate ID. GitHub's
 # merge ignores the driver, so a pull request can show a conflict that a local merge does not.
 /.qfai/spec/decisions.md merge=union
+# Preserve reviewed page bytes; schema and duplicate checks still apply.
+/.qfai/spec/decisions/page-*.md -text merge=union
 /.qfai/spec/open-questions.md merge=union

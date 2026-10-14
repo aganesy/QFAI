@@ -1,9 +1,26 @@
+import path from "node:path";
+
 import { parseAllMarkdownTables } from "../specPackParsers.js";
 import { isStoryTreeId } from "./ids.js";
 
 export type RecordTableKind = "decisions" | "open-questions";
 export type RecordRow = { id: string; content: string; approach: string; status: string };
 export type ParsedRecordTable = { rows: RecordRow[]; errors: string[] };
+export type DecisionOccurrence = {
+  row: RecordRow;
+  origin: { path: string; actualRow: number; rawOrdinal: number };
+  /** Stored physical row, including its original line ending. */
+  raw: string;
+};
+export type DecisionRegisterError = { file: string; message: string };
+export type DecisionRegister = {
+  table: ParsedRecordTable;
+  files: string[];
+  occurrences: DecisionOccurrence[];
+  errors: DecisionRegisterError[];
+  /** A size finding still reads the complete legacy register. */
+  complete: boolean;
+};
 export type ClassifiedRecordRow = {
   kind: "test-exception" | "change-request" | "unadjudicated" | "other";
   refs: string[];
@@ -29,6 +46,144 @@ const DECISION_STATUS = /^(?:TODO|WIP|DONE|REJECTED|(?:PARTLY )?SUPERSEDED \(by 
 const PARTLY_SUPERSEDED = /^PARTLY SUPERSEDED \(by DEC-\d{4}\)$/;
 const QUESTION_STATUS = /^(?:TODO|WIP|DONE|DEFERRED)$/;
 const ROW_KEYS = ["id", "content", "approach", "status"] as const;
+
+/** The optional index is a closed direct-path list; it never follows Markdown links. */
+export function decisionPagePaths(text: string): { paths: string[]; errors: string[] } {
+  const lines = text.split(/\r?\n/);
+  const indexes = lines.flatMap((line, index) => (line === "## Decision pages" ? [index] : []));
+  if (indexes.length === 0) return { paths: [], errors: [] };
+  const start = indexes[0] ?? -1;
+  const finish = lines.indexOf("## Decisions", start + 1);
+  const errors: string[] = [];
+  if (indexes.length !== 1 || finish < 0) {
+    errors.push("Decision pages requires one section before Decisions");
+  }
+  const paths: string[] = [];
+  for (const line of lines.slice(start + 1, finish < 0 ? undefined : finish)) {
+    if (line.trim() === "") continue;
+    const entry = /^- (decisions\/page-\d{4}\.md)$/.exec(line)?.[1];
+    if (!entry) {
+      errors.push(`Unsafe or invalid Decision pages entry: ${line}`);
+      continue;
+    }
+    if (paths.includes(entry))
+      errors.push(`Duplicate Decision pages entry: ${entry} is listed more than once`);
+    paths.push(entry);
+  }
+  if (paths.length === 0) errors.push("Decision pages requires at least one direct page entry");
+  return { paths, errors };
+}
+
+/** All listed pages precede the append tail; malformed inventories grant no partial read. */
+export function parseDecisionRegister(
+  texts: ReadonlyMap<string, string>,
+  rootFile: string,
+): DecisionRegister {
+  const errors: DecisionRegisterError[] = [];
+  const incompleteFiles = new Set<string>();
+  const report = (file: string, message: string, incomplete = true) => {
+    errors.push({ file, message });
+    if (incomplete) incompleteFiles.add(file);
+  };
+  const rootText = texts.get(rootFile);
+  if (rootText === undefined) {
+    report(rootFile, "Missing decisions root");
+    return { table: { rows: [], errors: [] }, files: [], occurrences: [], errors, complete: false };
+  }
+  const directory = path.posix.dirname(rootFile);
+  const index = decisionPagePaths(rootText);
+  for (const error of index.errors) report(rootFile, error);
+  const listed = index.paths.map((file) => path.posix.join(directory, file));
+  const pageDirectory = path.posix.join(directory, "decisions");
+  for (const file of texts.keys()) {
+    if (file.startsWith(`${pageDirectory}/`) && !listed.includes(file)) {
+      report(file, "Unlisted decision page or unexpected decision-directory entry");
+    }
+  }
+  const files = [...listed, rootFile];
+  const rows: RecordRow[] = [];
+  const occurrences: DecisionOccurrence[] = [];
+  const tableErrors: string[] = [];
+  const seen = new Set<string>();
+  for (const file of files) {
+    const text = texts.get(file);
+    if (text === undefined) {
+      report(file, "Missing or unreadable listed decision page");
+      continue;
+    }
+    const physical = text.match(/[^\n]*\n|[^\n]+$/g) ?? [];
+    if (physical.length > 500)
+      report(
+        file,
+        `Decision document has ${physical.length} physical lines; maximum is 500`,
+        false,
+      );
+    const content = text
+      .replace(/<!--[\s\S]*?-->/g, (comment) => comment.replace(/[^\r\n]/g, ""))
+      .split(/\r?\n/);
+    const headings = content.filter((line) => /^#/.test(line));
+    const expected =
+      file === rootFile && index.paths.length > 0
+        ? ["# Decisions", "## Decision pages", "## Decisions"]
+        : ["# Decisions", "## Decisions"];
+    if (headings.join("\n") !== expected.join("\n")) {
+      report(file, "Decision document requires the closed Decisions headings in order");
+    }
+    let inList = false;
+    for (const line of content) {
+      if (line === "## Decision pages") {
+        inList = true;
+        continue;
+      }
+      if (line === "## Decisions") {
+        inList = false;
+        continue;
+      }
+      if (line.trim() === "" || line === "# Decisions") continue;
+      if (inList && file === rootFile && /^- decisions\/page-\d{4}\.md$/.test(line)) continue;
+      if (!inList && line.startsWith("|")) continue;
+      report(file, "Unexpected content in the closed decision document");
+    }
+    const table = parseRecordTable(text, "decisions");
+    const stored = physical.flatMap((raw, index) =>
+      /^\|\s*DEC-/.test(raw) ? [{ raw, actualRow: index + 1 }] : [],
+    );
+    for (const error of table.errors) {
+      const numbered = /^decisions row (\d+) has/.exec(error)?.[1];
+      const named = /^decisions row (DEC-[^ ]+) has/.exec(error)?.[1];
+      const rowIndex = numbered
+        ? Number(numbered) - 1
+        : table.rows.findIndex((row) => row.id === named);
+      const actualRow = stored[rowIndex]?.actualRow;
+      tableErrors.push(`${file}${actualRow === undefined ? "" : `:${actualRow}`}: ${error}`);
+    }
+    if (stored.length !== table.rows.length)
+      report(file, "Decision rows cannot be mapped to their physical origins");
+    for (const [index, row] of table.rows.entries()) {
+      const origin = stored[index];
+      if (!origin) continue;
+      if (seen.has(row.id))
+        tableErrors.push(
+          `${file}: decisions declares ${row.id} more than once in the logical register`,
+        );
+      seen.add(row.id);
+      rows.push(row);
+      occurrences.push({
+        row,
+        origin: { path: file, actualRow: origin.actualRow, rawOrdinal: occurrences.length + 1 },
+        raw: origin.raw,
+      });
+    }
+  }
+  const complete = incompleteFiles.size === 0;
+  return {
+    table: { rows: complete ? rows : [], errors: tableErrors },
+    files,
+    occurrences: complete ? occurrences : [],
+    errors,
+    complete,
+  };
+}
 
 function statusPreview(status: string): string {
   const characters = Array.from(status.replace(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]+/gu, " ").trim());
@@ -121,8 +276,15 @@ export function diffRecordTables(
   headText: string,
   kind: RecordTableKind,
 ): RecordTableDiff {
-  const baseTable = parseRecordTable(baseText, kind);
-  const headTable = parseRecordTable(headText, kind);
+  return diffRecordRows(parseRecordTable(baseText, kind), parseRecordTable(headText, kind), kind);
+}
+
+/** Compares physical occurrences in logical register order, retaining duplicate copies. */
+export function diffRecordRows(
+  baseTable: ParsedRecordTable,
+  headTable: ParsedRecordTable,
+  kind: RecordTableKind,
+): RecordTableDiff {
   const base = baseTable.rows;
   const head = headTable.rows;
   const removed: RecordRow[] = [];

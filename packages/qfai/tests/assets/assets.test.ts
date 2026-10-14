@@ -1071,10 +1071,11 @@ describe("assets guardrails", () => {
       for (const register of ["decisions.md", "open-questions.md"]) {
         expect(rules, file).toContain(`/.qfai/spec/${register} merge=union`);
       }
+      expect(rules, file).toContain("/.qfai/spec/decisions/page-*.md -text merge=union");
       expect(
         rules.filter((rule) => rule.includes("merge=")),
-        `${file} sets a merge driver only on the two registers`,
-      ).toHaveLength(2);
+        `${file} sets a merge driver only on the two registers and direct decision pages`,
+      ).toHaveLength(3);
     }
   });
 
@@ -1778,6 +1779,7 @@ describe("assets guardrails", () => {
       "03_contract/contracts.md",
       "03_contract/tech.md",
       "decisions.md",
+      "decisions/page-NNNN.md",
       "open-questions.md",
     ].sort();
 

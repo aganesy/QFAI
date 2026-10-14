@@ -16,6 +16,10 @@ node_modules
 # The migrated decision ledger preserves archived table cells and provenance.
 # Prettier expands its long cells into a multi-megabyte padded table.
 .qfai/spec/decisions.md
+# Exact historical pages retain reviewed bytes; validation remains required.
+.qfai/spec/decisions/page-0001.md
+.qfai/spec/decisions/page-0002.md
+.qfai/spec/decisions/page-0003.md
 # A contract keeps its business rules in one long table. Prettier pads every
 # row to the widest cell, so editing one rule rewrites the whole table and
 # conflicts with every concurrent edit. Tables here use the compact style

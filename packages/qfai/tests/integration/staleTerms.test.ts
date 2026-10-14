@@ -53,6 +53,22 @@ describe("a spec document that states a term the project lists as stale", () => 
     ]);
   });
 
+  // QFAI:EX-0001-0053-25
+  it("leaves listed historical decision pages alone while scanning current story prose", async () => {
+    await put(storyFile, "# US-0001-0001: Mail\n\nMail goes out over smtp.\n");
+    await put(
+      `${specs}/decisions.md`,
+      "# Decisions\n\n## Decision pages\n\n- decisions/page-0001.md\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n",
+    );
+    await put(
+      `${specs}/decisions/page-0001.md`,
+      "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| DEC-0001 | Send mail | Rejected: SMTP | DONE |\n",
+    );
+    expect((await staleFindings(["SMTP"])).map((item) => [item.file, item.loc?.line])).toEqual([
+      [storyFile, 3],
+    ]);
+  });
+
   // QFAI:EX-0001-0053-08
   it("matches a whole word only", async () => {
     await put(storyFile, "# US-0001-0001: Mail\n\nThe smtpd daemon and SMTP_HOST are unrelated.\n");

@@ -90,7 +90,7 @@ function tree(contractText: string, decisions = ""): Map<string, string> {
   if (decisions) {
     files.set(
       `${spec}/decisions.md`,
-      `| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n${decisions}\n`,
+      `# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n${decisions}\n`,
     );
   }
   return files;

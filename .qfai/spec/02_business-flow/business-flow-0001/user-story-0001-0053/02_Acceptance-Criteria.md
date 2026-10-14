@@ -64,4 +64,18 @@ Feature: Decision and open-question table validation
     And inside code backslashes are literal, only a complete same-length raw run closes the span, and unmatched openers do not hide later balanced spans
     And original item values remain intact, code-only content is nonempty, quoted labels do not supply missing items, and Evidence prefix checks still apply
     And a row up to `DEC-2097` is not read
+  # AC-0001-0053-09
+  Scenario: Supported consumers read one ordered decision register
+    Given a configured specs directory with a legacy root-only decision table or a root table naming historical pages
+    When supported decision consumers read the register
+    Then they read each directly listed page in list order followed by the root Decisions table
+    And the root optionally holds one closed Decision pages list consisting only of unique direct `- decisions/page-NNNN.md` entries before Decisions
+    And each historical page holds exactly the legacy Decisions heading and one four-column Decisions table with no nested index
+    And every physical root and page document has at most 500 lines, including comments, headings, list items, blank lines and table lines
+    And row grammar, four-cell checks, Status vocabulary, keyword permissions, Approach checks, successor resolution and duplicate-ID validation cover every occurrence
+    And retired-inclusive allocation, migration origins and renumber ancestry read the complete register, while stale-term scanning excludes all decision pages
+    And missing or unreadable listed pages, duplicate entries, unlisted files in the decisions directory, unsafe or linked paths, traversal and wrong page shape fail without accepting a partial register
+    And legacy root-only registers remain readable by updated consumers without an automatic layout rewrite; an oversized register is reported without truncation
+    And older binaries or tools that read only raw root bytes are not promised relocated history and must be upgraded or retained on the root-only layout
+    And no row-count setting, database, new command or automatic rotation is introduced
 ```

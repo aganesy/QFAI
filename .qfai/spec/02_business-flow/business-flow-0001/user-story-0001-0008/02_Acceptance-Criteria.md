@@ -23,7 +23,7 @@ Feature: ID grammar
   Scenario: The next ID is the highest plus one
     Given a project on the story tree
     When the next ID of a shape is chosen
-    Then it is the highest ID of that shape the tree names under the same parent (the flow for a US, the story for an AC or EX), `decisions.md` rows included, plus one
+    Then it is the highest ID of that shape the tree names under the same parent (the flow for a US, the story for an AC or EX), all logical decision-register rows included, plus one
     And a gap is never filled and a retired ID is never reissued
 
   # AC-0001-0008-04
@@ -31,11 +31,11 @@ Feature: ID grammar
     Given a contract under a kind directory of `paths.contractsDir` on the story tree, declaring a contract ID `<KIND>-NNNN`
     When the business rules it declares are read, or its next rule ID is chosen
     Then a rule takes the ID `BR-<contract number>-NNNN`, and one whose first segment is not the number of the contract that declares it is an error
-    And the next rule ID of that contract is the highest `BR-<contract number>-NNNN` the tree names, `decisions.md` rows included, plus one
+    And the next rule ID of that contract is the highest `BR-<contract number>-NNNN` the tree names, all logical decision-register rows included, plus one
 
   # AC-0001-0008-05
   Scenario: A branch-added decision has an explicit preview and apply command
-    Given a unique valid DEC row in the current tree, absent from the common ancestor of HEAD and an explicit local base ref
+    Given a unique valid DEC row in the complete current logical register, absent from the complete register at the common ancestor of HEAD and an explicit local base ref
     When `qfai sdd renumber-decision --from <DEC-ID> --to <DEC-ID> --base <local-ref>` runs
     Then the command fixes HEAD and the base to commit SHAs and requires exactly one common ancestor
     And each invocation builds a complete plan; the default previews without writing, while `--apply` rechecks its own fixed refs and original bytes before writing
@@ -53,6 +53,7 @@ Feature: ID grammar
     When the command constructs its preview or apply plan
     Then it changes that row's ID and only reference occurrences provably added by the current branch since the common ancestor
     And inherited reference occurrences and inherited rows' ID, Content and Approach remain unchanged
+    And physical movement between decision pages and the root never makes an inherited row branch-added
     And a token inside a larger identifier is not replaced
     And ambiguous reference ownership is rejected before any write
 

@@ -109,6 +109,7 @@
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
+  lstatSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
@@ -1200,6 +1201,159 @@ function checkEntryDocuments(context, entry, violations) {
 }
 
 /**
+ * Checks the physical decision register without truncating any document.
+ * Pages are direct, explicitly listed members of the configured register.
+ *
+ * @param {string} root
+ * @param {{ specsDir: string, contractsDir: string }} paths
+ * @returns {{violations: {file: string, line: number, column: number, rule: string, message: string}[], unsafe: boolean}}
+ */
+function decisionRegisterViolations(root, paths) {
+  const result = { violations: [], unsafe: false };
+  const found = result.violations;
+  const specs = path.resolve(root, paths.specsDir);
+  const rootFile = path.join(specs, "decisions.md");
+  const pagesDir = path.join(specs, "decisions");
+  const fileName = (file) => path.relative(root, file).split(path.sep).join("/");
+  const report = (file, message) =>
+    found.push({ file: fileName(file), line: 1, column: 1, rule: "decision-register", message });
+
+  const inspect = (file, directory) => {
+    let stats;
+    try {
+      stats = lstatSync(file);
+    } catch (error) {
+      if (error instanceof Error && "code" in error && error.code === "ENOENT") return null;
+      report(
+        file,
+        "Cannot inspect this decision-register path; resolve its access before checking.",
+      );
+      result.unsafe = true;
+      return false;
+    }
+    if (stats.isSymbolicLink() || (directory ? !stats.isDirectory() : !stats.isFile())) {
+      report(
+        file,
+        directory
+          ? "Decision-register directories must be regular directories, not links."
+          : "Decision-register documents must be regular files, not links.",
+      );
+      result.unsafe = true;
+      return false;
+    }
+    if (!directory && stats.nlink !== 1) {
+      report(file, "Decision-register documents must not share a hard-linked file.");
+      result.unsafe = true;
+      return false;
+    }
+    return true;
+  };
+
+  // Preserve configured roots outside the workspace. For roots inside it,
+  // inspect every intermediate component as well as the configured directory.
+  const relative = path.relative(path.resolve(root), specs);
+  if (!path.isAbsolute(relative) && relative !== ".." && !relative.startsWith(".." + path.sep)) {
+    let component = path.resolve(root);
+    for (const name of relative.split(path.sep).filter(Boolean)) {
+      component = path.join(component, name);
+      if (inspect(component, true) !== true) return result;
+    }
+  }
+  if (inspect(specs, true) !== true) return result;
+  const rootState = inspect(rootFile, false);
+  if (rootState === false) return result;
+  const pageState = inspect(pagesDir, true);
+  if (pageState === false) return result;
+  if (rootState === null && pageState === null) return result;
+
+  const read = (file) => {
+    try {
+      const text = readFileSync(file, "utf-8");
+      const lines = text.match(/[^\n]*\n|[^\n]+$/g)?.length ?? 0;
+      if (lines > 500) {
+        report(
+          file,
+          "Decision-register documents must have at most 500 physical lines; found " + lines + ".",
+        );
+      }
+      return text;
+    } catch {
+      result.unsafe = true;
+      report(
+        file,
+        "Cannot read this decision-register document; resolve its access before checking.",
+      );
+      return null;
+    }
+  };
+  const listed = new Set();
+  if (rootState === null) {
+    report(rootFile, "Decision pages require their decisions.md root and explicit page list.");
+  } else {
+    const text = read(rootFile);
+    if (text === null) return result;
+    const lines = text.split(/\r?\n/);
+    const indexes = lines.flatMap((line, index) => (line === "## Decision pages" ? [index] : []));
+    const tables = lines.flatMap((line, index) => (line === "## Decisions" ? [index] : []));
+    if (
+      indexes.length > 1 ||
+      (indexes.length === 1 && (tables.length !== 1 || indexes[0] >= tables[0]))
+    ) {
+      report(
+        rootFile,
+        "Use at most one Decision pages section, before the unique Decisions section.",
+      );
+    } else if (indexes.length === 1) {
+      for (const line of lines.slice(indexes[0] + 1, tables[0])) {
+        if (line.trim() === "") continue;
+        const match = /^- decisions\/(page-[0-9]{4}\.md)$/.exec(line);
+        if (match === null) {
+          report(
+            rootFile,
+            "Decision pages must contain only direct '- decisions/page-NNNN.md' entries.",
+          );
+        } else if (listed.has(match[1])) {
+          report(rootFile, "Decision page " + match[1] + " is listed more than once.");
+        } else {
+          listed.add(match[1]);
+        }
+      }
+      if (listed.size === 0)
+        report(rootFile, "A Decision pages section must list at least one page.");
+    }
+  }
+
+  if (pageState === true) {
+    let names;
+    try {
+      names = readdirSync(pagesDir);
+    } catch {
+      result.unsafe = true;
+      report(pagesDir, "Cannot list decision pages; resolve directory access before checking.");
+      return result;
+    }
+    for (const name of names) {
+      if (!listed.has(name)) {
+        report(
+          path.join(pagesDir, name),
+          "Every decision-page directory entry must be a direct page listed by decisions.md.",
+        );
+      }
+      if (inspect(path.join(pagesDir, name), false) === false) return result;
+    }
+  }
+  for (const name of listed) {
+    const file = path.join(pagesDir, name);
+    const state = inspect(file, false);
+    if (state === null)
+      report(file, "A listed decision page is missing; restore it before checking.");
+    if (state === false) return result;
+    if (state === true && read(file) === null) return result;
+  }
+  return result;
+}
+
+/**
  * Checks every document the manifest routes, for a caller rather than a log.
  *
  * `qfai validate` reports what this returns. It applies the same routing, the
@@ -1216,10 +1370,16 @@ export function checkDocuments(root, paths = configuredPaths(root)) {
   if (mdschema === null) {
     return { ok: false, reason: `no ${MDSCHEMA_PACKAGE} installation was found` };
   }
+  const register = decisionRegisterViolations(root, paths);
+  if (register.unsafe) return { ok: true, checked: 0, violations: register.violations };
   const { files, unreadable } = documentUniverse(root, paths);
   const context = { root, paths, mdschema, universe: files, checked: 0 };
   const entries = readManifest();
-  const violations = [...unreadable, ...coverageViolations(entries, files.toSorted(), paths)];
+  const violations = [
+    ...unreadable,
+    ...coverageViolations(entries, files.toSorted(), paths),
+    ...register.violations,
+  ];
   for (const entry of entries) {
     const failure = checkEntryDocuments(context, entry, violations);
     if (failure !== null) return { ok: false, reason: failure };
@@ -1342,8 +1502,6 @@ export function main() {
     return 2;
   }
 
-  const { files: universe, unreadable } = documentUniverse(root, paths);
-
   /** @type {string[] | null} */
   let restrictTo = null;
   if (scope === "files") {
@@ -1376,6 +1534,31 @@ export function main() {
   let checked = 0;
   let inheritedFiles = 0;
   const perEntry = [];
+
+  const registerRoot = path.join(paths.specsDir, "decisions.md").split(path.sep).join("/");
+  const registerPages = path.join(paths.specsDir, "decisions").split(path.sep).join("/") + "/";
+  const registerInScope =
+    restrictSet === null ||
+    [...restrictSet].some((file) => file === registerRoot || file.startsWith(registerPages));
+  // Path safety applies before any traversal, even when only another document is selected.
+  const registerCheck = decisionRegisterViolations(root, paths);
+  const register = registerInScope || registerCheck.unsafe ? registerCheck.violations : [];
+  if (register.length > 0) {
+    violations++;
+    console.error("\n── decision register ──");
+    for (const found of register) {
+      console.error([found.file, "  ✗ 1:1  [" + found.rule + "] " + found.message].join("\n"));
+    }
+  }
+  perEntry.push({
+    id: "decision-register",
+    files: new Set(register.map((found) => found.file)).size,
+    ok: register.length === 0,
+    inherited: 0,
+  });
+
+  if (registerCheck.unsafe) return 1;
+  const { files: universe, unreadable } = documentUniverse(root, paths);
 
   /** @type {Map<string, string>} */
   const contents = new Map();

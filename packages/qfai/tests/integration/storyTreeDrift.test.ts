@@ -33,13 +33,16 @@ let root: string;
 const specs = ".qfai/spec";
 const decisions = `${specs}/decisions.md`;
 const glossary = `${specs}/01_policy/glossary.md`;
-const table = "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
+const table =
+  "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
 
 function git(...args: string[]): void {
   execFileSync("git", args, { cwd: root, stdio: "ignore" });
 }
 
 async function put(file: string, content: string): Promise<void> {
+  if (file === decisions && content.startsWith("|"))
+    content = "# Decisions\n\n## Decisions\n\n" + content;
   const target = path.join(root, file);
   await mkdir(path.dirname(target), { recursive: true });
   await writeFile(target, content, "utf8");
@@ -1597,4 +1600,118 @@ describe("story-tree drift", () => {
         .sort(),
     ).toEqual([contract, examples].sort());
   });
+});
+
+describe("relocated inherited raw decision rows", () => {
+  // QFAI:EX-0001-0054-19
+  it.each(["line ending", "stored padding", "authorised Status only"])(
+    "preserves physical row bytes during relocation: %s",
+    async (change) => {
+      git("config", "core.autocrlf", "false");
+      const page = `${specs}/decisions/page-0001.md`;
+      const inherited = "| DEC-0001 | Stored  choice | Keep | DONE |\n";
+      const request = (status: string) =>
+        `| DEC-0002 | Change request: ${decisions}, ${page} | - Date: 2026-10-12 | ${status} |\n`;
+      await put(decisions, table + inherited + request("WIP"));
+      git("add", ".");
+      git("commit", "-m", "fixed inherited raw history and request");
+      git("checkout", "-b", "topic");
+      const moved =
+        change === "line ending"
+          ? inherited.replace("\n", "\r\n")
+          : change === "stored padding"
+            ? inherited.replace("| DEC-0001 |", "|  DEC-0001  |")
+            : inherited;
+      await put(page, table + moved);
+      await put(
+        decisions,
+        table.replace(
+          "## Decisions",
+          "## Decision pages\n\n- decisions/page-0001.md\n\n## Decisions",
+        ) + request(change === "authorised Status only" ? "DONE" : "WIP"),
+      );
+      git("add", ".");
+      git("commit", "-m", "relocate inherited occurrences");
+      const findings = await validateStoryTreeDrift(root, config(), "drift");
+      if (change === "authorised Status only") {
+        // The drift profile also names the base it compared with, at info.
+        expect(findings.filter((found) => found.severity !== "info")).toEqual([]);
+      } else {
+        expect(findings).toContainEqual(
+          expect.objectContaining({ code: "QFAI-STORY-010", file: page, refs: ["DEC-0001"] }),
+        );
+      }
+    },
+  );
+});
+
+describe("relocation keeps the final inherited physical occurrence", () => {
+  // QFAI:EX-0001-0054-19
+  it.each(["tdd", "drift"] as const)(
+    "rejects a path-authorised relocation that drops final history under %s",
+    async (profile) => {
+      git("config", "core.autocrlf", "false");
+      const page = `${specs}/decisions/page-0001.md`;
+      const request = `| DEC-0001 | Change request: ${decisions}, ${page} | - Date: 2026-10-12 | WIP |\n`;
+      const historical = "| DEC-0002 | Final historical choice | Keep | DONE |\n";
+      await put(decisions, table + request + historical);
+      git("add", ".");
+      git("commit", "-m", "fixed request followed by inherited history");
+      git("checkout", "-b", "topic");
+      await put(page, table + request);
+      await put(
+        decisions,
+        table.replace(
+          "## Decisions",
+          "## Decision pages\n\n- decisions/page-0001.md\n\n## Decisions",
+        ),
+      );
+      git("add", ".");
+      git("commit", "-m", "path-authorised relocation drops final inherited occurrence");
+      const findings = await validateStoryTreeDrift(root, config(), profile);
+      const removed = findings.filter(
+        (finding) => finding.code === "QFAI-STORY-010" && finding.refs?.includes("DEC-0002"),
+      );
+      expect(removed).toHaveLength(1);
+      expect(removed).toContainEqual(
+        expect.objectContaining({
+          severity: "error",
+          file: decisions,
+          refs: ["DEC-0002"],
+          message: expect.stringContaining("DEC-0002 row removed (ID)"),
+        }),
+      );
+    },
+  );
+});
+
+// Supplementary missing-root regression: existing page history prevents an absent-base exemption.
+it("rejects a resolvable root-configured base with orphan page history before permissions", async () => {
+  const rootDecision = "decisions.md";
+  const page = "decisions/page-0001.md";
+  const request = `| DEC-0002 | Change request: ${rootDecision}, ${page} | - Date: 2026-10-12 | WIP |\n`;
+  await put(page, table + "| DEC-0001 | Historical choice | Keep | DONE |\n");
+  git("add", ".");
+  git("commit", "-m", "resolvable base has page history but no root");
+  git("checkout", "-b", "topic");
+  await put(
+    rootDecision,
+    table.replace("## Decisions", "## Decision pages\n\n- decisions/page-0001.md\n\n## Decisions") +
+      request,
+  );
+  git("add", ".");
+  git("commit", "-m", "valid head root and in-force request cannot waive unreadable base layout");
+  const rootConfig = config();
+  rootConfig.paths.specsDir = ".";
+  rootConfig.paths.contractsDir = "03_contract";
+  const findings = await validateStoryTreeDrift(root, rootConfig, "tdd");
+  expect(findings).toHaveLength(1);
+  expect(findings).toContainEqual(
+    expect.objectContaining({
+      code: "QFAI-DRIFT-001",
+      severity: "error",
+      file: rootDecision,
+      message: expect.stringContaining("Missing decisions root"),
+    }),
+  );
 });

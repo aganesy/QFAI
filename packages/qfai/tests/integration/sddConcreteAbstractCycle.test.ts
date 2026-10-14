@@ -75,7 +75,8 @@ const STORY = `${SPECS}/02_business-flow/business-flow-0001/user-story-0001-0001
 
 /** A one-flow story tree, with the given register text in place of an empty one. */
 function storyTree(registers: { decisions?: string; openQuestions?: string }) {
-  const empty = "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |";
+  const empty =
+    "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |";
   const files = new Map<string, string>([
     [
       `${SPECS}/02_business-flow/business-flows.md`,
@@ -203,7 +204,7 @@ describe("the concrete-abstract cycle across the shipped qfai-sdd", () => {
     const template = await readShipped(DECISIONS_TEMPLATE);
     expect(headerCells(template, "Content")).toEqual(["ID", "Content", "Approach", "Status"]);
     const register = (status: string): string =>
-      `| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| DEC-0001 | Change request: user-story-0001-0001/03_Example.md; an order of 20 000 in euros | Declined by the user | ${status} |`;
+      `# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| DEC-0001 | Change request: user-story-0001-0001/03_Example.md; an order of 20 000 in euros | Declined by the user | ${status} |`;
     const decisionsIssues = (status: string) =>
       validateStoryTreeStructureModel(storyTree({ decisions: register(status) })).filter(
         (issue) => issue.file?.endsWith("decisions.md") ?? false,

@@ -34,7 +34,8 @@ const examples = `${specs}/02_business-flow/business-flow-0001/user-story-0001-0
 const test = "tests/unit/order.test.ts";
 const example = "EX-0001-0001-01";
 const header = "| EX-ID | AC-Ref | Input | Expected |\n| --- | --- | --- | --- |\n";
-const decisions = "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
+const decisions =
+  "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
 
 function git(...args: string[]): void {
   execFileSync("git", args, { cwd: root, stdio: "ignore" });

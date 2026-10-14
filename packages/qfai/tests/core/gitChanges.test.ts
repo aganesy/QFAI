@@ -13,7 +13,11 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { getChangedFilesAgainstBase } from "../../src/core/gitChanges.js";
+import {
+  getChangedFilesAgainstBase,
+  readDecisionFilesAtRevision,
+  readFileAtBase,
+} from "../../src/core/gitChanges.js";
 
 const tempDirs: string[] = [];
 
@@ -124,4 +128,45 @@ describe("getChangedFilesAgainstBase", () => {
     // path is exactly what it exists to notice.
     expect(changedFilesOrThrow(root, "base").has("src/core/gone.ts")).toBe(true);
   });
+});
+
+// QFAI:EX-0001-0054-20
+it("reads a complete legacy ledger larger than the default Git stdout buffer", async () => {
+  const ledger = "# Decisions\n\n" + "x".repeat(1_416_904);
+  const root = await newRepo({ "docs/spec/decisions.md": ledger });
+  expect(readFileAtBase(root, "base", "docs/spec/decisions.md")).toBe(ledger);
+  expect(readFileAtBase(root, "base", "docs/spec/missing.md")).toBeNull();
+});
+
+it("distinguishes an unreadable existing Git blob from an absent base file", async () => {
+  const root = await newRepo({ "docs/spec/decisions.md": "# Decisions\n" });
+  const hash = execFileSync("git", ["rev-parse", "base:docs/spec/decisions.md"], {
+    cwd: root,
+    encoding: "utf8",
+  }).trim();
+  await rm(path.join(root, ".git", "objects", hash.slice(0, 2), hash.slice(2)));
+  expect(() => readFileAtBase(root, "base", "docs/spec/decisions.md")).toThrow(/read/i);
+});
+
+// Supplementary positive root-inventory regression; this does not prove unsafe-page refusal.
+it.each([".", "./", ""])("reads a repository-root register at configured %j", async (directory) => {
+  const header =
+    "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
+  const page = header + "| DEC-0001 | Historical | Keep | DONE |\n";
+  const tail =
+    header.replace(
+      "## Decisions",
+      "## Decision pages\n\n- decisions/page-0001.md\n\n## Decisions",
+    ) + "| DEC-0002 | Append tail | Keep | WIP |\n";
+  const root = await newRepo({
+    "decisions.md": tail,
+    "decisions/page-0001.md": page,
+    "unrelated.md": "Not a register document\n",
+  });
+  expect(readDecisionFilesAtRevision(root, "base", directory)).toEqual(
+    new Map([
+      ["decisions.md", tail],
+      ["decisions/page-0001.md", page],
+    ]),
+  );
 });

@@ -38,7 +38,7 @@ Inspect the impact cascade: policy → BF → US → AC → EX → enforcing con
 Use <paths.specsDir>/decisions.md and <paths.specsDir>/open-questions.md, each with exactly ID, Content, Approach, Status. Append a row; later only Status may change, including to `PARTLY SUPERSEDED (by DEC-NNNN)` when a later row narrows a decision without replacing it.
 Do not edit the first three cells or remove the row, except for explicit branch-added decision renumbering under ID allocation below
 or the bounded published decision prefix recovery below, and remove a row only as a proven surplus copy under the merge-added
-identical decision copy recovery below. Inherited rows retain those cells. Use the next highest ID in the table plus one. A retired item still reserves its BF or US ID.
+identical decision copy recovery below. Inherited rows retain those cells. Use the next highest ID in the table plus one; for DEC, include every listed page and the root tail. A retired item still reserves its BF or US ID.
 
 decisions.md records only what the user decided: each change request the user approved or declined,
 and each critical decision the user made. A row is appended once the user has decided what it records.
@@ -81,6 +81,36 @@ When specification changes are forbidden or either authority is missing, first
 append an `Unadjudicated:` OQ at TODO. Name the affected IDs, expected versus
 actual behavior, implementation-change evidence, owner and required permission.
 Stop dependent AC, EX and BR edits; independent authorized work may continue.
+
+### Decision pages
+
+The root may have one optional `## Decision pages` section before its unique
+`## Decisions` section. Its body holds only unique direct
+`- decisions/page-NNNN.md` entries with four digits; links, annotations, nested
+paths, traversal and unrelated prose are invalid. A page has `# Decisions`,
+one `## Decisions` section and one closed ID, Content, Approach, Status table.
+It has no page index or other section. The root retains its own four-column table.
+
+Read pages in list order, followed by the root table. This is one logical
+register: ID allocation, duplicate detection, retirement references and Status
+permissions include every row. Append new rows only to the root table.
+A root without a page list remains a valid legacy register and is read in full.
+Read errors or an incomplete inventory stop permission and allocation decisions.
+
+Each physical root and page has at most 500 lines, including comments, blanks,
+the index and table wrappers. Oversized files are reported without truncation.
+Every entry in the decisions directory must be a listed direct page. Register
+paths must be regular directories and files, without symbolic or hard links.
+A formatter exclusion preserves reviewed bytes; it does not waive validation.
+Use consumers that support the complete register before adopting pages; older
+consumers are not assumed to read them.
+
+Physical relocation needs a separately adopted execution change request and a
+reviewed raw-byte receipt for the exact source and target. Preserve every raw
+row occurrence, cell, Status, order and line ending; keep the current root tail.
+A historical DONE row is not approval to run a later relocation. Do not rotate
+automatically, repair Status, remove duplicates or normalize inherited cells.
+A read-only proposal or a migration projection grants no permission to write.
 
 ## Published decision prefix recovery
 
@@ -168,7 +198,7 @@ A retirement touches every place the ID is written. Do all of them in one change
 ## ID allocation
 
 Read all IDs of the kind in the relevant scope, including IDs named by retirement rows. The next ID is the highest plus one. A project that also counts the IDs its open pull requests add takes the highest across the tree and those pull requests, so a gap above the tree's own highest is allowed. BF spans the project. US is inside its BF. AC and EX are inside their US.
-A contract number spans every contract kind, and a BR is numbered inside its contract. DEC and OQ each span their table.
+A contract number spans every contract kind, and a BR is numbered inside its contract. DEC spans the complete ordered decision register; OQ spans its own table.
 Empty numeric scopes begin at 0001, and AC/EX tails begin at 01. Do not reuse an ID because its file was removed or a row was rejected.
 
 ### Capacity before writing
@@ -179,7 +209,8 @@ empty), remaining capacity 99-H and the number of requested additions. Count
 valid IDs in the tree and decisions, including retired IDs, plus observed
 published parallel heads and known reservations under the project's existing
 method. Name the fixed observation and what it did not cover. A snapshot
-reserves nothing and cannot cover unpublished concurrent work.
+reserves nothing and cannot cover unpublished concurrent work. Read decisions as
+the complete ordered register: every listed page followed by the root tail.
 
 If requested additions exceed 99-H, stop before any partial allocation or
 invalid declaration. Never fill gaps, reuse retired IDs or emit tail 100.

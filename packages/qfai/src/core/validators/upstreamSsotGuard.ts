@@ -8,7 +8,9 @@ import {
   describeBaseComparison,
   existsAtRevision,
   getChangedFilesAgainstBase,
+  gitStdout,
   normalizeRepoPath,
+  readDecisionFilesAtRevision,
   readFileAtBase,
   uncommittedContentPaths,
   type BaseComparison,
@@ -18,9 +20,10 @@ import { parseCountedExampleAnnotations } from "../storyTree/ids.js";
 import {
   classifyRecordRow,
   diffRecordTables,
-  parseRecordTable,
+  diffRecordRows,
   type RecordRow,
 } from "../storyTree/tables.js";
+import { buildStoryTreeModel, readStoryTreeModel, type StoryTreeModel } from "../storyTree/tree.js";
 import type { Issue } from "../types.js";
 import { countsForExample, readStoryTests, storyTestScanIssue } from "./storyTreeObligations.js";
 import { issue } from "./utils.js";
@@ -56,30 +59,161 @@ export async function validateStoryTreeDrift(
   ).replace(/\/$/, "");
   const decisions = path.posix.join(specs, "decisions.md");
   const questions = path.posix.join(specs, "open-questions.md");
+  const issues: Issue[] = [];
   const baseDecisions = readFileAtBase(root, baseBranch, decisions);
-  if (baseDecisions === null) {
-    // A base without decisions.md is a project before its story tree. A base that has it and
-    // could not be read is not, and passing on it is the failure this warning exists for.
-    return comparison.kind === "resolved" && existsAtRevision(root, comparison.mergeBase, decisions)
-      ? [notCompared(`${decisions} at "${baseBranch}" could not be read.`, RERUN_ACTION)]
-      : [];
+  // Read first: a failure that is not a missing file stops the run instead of being compared.
+  const headRoot = await readSafePath(path.join(root, decisions));
+  let baseModel: StoryTreeModel;
+  let headModel: StoryTreeModel;
+  try {
+    let files: Map<string, string>;
+    if (comparison.kind === "resolved") {
+      const ancestors = gitStdout(root, ["merge-base", "--all", baseBranch, "HEAD"])
+        ?.trim()
+        .split(/\s+/);
+      if (!ancestors || ancestors.length !== 1 || !ancestors[0])
+        throw new Error("A unique readable common ancestor is required");
+      files = readDecisionFilesAtRevision(root, ancestors[0], specs);
+    } else {
+      files = new Map(baseDecisions === null ? [] : [[decisions, baseDecisions]]);
+    }
+    const hasPages = [...files.keys()].some((file) =>
+      file.startsWith(`${path.posix.join(specs, "decisions")}/`),
+    );
+    if (baseDecisions === null && !hasPages) {
+      // A base without decisions.md is a project before its story tree. A base that has it and
+      // could not be read is not, and passing on it is the failure this warning exists for.
+      return comparison.kind === "resolved" &&
+        existsAtRevision(root, comparison.mergeBase, decisions)
+        ? [notCompared(`${decisions} at "${baseBranch}" could not be read.`, RERUN_ACTION)]
+        : [];
+    }
+    if (!files.has(decisions) && !hasPages) return [];
+    baseModel = buildStoryTreeModel(files, { specsDir: specs, contractsDir: contracts });
+    headModel = await readStoryTreeModel(root, config);
+    const problems = [baseModel, headModel].flatMap((model) => [
+      ...(model.decisionRegisterComplete
+        ? []
+        : model.decisionRegisterErrors.map(({ file, message }) => `${file}: ${message}`)),
+      ...(model.decisions?.errors ?? []).filter(
+        (error) => !/declares .+ more than once/.test(error),
+      ),
+    ]);
+    if (
+      !baseModel.decisionRegisterComplete ||
+      !headModel.decisionRegisterComplete ||
+      problems.length > 0
+    )
+      throw new Error(
+        `The complete decision register could not be read safely: ${problems.join("; ")}`,
+      );
+  } catch (error) {
+    return [
+      issue(
+        "QFAI-DRIFT-001",
+        `Decision-register comparison failed: ${error instanceof Error ? error.message : String(error)}`,
+        "error",
+        decisions,
+        "storyTree.upstreamEdit",
+        [decisions],
+      ),
+    ];
   }
-
-  const currentDecisions = await readSafePath(path.join(root, decisions));
-  const rows = parseRecordTable(currentDecisions, "decisions").rows;
-  const baseRows = new Map(
-    parseRecordTable(baseDecisions, "decisions").rows.map((row) => [row.id, row]),
-  );
+  const rows = headModel.decisions?.rows ?? [];
+  const baseRows = baseModel.decisions?.rows ?? [];
   const authorised = new Map<string, string>();
   for (const row of rows) {
     const classified = classifyRecordRow(row);
     if (classified.kind !== "change-request" || !classified.inForce) continue;
-    const baseRow = baseRows.get(row.id);
+    const inherited = baseRows.filter((candidate) => candidate.id === row.id);
+    if (inherited.length > 1 || rows.filter((candidate) => candidate.id === row.id).length !== 1)
+      continue;
+    const baseRow = inherited[0];
     if (!authorisesThisBranch(row.status, baseRow?.status)) continue;
     if (baseRow && rewritesImmutableCell(baseRow, row)) continue;
     for (const file of classified.refs) authorised.set(normalizeRepoPath(file), row.id);
   }
-  const issues: Issue[] = [];
+  // Existing duplicate history remains an error, but it does not remove the existing
+  // exemption for a uniquely identified request whose only changed cell is Status.
+  const statusDifference = diffRecordRows(
+    {
+      rows: baseRows,
+      errors: (baseModel.decisions?.errors ?? []).filter(
+        (error) => !/declares .+ more than once/.test(error),
+      ),
+    },
+    {
+      rows,
+      errors: (headModel.decisions?.errors ?? []).filter(
+        (error) => !/declares .+ more than once/.test(error),
+      ),
+    },
+    "decisions",
+  );
+  const onlyRequestStatus =
+    statusDifference.onlyChangeRequestRows &&
+    [
+      ...statusDifference.changed.map(({ id }) => id),
+      ...statusDifference.appended.map(({ id }) => id),
+    ].every(
+      (id) =>
+        rows.filter((row) => row.id === id).length === 1 &&
+        baseRows.filter((row) => row.id === id).length <= 1,
+    );
+  // A path-authorised relocation preserves every inherited physical row occurrence.
+  const headRegisterFiles = headModel.decisionFiles.map((file) =>
+    normalizeRepoPath(path.relative(root, file)),
+  );
+  const relocated =
+    baseModel.decisionFiles.join("\n") !== headRegisterFiles.join("\n") ||
+    baseModel.decisionOccurrences.some((before, index) => {
+      const after = headModel.decisionOccurrences[index];
+      return (
+        after !== undefined &&
+        (before.origin.path !== after.origin.path ||
+          before.origin.actualRow !== after.origin.actualRow)
+      );
+    });
+  if (relocated) {
+    for (const [index, before] of baseModel.decisionOccurrences.entries()) {
+      const after = headModel.decisionOccurrences[index];
+      if (!after) {
+        issues.push(
+          issue(
+            "QFAI-STORY-010",
+            `${before.origin.path}:${before.origin.actualRow}: ${before.row.id} row removed (ID)`,
+            "error",
+            before.origin.path,
+            "storyTree.rowRewritten",
+            [before.row.id],
+          ),
+        );
+        continue;
+      }
+      const statusOnly =
+        before.row.id === after.row.id &&
+        before.row.content === after.row.content &&
+        before.row.approach === after.row.approach &&
+        classifyRecordRow(after.row).kind === "change-request" &&
+        baseRows.filter((row) => row.id === before.row.id).length === 1 &&
+        rows.filter((row) => row.id === after.row.id).length === 1;
+      if (
+        before.raw === after.raw ||
+        (statusOnly && rawWithoutStatusToken(before.raw) === rawWithoutStatusToken(after.raw))
+      )
+        continue;
+      issues.push(
+        issue(
+          "QFAI-STORY-010",
+          `${after.origin.path}:${after.origin.actualRow}: ${before.row.id} inherited raw row changed during relocation`,
+          "error",
+          after.origin.path,
+          "storyTree.rowRewritten",
+          [before.row.id],
+        ),
+      );
+    }
+  }
   if (profile === "drift") {
     for (const [file, kind] of [
       [decisions, "decisions"],
@@ -88,6 +222,40 @@ export async function validateStoryTreeDrift(
       const base = readFileAtBase(root, baseBranch, file);
       if (base === null) continue;
       const head = await readSafePath(path.join(root, file));
+      if (kind === "decisions") {
+        for (const [index, before] of baseModel.decisionOccurrences.entries()) {
+          const after = headModel.decisionOccurrences[index];
+          if (!after) {
+            // Relocation already diagnosed this missing occurrence under either profile.
+            if (relocated) continue;
+            issues.push(
+              issue(
+                "QFAI-STORY-010",
+                `${before.origin.path}:${before.origin.actualRow}: ${before.row.id} row removed (ID)`,
+                "error",
+                before.origin.path,
+                "storyTree.rowRewritten",
+                [before.row.id],
+              ),
+            );
+            continue;
+          }
+          for (const cell of ["id", "content", "approach"] as const) {
+            if (before.row[cell] === after.row[cell]) continue;
+            issues.push(
+              issue(
+                "QFAI-STORY-010",
+                `${after.origin.path}:${after.origin.actualRow}: ${before.row.id} ${cell} changed`,
+                "error",
+                after.origin.path,
+                "storyTree.rowRewritten",
+                [before.row.id],
+              ),
+            );
+          }
+        }
+        continue;
+      }
       const difference = diffRecordTables(base, head, kind);
       for (const removed of difference.removed) {
         issues.push(
@@ -115,20 +283,34 @@ export async function validateStoryTreeDrift(
       }
     }
   }
-  const decisionDiff = diffRecordTables(baseDecisions, currentDecisions, "decisions");
-  const onlyChangeRequestRowsChanged =
-    decisionDiff.onlyChangeRequestRows &&
-    withoutChangeRequestRows(baseDecisions) === withoutChangeRequestRows(currentDecisions);
+  const registerFiles = new Set([
+    ...baseModel.decisionFiles,
+    ...headModel.decisionFiles.map((file) => normalizeRepoPath(path.relative(root, file))),
+  ]);
   const isProtected = (file: string): boolean =>
     file.startsWith(`${path.posix.join(specs, "01_policy")}/`) ||
     file.startsWith(`${path.posix.join(specs, "02_business-flow")}/`) ||
     contracts === "" ||
     file.startsWith(`${contracts}/`) ||
     file === decisions ||
+    file.startsWith(`${path.posix.join(specs, "decisions")}/`) ||
     file === questions;
+  // A physical register file whose only change is to Change request rows needs no request.
+  const requestOnly = new Set<string>();
+  if (onlyRequestStatus) {
+    for (const file of registerFiles) {
+      if (
+        withoutChangeRequestRows(readFileAtBase(root, baseBranch, file) ?? "") ===
+        withoutChangeRequestRows(
+          file === decisions ? headRoot : await readSafePath(path.join(root, file)),
+        )
+      )
+        requestOnly.add(file);
+    }
+  }
   for (const file of changed) {
     if (!isProtected(file) || authorised.has(file)) continue;
-    if (file === decisions && onlyChangeRequestRowsChanged) continue;
+    if (requestOnly.has(file)) continue;
     if (file.endsWith("/03_Example.md") && (await onlyAppendsExamples(root, baseBranch, file)))
       continue;
     if (file.startsWith(`${contracts}/`) && (await onlyCitesExamples(root, baseBranch, file)))
@@ -150,10 +332,7 @@ export async function validateStoryTreeDrift(
   const working = uncommittedContentPaths(
     root,
     (file) =>
-      isProtected(file) &&
-      !changed.has(file) &&
-      !authorised.has(file) &&
-      !(file === decisions && onlyChangeRequestRowsChanged),
+      isProtected(file) && !changed.has(file) && !authorised.has(file) && !requestOnly.has(file),
   );
   if (working === null) {
     issues.push(notCompared("git could not list the uncommitted changes.", RERUN_ACTION));
@@ -323,6 +502,11 @@ function authorisesThisBranch(status: string, statusAtBase: string | undefined):
 /** A row the base holds keeps its Content and Approach, so a rewrite of either grants nothing. */
 function rewritesImmutableCell(base: RecordRow, head: RecordRow): boolean {
   return base.content !== head.content || base.approach !== head.approach;
+}
+
+/** Replace only the final Status token; padding and the stored line ending remain evidence. */
+function rawWithoutStatusToken(raw: string): string {
+  return raw.replace(/(\|[ \t]*)([^|\r\n]*?\S)([ \t]*\|(?:\r\n|\n)?$)/, "$1<Status>$3");
 }
 
 function withoutChangeRequestRows(content: string): string {

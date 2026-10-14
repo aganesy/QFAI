@@ -4,6 +4,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 
+import { readRepositoryDecisions } from "../helpers/decisionRegister.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 import {
   editWorkflow,
@@ -292,7 +293,7 @@ describe("BF-0002 workflow hygiene acceptance", () => {
       ),
     ).toBe(true);
 
-    const record = readFileSync(path.join(REPO_ROOT, ".qfai", "spec", "decisions.md"), "utf8")
+    const record = readRepositoryDecisions(REPO_ROOT)
       .split(/\r?\n/u)
       .find((line) => /^\| DEC-\d+ \|/u.test(line) && line.includes("#DR-0017-0007:"));
     expect(record).toBeDefined();

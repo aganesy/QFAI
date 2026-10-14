@@ -36,7 +36,7 @@
  */
 /* global console, process */
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { lstatSync, readdirSync, readFileSync } from "node:fs";
 import { register } from "node:module";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -81,7 +81,14 @@ export function parseScope(scope) {
  */
 export function allocateAll(scopes, named, allocate) {
   const declarations = [...named.declarations];
-  const model = { declarations, decisions: named.decisions };
+  const model = {
+    declarations,
+    decisions: named.decisions
+      ? { ...named.decisions, errors: named.decisions.errors ?? [] }
+      : null,
+    decisionRegisterErrors: named.decisionRegisterErrors ?? [],
+    decisionRegisterComplete: named.decisionRegisterComplete ?? true,
+  };
   const ids = [];
   for (const { kind, parentId } of scopes) {
     let id;
@@ -206,13 +213,24 @@ class TreeReader {
     return this.git(args).toString("utf-8");
   }
 
-  /** What one file declares, and the decision rows it holds. */
-  parse(file, text) {
-    const model = this.buildModel(new Map([[file, text]]));
-    return {
-      ids: model.declarations.map(({ id }) => id),
-      rows: model.decisions?.rows ?? [],
-    };
+  /** One complete tree: historical pages and the root form one logical register. */
+  parse(texts) {
+    const model = this.buildModel(texts, { specsDir: SPEC_DIR });
+    if (model.decisionRegisterComplete === false || (model.decisions?.errors.length ?? 0) > 0) {
+      const problems = [
+        ...(model.decisionRegisterErrors ?? []).map(({ file, message }) => `${file}: ${message}`),
+        ...(model.decisions?.errors ?? []),
+      ];
+      throw new Error(
+        `The complete decision register is unavailable; allocation and collision checks are refused: ${problems.join("; ")}`,
+      );
+    }
+    return [
+      {
+        ids: model.declarations.map(({ id }) => id),
+        rows: model.decisions?.rows ?? [],
+      },
+    ];
   }
 
   /**
@@ -220,12 +238,28 @@ class TreeReader {
    * and content, however many heads carry it: most heads share most files.
    */
   atCommit(commit) {
+    let component = "";
+    for (const part of SPEC_DIR.split("/")) {
+      component = component ? `${component}/${part}` : part;
+      const entry = this.text(["ls-tree", "-z", commit, "--", component]);
+      if (entry !== "" && !/^040000 tree [0-9a-f]+\t/.test(entry))
+        throw new Error(`Unsafe story-tree Git directory: ${component}`);
+    }
     const entries = this.text(["ls-tree", "-r", "-z", "--full-name", commit, "--", SPEC_DIR])
       .split("\0")
       .flatMap((entry) => {
-        const match = /^\d+ blob ([0-9a-f]+)\t(.+)$/s.exec(entry);
+        const match = /^(\d+) (\w+) ([0-9a-f]+)\t(.+)$/s.exec(entry);
         if (match === null) return [];
-        const [, blob, file] = match;
+        const [, mode, type, blob, file] = match;
+        if (
+          (file === `${SPEC_DIR}/decisions.md` ||
+            file === `${SPEC_DIR}/decisions` ||
+            file.startsWith(`${SPEC_DIR}/decisions/`)) &&
+          (type !== "blob" || !/^100/.test(mode))
+        ) {
+          throw new Error(`Unsafe decision-register Git entry: ${file}`);
+        }
+        if (type !== "blob") return [];
         return [{ key: `${blob} ${file}`, blob, file }];
       });
     const missing = entries.filter(({ key }) => !this.parsed.has(key));
@@ -233,10 +267,13 @@ class TreeReader {
       const blobs = [...new Set(missing.map(({ blob }) => blob))];
       const texts = batchBlobs(this.git(["cat-file", "--batch"], `${blobs.join("\n")}\n`));
       for (const { key, blob, file } of missing) {
-        this.parsed.set(key, this.parse(file, texts.get(blob) ?? ""));
+        const text = texts.get(blob);
+        if (text === undefined)
+          throw new Error(`Git did not return the requested story-tree blob: ${file}`);
+        this.parsed.set(key, text);
       }
     }
-    return entries.map(({ key }) => this.parsed.get(key));
+    return this.parse(new Map(entries.map(({ key, file }) => [file, this.parsed.get(key)])));
   }
 
   /** Each file under the story tree in the working tree, untracked ones included. */
@@ -252,15 +289,51 @@ class TreeReader {
     ])
       .split("\0")
       .filter(Boolean);
-    return [...new Set(files)].flatMap((file) => {
-      let text;
+    const texts = new Map();
+    const registerRoot = path.join(this.cwd, SPEC_DIR, "decisions.md");
+    const registerDirectory = path.join(this.cwd, SPEC_DIR, "decisions");
+    const inspect = (file) => {
+      let stats;
       try {
-        text = readFileSync(path.join(this.cwd, file), "utf-8");
-      } catch {
-        return [];
+        stats = lstatSync(file);
+      } catch (error) {
+        if (error?.code === "ENOENT") return undefined;
+        throw error;
       }
-      return [this.parse(file, text)];
-    });
+      if (stats.isSymbolicLink() || (stats.isFile() && stats.nlink > 1))
+        throw new Error(`Unsafe decision-register path: ${file}`);
+      return stats;
+    };
+    let component = this.cwd;
+    for (const part of SPEC_DIR.split("/")) {
+      component = path.join(component, part);
+      const stats = inspect(component);
+      if (stats && !stats.isDirectory())
+        throw new Error(`Invalid story-tree directory: ${component}`);
+    }
+    const rootStats = inspect(registerRoot);
+    if (rootStats && !rootStats.isFile())
+      throw new Error("The decision root is not a regular file");
+    const directoryStats = inspect(registerDirectory);
+    if (directoryStats && !directoryStats.isDirectory())
+      throw new Error("The decision page directory is not a directory");
+    // Inventory every direct entry, including ignored and untracked files. Nested
+    // directories become explicit invalid entries rather than being silently skipped.
+    if (directoryStats) {
+      for (const name of readdirSync(registerDirectory)) {
+        const file = path.join(registerDirectory, name);
+        const relative = path.relative(this.cwd, file).replace(/\\/g, "/");
+        const stats = inspect(file);
+        if (!stats?.isFile()) texts.set(`${relative}/`, "");
+        else texts.set(relative, readFileSync(file, "utf-8"));
+      }
+    }
+    for (const file of [...new Set(files)]) {
+      if (texts.has(file) || file.startsWith(`${SPEC_DIR}/decisions/`)) continue;
+      // A listed or tracked file that cannot be read is not absent history.
+      texts.set(file, readFileSync(path.join(this.cwd, file), "utf-8"));
+    }
+    return this.parse(texts);
   }
 }
 

@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { resolvePath, type QfaiConfig } from "../config.js";
 import { collectFiles } from "../fs.js";
+import { readStoryTreeModel } from "../storyTree/tree.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -36,8 +37,11 @@ export async function validateStaleTerms(root: string, config: QfaiConfig): Prom
     for (const file of await collectFiles(directory, { extensions: [".md"] })) files.add(file);
   }
   const issues: Issue[] = [];
+  const decisionFiles = new Set(
+    (await readStoryTreeModel(root, config)).decisionFiles.map((file) => path.resolve(file)),
+  );
   for (const file of [...files].sort()) {
-    if (RECORD_FILES.has(path.basename(file))) continue;
+    if (RECORD_FILES.has(path.basename(file)) || decisionFiles.has(path.resolve(file))) continue;
     const relative = path.relative(root, file).split(path.sep).join("/");
     const lines = (await readFile(file, "utf8")).split(/\r?\n/);
     lines.forEach((line, index) => {

@@ -108,7 +108,10 @@ export function oldLayoutMessage(layoutRoot: string, files: readonly string[]): 
 }
 
 export function hasStoryTreeEntries(entries: readonly string[]): boolean {
-  return STORY_TREE_ROOT_ENTRIES.some((entry) => entries.includes(entry));
+  return (
+    entries.includes("decisions") ||
+    STORY_TREE_ROOT_ENTRIES.some((entry) => entries.includes(entry))
+  );
 }
 
 /** Detect the story-tree layout through the configured specs directory. */
@@ -129,6 +132,7 @@ export function storyTreeMarkdownPatterns(specsDir: string, contractsDir: string
   const story = `${flow}/user-story-*`;
   return [
     `${specs}/decisions.md`,
+    `${specs}/decisions/page-????.md`,
     `${specs}/open-questions.md`,
     ...POLICY_FILES.map((name) => `${specs}/01_policy/${name}`),
     `${specs}/02_business-flow/business-flows.md`,

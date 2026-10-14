@@ -8,7 +8,9 @@ Feature: Merge every record into the two project tables
   Scenario: Decision records, log entries, triage records and change requests become rows
     Given a project on the spec-pack layout with decision records, decision log entries, triage rows, change requests and a retired spec pack
     When step 2 runs
-    Then each becomes exactly one decisions.md row of four cells under a new DEC-NNNN ID, naming its old ID
+    Then each becomes exactly one root decisions.md row of four cells under a new DEC-NNNN ID, naming its old ID
+    And existing origin records, retired-inclusive maximum IDs and successor references are read from every historical page and the root
+    And rerunning a completed step appends no duplicate origin and rewrites no existing occurrence
     And each row's Status is the one the status map gives its old status
     And no flow or story is made from the retired spec pack
 

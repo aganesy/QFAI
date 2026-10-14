@@ -51,4 +51,6 @@
 # approval and application. These paths assume the default paths.specsDir;
 # update them if the project moves its spec tree.
 /.qfai/spec/decisions.md merge=union
+# Preserve reviewed page bytes; schema and duplicate checks still apply.
+/.qfai/spec/decisions/page-*.md -text merge=union
 /.qfai/spec/open-questions.md merge=union

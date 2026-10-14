@@ -167,23 +167,24 @@ export function validateStoryTreeObligationsModel(
     }
   }
 
-  const exceptions = new Map<string, string>();
-  for (const row of model.decisions?.rows ?? []) {
+  const exceptions = new Map<string, { decision: string; file: string }>();
+  for (const { row, origin } of model.decisionOccurrences) {
+    if (!model.decisionRegisterComplete || (model.decisions?.errors.length ?? 0) > 0) break;
     const classified = classifyRecordRow(row);
     if (classified.kind !== "test-exception" || !classified.inForce) continue;
     for (const id of classified.refs) {
       if (known.BF.has(id) || known.AC.has(id) || known.EX.has(id)) {
-        exceptions.set(id, row.id);
+        exceptions.set(id, { decision: row.id, file: origin.path });
       }
     }
   }
-  for (const [id, decision] of exceptions) {
+  for (const [id, { decision, file }] of exceptions) {
     issues.push(
       issue(
         "QFAI-STORY-009",
         `${id} is exempted by ${decision}`,
         "info",
-        model.decisionFile ?? undefined,
+        file,
         "storyTree.testException",
         [id, decision],
       ),

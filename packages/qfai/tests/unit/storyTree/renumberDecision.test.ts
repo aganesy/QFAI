@@ -39,7 +39,8 @@ function git(...args: string[]): void {
 
 async function prepare() {
   await mkdir(path.join(root, specsDir), { recursive: true });
-  const table = "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
+  const table =
+    "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
   await writeFile(path.join(root, ledger), table + "| DEC-0001 | Inherited | Keep | DONE |\n");
   git("add", ".");
   git("commit", "-m", "ancestor");

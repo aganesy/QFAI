@@ -15,11 +15,11 @@
  * fixture matches the regex that was written while looking at it.
  */
 
-import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { readRepositoryDecisions } from "../helpers/decisionRegister.js";
 import {
   capturedPairs,
   evaluateMeasurementClaim,
@@ -27,9 +27,6 @@ import {
 } from "../helpers/measurementClaim.js";
 
 const REPO_ROOT = path.resolve(__dirname, "../../../..");
-/** The decision register, one table row per decision. */
-const DECISIONS = path.join(REPO_ROOT, ".qfai", "spec", "decisions.md");
-
 /** Every decision row in the register. */
 const decisionRows = (text: string): string[] =>
   text.split(/\r?\n/).filter((line) => /^\| DEC-\d+ \|/.test(line));
@@ -149,8 +146,8 @@ describe("an asserted regression with no numbers is not accepting", () => {
 });
 
 describe("the extractor reads this repository's own decision record, not only its fixtures", () => {
-  it("finds the one measured pair that exists and none in the record that only describes the rule", async () => {
-    const text = await readFile(DECISIONS, "utf8");
+  it("finds the one measured pair that exists and none in the record that only describes the rule", () => {
+    const text = readRepositoryDecisions(REPO_ROOT);
     // Keyed by the imported decision each row carries, `…/07_Decisions.md#DR-NNNN-NNNN: title`.
     const sections = new Map<string, string>();
     for (const row of decisionRows(text)) {

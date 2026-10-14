@@ -188,7 +188,7 @@ describe("story-tree validators in the validate pipeline", () => {
     await put(
       root,
       `${specs}/decisions.md`,
-      "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n",
+      "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n",
     );
     await put(root, glossary, "# Terms\n");
     git("add", ".");

@@ -159,7 +159,10 @@ describe("BF-0001 ID examples", () => {
   // QFAI:EX-0001-0051-03
   it("accepts one declaration of every story-tree ID shape", () => {
     const contents = files();
-    contents.set(`${spec}/decisions.md`, table(["| DEC-0001 | Accepted choice | Reason | DONE |"]));
+    contents.set(
+      `${spec}/decisions.md`,
+      "# Decisions\n\n## Decisions\n\n" + table(["| DEC-0001 | Accepted choice | Reason | DONE |"]),
+    );
     contents.set(
       `${spec}/open-questions.md`,
       table(["| OQ-0001 | Resolved question | Answer | DONE |"]),
@@ -527,7 +530,8 @@ describe("BF-0001 decision and question examples", () => {
     const contents = files();
     contents.set(
       `${spec}/decisions.md`,
-      table(["| DEC-0001 | First decision | Reason | SUPERSEDED by DEC-0002 |"]),
+      "# Decisions\n\n## Decisions\n\n" +
+        table(["| DEC-0001 | First decision | Reason | SUPERSEDED by DEC-0002 |"]),
     );
     contents.set(
       `${spec}/open-questions.md`,
@@ -548,10 +552,11 @@ describe("BF-0001 decision and question examples", () => {
     );
     contents.set(
       `${spec}/decisions.md`,
-      table([
-        "| DEC-0001 | First decision | Reason | SUPERSEDED (by DEC-0002) |",
-        "| DEC-0002 | Second decision | Reason | DONE |",
-      ]),
+      "# Decisions\n\n## Decisions\n\n" +
+        table([
+          "| DEC-0001 | First decision | Reason | SUPERSEDED (by DEC-0002) |",
+          "| DEC-0002 | Second decision | Reason | DONE |",
+        ]),
     );
     expect(
       findings(contents, "QFAI-STORY-003").some((entry) => entry.file === `${spec}/decisions.md`),
@@ -561,7 +566,10 @@ describe("BF-0001 decision and question examples", () => {
   // QFAI:EX-0001-0053-03
   it("rejects a question ID declared in the decision table", () => {
     const contents = files();
-    contents.set(`${spec}/decisions.md`, table(["| OQ-0001 | Wrong ID kind | Reason | TODO |"]));
+    contents.set(
+      `${spec}/decisions.md`,
+      "# Decisions\n\n## Decisions\n\n" + table(["| OQ-0001 | Wrong ID kind | Reason | TODO |"]),
+    );
     expect(findings(contents, "QFAI-STORY-003")).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -774,7 +782,8 @@ describe("BF-0001 layer and exception examples", () => {
     const contents = files();
     contents.set(
       `${spec}/decisions.md`,
-      table(["| DEC-0001 | Test exception: BF-0001 | No E2E environment | DONE |"]),
+      "# Decisions\n\n## Decisions\n\n" +
+        table(["| DEC-0001 | Test exception: BF-0001 | No E2E environment | DONE |"]),
     );
     const done = validateStoryTreeObligationsModel(buildStoryTreeModel(contents), [], "atdd");
     expect(done).toEqual(
@@ -788,7 +797,8 @@ describe("BF-0001 layer and exception examples", () => {
     ).toBe(false);
     contents.set(
       `${spec}/decisions.md`,
-      table(["| DEC-0001 | Test exception: BF-0001 | No E2E environment | WIP |"]),
+      "# Decisions\n\n## Decisions\n\n" +
+        table(["| DEC-0001 | Test exception: BF-0001 | No E2E environment | WIP |"]),
     );
     expect(validateStoryTreeObligationsModel(buildStoryTreeModel(contents), [], "atdd")).toEqual(
       expect.arrayContaining([
@@ -802,7 +812,8 @@ describe("BF-0001 layer and exception examples", () => {
     const contents = files();
     contents.set(
       `${spec}/decisions.md`,
-      table(["| DEC-0001 | Test exception: AC-0001-0001-01 | No API environment | DONE |"]),
+      "# Decisions\n\n## Decisions\n\n" +
+        table(["| DEC-0001 | Test exception: AC-0001-0001-01 | No API environment | DONE |"]),
     );
     const model = buildStoryTreeModel(contents);
     const atdd = validateStoryTreeObligationsModel(model, [], "atdd");
@@ -827,9 +838,10 @@ describe("BF-0001 layer and exception examples", () => {
     );
     contents.set(
       `${spec}/decisions.md`,
-      table([
-        "| DEC-0001 | Test exception: EX-0001-0001-01, EX-0001-0001-03 | No test yet | DONE |",
-      ]),
+      "# Decisions\n\n## Decisions\n\n" +
+        table([
+          "| DEC-0001 | Test exception: EX-0001-0001-01, EX-0001-0001-03 | No test yet | DONE |",
+        ]),
     );
     const issues = validateStoryTreeObligationsModel(buildStoryTreeModel(contents), [], "tdd");
     expect(issues).toEqual(
