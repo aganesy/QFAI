@@ -10,7 +10,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { runInit } from "../../src/cli/commands/init.js";
+import { runInit } from "../helpers/legacyInit.js";
 import { loadConfig } from "../../src/core/config.js";
 import type { Issue } from "../../src/core/types.js";
 import { validateProject } from "../../src/core/validate.js";

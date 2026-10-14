@@ -1,3 +1,4 @@
+import { legacyInitArguments } from "../helpers/legacyInitArguments.js";
 // QFAI:BF-0003
 
 import { spawnSync } from "node:child_process";
@@ -26,7 +27,7 @@ type ValidateResult = {
 };
 
 function cli(root: string, ...args: string[]): CliResult {
-  const child = spawnSync(process.execPath, [CLI, ...args], {
+  const child = spawnSync(process.execPath, legacyInitArguments(CLI, args), {
     cwd: root,
     encoding: "utf8",
     timeout: 30_000,

@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "type": "command",
+        "bash": "node .qfai/tools/graph-hook.mjs shared",
+        "powershell": "node .qfai/tools/graph-hook.mjs shared",
+        "timeoutSec": 10
+      }
+    ]
+  }
+}

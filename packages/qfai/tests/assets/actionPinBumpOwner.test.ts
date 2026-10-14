@@ -421,9 +421,20 @@ describe("TC-0017-0065 (TDD-0065): the adopted worker value matches the recorded
       path.join(REPO_ROOT, "packages", "qfai", "vitest.knobs.ts"),
       "utf-8",
     );
+    const cpuMatch = /available logical CPUs:\s*(\d+)\b/i.exec(artifact);
+    expect(cpuMatch, "the artifact must state its measurement CPU count").not.toBeNull();
+    if (cpuMatch === null) return;
+    const measuredCpus = Number(cpuMatch[1]);
+    expect.soft(measuredCpus, "the recorded CPU count must be positive").toBeGreaterThan(0);
     expect
-      .soft(knobs, "the adopted value must be the one the runner declares")
-      .toMatch(new RegExp(`DECLARED_START\\s*=\\s*${adopted}\\b`));
+      .soft(knobs, "the declared starting hypothesis remains ten")
+      .toMatch(/DECLARED_START\s*=\s*10\b/);
+    expect
+      .soft(knobs, "the runner applies the approved CPU cap")
+      .toMatch(/DECLARED_WORKERS\s*=\s*Math\.min\(DECLARED_START,\s*availableParallelism\(\)\)/);
+    expect
+      .soft(adopted, "the adopted value matches the recorded machine's applied cap")
+      .toBe(Math.min(10, measuredCpus));
 
     // CLAIM 4 — the adopted value was actually measured. A comparison that omits the value it
     // adopts is the "adopted against no comparison" case the rule rejects outright.

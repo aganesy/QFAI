@@ -1,3 +1,4 @@
+import { legacyInitArguments } from "../../helpers/legacyInitArguments.js";
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { mkdtemp, readdir, readFile, realpath } from "node:fs/promises";
@@ -20,7 +21,7 @@ let initRoot = "";
 
 beforeAll(async () => {
   initRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-host-adapter-"));
-  const init = spawnSync(process.execPath, [CLI, "init", "--yes"], {
+  const init = spawnSync(process.execPath, legacyInitArguments(CLI, ["init", "--yes"]), {
     cwd: initRoot,
     encoding: "utf8",
   });

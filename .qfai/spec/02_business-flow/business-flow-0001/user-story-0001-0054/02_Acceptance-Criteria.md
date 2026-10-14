@@ -58,4 +58,19 @@ Feature: Append-only drift and change-request authorization
     And inherited decisions remain inherited for renumbering regardless of physical relocation
     And an unsafe, missing, malformed or unreadable head or base page reports an error and never silently disables drift or supplies permission
     And the existing no-Git, unresolvable-base and base-without-root rules remain limited to those conditions
+
+  # AC-0001-0054-10
+  Scenario: A base that cannot be compared with is reported, and the base that was used is named
+    Given the story tree in a git repository
+    When `qfai validate --profile tdd` or `qfai validate --profile drift` runs and `baseBranch` has no merge base with HEAD
+    Then one warning names `baseBranch` and the way to make it resolve, instead of the run passing as if nothing changed
+    And when the base resolves, `qfai validate --profile drift` reports at info the merge base commit and the number of changed files it compared, saying so when HEAD is that commit
+
+  # AC-0001-0054-11
+  Scenario: An edit that is not committed is said not to be compared
+    Given the story tree, and a protected file edited or added in the working tree and not committed, that no in-force change request names
+    When `qfai validate --profile tdd` or `qfai validate --profile drift` runs
+    Then one warning names the uncommitted protected paths, the first five, and counts the rest, and says they are not compared with the base
+    And once the change is committed the upstream-edit error of AC-0001-0054-03 applies to it, and the warning is gone
+    And an edit to `decisions.md` confined to `Change request:` rows, a file a change request names, an append-only `03_Example.md`, a contract that only gains EX IDs in its Examples cell and a file outside the protected set raise no such warning
 ```

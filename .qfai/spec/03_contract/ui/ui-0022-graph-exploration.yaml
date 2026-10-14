@@ -1,0 +1,218 @@
+# QFAI-CONTRACT-ID: UI-0022
+x-qfai-depends-on: []
+x-qfai-rules:
+  - id: BR-0022-0001
+    statement: The preparation summary names each tool, runtime readiness, analysis readiness and host protection state separately; installation is never presented as verified analysis or protection.
+    examples: [EX-0001-0237-01, EX-0001-0237-20, EX-0001-0237-21, EX-0001-0235-19, EX-0001-0235-20, EX-0001-0235-21]
+  - id: BR-0022-0002
+    statement: A preparation failure names the failed step and a recovery action and states whether a prior usable installation was retained; an absent document backend is shown as documents-not-ready with the configuration action.
+    examples: [EX-0001-0237-05, EX-0001-0237-14, EX-0001-0237-20, EX-0001-0234-07]
+  - id: BR-0022-0003
+    statement: A dry-run displays the proposed tool actions and observed states under a preview title with an explicit no-changes notice; it does not label planned installation as completed.
+    examples: [EX-0001-0237-17]
+  - id: BR-0022-0004
+    statement: A denied exploration message names the attempted action, the reason, the relevant graph CLI command, the bounded pending attempt UUID and preparation or AI-decided scoped fallback; failed and unsupported protection are distinguished visibly.
+    examples: [EX-0001-0235-01, EX-0001-0235-02, EX-0001-0235-21, EX-0001-0235-22, EX-0001-0234-15]
+  - id: BR-0022-0005
+    statement: Graph-query results show the requested scope, its readiness and coverage limits alongside source references, and label inferred relationships separately from facts. Invalid or incomplete arguments and failed queries show the failure cause and concrete recovery; lock contention shows retry and an abandoned lock shows manual recovery without automatic deletion.
+    examples: [EX-0001-0234-13, EX-0001-0234-14, EX-0001-0234-16, EX-0001-0236-15, EX-0001-0236-20]
+screens:
+  - id: graph_prepare
+    title: Graph tools
+    route: qfai init
+    primary_tasks:
+      - id: prepare_tools
+        label: Prepare project graph tools
+        acceptance: Both tool outcomes and any failed preparation step are visible.
+      - id: inspect_readiness
+        label: Check analysis and host readiness
+        acceptance: Runtime, code, documents and each host have separate status values.
+      - id: recover_preparation
+        label: Recover failed preparation
+        acceptance: The failed step and a concrete next action are visible without a false success claim.
+    elements:
+      - id: graph_prepare_tool_status
+        label: Tools
+        type: output
+      - id: graph_prepare_analysis_status
+        label: Analysis
+        type: output
+      - id: graph_prepare_host_status
+        label: Protection
+        type: output
+      - id: graph_prepare_failed_step
+        label: Failed step
+        type: output
+      - id: graph_prepare_recovery
+        label: Recovery
+        type: output
+      - id: graph_prepare_previous
+        label: Previous installation
+        type: output
+    actions:
+      - id: graph_prepare_retry
+        label: Run qfai init again
+        kind: command
+        effect: Repeats preparation after the displayed failure cause is corrected.
+      - id: graph_prepare_documents
+        label: Configure document processing
+        kind: command
+        effect: Applies an explicitly selected upstream processing destination to the managed process before document analysis.
+    supplements:
+      - id: graph_prepare_documents_missing
+        near: graph_prepare_analysis_status
+        when: empty
+        text: Document analysis is not ready. Select a processing destination before analyzing documents.
+        why: Installed runtimes do not establish document readiness, and missing processing settings need a separate recovery action.
+      - id: graph_prepare_retained
+        near: graph_prepare_failed_step
+        when: error
+        text: Preparation failed. Correct the reported cause, then retry.
+        why: The failed step needs a recovery action; the previous installation field records whether usable state was retained.
+      - id: graph_prepare_unverified
+        near: graph_prepare_host_status
+        when: default
+        text: Configuration alone does not verify search protection. Check trust and runtime verification for each host.
+        why: A settings entry cannot prove the host accepted it or blocked a search.
+      - id: graph_prepare_unsupported
+        near: graph_prepare_host_status
+        when: empty
+        text: This host cannot enforce the required search denial.
+        why: An unsupported event cannot be presented as a blocked search or verified protection.
+  - id: graph_preview
+    title: Graph tools preview
+    route: qfai init --dry-run
+    primary_tasks:
+      - id: preview_preparation
+        label: Inspect planned preparation
+        acceptance: Proposed tool actions and observed states are visible as a preview.
+    elements:
+      - id: graph_preview_actions
+        label: Planned actions
+        type: output
+      - id: graph_preview_status
+        label: Observed status
+        type: output
+    actions:
+      - id: graph_preview_apply
+        label: Run qfai init
+        kind: command
+        effect: Starts actual preparation when the user runs init without --dry-run.
+    supplements:
+      - id: graph_preview_no_changes
+        near: graph_preview_actions
+        when: default
+        text: Preview only. No files, downloads, analysis or processes were changed.
+        why: The user must distinguish proposed preparation from completed installation.
+  - id: graph_search_denied
+    title: Exploration redirected
+    route: Supported pre-tool exploratory-search event
+    primary_tasks:
+      - id: follow_graph_redirect
+        label: Follow the graph operation
+        acceptance: The attempted action, denial reason, graph CLI command and bounded pending attempt UUID are visible.
+      - id: recover_exploration
+        label: Prepare missing analysis or state why the graph cannot answer
+        acceptance: The next action is visible and scoped fallback requires no human approval.
+    elements:
+      - id: graph_search_denied_action
+        label: Attempted action
+        type: output
+      - id: graph_search_denied_reason
+        label: Reason
+        type: output
+      - id: graph_search_denied_operation
+        label: Graph CLI command
+        type: output
+      - id: graph_search_denied_attempt
+        label: Pending attempt
+        type: output
+      - id: graph_search_denied_capability
+        label: Protection status
+        type: output
+    actions:
+      - id: graph_search_use_graph
+        label: Run the suggested graph CLI command
+        kind: command
+        effect: Queries the appropriate engine after confirming the requested scope is current and ready.
+      - id: graph_search_prepare
+        label: Prepare required analysis
+        kind: command
+        effect: Prepares the missing requested scope through the selected native engine.
+      - id: graph_search_exception
+        label: Use scoped search when the graph cannot answer
+        kind: request
+        effect: Runs the fallback CLI with pending attempt UUID, unresolved question and AI reason; attempts the relevant graph and permits only the immutable observed target, operation, worktree and session for 60 seconds without human search approval.
+    supplements:
+      - id: graph_search_redirect
+        near: graph_search_denied_operation
+        when: default
+        text: Exploratory search denied. Run the suggested CLI command for code structure or document concepts.
+        why: The user needs the graph selection rule to recover from the blocked action.
+      - id: graph_search_missing
+        near: graph_search_prepare
+        when: empty
+        text: Required analysis is not ready. Run the graph CLI, or use its fallback command with the pending attempt, unresolved question and reason.
+        why: The AI can continue a necessary investigation without waiting for human approval while keeping graph-first exploration.
+      - id: graph_search_failed
+        near: graph_search_denied_capability
+        when: error
+        text: Search protection failed. Repair the reported configuration before direct exploration.
+        why: A classifier failure must be visible and cannot be mistaken for permission to search.
+      - id: graph_search_invalid_attempt
+        near: graph_search_exception
+        when: error
+        text: This pending attempt cannot grant search permission. Correct the reported cause and retry the denied action.
+        why: Invalid, missing or expired pending state and state-management failures require a new valid attempt rather than a manual scope override.
+  - id: graph_query_result
+    title: Graph evidence
+    route: node .qfai/tools/graph-cli.mjs code or documents
+    primary_tasks:
+      - id: assess_graph_evidence
+        label: Assess the requested scope and evidence
+        acceptance: Scope, readiness, coverage limits, source locations and inference labels are visible.
+      - id: recover_graph_query
+        label: Recover a failed graph command
+        acceptance: Invalid arguments, query failure or a contended or abandoned lock show their cause and a concrete retry or manual recovery action.
+    elements:
+      - id: graph_query_scope
+        label: Requested scope
+        type: output
+      - id: graph_query_readiness
+        label: Readiness
+        type: output
+      - id: graph_query_coverage
+        label: Coverage limits
+        type: output
+      - id: graph_query_sources
+        label: Source facts
+        type: output
+      - id: graph_query_inferences
+        label: Inferred relationships
+        type: output
+      - id: graph_query_failure
+        label: Failure cause
+        type: output
+      - id: graph_query_recovery
+        label: Recovery
+        type: output
+    actions:
+      - id: graph_query_read_source
+        label: Read the referenced file
+        kind: command
+        effect: Reads the exact returned source location for the evidence.
+      - id: graph_query_recover
+        label: Follow the reported recovery
+        kind: command
+        effect: Corrects invalid arguments or the reported failure before retrying; waits on contention or follows manual recovery for an abandoned lock without automatically deleting another operation's lock.
+    supplements:
+      - id: graph_query_incomplete
+        near: graph_query_coverage
+        when: empty
+        text: This scope is incomplete. No matches do not establish absence.
+        why: Unparsed or unsupported content can contain evidence missing from the graph.
+      - id: graph_query_lock_recovery
+        near: graph_query_recovery
+        when: error
+        text: If analysis is locked, follow the reported retry or manual recovery. Do not remove another operation's lock.
+        why: Lock contention and abandoned locks require different recovery, and deleting a lock can interrupt another operation.

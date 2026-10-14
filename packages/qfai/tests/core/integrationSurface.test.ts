@@ -1013,31 +1013,27 @@ describe("a resolving link is a finding, not a reason to stop", () => {
     });
   });
 
-  // POSIX only: this is the `ENOTDIR` shape, which Windows folds into `ENOENT`.
-  it.skipIf(process.platform === "win32")(
-    "carries the short-circuit out of the flattened-wrapper branch",
-    async () => {
-      // The branch detected the non-directory ancestor and reported it, but did
-      // not record it as unwalkable — so `sdd` / `full` walked on into the same
-      // `ENOTDIR` and rejected the run along with the finding.
-      await withProject(async (root) => {
-        if (!(await canCreateSymlink(root))) return;
-        await seedCanonical(root, ["qfai-implement"], []);
-        await wireAll(root, ["qfai-implement"], []);
-        for (const dir of SKILL_INTEGRATION_DIRS) {
-          const wrapper = path.join(root, ...dir.split("/"), "qfai-implement");
-          await rm(wrapper, { recursive: true, force: true });
-          await writeFile(wrapper, skillTarget(dir, "qfai-implement"), "utf-8");
-        }
-        const skillsDir = path.join(root, ".qfai", "assistant", "skill");
-        await rm(skillsDir, { recursive: true, force: true });
-        await writeFile(skillsDir, "not a directory\n", "utf-8");
+  it("carries the short-circuit out of the flattened-wrapper branch", async () => {
+    // The branch detected the non-directory ancestor and reported it, but did
+    // not record it as unwalkable — so `sdd` / `full` walked on into the same
+    // `ENOTDIR` and rejected the run along with the finding.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-implement"], []);
+      await wireAll(root, ["qfai-implement"], []);
+      for (const dir of SKILL_INTEGRATION_DIRS) {
+        const wrapper = path.join(root, ...dir.split("/"), "qfai-implement");
+        await rm(wrapper, { recursive: true, force: true });
+        await writeFile(wrapper, skillTarget(dir, "qfai-implement"), "utf-8");
+      }
+      const skillsDir = path.join(root, ".qfai", "assistant", "skill");
+      await rm(skillsDir, { recursive: true, force: true });
+      await writeFile(skillsDir, "not a directory\n", "utf-8");
 
-        const report = await inspectIntegrationSurface(root);
-        expect(report.unwalkable).toContain(".qfai/assistant/skill");
-      });
-    },
-  );
+      const report = await inspectIntegrationSurface(root);
+      expect(report.unwalkable).toContain(".qfai/assistant/skill");
+    });
+  });
 
   it("reports a canonical type collision when every wrapper was flattened", async () => {
     // A link is only one of the two ways a canonical goes wrong. A skill
@@ -1064,32 +1060,28 @@ describe("a resolving link is a finding, not a reason to stop", () => {
     });
   });
 
-  // POSIX only: this is the `ENOTDIR` shape, which Windows folds into `ENOENT`.
-  it.skipIf(process.platform === "win32")(
-    "names the non-directory ancestor, not each unreachable leaf",
-    async () => {
-      // `not-a-directory` on the leaf means a component above it is a regular
-      // file: the leaf is unreachable, not damaged. Naming it recorded one
-      // finding per skill and per agent, each pointing at a path the operator
-      // cannot even move aside — `ENOTDIR` again — while the one path at fault
-      // went unnamed.
-      await withProject(async (root) => {
-        if (!(await canCreateSymlink(root))) return;
-        await seedCanonical(root, ["qfai-implement"], []);
-        const assistant = path.join(root, ".qfai", "assistant");
-        await rm(assistant, { recursive: true, force: true });
-        await writeFile(assistant, "not a directory\n", "utf-8");
-        for (const dir of INTEGRATION_SURFACE_DIRS) {
-          await mkdir(path.join(root, ...dir.split("/")), { recursive: true });
-        }
-        await seedInitRecord(root);
+  it("names the non-directory ancestor, not each unreachable leaf", async () => {
+    // `not-a-directory` on the leaf means a component above it is a regular
+    // file: the leaf is unreachable, not damaged. Naming it recorded one
+    // finding per skill and per agent, each pointing at a path the operator
+    // cannot even move aside — `ENOTDIR` again — while the one path at fault
+    // went unnamed.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-implement"], []);
+      const assistant = path.join(root, ".qfai", "assistant");
+      await rm(assistant, { recursive: true, force: true });
+      await writeFile(assistant, "not a directory\n", "utf-8");
+      for (const dir of INTEGRATION_SURFACE_DIRS) {
+        await mkdir(path.join(root, ...dir.split("/")), { recursive: true });
+      }
+      await seedInitRecord(root);
 
-        const report = await inspectIntegrationSurface(root);
-        expect(report.unwalkable).toEqual([".qfai/assistant"]);
-        expect(report.issues[0]?.refs).toEqual([".qfai/assistant"]);
-      });
-    },
-  );
+      const report = await inspectIntegrationSurface(root);
+      expect(report.unwalkable).toEqual([".qfai/assistant"]);
+      expect(report.issues[0]?.refs).toEqual([".qfai/assistant"]);
+    });
+  });
 
   it("reports nothing for a resolving canonical ancestor with every wrapper gone", async () => {
     // The leaves are absent, so the broken-ancestor probe finds nothing — and
@@ -1240,28 +1232,23 @@ describe("a resolving link is a finding, not a reason to stop", () => {
     });
   });
 
-  // POSIX only: this is the `ENOTDIR` shape, and Windows folds that errno into
-  // `ENOENT`, which reads as absence. CI runs the ubuntu lane.
-  it.skipIf(process.platform === "win32")(
-    "stops the profile for a regular file where a canonical directory belongs",
-    async () => {
-      // That is the one shape `readdir` cannot survive: it gets as far as the
-      // call and raises `ENOTDIR`.
-      await withProject(async (root) => {
-        if (!(await canCreateSymlink(root))) return;
-        await seedCanonical(root, ["qfai-implement"], []);
-        await wireAll(root, ["qfai-implement"], []);
-        const skillsDir = path.join(root, ".qfai", "assistant", "skill");
-        await rm(skillsDir, { recursive: true, force: true });
-        await writeFile(skillsDir, "not a directory\n", "utf-8");
+  it("stops the profile for a regular file where a canonical directory belongs", async () => {
+    // That is the one shape `readdir` cannot survive: it gets as far as the
+    // call and raises `ENOTDIR`.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-implement"], []);
+      await wireAll(root, ["qfai-implement"], []);
+      const skillsDir = path.join(root, ".qfai", "assistant", "skill");
+      await rm(skillsDir, { recursive: true, force: true });
+      await writeFile(skillsDir, "not a directory\n", "utf-8");
 
-        const report = await inspectIntegrationSurface(root);
-        // Named at the component that is not a directory, not at the leaf below
-        // it: the leaf is not the path a walk fails on.
-        expect(report.unwalkable).toContain(".qfai/assistant/skill");
-      });
-    },
-  );
+      const report = await inspectIntegrationSurface(root);
+      // Named at the component that is not a directory, not at the leaf below
+      // it: the leaf is not the path a walk fails on.
+      expect(report.unwalkable).toContain(".qfai/assistant/skill");
+    });
+  });
 
   it("reports the canonical too when the wrapper was flattened", async () => {
     // `qfai init` repairs a flattened wrapper on its own and leaves the
@@ -1758,7 +1745,7 @@ describe("canonical ancestor type metadata without symlinks", () => {
     });
   });
 
-  it("does not mark a regular-file agent ancestor as unwalkable", async () => {
+  it("marks a regular-file agent directory as unwalkable", async () => {
     await withProject(async (root) => {
       await seedCanonical(root, ["qfai-implement"], []);
       await seedInitRecord(root);
@@ -1774,7 +1761,7 @@ describe("canonical ancestor type metadata without symlinks", () => {
       expect(report.issues.some((entry) => entry.message.includes(".qfai/assistant/agent"))).toBe(
         true,
       );
-      expect(report.unwalkable).toEqual([]);
+      expect(report.unwalkable).toEqual([".qfai/assistant/agent"]);
     });
   });
 });

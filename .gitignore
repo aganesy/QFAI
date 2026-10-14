@@ -71,3 +71,5 @@ coverage/
 !.qfai/
 !.qfai/assistant/
 !.qfai/assistant/**
+# QFAI graph analysis (local)
+/.qfai/tools/

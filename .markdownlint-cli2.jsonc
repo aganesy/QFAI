@@ -27,6 +27,7 @@
   "ignores": [
     "**/node_modules/**",
     "**/dist/**",
+    ".qfai/tools/**",
     "tmp/**",
     // Git worktrees of other branches. Linted here, their findings are reported
     // against this checkout.

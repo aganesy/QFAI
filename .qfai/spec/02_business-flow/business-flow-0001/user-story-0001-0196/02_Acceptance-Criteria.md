@@ -70,7 +70,7 @@ Feature: Install or upgrade and get the free-text entry
     Given a fresh project, or a project with its own `.claude/settings.json` or `.codex/hooks.json`
     When `qfai init` runs
     Then both hosts install the free-text entry reminder for a new request naming no skill
-    And Claude Code skips prompts with a line opening with `<task-notification>`, `<wake>` or `[SYSTEM NOTIFICATION`, and prints the reminder for any other prompt or input it cannot read
+    And Claude Code skips prompts with a line opening with `<task-notification>`, `<wake>`, `<ci-monitor-event>` or `[SYSTEM NOTIFICATION`, and prints the reminder for any other prompt or input it cannot read
     And Codex prints the free-text entry reminder on every prompt
     And eligible free-text entry and structured-question invocations print the full message first and a one-line reminder on later invocations of the same session, optional agent and message key
     And Claude notification exclusions run before counting; skipped notifications do not consume the first full message

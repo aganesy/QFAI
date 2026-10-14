@@ -32,7 +32,7 @@ import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 
-import { runInit } from "../../src/cli/commands/init.js";
+import { runInit } from "../helpers/legacyInit.js";
 import {
   collectJobSteps,
   headerComment,
@@ -499,11 +499,12 @@ describe(
         expect(declared.status).toBe(0);
         expect(JSON.parse(declared.outputs["scripts"] ?? "null")).toEqual(["unit", "e2e"]);
 
-        // Unparsable manifest: still the safe default, and still exit 0.
+        // Unparsable manifest: the probe fails closed. Reading it as "nothing declared" would skip
+        // every lane and let the required check go green over tests nobody selected.
         await writeFile(path.join(cwd, "package.json"), "{ not json", "utf8");
         const broken = await runStep(body, cwd);
-        expect(broken.status).toBe(0);
-        expect(broken.outputs["scripts"]).toBe("[]");
+        expect(broken.status).toBe(1);
+        expect(broken.outputs["scripts"]).toBeUndefined();
       } finally {
         await removeTempTree(cwd);
       }

@@ -58,7 +58,7 @@ import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 
-import { runInit } from "../../src/cli/commands/init.js";
+import { runInit } from "../helpers/legacyInit.js";
 import { classifyBuildCommand } from "../helpers/buildCommand.js";
 import {
   ALLOWED_ACTION_COMMITS,
@@ -90,6 +90,7 @@ import {
   refusals,
 } from "../helpers/shippedLaneCommands.js";
 import { captureStdout } from "../helpers/stdout.js";
+import { reviewedGraphInitFiles } from "../helpers/graphInitSurface.js";
 
 /** The initialised project, built once for the whole file. */
 let projectPromise: Promise<string> | undefined;
@@ -631,15 +632,32 @@ describe(
 
       // Inspect bytes and mode so unreviewed programs cannot hide behind a data file name.
       const executable: string[] = [];
+      const graphFiles = reviewedGraphInitFiles(path.resolve(process.cwd()));
+      expect(shipped.filter((file) => file.startsWith(".qfai/tools/")).sort()).toEqual(
+        [...graphFiles.keys()].sort(),
+      );
       for (const file of shipped) {
         const full = path.join(root, file);
-        const why = initMustNotShip(file, await readFile(full), (await stat(full)).mode);
+        const bytes = await readFile(full);
+        const mode = (await stat(full)).mode;
+        const reviewed = graphFiles.get(file);
+        const sharedHook =
+          file === ".github/hooks/qfai-graph.json" &&
+          fileDigest(bytes) === ALLOWED_INIT_CONTENT.get(file) &&
+          (mode & 0o100) === 0;
+        const why = sharedHook
+          ? undefined
+          : reviewed === undefined
+            ? initMustNotShip(file, bytes, mode)
+            : bytes.toString("utf8") === reviewed && (mode & 0o100) === 0
+              ? undefined
+              : "managed graph output differs from its reviewed bytes or mode";
         if (why !== undefined) executable.push(`${file}: ${why}`);
       }
       expect
         .soft(
           executable,
-          "`qfai init` may ship only the reviewed migration programs as executable files",
+          "`qfai init` may ship only the reviewed migration and graph programs as executable files",
         )
         .toEqual([]);
 
@@ -668,7 +686,10 @@ describe(
         if (actual !== digest) contentDrift.push(`${file}: ${actual}`);
       }
       expect
-        .soft(contentDrift, "a reviewed init file whose content is not the reviewed content")
+        .soft(
+          contentDrift,
+          "a reviewed init file whose content is not the reviewed content; for AGENTS.md and .github/copilot-instructions.md, run `pnpm build` and `pnpm pins:entry` after the independent review",
+        )
         .toEqual([]);
     });
 

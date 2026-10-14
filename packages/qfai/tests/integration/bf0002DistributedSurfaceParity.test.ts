@@ -11,7 +11,7 @@ import {
   repoRootFromHere,
 } from "../../scripts/lib/declared-sample-band-ids.mjs";
 import { runLintShipping } from "../../scripts/lint-shipping.js";
-import { runInit } from "../../src/cli/commands/init.js";
+import { runInit } from "../helpers/legacyInit.js";
 import { captureStdout } from "../helpers/stdout.js";
 import { isRecord } from "../helpers/shippedWorkflowFixtures.js";
 import { STORY_ID_BOUNDARIES, scanDistributedSurface } from "../helpers/distributedSurfaceScan.js";

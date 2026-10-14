@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { runInit } from "../../src/cli/commands/init.js";
+import { runInit } from "../helpers/legacyInit.js";
 import { loadConfig } from "../../src/core/config.js";
 import { storyTreeMarkdownPatterns } from "../../src/core/storyTree/layout.js";
 import type { Issue } from "../../src/core/types.js";

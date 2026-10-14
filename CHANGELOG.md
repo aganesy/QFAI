@@ -6,6 +6,83 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- `qfai init` installs isolated CodeGraph and Graphify runtimes with managed
+  graph CLIs and search-denial hooks. Code questions use CodeGraph; document
+  questions use Graphify. Document processing needs explicit configuration.
+  Completed local analysis can be reused across compatible worktrees through
+  independent copies. AI-decided fallback permits only the observed search scope.
+
+- **`qfai validate` says when the drift checks do not cover an uncommitted edit.**
+  A protected story-tree file that is edited or added in the working tree and
+  not committed is outside the `<base>...HEAD` comparison, so the `tdd` and
+  `drift` profiles passed on it and failed only once it was committed. They now
+  raise a `QFAI-DRIFT-004` warning that names the uncommitted paths, and the
+  fix text of `QFAI-DRIFT-001` says the change request row is needed before the
+  commit. Fixes #3546.
+
+- **`qfai init` says when it kept an assistant file that a new file depends on.**
+  A run without `--force` that writes a new file under `.qfai/assistant/` and
+  keeps a file there that differs from this release's copy now prints one line
+  with the two counts, the kept `SKILL.md` and `STEP.md` owners, and the way to
+  refresh them with `--force`. `qfai validate` otherwise reports the new file
+  under an unrelated code. On Windows the first `.qfai` copy now leaves out the
+  assistant layers it is meant to exclude, so the layers are written once.
+  Fixes #3545 and #3677.
+
+- **The `timings:` line of `qfai validate` names the slow validators and says the budget is not a gate.**
+  When the UI/UX group runs over its budget, the line now names the two slowest
+  validators of the group with their time, and says that the budget is a
+  target, not a gate, and raises no finding. The check itself is not faster;
+  making it scale with the size of a contract is still open. Refs #3537.
+
+- **`qfai doctor` says how a shipped workflow differs from the shipped text.**
+  The `workflows.drift.*` warning now gives the number of lines that differ on
+  each side and the jobs whose definition differs, and says that copying the
+  shipped file over the installed one replaces every local change, so a reader
+  can tell a stale copy from a deliberate change. A way to accept a known
+  difference is not part of this change. Refs #3534.
+
+- The document-schema rule `qfai init` writes shows how to run the document
+  lane's two checks before pushing: the schema checker and the Mermaid checker,
+  with the scripts and arguments the `qfai-docs.yml` lane uses. The rule points
+  to the lane's install step for the pinned versions and restates none of them.
+  Fixes #3539.
+
+- **`qfai validate` tells a reader which base the drift checks compared with.**
+  A repository whose `baseBranch` has no merge base with HEAD now gets one
+  `QFAI-DRIFT-003` warning that names the base and says to fetch it or set
+  `baseBranch`, where the run used to pass as if nothing had changed. The
+  `drift` profile also reports at info the merge base commit and the number of
+  changed files it compared, so a worktree whose base ref lags the pull
+  request's base shows it. A repository with commits but no `origin/main` (no
+  remote, or a `master` branch) warns until `baseBranch` is set; a directory
+  that is not a repository is still silent.
+  The drift checks also stop turning themselves off when a file at the base,
+  such as a long decision ledger, is larger than 1 MiB: reading it failed
+  like a missing file, and the run passed without comparing anything.
+  Fixes #3532.
+
+- **`QFAI-STORY-006` says where an annotation that counts for nothing sits.**
+  When an example's `QFAI:EX-` annotation is in a selected test file but not on
+  a comment line before a test declaration, the finding now names the file and
+  line and tells you to move it to a comment line above the test. The remedy
+  text says the same. Fixes #3531.
+
+- **The UI contract guide says where each rendered text goes.** `structure` is
+  optional only for a screen that shows no heading beyond its title, and a table
+  maps headings, eyebrow lines, labels, link text, column headers, captions, list
+  items and product text to the key that holds them. Fixes #3530.
+
+- **`qfai validate` says when the installed qfai is older than the one the project
+  declares.** When the nearest `package.json` declares a `qfai` range and the
+  running copy is below its lowest version, `QFAI-TOOL-003` (warning) is the first
+  finding in the JSON report, and names both versions and the install command.
+  The text format prints error groups before warning groups, so there it follows
+  the errors. While it is raised, `QFAI-SKILLS-010` names the version difference
+  and gives the install as its suggested action, instead of inviting an edit to
+  files nobody touched.
+  Fixes #3468.
+
 - **A merge that duplicated a decision has a bounded manual recovery.**
   When a bad two-parent merge adds a second byte-identical copy of an inherited
   decision, the SDD owner may remove only that surplus copy under a separate
@@ -63,6 +140,79 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The self-update route names what `doctor` and `validate` report, and the intermittent-fix steps say what shows a constructed failing state.**
+  The `dependency` row of the request extraction now reads as a request to
+  update `qfai` itself and run `init`. The `implement-dep-bump` step names a
+  new required key in `qfai.config.yaml` and a spec-contract edit with its
+  change request as part of a `qfai` update. `verify-repeat-run` and
+  `implement-stress-harness` ask for the recorded Red results, or a stated
+  reason why the failing state is deterministic, instead of "fails on every
+  run". Refs #3676 and #3678.
+
+- **The base-commit comparison of a timing-dependent suite is made under the
+  same load.** `common-gate-run` says to run the base commit under the
+  conditions of the compared run and to record both loads, to count a chain of
+  failures once, and to run alone the files that hold a new failure. A failure
+  that passes alone but fails in the suite on the changed branch is reported as
+  a possible order or shared-state effect of the change, and is left out only
+  after a full-suite rerun that does not show it; each failure left out is
+  listed in the final report. The baseline stays `same`, `different` or
+  `unrun` and the verdict stays `FAIL`; no state or field is added. Refs #3653:
+  the guidance half only.
+
+- **The prototyping preflight says what `qfai doctor` probes at the target URL.**
+  `prototyping-preflight` now states that doctor sends one `GET` to exactly the
+  URL it is given, accepts a status from 200 to 399, and does not follow a
+  redirect. A static server with no `index.html` at its root can answer 404 on
+  `/`, so the step tells the reader to pass a URL that answers 200.
+  Doctor itself is unchanged. Fixes #3667.
+
+- **A verify gate that fails the same way on the base commit records why.**
+  The `reason` of such a gate in `verify.json` names the failing test
+  identifiers and the environment, the stage report adds the base result and
+  the same gate's CI result (or says it is unknown), and the run asks the user
+  whether to commit with those gates open. The verdict stays `FAIL` and gains
+  no field. Fixes #3543.
+
+- **The final report of a run names the policy check.** The `qfai-run` final
+  report now says whether `common-policy-check` ran and its outcome, or that
+  it did not run and why. The plan lists no such step, so before this a run
+  that skipped the check left no trace of it. Fixes #3557.
+
+- **The verify gate says which Validate command wins.** When a project's
+  `Validate` entry runs a partial profile (its output carries
+  `QFAI-PROFILE-001`), `verify-qfai-gate` no longer treats it as the gate: it
+  records the entry's result as a signal, runs
+  `npx qfai validate --profile verify --fail-on error` as well, and passes or
+  fails on that run. Fixes #3555.
+
+- **A misplaced trace mark says how to repair it.** The `QFAI-STORY-007` error
+  for a `QFAI:BF-`, `QFAI:AC-` or `QFAI:EX-` annotation in a test of the wrong
+  layer now says to keep the annotation only in a test of the layer it belongs
+  to, to remove it from this test, and where the layer rules are
+  (`.qfai/assistant/rule/test-layers.md`). The finding's code, file and
+  annotation are unchanged. Fixes #3544.
+
+- **`qfai-run` points to the form of an approval row.** Step 7 names the
+  decisions template, whose header sets out the four items of the Approach
+  cell, and the template gains an example of a release approval's cells.
+  Refs #3551.
+
+- **A test that fails every run leaves the quarantine route.** `implement-quarantine`
+  quarantines nothing for a test that fails all of at least five recorded runs. It records the runs and reports
+  the outcome `failing-consistently` with an extraction of the report, and the decision rules
+  route that extraction (for example a wrong test goes to `repair-test`) while its
+  diagnosis and repair steps run. Fixes #3493.
+
+- **`qfai-run` reads a request to raise QFAI itself as a dependency change.**
+  The extraction guide's `dependency` row now names it, so the request takes
+  the dependency route, whose step already carries the upgrade procedure for
+  `qfai`. Fixes #3549.
+
+- **The shipped rules name `AGENTS.md` as the only entry file.** The wording
+  in `documentation-clarity.md` and `untrusted-content.md` no longer mentions
+  `CLAUDE.md`, which `qfai init` stopped writing.
+
 - **The shipped workflows pin `actions/setup-node` 7.1.0.** The three
   templates written by `qfai init` use the same commit as this repository.
 
@@ -85,6 +235,56 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   is read, so a run reads only what its request needs. Fixes #3575.
 
 ### Fixed
+
+- A contract file that raises an error and produces no rule no longer makes
+  `qfai validate` report every example as named by no rule. Before, one API
+  contract with a YAML error printed the parse error plus dozens of
+  `QFAI-STORY-005` errors on unrelated stories. The check for an uncited example
+  is now skipped while such a file exists, and one info finding names the file
+  and says the examples were not checked. The error for the file is reported as
+  before. Fixes #3665.
+- The `QFAI-LINK-001` warning for skill wrappers the operating system will not
+  follow, over canonical documents that read fine, is now one finding with a
+  one-line message and a one-line suggested action. Before, a Windows checkout
+  printed about 2 KB of it on every `qfai validate` run, which buried the counts
+  line. The message gives the count, the first path and how many more there are;
+  the finding still lists every path in its references, and its severity is
+  unchanged. Fixes #3652. Refs #3469: the single-line half only; a repair by
+  `validate` or a lower severity is not part of this change.
+- The shipped `qfai-tests.yml` fails closed on an unreadable `package.json`. A
+  manifest that is not valid JSON or not an object, a `scripts` field that is
+  not an object, a layer-named script that is not a string, and a malformed
+  lane or script list now stop change detection with an error annotation, so the
+  verdict is red. Before, each was read as "no test script declared": every lane
+  was skipped and the required check went green over no tests. A repository
+  without a `package.json`, or with no layer-named script, is still a valid
+  empty set. Fixes #3533.
+
+- **The Markdown-schema check no longer passes over a document directory it
+  cannot read.** A directory that fails to list for a reason other than being
+  absent (permission, I/O, descriptor exhaustion) is reported with its path and
+  cause, and the run fails instead of treating the documents beneath it as
+  conforming. Fixes #3626.
+
+- Skip Claude Code prompt reminders for `ci-monitor-event` notification lines
+  before counting eligible prompts. `qfai init` refreshes the previous official
+  prompt readers while retaining project edits and existing counter fallbacks.
+  Real host injection, scheduled-prompt classification and the reported SYSTEM
+  notice cause remain unverified; see the
+  [host diagnosis](https://github.com/aganesy/QFAI/issues/3461).
+
+- The SDD design authoring guide no longer says `npx qfai init` seeds a sample
+  `DESIGN.md` at the project root. Init writes none; the sample ships only as a
+  skill template, and a root file that exists was authored by
+  `common-design-md` or copied from that template on purpose. Fixes #3622.
+
+- A register ID that the union merge driver left on two rows of
+  `decisions.md` or `open-questions.md` now fails the repository's scans lane,
+  which runs early in the pull request lint job. Before, only the full
+  validation in the build job reported it, minutes into the run.
+  `pnpm branch:catchup` runs the same check after its merge and stops before it
+  commits or pushes. The union merge seed `qfai init` writes is unchanged.
+  Fixes #3671.
 
 - UI consistency repairs reach design authoring in the SDD stage. Existing
   design files change only within a newly authorized request; unrelated brand
@@ -114,6 +314,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **Profiling output retains its complete UTF-8 prefix within the shared 32 MiB limit.**
   A chunk that crosses the limit keeps the complete characters that fit before
   owned process termination begins. Output after the limit is discarded. Fixes #3462.
+
+- **Intermittent-fix steps check whether pressure and repeats are applicable.**
+  Executed regression evidence for a verified ordinary cause can make them
+  unnecessary. The steps record their proof and reason without claiming runs
+  they did not perform; races, uncertainty and quarantine still require runs.
+
+- Graph hook composition retains unreadable or malformed optional host settings
+  and reports recovery without stopping the rest of init.
+
+- Validation reports a canonical directory replaced by a file on Windows
+  before profile scans run, preserving integration and security findings.
+
+- Repository bootstrap rejects a file in place of a dependency directory's
+  parent on Windows before starting pnpm.
 
 ## [2.1.2] - 2026-10-11
 

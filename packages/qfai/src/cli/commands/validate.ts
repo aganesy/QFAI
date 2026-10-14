@@ -684,9 +684,14 @@ export function formatTimingOverruns(timings: ValidationTimings | undefined): st
   }
   const parts: string[] = [];
   if (timings.uiuxMs > timings.uiuxBudgetMs) {
+    // The group's validators run side by side, so the slowest two are the ones to look at.
+    const slowest = timings.uiuxParts
+      .slice(0, 2)
+      .map((part) => `${part.name} ${Math.round(part.ms)}ms`);
+    const where = slowest.length > 0 ? `; slowest, overlapping: ${slowest.join(", ")}` : "";
     parts.push(
       `uiux=${formatOverrunMs(timings.uiuxMs, timings.uiuxBudgetMs)}ms ` +
-        `(budget ${timings.uiuxBudgetMs}ms)`,
+        `(budget ${timings.uiuxBudgetMs}ms${where})`,
     );
   }
   if (timings.htmlMockMs > timings.htmlMockBudgetMs) {
@@ -695,7 +700,10 @@ export function formatTimingOverruns(timings: ValidationTimings | undefined): st
         `(budget ${timings.htmlMockBudgetMs}ms)`,
     );
   }
-  return parts.length > 0 ? `timings: over budget ${parts.join(" ")}` : null;
+  // A budget is a target. Said on the line itself, because nothing else is printed for it.
+  return parts.length > 0
+    ? `timings: over budget ${parts.join(" ")}; a target, not a gate: no finding is raised`
+    : null;
 }
 
 const MAX_OVERRUN_DECIMALS = 9;
@@ -1040,6 +1048,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "`validate` runs to completion, so its output is a verdict; a run that could not finish reports that as a finding rather than as a bare stderr line with no counts, no run-log and no validate.json.",
   "QFAI-TOOL-002":
     "The qfai a project's gates run through is the one its own dependency declaration installs, so the gating version is pinned by its own lockfile rather than by whichever checkout `npx` reached first.",
+  "QFAI-TOOL-003":
+    "The qfai that runs a project's gates is not older than the version the project declares, so a rule that reads a generated file is not judging it by a checker older than the tree.",
   "QFAI-TOOL-001":
     "The qfai that runs a project's gates is resolved from inside that project, so the gating version is pinned by its own lockfile; a global install or a monorepo-root hoist is a benign reading of the same path test.",
   "QFAI-PLATFORM-003":
@@ -1150,6 +1160,10 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Upstream SSOT files are unchanged relative to the base branch, or the change carries an approved Change Request.",
   "QFAI-DRIFT-002":
     "An example whose row changed since the base branch has a test annotating it that changed too.",
+  "QFAI-DRIFT-004":
+    "A protected story-tree file is committed before the drift checks run on it; an uncommitted edit is not compared with the base branch.",
+  "QFAI-DRIFT-003":
+    "The base branch resolves to a merge base with HEAD, so the drift checks compare against it; the drift profile names the commit it compared with.",
   "QFAI-RESEARCH-013":
     "A UI-bearing discussion pack registers at least `uiux.competitive_refs_min` complete competitive references (default 3) in `04_Sources.md`.",
   "QFAI-RESEARCH-014":
@@ -1345,9 +1359,13 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   "QFAI-CONTRACT-034":
     "Correct the named contract's ID, file name or index row, give a contract that shares a number the next free one, or remove a row that names no contract file, then rerun validate.",
   "QFAI-DRIFT-001":
-    "Restore the protected file or record an in-force change request authorizing the named change.",
+    "Restore the protected file, or record an in-force change request that names it before the change is committed: an uncommitted edit is not compared.",
+  "QFAI-DRIFT-004":
+    "Commit the change together with the change request row that names it, then rerun validate.",
   "QFAI-DRIFT-002":
     "Update the tests annotating the named example to its new row, or confirm they already assert it.",
+  "QFAI-DRIFT-003":
+    "Fetch the base branch so it resolves, or set baseBranch in qfai.config.yaml to a ref this checkout has, then rerun validate.",
   "QFAI-FLOW-005": "Use an existing BF-NNNN ID for --flow, or create the flow before selecting it.",
   "QFAI-LAYOUT-001":
     "Invoke the `/qfai-migration-v1-to-v2` skill in your AI assistant to move the old spec packs to the story tree, then rerun validate.",
@@ -1363,9 +1381,9 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   "QFAI-STORY-005":
     "Define the missing business rule or contract, correct the cited reference, or renumber the rule after the contract that declares it.",
   "QFAI-STORY-006":
-    "Add a real test in the required layer with a QFAI annotation for the named BF, AC, or EX.",
+    "Add a real test in the required layer with a QFAI annotation for the named BF, AC, or EX; an EX annotation goes on a comment line above the test declaration it covers.",
   "QFAI-STORY-007":
-    "Move the named test annotation to its required E2E, integration, API, or unit layer.",
+    "Remove the named annotation from this test and keep it only in a test of its own layer: BF in E2E, AC in integration or API, EX outside E2E.",
   "QFAI-STORY-008":
     "Correct the annotation to a declared BF, AC, or EX ID, or remove a stale annotation.",
   "QFAI-STORY-010":

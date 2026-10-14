@@ -2,13 +2,17 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
+import { isEnoent } from "../fs/errno.js";
 import { DEFAULT_GLOB_FILE_LIMIT } from "../fs.js";
 import {
+  describeBaseComparison,
   getChangedFilesAgainstBase,
   gitStdout,
   normalizeRepoPath,
-  readFileAtBase,
   readDecisionFilesAtRevision,
+  readFileAtBase,
+  uncommittedContentPaths,
+  type BaseComparison,
 } from "../gitChanges.js";
 import { parseAllMarkdownTables } from "../specPackParsers.js";
 import { parseCountedExampleAnnotations } from "../storyTree/ids.js";
@@ -30,8 +34,22 @@ export async function validateStoryTreeDrift(
   profile: "tdd" | "drift",
 ): Promise<Issue[]> {
   const baseBranch = config.baseBranch ?? "origin/main";
+  const comparison = describeBaseComparison(root, baseBranch);
+  if (comparison.kind === "unresolved") {
+    return [
+      notCompared(
+        `"${baseBranch}" has no merge base with HEAD.`,
+        "Fetch that ref, or set baseBranch in qfai.config.yaml to one this checkout has, then rerun validate.",
+      ),
+    ];
+  }
   const changed = getChangedFilesAgainstBase(root, baseBranch);
-  if (changed === null) return [];
+  if (changed === null) {
+    // In a repository whose base resolves, the listing itself failed.
+    return comparison.kind === "resolved"
+      ? [notCompared(`git could not list the changes since "${baseBranch}".`, RERUN_ACTION)]
+      : [];
+  }
   const specs = normalizeRepoPath(
     path.relative(root, path.resolve(root, config.paths.specsDir)),
   ).replace(/\/$/, "");
@@ -253,23 +271,28 @@ export async function validateStoryTreeDrift(
     ...baseModel.decisionFiles,
     ...headModel.decisionFiles.map((file) => normalizeRepoPath(path.relative(root, file))),
   ]);
-  for (const file of changed) {
-    const protectedPath =
-      file.startsWith(`${path.posix.join(specs, "01_policy")}/`) ||
-      file.startsWith(`${path.posix.join(specs, "02_business-flow")}/`) ||
-      contracts === "" ||
-      file.startsWith(`${contracts}/`) ||
-      file === decisions ||
-      file.startsWith(`${path.posix.join(specs, "decisions")}/`) ||
-      file === questions;
-    if (!protectedPath || authorised.has(file)) continue;
-    if (
-      registerFiles.has(file) &&
-      onlyRequestStatus &&
-      withoutChangeRequestRows(readFileAtBase(root, baseBranch, file) ?? "") ===
+  const isProtected = (file: string): boolean =>
+    file.startsWith(`${path.posix.join(specs, "01_policy")}/`) ||
+    file.startsWith(`${path.posix.join(specs, "02_business-flow")}/`) ||
+    contracts === "" ||
+    file.startsWith(`${contracts}/`) ||
+    file === decisions ||
+    file.startsWith(`${path.posix.join(specs, "decisions")}/`) ||
+    file === questions;
+  // A physical register file whose only change is to Change request rows needs no request.
+  const requestOnly = new Set<string>();
+  if (onlyRequestStatus) {
+    for (const file of registerFiles) {
+      if (
+        withoutChangeRequestRows(readFileAtBase(root, baseBranch, file) ?? "") ===
         withoutChangeRequestRows(await readSafePath(path.join(root, file)))
-    )
-      continue;
+      )
+        requestOnly.add(file);
+    }
+  }
+  for (const file of changed) {
+    if (!isProtected(file) || authorised.has(file)) continue;
+    if (requestOnly.has(file)) continue;
     if (file.endsWith("/03_Example.md") && (await onlyAppendsExamples(root, baseBranch, file)))
       continue;
     if (file.startsWith(`${contracts}/`) && (await onlyCitesExamples(root, baseBranch, file)))
@@ -286,7 +309,88 @@ export async function validateStoryTreeDrift(
     );
   }
   issues.push(...(await examplesWithoutTestChange(root, config, changed, specs, baseBranch)));
+  // A path already in the committed comparison is not named again, even when the working tree
+  // changes it further: the checks read the file as it is on disk.
+  const working = uncommittedContentPaths(
+    root,
+    (file) =>
+      isProtected(file) && !changed.has(file) && !authorised.has(file) && !requestOnly.has(file),
+  );
+  if (working === null) {
+    issues.push(notCompared("git could not list the uncommitted changes.", RERUN_ACTION));
+  } else {
+    // The same two edits a commit would pass without a change request pass uncommitted too.
+    const uncommitted: string[] = [];
+    for (const file of working) {
+      if (file.endsWith("/03_Example.md") && (await onlyAppendsExamples(root, baseBranch, file)))
+        continue;
+      if (file.startsWith(`${contracts}/`) && (await onlyCitesExamples(root, baseBranch, file)))
+        continue;
+      uncommitted.push(file);
+    }
+    if (uncommitted.length > 0) issues.push(uncommittedNotCompared(uncommitted));
+  }
+  if (profile === "drift" && comparison.kind === "resolved") {
+    issues.push(comparedAgainst(baseBranch, comparison, changed.size));
+  }
   return issues;
+}
+
+/** The most uncommitted paths the finding names; the count says how many there are. */
+const UNCOMMITTED_LISTED = 5;
+
+/**
+ * The comparison is `<base>...HEAD`, so an edit that is not committed yet is not in it and the
+ * checks pass on it. Said once, so a green run is not read as covering the working tree.
+ */
+function uncommittedNotCompared(uncommitted: readonly string[]): Issue {
+  const listed = uncommitted.slice(0, UNCOMMITTED_LISTED);
+  const rest = uncommitted.length - listed.length;
+  const single = uncommitted.length === 1;
+  return issue(
+    "QFAI-DRIFT-004",
+    `${uncommitted.length} uncommitted ${single ? "change" : "changes"} to protected story-tree ${single ? "file is" : "files are"} not compared with the base: ${listed.join(", ")}${rest > 0 ? ` and ${rest} more` : ""}.`,
+    "warning",
+    undefined,
+    "storyTree.uncommittedNotCompared",
+    listed,
+    "canonical",
+    "Commit the change together with the change request row that names it, then rerun validate.",
+  );
+}
+
+const RERUN_ACTION =
+  "Check that git can read the repository and that the file is smaller than 256 MiB, then rerun validate.";
+
+/** The warning for a run that compared nothing, so a pass is not read as a comparison. */
+function notCompared(reason: string, action: string): Issue {
+  return issue(
+    "QFAI-DRIFT-003",
+    `Nothing was compared: ${reason}`,
+    "warning",
+    undefined,
+    "storyTree.notCompared",
+    undefined,
+    "canonical",
+    action,
+  );
+}
+
+/**
+ * Names the commit the drift profile compared with, so a pass can be checked against the base the
+ * reader expects: a worktree whose base ref lags the pull request's base passes silently otherwise.
+ */
+function comparedAgainst(
+  baseBranch: string,
+  comparison: Extract<BaseComparison, { kind: "resolved" }>,
+  changedCount: number,
+): Issue {
+  const mergeBase = comparison.mergeBase.slice(0, 12);
+  const compared = `Compared ${changedCount} changed ${changedCount === 1 ? "file" : "files"} with "${baseBranch}" at merge base ${mergeBase}`;
+  const message = comparison.atHead
+    ? `${compared}; HEAD is that commit, so the branch has no commit of its own.`
+    : `${compared}.`;
+  return issue("QFAI-DRIFT-003", message, "info", undefined, "storyTree.baseCompared");
 }
 
 /**
@@ -466,7 +570,7 @@ async function readSafePath(file: string): Promise<string> {
   try {
     return await readFile(file, "utf8");
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return "";
+    if (isEnoent(error)) return "";
     throw error;
   }
 }

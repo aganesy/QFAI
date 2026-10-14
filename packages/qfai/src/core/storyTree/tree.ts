@@ -49,6 +49,11 @@ export type StoryTreeModel = {
   openQuestionsFile: string | null;
   contractFiles: string[];
   additionalContractFiles: string[];
+  /**
+   * Contract files that raised an error and produced no rule: the rules they
+   * would have declared, and the examples those rules cite, are not known.
+   */
+  unloadedContractFiles: string[];
   errors: string[];
 };
 
@@ -156,6 +161,7 @@ export function buildStoryTreeModel(
     openQuestionsFile: null,
     contractFiles: [],
     additionalContractFiles: [],
+    unloadedContractFiles: [],
     errors: [],
   };
   for (const [file, text] of [...texts.entries()].sort(([left], [right]) =>
@@ -233,6 +239,7 @@ export function buildStoryTreeModel(
     const scan = parseContractRules(file, text);
     model.rules.push(...scan.rules);
     model.errors.push(...scan.errors);
+    if (scan.rules.length === 0 && scan.errors.length > 0) model.unloadedContractFiles.push(file);
   }
   const decisions = recordTableFor(texts, "decisions.md", options.specsDir);
   const questions = recordTableFor(texts, "open-questions.md", options.specsDir);

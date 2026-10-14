@@ -44,7 +44,7 @@ vi.mock("node:fs/promises", async () => {
   };
 });
 
-const { runInit } = await import("../../src/cli/commands/init.js");
+const { runInit } = await import("../helpers/legacyInit.js");
 
 let root: string;
 

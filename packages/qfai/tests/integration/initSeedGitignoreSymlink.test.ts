@@ -14,7 +14,7 @@ import { promisify } from "node:util";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { runInit } from "../../src/cli/commands/init.js";
+import { runInit } from "../helpers/legacyInit.js";
 import { defaultConfig } from "../../src/core/config.js";
 import { validateStoryPolicyPlaceholders } from "../../src/core/validators/assistantAssets.js";
 import { captureStdout } from "../helpers/stdout.js";

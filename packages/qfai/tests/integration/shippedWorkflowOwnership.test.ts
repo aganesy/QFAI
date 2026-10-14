@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { runInit } from "../../src/cli/commands/init.js";
+import { runInit } from "../helpers/legacyInit.js";
 import { loadConfig, readSkippedWorkflows } from "../../src/core/config.js";
 import { isEnoent } from "../../src/core/fs/errno.js";
 import { QFAI_GITIGNORE_BLOCK } from "../../src/core/gitignore.js";

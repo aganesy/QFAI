@@ -32,7 +32,7 @@ vi.mock("node:fs/promises", async () => {
   };
 });
 
-const { runInit } = await import("../../src/cli/commands/init.js");
+const { runInit } = await import("../helpers/legacyInit.js");
 const { captureStdout } = await import("../helpers/stdout.js");
 
 /** A staging path, by the only marker that is stable across pid and clock. */

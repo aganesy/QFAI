@@ -8,6 +8,7 @@ node_modules
 # un-ignored so the negated file entry survives prettier's gitignore-style
 # matching.
 .qfai/report/**
+.qfai/tools/**
 !.qfai/report/
 !.qfai/report/preflight_summary.md
 .qfai/review/**

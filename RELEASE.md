@@ -212,8 +212,20 @@ New-Item -ItemType Directory -Force -Path tmp/qfai-release-smoke
 Set-Location tmp/qfai-release-smoke
 ```
 
+The registry can lag the publish job by a minute or two, and `npm i -D qfai` would then
+install the previous version, so the check would pass without testing the new one.
+Install `qfai@X.Y.Z`, never `qfai` alone, and only after `npm view` prints `X.Y.Z`.
+`--prefer-online` refreshes the cache that the install reads, so an old answer is not
+reused. `npm view` fails with E404 until the registry serves `X.Y.Z`, so repeat it:
+
 ```sh
-npm i -D qfai
+npm view qfai@X.Y.Z version --prefer-online
+```
+
+Then run the check:
+
+```sh
+npm i -D qfai@X.Y.Z
 npx qfai init
 # validate generates validate.json
 npx qfai validate

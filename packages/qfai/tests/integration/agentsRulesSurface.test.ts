@@ -9,6 +9,36 @@ import { readRule } from "../helpers/ruleWithReferences.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "../../../..");
 
+describe("graph exploration rule", () => {
+  it("preserves selection, safe recovery and reuse across the agent entry points", async () => {
+    const text = (
+      await readFile(path.join(ROOT, ".agents/rules/graph-exploration.md"), "utf8")
+    ).replace(/\s+/g, " ");
+    for (const clause of [
+      "Symbols, callers",
+      "design rationale",
+      "known source path directly",
+      "second engine only",
+      "Ambient API credentials",
+      "human approval of that destination and document scope",
+      ".qfai/graph-processing.json",
+      "No human search approval is needed.",
+      "Hidden scripts",
+      "Incomplete coverage does not establish absence",
+      "independent writable copies",
+      "outside Git",
+      "Exclude secret files",
+    ])
+      expect(text).toContain(clause);
+    for (const entry of [
+      "AGENTS.md",
+      ".github/copilot-instructions.md",
+      "packages/qfai/assets/init/root/AGENTS.md",
+    ])
+      expect(await readFile(path.join(ROOT, entry), "utf8")).toContain("graph-exploration.md");
+  });
+});
+
 describe("excess vocabulary covers code and product surface without adding tags", () => {
   const TAGS = ["delete", "stdlib", "native", "yagni", "shrink"];
 
@@ -435,7 +465,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         ROOT,
         "packages/qfai/assets/init/root/.agents/rules/shipped-ci-parity.md",
       );
-      await expect(lstat(shipped)).rejects.toThrow();
+      await expect(lstat(shipped)).rejects.toMatchObject({ code: "ENOENT" });
     });
   });
 
@@ -467,7 +497,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         ROOT,
         "packages/qfai/assets/init/root/.agents/rules/repository-language.md",
       );
-      await expect(lstat(shipped)).rejects.toThrow();
+      await expect(lstat(shipped)).rejects.toMatchObject({ code: "ENOENT" });
     });
   });
 

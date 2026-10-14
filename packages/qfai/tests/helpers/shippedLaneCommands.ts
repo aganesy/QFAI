@@ -1241,7 +1241,7 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
   ["qfai-docs.yml", "b462b2489e102a1992beec58c45195eeb2371e5ded3d10e28964e7a3af8ff082"],
-  ["qfai-tests.yml", "c2616e56b9812f30b3c1af630f0936835349815fb7a2a1f8c297a6566b4c6bd2"],
+  ["qfai-tests.yml", "23936510c76f82647e4d48cce2a116bf44185f5ba90fac3ca9b91a560a969572"],
   ["qfai-validate.yml", "a1407c67a98f053fd544b5a78b17b4c63c64be349c4483b55d647ef03c22145c"],
 ]);
 
@@ -1273,6 +1273,7 @@ export function fileDigest(raw: Buffer): string {
  */
 export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
   ".github/copilot-instructions.md",
+  ".github/hooks/qfai-graph.json",
   ".github/workflows/qfai-docs.yml",
   ".github/workflows/qfai-tests.yml",
   ".github/workflows/qfai-validate.yml",
@@ -1310,6 +1311,11 @@ export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
  * silent edit to it changes how every other pinned file is checked out.
  */
 export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
+  // The generated shared denial hook is pinned independently of workflow templates.
+  [
+    ".github/hooks/qfai-graph.json",
+    "e807d0caa761867301c9a8d08e70d07ccd537cca17b811cd2dc6cb4a1e89be20",
+  ],
   [
     // Re-pinned when the cross-AI rules block was restated for the tree it is written into. Three
     // prose lines now say the masters are seeded by `qfai init` rather than assumed to exist, and the
@@ -1329,10 +1335,10 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // and hashing what it wrote; dropping that bullet reproduces `2a264d5e…`.
     //
     // Every later bullet on that list moves this digest the same way. To re-pin one: run
-    // `qfai init` into a temp root and hash what it wrote — never copy a value out of a failure
-    // message — then drop the added bullet and confirm the previous digest comes back byte for
-    // byte. That check is what keeps a re-pin a review of one line rather than a re-blessing of
-    // the whole file.
+    // `pnpm build` and `pnpm pins:entry`, which hashes what `qfai init` writes into a temp root
+    // — never copy a value out of a failure message — then drop the added bullet and confirm
+    // the previous digest comes back byte for byte. That check is what keeps a re-pin a review
+    // of one line rather than a re-blessing of the whole file.
     //
     // Re-pinned for the grilling bullet, which now says a session ends in one of four named
     // endings instead of on an empty frontier and the user's confirmation. Derived by running
@@ -1375,7 +1381,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // Derived by running `qfai init` into a temp root; dropping that one bullet reproduces
     // `fcdba5a8…` byte for byte.
     ".github/copilot-instructions.md",
-    "b756eb95a096958e188a406f275d4a31a3128336c58ca50a9e002c2d2e503d4d",
+    "3cc78e107fdc002d7ed334fc99f915816793f40bd60f2660bed9131aac19fed2",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1401,7 +1407,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   //
   // To re-pin: run `qfai init` into a temp root and hash the `.gitignore` it
   // wrote — never copy a value out of a failure message.
-  [".gitignore", "b3dfe9b2704c0ae54ef8347cd23ed2a714c5966f38050932611a6ad326b597c4"],
+  [".gitignore", "bf131d12f076182939b21e2df2c21d66888e1a62ae448c72b78198702eb20cf8"],
   // Independent golden files pin the reviewed entry instructions. Update them only after
   // independent review, preserving exact bytes without trimming or newline normalization.
   [
@@ -1498,7 +1504,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // Re-pinned for the `Stop` group marked `QFAI session feedback reminder`, and again when it was
   // removed: the file has no `Stop` event, and restoring that group reproduces `f751cc6e…` byte
   // for byte. Derived the same way.
-  [".claude/settings.json", "da0e726996c0ec7306930b094eb6717afe5f9b76e6e8c1b378331e0f00b16ae6"],
+  [".claude/settings.json", "396c26ac251f5a15dece062a75f75f5fc04c1d72eca708ce1721765a8cd77dd6"],
   // Inside `.codex/`, and pinned for the reason `.claude/settings.json` is: its commands are a
   // program an adopter's agent runs. Two `UserPromptSubmit` groups, structured-question and
   // free-text entry. Codex takes one command string, so each runs the same `node -e` reader
@@ -1541,7 +1547,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // merge refreshes them. Derived the same way.
   // Re-pinned for the same `Stop` group, and again when it was removed: restoring that group
   // reproduces `e973ebb8…` byte for byte. Derived the same way.
-  [".codex/hooks.json", "524381d3026af9295c3706d59dd0018f24508cfc290e4cb3a8873c1f6f1c9938"],
+  [".codex/hooks.json", "252e94e4a2d0f08c155dcf5b85321c783da67a45bde82ac8c0b59f28234655f7"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`
@@ -1709,6 +1715,7 @@ export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
   "root/.agents/rules/document-schema.md",
   "root/.agents/rules/documentation-clarity.md",
   "root/.agents/rules/grilling.md",
+  "root/.agents/rules/graph-exploration.md",
   "root/.agents/rules/interface-clarity.md",
   "root/.agents/rules/minimal-implementation.md",
   "root/.agents/rules/reminders.json",
@@ -2076,11 +2083,11 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-tests.yml#detection",
-    '{"name":"Probe layer-named test scripts","id":"scripts","shell":"bash","run":"<body 678c2db6a736f883ce9a17182e0e8d8d5a9de25dd9e16c56dfcf8e6e5062c79e>"}',
+    '{"name":"Probe layer-named test scripts","id":"scripts","shell":"bash","run":"<body 40969a6773f60778f7f7afd9fe900c45d937866e252f9805123a750f8e77e4d6>"}',
   ],
   [
     "qfai-tests.yml#detection",
-    '{"name":"Intersect the selected lanes with the declared scripts","id":"selected","shell":"bash","env":{"QFAI_LANES":"${{ steps.diff.outputs.lanes }}","QFAI_SCRIPTS":"${{ steps.scripts.outputs.scripts }}"},"run":"<body 2fed6c8d2d3199dfb460266ae7b92e05bd6eea86f4aafe935b222d0cd1f7e9fa>"}',
+    '{"name":"Intersect the selected lanes with the declared scripts","id":"selected","shell":"bash","env":{"QFAI_LANES":"${{ steps.diff.outputs.lanes }}","QFAI_SCRIPTS":"${{ steps.scripts.outputs.scripts }}"},"run":"<body f58fb1e6b10ca9d70ef150b22bc76b1adb2e4250402cb6cc70b4491a4e097b91>"}',
   ],
   [
     "qfai-tests.yml#tests",
@@ -2233,12 +2240,13 @@ export const ALLOWED_ACTION_INPUTS: ReadonlyMap<string, ReadonlySet<string>> = n
  * this list refused it until it was written down.
  */
 export const ALLOWED_NODE_PAYLOADS: ReadonlySet<string> = new Set([
-  // `qfai-tests.yml#detection` — reads `scripts` out of `package.json`. 630 characters.
-  "7f72970abbe4e9a0fe876e3e0bd57468fc86bab5e3a3cd5076f09fb3653292cc",
+  // `qfai-tests.yml#detection` — reads `scripts` out of `package.json`, and stops with a non-zero
+  // exit on a manifest it cannot read. 1195 characters.
+  "4dae4c428c97a11a595323becce1dbb63bbb8c06b3a96e253837cf9873dc00af",
   // `qfai-tests.yml#detection` — intersects the selected lanes with the declared scripts, which is
-  // the matrix axis the lane runs on. Reads two environment variables, writes one line. 412
-  // characters.
-  "5bd9604195a53333576a969be91256204039c0c7db2e3cebb8b34bcaf0891530",
+  // the matrix axis the lane runs on, and stops with a non-zero exit on an input that is not a list
+  // of layers. Reads two environment variables, writes one line. 897 characters.
+  "8e00267730de04ba404f0ef54e28328b231db5ee1e19b9ba6dbb8d07e3e9eb0b",
   // `qfai-validate.yml#validate` — reads `packageManager` out of `package.json`. 1039 characters.
   "9cc40c1d1704f836361c2a47e780e0fa393307a55f01c129f2da50fc97f57230",
   // `qfai-validate.yml#validate` — asks `crypto.getHashes()` whether the integrity algorithm the

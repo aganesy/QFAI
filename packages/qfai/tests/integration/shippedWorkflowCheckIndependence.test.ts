@@ -22,7 +22,7 @@ import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 
-import { runInit } from "../../src/cli/commands/init.js";
+import { runInit } from "../helpers/legacyInit.js";
 import {
   collectJobSteps,
   evaluateCondition,

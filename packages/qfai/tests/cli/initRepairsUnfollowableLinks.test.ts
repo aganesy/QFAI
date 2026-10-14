@@ -66,7 +66,7 @@ function symlinkCallsFor(linkPath: string): unknown[][] {
   );
 }
 
-const { runInit } = await import("../../src/cli/commands/init.js");
+const { runInit } = await import("../helpers/legacyInit.js");
 
 const LINK = path.join(".claude", "skills", "qfai-implement");
 const execFile = promisify(execFileCallback);

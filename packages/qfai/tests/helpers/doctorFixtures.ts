@@ -11,7 +11,7 @@
 import { readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { runInit } from "../../src/cli/commands/init.js";
+import { runInit } from "./legacyInit.js";
 import { useTempDirPool } from "./shippedWorkflowFixtures.js";
 import { captureStdout } from "./stdout.js";
 

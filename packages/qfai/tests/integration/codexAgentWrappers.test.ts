@@ -7,7 +7,7 @@ import { parse as parseTOML } from "smol-toml";
 import { parse as parseYaml } from "yaml";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { runInit } from "../../src/cli/commands/init.js";
+import { runInit } from "../helpers/legacyInit.js";
 import {
   CODEX_AGENT_WRAPPER_DIR,
   CODEX_AGENT_WRAPPER_SUFFIX,

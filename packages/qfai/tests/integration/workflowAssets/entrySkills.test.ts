@@ -17,6 +17,7 @@ import {
   assistantLineCeiling,
 } from "../../../src/core/doctor/assetLineBudget.js";
 import { validateAgentDefinition } from "../../../src/core/validators/agentDefinition.js";
+import { approachProblems } from "../../../src/core/validators/storyTreeStructure.js";
 import type { WorkflowExtraction } from "../../../src/core/workflow/extraction.js";
 import { extractionFaults } from "../../../src/core/workflow/extractionShape.js";
 import { routingOutcome } from "../../../src/core/workflow/routeDecision.js";
@@ -602,6 +603,20 @@ describe("qfai-run", () => {
     ).toEqual(["hand-off-operation", "run-owned-cleanup"]);
   });
 
+  // QFAI:AC-0001-0211-05
+  // QFAI:EX-0001-0211-35
+  it("reads a request to raise qfai itself as a dependency change, whose step carries the upgrade", async () => {
+    const intents = sectionOf(await readShipped(EXTRACTION), "## Intent");
+    expect(rowOf(intents, "| `dependency`")).toMatch(/update `qfai` itself and run `init`/i);
+    const outcome = routingOutcome(
+      extraction({ intent: "dependency", artifacts: ["deps"], confidence: "high" }),
+    );
+    expect("taken" in outcome ? outcome.taken.route : undefined).toBe("bump-dependency");
+    expect(flat(await readShipped("step/implement-dep-bump/STEP.md"))).toMatch(
+      /when the dependency is `qfai` itself/i,
+    );
+  });
+
   // QFAI:AC-0001-0229-06
   // QFAI:EX-0001-0229-10
   it("lists code and tests only when the request asks for the change to be implemented", async () => {
@@ -773,6 +788,12 @@ describe("qfai-run", () => {
       /each approval of a specification change, a critical decision or a release is one `decisions\.md` row: what was approved, who approved it, when, and the chosen option's label/i,
     );
     expect(work).toMatch(/a decision you took appends no row/i);
+    expect(work).toMatch(/, in the `qfai-sdd` decisions template's form\./i);
+    // The template's release-approval example is a valid Approach cell as it stands.
+    const template = await readShipped("skill/qfai-sdd/templates/spec/decisions.md");
+    const example = template.split("\n").find((line) => line.startsWith("- Evidence:"));
+    expect(example).toBeDefined();
+    expect(approachProblems(example ?? "")).toEqual([]);
     expect(release).toMatch(/which authorizes no push, merge, tag or publication/i);
     expect(release).toMatch(
       /`qfai-run`.*\b(?:records|writes)\b.*`decisions\.md`.*\bbefore\b.*`triage-handoff`/i,

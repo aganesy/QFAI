@@ -79,15 +79,51 @@ export function readDecisionFilesAtRevision(
   return files;
 }
 
+/**
+ * What a comparison against `baseBranch` can be made from, so a caller can say which commit it
+ * compared with instead of passing silently on a base it could not use.
+ *
+ * - `not-a-repository`: git has no commit to compare from `root` (a tarball export, a directory
+ *   outside any repository, or a repository with no commit yet). Nothing could have been compared,
+ *   and nothing was expected to be.
+ * - `unresolved`: `root` is a repository, and `baseBranch` has no merge base with HEAD. A missing
+ *   or unfetched ref, a stale worktree and a shallow clone all land here.
+ * - `resolved`: the commit the comparison starts from. `atHead` holds when that commit is HEAD
+ *   itself, so the branch has no commit of its own.
+ */
+export type BaseComparison =
+  | { readonly kind: "not-a-repository" }
+  | { readonly kind: "unresolved" }
+  | { readonly kind: "resolved"; readonly mergeBase: string; readonly atHead: boolean };
+
+export function describeBaseComparison(root: string, baseBranch: string): BaseComparison {
+  const head = gitStdout(root, ["rev-parse", "--verify", "HEAD^{commit}"])?.trim();
+  if (!head) return { kind: "not-a-repository" };
+  const mergeBase = gitStdout(root, ["merge-base", baseBranch, "HEAD"])?.trim();
+  if (!mergeBase) return { kind: "unresolved" };
+  return { kind: "resolved", mergeBase, atHead: mergeBase === head };
+}
+
+/**
+ * The most stdout `gitStdout` reads. Node's default is 1 MiB, and a `git show` of a decision
+ * ledger past that size failed like a missing file, which turned the drift checks off without a
+ * word. A tree whose single file is larger than this is not a spec tree.
+ */
+const GIT_STDOUT_MAX_BYTES = 256 * 1024 * 1024;
+
+/** Whether `revision` holds `file`, whatever its size: a file git cannot show may still be there. */
+export function existsAtRevision(root: string, revision: string, file: string): boolean {
+  return gitStdout(root, ["cat-file", "-e", `${revision}:${normalizeRepoPath(file)}`]) !== null;
+}
+
 /** Runs git for its stdout, or returns `null` when the command cannot run. */
 export function gitStdout(root: string, args: readonly string[]): string | null {
   try {
     return execFileSync("git", [...args], {
       cwd: root,
       encoding: "utf-8",
-      // Same bounded candidate size used by the decision renumber reader.
-      maxBuffer: 16 * 1024 * 1024 + 1024 * 1024,
       stdio: ["ignore", "pipe", "ignore"],
+      maxBuffer: GIT_STDOUT_MAX_BYTES,
     });
   } catch {
     return null;
@@ -118,7 +154,7 @@ function differsIgnoringEol(root: string, baseBranch: string, file: string): boo
   try {
     execFileSync(
       "git",
-      ["diff", "--ignore-cr-at-eol", "--quiet", `${baseBranch}...HEAD`, "--", file],
+      ["diff", "--ignore-cr-at-eol", "--quiet", `${baseBranch}...HEAD`, "--", `:(literal)${file}`],
       { cwd: root, encoding: "utf-8", stdio: ["ignore", "ignore", "ignore"] },
     );
     return false;
@@ -284,13 +320,21 @@ export function changedFilesSince(
 }
 
 /**
- * Every path the working tree holds uncommitted: tracked changes, staged or not, and untracked
- * files git does not ignore. `null` when `root` is not inside a git repository.
+ * The paths the working tree holds uncommitted that `include` accepts: tracked changes, staged or
+ * not, and untracked files git does not ignore. `null` when git cannot list them.
+ *
+ * A tracked file whose only difference from HEAD is a line ending is left out, as
+ * {@link getChangedFilesAgainstBase} drops it from the committed comparison: such an edit carries
+ * no content, so it must not be warned about now and then never reported once committed.
+ * `include` runs first, so only the paths a caller cares about cost a `git diff`.
  *
  * `-z` keeps a path with a space or a non-ASCII name as git wrote it, and `--no-renames` makes a
  * move report both of its paths.
  */
-export function uncommittedPaths(root: string): string[] | null {
+export function uncommittedContentPaths(
+  root: string,
+  include: (file: string) => boolean,
+): string[] | null {
   const output = gitStdout(root, [
     "status",
     "--porcelain=v1",
@@ -299,9 +343,30 @@ export function uncommittedPaths(root: string): string[] | null {
     "--no-renames",
   ]);
   if (output === null) return null;
-  return output
-    .split("\0")
-    .filter((entry) => entry.length > 3)
-    .map((entry) => normalizeRepoPath(entry.slice(3)))
-    .sort();
+  const paths: string[] = [];
+  for (const entry of output.split("\0")) {
+    if (entry.length <= 3) continue;
+    const file = normalizeRepoPath(entry.slice(3));
+    if (!include(file)) continue;
+    const code = entry.slice(0, 2);
+    const modifiedInPlace = !code.includes("?") && !code.includes("D") && !code.includes("A");
+    if (modifiedInPlace && !differsFromHeadIgnoringEol(root, file)) continue;
+    paths.push(file);
+  }
+  return paths.sort();
+}
+
+/** Whether `file` differs from HEAD, in the index or the working tree, beyond line endings. */
+function differsFromHeadIgnoringEol(root: string, file: string): boolean {
+  try {
+    execFileSync(
+      "git",
+      ["diff", "--ignore-cr-at-eol", "--quiet", "HEAD", "--", `:(literal)${file}`],
+      { cwd: root, encoding: "utf-8", stdio: ["ignore", "ignore", "ignore"] },
+    );
+    return false;
+  } catch {
+    // A git failure is read as "changed", as in `differsIgnoringEol`.
+    return true;
+  }
 }

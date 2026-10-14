@@ -8,7 +8,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { runInit } from "../../../src/cli/commands/init.js";
+import { runInit } from "../../helpers/legacyInit.js";
 import { SKILL_INTEGRATION_DIRS } from "../../../src/core/init/integrationDirs.js";
 import { skillFrontmatterMapping } from "../../../src/core/agentFrontmatter.js";
 import { loadConfig } from "../../../src/core/config.js";

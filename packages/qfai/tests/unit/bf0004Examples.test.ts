@@ -10,7 +10,7 @@ import { parse as parseYaml } from "yaml";
 import { defaultConfig } from "../../src/core/config.js";
 import { parseRecordTable } from "../../src/core/storyTree/tables.js";
 import { validateProject } from "../../src/core/validate.js";
-import { runInit } from "../../src/cli/commands/init.js";
+import { runInit } from "../helpers/legacyInit.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { expectSentence } from "../helpers/shippedSentences.js";
 import {

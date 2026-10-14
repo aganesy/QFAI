@@ -40,6 +40,8 @@ export const EXIT_CODES = {
    * input file does too.
    */
   inputError: 2,
+  /** Init could not read or write a required file or directory. */
+  requiredIo: 64,
 } as const;
 
 type ExitCodeRow = {
@@ -93,11 +95,19 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
     ],
   },
   {
+    label: "init",
+    lines: [
+      `${EXIT_CODES.ok} = success, ${EXIT_CODES.inputError} = a usage error,`,
+      `${EXIT_CODES.findings} = preparation or prerequisite failure,`,
+      `${EXIT_CODES.requiredIo} = a required file or directory cannot be read or written`,
+    ],
+  },
+  {
     label: "other commands",
     lines: [
       `${EXIT_CODES.ok} = success, ${EXIT_CODES.inputError} = a usage error,`,
       `${EXIT_CODES.findings} = a runtime error`,
-      "(init / discussion)",
+      "(discussion)",
     ],
   },
 ];

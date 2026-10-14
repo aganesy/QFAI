@@ -7,7 +7,7 @@ import fg from "fast-glob";
 import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 
-import { runInit } from "../../src/cli/commands/init.js";
+import { runInit } from "../helpers/legacyInit.js";
 import { runReport } from "../../src/cli/commands/report.js";
 import { runValidate } from "../../src/cli/commands/validate.js";
 import { defaultConfig } from "../../src/core/config.js";

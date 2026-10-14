@@ -6,7 +6,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { runDoctor } from "../../src/cli/commands/doctor.js";
-import { runInit } from "../../src/cli/commands/init.js";
+import { runInit } from "../helpers/legacyInit.js";
 import { run } from "../../src/cli/main.js";
 import { captureStdout } from "../helpers/stdout.js";
 

@@ -21,7 +21,7 @@ import { isDeepStrictEqual } from "node:util";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 
-import { runInit } from "../../src/cli/commands/init.js";
+import { runInit } from "../helpers/legacyInit.js";
 import { ensureRootGitignoreEntries } from "../../src/core/init/rootGitignore.js";
 import { defaultConfig, routingEntryName } from "../../src/core/config.js";
 import { validateProject } from "../../src/core/validate.js";

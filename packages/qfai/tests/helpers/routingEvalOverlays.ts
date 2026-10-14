@@ -1,3 +1,4 @@
+import { legacyInitArguments } from "./legacyInitArguments.js";
 import { spawnSync } from "node:child_process";
 import { appendFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
@@ -296,6 +297,9 @@ const CLI = path.resolve(
 
 /** Writes the common base into `root`: the output of `qfai init`. */
 export function buildBase(root: string): void {
-  const init = spawnSync(process.execPath, [CLI, "init", "--yes"], { cwd: root, encoding: "utf8" });
+  const init = spawnSync(process.execPath, legacyInitArguments(CLI, ["init", "--yes"]), {
+    cwd: root,
+    encoding: "utf8",
+  });
   if (init.status !== 0) throw new Error(`qfai init: ${init.stderr}`);
 }
