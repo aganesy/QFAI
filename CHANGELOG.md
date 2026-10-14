@@ -4,6 +4,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-10-14
+
 ### Added
 
 - `qfai init` installs isolated CodeGraph and Graphify runtimes with managed
