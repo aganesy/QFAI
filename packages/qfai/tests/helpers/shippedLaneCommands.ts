@@ -1407,7 +1407,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   //
   // To re-pin: run `qfai init` into a temp root and hash the `.gitignore` it
   // wrote — never copy a value out of a failure message.
-  [".gitignore", "bf131d12f076182939b21e2df2c21d66888e1a62ae448c72b78198702eb20cf8"],
+  [".gitignore", "cd15bf81c504f2391e219775f2cbbf903fa8c15c24254e905d5da1d43eb17cde"],
   // Independent golden files pin the reviewed entry instructions. Update them only after
   // independent review, preserving exact bytes without trimming or newline normalization.
   [

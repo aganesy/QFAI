@@ -6,6 +6,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Reviewers run no test suite the verify stage runs.** The delegation baseline
+  now says a reviewer runs no suite or gate the verify stage runs and reads their
+  results instead, so a review no longer loads the machine while the run's own
+  gate is running. Fixes #3695.
+
 - **The Markdown-schema check names the filesystem failure it met in the decision
   register.** When it cannot inspect a register path, read a register document or
   list the decision pages, the finding now carries the failure code, so a denied
@@ -18,6 +23,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai init` keeps the final newline of `.gitignore`.** When it rebuilt a
+  managed block that had to move to the end of the file, the last line,
+  `!.qfai/assistant/**`, was written without a newline, so `git diff` showed
+  `No newline at end of file`. The file now ends with exactly one newline.
+  Fixes #3748.
+
 - **The Markdown-schema check no longer reports `0 file(s) conform`.** When no
   spec or contract document is in scope, for example when only operational
   Markdown outside the story tree changed, it now says that nothing was checked,
@@ -29,6 +40,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   notice says they are partial. The suggested action still lists all four as
   the profiles CI runs without the warning. A test keeps the list equal to the
   profiles whose coverage notice does not call them partial. Fixes #3760.
+
+- **The Markdown-schema check reports a configured contract root it cannot
+  walk.** A configured contract directory that is a file, or that cannot be
+  inspected, is now an `inventory` finding with its path and cause, and the run
+  fails, as a subdirectory that cannot be listed already did. An absent root is
+  still tolerated; a spec directory in the same state was already stopped by the
+  decision-register check. Fixes #3697.
 
 ## [2.2.0] - 2026-10-14
 
