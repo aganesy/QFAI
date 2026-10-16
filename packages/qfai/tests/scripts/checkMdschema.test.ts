@@ -1629,10 +1629,60 @@ describe("decision-register filesystem causes", () => {
         }),
       ]);
       const message: string = result.violations[0].message;
-      expect(message).toContain(`${code}: injected failure`);
+      expect(message).toContain(`(${code})`);
+      expect(message).not.toContain("injected failure");
+      expect(message).not.toContain(root);
       for (const other of codes.filter((candidate) => candidate !== code)) {
         expect(message).not.toContain(other);
       }
+    },
+  );
+
+  // QFAI:EX-0001-0053-29
+  it("keeps a listed page that inspection finds absent as a missing page, not an access failure", async () => {
+    const { root, page } = await paged();
+    unsafeReads.faults.push({ operation: "lstat", file: page, code: "ENOENT" });
+    const result = checkDocuments(root);
+    expect(result.ok).toBe(true);
+    expect(result.violations).toContainEqual(
+      expect.objectContaining({
+        file: ".qfai/specs/decisions/page-0001.md",
+        rule: "decision-register",
+        message: "A listed decision page is missing; restore it before checking.",
+      }),
+    );
+    const messages = result.violations.map((violation) => violation.message).join("\n");
+    expect(messages).not.toContain("ENOENT");
+    expect(messages).not.toContain("Cannot inspect");
+  });
+
+  const vanished: [string, FaultOperation, string, string][] = [
+    ["read a listed page", "readFile", "Cannot read", ".qfai/specs/decisions/page-0001.md"],
+    ["list the pages directory", "readdir", "Cannot list", ".qfai/specs/decisions"],
+  ];
+
+  // QFAI:EX-0001-0053-29
+  it.each(vanished)(
+    "reports a path that vanishes after inspection as unsafe when it cannot %s",
+    async (_, operation, prefix, relative) => {
+      const { root } = await paged();
+      unsafeReads.faults.push({
+        operation,
+        file: path.join(root, ...relative.split("/")),
+        code: "ENOENT",
+      });
+      const result = checkDocuments(root);
+      expect(result.ok).toBe(true);
+      expect(result.checked).toBe(0);
+      expect(result.violations).toEqual([
+        expect.objectContaining({
+          file: relative,
+          rule: "decision-register",
+          message: expect.stringContaining(`${prefix}`),
+        }),
+      ]);
+      expect(result.violations[0].message).toContain("(ENOENT)");
+      expect(result.violations[0].message).not.toContain(root);
     },
   );
 
@@ -1651,10 +1701,11 @@ describe("decision-register filesystem causes", () => {
         output.push(stderr.mock.calls.flat().join("\n"));
         stderr.mockClear();
       }
-      expect(output[0]).toContain("EACCES: injected failure");
+      expect(output[0]).toContain("(EACCES)");
       expect(output[0]).not.toContain("EIO");
-      expect(output[1]).toContain("EIO: injected failure");
+      expect(output[1]).toContain("(EIO)");
       expect(output[1]).not.toContain("EACCES");
+      for (const text of output) expect(text).not.toContain("injected failure");
     } finally {
       process.argv = argv;
       stderr.mockRestore();

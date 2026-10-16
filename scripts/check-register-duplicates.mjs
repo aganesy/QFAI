@@ -7,7 +7,9 @@
  * duplicate, but it runs in the build job, minutes after the push. This check reads only the
  * registers, so the scans lane and `pnpm branch:catchup` report the duplicate before a push. The
  * decisions register is its root file and every `decisions/page-NNNN.md` page: an ID defined twice
- * in one page, in two pages, or in a page and the root is a duplicate.
+ * in one page, in two pages, or in a page and the root is a duplicate. Every `page-NNNN.md` in the
+ * pages directory is read, whether the root's page list names it or not: a duplicate in an unlisted
+ * page is still a duplicate, and `qfai validate` reports the unlisted page itself.
  *
  * A row counts when its first table cell is a register ID. An ID cited inside another row's
  * content does not count.

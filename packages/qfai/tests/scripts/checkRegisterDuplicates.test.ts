@@ -14,6 +14,8 @@ import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { createSymlinkFixture } from "../helpers/symlinkFixture.js";
+
 // tests/scripts/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const SCRIPT = path.join(repoRoot, "scripts", "check-register-duplicates.mjs");
@@ -224,6 +226,69 @@ describe("check-register-duplicates", () => {
 
       expect(run.status, run.output).toBe(2);
       expect(run.output).toContain(".qfai/spec/decisions/page-0001.md could not be read");
+    });
+
+    // QFAI:EX-0002-0025-24
+    it("fails closed on a pages directory that is a link, reading nothing through it", async (context) => {
+      const root = await treeWith({
+        [DECISIONS]: decisions([row("DEC-0001")]),
+        [QUESTIONS]: questions(["| OQ-0001 | open |"]),
+        [path.join("elsewhere", "page-0001.md")]: decisions([row("DEC-0001")]),
+      });
+      const linked = await createSymlinkFixture(
+        path.join(root, "elsewhere"),
+        path.join(root, ".qfai", "spec", "decisions"),
+        process.platform === "win32" ? "junction" : "dir",
+      );
+      if (!linked) {
+        context.skip();
+        return;
+      }
+
+      const run = check(root);
+
+      expect(run.status, run.output).toBe(2);
+      expect(run.output).toContain(".qfai/spec/decisions could not be read");
+      expect(run.output).not.toContain("DEC-0001 is defined more than once");
+    });
+
+    // QFAI:EX-0002-0025-24
+    it("fails closed on a page that is a link, reading nothing through it", async (context) => {
+      const root = await treeWith({
+        [DECISIONS]: decisions([row("DEC-0001")]),
+        [QUESTIONS]: questions(["| OQ-0001 | open |"]),
+        [path.join("elsewhere", "page.md")]: decisions([row("DEC-0001")]),
+      });
+      await mkdir(path.join(root, ".qfai", "spec", "decisions"), { recursive: true });
+      const linked = await createSymlinkFixture(
+        path.join(root, "elsewhere", "page.md"),
+        path.join(root, PAGE_ONE),
+        "file",
+      );
+      if (!linked) {
+        context.skip();
+        return;
+      }
+
+      const run = check(root);
+
+      expect(run.status, run.output).toBe(2);
+      expect(run.output).toContain(".qfai/spec/decisions/page-0001.md could not be read");
+      expect(run.output).not.toContain("DEC-0001 is defined more than once");
+    });
+
+    // QFAI:EX-0002-0025-24
+    it("fails closed on a pages path that is a plain file", async () => {
+      const root = await treeWith({
+        [DECISIONS]: decisions([row("DEC-0001")]),
+        [QUESTIONS]: questions(["| OQ-0001 | open |"]),
+        [path.join(".qfai", "spec", "decisions")]: decisions([row("DEC-0001")]),
+      });
+
+      const run = check(root);
+
+      expect(run.status, run.output).toBe(2);
+      expect(run.output).toContain(".qfai/spec/decisions could not be read");
     });
   });
 
