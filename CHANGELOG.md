@@ -13,6 +13,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   (`EMFILE`) are no longer the same line. The check still stops and still treats
   the register as unverified. Fixes #3628.
 
+### Fixed
+
+- **A failed graph tool download no longer leaves an unignored cache.**
+  `qfai init` now writes the `/.qfai/tools/` ignore entry before it prepares the
+  graph runtimes, so the npm and Python caches a failed download leaves under
+  `.qfai/tools/` are no longer staged by `git add -A`. Refs #3744.
+
 ## [2.2.0] - 2026-10-14
 
 ### Added

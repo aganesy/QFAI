@@ -4,6 +4,8 @@ import path from "node:path";
 import { expect, it } from "vitest";
 import { runGraphProcess } from "../../../src/core/graph/process.js";
 import { ensureGraphGitignore, GRAPH_IGNORE_MARKER } from "../../../src/core/graph/ignore.js";
+import { prepareGraphIntegration } from "../../../src/core/graph/integration.js";
+import { graphProcessFixture } from "../../helpers/graphProcess.js";
 
 async function repository() {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-ignore-"));
@@ -88,5 +90,28 @@ it("preserves removed managed ignores and tracked output with concrete conflict 
     } finally {
       await rm(root, { recursive: true, force: true });
     }
+  }
+});
+
+// QFAI:EX-0001-0236-16
+it("ignores the tools directory even when a runtime download fails", async () => {
+  const root = await repository();
+  try {
+    const fixture = graphProcessFixture();
+    const result = await prepareGraphIntegration(root, (command, args, options) =>
+      args[0] === "pip"
+        ? Promise.resolve({ exitCode: 1, stdout: "" })
+        : fixture.run(command, args, options),
+    );
+
+    expect(result.failedStep).toBe("Graphify download");
+    expect(result.files).toContain(".gitignore");
+    expect(await readFile(path.join(root, ".gitignore"), "utf8")).toContain(GRAPH_IGNORE_MARKER);
+    const cache = ".qfai/tools/home/win32-x64/graphify/cache/entry.json";
+    expect(
+      (await runGraphProcess("git", ["check-ignore", "-q", cache], { cwd: root })).exitCode,
+    ).toBe(0);
+  } finally {
+    await rm(root, { recursive: true, force: true });
   }
 });
