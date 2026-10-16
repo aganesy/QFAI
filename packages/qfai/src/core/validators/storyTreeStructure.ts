@@ -223,7 +223,9 @@ export function validateStoryTreeStructureModel(model: StoryTreeModel): Issue[] 
   }
 
   const examples = new Set(model.examples.map((entry) => entry.id));
-  const citedExamples = new Set<string>();
+  // The first rule citing each example, so an uncited one can point at the rule that already
+  // cites a sibling of the same acceptance criterion.
+  const citedExamples = new Map<string, RuleRecord>();
   for (const rule of model.rules) {
     if (rule.examples.length === 0) {
       const hint =
@@ -244,8 +246,8 @@ export function validateStoryTreeStructureModel(model: StoryTreeModel): Issue[] 
             ref,
           ]),
         );
-      } else {
-        citedExamples.add(ref);
+      } else if (!citedExamples.has(ref)) {
+        citedExamples.set(ref, rule);
       }
     }
   }
@@ -269,7 +271,7 @@ export function validateStoryTreeStructureModel(model: StoryTreeModel): Issue[] 
         issues.push(
           finding(
             "QFAI-STORY-005",
-            `${example.id} is not cited by a rule in ${example.file}`,
+            `${example.id} is not cited by a rule in ${example.file}. ${citationHint(example, model.examples, citedExamples)}`,
             example.file,
             [example.id],
           ),
@@ -284,6 +286,32 @@ export function validateStoryTreeStructureModel(model: StoryTreeModel): Issue[] 
   issues.push(...validateRecordCitations(model));
   issues.push(...validateDecisionApproaches(model));
   return issues;
+}
+
+type ExampleRecord = StoryTreeModel["examples"][number];
+type RuleRecord = StoryTreeModel["rules"][number];
+
+/**
+ * Where the citation of an uncited example goes. The example is defined in its story's Examples
+ * file, but the citation is a contract rule's Examples entry, so the hint names the rule that
+ * already cites a sibling example of the same acceptance criterion when one exists.
+ */
+function citationHint(
+  example: ExampleRecord,
+  examples: readonly ExampleRecord[],
+  cited: ReadonlyMap<string, RuleRecord>,
+): string {
+  const general = "Cite it in the Examples of the contract rule that enforces it.";
+  // An empty AC-Ref is its own QFAI-STORY-004 finding and names no criterion to share.
+  if (example.acRef.trim() === "") return general;
+  for (const entry of examples) {
+    if (entry.id === example.id || entry.acRef !== example.acRef) continue;
+    const rule = cited.get(entry.id);
+    if (rule !== undefined) {
+      return `Cite it in the Examples of the contract rule that enforces it, such as ${rule.id} in ${rule.file}, which cites ${entry.id} of the same ${example.acRef}.`;
+    }
+  }
+  return general;
 }
 
 /** A `BR-NNNN-NNNN` carries the number of the contract that declares it. */

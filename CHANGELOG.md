@@ -23,6 +23,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **An uncited example's finding says where the citation goes.** `QFAI-STORY-005`
+  for an example no rule cites now adds that the citation belongs in the
+  Examples of the contract rule that enforces it, and names the rule that
+  already cites a sibling example of the same acceptance criterion when there is
+  one. Fixes #3761.
+
 - **`qfai init` keeps the final newline of `.gitignore`.** When it rebuilt a
   managed block that had to move to the end of the file, the last line,
   `!.qfai/assistant/**`, was written without a newline, so `git diff` showed
