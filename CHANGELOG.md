@@ -23,6 +23,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai init` keeps the final newline of `.gitignore`.** When it rebuilt a
+  managed block that had to move to the end of the file, the last line,
+  `!.qfai/assistant/**`, was written without a newline, so `git diff` showed
+  `No newline at end of file`. The file now ends with exactly one newline.
+  Fixes #3748.
+
 - **The Markdown-schema check no longer reports `0 file(s) conform`.** When no
   spec or contract document is in scope, for example when only operational
   Markdown outside the story tree changed, it now says that nothing was checked,

@@ -184,7 +184,12 @@ function placeManagedBlock(
     }
   }
   const separator = stripped.length > 0 && !stripped.endsWith("\n") ? "\n\n" : "\n";
-  return { content: stripped.length > 0 ? stripped + separator + block : block, inPlace: false };
+  // A rebuilt block ends at its last negation; the file still ends with exactly one newline.
+  const terminated = `${block.replace(/\n+$/, "")}\n`;
+  return {
+    content: stripped.length > 0 ? stripped + separator + terminated : terminated,
+    inPlace: false,
+  };
 }
 
 /** Splice `block` back in at line `at`, blank-line separated from both sides. */
