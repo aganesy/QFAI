@@ -165,7 +165,6 @@ describe("a document directory the lane cannot list", () => {
 describe("a configured document root the lane cannot walk", () => {
   const CONTRACTS = ".qfai/spec/03_contract";
 
-  // QFAI:EX-0001-0053-29
   it("reports a configured root that is a file, and fails the command", async () => {
     const root = await newTree();
     refusal.dir = "";
@@ -178,7 +177,7 @@ describe("a configured document root the lane cannot walk", () => {
         expect.objectContaining({
           file: CONTRACTS,
           rule: "inventory",
-          message: expect.stringContaining("not a directory") as unknown,
+          message: expect.stringContaining("is not a directory") as unknown,
         }),
       ],
     });
@@ -187,7 +186,6 @@ describe("a configured document root the lane cannot walk", () => {
     expect(result.stderr).toContain(CONTRACTS);
   });
 
-  // QFAI:EX-0001-0053-29
   it("reports a configured root that cannot be inspected, keeping its cause", async () => {
     const root = await newTree();
     refusal.dir = "";
@@ -201,13 +199,16 @@ describe("a configured document root the lane cannot walk", () => {
         expect.objectContaining({
           file: CONTRACTS,
           rule: "inventory",
-          message: expect.stringContaining("EACCES") as unknown,
+          message: expect.stringContaining("could not be inspected (EACCES") as unknown,
         }),
       ],
     });
+    const result = runMain(root);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(CONTRACTS);
+    expect(result.stderr).toContain("EACCES");
   });
 
-  // QFAI:EX-0001-0053-29
   it("keeps an absent configured root a tolerated absence", async () => {
     const root = await newTree();
     refusal.dir = "";

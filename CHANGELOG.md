@@ -15,11 +15,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
-- **The Markdown-schema check reports a configured document root it cannot
-  walk.** A configured spec or contract directory that is a file, or that cannot
-  be inspected, is now an `inventory` finding with its path and cause, and the
-  run fails, as a subdirectory that cannot be listed already did. An absent root
-  is still tolerated. Fixes #3697.
+- **The Markdown-schema check reports a configured contract root it cannot
+  walk.** A configured contract directory that is a file, or that cannot be
+  inspected, is now an `inventory` finding with its path and cause, and the run
+  fails, as a subdirectory that cannot be listed already did. An absent root is
+  still tolerated; a spec directory in the same state was already stopped by the
+  decision-register check. Fixes #3697.
 
 ## [2.2.0] - 2026-10-14
 
