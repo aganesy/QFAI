@@ -13,6 +13,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   (`EMFILE`) are no longer the same line. The check still stops and still treats
   the register as unverified. Fixes #3628.
 
+### Fixed
+
+- **`QFAI-VALIDATE-017` lists only `full` and `verify` as full-scan profiles.**
+  It named `tdd` and `sdd` as full-scan too, while their own `QFAI-PROFILE-001`
+  notice says they are partial. The suggested action still lists all four as
+  the profiles CI runs without the warning. A test keeps the list equal to the
+  profiles whose coverage notice does not call them partial. Fixes #3760.
+
 ## [2.2.0] - 2026-10-14
 
 ### Added

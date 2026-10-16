@@ -41,6 +41,14 @@ export function isCiEnvironment(env: NodeJS.ProcessEnv = process.env): boolean {
 // unreachable.
 const CI_ALLOWED_PROFILES = new Set<ValidationProfile>(["full", "verify", "tdd", "sdd"]);
 
+/**
+ * The profiles that evaluate every gate a full scan covers. `tdd` and `sdd` are allowed in CI
+ * above as paired stage gates, but each is partial, and its own `QFAI-PROFILE-001` notice says
+ * so; naming them here as full-scan told the operator two things at once. `validate.ts` derives
+ * the same set from its gate groups (`fullScanProfiles`), and a test keeps the two equal.
+ */
+export const FULL_SCAN_PROFILES: readonly ValidationProfile[] = ["full", "verify"];
+
 export function buildCiProfileIssue(
   profile: ValidationProfile | undefined,
   env: NodeJS.ProcessEnv = process.env,
@@ -48,20 +56,21 @@ export function buildCiProfileIssue(
   if (profile === undefined || CI_ALLOWED_PROFILES.has(profile) || !isCiEnvironment(env)) {
     return null;
   }
-  // Generated from the allowlist so the operator-facing strings cannot drift
+  // Generated from the two sets so the operator-facing strings cannot drift
   // from the code. They named three profiles while the set held four.
   const allowed = [...CI_ALLOWED_PROFILES].join(" / ");
+  const fullScan = FULL_SCAN_PROFILES.join(" / ");
   return {
     code: "QFAI-VALIDATE-017",
     severity: "warning",
     category: "change",
     message:
       `CI is running profile "${profile}", which is not a full-scan. It is valid as a stage gate, ` +
-      `but it is not grounds for declaring completion (full-scan profiles: ${allowed}).`,
+      `but it is not grounds for declaring completion (full-scan profiles: ${fullScan}).`,
     rule: "VALIDATE-017",
     suggested_action:
       `If this run is a stage gate, no action is needed. Before declaring completion, ` +
-      `run a full-scan with --profile full (or with no --profile). Profiles CI treats ` +
-      `as a full-scan: ${allowed}.`,
+      `run a full-scan with --profile full (or with no --profile). Profiles CI runs ` +
+      `without this warning: ${allowed}; of these, only ${fullScan} are a full-scan.`,
   };
 }
