@@ -19,6 +19,7 @@ import path from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
+import { ensureRootGitignoreEntries } from "../../src/core/init/rootGitignore.js";
 import { runInit } from "../helpers/legacyInit.js";
 import { captureStdout } from "../helpers/stdout.js";
 import {
@@ -576,6 +577,27 @@ describe("the managed block does not repeat a line the project already has", () 
 
       const lines = (await readGitignore(root)).split(NL);
       expect(lines.filter((line) => line === "/tmp/")).toHaveLength(2);
+    });
+  });
+});
+
+describe("a rebuilt block keeps the file's final newline", () => {
+  const last = QFAI_GITIGNORE_GOVERNANCE_NEGATIONS[QFAI_GITIGNORE_GOVERNANCE_NEGATIONS.length - 1];
+  const staleBlock = [QFAI_GITIGNORE_MARKER, ".qfai/report/*", "!.qfai/", "!.qfai/assistant/"];
+
+  // QFAI:EX-0001-0033-07
+  it.each([
+    ["holds only the block", staleBlock.join(NL) + NL],
+    ["holds project lines above the block", ["node_modules/", "", ...staleBlock].join(NL) + NL],
+  ])("ends with exactly one newline when the file %s", async (_, before) => {
+    await withProject(async (root) => {
+      await writeFile(path.join(root, ".gitignore"), before, "utf-8");
+
+      await ensureRootGitignoreEntries(root, false, () => undefined);
+
+      const after = await readGitignore(root);
+      expect(after.endsWith(last + NL), JSON.stringify(after.slice(-40))).toBe(true);
+      expect(after.endsWith(NL + NL)).toBe(false);
     });
   });
 });

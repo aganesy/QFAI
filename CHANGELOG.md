@@ -13,6 +13,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   (`EMFILE`) are no longer the same line. The check still stops and still treats
   the register as unverified. Fixes #3628.
 
+### Fixed
+
+- **`qfai init` keeps the final newline of `.gitignore`.** When it rebuilt a
+  managed block that had to move to the end of the file, the last line,
+  `!.qfai/assistant/**`, was written without a newline, so `git diff` showed
+  `No newline at end of file`. The file now ends with exactly one newline.
+  Fixes #3748.
+
 ## [2.2.0] - 2026-10-14
 
 ### Added
