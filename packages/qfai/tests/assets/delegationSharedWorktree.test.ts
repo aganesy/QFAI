@@ -19,6 +19,13 @@ async function readProtocol(tree: string): Promise<string> {
 }
 
 describe.each(trees)("%s — delegation in a shared worktree", (tree) => {
+  it("keeps a reviewer from running the suites the verify stage runs", async () => {
+    const protocol = await readProtocol(tree);
+    expect(protocol).toContain(
+      "A reviewer runs no suite or gate the verify stage runs; it reads their results.",
+    );
+  });
+
   it("keeps a read-only agent from checking out and gives each agent its own scratch path", async () => {
     const protocol = await readProtocol(tree);
     expect(protocol).toContain(
