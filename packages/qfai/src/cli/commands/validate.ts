@@ -385,6 +385,17 @@ function isKnownProfile(profile: string): profile is ValidationProfile {
   return Object.prototype.hasOwnProperty.call(PROFILE_GATE_GROUPS, profile);
 }
 
+/**
+ * The profiles that leave no gate a full scan covers unevaluated: the profiles whose
+ * `QFAI-PROFILE-001` notice never calls them partial. `FULL_SCAN_PROFILES` in
+ * `core/phasePolicy.ts` names them in `QFAI-VALIDATE-017`, and a test keeps the two equal.
+ */
+export function fullScanProfiles(): ValidationProfile[] {
+  return Object.keys(PROFILE_GATE_GROUPS)
+    .filter(isKnownProfile)
+    .filter((profile) => unevaluatedGates(profile, []).fullCovered.length === 0);
+}
+
 /** Families a profile does not evaluate, split by where the reader must go. */
 type UnevaluatedGates = {
   /** Deduped, order-preserving families a `full` scan would have covered. */

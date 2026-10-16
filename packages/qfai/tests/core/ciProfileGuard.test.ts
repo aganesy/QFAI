@@ -14,7 +14,12 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { buildCiProfileIssue, isCiEnvironment } from "../../src/core/phasePolicy.js";
+import { fullScanProfiles } from "../../src/cli/commands/validate.js";
+import {
+  buildCiProfileIssue,
+  FULL_SCAN_PROFILES,
+  isCiEnvironment,
+} from "../../src/core/phasePolicy.js";
 
 const CI_ENV = { CI: "true" } as NodeJS.ProcessEnv;
 const LOCAL_ENV = {} as NodeJS.ProcessEnv;
@@ -45,7 +50,7 @@ describe("isCiEnvironment", () => {
 });
 
 describe("buildCiProfileIssue", () => {
-  it("is silent for the full-scan profiles", () => {
+  it("is silent for the profiles CI accepts", () => {
     for (const profile of ["full", "verify", "tdd", "sdd"] as const) {
       expect(buildCiProfileIssue(profile, CI_ENV), profile).toBeNull();
     }
@@ -71,15 +76,25 @@ describe("buildCiProfileIssue", () => {
     });
   }
 
-  it("names every allowed profile in both operator-facing strings", () => {
+  it("names every allowed profile in the suggested action", () => {
     // They enumerated three while the code allowed four; generating them from
     // the allowlist is what stops that recurring.
     const found = buildCiProfileIssue("atdd", CI_ENV);
 
     for (const profile of ["full", "verify", "tdd", "sdd"]) {
-      expect(found?.message, `message: ${profile}`).toContain(profile);
       expect(found?.suggested_action, `suggested_action: ${profile}`).toContain(profile);
     }
+  });
+
+  it("lists as full-scan only the profiles whose coverage notice does not call them partial", () => {
+    // tdd and sdd were listed as full-scan profiles while their own QFAI-PROFILE-001
+    // notice says they are partial.
+    expect([...FULL_SCAN_PROFILES].sort()).toEqual(fullScanProfiles().sort());
+    const found = buildCiProfileIssue("discussion", CI_ENV);
+
+    expect(found?.message).toContain(`(full-scan profiles: ${FULL_SCAN_PROFILES.join(" / ")})`);
+    expect(found?.message).not.toContain("tdd");
+    expect(found?.message).not.toContain("sdd");
   });
 
   it("says the stage run is valid and what completion still needs", () => {
