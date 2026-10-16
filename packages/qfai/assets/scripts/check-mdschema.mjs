@@ -621,8 +621,12 @@ function isMissing(error) {
 }
 
 /**
- * A filesystem failure as one line that keeps its code, so EACCES, EIO and
- * EMFILE can be told apart.
+ * A filesystem failure as its error code, so EACCES, EIO and EMFILE can be told
+ * apart.
+ *
+ * Node's message for a coded failure carries the syscall and the absolute path,
+ * which a CI log or a report should not hold; every finding already names the
+ * repository-relative path. A failure without a code keeps its message.
  *
  * @param {unknown} error
  * @returns {string}
@@ -630,9 +634,7 @@ function isMissing(error) {
 function describeFailure(error) {
   if (!(error instanceof Error)) return String(error);
   const code = "code" in error && typeof error.code === "string" ? error.code : "";
-  return code === "" || error.message.startsWith(code)
-    ? error.message
-    : `${code}: ${error.message}`;
+  return code === "" ? error.message : code;
 }
 
 /**
@@ -1780,10 +1782,14 @@ export function main() {
   // pre-existing failures back reports what it actually established — that this
   // branch introduced none — because the other wording would put the migration's
   // backlog on record as clean.
+  // Nor where nothing was checked: "0 file(s) conform" read as a pass for files no
+  // schema covers, so a gate citing it recorded evidence that checked nothing.
   const verdict =
-    inheritedFiles > 0
-      ? `${checked} file(s) checked, no new violations`
-      : `${checked} file(s) conform`;
+    checked === 0
+      ? "no spec or contract document is in scope, so nothing was checked"
+      : inheritedFiles > 0
+        ? `${checked} file(s) checked, no new violations`
+        : `${checked} file(s) conform`;
   console.log(`check-mdschema: ${verdict} (${where})${held}.`);
   return 0;
 }

@@ -8,10 +8,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - **The Markdown-schema check names the filesystem failure it met in the decision
   register.** When it cannot inspect a register path, read a register document or
-  list the decision pages, the finding now carries the failure code and message,
-  so a denied read (`EACCES`), an I/O failure (`EIO`) and descriptor exhaustion
-  (`EMFILE`) are no longer the same line. The check still stops and still treats
-  the register as unverified. Fixes #3628.
+  list the decision pages, the finding now carries the failure code, so a denied
+  read (`EACCES`), an I/O failure (`EIO`) and descriptor exhaustion (`EMFILE`)
+  are no longer the same line. The finding names the repository-relative path
+  only: the absolute path and system call in the operating system's message stay
+  out of CI logs and reports, here and in the `inventory` finding for a
+  directory that cannot be listed. The check still stops and still treats the register
+  as unverified. Fixes #3628 and #3743.
+
+### Fixed
+
+- **The Markdown-schema check no longer reports `0 file(s) conform`.** When no
+  spec or contract document is in scope, for example when only operational
+  Markdown outside the story tree changed, it now says that nothing was checked,
+  so the line is not taken as passing evidence. The exit code is unchanged.
+  Refs #3765.
 
 ### Fixed
 
