@@ -1756,7 +1756,7 @@ export function main() {
   // schema covers, so a gate citing it recorded evidence that checked nothing.
   const verdict =
     checked === 0
-      ? "no document in scope matches a schema, so nothing was checked"
+      ? "no spec or contract document is in scope, so nothing was checked"
       : inheritedFiles > 0
         ? `${checked} file(s) checked, no new violations`
         : `${checked} file(s) conform`;

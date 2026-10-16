@@ -388,7 +388,7 @@ describe("check-mdschema driver", () => {
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain(
-      "no document in scope matches a schema, so nothing was checked",
+      "no spec or contract document is in scope, so nothing was checked",
     );
     expect(result.stdout).not.toContain("conform");
   });
