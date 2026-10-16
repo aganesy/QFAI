@@ -121,6 +121,7 @@ describe("a document directory the lane cannot list", () => {
           }),
         ],
       });
+      expect(JSON.stringify(checkDocuments(root))).not.toContain(path.basename(root));
     },
   );
 
