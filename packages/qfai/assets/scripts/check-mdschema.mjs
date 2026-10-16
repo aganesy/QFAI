@@ -939,25 +939,53 @@ export function configuredPaths(root) {
 function documentUniverse(root, paths) {
   /** @type {{ dir: string, cause: string }[]} */
   const failed = [];
+  /** @type {{ dir: string, problem: string }[]} */
+  const roots = [];
   const files = [
     ...new Set(
       [paths.specsDir, paths.contractsDir].flatMap((dir) => {
         const absolute = path.resolve(root, dir);
-        return existsSync(absolute) && statSync(absolute).isDirectory()
-          ? walk(absolute, root, failed)
-          : [];
+        const relative = path.relative(root, absolute).split(path.sep).join("/") || ".";
+        // An absent configured root holds no documents. One that is a file, or
+        // that cannot be inspected, is a tree whose documents were not checked.
+        // The spec root rarely reaches here: the decision-register check inspects
+        // it first and stops the run on the same two conditions.
+        let stats;
+        try {
+          stats = statSync(absolute);
+        } catch (error) {
+          if (!isMissing(error)) {
+            roots.push({
+              dir: relative,
+              problem: `could not be inspected (${describeFailure(error)})`,
+            });
+          }
+          return [];
+        }
+        if (!stats.isDirectory()) {
+          roots.push({ dir: relative, problem: "is not a directory" });
+          return [];
+        }
+        return walk(absolute, root, failed);
       }),
     ),
   ];
-  const unreadable = [...new Map(failed.map((found) => [found.dir, found])).values()].map(
-    ({ dir, cause }) => ({
+  const unreadable = [
+    ...roots.map(({ dir, problem }) => ({
+      file: dir,
+      line: 1,
+      column: 1,
+      rule: "inventory",
+      message: `this configured document root ${problem}; the documents beneath it were not checked`,
+    })),
+    ...[...new Map(failed.map((found) => [found.dir, found])).values()].map(({ dir, cause }) => ({
       file: dir,
       line: 1,
       column: 1,
       rule: "inventory",
       message: `this directory could not be listed (${cause}); the documents beneath it were not checked`,
-    }),
-  );
+    })),
+  ];
   return { files, unreadable };
 }
 

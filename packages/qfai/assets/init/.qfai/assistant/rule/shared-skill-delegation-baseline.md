@@ -45,6 +45,8 @@ classified by the taxonomy below before any response.
   return. Only read-only fixed-SHA `git show` reviews permit clean switches.
   Writers, local gates and reviews using live files or checkout-dependent
   execution must finish first.
+- A reviewer runs no suite or gate the verify stage runs; it reads their
+  results.
 
 ### Worker edit boundary
 

@@ -6,6 +6,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Reviewers run no test suite the verify stage runs.** The delegation baseline
+  now says a reviewer runs no suite or gate the verify stage runs and reads their
+  results instead, so a review no longer loads the machine while the run's own
+  gate is running. Fixes #3695.
+
 - **The Markdown-schema check names the filesystem failure it met in the decision
   register.** When it cannot inspect a register path, read a register document or
   list the decision pages, the finding now carries the failure code, so a denied
@@ -18,16 +23,29 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
-- **A failed graph tool download no longer leaves an unignored cache.**
-  `qfai init` now writes the `/.qfai/tools/` ignore entry before it prepares the
-  graph runtimes, so the npm and Python caches a failed download leaves under
-  `.qfai/tools/` are no longer staged by `git add -A`. Refs #3744.
+- **`qfai init` keeps the final newline of `.gitignore`.** When it rebuilt a
+  managed block that had to move to the end of the file, the last line,
+  `!.qfai/assistant/**`, was written without a newline, so `git diff` showed
+  `No newline at end of file`. The file now ends with exactly one newline.
+  Fixes #3748.
 
 - **The Markdown-schema check no longer reports `0 file(s) conform`.** When no
   spec or contract document is in scope, for example when only operational
   Markdown outside the story tree changed, it now says that nothing was checked,
   so the line is not taken as passing evidence. The exit code is unchanged.
   Refs #3765.
+
+- **The Markdown-schema check reports a configured contract root it cannot
+  walk.** A configured contract directory that is a file, or that cannot be
+  inspected, is now an `inventory` finding with its path and cause, and the run
+  fails, as a subdirectory that cannot be listed already did. An absent root is
+  still tolerated; a spec directory in the same state was already stopped by the
+  decision-register check. Fixes #3697.
+
+- **A failed graph tool download no longer leaves an unignored cache.**
+  `qfai init` now writes the `/.qfai/tools/` ignore entry before it prepares the
+  graph runtimes, so the npm and Python caches a failed download leaves under
+  `.qfai/tools/` are no longer staged by `git add -A`. Refs #3744.
 
 ## [2.2.0] - 2026-10-14
 
