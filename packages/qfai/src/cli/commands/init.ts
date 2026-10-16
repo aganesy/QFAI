@@ -534,12 +534,12 @@ export async function runInit(
     const preparation = await prepareGraphIntegration(destRoot, graphProcess);
     if (preparation.files.includes(".gitignore")) await ensureRootGitignoreEntries(destRoot, false);
     info(renderGraphPreparation(preparation, preparation.hosts));
+    for (const conflict of preparation.conflicts) warn(conflict);
     if (preparation.failedStep) {
       throw new Error(
         `Graph preparation failed at ${preparation.failedStep}. Run qfai init again after correcting the reported cause.`,
       );
     }
-    for (const conflict of preparation.conflicts) warn(conflict);
   } else {
     info(await renderGraphPreview(destRoot));
   }

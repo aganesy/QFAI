@@ -15,15 +15,17 @@ export async function prepareGraphIntegration(
   root: string,
   run: GraphProcess = runGraphProcess,
 ): Promise<GraphIntegrationPreparation> {
+  // Before preparation: a failed download still leaves its cache under .qfai/tools/, and an
+  // unignored cache is what `git add -A` stages.
+  const ignore = await ensureGraphGitignore(root, run);
   const preparation = await prepareGraphRuntimes(root, run);
   if (preparation.failedStep)
     return {
       ...preparation,
-      files: [],
-      conflicts: [],
+      files: ignore.files,
+      conflicts: ignore.conflicts,
       hosts: await inspectInstalledGraphHosts(root, run),
     };
-  const ignore = await ensureGraphGitignore(root, run);
   const entries = await installGraphEntrypoints(root);
   if (entries.conflicts.length > 0)
     return {
