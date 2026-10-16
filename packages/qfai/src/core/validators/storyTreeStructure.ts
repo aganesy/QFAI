@@ -225,7 +225,7 @@ export function validateStoryTreeStructureModel(model: StoryTreeModel): Issue[] 
   const examples = new Set(model.examples.map((entry) => entry.id));
   // The first rule citing each example, so an uncited one can point at the rule that already
   // cites a sibling of the same acceptance criterion.
-  const citedExamples = new Map<string, (typeof model.rules)[number]>();
+  const citedExamples = new Map<string, RuleRecord>();
   for (const rule of model.rules) {
     if (rule.examples.length === 0) {
       const hint =
@@ -288,7 +288,6 @@ export function validateStoryTreeStructureModel(model: StoryTreeModel): Issue[] 
   return issues;
 }
 
-/** A `BR-NNNN-NNNN` carries the number of the contract that declares it. */
 type ExampleRecord = StoryTreeModel["examples"][number];
 type RuleRecord = StoryTreeModel["rules"][number];
 
@@ -302,16 +301,20 @@ function citationHint(
   examples: readonly ExampleRecord[],
   cited: ReadonlyMap<string, RuleRecord>,
 ): string {
-  const sibling = examples.find(
-    (entry) => entry.id !== example.id && entry.acRef === example.acRef && cited.has(entry.id),
-  );
-  const rule = sibling === undefined ? undefined : cited.get(sibling.id);
-  if (sibling === undefined || rule === undefined) {
-    return "Cite it in the Examples of the contract rule that enforces it.";
+  const general = "Cite it in the Examples of the contract rule that enforces it.";
+  // An empty AC-Ref is its own QFAI-STORY-004 finding and names no criterion to share.
+  if (example.acRef.trim() === "") return general;
+  for (const entry of examples) {
+    if (entry.id === example.id || entry.acRef !== example.acRef) continue;
+    const rule = cited.get(entry.id);
+    if (rule !== undefined) {
+      return `Cite it in the Examples of the contract rule that enforces it, such as ${rule.id} in ${rule.file}, which cites ${entry.id} of the same ${example.acRef}.`;
+    }
   }
-  return `Cite it in the Examples of the contract rule that enforces it, such as ${rule.id} in ${rule.file}, which cites ${sibling.id} of the same ${example.acRef}.`;
+  return general;
 }
 
+/** A `BR-NNNN-NNNN` carries the number of the contract that declares it. */
 function validateRuleContractNumbers(model: StoryTreeModel): Issue[] {
   const contractByFile = new Map(model.contracts.map(({ id, file }) => [file, id]));
   const issues: Issue[] = [];
