@@ -43,9 +43,9 @@ const CI_ALLOWED_PROFILES = new Set<ValidationProfile>(["full", "verify", "tdd",
 
 /**
  * The profiles that evaluate every gate a full scan covers. `tdd` and `sdd` are allowed in CI
- * above as paired stage gates, but each is partial, and its own `QFAI-PROFILE-001` notice says
- * so; naming them here as full-scan told the operator two things at once. `validate.ts` derives
- * the same set from its gate groups (`fullScanProfiles`), and a test keeps the two equal.
+ * above as paired stage gates, but each is partial, as its own `QFAI-PROFILE-001` notice says.
+ * `validate.ts` derives the same set from its gate groups (`fullScanProfiles`), and a test keeps
+ * the two equal.
  */
 export const FULL_SCAN_PROFILES: readonly ValidationProfile[] = ["full", "verify"];
 
@@ -71,6 +71,6 @@ export function buildCiProfileIssue(
     suggested_action:
       `If this run is a stage gate, no action is needed. Before declaring completion, ` +
       `run a full-scan with --profile full (or with no --profile). Profiles CI runs ` +
-      `without this warning: ${allowed}; of these, only ${fullScan} are a full-scan.`,
+      `without this warning: ${allowed}; of these, only ${fullScan} run a full scan.`,
   };
 }

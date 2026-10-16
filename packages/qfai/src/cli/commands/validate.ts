@@ -391,9 +391,9 @@ function isKnownProfile(profile: string): profile is ValidationProfile {
  * `core/phasePolicy.ts` names them in `QFAI-VALIDATE-017`, and a test keeps the two equal.
  */
 export function fullScanProfiles(): ValidationProfile[] {
-  return (Object.keys(PROFILE_GATE_GROUPS) as ValidationProfile[]).filter(
-    (profile) => unevaluatedGates(profile, []).fullCovered.length === 0,
-  );
+  return Object.keys(PROFILE_GATE_GROUPS)
+    .filter(isKnownProfile)
+    .filter((profile) => unevaluatedGates(profile, []).fullCovered.length === 0);
 }
 
 /** Families a profile does not evaluate, split by where the reader must go. */
