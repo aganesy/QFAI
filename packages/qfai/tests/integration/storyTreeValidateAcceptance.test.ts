@@ -539,6 +539,24 @@ describe("story-tree validation acceptance", () => {
   });
 
   // QFAI:AC-0001-0055-04
+  it("points an uncited example at the rule that cites a sibling of the same criterion", async () => {
+    const { root, issues } = await validateTree(
+      changed({
+        [`${story}/03_Example.md`]: examples(
+          ["EX-0001-0001-01", "AC-0001-0001-01"],
+          ["EX-0001-0001-02", "AC-0001-0001-01"],
+        ),
+      }),
+    );
+
+    const uncited = errorsNaming(issues, "QFAI-STORY-005", "EX-0001-0001-02");
+    expect(uncited).toHaveLength(1);
+    expect(uncited[0]?.message).toContain(
+      `Cite it in the Examples of the contract rule that enforces it, such as BR-0001-0001 in ${posix(path.join(root, contract, "cli/cli-0001-check.md"))}, which cites EX-0001-0001-01 of the same AC-0001-0001-01.`,
+    );
+  });
+
+  // QFAI:AC-0001-0055-04
   it("names a rule that has no example or cites one the tree does not define", async () => {
     const { root, issues } = await validateTree(
       changed({
@@ -613,7 +631,7 @@ describe("story-tree validation acceptance", () => {
         severity: "error",
         refs: ["EX-0001-0001-01"],
         file: posix(path.join(root, story, "03_Example.md")),
-        message: `EX-0001-0001-01 is not cited by a rule in ${posix(path.join(root, story, "03_Example.md"))}`,
+        message: `EX-0001-0001-01 is not cited by a rule in ${posix(path.join(root, story, "03_Example.md"))}. Cite it in the Examples of the contract rule that enforces it.`,
       });
 
       const repaired = await validateTree(

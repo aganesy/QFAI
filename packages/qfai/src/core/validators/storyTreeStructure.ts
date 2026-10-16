@@ -223,7 +223,9 @@ export function validateStoryTreeStructureModel(model: StoryTreeModel): Issue[] 
   }
 
   const examples = new Set(model.examples.map((entry) => entry.id));
-  const citedExamples = new Set<string>();
+  // The first rule citing each example, so an uncited one can point at the rule that already
+  // cites a sibling of the same acceptance criterion.
+  const citedExamples = new Map<string, (typeof model.rules)[number]>();
   for (const rule of model.rules) {
     if (rule.examples.length === 0) {
       const hint =
@@ -244,8 +246,8 @@ export function validateStoryTreeStructureModel(model: StoryTreeModel): Issue[] 
             ref,
           ]),
         );
-      } else {
-        citedExamples.add(ref);
+      } else if (!citedExamples.has(ref)) {
+        citedExamples.set(ref, rule);
       }
     }
   }
@@ -269,7 +271,7 @@ export function validateStoryTreeStructureModel(model: StoryTreeModel): Issue[] 
         issues.push(
           finding(
             "QFAI-STORY-005",
-            `${example.id} is not cited by a rule in ${example.file}`,
+            `${example.id} is not cited by a rule in ${example.file}. ${citationHint(example, model.examples, citedExamples)}`,
             example.file,
             [example.id],
           ),
@@ -287,6 +289,29 @@ export function validateStoryTreeStructureModel(model: StoryTreeModel): Issue[] 
 }
 
 /** A `BR-NNNN-NNNN` carries the number of the contract that declares it. */
+type ExampleRecord = StoryTreeModel["examples"][number];
+type RuleRecord = StoryTreeModel["rules"][number];
+
+/**
+ * Where the citation of an uncited example goes. The example is defined in its story's Examples
+ * file, but the citation is a contract rule's Examples entry, so the hint names the rule that
+ * already cites a sibling example of the same acceptance criterion when one exists.
+ */
+function citationHint(
+  example: ExampleRecord,
+  examples: readonly ExampleRecord[],
+  cited: ReadonlyMap<string, RuleRecord>,
+): string {
+  const sibling = examples.find(
+    (entry) => entry.id !== example.id && entry.acRef === example.acRef && cited.has(entry.id),
+  );
+  const rule = sibling === undefined ? undefined : cited.get(sibling.id);
+  if (sibling === undefined || rule === undefined) {
+    return "Cite it in the Examples of the contract rule that enforces it.";
+  }
+  return `Cite it in the Examples of the contract rule that enforces it, such as ${rule.id} in ${rule.file}, which cites ${sibling.id} of the same ${example.acRef}.`;
+}
+
 function validateRuleContractNumbers(model: StoryTreeModel): Issue[] {
   const contractByFile = new Map(model.contracts.map(({ id, file }) => [file, id]));
   const issues: Issue[] = [];

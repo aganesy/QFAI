@@ -13,6 +13,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   (`EMFILE`) are no longer the same line. The check still stops and still treats
   the register as unverified. Fixes #3628.
 
+### Fixed
+
+- **An uncited example's finding says where the citation goes.** `QFAI-STORY-005`
+  for an example no rule cites now adds that the citation belongs in the
+  Examples of the contract rule that enforces it, and names the rule that
+  already cites a sibling example of the same acceptance criterion when there is
+  one. Fixes #3761.
+
 ## [2.2.0] - 2026-10-14
 
 ### Added
