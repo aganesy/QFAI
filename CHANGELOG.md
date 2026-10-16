@@ -18,18 +18,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A failed graph tool download no longer leaves an unignored cache.**
+  `qfai init` now writes the `/.qfai/tools/` ignore entry before it prepares the
+  graph runtimes, so the npm and Python caches a failed download leaves under
+  `.qfai/tools/` are no longer staged by `git add -A`. Refs #3744.
+
 - **The Markdown-schema check no longer reports `0 file(s) conform`.** When no
   spec or contract document is in scope, for example when only operational
   Markdown outside the story tree changed, it now says that nothing was checked,
   so the line is not taken as passing evidence. The exit code is unchanged.
   Refs #3765.
-
-### Fixed
-
-- **A failed graph tool download no longer leaves an unignored cache.**
-  `qfai init` now writes the `/.qfai/tools/` ignore entry before it prepares the
-  graph runtimes, so the npm and Python caches a failed download leaves under
-  `.qfai/tools/` are no longer staged by `git add -A`. Refs #3744.
 
 ## [2.2.0] - 2026-10-14
 
