@@ -24,8 +24,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   so the line is not taken as passing evidence. The exit code is unchanged.
   Refs #3765.
 
-### Fixed
-
 - **`QFAI-VALIDATE-017` lists only `full` and `verify` as full-scan profiles.**
   It named `tdd` and `sdd` as full-scan too, while their own `QFAI-PROFILE-001`
   notice says they are partial. The suggested action still lists all four as
