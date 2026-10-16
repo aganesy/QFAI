@@ -582,13 +582,20 @@ describe("the managed block does not repeat a line the project already has", () 
 });
 
 describe("a rebuilt block keeps the file's final newline", () => {
-  const last = QFAI_GITIGNORE_GOVERNANCE_NEGATIONS[QFAI_GITIGNORE_GOVERNANCE_NEGATIONS.length - 1];
+  const last = QFAI_GITIGNORE_GOVERNANCE_NEGATIONS.at(-1) ?? "";
   const staleBlock = [QFAI_GITIGNORE_MARKER, ".qfai/report/*", "!.qfai/", "!.qfai/assistant/"];
 
   // QFAI:EX-0001-0033-07
   it.each([
     ["holds only the block", staleBlock.join(NL) + NL],
-    ["holds project lines above the block", ["node_modules/", "", ...staleBlock].join(NL) + NL],
+    // The 2.1.2 to 2.2.0 upgrade: the graph ignore lines below the block re-ignore what
+    // `!.qfai/` re-includes, so the rebuilt block moves to the end of the file.
+    [
+      "holds project lines above the block and the graph ignore lines below it",
+      ["node_modules/", "", ...staleBlock, "# QFAI graph analysis (local)", "/.qfai/tools/"].join(
+        NL,
+      ) + NL,
+    ],
   ])("ends with exactly one newline when the file %s", async (_, before) => {
     await withProject(async (root) => {
       await writeFile(path.join(root, ".gitignore"), before, "utf-8");
