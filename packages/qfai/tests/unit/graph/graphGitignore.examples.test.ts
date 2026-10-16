@@ -94,6 +94,7 @@ it("preserves removed managed ignores and tracked output with concrete conflict 
 });
 
 // QFAI:EX-0001-0236-16
+// Mutation: packages/qfai/src/core/graph/integration.ts moving `const ignore = await ensureGraphGitignore(root, run);` back below `prepareGraphRuntimes` fails "ignores the tools directory even when a runtime download fails"
 it("ignores the tools directory even when a runtime download fails", async () => {
   const root = await repository();
   try {
