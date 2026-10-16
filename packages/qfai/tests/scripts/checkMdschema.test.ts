@@ -381,13 +381,16 @@ describe("check-mdschema driver", () => {
     expect(result.stderr).toContain("story-business-flow");
   });
 
-  it("exits 0 when the tree has no documents the manifest matches", async () => {
+  it("exits 0 when the tree has no documents the manifest matches, saying nothing was checked", async () => {
     const root = await newTempDir();
 
     const result = runDriver(["--root", root, "--scope", "all"]);
 
     expect(result.status).toBe(0);
-    expect(result.stdout).toContain("0 file(s) conform");
+    expect(result.stdout).toContain(
+      "no document in scope matches a schema, so nothing was checked",
+    );
+    expect(result.stdout).not.toContain("conform");
   });
 
   it("exits 2 on an unknown flag", () => {

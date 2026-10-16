@@ -1752,10 +1752,14 @@ export function main() {
   // pre-existing failures back reports what it actually established — that this
   // branch introduced none — because the other wording would put the migration's
   // backlog on record as clean.
+  // Nor where nothing was checked: "0 file(s) conform" read as a pass for files no
+  // schema covers, so a gate citing it recorded evidence that checked nothing.
   const verdict =
-    inheritedFiles > 0
-      ? `${checked} file(s) checked, no new violations`
-      : `${checked} file(s) conform`;
+    checked === 0
+      ? "no document in scope matches a schema, so nothing was checked"
+      : inheritedFiles > 0
+        ? `${checked} file(s) checked, no new violations`
+        : `${checked} file(s) conform`;
   console.log(`check-mdschema: ${verdict} (${where})${held}.`);
   return 0;
 }

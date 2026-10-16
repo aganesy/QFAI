@@ -13,6 +13,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   (`EMFILE`) are no longer the same line. The check still stops and still treats
   the register as unverified. Fixes #3628.
 
+### Fixed
+
+- **The Markdown-schema check no longer reports `0 file(s) conform`.** When no
+  document in scope matches a schema, for example operational Markdown outside
+  the story tree, it now says that nothing was checked, so the line is not taken
+  as passing evidence. The exit code is unchanged. Fixes #3765.
+
 ## [2.2.0] - 2026-10-14
 
 ### Added
