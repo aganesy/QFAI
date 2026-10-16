@@ -1657,6 +1657,7 @@ describe("decision-register filesystem causes", () => {
   });
 
   const vanished: [string, FaultOperation, string, string][] = [
+    ["read the root document", "readFile", "Cannot read", ".qfai/specs/decisions.md"],
     ["read a listed page", "readFile", "Cannot read", ".qfai/specs/decisions/page-0001.md"],
     ["list the pages directory", "readdir", "Cannot list", ".qfai/specs/decisions"],
   ];
@@ -1678,7 +1679,7 @@ describe("decision-register filesystem causes", () => {
         expect.objectContaining({
           file: relative,
           rule: "decision-register",
-          message: expect.stringContaining(`${prefix}`),
+          message: expect.stringContaining(prefix),
         }),
       ]);
       expect(result.violations[0].message).toContain("(ENOENT)");

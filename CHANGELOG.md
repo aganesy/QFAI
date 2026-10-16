@@ -12,7 +12,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   read (`EACCES`), an I/O failure (`EIO`) and descriptor exhaustion (`EMFILE`)
   are no longer the same line. The finding names the repository-relative path
   only: the absolute path and system call in the operating system's message stay
-  out of CI logs and reports. The check still stops and still treats the register
+  out of CI logs and reports, here and in the `inventory` finding for a
+  directory that cannot be listed. The check still stops and still treats the register
   as unverified. Fixes #3628 and #3743.
 
 ## [2.2.0] - 2026-10-14
