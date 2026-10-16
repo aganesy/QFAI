@@ -35,6 +35,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   so the line is not taken as passing evidence. The exit code is unchanged.
   Refs #3765.
 
+- **The Markdown-schema check reports a configured contract root it cannot
+  walk.** A configured contract directory that is a file, or that cannot be
+  inspected, is now an `inventory` finding with its path and cause, and the run
+  fails, as a subdirectory that cannot be listed already did. An absent root is
+  still tolerated; a spec directory in the same state was already stopped by the
+  decision-register check. Fixes #3697.
+
 ## [2.2.0] - 2026-10-14
 
 ### Added
