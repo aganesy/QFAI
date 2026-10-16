@@ -941,9 +941,21 @@ function documentUniverse(root, paths) {
     ...new Set(
       [paths.specsDir, paths.contractsDir].flatMap((dir) => {
         const absolute = path.resolve(root, dir);
-        return existsSync(absolute) && statSync(absolute).isDirectory()
-          ? walk(absolute, root, failed)
-          : [];
+        const relative = path.relative(root, absolute).split(path.sep).join("/") || ".";
+        // An absent configured root holds no documents. One that is a file, or
+        // that cannot be inspected, is a tree whose documents were not checked.
+        let stats;
+        try {
+          stats = statSync(absolute);
+        } catch (error) {
+          if (!isMissing(error)) failed.push({ dir: relative, cause: describeFailure(error) });
+          return [];
+        }
+        if (!stats.isDirectory()) {
+          failed.push({ dir: relative, cause: "not a directory" });
+          return [];
+        }
+        return walk(absolute, root, failed);
       }),
     ),
   ];

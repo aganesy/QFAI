@@ -21,7 +21,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 type Fs = typeof fs;
 
-const refusal = vi.hoisted(() => ({ dir: "", code: "EACCES" }));
+const refusal = vi.hoisted(() => ({ dir: "", code: "EACCES", stat: "" }));
 
 vi.mock("node:fs", async () => {
   const actual = await vi.importActual<Fs>("node:fs");
@@ -35,6 +35,14 @@ vi.mock("node:fs", async () => {
         );
       }
       return Reflect.apply(actual.readdirSync, actual, args) as unknown;
+    },
+    statSync: (...args: Parameters<Fs["statSync"]>) => {
+      if (refusal.stat !== "" && path.resolve(String(args[0])) === refusal.stat) {
+        throw Object.assign(new Error(`EACCES: permission denied, stat '${refusal.stat}'`), {
+          code: "EACCES",
+        });
+      }
+      return Reflect.apply(actual.statSync, actual, args) as unknown;
     },
   };
 });
@@ -72,6 +80,7 @@ async function newTree(): Promise<string> {
 afterEach(async () => {
   refusal.dir = "";
   refusal.code = "EACCES";
+  refusal.stat = "";
   while (tempDirs.length > 0) {
     const dir = tempDirs.pop();
     if (dir !== undefined) await rm(dir, { recursive: true, force: true });
@@ -146,6 +155,60 @@ describe("a document directory the lane cannot list", () => {
   });
 
   it("passes a tree whose every directory lists", async () => {
+    const root = await newTree();
+    refusal.dir = "";
+
+    expect(checkDocuments(root)).toEqual({ ok: true, checked: 1, violations: [] });
+  });
+});
+
+describe("a configured document root the lane cannot walk", () => {
+  const CONTRACTS = ".qfai/spec/03_contract";
+
+  // QFAI:EX-0001-0053-29
+  it("reports a configured root that is a file, and fails the command", async () => {
+    const root = await newTree();
+    refusal.dir = "";
+    await writeFile(path.join(root, CONTRACTS), "not a directory", "utf-8");
+
+    expect(checkDocuments(root)).toEqual({
+      ok: true,
+      checked: 1,
+      violations: [
+        expect.objectContaining({
+          file: CONTRACTS,
+          rule: "inventory",
+          message: expect.stringContaining("not a directory") as unknown,
+        }),
+      ],
+    });
+    const result = runMain(root);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(CONTRACTS);
+  });
+
+  // QFAI:EX-0001-0053-29
+  it("reports a configured root that cannot be inspected, keeping its cause", async () => {
+    const root = await newTree();
+    refusal.dir = "";
+    await mkdir(path.join(root, CONTRACTS), { recursive: true });
+    refusal.stat = path.join(root, CONTRACTS);
+
+    expect(checkDocuments(root)).toEqual({
+      ok: true,
+      checked: 1,
+      violations: [
+        expect.objectContaining({
+          file: CONTRACTS,
+          rule: "inventory",
+          message: expect.stringContaining("EACCES") as unknown,
+        }),
+      ],
+    });
+  });
+
+  // QFAI:EX-0001-0053-29
+  it("keeps an absent configured root a tolerated absence", async () => {
     const root = await newTree();
     refusal.dir = "";
 
