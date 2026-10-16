@@ -18,19 +18,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
-- **The Markdown-schema check no longer reports `0 file(s) conform`.** When no
-  spec or contract document is in scope, for example when only operational
-  Markdown outside the story tree changed, it now says that nothing was checked,
-  so the line is not taken as passing evidence. The exit code is unchanged.
-  Refs #3765.
-
-### Fixed
-
 - **An uncited example's finding says where the citation goes.** `QFAI-STORY-005`
   for an example no rule cites now adds that the citation belongs in the
   Examples of the contract rule that enforces it, and names the rule that
   already cites a sibling example of the same acceptance criterion when there is
   one. Fixes #3761.
+
+- **The Markdown-schema check no longer reports `0 file(s) conform`.** When no
+  spec or contract document is in scope, for example when only operational
+  Markdown outside the story tree changed, it now says that nothing was checked,
+  so the line is not taken as passing evidence. The exit code is unchanged.
+  Refs #3765.
 
 ## [2.2.0] - 2026-10-14
 
