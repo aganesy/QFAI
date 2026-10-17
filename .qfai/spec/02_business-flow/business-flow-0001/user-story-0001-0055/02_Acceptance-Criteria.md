@@ -33,7 +33,7 @@ Feature: Example, criterion, and rule links
   Scenario: An example no rule names is reported
     Given the story tree, and an EX that no rule names in its examples
     When `qfai validate --profile sdd` runs
-    Then an error names the EX ID and the `03_Example.md` that defines it
+    Then an error names the EX ID and the `03_Example.md` that defines it, and says the citation goes in a contract rule's examples
 
   # AC-0001-0055-06
   Scenario: A Business rules table is read with three columns
