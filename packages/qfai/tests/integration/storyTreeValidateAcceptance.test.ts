@@ -552,6 +552,7 @@ describe("story-tree validation acceptance", () => {
 
     const uncited = errorsNaming(issues, "QFAI-STORY-005", "EX-0001-0001-02");
     expect(uncited).toHaveLength(1);
+    expect(uncited[0]?.file).toBe(posix(path.join(root, story, "03_Example.md")));
     expect(uncited[0]?.message).toContain(
       `Cite it in the Examples of the contract rule that enforces it, such as BR-0001-0001 in ${posix(path.join(root, contract, "cli/cli-0001-check.md"))}, which cites EX-0001-0001-01 of the same AC-0001-0001-01.`,
     );
