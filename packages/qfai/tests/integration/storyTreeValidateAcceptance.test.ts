@@ -539,6 +539,7 @@ describe("story-tree validation acceptance", () => {
   });
 
   // QFAI:AC-0001-0055-05
+  // QFAI:EX-0001-0055-14
   it("points an uncited example at the rule that cites a sibling of the same criterion", async () => {
     const { root, issues } = await validateTree(
       changed({
@@ -557,6 +558,7 @@ describe("story-tree validation acceptance", () => {
   });
 
   // QFAI:AC-0001-0055-05
+  // QFAI:EX-0001-0055-14
   it("names no rule for an uncited example whose criterion has no cited example", async () => {
     const { issues } = await validateTree(
       changed({

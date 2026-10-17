@@ -8,7 +8,7 @@ Feature: Example, criterion, and rule links
   Scenario: An example with a broken criterion reference is reported
     Given the story tree, and an EX row whose `AC-Ref` cell names no AC, several ACs, an AC the tree does not define, or an AC of another story
     When `qfai validate --profile sdd` runs
-    Then an error names the EX ID and the `03_Example.md` that defines it
+    Then an error names the EX ID and the `03_Example.md` that defines it, and says the citation goes in a contract rule's examples
 
   # AC-0001-0055-02
   Scenario: A criterion no example names is reported
