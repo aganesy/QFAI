@@ -1347,6 +1347,18 @@ describe("a forbidden-text finding", () => {
     expect(offendingLine(VERSIONED, 1, "(?m)^- x")).toBeNull();
     // The body stops at the next heading of the same level.
     expect(offendingLine(VERSIONED, 1, "(?m)^## Next")).toBeNull();
+    // `\A` anchors at the body's start; CRLF line endings count the same lines.
+    expect(offendingLine("## A\nprose\n", 1, String.raw`\A\s*[^#\s]`)).toBe(2);
+    expect(offendingLine(VERSIONED.replaceAll("\n", "\r\n"), 1, "(?m)^- `[^`\\n]*`[^\\n]")).toBe(5);
+    // An anchor after an escaped backslash is not translated.
+    expect(offendingLine("## A\nprose\n", 1, String.raw`\\A`)).toBeNull();
+  });
+
+  it("keeps mdschema's position where RE2 and JavaScript read whitespace differently", () => {
+    // RE2's `\s` is ASCII only; JavaScript's also takes an ideographic space.
+    const document = "## A\n\n- ok\n\u3000foo\nbar\n";
+    expect(offendingLine(document, 1, PROSE_LINE)).toBeNull();
+    expect(offendingLine(document.replace("\u3000", ""), 1, PROSE_LINE)).toBe(4);
   });
 
   it("places a finding on the offending line, the earliest when patterns merge", () => {

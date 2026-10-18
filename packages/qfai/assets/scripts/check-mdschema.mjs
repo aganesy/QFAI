@@ -1156,8 +1156,9 @@ function readTextOrNull(file) {
 /**
  * A schema's Go (RE2) pattern as a JavaScript RegExp, or `null` where it uses
  * syntax this does not translate. It translates a leading `(?flags)` group of
- * `i`, `m` and `s`, and the `\A` and `\z` anchors; a pattern JavaScript then
- * refuses gives `null`.
+ * `i`, `m` and `s`, and the `\A` and `\z` anchors. An anchor written after an
+ * escaped backslash or inside a class, or a pattern JavaScript then refuses,
+ * gives `null`.
  *
  * @param {string} pattern
  * @returns {RegExp | null}
@@ -1165,7 +1166,7 @@ function readTextOrNull(file) {
 function goPatternToRegExp(pattern) {
   const lead = /^\(\?([a-z]+)\)/u.exec(pattern);
   const flags = lead === null ? "" : lead[1];
-  if (/[^ims]/u.test(flags)) return null;
+  if (/[^ims]/u.test(flags) || /\\\\[Az]|\[[^\]]*\\[Az]/u.test(pattern)) return null;
   const body = (lead === null ? pattern : pattern.slice(lead[0].length))
     .replaceAll("\\A", "(?<![\\s\\S])")
     .replaceAll("\\z", "(?![\\s\\S])");
@@ -1183,7 +1184,9 @@ function goPatternToRegExp(pattern) {
  * The body runs from the line after the heading to the next heading of the same
  * or a higher level. The line is that of the match's first non-blank character.
  * `null` means the heading, the pattern or a match was not found, and the caller
- * keeps mdschema's own position.
+ * keeps mdschema's own position. So does a body holding whitespace outside
+ * ASCII, a vertical tab or a carriage return: RE2's `\s` leaves those out and
+ * JavaScript's takes them in, so the two could match different lines.
  *
  * @param {string} document
  * @param {number} headingLine 1-based
@@ -1202,12 +1205,17 @@ export function offendingLine(document, headingLine, pattern) {
     end++;
   }
   const body = lines.slice(headingLine, end).join("\n");
+  if (NON_RE2_WHITESPACE.test(body)) return null;
   const match = re.exec(body);
   if (match === null) return null;
   const visible = match[0].search(/\S/u);
   const offset = match.index + (visible === -1 ? 0 : visible);
   return headingLine + 1 + (body.slice(0, offset).match(/\n/gu)?.length ?? 0);
 }
+
+/** Whitespace JavaScript's `\s` matches and RE2's does not, including the line breaks only JavaScript knows. */
+const NON_RE2_WHITESPACE =
+  /[\v\r\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]/u;
 
 /** One violation line of `mdschema check` output: `  ✗ 3:4 [rule] message`. */
 const VIOLATION_LINE = /^\s+✗\s+(\d+):(\d+)\s+\[([^\]]+)\]\s+(.*\S)\s*$/u;
