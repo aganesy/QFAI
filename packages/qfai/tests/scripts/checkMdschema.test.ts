@@ -46,6 +46,7 @@ import {
   parseViolations,
   patternToRegExp,
   explainForbiddenText,
+  offendingLine,
   sectionDescriptions,
   rootHeadingPattern,
 } from "../../assets/scripts/check-mdschema.mjs";
@@ -1330,6 +1331,64 @@ describe("a forbidden-text finding", () => {
     expect(messages).toEqual([
       `Section 'Dependencies' does not hold what the schema requires: ${DESCRIPTION}`,
     ]);
+  });
+
+  const PROSE_LINE = String.raw`(?m)^[ \t]?[^-\s#]`;
+  const VERSIONED =
+    "## Dependencies\n\n- `zod`\n  - validation\n- `react` 18.3.1\n  - ui\n\n## Next\n";
+
+  it("finds the line a pattern matches in the section body, or null", () => {
+    expect(offendingLine(VERSIONED, 1, "(?m)^- `[^`\\n]*`[^\\n]")).toBe(5);
+    expect(offendingLine(VERSIONED.replace("- `zod`", "Some prose"), 1, PROSE_LINE)).toBe(3);
+    expect(offendingLine(VERSIONED, 1, String.raw`(?:\A|\n[ \t]*\n)\s*[^-\s#]`)).toBeNull();
+    // A line that is not a heading, a flag JavaScript has no counterpart for, or no match.
+    expect(offendingLine(VERSIONED, 2, first)).toBeNull();
+    expect(offendingLine(VERSIONED, 1, "(?U)^- [^`N]")).toBeNull();
+    expect(offendingLine(VERSIONED, 1, "(?m)^- x")).toBeNull();
+    // The body stops at the next heading of the same level.
+    expect(offendingLine(VERSIONED, 1, "(?m)^## Next")).toBeNull();
+  });
+
+  it("places a finding on the offending line, the earliest when patterns merge", () => {
+    const document = VERSIONED.replace("- `zod`", "Some prose");
+    const output = [
+      "/tree/tech.md",
+      lineOf("(?m)^- `[^`\\n]*`[^\\n]").replace("43:4", "1:4"),
+      lineOf(PROSE_LINE).replace("43:4", "1:4"),
+    ].join("\n");
+
+    const lines = explainForbiddenText(output, TECH_SCHEMA, () => document).split("\n");
+
+    expect(lines.filter((line) => line.includes("[forbidden-text]"))).toEqual([
+      `  ✗ 3:1 [forbidden-text] Section 'Dependencies' does not hold what the schema requires: ${DESCRIPTION}`,
+    ]);
+  });
+
+  it("keeps mdschema's position when the document cannot be read", () => {
+    expect(explainForbiddenText(lineOf(first), TECH_SCHEMA, () => null)).toContain(
+      "  ✗ 43:4 [forbidden-text]",
+    );
+  });
+
+  it("returns the offending line to a caller", async () => {
+    const root = await newTempDir();
+    const body = TECH_TEMPLATE.replace(
+      /^- `<package>`\n {2}- `<what the project uses it for>`\n/m,
+      "- `zod`\n  - validation\n- `react` 18.3.1\n  - ui\n",
+    );
+    await writeTech(root, body);
+    const expected = body.split("\n").indexOf("- `react` 18.3.1") + 1;
+
+    const result = checkDocuments(root, {
+      specsDir: ".qfai/specs",
+      contractsDir: ".qfai/contracts",
+    });
+
+    expect(
+      result.violations
+        .filter((v: { rule: string }) => v.rule === "forbidden-text")
+        .map((v: { line: number; column: number }) => [v.line, v.column]),
+    ).toEqual([[expected, 1]]);
   });
 });
 
