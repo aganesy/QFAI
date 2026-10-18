@@ -164,6 +164,12 @@ describe("shipped assistant docs invoke qfai through the canonical launcher", ()
       expect(content).not.toContain("run once, before the first gate");
       expect(content).toContain("every `npx qfai` call, gates included, is UNRUN");
       expect(content).toContain(
+        "invoke every `npx qfai` call, gates included, through the launcher that proof established",
+      );
+      expect(content).toContain(
+        "If the launcher cannot be resolved at any point, that call, a gate included, is UNRUN",
+      );
+      expect(content).toContain(
         "**`node_modules` without `.bin/qfai`.** An interrupted install: run it again, then the preflight.",
       );
       expect(content).toContain(
