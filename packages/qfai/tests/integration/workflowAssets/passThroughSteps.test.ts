@@ -112,7 +112,7 @@ describe("a step that may pass with evidence", () => {
       /for each EX added, name in the stage report the contract rule that will cite it, or the contract that needs a new rule for it\. `sdd-contract` writes the rule/i,
     );
     expect(await passesWhen("sdd-contract")).toMatch(
-      /a pass is refused while an example is cited by no BR, an example this run added included/i,
+      /a pass is refused while an example `sdd-story` wrote or kept is cited by no BR, an example this run added included/i,
     );
   });
 
