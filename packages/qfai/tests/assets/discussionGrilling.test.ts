@@ -285,7 +285,7 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
     expectPhrase(skill, "The agent that holds the session writes the row, `Ended at` included.");
     expectPhrase(
       skill,
-      "write the row before delegating, and pass the row to the pack author, who copies it and does not reconstruct it",
+      "write the row before delegating, and pass the row to the pack author, who copies it unchanged into the stage report it writes and does not reconstruct it",
     );
   });
 
