@@ -99,6 +99,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   report. Wording a decision made false no longer passes `qfai validate` and
   surfaces only in review. Fixes #3803.
 
+- **The tech.md Dependencies finding states the item shape it accepts.** The
+  `QFAI-DOCSCHEMA-001` text for the section now says each dependency is a
+  top-level item holding only its package name in backticks, with the reason on
+  a nested item below it, so a version on the same line or a prose item is no
+  longer a guess to fix. Refs #3821.
+
 - **A failed graph tool download no longer leaves an unignored cache.**
   `qfai init` now writes the `/.qfai/tools/` ignore entry before it prepares the
   graph runtimes, so the npm and Python caches a failed download leaves under

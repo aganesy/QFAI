@@ -99,7 +99,7 @@ structure:
       - heading:
           pattern: "^## Dependencies$"
           regex: true
-        description: Each runtime dependency with the reason for it on a nested item, or `- None.`
+        description: Each runtime dependency as a top-level item that holds only its package name in backticks, with the reason on a nested item below it, or `- None.`
         allow_additional: false
         lists:
           - min: 1

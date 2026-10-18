@@ -1236,7 +1236,7 @@ describe("a forbidden-text finding", () => {
     "- some prose\n",
   );
   const DESCRIPTION =
-    "Each runtime dependency with the reason for it on a nested item, or `- None.`";
+    "Each runtime dependency as a top-level item that holds only its package name in backticks, with the reason on a nested item below it, or `- None.`";
   const first = "(?m)^- [^`N]";
   const second = String.raw`(?m)^- N(?:[^o\n]|o[^n\n])`;
   const lineOf = (pattern: string): string =>
