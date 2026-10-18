@@ -11,6 +11,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   results instead, so a review no longer loads the machine while the run's own
   gate is running. Fixes #3695.
 
+- **`qfai-run` runs the launcher preflight in the step that calls `plan`.**
+  Step 1 now runs the preflight after the extraction and before
+  `npx qfai workflow plan`, so a checkout with no install cannot reach an older
+  qfai elsewhere on the machine first. Fixes #3822.
+
 - **The `qfai-run` extraction reference fits one read.** Its intent, flag,
   qualifier, signal, artifact, risk and example tables are now one-line lists,
   so the padding of the widest row no longer repeats on every row. The file
