@@ -158,7 +158,8 @@ the smallest useful seam and a falsifiable assertion.
 
 Where `implement-diagnose` already wrote the failing test for the example, do
 not write another: annotate that test with the EX ID and run it to confirm it
-still fails.
+still fails. Where the Test entry is `CI only: <check name>`, keep that test's
+`ci-deferred` Red and do not run it.
 
 While implementing, run only the selected test. The full suite, Lint,
 Typecheck, Build and `npx qfai validate` run once, in the verify stage.
@@ -238,6 +239,8 @@ the obligation, test path and selector,
 RED, GREEN, and Refactor commands and observed results, and open findings.
 For each focused phase, include the selected-case execution receipt above;
 command, exit and aggregate counts alone do not establish behavior execution.
+For a `ci-deferred` phase, the test path, its selector and the check name take
+the place of the command, the observed result and the receipt.
 Evidence without a command and result pair does not prove a gate.
 A failing or unrun gate cannot be reported as PASS.
 

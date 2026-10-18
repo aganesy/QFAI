@@ -76,7 +76,8 @@ test that should have caught it, before any production code changes:
    `.qfai/assistant/skill/qfai-implement/references/red-admissibility.md#ci-only-test-gate`
    states, and the route's code review reads the test against the code
    before the fix.
-3. Record the test path, the command and the failure in the stage report.
+3. Record the test path, the command and the failure in the stage report. For
+   a `ci-deferred` Red, record the test path, its selector and the check name.
 
 A verdict that moves the work to another route leaves no new test behind:
 remove the test written here.

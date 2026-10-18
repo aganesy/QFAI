@@ -60,8 +60,9 @@ invocation runs locally. Record those phases `ci-deferred` instead:
 
 - Write the test before any production code, as for an observed Red, and do
   not run it.
-- Under the example, the stage report says `red: ci-deferred` and
-  `green: ci-deferred`, with the test path, its selector and the check name.
+- In the example's `### EX-NNNN-NNNN-NN` section, the stage report says
+  `red: ci-deferred`, `green: ci-deferred` and `refactor: ci-deferred`, with
+  the test path, its selector and the check name.
   This is a report label, not a gate status: no gate counts it, and it is not
   a pass. The Test gate stays DELEGATED to that check in the verify stage.
 - The route's code review reads the test against the code before the fix and
