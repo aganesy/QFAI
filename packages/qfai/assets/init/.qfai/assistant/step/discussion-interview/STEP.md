@@ -134,6 +134,10 @@ off that row. Without it a skipped session and a completed one present the same
 pack — nine files, every topic covered, every open question registered — so
 the reviewer would have to block every run or accept a claim it cannot check.
 
+The agent that holds the session writes the row, `Ended at` included. Where
+another agent authors the pack, write the row before delegating, and pass the
+row to the pack author, who copies it and does not reconstruct it.
+
 A `stopped` session writes no row: the ending is reported, and no later step
 runs.
 

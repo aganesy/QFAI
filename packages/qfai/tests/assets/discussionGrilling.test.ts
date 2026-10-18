@@ -279,6 +279,16 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
     expectPhrase(record, "It still cannot prove a session happened");
   });
 
+  it("has the session holder hand the row to a delegated pack author", async () => {
+    // A pack author that never held the session cannot know when it ended.
+    const skill = await readSkill();
+    expectPhrase(skill, "The agent that holds the session writes the row, `Ended at` included.");
+    expectPhrase(
+      skill,
+      "write the row before delegating, and pass the row to the pack author, who copies it and does not reconstruct it",
+    );
+  });
+
   it("leaves a record the reviewer can check the claim against", async () => {
     // A skipped session and a completed one present the same pack, so a
     // reviewer with only the pack must either block every run or accept a

@@ -29,6 +29,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   already cites a sibling example of the same acceptance criterion when there is
   one. Fixes #3761.
 
+- **A delegated pack author receives the grilling record.** `discussion-interview`
+  now says the agent that holds the session writes the `## Grilling Session`
+  row, `Ended at` included, before delegating pack authoring, and passes the
+  row to the pack author. A pack written by another agent no longer lacks a
+  verifiable end time. Fixes #3795.
+
 - **`qfai init` keeps the final newline of `.gitignore`.** When it rebuilt a
   managed block that had to move to the end of the file, the last line,
   `!.qfai/assistant/**`, was written without a newline, so `git diff` showed
