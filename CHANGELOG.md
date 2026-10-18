@@ -54,6 +54,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   still tolerated; a spec directory in the same state was already stopped by the
   decision-register check. Fixes #3697.
 
+- **The story and contract steps search for a claim a decision replaced.**
+  `sdd-story` and `sdd-contract` now search the whole story tree and the
+  contracts for the old claim before finishing, and list each hit in the stage
+  report. Wording a decision made false no longer passes `qfai validate` and
+  surfaces only in review. Fixes #3803.
+
 - **A failed graph tool download no longer leaves an unignored cache.**
   `qfai init` now writes the `/.qfai/tools/` ignore entry before it prepares the
   graph runtimes, so the npm and Python caches a failed download leaves under

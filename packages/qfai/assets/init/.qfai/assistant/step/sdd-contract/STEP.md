@@ -63,6 +63,10 @@ states.
    attributes, and run the executable DB contract checks
    `contract-artifact-rules.md` requires. Record the command and result under
    Contract executability in the SDD report.
+7. Where a decision replaced a claim, such as an input, a threshold or a
+   count, search the whole story tree and the contracts for the old claim
+   before finishing. List each hit in the stage report, with what it now
+   says or why it stays.
 
 ## UI contracts
 

@@ -67,6 +67,10 @@ states.
    acceptance tests in this step.
 7. Retire a story by removing its directory under the change request that names
    it, and never recycle its IDs.
+8. Where a decision replaced a claim, such as an input, a threshold or a
+   count, search the whole story tree and the contracts for the old claim
+   before finishing. List each hit in the stage report, with what it now
+   says or why it stays.
 
 ## Passes when
 
