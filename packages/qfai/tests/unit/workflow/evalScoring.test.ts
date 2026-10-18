@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { execPath } from "node:process";
 
 import { expect, it } from "vitest";
@@ -6,6 +7,7 @@ import type { WorkflowPlanFile } from "../../../src/core/workflow/plans.js";
 import {
   designVerdict,
   scoreDesignCases,
+  type DesignRun,
   type DesignSeed,
 } from "../../helpers/designAuthoringEval.js";
 import {
@@ -167,7 +169,10 @@ it("A host command that cannot start stops the eval, naming the command", () => 
 });
 
 it("A host command that starts and exits non-zero returns, so its cases are still scored", () => {
-  expect(() => runHost(execPath, ["-e", "process.exit(3)"], process.cwd())).not.toThrow();
+  expect(runHost(execPath, ["-e", "process.exit(3)"], process.cwd())).toEqual({
+    status: 3,
+    signal: null,
+  });
 });
 
 // A catalog of two routes, enough for the scoring rules the route evaluation applies.
@@ -293,21 +298,43 @@ function designSeed(id: string, expected: DesignSeed["expected"]): DesignSeed {
   return { id, userPrompt: "Author DESIGN.md.", repoFacts: {}, expected, rationale: "A case." };
 }
 
-it("A design-authoring case passes on the file outcome it expects and the text it must hold", () => {
+// The shipped sample `DESIGN.md`, whose brand is Acme Ledger, with its primary color set.
+const SAMPLE_DESIGN_MD = readFileSync(
+  new URL(
+    "../../../assets/init/.qfai/assistant/skill/qfai-prototyping/templates/DESIGN.md.sample",
+    import.meta.url,
+  ),
+  "utf8",
+);
+const designText = (primary: string): string =>
+  SAMPLE_DESIGN_MD.replace(/^(\s*primary:\s*)"#[0-9A-Fa-f]{6}"/m, `$1"${primary}"`);
+
+function designRun(
+  seedId: string,
+  before: string | null,
+  after: string | null,
+  text: string | null,
+  ran: Partial<Pick<DesignRun, "exit" | "signal" | "engaged">> = {},
+): DesignRun {
+  return { seedId, before, after, text, exit: 0, signal: null, engaged: true, ...ran };
+}
+
+it("A design-authoring case passes on the file outcome it expects and the fields it must hold", () => {
+  const fields = { "visual.colors.primary": "#0F766E", "brand.name": "Acme Ledger" };
   const seeds = [
-    designSeed("DESIGN-901", { designMd: "changed", contains: ["#0F766E", "Acme Ledger"] }),
+    designSeed("DESIGN-901", { designMd: "changed", fields }),
     designSeed("DESIGN-902", { designMd: "unchanged" }),
     designSeed("DESIGN-903", { designMd: "absent" }),
-    designSeed("DESIGN-904", { designMd: "changed", contains: ["#0F766E"] }),
+    designSeed("DESIGN-904", { designMd: "changed", fields }),
     designSeed("DESIGN-905", { designMd: "unchanged" }),
     designSeed("DESIGN-906", { designMd: "absent" }),
   ];
   const runs = [
-    { seedId: "DESIGN-901", before: "a", after: "b", text: "primary: #0f766e\nname: Acme Ledger" },
-    { seedId: "DESIGN-902", before: "a", after: "a", text: "unchanged" },
-    { seedId: "DESIGN-903", before: null, after: null, text: null },
-    { seedId: "DESIGN-904", before: "a", after: "b", text: "primary: #FF7F50" },
-    { seedId: "DESIGN-905", before: "a", after: "b", text: "rewritten" },
+    designRun("DESIGN-901", "a", "b", designText("#0f766e")),
+    designRun("DESIGN-902", "a", "a", "unchanged"),
+    designRun("DESIGN-903", null, null, null),
+    designRun("DESIGN-904", "a", "b", designText("#FF7F50")),
+    designRun("DESIGN-905", "a", "b", "rewritten"),
   ];
 
   const scores = scoreDesignCases(seeds, runs);
@@ -318,7 +345,7 @@ it("A design-authoring case passes on the file outcome it expects and the text i
     ["DESIGN-901", "changed", [], true],
     ["DESIGN-902", "unchanged", [], true],
     ["DESIGN-903", "absent", [], true],
-    ["DESIGN-904", "changed", ["#0F766E"], false],
+    ["DESIGN-904", "changed", ["visual.colors.primary"], false],
     ["DESIGN-905", "changed", [], false],
     ["DESIGN-906", null, [], false],
   ]);
@@ -327,4 +354,25 @@ it("A design-authoring case passes on the file outcome it expects and the text i
     failures: ["DESIGN-904", "DESIGN-905", "DESIGN-906"],
   });
   expect(designVerdict(scores.slice(0, 3))).toEqual({ pass: true, failures: [] });
+});
+
+it("A design-authoring case fails where the host exited non-zero, on a signal, or never engaged", () => {
+  const seeds = ["DESIGN-911", "DESIGN-912", "DESIGN-913", "DESIGN-914", "DESIGN-915"].map((id) =>
+    designSeed(id, { designMd: id === "DESIGN-914" ? "absent" : "unchanged" }),
+  );
+  const runs = [
+    designRun("DESIGN-911", "a", "a", "kept", { exit: 1 }),
+    designRun("DESIGN-912", "a", "a", "kept", { exit: null, signal: "SIGTERM" }),
+    designRun("DESIGN-913", "a", "a", "kept", { engaged: false }),
+    designRun("DESIGN-914", null, null, null, { engaged: false }),
+    designRun("DESIGN-915", "a", "a", "kept"),
+  ];
+
+  expect(scoreDesignCases(seeds, runs).map(({ seedId, pass }) => [seedId, pass])).toEqual([
+    ["DESIGN-911", false],
+    ["DESIGN-912", false],
+    ["DESIGN-913", false],
+    ["DESIGN-914", false],
+    ["DESIGN-915", true],
+  ]);
 });

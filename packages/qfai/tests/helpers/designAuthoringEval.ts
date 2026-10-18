@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import { parseDesignMd } from "../../src/core/design/designMd.js";
 import type { FactOverlay, RoutingSeed } from "./routingEval.js";
 
 /**
@@ -18,19 +19,34 @@ export interface DesignSeed extends RoutingSeed {
   userPrompt: string;
   expected: {
     designMd: DesignOutcome;
-    // Text the resulting file must hold, compared without case: a value taken from the token
-    // source, or a brand field the change had to preserve.
-    contains?: string[];
+    // Front-matter fields the resulting file must hold, keyed by dotted path and compared without
+    // case: a value taken from the token source, or a brand field the change had to preserve.
+    fields?: Readonly<Record<string, string>>;
   };
   rationale: string;
 }
 
-// What the manual runner observed for one seed: the file's digests and its text after the run.
+const read = (value: unknown, key: string): unknown =>
+  typeof value === "object" && value !== null ? Reflect.get(value, key) : undefined;
+
+/** Whether a parsed seed line holds what a design-authoring seed needs. */
+export const isDesignSeed = (value: unknown): value is DesignSeed =>
+  typeof read(value, "id") === "string" &&
+  typeof read(value, "userPrompt") === "string" &&
+  typeof read(value, "expected") === "object" &&
+  read(value, "expected") !== null &&
+  typeof read(read(value, "expected"), "designMd") === "string";
+
+// What the manual runner observed for one seed: the file's digests and its text after the run,
+// how the host exited, and whether the session engaged, that is planned at least once.
 export interface DesignRun {
   seedId: string;
   before: string | null;
   after: string | null;
   text: string | null;
+  exit: number | null;
+  signal: string | null;
+  engaged: boolean;
 }
 
 export interface DesignCaseScore {
@@ -46,7 +62,28 @@ function outcomeOf(run: DesignRun): DesignOutcome {
   return run.before === run.after ? "unchanged" : "changed";
 }
 
-/** Scores each seed's run on the file outcome and the text it must hold. A seed with no run fails. */
+// The expected fields the file's front matter does not hold, or every one when it does not parse.
+function missingFields(text: string | null, fields: Readonly<Record<string, string>>): string[] {
+  const keys = Object.keys(fields);
+  const parsed = text === null ? null : parseDesignMd(text);
+  if (parsed === null || "error" in parsed) return keys;
+  return keys.filter((key) => {
+    const value = key.split(".").reduce<unknown>((at, part) => read(at, part), parsed.data);
+    return typeof value !== "string" || value.toLowerCase() !== (fields[key] ?? "").toLowerCase();
+  });
+}
+
+// A host that exited non-zero or on a signal fails its case, and an outcome that writes nothing
+// passes only where the session engaged, so a host that stopped at once proves nothing.
+function ranCleanly(run: DesignRun, outcome: DesignOutcome): boolean {
+  if (run.exit !== 0 || run.signal !== null) return false;
+  return outcome === "unchanged" || outcome === "absent" ? run.engaged : true;
+}
+
+/**
+ * Scores each seed's run on the file outcome, the fields it must hold and how the host ran. A seed
+ * with no run fails.
+ */
 export function scoreDesignCases(
   seeds: readonly DesignSeed[],
   runs: readonly DesignRun[],
@@ -54,18 +91,16 @@ export function scoreDesignCases(
   return seeds.map((seed) => {
     const run = runs.find((each) => each.seedId === seed.id);
     if (!run) {
-      return { seedId: seed.id, outcome: null, missing: seed.expected.contains ?? [], pass: false };
+      const missing = Object.keys(seed.expected.fields ?? {});
+      return { seedId: seed.id, outcome: null, missing, pass: false };
     }
-    const text = (run.text ?? "").toLowerCase();
-    const missing = (seed.expected.contains ?? []).filter(
-      (each) => !text.includes(each.toLowerCase()),
-    );
+    const missing = seed.expected.fields ? missingFields(run.text, seed.expected.fields) : [];
     const outcome = outcomeOf(run);
     return {
       seedId: seed.id,
       outcome,
       missing,
-      pass: outcome === seed.expected.designMd && missing.length === 0,
+      pass: outcome === seed.expected.designMd && missing.length === 0 && ranCleanly(run, outcome),
     };
   });
 }

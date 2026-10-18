@@ -29,6 +29,7 @@ import {
   DESIGN_MD,
   DESIGN_OUTCOMES,
   DESIGN_OVERLAYS,
+  isDesignSeed,
   type DesignSeed,
 } from "../../helpers/designAuthoringEval.js";
 import {
@@ -634,7 +635,7 @@ it("A record where every seed lands as expected passes, and one security seed on
 
 async function designSeeds(): Promise<DesignSeed[]> {
   const lines = (await fixtureText("design-authoring-seeds.jsonl")).split("\n").filter(Boolean);
-  return lines.map((line): DesignSeed => JSON.parse(line));
+  return lines.map((line): unknown => JSON.parse(line)).filter(isDesignSeed);
 }
 
 // What the root DESIGN.md of a built fixture is, before any host runs: an authored file must

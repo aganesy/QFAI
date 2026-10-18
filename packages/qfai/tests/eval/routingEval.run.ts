@@ -18,8 +18,9 @@
  * the local launcher installed; a route evaluation seed runs on the base as it is. The runner
  * reads what each run recorded, scores every case and writes the eval record to
  * `tests/eval/records/<host>-<version>.json`. A design-authoring seed is scored on the root
- * `DESIGN.md` the run leaves, with its digests before and after the run in the record. A failing
- * route evaluation or design-authoring case blocks the verdict.
+ * `DESIGN.md` the run leaves, with its digests before and after the run, the host's exit and
+ * whether the session planned in the record. A failing route evaluation or design-authoring case
+ * blocks the verdict.
  */
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -35,6 +36,7 @@ import {
   DESIGN_MD,
   DESIGN_OVERLAYS,
   designVerdict,
+  isDesignSeed,
   scoreDesignCases,
   type DesignRun,
   type DesignSeed,
@@ -185,11 +187,11 @@ async function observeRoutes(root: string, seedId: string): Promise<RouteRun> {
 }
 
 // Runs the host on `prompt` in `root`, which holds a committed fixture.
-function spawnHost(root: string, prompt: string, argv: string[]): number {
+function spawnHost(root: string, prompt: string, argv: string[]) {
   const [command = "", ...args] = argv.map((each) => (each === "{prompt}" ? prompt : each));
   const started = Date.now();
-  runHost(command, args, root);
-  return Date.now() - started;
+  const exit = runHost(command, args, root);
+  return { wallClockMs: Date.now() - started, ...exit };
 }
 
 async function inTempCopy<T>(baseRoot: string, act: (root: string) => Promise<T>): Promise<T> {
@@ -211,7 +213,7 @@ async function runSeed(baseRoot: string, seed: Seed, argv: string[]) {
       throw error;
     }
     commit(root);
-    const wallClockMs = spawnHost(root, seed.userPrompt, argv);
+    const { wallClockMs } = spawnHost(root, seed.userPrompt, argv);
     return { wallClockMs, ...(await observe(root, seed.id)) };
   });
 }
@@ -251,14 +253,19 @@ async function routeEval(baseRoot: string, argv: string[]) {
   };
 }
 
-const isDesignSeed = (value: unknown): value is DesignSeed =>
-  typeof read(value, "userPrompt") === "string" && typeof read(value, "expected") === "object";
+const isMissing = (error: unknown): boolean => read(error, "code") === "ENOENT";
 
-// The root `DESIGN.md`: its sha256 digest and its text, or `null` for both when it is absent.
+// The root `DESIGN.md`: the sha256 digest of its bytes and its text, or `null` for both when it
+// is absent. Any other read error stops the eval.
 async function designFile(root: string): Promise<{ digest: string | null; text: string | null }> {
-  const text = await readFile(path.join(root, DESIGN_MD), "utf8").catch(() => null);
-  const digest = text === null ? null : createHash("sha256").update(text).digest("hex");
-  return { digest, text };
+  let bytes: Buffer;
+  try {
+    bytes = await readFile(path.join(root, DESIGN_MD));
+  } catch (error) {
+    if (isMissing(error)) return { digest: null, text: null };
+    throw error;
+  }
+  return { digest: createHash("sha256").update(bytes).digest("hex"), text: bytes.toString("utf8") };
 }
 
 async function runDesignSeed(baseRoot: string, seed: DesignSeed, argv: string[]) {
@@ -266,21 +273,43 @@ async function runDesignSeed(baseRoot: string, seed: DesignSeed, argv: string[])
     await buildSeedFixture(root, seed, DESIGN_OVERLAYS);
     commit(root);
     const before = await designFile(root);
-    spawnHost(root, seed.userPrompt, argv);
+    const { status, signal } = spawnHost(root, seed.userPrompt, argv);
     const after = await designFile(root);
-    return { seedId: seed.id, before: before.digest, after: after.digest, text: after.text };
+    const engaged = (await planDocuments(root)).length > 0;
+    return {
+      seedId: seed.id,
+      before: before.digest,
+      after: after.digest,
+      text: after.text,
+      exit: status,
+      signal,
+      engaged,
+    };
   });
 }
 
 // Scores every design-authoring seed on the file its run left.
 async function designEval(baseRoot: string, argv: string[]) {
   const seedText = await readFile(path.join(FIXTURES, "design-authoring-seeds.jsonl"), "utf8");
-  const seeds = jsonLines(seedText).filter(isDesignSeed);
+  const lines = jsonLines(seedText);
+  const seeds = lines.filter(isDesignSeed);
+  if (seeds.length !== lines.length) {
+    throw new Error(
+      "A design-authoring seed line lacks an id, a userPrompt or an expected outcome",
+    );
+  }
   const runs: DesignRun[] = [];
   for (const seed of seeds) runs.push(await runDesignSeed(baseRoot, seed, argv));
   const cases = scoreDesignCases(seeds, runs).map((score) => {
     const run = runs.find((each) => each.seedId === score.seedId);
-    return { ...score, before: run?.before ?? null, after: run?.after ?? null };
+    return {
+      ...score,
+      before: run?.before ?? null,
+      after: run?.after ?? null,
+      exit: run?.exit ?? null,
+      signal: run?.signal ?? null,
+      engaged: run?.engaged ?? false,
+    };
   });
   return { verdict: designVerdict(cases), cases };
 }
