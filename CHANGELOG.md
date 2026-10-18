@@ -35,6 +35,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `No newline at end of file`. The file now ends with exactly one newline.
   Fixes #3748.
 
+- **`implement-tdd` says where a UI test's annotations go.** Its UI paragraph
+  now says a component test carries only `QFAI:EX` annotations, a UI acceptance
+  criterion's `QFAI:AC` annotation goes in an integration or API test, and a
+  flow's `QFAI:BF` in an E2E test. The layer rule no longer surfaces first as a
+  `QFAI-STORY-007` error after the tests are written. Fixes #3796.
+
 - **The Markdown-schema check no longer reports `0 file(s) conform`.** When no
   spec or contract document is in scope, for example when only operational
   Markdown outside the story tree changed, it now says that nothing was checked,

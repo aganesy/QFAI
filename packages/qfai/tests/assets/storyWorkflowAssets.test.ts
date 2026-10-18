@@ -63,6 +63,13 @@ describe("story-tree acceptance and implementation assets", () => {
     expect(gatekeeper).toContain("For UI work, inspect the rendered surface");
   });
 
+  it("names the layers a UI test's annotations belong in where UI work is implemented", async () => {
+    const tdd = (await read("step/implement-tdd/STEP.md")).replace(/\s+/g, " ");
+    expect(tdd).toContain(
+      "A component test carries only `QFAI:EX` annotations: a UI acceptance criterion's `QFAI:AC` annotation goes in an integration or API test, and a flow's `QFAI:BF` annotation in an E2E test, as `.qfai/assistant/rule/test-layers.md#annotation-routing` states.",
+    );
+  });
+
   it("rejects a load error and proves RED came from the selected assertion", async () => {
     const admissibility = await read("skill/qfai-implement/references/red-admissibility.md");
     expect(admissibility).toContain("one example and one test selector");
