@@ -21,6 +21,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   directory that cannot be listed. The check still stops and still treats the register
   as unverified. Fixes #3628 and #3743.
 
+- **A new example's citing rule is owed before the final gate.** `sdd-story`
+  now has the stage report name, for each example it adds, the contract rule
+  that will cite it or the contract that needs a new one. `sdd-contract` no
+  longer passes while an example is cited by no rule, so an uncited example
+  shows before the spec review instead of as `QFAI-STORY-005` at the end.
+  Fixes #3784.
+
 ### Fixed
 
 - **An uncited example's finding says where the citation goes.** `QFAI-STORY-005`
