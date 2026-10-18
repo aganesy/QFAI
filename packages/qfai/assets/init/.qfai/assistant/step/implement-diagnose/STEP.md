@@ -71,7 +71,11 @@ test that should have caught it, before any production code changes:
    `implement-tdd`, which appends the EX and annotates the test.
 2. Run that test alone and observe its assertion fail for the reported
    behaviour (Red). A load error, a missing dependency or a broken fixture is
-   not a Red.
+   not a Red. Where the Test entry of the Standard commands is
+   `CI only: <check name>`, do not run it: record `red: ci-deferred`, as
+   `.qfai/assistant/skill/qfai-implement/references/red-admissibility.md#ci-only-test-gate`
+   states, and the route's code review reads the test against the code
+   before the fix.
 3. Record the test path, the command and the failure in the stage report.
 
 A verdict that moves the work to another route leaves no new test behind:
@@ -125,5 +129,6 @@ Inside a workflow run, the result carries:
 
 The step is done when one verdict is recorded with the observation that
 supports it, and no tracked file changed but the failing test. That
-observation is the reproduction: on a `fix` route the test's observed Red, and
+observation is the reproduction: on a `fix` route the test's observed Red, or
+its `ci-deferred` Red where the Test entry is `CI only: <check name>`, and
 for `needs-info` the attempts that could not reproduce it.
