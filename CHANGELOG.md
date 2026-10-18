@@ -17,6 +17,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   drops from about 36 KB to about 21 KB with the same values and wording.
   Fixes #3780.
 
+- **A failed launcher preflight stops every `npx qfai` call, not only gates.**
+  The shared baseline's launcher rules now name every `npx qfai` call, gates
+  included, and say a passed preflight holds per checkout until its
+  `node_modules` is gone or a merge changes the lockfile or `package.json`.
+  Fixes #3818.
+
 - **The Markdown-schema check names the filesystem failure it met in the decision
   register.** When it cannot inspect a register path, read a register document or
   list the decision pages, the finding now carries the failure code, so a denied
