@@ -290,7 +290,7 @@ describe("qfai-run", () => {
     );
     // The step that calls `plan` runs the preflight itself, so `plan` cannot come first.
     expect(flat(extract ?? "")).toContain(
-      "Then run the launcher preflight above; once it holds, pass the extraction to `npx qfai workflow plan --in <file>`",
+      "Then run the launcher preflight above; after it passes, hand the extraction to `npx qfai workflow plan --in <file>`",
     );
 
     const guide = flat(screens);
