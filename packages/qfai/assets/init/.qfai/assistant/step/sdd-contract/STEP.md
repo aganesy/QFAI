@@ -112,3 +112,7 @@ Read first: the triage decisions, the examples `sdd-story` wrote or kept, and th
 contracts whose rules cite them. The step passes when the change writes no BR
 and changes no contract or `contracts.md` row. The pass names the contracts it
 read.
+
+A pass is refused while an example `sdd-story` wrote or kept is cited by no
+BR, an example this run added included: that example is owed a rule, which
+this step writes.

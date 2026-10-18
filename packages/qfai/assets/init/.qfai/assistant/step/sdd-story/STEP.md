@@ -60,6 +60,9 @@ states.
 4. Give each EX exactly one existing AC in its `AC-Ref` cell, and give each AC
    at least one EX. `Input` and `Expected` hold plain values, not Gherkin
    steps.
+   For each EX added, name in the stage report the contract rule that will
+   cite it, or the contract that needs a new rule for it. `sdd-contract`
+   writes the rule.
 5. Preserve normal outcomes and meaningful failure boundaries.
 6. Follow `.qfai/assistant/skill/qfai-sdd/references/spec-traceability-rules.md`
    and `.qfai/assistant/rule/test-layers.md` when deriving the later BF/E2E,

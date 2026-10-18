@@ -104,6 +104,18 @@ describe("a step that may pass with evidence", () => {
     expect(triage).toMatch(/record the owner/i);
   });
 
+  // QFAI:AC-0001-0216-04
+  // QFAI:EX-0001-0216-08
+  it("has sdd-story name the rule each new example is owed, and refuses an sdd-contract pass while one is uncited", async () => {
+    const story = flat(sectionOf(await readShipped("step/sdd-story/STEP.md"), "## Procedure"));
+    expect(story).toMatch(
+      /for each EX added, name in the stage report the contract rule that will cite it, or the contract that needs a new rule for it\. `sdd-contract` writes the rule/i,
+    );
+    expect(await passesWhen("sdd-contract")).toMatch(
+      /a pass is refused while an example `sdd-story` wrote or kept is cited by no BR, an example this run added included/i,
+    );
+  });
+
   // QFAI:AC-0001-0186-01
   // QFAI:EX-0001-0186-11
   it("has implement-tdd append nothing where an example states the case, and annotate the failing test with it", async () => {
