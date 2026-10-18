@@ -162,11 +162,12 @@ describe("shipped assistant docs invoke qfai through the canonical launcher", ()
         "**Launcher preflight — run once, before the first `npx qfai` call**, a gate or a run's `workflow plan` alike.",
       );
       expect(content).not.toContain("run once, before the first gate");
+      expect(content).toContain("every `npx qfai` call, gates included, is UNRUN");
       expect(content).toContain(
         "**`node_modules` without `.bin/qfai`.** An interrupted install: run it again, then the preflight.",
       );
       expect(content).toContain(
-        "After a base-branch merge, install again only when it changed the lockfile or `package.json`.",
+        "In a checkout whose preflight passed, install again only when its `node_modules` is gone or a merge changed the lockfile or `package.json`.",
       );
     }
   });
