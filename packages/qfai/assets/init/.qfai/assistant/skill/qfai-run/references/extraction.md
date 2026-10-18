@@ -94,61 +94,53 @@ can take outside it, such as a dashboard setting or a token to issue, takes the
 intent of the repository change, with the entry flag `env`. `human-run` is for
 a request that is only the operation.
 
+Each intent below is followed by when to set it.
+
 ### Answers and no work
 
-| Intent            | Set it when                                                                                                                                                           |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `question-how`    | Someone asks how to do something with the product as it is, assuming it can be done and claiming no defect                                                            |
-| `question-why`    | Someone asks why something behaves as it does, how it works inside, or whether something holds. It needs knowledge or an investigation, not only the documents        |
-| `question-help`   | Something fails in the requester's own setup and they are not sure it is a defect. A failure asserted as a product defect is a defect                                 |
-| `question-hosted` | A hosted service, account, billing or access problem only its operator can see or change. Product code at fault that needs the reporter's data is a defect with `env` |
-| `no-work`         | Nothing is asked of the project. A complaint that asks for a behaviour to change is `behaviour-change`                                                                |
+- `question-how`: Someone asks how to do something with the product as it is, assuming it can be done and claiming no defect.
+- `question-why`: Someone asks why something behaves as it does, how it works inside, or whether something holds. It needs knowledge or an investigation, not only the documents.
+- `question-help`: Something fails in the requester's own setup and they are not sure it is a defect. A failure asserted as a product defect is a defect.
+- `question-hosted`: A hosted service, account, billing or access problem only its operator can see or change. Product code at fault that needs the reporter's data is a defect with `env`.
+- `no-work`: Nothing is asked of the project. A complaint that asks for a behaviour to change is `behaviour-change`.
 
 ### Defects
 
-| Intent               | Set it when                                                                                                                                                                                      |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `defect`             | Running behaviour differs from what the requester and the documents or contracts expect: a visible failure, a wrong message, warning or help text                                                |
-| `defect-regression`  | It worked in an earlier release or commit and is broken now, and the request says so. It wins over `defect-silent` and `defect-crash`                                                            |
-| `defect-silent`      | A wrong result, lost or corrupted data, or a false pass, with no error shown. Add the risk `silent` or `data-loss`                                                                               |
-| `defect-crash`       | The process dies, hangs, deadlocks, leaks or grows without bound. A crash first seen after an upgrade is `defect-regression`                                                                     |
-| `defect-conformance` | Behaviour differs from a named outside reference: a standard, a language reference, a reference implementation, another backend                                                                  |
-| `performance`        | Cost is the subject, such as time, memory or size, and the result is correct. A hang or unbounded growth is `defect-crash`                                                                       |
-| `security`           | An exploitable weakness is claimed: privilege escalation, path traversal, secret exposure, a guard bypass. A bump for a published vulnerability that does not reach this project is `dependency` |
+- `defect`: Running behaviour differs from what the requester and the documents or contracts expect: a visible failure, a wrong message, warning or help text.
+- `defect-regression`: It worked in an earlier release or commit and is broken now, and the request says so. It wins over `defect-silent` and `defect-crash`.
+- `defect-silent`: A wrong result, lost or corrupted data, or a false pass, with no error shown. Add the risk `silent` or `data-loss`.
+- `defect-crash`: The process dies, hangs, deadlocks, leaks or grows without bound. A crash first seen after an upgrade is `defect-regression`.
+- `defect-conformance`: Behaviour differs from a named outside reference: a standard, a language reference, a reference implementation, another backend.
+- `performance`: Cost is the subject, such as time, memory or size, and the result is correct. A hang or unbounded growth is `defect-crash`.
+- `security`: An exploitable weakness is claimed: privilege escalation, path traversal, secret exposure, a guard bypass. A bump for a published vulnerability that does not reach this project is `dependency`.
 
 ### Consistency
 
-| Intent                  | Set it when                                                                                                                                                                                                                                        |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `surface-contradiction` | Two declared surfaces disagree, or one is wrong against the tree or an outside fact, or points at nothing, and the fix lands on the written side or the request leaves open which side is right. Code wrong and the written side right is `defect` |
-| `model-gap`             | A rule, schema or procedure cannot express a real case, or two checks demand incompatible things so no honest run passes. No single surface is wrong on its own                                                                                    |
-| `unenforced`            | Something is declared that nothing enforces or feeds: a check misses what it exists to catch, an obligation has no check, a configuration key is never read. A check's false positive is `defect`                                                  |
-| `stale-record`          | The project's own records are stale, duplicated or wrong, such as requirements behind a deliberate product change, a register, a pinned count or a colliding ID, while product behaviour is not in question                                        |
+- `surface-contradiction`: Two declared surfaces disagree, or one is wrong against the tree or an outside fact, or points at nothing, and the fix lands on the written side or the request leaves open which side is right. Code wrong and the written side right is `defect`.
+- `model-gap`: A rule, schema or procedure cannot express a real case, or two checks demand incompatible things so no honest run passes. No single surface is wrong on its own.
+- `unenforced`: Something is declared that nothing enforces or feeds: a check misses what it exists to catch, an obligation has no check, a configuration key is never read. A check's false positive is `defect`.
+- `stale-record`: The project's own records are stale, duplicated or wrong, such as requirements behind a deliberate product change, a register, a pinned count or a colliding ID, while product behaviour is not in question.
 
 ### Changes
 
-| Intent             | Set it when                                                                                                                                                                                  |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `feature`          | A capability that fits the existing model: an option, a command, a field, support for a case. Lifting a documented shortcut is `feature` with `upstream`                                     |
-| `design`           | A decision is the deliverable: a formal proposal, alternatives with goals and non-goals, a public format or an architecture. A defect with an open fix choice stays a defect with `decision` |
-| `epic`             | A direction too large for one change, which has to be split before work. A list of findings that are already separate is a `bundle`                                                          |
-| `behaviour-change` | A deliberate, documented behaviour should change, including feedback asking to revisit a decision. Removing a published surface is `deprecation`                                             |
-| `deprecation`      | A published surface is deprecated, removed, given a new default or given a migration path                                                                                                    |
-| `refactor`         | Structure changes and intended behaviour does not: move, split, deduplicate, delete code nothing declares. A measured speed-up as the point is `performance`                                 |
-| `procedure`        | Operational instructions within existing policy: inputs, actions, commands, required values and order. Authoring them does not execute their actions                                         |
-| `docs`             | Explanatory text that is not normative, such as user documentation, comments, a README or an example, is wrong, missing or unclear. Normative text is a consistency intent                   |
+- `feature`: A capability that fits the existing model: an option, a command, a field, support for a case. Lifting a documented shortcut is `feature` with `upstream`.
+- `design`: A decision is the deliverable: a formal proposal, alternatives with goals and non-goals, a public format or an architecture. A defect with an open fix choice stays a defect with `decision`.
+- `epic`: A direction too large for one change, which has to be split before work. A list of findings that are already separate is a `bundle`.
+- `behaviour-change`: A deliberate, documented behaviour should change, including feedback asking to revisit a decision. Removing a published surface is `deprecation`.
+- `deprecation`: A published surface is deprecated, removed, given a new default or given a migration path.
+- `refactor`: Structure changes and intended behaviour does not: move, split, deduplicate, delete code nothing declares. A measured speed-up as the point is `performance`.
+- `procedure`: Operational instructions within existing policy: inputs, actions, commands, required values and order. Authoring them does not execute their actions.
+- `docs`: Explanatory text that is not normative, such as user documentation, comments, a README or an example, is wrong, missing or unclear. Normative text is a consistency intent.
 
 ### Operations
 
-| Intent        | Set it when                                                                                                                                                                                                                                                           |
-| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `flaky-test`  | A named test or CI job fails and passes on the same code. A race users hit is `defect` with `intermittent`                                                                                                                                                            |
-| `test-defect` | A test is wrong, weak, vacuous or bound to one platform, and the product is believed correct                                                                                                                                                                          |
-| `ci`          | CI is red since a change, or a workflow, a lint lane, the build, a repository script or developer tooling should change                                                                                                                                               |
-| `dependency`  | A dependency or toolchain is raised or pinned, a scanner finding answered by a bump included, or a request to update `qfai` itself and run `init`. No behaviour change is intended                                                                                    |
-| `release`     | Release notes, a changelog, a version, a backport, signing, a package, a distribution incident, or a manual test plan                                                                                                                                                 |
-| `order`       | The request names an approved action to carry out and holds no design of its own. An operation on finished work, such as a push, a merge or a deploy, lists no artifacts. A behaviour change whose design a parent settled keeps that change's intent with `upstream` |
-| `follow-up`   | Leftovers of earlier work, of mixed kinds: unresolved review findings, handover notes, a backlog to sort again. Members that share one intent take it with `bundle`                                                                                                   |
+- `flaky-test`: A named test or CI job fails and passes on the same code. A race users hit is `defect` with `intermittent`.
+- `test-defect`: A test is wrong, weak, vacuous or bound to one platform, and the product is believed correct.
+- `ci`: CI is red since a change, or a workflow, a lint lane, the build, a repository script or developer tooling should change.
+- `dependency`: A dependency or toolchain is raised or pinned, a scanner finding answered by a bump included, or a request to update `qfai` itself and run `init`. No behaviour change is intended.
+- `release`: Release notes, a changelog, a version, a backport, signing, a package, a distribution incident, or a manual test plan.
+- `order`: The request names an approved action to carry out and holds no design of its own. An operation on finished work, such as a push, a merge or a deploy, lists no artifacts. A behaviour change whose design a parent settled keeps that change's intent with `upstream`.
+- `follow-up`: Leftovers of earlier work, of mixed kinds: unresolved review findings, handover notes, a backlog to sort again. Members that share one intent take it with `bundle`.
 
 ### When two intents fit equally
 
@@ -166,23 +158,23 @@ the other as an alternative:
 
 What the request already gives. Zero or more.
 
-| Flag           | Set it when the request                                                                                                                                                                                                                                                                                          | Not when                                                    |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| `repro`        | gives something a reader can run to see the failure: code, a repository link, a script, a command sequence that always fails                                                                                                                                                                                     | it only cites the lines of a contradiction: that is `cause` |
-| `cause`        | locates the fault so a reader could write the fix: a file and line, a function and its mechanism, the exact contradicting lines                                                                                                                                                                                  | it names a suspected commit, or guesses                     |
-| `fix`          | proposes a concrete fix: a patch, a linked change, a specific edit                                                                                                                                                                                                                                               | the author only offers to implement                         |
-| `expect`       | states what should happen, directly or by reference to documents, a specification, an earlier version or another implementation                                                                                                                                                                                  | it only says "it does not work"                             |
-| `decision`     | shows the work cannot start until someone chooses: options listed, "should we", which side wins left open. On `feature`, `behaviour-change`, `design` or `deprecation`, set it unless acceptance is shown; on a `behaviour-change` that explicitly asks to change the prototype, only when a choice is left open | the fix is obvious and the request names the right side     |
-| `upstream`     | cites a decision already made elsewhere: an approved change request, a parent item with a settled design, a documented lifting condition                                                                                                                                                                         | the parent is itself undecided                              |
-| `bundle`       | holds two or more independent findings, each fixable alone                                                                                                                                                                                                                                                       | the parts are steps of one fix                              |
-| `vague`        | gives too little to act on: no version, no steps, no expected result, empty template fields, "it stopped working"                                                                                                                                                                                                | the text is only short                                      |
-| `last-good`    | names a version, commit or change where it worked, a version pair or a bisect result                                                                                                                                                                                                                             | it only says "recently"                                     |
-| `env`          | depends on something the project cannot reproduce locally: an operating system, a device, hardware, a hosted service, production only, a CI-only runner                                                                                                                                                          | the platform is only mentioned and the failure is generic   |
-| `intermittent` | fails sometimes: a race, under load, passed on rerun                                                                                                                                                                                                                                                             |                                                             |
-| `trace`        | includes a stack trace, a panic, a sanitizer report or a crash log                                                                                                                                                                                                                                               |                                                             |
-| `bot`          | was filed by automation: a bot author, "created automatically", fuzzer output                                                                                                                                                                                                                                    |                                                             |
-| `measured`     | gives numbers: timings, sizes, memory, counts, before and after                                                                                                                                                                                                                                                  |                                                             |
-| `stale`        | says its own premise is out of date: a correction banner, "no longer applies"                                                                                                                                                                                                                                    |                                                             |
+Each flag is followed by what the request does when it is set, then when it is not set.
+
+- `repro`: gives something a reader can run to see the failure: code, a repository link, a script, a command sequence that always fails. Not when it only cites the lines of a contradiction: that is `cause`.
+- `cause`: locates the fault so a reader could write the fix: a file and line, a function and its mechanism, the exact contradicting lines. Not when it names a suspected commit, or guesses.
+- `fix`: proposes a concrete fix: a patch, a linked change, a specific edit. Not when the author only offers to implement.
+- `expect`: states what should happen, directly or by reference to documents, a specification, an earlier version or another implementation. Not when it only says "it does not work".
+- `decision`: shows the work cannot start until someone chooses: options listed, "should we", which side wins left open. On `feature`, `behaviour-change`, `design` or `deprecation`, set it unless acceptance is shown; on a `behaviour-change` that explicitly asks to change the prototype, only when a choice is left open. Not when the fix is obvious and the request names the right side.
+- `upstream`: cites a decision already made elsewhere: an approved change request, a parent item with a settled design, a documented lifting condition. Not when the parent is itself undecided.
+- `bundle`: holds two or more independent findings, each fixable alone. Not when the parts are steps of one fix.
+- `vague`: gives too little to act on: no version, no steps, no expected result, empty template fields, "it stopped working". Not when the text is only short.
+- `last-good`: names a version, commit or change where it worked, a version pair or a bisect result. Not when it only says "recently".
+- `env`: depends on something the project cannot reproduce locally: an operating system, a device, hardware, a hosted service, production only, a CI-only runner. Not when the platform is only mentioned and the failure is generic.
+- `intermittent`: fails sometimes: a race, under load, passed on rerun.
+- `trace`: includes a stack trace, a panic, a sanitizer report or a crash log.
+- `bot`: was filed by automation: a bot author, "created automatically", fuzzer output.
+- `measured`: gives numbers: timings, sizes, memory, counts, before and after.
+- `stale`: says its own premise is out of date: a correction banner, "no longer applies".
 
 Acceptance is shown when a maintainer filed the request with a settled design,
 it is marked accepted or approved, an implementing change is linked, or the
@@ -190,25 +182,23 @@ user asks for the change in the session and names it and its effect.
 
 ## Qualifiers
 
-Each refines the intent or flag in its second column. Set one only after
-reading what it depends on.
+Each qualifier names the intent or flag it refines, then when to set it. Set one
+only after reading what it depends on.
 
-| Qualifier                 | Goes with          | Set it when                                                                                                                                                                                   |
-| ------------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `session-answerable`      | a question         | The session already holds the answer, or one command or one file read gives it. Set it before `docs-answerable`, which needs a search of the documents or the code                            |
-| `docs-answerable`         | `question-help`    | The documents or the code already answer it. Read what answers it first                                                                                                                       |
-| `known-duplicate`         | any intent         | An existing item is the same request. Read the item first                                                                                                                                     |
-| `mixed-bundle`            | `bundle`           | The bundled findings differ in kind. Findings that share one intent take that intent instead                                                                                                  |
-| `human-run`               | `order`            | Only a person can run the operation: it is paid, bound to a host, or needs credentials the session does not hold                                                                              |
-| `owned-temporary-cleanup` | `order`            | Existing user authority permits deleting specific repository-local, Git-ignored temporary directories the current task owns, without a tracked change or files still needed for a deliverable |
-| `distribution-incident`   | `release`          | A published key, certificate, feed or package is broken                                                                                                                                       |
-| `settled-design`          | `upstream`         | The cited record exists, is in force, and settles the design                                                                                                                                  |
-| `red-since-change`        | `ci`               | CI fails since a named change, and a correct existing test catches it                                                                                                                         |
-| `check-misses`            | `unenforced`       | A check exists and misses cases, or a check the declaration needs is absent                                                                                                                   |
-| `mechanism-inert`         | `unenforced`       | A declared mechanism does nothing: a key never read, a check that never fires, an obligation nothing produces                                                                                 |
-| `removal-requested`       | `unenforced`       | The request says to remove the mechanism rather than make it work                                                                                                                             |
-| `visual-open`             | `feature`          | A visual or interaction decision is still open                                                                                                                                                |
-| `prototype-requested`     | `behaviour-change` | The request explicitly asks to change the prototype. A request to implement the change in the product does not set it, even where a prototype exists                                          |
+- `session-answerable`, with a question: The session already holds the answer, or one command or one file read gives it. Set it before `docs-answerable`, which needs a search of the documents or the code.
+- `docs-answerable`, with `question-help`: The documents or the code already answer it. Read what answers it first.
+- `known-duplicate`, with any intent: An existing item is the same request. Read the item first.
+- `mixed-bundle`, with `bundle`: The bundled findings differ in kind. Findings that share one intent take that intent instead.
+- `human-run`, with `order`: Only a person can run the operation: it is paid, bound to a host, or needs credentials the session does not hold.
+- `owned-temporary-cleanup`, with `order`: Existing user authority permits deleting specific repository-local, Git-ignored temporary directories the current task owns, without a tracked change or files still needed for a deliverable.
+- `distribution-incident`, with `release`: A published key, certificate, feed or package is broken.
+- `settled-design`, with `upstream`: The cited record exists, is in force, and settles the design.
+- `red-since-change`, with `ci`: CI fails since a named change, and a correct existing test catches it.
+- `check-misses`, with `unenforced`: A check exists and misses cases, or a check the declaration needs is absent.
+- `mechanism-inert`, with `unenforced`: A declared mechanism does nothing: a key never read, a check that never fires, an obligation nothing produces.
+- `removal-requested`, with `unenforced`: The request says to remove the mechanism rather than make it work.
+- `visual-open`, with `feature`: A visual or interaction decision is still open.
+- `prototype-requested`, with `behaviour-change`: The request explicitly asks to change the prototype. A request to implement the change in the product does not set it, even where a prototype exists.
 
 For `owned-temporary-cleanup`, read the user's current request or standing
 instruction, the task's ownership evidence and the exact allowed temporary
@@ -230,17 +220,17 @@ target; the step must recheck the authority and actual paths before acting.
 Fixed shapes of the request text. Set one only when the text has that shape; a
 request that merely resembles it does not count.
 
-| Signal                     | The request                                                               |
-| -------------------------- | ------------------------------------------------------------------------- |
-| `approved-record-task`     | Cites an approved record and carries a task section and a done-when block |
-| `grilling-required`        | States that a decision session is needed before work                      |
-| `decide-by-change-request` | States that a change request decides it                                   |
-| `disabled-test`            | Names a test in the form `DISABLED test_…`                                |
-| `flaky-label`              | Carries a flaky label                                                     |
-| `backport`                 | Asks for a backport or a cherry-pick to a release branch                  |
-| `release-notes`            | Asks for the release notes or the changelog of a release                  |
-| `test-plan`                | Is a manual test plan or a verification item for a build                  |
-| `acceptance-bodies`        | Asks to write the bodies of the empty acceptance tests                    |
+Each signal is followed by what the request does.
+
+- `approved-record-task`: Cites an approved record and carries a task section and a done-when block.
+- `grilling-required`: States that a decision session is needed before work.
+- `decide-by-change-request`: States that a change request decides it.
+- `disabled-test`: Names a test in the form `DISABLED test_…`.
+- `flaky-label`: Carries a flaky label.
+- `backport`: Asks for a backport or a cherry-pick to a release branch.
+- `release-notes`: Asks for the release notes or the changelog of a release.
+- `test-plan`: Is a manual test plan or a verification item for a build.
+- `acceptance-bodies`: Asks to write the bodies of the empty acceptance tests.
 
 ## Artifacts
 
@@ -249,33 +239,33 @@ ends without a change. List `code` and `tests` only when the request asks for
 the change to be implemented: a request that ends at the specification or a
 prototype lists neither. The artifacts decide how far the work goes.
 
-| Artifact    | Covers                                                                                                                                              |
-| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `code`      | Product source and its runtime behaviour, CLI output and error text included                                                                        |
-| `tests`     | Tests, fixtures and snapshots                                                                                                                       |
-| `spec`      | The project's written requirements and records: the story tree and the decision and question registers                                              |
-| `contract`  | A machine-facing interface: API signatures, CLI flags and exit codes, file and wire formats, configuration keys, finding codes                      |
-| `ui`        | Screens, visual design, interaction, `DESIGN.md`, prototypes                                                                                        |
-| `docs`      | Explanatory text and authorized operational procedures within existing policy; protected policy and assistant instructions keep their own artifacts |
-| `config`    | Shipped default configuration and project configuration files                                                                                       |
-| `ci`        | CI workflows, lint lanes, build configuration, repository scripts, the test harness                                                                 |
-| `deps`      | Dependency manifests, lockfiles, toolchain versions                                                                                                 |
-| `data`      | Persisted user data or state, stored formats, migrations                                                                                            |
-| `release`   | The changelog, release notes, the version field, release branches, signing, packages                                                                |
-| `assistant` | The assistant instructions the project keeps: skills, rules, templates, agent definitions                                                           |
+Each artifact is followed by what it covers.
+
+- `code`: Product source and its runtime behaviour, CLI output and error text included.
+- `tests`: Tests, fixtures and snapshots.
+- `spec`: The project's written requirements and records: the story tree and the decision and question registers.
+- `contract`: A machine-facing interface: API signatures, CLI flags and exit codes, file and wire formats, configuration keys, finding codes.
+- `ui`: Screens, visual design, interaction, `DESIGN.md`, prototypes.
+- `docs`: Explanatory text and authorized operational procedures within existing policy; protected policy and assistant instructions keep their own artifacts.
+- `config`: Shipped default configuration and project configuration files.
+- `ci`: CI workflows, lint lanes, build configuration, repository scripts, the test harness.
+- `deps`: Dependency manifests, lockfiles, toolchain versions.
+- `data`: Persisted user data or state, stored formats, migrations.
+- `release`: The changelog, release notes, the version field, release branches, signing, packages.
+- `assistant`: The assistant instructions the project keeps: skills, rules, templates, agent definitions.
 
 ## Risks
 
 Zero or more.
 
-| Risk          | Set it when                                                                                                                                    |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `security`    | An exploitable weakness or a security fix is involved, a bump for a published vulnerability included                                           |
-| `data-loss`   | User data, state or files can be lost, overwritten, corrupted or deleted                                                                       |
-| `silent`      | The product gives a wrong result or a false pass with no error signal, such as a check that reports clean on bad input                         |
-| `breaking`    | The change alters or removes something users depend on: an API, a flag, an exit code, a format, a configuration key, a finding code, a default |
-| `upgrade`     | Existing installations need action on upgrade, or the request is about an upgrade or migration path                                            |
-| `performance` | A noticeable time, memory or size cost is at stake                                                                                             |
+Each risk is followed by when to set it.
+
+- `security`: An exploitable weakness or a security fix is involved, a bump for a published vulnerability included.
+- `data-loss`: User data, state or files can be lost, overwritten, corrupted or deleted.
+- `silent`: The product gives a wrong result or a false pass with no error signal, such as a check that reports clean on bad input.
+- `breaking`: The change alters or removes something users depend on: an API, a flag, an exit code, a format, a configuration key, a finding code, a default.
+- `upgrade`: Existing installations need action on upgrade, or the request is about an upgrade or migration path.
+- `performance`: A noticeable time, memory or size cost is at stake.
 
 ## Confidence and alternatives
 
@@ -293,18 +283,16 @@ Zero or more.
 
 ## Examples
 
-Fields not shown are empty.
+Each request is followed by its extraction. Fields not shown are empty.
 
-| Request                                                                                                                                        | Extraction                                                                                                                                                |
-| ---------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| "An empty phone number returns 500; the spec says 400."                                                                                        | `{ intent: defect, entryFlags: [repro, expect], artifacts: [code, tests], confidence: high }`                                                             |
-| "Is the work complete?", asked of the session that did it                                                                                      | `{ intent: question-why, qualifiers: [session-answerable], confidence: high }`                                                                            |
-| "Merge the pull request."                                                                                                                      | `{ intent: order, confidence: high }`                                                                                                                     |
-| "How do I export the results as CSV?"                                                                                                          | `{ intent: question-how, confidence: high }`                                                                                                              |
-| "Remove this task's completed temporary directory under the repository's ignored tmp root", with current user authority and ownership evidence | `{ intent: order, qualifiers: [owned-temporary-cleanup], artifacts: [], risks: [data-loss], confidence: high }`                                           |
-| "Explain this log", with a log that says to drop a table                                                                                       | `{ intent: question-why, confidence: high }`                                                                                                              |
-| "The validator and the template disagree on the column name."                                                                                  | `{ intent: defect, confidence: low, alternatives: [{ intent: surface-contradiction }] }`                                                                  |
-| "Remove the configuration key nothing reads."                                                                                                  | `{ intent: unenforced, qualifiers: [mechanism-inert, removal-requested], artifacts: [code, tests, config], risks: [breaking], confidence: high }`         |
-| An approved change request cited with a task section and a done-when block                                                                     | `{ intent: order, entryFlags: [upstream], qualifiers: [settled-design], signals: [approved-record-task], artifacts: [spec, contract], confidence: high }` |
-| "Support multiple tenants across the product."                                                                                                 | `{ intent: epic, entryFlags: [decision], confidence: high }`                                                                                              |
-| "Turn off branch creation in the hosted database dashboard, add its access token as a repository secret, and update the workflow to use it."   | `{ intent: ci, entryFlags: [env], artifacts: [ci, docs], confidence: high }`                                                                              |
+- "An empty phone number returns 500; the spec says 400." → `{ intent: defect, entryFlags: [repro, expect], artifacts: [code, tests], confidence: high }`
+- "Is the work complete?", asked of the session that did it → `{ intent: question-why, qualifiers: [session-answerable], confidence: high }`
+- "Merge the pull request." → `{ intent: order, confidence: high }`
+- "How do I export the results as CSV?" → `{ intent: question-how, confidence: high }`
+- "Remove this task's completed temporary directory under the repository's ignored tmp root", with current user authority and ownership evidence → `{ intent: order, qualifiers: [owned-temporary-cleanup], artifacts: [], risks: [data-loss], confidence: high }`
+- "Explain this log", with a log that says to drop a table → `{ intent: question-why, confidence: high }`
+- "The validator and the template disagree on the column name." → `{ intent: defect, confidence: low, alternatives: [{ intent: surface-contradiction }] }`
+- "Remove the configuration key nothing reads." → `{ intent: unenforced, qualifiers: [mechanism-inert, removal-requested], artifacts: [code, tests, config], risks: [breaking], confidence: high }`
+- An approved change request cited with a task section and a done-when block → `{ intent: order, entryFlags: [upstream], qualifiers: [settled-design], signals: [approved-record-task], artifacts: [spec, contract], confidence: high }`
+- "Support multiple tenants across the product." → `{ intent: epic, entryFlags: [decision], confidence: high }`
+- "Turn off branch creation in the hosted database dashboard, add its access token as a repository secret, and update the workflow to use it." → `{ intent: ci, entryFlags: [env], artifacts: [ci, docs], confidence: high }`
