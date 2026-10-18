@@ -1,6 +1,6 @@
 /**
- * The routing eval and the route evaluation, run by a maintainer against one host at release and
- * never by CI:
+ * The routing eval, the route evaluation and the design-authoring eval, run by a maintainer
+ * against one host at release and never by CI:
  *
  *   QFAI_EVAL_HOST=claude-code QFAI_EVAL_COMMAND='["claude", "-p", "{prompt}"]' \
  *     node node_modules/vitest/vitest.mjs run --config tests/eval/vitest.config.ts
@@ -17,9 +17,12 @@
  * `codex.exe`, not a `.cmd` shim. Each seed's fixture is built from one `qfai init` base with
  * the local launcher installed; a route evaluation seed runs on the base as it is. The runner
  * reads what each run recorded, scores every case and writes the eval record to
- * `tests/eval/records/<host>-<version>.json`. A failing route evaluation blocks the verdict.
+ * `tests/eval/records/<host>-<version>.json`. A design-authoring seed is scored on the root
+ * `DESIGN.md` the run leaves, with its digests before and after the run in the record. A failing
+ * route evaluation or design-authoring case blocks the verdict.
  */
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { cp, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -28,6 +31,14 @@ import { fileURLToPath } from "node:url";
 import { it } from "vitest";
 
 import { loadBuiltInPlans } from "../../src/core/workflow/plans.js";
+import {
+  DESIGN_MD,
+  DESIGN_OVERLAYS,
+  designVerdict,
+  scoreDesignCases,
+  type DesignRun,
+  type DesignSeed,
+} from "../helpers/designAuthoringEval.js";
 import {
   buildSeedFixture,
   evalRecordProblems,
@@ -240,6 +251,40 @@ async function routeEval(baseRoot: string, argv: string[]) {
   };
 }
 
+const isDesignSeed = (value: unknown): value is DesignSeed =>
+  typeof read(value, "userPrompt") === "string" && typeof read(value, "expected") === "object";
+
+// The root `DESIGN.md`: its sha256 digest and its text, or `null` for both when it is absent.
+async function designFile(root: string): Promise<{ digest: string | null; text: string | null }> {
+  const text = await readFile(path.join(root, DESIGN_MD), "utf8").catch(() => null);
+  const digest = text === null ? null : createHash("sha256").update(text).digest("hex");
+  return { digest, text };
+}
+
+async function runDesignSeed(baseRoot: string, seed: DesignSeed, argv: string[]) {
+  return inTempCopy(baseRoot, async (root): Promise<DesignRun> => {
+    await buildSeedFixture(root, seed, DESIGN_OVERLAYS);
+    commit(root);
+    const before = await designFile(root);
+    spawnHost(root, seed.userPrompt, argv);
+    const after = await designFile(root);
+    return { seedId: seed.id, before: before.digest, after: after.digest, text: after.text };
+  });
+}
+
+// Scores every design-authoring seed on the file its run left.
+async function designEval(baseRoot: string, argv: string[]) {
+  const seedText = await readFile(path.join(FIXTURES, "design-authoring-seeds.jsonl"), "utf8");
+  const seeds = jsonLines(seedText).filter(isDesignSeed);
+  const runs: DesignRun[] = [];
+  for (const seed of seeds) runs.push(await runDesignSeed(baseRoot, seed, argv));
+  const cases = scoreDesignCases(seeds, runs).map((score) => {
+    const run = runs.find((each) => each.seedId === score.seedId);
+    return { ...score, before: run?.before ?? null, after: run?.after ?? null };
+  });
+  return { verdict: designVerdict(cases), cases };
+}
+
 async function runEval(): Promise<void> {
   const { host, argv } = hostArgv();
   const seedText = await readFile(path.join(FIXTURES, "routing-seeds.jsonl"), "utf8");
@@ -252,9 +297,11 @@ async function runEval(): Promise<void> {
   const baseRoot = await base();
   const runs: Record<string, Awaited<ReturnType<typeof runSeed>>> = {};
   let routes: Awaited<ReturnType<typeof routeEval>>;
+  let design: Awaited<ReturnType<typeof designEval>>;
   try {
     for (const seed of seeds) runs[seed.id] = await runSeed(baseRoot, seed, argv);
     routes = await routeEval(baseRoot, argv);
+    design = await designEval(baseRoot, argv);
   } finally {
     await removeTempTree(baseRoot);
   }
@@ -277,9 +324,13 @@ async function runEval(): Promise<void> {
     host,
     version,
     safetyList,
-    verdict: { ...verdict, blocked: verdict.blocked || !routes.verdict.pass },
+    verdict: {
+      ...verdict,
+      blocked: verdict.blocked || !routes.verdict.pass || !design.verdict.pass,
+    },
     cases,
     routes,
+    design,
   };
   const problems = evalRecordProblems(record);
   if (problems.length > 0) throw new Error(`The eval record is incomplete: ${problems.join(", ")}`);
@@ -290,4 +341,7 @@ async function runEval(): Promise<void> {
   );
 }
 
-it("runs the routing eval and the route evaluation against one host", runEval);
+it(
+  "runs the routing eval, the route evaluation and the design-authoring eval against one host",
+  runEval,
+);

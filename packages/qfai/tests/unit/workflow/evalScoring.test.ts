@@ -4,6 +4,11 @@ import { expect, it } from "vitest";
 
 import type { WorkflowPlanFile } from "../../../src/core/workflow/plans.js";
 import {
+  designVerdict,
+  scoreDesignCases,
+  type DesignSeed,
+} from "../../helpers/designAuthoringEval.js";
+import {
   evalRecordProblems,
   isSafetyRelevant,
   releaseVerdict,
@@ -282,4 +287,44 @@ it("A re-routing seed passes only where the run ends at its declared destination
   const verdict = routeEvalVerdict(seeds, scoreRouteSeeds(seeds, runs, PLANS));
 
   expect([verdict.rerouteMisses, verdict.pass]).toEqual([["SEED-921"], false]);
+});
+
+function designSeed(id: string, expected: DesignSeed["expected"]): DesignSeed {
+  return { id, userPrompt: "Author DESIGN.md.", repoFacts: {}, expected, rationale: "A case." };
+}
+
+it("A design-authoring case passes on the file outcome it expects and the text it must hold", () => {
+  const seeds = [
+    designSeed("DESIGN-901", { designMd: "changed", contains: ["#0F766E", "Acme Ledger"] }),
+    designSeed("DESIGN-902", { designMd: "unchanged" }),
+    designSeed("DESIGN-903", { designMd: "absent" }),
+    designSeed("DESIGN-904", { designMd: "changed", contains: ["#0F766E"] }),
+    designSeed("DESIGN-905", { designMd: "unchanged" }),
+    designSeed("DESIGN-906", { designMd: "absent" }),
+  ];
+  const runs = [
+    { seedId: "DESIGN-901", before: "a", after: "b", text: "primary: #0f766e\nname: Acme Ledger" },
+    { seedId: "DESIGN-902", before: "a", after: "a", text: "unchanged" },
+    { seedId: "DESIGN-903", before: null, after: null, text: null },
+    { seedId: "DESIGN-904", before: "a", after: "b", text: "primary: #FF7F50" },
+    { seedId: "DESIGN-905", before: "a", after: "b", text: "rewritten" },
+  ];
+
+  const scores = scoreDesignCases(seeds, runs);
+
+  expect(
+    scores.map(({ seedId, outcome, missing, pass }) => [seedId, outcome, missing, pass]),
+  ).toEqual([
+    ["DESIGN-901", "changed", [], true],
+    ["DESIGN-902", "unchanged", [], true],
+    ["DESIGN-903", "absent", [], true],
+    ["DESIGN-904", "changed", ["#0F766E"], false],
+    ["DESIGN-905", "changed", [], false],
+    ["DESIGN-906", null, [], false],
+  ]);
+  expect(designVerdict(scores)).toEqual({
+    pass: false,
+    failures: ["DESIGN-904", "DESIGN-905", "DESIGN-906"],
+  });
+  expect(designVerdict(scores.slice(0, 3))).toEqual({ pass: true, failures: [] });
 });
