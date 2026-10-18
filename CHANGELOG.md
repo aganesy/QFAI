@@ -11,6 +11,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   results instead, so a review no longer loads the machine while the run's own
   gate is running. Fixes #3695.
 
+- **The `qfai-run` extraction reference fits one read.** Its intent, flag,
+  qualifier, signal, artifact, risk and example tables are now one-line lists,
+  so the padding of the widest row no longer repeats on every row. The file
+  drops from about 36 KB to about 21 KB with the same values and wording.
+  Fixes #3780.
+
 - **The Markdown-schema check names the filesystem failure it met in the decision
   register.** When it cannot inspect a register path, read a register document or
   list the decision pages, the finding now carries the failure code, so a denied

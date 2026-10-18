@@ -190,13 +190,18 @@ const EXTRACTION_SECTIONS: Record<string, string> = {
   confidence: "## Confidence and alternatives",
 };
 
-// The code-spanned value opening each table row of a section, sorted.
+// The code-spanned value opening each list item or table row of a section, sorted.
 function firstCells(section: string): string[] {
   return section
     .split("\n")
-    .map((line) => /^\| `([^`]+)` /.exec(line)?.[1])
+    .map((line) => /^(?:- |\| )`([^`]+)`[ :,]/.exec(line)?.[1])
     .filter((value): value is string => value !== undefined)
     .sort();
+}
+
+// The list item of a section that defines a value.
+function itemOf(section: string, value: string): string {
+  return section.split("\n").find((line) => line.startsWith(`- \`${value}\``)) ?? "";
 }
 
 // The extraction example the plan reference shows.
@@ -525,10 +530,10 @@ describe("qfai-run", () => {
   // QFAI:EX-0001-0211-44
   it("marks a behaviour change as a prototype request only when it asks to change the prototype", async () => {
     const reference = await readShipped(EXTRACTION);
-    expect(rowOf(sectionOf(reference, "## Qualifiers"), "| `prototype-requested`")).toMatch(
-      /\| `behaviour-change` +\| the request explicitly asks to change the prototype\. a request to implement the change in the product does not set it/i,
+    expect(itemOf(sectionOf(reference, "## Qualifiers"), "prototype-requested")).toMatch(
+      /with `behaviour-change`: the request explicitly asks to change the prototype\. a request to implement the change in the product does not set it/i,
     );
-    expect(rowOf(sectionOf(reference, "## Entry flags"), "| `decision`")).toMatch(
+    expect(itemOf(sectionOf(reference, "## Entry flags"), "decision")).toMatch(
       /on a `behaviour-change` that explicitly asks to change the prototype, only when a choice is left open/i,
     );
     expect(flat(sectionOf(reference, "## Entry flags"))).toMatch(
@@ -589,8 +594,8 @@ describe("qfai-run", () => {
       /an operation on finished work that the session runs itself and that deletes nothing is `\{ intent: order, artifacts: \[\] \}`/i,
     );
     const qualifiers = sectionOf(await readShipped(EXTRACTION), "## Qualifiers");
-    expect(rowOf(qualifiers, "| `human-run`")).toMatch(/\| `order` +\| only a person can run/i);
-    expect(rowOf(qualifiers, "| `owned-temporary-cleanup`")).toMatch(/\| `order` +\| .*deleting/i);
+    expect(itemOf(qualifiers, "human-run")).toMatch(/with `order`: only a person can run/i);
+    expect(itemOf(qualifiers, "owned-temporary-cleanup")).toMatch(/with `order`: .*deleting/i);
     const order = (qualifier: WorkflowExtraction["qualifiers"][number]) =>
       routingOutcome({
         ...extraction({ intent: "order", artifacts: [], confidence: "high" }),
@@ -607,7 +612,7 @@ describe("qfai-run", () => {
   // QFAI:EX-0001-0211-35
   it("reads a request to raise qfai itself as a dependency change, whose step carries the upgrade", async () => {
     const intents = sectionOf(await readShipped(EXTRACTION), "## Intent");
-    expect(rowOf(intents, "| `dependency`")).toMatch(/update `qfai` itself and run `init`/i);
+    expect(itemOf(intents, "dependency")).toMatch(/update `qfai` itself and run `init`/i);
     const outcome = routingOutcome(
       extraction({ intent: "dependency", artifacts: ["deps"], confidence: "high" }),
     );
