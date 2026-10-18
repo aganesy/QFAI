@@ -71,6 +71,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   flow's `QFAI:BF` in an E2E test. The layer rule no longer surfaces first as a
   `QFAI-STORY-007` error after the tests are written. Fixes #3796.
 
+- **A forbidden-text finding points at the offending line.** `mdschema`
+  reports these findings on the section heading. The document check now moves
+  each one to the first line the forbidden pattern matches, the earliest when
+  several patterns fail in one section, so `QFAI-DOCSCHEMA-001` names the item
+  to fix. It keeps the heading position when the document cannot be read or
+  the pattern cannot be translated. Fixes #3821.
+
 - **The Markdown-schema check no longer reports `0 file(s) conform`.** When no
   spec or contract document is in scope, for example when only operational
   Markdown outside the story tree changed, it now says that nothing was checked,

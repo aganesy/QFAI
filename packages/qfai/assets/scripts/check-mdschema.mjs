@@ -997,7 +997,7 @@ function documentUniverse(root, paths) {
 let showPatterns = false;
 
 /** A forbidden-text finding: the pattern that matched and the section it matched in. */
-const FORBIDDEN_TEXT_MESSAGE = /^Forbidden text '.*' found in section '([^']*)'$/u;
+const FORBIDDEN_TEXT_MESSAGE = /^Forbidden text '(.*)' found in section '([^']*)'$/u;
 
 /**
  * The heading entries of a schema with the description each declares.
@@ -1083,36 +1083,54 @@ function sectionDescription(entries, name) {
  * no description keeps the pattern, because it is all there is to say. The
  * closing tally follows the findings that remain.
  *
+ * mdschema places a forbidden-text finding on the section's heading. Where the
+ * document can be read and the pattern translated, the finding moves to the
+ * line the pattern matches, so the reader sees which item is wrong.
+ *
  * @param {string} output
  * @param {string} schemaText
+ * @param {(file: string) => string | null} [readDocument] the text of a document
+ *   mdschema names, or `null`
  * @returns {string}
  */
-export function explainForbiddenText(output, schemaText) {
+export function explainForbiddenText(output, schemaText, readDocument = readTextOrNull) {
   const entries = sectionDescriptions(schemaText);
   const lines = [];
-  let seen = new Set();
+  /** @type {Map<string, { index: number, at: number | null }>} */
+  let seen = new Map();
   let merged = 0;
+  let document = null;
   for (const line of output.split(/\r?\n/)) {
-    if (/^\S/.test(line)) seen = new Set();
+    if (/^\S/.test(line)) {
+      seen = new Map();
+      if (!TALLY_LINE.test(line)) document = readDocument(line.trim());
+    }
     const found = VIOLATION_LINE.exec(line);
     const forbidden =
       found !== null && found[3] === "forbidden-text"
         ? FORBIDDEN_TEXT_MESSAGE.exec(found[4])
         : null;
-    const description = forbidden === null ? null : sectionDescription(entries, forbidden[1]);
+    const description = forbidden === null ? null : sectionDescription(entries, forbidden[2]);
     if (found === null || forbidden === null || description === null) {
       lines.push(line);
       continue;
     }
-    const key = `${found[1]}:${found[2]}:${forbidden[1]}`;
-    if (seen.has(key)) {
+    const at = document === null ? null : offendingLine(document, Number(found[1]), forbidden[1]);
+    const finding = (/** @type {number | null} */ line) =>
+      `  ✗ ${line === null ? `${found[1]}:${found[2]}` : `${line}:1`} [forbidden-text] Section '${forbidden[2]}' does not hold what the schema requires: ${description}`;
+    // Patterns that fail in one section are one finding, at the earliest line any of them matched.
+    const key = `${found[1]}:${found[2]}:${forbidden[2]}`;
+    const earlier = seen.get(key);
+    if (earlier !== undefined) {
       merged++;
+      if (at !== null && (earlier.at === null || at < earlier.at)) {
+        earlier.at = at;
+        lines[earlier.index] = finding(at);
+      }
       continue;
     }
-    seen.add(key);
-    lines.push(
-      `  ✗ ${found[1]}:${found[2]} [forbidden-text] Section '${forbidden[1]}' does not hold what the schema requires: ${description}`,
-    );
+    seen.set(key, { index: lines.length, at });
+    lines.push(finding(at));
   }
   return lines
     .map((line) =>
@@ -1125,6 +1143,79 @@ export function explainForbiddenText(output, schemaText) {
     )
     .join("\n");
 }
+
+/** The text of `file`, or `null` when it cannot be read. */
+function readTextOrNull(file) {
+  try {
+    return readFileSync(file, "utf-8");
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * A schema's Go (RE2) pattern as a JavaScript RegExp, or `null` where it uses
+ * syntax this does not translate. It translates a leading `(?flags)` group of
+ * `i`, `m` and `s`, and the `\A` and `\z` anchors. An anchor written after an
+ * escaped backslash or inside a class, or a pattern JavaScript then refuses,
+ * gives `null`.
+ *
+ * @param {string} pattern
+ * @returns {RegExp | null}
+ */
+function goPatternToRegExp(pattern) {
+  const lead = /^\(\?([a-z]+)\)/u.exec(pattern);
+  const flags = lead === null ? "" : lead[1];
+  if (/[^ims]/u.test(flags) || /\\\\[Az]|\[[^\]]*\\[Az]/u.test(pattern)) return null;
+  const body = (lead === null ? pattern : pattern.slice(lead[0].length))
+    .replaceAll("\\A", "(?<![\\s\\S])")
+    .replaceAll("\\z", "(?![\\s\\S])");
+  try {
+    return new RegExp(body, flags);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The line where `pattern` first matches in the body of the section whose
+ * heading is on line `headingLine` of `document`, or `null`.
+ *
+ * The body runs from the line after the heading to the next heading of the same
+ * or a higher level. The line is that of the match's first non-blank character.
+ * `null` means the heading, the pattern or a match was not found, and the caller
+ * keeps mdschema's own position. So does a body holding whitespace outside
+ * ASCII, a vertical tab or a carriage return: RE2's `\s` leaves those out and
+ * JavaScript's takes them in, so the two could match different lines.
+ *
+ * @param {string} document
+ * @param {number} headingLine 1-based
+ * @param {string} pattern a schema's forbidden-text pattern
+ * @returns {number | null}
+ */
+export function offendingLine(document, headingLine, pattern) {
+  const lines = document.split(/\r?\n/u);
+  const heading = /^(#{1,6})\s/u.exec(lines[headingLine - 1] ?? "");
+  const re = goPatternToRegExp(pattern);
+  if (heading === null || re === null) return null;
+  let end = headingLine;
+  while (end < lines.length) {
+    const next = /^(#{1,6})\s/u.exec(lines[end] ?? "");
+    if (next !== null && next[1].length <= heading[1].length) break;
+    end++;
+  }
+  const body = lines.slice(headingLine, end).join("\n");
+  if (NON_RE2_WHITESPACE.test(body)) return null;
+  const match = re.exec(body);
+  if (match === null) return null;
+  const visible = match[0].search(/\S/u);
+  const offset = match.index + (visible === -1 ? 0 : visible);
+  return headingLine + 1 + (body.slice(0, offset).match(/\n/gu)?.length ?? 0);
+}
+
+/** Whitespace JavaScript's `\s` matches and RE2's does not, including the line breaks only JavaScript knows. */
+const NON_RE2_WHITESPACE =
+  /[\v\r\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]/u;
 
 /** One violation line of `mdschema check` output: `  ✗ 3:4 [rule] message`. */
 const VIOLATION_LINE = /^\s+✗\s+(\d+):(\d+)\s+\[([^\]]+)\]\s+(.*\S)\s*$/u;
