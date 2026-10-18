@@ -158,7 +158,7 @@ the other as an alternative:
 
 What the request already gives. Zero or more.
 
-Each flag is followed by what the request does when it is set, then when it is not set.
+Each flag is followed by what the request does when it is set, then, where one applies, when it is not set.
 
 - `repro`: gives something a reader can run to see the failure: code, a repository link, a script, a command sequence that always fails. Not when it only cites the lines of a contradiction: that is `cause`.
 - `cause`: locates the fault so a reader could write the fix: a file and line, a function and its mechanism, the exact contradicting lines. Not when it names a suspected commit, or guesses.
