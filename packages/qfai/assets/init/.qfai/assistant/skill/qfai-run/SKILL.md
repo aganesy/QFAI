@@ -62,7 +62,7 @@ values plan nothing.
    (or `question-how`, `question-help`); an operation on finished work that the session runs itself and
    that deletes nothing is `{ intent: order, artifacts: [] }`. Every other field is empty, with
    `confidence: high`; neither needs a reference. Read any other request as `references/extraction.md`
-   sets out, and pass the extraction to `npx qfai workflow plan --in <file>`, or `--in -`.
+   sets out. Then run the launcher preflight above; once it holds, pass the extraction to `npx qfai workflow plan --in <file>`, or `--in -`.
 2. **Candidates.** When `plan` returns `candidates`, put one single-select
    question, each option saying in the user's words what that route will do,
    then run `npx qfai workflow plan --route <route>` for the chosen one.
