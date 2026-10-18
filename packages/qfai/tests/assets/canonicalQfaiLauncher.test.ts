@@ -153,6 +153,25 @@ describe("shipped assistant docs invoke qfai through the canonical launcher", ()
     }
   });
 
+  // An interrupted install leaves node_modules without .bin, and a workflow run calls
+  // `npx qfai workflow plan` before any gate, so a gate-only preflight runs too late.
+  it("the preflight runs before the first qfai call and names an interrupted install", async () => {
+    for (const baseline of BASELINE_PATHS) {
+      const content = (await readFile(path.join(repoRoot, baseline), "utf-8")).replace(/\s+/g, " ");
+      expect(content).toContain(
+        "**Launcher preflight — run once, before the first `npx qfai` call.** That call may be a gate or the first command of a workflow run, such as `npx qfai workflow plan`.",
+      );
+      expect(content).not.toContain("run once, before the first gate");
+      expect(content).toContain(
+        "**`node_modules` exists but holds no `.bin/qfai`.** An interrupted or failed install leaves a partial `node_modules`",
+      );
+      expect(content).toContain("The install is incomplete: run the install command again");
+      expect(content).toContain(
+        "A passed preflight holds until the lockfile or `package.json` changes. After a base-branch merge, install again only when the merge changed one of them.",
+      );
+    }
+  });
+
   // Yarn Berry defaults to `nodeLinker: pnp`, which writes no
   // `node_modules/.bin` even for a correctly installed dependency. Gating on
   // that file alone would report every PnP project as UNRUN forever, and the

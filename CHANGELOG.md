@@ -47,6 +47,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the profiles CI runs without the warning. A test keeps the list equal to the
   profiles whose coverage notice does not call them partial. Fixes #3760.
 
+- **The launcher preflight runs before the first `npx qfai` call.** It ran
+  before the first gate, so a workflow run's `npx qfai workflow plan` in a
+  checkout with no install could reach an older copy elsewhere on the machine.
+  The preflight now also names a `node_modules` without `.bin/qfai` as an
+  interrupted install to run again, and says a base-branch merge needs a new
+  install only when it changed the lockfile or `package.json`.
+  Fixes #3800 and #3810.
+
 - **The Markdown-schema check reports a configured contract root it cannot
   walk.** A configured contract directory that is a file, or that cannot be
   inspected, is now an `inventory` finding with its path and cause, and the run

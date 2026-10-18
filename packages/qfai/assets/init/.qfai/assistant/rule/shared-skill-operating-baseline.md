@@ -118,15 +118,17 @@ including its `--auto` rule. What each bucket needs inside a workflow run is
 
 ## Canonical qfai Launcher (Mandatory)
 
-- **Launcher preflight — run once, before the first gate.** Confirm the project resolves qfai from its own dependencies. Either proof is sufficient:
+- **Launcher preflight — run once, before the first `npx qfai` call.** That call may be a gate or the first command of a workflow run, such as `npx qfai workflow plan`. Confirm the project resolves qfai from its own dependencies. Either proof is sufficient:
   - **A local binary at `node_modules/.bin/qfai`.** The normal case for npm, pnpm and Yarn configured with `nodeLinker: node-modules`.
   - **A Plug'n'Play install.** Yarn Berry's default `nodeLinker: pnp` writes no `node_modules/.bin`, so the file check alone would report a correctly installed project as UNRUN forever. Accept it when the project has a `.pnp.cjs` / `.pnp.loader.mjs` at its root and lists `qfai` in `package.json` `dependencies` / `devDependencies`; `yarn exec qfai --help` exiting 0 is the direct
     confirmation.
 
   If neither proof holds, every gate below is UNRUN: report it as a blocker and stop. `package.json` says which fix applies:
   - **`qfai` is listed in `dependencies` or `devDependencies`, but this checkout has no install.** A fresh clone or a new worktree has no `node_modules`, and `npx qfai` then resolves the copy of a parent directory, which may be an older version of another checkout. Run the project's install command in this checkout, then run the preflight again.
+  - **`node_modules` exists but holds no `.bin/qfai`.** An interrupted or failed install leaves a partial `node_modules`, and `npx qfai` again resolves a parent directory's copy. The install is incomplete: run the install command again, then the preflight.
   - **`qfai` is not listed.** Install the dependency: `npm i -D qfai`, or the pnpm / yarn equivalent. `qfai` does not add itself to `package.json` on init, so a project bootstrapped with `npx qfai init` alone has no local dependency yet.
 
+- A passed preflight holds until the lockfile or `package.json` changes. After a base-branch merge, install again only when the merge changed one of them.
 - Once the preflight passes, invoke every gate through the launcher that proof established:
   - local binary -> `npx qfai …`, which resolves to it. `node_modules/.bin/qfai …` is the same thing spelled out; prefer it when PATH reachability is uncertain.
   - Plug'n'Play -> `yarn exec qfai …` (equivalently `yarn qfai …`), which sets up the PnP environment for the child process. Do **not** fall back to `npx qfai` there: outside the PnP runtime it cannot see the workspace dependency and would fetch a remote copy instead.
