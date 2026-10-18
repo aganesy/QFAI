@@ -75,4 +75,13 @@ describe("story-tree acceptance and implementation assets", () => {
     const baseline = await read("rule/shared-skill-operating-baseline.md");
     expect(baseline).toContain("500 lines per Markdown assistant asset file");
   });
+
+  it("has the story and contract steps search the tree for a claim a decision replaced", async () => {
+    for (const step of ["sdd-story", "sdd-contract"]) {
+      const text = (await read(`step/${step}/STEP.md`)).replace(/\s+/g, " ");
+      expect(text, step).toContain(
+        "Where a decision replaced a claim, such as an input, a threshold or a count, search the whole story tree and the contracts for the old claim before finishing. List each hit in the stage report, with what it now says or why it stays.",
+      );
+    }
+  });
 });
