@@ -1,3 +1,7 @@
+import type { StoryTreeIdKind } from "../../core/storyTree/ids.js";
+
+const STORY_TREE_ID_KINDS: readonly StoryTreeIdKind[] = ["BF", "US", "AC", "EX", "BR", "DEC", "OQ"];
+
 export type ParsedArgs = {
   command: string | null;
   invalid: boolean;
@@ -70,7 +74,11 @@ export type ParsedArgs = {
     /** Positional `<id>` for `qfai discussion use <id>`. */
     discussionId?: string;
     /** Subcommand for `qfai sdd`. */
-    sddAction?: "preflight" | "renumber-decision";
+    sddAction?: "preflight" | "renumber-decision" | "next-id";
+    /** Positional `<kind>` for `qfai sdd next-id`. */
+    sddIdKind?: StoryTreeIdKind;
+    /** Positional `<parent-ID>` for `qfai sdd next-id`: the BF of a US, the US of an AC or EX, the contract of a BR. */
+    sddIdParent?: string;
     sddFrom?: string;
     sddTo?: string;
     sddBase?: string;
@@ -243,14 +251,35 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   if (command === "sdd") {
     const candidate = args[0];
     if (isSubcommandToken(candidate)) {
-      if (candidate === "preflight" || candidate === "renumber-decision") {
+      if (
+        candidate === "preflight" ||
+        candidate === "renumber-decision" ||
+        candidate === "next-id"
+      ) {
         options.sddAction = candidate;
       } else {
         markInvalid(subcommandReason("sdd", candidate));
       }
       args.shift();
     }
+    if (options.sddAction === "next-id" && isPositionalToken(args[0])) {
+      const kind = args.shift() ?? "";
+      const known = STORY_TREE_ID_KINDS.find((value) => value === kind);
+      if (known) options.sddIdKind = known;
+      else
+        markInvalid(
+          `qfai sdd next-id: unknown ID kind "${kind}". Expected: ${STORY_TREE_ID_KINDS.join("|")}`,
+        );
+      const parent = args[0];
+      if (isPositionalToken(parent)) {
+        options.sddIdParent = parent;
+        args.shift();
+      }
+    }
   }
+  // Only `qfai sdd preflight` reads its diagnostic options; the other sdd subcommands refuse them.
+  const sddPreflight = (): boolean =>
+    command === "sdd" && (options.sddAction === undefined || options.sddAction === "preflight");
 
   if (command === "workflow") {
     const candidate = args[0];
@@ -336,7 +365,11 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid(missingValue(arg));
           break;
         }
-        if (command !== "sdd" || options.sddAction !== "renumber-decision") {
+        const reads =
+          command === "sdd" &&
+          (options.sddAction === "renumber-decision" ||
+            (options.sddAction === "next-id" && arg === "--base"));
+        if (!reads) {
           markInvalid(notValidHere(arg));
           break;
         }
@@ -428,7 +461,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           }
           break;
         }
-        if (command === "sdd" && options.sddAction !== "renumber-decision") {
+        if (sddPreflight()) {
           if (next === "text" || next === "json") {
             options.sddFormat = next;
           } else {
@@ -462,7 +495,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         break;
       case "--profile": {
         const next = consumeOptionValue();
-        if (command === "sdd" && options.sddAction === "renumber-decision") {
+        if (command === "sdd" && !sddPreflight()) {
           markInvalid(notValidHere("--profile"));
           break;
         }
@@ -515,7 +548,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           command !== "validate" &&
           command !== "report" &&
           command !== "doctor" &&
-          (command !== "sdd" || options.sddAction === "renumber-decision")
+          !sddPreflight()
         ) {
           markInvalid(notValidHere("--fail-on"));
           break;
@@ -705,8 +738,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid(missingValue("--import"));
           break;
         }
-        if (command === "sdd" && options.sddAction !== "renumber-decision")
-          options.sddImport = next;
+        if (sddPreflight()) options.sddImport = next;
         else markInvalid(notValidHere("--import"));
         break;
       }
@@ -716,7 +748,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid(missingValue("--assume"));
           break;
         }
-        if (command === "sdd" && options.sddAction !== "renumber-decision") {
+        if (sddPreflight()) {
           // Repeatable: `--assume A --assume B` are listed as they are under
           // `Open Questions (Carry-over)` in the preflight summary.
           options.sddAssumptions.push(next);
@@ -735,7 +767,8 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid(`qfai: unknown option: ${arg}`);
         } else if (
           (command === "workflow" ||
-            (command === "sdd" && options.sddAction === "renumber-decision")) &&
+            (command === "sdd" &&
+              (options.sddAction === "renumber-decision" || options.sddAction === "next-id"))) &&
           arg !== undefined
         ) {
           // These subcommands take no positional arguments.
@@ -782,6 +815,13 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     if (options.sddFrom === options.sddTo)
       markInvalid("qfai sdd: --from and --to must name different DEC IDs.");
   }
+  if (command === "sdd" && options.sddAction === "next-id" && !options.help && !options.version) {
+    if (!options.sddIdKind)
+      markInvalid(
+        `qfai sdd next-id: the ID kind is missing. Expected: ${STORY_TREE_ID_KINDS.join("|")}`,
+      );
+    if (!options.sddBase) markInvalid(missingValue("--base"));
+  }
   // Every command except init reads `--root` as the target directory. init
   // looked only at `--dir`, so passing `--root` dropped the value and
   // initialized the cwd. init now treats `--root` as an alias for the output
@@ -796,7 +836,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
 const SUBCOMMAND_EXPECTATIONS = new Map<string, string>([
   ["discussion", "list|use"],
   ["atdd", "scaffold"],
-  ["sdd", "preflight|renumber-decision"],
+  ["sdd", "preflight|renumber-decision|next-id"],
   ["workflow", WORKFLOW_OPERATIONS.join("|")],
 ]);
 

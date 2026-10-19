@@ -23,7 +23,12 @@ import {
   parseDecisionRegister,
   type DecisionRegister,
 } from "./tables.js";
-import { buildStoryTreeModel, nextStoryTreeId, readStoryTreeModel } from "./tree.js";
+import {
+  buildStoryTreeModel,
+  nextStoryTreeId,
+  readStoryTreeModel,
+  type StoryTreeModel,
+} from "./tree.js";
 
 const execute = promisify(execFile);
 const MAX_BYTES = 16 * 1024 * 1024;
@@ -257,6 +262,38 @@ async function fixedSpecTexts(
     files.set(file, text(await git(root, ["cat-file", "blob", match[1]]), file));
   }
   return files;
+}
+
+/**
+ * The story tree a local ref's commit holds, read from Git objects alone: no file in the working
+ * tree is read or written, and no remote is asked.
+ */
+export async function readStoryTreeAtRef(options: {
+  root: string;
+  ref: string;
+  specsDir: string;
+  contractsDir: string;
+}): Promise<{ sha: string; model: StoryTreeModel }> {
+  const root = (await git(path.resolve(options.root), ["rev-parse", "--show-toplevel"]))
+    .toString()
+    .trim();
+  const inside = (directory: string): string => {
+    const relative = path
+      .relative(root, path.resolve(options.root, directory))
+      .split(path.sep)
+      .join("/");
+    if (relative === ".." || relative.startsWith("../") || path.isAbsolute(relative))
+      throw new Error("The story tree must be inside the repository.");
+    return relative;
+  };
+  const specs = inside(options.specsDir);
+  const contracts = inside(options.contractsDir);
+  const sha = await commit(root, options.ref);
+  const files = await fixedSpecTexts(root, sha, specs);
+  if (!contracts.startsWith(`${specs}/`))
+    for (const [file, source] of await fixedSpecTexts(root, sha, contracts))
+      files.set(file, source);
+  return { sha, model: buildStoryTreeModel(files, { specsDir: specs, contractsDir: contracts }) };
 }
 
 /** Invocation-bound evidence supplied only after an independent receipt review and adoption. */

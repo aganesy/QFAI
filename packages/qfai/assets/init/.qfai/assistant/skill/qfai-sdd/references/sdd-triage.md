@@ -201,6 +201,8 @@ A retirement touches every place the ID is written. Do all of them in one change
 Read all IDs of the kind in the relevant scope, including IDs named by retirement rows. The next ID is the highest plus one. A project that also counts the IDs its open pull requests add takes the highest across the tree and those pull requests, so a gap above the tree's own highest is allowed. BF spans the project. US is inside its BF. AC and EX are inside their US.
 A contract number spans every contract kind, and a BR is numbered inside its contract. DEC spans the complete ordered decision register; OQ spans its own table.
 Empty numeric scopes begin at 0001, and AC/EX tails begin at 01. Do not reuse an ID because its file was removed or a row was rejected.
+Take the number from `npx qfai sdd next-id <kind> [<parent-ID>] --base <local-ref>` right before writing it: a US names its BF, an AC or EX its US, and a BR its contract.
+It reads the working tree and the base ref's commit, a fetched ref such as `origin/main`, and prints the number after the highest of both, not after the last row. It writes nothing and does not see open pull requests.
 
 ### Capacity before writing
 

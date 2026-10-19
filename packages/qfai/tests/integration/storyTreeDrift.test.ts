@@ -595,6 +595,94 @@ describe("decision renumber public CLI", () => {
   );
 });
 
+describe("next free ID public CLI", () => {
+  function gitText(...args: string[]): string {
+    return execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
+  }
+
+  async function invoke(argv: string[]) {
+    const previous = process.exitCode;
+    const stdout = vi.spyOn(process.stdout, "write").mockReturnValue(true);
+    const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+    process.exitCode = undefined;
+    try {
+      await run(["sdd", "next-id", ...argv, "--root", root], root);
+      return {
+        code: process.exitCode,
+        stdout: stdout.mock.calls.map((call) => String(call[0])).join(""),
+        stderr: stderr.mock.calls.map((call) => String(call[0])).join(""),
+      };
+    } finally {
+      stdout.mockRestore();
+      stderr.mockRestore();
+      process.exitCode = previous;
+    }
+  }
+
+  // QFAI:EX-0001-0008-29
+  it("prints the number after the highest ID of the base and the working tree, not after the last row", async () => {
+    git("config", "core.autocrlf", "false");
+    await put(decisions, table + "| DEC-0001 | Ancestor | Keep | DONE |\n");
+    git("add", ".");
+    git("commit", "-m", "ancestor");
+    git("checkout", "-b", "topic");
+    await put(
+      decisions,
+      table + "| DEC-0001 | Ancestor | Keep | DONE |\n| DEC-0002 | Topic | Keep | TODO |\n",
+    );
+    git("add", ".");
+    git("commit", "-m", "topic decision");
+    git("checkout", "main");
+    await put(
+      decisions,
+      table +
+        "| DEC-0001 | Ancestor | Keep | DONE |\n" +
+        "| DEC-0006 | Base | Keep | DONE |\n" +
+        "| DEC-0003 | Base, placed after a higher ID | Keep | DONE |\n",
+    );
+    git("add", ".");
+    git("commit", "-m", "base advances");
+    git("checkout", "topic");
+
+    const fromBase = await invoke(["DEC", "--base", "main"]);
+    expect(fromBase.code).toBe(0);
+    expect(fromBase.stdout.trim()).toBe("DEC-0007");
+
+    await put(
+      decisions,
+      table +
+        "| DEC-0001 | Ancestor | Keep | DONE |\n" +
+        "| DEC-0002 | Topic | Keep | TODO |\n" +
+        "| DEC-0009 | Uncommitted | Keep | TODO |\n",
+    );
+    const before = await readFile(path.join(root, decisions));
+    const status = gitText("status", "--porcelain", "--untracked-files=all");
+    const fromWorkingTree = await invoke(["DEC", "--base", "main"]);
+    expect(fromWorkingTree.code).toBe(0);
+    expect(fromWorkingTree.stdout.trim()).toBe("DEC-0010");
+    expect((await readFile(path.join(root, decisions))).equals(before)).toBe(true);
+    expect(gitText("status", "--porcelain", "--untracked-files=all")).toBe(status);
+
+    const question = await invoke(["OQ", "--base", "main"]);
+    expect(question.code).toBe(0);
+    expect(question.stdout.trim()).toBe("OQ-0001");
+  });
+
+  // QFAI:EX-0001-0008-30
+  it.each([
+    [["US", "--base", "main"], "BF parent"],
+    [["DEC", "--base", "no-such-ref"], "no-such-ref"],
+  ])("reports %j and exits 2 without printing an ID", async (argv, reason) => {
+    await put(decisions, table + "| DEC-0001 | Ancestor | Keep | DONE |\n");
+    git("add", ".");
+    git("commit", "-m", "ancestor");
+    const result = await invoke(argv);
+    expect(result.code).toBe(2);
+    expect(result.stdout).not.toMatch(/\b(?:US|DEC)-\d{4}/);
+    expect(result.stderr).toContain(reason);
+  });
+});
+
 afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });

@@ -165,6 +165,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   stopped on other conflicts.
   Fixes #3778.
 
+- **`qfai sdd next-id` prints the next free story-tree ID.**
+  `qfai sdd next-id <kind> [<parent-ID>] --base <local-ref>` reads the working
+  tree and the base ref's commit and prints the number after the highest ID of
+  the kind that either names, so a branch no longer reuses a number its base
+  added, and a register whose rows are out of ID order is still read by its
+  highest ID rather than its last row. It covers BF, US, AC, EX, BR, DEC and
+  OQ; a US takes its BF, an AC or EX its US, and a BR its contract. It writes
+  nothing and does not see open pull requests. The `sdd-triage` ID allocation
+  wording points to it.
+  Fixes #3654.
+
 - **A discussion pack that keeps the current DESIGN.md can skip the design
   research.** The classification block of `01_Context.md` takes
   `design_direction: inherit`. A UI-bearing pack that declares it owes no Trend
