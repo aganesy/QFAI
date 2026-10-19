@@ -210,6 +210,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the earlier rows stay as written. Only a no-question mode may record the
   decision as an assumption. Fixes #3794.
 
+- **`qfai init --dry-run` marks each path with its state.** The dry-run path
+  lines now carry a state column. A path it would write is `new` or
+  `changed`: a `changed` path holds a file the run would replace or update,
+  so the preview of an `init --force` upgrade shows what it would overwrite; a
+  merged file keeps the project's content and is also named on its
+  `would update:` line. With `--force` and `--verbose`, each skipped path is
+  `identical` when it already holds what init would write, or `kept` when it
+  differs and stays as it is. Fixes #3752.
+
 - **Tool-time reminders print once per session.** The grilling, API-budget,
   minimal-implementation and documentation-clarity after-write or after-edit
   hooks in `.claude/settings.json` and `.codex/hooks.json` print their full
