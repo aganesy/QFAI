@@ -136,6 +136,15 @@ describe("a step that may pass with evidence", () => {
       /where an existing assertion already proves an example this step added or renumbered, add that example's `\/\/ QFAI:EX-NNNN-NNNN-NN` line to the test's annotation lines/i,
     );
     expect(procedure).toMatch(
+      /directly before the test declaration it marks, in a selected non-E2E test file/i,
+    );
+    expect(procedure).toMatch(
+      /replace an old ID only on the test that proves the renumbered example, the incoming item a merge collision renumbered; a test of the item that kept the ID keeps its annotation/i,
+    );
+    expect(procedure).toMatch(
+      /do not author acceptance tests in this step\. item 9's annotation line is not test authoring/i,
+    );
+    expect(procedure).toMatch(
       /this is specification metadata, not a test repair: change no assertion body, add or remove no case, and keep the case count/i,
     );
     expect(procedure).toMatch(
