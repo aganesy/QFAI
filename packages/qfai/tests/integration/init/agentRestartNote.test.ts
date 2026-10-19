@@ -1,6 +1,7 @@
 /**
  * Integration: init prints one line asking the user to restart a running agent session when it
- * wrote a skill or hook file, and nothing when it wrote none.
+ * wrote a file an agent loads at session start (a skill, step, agent or rule file, a Codex agent
+ * profile, a rule master, an agent entry point or a hook file), and nothing when it wrote none.
  */
 // QFAI:AC-0001-0196-19
 import { readdir, readFile, rm, writeFile } from "node:fs/promises";
@@ -11,7 +12,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { initQuietly, SKILLS, withEmptyRepo } from "./upgradeStates.js";
 
 const RESTART_LINE =
-  "Skill or hook files changed: restart any running agent session so it uses the new text.";
+  "Agent instruction files changed: restart any running agent session so it uses the new text.";
 
 const SKILL_FILE = path.join(SKILLS, "qfai-run", "SKILL.md");
 
@@ -122,6 +123,43 @@ describe("the agent restart note", () => {
       const output = await initQuietly(root);
 
       expect(await readFile(entryPoint, "utf-8")).toContain(".agents/rules/");
+      expect(restartLines(output)).toEqual([RESTART_LINE]);
+    });
+  });
+
+  // QFAI:EX-0001-0196-76
+  it("is printed by a plain init that adds a missing rule's bullet to the Copilot instructions", async () => {
+    await withEmptyRepo(async (root) => {
+      await initQuietly(root);
+      const instructions = path.join(root, ".github", "copilot-instructions.md");
+      const bullet = "- `.agents/rules/grilling.md`";
+      const written = await readFile(instructions, "utf-8");
+      const withoutBullet = written
+        .split("\n")
+        .filter((line) => !line.startsWith(bullet))
+        .join("\n");
+      expect(withoutBullet).not.toBe(written);
+      await writeFile(instructions, withoutBullet, "utf-8");
+      await rm(path.join(root, ".agents", "rules", "grilling.md"));
+
+      const output = await initQuietly(root);
+
+      expect(await readFile(instructions, "utf-8")).toContain(bullet);
+      expect(restartLines(output)).toEqual([RESTART_LINE]);
+    });
+  });
+
+  // QFAI:EX-0001-0196-72
+  it("is printed by --force when it rewrites edited Copilot instructions", async () => {
+    await withEmptyRepo(async (root) => {
+      await initQuietly(root);
+      const instructions = path.join(root, ".github", "copilot-instructions.md");
+      const generated = await readFile(instructions, "utf-8");
+      await writeFile(instructions, `${generated}\nA local edit.\n`, "utf-8");
+
+      const output = await initQuietly(root, true);
+
+      expect(await readFile(instructions, "utf-8")).toBe(generated);
       expect(restartLines(output)).toEqual([RESTART_LINE]);
     });
   });
