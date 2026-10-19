@@ -235,17 +235,29 @@ it("A review whose target only resolves conflicts between reviewed sides gets no
 });
 
 // QFAI:EX-0001-0225-17
-it("A code review of a small literal-only change gets no reviewer, and the final report says so", async () => {
+it("A route code review of a small literal-only change gets no reviewer, and both reports say so", async () => {
   const { after } = await reviewerSet();
+  const step = await shipped("step/common-review-cycle/STEP.md");
+  const writes = flat(/## Writes([\s\S]*?)\n## /.exec(step)?.[1] ?? "");
+  const gate = flat(/## Gate([\s\S]*)$/.exec(step)?.[1] ?? "");
 
   expect(after).toContain(
-    "A code review whose target changes at most five lines, each changing only a literal value such as a version, a number, a name or a flag in a configuration or build file, gets no reviewer.",
+    "In a route, a code review whose target replaces at most five lines, a replaced line counting once, and no line added or removed, each changing only a literal value such as a version, a number, a name or a flag in a configuration or build file, gets no reviewer.",
   );
   expect(after).toContain(
-    "A change to code, tests, a story-tree or contract file, a screen or a file's structure is not literal-only.",
+    "A change to code, tests, a story-tree or contract file, a screen or a file's structure is not literal-only, and neither is a change that touches permissions, secrets, credentials or tokens; a URL, host, registry, image or action reference; a dependency or tool version resolved from the network; a workflow trigger; a setting that turns a check, lint rule, type check, gate or test on or off; or any text inside a shell command, script or recipe.",
   );
   expect(after).toContain(
-    "The final report names the skip, the changed lines and why no reviewer ran.",
+    "The stage report and the final report both name the skip, the changed lines and why no reviewer ran.",
+  );
+  expect(writes).toContain(
+    "For a code review skipped as a small literal-only change: the skip, the changed lines and why no reviewer ran, in the stage report and in the final report.",
+  );
+  expect(gate).toContain(
+    "A code review skipped as a small literal-only change is named, with its changed lines and why, in the stage report and in the final report.",
+  );
+  expect(await runReviewStep()).toContain(
+    "or a route code review of a small literal-only change, as `common-review-cycle` defines, gets no reviewer.",
   );
   expect(reviews(await planOf("change-tooling"))).toEqual(["note:code"]);
 });
@@ -262,7 +274,7 @@ it("The entry skill's review step states the same count as the review step", asy
     "Only a contract or screen change no earlier review read adds `architecture-reviewer` or `product-surface-reviewer`, as `common-review-cycle` lists; no one else joins.",
   );
   expect(run).toContain(
-    "A review whose target's only edits resolve the conflicts of a merge or branch update between reviewed sides gets no reviewer.",
+    "A review whose target's only edits resolve the conflicts of a merge or branch update between reviewed sides, or a route code review of a small literal-only change, as `common-review-cycle` defines, gets no reviewer.",
   );
   expect(run).not.toMatch(/flows served by a UI contract/);
 });

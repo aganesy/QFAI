@@ -111,12 +111,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Fixes #3551.
 
 - **A code review of a small literal-only change dispatches no reviewer.**
-  When the diff changes at most five lines and each changes only a literal value
-  in a configuration or build file, such as a version, a number, a name or a
-  flag, `common-review-cycle` holds the code review without a reviewer, and the
-  final report names the skip, the changed lines and why. A diff that touches
-  code, tests, the story tree, a contract, a screen or a file's structure is
-  reviewed as before. Fixes #3766.
+  In a route, when the diff replaces at most five lines, adds or removes none,
+  and each changes only a literal value in a configuration or build file, such
+  as a version, a number, a name or a flag, `common-review-cycle` holds the
+  code review without a reviewer, and the stage report and the final report
+  name the skip, the changed lines and why. A diff that touches code, tests,
+  the story tree, a contract, a screen or a file's structure is reviewed as
+  before, and so is one that touches permissions, secrets, credentials or
+  tokens, a URL, host, registry, image or action reference, a version resolved
+  from the network, a workflow trigger, a setting that turns a check on or
+  off, or text inside a shell command, script or recipe. Fixes #3766.
 
 - **A critical decision found while writing the discussion pack goes back to
   the user.** `discussion-pack` and `discussion-oq` now reopen the ended session

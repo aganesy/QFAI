@@ -59,9 +59,10 @@ Feature: Review a change twice: the specification before the code, and the code 
 
   # AC-0001-0225-07
   Scenario: A code review of a small literal-only change gets no reviewer
-    Given a code review its route names whose target changes at most five lines, each changing only a literal value such as a version, a number, a name or a flag in a configuration or build file
+    Given a code review its route names whose target replaces at most five lines, a replaced line counting once, and no line added or removed, each changing only a literal value such as a version, a number, a name or a flag in a configuration or build file
     When the review is reached
     Then no reviewer is dispatched
-    And the review is still held, and the final report names the skip, the changed lines and why no reviewer ran
-    And a target that also changes code, tests, a story-tree or contract file, a screen or a file's structure, or changes more than five lines, dispatches its reviewers
+    And the review is still held, and the stage report and the final report both name the skip, the changed lines and why no reviewer ran
+    And a target that also changes code, tests, a story-tree or contract file, a screen or a file's structure, or replaces more than five lines, or adds or removes a line, dispatches its reviewers
+    And a target that touches permissions, secrets, credentials or tokens; a URL, host, registry, image or action reference; a dependency or tool version resolved from the network; a workflow trigger; a setting that turns a check, lint rule, type check, gate or test on or off; or any text inside a shell command, script or recipe is not literal-only, and dispatches its reviewers
 ```
