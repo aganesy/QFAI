@@ -66,6 +66,11 @@ Any other route closes here.
 - No file git tracks. Name any ignored record's location in the stage
   report, separately from tracked changes.
 - The stage report states the outcome and each follow-up's goal and reason.
+  When the release change is produced outside this run (by a release workflow
+  or bot), the stage report records the release approval with what was
+  approved, who approved it, when, and the chosen option's label, and lists
+  the row as a pending follow-up; the next change that touches `decisions.md`
+  appends its row.
   For a re-route, retain the plan's branch outcome, the selected route and
   the request extraction in the session handoff. A re-route does not close
   the request.
@@ -79,5 +84,5 @@ triage step. The report never says a tracked change is done. The `cleaned`
 outcome confirms only the temporary cleanup's completed gate.
 
 Outside triage steps, the only tracked-file changes allowed are the records
-the route's discussion stage names and the required approval row that
-`qfai-run` writes in `decisions.md` before `triage-handoff` runs.
+the route's discussion stage names and the approval row, if any, that
+`qfai-run` writes in `decisions.md` under its step 7 before `triage-handoff` runs.

@@ -440,11 +440,13 @@ describe("where qfai-run runs the policy check and the commit", () => {
     ).toMatch(/list each step of the stage with its status/i);
   });
 
-  it("commits after an end release point, so the commit holds the approval", async () => {
+  it("commits after an end release point, so the commit holds any approval row written", async () => {
     const work = flat(
       sectionOf(await readShipped("skill/qfai-run/references/stage-points.md"), "## Release point"),
     );
-    expect(work).toMatch(/`verify-commit` runs after that, so the commit holds the approval/i);
+    expect(work).toMatch(
+      /`verify-commit` runs after that, so the commit holds any approval row written/i,
+    );
   });
 
   it("starts a stage skill invoked by name with the policy check", async () => {

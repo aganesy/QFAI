@@ -233,7 +233,9 @@ describe("a question answered without a change", () => {
 
     expect(gate).toMatch(/\bno tracked file (?:was )?changed by (?:any|a|the) triage step\b/i);
     expect(gate).toMatch(/\bonly (?:exception|exclusion|tracked-file changes allowed)\b/i);
-    expect(gate).toMatch(/\brequired approval row\b/i);
+    expect(gate).toMatch(
+      /\bthe approval row, if any, that `qfai-run` writes in `decisions\.md` under its step 7\b/i,
+    );
     expect(gate).toContain("`decisions.md`");
     expect(gate).toMatch(/`qfai-run`.*\b(?:records|writes)\b.*\bbefore\b.*`triage-handoff`/i);
 
@@ -242,6 +244,9 @@ describe("a question answered without a change", () => {
         /No file git tracks/,
       );
     }
+    expect(flat(sectionOf(await step("triage-close"), "## What it writes"))).toMatch(
+      /when the release change is produced outside this run \(by a release workflow or bot\), the stage report records the release approval with what was approved, who approved it, when, and the chosen option's label, and lists the row as a pending follow-up; the next change that touches `decisions\.md` appends its row/i,
+    );
     const handoff = await step("triage-handoff");
     expect(flat(sectionOf(handoff, "## Procedure"))).toMatch(
       /run none of the operation here: no push, publication, tag or change to an account/i,
