@@ -30,6 +30,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   flag adds to a defect plan, and how to read a change that only adds or
   corrects diagnostic output. Fixes #3471.
 
+- **`qfai init` asks you to restart a running agent session after it rewrites
+  skills or hooks.** A running session keeps the skill and hook text it loaded
+  at start, so after `qfai init --force` it went on acting on the old text.
+  When a run writes a file under the skill, step, agent or rule trees of
+  `.qfai/assistant/`, or writes `.claude/settings.json` or `.codex/hooks.json`,
+  the summary now has one line saying to restart the session or invoke the
+  skill again. A dry run, and a run that changed none of those files, print no
+  such line. Fixes #3536.
+
 - **A project that runs tests in CI only records Red and Green `ci-deferred`.**
   Where the Standard commands write the Test entry `CI only: <check name>`,
   `implement-tdd` and `implement-diagnose` write the failing test first and do

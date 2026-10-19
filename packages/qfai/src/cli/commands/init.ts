@@ -115,6 +115,13 @@ const STANDARD_ASSET_PATHS: readonly string[] = REFRESHED_ASSISTANT_LAYERS.map(
   (layer) => `assistant/${layer}`,
 );
 
+/**
+ * Printed when the run wrote skill, step, agent, rule or hook files. A running agent session keeps
+ * the text it loaded at start, so it acts on the old text until it restarts or loads the skill again.
+ */
+const AGENT_RESTART_NOTE =
+  "Skill or hook files changed: restart any running agent session, or invoke the skill again, so it uses the new text.";
+
 const STORY_SEED_PATHS = [
   "decisions.md",
   "open-questions.md",
@@ -529,6 +536,14 @@ export async function runInit(
   }
   if (codexHooksResult.copied.length > 0 && !options.dryRun) {
     info(CODEX_HOOKS_TRUST_NOTE);
+  }
+  const agentTextWritten = [
+    ...skillsResult.copied,
+    ...claudeHooksResult.copied,
+    ...codexHooksResult.copied,
+  ];
+  if (agentTextWritten.length > 0 && !options.dryRun) {
+    info(AGENT_RESTART_NOTE);
   }
   if (!options.dryRun) {
     const preparation = await prepareGraphIntegration(destRoot, graphProcess);
