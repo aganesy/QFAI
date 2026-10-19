@@ -21,13 +21,16 @@ export function readFileAtBase(root: string, baseBranch: string, file: string): 
   return readFileAtRevision(root, revision, file);
 }
 
+/** The path is tracked at the revision but is not a regular file, such as a symlink or a submodule. */
+export class NotRegularFileError extends Error {}
+
 /** Only a confirmed absent path is null; a failed existing-blob read is not absent history. */
 export function readFileAtRevision(root: string, revision: string, file: string): string | null {
   const names = gitStdout(root, ["ls-tree", "-z", revision, "--", normalizeRepoPath(file)]);
   if (names === null) throw new Error(`Git could not read the file inventory at ${revision}`);
   if (names === "") return null;
   const object = /^100[0-7]{3} blob ([a-f0-9]+)\t/.exec(names)?.[1];
-  if (!object) throw new Error(`Git path is not a regular tracked file: ${file}`);
+  if (!object) throw new NotRegularFileError(`Git path is not a regular tracked file: ${file}`);
   const contents = gitStdout(root, ["cat-file", "blob", object]);
   if (contents === null) throw new Error(`Git could not read existing file: ${file}`);
   return contents;
