@@ -143,7 +143,7 @@ const CATALOG: [string, string][] = [
   ],
   [
     "bump-dependency",
-    "Stages in order — `bump` (implement): `implement-dep-bump`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points none; release point none; branch points none",
+    "Stages in order — `bump` (implement): `implement-dep-bump`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points none; release point none; branch points `implement-dep-bump`, `contract-finding` to `apply-settled`",
   ],
   [
     "revert-culprit",
