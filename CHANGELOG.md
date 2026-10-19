@@ -110,6 +110,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   pending approval row first.
   Fixes #3551.
 
+- **A colliding decision ID is renumbered once, at merge time.** The
+  `qfai-sdd` triage reference now says a branch keeps its decision IDs while
+  its pull request is open, and the session that merges it runs
+  `qfai sdd renumber-decision` against the fetched base only when that base
+  declares an ID the branch added, renumbering every branch-added row from the
+  lowest colliding one upward. Because the shipped `.gitattributes` union-merges
+  `decisions.md`, a collision never conflicts, so the reference says to check
+  the base before merging, to undo an unpushed merge with
+  `git reset --merge ORIG_HEAD` before renumbering, and to abort a merge that
+  stopped on other conflicts.
+  Fixes #3778.
+
 - **`npx qfai workflow plan --order` plans an operation on finished work with
   no extraction file.** A push, a pull request or another operation the user
   names after a finished run no longer needs its own extraction file: `--order`
