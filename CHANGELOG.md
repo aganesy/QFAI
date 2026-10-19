@@ -22,6 +22,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   drops from about 36 KB to about 21 KB with the same values and wording.
   Fixes #3780.
 
+- **A project that runs tests in CI only records Red and Green `ci-deferred`.**
+  Where the Standard commands write the Test entry `CI only: <check name>`,
+  `implement-tdd` and `implement-diagnose` write the failing test first and do
+  not run it. The stage report says `red: ci-deferred`, a report label that no
+  gate counts. The route's code review then reads the test against the code
+  before the fix and confirms it fails there. A run allowed to push and open a
+  pull request may instead observe Red in CI on a commit holding only the test
+  and record the run URL. Fixes #3470.
+
 - **A failed launcher preflight stops every `npx qfai` call, not only gates.**
   The shared baseline's launcher rules now name every `npx qfai` call, gates
   included, and say a passed preflight holds per checkout until its

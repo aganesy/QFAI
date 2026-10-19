@@ -63,7 +63,7 @@ specialization_tags:
 - Backend implementation summary
 - Changed files and affected contracts
 - Local verification notes
-- Test path, selector, observed RED/GREEN/Refactor results and changed files, in the stage report
+- Test path, selector, observed RED/GREEN/Refactor results (or `ci-deferred`) and changed files, in the stage report
 - Notes on invariants, validation, and why added abstractions/configuration are necessary now
 
 ## Stop conditions

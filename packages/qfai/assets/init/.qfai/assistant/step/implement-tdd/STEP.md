@@ -158,7 +158,8 @@ the smallest useful seam and a falsifiable assertion.
 
 Where `implement-diagnose` already wrote the failing test for the example, do
 not write another: annotate that test with the EX ID and run it to confirm it
-still fails.
+still fails. Where the Test entry is `CI only: <check name>`, keep that test's
+`ci-deferred` Red and do not run it.
 
 While implementing, run only the selected test. The full suite, Lint,
 Typecheck, Build and `npx qfai validate` run once, in the verify stage.
@@ -188,7 +189,11 @@ ordinary success. Existing approved alternative RED routes remain available.
    not an admissible RED. Record command, selector and failure. Follow
    `.qfai/assistant/skill/qfai-implement/references/red-admissibility.md` and
    `.qfai/assistant/skill/qfai-implement/references/red-not-observable.md`
-   when existing behavior prevents an ordinary RED.
+   when existing behavior prevents an ordinary RED. Where the Test entry is
+   `CI only: <check name>`, run nothing locally: record Red, Green and
+   Refactor `ci-deferred`, as
+   `.qfai/assistant/skill/qfai-implement/references/red-admissibility.md#ci-only-test-gate`
+   states.
 2. **Green:** Write the minimum production code that makes this test pass.
    Do not generalize to an untested case. Minimal is measured against the
    example's obligation, not the test's inputs: a value hard-coded to match
@@ -205,7 +210,8 @@ alone does not prove the user-visible result. A component test carries only
 `QFAI:EX` annotations: a UI acceptance criterion's `QFAI:AC` annotation goes in
 an integration or API test, and a flow's `QFAI:BF` annotation in an E2E test, as
 `.qfai/assistant/rule/test-layers.md#annotation-routing` states. The route's
-code review reads the recorded Red and Green results. Classify its findings as
+code review reads the recorded Red and Green results, and reads each
+`ci-deferred` test against the code before the fix. Classify its findings as
 `.qfai/assistant/skill/qfai-implement/references/finding-classification.md`
 says. A record correction follows `.qfai/assistant/rule/drift-protocol.md`.
 
@@ -233,11 +239,14 @@ the obligation, test path and selector,
 RED, GREEN, and Refactor commands and observed results, and open findings.
 For each focused phase, include the selected-case execution receipt above;
 command, exit and aggregate counts alone do not establish behavior execution.
+For a `ci-deferred` phase, the test path, its selector and the check name take
+the place of the command, the observed result and the receipt.
 Evidence without a command and result pair does not prove a gate.
 A failing or unrun gate cannot be reported as PASS.
 
 ## Gate
 
 The step is done for an example when its RED, GREEN and Refactor results are
-observed and recorded. It is done for the flow when every example the
+observed and recorded, or recorded `ci-deferred` where the Test entry is
+`CI only: <check name>`. It is done for the flow when every example the
 selection listed is done.

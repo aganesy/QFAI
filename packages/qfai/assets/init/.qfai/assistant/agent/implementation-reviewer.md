@@ -74,6 +74,8 @@ specialization_tags:
 - `<paths.specsDir>/03_contract/tech.md`, plus the active API, DB or UI contracts this change affects.
 - The changed code and tests, their diff, repository review instructions, and actual quality-gate results.
 - The stage report for the reviewed EX: its test, selector and observed results. A missing required observation prevents PASS.
+  A `ci-deferred` Red or Green is not a missing observation: read the test against the code before the fix instead,
+  as `.qfai/assistant/skill/qfai-implement/references/red-admissibility.md#ci-only-test-gate` states.
 
 ## Deliverables
 
