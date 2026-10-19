@@ -49,10 +49,15 @@ Run listed commands and record outputs. A gate that looks unrelated to the
 change is still run and its result recorded; `verify.json` has no status for a
 gate that does not apply to the change. A conditional gate whose condition is
 false is left out of `gates` with its reason, as `common-gate-run` step 1
-says. A gate whose Standard commands entry
-is `CI only: <check name>` is not run here: record it `DELEGATED` with that
-check name. This requires an actual CI check covering the same gate and scope;
-local environment failure alone creates no delegation. Retain observed FAIL or
+says. A gate is not run here, and is recorded `DELEGATED` with its check name,
+when its Standard commands entry is `CI only: <check name>`, or when the
+user's instruction for this run delegates that gate to a named CI check. A delegation by
+instruction holds for this run only and is recorded as `## Report` says. A
+standing instruction in the project's agent instructions counts for each run it
+is in force; quote it. Either delegation requires an actual CI check covering
+the same gate and scope;
+local environment failure alone creates no delegation, and the agent never
+delegates a gate on its own judgment. Retain observed FAIL or
 UNRUN results. Where the environment cannot run any other command, ask the user
 to run it and provide the output. Never assume PASS without evidence.
 
@@ -100,9 +105,17 @@ check, actual outcome and counts, blocker and resume condition. If no run exists
 record that fact. A result for another head does not pass this head; a missing
 or mismatched result remains pending. Keep earlier failures visible.
 
+For a gate delegated by instruction, the stage report quotes the user's
+instruction word for word and says where it came from: this request, an answer
+to a question, or the project's agent instructions. It names the gate, the
+check and its state with the quote. `verify.json` carries only `check` and
+`ci`, and its `summary` says "delegated by user instruction". If no instruction
+can be quoted, the gate is not delegated.
+
 Name pending checks in `summary` and the stage report. A covered verification
 commit may use the existing DELEGATED allowance in `verify-commit`; it does not
-complete verification. With explicit CI-only delegation covering transport,
+complete verification. With explicit delegation (CI-only or by instruction)
+covering transport,
 actual changes addressing a failed check through the existing planned fix may
 be committed while HEAD still names the failing commit. Every nondelegated gate
 must pass. Retain the prior head, check, run and observed result as FAIL, and
@@ -179,10 +192,25 @@ pending delegated checks permit only that transport, never formal completion;
 they do not replace the earlier failed result. Keep revision and run evidence
 in the stage report, without adding verdict fields or states.
 `scope` is the gate set `verify-qfai-gate` covered through execution or an
-explicitly declared matching CI-only check, never a stage this run did not
+matching delegated (CI-only or by instruction) check, never a stage this run did not
 cover. Delegation does not claim that its validation profile has already run. Fields, the closed `scope` enum, a conforming example and what must
 never be written are in
 `.qfai/assistant/skill/qfai-verify/references/verify-output-contract.md`.
+
+## After CI
+
+Compare a CI result against the verification commit made from the tree the
+verdict covers: the commit `verify-commit` names. When a delegated check's
+result is observed for that commit, update `.qfai/report/verify.json`:
+
+- set that gate's `ci` to the observed state;
+- the gate stays `DELEGATED` and is never rewritten `PASS`;
+- set `status` again from every gate by the `## Verdict` rule, so a red check
+  makes it `"FAIL"` and a later green rerun on the same commit clears that `FAIL`.
+
+Name the run, check and commit in the stage report. A result for another
+commit changes nothing. Formal completion still needs every required check
+green on the current head.
 
 ## Stage report
 
@@ -196,7 +224,7 @@ run's change and reports each result.
   shared location is never named as this stage's report.
 - Report the stage's completion or stop separately from actual test and gate
   observations. A required gate that did not run is UNRUN, never a pass.
-- A gate the project runs in CI only is DELEGATED, with its check name and
+- A gate delegated (CI-only or by instruction) is DELEGATED, with its check name and
   observed CI status.
 
 Keep these details in the stage report and session handoff. `verify.json`

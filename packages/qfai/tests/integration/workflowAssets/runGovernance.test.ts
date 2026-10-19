@@ -246,7 +246,7 @@ describe("independent targets under one goal", () => {
     expect(targets).toMatch(/preserve target edits.*permitted commit of only its paths/i);
     expect(targets).toMatch(/whole index and worktree are clean/i);
     expect(targets).toMatch(
-      /CI-only pending gates.*DELEGATED commit allowance.*only under (?:explicit |a )user instruction or project policy/i,
+      /pending gates delegated \(CI-only or by instruction\).*DELEGATED commit allowance.*only under (?:explicit |a )user instruction or project policy/i,
     );
     expect(targets).toMatch(
       /(?:wait never authorizes an early commit|waiting alone never authorizes a commit) or skipped gate/i,

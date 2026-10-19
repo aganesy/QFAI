@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -37,7 +38,7 @@ async function project(installed: Record<string, string>, config = ""): Promise<
 
 async function driftFindings(
   root: string,
-): Promise<{ id: string; severity: string; message: string }[]> {
+): Promise<{ id: string; severity: string; message: string; details?: unknown }[]> {
   const data = await createDoctorData({ startDir: root, rootExplicit: true });
   return data.checks.filter((check) => check.id.startsWith("workflows.drift"));
 }
@@ -45,6 +46,12 @@ async function driftFindings(
 async function configLoadMessage(root: string): Promise<string | undefined> {
   const data = await createDoctorData({ startDir: root, rootExplicit: true });
   return data.checks.find((check) => check.id === "config.load")?.message;
+}
+
+/** The digest a `workflow.acceptedDrift` entry records for a file holding `text`. */
+function digestOf(text: string): string {
+  const lf = text.replace(/\r\n?/g, "\n");
+  return `sha256:${createHash("sha256").update(lf, "utf8").digest("hex")}`;
 }
 
 const SETUP_NODE = /uses: actions\/setup-node@([^\s#]+)/;
@@ -213,13 +220,21 @@ describe("qfai doctor reports a shipped workflow that differs from the shipped t
   });
 });
 
+const OURS = "name: ours\n";
+/** The SHA-256 of `OURS`, written out so the digest is not only checked against itself. */
+const OURS_DIGEST = "sha256:d7bbcd55840ed6edd5e0c7305b786ec5ab712ba4cd652d3ecb3bc48b06e7d12a";
+
+function acceptedDocs(digest: string, reason = "We run our own docs lane."): string {
+  return `workflow:\n  acceptedDrift:\n    - file: qfai-docs.yml\n      digest: ${digest}\n      reason: ${reason}\n`;
+}
+
 describe("qfai doctor reads an accepted drift from qfai.config.yaml", () => {
   // QFAI:EX-0003-0011-33
-  it("reports an accepted workflow as info with its reason and still warns for the others", async () => {
+  it("reports an accepted workflow whose digest matches as info with its reason and still warns for the others", async () => {
     // QFAI:AC-0003-0011-15
     const root = await project(
-      { "qfai-docs.yml": "name: ours\n", "qfai-tests.yml": "name: edited\n" },
-      "workflow:\n  acceptedDrift:\n    - file: qfai-docs.yml\n      reason: We run our own docs lane.\n",
+      { "qfai-docs.yml": OURS, "qfai-tests.yml": "name: edited\n" },
+      acceptedDocs(digestOf(OURS)),
     );
 
     const found = await driftFindings(root);
@@ -230,22 +245,27 @@ describe("qfai doctor reads an accepted drift from qfai.config.yaml", () => {
     ]);
     expect(found[0]?.message).toContain(".github/workflows/qfai-docs.yml");
     expect(found[0]?.message).toContain("workflow.acceptedDrift");
+    expect(found[0]?.message).toContain(digestOf(OURS));
     expect(found[0]?.message).toContain("We run our own docs lane.");
     expect(await configLoadMessage(root)).toBe("Loaded and normalized with 0 issues");
   });
 
   // QFAI:EX-0003-0011-34
-  it("rejects an entry with no reason, an empty reason or a name outside the shipped set, and accepts nothing", async () => {
+  it("rejects an entry with no or a malformed digest, no or an empty reason, or a name outside the shipped set, and accepts nothing", async () => {
     // QFAI:AC-0003-0011-15
+    const digest = `      digest: ${digestOf(OURS)}\n`;
     for (const entry of [
-      "    - file: qfai-docs.yml\n",
-      '    - file: qfai-docs.yml\n      reason: "  "\n',
-      "    - file: qfai-orphan.yml\n      reason: Ours.\n",
-      "    - file: qfai-docs.yml\n      reason: Ours.\n    - file: qfai-docs.yml\n      reason: Again.\n",
+      `    - file: qfai-docs.yml\n${digest}`,
+      `    - file: qfai-docs.yml\n${digest}      reason: "  "\n`,
+      "    - file: qfai-docs.yml\n      reason: Ours.\n",
+      `    - file: qfai-docs.yml\n${digest.replace("sha256:", "")}      reason: Ours.\n`,
+      `    - file: qfai-docs.yml\n      digest: ${OURS_DIGEST.toUpperCase().replace("SHA256:", "sha256:")}\n      reason: Ours.\n`,
+      `    - file: qfai-orphan.yml\n${digest}      reason: Ours.\n`,
+      `    - file: qfai-docs.yml\n${digest}      reason: Ours.\n    - file: qfai-docs.yml\n${digest}      reason: Again.\n`,
       "    - qfai-docs.yml\n",
     ]) {
       const root = await project(
-        { "qfai-docs.yml": "name: ours\n" },
+        { "qfai-docs.yml": OURS },
         `workflow:\n  acceptedDrift:\n${entry}`,
       );
 
@@ -257,5 +277,41 @@ describe("qfai doctor reads an accepted drift from qfai.config.yaml", () => {
       ).toEqual(["warning"]);
       expect(await configLoadMessage(root), entry).toContain("workflow.acceptedDrift");
     }
+  });
+
+  // QFAI:EX-0003-0011-35
+  it("prints the current digest of a differing file, the same for LF and CRLF line endings", async () => {
+    // QFAI:AC-0003-0011-15
+    const root = await project({
+      "qfai-docs.yml": OURS,
+      "qfai-tests.yml": "name: ours\r\non: push\r\n",
+    });
+
+    const [docs, tests] = await driftFindings(root);
+
+    expect(docs?.message).toContain(`Its current digest is ${OURS_DIGEST}.`);
+    expect(docs?.details).toMatchObject({ digest: OURS_DIGEST });
+    expect(tests?.message).toContain(
+      `Its current digest is ${digestOf("name: ours\non: push\n")}.`,
+    );
+  });
+
+  // QFAI:EX-0003-0011-36
+  it("warns again for an accepted file whose digest no longer matches, naming both digests", async () => {
+    // QFAI:AC-0003-0011-15
+    const edited = "name: ours, edited again\n";
+    const root = await project({ "qfai-docs.yml": edited }, acceptedDocs(digestOf(OURS)));
+
+    const found = await driftFindings(root);
+
+    expect(found.map((check) => [check.id, check.severity])).toEqual([
+      ["workflows.drift.qfai-docs", "warning"],
+    ]);
+    expect(found[0]?.message).toContain(
+      `changed since workflow.acceptedDrift accepted it: the entry records ${digestOf(OURS)}. It differs`,
+    );
+    expect(found[0]?.message).toContain(`Its current digest is ${digestOf(edited)}.`);
+    expect(found[0]?.message).toContain("put that digest in its workflow.acceptedDrift entry");
+    expect(await configLoadMessage(root)).toBe("Loaded and normalized with 0 issues");
   });
 });

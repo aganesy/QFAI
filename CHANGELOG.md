@@ -205,7 +205,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   difference with a reason.** The `workflows.drift.*` warning now also names each
   action both files use whose pinned version differs, with the version on each
   side. A file listed under `workflow.acceptedDrift` in `qfai.config.yaml`, each
-  entry with a `file` and a `reason`, is reported as `info` with that reason
+  entry with a `file`, a `digest` and a `reason`, is reported as `info` with that reason
   instead of a warning; an entry without a reason or with an empty one, or a file outside
   the shipped set or listed twice, is a configuration error and accepts nothing. The README upgrade steps now cover
   the workflows `init --force` leaves alone.
@@ -216,6 +216,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and `qfai-sdd` triage passes a seed or sample data change whose values no
   story, BR or contract sets with a one-line note and no decision row.
   Fixes #3779.
+
+- **An accepted workflow difference now records the file's digest, and a file
+  that changes again warns again.** Each `workflow.acceptedDrift` entry needs a
+  `digest`: `sha256:` and the SHA-256 of the installed file with its line
+  endings read as LF. The `workflows.drift.*` warning prints the file's current
+  digest to copy into the entry. Doctor reports `info` only while the file's
+  digest equals the recorded one; otherwise it warns that the file changed since
+  it was accepted, naming both digests. An entry without a digest or with a
+  malformed one is a configuration error and accepts nothing. Fixes #3534.
 
 - **Verify runs a gate that looks unrelated to the change, and a procedure
   edit with no checker records "no applicable checker".** `verify-repo-gate`
@@ -246,6 +255,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `@AGENTS.md` to it, and saying that `qfai init` writes neither. The line is
   printed whether or not the files exist: `qfai init` still neither reads nor
   edits them. Fixes #3490.
+
+- **A user can hand a gate to CI for one run.** A gate could be recorded
+  `DELEGATED` only when the project's Standard commands declared it
+  `CI only: <check name>`, so a user who runs tests only in CI saw the verify
+  stage run them locally or stop the commit. The user's instruction for a run
+  that delegates a gate to a named CI check now counts the same way for that
+  run. The stage report quotes the instruction word for word with where it came
+  from, and without an instruction that can be quoted the gate is not delegated;
+  the agent still never delegates a gate on its own judgment. `verify-repo-gate`
+  also says how to update the verdict once the check reports for the
+  verification commit: the gate keeps `DELEGATED` with the observed state and is
+  never rewritten `PASS`, and the verdict is set again from every gate, so a red
+  check fails it and a later green rerun clears that failure. Fixes #3554.
+  Fixes #3785.
 
 - **The `qfai-run` extraction guide decides whether a changed default is a
   deprecation or a behaviour change.** `deprecation` already covered a published surface given a new

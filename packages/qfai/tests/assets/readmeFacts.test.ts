@@ -66,6 +66,7 @@ describe("README facts", () => {
       expect(section, readmePath).toContain("npx qfai validate");
       expect(section, readmePath).toContain("`init --force` does not touch the workflows");
       expect(section, readmePath).toContain("workflow.acceptedDrift");
+      expect(section, readmePath).toContain("with the digest doctor prints");
       expect(section, readmePath).toContain("https://github.com/aganesy/QFAI/releases");
     }
   });
