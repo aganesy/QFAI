@@ -226,7 +226,7 @@ it("escapes a control character in the rerun directory", async () => {
         : fixture.run(command, args, options),
     );
     const output = renderGraphPreparation(result);
-    expect(output).toContain("forged\x0aline");
+    expect(output).toContain("forged\\x0aline");
     expect(output.split("\n").some((line) => line.startsWith("line"))).toBe(false);
   } finally {
     tmpdir.mockRestore();
