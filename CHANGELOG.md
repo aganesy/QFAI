@@ -258,6 +258,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   code, a generated file or a lockfile. A resolution in the story tree, a
   contract or a register keeps its code review. Fixes #3541.
 
+- **A request to remove a feature the specification states takes its own route.**
+  A behaviour change with the qualifier `removal-requested` now routes
+  `retire-feature` instead of `change-compatibility`, whose scaffold and
+  test-first steps added tests the removal did not need. The route rewrites the
+  stories, examples and contract rules under the specification review, then
+  runs `implement-retire`, which removes the feature from code, configuration
+  and documents, deletes the tests of removed examples, changes an assertion
+  that pins the old behaviour or wording to what the specification now states,
+  and adds no test. An open choice still routes `decide-design` first, and a
+  proposal it adopts may continue to `retire-feature`. Fixes #3650.
+
 - **A critical decision found while writing the discussion pack goes back to
   the user.** `discussion-pack` and `discussion-oq` now reopen the ended session
   for that one node: they stop writing, ask the user one round, and resume. The

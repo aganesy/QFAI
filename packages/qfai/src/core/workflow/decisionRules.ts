@@ -217,6 +217,12 @@ export const DECISION_RULES: readonly DecisionRule[] = [
       "decide-design",
     ),
     clause(prototypeChange, "prototype-feature"),
+    // A behaviour change that removes a feature rewrites its specification, then retires its
+    // code and tests, adding none.
+    clause(
+      (input) => is("behaviour-change")(input) && qualified(input, "removal-requested"),
+      "retire-feature",
+    ),
     clause(is("deprecation", "behaviour-change"), "change-compatibility"),
     clause((input) => is("feature")(input) && qualified(input, "visual-open"), "prototype-feature"),
     clause(is("feature"), "add-feature"),

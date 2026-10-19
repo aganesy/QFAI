@@ -17,4 +17,7 @@ decisionPoints: [discussion-interview]
 branchPoints:
   - step: triage-close
     outcomes:
-      - { outcome: adopted, routes: [add-feature, prototype-feature, change-compatibility] }
+      - {
+          outcome: adopted,
+          routes: [add-feature, prototype-feature, change-compatibility, retire-feature],
+        }
