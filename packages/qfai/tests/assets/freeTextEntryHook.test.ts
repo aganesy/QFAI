@@ -37,9 +37,9 @@ const SHIPPED_MESSAGES = "packages/qfai/assets/init/root/.agents/rules/reminders
 const SHIPPED_RUN_SKILL = "packages/qfai/assets/init/.qfai/assistant/skill/qfai-run/SKILL.md";
 const FREE_TEXT_CASES =
   "a change, a fix, an investigation of the codebase, a question about the project or an operation on finished work";
-/** The one sentence the reminder and the skill both give on which copy of the skill a worktree follows. */
+/** The words the reminder and the skill both give on which copy of the skill a worktree follows. */
 const WORKTREE_COPY =
-  "In a git worktree, read and follow the worktree's own `.qfai/assistant/skill/qfai-run/SKILL.md`, whatever copy the host loaded.";
+  "read and follow the worktree's own `.qfai/assistant/skill/qfai-run/SKILL.md`, whatever copy the host loaded.";
 
 /** This repository's own Claude Code hooks, and the copy `qfai init` writes. */
 const OWN_SETTINGS = ".claude/settings.json";
@@ -163,17 +163,16 @@ describe("the free-text entry reminder", () => {
       const project = projectDirOf(repoRoot, SHIPPED_SETTINGS);
       const stdout = await runReminderHook({ command: "node", args }, project);
       const context = contextOf(stdout);
-      expect(context).toContain("names no skill, invoke the `qfai-run` skill");
-      expect(context).toContain("A message that names a skill goes to that skill.");
       expect(context).toContain(
-        "Read the skill once per session rather than working from this line.",
+        "for each new request the user wrote that names no skill, the lightest included, invoke the `qfai-run` skill before any other work",
       );
+      expect(context).toContain("Read the skill once per session");
       expect(context).toContain(WORKTREE_COPY);
-      expect(context.length).toBeLessThan(1000);
+      expect(context.length).toBeLessThan(500);
     },
   );
 
-  it("names the same cases the qfai-run skill names", async () => {
+  it("leaves the list of cases to the qfai-run skill, which names them", async () => {
     const stdout = await runReminderHook(
       {
         command: "node",
@@ -181,7 +180,7 @@ describe("the free-text entry reminder", () => {
       },
       projectDirOf(repoRoot, SHIPPED_SETTINGS),
     );
-    expect(contextOf(stdout)).toContain(FREE_TEXT_CASES);
+    expect(contextOf(stdout)).toContain("names no skill");
     const skill = await readFile(path.join(repoRoot, SHIPPED_RUN_SKILL), "utf-8");
     const description = /^description: "(.*)"$/m.exec(skill)?.[1];
     expect(description).toContain(FREE_TEXT_CASES);
@@ -214,9 +213,7 @@ describe("the free-text entry reminder", () => {
       },
       projectDirOf(repoRoot, SHIPPED_SETTINGS),
     );
-    expect(contextOf(stdout)).toContain(
-      "No request skips the run: a question that one command or one file read answers is planned too, and takes the lightest route.",
-    );
+    expect(contextOf(stdout)).toContain("the lightest included, invoke the `qfai-run` skill");
     expect(contextOf(stdout)).not.toContain("needs no run");
     const skill = await readFile(path.join(repoRoot, SHIPPED_RUN_SKILL), "utf-8");
     expect(/^description: "(.*)"$/m.exec(skill)?.[1]).not.toMatch(/needs no (?:run|plan)/);
@@ -231,7 +228,7 @@ describe("the free-text entry reminder", () => {
       projectDirOf(repoRoot, SHIPPED_SETTINGS),
     );
     expect(contextOf(stdout)).toContain(
-      "If `qfai-run` cannot start, stop and say so; do not answer without the workflow.",
+      "invoke the `qfai-run` skill before any other work, or stop and say so if it cannot start;",
     );
   });
 
@@ -247,11 +244,9 @@ describe("the free-text entry reminder", () => {
     });
     try {
       const full = contextOf(await runReminderHook(entry, project, sessionInput));
+      expect(full).toContain("for each new request the user wrote");
       expect(full).toContain(
-        "Only a message the user wrote is a request: an automated notice starts no run;",
-      );
-      expect(full).toContain(
-        "a pending answer or requested operation result resumes the current step without a new invocation.",
+        "an automated notice starts no run, and a pending answer or requested operation result resumes the current step.",
       );
       const brief = contextOf(await runReminderHook(entry, project, sessionInput));
       expect(brief).toContain("For new requests the user wrote, use qfai-run to plan;");

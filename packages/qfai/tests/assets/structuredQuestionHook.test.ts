@@ -92,14 +92,6 @@ function expectAuthorizationBoundary(instruction: string): void {
   expect(text).toMatch(/\bcancellation\b.*\bexplicit tool blocks?\b/i);
 }
 
-async function contextOf(rel: string): Promise<string> {
-  const payload: { hookSpecificOutput?: { additionalContext?: string } } = JSON.parse(
-    await payloadOf(rel, promptGroup(await readSettings(rel))),
-  );
-  expect(payload.hookSpecificOutput?.additionalContext).toEqual(expect.any(String));
-  return payload.hookSpecificOutput?.additionalContext ?? "";
-}
-
 describe("the structured-question reminder", () => {
   it.each(SETTINGS)("%s fires on every turn, not once", async (rel) => {
     // The moment a question forms is unpredictable, and a session-start
@@ -140,13 +132,12 @@ describe("the structured-question reminder", () => {
     const settings = await readSettings(rel);
     const payload = await payloadOf(rel, promptGroup(settings));
     expect(payload).toContain(".agents/rules/user-questions.md");
-    expect(payload).toContain("No question is light enough to skip it");
+    expect(payload).toContain("does the next step need the user's answer? Only then ask");
     // The fallback, so a host without the tool is not read as an exemption.
-    expect(payload).toContain("through that rule's fallback where it is not");
+    expect(payload).toContain("or that rule's fallback where it is not callable");
     // The reply language, which drifts toward the language of the tool output in a long session.
-    expect(payload).toContain("Reply in the user's working language");
+    expect(payload).toContain("reply in the user's working language");
     expect(payload).toContain(".qfai/assistant/rule/communication.md");
-    expect(payload).toMatch(/Ask only when the next step needs the user's answer/i);
   });
 
   // QFAI:EX-0001-0196-26
@@ -158,12 +149,6 @@ describe("the structured-question reminder", () => {
       expectReportBoundary(sectionOf(rule, "## 6."));
     },
   );
-
-  // QFAI:EX-0001-0196-26
-  // QFAI:EX-0001-0196-57
-  it.each(SETTINGS)("%s carries the same waiting and completion boundaries", async (rel) => {
-    expectReportBoundary(await contextOf(rel));
-  });
 
   // QFAI:EX-0001-0196-58
   it.each(QUESTION_RULES)(
@@ -177,26 +162,29 @@ describe("the structured-question reminder", () => {
     },
   );
 
-  // QFAI:EX-0001-0196-58
-  it.each(SETTINGS)(
-    "%s retains prior authorization and required-input boundaries in the full reminder",
-    async (rel) => {
-      expectAuthorizationBoundary(await contextOf(rel));
-    },
-  );
-
   // QFAI:EX-0001-0196-43
   // QFAI:EX-0001-0196-59
-  it.each(SETTINGS)(
-    "%s distinguishes requested values from independent or mixed instructions",
-    async (rel) => {
-      const text = flat(await contextOf(rel));
-      expect(text).toMatch(/requested free-text values.*resume.*waiting step/i);
-      expect(text).toMatch(/independent instructions.*new plan/i);
-      expect(text).toMatch(/split mixed replies/i);
-      expect(text).toMatch(/infer no option approval/i);
-    },
-  );
+  it("leaves requested values and independent or mixed instructions to the qfai-run reply section", async () => {
+    // The reminder points at the rule; the reply guidance lives where qfai-run reads it.
+    const replies = flat(
+      sectionOf(
+        await readFile(
+          path.join(
+            repoRoot,
+            "packages/qfai/assets/init/.qfai/assistant/skill/qfai-run/references/operator-screens.md",
+          ),
+          "utf-8",
+        ),
+        "## Replies to a waiting step",
+      ),
+    );
+    expect(replies).toMatch(
+      /Free text supplying the requested value is an answer to that waiting step/,
+    );
+    expect(replies).toMatch(/independent new request is planned/i);
+    expect(replies).toMatch(/plan the independent request separately/i);
+    expect(replies).toMatch(/Never treat an unrelated instruction as selection or approval/);
+  });
 
   /** What the host writes to a `UserPromptSubmit` hook's stdin for one prompt. */
   const promptInput = (prompt: string): string =>

@@ -2,72 +2,69 @@
   "structured-question": {
     "hookSpecificOutput": {
       "hookEventName": "UserPromptSubmit",
-      "additionalContext": "QFAI user questions (.agents/rules/user-questions.md). Put every question through the host's structured question tool where callable, and through that rule's fallback where it is not, with the same parts. No question is light enough to skip it. Ask only when the next step needs the user's answer. Background waiting and completion-only reports need no question. State the current state, awaited evidence or result and the resume condition; promise no unsupported automatic restart. Dismissal or silence is no answer or permission. Existing delegation can cover a routine choice; it cannot supply a hard-required fact or uncovered approval, override cancellation or bypass an explicit tool block. Requested free-text values resume the waiting step; independent instructions need a new plan; split mixed replies and infer no option approval. Reply in the user's working language (.qfai/assistant/rule/communication.md). Read the rule once per session."
+      "additionalContext": "QFAI user questions (.agents/rules/user-questions.md): does the next step need the user's answer? Only then ask, through the host's structured question tool or that rule's fallback where it is not callable, and reply in the user's working language (.qfai/assistant/rule/communication.md); read the rule once per session rather than working from this line."
     },
     "briefContext": "QFAI user questions (.agents/rules/user-questions.md): ask in the answer's shape only when an answer is needed; waiting and completion reports need none; reply in the user's working language."
   },
   "free-text-entry": {
     "hookSpecificOutput": {
       "hookEventName": "UserPromptSubmit",
-      "additionalContext": "QFAI free-text entry. When the user's message asks for a change, a fix, an investigation of the codebase, a question about the project or an operation on finished work and names no skill, invoke the `qfai-run` skill before any other work. A message that names a skill goes to that skill. No request skips the run: a question that one command or one file read answers is planned too, and takes the lightest route. If `qfai-run` cannot start, stop and say so; do not answer without the workflow. Only a message the user wrote is a request: an automated notice starts no run; a pending answer or requested operation result resumes the current step without a new invocation. An answer after request-info closed follows its declared branch; an ambiguous reply implies no success, fact or approval. Read the skill once per session rather than working from this line. In a git worktree, read and follow the worktree's own `.qfai/assistant/skill/qfai-run/SKILL.md`, whatever copy the host loaded."
+      "additionalContext": "QFAI free-text entry: for each new request the user wrote that names no skill, the lightest included, invoke the `qfai-run` skill before any other work, or stop and say so if it cannot start; an automated notice starts no run, and a pending answer or requested operation result resumes the current step. Read the skill once per session, and in a git worktree read and follow the worktree's own `.qfai/assistant/skill/qfai-run/SKILL.md`, whatever copy the host loaded."
     },
     "briefContext": "For new requests the user wrote, use qfai-run to plan; automated notices start no run, and pending answers or requested operation results resume the current step."
   },
   "qfai-not-installed": {
     "hookSpecificOutput": {
       "hookEventName": "UserPromptSubmit",
-      "additionalContext": "QFAI install check. This checkout has no `node_modules/.bin/qfai`, so `npx qfai` may run the copy of another checkout, an older version, or fetch one. If `package.json` lists `qfai`, run the project's install command in this checkout. If it does not, run `npm i -D qfai`. Run no `npx qfai` command until then."
+      "additionalContext": "QFAI install check: this checkout has no `node_modules/.bin/qfai`, so `npx qfai` may run another checkout's copy, an older version, or fetch one. Run the project's install command if `package.json` lists `qfai`, otherwise `npm i -D qfai`, and run no `npx qfai` command until then."
     }
   },
   "documentation-clarity-before-post": {
     "hookSpecificOutput": {
       "hookEventName": "PreToolUse",
-      "additionalContext": "QFAI documentation clarity (.agents/rules/documentation-clarity.md). PR and issue bodies may contain numbers and links. No issue or PR numbers, ticket IDs or team-local jargon in source or ordinary Markdown; keep the rule's existing exceptions. Ordinary specifications and change descriptions omit design and implementation history. Only when the user expressly requests an incident, event or work record, include necessary observed events, evidence, uncertainty, current impact and next action. Put the conclusion first. Cut self-evident, repeated or wordy text, announcements, recaps and empty intensifiers. Use ordinary words, name who acts, one claim per sentence, short lines, and lists or tables for parallel items. Also mark what is unverified. Re-read every changed line and rewrite literal translations or anything that matches a pattern in the rule."
+      "additionalContext": "QFAI documentation clarity (.agents/rules/documentation-clarity.md): does this post put the conclusion first, name who acts and mark what is unverified, with no line that matches a pattern in the rule? PR and issue bodies may contain numbers and links; read the rule once per session rather than working from this line."
     }
   },
   "grilling-design-artifact": {
     "hookSpecificOutput": {
       "hookEventName": "PreToolUse",
-      "additionalContext": "QFAI grilling (.agents/rules/grilling.md). Before this: is a design decision about to be fixed that the request needs and the repository cannot settle? If not (an operation, a routine step, a settled decision being applied, or a fix whose expected behaviour the story tree states), start no griller, decide from what is written and list nothing for the user. If so, outside the discussion stage, settle it between agents and take the griller's recommendation. Either way, ask the user only a critical decision — one that contradicts a spec, a contract or a recorded decision, one whose effect cannot be taken back, or product intent nothing written states. Do not ask about, or add, what the request did not need. Read the rule once per session rather than working from this line."
-    },
-    "briefContext": "QFAI grilling (.agents/rules/grilling.md): start a griller only for a design decision the repository cannot settle, never for an operation or a routine step; bring only critical decisions to the user."
+      "additionalContext": "QFAI grilling (.agents/rules/grilling.md): is a design decision about to be fixed that the request needs and the repository cannot settle? Only then hold a grilling session, delegated outside the discussion stage, and ask the user only a critical decision; read the rule once per session rather than working from this line."
+    }
   },
   "grilling-delegation": {
     "hookSpecificOutput": {
       "hookEventName": "PreToolUse",
-      "additionalContext": "QFAI grilling (.agents/rules/grilling.md). Before this: is a design decision about to be fixed that the request needs and the repository cannot settle? If not (an operation, a routine step, a settled decision being applied, or a fix whose expected behaviour the story tree states), start no griller, decide from what is written and list nothing for the user. If so, outside the discussion stage, settle it between agents and take the griller's recommendation. Either way, ask the user only a critical decision — one that contradicts a spec, a contract or a recorded decision, one whose effect cannot be taken back, or product intent nothing written states. Do not ask about, or add, what the request did not need. Read the rule once per session rather than working from this line."
-    },
-    "briefContext": "QFAI grilling (.agents/rules/grilling.md): start a griller only for a design decision the repository cannot settle, never for an operation or a routine step; bring only critical decisions to the user."
+      "additionalContext": "QFAI grilling (.agents/rules/grilling.md): is a design decision about to be fixed that the request needs and the repository cannot settle? Only then hold a grilling session, delegated outside the discussion stage, and ask the user only a critical decision; read the rule once per session rather than working from this line."
+    }
   },
   "grilling-plan": {
     "hookSpecificOutput": {
       "hookEventName": "PreToolUse",
-      "additionalContext": "QFAI grilling (.agents/rules/grilling.md). Before this: is a design decision about to be fixed that the request needs and the repository cannot settle? If not (an operation, a routine step, a settled decision being applied, or a fix whose expected behaviour the story tree states), start no griller, decide from what is written and list nothing for the user. If so, outside the discussion stage, settle it between agents and take the griller's recommendation. Either way, ask the user only a critical decision — one that contradicts a spec, a contract or a recorded decision, one whose effect cannot be taken back, or product intent nothing written states. Do not ask about, or add, what the request did not need. Read the rule once per session rather than working from this line."
-    },
-    "briefContext": "QFAI grilling (.agents/rules/grilling.md): start a griller only for a design decision the repository cannot settle, never for an operation or a routine step; bring only critical decisions to the user."
+      "additionalContext": "QFAI grilling (.agents/rules/grilling.md): is a design decision about to be fixed that the request needs and the repository cannot settle? Only then hold a grilling session, delegated outside the discussion stage, and ask the user only a critical decision; read the rule once per session rather than working from this line."
+    }
   },
   "documentation-clarity-after-write": {
     "hookSpecificOutput": {
       "hookEventName": "PostToolUse",
-      "additionalContext": "QFAI documentation clarity (.agents/rules/documentation-clarity.md). For the changed source and ordinary Markdown: no issue or PR numbers, ticket IDs or team-local jargon; keep the rule's existing exceptions. Ordinary specifications and change descriptions omit design and implementation history. Only when the user expressly requests an incident, event or work record, include necessary observed events, evidence, uncertainty, current impact and next action. Put the conclusion first. Cut self-evident, repeated or wordy text, announcements, recaps and empty intensifiers. Use ordinary words, name who acts, one claim per sentence, short lines, and lists or tables for parallel items. Also mark what is unverified. Re-read every changed line and rewrite literal translations or anything that matches a pattern in the rule."
+      "additionalContext": "QFAI documentation clarity (.agents/rules/documentation-clarity.md): does the changed source or ordinary Markdown put the conclusion first, name who acts and mark what is unverified, with no issue or PR numbers and no line that matches a pattern in the rule? Read the rule once per session rather than working from this line."
     }
   },
   "documentation-clarity-after-edit": {
     "hookSpecificOutput": {
       "hookEventName": "PostToolUse",
-      "additionalContext": "QFAI documentation clarity (.agents/rules/documentation-clarity.md). For the changed source and ordinary Markdown: no issue or PR numbers, ticket IDs or team-local jargon; keep the rule's existing exceptions. Ordinary specifications and change descriptions omit design and implementation history. Only when the user expressly requests an incident, event or work record, include necessary observed events, evidence, uncertainty, current impact and next action. Put the conclusion first. Cut self-evident, repeated or wordy text, announcements, recaps and empty intensifiers. Use ordinary words, name who acts, one claim per sentence, short lines, and lists or tables for parallel items. Also mark what is unverified. Re-read every changed line and rewrite literal translations or anything that matches a pattern in the rule."
+      "additionalContext": "QFAI documentation clarity (.agents/rules/documentation-clarity.md): does the changed source or ordinary Markdown put the conclusion first, name who acts and mark what is unverified, with no issue or PR numbers and no line that matches a pattern in the rule? Read the rule once per session rather than working from this line."
     }
   },
   "minimal-implementation": {
     "hookSpecificOutput": {
       "hookEventName": "PostToolUse",
-      "additionalContext": "QFAI minimal implementation (.agents/rules/minimal-implementation.md). A source file just changed, which is this reminder's trigger and not the rule's scope: could it not exist at all, is it already in this codebase, or does the standard library, the platform or an already-installed dependency do it? The same rungs run at a design stage that decides where a capability or a body of data comes from. Otherwise the least code that works. Mark a deliberate shortcut with both its ceiling and the condition that lifts it. The ladder never removes what § 2 of that rule lists. For a change to a screen or to terminal output, .agents/rules/interface-clarity.md governs what may appear."
+      "additionalContext": "QFAI minimal implementation (.agents/rules/minimal-implementation.md): could this code not exist at all, is it already in this codebase, or does the standard library, the platform or an installed dependency do it? Otherwise write the least code that works, keep what § 2 of that rule lists, and read the rule once per session rather than working from this line."
     }
   },
   "api-budget": {
     "hookSpecificOutput": {
       "hookEventName": "PreToolUse",
-      "additionalContext": "QFAI API budget (.agents/rules/api-budget.md). Before this call: can git answer it instead? Then REST, then GraphQL — the forge's own pull-request and issue subcommands take the GraphQL path, a separate allowance counted in points. One call for the whole set, not one per branch. Save a payload once and search the file; a second grep is not a second download. Poll no faster than the thing being polled changes. A rate-limit endpoint misreports the budget: read the remaining count off this response's own headers. The allowance belongs to the account, and every session and sub-agent draws on it at once. Read the rule once per session rather than working from this line."
+      "additionalContext": "QFAI API budget (.agents/rules/api-budget.md): can git answer this instead, or REST before GraphQL, with one call for the whole set? Poll no faster than the thing changes, and read the rule once per session rather than working from this line."
     }
   }
 }

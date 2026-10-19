@@ -49,7 +49,7 @@ Feature: Answer only the critical decisions, and approve each release
     Then no griller starts and no grilling session is held
     And the agent decides from what is written, and the final report lists nothing for the user
     And a step that meets such a decision outside the discussion stage still holds a delegated session, and a critical decision still goes to the user
-    And the grilling rule and its reminders say when a session is held and when none is
+    And the grilling rule says when a session is held and when none is, and its reminders hold one only for such a decision
 
   # AC-0001-0223-07
   Scenario: The final report states the policy check

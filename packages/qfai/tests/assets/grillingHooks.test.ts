@@ -126,13 +126,13 @@ describe("the grilling reminder fires where a decision gets made quietly", () =>
       const payload = await printed(rel, preToolUse(settings, matcher));
       expect(payload, `${matcher} does not name the master`).toContain(".agents/rules/grilling.md");
       expect(payload, `${matcher} invites working from the line`).toContain(
-        "Read the rule once per session rather than working from this line.",
+        "read the rule once per session rather than working from this line.",
       );
       // Who answers is the one thing the reminder carries: the moment it fires
       // is when an agent decides whether to stop for the user, and asking the
       // user every design question is the failure the default avoids.
       expect(payload, `${matcher} does not name the default answerer`).toContain(
-        "If so, outside the discussion stage, settle it between agents and take the griller's recommendation.",
+        "Only then hold a grilling session, delegated outside the discussion stage,",
       );
       expect(payload, `${matcher} does not name what reaches the user`).toContain(
         "ask the user only a critical decision",
@@ -149,7 +149,7 @@ describe("the grilling reminder fires where a decision gets made quietly", () =>
   it.each(SETTINGS)("%s says when a griller session is held and when none is", async (rel) => {
     // A reminder that names only the delegated session reads as an order to
     // start a griller at every write, delegation and plan: a merge included.
-    // The full form gives both branches; the brief form keeps the boundary.
+    // So the one question it asks is the boundary, and "only then" holds it.
     const settings = await readSettings(rel);
     for (const [matcher] of MARKERS) {
       for (const hook of preToolUse(settings, matcher).hooks) {
@@ -163,31 +163,15 @@ describe("the grilling reminder fires where a decision gets made quietly", () =>
         expect(context, matcher).toContain(
           "is a design decision about to be fixed that the request needs and the repository cannot settle?",
         );
-        expect(context, matcher).toContain(
-          "If not (an operation, a routine step, a settled decision being applied, or a fix whose expected behaviour the story tree states), start no griller, decide from what is written and list nothing for the user.",
-        );
-        expect(context, matcher).toContain("Either way, ask the user only a critical decision");
-        expect(context.length, matcher).toBeLessThan(1000);
+        expect(context, matcher).toContain("Only then hold a grilling session");
+        expect(context, matcher).toContain("ask the user only a critical decision");
+        expect(context.length, matcher).toBeLessThan(500);
       }
     }
   });
 
   // QFAI:EX-0001-0223-13
-  it("keeps the boundary in the brief form and states it in the rule", async () => {
-    const reminders: Record<string, { briefContext?: string }> = JSON.parse(
-      await readFile(
-        path.join(repoRoot, "packages/qfai/assets/init/root/.agents/rules/reminders.json"),
-        "utf-8",
-      ),
-    );
-    for (const key of ["grilling-design-artifact", "grilling-delegation", "grilling-plan"]) {
-      const brief = reminders[key]?.briefContext ?? "";
-      expect(brief, key).toContain(
-        "start a griller only for a design decision the repository cannot settle, never for an operation or a routine step",
-      );
-      expect(brief, key).toContain("bring only critical decisions to the user");
-      expect(brief, key).not.toMatch(/\bread\b/i);
-    }
+  it("states the boundary in the rule", async () => {
     const rule = (
       await readFile(
         path.join(repoRoot, "packages/qfai/assets/init/root/.agents/rules/grilling.md"),
