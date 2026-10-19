@@ -206,7 +206,7 @@ describe("independent targets under one goal", () => {
       /settled independent scopes.*extract each target separately.*planner/i,
     );
     expect(extraction).toMatch(
-      /standing instruction to work through a queue.*is such a goal.*each queue item is a target with its own extraction and plan/i,
+      /standing instruction to work through a queue.*is such a goal.*each queue item whose scope is settled is a target with its own extraction and plan.*merge item extracts as `\{ intent: order, artifacts: \[\] \}`.*waits on another.*stacked pull request.*waits as an unfinished prerequisite/i,
     );
     expect(extraction).toMatch(/newly eligible target.*goal's selection criteria.*own extraction/i);
     const targets = await passage(SCREENS, TARGETS);
