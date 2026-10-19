@@ -13,6 +13,11 @@ matches the current version.
 - Each change has its description under `## [Unreleased]` in `CHANGELOG.md`
   (Prepare release fails if the section is empty, or holds only headings such as
   `### Added`)
+- A change that moves an exact version pin in `packages/qfai/package.json`
+  (such as `@jackchuka/mdschema`) states the old and new versions in that
+  description, and says whether the dependency declares an install script. The
+  GitHub Release body is cut from this section, and it is the release notes
+  adopters read before they upgrade
 - Supported: Node.js >= 20.19.0 / Tested: Node.js 20 / Recommended: Node.js 20 LTS or later
 
 ### Using the automated path

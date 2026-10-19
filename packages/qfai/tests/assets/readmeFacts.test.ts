@@ -64,6 +64,7 @@ describe("README facts", () => {
       expect(section, readmePath).toContain("npx qfai init --force");
       expect(section, readmePath).toContain("npx qfai doctor");
       expect(section, readmePath).toContain("npx qfai validate");
+      expect(section, readmePath).toContain("https://github.com/aganesy/QFAI/releases");
     }
   });
 
