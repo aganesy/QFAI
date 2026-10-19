@@ -406,8 +406,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `npx qfai workflow plan` left a scope in `scopes` even when the next wider
   scope added only stages whose steps all pass through, so a feature request
   was asked to choose between two scopes that differ only by a documentation
-  stage that does nothing by default. Such a scope is now left out and the
-  wider one stays, so one scope remains and no scope question is asked.
+  stage that writes nothing when it has nothing to write. Such a scope is now
+  left out and the wider one stays, so one scope remains and no scope question
+  is asked. A stage that writes code or tests, or has a review, still counts as
+  a real difference.
   Fixes #3694.
 
 - **A forbidden-text finding points at the offending line.** `mdschema`

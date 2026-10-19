@@ -132,6 +132,35 @@ it("A scope is not offered when the next wider one adds only pass-through stages
     { scope: "medium", stages: ["sdd", "note"], recommended: true },
     { scope: "broad", stages: ["sdd", "implement", "note"], recommended: false },
   ]);
+
+  const reviewed = stages.map((each) =>
+    each.id === "note" ? { ...each, review: "code" as const } : each,
+  );
+  expect(scopesOf(reviewed, ["spec"])).toEqual([
+    { scope: "narrow", stages: ["sdd"], recommended: true },
+    { scope: "medium", stages: ["sdd", "note"], recommended: false },
+    { scope: "broad", stages: ["sdd", "implement", "note"], recommended: false },
+  ]);
+
+  const passingImplement = stages.map((each) =>
+    each.id === "implement" ? { ...each, steps: [passing("implement-tdd")] } : each,
+  );
+  expect(scopesOf(passingImplement, ["spec"])).toEqual([
+    { scope: "medium", stages: ["sdd", "note"], recommended: true },
+    { scope: "broad", stages: ["sdd", "implement", "note"], recommended: false },
+  ]);
+});
+
+// QFAI:EX-0001-0229-09
+it("A spec-only settled request keeps the scope that stops before pass-through implementation", async () => {
+  const planned = await planFor(extraction({ intent: "order", artifacts: ["spec"] }));
+
+  expect(field(planned.json, "route")).toBe("apply-settled");
+  expect(field(planned.json, "scopes")).toEqual([
+    { scope: "narrow", stages: ["spec"], recommended: true },
+    { scope: "medium", stages: ["spec", "note", "verify"], recommended: false },
+    { scope: "broad", stages: ["spec", "implement", "note", "verify"], recommended: false },
+  ]);
 });
 
 // QFAI:EX-0001-0229-13
