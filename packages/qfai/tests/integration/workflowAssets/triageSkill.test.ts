@@ -242,6 +242,9 @@ describe("a question answered without a change", () => {
         /No file git tracks/,
       );
     }
+    expect(flat(sectionOf(await step("triage-close"), "## What it writes"))).toMatch(
+      /when automation produces the release change, the stage report records the release approval with the same four items, and the next change that touches `decisions\.md` appends its row/i,
+    );
     const handoff = await step("triage-handoff");
     expect(flat(sectionOf(handoff, "## Procedure"))).toMatch(
       /run none of the operation here: no push, publication, tag or change to an account/i,

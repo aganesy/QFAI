@@ -66,6 +66,9 @@ Any other route closes here.
 - No file git tracks. Name any ignored record's location in the stage
   report, separately from tracked changes.
 - The stage report states the outcome and each follow-up's goal and reason.
+  When automation produces the release change, the stage report records the
+  release approval with the same four items, and the next change that touches
+  `decisions.md` appends its row.
   For a re-route, retain the plan's branch outcome, the selected route and
   the request extraction in the session handoff. A re-route does not close
   the request.

@@ -853,6 +853,9 @@ describe("qfai-run", () => {
     );
     expect(work).toMatch(/a decision you took appends no row/i);
     expect(work).toMatch(/, in the `qfai-sdd` decisions template's form\./i);
+    expect(work).toMatch(
+      /when automation produces the release change, record its approval in the final report with the same four items; the next change that touches `decisions\.md` appends the row/i,
+    );
     // The template's release-approval example is a valid Approach cell as it stands.
     const template = await readShipped("skill/qfai-sdd/templates/spec/decisions.md");
     const example = template.split("\n").find((line) => line.startsWith("- Evidence:"));
