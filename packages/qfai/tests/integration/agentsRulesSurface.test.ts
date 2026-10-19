@@ -1098,6 +1098,32 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       );
     });
 
+    // Options the user reports they cannot see are restated in the message body
+    // with every part the fallback carries and the answer format, and the answer
+    // that comes back is mapped to an option before anything acts on it.
+    it.each(MASTERS)("%s restates options the user cannot see", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/never\s+appeared\s+or\s+cannot\s+see\s+its\s+options/);
+      expect(text).toMatch(
+        /the\s+same\s+numbered\s+options\s+with\s+every\s+part\s+§\s+5\s+lists\s+\(description,\s+the\s+recommendation\s+where\s+one\s+is\s+permitted,\s+and\s+how\s+many\s+may\s+be\s+chosen\)\s+and\s+how\s+to\s+answer/,
+      );
+      expect(text).toMatch(/confirm\s+which\s+option\s+it\s+maps\s+to\s+before\s+acting\s+on\s+it/);
+    });
+
+    // A change of direction makes pending questions and approval requests that
+    // no longer fit it obsolete: they are withdrawn where the user can see it,
+    // and the latest decision is what carries forward.
+    it.each(MASTERS)("%s withdraws requests a change of direction overtakes", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/A\s+change\s+of\s+direction\s+withdraws\s+what\s+it\s+overtakes/);
+      expect(text).toMatch(/Withdraw\s+it\s+visibly/);
+      expect(text).toMatch(/carry\s+the\s+latest\s+decision\s+forward/);
+      expect(text).toMatch(/A\s+late\s+answer\s+to\s+a\s+withdrawn\s+request\s+is\s+not\s+applied/);
+      expect(text).toMatch(
+        /treat\s+it\s+as\s+a\s+new\s+instruction:\s+ask\s+whether\s+it\s+reinstates\s+the\s+withdrawn\s+direction\s+before\s+acting/,
+      );
+    });
+
     // The form and the count are independent. Without this the rule reads as a
     // licence to ask more, and a well-shaped question that should not be asked
     // is still one that should not be asked.
