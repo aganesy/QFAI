@@ -10,7 +10,7 @@
  * below its git root, and from outside any repository.
  */
 
-import { copyFile, mkdir, mkdtemp, readFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -214,6 +214,35 @@ describe("the free-text entry reminder", () => {
     expect(contextOf(stdout)).toContain(
       "If `qfai-run` cannot start, stop and say so; do not answer without the workflow.",
     );
+  });
+
+  it("applies only to a message the user wrote, not to an automated notice", async () => {
+    const entry = promptEntry(await readGroups(SHIPPED_SETTINGS), FREE_TEXT_ENTRY_HOOK_MARKER);
+    const project = projectDirOf(repoRoot, SHIPPED_SETTINGS);
+    const sessionId = `free-text-scope-${process.pid}-${Date.now()}`;
+    const sessionInput = JSON.stringify({
+      hook_event_name: "UserPromptSubmit",
+      prompt: "fix the login bug",
+      session_id: sessionId,
+    });
+    try {
+      const full = contextOf(await runReminderHook(entry, project, sessionInput));
+      expect(full).toContain(
+        "Only a message the user wrote is a request: an automated notice starts no run;",
+      );
+      expect(full).toContain(
+        "a pending answer or requested operation result resumes the current step without a new invocation.",
+      );
+      const brief = contextOf(await runReminderHook(entry, project, sessionInput));
+      expect(brief).toContain("For new requests the user wrote, use qfai-run to plan;");
+      expect(brief).toContain("automated notices start no run");
+    } finally {
+      // The hook keeps a per-session counter in the temp directory.
+      const counters = (await readdir(os.tmpdir())).filter((name) =>
+        name.startsWith(`qfai-reminder-${sessionId}-`),
+      );
+      await Promise.all(counters.map((name) => rm(path.join(os.tmpdir(), name), { force: true })));
+    }
   });
 
   /** What the hook prints for a `UserPromptSubmit` carrying `prompt`, or for raw `input`. */
