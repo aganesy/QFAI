@@ -48,7 +48,7 @@ export function renderGraphPreparation(
   if (preparation.failedStep) {
     lines.push(
       `Failed step: ${preparation.failedStep}`,
-      "Recovery: Preparation failed. Correct the reported cause, then retry.",
+      "Recovery: Preparation failed. Fix the cause, then run qfai init again.",
     );
     if (preparation.recovery) lines.push(preparation.recovery);
     lines.push(`Previous installation: ${preparation.previousInstallation ?? "none"}`);

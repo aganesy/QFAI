@@ -53,7 +53,7 @@ screens:
       - id: graph_prepare_retry
         label: Run qfai init again
         kind: command
-        effect: Repeats preparation after the displayed failure cause is corrected.
+        effect: Repeats preparation after the cause is fixed; a failed download first names the command that shows its cause when rerun by hand.
       - id: graph_prepare_documents
         label: Configure document processing
         kind: command
@@ -67,8 +67,8 @@ screens:
       - id: graph_prepare_retained
         near: graph_prepare_failed_step
         when: error
-        text: Preparation failed. Correct the reported cause, then retry.
-        why: The failed step needs a recovery action; the previous installation field records whether usable state was retained.
+        text: Preparation failed. Fix the cause, then run qfai init again.
+        why: The failed step needs a recovery action. Installer output is not shown because it can carry credentials, so a failed download names the command to rerun by hand to see the cause; the previous installation field records whether usable state was retained.
       - id: graph_prepare_unverified
         near: graph_prepare_host_status
         when: default
@@ -191,7 +191,7 @@ screens:
         label: Inferred relationships
         type: output
       - id: graph_query_failure
-        label: Failure cause
+        label: Failed operation
         type: output
       - id: graph_query_recovery
         label: Recovery

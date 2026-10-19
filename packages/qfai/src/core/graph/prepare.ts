@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { access, cp, mkdir, rm } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import {
   codegraphEnvironment,
@@ -104,7 +105,22 @@ export async function prepareGraphRuntimes(
         ],
         { cwd: root, env },
       );
-      if (install.exitCode !== 0) return { ...notReady, failedStep: "CodeGraph download" };
+      if (install.exitCode !== 0)
+        return {
+          ...notReady,
+          failedStep: "CodeGraph download",
+          recovery: rerunByHand(
+            "npm",
+            "install",
+            "--prefix",
+            quoted(manualCheckDirectory("codegraph")),
+            "--no-audit",
+            "--no-fund",
+            "--save-exact",
+            "--ignore-scripts",
+            `@colbymchenry/codegraph@${GRAPH_VERSIONS.codegraph}`,
+          ),
+        };
       const codeVersion = await run(process.execPath, [staged.codegraph, "--version"], {
         cwd: root,
         env,
@@ -147,7 +163,19 @@ export async function prepareGraphRuntimes(
         ],
         { cwd: root, env: pythonEnvironment },
       );
-      if (pythonInstall.exitCode !== 0) return { ...notReady, failedStep: "Graphify download" };
+      if (pythonInstall.exitCode !== 0)
+        return {
+          ...notReady,
+          failedStep: "Graphify download",
+          recovery: rerunByHand(
+            "uv",
+            "pip",
+            "install",
+            "--target",
+            quoted(manualCheckDirectory("graphify")),
+            quoted(`graphifyy[ollama]==${GRAPH_VERSIONS.graphify}`),
+          ),
+        };
       const graphifyVersion = await run(
         staged.python,
         [
@@ -174,6 +202,20 @@ export async function prepareGraphRuntimes(
   } finally {
     await rm(stagingRoot, { recursive: true, force: true });
   }
+}
+
+// The installer's own output is not shown, since it can carry credentials. The same download,
+// run by hand into a throwaway directory, shows the cause in the user's terminal instead.
+function rerunByHand(...command: string[]): string {
+  return `To see the cause, run: ${command.join(" ")}`;
+}
+
+function manualCheckDirectory(engine: "codegraph" | "graphify"): string {
+  return path.join(os.tmpdir(), "qfai-graph-check", engine);
+}
+
+function quoted(argument: string): string {
+  return `"${argument}"`;
 }
 
 async function compatibleRuntime(

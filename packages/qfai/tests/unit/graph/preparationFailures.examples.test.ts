@@ -2,7 +2,11 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { expect, it } from "vitest";
-import { graphRuntimePaths, prepareGraphRuntimes } from "../../../src/core/graph/prepare.js";
+import {
+  GRAPH_VERSIONS,
+  graphRuntimePaths,
+  prepareGraphRuntimes,
+} from "../../../src/core/graph/prepare.js";
 import { renderGraphPreparation } from "../../../src/core/graph/presentation.js";
 import { graphProcessFixture } from "../../helpers/graphProcess.js";
 import { graphAnalysisRoot } from "../../../src/core/graph/analysis.js";
@@ -163,6 +167,38 @@ it("retains the prior installation after an interrupted replacement download", a
     expect(inverse.failedStep).toBe("CodeGraph download");
     expect(renderGraphPreparation(inverse)).toContain("CodeGraph: not-ready");
     expect(renderGraphPreparation(inverse)).toContain("Graphify: installed");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+// QFAI:EX-0001-0237-22
+// Mutation: packages/qfai/src/core/graph/prepare.ts `command.join(" ")` -> `command[0]` fails "names a command to rerun a failed download by hand"
+it("names a command to rerun a failed download by hand", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-rerun-"));
+  const fixture = graphProcessFixture();
+  try {
+    const graphify = renderGraphPreparation(
+      await prepareGraphRuntimes(root, (command, args, options) =>
+        args[0] === "pip"
+          ? Promise.resolve({ exitCode: 1, stdout: "" })
+          : fixture.run(command, args, options),
+      ),
+    );
+    expect(graphify).toContain("Failed step: Graphify download");
+    expect(graphify).toContain("To see the cause, run: uv pip install --target ");
+    expect(graphify).toContain(`"graphifyy[ollama]==${GRAPH_VERSIONS.graphify}"`);
+    expect(graphify).not.toContain("reported cause");
+    const codegraph = renderGraphPreparation(
+      await prepareGraphRuntimes(root, (command, args, options) =>
+        args.includes("install") && args.includes("--prefix")
+          ? Promise.resolve({ exitCode: 1, stdout: "" })
+          : fixture.run(command, args, options),
+      ),
+    );
+    expect(codegraph).toContain("Failed step: CodeGraph download");
+    expect(codegraph).toContain("To see the cause, run: npm install --prefix ");
+    expect(codegraph).toContain(`@colbymchenry/codegraph@${GRAPH_VERSIONS.codegraph}`);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
