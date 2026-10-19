@@ -7,6 +7,7 @@ Use this file for the full completion logic behind `/qfai-discussion`.
 - All Packs
 - UI-bearing Packs
 - CLI Packs
+- Inheriting Packs
 - Non-UI Packs
 - Notes
 

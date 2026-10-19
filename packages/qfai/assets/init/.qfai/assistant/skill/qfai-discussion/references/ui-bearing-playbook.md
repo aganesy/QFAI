@@ -82,7 +82,7 @@ whose `screen_id` equals the `screens[].id` of a UI contract under
 `<paths.contractsDir>/ui/`.
 
 The declaration is not allowed when the pack adds a screen or changes the
-design direction. `qfai validate` reports `QFAI-CLASSIFICATION-011` when the
+design direction. `npx qfai validate` reports `QFAI-CLASSIFICATION-011` when the
 screen contracts name a `screen_id` no UI contract's `screens[].id` declares, or when
 Design Direction records an `adopted_theme` or `brand_accent`.
 
