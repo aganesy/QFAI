@@ -245,7 +245,7 @@ it("A route code review of a small literal-only change gets no reviewer, and bot
     "In a route, a code review whose target replaces at most five lines, a replaced line counting once, and no line added or removed, each changing only a literal value such as a version, a number, a name or a flag in a configuration or build file, gets no reviewer.",
   );
   expect(after).toContain(
-    "A change to code, tests, a story-tree or contract file, a screen or a file's structure is not literal-only, and neither is a change that touches permissions, secrets, credentials or tokens; a URL, host, registry, image or action reference; a dependency or tool version resolved from the network; a workflow trigger; a setting that turns a check, lint rule, type check, gate or test on or off; or any text inside a shell command, script or recipe.",
+    "A change to code, tests, a story-tree or contract file, a screen or a file's structure is not literal-only, and neither is a change that touches permissions, secrets, credentials or tokens; a URL, host, registry, image or action reference; a dependency or tool version resolved from the network; a workflow trigger; a setting that turns a check, lint rule, type check, gate or test on or off; any text inside a shell command, script or recipe; or a package's own version, or any value a release, tag or publish job reads.",
   );
   expect(after).toContain(
     "The stage report and the final report both name the skip, the changed lines and why no reviewer ran.",
@@ -254,7 +254,7 @@ it("A route code review of a small literal-only change gets no reviewer, and bot
     "For a code review skipped as a small literal-only change: the skip, the changed lines and why no reviewer ran, in the stage report and in the final report.",
   );
   expect(gate).toContain(
-    "A code review skipped as a small literal-only change is named, with its changed lines and why, in the stage report and in the final report.",
+    "For a code review skipped as a small literal-only change, the stage report names the skip, the changed lines and why, and records the skip for the final report.",
   );
   expect(await runReviewStep()).toContain(
     "or a route code review of a small literal-only change, as `common-review-cycle` defines, gets no reviewer.",

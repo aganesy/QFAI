@@ -120,7 +120,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   before, and so is one that touches permissions, secrets, credentials or
   tokens, a URL, host, registry, image or action reference, a version resolved
   from the network, a workflow trigger, a setting that turns a check on or
-  off, or text inside a shell command, script or recipe. Fixes #3766.
+  off, text inside a shell command, script or recipe, or a package's own
+  version or any value a release, tag or publish job reads. Fixes #3766.
 
 - **A critical decision found while writing the discussion pack goes back to
   the user.** `discussion-pack` and `discussion-oq` now reopen the ended session

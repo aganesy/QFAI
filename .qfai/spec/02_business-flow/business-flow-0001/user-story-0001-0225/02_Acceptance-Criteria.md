@@ -64,5 +64,5 @@ Feature: Review a change twice: the specification before the code, and the code 
     Then no reviewer is dispatched
     And the review is still held, and the stage report and the final report both name the skip, the changed lines and why no reviewer ran
     And a target that also changes code, tests, a story-tree or contract file, a screen or a file's structure, or replaces more than five lines, or adds or removes a line, dispatches its reviewers
-    And a target that touches permissions, secrets, credentials or tokens; a URL, host, registry, image or action reference; a dependency or tool version resolved from the network; a workflow trigger; a setting that turns a check, lint rule, type check, gate or test on or off; or any text inside a shell command, script or recipe is not literal-only, and dispatches its reviewers
+    And a target that touches permissions, secrets, credentials or tokens; a URL, host, registry, image or action reference; a dependency or tool version resolved from the network; a workflow trigger; a setting that turns a check, lint rule, type check, gate or test on or off; any text inside a shell command, script or recipe; or a package's own version, or any value a release, tag or publish job reads is not literal-only, and dispatches its reviewers
 ```
