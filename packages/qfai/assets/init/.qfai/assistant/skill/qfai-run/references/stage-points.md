@@ -4,12 +4,13 @@ What `qfai-run` does at a step the plan marks with a release point, a decision p
 
 ## Release point
 
-Before a step `releasePoint` names runs, ask the user to approve the release; where it is `end`, ask once the last stage's gates have passed, then rerun them over the approval's `decisions.md` row.
-`verify-commit` runs after that, so the commit holds the approval. Nothing after it
+Before a step `releasePoint` names runs, ask the user to approve the release; where it is `end`, ask once the last stage's gates have passed.
+Record the approval as step 7 of `SKILL.md` says: a `decisions.md` row the run writes, or, when the release change is produced outside this run, the final report, with the row appended by the next change that touches `decisions.md`.
+Rerun the gates over any row written. `verify-commit` runs after that, so the commit holds any approval row written. Nothing after it
 runs without the approval, which authorizes no push, merge, tag or publication.
 
-After approval at a handoff release point, `qfai-run` writes the required
-approval row in `decisions.md` before `triage-handoff` runs. Every triage step
+After approval at a handoff release point, `qfai-run` records the approval as
+step 7 says before `triage-handoff` runs. Every triage step
 still changes no tracked file. No handed-off operation runs on the user's behalf.
 
 ## Decision point

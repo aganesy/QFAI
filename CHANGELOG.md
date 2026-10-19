@@ -37,10 +37,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   extraction.
   Fixes #3498.
 
-- **An automated release change no longer needs its own pull request for the
-  approval row.** When automation produces the release change, `qfai-run` and
-  `triage-close` record the release approval in the final report with the same
-  four items, and the next change that touches `decisions.md` appends its row.
+- **A release change produced outside the run no longer needs its own pull
+  request for the approval row.** When a release workflow or bot produces the
+  release change, `qfai-run`, its stage points and `triage-close` record the
+  release approval in the final report with the same four items and list the
+  row as a pending follow-up; the next change that touches `decisions.md`
+  appends it, and the next `qfai-run` that writes `decisions.md` appends any
+  pending approval row first.
   Fixes #3551.
 
 - **A project that runs tests in CI only records Red and Green `ci-deferred`.**
