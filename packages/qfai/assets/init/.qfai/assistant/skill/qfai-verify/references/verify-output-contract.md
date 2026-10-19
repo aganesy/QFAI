@@ -4,7 +4,7 @@
 
 - Verdict file
 - Per-gate results
-- CI-only checks
+- Delegated checks
 - Scope
 - Example and rules
 
@@ -44,22 +44,28 @@ Each entry of `gates` is `{ name, status, command }`, plus these optional fields
 | `check`    | string | On a `"DELEGATED"` gate: the CI check that runs it.                                                                                                                                                   |
 | `ci`       | string | On a `"DELEGATED"` gate: `"green"`, `"red"` or `"pending"`, the state of that check when the file is written.                                                                                         |
 
-## CI-only checks
+## Delegated checks
 
-A gate the project's Standard commands declare `CI only: <check name>` is
-recorded `"DELEGATED"` with its `check` and `ci` for the candidate being evaluated.
+A gate the project's Standard commands declare `CI only: <check name>`, or a
+gate where the user's instruction for this run delegates that gate to a named CI check,
+is recorded `"DELEGATED"` with its `check` and `ci` for the candidate being evaluated.
 `check` names the actual CI check and `ci` its observed state.
 A `"red"` check makes the top-level `status` `"FAIL"` for that candidate.
 A `"pending"` one does not, and `summary` names it. A runnable local gate is
-never delegated to avoid running it. Retain an observed FAIL or
-UNRUN; neither becomes PASS or DELEGATED because a verification commit is wanted.
+never delegated to avoid running it on the agent's own judgment. Retain an
+observed FAIL or UNRUN; neither becomes PASS or DELEGATED because a verification commit is wanted.
+
+A delegation by instruction needs the instruction quoted word for word in the
+stage report, with where it came from. `verify.json` carries only `check` and
+`ci` for it, and `summary` says "delegated by user instruction". Without an
+instruction that can be quoted, the gate is not delegated.
 
 A `"PASS"` verdict with pending delegated checks supports only the existing
 verification-commit allowance under a user instruction or project policy
 covering that commit and its paths. It does not establish formal completion or
 permission to push, create a pull request or merge. Every nondelegated gate
 must pass. A delegated red check stops transport of the same unchanged candidate.
-Explicit CI-only delegation covering a transport commit may instead carry actual
+Explicit delegation (CI-only or by instruction) covering a transport commit may instead carry actual
 changes addressing that failure through the existing planned fix into a new
 candidate, while HEAD still names the failed commit. Preserve the prior head,
 check, run and observed result as FAIL; never relabel that evidence pending.
@@ -85,7 +91,7 @@ states to this contract.
 ## Scope
 
 `scope` is a closed enum. Write the gate set this invocation covers through
-execution or an explicitly declared matching CI-only check. Delegation never
+execution or a matching delegated (CI-only or by instruction) check. Delegation never
 claims that the profile already ran; its check must perform the required scan
 and profile. A whole-repository scope still requires full validation. Write the
 one that matches the stage you were invoked for:
@@ -120,7 +126,7 @@ Rules:
   commit described above. A `FAIL` verdict is a legitimate output; downstream
   work stops as its gate requires.
 - Never write a `scope` this invocation does not cover by execution or its
-  declared matching CI-only check. Writing `"prototyping"` for a `full` gate set
+  matching delegated (CI-only or by instruction) check. Writing `"prototyping"` for a `full` gate set
   is a false verdict, not a workaround. A `--profile verify` gate is
   `scope: "full"`, not `scope: "atdd"`; `atdd` covers the ATDD gate set only.
 - Do not add a `version` / `schemaVersion` field. No reader validates one, and a second version series in a distributed artifact is exactly what the distributed-surface rule forbids: the npm package version is the only version this surface has.

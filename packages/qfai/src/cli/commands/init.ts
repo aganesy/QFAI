@@ -581,9 +581,11 @@ export async function runInit(
     for (const conflict of preparation.conflicts) warn(conflict);
     if (preparation.failedStep) {
       throw new Error(
-        `Graph preparation failed at ${preparation.failedStep}. Run qfai init again after correcting the reported cause.`,
+        `Graph preparation failed at ${preparation.failedStep}. Follow the recovery above, then run qfai init again.`,
       );
     }
+    // Last, so a run whose graph preparation fails never prints it.
+    info(`qfai init: done (dest=${formatReportPath(destRoot)})`);
   } else {
     info(await renderGraphPreview(destRoot));
   }
@@ -1439,7 +1441,7 @@ async function report(
   // Escaped like every path below it. `--dir` is operator-supplied and echoed
   // verbatim here, so a destination carrying a newline or an ANSI sequence could
   // forge report lines in the very report the escaping exists to make trustworthy.
-  info(`qfai ${label}: ${dryRun ? "dry-run" : "done"} (dest=${formatReportPath(baseDir)})`);
+  info(`qfai ${label}: ${dryRun ? "dry-run" : "files"} (dest=${formatReportPath(baseDir)})`);
   if (writtenPaths.length > 0) {
     info(`  ${dryRun ? "would write" : "written"}: ${writtenPaths.length}`);
     if (dryRun) {
