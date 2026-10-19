@@ -16,6 +16,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `npx qfai workflow plan`, so a checkout with no install cannot reach an older
   qfai elsewhere on the machine first. Fixes #3822.
 
+- **`implement-scaffold` supports test files named by purpose.** Where a
+  project's acceptance tests are files named for what they test, the step now
+  writes each missing empty test and its annotation into such a file in the
+  right layer directory instead of running `npx qfai atdd scaffold`, which
+  writes one file per criterion. The step then passes as before, because every
+  item has an annotating test. Fixes #3792.
+
 - **The `qfai-run` extraction reference fits one read.** Its intent, flag,
   qualifier, signal, artifact, risk and example tables are now one-line lists,
   so the padding of the widest row no longer repeats on every row. The file
