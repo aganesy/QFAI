@@ -3,6 +3,7 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { isEnoent } from "../fs/errno.js";
+import { matchesOutsideCodeSpans } from "../parse/markdown.js";
 import { resolveStoryTreeRoots } from "../storyTree/layout.js";
 import type { Issue } from "../types.js";
 import { exists, isInside, issue } from "./utils.js";
@@ -12,10 +13,40 @@ const PATH_SHAPE = /^(?:\.{1,2}\/)*[\w@.-]+(?:\/[\w@.-]+)+$/;
 const FILE_EXTENSION = /\.[A-Za-z0-9]{1,8}$/;
 const CODE_SPAN = /`([^`\n]+)`/g;
 const LINK_DESTINATION = /\]\(([^)\s]+)/g;
+const DECISION_ROW = /^\|\s*DEC-\d{4}\s*\|/;
+const UNESCAPED_PIPE = /(?<!\\)\|/;
+/** An Approach item label such as `- Evidence:` or `- Residual risk:`, after a blank or the cell start. */
+const ITEM_LABEL = /(?:^|\s)- ([A-Z][A-Za-z]*(?: [a-z]+)*):/g;
 
 type Tree = "policy" | "business-flow" | "contract" | "decision and open-question";
 
 type TreeCount = { lines: number; files: string[] };
+
+/** An Approach cell without each Evidence item, which runs to the next item or the cell's end. */
+function withoutEvidenceItems(approach: string): string {
+  const labels = matchesOutsideCodeSpans(approach, ITEM_LABEL);
+  let kept = "";
+  let cursor = 0;
+  for (const [index, label] of labels.entries()) {
+    if (label[1] !== "Evidence") continue;
+    kept += approach.slice(cursor, label.index);
+    cursor = labels[index + 1]?.index ?? approach.length;
+  }
+  return kept + approach.slice(cursor);
+}
+
+/**
+ * A decision row without the parts the decision form requires to name files: its
+ * Evidence items and, in a change request, its Content. Any other line is kept whole.
+ */
+function withoutEvidence(line: string): string {
+  if (!DECISION_ROW.test(line)) return line;
+  const cells = line.split(UNESCAPED_PIPE);
+  const [, , content = "", approach = ""] = cells;
+  if (content.trim().startsWith("Change request:")) cells[2] = "";
+  cells[3] = withoutEvidenceItems(approach);
+  return cells.join("|");
+}
 
 function pathCandidates(line: string): string[] {
   const tokens = [...line.matchAll(CODE_SPAN), ...line.matchAll(LINK_DESTINATION)];
@@ -52,7 +83,9 @@ function plural(count: number, noun: string): string {
  * A story-tree document that names a file by a repository path outside `.qfai`.
  * The path goes stale without a spec review when that file moves. A path counts as
  * inside `.qfai` when it starts with `.qfai/`, or names an existing file there
- * relative to the document, `paths.specsDir` or `paths.contractsDir`. Discussion
+ * relative to the document, `paths.specsDir` or `paths.contractsDir`. In the
+ * decision and open-question tree, a decision row's Evidence items and a change
+ * request's Content are not read, since the decision form requires them. Discussion
  * packs are reference material and are not read. One finding per tree carries the
  * counts, so an existing project can bring them down over time.
  */
@@ -78,16 +111,17 @@ export async function validateExternalReferences(
   const counts = new Map<Tree, TreeCount>();
   for (const file of files) {
     const documentDir = path.dirname(file);
+    const tree = treeOf(file, specsDir, contractsDir);
     let outside = 0;
     for (const line of (await readFile(file, "utf8")).split(/\r?\n/)) {
-      for (const token of pathCandidates(line)) {
+      const scanned = tree === "decision and open-question" ? withoutEvidence(line) : line;
+      for (const token of pathCandidates(scanned)) {
         if (await insideQfai(token, documentDir)) continue;
         outside += 1;
         break;
       }
     }
     if (outside === 0) continue;
-    const tree = treeOf(file, specsDir, contractsDir);
     const count = counts.get(tree) ?? { lines: 0, files: [] };
     count.lines += outside;
     count.files.push(file);
