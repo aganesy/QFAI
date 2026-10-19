@@ -158,8 +158,41 @@ export const SCAFFOLD_RUNNERS: readonly string[] = [
  */
 export type JsTestRunner = "vitest" | "node:test" | "jest" | "none" | "unknown";
 
-/** `node --test` as a script runs it, flags allowed between the two words. */
-const NODE_TEST_SCRIPT = /(?:^|[\s;&|(])node(?:\.exe)?\s+(?:[^\s;&|]+\s+)*?--test(?=$|[\s;&|)"'])/;
+/** `node` or `node.exe` as a command word, a path allowed before it. */
+const NODE_COMMAND = /^(?:.*[/\\])?node(?:\.exe)?$/;
+
+/** Node options that take the next word as their value. */
+const NODE_VALUE_OPTIONS: ReadonlySet<string> = new Set([
+  "--import",
+  "--require",
+  "-r",
+  "--loader",
+  "--experimental-loader",
+  "--env-file",
+]);
+
+/**
+ * Whether a script runs `node --test`: a `node` command word followed by
+ * `--test` with only options before it. A script or file argument ends the
+ * options, so `node build.mjs --test` hands `--test` to the script instead.
+ */
+function runsNodeTest(script: string): boolean {
+  // Quotes around a word are dropped, so `"/usr/bin/node" --test` still reads.
+  const words = script
+    .split(/[\s;&|()]+/)
+    .map((word) => word.replace(/^["']|["']$/g, ""))
+    .filter((word) => word !== "");
+  for (let start = 0; start < words.length; start += 1) {
+    if (!NODE_COMMAND.test(words[start] ?? "")) continue;
+    for (let index = start + 1; index < words.length; index += 1) {
+      const word = words[index] ?? "";
+      if (word === "--test") return true;
+      if (!word.startsWith("-")) break;
+      if (NODE_VALUE_OPTIONS.has(word)) index += 1;
+    }
+  }
+  return false;
+}
 
 /**
  * Read the runner from a parsed `package.json`. vitest in `dependencies` or
@@ -176,9 +209,7 @@ export function detectJsTestRunner(manifest: unknown): JsTestRunner {
   const scripts = manifest["scripts"];
   if (
     isRecord(scripts) &&
-    Object.values(scripts).some(
-      (script) => typeof script === "string" && NODE_TEST_SCRIPT.test(script),
-    )
+    Object.values(scripts).some((script) => typeof script === "string" && runsNodeTest(script))
   ) {
     return "node:test";
   }
@@ -215,7 +246,7 @@ export const DEFAULT_SCAFFOLD_DIALECT: ScaffoldDialect = bindNaming(
 /** Outcome of matching a project's configured globs against this table. */
 export type ScaffoldDialectResolution =
   | { readonly outcome: "resolved"; readonly dialect: ScaffoldDialect }
-  /** The globs chose JS/TS, and package.json names no runner, or one with no skeleton here. */
+  /** JS/TS was chosen, and package.json names no runner, or one with no skeleton here. */
   | { readonly outcome: "unsupported-runner"; readonly runner: "jest" | "none" }
   /** Extensions were recovered, but qfai has no skeleton shape for any of them. */
   | { readonly outcome: "unsupported-stack" }
@@ -880,27 +911,30 @@ export type ScaffoldDialectOptions = {
    * representative id stands in for all of them.
    */
   readonly ids?: readonly string[];
-  /**
-   * The project's JS/TS runner (`detectJsTestRunner`). It decides the
-   * skeleton only when the globs choose JS/TS; omitted, it is `unknown`.
-   */
-  readonly jsRunner?: JsTestRunner;
 };
 
-/** Bind the chosen naming, swapping the JS/TS template for the project's runner. */
-function resolveFor(
-  template: ScaffoldDialectTemplate,
-  naming: ScaffoldNaming,
+/**
+ * Fit a resolved dialect to the project's JS/TS runner. A non-JS/TS dialect is
+ * returned as it is; a JS/TS one keeps its file name and takes the runner's
+ * body, or is refused when the runner has no skeleton here.
+ */
+export function applyJsRunner(
+  dialect: ScaffoldDialect,
   jsRunner: JsTestRunner,
 ): ScaffoldDialectResolution {
-  if (template !== JS_TS_DIALECT) {
-    return { outcome: "resolved", dialect: bindNaming(template, naming) };
-  }
+  if (dialect.id !== "js-ts") return { outcome: "resolved", dialect };
   if (jsRunner === "jest" || jsRunner === "none") {
     return { outcome: "unsupported-runner", runner: jsRunner };
   }
-  const runnerTemplate = jsRunner === "node:test" ? NODE_TEST_DIALECT : JS_TS_DIALECT;
-  return { outcome: "resolved", dialect: bindNaming(runnerTemplate, naming) };
+  const template = jsRunner === "node:test" ? NODE_TEST_DIALECT : JS_TS_DIALECT;
+  return {
+    outcome: "resolved",
+    dialect: {
+      ...dialect,
+      runner: template.runner,
+      buildBody: (targetId: string) => template.buildBody(targetId),
+    },
+  };
 }
 
 /** One (dialect, naming) pair the project's configured extensions admit. */
@@ -941,10 +975,11 @@ function admissibleCandidates(extensions: ReadonlySet<string>): ScaffoldCandidat
  * Pick the skeleton dialect — and the naming convention within it — for a
  * project from its configured `testFileGlobs` / `testFileExcludeGlobs`.
  *
- * The caller refuses on either non-`resolved` outcome rather than writing a
- * file no gate reads (`unsupported-stack`) or one no runner collects
+ * The caller refuses on a non-`resolved` outcome rather than writing a file
+ * no gate reads (`unsupported-stack`) or one no runner collects
  * (`naming-mismatch`) — the misleading outcomes this selection exists to
- * remove.
+ * remove. A JS/TS result is the vitest skeleton; `applyJsRunner` fits it to
+ * the project's runner, which this function never reads.
  */
 export function resolveScaffoldDialect(
   testFileGlobs: readonly string[],
@@ -953,7 +988,6 @@ export function resolveScaffoldDialect(
   const scaffoldDir =
     options.scaffoldDir === undefined ? undefined : normalizeGlobPath(options.scaffoldDir);
   const matchWholePath = scaffoldDir !== undefined && scaffoldDir !== "";
-  const jsRunner = options.jsRunner ?? "unknown";
   /** The path the writer would produce for `fileName`, as the globs see it. */
   const candidatePath = (fileName: string): string =>
     scaffoldDir === undefined || scaffoldDir === "" ? fileName : `${scaffoldDir}/${fileName}`;
@@ -1010,7 +1044,7 @@ export function resolveScaffoldDialect(
   if (extensions.size === 0) {
     // Same fallback the scan takes (`DEFAULT_TEST_FILE_GLOB`), so an
     // unconfigured project still gets the JS/TS skeleton the scan reads.
-    return resolveFor(JS_TS_DIALECT, firstNaming(JS_TS_DIALECT), jsRunner);
+    return { outcome: "resolved", dialect: DEFAULT_SCAFFOLD_DIALECT };
   }
   const candidates = admissibleCandidates(extensions);
   if (candidates.length === 0) {
@@ -1036,5 +1070,5 @@ export function resolveScaffoldDialect(
       shapes: candidates.map(({ naming }) => candidatePath(naming.shape)),
     };
   }
-  return resolveFor(chosen.template, chosen.naming, jsRunner);
+  return { outcome: "resolved", dialect: bindNaming(chosen.template, chosen.naming) };
 }

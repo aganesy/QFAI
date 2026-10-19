@@ -231,8 +231,58 @@ describe("atdd scaffold story-tree targets", () => {
     await seedStory();
     await writeNodeTestProject({});
     await writeFile(path.join(root, "package.json"), "{ not json");
-    expect(await runAtddScaffold({ root, flowId, write: () => {}, writeErr: () => {} })).toBe(1);
+    const messages: string[] = [];
+    expect(
+      await runAtddScaffold({
+        root,
+        flowId,
+        write: () => {},
+        writeErr: (message) => messages.push(message),
+      }),
+    ).toBe(1);
+    expect(messages.join("\n")).toContain(`${path.join(root, "package.json")} is not valid JSON`);
     await expect(readdir(path.join(root, "tests"))).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("reads a package.json that starts with a byte order mark", async () => {
+    await seedStory();
+    await writeNodeTestProject({});
+    await writeFile(
+      path.join(root, "package.json"),
+      String.fromCharCode(0xfeff) + JSON.stringify({ scripts: { test: "node --test" } }),
+    );
+    expect(await runAtddScaffold({ root, flowId, write: () => {}, writeErr: () => {} })).toBe(0);
+    const body = await readFile(path.join(root, "tests", "e2e", `${flowId}.test.mjs`), "utf8");
+    expect(body).toContain(`import { describe, it } from "node:test";`);
+  });
+
+  it("decides the runner from the workspace member that holds the destination", async () => {
+    await seedStory();
+    const member = path.join(root, "packages", "app");
+    await mkdir(member, { recursive: true });
+    await writeFile(
+      path.join(root, "package.json"),
+      JSON.stringify({ scripts: { test: "pnpm -r test" } }),
+    );
+    await writeFile(
+      path.join(member, "package.json"),
+      JSON.stringify({ devDependencies: { vitest: "^3.0.0" } }),
+    );
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      [
+        "paths:",
+        "  testsDir: packages/app/tests",
+        "validation:",
+        "  traceability:",
+        "    testFileGlobs:",
+        "      - packages/app/tests/**/*.test.ts",
+        "",
+      ].join("\n"),
+    );
+    expect(await runAtddScaffold({ root, flowId, write: () => {}, writeErr: () => {} })).toBe(0);
+    const body = await readFile(path.join(member, "tests", "e2e", `${flowId}.test.ts`), "utf8");
+    expect(body).toContain(`import { describe, it } from "vitest";`);
   });
 });
 

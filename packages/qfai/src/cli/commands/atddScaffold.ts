@@ -12,6 +12,7 @@ import {
 import {
   detectJsTestRunner,
   type JsTestRunner,
+  applyJsRunner,
   resolveScaffoldDialect,
   SCAFFOLD_RUNNERS,
 } from "../../core/atdd/scaffoldDialect.js";
@@ -40,17 +41,34 @@ function targetsForStory(
     .map((id) => ({ id, kind: "AC" as const, storyId }));
 }
 
-/** The runner the project's package.json declares; `unknown` when there is no package.json. */
-async function readJsTestRunner(root: string): Promise<JsTestRunner> {
-  let text: string;
-  try {
-    text = await readFile(path.join(root, "package.json"), "utf8");
-  } catch (caught) {
-    if (isEnoent(caught)) return "unknown";
-    throw caught;
+/**
+ * The runner the nearest `package.json` declares, searched from `fromDir` up
+ * to `root`, so a workspace member's manifest decides for its own tests.
+ * `unknown` when there is none on that path.
+ */
+async function readJsTestRunner(root: string, fromDir: string): Promise<JsTestRunner> {
+  for (let dir = fromDir; ; dir = path.dirname(dir)) {
+    const manifestPath = path.join(dir, "package.json");
+    let text: string | undefined;
+    try {
+      text = await readFile(manifestPath, "utf8");
+    } catch (caught) {
+      if (!isEnoent(caught)) throw caught;
+    }
+    if (text !== undefined) {
+      let manifest: unknown;
+      try {
+        manifest = JSON.parse(text.replace(/^\uFEFF/, ""));
+      } catch (caught) {
+        throw new Error(
+          `${manifestPath} is not valid JSON: ${caught instanceof Error ? caught.message : String(caught)}`,
+          { cause: caught },
+        );
+      }
+      return detectJsTestRunner(manifest);
+    }
+    if (path.relative(root, dir) === "" || path.dirname(dir) === dir) return "unknown";
   }
-  const manifest: unknown = JSON.parse(text);
-  return detectJsTestRunner(manifest);
 }
 
 export async function runAtddScaffold(options: AtddScaffoldOptions): Promise<number> {
@@ -105,12 +123,21 @@ export async function runAtddScaffold(options: AtddScaffoldOptions): Promise<num
     const relativeDir = path.relative(options.root, path.dirname(probePath)).replace(/\\/g, "/");
     const comparable =
       relativeDir !== ".." && !relativeDir.startsWith("../") && !path.isAbsolute(relativeDir);
-    const resolution = resolveScaffoldDialect(testFileGlobs, {
+    const globResolution = resolveScaffoldDialect(testFileGlobs, {
       ...(comparable ? { scaffoldDir: relativeDir } : {}),
       excludeGlobs,
       ids: targets.map((target) => target.id),
-      jsRunner: await readJsTestRunner(options.root),
     });
+    const resolution =
+      globResolution.outcome === "resolved" && globResolution.dialect.id === "js-ts"
+        ? applyJsRunner(
+            globResolution.dialect,
+            await readJsTestRunner(
+              options.root,
+              comparable ? path.dirname(probePath) : options.root,
+            ),
+          )
+        : globResolution;
     if (resolution.outcome === "unsupported-stack") {
       writeErr(
         `qfai atdd scaffold: no skeleton dialect for ${deriveAtddFilePattern(testFileGlobs)}; supported runners: ${SCAFFOLD_RUNNERS.join(", ")}.`,
@@ -119,7 +146,7 @@ export async function runAtddScaffold(options: AtddScaffoldOptions): Promise<num
     }
     if (resolution.outcome === "unsupported-runner") {
       writeErr(
-        `qfai atdd scaffold: ${resolution.runner === "none" ? "package.json names no test runner" : `package.json runs tests with ${resolution.runner}, which has no skeleton dialect`}; supported runners: ${SCAFFOLD_RUNNERS.join(", ")}.`,
+        `qfai atdd scaffold: ${resolution.runner === "none" ? "package.json names no test runner" : `package.json runs tests with ${resolution.runner}, which has no skeleton dialect`}; supported runners: ${SCAFFOLD_RUNNERS.join(", ")}. Declare vitest in devDependencies, or run node --test from a package.json script.`,
       );
       return 2;
     }

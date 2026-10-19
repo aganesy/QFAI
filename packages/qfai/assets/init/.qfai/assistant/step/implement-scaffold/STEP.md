@@ -49,7 +49,8 @@ the system's shape has settled.
 
 The command never overwrites an existing test. A destination the configured
 globs would not collect is a refusal: fix the globs or the layout, not the
-command's output.
+command's output. So is a JS/TS project whose nearest `package.json` names
+no vitest and no `node --test` script: declare the runner there.
 
 Unit and component tests are not scaffolded. `implement-tdd` writes them test
 first, one example at a time.
