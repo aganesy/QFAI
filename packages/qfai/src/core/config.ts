@@ -291,6 +291,9 @@ export async function loadConfig(root: string): Promise<ConfigLoadResult> {
   if (readSkippedWorkflows(parsed) === null) {
     issues.push(configIssue(configPath, SKIPPED_WORKFLOWS_MESSAGE));
   }
+  if (readAcceptedDrift(parsed) === null) {
+    issues.push(configIssue(configPath, ACCEPTED_DRIFT_MESSAGE));
+  }
   return { config: normalized, issues, configPath, document: parsed };
 }
 
@@ -333,6 +336,32 @@ export function readSkippedWorkflows(document: unknown): ReadonlySet<string> | n
     names.add(name);
   }
   return names;
+}
+
+/** The config issue an invalid `workflow.acceptedDrift` raises. */
+export const ACCEPTED_DRIFT_MESSAGE = `workflow.acceptedDrift must be a list of entries, each with a file, one of the shipped workflow file names (${[...SHIPPED_WORKFLOW_NAMES].join(", ")}) listed once, and a reason that is not empty; an absent key means no difference is accepted.`;
+
+/**
+ * The shipped workflows `workflow.acceptedDrift` accepts as differing from the shipped text, each
+ * with its trimmed reason, read from the parsed config document. `null` means the value is not a
+ * list of such entries, and no entry is accepted in its place.
+ */
+export function readAcceptedDrift(document: unknown): ReadonlyMap<string, string> | null {
+  const workflow = isRecord(document) ? document.workflow : undefined;
+  if (!isRecord(workflow) || workflow.acceptedDrift === undefined) return new Map();
+  const listed = workflow.acceptedDrift;
+  if (!Array.isArray(listed)) return null;
+  const accepted = new Map<string, string>();
+  for (const entry of listed) {
+    if (!isRecord(entry)) return null;
+    const { file, reason } = entry;
+    if (typeof file !== "string" || !SHIPPED_WORKFLOW_NAMES.has(file) || accepted.has(file)) {
+      return null;
+    }
+    if (typeof reason !== "string" || reason.trim() === "") return null;
+    accepted.set(file, reason.trim());
+  }
+  return accepted;
 }
 
 export function resolvePath(root: string, config: QfaiConfig, key: ConfigPathKey): string {
