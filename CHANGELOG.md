@@ -228,6 +228,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   clock profile, and an adoption checklist. `implement-credentials` and
   `implement-acceptance` point to it. Fixes #3696. Fixes #3758.
 
+- **`qfai validate` says when the assistant tree comes from another release.**
+  `qfai init` now writes `.qfai/assistant/VERSION` with the version of the
+  qfai that ran it, where the file is absent and again under `--force`. When
+  the file names a version other than the running one, or is missing,
+  `qfai validate` reports one `QFAI-TOOL-004` warning first and still runs
+  every check, a `QFAI-SKILLS-010` error names the difference, and
+  `qfai doctor` reports an `assistant.version` warning. Each names the
+  install command and `qfai init --force` as the repair. A tree written
+  before this release has no version file, so it gets the warning until
+  `qfai init --force` writes one. Fixes #3538.
+
 - **The verify report lists what a test run records, apart from what is
   covered.** `verify-repo-gate` gains a `### Run report` recipe: when the report
   cites test runner results, it records for each layer the revision and the CI

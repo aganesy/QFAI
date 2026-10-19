@@ -39,6 +39,12 @@ import {
   type InstalledOlderThanDeclared,
 } from "./version.js";
 import { applyWaivers } from "./waivers.js";
+import {
+  assistantVersionRepair,
+  compareAssistantVersion,
+  describeAssistantVersionMismatch,
+  type AssistantVersionMismatch,
+} from "./assistantVersion.js";
 import { validateContracts, validateUiContractParse } from "./validators/contracts.js";
 import { validateUiScreenCopy } from "./validators/uiScreenCopy.js";
 import { validateUiScreenEntries } from "./validators/uiScreenEntries.js";
@@ -110,7 +116,11 @@ export async function validateProject(
   // profile and the old-layout early return carry it, ahead of the config and
   // validator findings in the report.
   const olderThanDeclared = await detectInstalledOlderThanDeclared(root);
-  const versionIssues = buildInstalledOlderIssues(olderThanDeclared);
+  const assistantMismatch = await compareAssistantVersion(root, await resolveToolVersion());
+  const versionIssues = [
+    ...buildInstalledOlderIssues(olderThanDeclared),
+    ...buildAssistantVersionIssues(assistantMismatch),
+  ];
   const forbiddenIdentifiers = config.validation.forbiddenIdentifiers ?? [];
   const securityIssues =
     forbiddenIdentifiers.length > 0
@@ -175,7 +185,7 @@ export async function validateProject(
   );
   const findings = explainVersionMismatch(
     [...versionIssues, ...configIssues, ...securityIssues, ...scopeIssues, ...profileRun.issues],
-    olderThanDeclared,
+    versionDifferenceNotes(olderThanDeclared, assistantMismatch),
   );
   const scopedFindings = findings.filter((finding) => isFindingInFlowScope(finding, flowScope));
   const { issues, waivers } = await applyWaivers(root, scopedFindings);
@@ -388,8 +398,9 @@ async function buildToolProvenanceIssues(root: string): Promise<Issue[]> {
 /**
  * The running qfai is older than the version this project declares.
  *
- * The files `qfai init` writes carry no version, so the project's dependency
- * declaration is the record of which qfai the tree was written for. An
+ * The project's dependency declaration is one record of which qfai the tree
+ * was written for; `.qfai/assistant/VERSION` is the other, read by
+ * {@link buildAssistantVersionIssues}. An
  * installed copy below the lowest version that declaration admits is what a
  * lockfile that moved after the last install leaves, and a rule that reads a
  * generated file then reports the file as wrong when the checker is. This is
@@ -428,29 +439,77 @@ function buildInstalledOlderIssues(older: InstalledOlderThanDeclared | null): Is
 }
 
 /**
- * Rules whose input is a file `qfai init` generated. Under
- * {@link detectInstalledOlderThanDeclared} each is reported as the version
- * difference it may be, with the install as the repair, instead of as a fault in
- * the file that invites an edit to files nobody touched.
+ * The running qfai is not the version recorded in `.qfai/assistant/VERSION`.
+ *
+ * Said once, first, for the reason {@link buildInstalledOlderIssues} is: a rule
+ * that reads a generated file reports the file as wrong when the checker and
+ * the tree come from different releases. `warning`, and the run continues, so
+ * the findings that are real stay visible. A tree with no version file gets the
+ * same one finding and no other treatment.
+ */
+function buildAssistantVersionIssues(mismatch: AssistantVersionMismatch | null): Issue[] {
+  if (mismatch === null) return [];
+  return [
+    issue(
+      "QFAI-TOOL-004",
+      `${describeAssistantVersionMismatch(mismatch)} A finding below about a generated file ` +
+        `may come from the version difference and not from the file.`,
+      "warning",
+      undefined,
+      "toolProvenance.assistantVersion",
+      undefined,
+      "canonical",
+      assistantVersionRepair(mismatch),
+    ),
+  ];
+}
+
+/** What a generated-file finding gains from one version difference. */
+type VersionDifferenceNote = { readonly note: string; readonly action: string };
+
+function versionDifferenceNotes(
+  older: InstalledOlderThanDeclared | null,
+  assistant: AssistantVersionMismatch | null,
+): VersionDifferenceNote[] {
+  const notes: VersionDifferenceNote[] = [];
+  if (older !== null) {
+    notes.push({
+      note:
+        `The installed qfai ${older.installed} is older than the ` +
+        `${older.declaredLowest} this project declares, so this may be a version ` +
+        `difference and not a fault in the file (QFAI-TOOL-003).`,
+      action:
+        "Run the install command (`npm ci` / `pnpm install`) so the installed qfai " +
+        `satisfies ${older.declaredRange}, and run again before editing this file.`,
+    });
+  }
+  if (assistant !== null) {
+    notes.push({
+      note:
+        `${describeAssistantVersionMismatch(assistant)} This may be a version difference ` +
+        `and not a fault in the file (QFAI-TOOL-004).`,
+      action: assistantVersionRepair(assistant),
+    });
+  }
+  return notes;
+}
+
+/**
+ * Rules whose input is a file `qfai init` generated. Under a version
+ * difference each is reported as the difference it may be, with its repair,
+ * instead of as a fault in the file that invites an edit to files nobody
+ * touched.
  */
 const GENERATED_FILE_RULES: ReadonlySet<string> = new Set(["QFAI-SKILLS-010"]);
 
-function explainVersionMismatch(
-  issues: Issue[],
-  older: InstalledOlderThanDeclared | null,
-): Issue[] {
-  if (older === null) return issues;
+function explainVersionMismatch(issues: Issue[], notes: readonly VersionDifferenceNote[]): Issue[] {
+  if (notes.length === 0) return issues;
   return issues.map((entry) =>
     GENERATED_FILE_RULES.has(entry.code)
       ? {
           ...entry,
-          message:
-            `${entry.message} The installed qfai ${older.installed} is older than the ` +
-            `${older.declaredLowest} this project declares, so this may be a version ` +
-            `difference and not a fault in the file (QFAI-TOOL-003).`,
-          suggested_action:
-            "Run the install command (`npm ci` / `pnpm install`) so the installed qfai " +
-            `satisfies ${older.declaredRange}, and run again before editing this file.`,
+          message: [entry.message, ...notes.map((item) => item.note)].join(" "),
+          suggested_action: notes.map((item) => item.action).join(" "),
         }
       : entry,
   );

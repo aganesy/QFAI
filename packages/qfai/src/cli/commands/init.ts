@@ -64,6 +64,12 @@ import {
 } from "../../core/claudeCodeHooks.js";
 import { ASSISTANT_DIR, REFRESHED_ASSISTANT_LAYERS } from "../../core/paths/assistantPaths.js";
 import {
+  assistantVersionPath,
+  assistantVersionText,
+  isRecordableVersion,
+} from "../../core/assistantVersion.js";
+import { resolveToolVersion } from "../../core/version.js";
+import {
   PENDING_CITATIONS_BASENAME,
   type PendingCitations,
   readPendingCitations,
@@ -429,6 +435,7 @@ export async function runInit(
     dryRun: options.dryRun,
     conflictPolicy: "skip",
   });
+  const versionResult = await writeAssistantVersion(destRoot, options);
   reportRefusedWrites(
     [
       ...workflowResult.refused,
@@ -438,6 +445,7 @@ export async function runInit(
       ...qfaiResult.refused,
       ...storyTreeResult.refused,
       ...skillsResult.refused,
+      ...versionResult.refused,
     ],
     destRoot,
   );
@@ -499,6 +507,7 @@ export async function runInit(
     qfaiResult,
     storyTreeResult,
     skillsResult,
+    versionResult,
   ];
   await report(
     [
@@ -506,6 +515,7 @@ export async function runInit(
       ...qfaiResult.copied,
       ...storyTreeResult.copied,
       ...skillsResult.copied,
+      ...versionResult.copied,
       ...wrappersResult.copied,
       ...gitignoreResult.copied,
       ...entryPointRulesResult.copied,
@@ -517,6 +527,7 @@ export async function runInit(
       ...qfaiResult.skipped,
       ...storyTreeResult.skipped,
       ...skillsResult.skipped,
+      ...versionResult.skipped,
       ...wrappersResult.skipped,
       ...gitignoreResult.skipped,
       ...entryPointRulesResult.skipped,
@@ -595,6 +606,50 @@ export async function runInit(
   } else {
     info(await renderGraphPreview(destRoot));
   }
+}
+
+/**
+ * Records the release that wrote the assistant tree in `.qfai/assistant/VERSION`, on the terms of
+ * the shipped assistant files: written where absent, rewritten under `--force`, and kept as it is
+ * otherwise. A file that already records this release is skipped as identical. Nothing is written
+ * through a linked or non-directory parent, or over an entry that is not a regular file.
+ */
+async function writeAssistantVersion(
+  destRoot: string,
+  options: { force: boolean; dryRun: boolean },
+): Promise<CopyResult> {
+  const result: CopyResult = { copied: [], skipped: [], refused: [], kept: [] };
+  const version = await resolveToolVersion();
+  if (!isRecordableVersion(version)) return result;
+  const target = assistantVersionPath(destRoot);
+  const content = assistantVersionText(version);
+  if ((await blockedAncestor(destRoot, target)) !== undefined) {
+    result.refused.push(target);
+    return result;
+  }
+  const existing = await safeLstat(target);
+  if (existing !== undefined) {
+    const current = existing.isFile() ? await readFile(target, "utf-8") : undefined;
+    if (current === content) {
+      result.skipped.push(target);
+      return result;
+    }
+    if (!options.force || !existing.isFile()) {
+      result.skipped.push(target);
+      result.kept.push(target);
+      return result;
+    }
+  }
+  if (!options.dryRun) {
+    await mkdir(path.dirname(target), { recursive: true });
+    if (!(await writeGeneratedProfile(target, content))) {
+      result.skipped.push(target);
+      result.kept.push(target);
+      return result;
+    }
+  }
+  result.copied.push(target);
+  return result;
 }
 
 /** The owner files a note names, at most; the rest are counted. */
