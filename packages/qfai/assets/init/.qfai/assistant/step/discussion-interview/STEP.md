@@ -146,8 +146,9 @@ runs.
 
 The reviewer confirms:
 
-- the stage report's `## Grilling Session` row shows the session ended before
-  authoring began, with `Ended` one of `confirmed`, `user-closed`,
+- every row of the stage report's `## Grilling Session` table has its
+  `Ended at` before its own `Authoring began` (for a reopened row, when
+  authoring resumed), with `Ended` one of `confirmed`, `user-closed`,
   `no-question`, or `adopted` with the recorded explicit-delegation conditions
   verified;
 - every decision the session settled is recorded where

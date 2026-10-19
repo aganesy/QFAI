@@ -29,6 +29,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   drops from about 36 KB to about 21 KB with the same values and wording.
   Fixes #3780.
 
+- **`qfai-run` plans each item of a standing queue instruction separately.**
+  The extraction reference now gives "merge the open pull requests oldest
+  first, then the issues" as an example of one goal covering independent
+  targets, so each pull request or issue gets its own extraction and plan
+  instead of being worked without one. Fixes #3781.
+
 - **The `sdd-triage` step says how a replaced decision is recorded.** Its
   decision-row rules now say that when a later decision replaces a row, that
   row's Status changes to `SUPERSEDED (by DEC-NNNN)`, or to
@@ -111,6 +117,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   once whether a run holds anything but an expected code. A script that read
   the line after `counts:` as `fail-on:` must skip the new line.
   Fixes #3797.
+
+- **A colliding decision ID is renumbered once, at merge time.** The
+  `qfai-sdd` triage reference now says a branch keeps its decision IDs while
+  its pull request is open, and the session that merges it runs
+  `qfai sdd renumber-decision` against the fetched base only when that base
+  declares an ID the branch added, renumbering every branch-added row from the
+  lowest colliding one upward. Because the shipped `.gitattributes` union-merges
+  `decisions.md`, a collision never conflicts, so the reference says to check
+  the base before merging, to undo an unpushed merge with
+  `git reset --merge ORIG_HEAD` before renumbering, and to abort a merge that
+  stopped on other conflicts.
+  Fixes #3778.
+
+- **A critical decision found while writing the discussion pack goes back to
+  the user.** `discussion-pack` and `discussion-oq` now reopen the ended session
+  for that one node: they stop writing, ask the user one round, and resume. The
+  stage report's `## Grilling Session` table gains one row for that round, and
+  the earlier rows stay as written. Only a no-question mode may record the
+  decision as an assumption. Fixes #3794.
 
 - **Shipped seed and sample data now have an artifact to fall under.** The
   `qfai-run` extraction reference files them under `data` rather than `config`,
