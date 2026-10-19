@@ -7,7 +7,7 @@
  */
 import path from "node:path";
 
-import { resolvePath, type QfaiConfig } from "../../config.js";
+import { findConfigRoot, resolvePath, type QfaiConfig } from "../../config.js";
 import { findLatestPack } from "../../packLocator.js";
 import type { Issue } from "../../types.js";
 import { readSafe } from "../utils.js";
@@ -23,7 +23,11 @@ import { validateThreeLayerFamilyCompleteness } from "./threeLayer.js";
 import { validateScreenContractSchema } from "./screenContract.js";
 import { validateTrendScan } from "./trendScan.js";
 
-type UixValidator = (root: string, config: QfaiConfig) => Promise<Issue[]>;
+/**
+ * `projectRoot` is the project the pack belongs to, for a check that compares
+ * the pack against the project's own contracts.
+ */
+type UixValidator = (root: string, config: QfaiConfig, projectRoot?: string) => Promise<Issue[]>;
 
 /**
  * The canonical UIX validator set — the whole UIX surface `qfai validate`
@@ -68,10 +72,15 @@ export async function runCanonicalUixValidators(
   if (packRoots.length === 0) {
     return [];
   }
+  // A repo root is the project; a pack root given directly belongs to the
+  // project that holds `qfai.config.yaml` above it.
+  const projectRoot = packRoots[0] === root ? (await findConfigRoot(root)).root : root;
 
   const perPack = await Promise.all(
     packRoots.map(async (packRoot) => {
-      const results = await Promise.all(CANONICAL_UIX_VALIDATORS.map((v) => v(packRoot, config)));
+      const results = await Promise.all(
+        CANONICAL_UIX_VALIDATORS.map((v) => v(packRoot, config, projectRoot)),
+      );
       return results.flat();
     }),
   );
