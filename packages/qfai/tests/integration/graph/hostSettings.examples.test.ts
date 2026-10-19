@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -5,7 +6,10 @@ import { expect, it } from "vitest";
 import { composeGraphDenialHooks } from "../../../src/core/graph/hostSettings.js";
 import { parse } from "smol-toml";
 import { prepareGraphIntegration } from "../../../src/core/graph/integration.js";
+import { createDoctorData } from "../../../src/core/doctor.js";
+import { renderGraphPreparation } from "../../../src/core/graph/presentation.js";
 import { graphProcessFixture } from "../../helpers/graphProcess.js";
+import { removeTempTree } from "../../helpers/tempTree.js";
 
 // QFAI:EX-0001-0237-06
 // Mutation: packages/qfai/src/core/graph/integration.ts `const entries = await installGraphEntrypoints(root);` -> `const entries = { files: [], conflicts: [] };` fails "prepares a portable CLI without changing unrelated Codex and MCP settings"
@@ -144,5 +148,207 @@ it("preserves malformed hooks and adopter-edited CLI entrypoints with manual rec
     expect(await readFile(common, "utf8")).toBe("{ malformed unrelated MCP settings");
   } finally {
     await rm(root, { recursive: true, force: true });
+  }
+});
+
+/** One host's graph hook command, as the host runs it: exec form for Claude Code, a shell line otherwise. */
+interface GraphHookCommand {
+  host: string;
+  command: string;
+  args?: string[];
+}
+
+async function graphHookCommands(root: string): Promise<GraphHookCommand[]> {
+  const read = async (...segments: string[]): Promise<unknown> =>
+    JSON.parse(await readFile(path.join(root, ...segments), "utf8"));
+  const last = (value: unknown, event: string): Record<string, unknown> => {
+    const groups = record(record(value).hooks)[event];
+    if (!Array.isArray(groups)) throw new Error(`No ${event} groups.`);
+    const group = record(groups.at(-1));
+    return Array.isArray(group.hooks) ? record(group.hooks[0]) : group;
+  };
+  const claude = last(await read(".claude", "settings.json"), "PreToolUse");
+  const codex = last(await read(".codex", "hooks.json"), "PreToolUse");
+  const shared = last(await read(".github", "hooks", "qfai-graph.json"), "preToolUse");
+  expect(shared.powershell).toBe(shared.bash);
+  const args = claude.args;
+  if (!Array.isArray(args) || typeof claude.command !== "string") throw new Error("No Claude entry.");
+  if (typeof codex.command !== "string" || typeof shared.bash !== "string")
+    throw new Error("No shell entry.");
+  return [
+    {
+      host: "claude",
+      command: claude.command,
+      args: args.map((arg: unknown) => String(arg).replace("${CLAUDE_PROJECT_DIR}", root)),
+    },
+    { host: "codex", command: codex.command },
+    { host: "shared", command: shared.bash },
+  ];
+}
+
+function runGraphHook(hook: GraphHookCommand, root: string, input: string) {
+  const options = { cwd: root, input, encoding: "utf8" as const, timeout: 30000 };
+  return hook.args === undefined
+    ? spawnSync(hook.command, { ...options, shell: true })
+    : spawnSync(hook.command, hook.args, options);
+}
+
+function record(value: unknown): Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    throw new Error("Expected an object.");
+  return Object.fromEntries(Object.entries(value));
+}
+
+const MISSING_HOOK_LINE =
+  "QFAI graph hook skipped: .qfai/tools/graph-hook.mjs is missing in this checkout. Run npx qfai init here to install it.";
+
+// QFAI:EX-0001-0237-23
+// Mutation: packages/qfai/src/core/graph/hookCommands.ts `require('fs').existsSync(f)?` -> `true?` fails "passes each host's graph hook with one reminder line where the script is missing"
+it("passes each host's graph hook with one reminder line where the script is missing", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-hook-missing-"));
+  try {
+    expect((await composeGraphDenialHooks(root)).conflicts).toEqual([]);
+    const hooks = await graphHookCommands(root);
+    for (const hook of hooks) {
+      const result = runGraphHook(hook, root, "{}");
+      expect(result.error, hook.host).toBeUndefined();
+      expect(result.status, hook.host).toBe(0);
+      expect(result.stdout, hook.host).toBe("");
+      expect(result.stderr.trim().split(/\r?\n/), hook.host).toEqual([MISSING_HOOK_LINE]);
+    }
+    // Where the script exists, the guard runs it in the same process with its argument, stdin and
+    // exit code, so a denial still reaches the host.
+    await mkdir(path.join(root, ".qfai", "tools"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai", "tools", "graph-hook.mjs"),
+      'import { readFileSync } from "node:fs";\n' +
+        'process.stdout.write(JSON.stringify([process.argv.slice(2), readFileSync(0, "utf8")]));\n' +
+        "process.exitCode = 2;\n",
+    );
+    for (const hook of hooks) {
+      const result = runGraphHook(hook, root, '{"tool_name":"Grep"}');
+      expect(result.status, hook.host).toBe(2);
+      expect(result.stderr, hook.host).toBe("");
+      expect(JSON.parse(result.stdout), hook.host).toEqual([[hook.host], '{"tool_name":"Grep"}']);
+    }
+  } finally {
+    await removeTempTree(root);
+  }
+});
+
+// QFAI:EX-0001-0237-24
+// Mutation: packages/qfai/src/core/graph/hostSettings.ts `if (existing.length === 1 && isEarlierGraphHookGroup(existing[0]))` -> `if (false)` fails "replaces the graph hook entries an earlier release wrote with the guarded ones"
+it("replaces the graph hook entries an earlier release wrote with the guarded ones", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-hook-upgrade-"));
+  const reminder = {
+    matcher: "Bash",
+    hooks: [{ type: "command", command: "node reminder.mjs", statusMessage: "existing reminder" }],
+  };
+  // The exact entries 2.2.0 wrote, which ran the git-ignored script directly.
+  const earlier = {
+    claude: {
+      matcher: "Bash|PowerShell|Grep",
+      hooks: [
+        {
+          type: "command",
+          statusMessage: "QFAI graph exploration",
+          command: "node",
+          args: ["${CLAUDE_PROJECT_DIR}/.qfai/tools/graph-hook.mjs", "claude"],
+        },
+      ],
+    },
+    codex: {
+      matcher: "^(Bash|PowerShell|exec_command|Grep|grep|rg|grep_search|search_files|file_search)$",
+      hooks: [
+        {
+          type: "command",
+          statusMessage: "QFAI graph exploration",
+          command: "node .qfai/tools/graph-hook.mjs codex",
+        },
+      ],
+    },
+    shared: {
+      type: "command",
+      bash: "node .qfai/tools/graph-hook.mjs shared",
+      powershell: "node .qfai/tools/graph-hook.mjs shared",
+      timeoutSec: 10,
+    },
+  };
+  const files = {
+    claude: path.join(root, ".claude", "settings.json"),
+    codex: path.join(root, ".codex", "hooks.json"),
+    shared: path.join(root, ".github", "hooks", "qfai-graph.json"),
+  };
+  try {
+    for (const file of Object.values(files)) await mkdir(path.dirname(file), { recursive: true });
+    const write = (file: string, value: unknown): Promise<void> =>
+      writeFile(file, JSON.stringify(value, null, 2) + "\n");
+    await write(files.claude, { hooks: { PreToolUse: [reminder, earlier.claude] } });
+    await write(files.codex, { hooks: { PreToolUse: [reminder, earlier.codex] } });
+    await write(files.shared, { version: 1, hooks: { preToolUse: [earlier.shared] } });
+    const result = await composeGraphDenialHooks(root);
+    expect(result.conflicts).toEqual([]);
+    expect([...result.files].sort()).toEqual([
+      ".claude/settings.json",
+      ".codex/hooks.json",
+      ".github/hooks/qfai-graph.json",
+    ]);
+    for (const file of [files.claude, files.codex]) {
+      const groups: unknown = record(JSON.parse(await readFile(file, "utf8")).hooks).PreToolUse;
+      if (!Array.isArray(groups)) throw new Error("No PreToolUse groups.");
+      expect(groups).toHaveLength(2);
+      expect(groups[0]).toEqual(reminder);
+      expect(JSON.stringify(groups[1])).toContain("QFAI graph exploration");
+      expect(JSON.stringify(groups[1])).toContain("existsSync");
+    }
+    const shared: unknown = record(JSON.parse(await readFile(files.shared, "utf8")).hooks)
+      .preToolUse;
+    if (!Array.isArray(shared)) throw new Error("No preToolUse entries.");
+    expect(shared).toHaveLength(1);
+    expect(JSON.stringify(shared[0])).toContain("existsSync");
+    for (const hook of await graphHookCommands(root))
+      expect(runGraphHook(hook, root, "{}").status, hook.host).toBe(0);
+    expect(await composeGraphDenialHooks(root)).toEqual({ files: [], conflicts: [] });
+  } finally {
+    await removeTempTree(root);
+  }
+});
+
+// QFAI:EX-0001-0237-25
+// Mutation: packages/qfai/src/core/graph/presentation.ts `GRAPH_TOOLS_LOCAL_NOTE,` -> `` fails "says in the init summary that the graph tools are local to each checkout"
+it("says in the init summary that the graph tools are local to each checkout", () => {
+  const output = renderGraphPreparation({
+    runtime: "installed",
+    code: "code-not-ready",
+    documents: "documents-not-ready",
+  });
+  expect(output.split("\n")).toContain(
+    ".qfai/tools/ is git-ignored and local to this checkout: run npx qfai init in every other clone or worktree. Until then its graph hook skips each call with a reminder.",
+  );
+});
+
+// QFAI:EX-0001-0237-26
+// Mutation: packages/qfai/src/core/doctor/graphHook.ts `if (await exists(path.join(root, ...GRAPH_HOOK_SCRIPT.split("/"))))` -> `if (true)` fails "warns in doctor when committed graph hook entries point at a missing script"
+it("warns in doctor when committed graph hook entries point at a missing script", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-hook-doctor-"));
+  const check = async () =>
+    (await createDoctorData({ startDir: root, rootExplicit: true })).checks.find(
+      (entry) => entry.id === "graph.hookScript",
+    );
+  try {
+    expect(await check()).toBeUndefined();
+    await composeGraphDenialHooks(root);
+    const missing = await check();
+    expect(missing?.severity).toBe("warning");
+    expect(missing?.message).toContain(".claude/settings.json");
+    expect(missing?.message).toContain(".codex/hooks.json");
+    expect(missing?.message).toContain(".github/hooks/qfai-graph.json");
+    expect(missing?.message).toContain(".qfai/tools/graph-hook.mjs");
+    expect(missing?.message).toContain("npx qfai init");
+    await mkdir(path.join(root, ".qfai", "tools"), { recursive: true });
+    await writeFile(path.join(root, ".qfai", "tools", "graph-hook.mjs"), "\n");
+    expect((await check())?.severity).toBe("ok");
+  } finally {
+    await removeTempTree(root);
   }
 });
