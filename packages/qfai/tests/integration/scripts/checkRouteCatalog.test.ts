@@ -51,10 +51,10 @@ function approvedBy(route: string): string {
 // QFAI:EX-0001-0217-01
 it("The shipped catalog, a row citing an unknown decision, and one citing a row that is no change request", () => {
   const unknown = withRow("edit-text", (row) =>
-    row.replace(`Approved by ${approvedBy("edit-text")}.`, "Approved by DEC-9999."),
+    row.replace(`Approved by ${approvedBy("edit-text")}`, "Approved by DEC-9999"),
   );
   const notARequest = withRow("fix-intermittent", (row) =>
-    row.replace(`Approved by ${approvedBy("fix-intermittent")}.`, "Approved by DEC-0003."),
+    row.replace(`Approved by ${approvedBy("fix-intermittent")}`, "Approved by DEC-0003"),
   );
 
   expect({
