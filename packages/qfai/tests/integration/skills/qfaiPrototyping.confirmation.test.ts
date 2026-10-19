@@ -109,7 +109,7 @@ describe.each(TREES)("%s", (tree) => {
     );
     const preflight = flat(await read(tree, "step/prototyping-preflight/STEP.md"));
     expect(preflight).toContain(
-      "For a `restyle` request, also run `npx qfai doctor --profile prototyping --target-url <url>` against the live app's URL",
+      "For a `restyle` request, the live app must already be running. Also run `npx qfai doctor --profile prototyping --target-url <url>` against the live app's URL",
     );
     const generator = section(
       await read(tree, "skill/qfai-prototyping/references/generator-prompt.md"),
