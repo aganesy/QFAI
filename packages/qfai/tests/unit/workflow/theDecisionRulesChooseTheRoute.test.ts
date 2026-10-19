@@ -380,11 +380,16 @@ it("A behaviour change that removes a feature retires it, unless a choice is ope
       entryFlags: ["decision"],
       qualifiers: ["removal-requested"],
     }),
+    await decided({
+      intent: "behaviour-change",
+      qualifiers: ["prototype-requested", "removal-requested"],
+    }),
     await decided({ intent: "deprecation", qualifiers: ["removal-requested"] }),
     await decided({ intent: "unenforced", qualifiers: ["removal-requested"] }),
   ]).toEqual([
     ["retire-feature", 28],
     ["decide-design", 28],
+    ["prototype-feature", 28],
     ["change-compatibility", 28],
     ["retire-mechanism", 19],
   ]);

@@ -266,7 +266,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   runs `implement-retire`, which removes the feature from code, configuration
   and documents, deletes the tests of removed examples, changes an assertion
   that pins the old behaviour or wording to what the specification now states,
-  and adds no test. An open choice still routes `decide-design` first. Fixes #3650.
+  and adds no test. An open choice still routes `decide-design` first, and a
+  proposal it adopts may continue to `retire-feature`. Fixes #3650.
 
 - **A critical decision found while writing the discussion pack goes back to
   the user.** `discussion-pack` and `discussion-oq` now reopen the ended session

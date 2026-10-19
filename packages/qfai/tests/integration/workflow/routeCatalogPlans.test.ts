@@ -52,7 +52,7 @@ const CATALOG: [string, string][] = [
   ],
   [
     "decide-design",
-    "Stages in order — `discussion` (discussion): `discussion-research`, `discussion-interview`, `discussion-pack°`, `discussion-uiux°`, `discussion-oq`; `close` (triage): `triage-close`; decision points `discussion-interview`; release point none; branch points `triage-close`, `adopted` to `add-feature`, `prototype-feature` or `change-compatibility`",
+    "Stages in order — `discussion` (discussion): `discussion-research`, `discussion-interview`, `discussion-pack°`, `discussion-uiux°`, `discussion-oq`; `close` (triage): `triage-close`; decision points `discussion-interview`; release point none; branch points `triage-close`, `adopted` to `add-feature`, `prototype-feature`, `change-compatibility` or `retire-feature`",
   ],
   [
     "decompose-epic",
