@@ -123,6 +123,18 @@ describe("the steps the routes add to qfai-implement", () => {
     expect(bump).toMatch(/never edit a lockfile by hand/i);
     expect(bump).toMatch(/when the dependency is `qfai` itself/i);
     expect(bump).toMatch(/`init --force`, the retired files the release notes list/i);
+    expect(bump).toMatch(/names a spec contract to change, leave the contract unchanged/i);
+    expect(bump).toMatch(/to the operator as a critical decision: return `awaiting_input`/i);
+    expect(bump).toMatch(/on approval, append one `Change request:` row to `decisions\.md`/i);
+    expect(bump).toMatch(
+      /report `branch: \{ outcome: contract-finding \}` citing that row's DEC ID/i,
+    );
+    expect(bump).toMatch(
+      /`apply-settled`, whose `spec` stage edits the contract under its change request/i,
+    );
+    expect(bump).toMatch(
+      /when every other part of the update is met and recorded and the only finding left is the contract one, which it reports as `contract-finding`/i,
+    );
 
     const toolingStep = await stepText("implement-tooling");
     const tooling = flat(toolingStep);
