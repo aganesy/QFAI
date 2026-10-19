@@ -60,7 +60,7 @@ INTERNAL_SPEC_RE='[sS][pP][eE][cC]-0*[1-9][0-9]+'
 #
 # Keep it broad: the shipped spelling adapts to this guard, never the
 # reverse. Do not narrow it to a project-qualified form, add a context
-# exemption or add an allow-list entry. See
+# exemption or let any listed file through. See
 # .agents/rules/distributed-surface.local.md.
 INTERNAL_VERSION_RE='\bv[0-9]+\.[0-9]+(\.[0-9]+)?\b|\bv1\.x\b'
 
