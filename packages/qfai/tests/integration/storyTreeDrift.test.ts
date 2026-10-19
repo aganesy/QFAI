@@ -51,7 +51,7 @@ function commitWithLink(parent: string, link: string): void {
   const gitIn = (args: string[], input?: string): string =>
     execFileSync("git", args, { cwd: root, env, encoding: "utf8", input }).trim();
   gitIn(["read-tree", parent]);
-  gitIn(["rm", "-r", "-q", "--cached", "--ignore-unmatch", "--", link]);
+  gitIn(["rm", "-r", "-q", "-f", "--cached", "--ignore-unmatch", "--", link]);
   const blob = gitIn(["hash-object", "-w", "--stdin"], "elsewhere");
   gitIn(["update-index", "--add", "--cacheinfo", `120000,${blob},${link}`]);
   const tree = gitIn(["write-tree"]);
