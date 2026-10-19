@@ -147,5 +147,25 @@ export function scopesOf(
         .some((earlier) => earlier.stages.length === candidate.stages.length),
   );
   distinct.push({ scope: "broad", stages: all });
-  return distinct.map((candidate, index) => ({ ...candidate, recommended: index === 0 }));
+  // A scope the next wider one differs from only by cost-free stages offers no real choice, so only
+  // the wider one stays. A stage is cost-free when every step passes through, it has no review, and
+  // it writes neither code nor tests: a pass-through step still writes when there is work to do.
+  const passesThrough = new Set(
+    stages
+      .filter(
+        (stage) =>
+          !WRITES_CODE.has(stage.kind) &&
+          stage.review === undefined &&
+          stage.steps.every((step) => step.passThrough === true),
+      )
+      .map((stage) => stage.id),
+  );
+  const offered = distinct.filter((candidate, index) => {
+    const wider = distinct[index + 1];
+    return (
+      wider === undefined ||
+      wider.stages.some((id) => !candidate.stages.includes(id) && !passesThrough.has(id))
+    );
+  });
+  return offered.map((candidate, index) => ({ ...candidate, recommended: index === 0 }));
 }

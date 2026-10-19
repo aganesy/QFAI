@@ -157,13 +157,15 @@ the ids of the stages it runs in plan order, and `true` for the narrowest.
   change note and the gates that end the route follow; when they reach the route's last stage
   that writes code, every verify stage that ends the route follows.
 - `medium` adds the change note and the gates to those stages; where `narrow`
-  already holds implementation, it equals `narrow`.
+  already holds implementation, it equals `narrow`. It is listed unless `broad`
+  adds only pass-through stages that write neither code nor tests and have no review.
 - Documentation-only maintenance or procedure writing keeps the change note
   and closing gates. A procedure plan therefore gets `broad` alone.
 - A security intake plan gets `broad` alone.
 - `broad` runs every stage.
 
-A scope holding every stage is `broad`, and `medium` is left out when it equals `narrow`. An extraction with
+A scope holding every stage is `broad`, and `medium` is left out when it equals `narrow`. A scope is also left
+out when the next wider one adds only such pass-through stages. An extraction with
 no artifacts, or whose route writes nothing, gets `broad` alone. A candidate
 keeps its scopes: `--route` returns none.
 
