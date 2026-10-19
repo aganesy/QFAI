@@ -43,6 +43,13 @@ them; it is the procedure that applies them.
   merge and why no reviewer ran. A parent skill invoked by name uses the
   reviewers its own `## Review` section names, such as `qfai-discussion`'s.
 
+  A code review whose target changes at most five lines, each changing only a
+  literal value such as a version, a number, a name or a flag in a
+  configuration or build file, gets no reviewer. A change to code, tests, a
+  story-tree or contract file, a screen or a file's structure is not
+  literal-only. The final report names the skip, the changed lines and why no
+  reviewer ran.
+
 - **The review target.** The specification review: every path and ID the
   stage it follows wrote or changed, and the source it was written from. The
   code review: the route's whole diff against the revision the route started

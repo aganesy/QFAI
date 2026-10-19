@@ -56,4 +56,12 @@ Feature: Review a change twice: the specification before the code, and the code 
     Then no reviewer is dispatched
     And the review is still held, and the stage report names the merge and says no reviewer ran because the edits only resolve conflicts
     And a resolution that adds content neither side had is not conflict-only, and its reviews dispatch their reviewers
+
+  # AC-0001-0225-07
+  Scenario: A code review of a small literal-only change gets no reviewer
+    Given a code review its route names whose target changes at most five lines, each changing only a literal value such as a version, a number, a name or a flag in a configuration or build file
+    When the review is reached
+    Then no reviewer is dispatched
+    And the review is still held, and the final report names the skip, the changed lines and why no reviewer ran
+    And a target that also changes code, tests, a story-tree or contract file, a screen or a file's structure, or changes more than five lines, dispatches its reviewers
 ```
