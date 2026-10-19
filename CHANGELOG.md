@@ -110,6 +110,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   pending approval row first.
   Fixes #3551.
 
+- **`npx qfai workflow plan --order` plans an operation on finished work with
+  no extraction file.** A push, a pull request or another operation the user
+  names after a finished run no longer needs its own extraction file: `--order`
+  plans `{ intent: order, artifacts: [] }` through the same decision rules, and
+  `qfai-run` uses it for such operations. Fixes #3791.
+
 - **A critical decision found while writing the discussion pack goes back to
   the user.** `discussion-pack` and `discussion-oq` now reopen the ended session
   for that one node: they stop writing, ask the user one round, and resume. The

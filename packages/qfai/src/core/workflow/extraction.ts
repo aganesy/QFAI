@@ -132,6 +132,18 @@ export interface WorkflowExtraction extends RoutingReading {
   alternatives?: RoutingReading[];
 }
 
+// The extraction `npx qfai workflow plan --order` plans: an order that names nothing to change,
+// read at high confidence, so the decision rules give the route as for any extraction.
+export const ORDER_EXTRACTION: WorkflowExtraction = {
+  intent: "order",
+  entryFlags: [],
+  qualifiers: [],
+  signals: [],
+  risks: [],
+  artifacts: [],
+  confidence: "high",
+};
+
 // Alternatives are one or two readings: required at `low`, allowed at `medium`, refused at
 // `high`.
 export function alternativesFit(confidence: unknown, alternatives: unknown): boolean {

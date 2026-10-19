@@ -62,7 +62,7 @@ values plan nothing.
    (or `question-how`, `question-help`); an operation on finished work, or on a device or system the session reaches, that the session runs itself and
    that deletes nothing is `{ intent: order, artifacts: [] }`. Every other field is empty, with
    `confidence: high`; neither needs a reference. Read any other request as `references/extraction.md`
-   sets out. Then run the launcher preflight above; after it passes, hand the extraction to `npx qfai workflow plan --in <file>`, or `--in -`.
+   sets out. Then run the launcher preflight above; after it passes, hand the extraction to `npx qfai workflow plan --in <file>`, or `--in -`; plan the operation with `--order` instead, which needs no file.
 2. **Candidates.** When `plan` returns `candidates`, put one single-select
    question, each option saying in the user's words what that route will do,
    then run `npx qfai workflow plan --route <route>` for the chosen one.
@@ -92,7 +92,7 @@ values plan nothing.
    When the release change is produced outside this run (by a release workflow or bot), record its approval in the final report with the same four items and list the row as a pending follow-up;
    the next change that touches `decisions.md` appends the row, and a `qfai-run` that writes `decisions.md` appends any pending approval row first.
 8. **A finding no stage serves.** Stop, and name the finding, its owner and the stage skill to invoke by name.
-9. **Commit.** `verify-commit` runs last, after any release point; never pushes. A push, pull request, merge or branch update the user asks for after the plan ends is planned next as `{ intent: order, artifacts: [] }`, and its `triage-operate` delivers it.
+9. **Commit.** `verify-commit` runs last, after any release point; never pushes. A push, pull request, merge or branch update the user asks for after the plan ends is planned next as `{ intent: order, artifacts: [] }` with `npx qfai workflow plan --order`, and its `triage-operate` delivers it.
 10. **Session feedback.** When the final report closes the user's last task and nothing waits on them, follow `.agents/rules/session-feedback.md` once.
 
 ## Under a no-question mode

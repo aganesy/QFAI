@@ -409,7 +409,11 @@ it("--order plans an operation on finished work with no extraction file", async 
 
   expect({
     status: ordered.status,
-    head: [field(ordered.json, "route"), field(ordered.json, "family"), field(ordered.json, "rule")],
+    head: [
+      field(ordered.json, "route"),
+      field(ordered.json, "family"),
+      field(ordered.json, "rule"),
+    ],
     step: field(ordered.json, "stages.0.steps.0.name"),
     same: ordered.stdout === fromStdin.stdout,
     unchanged: JSON.stringify(await listTree(root)) === JSON.stringify(before),
@@ -421,8 +425,20 @@ it("--order plans an operation on finished work with no extraction file", async 
     same: true,
     unchanged: true,
     combined: [
-      [2, [{ reason: "invalid-input", subject: "--in" }, { reason: "invalid-input", subject: "--order" }]],
-      [2, [{ reason: "invalid-input", subject: "--route" }, { reason: "invalid-input", subject: "--order" }]],
+      [
+        2,
+        [
+          { reason: "invalid-input", subject: "--in" },
+          { reason: "invalid-input", subject: "--order" },
+        ],
+      ],
+      [
+        2,
+        [
+          { reason: "invalid-input", subject: "--route" },
+          { reason: "invalid-input", subject: "--order" },
+        ],
+      ],
     ],
   });
 });
