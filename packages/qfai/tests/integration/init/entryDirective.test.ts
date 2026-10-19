@@ -12,7 +12,7 @@ import { describe, expect, it } from "vitest";
 import { initQuietly, withEmptyRepo } from "./upgradeStates.js";
 
 const CLAUDE_MD_LINE =
-  "qfai init does not write CLAUDE.md. Where a project has one, Claude Code reads it instead of AGENTS.md: add the line @AGENTS.md to it.";
+  "If this project has a CLAUDE.md or CLAUDE.local.md, add the line @AGENTS.md to it: Claude Code reads that file instead of AGENTS.md, and qfai init does not write either.";
 
 const ENTRY_POINTS = ["AGENTS.md"];
 const COPILOT = ".github/copilot-instructions.md";
