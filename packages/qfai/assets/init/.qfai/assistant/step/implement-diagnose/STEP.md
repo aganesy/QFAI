@@ -72,8 +72,9 @@ test that should have caught it, before any production code changes:
 2. Run that test alone and observe its assertion fail for the reported
    behaviour (Red). A load error, a missing dependency or a broken fixture is
    not a Red. Where the Test entry of the Standard commands is
-   `CI only: <check name>`, or the user's instruction for this run delegates that gate to a named CI check,
-   do not run it: record `red: ci-deferred`, quoting that instruction, as
+   `CI only: <check name>`, or the user's instruction for this run delegates
+   that gate to a named CI check, do not run it: record `red: ci-deferred`,
+   quoting that instruction, as
    `.qfai/assistant/skill/qfai-implement/references/red-admissibility.md#ci-only-test-gate`
    states, and the route's code review reads the test against the code
    before the fix.
@@ -132,6 +133,6 @@ Inside a workflow run, the result carries:
 The step is done when one verdict is recorded with the observation that
 supports it, and no tracked file changed but the failing test. That
 observation is the reproduction: on a `fix` route the test's observed Red, or
-its `ci-deferred` Red where the Test entry is `CI only: <check name>` or
-the user's instruction for this run delegates that gate to a named CI check, and
+its `ci-deferred` Red where the Test entry is `CI only: <check name>` or the
+user's instruction for this run delegates that gate to a named CI check, and
 for `needs-info` the attempts that could not reproduce it.

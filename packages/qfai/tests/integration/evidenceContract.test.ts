@@ -484,6 +484,12 @@ describe("focused evidence guidance", () => {
     expect(ciOnly).toMatch(
       /standing instruction in the project's agent instructions counts for each run it is in force/,
     );
+    expect(ciOnly).toContain(
+      "A delegation requires an actual CI check that runs this test; local environment failure alone creates no delegation.",
+    );
+    expect(ciOnly).toContain(
+      "Under a delegation by instruction, that test-only commit is the expected way to observe Red whenever the run has that authority.",
+    );
     expect(ciOnly).toMatch(
       /Without an instruction that can be quoted, nothing is deferred and the focused phases run locally; the agent never defers them on its own judgment/,
     );
