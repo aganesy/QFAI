@@ -122,6 +122,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   pending approval row first.
   Fixes #3551.
 
+- **A code review of a small literal-only change dispatches no reviewer.**
+  In a route, when the diff replaces at most five lines, adds or removes none,
+  and each changes only a literal value in a configuration or build file, such
+  as a version, a number, a name or a flag, `common-review-cycle` holds the
+  code review without a reviewer, and the stage report and the final report
+  name the skip, the changed lines and why. A diff that touches code, tests,
+  the story tree, a contract, a screen or a file's structure is reviewed as
+  before, and so is one that touches permissions, secrets, credentials or
+  tokens, a URL, host, registry, image or action reference, a version resolved
+  from the network, a workflow trigger, a setting that turns a check on or
+  off, text inside a shell command, script or recipe, or a package's own
+  version or any value a release, tag or publish job reads. Fixes #3766.
+
 - **`qfai validate` text output now counts findings per code.** A `codes:`
   line after `counts:` follows each severity's count with the count of each
   of its codes, most frequent first, for example
