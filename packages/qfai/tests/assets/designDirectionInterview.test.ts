@@ -125,6 +125,14 @@ describe("a pack may inherit the current DESIGN.md", () => {
         "owes no Trend Scan, no minimum count of competitive or catalogue references",
       );
       expect(playbook).toContain("### Inheriting the current DESIGN.md");
+      const matrix = flat(await read(tree, MATRIX));
+      expect(matrix).toContain("## Inheriting Packs");
+      expect(matrix).toContain("UI-bearing items 1 and 5 do not apply");
+      const packStep = flat(await read(tree, "assistant/step/discussion-pack/STEP.md"));
+      expect(packStep).toContain(
+        "A pack whose classification declares `design_direction: inherit` records no direction and skips the registries and the 40/50 sidecars",
+      );
+      expect(packStep).toContain("ui-bearing-playbook.md#inheriting-the-current-designmd");
       expect(playbook).toContain(
         "The declaration is not allowed when the pack adds a screen or changes the design direction.",
       );

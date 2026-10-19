@@ -91,7 +91,10 @@ and the `uiux/` sidecars. Root DESIGN.md is not a discussion output.
    choice is made in the session, not here; this step writes it down. Required
    when any classified surface — primary or secondary — is `web`, `mobile`,
    `desktop` or `mixed`; skip for cli-only and non-ui targets. The answers, not
-   a rendered brand file, are the handoff.
+   a rendered brand file, are the handoff. A pack whose classification declares
+   `design_direction: inherit` records no direction and skips the registries
+   and the 40/50 sidecars, under the conditions of
+   `.qfai/assistant/skill/qfai-discussion/references/ui-bearing-playbook.md#inheriting-the-current-designmd`.
 8. Generate `prototyping.yaml` only for a visual prototyping surface; a cli-only pack emits none.
    Write it where the pack targets `web`, `mobile`, `desktop` or `mixed` and an
    explicit prototyping recommendation is useful. `/qfai-prototyping` rejects
@@ -120,7 +123,8 @@ Decide whether the target is UI-bearing with
   `/qfai-sdd`'s `common-design-md` step turns into root `DESIGN.md` front matter and
   its `# Brand Philosophy` body, so an entry left blank leaves a brand field
   with nothing behind it. A registry `reference` resolves to a URL, repository
-  path, or `SRC-ID`.
+  path, or `SRC-ID`. A pack declaring `design_direction: inherit` owes neither
+  registry nor the Trend Scan (see step 7).
 
 Discussion is planner-first: carry the screen explorations unranked and do not
 finalize the design system here. The brand direction is the exception — which

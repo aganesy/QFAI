@@ -106,6 +106,18 @@ so conditions 1 and 5 above do not apply to it:
 - `primary_surface: cli` with a visual `secondary_surfaces` entry is NOT a cli-only pack —
   conditions 1 and 2 stay blocking for it.
 
+## Inheriting Packs
+
+A pack whose classification declares `design_direction: inherit` keeps the current root
+`DESIGN.md`, under the conditions the inheriting section of the UI-bearing playbook sets out:
+it changes existing screens only and records no direction of its own.
+
+- UI-bearing items 1 and 5 do not apply: no Trend Scan, no minimum count of competitive or
+  catalogue references, and no Design Direction. A reference it does fill in is still complete.
+- From item 2, `uiux/00_index.md` stays required; `40_screen_contracts.md` and
+  `50_review_input_bundle.md` may be left out. A screen contract it does write keeps item 3.
+- Items 4 and All Packs item 3 apply unchanged.
+
 ## Non-UI Packs
 
 - No uiux sidecars required

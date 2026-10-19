@@ -5,6 +5,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { defaultConfig as shippedConfig, type QfaiConfig } from "../../../src/core/config.js";
+import { runCanonicalUixValidators } from "../../../src/core/validators/uix/canonical.js";
 import { validateClassification } from "../../../src/core/validators/uix/classification.js";
 
 const tempDirs: string[] = [];
@@ -165,14 +166,23 @@ describe("validateClassification of a pack that inherits the current DESIGN.md",
   async function createInheritingPack(options: {
     screenIds?: string[];
     designDirection?: string[];
+    declaration?: string;
+    withConfig?: boolean;
   }): Promise<string> {
     const project = await newTempDir();
-    await writeFile(path.join(project, "qfai.config.yaml"), "workflow:\n  mode: active\n", "utf-8");
+    if (options.withConfig !== false) {
+      await writeFile(
+        path.join(project, "qfai.config.yaml"),
+        "workflow:\n  mode: active\n",
+        "utf-8",
+      );
+    }
     const uiDir = path.join(project, ".qfai", "spec", "03_contract", "ui");
     await mkdir(uiDir, { recursive: true });
+    // SCR-002 has no route: a screen exists once a contract names its id.
     await writeFile(
       path.join(uiDir, "ui-0001-login.yaml"),
-      ["screens:", "  - id: SCR-001", "    route: /login", ""].join("\n"),
+      ["screens:", "  - id: SCR-001", "    route: /login", "  - id: SCR-002", ""].join("\n"),
       "utf-8",
     );
     const pack = path.join(project, ".qfai", "discussion", "discussion-20260101000000000");
@@ -181,7 +191,7 @@ describe("validateClassification of a pack that inherits the current DESIGN.md",
       path.join(pack, "01_Context.md"),
       [
         completeContext(),
-        "- design_direction: inherit",
+        `- design_direction: ${options.declaration ?? "inherit"}`,
         "",
         "## Design Direction",
         "",
@@ -213,6 +223,42 @@ describe("validateClassification of a pack that inherits the current DESIGN.md",
     await expect(validateClassification(pack, shippedConfig)).resolves.toEqual([]);
   });
 
+  it("matches screens against every screens[].id, routed or not", async () => {
+    const pack = await createInheritingPack({ screenIds: ["SCR-001", "SCR-002"] });
+
+    await expect(validateClassification(pack, shippedConfig)).resolves.toEqual([]);
+  });
+
+  it("matches screens against the project the canonical caller names, with no qfai.config.yaml", async () => {
+    const pack = await createInheritingPack({ screenIds: ["SCR-001"], withConfig: false });
+    const project = path.resolve(pack, "..", "..", "..");
+
+    const issues = await runCanonicalUixValidators(project, shippedConfig);
+
+    expect(issues.filter((issue) => issue.code === "QFAI-CLASSIFICATION-011")).toEqual([]);
+  });
+
+  it("rejects a design_direction value other than new or inherit", async () => {
+    const pack = await createInheritingPack({ declaration: "keep" });
+
+    const issues = await validateClassification(pack, shippedConfig);
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.code).toBe("QFAI-CLASSIFICATION-011");
+    expect(issues[0]?.message).toContain("'keep' is invalid");
+  });
+
+  it("accepts new and the unfilled template slot", async () => {
+    for (const declaration of ["new", "[new|inherit]"]) {
+      const pack = await createInheritingPack({
+        declaration,
+        designDirection: ["- adopted_theme: Material 3"],
+      });
+
+      await expect(validateClassification(pack, shippedConfig)).resolves.toEqual([]);
+    }
+  });
+
   it("accepts the declaration on a pack with no screen contracts", async () => {
     const pack = await createInheritingPack({});
 
@@ -228,6 +274,7 @@ describe("validateClassification of a pack that inherits the current DESIGN.md",
     expect(issues[0]?.code).toBe("QFAI-CLASSIFICATION-011");
     expect(issues[0]?.severity).toBe("error");
     expect(issues[0]?.message).toContain("SCR-NEW");
+    expect(issues[0]?.message).toContain("screens[].id");
     expect(issues[0]?.message).not.toContain("SCR-001");
   });
 

@@ -428,13 +428,16 @@ export async function validateCompetitiveReferences(
   // an empty registry, and an unedited sample would raise a false incomplete.
   const masked = content ? maskNonSpecRegions(content) : null;
 
-  // A pack that inherits the current DESIGN.md owes no count; what it registers is still checked.
-  const countsOwed = !(await packInheritsDesign(root));
+  // A pack that inherits the current DESIGN.md owes no count, and a block it
+  // left as the unfilled template is not registered. A reference it filled in
+  // is still checked.
+  const inherited = await packInheritsDesign(root);
   const issues: Issue[] = [];
   for (const registry of REGISTRIES) {
-    const references = masked
-      ? parseReferences(extractRegistrySection(masked, registry.heading))
-      : [];
+    const parsed = masked ? parseReferences(extractRegistrySection(masked, registry.heading)) : [];
+    const references = inherited
+      ? parsed.filter((reference) => reference.missingFields.length < MANDATORY_FIELDS.length)
+      : parsed;
     let incomplete = 0;
     for (const reference of references) {
       if (reference.missingFields.length === 0) {
@@ -453,7 +456,7 @@ export async function validateCompetitiveReferences(
 
     const required = registry.noun === "catalogue" ? registry.minimum(config) : minimum;
     const complete = references.length - incomplete;
-    if (countsOwed && required > 0 && complete < required) {
+    if (!inherited && required > 0 && complete < required) {
       issues.push(
         competitiveIssue(
           "QFAI-RESEARCH-013",

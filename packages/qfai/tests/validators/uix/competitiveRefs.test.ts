@@ -1,12 +1,19 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
 import { defaultConfig, type QfaiConfig } from "../../../src/core/config.js";
 import { runCanonicalUixValidators } from "../../../src/core/validators/uix/canonical.js";
 import { validateCompetitiveReferences } from "../../../src/core/validators/uix/competitiveRefs.js";
+
+// Anchored to this file, not to `process.cwd()`.
+const SHIPPED_SOURCES_TEMPLATE = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../../assets/init/.qfai/assistant/skill/qfai-discussion/templates/04_Sources.md",
+);
 
 const tempDirs: string[] = [];
 
@@ -798,6 +805,20 @@ describe("validateCompetitiveReferences for a pack that inherits the current DES
       root,
       withUiux({ competitive_refs_min: 3, catalogue_refs_min: 1 }),
     );
+
+    expect(issues).toEqual([]);
+  });
+
+  it("treats the unfilled shipped template blocks as unregistered", async () => {
+    const root = await newTempDir();
+    await createInheritingPack(root);
+    await writeFile(
+      path.join(root, "04_Sources.md"),
+      await readFile(SHIPPED_SOURCES_TEMPLATE, "utf-8"),
+      "utf-8",
+    );
+
+    const issues = await validateCompetitiveReferences(root, defaultConfig);
 
     expect(issues).toEqual([]);
   });

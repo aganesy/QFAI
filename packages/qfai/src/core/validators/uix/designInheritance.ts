@@ -14,18 +14,39 @@
 import path from "node:path";
 
 import { findConfigRoot, type QfaiConfig } from "../../config.js";
-import { readUiContractScreenContracts } from "../../contracts/screenContracts.js";
+import { readUiContractScreenIds } from "../../contracts/screenContracts.js";
 import { maskNonSpecRegions } from "../../specPackParsers.js";
 import { readSafe } from "../utils.js";
+import { isPlaceholder } from "./placeholder.js";
 
-const DESIGN_DIRECTION_RE = /^\s*-\s*design_direction:\s*(\S+)\s*$/im;
+const CLASSIFICATION_HEADING = "## ui-bearing classification";
+const DESIGN_DIRECTION_HEADING = "## design direction";
+const DESIGN_DIRECTION_RE = /^\s*-\s*design_direction:(.*)$/im;
 const SCREEN_ID_RE = /^\s*-\s*screen_id:\s*(\S+)\s*$/gim;
 const DIRECTION_FIELDS = ["adopted_theme", "brand_accent"] as const;
-const UNFILLED_RE = /^(?:\[[^\]]*\]|tbd|todo|n\/a|none)?$/i;
+
+/** The values `design_direction` accepts. */
+export const DESIGN_DIRECTION_VALUES = ["new", "inherit"] as const;
+
+/**
+ * What the classification block says about the design direction. An absent
+ * field and an unfilled template slot both read as `absent`.
+ */
+export type DesignDirectionDeclaration =
+  { kind: "absent" } | { kind: "new" } | { kind: "inherit" } | { kind: "invalid"; value: string };
+
+/** Reads `design_direction` from the classification block of `01_Context.md` content. */
+export function readDesignDirectionDeclaration(contextContent: string): DesignDirectionDeclaration {
+  const block = h2Section(maskNonSpecRegions(contextContent), CLASSIFICATION_HEADING);
+  const value = DESIGN_DIRECTION_RE.exec(block)?.[1]?.trim();
+  if (value === undefined || isPlaceholder(value)) return { kind: "absent" };
+  if (value === "new" || value === "inherit") return { kind: value };
+  return { kind: "invalid", value };
+}
 
 /** True when `01_Context.md` content declares `design_direction: inherit`. */
 export function declaresInheritedDesign(contextContent: string): boolean {
-  return DESIGN_DIRECTION_RE.exec(contextContent)?.[1] === "inherit";
+  return readDesignDirectionDeclaration(contextContent).kind === "inherit";
 }
 
 /** True when the pack at `root` declares `design_direction: inherit`. */
@@ -35,7 +56,7 @@ export async function packInheritsDesign(root: string): Promise<boolean> {
 }
 
 export type InheritanceConflicts = {
-  /** Screen IDs the pack's screen contracts name that no UI contract of the project declares. */
+  /** `screen_id` values in the pack that no UI contract's `screens[].id` declares. */
   newScreens: string[];
   /** Design Direction fields the pack fills with a value of its own. */
   directionFields: string[];
@@ -44,48 +65,51 @@ export type InheritanceConflicts = {
 /**
  * What makes an inheritance declaration wrong for the pack at `root`.
  *
- * The project is the directory holding `qfai.config.yaml` above the pack; its
- * UI contracts are the screens that already exist.
+ * `projectRoot` is the project whose UI contracts hold the screens that
+ * already exist. Without it, the project is the directory holding
+ * `qfai.config.yaml` above the pack.
  */
 export async function findInheritanceConflicts(
   root: string,
   contextContent: string,
   config: QfaiConfig,
+  projectRoot?: string,
 ): Promise<InheritanceConflicts> {
   return {
-    newScreens: await findNewScreens(root, config),
+    newScreens: await findNewScreens(root, config, projectRoot),
     directionFields: findDirectionFields(contextContent),
   };
 }
 
-async function findNewScreens(root: string, config: QfaiConfig): Promise<string[]> {
+async function findNewScreens(
+  root: string,
+  config: QfaiConfig,
+  projectRoot: string | undefined,
+): Promise<string[]> {
   const contracts = await readSafe(path.join(root, "uiux", "40_screen_contracts.md"));
   if (!contracts) return [];
   const packScreens = [...maskNonSpecRegions(contracts).matchAll(SCREEN_ID_RE)]
     .map((match) => match[1] ?? "")
-    .filter((id) => !UNFILLED_RE.test(id));
+    .filter((id) => !isPlaceholder(id));
   if (packScreens.length === 0) return [];
 
-  const project = await findConfigRoot(root);
-  const declared = new Set(
-    (await readUiContractScreenContracts(project.root, config.paths.contractsDir)).map(
-      (screen) => screen.screenId,
-    ),
-  );
+  const project = projectRoot ?? (await findConfigRoot(root)).root;
+  const declared = await readUiContractScreenIds(project, config.paths.contractsDir);
   return [...new Set(packScreens.filter((id) => !declared.has(id)))];
 }
 
 function findDirectionFields(contextContent: string): string[] {
-  const section = designDirectionSection(contextContent);
+  const section = h2Section(maskNonSpecRegions(contextContent), DESIGN_DIRECTION_HEADING);
   return DIRECTION_FIELDS.filter((field) => {
-    const value = new RegExp(`^\\s*-\\s*${field}:(.*)$`, "im").exec(section)?.[1]?.trim();
-    return value !== undefined && !UNFILLED_RE.test(value);
+    const value = new RegExp(`^\\s*-\\s*${field}:(.*)$`, "im").exec(section)?.[1];
+    return value !== undefined && !isPlaceholder(value);
   });
 }
 
-function designDirectionSection(content: string): string {
+/** The body of the H2 section whose lowercased heading is `heading`, or "". */
+function h2Section(content: string, heading: string): string {
   const lines = content.split("\n");
-  const start = lines.findIndex((line) => line.trim().toLowerCase() === "## design direction");
+  const start = lines.findIndex((line) => line.trim().toLowerCase() === heading);
   if (start === -1) return "";
   const end = lines.findIndex((line, index) => index > start && /^##\s/.test(line));
   return lines.slice(start + 1, end === -1 ? lines.length : end).join("\n");

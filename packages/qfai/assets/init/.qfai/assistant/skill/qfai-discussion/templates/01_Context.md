@@ -21,7 +21,7 @@ Notes:
 - Prototyping **execution** surfaces (used in `prototyping.yaml`) are a strict subset: `web|mobile|desktop|mixed`.
 - `cli` and `non-ui` are classification-only values and never appear in `prototyping.yaml`. `/qfai-prototyping` rejects them, so a cli-only pack emits none.
 - `design_direction: inherit` declares that the pack keeps the current root `DESIGN.md`: it changes existing screens only and sets no direction of its own. Such a pack owes no Trend Scan, no minimum count of competitive or catalogue references, and no `uiux/40_screen_contracts.md` or `uiux/50_review_input_bundle.md`.
-- `qfai validate` refuses `inherit` when `uiux/40_screen_contracts.md` names a screen no UI contract of the project declares, or when Design Direction below records an `adopted_theme` or `brand_accent`. Use `new` for anything else.
+- `qfai validate` refuses `inherit` when `uiux/40_screen_contracts.md` names a `screen_id` that matches no `screens[].id` of the project's UI contracts, or when Design Direction below records an `adopted_theme` or `brand_accent`. Use `new` for anything else.
 
 ## Design Direction
 

@@ -130,8 +130,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `QFAI-TREND-004`, `QFAI-RESEARCH-013` and `QFAI-THREELAYER-002` for those two
   files no longer fire on it; a reference it registers is still checked. The new
   `QFAI-CLASSIFICATION-011` refuses the declaration when the pack's screen
-  contracts name a screen no UI contract of the project declares, or when its
-  Design Direction records an `adopted_theme` or `brand_accent`. Fixes #3829.
+  contracts name a `screen_id` that matches no `screens[].id` of the project's UI
+  contracts, or when its Design Direction records an `adopted_theme` or
+  `brand_accent`, and rejects a `design_direction` other than `new` or `inherit`. Fixes #3829.
 
 - **A critical decision found while writing the discussion pack goes back to
   the user.** `discussion-pack` and `discussion-oq` now reopen the ended session
