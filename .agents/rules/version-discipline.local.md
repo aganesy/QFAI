@@ -31,6 +31,14 @@ Three things follow.
 - To publish a tag that already exists again, run `release.yml` by hand with
   its `tag` input. That cuts no new tag.
 
+An agent carries out this path only when the user's own instruction for the
+run delegates it, quoted word for word with its source; a version named alone
+delegates nothing. It then dispatches Prepare release with that version,
+reviews the release pull request under `REVIEW.md`, merges it only when
+`REVIEW.md` allows, and runs the final check in `RELEASE.md` once the package
+is published. It never approves the `release` environment and never pushes a
+tag. Without such an instruction, the release is handed to the user.
+
 ## Commands that stop for approval
 
 A command that tags a release, publishes a package or starts a release workflow

@@ -84,6 +84,30 @@ it("A release with no release signal is handed off, since the user runs a releas
   expect(await decided({ intent: "release" })).toEqual(["hand-off-operation", 14]);
 });
 
+// QFAI:EX-0001-0211-57
+it("A release the user's quoted instruction delegates is carried out, and every other release is handed off", async () => {
+  expect([
+    await decided({ intent: "release", qualifiers: ["release-delegated"], artifacts: ["release"] }),
+    await decided({ intent: "release", qualifiers: ["release-delegated"] }),
+    await decided({ intent: "release", artifacts: ["release"] }),
+    await decided({
+      intent: "release",
+      qualifiers: ["release-delegated", "distribution-incident"],
+    }),
+    await decided({
+      intent: "release",
+      qualifiers: ["release-delegated"],
+      signals: ["release-notes"],
+    }),
+  ]).toEqual([
+    ["run-release", 14],
+    ["run-release", 14],
+    ["hand-off-operation", 14],
+    ["hand-off-operation", 14],
+    ["draft-release-notes", 5],
+  ]);
+});
+
 // QFAI:EX-0001-0211-37
 it("A request for the bodies of the empty acceptance tests writes them", async () => {
   expect(

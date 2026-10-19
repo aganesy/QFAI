@@ -140,6 +140,7 @@ const EXTRACTION_VOCABULARIES: Record<string, string[]> = {
     "mixed-bundle",
     "human-run",
     "distribution-incident",
+    "release-delegated",
     "settled-design",
     "red-since-change",
     "check-misses",
@@ -633,6 +634,37 @@ describe("qfai-run", () => {
         "taken" in each ? each.taken.route : undefined,
       ),
     ).toEqual(["hand-off-operation", "run-owned-cleanup"]);
+  });
+
+  // QFAI:AC-0001-0211-05
+  // QFAI:EX-0001-0211-58
+  it("reads a release the user's quoted instruction delegates as a delegated release, and a bare release as none", async () => {
+    const reference = await readShipped(EXTRACTION);
+    expect(itemOf(sectionOf(reference, "## Qualifiers"), "release-delegated")).toContain(
+      "with `release`: The user's own instruction for this run, quoted word for word with its source, has the agent carry out the release, or only its version edit, for a version the user named. A request that only asks for a release, a version named without saying who carries it out, a branch name or a project policy delegates nothing.",
+    );
+    const line = sectionOf(reference, "## Examples")
+      .split("\n")
+      .find((each) =>
+        each.startsWith(
+          '- "Release 2.4.0. You run the preparation and merge the release pull request; I only approve the publish." → ',
+        ),
+      );
+    const parsed: unknown = parse(/→ `(\{.*\})`$/.exec(line ?? "")?.[1] ?? "null");
+    expect(parsed).toEqual({
+      intent: "release",
+      qualifiers: ["release-delegated"],
+      artifacts: ["release"],
+      confidence: "high",
+    });
+    const pinned: unknown = { ...extraction(), ...(isRecord(parsed) ? parsed : {}) };
+    if (!isExtraction(pinned)) throw new Error("the pinned example is not an extraction");
+    const routeOf = (outcome: ReturnType<typeof routingOutcome>) =>
+      "taken" in outcome ? outcome.taken.route : undefined;
+    expect([
+      routeOf(routingOutcome(pinned)),
+      routeOf(routingOutcome({ ...pinned, qualifiers: [] })),
+    ]).toEqual(["run-release", "hand-off-operation"]);
   });
 
   // QFAI:AC-0001-0211-05

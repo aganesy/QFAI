@@ -101,6 +101,13 @@ it("hand-off-operation releases before triage-handoff", async () => {
   expect((await planned("hand-off-operation")).releasePoint).toBe("triage-handoff");
 });
 
+// QFAI:EX-0001-0220-56
+it("run-release releases before triage-operate, which carries the release out", async () => {
+  const plan = await planned("run-release");
+
+  expect([stepOrder(plan), plan.releasePoint]).toEqual([["triage-operate"], "triage-operate"]);
+});
+
 // QFAI:EX-0001-0214-07
 it("draft-release-notes drafts, then releases at its end with no verify stage", async () => {
   const plan = await planned("draft-release-notes");

@@ -239,6 +239,7 @@ only after reading what it depends on.
 - `owned-temporary-cleanup`, with `order`: Existing user authority permits deleting specific repository-local, Git-ignored temporary directories the current task owns, without a tracked change or files still needed for a deliverable.
 - `meaning-preserving`, with `stale-record` or `order`: The change keeps every record's meaning. It only resolves the conflicts of a merge or a branch update, or renumbers an ID the branch added that the base also took, and adds no content neither side had. It lists the artifacts the conflict touches; a conflict in code, a generated file or a lockfile is not this qualifier.
 - `distribution-incident`, with `release`: A published key, certificate, feed or package is broken.
+- `release-delegated`, with `release`: The user's own instruction for this run, quoted word for word with its source, has the agent carry out the release, or only its version edit, for a version the user named. A request that only asks for a release, a version named without saying who carries it out, a branch name or a project policy delegates nothing.
 - `settled-design`, with `upstream`: The cited record exists, is in force, and settles the design.
 - `red-since-change`, with `ci`: CI fails since a named change, and a correct existing test catches it.
 - `check-misses`, with `unenforced`: A check exists and misses cases, or a check the declaration needs is absent.
@@ -350,5 +351,6 @@ Each request is followed by its extraction. Fields not shown are empty.
 - An approved change request cited with a task section and a done-when block → `{ intent: order, entryFlags: [upstream], qualifiers: [settled-design], signals: [approved-record-task], artifacts: [spec, contract], confidence: high }`
 - "The import fails and the `catch` logs nothing, so the cause cannot be read; log the error there." → `{ intent: defect, entryFlags: [cause, fix, expect], artifacts: [code, tests], confidence: high }`
 - "Merging main left conflicts in the decision register; renumber our colliding rows and keep both sides." → `{ intent: stale-record, qualifiers: [meaning-preserving], artifacts: [spec], confidence: high }`
+- "Release 2.4.0. You run the preparation and merge the release pull request; I only approve the publish." → `{ intent: release, qualifiers: [release-delegated], artifacts: [release], confidence: high }`
 - "Support multiple tenants across the product." → `{ intent: epic, entryFlags: [decision], confidence: high }`
 - "Turn off branch creation in the hosted database dashboard, add its access token as a repository secret, and update the workflow to use it." → `{ intent: ci, entryFlags: [env], artifacts: [ci, docs], confidence: high }`
