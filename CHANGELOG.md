@@ -97,6 +97,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the merge commit and its checks pass. Two route-evaluation seeds cover the
   request. Refs #3553.
 
+- **In a git worktree, the worktree's own `qfai-run` skill is the one to
+  follow.** The host may load another checkout's copy of the skill. The
+  free-text entry reminder and the top of the `qfai-run` skill now give the
+  same sentence: follow the worktree's own `.claude/skills/qfai-run/SKILL.md`,
+  whichever copy the host loaded. Fixes #3799.
+
 - **A failed launcher preflight stops every `npx qfai` call, not only gates.**
   The shared baseline's launcher rules now name every `npx qfai` call, gates
   included, and say a passed preflight holds per checkout until its
