@@ -3,7 +3,7 @@
  * wrote a skill or hook file, and nothing when it wrote none.
  */
 // QFAI:AC-0001-0196-19
-import { readdir, readFile, writeFile } from "node:fs/promises";
+import { readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
@@ -93,6 +93,35 @@ describe("the agent restart note", () => {
       const output = await initQuietly(root, true);
 
       expect(await readFile(rule, "utf-8")).toBe(shipped);
+      expect(restartLines(output)).toEqual([RESTART_LINE]);
+    });
+  });
+
+  // QFAI:EX-0001-0196-76
+  it("is printed by a plain init that creates a missing rule master", async () => {
+    await withEmptyRepo(async (root) => {
+      await initQuietly(root);
+      const rule = path.join(root, ".agents", "rules", "grilling.md");
+      const shipped = await readFile(rule, "utf-8");
+      await rm(rule);
+
+      const output = await initQuietly(root);
+
+      expect(await readFile(rule, "utf-8")).toBe(shipped);
+      expect(restartLines(output)).toEqual([RESTART_LINE]);
+    });
+  });
+
+  // QFAI:EX-0001-0196-76
+  it("is printed by a plain init that adds the rules section to AGENTS.md", async () => {
+    await withEmptyRepo(async (root) => {
+      await initQuietly(root);
+      const entryPoint = path.join(root, "AGENTS.md");
+      await writeFile(entryPoint, "# Project\n", "utf-8");
+
+      const output = await initQuietly(root);
+
+      expect(await readFile(entryPoint, "utf-8")).toContain(".agents/rules/");
       expect(restartLines(output)).toEqual([RESTART_LINE]);
     });
   });
