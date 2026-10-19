@@ -22,7 +22,8 @@ answer. No command, score or check decides that the loop is done.
 
 ## Writes
 
-- `.qfai/prototype/iter-NN/index.html` (the generator).
+- `.qfai/prototype/iter-NN/index.html` (the generator), and in a `restyle`
+  loop the project's stylesheet and motion files it restyles.
 - `.qfai/prototype/iter-NN/review.json` and
   `iter-NN/<ui-contract-id>/<screen>.review.json` (the reviewer).
 - `.qfai/prototype/progress.md` (the orchestrator).
@@ -65,6 +66,28 @@ Record `targetIterations`, `evaluationAxesSource`, `delegationMap` and
 the loop does not stop at it. Report an
 assignment that gives generation and review to one identity before either
 runs.
+
+## Iteration kind
+
+Record `iterationKind` in `progress.md` beside `targetIterations` and the
+other planning fields. The kind comes from the request, as preflight took it:
+`prototype`, the default, or `restyle` when the request changes only the
+styles and motion of screens the project already runs, keeping their screens,
+fields and behaviour. A `restyle` iteration is the live app restyled in place.
+The generator edits the project's stylesheet and motion entry points and
+writes `iter-NN/index.html` as a list of the live routes in scope, one link
+per declared screen. Each link carries the route's absolute URL and the setup
+it needs, such as a login or seed data. The live app is already running at
+preflight, and the build owner keeps it running, so each link answers and the
+reviewer drives those routes directly.
+
+A restyle's edits are product code. The route's implement stage carries them:
+there they are change-noted, gated, tested and committed. So a restyle needs a
+scope that includes the implement stage. Today only `broad` does: `narrow`
+and `medium` stop before it.
+
+If the route's scope has no implement stage, stop and ask the user to re-plan
+before iteration 00.
 
 ## Procedure
 
