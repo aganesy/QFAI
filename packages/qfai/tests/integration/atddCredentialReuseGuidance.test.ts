@@ -296,10 +296,34 @@ describe("the optional test runner recipes ship beside the rule set", () => {
       /nothing here\s+is executed in this repository/,
     );
     const status = section(recipes, "Status and what the adopter supplies");
-    for (const adapter of ["createAccount", "issueSession", "acceptsSession", "deleteAccount"]) {
+    expect(status, "the recipes misstate where each part came from").toMatch(
+      /Vitest session cache and the CI aggregate job come from one adopter's[\s\S]*Playwright recipe and the other\s+sections were written from that adopter's description/,
+    );
+    expect(status).toContain("The application supplies five adapters.");
+    expect(status).toContain("`createAccount(actor, slot)`");
+    const adapters = ["createAccount", "issueSession", "signIn", "acceptsSession", "deleteAccount"];
+    for (const adapter of adapters) {
       expect(status, `the adapter ${adapter} is not listed`).toContain(`\`${adapter}\``);
     }
+    // Rule 4: the run-owned directory, removed at teardown, is the cache's
+    // lifetime, and "worker" means the pool slot or the parallel index.
+    const directory = section(recipes, "The run-owned session directory");
+    expect(directory).toMatch(/binds the cache's lifetime to the worker's/);
+    expect(directory).toMatch(
+      /a worker is a pool slot or a parallel index, which lasts the whole run/,
+    );
+    expect(directory, "a missing directory does not stop the run").toContain(
+      'throw new Error("TEST_SESSION_CACHE_DIR is not set',
+    );
+    expect(directory).toContain("await deleteAccount(id);");
+    expect(directory).toContain('"created.jsonl"');
     const vitest = section(recipes, "Vitest: one session per pool slot and actor");
+    expect(vitest).toContain("const directory = ownedSessionDirectory();");
+    expect(vitest).toContain("await recordCreated(ownedSessionDirectory(), account.id);");
+    expect(vitest).toContain("await deleteCreatedAccounts(directory);");
+    expect(vitest, "the recipe hides its reliance on start-up order").toMatch(
+      /relies on that start-up order[\s\S]*`provide` and `inject`/,
+    );
     expect(vitest).toContain("process.env.VITEST_POOL_ID");
     expect(vitest).toContain("TEST_SESSION_CACHE_DIR");
     expect(vitest, "a rejected session is not refreshed").toContain('"refreshed"');
@@ -307,6 +331,14 @@ describe("the optional test runner recipes ship beside the rule set", () => {
     const playwright = section(recipes, "Playwright: one account and storage state per worker");
     expect(playwright).toContain('teardown: "teardown"');
     expect(playwright).toContain("testInfo.parallelIndex");
+    expect(playwright).toContain('globalSetup: "./global-setup.ts"');
+    expect(playwright).toContain("await chmod(statePath(directory, slot), 0o600);");
+    expect(playwright).toContain("await recordCreated(directory, account.id);");
+    expect(playwright, "the teardown project does not delete the recorded accounts").toMatch(
+      /\/\/ auth\.teardown\.ts[\s\S]*await deleteCreatedAccounts\(directory\);/,
+    );
+    expect(playwright).toContain('{ name: "exclusive", dependencies: ["setup"]');
+    expect(playwright).toContain("/\\.exclusive\\.spec\\.ts/]");
     expect(playwright, "session subjects share the pooled actor").toMatch(
       /login, logout, expiry, password change/,
     );
@@ -314,17 +346,29 @@ describe("the optional test runner recipes ship beside the rule set", () => {
     expect(section(recipes, "Database hooks only where a group needs them")).toMatch(
       /fails without it rather than skipping/,
     );
-    expect(section(recipes, "Shared and exclusive access to a common database or server")).toMatch(
-      /\*\*Unknown\*\*[\s\S]*is exclusive/,
+    const admission = section(
+      recipes,
+      "Shared and exclusive access to a common database or server",
     );
-    expect(section(recipes, "Credential directory hygiene")).toMatch(/exclude the directory/);
+    expect(admission).toMatch(/\*\*Unknown\*\*[\s\S]*is exclusive/);
+    expect(admission).toContain(
+      "`npx --no-install playwright test --project=exclusive --workers=1`",
+    );
+    const hygiene = section(recipes, "Credential directory hygiene");
+    expect(hygiene).toMatch(/exclude the directory/);
+    expect(hygiene, "authenticated traces may be published").toMatch(
+      /traces, HAR files and HTML reports from an authenticated project[\s\S]*never from a public run/,
+    );
     // The aggregate verdict compares every required lane with the one expected
     // result, so a failed, cancelled or unexpected skipped lane all fail it.
     const ci = section(recipes, "CI: auxiliary jobs inside the protected result");
     expect(ci).toContain("if: ${{ always() }}");
     expect(ci).toContain('[ "$result" = "$expected" ] ||');
     expect(ci).toContain('[ "$CHANGE_RESULT" = success ] ||');
-    expect(section(recipes, "Adoption checklist")).toMatch(/skipped unexpectedly/);
+    const checklist = section(recipes, "Adoption checklist");
+    expect(checklist).toMatch(/skipped unexpectedly/);
+    expect(checklist).toMatch(/no trace, HAR file or\s+HTML report from an authenticated project/);
+    expect(checklist).toMatch(/deletes every account recorded in `created\.jsonl`/);
   });
 
   // QFAI:EX-0001-0074-05

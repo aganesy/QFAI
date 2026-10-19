@@ -8,6 +8,7 @@ stay the obligation; a recipe is one way to meet them.
 ## Contents
 
 - Status and what the adopter supplies
+- The run-owned session directory
 - Vitest: one session per pool slot and actor
 - Playwright: one account and storage state per worker
 - Business data each file owns
@@ -20,31 +21,89 @@ stay the obligation; a recipe is one way to meet them.
 
 ## Status and what the adopter supplies
 
-These recipes come from one adopter's working implementation, reduced to the parts that do not
-depend on the application. QFAI's own suite signs nothing in and runs no browser, so nothing here
-is executed in this repository: read each recipe as a pattern to adopt, then prove it in your own
-suite with the adoption checklist at the end.
+The Vitest session cache and the CI aggregate job come from one adopter's working implementation,
+reduced to the parts that do not depend on the application. The Playwright recipe and the other
+sections were written from that adopter's description of its suite. QFAI's own suite signs
+nothing in and runs no browser, so nothing here is executed in this repository: read each recipe as a
+pattern to adopt, then prove it in your own suite with the adoption checklist at the end.
 
-The application supplies four adapters. QFAI ships none of them, and no recipe below assumes how
+The application supplies five adapters. QFAI ships none of them, and no recipe below assumes how
 they work inside:
 
-| Adapter          | What it does                                                         |
-| ---------------- | -------------------------------------------------------------------- |
-| `createAccount`  | Creates a private account for one run, one worker slot and one actor |
-| `issueSession`   | Signs that account in and returns the session the product accepts    |
-| `signIn`         | Completes the same sign-in on a browser page, for Playwright         |
-| `acceptsSession` | Asks the product whether a restored session is still valid           |
-| `deleteAccount`  | Removes an account this run created, and nothing else                |
+| Adapter          | What it does                                                                          |
+| ---------------- | ------------------------------------------------------------------------------------- |
+| `createAccount`  | `createAccount(actor, slot)` creates a private account for this run, returning its ID |
+| `issueSession`   | Signs that account in and returns the session the product accepts                     |
+| `signIn`         | Completes the same sign-in on a browser page, for Playwright                          |
+| `acceptsSession` | Asks the product whether a restored session is still valid                            |
+| `deleteAccount`  | Removes an account this run created, and nothing else                                 |
 
 When a test needs a controlled business time, the application also supplies a clock adapter, as
 the business time section describes.
+
+## The run-owned session directory
+
+Both runners share these helpers. The run's global setup creates one private directory and exports
+it as `TEST_SESSION_CACHE_DIR`; every worker reads that same directory. Each account the run
+creates is recorded by its ID in `created.jsonl`, which holds no secret, and the teardown deletes
+every recorded account, so an account made by a refresh is removed too.
+
+```ts
+// session-directory.ts
+import { statSync } from "node:fs";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+
+export async function createSessionDirectory(): Promise<string> {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "session-cache-"));
+  await fs.chmod(directory, 0o700);
+  process.env.TEST_SESSION_CACHE_DIR = directory;
+  return directory;
+}
+
+/** Every worker calls this; a missing or shared directory stops the run. */
+export function ownedSessionDirectory(): string {
+  const directory = process.env.TEST_SESSION_CACHE_DIR;
+  if (!directory) throw new Error("TEST_SESSION_CACHE_DIR is not set: global setup creates it");
+  const stat = statSync(directory);
+  if (!stat.isDirectory()) throw new Error(`${directory} is not a directory`);
+  if (process.platform !== "win32" && (stat.mode & 0o077) !== 0)
+    throw new Error(`${directory} is readable by other users`);
+  return directory;
+}
+
+export async function recordCreated(directory: string, id: string): Promise<void> {
+  await fs.appendFile(path.join(directory, "created.jsonl"), `${JSON.stringify({ id })}\n`, {
+    mode: 0o600,
+  });
+}
+
+export async function deleteCreatedAccounts(directory: string): Promise<void> {
+  let lines: string[] = [];
+  try {
+    lines = (await fs.readFile(path.join(directory, "created.jsonl"), "utf8")).split("\n");
+  } catch (error) {
+    if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
+  }
+  for (const line of lines.filter((entry) => entry.trim() !== "")) {
+    const { id }: { id: string } = JSON.parse(line);
+    await deleteAccount(id);
+  }
+}
+```
+
+The directory is how both recipes meet the rule that binds the cache's lifetime to the worker's:
+here a worker is a pool slot or a parallel index, which lasts the whole run, and the run's teardown
+removes the directory with every cached session in it.
 
 ## Vitest: one session per pool slot and actor
 
 Vitest isolates each test file in its own module registry, so a module-level cache does not outlive
 one file. A process ID or a per-file counter does not give a worker lifetime either. What survives
 is the pool slot, `VITEST_POOL_ID`, a stable number per worker slot. Key the cache by the private
-directory the run owns, the slot and the actor.
+directory the run owns, the slot and the actor. In this recipe a worker is that pool slot, and the
+cache lives as long as the slot does: until the run's teardown removes the directory.
 
 ```ts
 import { createHash } from "node:crypto";
@@ -53,14 +112,13 @@ import path from "node:path";
 
 type SessionOptions = {
   actor: string;
-  create: () => Promise<string>;
+  create: (slot: string) => Promise<string>;
   accepted: (session: string) => Promise<boolean>;
 };
 
 /** The run owns the directory; the pool slot survives isolated file registries. */
 export async function workerSession({ actor, create, accepted }: SessionOptions): Promise<string> {
-  const directory = process.env.TEST_SESSION_CACHE_DIR;
-  if (!directory) return create();
+  const directory = ownedSessionDirectory();
   const worker = process.env.VITEST_POOL_ID;
   if (!worker || !/^\d+$/.test(worker)) throw new Error("A worker session requires VITEST_POOL_ID");
   const key = createHash("sha256").update(actor).digest("hex").slice(0, 20);
@@ -83,7 +141,7 @@ export async function workerSession({ actor, create, accepted }: SessionOptions)
     return session;
   }
   const event = session === undefined ? "issued" : "refreshed";
-  session = await create();
+  session = await create(worker);
   await fs.writeFile(file, JSON.stringify(session), { mode: 0o600 });
   await record(event);
   return session;
@@ -101,7 +159,11 @@ export function sessionFor(actor: string): Promise<string> {
   if (pending === undefined) {
     pending = workerSession({
       actor,
-      create: async () => issueSession(await createAccount(actor)),
+      create: async (slot) => {
+        const account = await createAccount(actor, slot);
+        await recordCreated(ownedSessionDirectory(), account.id);
+        return issueSession(account);
+      },
       accepted: acceptsSession,
     });
     sessions.set(actor, pending);
@@ -110,24 +172,26 @@ export function sessionFor(actor: string): Promise<string> {
 }
 ```
 
-Global setup creates a fresh private directory, sets `TEST_SESSION_CACHE_DIR` before the workers
-start, and removes the directory in the teardown it returns, which runs after a failed run too:
+Global setup creates the directory before the workers start, and the teardown it returns, which
+runs after a failed run too, deletes the recorded accounts and removes the directory:
 
 ```ts
+// vitest.global-setup.ts
 import fs from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
 
 export default async function setup() {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "session-cache-"));
-  await fs.chmod(directory, 0o700);
-  process.env.TEST_SESSION_CACHE_DIR = directory;
+  const directory = await createSessionDirectory();
   return async () => {
-    await deleteAccountsCreatedBy(directory);
+    await deleteCreatedAccounts(directory);
     await fs.rm(directory, { recursive: true, force: true });
   };
 }
 ```
+
+The workers see `TEST_SESSION_CACHE_DIR` because Vitest starts them after global setup and they
+inherit its environment; the recipe relies on that start-up order. Vitest's documented channel from
+global setup to tests is `provide` and `inject`: where your version offers it, pass the directory
+that way and have `ownedSessionDirectory()` read it from `inject`.
 
 Keep these behaviours when you adapt it:
 
@@ -141,35 +205,58 @@ Keep these behaviours when you adapt it:
 
 ## Playwright: one account and storage state per worker
 
-A setup project signs one account in per worker and saves its storage state; the test project
-picks the state by the worker's parallel index; a teardown project deletes the accounts and their
-states. The worker count is fixed in the configuration, so the setup and the run agree on it.
+A global setup creates the run's private directory; a setup project signs one account in per
+worker and saves its storage state there; the test project picks the state by the worker's parallel
+index; a teardown project deletes the recorded accounts and their states. The worker count is fixed
+in the configuration, so the setup and the run agree on it. In this recipe a worker is a parallel
+index, and its storage state lives until the run's teardown removes the directory.
 
 ```ts
 // playwright.config.ts
 import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
+  globalSetup: "./global-setup.ts",
   workers: 4,
   projects: [
     { name: "setup", testMatch: /auth\.setup\.ts/, teardown: "teardown" },
     { name: "teardown", testMatch: /auth\.teardown\.ts/ },
-    { name: "e2e", dependencies: ["setup"], testIgnore: /auth\.(setup|teardown)\.ts/ },
+    {
+      name: "e2e",
+      dependencies: ["setup"],
+      testIgnore: [/auth\.(setup|teardown)\.ts/, /\.exclusive\.spec\.ts/],
+    },
+    { name: "exclusive", dependencies: ["setup"], testMatch: /\.exclusive\.spec\.ts/ },
   ],
 });
 ```
 
 ```ts
+// global-setup.ts: the environment it sets reaches every worker
+import fs from "node:fs/promises";
+
+export default async function globalSetup() {
+  const directory = await createSessionDirectory();
+  return async () => {
+    await fs.rm(directory, { recursive: true, force: true });
+  };
+}
+```
+
+```ts
 // auth.setup.ts
+import { chmod } from "node:fs/promises";
 import { test as setup } from "@playwright/test";
 
 setup("sign in one account per worker", async ({ browser }) => {
   const directory = ownedSessionDirectory();
   for (let slot = 0; slot < setup.info().config.workers; slot++) {
-    const account = await createAccount(`worker-${slot}`);
+    const account = await createAccount("member", String(slot));
+    await recordCreated(directory, account.id);
     const context = await browser.newContext();
     await signIn(await context.newPage(), account);
     await context.storageState({ path: statePath(directory, slot) });
+    await chmod(statePath(directory, slot), 0o600);
     await context.close();
   }
 });
@@ -186,11 +273,22 @@ export const test = base.extend({
 });
 ```
 
-`ownedSessionDirectory()` returns the private directory the run created, and throws when that
-directory is missing or not private; the credential directory section says what it checks. The
-teardown project deletes each account the setup created and the storage state files. A test
-whose subject is the session itself (login, logout, expiry, password change) starts from an empty
-storage state with `test.use({ storageState: { cookies: [], origins: [] } })` and creates its own
+```ts
+// auth.teardown.ts
+import { rm } from "node:fs/promises";
+import { test as teardown } from "@playwright/test";
+
+teardown("delete the run's accounts and storage states", async () => {
+  const directory = ownedSessionDirectory();
+  await deleteCreatedAccounts(directory);
+  for (let slot = 0; slot < teardown.info().config.workers; slot++) {
+    await rm(statePath(directory, slot), { force: true });
+  }
+});
+```
+
+A test whose subject is the session itself (login, logout, expiry, password change) starts from an
+empty storage state with `test.use({ storageState: { cookies: [], origins: [] } })` and creates its own
 subject. When the suite runs once per clock profile, each profile runs its own setup and teardown.
 
 ## Business data each file owns
@@ -247,7 +345,8 @@ by declared access:
 
 The simplest bounded admission is two passes: the shared files with the measured worker count,
 then the exclusive files with one worker, for example a Vitest project with
-`fileParallelism: false`, or `npx playwright test --project=exclusive --workers=1`.
+`fileParallelism: false`, or `npx --no-install playwright test --project=exclusive --workers=1` after a run of the `e2e`
+project.
 
 ## Deterministic business time
 
@@ -284,6 +383,9 @@ export const clockProfiles = {
   refuses a directory that already holds files it did not write.
 - The directory is private (mode 700, files 600) and is removed by the teardown, which also runs
   after a failure.
+- Playwright traces, HAR files and HTML reports from an authenticated project carry cookies and
+  tokens. Do not upload them, or upload them only to a restricted location with a short retention,
+  and never from a public run.
 - Artifact uploads exclude the directory. Keep only noncredential reuse metrics, such as the counts
   of issued, reused and refreshed sessions per slot, copied out before the teardown removes it.
 
@@ -337,5 +439,7 @@ source-mutation probes and their counts separately; a probe count is not a test 
 - Each clock profile's report shows its cases ran with zero skips; a production configuration
   ignores the test clock.
 - The aggregate check fails when any required lane fails, is cancelled or is skipped unexpectedly.
-- No artifact holds a session, a storage state or an account secret.
+- No artifact holds a session, a storage state or an account secret, and no trace, HAR file or
+  HTML report from an authenticated project is uploaded where it is public or kept long.
+- The teardown deletes every account recorded in `created.jsonl`, after a failed run too.
 - Parallel workers are bounded by shared-state exclusion; measure before claiming a speedup.
