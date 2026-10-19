@@ -26,6 +26,7 @@ Feature: Append-only drift and change-request authorization
     And a `Change request:` row at TODO authorises nothing
     And a row the base holds whose Content or Approach cell changed authorises nothing
     And a `03_Example.md` whose only change is appended example rows, and a contract whose only change is EX IDs added to the Examples cell of its rules, need no such row
+    And a YAML file whose parsed value is unchanged, and a Markdown file whose only change is line endings, trailing whitespace, table cell padding or the line breaks inside a paragraph or list item, need no such row
 
   # AC-0001-0054-04
   Scenario: Appending or changing the Status of a change-request row is not an upstream edit
