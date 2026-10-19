@@ -4,6 +4,8 @@
  * Each case writes a UI contract into a temporary project and runs the
  * validators the way `qfai validate` does, so the findings are the ones an
  * author sees: the code, the severity, and the file, screen and id they name.
+ * The last cases pass a rendered-text file, as `qfai validate --rendered` does,
+ * and compare what a screen showed with what its contract lists.
  */
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -17,6 +19,7 @@ import { runInit } from "../helpers/legacyInit.js";
 import { runValidate } from "../../src/cli/commands/validate.js";
 import { defaultConfig } from "../../src/core/config.js";
 import { validateContracts } from "../../src/core/validators/contracts.js";
+import { validateUiRenderedCopy } from "../../src/core/validators/uiRenderedCopy.js";
 import { validateUiScreenCopy } from "../../src/core/validators/uiScreenCopy.js";
 import { captureStdout } from "../helpers/stdout.js";
 
@@ -367,5 +370,147 @@ describe("which screens are read", () => {
     delete missing["supplements"];
     await writeContract([screen(), missing]);
     expect(await copyFindings()).toEqual([]);
+  });
+});
+
+const DEMO: Mapping = {
+  id: "sp_demo",
+  near: "g_customer",
+  when: "default",
+  text: "Sample data. Nothing you enter is stored.",
+  why: "The form looks real; without this the user may expect the order to exist afterwards.",
+};
+
+const RENDERED = "rendered.json";
+
+/** The rendered-text file a caller's own browser run would write, at the project root. */
+async function writeRendered(value: unknown): Promise<void> {
+  await writeFile(path.join(root, RENDERED), JSON.stringify(value), "utf-8");
+}
+
+function rendered(texts: string[], overrides: Mapping = {}): Mapping {
+  return { contract: "UI-0001", screen: "order_create", when: "default", texts, ...overrides };
+}
+
+async function renderedFindings(file = RENDERED) {
+  const issues = await validateUiRenderedCopy(root, defaultConfig, file);
+  return issues.filter((issue) => /^QFAI-CONTRACT-04[678]$/.test(issue.code));
+}
+
+// QFAI:AC-0001-0230-07
+describe("rendered text compared with the screen's copy", () => {
+  // QFAI:EX-0001-0230-13
+  it("raises nothing when every rendered text is the title, a heading, a label or a supplement of that state", async () => {
+    await writeContract([screen({ supplements: [SAVED, DEMO] })]);
+    await writeRendered({
+      screens: [
+        rendered([
+          "Create Order",
+          "Customer",
+          "Customer ID",
+          "Submit order",
+          "Save draft",
+          "sample data.  nothing you enter is stored",
+        ]),
+        rendered(["Create Order", "Saved to Drafts"], { when: "success" }),
+      ],
+    });
+    expect(await renderedFindings()).toEqual([]);
+  });
+
+  // QFAI:EX-0001-0230-14
+  it("names a rendered text the contract does not hold, and a supplement of that state the screen did not show", async () => {
+    await writeContract([screen({ supplements: [SAVED, DEMO] })]);
+    await writeRendered({ screens: [rendered(["Create Order", "Free shipping over $50"])] });
+    const findings = await renderedFindings();
+    expect(findings.map((finding) => [finding.code, finding.severity])).toEqual([
+      ["QFAI-CONTRACT-047", "error"],
+      ["QFAI-CONTRACT-048", "error"],
+    ]);
+    const [excess, unmet] = findings;
+    expect(excess?.file).toBe(FILE);
+    expect(excess?.message).toContain("`order_create`");
+    expect(excess?.message).toContain("UI-0001");
+    expect(excess?.message).toContain("`when: default`");
+    expect(excess?.message).toContain('"Free shipping over $50"');
+    expect(excess?.suggested_action).toContain("`supplements`");
+    expect(unmet?.file).toBe(FILE);
+    expect(unmet?.message).toContain("`sp_demo`");
+    expect(unmet?.message).toContain('"Sample data. Nothing you enter is stored."');
+  });
+
+  // QFAI:EX-0001-0230-15
+  it("names a file that cannot be read, and each entry out of shape", async () => {
+    await writeContract([screen()]);
+    const missing = await renderedFindings("absent.json");
+    expect(missing.map((finding) => [finding.code, finding.severity])).toEqual([
+      ["QFAI-CONTRACT-046", "error"],
+    ]);
+    expect(missing[0]?.message).toContain("absent.json");
+
+    await writeRendered({
+      screens: [
+        rendered([], { contract: "UI-0009" }),
+        rendered([], { screen: "nope" }),
+        rendered([], { when: "busy" }),
+        rendered([], { note: "x" }),
+        rendered([1]),
+        rendered(["Create Order"]),
+        rendered(["Create Order"]),
+      ],
+    });
+    const messages = (await renderedFindings()).map((finding) => {
+      expect(finding.code).toBe("QFAI-CONTRACT-046");
+      expect(finding.file).toBe(RENDERED);
+      return finding.message;
+    });
+    expect(messages).toHaveLength(6);
+    expect(messages.some((message) => message.includes("`UI-0009`"))).toBe(true);
+    expect(messages.some((message) => message.includes("`nope`"))).toBe(true);
+    expect(messages.some((message) => message.includes("`when` is `busy`"))).toBe(true);
+    expect(messages.some((message) => message.includes("carries `note`"))).toBe(true);
+    expect(messages.some((message) => message.includes("`screens[4]`"))).toBe(true);
+    expect(messages.some((message) => message.includes("`screens[6]` repeats"))).toBe(true);
+
+    await writeFile(path.join(root, RENDERED), "{ not json", "utf-8");
+    expect((await renderedFindings()).map((finding) => finding.code)).toEqual([
+      "QFAI-CONTRACT-046",
+    ]);
+  });
+
+  // QFAI:EX-0001-0230-16
+  it("compares only the screens and states the file has an entry for", async () => {
+    await writeContract([
+      screen({ supplements: [SAVED, DEMO] }),
+      screen({ id: "second", route: "/second", supplements: [DEMO] }),
+    ]);
+    await writeRendered({
+      screens: [rendered(["Create Order", "Sample data. Nothing you enter is stored."])],
+    });
+    expect(await renderedFindings()).toEqual([]);
+  });
+
+  it("runs from qfai validate when the file is passed, and fails the run on a difference", async () => {
+    await initProject();
+    await writeContract([screen({ supplements: [SAVED, DEMO] })]);
+    await writeRendered({ screens: [rendered(["Create Order", "Free shipping over $50"])] });
+    let code = 0;
+    const out = await captureStdout(async () => {
+      code = await runValidate({
+        root,
+        strict: false,
+        failOn: "error",
+        profile: "sdd",
+        renderedPath: RENDERED,
+      });
+    });
+    expect(out).toMatch(/\[error\] QFAI-CONTRACT-047/);
+    expect(out).toMatch(/\[error\] QFAI-CONTRACT-048/);
+    expect(code).toBe(1);
+
+    const without = await captureStdout(async () => {
+      await runValidate({ root, strict: false, failOn: "never", profile: "sdd" });
+    });
+    expect(without).not.toMatch(/QFAI-CONTRACT-04[678]/);
   });
 });
