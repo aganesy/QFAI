@@ -117,8 +117,8 @@ const STANDARD_ASSET_PATHS: readonly string[] = REFRESHED_ASSISTANT_LAYERS.map(
 );
 
 /**
- * Printed when the run wrote skill, step, agent, rule or hook files, a Codex agent profile or a
- * rule master. A running agent session keeps the text it loaded at start, so it acts on the old
+ * Printed when the run wrote skill, step, agent, rule or hook files, a Codex agent profile, a
+ * rule master or an agent entry point. A running agent session keeps the text it loaded at start, so it acts on the old
  * text until it restarts.
  */
 const AGENT_RESTART_NOTE =
@@ -567,7 +567,10 @@ export async function runInit(
   const agentTextWritten = [
     ...skillsResult.copied,
     ...wrappersResult.copied.filter((dest) => path.dirname(dest) === codexProfileDir),
-    ...rulesForced.copied.filter((dest) => path.extname(dest) === ".md"),
+    ...[...rulesCreated.copied, ...rulesForced.copied].filter(
+      (dest) => path.extname(dest) === ".md",
+    ),
+    ...entryPointRulesResult.copied,
     ...claudeHooksResult.copied,
     ...codexHooksResult.copied,
   ];
