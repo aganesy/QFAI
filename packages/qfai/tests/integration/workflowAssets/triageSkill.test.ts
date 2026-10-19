@@ -294,9 +294,14 @@ describe("a question answered without a change", () => {
     const procedure = flat(sectionOf(await step("triage-operate"), "## Procedure"));
     expect(procedure).toMatch(/Wait for checks still running before a merge/);
     expect(procedure).toMatch(/Poll no faster than the checks change/);
-    expect(procedure).toMatch(/A failing check stops the operation as a tracked change it needs/);
     expect(procedure).toMatch(
-      /After a merge, check the merged result: the target branch holds the merge commit, and the checks the project runs on that branch pass/,
+      /A failing check that a rerun does not clear stops the operation as a tracked change it needs/,
+    );
+    expect(procedure).toMatch(
+      /After a merge, check the merged result: the target branch holds the merge commit, and, when the user asked to see them pass or the project's policy requires it, the checks the project runs on that branch pass/,
+    );
+    expect(procedure).toMatch(
+      /A failure there is reported as `needs-change`, naming the merge commit, since the merge itself stands/,
     );
   });
 
