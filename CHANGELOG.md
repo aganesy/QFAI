@@ -22,6 +22,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   drops from about 36 KB to about 21 KB with the same values and wording.
   Fixes #3780.
 
+- **`user-questions.md` withdraws overtaken requests and restates unseen
+  options.** When the user changes the direction of the work, a pending question
+  or approval request that no longer fits is withdrawn visibly and the latest
+  decision carries forward; a late answer to a withdrawn request is answered in
+  one line and confirmed as a new instruction before anything acts on it. When
+  the user says they cannot see the options, the same numbered options are
+  restated in the message body with every part the plain-text fallback carries
+  and how to answer, and the answer is mapped to an option before it is acted
+  on. Fixes #3705. Fixes #3706.
+
 - **The free-text entry reminder applies only to a message the user wrote.**
   Its full and brief messages now say that an automated notice, such as a
   finished background task, a wake-up or a CI event, starts no `qfai-run`, so

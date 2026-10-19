@@ -194,8 +194,11 @@ took the question. It does not say the user saw it or answered it.
   confirmed. Where the host does not confirm display, say the question is
   unconfirmed and still open.
 - A tool error, a lost connection or the user saying the question never
-  appeared sends the same question to the plain-text form above, with every part
-  the tool would have carried and the reason in one line.
+  appeared or cannot see its options sends the same question to the plain-text
+  form above. Restate in the message body the same numbered options with every
+  part § 5 lists (description, the recommendation where one is permitted, and
+  how many may be chosen) and how to answer, with the reason in one line. When
+  the answer arrives, confirm which option it maps to before acting on it.
 - Resend only for a reason the host reports, never on a timer. A late answer to
   an earlier send of the same question answers that question. An answer to a
   question already answered is not applied again.
@@ -234,6 +237,13 @@ Do not report a waiting step as complete or promise automatic restart the host
 does not provide. An ongoing step awaiting an already requested external
 operation needs no repeated question when no new decision or missing fact is
 needed. Ask only if the report reveals an answer the next step still requires.
+
+**A change of direction withdraws what it overtakes.** When the user changes
+the direction of the work, a pending question or approval request that no
+longer fits it is obsolete. Withdraw it visibly, in one line naming it, and
+carry the latest decision forward. A late answer to a withdrawn request is not
+applied. Say so in one line, and treat it as a new instruction: ask whether it
+reinstates the withdrawn direction before acting.
 
 **A user's stop is not such a turn.** The stop is confirmed in one line, every
 open decision is listed as open, and nothing is asked.
