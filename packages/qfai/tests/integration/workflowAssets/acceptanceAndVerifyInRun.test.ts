@@ -317,3 +317,45 @@ describe("acceptance scaffold evidence in the human report", () => {
     ]);
   });
 });
+
+describe("the run report recipe in the human report", () => {
+  const repoGate = "step/verify-repo-gate/STEP.md";
+  const recipeHeading = "### Run report";
+
+  // QFAI:AC-0001-0208-08
+  // QFAI:EX-0001-0208-09
+  it("lists what a run report records and keeps it apart from semantic coverage", async () => {
+    const recipe = sectionOf(await readShipped(repoGate), recipeHeading);
+    expect(recipe).not.toBe("");
+    const revision = rowOf(recipe, "| Revision and run");
+    expect(revision).toContain("common-gate-run/STEP.md#ci-evidence");
+    expect(revision).toMatch(/deployed source.*difference from that commit/u);
+    expect(rowOf(recipe, "| Counts per layer")).toMatch(
+      /each layer.*runner.*command.*collected, passed, failed and skipped.*report/u,
+    );
+    expect(rowOf(recipe, "| Skips")).toMatch(/skipped case.*reason.*intended/u);
+    expect(rowOf(recipe, "| Fresh or cached")).toMatch(
+      /restored from a cache names the run that produced it.*not reported as a fresh execution/u,
+    );
+    expect(rowOf(recipe, "| Retries")).toMatch(/counts once.*final outcome.*number of attempts/u);
+    expect(rowOf(recipe, "| Support cases")).toMatch(
+      /Setup, teardown.*apart from the cases that check behavior/u,
+    );
+    const unknown = rowOf(recipe, "| UNKNOWN and UNRUN");
+    expect(unknown).toMatch(/UNKNOWN/u);
+    expect(unknown).toMatch(/report is missing.*collected no cases.*UNRUN/u);
+    expect(unknown).toMatch(/physical device/u);
+    expect(unknown).toMatch(/Neither is a pass/u);
+
+    const coverage = flat(recipe);
+    expect(coverage).toMatch(
+      /annotation, an assertion and a passing case do not prove every clause of a requirement/u,
+    );
+    expect(coverage).toMatch(
+      /Where the report states the semantic coverage of a requirement, state it apart from the run report, and do not mark a requirement covered because its annotated test passed/u,
+    );
+    expect(coverage).toMatch(
+      /layer recorded UNRUN here is UNRUN for the gate that covers it, under `## Verdict` and `## A missing environment`; this recipe changes no gate status/u,
+    );
+  });
+});
