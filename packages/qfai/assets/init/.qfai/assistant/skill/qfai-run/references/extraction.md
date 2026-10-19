@@ -111,7 +111,9 @@ a request that is only the operation.
 A request that explicitly asks for issues to be filed, such as follow-up issues
 for what finished work left over or feedback on the tools it used, names an
 operation the session carries out: extract it as `order` with no artifacts.
-Leftovers to sort again, with no request to file them, stay `follow-up`.
+Feedback on the tools is still drafted and approved as
+`.agents/rules/session-feedback.md` sets out: the user chooses which drafts are
+filed. Leftovers to sort again, with no request to file them, stay `follow-up`.
 
 Each intent below is followed by when to set it.
 
