@@ -1051,6 +1051,26 @@ describe("the runner a finding names is the one the file runs on", () => {
     });
   });
 
+  it("names node:test for a single-quoted import", async () => {
+    const file = `import test from 'node:test';\n\n${parked}`;
+    await withTests({ "tests/a.test.mjs": file }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+      expect(issues.find((i) => i.code === "QFAI-TEST-003")?.message).toContain(
+        "silent in node:test",
+      );
+    });
+  });
+
+  it("names Playwright for a file that imports both", async () => {
+    const file = `import { test } from "@playwright/test";\nimport "node:test";\nconst { it } = require("node:test");\n\n${parked}`;
+    await withTests({ "tests/a.test.mjs": file }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+      expect(issues.find((i) => i.code === "QFAI-TEST-003")?.message).toContain(
+        "silent in Playwright",
+      );
+    });
+  });
+
   it("names node:test in a stub finding as well as a skip finding", async () => {
     const file = `import { it } from "node:test";\n\n${JS_STUB}`;
     await withTests({ "tests/a.test.ts": file }, async (root) => {

@@ -622,7 +622,8 @@ const PLAYWRIGHT_IMPORT =
 
 /**
  * Node's built-in runner is the same split: a file that brings `test` in from
- * `node:test` runs under `node --test`, which vitest and jest never reach.
+ * `node:test` runs under `node --test`, which vitest and jest never reach. Like
+ * the Playwright check, it reads the whole file, so a quoted mention counts.
  */
 const NODE_TEST_IMPORT = /\bfrom\s*(['"])node:test\1|\brequire\(\s*(['"])node:test\2/;
 
