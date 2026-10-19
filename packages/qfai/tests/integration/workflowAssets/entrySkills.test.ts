@@ -1272,6 +1272,31 @@ describe("qfai-maintain", () => {
     expect(resolving).toMatch(/in the `resolve-conflicts` route/i);
     expect(resolving).toMatch(/each edit only keeps what one side already had/i);
     expect(resolving).toMatch(/content neither side had is a semantic effect/i);
+    expect(resolving).toMatch(/starts or resumes that merge with `git merge --no-commit <base>`/i);
+    expect(resolving).toContain(
+      "the incoming item renumbered as `.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md` (two branches taking the same ID) says",
+    );
+    expect(resolving).toContain(
+      "When both sides changed the same record, keeping both is a semantic effect: stop.",
+    );
+    expect(resolving).toContain(
+      "An ID two merged records already share is a semantic effect: stop.",
+    );
+    expect(resolving).toContain("A conflict in code, or in a file listed under");
+    expect(resolving).toContain("such as a generated file or a lockfile, stops");
+    expect(flat(sectionOf(skill, "## The edit"))).toContain(
+      "except a renumber [Resolving conflicts](#resolving-conflicts) allows",
+    );
+    expect(flat(sectionOf(skill, "## Stage report"))).toContain(
+      "the combined diff of each resolved path, taken with `git diff` before it is staged, with every added line inside one side's text",
+    );
+    const commit = flat(await readShipped("step/verify-commit/STEP.md"));
+    expect(commit).toContain(
+      "conclude the merge in progress with `git commit --no-edit`; the commit then also holds the base's changes. Add `git show --remerge-diff` of that commit to the stage report",
+    );
+    expect(commit).toContain(
+      "except concluding the merge in progress of the `resolve-conflicts` route",
+    );
   });
 });
 

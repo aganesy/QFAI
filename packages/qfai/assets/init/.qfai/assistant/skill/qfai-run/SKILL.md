@@ -85,7 +85,7 @@ values plan nothing.
    `implementation-reviewer`. Only a contract or screen change no earlier review read adds
    `architecture-reviewer` or `product-surface-reviewer`, as `common-review-cycle` lists; no one else
    joins. A review whose target's only edits resolve the conflicts of a merge or branch update between
-   reviewed sides gets no reviewer.
+   reviewed sides gets no reviewer, unless the plan's own edit stage made it in the story tree, a contract or a register.
    No agent reviews its own work; no step adds a review. Each returns PASS or REVISE.
    Fix or answer each finding once, with no re-review. Stop a step that exceeds the request.
 7. **Approvals.** Each approval of a specification change, a critical decision or a release is one `decisions.md` row: what was approved, who approved it, when, and the chosen option's label, in the `qfai-sdd` decisions template's form. A decision you took appends no row.

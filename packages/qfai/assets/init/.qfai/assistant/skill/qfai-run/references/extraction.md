@@ -237,7 +237,7 @@ only after reading what it depends on.
 - `mixed-bundle`, with `bundle`: The bundled findings differ in kind. Findings that share one intent take that intent instead.
 - `human-run`, with `order`: Only a person can run the operation: it is paid, bound to a host, or needs credentials the session does not hold.
 - `owned-temporary-cleanup`, with `order`: Existing user authority permits deleting specific repository-local, Git-ignored temporary directories the current task owns, without a tracked change or files still needed for a deliverable.
-- `meaning-preserving`, with `stale-record` or `order`: The change keeps every record's meaning. It only resolves the conflicts of a merge or a branch update, or renumbers a colliding ID, and adds no content neither side had.
+- `meaning-preserving`, with `stale-record` or `order`: The change keeps every record's meaning. It only resolves the conflicts of a merge or a branch update, or renumbers an ID the incoming side added, and adds no content neither side had. It lists the artifacts the conflict touches; a conflict in code, a generated file or a lockfile is not this qualifier.
 - `distribution-incident`, with `release`: A published key, certificate, feed or package is broken.
 - `settled-design`, with `upstream`: The cited record exists, is in force, and settles the design.
 - `red-since-change`, with `ci`: CI fails since a named change, and a correct existing test catches it.

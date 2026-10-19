@@ -229,6 +229,60 @@
           }
         }
       }
+    },
+    {
+      "then": {
+        "properties": {
+          "intent": {
+            "enum": ["stale-record", "order"]
+          },
+          "artifacts": {
+            "type": "array",
+            "minItems": 1
+          }
+        }
+      },
+      "if": {
+        "required": ["qualifiers"],
+        "properties": {
+          "qualifiers": {
+            "type": "array",
+            "contains": {
+              "const": "meaning-preserving"
+            }
+          }
+        }
+      }
+    },
+    {
+      "then": {
+        "properties": {
+          "artifacts": {
+            "type": "array",
+            "minItems": 1
+          }
+        }
+      },
+      "if": {
+        "required": ["alternatives"],
+        "properties": {
+          "alternatives": {
+            "type": "array",
+            "contains": {
+              "type": "object",
+              "required": ["qualifiers"],
+              "properties": {
+                "qualifiers": {
+                  "type": "array",
+                  "contains": {
+                    "const": "meaning-preserving"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   ],
   "$defs": {
@@ -352,6 +406,26 @@
                 "type": "array",
                 "contains": {
                   "const": "owned-temporary-cleanup"
+                }
+              }
+            }
+          }
+        },
+        {
+          "then": {
+            "properties": {
+              "intent": {
+                "enum": ["stale-record", "order"]
+              }
+            }
+          },
+          "if": {
+            "required": ["qualifiers"],
+            "properties": {
+              "qualifiers": {
+                "type": "array",
+                "contains": {
+                  "const": "meaning-preserving"
                 }
               }
             }

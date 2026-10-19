@@ -41,14 +41,26 @@ changes.
 
 ## Resolving conflicts
 
-In the `resolve-conflicts` route, the edit resolves the conflicts of a merge or
-a branch update, or renumbers a colliding ID, and keeps every record's meaning.
-There the step may edit any file the conflict touches, a story-tree file, a
-contract, a row of `decisions.md` or `open-questions.md` and the files listed
-above included, but each edit only keeps what one side already had: both sides
-of a conflicting row or block, or an ID renumbered together with every reference
-to it. Content neither side had is a semantic effect: stop before it as
-[A semantic effect](#a-semantic-effect) says.
+In the `resolve-conflicts` route, the step resolves the conflicts of merging
+the named base and keeps every record's meaning. It starts or resumes that merge
+with `git merge --no-commit <base>`; `verify-commit` concludes it.
+
+There the step may edit a story-tree file, a contract, or a row of
+`decisions.md` or `open-questions.md`, but each edit only keeps what one side
+already had: what each side added to a conflicting block, or the incoming item
+renumbered as `.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md` (two
+branches taking the same ID) says.
+
+Stop before the edit, as [A semantic effect](#a-semantic-effect) says, on any
+of these:
+
+- Content neither side had is a semantic effect.
+- When both sides changed the same record, keeping both is a semantic effect:
+  stop.
+- An ID two merged records already share is a semantic effect: stop.
+- A conflict in code, or in a file listed under
+  [Never a maintenance edit](#never-a-maintenance-edit), such as a generated
+  file or a lockfile, stops: its owner route resolves or regenerates it.
 
 ## Reads
 
@@ -63,7 +75,8 @@ itself.
 
 1. Read the write scope. Edit nothing outside it.
 2. Before editing, judge whether each planned edit has a semantic effect: a
-   changed command, value, identifier, condition or rule. If one has, stop before
+   changed command, value, identifier, condition or rule, except a renumber
+   [Resolving conflicts](#resolving-conflicts) allows. If one has, stop before
    editing as [A semantic effect](#a-semantic-effect) says. Do not make the edit.
 3. Make the edit.
 4. Run the applicable lint and link checks over the changed files through
@@ -80,12 +93,12 @@ so the run is `blocked`, naming the finding and the owner skill to invoke by nam
 The session report records:
 
 - the semantic effect, affected paths and the review or command that found it;
-- that nothing was edited and the `edit-text` run binds no flow;
+- that nothing was edited and this run binds no flow;
 - the owner skill to invoke by name: `qfai-implement` for code or configuration,
   or `qfai-sdd` for a story or contract;
 - the authorized owner route needed before work can resume.
 
-Do not treat a stage of the `edit-text` plan as the owner of this repair.
+Do not treat a stage of this route's plan as the owner of this repair.
 
 ## Passes when
 
@@ -104,10 +117,15 @@ edit changes none. Any other entry under
 - The no-behaviour-change judgement, with its reason.
 - The independent review's verdict and who gave it.
 - The lint and link checks run, and their results.
+- In the `resolve-conflicts` route, the combined diff of each resolved path,
+  taken with `git diff` before it is staged, with every added line inside one
+  side's text.
 
 ## Gate
 
 The diff stays inside the write scope, the no-behaviour-change judgement names
 its reason, and every check run over the changed files exited 0. The review that
 follows (`implementation-reviewer`) confirms the diff changes no behaviour; the
-reviewer is never the agent that made the edit.
+reviewer is never the agent that made the edit. In the `resolve-conflicts`
+route, that review runs as `common-review-cycle` says: a resolution that
+touches no story-tree file, contract or register row gets no reviewer.

@@ -55,7 +55,11 @@ covering that action, target and scope. Commit authority alone covers none of th
    `git add <those paths>`. Never `git add -A`, `git add .` or `git add -f`,
    and never a file git ignores, such as `.qfai/report/*`. A file that was
    already modified before the run and then written by it is committed whole;
-   the final report names it.
+   the final report names it. In the `resolve-conflicts` route, stage the
+   resolved paths and conclude the merge in progress with `git commit --no-edit`;
+   the commit then also holds the base's changes. Add `git show --remerge-diff`
+   of that commit to the stage report: every added line stays inside one side's
+   text, or the run stops.
 3. Commit with a message in the project's convention that says what changed
    and why.
 4. Where a commit hook refuses the commit, fix the cause and commit again.
@@ -71,8 +75,10 @@ The verification commit and pending report satisfy this step's gate while CI wai
 
 ## Gate
 
-- The commit exists and holds exactly the tracked deliverables the run wrote.
+- The commit exists and holds exactly the tracked deliverables the run wrote,
+  or, in the `resolve-conflicts` route, the merge the run concluded.
 - Pending CI is named in the report with the target, current head, run ID or URL
   when available, check, observed outcome and counts, blocker and resume condition.
   If no run exists, say so; invent no run ID or result.
-- Nothing was pushed, and no pull request or merge was made by this step.
+- Nothing was pushed, and no pull request or merge was made by this step,
+  except concluding the merge in progress of the `resolve-conflicts` route.

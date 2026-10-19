@@ -130,12 +130,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - **A request that only resolves merge conflicts takes a short route.** The
   extraction gains the qualifier `meaning-preserving`, on `stale-record` or
-  `order`, for a change that only resolves the conflicts of a merge or a branch
-  update, or renumbers a colliding ID. It routes the new route
-  `resolve-conflicts`: one `maintain-edit` stage with the code review, then the
-  verify block. There `maintain-edit` may edit story-tree files, contracts and
-  register rows, but keeps only what one side already had and stops on content
-  neither side had. Fixes #3541.
+  `order` with at least one artifact, for a change that only resolves the
+  conflicts of a merge or a branch update, or renumbers an ID the incoming side
+  added. It routes the new route `resolve-conflicts`: one `maintain-edit`
+  stage, then the verify block, whose `verify-commit` concludes the merge.
+  There `maintain-edit` may edit story-tree files, contracts and register rows,
+  keeps only what one side already had, and stops on content neither side had,
+  a record both sides changed, an ID two merged records share, or a conflict in
+  code, a generated file or a lockfile. A resolution in the story tree, a
+  contract or a register keeps its code review. Fixes #3541.
 
 - **A critical decision found while writing the discussion pack goes back to
   the user.** `discussion-pack` and `discussion-oq` now reopen the ended session
