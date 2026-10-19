@@ -33,7 +33,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `question-why`.** The `qfai-run` extraction reference now reads a notice such
   as a failed deploy, reported with no cause, as an investigation and shows one
   example. The investigation step reports a new extraction when it finds a
-  defect, so the request needs no new intent and no reading before extraction.
+  defect, so the request needs no new intent and no fact-gathering before
+  extraction.
   Fixes #3498.
 
 - **A project that runs tests in CI only records Red and Green `ci-deferred`.**

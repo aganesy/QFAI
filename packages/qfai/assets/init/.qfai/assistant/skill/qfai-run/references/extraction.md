@@ -41,9 +41,13 @@ Read the request as it stands when it arrives. What the work finds later, such
 as a cause or an "as designed", does not change the extraction.
 
 An alert or a notice whose intent depends on facts not yet read, such as a
-failed deploy or a red job reported with no cause, is an investigation: extract
-it as `question-why`. Read nothing more to choose another intent. When the
-investigation finds a defect, it reports a new extraction for the fix.
+failed deploy or a red job with no named change, is an investigation: extract
+it as `question-why`. Read nothing beyond what step 2 reads to choose another
+intent. When the request names the job's change or its flakiness, `ci` and
+`flaky-test` still apply. An alert that already holds the failure's evidence
+and asserts a product defect is a defect; `env` applies as below. When the
+investigation finds a defect, it reports the outcome `defect-found` with a new
+extraction of the request as a defect report.
 
 When one goal covers targets with settled independent scopes, extract each
 target separately before asking the planner for its plan. A newly eligible
