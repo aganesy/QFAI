@@ -199,7 +199,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   difference with a reason.** The `workflows.drift.*` warning now also names each
   action both files use whose pinned version differs, with the version on each
   side. A file listed under `workflow.acceptedDrift` in `qfai.config.yaml`, each
-  entry with a `file` and a `reason`, is reported as `info` with that reason
+  entry with a `file`, a `digest` and a `reason`, is reported as `info` with that reason
   instead of a warning; an entry without a reason or with an empty one, or a file outside
   the shipped set or listed twice, is a configuration error and accepts nothing. The README upgrade steps now cover
   the workflows `init --force` leaves alone.
@@ -210,6 +210,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and `qfai-sdd` triage passes a seed or sample data change whose values no
   story, BR or contract sets with a one-line note and no decision row.
   Fixes #3779.
+
+- **An accepted workflow difference now records the file's digest, and a file
+  that changes again warns again.** Each `workflow.acceptedDrift` entry needs a
+  `digest`: `sha256:` and the SHA-256 of the installed file with its line
+  endings read as LF. The `workflows.drift.*` warning prints the file's current
+  digest to copy into the entry. Doctor reports `info` only while the file's
+  digest equals the recorded one; otherwise it warns that the file changed since
+  it was accepted, naming both digests. An entry without a digest or with a
+  malformed one is a configuration error and accepts nothing. Fixes #3534.
 
 - **Verify runs a gate that looks unrelated to the change, and a procedure
   edit with no checker records "no applicable checker".** `verify-repo-gate`
