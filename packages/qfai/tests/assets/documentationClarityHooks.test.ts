@@ -461,8 +461,6 @@ describe("the shipped reminder catalog", () => {
     }
   });
 
-  // QFAI:EX-0001-0196-53
-  // QFAI:EX-0001-0196-56
   it("keeps compact editing pointers in the shared catalog with their required rules", () => {
     if (typeof catalog !== "object" || catalog === null) throw new Error("no reminder catalog");
     for (const [key, rule] of [

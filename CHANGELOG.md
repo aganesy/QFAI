@@ -104,6 +104,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   pending approval row first.
   Fixes #3551.
 
+- **Tool-time reminders print once per session.** The grilling, API-budget,
+  minimal-implementation and documentation-clarity after-write or after-edit
+  hooks in `.claude/settings.json` and `.codex/hooks.json` print their full
+  message on a session's first eligible call and nothing after it, where they
+  printed a one-line pointer on every later call. The prompt-time free-text
+  entry and question-form reminders keep their short line each turn, and
+  `qfai init` replaces the earlier groups in place unless the project edited
+  them. Fixes #3762.
+
 - **Shipped seed and sample data now have an artifact to fall under.** The
   `qfai-run` extraction reference files them under `data` rather than `config`,
   and `qfai-sdd` triage passes a seed or sample data change whose values no
