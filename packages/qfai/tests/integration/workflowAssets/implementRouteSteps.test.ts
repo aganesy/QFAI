@@ -194,7 +194,9 @@ describe("the steps the routes add to qfai-implement", () => {
   it("lets implement-retire retire a feature whose specification the route already rewrote, adding no test", async () => {
     const retiring = flat(sectionOf(await stepText("implement-retire"), "## Retiring a feature"));
     expect(retiring).toMatch(/in the `retire-feature` route/i);
-    expect(retiring).toMatch(/the specification stage before this step already removed or rewrote/i);
+    expect(retiring).toMatch(
+      /the specification stage before this step already removed or rewrote/i,
+    );
     expect(retiring).toMatch(/a test of a removed example is deleted with it/i);
     expect(retiring).toMatch(/changes that assertion to what the rewritten specification states/i);
     expect(retiring).toMatch(/no test is added, neither for the removal nor for the new wording/i);

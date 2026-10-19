@@ -16,6 +16,7 @@ export const WORKFLOW_ROUTES = [
   "add-feature",
   "prototype-feature",
   "change-compatibility",
+  "retire-feature",
   "apply-settled",
   "apply-settled-prototype",
   "run-owned-cleanup",

@@ -39,6 +39,20 @@ This step carries it out.
    story or contract through its own route.
 5. Run the relevant suite. It passes.
 
+## Retiring a feature
+
+In the `retire-feature` route, the user asked to remove a feature, or a concept
+across the project's surfaces, and the specification stage before this step
+already removed or rewrote the stories, examples and contract rules that stated
+it. That rewritten specification is the recorded decision. The step removes the
+feature from code, configuration and documents as the procedure says, and
+rewords what still names it to match the specification. A test of a removed
+example is deleted with it. A test that also checks behaviour the specification
+keeps, and asserts the old behaviour or wording, stays: the step changes that
+assertion to what the rewritten specification states, and moves its example
+annotation to the rewritten example. No test is added, neither for the removal
+nor for the new wording.
+
 ## What it writes
 
 - The deleted and changed files, listed in the stage report.
