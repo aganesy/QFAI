@@ -279,6 +279,37 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
     expectPhrase(record, "It still cannot prove a session happened");
   });
 
+  it("reopens an ended session for one node a pack writer finds critical", async () => {
+    // A pack written on an assumption is the draft the run then defends, so a
+    // critical decision found while authoring goes back to the user for that
+    // node, and the record keeps the earlier rows rather than rewriting them.
+    for (const step of ["discussion-pack", "discussion-oq"] as const) {
+      const body = await readDiscussionStep(assistantDir, step);
+      expect(body, step).toContain("## A critical decision found while authoring");
+      expectPhrase(body, "reopens the session for that node only");
+      expectPhrase(body, "ask the user one round on that node");
+      expectPhrase(body, "common-grilling-record/STEP.md#a-reopened-node");
+      expectPhrase(body, "The rest of the session's record stays as it is.");
+      expectPhrase(
+        body,
+        "Recording the decision as an assumption is allowed only under a no-question mode",
+      );
+      // A stop in the reopened round ends the run; it writes no row.
+      expectPhrase(
+        body,
+        "A stop in that round ends the run as `stopped` does: no row is written, writing stops, and the report names the pack files already written and the open node.",
+      );
+      expect(unwrap(body), step).not.toContain("A stop in that round is `Ended: stopped`");
+    }
+    const record = await read("assistant/step/common-grilling-record/STEP.md");
+    expect(record).toContain("## A reopened node");
+    expectPhrase(record, "Append one row for that round under the same header");
+    expectPhrase(record, "before authoring resumes. The earlier rows stay as written.");
+    expectPhrase(record, "one session per run, except a reopened node, below");
+    expectPhrase(record, "until no node it opened is left open");
+    expectPhrase(record, "Under a no-question mode the row's `Ended` is `no-question`");
+  });
+
   it("has the session holder hand the row to a delegated pack author", async () => {
     // A pack author that never held the session cannot know when it ended.
     const skill = await readSkill();
@@ -307,14 +338,14 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
     expectPhrase(record, "not as a fictional human option answer");
     expectPhrase(record, "A missing hard-required consumed input authorizes no authoring ending");
     expectPhrase(skill, "accept a claim it cannot check");
-    // And the gate reads the row rather than the event.
-    expectPhrase(
-      skill,
-      "the stage report's `## Grilling Session` row shows the session ended before authoring began",
-    );
+    // And the gate reads every row rather than the event: a reopened row ends
+    // before authoring resumes, not before the first pack file.
+    const everyRow =
+      "of the stage report's `## Grilling Session` table has its `Ended at` before its own `Authoring began` (for a reopened row, when authoring resumed)";
+    expectPhrase(skill, `every row ${everyRow}`);
 
     const matrix = await read(MATRIX);
-    expectPhrase(matrix, "The stage report's `## Grilling Session` row");
+    expectPhrase(matrix, `Every row ${everyRow}`);
     expectPhrase(matrix, "The no-question row is the one to read carefully");
   });
 

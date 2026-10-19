@@ -25,6 +25,18 @@ or with `Ended: stopped`, write no pack file and stop. A pack drafted
 mid-session records a design that was still being decided, and the draft is
 what the rest of the run then defends.
 
+## A critical decision found while authoring
+
+A decision found while authoring that is critical under
+`.agents/rules/grilling.md#critical-decisions` reopens the session for that
+node only. Stop writing the pack, ask the user one round on that node, record
+the round as `.qfai/assistant/step/common-grilling-record/STEP.md#a-reopened-node`
+says, then resume. The rest of the session's record stays as it is.
+Recording the decision as an assumption is allowed only under a no-question
+mode, labelled beside its open question.
+A stop in that round ends the run as `stopped` does: no row is written,
+writing stops, and the report names the pack files already written and the open node.
+
 ## Passes when
 
 Read first: the pack under work and the interview's answers. The step passes
