@@ -217,6 +217,22 @@ const SUPERSEDED_HOOK_GROUPS: ReadonlySet<string> = new Set([
   // Claude prompt groups before CI-monitor notifications were excluded.
   "d667a61872533a4d1313ac4b4422842c800eb620736a1de98f1eb74bff156d9a",
   "efe8ac5d03228600cd80eb832c8be192d4350e6080e2e794b2708d69ba2e2666",
+  // Tool-time groups that printed a one-line reminder on every call after the first, before they
+  // printed nothing after the first: in `.claude/settings.json` grilling before a write or edit,
+  // a delegation and leaving plan mode, API budget, documentation clarity after a Markdown write
+  // or edit, and minimal implementation; then the same groups, without plan grilling, in
+  // `.codex/hooks.json`.
+  "67405cd14066bb696c6782941b9314bfd378c33f23834b9d5d14c262ad35e89c",
+  "f31358b7fd0862557710676752ca17e6c0b16e43656984ed14e80a1436be0590",
+  "2213e609f047910765610bd66448fdff3c5c22b2b08323393920c57e308252c0",
+  "dcb5a23f6e5c02156fccaae0bcfac0692d193667de79e22a6802a72d57ffc106",
+  "367f4fb91a8b0850e9c43da1323014d8ea6674bd5337bf5184184ae95ac47509",
+  "ec8bf6ca89a241b7d6602b3a9d545bf77de9fb698e71a65e4c174c29a2ff71d3",
+  "ee4050ed948da42ad9ad3c9a9ff31bf4718a3c839b11b2a087ee7e0e25a26498",
+  "5c37b50d2cc78fe1a0ab61fee981e2bb40c45bd29460ce3d8764a5a1a32b0627",
+  "a05e541a30e43d166bedd13b06275aed6c5550c9db3ec6ef91e32fc42c657556",
+  "40b6b79f51f908712c1bf66f02510e21b39c7e6da1f3dbcc3508f3911ad678f9",
+  "71c8c279203aba4bee78f5bce2c97b5d819cfae0fa3282c18dc7ad8ee8bf658b",
 ]);
 
 export type HookMergeResult =
