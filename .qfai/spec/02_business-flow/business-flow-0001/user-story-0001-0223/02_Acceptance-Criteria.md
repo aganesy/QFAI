@@ -56,4 +56,5 @@ Feature: Answer only the critical decisions, and approve each release
     Given a run of any route
     When the final report is written
     Then it says whether `common-policy-check` ran and its outcome, or that it did not run and why
+    And it lists each plan step and planned review with its status and, for every status but ran, the reason
 ```

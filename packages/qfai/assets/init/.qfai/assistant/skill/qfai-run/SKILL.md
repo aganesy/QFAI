@@ -75,7 +75,7 @@ values plan nothing.
    closes, answers or asks, it reads and reports and writes nothing.
 5. **Run the stages.** Run each stage in plan order, and each of its steps in
    order, as `.qfai/assistant/rule/shared-skill-operating-baseline.md#running-steps-mandatory` says.
-   When a step is short or passes without edits, read `references/operator-screens.md`.
+   Note each step's status for the final report; when a step is short or passes without edits, read `references/operator-screens.md`.
    Write artifacts yourself or delegate independent parallel work or review.
    At a step the plan marks with a point, follow `references/stage-points.md`:
    - **Release point.** Ask the user to approve the release before the step `releasePoint` names.

@@ -655,6 +655,26 @@ describe("qfai-run", () => {
     );
   });
 
+  it("routes an env-bound defect without repro to fix-env-bound, says what that adds, and reads a diagnostics-only change", async () => {
+    const reference = await readShipped(EXTRACTION);
+    expect(flat(sectionOf(reference, "## Entry flags"))).toMatch(
+      /a defect with `env` and without `repro` takes the environment-bound fix route unless an earlier rule applies, .* that route adds a stage before diagnosis that asks the reporter .* and a stage after verification that confirms the fix there/i,
+    );
+    const outcome = routingOutcome(
+      extraction({
+        intent: "defect",
+        entryFlags: ["env"],
+        artifacts: ["code"],
+        confidence: "high",
+      }),
+    );
+    expect("taken" in outcome ? outcome.taken.route : undefined).toBe("fix-env-bound");
+    const intents = flat(sectionOf(reference, "## Intent"));
+    expect(intents).toMatch(
+      /a change that only adds or corrects diagnostic output, .* is `defect` when the missing or wrong output is what the request reports, and `feature` when it asks for new output and reports nothing wrong/i,
+    );
+  });
+
   // QFAI:AC-0001-0224-02
   // QFAI:EX-0001-0224-02
   it("writes artifacts itself, delegates only parallel parts and reviews, and never reviews its own work", async () => {
