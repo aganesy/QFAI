@@ -719,7 +719,10 @@ describe("the Codex reminders that repeat", () => {
           const editing = await codexEntry(event, key);
           const input = inSession(codexInput(event, tool, command), session);
           await firedContext(editing, shell, cwd, input, event);
-          await firedContext(editing, shell, cwd, input, event);
+          expect(
+            await firedEventIn(editing, shell, cwd, input),
+            `${key}, ${shell}, second`,
+          ).toBeNull();
         }
         const input = inSession(
           codexInput("PreToolUse", "mcp__github__create_issue", "Post the prepared issue"),
