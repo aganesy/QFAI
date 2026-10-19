@@ -22,6 +22,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   drops from about 36 KB to about 21 KB with the same values and wording.
   Fixes #3780.
 
+- **The README links the release notes.** The upgrade section now points to
+  the GitHub Releases page, whose bodies are the release notes, and the
+  `@jackchuka/mdschema` section says a release that moves its exact pin says so
+  there. Before Prepare release, the release procedure now has the releaser
+  diff the package manifest against the previous tag and add a line for every
+  exact dependency pin that moved, naming the old and new versions and whether
+  the dependency declares an install script, and it asks each change to name the
+  files it retires. Fixes #3547.
+
 - **The `qfai-run` final report lists every plan step with its status.** A
   step-status table gives one row per plan step and planned review, each marked
   `ran`, `passed`, `delegated`, `not run` or `not reached`, with a reason for
