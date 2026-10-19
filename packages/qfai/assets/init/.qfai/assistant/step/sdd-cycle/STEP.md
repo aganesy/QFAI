@@ -19,7 +19,8 @@ rules against their examples. Follow
   the Examples cell of a BR. No cycle runs when it changed none, even if an AC
   or EX changed, or in an append stage.
 - **Finder.** A sub-agent that wrote none of those BRs reads them, the EXs they
-  cite and the EXs this invocation wrote or changed. It raises findings of five
+  cite and the EXs this invocation wrote or changed. The orchestrator starts
+  it, never a stage worker the orchestrator delegated to. It raises findings of five
   kinds: a case the rule implies that no example states, a redundant example,
   an example no rule explains, a rule its examples do not support, and a flow,
   story or criterion split the rules show to be wrong.

@@ -62,7 +62,9 @@ them; it is the procedure that applies them.
    the reviewer reads it against the code before the fix and confirms that
    its assertion fails there
    (`.qfai/assistant/skill/qfai-implement/references/red-admissibility.md#ci-only-test-gate`).
-2. **Dispatch.** Send each reviewer a work order in the shared template. An
+2. **Dispatch.** The orchestrator sends each reviewer a work order in the
+   shared template; a stage worker the orchestrator delegated to dispatches no
+   reviewer. An
    agent that authored, edited or recommended a decision in the reviewed
    artifact is not its independent reviewer. The session report names its
    authors, editors and decision recommenders, and the independent reviewers.

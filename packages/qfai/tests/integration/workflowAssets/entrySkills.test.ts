@@ -806,6 +806,26 @@ describe("qfai-run", () => {
     expect(work).toMatch(/no agent reviews its own work/i);
   });
 
+  it("starts every finder, griller and reviewer itself, never through a stage worker", async () => {
+    const work = flat(sectionOf(await readShipped(RUN), "## The work"));
+    expect(work).toMatch(/a stage worker you delegate to starts no agent of its own/i);
+    expect(work).toMatch(/you start every finder, griller and reviewer a step calls for/i);
+    const owners: ReadonlyArray<readonly [string, RegExp]> = [
+      ["step/sdd-cycle/STEP.md", /the orchestrator starts it, never a stage worker/i],
+      [
+        "step/sdd-triage/STEP.md",
+        /the orchestrator starts the griller of a delegated session, never a stage worker/i,
+      ],
+      [
+        "step/common-review-cycle/STEP.md",
+        /a stage worker the orchestrator delegated to dispatches no reviewer/i,
+      ],
+    ];
+    for (const [step, owner] of owners) {
+      expect(flat(await readShipped(step)), step).toMatch(owner);
+    }
+  });
+
   // QFAI:AC-0001-0224-04
   // QFAI:AC-0001-0224-10
   // QFAI:EX-0001-0224-05
