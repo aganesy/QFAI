@@ -33,7 +33,7 @@ mirrors (`.claude/rules/scoped/`, etc.) reference these masters; the
 
 Key rules to follow:
 
-- `.agents/rules/graph-exploration.md` — use CodeGraph for code structure and Graphify for document concepts; configure local processing and use scoped AI-decided search fallback.
+- `.agents/rules/graph-exploration.md` — when the graph tools are ready, use CodeGraph for code structure and Graphify for document concepts; configure local processing and use scoped AI-decided search fallback; until then follow its opening section on searching without them.
 
 - `.agents/rules/temporary-files.md` — temporary files MUST go under `tmp/`.
 - `.agents/rules/temporary-files.local.md` — a test's own `mkdtemp` sandbox is outside that rule.

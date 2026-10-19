@@ -50,6 +50,7 @@ describe("graph exploration rule", () => {
       "reports an engine as not ready, use ordinary search",
       "search protection is reported as unsupported",
       "Say in your report that the graph was not used and why.",
+      "When a supported hook denies the search, use",
     ])
       expect(opening).toContain(clause);
     for (const entry of [
