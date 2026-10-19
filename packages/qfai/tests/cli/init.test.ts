@@ -92,7 +92,13 @@ function sectionPaths(output: string, header: string): string[] {
     if (!line.startsWith(bulletPrefix)) {
       break;
     }
-    paths.push(line.slice(bulletPrefix.length).trim());
+    // A dry run puts the path's state (`new` or `changed`) before it.
+    paths.push(
+      line
+        .slice(bulletPrefix.length)
+        .trim()
+        .replace(/^(?:new|changed) +/, ""),
+    );
   }
   return paths;
 }

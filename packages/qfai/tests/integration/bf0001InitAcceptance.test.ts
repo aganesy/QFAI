@@ -57,7 +57,14 @@ function reportSection(output: string, header: string): string[] {
   const paths: string[] = [];
   for (const line of lines.slice(start + 1)) {
     if (!line.startsWith(bullet)) break;
-    paths.push(line.slice(bullet.length).trim().replace(/\\/g, "/"));
+    // A dry run puts the path's state (`new` or `changed`) before it.
+    paths.push(
+      line
+        .slice(bullet.length)
+        .trim()
+        .replace(/^(?:new|changed) +/, "")
+        .replace(/\\/g, "/"),
+    );
   }
   return paths;
 }
