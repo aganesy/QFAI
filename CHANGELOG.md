@@ -122,6 +122,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   stopped on other conflicts.
   Fixes #3778.
 
+- **A dependency update whose checks name a contract to change moves to the
+  route that edits the spec.** When `validate`, or another check the update
+  runs, reports a finding that names a spec contract, `implement-dep-bump` now
+  leaves the contract unchanged and reports `contract-finding`, and the
+  `bump-dependency` plan moves the work to `apply-settled`, whose settled triage
+  edits the contract under its change request. Such an update no longer needs
+  the `stale-record` reading, whose route starts with a diagnosis that had
+  nothing to find. The `dependency` intent in the extraction reference now
+  covers that contract edit.
+  Fixes #3535.
+
 - **`npx qfai workflow plan --order` plans an operation on finished work with
   no extraction file.** A push, a pull request or another operation the user
   names after a finished run no longer needs its own extraction file: `--order`

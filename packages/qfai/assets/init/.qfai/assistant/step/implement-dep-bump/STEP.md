@@ -46,20 +46,28 @@ the section "Keeping QFAI itself up to date" of `node_modules/qfai/README.md`:
 `init --force`, the retired files the release notes list, then `doctor` and
 `validate`. `init --force` replaces the skills and steps in use, so read the
 next step from disk after it runs. What `doctor` and `validate` report is part
-of the update: a new required key in `qfai.config.yaml`, and an edit to a spec
-contract, which needs its change request in `decisions.md` under
-`paths.specsDir`, as `.qfai/assistant/rule/drift-protocol.md` describes, before
-the contract file changes.
+of the update: this step writes a new required key in `qfai.config.yaml`, and a
+finding that names a spec contract moves the work as the next section says.
+
+## When a finding names a contract
+
+When `validate`, or another check the update runs, reports a finding that
+names a spec contract to change, leave the contract unchanged and report
+`branch: { outcome: contract-finding }` with the finding, the contract it names
+and the fix it states. The work moves to `apply-settled`, whose settled triage
+edits the contract under its change request in `decisions.md` under
+`paths.specsDir`, as `.qfai/assistant/rule/drift-protocol.md` describes. The
+manifest, lockfile and configuration changes already made stay.
 
 ## What it writes
 
 - The actual changed paths for the manifest, lockfile and any adapted call,
   listed in the stage report. When the dependency is `qfai` itself, they also
-  include a new key in `qfai.config.yaml` and a spec-contract edit with its
-  change request.
+  include a new key in `qfai.config.yaml`.
 - A record of the versions, the breaking changes read and how each was met, in the stage report.
 
 ## Gate
 
 The step is done when the target version is installed, the runtime check and
-every breaking change are recorded as met, and the relevant suite passes.
+every breaking change are recorded as met, and the relevant suite passes, or
+when it reports `contract-finding`.
