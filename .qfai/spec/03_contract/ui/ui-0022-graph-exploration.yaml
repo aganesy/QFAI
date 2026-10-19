@@ -74,6 +74,11 @@ screens:
         when: default
         text: Configuration alone does not verify search protection. Check trust and runtime verification for each host.
         why: A settings entry cannot prove the host accepted it or blocked a search.
+      - id: graph_prepare_local
+        near: graph_prepare_host_status
+        when: default
+        text: ".qfai/tools/ is local to this checkout: run npx qfai init in each other clone or worktree."
+        why: The host settings that run the graph hook are committed while the tools directory is git-ignored, so another clone or worktree has the entries without the script.
       - id: graph_prepare_unsupported
         near: graph_prepare_host_status
         when: empty

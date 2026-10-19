@@ -1,5 +1,10 @@
 import path from "node:path";
 import { findUnsafeHostFileComponent, readPinnedRegularFile } from "../init/fsGuards.js";
+import {
+  CLAUDE_GRAPH_HOOK_GROUP,
+  CODEX_GRAPH_HOOK_GROUP,
+  SHARED_GRAPH_HOOK_ENTRY,
+} from "./hookCommands.js";
 import { inspectGraphHostProtection, type GraphHostProtection } from "./hosts.js";
 import { codegraphEnvironment, type GraphProcess } from "./process.js";
 
@@ -19,41 +24,15 @@ export async function inspectInstalledGraphHosts(
   const claudeReady =
     wrappers &&
     claude?.disableAllHooks !== true &&
-    contains(claude, "PreToolUse", {
-      matcher: "Bash|PowerShell|Grep",
-      hooks: [
-        {
-          type: "command",
-          statusMessage: "QFAI graph exploration",
-          command: "node",
-          args: ["${CLAUDE_PROJECT_DIR}/.qfai/tools/graph-hook.mjs", "claude"],
-        },
-      ],
-    });
+    contains(claude, "PreToolUse", CLAUDE_GRAPH_HOOK_GROUP);
   const codex = await readObject(root, ".codex/hooks.json");
   const codexReady =
     wrappers &&
     codex?.disableAllHooks !== true &&
-    contains(codex, "PreToolUse", {
-      matcher: "^(Bash|PowerShell|exec_command|Grep|grep|rg|grep_search|search_files|file_search)$",
-      hooks: [
-        {
-          type: "command",
-          statusMessage: "QFAI graph exploration",
-          command: "node .qfai/tools/graph-hook.mjs codex",
-        },
-      ],
-    });
+    contains(codex, "PreToolUse", CODEX_GRAPH_HOOK_GROUP);
   const shared = await readObject(root, ".github/hooks/qfai-graph.json");
   const sharedReady =
-    wrappers &&
-    shared?.version === 1 &&
-    contains(shared, "preToolUse", {
-      type: "command",
-      bash: "node .qfai/tools/graph-hook.mjs shared",
-      powershell: "node .qfai/tools/graph-hook.mjs shared",
-      timeoutSec: 10,
-    });
+    wrappers && shared?.version === 1 && contains(shared, "preToolUse", SHARED_GRAPH_HOOK_ENTRY);
   const facts = [];
   for (const [host, configured] of [
     ["claude", claudeReady],

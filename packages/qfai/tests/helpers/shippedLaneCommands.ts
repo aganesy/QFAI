@@ -1312,9 +1312,13 @@ export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
  */
 export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // The generated shared denial hook is pinned independently of workflow templates.
+  // Re-pinned when every graph hook command began with a `node -e` guard that exits 0 with one
+  // line naming `npx qfai init` where the git-ignored script is missing, and otherwise imports it.
+  // Derived by serialising the composed file as the composition code does; the unguarded command
+  // reproduces `e807d0ca…` byte for byte.
   [
     ".github/hooks/qfai-graph.json",
-    "e807d0caa761867301c9a8d08e70d07ccd537cca17b811cd2dc6cb4a1e89be20",
+    "be3aa16a014edcc4a83fb53d3e5ad0e88d87a190c7714d389c8cc97b93d641f5",
   ],
   [
     // Re-pinned when the cross-AI rules block was restated for the tree it is written into. Three
@@ -1509,7 +1513,10 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // programs print nothing once the counter passes one, where they printed a one-line pointer.
   // Events, matchers, markers and message keys are unchanged; the previous groups are listed as
   // superseded so the merge refreshes them. Restoring the six programs reproduces `396c26ac…`.
-  [".claude/settings.json", "6d3610ad29dff7bf19710d85b8b0fe0f4791385b793b83eb9b60076939c7b96e"],
+  // Re-pinned for the guarded graph hook group init appends after the template's groups: the same
+  // matcher and marker, with `-e` and the guard before the script path. Restoring the unguarded
+  // group reproduces `6d3610ad…` byte for byte.
+  [".claude/settings.json", "6286146e8247f070786c89572ea09d89fcfe0f9759e7c758155ee4fd4639e055"],
   // Inside `.codex/`, and pinned for the reason `.claude/settings.json` is: its commands are a
   // program an adopter's agent runs. Two `UserPromptSubmit` groups, structured-question and
   // free-text entry. Codex takes one command string, so each runs the same `node -e` reader
@@ -1554,7 +1561,9 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // reproduces `e973ebb8…` byte for byte. Derived the same way.
   // Re-pinned for the same change as `.claude/settings.json` that stopped the tool-time reminders
   // after the first eligible call. Restoring the five programs reproduces `252e94e4…`.
-  [".codex/hooks.json", "49a8956034f4b08d8717fc06d2fa6f67490d0baf4bae664ddd7eaaa698e7abfd"],
+  // Re-pinned for the same guarded graph hook group as `.claude/settings.json`, one line with no
+  // character a hook shell expands. Restoring the unguarded command reproduces `49a89560…`.
+  [".codex/hooks.json", "1625fdb6b0a5a554ed9f889c36d2ff2f9c1b5d1c693eb38cd6aa40fc3948d33f"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`

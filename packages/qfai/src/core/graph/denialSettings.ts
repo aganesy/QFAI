@@ -2,31 +2,23 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { isEnoent } from "../fs/errno.js";
 import { findUnsafeHostFileComponent, readPinnedRegularFile } from "../init/fsGuards.js";
+import {
+  CODEX_GRAPH_HOOK_GROUP,
+  GRAPH_HOOK_MARKER,
+  isEarlierGraphHookGroup,
+  SHARED_GRAPH_HOOK_ENTRY,
+} from "./hookCommands.js";
 import { hasOpaqueCredentials, type GraphSettingsComposition } from "./hostSettings.js";
 
 export async function composeAdditionalGraphDenialHooks(
   root: string,
 ): Promise<GraphSettingsComposition> {
-  const codex = await compose(root, ".codex/hooks.json", "PreToolUse", {
-    matcher: "^(Bash|PowerShell|exec_command|Grep|grep|rg|grep_search|search_files|file_search)$",
-    hooks: [
-      {
-        type: "command",
-        statusMessage: "QFAI graph exploration",
-        command: "node .qfai/tools/graph-hook.mjs codex",
-      },
-    ],
-  });
+  const codex = await compose(root, ".codex/hooks.json", "PreToolUse", CODEX_GRAPH_HOOK_GROUP);
   const shared = await compose(
     root,
     ".github/hooks/qfai-graph.json",
     "preToolUse",
-    {
-      type: "command",
-      bash: "node .qfai/tools/graph-hook.mjs shared",
-      powershell: "node .qfai/tools/graph-hook.mjs shared",
-      timeoutSec: 10,
-    },
+    SHARED_GRAPH_HOOK_ENTRY,
     1,
   );
   return {
@@ -84,12 +76,15 @@ async function compose(
   if (!Array.isArray(groups)) return conflict;
   const currentGroups: unknown[] = groups;
   const current = currentGroups.filter((group: unknown) => candidate(group));
-  if (current.length > 0)
+  let next = [...currentGroups, managed];
+  if (current.length === 1 && isEarlierGraphHookGroup(current[0]))
+    next = currentGroups.map((group: unknown) => (group === current[0] ? managed : group));
+  else if (current.length > 0)
     return current.length === 1 && JSON.stringify(current[0]) === JSON.stringify(managed)
       ? { files: [], conflicts: [] }
       : conflict;
   // This dedicated shared file must not acquire a second unrelated configuration.
-  if (version !== undefined && text !== "{}") return conflict;
+  else if (version !== undefined && text !== "{}") return conflict;
   await mkdir(path.dirname(file), { recursive: true });
   await writeFile(
     file,
@@ -97,7 +92,7 @@ async function compose(
       {
         ...parsed,
         ...(version === undefined ? {} : { version }),
-        hooks: { ...hooks, [event]: [...currentGroups, managed] },
+        hooks: { ...hooks, [event]: next },
       },
       null,
       2,
@@ -108,7 +103,7 @@ async function compose(
 
 function candidate(value: unknown): boolean {
   if (!object(value)) return false;
-  if (value.statusMessage === "QFAI graph exploration") return true;
+  if (value.statusMessage === GRAPH_HOOK_MARKER) return true;
   if (
     [value.command, value.bash, value.powershell].some(
       (text) => typeof text === "string" && text.includes("graph-hook.mjs"),

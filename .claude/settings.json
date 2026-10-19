@@ -174,7 +174,12 @@
             "type": "command",
             "statusMessage": "QFAI graph exploration",
             "command": "node",
-            "args": ["${CLAUDE_PROJECT_DIR}/.qfai/tools/graph-hook.mjs", "claude"]
+            "args": [
+              "-e",
+              "const f=require('path').resolve(process.argv[1]);require('fs').existsSync(f)?import(require('url').pathToFileURL(f).href):console.error('QFAI graph hook skipped: .qfai/tools/graph-hook.mjs is missing. Run npx qfai init in this checkout.')",
+              "${CLAUDE_PROJECT_DIR}/.qfai/tools/graph-hook.mjs",
+              "claude"
+            ]
           }
         ]
       }

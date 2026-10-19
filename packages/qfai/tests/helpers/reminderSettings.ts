@@ -1,4 +1,9 @@
 import { expect } from "vitest";
+import {
+  CLAUDE_GRAPH_HOOK_GROUP,
+  CODEX_GRAPH_HOOK_GROUP,
+  GRAPH_HOOK_MARKER,
+} from "../../src/core/graph/hookCommands.js";
 
 /** Removes only the exact additional graph guard before comparing reminder settings. */
 export function reminderSettings(text: string, host: "claude" | "codex"): string {
@@ -10,35 +15,9 @@ export function reminderSettings(text: string, host: "claude" | "codex"): string
     (group) =>
       object(group) &&
       Array.isArray(group.hooks) &&
-      group.hooks.some(
-        (hook: unknown) => object(hook) && hook.statusMessage === "QFAI graph exploration",
-      ),
+      group.hooks.some((hook: unknown) => object(hook) && hook.statusMessage === GRAPH_HOOK_MARKER),
   );
-  expect(guard).toEqual([
-    host === "claude"
-      ? {
-          matcher: "Bash|PowerShell|Grep",
-          hooks: [
-            {
-              type: "command",
-              statusMessage: "QFAI graph exploration",
-              command: "node",
-              args: ["${CLAUDE_PROJECT_DIR}/.qfai/tools/graph-hook.mjs", "claude"],
-            },
-          ],
-        }
-      : {
-          matcher:
-            "^(Bash|PowerShell|exec_command|Grep|grep|rg|grep_search|search_files|file_search)$",
-          hooks: [
-            {
-              type: "command",
-              statusMessage: "QFAI graph exploration",
-              command: "node .qfai/tools/graph-hook.mjs codex",
-            },
-          ],
-        },
-  ]);
+  expect(guard).toEqual([host === "claude" ? CLAUDE_GRAPH_HOOK_GROUP : CODEX_GRAPH_HOOK_GROUP]);
   return (
     JSON.stringify(
       {

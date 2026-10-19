@@ -83,7 +83,7 @@ it("prepares CLI and denial hooks without creating MCP registration", async () =
 });
 
 // QFAI:EX-0001-0237-08
-// Mutation: packages/qfai/src/core/graph/hostSettings.ts `PreToolUse: [...currentGroups, managed]` -> `PreToolUse: [managed]` fails "adds a separate denial hook after an unchanged notification reminder"
+// Mutation: packages/qfai/src/core/graph/hostSettings.ts `let next = [...currentGroups, managed];` -> `let next = [managed];` fails "adds a separate denial hook after an unchanged notification reminder"
 it("adds a separate denial hook after an unchanged notification reminder", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-reminder-"));
   const file = path.join(root, ".claude", "settings.json");
@@ -172,7 +172,8 @@ async function graphHookCommands(root: string): Promise<GraphHookCommand[]> {
   const shared = last(await read(".github", "hooks", "qfai-graph.json"), "preToolUse");
   expect(shared.powershell).toBe(shared.bash);
   const args = claude.args;
-  if (!Array.isArray(args) || typeof claude.command !== "string") throw new Error("No Claude entry.");
+  if (!Array.isArray(args) || typeof claude.command !== "string")
+    throw new Error("No Claude entry.");
   if (typeof codex.command !== "string" || typeof shared.bash !== "string")
     throw new Error("No shell entry.");
   return [
@@ -200,7 +201,7 @@ function record(value: unknown): Record<string, unknown> {
 }
 
 const MISSING_HOOK_LINE =
-  "QFAI graph hook skipped: .qfai/tools/graph-hook.mjs is missing in this checkout. Run npx qfai init here to install it.";
+  "QFAI graph hook skipped: .qfai/tools/graph-hook.mjs is missing. Run npx qfai init in this checkout.";
 
 // QFAI:EX-0001-0237-23
 // Mutation: packages/qfai/src/core/graph/hookCommands.ts `require('fs').existsSync(f)?` -> `true?` fails "passes each host's graph hook with one reminder line where the script is missing"
@@ -301,8 +302,9 @@ it("replaces the graph hook entries an earlier release wrote with the guarded on
       expect(JSON.stringify(groups[1])).toContain("QFAI graph exploration");
       expect(JSON.stringify(groups[1])).toContain("existsSync");
     }
-    const shared: unknown = record(JSON.parse(await readFile(files.shared, "utf8")).hooks)
-      .preToolUse;
+    const shared: unknown = record(
+      JSON.parse(await readFile(files.shared, "utf8")).hooks,
+    ).preToolUse;
     if (!Array.isArray(shared)) throw new Error("No preToolUse entries.");
     expect(shared).toHaveLength(1);
     expect(JSON.stringify(shared[0])).toContain("existsSync");
@@ -323,7 +325,7 @@ it("says in the init summary that the graph tools are local to each checkout", (
     documents: "documents-not-ready",
   });
   expect(output.split("\n")).toContain(
-    ".qfai/tools/ is git-ignored and local to this checkout: run npx qfai init in every other clone or worktree. Until then its graph hook skips each call with a reminder.",
+    ".qfai/tools/ is local to this checkout: run npx qfai init in each other clone or worktree.",
   );
 });
 
