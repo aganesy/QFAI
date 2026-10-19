@@ -188,6 +188,17 @@ describe("the steps the routes add to qfai-implement", () => {
     const benchmark = flat(await stepText("implement-benchmark"));
     expect(benchmark).toMatch(/a difference inside the measured spread is no difference/i);
   });
+
+  // QFAI:AC-0001-0220-04
+  // QFAI:EX-0001-0220-55
+  it("lets implement-retire retire a feature whose specification the route already rewrote, adding no test", async () => {
+    const retiring = flat(sectionOf(await stepText("implement-retire"), "## Retiring a feature"));
+    expect(retiring).toMatch(/in the `retire-feature` route/i);
+    expect(retiring).toMatch(/the specification stage before this step already removed or rewrote/i);
+    expect(retiring).toMatch(/a test of a removed example is deleted with it/i);
+    expect(retiring).toMatch(/changes that assertion to what the rewritten specification states/i);
+    expect(retiring).toMatch(/no test is added, neither for the removal nor for the new wording/i);
+  });
 });
 
 describe("implement-diagnose", () => {
