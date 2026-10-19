@@ -27,6 +27,7 @@ import { maskNonSpecRegions, parseAllMarkdownTables } from "../../specPackParser
 import type { Issue } from "../../types.js";
 import { isUiBearingSpec } from "../uixDetection.js";
 import { readSafe } from "../utils.js";
+import { packInheritsDesign } from "./designInheritance.js";
 
 /** Default minimum applied when `uiux.competitive_refs_min` is absent. */
 export const DEFAULT_COMPETITIVE_REFS_MIN = 3;
@@ -427,6 +428,8 @@ export async function validateCompetitiveReferences(
   // an empty registry, and an unedited sample would raise a false incomplete.
   const masked = content ? maskNonSpecRegions(content) : null;
 
+  // A pack that inherits the current DESIGN.md owes no count; what it registers is still checked.
+  const countsOwed = !(await packInheritsDesign(root));
   const issues: Issue[] = [];
   for (const registry of REGISTRIES) {
     const references = masked
@@ -450,7 +453,7 @@ export async function validateCompetitiveReferences(
 
     const required = registry.noun === "catalogue" ? registry.minimum(config) : minimum;
     const complete = references.length - incomplete;
-    if (required > 0 && complete < required) {
+    if (countsOwed && required > 0 && complete < required) {
       issues.push(
         competitiveIssue(
           "QFAI-RESEARCH-013",

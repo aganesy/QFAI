@@ -4,6 +4,7 @@ import type { QfaiConfig } from "../../config.js";
 import type { Issue, IssueSeverity } from "../../types.js";
 import { isUiBearingSpec } from "../uixDetection.js";
 import { readSafe } from "../utils.js";
+import { packInheritsDesign } from "./designInheritance.js";
 
 const REQUIRED_CATEGORIES = [
   "user expectation / market norm",
@@ -145,7 +146,7 @@ function extractField(entry: string, field: string): string | undefined {
 }
 
 export async function validateTrendScan(root: string, _config: QfaiConfig): Promise<Issue[]> {
-  if (!(await isUiBearingSpec(root))) {
+  if (!(await isUiBearingSpec(root)) || (await packInheritsDesign(root))) {
     return [];
   }
 

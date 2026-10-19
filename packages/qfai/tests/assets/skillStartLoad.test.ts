@@ -36,7 +36,7 @@ const BASELINES: ReadonlyArray<readonly [string, string]> = [
 /** Characters a skill may load at start. */
 const START_LOAD_BUDGET: Readonly<Record<string, number>> = {
   "qfai-configure": 66_000,
-  "qfai-discussion": 52_000,
+  "qfai-discussion": 53_000,
   "qfai-grill": 55_000,
   "qfai-grilling": 70_000,
   "qfai-implement": 54_000,

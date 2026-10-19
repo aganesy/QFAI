@@ -122,6 +122,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   stopped on other conflicts.
   Fixes #3778.
 
+- **A discussion pack that keeps the current DESIGN.md can skip the design
+  research.** The classification block of `01_Context.md` takes
+  `design_direction: inherit`. A UI-bearing pack that declares it owes no Trend
+  Scan, no minimum count of competitive or catalogue references, and no
+  `uiux/40_screen_contracts.md` or `uiux/50_review_input_bundle.md`, so
+  `QFAI-TREND-004`, `QFAI-RESEARCH-013` and `QFAI-THREELAYER-002` for those two
+  files no longer fire on it; a reference it registers is still checked. The new
+  `QFAI-CLASSIFICATION-011` refuses the declaration when the pack's screen
+  contracts name a screen no UI contract of the project declares, or when its
+  Design Direction records an `adopted_theme` or `brand_accent`. Fixes #3829.
+
 - **A critical decision found while writing the discussion pack goes back to
   the user.** `discussion-pack` and `discussion-oq` now reopen the ended session
   for that one node: they stop writing, ask the user one round, and resume. The

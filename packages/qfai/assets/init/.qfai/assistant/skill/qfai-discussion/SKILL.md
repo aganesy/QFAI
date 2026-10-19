@@ -77,7 +77,9 @@ before running `discussion-uiux`.
 
 Every UI-bearing pack carries `uiux/00_index.md`, `uiux/40_screen_contracts.md`
 and `uiux/50_review_input_bundle.md`. That is the whole family, on every
-UI-bearing surface including `cli`.
+UI-bearing surface including `cli`. A pack that keeps the current root
+`DESIGN.md` may declare `design_direction: inherit` instead
+(`references/ui-bearing-playbook.md#inheriting-the-current-designmd`).
 
 A **cli-only** pack (`primary_surface: cli`, no visual `secondary_surfaces`
 entry) keeps all three sidecars, but the brand questions do not apply to it:

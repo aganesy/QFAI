@@ -1319,6 +1319,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-CLASSIFICATION-009":
     "`secondary_surfaces` is present, as a list or an explicit empty list.",
   "QFAI-CLASSIFICATION-010": "`secondary_surfaces` does not repeat the `primary_surface`.",
+  "QFAI-CLASSIFICATION-011":
+    "A pack that declares `design_direction: inherit` adds no screen and records no design direction of its own.",
   "QFAI-DIRECTION-001":
     "`50_review_input_bundle.md` states that the latest iteration is the accepted one and no earlier iteration is restored.",
   "QFAI-OQ-001": "No critical open question remains open in the OQ register.",

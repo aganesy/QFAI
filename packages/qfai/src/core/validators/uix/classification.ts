@@ -9,6 +9,7 @@ import {
 } from "../../detection/surfaceType.js";
 import type { Issue, IssueSeverity } from "../../types.js";
 import { readSafe } from "../utils.js";
+import { declaresInheritedDesign, findInheritanceConflicts } from "./designInheritance.js";
 
 const VALID_PRIMARY_SURFACES: SurfaceType[] = [
   "web",
@@ -37,7 +38,7 @@ function classificationIssue(
   };
 }
 
-export async function validateClassification(root: string, _config: QfaiConfig): Promise<Issue[]> {
+export async function validateClassification(root: string, config: QfaiConfig): Promise<Issue[]> {
   const contextPath = path.join(root, "01_Context.md");
   const content = await readSafe(contextPath);
   if (!content) {
@@ -236,5 +237,42 @@ export async function validateClassification(root: string, _config: QfaiConfig):
     );
   }
 
+  if (declaresInheritedDesign(content)) {
+    issues.push(...(await inheritanceRefusals(root, content, config)));
+  }
+
+  return issues;
+}
+
+/** One error per reason the pack may not inherit the current `DESIGN.md`. */
+async function inheritanceRefusals(
+  root: string,
+  content: string,
+  config: QfaiConfig,
+): Promise<Issue[]> {
+  const { newScreens, directionFields } = await findInheritanceConflicts(root, content, config);
+  const issues: Issue[] = [];
+  if (newScreens.length > 0) {
+    issues.push(
+      classificationIssue(
+        "QFAI-CLASSIFICATION-011",
+        `design_direction: inherit is declared, but uiux/40_screen_contracts.md adds screens no UI contract of the project declares: ${newScreens.join(", ")}. A pack that adds a screen cannot inherit the current DESIGN.md.`,
+        "error",
+        "01_Context.md",
+        "Remove design_direction: inherit and complete the design research, or keep the pack to existing screens.",
+      ),
+    );
+  }
+  if (directionFields.length > 0) {
+    issues.push(
+      classificationIssue(
+        "QFAI-CLASSIFICATION-011",
+        `design_direction: inherit is declared, but 01_Context.md#Design Direction records a direction of its own: ${directionFields.join(", ")}. A pack that changes DESIGN.md cannot inherit it.`,
+        "error",
+        "01_Context.md",
+        "Remove design_direction: inherit, or clear the Design Direction fields so the pack keeps the current DESIGN.md.",
+      ),
+    );
+  }
   return issues;
 }
