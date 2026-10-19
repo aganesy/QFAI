@@ -28,9 +28,18 @@ operation. This step runs it and reports what happened.
    operation. The request alone authorizes only what it names.
 2. Check what the operation needs first: the pull request's checks and reviews,
    the branch's state, the target environment.
-3. Run the operation, and observe its result: the merge commit, the deploy
+3. Wait for checks still running before a merge, and for the checks a push or
+   a new pull request starts when the user asked to see them pass. Poll no
+   faster than the checks change. A failing check that a rerun does not clear
+   stops the operation as a tracked change it needs, as below.
+4. Run the operation, and observe its result: the merge commit, the deploy
    status, the closed item.
-4. Report the result as observed, including a failure.
+5. After a merge, check the merged result: the target branch holds the merge
+   commit, and, when the user asked to see them pass or the project's policy
+   requires it, the checks the project runs on that branch pass. A failure
+   there is reported as `needs-change`, naming the merge commit, since the
+   merge itself stands.
+6. Report the result as observed, including a failure.
 
 An operation that needs a tracked file to change, such as a conflict to resolve
 or a failing check to fix, stops here: report the outcome `needs-change` with an

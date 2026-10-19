@@ -294,6 +294,22 @@ describe("a question answered without a change", () => {
     );
   });
 
+  // QFAI:AC-0001-0220-06
+  it("waits for the checks a merge needs and checks the merged result", async () => {
+    const procedure = flat(sectionOf(await step("triage-operate"), "## Procedure"));
+    expect(procedure).toMatch(/Wait for checks still running before a merge/);
+    expect(procedure).toMatch(/Poll no faster than the checks change/);
+    expect(procedure).toMatch(
+      /A failing check that a rerun does not clear stops the operation as a tracked change it needs/,
+    );
+    expect(procedure).toMatch(
+      /After a merge, check the merged result: the target branch holds the merge commit, and, when the user asked to see them pass or the project's policy requires it, the checks the project runs on that branch pass/,
+    );
+    expect(procedure).toMatch(
+      /A failure there is reported as `needs-change`, naming the merge commit, since the merge itself stands/,
+    );
+  });
+
   // QFAI:AC-0001-0214-02
   // QFAI:EX-0001-0214-03
   it("records a documentation gap the answer shows as a follow-up, and plans nothing for it", async () => {

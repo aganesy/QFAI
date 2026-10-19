@@ -74,6 +74,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   pull request may instead observe Red in CI on a commit holding only the test
   and record the run URL. Fixes #3470.
 
+- **Delivery after a change plan runs as its own operation plan.** When the
+  user asks for a push, a pull request, a merge or a branch update after a
+  change plan ends, `qfai-run` now plans it next as an operation on finished
+  work, which `triage-operate` carries out, instead of doing it outside any
+  plan. `triage-operate` now waits for the checks a merge needs, polling no
+  faster than they change, and after a merge confirms the target branch holds
+  the merge commit and its checks pass. Two route-evaluation seeds cover the
+  request. Refs #3553.
+
 - **A failed launcher preflight stops every `npx qfai` call, not only gates.**
   The shared baseline's launcher rules now name every `npx qfai` call, gates
   included, and say a passed preflight holds per checkout until its

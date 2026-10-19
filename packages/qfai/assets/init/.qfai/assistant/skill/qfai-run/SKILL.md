@@ -92,7 +92,7 @@ values plan nothing.
    When the release change is produced outside this run (by a release workflow or bot), record its approval in the final report with the same four items and list the row as a pending follow-up;
    the next change that touches `decisions.md` appends the row, and a `qfai-run` that writes `decisions.md` appends any pending approval row first.
 8. **A finding no stage serves.** Stop, and name the finding, its owner and the stage skill to invoke by name.
-9. **Commit.** `verify-commit` runs last, after any release point; never pushes.
+9. **Commit.** `verify-commit` runs last, after any release point; never pushes. A push, pull request, merge or branch update the user asks for after the plan ends is planned next as `{ intent: order, artifacts: [] }`, and its `triage-operate` delivers it.
 10. **Session feedback.** When the final report closes the user's last task and nothing waits on them, follow `.agents/rules/session-feedback.md` once.
 
 ## Under a no-question mode
