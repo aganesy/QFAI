@@ -29,6 +29,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   No gate reads the table. The extraction reference now says what the `env`
   flag adds to a defect plan, and how to read a change that only adds or
   corrects diagnostic output. Fixes #3471.
+- **An alert whose intent depends on unread facts is extracted as
+  `question-why`.** The `qfai-run` extraction reference now reads a notice such
+  as a failed deploy, reported with no cause, as an investigation and shows one
+  example. The investigation step reports a new extraction when it finds a
+  defect, so the request needs no new intent and no fact-gathering before
+  extraction.
+  Fixes #3498.
 
 - **A project that runs tests in CI only records Red and Green `ci-deferred`.**
   Where the Standard commands write the Test entry `CI only: <check name>`,

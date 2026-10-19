@@ -19,7 +19,7 @@ import {
 import { validateAgentDefinition } from "../../../src/core/validators/agentDefinition.js";
 import { approachProblems } from "../../../src/core/validators/storyTreeStructure.js";
 import type { WorkflowExtraction } from "../../../src/core/workflow/extraction.js";
-import { extractionFaults } from "../../../src/core/workflow/extractionShape.js";
+import { extractionFaults, isExtraction } from "../../../src/core/workflow/extractionShape.js";
 import { routingOutcome } from "../../../src/core/workflow/routeDecision.js";
 import { WORKFLOW_ROUTES } from "../../../src/core/workflow/routes.js";
 import {
@@ -624,6 +624,41 @@ describe("qfai-run", () => {
     expect(flat(await readShipped("step/implement-dep-bump/STEP.md"))).toMatch(
       /when the dependency is `qfai` itself/i,
     );
+  });
+
+  // QFAI:AC-0001-0211-05
+  // QFAI:EX-0001-0211-35
+  it("reads an alert whose intent depends on unread facts as an investigation question", async () => {
+    const reference = await readShipped(EXTRACTION);
+    const procedure = flat(sectionOf(reference, "## Procedure"));
+    expect(procedure).toMatch(
+      /alert or a notice whose intent depends on facts not yet read, such as a failed deploy or a red job with no named change, is an investigation: extract it as `question-why`/i,
+    );
+    expect(procedure).toContain("Read nothing beyond what step 2 reads to choose another intent.");
+    expect(procedure).toMatch(
+      /names the job's change or its flakiness, `ci` and `flaky-test` still apply/i,
+    );
+    expect(procedure).toContain(
+      "An alert that already holds the failure's evidence and asserts a product defect is a defect; `env` applies as below.",
+    );
+    expect(procedure).toMatch(
+      /finds a defect, it reports the outcome `defect-found` with a new extraction of the request as a defect report/i,
+    );
+    expect(flat(await readShipped("step/triage-investigate/STEP.md"))).toMatch(
+      /report the outcome `defect-found` with an extraction of the request as a defect report/i,
+    );
+    const line = sectionOf(reference, "## Examples")
+      .split("\n")
+      .find((each) => each.startsWith('- "Last night\'s deploy failed.", with no cause given → '));
+    const parsed: unknown = parse(/→ `(\{.*\})`$/.exec(line ?? "")?.[1] ?? "null");
+    expect(parsed).toEqual({ intent: "question-why", confidence: "high" });
+    const pinned: unknown = {
+      ...extraction({ artifacts: [] }),
+      ...(isRecord(parsed) ? parsed : {}),
+    };
+    if (!isExtraction(pinned)) throw new Error("the pinned example is not an extraction");
+    const outcome = routingOutcome(pinned);
+    expect("taken" in outcome ? outcome.taken.route : undefined).toBe("answer-question");
   });
 
   // QFAI:AC-0001-0229-06
