@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { deriveAtddFilePattern } from "../../core/atddTraceability.js";
@@ -8,8 +9,14 @@ import {
   scaffoldDestPath,
   type ScaffoldTarget,
 } from "../../core/atdd/scaffold.js";
-import { resolveScaffoldDialect, SCAFFOLD_RUNNERS } from "../../core/atdd/scaffoldDialect.js";
+import {
+  detectJsTestRunner,
+  type JsTestRunner,
+  resolveScaffoldDialect,
+  SCAFFOLD_RUNNERS,
+} from "../../core/atdd/scaffoldDialect.js";
 import { loadConfig } from "../../core/config.js";
+import { isEnoent } from "../../core/fs/errno.js";
 import { isStoryTreeId } from "../../core/storyTree/ids.js";
 import { readStoryTreeModel } from "../../core/storyTree/tree.js";
 import { error as logError, info as logInfo } from "../../core/logger.js";
@@ -31,6 +38,19 @@ function targetsForStory(
     .map((item) => item.id)
     .sort()
     .map((id) => ({ id, kind: "AC" as const, storyId }));
+}
+
+/** The runner the project's package.json declares; `unknown` when it has none. */
+async function readJsTestRunner(root: string): Promise<JsTestRunner> {
+  let text: string;
+  try {
+    text = await readFile(path.join(root, "package.json"), "utf8");
+  } catch (caught) {
+    if (isEnoent(caught)) return "unknown";
+    throw caught;
+  }
+  const manifest: unknown = JSON.parse(text);
+  return detectJsTestRunner(manifest);
 }
 
 export async function runAtddScaffold(options: AtddScaffoldOptions): Promise<number> {
@@ -89,10 +109,17 @@ export async function runAtddScaffold(options: AtddScaffoldOptions): Promise<num
       ...(comparable ? { scaffoldDir: relativeDir } : {}),
       excludeGlobs,
       ids: targets.map((target) => target.id),
+      jsRunner: await readJsTestRunner(options.root),
     });
     if (resolution.outcome === "unsupported-stack") {
       writeErr(
         `qfai atdd scaffold: no skeleton dialect for ${deriveAtddFilePattern(testFileGlobs)}; supported runners: ${SCAFFOLD_RUNNERS.join(", ")}.`,
+      );
+      return 2;
+    }
+    if (resolution.outcome === "unsupported-runner") {
+      writeErr(
+        `qfai atdd scaffold: package.json runs tests with ${resolution.runner}, which has no skeleton dialect; supported runners: ${SCAFFOLD_RUNNERS.join(", ")}.`,
       );
       return 2;
     }

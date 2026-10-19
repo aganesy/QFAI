@@ -249,6 +249,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   so the line is not taken as passing evidence. The exit code is unchanged.
   Refs #3765.
 
+- **`qfai atdd scaffold` writes `node:test` tests in a `node --test` project.**
+  It wrote tests that import from `vitest` whatever runner the project used.
+  It now reads `package.json`: a project that declares vitest keeps the vitest
+  test, one whose scripts run `node --test` without vitest gets a test that
+  imports `describe` and `it` from `node:test`, and one that declares only jest
+  is refused with exit 2 and the list of supported runners. A project whose
+  `package.json` names no runner, or that has none, still gets the vitest test.
+  Fixes #3826.
+
 - **A DESIGN.md violation every screen shares is reported once.** The
   prototyping reviewer repeated a violation whose source every screen shares,
   such as a shared stylesheet or component, in each screen's review payload, so
