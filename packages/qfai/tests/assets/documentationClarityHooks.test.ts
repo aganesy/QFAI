@@ -260,14 +260,14 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
     }
   });
 
-  it("points at the floor and the interface rule instead of restating them", async () => {
+  it("points at the floor instead of restating it", async () => {
     const entry = (hooks.get("PostToolUse") ?? [])[1]?.hooks[0];
     const text =
       entry === undefined ? "" : await runReminderHook(entry, projectDirOf(repoRoot, rel));
-    expect(text).toContain("The ladder never removes what § 2 of that rule lists.");
+    expect(text).toContain("keep what § 2 lists");
+    expect(text).toContain("mark a shortcut with its ceiling and lifting condition");
     expect(text).not.toContain("error handling that prevents data loss");
     expect(text).toContain("is it already in this codebase");
-    expect(text).toContain(".agents/rules/interface-clarity.md");
   });
 
   it("runs a program directly, with no shell and no message of its own", () => {
@@ -454,9 +454,18 @@ describe("the shipped reminder catalog", () => {
         // A full form that asks for its rule or skill to be read asks for it once per session.
         if (/\bread the (?:rule|skill)\b/i.test(full)) {
           expect(full, `${key} asks for a reread`).toMatch(
-            /\bRead the (?:rule|skill) once per session\b/,
+            /\bread the (?:rule|skill) once per session\b/i,
           );
         }
+        // One or two sentences: the rule or skill it names holds the detail. The split is a rough
+        // guard; the 500-character cap below is the real bound on what a reminder may carry.
+        const sentences = full.split(/[.?!](?:\s|$)/).filter((part) => part.trim() !== "");
+        expect(sentences.length, `${key} is longer than two sentences`).toBeLessThanOrEqual(2);
+        expect(full.length, `${key} is longer than two lines`).toBeLessThan(500);
+        // Each names the rule or skill it points at; the install check names the missing launcher.
+        expect(full, `${key} names no rule or skill`).toMatch(
+          /\.agents\/rules\/|qfai-run|node_modules\/\.bin\/qfai/,
+        );
       }
     }
   });
@@ -579,14 +588,6 @@ describe("documentation clarity reminder scope", () => {
     expect(identifiers).toMatch(/Numbers and links belong[^.]*commit messages and the changelog/i);
     expect(identifiers).toContain("Spec-tree IDs");
     expect(identifiers).toContain("Names the reader sees");
-  });
-
-  it("limits all three reminders to expressly requested records with necessary factual content", () => {
-    for (const key of keys) expectRequestedRecordScope(messages.get(key) ?? "");
-  });
-
-  it("keeps design history out of ordinary specifications and change descriptions in every reminder", () => {
-    for (const key of keys) expectOrdinaryHistoryExcluded(messages.get(key) ?? "");
   });
 
   it("gives clause two the same narrow record exception without weakening ordinary writing", () => {
