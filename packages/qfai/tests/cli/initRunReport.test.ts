@@ -33,7 +33,10 @@ import { captureStdout } from "../helpers/stdout.js";
  */
 const DESIGN_SAMPLE = ".qfai/assistant/skill/qfai-prototyping/templates/DESIGN.md.sample";
 
-/** The `    - <relative path>` entries under a given report heading. */
+/**
+ * The `    - <relative path>` entries under a given report heading. A dry run puts the path's
+ * state (`new`, `changed`, `identical` or `kept`) before it, and that column is dropped here.
+ */
 function pathsUnder(output: string, heading: string): string[] {
   const lines = output.split("\n");
   const start = lines.indexOf(heading);
@@ -45,7 +48,7 @@ function pathsUnder(output: string, heading: string): string[] {
     if (!line.startsWith("    - ")) {
       break;
     }
-    listed.push(line.slice("    - ".length));
+    listed.push(line.slice("    - ".length).replace(/^(?:new|changed|identical|kept) +/, ""));
   }
   return listed;
 }
@@ -94,8 +97,8 @@ describe("qfai init run report", () => {
 
       expect(output).toMatch(/ {2}would write:\s*\d+/);
       expect(output).toContain("  would write paths:");
-      expect(output).toContain(`    - ${DESIGN_SAMPLE}`);
-      expect(output).not.toContain("    - DESIGN.md");
+      expect(output).toContain(`    - new     ${DESIGN_SAMPLE}`);
+      expect(pathsUnder(output, "  would write paths:")).not.toContain("DESIGN.md");
       // The past-tense heading must not appear under a dry-run header.
       expect(output).not.toMatch(/ {2}written:\s*\d+/);
     } finally {

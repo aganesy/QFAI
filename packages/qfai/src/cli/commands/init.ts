@@ -24,6 +24,7 @@ import {
   copyTemplatePaths,
   copyTemplateTree,
 } from "../../core/fs/templateCopy.js";
+import type { CopyResult } from "../../core/fs/templateCopy.js";
 import { getInitAssetsDir } from "../lib/assets.js";
 import { error, info, warn } from "../../core/logger.js";
 import { hasErrnoCode, isEnoent } from "../../core/fs/errno.js";
@@ -490,7 +491,16 @@ export async function runInit(
     info("Reference: https://docs.github.com/en/copilot/using-github-copilot/code-review");
   }
 
-  report(
+  const copyResults = [
+    workflowResult,
+    rootResult,
+    rulesCreated,
+    rulesForced,
+    qfaiResult,
+    storyTreeResult,
+    skillsResult,
+  ];
+  await report(
     [
       ...rootResult.copied,
       ...qfaiResult.copied,
@@ -514,10 +524,14 @@ export async function runInit(
       ...codexHooksResult.skipped,
     ],
     removed,
-    options.dryRun,
+    {
+      dryRun: options.dryRun,
+      force: options.force,
+      verbose: options.verbose ?? false,
+      identical: [...identicalCopySkips(copyResults), ...wrappersResult.identical],
+    },
     "init",
     destRoot,
-    options.verbose ?? false,
   );
 
   const keptNote = keptAssistantNote(
@@ -1335,6 +1349,48 @@ function listReportPaths(relativePaths: string[]): void {
 }
 
 /**
+ * The template copies' skips that already hold the template's content. A copy lists a skipped
+ * file that differs as kept, and a forced copy skips only a file holding the template's bytes.
+ */
+function identicalCopySkips(results: readonly CopyResult[]): string[] {
+  const kept = new Set(results.flatMap((result) => result.kept));
+  return results.flatMap((result) => result.skipped).filter((dest) => !kept.has(dest));
+}
+
+/** How a run went, as the report needs it. */
+type ReportRun = {
+  dryRun: boolean;
+  force: boolean;
+  verbose: boolean;
+  /** Skipped paths that already hold what this run would write. */
+  identical: string[];
+};
+
+/**
+ * The paths a `--force` dry run skips, each after its state: `identical` where the file already
+ * holds what init would write, `kept` where it differs and stays as it is (a create-only file the
+ * project changed, a file init merges into, or one it refused to write).
+ */
+function listSkippedStates(relativePaths: string[], identical: ReadonlySet<string>): void {
+  for (const relative of relativePaths) {
+    const state = identical.has(relative) ? "identical" : "kept";
+    info(`    - ${state.padEnd("identical".length)} ${formatReportPath(relative)}`);
+  }
+}
+
+/**
+ * The paths a dry run would write, each after its state: `new` where nothing is at the path yet,
+ * `changed` where something is and the run would replace or update it. A path whose content
+ * already matches is never in this list, because every writer books it as skipped.
+ */
+async function listPlannedPaths(relativePaths: string[], baseDir: string): Promise<void> {
+  for (const relative of relativePaths) {
+    const state = (await pathExists(path.join(baseDir, relative))) ? "changed" : "new";
+    info(`    - ${state.padEnd("changed".length)} ${formatReportPath(relative)}`);
+  }
+}
+
+/**
  * The run report. The `copied` side is the one worth detailing.
  *
  * `--dry-run` exists to answer "what will this touch?", so `copied` is listed
@@ -1342,6 +1398,10 @@ function listReportPaths(relativePaths: string[]): void {
  * contrast, is the "nothing to do here" case: a no-op rerun on an initialized
  * directory puts every shipped asset there. By default it is folded into a
  * count, and the list sits behind `--verbose`.
+ *
+ * A dry run puts each path's state before it (`listPlannedPaths`), so the preview of an upgrade
+ * says which files it would replace, and a `--force` dry run marks each skipped path the same way
+ * (`listSkippedStates`), so it also says which files it leaves as they are.
  *
  * The headings are `written` / `would write` because `copied` is not only newly
  * created files. Regenerating skills/agents with `--force` and appending the
@@ -1362,15 +1422,15 @@ function listReportPaths(relativePaths: string[]): void {
  * working tree (`core.symlinks` in `configureGitSymlinks`) does not belong
  * here, so that write discloses itself.
  */
-function report(
+async function report(
   copied: string[],
   skipped: string[],
   removed: string[],
-  dryRun: boolean,
+  run: ReportRun,
   label: string,
   baseDir: string,
-  verbose: boolean,
-): void {
+): Promise<void> {
+  const { dryRun, verbose } = run;
   const writtenPaths = toReportPaths(copied, baseDir);
   const skippedPaths = excludeWritten(toReportPaths(skipped, baseDir), writtenPaths);
   const removedPaths = toReportPaths(removed, baseDir);
@@ -1384,14 +1444,23 @@ function report(
   info(`qfai ${label}: ${dryRun ? "dry-run" : "files"} (dest=${formatReportPath(baseDir)})`);
   if (writtenPaths.length > 0) {
     info(`  ${dryRun ? "would write" : "written"}: ${writtenPaths.length}`);
-    info(dryRun ? "  would write paths:" : "  written paths:");
-    listReportPaths(writtenPaths);
+    if (dryRun) {
+      info("  would write paths:");
+      await listPlannedPaths(writtenPaths, baseDir);
+    } else {
+      info("  written paths:");
+      listReportPaths(writtenPaths);
+    }
   }
   if (skippedPaths.length > 0) {
     info(`  skipped: ${skippedPaths.length}`);
     if (verbose) {
       info("  skipped paths:");
-      listReportPaths(skippedPaths);
+      if (dryRun && run.force) {
+        listSkippedStates(skippedPaths, new Set(toReportPaths(run.identical, baseDir)));
+      } else {
+        listReportPaths(skippedPaths);
+      }
     } else {
       info("  (re-run with --verbose to list the skipped paths)");
     }
@@ -1630,6 +1699,8 @@ async function configureGitSymlinks(destRoot: string, dryRun: boolean): Promise<
 type SyncResult = {
   copied: string[];
   skipped: string[];
+  /** The skipped entries that already hold what this run would write. */
+  identical: string[];
   removed: string[];
 };
 
@@ -1644,6 +1715,7 @@ async function syncIntegrationWrappers(
 
   const copied: string[] = [];
   const skipped: string[] = [];
+  const identical: string[] = [];
 
   const removed: string[] = [];
 
@@ -1668,6 +1740,7 @@ async function syncIntegrationWrappers(
     );
     if (copilotExists && (await holdsText(copilotDest, content))) {
       skipped.push(copilotDest);
+      identical.push(copilotDest);
     } else {
       copied.push(copilotDest);
       if (!options.dryRun) {
@@ -1784,6 +1857,7 @@ async function syncIntegrationWrappers(
       }
       if (alreadyExists && (await holdsText(dest, content))) {
         skipped.push(dest);
+        identical.push(dest);
       } else {
         copied.push(dest);
         if (!options.dryRun) {
@@ -1803,14 +1877,17 @@ async function syncIntegrationWrappers(
   const agentResult = await createAgentSymlinks(destRoot, agents, options);
   copied.push(...agentResult.copied);
   skipped.push(...agentResult.skipped);
+  // Under `--force` a link is skipped only when it already names its target.
+  if (options.force) identical.push(...skillResult.skipped, ...agentResult.skipped);
 
   // Step 6: Generate Codex agent profiles (.codex/agents/<name>.toml)
   const codexResult = await createCodexAgentTomls(assistantAssetsDir, destRoot, agents, options);
   copied.push(...codexResult.copied);
   skipped.push(...codexResult.skipped);
+  identical.push(...codexResult.identical);
   removed.push(...codexResult.removed);
 
-  return { copied, skipped, removed };
+  return { copied, skipped, identical, removed };
 }
 
 async function createSkillSymlinks(
@@ -1931,19 +2008,20 @@ async function createCodexAgentTomls(
   destRoot: string,
   agents: string[],
   options: WrapperSyncOptions,
-): Promise<{ copied: string[]; skipped: string[]; removed: string[] }> {
+): Promise<{ copied: string[]; skipped: string[]; identical: string[]; removed: string[] }> {
   const copied: string[] = [];
   const skipped: string[] = [];
+  const identical: string[] = [];
   const removed: string[] = [];
 
   const roster = await collectCodexAgentRoster(destRoot, agents);
   if (roster.length === 0) {
-    return { copied, skipped, removed };
+    return { copied, skipped, identical, removed };
   }
 
   const wrapperDir = path.join(destRoot, ...CODEX_AGENT_WRAPPER_DIR.split("/"));
   if (await skipsLinkedHostDir(destRoot, CODEX_AGENT_WRAPPER_DIR)) {
-    return { copied, skipped, removed };
+    return { copied, skipped, identical, removed };
   }
 
   for (const agentName of roster) {
@@ -1985,6 +2063,7 @@ async function createCodexAgentTomls(
       (await readTextFileIfPresent(destination)) === plan.toml
     ) {
       skipped.push(destination);
+      identical.push(destination);
       continue;
     }
 
@@ -2006,7 +2085,7 @@ async function createCodexAgentTomls(
     copied.push(destination);
   }
 
-  return { copied, skipped, removed };
+  return { copied, skipped, identical, removed };
 }
 
 type CodexAgentProfilePlan =
