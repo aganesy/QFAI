@@ -1,5 +1,6 @@
 /**
  * Merge the live origin default branch, reseal its pins and commit the complete merge.
+ * A CHANGELOG.md conflict inside `## [Unreleased]` keeps both sides' entries, one group per type.
  * Usage: pnpm branch:catchup [--push]
  * Refusals preserve the current merge and edits. Observations are not an atomic snapshot.
  */
@@ -24,6 +25,18 @@ const INPUTS = [
   ".github/lifecycle-manifests.txt",
   ".github/command-files.txt",
 ];
+const CHANGELOG = "CHANGELOG.md";
+const CHANGELOG_GROUPS = [
+  "Highlights",
+  "Added",
+  "Changed",
+  "Deprecated",
+  "Removed",
+  "Fixed",
+  "Security",
+];
+const SECTION_HEADING = /^#{1,2} /;
+const UNRELEASED_HEADING = /^## \[Unreleased\]\s*$/;
 const WRITERS = ["scripts/pin-guard-bytes.mjs", "scripts/pin-verification-bodies.mjs"];
 const MAX_BYTES = 64 * 1024 * 1024;
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -140,7 +153,7 @@ function pendingOperation() {
   }
 }
 
-const outside = ["--", ".", ...OUTPUTS.map((relative) => `:(exclude)${relative}`)];
+const outside = ["--", ".", ...[...OUTPUTS, CHANGELOG].map((relative) => `:(exclude)${relative}`)];
 
 function observe() {
   return {
@@ -161,6 +174,7 @@ function observe() {
     ]).stdout.toString("latin1"),
     outsideDiff: git(["diff", "--binary", "--no-ext-diff", ...outside]).stdout.toString("latin1"),
     files: OUTPUTS.map(regularText),
+    changelog: regularText(CHANGELOG),
   };
 }
 
@@ -179,22 +193,31 @@ function stableCore(before, after) {
   );
 }
 
-function conflictCandidates(source) {
-  const lines = source.match(/[^\n]*(?:\n|$)/g)?.filter((line) => line !== "") ?? [];
-  let left = "";
-  let right = "";
+function linesOf(source) {
+  return source.match(/[^\n]*(?:\n|$)/g)?.filter((line) => line !== "") ?? [];
+}
+
+/** Common line runs and conflict regions in file order; a diff3 base part is dropped. */
+function conflictSegments(source) {
+  const segments = [];
+  let region;
   let state = "outside";
-  let count = 0;
-  for (const line of lines) {
+  for (const line of linesOf(source)) {
     const marker = /^(<{7}|={7}|>{7}|\|{7})(?: |\r?$)/.exec(line.replace(/\n$/, ""));
     if (marker === null) {
-      if (state === "outside" || state === "left") left += line;
-      if (state === "outside" || state === "right") right += line;
+      if (state === "left") region.left.push(line);
+      else if (state === "right") region.right.push(line);
+      else if (state === "outside") {
+        const last = segments.at(-1);
+        if (last?.common === undefined) segments.push({ common: [line] });
+        else last.common.push(line);
+      }
       continue;
     }
     if (marker[1] === "<<<<<<<" && state === "outside") {
       state = "left";
-      count += 1;
+      region = { left: [], right: [] };
+      segments.push(region);
     } else if (marker[1] === "|||||||" && state === "left") {
       state = "base";
     } else if (marker[1] === "=======" && (state === "left" || state === "base")) {
@@ -205,8 +228,133 @@ function conflictCandidates(source) {
       refuse("Malformed or ambiguous conflict markers.");
     }
   }
-  if (state !== "outside" || count === 0) refuse("Malformed or missing conflict markers.");
-  return [left, right];
+  if (state !== "outside" || region === undefined) refuse("Malformed or missing conflict markers.");
+  return segments;
+}
+
+function conflictCandidates(source) {
+  const segments = conflictSegments(source);
+  return ["left", "right"].map((side) =>
+    segments.map((segment) => (segment.common ?? segment[side]).join("")).join(""),
+  );
+}
+
+function changelogRefusal(reason) {
+  refuse(`Manual conflict resolution required: ${CHANGELOG} (${reason}).`);
+}
+
+/** The lines up to and including the one `## [Unreleased]` heading, its section, and the rest. */
+function unreleasedSplit(lines) {
+  const starts = lines.flatMap((line, index) => (UNRELEASED_HEADING.test(line) ? [index] : []));
+  if (starts.length !== 1) changelogRefusal("a side does not hold exactly one ## [Unreleased]");
+  const start = starts[0] + 1;
+  const found = lines.findIndex((line, index) => index >= start && SECTION_HEADING.test(line));
+  const end = found === -1 ? lines.length : found;
+  return [lines.slice(0, start), lines.slice(start, end), lines.slice(end)];
+}
+
+/** How often each entry line occurs; blank lines and group headings are not entries. */
+function entryCounts(section) {
+  const counts = new Map();
+  for (const line of section) {
+    if (line.trim() === "" || line.startsWith("### ")) continue;
+    const key = line.replace(/\n$/, "");
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return counts;
+}
+
+/** Whether a blank line separates two entries of one group in the section. */
+function spacedEntries(section) {
+  let previous = "";
+  let blank = false;
+  for (const line of section) {
+    if (line.trim() === "") {
+      blank = true;
+      continue;
+    }
+    if (blank && line.startsWith("- ") && previous !== "" && !previous.startsWith("### "))
+      return true;
+    previous = line;
+    blank = false;
+  }
+  return false;
+}
+
+/** The section rebuilt with one heading per type, in Keep a Changelog order. */
+function regroup(section, followed, spaced) {
+  const groups = new Map();
+  let entries;
+  for (const line of section) {
+    const heading = /^### (.+?)\s*$/.exec(line);
+    if (heading !== null) {
+      if (!CHANGELOG_GROUPS.includes(heading[1]))
+        changelogRefusal(`unknown group heading "${heading[1]}"`);
+      entries = groups.get(heading[1]) ?? [];
+      groups.set(heading[1], entries);
+    } else if (line.startsWith("- ")) {
+      if (entries === undefined) changelogRefusal("an entry sits above the first group");
+      entries.push([line]);
+    } else if (line.trim() !== "") {
+      if (entries?.at(-1) === undefined) changelogRefusal("text sits outside an entry");
+      entries.at(-1).push(line);
+    } else entries?.at(-1)?.push(line);
+  }
+  const rebuilt = [];
+  for (const name of CHANGELOG_GROUPS) {
+    const kept = groups.get(name) ?? [];
+    if (kept.length === 0) continue;
+    rebuilt.push("\n", `### ${name}\n`, "\n");
+    kept.forEach((entry, index) => {
+      const last = entry.findLastIndex((line) => line.trim() !== "");
+      rebuilt.push(...(index > 0 && spaced ? ["\n"] : []), ...entry.slice(0, last + 1));
+    });
+  }
+  if (followed) rebuilt.push("\n");
+  return rebuilt;
+}
+
+/**
+ * Keeps both sides of every conflict region inside `## [Unreleased]` and regroups that section.
+ * Each side may only add entry lines to the merge base's section, and the result must hold
+ * exactly the entries both sides added on top of the base; anything else stops for a person.
+ */
+function changelogResolution(source, stages) {
+  if ([source, ...stages].some((value) => value.includes("\r")))
+    changelogRefusal("carriage returns are not supported");
+  const merged = [];
+  let section = "";
+  for (const segment of conflictSegments(source)) {
+    if (segment.common !== undefined) {
+      for (const line of segment.common) if (SECTION_HEADING.test(line)) section = line;
+      merged.push(...segment.common);
+      continue;
+    }
+    if (!UNRELEASED_HEADING.test(section))
+      changelogRefusal("a conflict lies outside ## [Unreleased]");
+    const sides = [...segment.left, ...segment.right];
+    if (sides.some((line) => SECTION_HEADING.test(line)))
+      changelogRefusal("a conflict holds a release or title heading");
+    merged.push(...sides.map((line) => (line.endsWith("\n") ? line : `${line}\n`)));
+  }
+  const [head, body, rest] = unreleasedSplit(merged);
+  const sections = stages.map((value) => unreleasedSplit(linesOf(value))[1]);
+  // Entries keep the spacing either side already uses between two entries of one group.
+  const rebuilt = regroup(body, rest.length > 0, sections.slice(1).some(spacedEntries));
+  const [base, ours, theirs] = sections.map(entryCounts);
+  const resolved = entryCounts(rebuilt);
+  for (const key of new Set([
+    ...base.keys(),
+    ...ours.keys(),
+    ...theirs.keys(),
+    ...resolved.keys(),
+  ])) {
+    const [b, o, t] = [base, ours, theirs].map((counts) => counts.get(key) ?? 0);
+    if (o < b || t < b) changelogRefusal("a side changed or removed an Unreleased entry");
+    if ((resolved.get(key) ?? 0) !== o + t - b)
+      changelogRefusal("the combined entries differ from what both sides added");
+  }
+  return [...head, ...rebuilt, ...rest].join("");
 }
 
 function listShape(source) {
@@ -320,7 +468,7 @@ function resolutions(observation) {
     ),
   ];
   for (const relative of paths) {
-    if (!OUTPUTS.slice(0, 3).includes(relative))
+    if (!OUTPUTS.slice(0, 3).includes(relative) && relative !== CHANGELOG)
       refuse(`Manual conflict resolution required: ${relative}`);
     const entries = observation.conflicts
       .split("\0")
@@ -330,10 +478,12 @@ function resolutions(observation) {
     }
   }
   const candidates = new Map(
-    paths.map((relative) => [
-      relative,
-      conflictCandidates(observation.files[OUTPUTS.indexOf(relative)]),
-    ]),
+    paths
+      .filter((relative) => relative !== CHANGELOG)
+      .map((relative) => [
+        relative,
+        conflictCandidates(observation.files[OUTPUTS.indexOf(relative)]),
+      ]),
   );
   const listCandidates = candidates.get(OUTPUTS[0]) ?? [observation.files[0], observation.files[0]];
   const lists = listCandidates.map(listShape);
@@ -357,13 +507,26 @@ function resolutions(observation) {
     if (shapes[0] !== shapes[1])
       refuse(`Non-digest conflict requires manual resolution: ${relative}`);
   }
-  return [...candidates].map(([relative, pair]) => ({ relative, replacement: pair[0] }));
+  const planned = [...candidates].map(([relative, pair]) => ({ relative, replacement: pair[0] }));
+  if (paths.includes(CHANGELOG)) {
+    const stages = [1, 2, 3].map((stage) => {
+      const source = git(["show", `:${stage}:${CHANGELOG}`]).stdout.toString("utf-8");
+      if (source.includes("\uFFFD") || source.includes("\0"))
+        refuse(`${CHANGELOG} has an unreadable merge side.`);
+      return source;
+    });
+    planned.push({
+      relative: CHANGELOG,
+      replacement: changelogResolution(observation.changelog, stages),
+    });
+  }
+  return planned;
 }
 
-function indexOutside(index) {
+function indexOutside(index, staged) {
   return index
     .split("\0")
-    .filter((entry) => !OUTPUTS.includes(entry.slice(entry.indexOf("\t") + 1)))
+    .filter((entry) => !staged.includes(entry.slice(entry.indexOf("\t") + 1)))
     .join("\0");
 }
 
@@ -423,6 +586,7 @@ export function main(args = process.argv.slice(2)) {
         const changed = OUTPUTS.indexOf(relative);
         if (
           !stableCore(accepted, after) ||
+          after.changelog !== (relative === CHANGELOG ? replacement : accepted.changelog) ||
           after.files.some(
             (value, index) => value !== (index === changed ? replacement : accepted.files[index]),
           )
@@ -445,22 +609,26 @@ export function main(args = process.argv.slice(2)) {
         }
         if (result.status !== 0) refuse(`${writer} failed; partial changes and merge retained.`);
         const after = observe();
-        if (!stableCore(accepted, after))
+        if (!stableCore(accepted, after) || after.changelog !== accepted.changelog)
           refuse(`${writer} changed unexpected state; merge retained.`);
         accepted = after;
       }
       unchanged(accepted);
-      git(["add", "--", ...OUTPUTS]);
+      const stagedPaths = planned.some(({ relative }) => relative === CHANGELOG)
+        ? [...OUTPUTS, CHANGELOG]
+        : OUTPUTS;
+      git(["add", "--", ...stagedPaths]);
       const staged = observe();
       if (
         staged.branch !== accepted.branch ||
         staged.head !== accepted.head ||
         staged.merge !== accepted.merge ||
         staged.conflicts !== "" ||
-        indexOutside(staged.index) !== indexOutside(accepted.index) ||
+        indexOutside(staged.index, stagedPaths) !== indexOutside(accepted.index, stagedPaths) ||
         staged.outsideStatus !== accepted.outsideStatus ||
         staged.outsideDiff !== accepted.outsideDiff ||
-        JSON.stringify(staged.files) !== JSON.stringify(accepted.files)
+        JSON.stringify(staged.files) !== JSON.stringify(accepted.files) ||
+        staged.changelog !== accepted.changelog
       ) {
         refuse("Unexpected state change while staging; merge retained.");
       }
@@ -486,6 +654,7 @@ export function main(args = process.argv.slice(2)) {
           completed.index !== accepted.index ||
           completed.status !== "" ||
           JSON.stringify(completed.files) !== JSON.stringify(accepted.files) ||
+          completed.changelog !== accepted.changelog ||
           parents.length !== 3 ||
           parents[1] !== accepted.head ||
           parents[2] !== fetched

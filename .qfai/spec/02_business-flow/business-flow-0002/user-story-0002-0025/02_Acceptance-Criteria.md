@@ -36,12 +36,12 @@ Feature: Safe branch catch-up with CI pin resealing
     And declaration keys, structure, context and map membership remain unchanged
     And resolution preserves common bytes outside conflict regions without selecting a whole merge side
     And workflow differences are only the four existing PINNED_INPUTS target digests
-    And a malformed, ambiguous, membership-changing, foreign, semantic or other-file conflict stops the helper
+    And a malformed, ambiguous, membership-changing, foreign, semantic or other-file conflict stops the helper, apart from a `CHANGELOG.md` conflict inside `## [Unreleased]`
     And rejected conflicts retain the pending merge without partial automatic resolution, abort or reset
 
   # AC-0002-0025-04
   Scenario: Resealing commits the complete merge or preserves a failure
-    Given the merge is conflict-free or all its conflicts are proven digest conflicts
+    Given the merge is conflict-free or all its conflicts are proven digest conflicts or Unreleased-only changelog conflicts
     When the existing guard-byte resealer runs before the existing verification-body resealer
     Then writer changes are confined to the pinned-byte list, status-context declaration, CI workflow and lifecycle-manifest list
     And those paths are staged explicitly while all staged merge changes remain in the final commit
@@ -76,4 +76,13 @@ Feature: Safe branch catch-up with CI pin resealing
     Then the register check fails, naming the ID, the register and both lines
     And the pull request lint lane runs that check, so the lint job fails rather than only the build job's full validation
     And the helper stops after staging its outputs and before its commit, retaining the merge, committing nothing and pushing nothing
+
+  # AC-0002-0025-08
+  Scenario: A changelog conflict inside Unreleased keeps both sides' entries
+    Given a catch-up merge conflicts in `CHANGELOG.md`
+    When every conflict region lies inside `## [Unreleased]` and each merge side only added entries to that section
+    Then the helper keeps both sides' entries, the branch's first, under one heading per change type in Keep a Changelog order
+    And it stages `CHANGELOG.md` explicitly beside the writer outputs and commits the complete merge
+    And a region in or touching a released section, a side that changed or removed an existing entry, an unknown group heading or a result that does not hold exactly the entries both sides added stops the helper
+    And a stopped changelog conflict retains the pending merge and its markers without partial automatic resolution, abort or reset
 ```
