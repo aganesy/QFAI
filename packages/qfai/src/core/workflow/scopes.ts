@@ -43,6 +43,15 @@ function hasPrivateIntake(stages: readonly PlanStage[]): boolean {
   return stages.some((stage) => stage.steps.some((step) => step.name === PRIVATE_INTAKE));
 }
 
+function writesSomething(stage: PlanStage): boolean {
+  return (WRITES[stage.kind]?.length ?? 0) > 0;
+}
+
+// The first step of the first stage that writes an artifact, or `undefined` when no stage writes.
+export function firstWritingStep(stages: readonly PlanStage[]): string | undefined {
+  return stages.find(writesSomething)?.steps[0]?.name;
+}
+
 function writesRequested(stage: PlanStage, artifacts: readonly Artifact[]): boolean {
   return artifacts.some(
     (artifact) =>
@@ -106,7 +115,7 @@ export function unservedArtifacts(
   stages: readonly PlanStage[],
   artifacts: readonly Artifact[],
 ): Artifact[] {
-  const writesAny = stages.some((stage) => (WRITES[stage.kind]?.length ?? 0) > 0);
+  const writesAny = stages.some(writesSomething);
   const served = stages.some((stage) => writesRequested(stage, artifacts));
   if (!writesAny || served || hasPrivateIntake(stages)) return [];
   return [...artifacts];

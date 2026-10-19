@@ -2,7 +2,7 @@
 // and decision, release and branch points. It starts nothing and writes nothing.
 
 import type { RouteChoice } from "./decisionRules.js";
-import type { Artifact } from "./extraction.js";
+import type { Artifact, WorkflowExtraction } from "./extraction.js";
 import { extractionFaultsOf, isExtraction } from "./extractionShape.js";
 import {
   loadInstalledPlan,
@@ -12,7 +12,7 @@ import {
 } from "./plans.js";
 import { routingOutcome } from "./routeDecision.js";
 import { isWorkflowRoute, type WorkflowRoute } from "./routes.js";
-import { scopesOf, unservedArtifacts, type PlanScope } from "./scopes.js";
+import { firstWritingStep, scopesOf, unservedArtifacts, type PlanScope } from "./scopes.js";
 import { stepPath } from "./steps.js";
 
 export type PlanReason =
@@ -176,6 +176,17 @@ async function candidatesOf(
   };
 }
 
+// The `decision` flag says the work cannot start until someone chooses. A plan that names no
+// decision point then takes the first step that writes as one, so the choice is put to the user
+// before anything changes; the route itself stays as it is.
+function decisionPointsOf(plan: WorkflowPlanFile, extraction: WorkflowExtraction): string[] {
+  if (plan.decisionPoints.length > 0 || !extraction.entryFlags.includes("decision")) {
+    return plan.decisionPoints;
+  }
+  const step = firstWritingStep(plan.stages);
+  return step === undefined ? [] : [step];
+}
+
 async function planOfExtraction(root: string, extraction: unknown): Promise<PlanDocument> {
   if (!isExtraction(extraction)) {
     const message =
@@ -198,7 +209,12 @@ async function planOfExtraction(root: string, extraction: unknown): Promise<Plan
   if (!load.ok) return load.document;
   const unserved = unservedArtifacts(load.plan.stages, artifacts);
   if (unserved.length > 0) return unservedRefusal(unserved);
-  return planned(load.plan, outcome.taken.rule, scopesOf(load.plan.stages, artifacts));
+  const decisionPoints = decisionPointsOf(load.plan, extraction);
+  return planned(
+    { ...load.plan, decisionPoints },
+    outcome.taken.rule,
+    scopesOf(load.plan.stages, artifacts),
+  );
 }
 
 // The plan of an extraction or of a named route, the candidates of a low-confidence extraction,

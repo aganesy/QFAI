@@ -95,16 +95,16 @@ The route, its stages in order with each step's file, and its points.
 }
 ```
 
-| Field            | Meaning                                                                                   |
-| ---------------- | ----------------------------------------------------------------------------------------- |
-| `rule`           | The decision rule that chose the route; `null` when none held; absent for `--route`       |
-| `review`         | `spec` or `code`: the review that follows the stage; absent where none does               |
-| `mode`           | `settled` or `read-only` where the plan fixes how the step runs; otherwise `null`         |
-| `passThrough`    | The step runs, and writes nothing when it shows it has nothing to write                   |
-| `decisionPoints` | The steps that put each critical decision to the user before acting on it                 |
-| `releasePoint`   | The step the user approves the release before, `end` for after the last stage, or `null`  |
-| `branchPoints`   | Each outcome with its destinations; `decision-table` means plan the step's new extraction |
-| `scopes`         | How far the work may go, narrowest first; absent for `--route`                            |
+| Field            | Meaning                                                                                                                                                         |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `rule`           | The decision rule that chose the route; `null` when none held; absent for `--route`                                                                             |
+| `review`         | `spec` or `code`: the review that follows the stage; absent where none does                                                                                     |
+| `mode`           | `settled` or `read-only` where the plan fixes how the step runs; otherwise `null`                                                                               |
+| `passThrough`    | The step runs, and writes nothing when it shows it has nothing to write                                                                                         |
+| `decisionPoints` | The steps that put each critical decision to the user before acting on it; with the `decision` flag set, a plan that names none gets its first step that writes |
+| `releasePoint`   | The step the user approves the release before, `end` for after the last stage, or `null`                                                                        |
+| `branchPoints`   | Each outcome with its destinations; `decision-table` means plan the step's new extraction                                                                       |
+| `scopes`         | How far the work may go, narrowest first; absent for `--route`                                                                                                  |
 
 ## Candidates
 
