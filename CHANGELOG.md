@@ -383,6 +383,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the per-iteration summary, and each screen's payload keeps the violations that
   come from that screen. Fixes #3666.
 
+- **A failed graph tool download names the command that shows its cause.**
+  `qfai init` hides the installer's output, which can carry credentials, yet
+  told you to correct a cause it never showed. A failed CodeGraph or Graphify
+  download now has a recovery line naming the command that repeats the download
+  by hand into a throwaway temporary directory, where its output shows the
+  cause, and saying to delete that directory afterwards. The
+  `qfai init: done` line now comes after graph preparation, so a run whose
+  graph preparation fails no longer prints it; the file report above it reads
+  `qfai init: files`. Fixes #3744.
+
 - **The orchestrator starts every finder, griller and reviewer itself.** A
   stage worker that ran a whole `sdd` stage often could not start agents of its
   own, so the concrete-abstract cycle's finder and the delegated grilling were

@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { access, cp, mkdir, rm } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import {
   codegraphEnvironment,
@@ -13,6 +14,7 @@ import { isEnoent } from "../fs/errno.js";
 import { inspectCurrentCodeAnalysis } from "./analysis.js";
 import { GRAPH_VERSIONS, graphRuntimePaths } from "./layout.js";
 import { assertGraphStoragePath, replaceGraphDirectory } from "./storage.js";
+import { formatReportPath } from "../init/reportPath.js";
 export { GRAPH_VERSIONS, graphRuntimePaths } from "./layout.js";
 
 export interface GraphPreparation {
@@ -25,6 +27,8 @@ export interface GraphPreparation {
   documents: "documents-not-ready";
   failedStep?: string;
   recovery?: string;
+  /** A failed download repeated by hand into a throwaway directory, whose output shows the cause. */
+  rerun?: { command: string; directory: string };
   previousInstallation?: "retained" | "none";
 }
 
@@ -104,7 +108,22 @@ export async function prepareGraphRuntimes(
         ],
         { cwd: root, env },
       );
-      if (install.exitCode !== 0) return { ...notReady, failedStep: "CodeGraph download" };
+      if (install.exitCode !== 0)
+        return {
+          ...notReady,
+          failedStep: "CodeGraph download",
+          rerun: rerunByHand("codegraph", (directory) => [
+            "npm",
+            "install",
+            "--prefix",
+            directory,
+            "--no-audit",
+            "--no-fund",
+            "--save-exact",
+            "--ignore-scripts",
+            `@colbymchenry/codegraph@${GRAPH_VERSIONS.codegraph}`,
+          ]),
+        };
       const codeVersion = await run(process.execPath, [staged.codegraph, "--version"], {
         cwd: root,
         env,
@@ -147,7 +166,21 @@ export async function prepareGraphRuntimes(
         ],
         { cwd: root, env: pythonEnvironment },
       );
-      if (pythonInstall.exitCode !== 0) return { ...notReady, failedStep: "Graphify download" };
+      if (pythonInstall.exitCode !== 0)
+        return {
+          ...notReady,
+          failedStep: "Graphify download",
+          rerun: rerunByHand("graphify", (directory) => [
+            "uv",
+            "pip",
+            "install",
+            "--python",
+            '">=3.10"',
+            "--target",
+            directory,
+            `"graphifyy[ollama]==${GRAPH_VERSIONS.graphify}"`,
+          ]),
+        };
       const graphifyVersion = await run(
         staged.python,
         [
@@ -174,6 +207,20 @@ export async function prepareGraphRuntimes(
   } finally {
     await rm(stagingRoot, { recursive: true, force: true });
   }
+}
+
+// The installer's own output is not shown, since it can carry credentials. The same download,
+// run by hand into a throwaway directory, shows the cause in the user's terminal instead.
+// The directory is escaped as report paths are, so a temporary directory carrying a control
+// character cannot forge output lines.
+function rerunByHand(
+  engine: "codegraph" | "graphify",
+  command: (directory: string) => string[],
+): { command: string; directory: string } {
+  const raw = path.join(os.tmpdir(), "qfai-graph-check", engine);
+  const shown = formatReportPath(raw);
+  const directory = shown === raw ? `"${raw}"` : shown;
+  return { command: command(directory).join(" "), directory };
 }
 
 async function compatibleRuntime(

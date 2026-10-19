@@ -122,7 +122,8 @@ export const runGraphProcess: GraphProcess = async (command, args, options) => {
     return { exitCode: 0, stdout: result.stdout };
   } catch (cause: unknown) {
     if (!(cause instanceof Error) || !("code" in cause)) throw cause;
-    // Installation and backend stderr can contain credentials. Report the step instead.
+    // Installation and backend stderr can contain credentials. Report the step instead; the
+    // preparation names the command a failed download can be rerun with by hand.
     return { exitCode: typeof cause.code === "number" ? cause.code : 1, stdout: "" };
   }
 };
