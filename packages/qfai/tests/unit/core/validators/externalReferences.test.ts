@@ -127,6 +127,35 @@ describe("validateExternalReferences", () => {
     );
   });
 
+  // QFAI:EX-0001-0051-15
+  it("ends an Evidence item at the next item and reads it only in a decision row", async () => {
+    const page = ".qfai/spec/decisions/page-0001.md";
+    const questions = ".qfai/spec/open-questions.md";
+    const rows = [
+      "| DEC-0001 | Change request: `src/a.md` \\| `src/b.md` | - Evidence: `src/c.ts` \\| `src/d.ts` - Grounds: kept | DONE |",
+      "| DEC-0002 | Note | - Evidence: file:`src/e.ts` - Residual risk: `src/f.ts` may move - Rollback: none — kept | DONE |",
+      "| DEC-0003 | Note | - Evidence: file:x - Grounds: the `- Evidence:` item names `src/g.ts` - Residual risk: none — kept - Rollback: none — kept | DONE |",
+    ];
+    await inProject(
+      {
+        [decisions]: `${rows.join("\n")}\n`,
+        [page]:
+          "| DEC-0004 | Change request: `src/h.md` | - Evidence: `src/h.md` - Grounds: kept | DONE |\n",
+        [questions]: "| OQ-0001 | Open | - Evidence: `src/i.ts` | TODO |\n",
+      },
+      async (root) => {
+        const findings = await validateExternalReferences(root, defaultConfig);
+        expect(findings.map(({ message, file }) => [message, file])).toEqual([
+          [
+            "The decision and open-question tree has 3 lines in 2 files naming a path outside .qfai",
+            path.join(root, ...decisions.split("/")),
+          ],
+        ]);
+        expect(findings[0]?.relatedFiles).toEqual([path.join(root, ...questions.split("/"))]);
+      },
+    );
+  });
+
   it("counts a relative link that leaves .qfai", async () => {
     await inProject({ [policy]: "[out](../../../src/a.ts)\n", "src/a.ts": "x\n" }, async (root) => {
       const findings = await validateExternalReferences(root, defaultConfig);

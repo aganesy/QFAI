@@ -54,6 +54,24 @@ export function inlineCodeSpans(text: string): Array<readonly [number, number]> 
 }
 
 /**
+ * The matches of a global pattern whose first non-blank character lies outside
+ * every closed backtick span, so a label quoted in a code span is not taken for one.
+ */
+export function matchesOutsideCodeSpans(text: string, pattern: RegExp): RegExpExecArray[] {
+  const spans = inlineCodeSpans(text);
+  let spanIndex = 0;
+  return [...text.matchAll(pattern)].filter((match) => {
+    const start = match.index + match[0].length - match[0].trimStart().length;
+    let span = spans[spanIndex];
+    while (span && span[1] <= start) {
+      spanIndex += 1;
+      span = spans[spanIndex];
+    }
+    return !span || start < span[0];
+  });
+}
+
+/**
  * ATX heading, with the up-to-three leading spaces CommonMark allows. A
  * document that indents a heading — the third space is still a heading, the
  * fourth makes it an indented code block — was read as ordinary prose, so a

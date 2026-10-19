@@ -56,5 +56,5 @@ Feature: Story-tree layout and ID validation
     When `qfai validate --profile sdd` runs
     Then one warning for each of the policy, business-flow, contract, and decision and open-question trees counts its lines and its files
     And a path under `.qfai`, a URL, and a discussion pack raise nothing
-    And a decision's Evidence item and a change request's Content, which the decision form requires to name files, raise nothing
+    And a decision row's Evidence items and a change request's Content, which the decision form requires to name files, raise nothing
 ```
