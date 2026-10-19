@@ -182,6 +182,19 @@ export function validateStoryTreeStructureModel(model: StoryTreeModel): Issue[] 
         ),
       );
     }
+    // A plain DONE is still accepted; the warning asks for the deciding row to be named.
+    if (row.status === "DONE") {
+      issues.push(
+        issue(
+          "QFAI-STORY-018",
+          `${row.id} is DONE and names no decision in ${model.openQuestionsFile}`,
+          "warning",
+          model.openQuestionsFile ?? "",
+          "storyTree.structure",
+          [row.id],
+        ),
+      );
+    }
   }
 
   const criteria = new Set(model.acceptanceCriteria.map((entry) => entry.id));
