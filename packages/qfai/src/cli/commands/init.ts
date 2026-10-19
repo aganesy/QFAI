@@ -115,6 +115,14 @@ const STANDARD_ASSET_PATHS: readonly string[] = REFRESHED_ASSISTANT_LAYERS.map(
   (layer) => `assistant/${layer}`,
 );
 
+/**
+ * Printed when the run wrote skill, step, agent, rule or hook files, a Codex agent profile or a
+ * rule master. A running agent session keeps the text it loaded at start, so it acts on the old
+ * text until it restarts.
+ */
+const AGENT_RESTART_NOTE =
+  "Skill or hook files changed: restart any running agent session so it uses the new text.";
+
 const STORY_SEED_PATHS = [
   "decisions.md",
   "open-questions.md",
@@ -529,6 +537,19 @@ export async function runInit(
   }
   if (codexHooksResult.copied.length > 0 && !options.dryRun) {
     info(CODEX_HOOKS_TRUST_NOTE);
+  }
+  // `reminders.json` sits with the rule masters but is read by the hooks on every run, so a
+  // running session picks up its new text without a restart.
+  const codexProfileDir = path.join(destRoot, ...CODEX_AGENT_WRAPPER_DIR.split("/"));
+  const agentTextWritten = [
+    ...skillsResult.copied,
+    ...wrappersResult.copied.filter((dest) => path.dirname(dest) === codexProfileDir),
+    ...rulesForced.copied.filter((dest) => path.extname(dest) === ".md"),
+    ...claudeHooksResult.copied,
+    ...codexHooksResult.copied,
+  ];
+  if (agentTextWritten.length > 0 && !options.dryRun) {
+    info(AGENT_RESTART_NOTE);
   }
   if (!options.dryRun) {
     const preparation = await prepareGraphIntegration(destRoot, graphProcess);
