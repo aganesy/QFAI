@@ -153,6 +153,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the line after `counts:` as `fail-on:` must skip the new line.
   Fixes #3797.
 
+- **`qfai validate` warns when an open question is DONE without naming its
+  decision.** An `open-questions.md` row whose Status is plain `DONE` now
+  raises `QFAI-STORY-018` at warning in `sdd`, naming the file and the row,
+  so the row can be rewritten as `DONE (by DEC-NNNN)` naming the decision that
+  answered it. Plain `DONE` is still accepted, so `--fail-on error` keeps
+  passing on an existing register. Fixes #3906.
+
 - **A colliding decision ID is renumbered once, at merge time.** The
   `qfai-sdd` triage reference now says a branch keeps its decision IDs while
   its pull request is open, and the session that merges it runs

@@ -208,6 +208,38 @@ describe("story-tree layout dispatch", () => {
     expect(closed.issues.some((item) => item.code === "QFAI-STORY-003")).toBe(false);
   });
 
+  // QFAI:EX-0001-0053-34
+  it("warns about an open question that is DONE and names no decision", async () => {
+    const table = (title: string, rows: string): string =>
+      `# ${title}\n\n## ${title}\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n${rows}`;
+    await put(`${specs}/decisions.md`, table("Decisions", "| DEC-0001 | A | B | DONE |\n"));
+    await put(
+      `${specs}/open-questions.md`,
+      table(
+        "Open Questions",
+        "| OQ-0001 | Q | A | DONE |\n| OQ-0002 | Q | A | DONE (by DEC-0001) |\n| OQ-0003 | Q | A | SUPERSEDED (by DEC-0001) |\n| OQ-0004 | Q | A | TODO |\n| OQ-0005 | Q | A | WIP |\n| OQ-0006 | Q | A | DEFERRED |\n",
+      ),
+    );
+
+    const result = await validateProject(root, configured(), { profile: "sdd" });
+    const reported = result.issues
+      .filter((item) => item.code === "QFAI-STORY-018")
+      .map((item) => [
+        item.severity,
+        path.relative(root, item.file ?? "").replaceAll("\\", "/"),
+        item.refs,
+        item.message,
+      ]);
+    expect(reported).toEqual([
+      [
+        "warning",
+        `${specs}/open-questions.md`,
+        ["OQ-0001"],
+        expect.stringContaining("OQ-0001 is DONE and names no decision"),
+      ],
+    ]);
+  });
+
   // QFAI:AC-0001-0053-01
   // QFAI:EX-0001-0053-01
   it("names the extra column of decisions.md and the missing column of open-questions.md", async () => {
