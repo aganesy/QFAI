@@ -59,6 +59,11 @@ pnpm approve-builds          # pnpm: adds it to `onlyBuiltDependencies`
 `npx qfai doctor` runs `mdschema --help` and reports an error, naming these
 fixes, when the binary does not start.
 
+QFAI pins this dependency to an exact version. A release that moves the pin
+says so in its [release notes](#keeping-qfai-itself-up-to-date), so a project
+that approves the script for each version can approve the new one before it
+upgrades.
+
 ## Quick start
 
 > **Windows users:** `qfai init` creates symlinks internally.
@@ -863,6 +868,11 @@ package does not refresh what a previous one already wrote. Only
 Moving a project from the spec-pack layout to the story tree also requires
 `/qfai-migration-v1-to-v2`. `init --force` refreshes shipped assets; the
 migration skill moves project content and reports items that need a person.
+
+The release notes of each version are the body of its GitHub Release, listed
+at <https://github.com/aganesy/QFAI/releases>. Read them before you upgrade:
+they name the files a version retires and any change to the exact version of a
+dependency the package pins, such as `@jackchuka/mdschema`.
 
 To upgrade by hand:
 

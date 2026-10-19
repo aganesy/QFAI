@@ -9,10 +9,19 @@ matches the current version.
 
 ### Common
 
+The GitHub Release body is cut from `## [Unreleased]` in `CHANGELOG.md`, and
+it is the release notes adopters read before they upgrade.
+
 - The target commits are all on main
-- Each change has its description under `## [Unreleased]` in `CHANGELOG.md`
-  (Prepare release fails if the section is empty, or holds only headings such as
-  `### Added`)
+- Each change has its description under `## [Unreleased]` in `CHANGELOG.md`,
+  and the files it retires are named there (Prepare release fails if the
+  section is empty, or holds only headings such as `### Added`)
+- Every exact version pin that moved since the previous release has its own
+  line under `## [Unreleased]`, naming the old and new versions and whether the
+  dependency declares an install script. A Renovate pull request writes no
+  description, so before you run Prepare release, run
+  `git diff v<previous> -- packages/qfai/package.json` and add the line for each
+  pin it shows moving (such as `@jackchuka/mdschema`)
 - Supported: Node.js >= 20.19.0 / Tested: Node.js 20 / Recommended: Node.js 20 LTS or later
 
 ### Using the automated path
