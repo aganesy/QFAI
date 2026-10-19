@@ -24,6 +24,9 @@ step writes the assertions those bodies owe.
   contracts, under `paths.contractsDir`.
 - The worker session setup `implement-credentials` wrote, when a test needs an
   authenticated actor.
+- When a test depends on business time, shares a database or server with
+  other workers, or feeds a required CI check:
+  `.qfai/assistant/skill/qfai-implement/references/test-runner-recipes.md`.
 
 ## Writes
 

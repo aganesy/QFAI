@@ -31,6 +31,10 @@ in scope needs an authenticated actor.
 Follow `.qfai/assistant/skill/qfai-implement/references/credential-reuse.md`.
 It holds the seven session-reuse rules, the rule for a caller-injected
 environment and a worked example. Keep actors and sessions isolated by worker.
+For a Playwright or Vitest suite, the optional recipes in
+`.qfai/assistant/skill/qfai-implement/references/test-runner-recipes.md` put
+the rules into code, with the business data, shared-state, credential
+directory and CI aggregate patterns around them.
 
 ## Passes when
 

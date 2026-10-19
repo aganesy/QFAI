@@ -205,6 +205,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   nothing to find. The `dependency` intent in the extraction reference now
   covers that contract edit.
   Fixes #3535.
+- **`qfai-implement` ships optional Playwright and Vitest recipes.** A new
+  test runner recipes reference puts the worker session-reuse rules into code:
+  a Vitest session cache keyed by the run's private directory, the pool slot
+  and the actor, and Playwright setup, fixture and teardown projects with one
+  account and storage state per worker. It also covers the adapters the
+  application supplies, business data each file owns, database hooks scoped to
+  the groups that need them, shared and exclusive access to a common database,
+  credential directory hygiene, a CI aggregate job that fails on a failed,
+  cancelled or unexpectedly skipped lane, deterministic business time per
+  clock profile, and an adoption checklist. `implement-credentials` and
+  `implement-acceptance` point to it. Fixes #3696. Fixes #3758.
+
 - **The verify report lists what a test run records, apart from what is
   covered.** `verify-repo-gate` gains a `### Run report` recipe: when the report
   cites test runner results, it records for each layer the revision and the CI
