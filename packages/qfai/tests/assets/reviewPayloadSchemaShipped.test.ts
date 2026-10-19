@@ -40,6 +40,11 @@ const FEEL_FIELDS = [
   "menuReachabilityFeel",
 ];
 
+/** Folds line wraps, so a rule is matched as one sentence. */
+function flatten(text: string): string {
+  return text.replace(/\s*\n\s*/g, " ");
+}
+
 async function readShipped(relative: string): Promise<string[]> {
   return Promise.all(ASSISTANT_ROOTS.map((root) => readFile(path.join(root, relative), "utf-8")));
 }
@@ -68,6 +73,30 @@ describe("shipped reviewer payload schema", () => {
     }
   });
 
+  // A violation every screen shares was repeated in each payload, so one fix
+  // read as one entry per screen.
+  it("records a screen-independent DESIGN.md violation in the summary only", async () => {
+    for (const schema of await readShipped(SCHEMA_REL)) {
+      expect(schema).toContain(
+        "only the violations specific to this screen, since a screen-independent one is recorded once in the per-iteration summary and in no payload",
+      );
+    }
+    for (const prompt of (await readShipped(PROMPT_REL)).map(flatten)) {
+      expect(prompt).toContain(
+        "- `designMdViolations` — every screen-independent violation, recorded here and in no payload, plus the **union** of the pairs' arrays, deduplicated on `(kind, found)`.",
+      );
+      expect(prompt).toContain(
+        "A violation is screen-independent when its source is shared by every screen of the iteration",
+      );
+      expect(prompt).toContain(
+        "A pair's payload lists only the violations whose source is that screen.",
+      );
+      expect(prompt).toContain(
+        "When the iteration reviews one screen, nothing is screen-independent and its payload keeps every violation.",
+      );
+    }
+  });
+
   it("has the reviewer write the per-screen payloads and the summary every iteration", async () => {
     for (const step of await readShipped(LOOP_STEP_REL)) {
       const procedure = /^## Procedure\b([\s\S]*?)^## /m.exec(step)?.[1];
@@ -81,7 +110,7 @@ describe("shipped reviewer payload schema", () => {
 
 /** The prompt's text with line wraps folded, so a rule is matched as one sentence. */
 async function readPromptFlat(): Promise<string[]> {
-  return (await readShipped(PROMPT_REL)).map((prompt) => prompt.replace(/\s*\n\s*/g, " "));
+  return (await readShipped(PROMPT_REL)).map(flatten);
 }
 
 describe("the pivotDirective rule the shipped reviewer prompt states", () => {
