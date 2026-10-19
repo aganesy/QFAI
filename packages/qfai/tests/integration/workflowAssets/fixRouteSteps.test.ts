@@ -172,6 +172,49 @@ describe("a fix route from the diagnosis to the commit", () => {
     expect(contract).toMatch(/stage report.*summary.*add no verdict fields or states/i);
   });
 
+  // QFAI:EX-0001-0225-18
+  it("delegates a gate to CI for one run on the user's instruction, never on the agent's own judgment", async () => {
+    const firstGate = flat(
+      sectionOf(await readShipped("step/verify-commit/STEP.md"), "## Procedure").split(
+        /\n2\. /,
+      )[0] ?? "",
+    );
+    expect(firstGate).toMatch(
+      /user's instruction for this run delegates it to an actual named CI check/i,
+    );
+    expect(firstGate).toMatch(/instruction recorded as its basis/i);
+    expect(firstGate).toMatch(/agent delegates on its own judgment/i);
+    const repoGates = await section("verify-repo-gate", "## Repository gates");
+    expect(repoGates).toMatch(/user's instruction for this run delegates that gate to CI/i);
+    expect(repoGates).toMatch(/holds for this run only.*instruction as its basis/i);
+    expect(repoGates).toMatch(/never delegates a gate on its own judgment/i);
+    const targets = flat(
+      sectionOf(
+        await readShipped("skill/qfai-run/references/operator-screens.md"),
+        "## Independent targets under one goal",
+      ),
+    );
+    expect(targets).toMatch(/delegated to CI for this run by the user's instruction/i);
+    const contract = flat(
+      await readShipped("skill/qfai-verify/references/verify-output-contract.md"),
+    );
+    expect(contract).toMatch(/user's instruction for this run delegates to an actual CI check/i);
+    const gateRun = flat(await readShipped("step/common-gate-run/STEP.md"));
+    expect(gateRun).toMatch(/user's instruction for this run delegates to CI/i);
+  });
+
+  // QFAI:EX-0001-0225-19
+  it("updates the verdict from the delegated check's observed result, never writing it PASS", async () => {
+    const afterCi = await section("verify-repo-gate", "## After CI");
+    expect(afterCi).toMatch(/observed for the head the verdict was written for/i);
+    expect(afterCi).toMatch(/gate's `ci` to the observed state/i);
+    expect(afterCi).toMatch(/red.*`status` to `"FAIL"`/i);
+    expect(afterCi).toMatch(/stays `DELEGATED`.*never rewritten `PASS`/i);
+    expect(afterCi).toMatch(/result for another head changes nothing/i);
+    const completion = await section("verify-commit", "## Completion after CI");
+    expect(completion).toMatch(/`verify-repo-gate`.*`## After CI`.*updates the verdict/i);
+  });
+
   // QFAI:EX-0001-0225-07
   it("never stages an ignored file, and reruns the gates after a hook-driven code fix", async () => {
     const procedure = await section("verify-commit", "## Procedure");
