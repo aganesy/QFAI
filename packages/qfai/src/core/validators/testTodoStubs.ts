@@ -620,11 +620,19 @@ const STUB_DIALECTS: readonly StubDialect[] = [
 const PLAYWRIGHT_IMPORT =
   /\bfrom\s*(['"])@playwright\/test\1|\brequire\(\s*(['"])@playwright\/test\2/;
 
+/**
+ * Node's built-in runner is the same split: a file that brings `test` in from
+ * `node:test` runs under `node --test`, which vitest and jest never reach. Like
+ * the Playwright check, it reads the whole file, so a quoted mention counts.
+ */
+const NODE_TEST_IMPORT = /\bfrom\s*(['"])node:test\1|\brequire\(\s*(['"])node:test\2/;
+
 /** The runner named in a finding about `content`. */
 function runnerOf(dialect: StubDialect, content: string): string {
-  return dialect.runner === "vitest/jest" && PLAYWRIGHT_IMPORT.test(content)
-    ? "Playwright"
-    : dialect.runner;
+  if (dialect.runner !== "vitest/jest") return dialect.runner;
+  if (PLAYWRIGHT_IMPORT.test(content)) return "Playwright";
+  if (NODE_TEST_IMPORT.test(content)) return "node:test";
+  return dialect.runner;
 }
 
 function stubIssue(

@@ -278,6 +278,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   to fix. It keeps the heading position when the document cannot be read or
   the pattern cannot be translated. Fixes #3821.
 
+- **A stub finding in a `node:test` file names `node:test`.** `QFAI-TEST-001`
+  and `QFAI-TEST-003` said a stub or skipped test was silent in vitest/jest
+  even in a file that imports from `node:test`. Such a file now gets
+  `node:test` in the message, as a file that imports `@playwright/test` already
+  gets Playwright. Fixes #3878.
+
 - **The Markdown-schema check no longer reports `0 file(s) conform`.** When no
   spec or contract document is in scope, for example when only operational
   Markdown outside the story tree changed, it now says that nothing was checked,
