@@ -28,6 +28,9 @@ describe("graph exploration rule", () => {
       "independent writable copies",
       "outside Git",
       "Exclude secret files",
+      "depends on the model you select, and QFAI does not evaluate it",
+      "Restoration is proven only on Windows x64, for CodeGraph on Node.js 24.16.0 and for Graphify on Python 3.12.13",
+      "runtime versions are unverified and use local generation",
     ])
       expect(text).toContain(clause);
     for (const entry of [
@@ -36,6 +39,31 @@ describe("graph exploration rule", () => {
       "packages/qfai/assets/init/root/AGENTS.md",
     ])
       expect(await readFile(path.join(ROOT, entry), "utf8")).toContain("graph-exploration.md");
+  });
+
+  it("opens with what to do while the graph tools are not ready", async () => {
+    const rule = await readFile(
+      path.join(ROOT, "packages/qfai/assets/init/root/.agents/rules/graph-exploration.md"),
+      "utf8",
+    );
+    const headings = rule.match(/^## .+$/gm) ?? [];
+    expect(headings[0]).toBe("## While the graph tools are not ready");
+    const opening = rule.split(/^## /m)[1]?.replace(/\s+/g, " ");
+    for (const clause of [
+      "reports an engine as not ready, use ordinary search",
+      "search protection is reported as unsupported",
+      "Say in your report that the graph was not used and why.",
+      "When a supported hook denies the search, use",
+    ])
+      expect(opening).toContain(clause);
+    for (const entry of [
+      "packages/qfai/assets/init/root/AGENTS.md",
+      "packages/qfai/tests/fixtures/shipped-entry/agents.txt",
+      "packages/qfai/src/cli/commands/init.ts",
+    ])
+      expect(await readFile(path.join(ROOT, entry), "utf8")).toContain(
+        "when the graph tools are ready, use the matching graph engine",
+      );
   });
 });
 
