@@ -13,6 +13,7 @@ import {
   getChangedFilesAgainstBase,
   gitStdout,
   normalizeRepoPath,
+  NotRegularFileError,
   readDecisionFilesAtRevision,
   readFileAtBase,
   readFileAtRevision,
@@ -314,7 +315,7 @@ export async function validateStoryTreeDrift(
   }
   // The edits a protected file may take without a change request, against the head given.
   const needsNoRequest = (file: string, head: string | null): boolean => {
-    const base = readFileAtBase(root, baseBranch, file);
+    const base = regularFileOrNull(() => readFileAtBase(root, baseBranch, file));
     if (base === null || head === null) return false;
     return (
       (file.endsWith("/03_Example.md") && onlyAppendsExamples(base, head)) ||
@@ -326,7 +327,13 @@ export async function validateStoryTreeDrift(
     if (!isProtected(file) || authorised.has(file)) continue;
     if (requestOnly.has(file)) continue;
     // The committed comparison reads the committed file, not the working tree.
-    if (needsNoRequest(file, readFileAtRevision(root, "HEAD", file))) continue;
+    if (
+      needsNoRequest(
+        file,
+        regularFileOrNull(() => readFileAtRevision(root, "HEAD", file)),
+      )
+    )
+      continue;
     issues.push(
       issue(
         "QFAI-DRIFT-001",
@@ -618,9 +625,10 @@ function yamlComments(content: string): string[] {
 /** The parsed value, or null when the parser reports any error or warning, such as an unknown tag. */
 function yamlValue(content: string, version: "1.1" | "1.2"): { value: unknown } | null {
   try {
-    const document = parseDocument(content, { version });
+    // BigInt keeps a large integer exact, and a Map keeps key types and complex keys.
+    const document = parseDocument(content, { version, intAsBigInt: true });
     if (document.errors.length > 0 || document.warnings.length > 0) return null;
-    return { value: document.toJS() };
+    return { value: document.toJS({ mapAsMap: true }) };
   } catch {
     // A document the parser cannot turn into a value has none to compare.
     return null;
@@ -632,26 +640,31 @@ const OPENS_BLOCK =
   /^(?:[ \t]*$| {4}|\t| {0,3}(?:#|>|<|\[[^\]]+\]:|[-*+](?:[ \t]|$)|\d{1,9}[.)](?:[ \t]|$)|=+[ \t]*$|-+[ \t]*$|([-*_])(?:[ \t]*\1){2,}[ \t]*$))|(?<!\\)\|/;
 
 /**
- * A block the next line never continues: a heading, HTML, a link reference definition, a rule or
- * a setext underline, an indented line or a table row.
+ * A block the next line never continues: a heading, a list item, a quote, HTML, a link reference
+ * definition, a rule or a setext underline, an indented line or a table row.
  */
 const CLOSED_BLOCK =
-  /^(?: {4}|\t| {0,3}(?:#|<|\[[^\]]+\]:|=+[ \t]*$|-+[ \t]*$|([-*_])(?:[ \t]*\1){2,}[ \t]*$))|(?<!\\)\|/;
+  /^(?: {4}|\t| {0,3}(?:#|>|<|[-*+](?:[ \t]|$)|\d{1,9}[.)](?:[ \t]|$)|\[[^\]]+\]:|=+[ \t]*$|-+[ \t]*$|([-*_])(?:[ \t]*\1){2,}[ \t]*$))|(?<!\\)\|/;
 
 const BLANK = /^[ \t]*$/;
+
+/** A comment or a `pre`, `script`, `style` or `textarea` element, which may hold blank lines. */
+const RAW_HTML = /^ {0,3}<(?:(!--)|(pre|script|style|textarea)(?=[\s>]|$))/i;
 
 /**
  * The Markdown as blocks, with only these differences removed: a leading byte order mark, line
  * endings, trailing spaces and tabs, table cell padding, and the line break and indentation
- * between two lines of one paragraph or list item. Case, punctuation, inner spacing and the order
- * of lines, rows and items are kept, a line break that is a hard break is kept, and a fenced
- * block, front matter or an HTML block up to the next blank line is kept line for line.
+ * between two lines of one paragraph. Case, punctuation, inner spacing and the order of lines,
+ * rows and items are kept, a line break that is a hard break is kept, and a fenced block, front
+ * matter, a comment or raw element up to its close, or another HTML block up to the next blank
+ * line, is kept line for line.
  */
 function markdownBlocks(content: string): string[] {
   const text = content.charCodeAt(0) === 0xfeff ? content.slice(1) : content;
   const blocks: string[] = [];
   const lines = text.replace(/\r\n/g, "\n").split("\n");
-  // Front matter closes on its own `---` line, a fence on a fence of its kind at least as long.
+  // Front matter closes on its own `---` line, a fence on a fence of its kind at least as long,
+  // and a comment or raw element on the line holding its close.
   let closer: RegExp | null = /^---[ \t]*$/.test(lines[0] ?? "") ? /^---[ \t]*$/ : null;
   let html = false;
   let continues = false;
@@ -674,6 +687,14 @@ function markdownBlocks(content: string): string[] {
       continues = false;
       continue;
     }
+    const verbatim = RAW_HTML.exec(raw);
+    if (verbatim) {
+      blocks.push(raw);
+      const closing = verbatim[1] ? /-->/ : new RegExp(`</${verbatim[2] ?? ""}>`, "i");
+      if (!closing.test(raw.slice(verbatim[0].length))) closer = closing;
+      continues = false;
+      continue;
+    }
     if (/^ {0,3}</.test(raw)) {
       blocks.push(raw);
       html = true;
@@ -690,6 +711,16 @@ function markdownBlocks(content: string): string[] {
     hardBreak = / {2}$|\\$/.test(raw);
   }
   return blocks;
+}
+
+/** A symlink or a submodule at the path has no text to compare, so it reads as a change. */
+function regularFileOrNull(read: () => string | null): string | null {
+  try {
+    return read();
+  } catch (error) {
+    if (error instanceof NotRegularFileError) return null;
+    throw error;
+  }
 }
 
 /** The file in the working tree, or null when it is missing. */

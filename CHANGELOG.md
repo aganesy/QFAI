@@ -455,7 +455,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   error or warning to deep-equal values under YAML 1.2 and 1.1 and keep the same
   comments, such as a plain scalar rewritten as a folded block scalar, or a
   Markdown file that differs only in line endings, trailing whitespace, table
-  cell padding or the line breaks inside one paragraph or list item. A change of
+  cell padding or the line breaks inside one paragraph. A change of
   case, punctuation, spacing or order, a hard line break, a changed YAML comment
   such as the contract ID, a line inside a fenced block such as a Gherkin step,
   front matter or an HTML block, or a YAML side that does not parse cleanly
