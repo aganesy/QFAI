@@ -31,6 +31,7 @@ describe("story-tree decision records replace the per-spec delta", () => {
       expect(template).not.toContain("Owner | Due");
       expect(template).toContain("set `DONE (by DEC-NNNN)`, naming that");
       expect(template).toContain("set `SUPERSEDED (by DEC-NNNN)` and append a new row");
+      expect(template).toContain("warns on a plain DONE, because it names no decision");
     });
   }
 });

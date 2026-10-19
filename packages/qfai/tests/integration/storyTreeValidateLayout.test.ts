@@ -217,7 +217,7 @@ describe("story-tree layout dispatch", () => {
       `${specs}/open-questions.md`,
       table(
         "Open Questions",
-        "| OQ-0001 | Q | A | DONE |\n| OQ-0002 | Q | A | DONE (by DEC-0001) |\n| OQ-0003 | Q | A | SUPERSEDED (by DEC-0001) |\n| OQ-0004 | Q | A | TODO |\n| OQ-0005 | Q | A | DEFERRED |\n",
+        "| OQ-0001 | Q | A | DONE |\n| OQ-0002 | Q | A | DONE (by DEC-0001) |\n| OQ-0003 | Q | A | SUPERSEDED (by DEC-0001) |\n| OQ-0004 | Q | A | TODO |\n| OQ-0005 | Q | A | WIP |\n| OQ-0006 | Q | A | DEFERRED |\n",
       ),
     );
 

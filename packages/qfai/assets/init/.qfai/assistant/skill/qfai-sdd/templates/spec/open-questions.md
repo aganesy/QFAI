@@ -7,7 +7,8 @@ When a decision row answers the question, set `DONE (by DEC-NNNN)`, naming that
 row. When a decision makes what the row states wrong before the question is
 answered, set `SUPERSEDED (by DEC-NNNN)` and append a new row for the question
 that remains. A reader of the row then finds the decision that overrides its
-text. Validation reports a named decision that no decisions row declares.
+text. Validation reports a named decision that no decisions row declares,
+and warns on a plain DONE, because it names no decision.
 -->
 
 # Open Questions
