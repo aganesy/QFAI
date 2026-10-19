@@ -155,6 +155,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   stopped on other conflicts.
   Fixes #3778.
 
+- **A discussion pack that keeps the current DESIGN.md can skip the design
+  research.** The classification block of `01_Context.md` takes
+  `design_direction: inherit`. A UI-bearing pack that declares it owes no Trend
+  Scan, no minimum count of competitive or catalogue references, and no
+  `uiux/40_screen_contracts.md` or `uiux/50_review_input_bundle.md`, so
+  `QFAI-TREND-004`, `QFAI-RESEARCH-013` and `QFAI-THREELAYER-002` for those two
+  files no longer fire on it; a reference it registers is still checked. The new
+  `QFAI-CLASSIFICATION-011` refuses the declaration when the pack's screen
+  contracts name a `screen_id` that matches no `screens[].id` of the project's UI
+  contracts, or when its Design Direction records an `adopted_theme` or
+  `brand_accent`, and rejects a `design_direction` other than `new` or `inherit`. Fixes #3829.
+
 - **Each hook reminder is one or two sentences.** Every full message in
   `.agents/rules/reminders.json` now names its rule or skill and the action or
   question the agent applies there, and leaves the rest to that file, so a long

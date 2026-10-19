@@ -50,7 +50,9 @@ is in place.
    a `visual.*` token tree for one. The design direction belongs in this session
    because `discussion-pack` records it after the pack is authored, and a
    user-owned visual choice asked there is asked after the thing it governs is
-   written.
+   written. Skip the design-DNA questions when the classification declares
+   `design_direction: inherit`, under the conditions of
+   `.qfai/assistant/skill/qfai-discussion/references/ui-bearing-playbook.md#inheriting-the-current-designmd`.
 4. The research findings are inputs to the session's tree, not a later fill-in:
    a decision settled before the research that bears on it is settled against
    evidence nobody had, and the method reads a fact rather than asking about it.

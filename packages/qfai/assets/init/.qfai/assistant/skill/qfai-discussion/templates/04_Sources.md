@@ -94,6 +94,8 @@ classification or an explicit user decision.
 
 ## Trend Scan
 
+A pack whose `01_Context.md` declares `design_direction: inherit` owes no Trend Scan.
+
 ### user expectation / market norm
 
 #### Entry 1
@@ -235,7 +237,9 @@ registered is held to all three fields either way.
 UI-bearing packs must register at least `uiux.competitive_refs_min` complete
 references (default: 3). Three blocks are pre-seeded below; copy another
 `### Reference:` block for each reference beyond that, and delete any block you
-do not use only if the remaining count still meets the minimum.
+do not use only if the remaining count still meets the minimum. A pack that
+declares `design_direction: inherit` owes no count; a reference it registers is
+still complete.
 
 Each `reference` is a resolvable URL, repository path, or `SRC-ID`. Use a
 competitor to identify what this product should differ from. State adopted and
