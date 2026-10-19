@@ -341,10 +341,12 @@ function validateRuleContractNumbers(model: StoryTreeModel): Issue[] {
  */
 const CITED_RECORD_ID = /(?<![A-Za-z0-9_-])((?:DEC|OQ)-\d{4})(?![0-9-])/g;
 const SUPERSEDED_BY = /^(?:PARTLY )?SUPERSEDED \(by (DEC-\d{4})\)$/;
+const DECIDED_BY = /^(?:DONE|SUPERSEDED) \(by (DEC-\d{4})\)$/;
 
 /**
- * Every decision or open question a contract rule cites, and every decision a
- * superseded row names as its successor, is declared by a row.
+ * Every decision or open question a contract rule cites, every decision a
+ * superseded row names as its successor, and every decision an open question's
+ * Status names, is declared by a row.
  */
 function validateRecordCitations(model: StoryTreeModel): Issue[] {
   const decisions = new Set((model.decisions?.rows ?? []).map(({ id }) => id));
@@ -376,6 +378,19 @@ function validateRecordCitations(model: StoryTreeModel): Issue[] {
         `${row.id} is superseded by ${successor}, which no decisions row declares, in ${decisionFile}`,
         decisionFile,
         [row.id, successor],
+      ),
+    );
+  }
+  const questionFile = model.openQuestionsFile ?? "";
+  for (const row of model.openQuestions?.rows ?? []) {
+    const decision = DECIDED_BY.exec(row.status)?.[1];
+    if (decision === undefined || decisions.has(decision)) continue;
+    issues.push(
+      finding(
+        "QFAI-STORY-003",
+        `${row.id} names ${decision} in its Status, which no decisions row declares, in ${questionFile}`,
+        questionFile,
+        [row.id, decision],
       ),
     );
   }

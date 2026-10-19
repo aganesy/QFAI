@@ -14,10 +14,10 @@ Feature: Decision and open-question table validation
 
   # AC-0001-0053-02
   Scenario: A Status outside the vocabulary is reported
-    Given the story tree, and a row whose Status is outside its table's vocabulary — TODO, WIP or DONE in both tables, plus `SUPERSEDED (by DEC-NNNN)`, `PARTLY SUPERSEDED (by DEC-NNNN)` and REJECTED in `decisions.md`, and DEFERRED in `open-questions.md`
+    Given the story tree, and a row whose Status is outside its table's vocabulary — TODO, WIP or DONE in both tables, plus `SUPERSEDED (by DEC-NNNN)`, `PARTLY SUPERSEDED (by DEC-NNNN)` and REJECTED in `decisions.md`, and DEFERRED, `DONE (by DEC-NNNN)` and `SUPERSEDED (by DEC-NNNN)` in `open-questions.md`
     When `qfai validate --profile sdd` runs
     Then a `QFAI-STORY-003` error names the file and row ID and retains `has an invalid Status`, followed by a quoted preview of the value and that table's allowed statuses
-    And each superseding DEC reference has exactly four digits, with successor existence checked separately
+    And each DEC reference in a Status has exactly four digits, with the named decision's existence checked separately
     And the display preview replaces each consecutive run of Unicode Cc, Cf, Zl or Zp characters with one space and trims the result
     And the preview keeps the first 40 Unicode code points and adds ASCII `...` only when the sanitized, trimmed value is longer
     And other ordinary spaces, parsed rows, Status values, parsing, accepted statuses, severity, file and row identity, and exit behavior remain unchanged
@@ -44,7 +44,7 @@ Feature: Decision and open-question table validation
 
   # AC-0001-0053-06
   Scenario: A cited decision or question that no row declares is reported
-    Given the story tree, and a contract rule whose statement cites a `DEC-NNNN` or `OQ-NNNN` that no row declares, or a `decisions.md` row at `SUPERSEDED (by DEC-NNNN)` whose successor no row declares
+    Given the story tree, and a contract rule whose statement cites a `DEC-NNNN` or `OQ-NNNN` that no row declares, or a `decisions.md` row at `SUPERSEDED (by DEC-NNNN)` whose successor no row declares, or an `open-questions.md` row at `DONE (by DEC-NNNN)` or `SUPERSEDED (by DEC-NNNN)` naming a decision no row declares
     When `qfai validate --profile sdd` runs
     Then `QFAI-STORY-003` is raised at error naming the file, the citing rule or row, and the missing ID
   # AC-0001-0053-07
