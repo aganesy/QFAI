@@ -20,10 +20,14 @@ function packagedPath(name: string): string {
   return path.join(getInitAssetsDir(), "root", ".github", "workflows", name);
 }
 
-async function project(installed: Record<string, string>): Promise<string> {
+async function project(installed: Record<string, string>, config = ""): Promise<string> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-workflow-drift-"));
   roots.push(root);
-  await writeFile(path.join(root, "qfai.config.yaml"), "paths:\n  specsDir: .qfai/spec\n", "utf-8");
+  await writeFile(
+    path.join(root, "qfai.config.yaml"),
+    `paths:\n  specsDir: .qfai/spec\n${config}`,
+    "utf-8",
+  );
   await mkdir(path.join(root, ".github", "workflows"), { recursive: true });
   for (const [name, text] of Object.entries(installed)) {
     await writeFile(path.join(root, ".github", "workflows", name), text, "utf-8");
@@ -37,6 +41,13 @@ async function driftFindings(
   const data = await createDoctorData({ startDir: root, rootExplicit: true });
   return data.checks.filter((check) => check.id.startsWith("workflows.drift"));
 }
+
+async function configLoadMessage(root: string): Promise<string | undefined> {
+  const data = await createDoctorData({ startDir: root, rootExplicit: true });
+  return data.checks.find((check) => check.id === "config.load")?.message;
+}
+
+const SETUP_NODE = /uses: actions\/setup-node@([^\s#]+)/;
 
 describe("qfai doctor reports a shipped workflow that differs from the shipped text", () => {
   // QFAI:EX-0003-0011-25
@@ -152,5 +163,99 @@ describe("qfai doctor reports a shipped workflow that differs from the shipped t
     });
 
     expect(await driftFindings(root)).toEqual([]);
+  });
+
+  // QFAI:EX-0003-0011-32
+  it("names a pinned action whose version differs, with both versions", async () => {
+    // QFAI:AC-0003-0011-14
+    const shipped = await readFile(packagedPath("qfai-tests.yml"), "utf-8");
+    const pinned = SETUP_NODE.exec(shipped)?.[1];
+    expect(pinned).toBeDefined();
+    const root = await project({
+      "qfai-tests.yml": shipped.replace(SETUP_NODE, "uses: actions/setup-node@main"),
+    });
+
+    const [found] = await driftFindings(root);
+
+    expect(found?.message).toContain(
+      `; pinned actions that differ: actions/setup-node (installed main, shipped ${pinned ?? ""})`,
+    );
+  });
+
+  // QFAI:EX-0003-0011-32
+  it("shows the version comment beside a pin and a bare SHA as it is", async () => {
+    // QFAI:AC-0003-0011-14
+    const shipped = await readFile(packagedPath("qfai-tests.yml"), "utf-8");
+    const pinned = SETUP_NODE.exec(shipped)?.[1] ?? "";
+    const root = await project({
+      "qfai-tests.yml": shipped.replace(
+        SETUP_NODE,
+        "uses: actions/setup-node@0123456789abcdef0123456789abcdef01234567 # v4.1.0",
+      ),
+    });
+
+    const [found] = await driftFindings(root);
+
+    expect(found?.message).toContain(
+      `actions/setup-node (installed 0123456789abcdef0123456789abcdef01234567 (v4.1.0), shipped ${pinned})`,
+    );
+  });
+
+  // QFAI:EX-0003-0011-32
+  it("names no pinned action when every pin matches", async () => {
+    // QFAI:AC-0003-0011-14
+    const shipped = await readFile(packagedPath("qfai-validate.yml"), "utf-8");
+    const root = await project({ "qfai-validate.yml": `${shipped}# a local edit\n` });
+
+    const [found] = await driftFindings(root);
+
+    expect(found?.message).not.toContain("pinned actions that differ");
+  });
+});
+
+describe("qfai doctor reads an accepted drift from qfai.config.yaml", () => {
+  // QFAI:EX-0003-0011-33
+  it("reports an accepted workflow as info with its reason and still warns for the others", async () => {
+    // QFAI:AC-0003-0011-15
+    const root = await project(
+      { "qfai-docs.yml": "name: ours\n", "qfai-tests.yml": "name: edited\n" },
+      "workflow:\n  acceptedDrift:\n    - file: qfai-docs.yml\n      reason: We run our own docs lane.\n",
+    );
+
+    const found = await driftFindings(root);
+
+    expect(found.map((check) => [check.id, check.severity])).toEqual([
+      ["workflows.drift.qfai-docs", "info"],
+      ["workflows.drift.qfai-tests", "warning"],
+    ]);
+    expect(found[0]?.message).toContain(".github/workflows/qfai-docs.yml");
+    expect(found[0]?.message).toContain("workflow.acceptedDrift");
+    expect(found[0]?.message).toContain("We run our own docs lane.");
+    expect(await configLoadMessage(root)).toBe("Loaded and normalized with 0 issues");
+  });
+
+  // QFAI:EX-0003-0011-34
+  it("rejects an entry with no reason, an empty reason or a name outside the shipped set, and accepts nothing", async () => {
+    // QFAI:AC-0003-0011-15
+    for (const entry of [
+      "    - file: qfai-docs.yml\n",
+      '    - file: qfai-docs.yml\n      reason: "  "\n',
+      "    - file: qfai-orphan.yml\n      reason: Ours.\n",
+      "    - file: qfai-docs.yml\n      reason: Ours.\n    - file: qfai-docs.yml\n      reason: Again.\n",
+      "    - qfai-docs.yml\n",
+    ]) {
+      const root = await project(
+        { "qfai-docs.yml": "name: ours\n" },
+        `workflow:\n  acceptedDrift:\n${entry}`,
+      );
+
+      const found = await driftFindings(root);
+
+      expect(
+        found.map((check) => check.severity),
+        entry,
+      ).toEqual(["warning"]);
+      expect(await configLoadMessage(root), entry).toContain("workflow.acceptedDrift");
+    }
   });
 });
