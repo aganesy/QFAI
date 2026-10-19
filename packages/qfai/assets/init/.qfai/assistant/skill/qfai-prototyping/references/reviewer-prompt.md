@@ -37,6 +37,9 @@ transition-pass percentages as a substitute for the qualitative review.
   Open each route in your own Playwright session and exercise its declared
   primary tasks. Record `sessionStatus` and `retryCount` in the per-screen
   payload according to the closed per-screen payload schema.
+  In a `restyle` iteration, the iteration page lists the live routes in
+  scope: open each listed route in the running app and review it there.
+  The list page is not a screen, and the screens are the project's own.
 - A screenshot or HTML snapshot, only when one was taken. Name any mandatory
   input you did not receive in a finding.
 - The layout anti-pattern registry the package ships.

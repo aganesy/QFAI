@@ -30,7 +30,7 @@ export type HandoffWriterPair = {
   readonly writerToken: string;
   /**
    * When true, the writer must also name every field the schema lists in
-   * `HANDOFF_MINIMUM_FIELDS`, each as a code span. A prose writer has no
+   * `HANDOFF_MINIMUM_FIELDS` and `HANDOFF_RESTYLE_FIELDS`, each as a code span. A prose writer has no
    * type to import, so its field list is what has to move with the schema.
    */
   readonly namesSchemaFields: boolean;

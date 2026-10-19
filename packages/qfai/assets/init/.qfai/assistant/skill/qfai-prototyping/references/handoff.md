@@ -5,6 +5,8 @@
 `.qfai/prototype/iter-<final>/index.html` — the iteration the user
 confirmed. It is one self-contained file with one client-side route per
 declared screen, written by the generator.
+A `restyle` loop has no such file: its iterations restyled the live app
+in place, and its handoff is the short form under Restyle handoff below.
 
 Root `DESIGN.md` remains the brand SSOT through handoff.
 
@@ -74,6 +76,33 @@ them consistently with each other
 same checkout. `npx qfai validate --profile saas-package` requires it to be present
 and to conform, and reports `QFAI-SAAS-002` naming the file
 otherwise; no other command reads it.
+
+## Restyle handoff
+
+When `.qfai/prototype/progress.md` records `iterationKind` `restyle`, every
+screen is one the project already runs, so there is no prototype to copy and no region to
+procure. No `final/index.html` is written, and
+`final/handoff.json` takes this short form in place of `finalArtifact` and `procurement`:
+
+```json
+{
+  "iterationKind": "restyle",
+  "liveRoutes": ["<route the confirmed iteration listed>"],
+  "entryPoints": {
+    "stylesheet": ["<repository-relative path>"],
+    "motion": ["<repository-relative path>"]
+  },
+  "implementationNotes": "Plain prose ..."
+}
+```
+
+- `liveRoutes` names every live route the confirmed iteration listed.
+- `entryPoints` names the files the restyle changed: the stylesheet entry
+  points and the motion entry points, each list empty when the restyle
+  changed none.
+- `implementationNotes` is as above.
+- `npx qfai validate --profile saas-package` reports a `restyle` record
+  without a non-empty `liveRoutes` or without both `entryPoints` lists.
 
 ## Checking an implementation's tokens
 

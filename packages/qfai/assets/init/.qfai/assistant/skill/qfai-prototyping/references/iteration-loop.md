@@ -41,6 +41,13 @@ The latest iteration is always the one put to the user. Temporary regressions
 are allowed; a leap backwards is a normal path to a breakthrough on the IA and
 flow axes.
 
+## Restyle iterations
+
+A loop whose `progress.md` records `iterationKind` `restyle` restyles the
+live app in place. Each `iter-NN/index.html` lists the live routes in scope,
+the reviewer drives those routes in the running app, and the handoff is a
+short form that names the routes and the stylesheet and motion entry points.
+
 ## Surface profile
 
 `surface` (web/mobile/desktop/mixed) only affects how the reviewer opens the

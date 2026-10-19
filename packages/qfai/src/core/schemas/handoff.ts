@@ -12,7 +12,8 @@
  *   - productScope?
  * All fields are optional; `additionalProperties: true` so skills MAY
  * attach per-skill data under custom keys without violating the
- * contract.
+ * contract. A record whose `iterationKind` is `restyle` must also carry
+ * the restyle short form's `liveRoutes` and `entryPoints`.
  */
 
 export const HANDOFF_MINIMUM_FIELDS = [
@@ -25,6 +26,13 @@ export const HANDOFF_MINIMUM_FIELDS = [
 ] as const;
 
 export type HandoffMinimumField = (typeof HANDOFF_MINIMUM_FIELDS)[number];
+
+/**
+ * The fields of the short form a prototyping handoff takes when the loop
+ * restyled the live app in place (`iterationKind: "restyle"`): the live
+ * routes reviewed, and the stylesheet and motion entry points changed.
+ */
+export const HANDOFF_RESTYLE_FIELDS = ["iterationKind", "liveRoutes", "entryPoints"] as const;
 
 /**
  * Canonical (typed) view over the minimum field set. Extra keys are
@@ -83,7 +91,35 @@ export function validateHandoff(input: unknown): HandoffValidationIssue[] {
       });
     }
   }
+  if (obj.iterationKind === "restyle") issues.push(...restyleIssues(obj));
   return issues;
+}
+
+/** A restyle record names at least one live route and both lists of entry points. */
+function restyleIssues(obj: Record<string, unknown>): HandoffValidationIssue[] {
+  const issues: HandoffValidationIssue[] = [];
+  const routes = obj.liveRoutes;
+  if (!isStringList(routes) || routes.length === 0) {
+    issues.push({
+      code: "HANDOFF-SCHEMA-FIELD-TYPE",
+      message: 'A restyle handoff needs "liveRoutes", a non-empty list of route strings.',
+      field: "liveRoutes",
+    });
+  }
+  const entry = obj.entryPoints;
+  if (!isRecord(entry) || !isStringList(entry.stylesheet) || !isStringList(entry.motion)) {
+    issues.push({
+      code: "HANDOFF-SCHEMA-FIELD-TYPE",
+      message:
+        'A restyle handoff needs "entryPoints" with "stylesheet" and "motion" lists of paths.',
+      field: "entryPoints",
+    });
+  }
+  return issues;
+}
+
+function isStringList(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
 }
 
 /**

@@ -95,7 +95,7 @@ describe.each(TREES)("%s", (tree) => {
     const handoff = flat(await read(tree, "step/prototyping-handoff/STEP.md"));
 
     expect(loop).toContain(
-      "Record `iterationKind` in `progress.md` with them: `prototype`, the default, or `restyle` when the request changes only the styles and motion of screens the project already runs",
+      "Record `iterationKind` in `progress.md` with those fields: `prototype`, the default, or `restyle` when the request changes only the styles and motion of screens the project already runs",
     );
     expect(loop).toContain(
       "writes `iter-NN/index.html` as a list of the live routes in scope, one link per declared screen",

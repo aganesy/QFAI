@@ -22,7 +22,8 @@ answer. No command, score or check decides that the loop is done.
 
 ## Writes
 
-- `.qfai/prototype/iter-NN/index.html` (the generator).
+- `.qfai/prototype/iter-NN/index.html` (the generator), and in a `restyle`
+  loop the project's stylesheet and motion files it restyles.
 - `.qfai/prototype/iter-NN/review.json` and
   `iter-NN/<ui-contract-id>/<screen>.review.json` (the reviewer).
 - `.qfai/prototype/progress.md` (the orchestrator).
@@ -64,6 +65,17 @@ Record `targetIterations`, `evaluationAxesSource`, `delegationMap` and
 the loop does not stop at it. Report an
 assignment that gives generation and review to one identity before either
 runs.
+
+## Iteration kind
+
+Record `iterationKind` in `progress.md` with those fields: `prototype`, the default,
+or `restyle` when the request changes only the styles and motion of screens
+the project already runs, keeping their screens, fields and behaviour. A
+`restyle` iteration is the live app restyled in place. The generator edits
+the project's stylesheet and motion entry points and writes
+`iter-NN/index.html` as a list of the live routes in scope, one link per
+declared screen. The build owner also runs the project's app, so each link
+answers, and the reviewer drives those routes directly.
 
 ## Procedure
 
