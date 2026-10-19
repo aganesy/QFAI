@@ -3,6 +3,7 @@
 // QFAI:AC-0001-0222-03
 // QFAI:AC-0001-0222-04
 // QFAI:AC-0001-0222-05
+// QFAI:AC-0001-0222-08
 // QFAI:AC-0001-0210-05
 
 import { mkdir, rm, writeFile } from "node:fs/promises";
@@ -389,4 +390,61 @@ it("A relative --in path is read from the project named by --root", async () => 
   const planned = workflow(elsewhere, ["plan", "--root", root, "--in", file]);
 
   expect([planned.status, field(planned.json, "route")]).toEqual([0, "add-feature"]);
+});
+
+// QFAI:EX-0001-0222-16
+it("--order plans an operation on finished work with no extraction file", async () => {
+  const root = await minimalProject();
+  const before = await listTree(root);
+  const ordered = workflow(root, ["plan", "--order"]);
+  const fromStdin = workflow(
+    root,
+    ["plan", "--in", "-"],
+    JSON.stringify(extraction({ intent: "order", artifacts: [] })),
+  );
+  const combined = [
+    workflow(root, ["plan", "--order", "--in", "-"], "{}"),
+    workflow(root, ["plan", "--order", "--route", "run-operation"]),
+  ];
+  const twice = workflow(root, ["plan", "--order", "--order"]);
+  const stray = workflow(root, ["plan", "--order", "x"]);
+
+  expect({
+    status: ordered.status,
+    head: [
+      field(ordered.json, "route"),
+      field(ordered.json, "family"),
+      field(ordered.json, "rule"),
+    ],
+    step: field(ordered.json, "stages.0.steps.0.name"),
+    same: ordered.stdout === fromStdin.stdout,
+    unchanged: JSON.stringify(await listTree(root)) === JSON.stringify(before),
+    combined: combined.map((run) => [run.status, field(run.json, "reasons")]),
+    twice: [twice.status, field(twice.json, "reasons")],
+    stray: [stray.status, field(stray.json, "reasons")],
+  }).toEqual({
+    status: 0,
+    head: ["run-operation", "upkeep", 15],
+    step: "triage-operate",
+    same: true,
+    unchanged: true,
+    combined: [
+      [
+        2,
+        [
+          { reason: "invalid-input", subject: "--in" },
+          { reason: "invalid-input", subject: "--order" },
+        ],
+      ],
+      [
+        2,
+        [
+          { reason: "invalid-input", subject: "--route" },
+          { reason: "invalid-input", subject: "--order" },
+        ],
+      ],
+    ],
+    twice: [2, [{ reason: "invalid-input", subject: "--order" }]],
+    stray: [2, [{ reason: "invalid-input", subject: "x" }]],
+  });
 });

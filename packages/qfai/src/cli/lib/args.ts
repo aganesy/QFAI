@@ -99,6 +99,8 @@ export type ParsedArgs = {
     workflowRoute?: string;
     /** `--in <path|->` for `qfai workflow plan`: the extraction file, or `-` for stdin. */
     workflowIn?: string;
+    /** `--order` for `qfai workflow plan`: plan an operation on finished work with no extraction. */
+    workflowOrder?: boolean;
     help: boolean;
     /**
      * `--version` / `-V`: print the resolved tool version to stdout and
@@ -583,6 +585,16 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         break;
       }
+      case "--order":
+        if (command === "workflow") {
+          if (options.workflowOrder === true) {
+            markInvalid(`${refusedOption("--order")}: --order is given twice.`);
+          }
+          options.workflowOrder = true;
+        } else {
+          markInvalid(notValidHere("--order"));
+        }
+        break;
       case "--run-validate":
         if (command === "report") {
           options.reportRunValidate = true;
