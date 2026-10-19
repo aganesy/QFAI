@@ -146,6 +146,10 @@ Each intent below is followed by when to set it.
 - `procedure`: Operational instructions within existing policy: inputs, actions, commands, required values and order. Authoring them does not execute their actions.
 - `docs`: Explanatory text that is not normative, such as user documentation, comments, a README or an example, is wrong, missing or unclear. Normative text is a consistency intent.
 
+A changed default is `deprecation` when the default belongs to a published
+surface, such as a public API, a CLI flag or a configuration key, and
+`behaviour-change` when it is a deliberate change to how the product behaves.
+
 ### Operations
 
 - `flaky-test`: A named test or CI job fails and passes on the same code. A race users hit is `defect` with `intermittent`.

@@ -72,6 +72,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   now has one line saying to restart any running agent session. A dry run, and
   a run that changed none of those files, print no such line. Refs #3536.
 
+- **The `qfai-run` extraction guide separates a new default from a behaviour
+  change.** `deprecation` already covered a published surface given a new
+  default, so a changed default could read as either intent. The guide now says
+  a changed default is `deprecation` when it belongs to a published surface,
+  such as a public API, a CLI flag or a configuration key, and
+  `behaviour-change` when it is a deliberate change to how the product behaves.
+  Fixes #3801.
+
 - **The graph exploration rule states two limits of graph analysis.** It now
   says the quality of document answers depends on the model the operator
   selects and that QFAI does not evaluate it. It also names the runtimes
