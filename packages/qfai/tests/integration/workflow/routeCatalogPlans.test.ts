@@ -52,7 +52,7 @@ const CATALOG: [string, string][] = [
   ],
   [
     "decide-design",
-    "Stages in order — `discussion` (discussion): `discussion-research`, `discussion-interview`, `discussion-pack°`, `discussion-uiux°`, `discussion-oq`; `close` (triage): `triage-close`; decision points `discussion-interview`; release point none; branch points `triage-close`, `adopted` to `add-feature`, `prototype-feature` or `change-compatibility`",
+    "Stages in order — `discussion` (discussion): `discussion-research`, `discussion-interview`, `discussion-pack°`, `discussion-uiux°`, `discussion-oq`; `close` (triage): `triage-close`; decision points `discussion-interview`; release point none; branch points `triage-close`, `adopted` to `add-feature`, `prototype-feature`, `change-compatibility` or `retire-feature`",
   ],
   [
     "decompose-epic",
@@ -87,6 +87,10 @@ const CATALOG: [string, string][] = [
   [
     "change-compatibility",
     "Stages in order — `sdd` (sdd, then the specification review): `sdd-triage`, `sdd-contract`, `sdd-story`; `implement` (implement): `implement-scaffold`, `implement-tdd`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`; release point none; branch points none",
+  ],
+  [
+    "retire-feature",
+    "Stages in order — `spec` (sdd, then the specification review): `sdd-triage`, `sdd-story`, `sdd-contract°`; `remove` (implement): `implement-retire`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`; release point none; branch points none",
   ],
   [
     "refactor-code",
@@ -252,6 +256,7 @@ for (const [route, expected] of CATALOG) {
   // QFAI:EX-0001-0220-41
   // QFAI:EX-0001-0220-42
   // QFAI:EX-0001-0220-53
+  // QFAI:EX-0001-0220-54
   it(route, async () => {
     const plan = (await loadBuiltInPlans()).find((each) => each.route === route);
 

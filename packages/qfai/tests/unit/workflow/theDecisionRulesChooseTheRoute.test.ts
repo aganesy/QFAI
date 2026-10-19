@@ -371,6 +371,30 @@ it("A behaviour change prototypes only when the request asks to change the proto
   ).toEqual(["prototype-feature", "decide-design", "change-compatibility"]);
 });
 
+// QFAI:EX-0001-0211-56
+it("A behaviour change that removes a feature retires it, unless a choice is open", async () => {
+  expect([
+    await decided({ intent: "behaviour-change", qualifiers: ["removal-requested"] }),
+    await decided({
+      intent: "behaviour-change",
+      entryFlags: ["decision"],
+      qualifiers: ["removal-requested"],
+    }),
+    await decided({
+      intent: "behaviour-change",
+      qualifiers: ["prototype-requested", "removal-requested"],
+    }),
+    await decided({ intent: "deprecation", qualifiers: ["removal-requested"] }),
+    await decided({ intent: "unenforced", qualifiers: ["removal-requested"] }),
+  ]).toEqual([
+    ["retire-feature", 28],
+    ["decide-design", 28],
+    ["prototype-feature", 28],
+    ["change-compatibility", 28],
+    ["retire-mechanism", 19],
+  ]);
+});
+
 // QFAI:EX-0001-0211-42
 // QFAI:EX-0001-0211-43
 it("A settled behaviour change that asks to change the prototype applies its record, then prototypes", async () => {

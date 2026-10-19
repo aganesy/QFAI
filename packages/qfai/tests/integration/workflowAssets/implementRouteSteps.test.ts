@@ -188,6 +188,31 @@ describe("the steps the routes add to qfai-implement", () => {
     const benchmark = flat(await stepText("implement-benchmark"));
     expect(benchmark).toMatch(/a difference inside the measured spread is no difference/i);
   });
+
+  // QFAI:AC-0001-0220-04
+  // QFAI:EX-0001-0220-55
+  it("lets implement-retire retire a feature whose specification the route already rewrote, adding no test", async () => {
+    const retiring = flat(sectionOf(await stepText("implement-retire"), "## Retiring a feature"));
+    expect(retiring).toMatch(/in the `retire-feature` route/i);
+    expect(retiring).toMatch(
+      /the specification stage before this step already removed or rewrote/i,
+    );
+    expect(retiring).toMatch(
+      /when a contract rule still cites an example that stage removed, the step changes nothing: it returns `needs_repair`/i,
+    );
+    expect(retiring).toMatch(
+      /a test is deleted only when every example its example annotations name was removed in the specification stage's diff/i,
+    );
+    expect(retiring).toMatch(/lists each deleted test with the example IDs it was deleted for/i);
+    expect(retiring).toMatch(
+      /a test that annotates any example the specification keeps stays\. The step changes its assertions to what the rewritten specification states/i,
+    );
+    expect(retiring).toMatch(/moves its example annotation to the rewritten example/i);
+    expect(retiring).toMatch(
+      /a test that refers to the feature but annotates no removed example is not deleted\. The stage report lists it/i,
+    );
+    expect(retiring).toMatch(/no test is added, neither for the removal nor for the new wording/i);
+  });
 });
 
 describe("implement-diagnose", () => {
