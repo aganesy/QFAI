@@ -280,6 +280,13 @@ it("apply-settled moves to decide-design when sdd-triage reports outside-record"
   ]);
 });
 
+// QFAI:EX-0001-0215-18
+it("bump-dependency moves to apply-settled when implement-dep-bump reports a finding that names a contract", async () => {
+  expect(
+    destinations(await planned("bump-dependency"), "implement-dep-bump", "contract-finding"),
+  ).toEqual(["apply-settled"]);
+});
+
 // QFAI:EX-0001-0215-09
 it("decide-design moves an adopted proposal to prototype-feature when triage-close names it", async () => {
   expect(destinations(await planned("decide-design"), "triage-close", "adopted")).toContain(
