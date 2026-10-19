@@ -158,7 +158,8 @@ the smallest useful seam and a falsifiable assertion.
 
 Where `implement-diagnose` already wrote the failing test for the example, do
 not write another: annotate that test with the EX ID and run it to confirm it
-still fails. Where the Test entry is `CI only: <check name>`, keep that test's
+still fails. Where the Test entry is `CI only: <check name>`, or
+the user's instruction for this run delegates that gate to a named CI check, keep that test's
 `ci-deferred` Red and do not run it.
 
 While implementing, run only the selected test. The full suite, Lint,
@@ -190,8 +191,9 @@ ordinary success. Existing approved alternative RED routes remain available.
    `.qfai/assistant/skill/qfai-implement/references/red-admissibility.md` and
    `.qfai/assistant/skill/qfai-implement/references/red-not-observable.md`
    when existing behavior prevents an ordinary RED. Where the Test entry is
-   `CI only: <check name>`, run nothing locally: record Red, Green and
-   Refactor `ci-deferred`, as
+   `CI only: <check name>`, or the user's instruction for this run delegates that gate to a named CI check,
+   run nothing locally: record Red, Green and Refactor `ci-deferred`, quoting
+   that instruction, as
    `.qfai/assistant/skill/qfai-implement/references/red-admissibility.md#ci-only-test-gate`
    states.
 2. **Green:** Write the minimum production code that makes this test pass.
@@ -248,5 +250,6 @@ A failing or unrun gate cannot be reported as PASS.
 
 The step is done for an example when its RED, GREEN and Refactor results are
 observed and recorded, or recorded `ci-deferred` where the Test entry is
-`CI only: <check name>`. It is done for the flow when every example the
+`CI only: <check name>` or the user's instruction for this run delegates that gate to a named CI check.
+It is done for the flow when every example the
 selection listed is done.
