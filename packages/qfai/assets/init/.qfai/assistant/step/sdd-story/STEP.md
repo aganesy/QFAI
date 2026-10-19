@@ -31,6 +31,8 @@ Stage 3 of the story tree: stories and examples.
 - Each affected `user-story-NNNN-NNNN/` with exactly `01_User-story.md`,
   `02_Acceptance-Criteria.md`, and `03_Example.md`, from their paired templates.
   Do not create another document inside a story directory.
+- The `// QFAI:EX-NNNN-NNNN-NN` annotation line that maps an example to an
+  existing test, as procedure item 9 states, and nothing else in a test file.
 
 Write only what the user approved, as
 `.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#a-change-to-the-story-tree`
@@ -75,6 +77,13 @@ states.
    before finishing. List each hit in the stage report, with what it now
    says or why it stays. A hit in a contract is left to `sdd-contract`,
    which reports it.
+9. Where an existing assertion already proves an example this step added or
+   renumbered, add that example's `// QFAI:EX-NNNN-NNNN-NN` line to the test's
+   annotation lines, directly before its `it(`, and replace the old ID of a
+   renumbered example. This is specification metadata, not a test repair:
+   change no assertion body, add or remove no case, and keep the case count.
+   List each annotated test in the stage report. An example no existing
+   assertion proves stays unannotated for the implementation stage.
 
 ## Passes when
 

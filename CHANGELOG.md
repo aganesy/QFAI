@@ -53,6 +53,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   extraction.
   Fixes #3498.
 
+- **`sdd-story` annotates an existing test with the example it proves.** Where
+  an existing assertion already proves an example the step added or
+  renumbered, `sdd-story` now adds that example's `// QFAI:EX-…` line before the
+  test and changes nothing else: no assertion body, no case and no case count.
+  A `restate-records` run therefore no longer leaves the annotation without an
+  owner, and `implement-test-fix` keeps requiring that a repaired test annotate
+  the same IDs. Fixes #3757.
+
 - **A release change produced outside the run no longer needs its own pull
   request for the approval row.** When a release workflow or bot produces the
   release change, `qfai-run`, its stage points and `triage-close` record the
