@@ -555,7 +555,9 @@ describe("qfai-run", () => {
     expect(extract).toMatch(/neither needs a reference/i);
     expect(extract).toContain("qualifiers: [session-answerable]");
     expect(extract).toContain("`{ intent: order, artifacts: [] }`");
-    expect(extract).toContain("plan the operation with `--order` instead, which needs no file");
+    expect(extract).toContain(
+      "The session-run operation that deletes nothing, read above as `{ intent: order, artifacts: [] }`, goes to `npx qfai workflow plan --order` instead, with no file; an order read through `references/extraction.md` keeps `--in`.",
+    );
     expect(extract).toMatch(/read any other request as `references\/extraction\.md`/i);
     expect(extract).toMatch(/every other field is empty, with `confidence: high`/i);
     const full = (fields: Partial<WorkflowExtraction>) =>

@@ -19,7 +19,7 @@ are exact: an unknown key is refused.
 | `npx qfai workflow plan --in <file>`     | A request, with its extraction in a JSON file   |
 | `npx qfai workflow plan --in -`          | The same, with the extraction on standard input |
 | `npx qfai workflow plan --route <route>` | The candidate chosen, or a branch destination   |
-| `npx qfai workflow plan --order`         | An operation on finished work, with no file     |
+| `npx qfai workflow plan --order`         | An operation the session runs itself that deletes nothing, with no file |
 
 - Each call prints one JSON document and writes no file.
 - Exit 0 is a plan or candidates, 2 a refused input, and 1 an input file that

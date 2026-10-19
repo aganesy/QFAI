@@ -398,7 +398,7 @@ Commands:
   sdd renumber-decision --from <DEC-ID> --to <DEC-ID> --base <local-ref> [--apply]  Preview or apply a branch-added decision's renumbering
   atdd scaffold --story <US-ID> Generate one test skeleton per AC in a story
   atdd scaffold --flow <BF-ID>  Generate an E2E test skeleton for a flow
-  workflow plan                Print the route plan for a request extraction (--in <path|->) a route (--route <route>), or an operation on finished work (--order)
+  workflow plan                Print the route plan for a request extraction (--in <path|->), a route (--route <route>), or an operation on finished work (--order)
 
 Options:
   --root <path>   Target directory (for init, the output directory when --dir is absent)

@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { ORDER_EXTRACTION } from "../../core/workflow/extraction.js";
+import { orderExtraction } from "../../core/workflow/extraction.js";
 import { planOf, refusal, type PlanDocument } from "../../core/workflow/plan.js";
 import { EXIT_CODES } from "../lib/exitCodes.js";
 
@@ -64,7 +64,7 @@ async function readExtraction(root: string, inPath: string): Promise<Read> {
 // `npx qfai workflow plan`, given exactly one of `--in`, `--route` and `--order`.
 export async function runWorkflowPlan(options: WorkflowOptions): Promise<number> {
   if (options.order === true) {
-    return emitPlanDocument(await planOf(options.root, { extraction: ORDER_EXTRACTION }));
+    return emitPlanDocument(await planOf(options.root, { extraction: orderExtraction() }));
   }
   if (options.route !== undefined) {
     return emitPlanDocument(await planOf(options.root, { route: options.route }));

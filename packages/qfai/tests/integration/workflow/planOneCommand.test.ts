@@ -406,6 +406,8 @@ it("--order plans an operation on finished work with no extraction file", async 
     workflow(root, ["plan", "--order", "--in", "-"], "{}"),
     workflow(root, ["plan", "--order", "--route", "run-operation"]),
   ];
+  const twice = workflow(root, ["plan", "--order", "--order"]);
+  const stray = workflow(root, ["plan", "--order", "x"]);
 
   expect({
     status: ordered.status,
@@ -418,6 +420,8 @@ it("--order plans an operation on finished work with no extraction file", async 
     same: ordered.stdout === fromStdin.stdout,
     unchanged: JSON.stringify(await listTree(root)) === JSON.stringify(before),
     combined: combined.map((run) => [run.status, field(run.json, "reasons")]),
+    twice: [twice.status, field(twice.json, "reasons")],
+    stray: [stray.status, field(stray.json, "reasons")],
   }).toEqual({
     status: 0,
     head: ["run-operation", "upkeep", 15],
@@ -440,5 +444,7 @@ it("--order plans an operation on finished work with no extraction file", async 
         ],
       ],
     ],
+    twice: [2, [{ reason: "invalid-input", subject: "--order" }]],
+    stray: [2, [{ reason: "invalid-input", subject: "x" }]],
   });
 });
