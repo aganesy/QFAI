@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
 
-import { parse as parseYaml } from "yaml";
+import { Lexer, parseDocument } from "yaml";
 
 import type { QfaiConfig } from "../config.js";
 import { isEnoent } from "../fs/errno.js";
@@ -15,6 +15,7 @@ import {
   normalizeRepoPath,
   readDecisionFilesAtRevision,
   readFileAtBase,
+  readFileAtRevision,
   uncommittedContentPaths,
   type BaseComparison,
 } from "../gitChanges.js";
@@ -311,15 +312,21 @@ export async function validateStoryTreeDrift(
         requestOnly.add(file);
     }
   }
-  // The edits a protected file may take without a change request.
-  const needsNoRequest = async (file: string): Promise<boolean> =>
-    (file.endsWith("/03_Example.md") && (await onlyAppendsExamples(root, baseBranch, file))) ||
-    (file.startsWith(`${contracts}/`) && (await onlyCitesExamples(root, baseBranch, file))) ||
-    (await unchangedContent(root, baseBranch, file));
+  // The edits a protected file may take without a change request, against the head given.
+  const needsNoRequest = (file: string, head: string | null): boolean => {
+    const base = readFileAtBase(root, baseBranch, file);
+    if (base === null || head === null) return false;
+    return (
+      (file.endsWith("/03_Example.md") && onlyAppendsExamples(base, head)) ||
+      (file.startsWith(`${contracts}/`) && onlyCitesExamples(base, head)) ||
+      unchangedContent(file, base, head)
+    );
+  };
   for (const file of changed) {
     if (!isProtected(file) || authorised.has(file)) continue;
     if (requestOnly.has(file)) continue;
-    if (await needsNoRequest(file)) continue;
+    // The committed comparison reads the committed file, not the working tree.
+    if (needsNoRequest(file, readFileAtRevision(root, "HEAD", file))) continue;
     issues.push(
       issue(
         "QFAI-DRIFT-001",
@@ -345,7 +352,7 @@ export async function validateStoryTreeDrift(
     // The edits a commit would pass without a change request pass uncommitted too.
     const uncommitted: string[] = [];
     for (const file of working) {
-      if (!(await needsNoRequest(file))) uncommitted.push(file);
+      if (!needsNoRequest(file, await readWorkingFile(root, file))) uncommitted.push(file);
     }
     if (uncommitted.length > 0) issues.push(uncommittedNotCompared(uncommitted));
   }
@@ -524,16 +531,10 @@ const EXAMPLE_ROW = /^\|\s*EX-\d{4}-\d{4}-\d{2}\s*\|/;
  * Whether the file differs from its base only by appended example rows. Table padding is
  * ignored, because a wider appended row makes the formatter re-pad every row.
  */
-async function onlyAppendsExamples(
-  root: string,
-  baseBranch: string,
-  file: string,
-): Promise<boolean> {
-  const base = readFileAtBase(root, baseBranch, file);
-  if (base === null) return false;
+function onlyAppendsExamples(base: string, head: string): boolean {
   const baseLines = unpadded(base);
   const kept = new Set(baseLines);
-  const headLines = unpadded(await readSafePath(path.join(root, file)));
+  const headLines = unpadded(head);
   const remaining = headLines.filter((line) => kept.has(line) || !EXAMPLE_ROW.test(line));
   return remaining.join("\n") === baseLines.join("\n");
 }
@@ -544,11 +545,9 @@ const EXAMPLE_ID = /^EX-\d{4}-\d{4}-\d{2}$/;
  * Whether the contract differs from its base only by EX IDs added to the Examples cell, the
  * last cell, of business-rule rows it already holds. Table padding is ignored.
  */
-async function onlyCitesExamples(root: string, baseBranch: string, file: string): Promise<boolean> {
-  const base = readFileAtBase(root, baseBranch, file);
-  if (base === null) return false;
+function onlyCitesExamples(base: string, head: string): boolean {
   const baseLines = unpadded(base);
-  const headLines = unpadded(await readSafePath(path.join(root, file)));
+  const headLines = unpadded(head);
   if (baseLines.length !== headLines.length) return false;
   return baseLines.every(
     (line, index) => line === headLines[index] || onlyAddsExampleIds(line, headLines[index] ?? ""),
@@ -582,55 +581,79 @@ function unpadded(content: string): string[] {
 function unpaddedRow(line: string): string {
   return line
     .split(/(?<!\\)\|/)
-    .map((cell) => cell.trim().replace(/^(:?)-{3,}(:?)$/, "$1---$2"))
+    .map((cell) => cell.replace(/^[ \t]+|[ \t]+$/g, "").replace(/^(:?)-{3,}(:?)$/, "$1---$2"))
     .join("|");
 }
 
 /**
  * Whether the file reads the same as at the base once differences that cannot change its meaning
- * are set aside: a YAML file whose two sides both parse to deep-equal values, or a Markdown file
- * with the same blocks. Any other file, a side that is missing, or a side that does not parse, is
- * a change.
+ * are set aside: a YAML file whose two sides both parse cleanly to deep-equal values and hold the
+ * same comments, or a Markdown file with the same blocks. Any other file is a change.
  */
-async function unchangedContent(root: string, baseBranch: string, file: string): Promise<boolean> {
-  const isYaml = /\.ya?ml$/i.test(file);
-  if (!isYaml && !/\.md$/i.test(file)) return false;
-  const base = readFileAtBase(root, baseBranch, file);
-  if (base === null) return false;
-  let head: string;
+function unchangedContent(file: string, base: string, head: string): boolean {
+  if (/\.ya?ml$/i.test(file)) return sameYaml(base, head);
+  if (/\.md$/i.test(file)) return isDeepStrictEqual(markdownBlocks(base), markdownBlocks(head));
+  return false;
+}
+
+/**
+ * Comments carry identity, such as a contract's ID comment, so they must match in order. The
+ * values must match read as YAML 1.2 and as YAML 1.1, where `017` and `yes` read differently.
+ */
+function sameYaml(base: string, head: string): boolean {
+  if (!isDeepStrictEqual(yamlComments(base), yamlComments(head))) return false;
+  return (["1.2", "1.1"] as const).every((version) => {
+    const before = yamlValue(base, version);
+    const after = yamlValue(head, version);
+    return before !== null && after !== null && isDeepStrictEqual(before.value, after.value);
+  });
+}
+
+function yamlComments(content: string): string[] {
+  return [...new Lexer().lex(content)]
+    .filter((token) => token.startsWith("#"))
+    .map((token) => token.trim());
+}
+
+/** The parsed value, or null when the parser reports any error or warning, such as an unknown tag. */
+function yamlValue(content: string, version: "1.1" | "1.2"): { value: unknown } | null {
   try {
-    head = await readFile(path.join(root, file), "utf8");
-  } catch (error) {
-    if (isEnoent(error)) return false;
-    throw error;
-  }
-  if (!isYaml) return isDeepStrictEqual(markdownBlocks(base), markdownBlocks(head));
-  try {
-    return isDeepStrictEqual(parseYaml(base), parseYaml(head));
+    const document = parseDocument(content, { version });
+    if (document.errors.length > 0 || document.warnings.length > 0) return null;
+    return { value: document.toJS() };
   } catch {
-    // A side that does not parse has no value to compare.
-    return false;
+    // A document the parser cannot turn into a value has none to compare.
+    return null;
   }
 }
 
 /** A line that opens a block of its own, so a line break before it is never a re-wrap. */
 const OPENS_BLOCK =
-  /^(?:[ \t]*$|\s{4}|\t| {0,3}(?:#|>|<|[-*+](?:\s|$)|\d{1,9}[.)](?:\s|$)|=+\s*$|([-*_])(?:\s*\1){2,}\s*$))|(?<!\\)\|/;
-
-/** A block the next line never continues: a heading, HTML, a rule, an indented line or a table row. */
-const CLOSED_BLOCK = /^(?:\s{4}|\t| {0,3}(?:#|<|=+\s*$|([-*_])(?:\s*\1){2,}\s*$))|(?<!\\)\|/;
+  /^(?:[ \t]*$| {4}|\t| {0,3}(?:#|>|<|\[[^\]]+\]:|[-*+](?:[ \t]|$)|\d{1,9}[.)](?:[ \t]|$)|=+[ \t]*$|-+[ \t]*$|([-*_])(?:[ \t]*\1){2,}[ \t]*$))|(?<!\\)\|/;
 
 /**
- * The Markdown as blocks, with only these differences removed: line endings, trailing whitespace,
- * table cell padding, and the line break and indentation between two lines of one paragraph or
- * list item. Case, punctuation, inner spacing and the order of lines, rows and items are kept, a
- * line break that is a hard break is kept, and a fenced block or front matter is kept byte for byte.
+ * A block the next line never continues: a heading, HTML, a link reference definition, a rule or
+ * a setext underline, an indented line or a table row.
+ */
+const CLOSED_BLOCK =
+  /^(?: {4}|\t| {0,3}(?:#|<|\[[^\]]+\]:|=+[ \t]*$|-+[ \t]*$|([-*_])(?:[ \t]*\1){2,}[ \t]*$))|(?<!\\)\|/;
+
+const BLANK = /^[ \t]*$/;
+
+/**
+ * The Markdown as blocks, with only these differences removed: a leading byte order mark, line
+ * endings, trailing spaces and tabs, table cell padding, and the line break and indentation
+ * between two lines of one paragraph or list item. Case, punctuation, inner spacing and the order
+ * of lines, rows and items are kept, a line break that is a hard break is kept, and a fenced
+ * block, front matter or an HTML block up to the next blank line is kept line for line.
  */
 function markdownBlocks(content: string): string[] {
+  const text = content.charCodeAt(0) === 0xfeff ? content.slice(1) : content;
   const blocks: string[] = [];
-  const lines = content.replace(/\r\n/g, "\n").split("\n");
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
   // Front matter closes on its own `---` line, a fence on a fence of its kind at least as long.
-  let closer: RegExp | null = lines[0] === "---" ? /^---$/ : null;
+  let closer: RegExp | null = /^---[ \t]*$/.test(lines[0] ?? "") ? /^---[ \t]*$/ : null;
+  let html = false;
   let continues = false;
   let hardBreak = false;
   for (const [index, raw] of lines.entries()) {
@@ -639,6 +662,11 @@ function markdownBlocks(content: string): string[] {
       if (index > 0 && closer.test(raw)) closer = null;
       continue;
     }
+    if (html && !BLANK.test(raw)) {
+      blocks.push(raw);
+      continue;
+    }
+    html = false;
     const fence = /^ {0,3}(`{3,}|~{3,})/.exec(raw)?.[1];
     if (fence) {
       blocks.push(raw);
@@ -646,9 +674,15 @@ function markdownBlocks(content: string): string[] {
       continues = false;
       continue;
     }
-    const line = raw.trimEnd();
+    if (/^ {0,3}</.test(raw)) {
+      blocks.push(raw);
+      html = true;
+      continues = false;
+      continue;
+    }
+    const line = raw.replace(/[ \t]+$/, "");
     if (continues && !OPENS_BLOCK.test(line)) {
-      blocks.push(`${blocks.pop() ?? ""}${hardBreak ? "\n" : " "}${line.trimStart()}`);
+      blocks.push(`${blocks.pop() ?? ""}${hardBreak ? "\n" : " "}${line.replace(/^[ \t]+/, "")}`);
     } else {
       blocks.push(line.startsWith("|") ? unpaddedRow(line) : line);
       continues = line !== "" && !CLOSED_BLOCK.test(line);
@@ -656,6 +690,16 @@ function markdownBlocks(content: string): string[] {
     hardBreak = / {2}$|\\$/.test(raw);
   }
   return blocks;
+}
+
+/** The file in the working tree, or null when it is missing. */
+async function readWorkingFile(root: string, file: string): Promise<string | null> {
+  try {
+    return await readFile(path.join(root, file), "utf8");
+  } catch (error) {
+    if (isEnoent(error)) return null;
+    throw error;
+  }
 }
 
 async function readSafePath(file: string): Promise<string> {
