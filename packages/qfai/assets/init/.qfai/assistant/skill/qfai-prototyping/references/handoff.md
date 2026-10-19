@@ -1,5 +1,12 @@
 # Handoff (post-loop)
 
+## Contents
+
+- Inputs
+- Outputs
+- Restyle handoff
+- Checking an implementation's tokens
+
 ## Inputs
 
 `.qfai/prototype/iter-<final>/index.html` — the iteration the user
