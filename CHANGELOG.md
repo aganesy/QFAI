@@ -295,8 +295,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **A failed graph tool download names the command that shows its cause.**
   `qfai init` hides the installer's output, which can carry credentials, yet
   told you to correct a cause it never showed. A failed CodeGraph or Graphify
-  download now prints the command that repeats the download by hand into a
-  throwaway directory, where its output shows the cause. The
+  download now has a recovery line naming the command that repeats the download
+  by hand into a throwaway temporary directory, where its output shows the
+  cause, and saying to delete that directory afterwards. The
   `qfai init: done` line now comes after graph preparation, so a run whose
   graph preparation fails no longer prints it; the file report above it reads
   `qfai init: files`. Fixes #3744.

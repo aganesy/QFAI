@@ -824,9 +824,10 @@ describe("qfai init", () => {
   it("prints the done line after graph preparation, and none when preparation fails", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-done-"));
     const failedRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-init-graph-failed-"));
+    const installerOutput = "INSTALLER-OUTPUT-SENTINEL token=secret";
     const failingDownload: GraphProcess = (command, args, options) =>
       command === "uv" && args[0] === "pip"
-        ? Promise.resolve({ exitCode: 1, stdout: "" })
+        ? Promise.resolve({ exitCode: 1, stdout: installerOutput })
         : legacyGraphProcess(command, args, options);
     try {
       const output = await captureStdout(async () => {
@@ -847,8 +848,11 @@ describe("qfai init", () => {
         });
       });
       expect(failure).toBeInstanceOf(Error);
-      expect(String(failure)).toContain("Graph preparation failed at Graphify download");
-      expect(failedOutput).toContain("To see the cause, run: uv pip install");
+      expect(String(failure)).toContain(
+        "Graph preparation failed at Graphify download. Follow the recovery above, then run qfai init again.",
+      );
+      expect(failedOutput).toContain("Recovery: Run uv pip install");
+      expect(`${failedOutput}${String(failure)}`).not.toContain(installerOutput);
       expect(failedOutput).not.toContain("qfai init: done");
       expect(`${failedOutput}${String(failure)}`).not.toContain("reported cause");
     } finally {

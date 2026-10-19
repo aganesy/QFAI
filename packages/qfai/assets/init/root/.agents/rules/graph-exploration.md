@@ -10,8 +10,9 @@ When `qfai init` or the graph CLI reports an engine as not ready, use ordinary
 search for the questions that engine answers. Do the same when search
 protection is reported as unsupported for your host. Say in your report that
 the graph was not used and why. When a supported hook denies the search, use
-the fallback command in "Direct search and result limits" below. Retry the
-graph CLI once the reported cause is corrected.
+the fallback command in "Direct search and result limits" below. Retry once
+the cause is fixed; for a failed download, run the command `qfai init` names to
+see the cause.
 
 ## Choose the first engine
 

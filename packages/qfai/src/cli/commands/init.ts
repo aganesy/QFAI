@@ -558,7 +558,7 @@ export async function runInit(
     for (const conflict of preparation.conflicts) warn(conflict);
     if (preparation.failedStep) {
       throw new Error(
-        `Graph preparation failed at ${preparation.failedStep}; qfai init did not finish.`,
+        `Graph preparation failed at ${preparation.failedStep}. Follow the recovery above, then run qfai init again.`,
       );
     }
     // Last, so a run whose graph preparation fails never prints it.

@@ -191,7 +191,7 @@ screens:
         label: Inferred relationships
         type: output
       - id: graph_query_failure
-        label: Failed operation
+        label: Failure cause
         type: output
       - id: graph_query_recovery
         label: Recovery
