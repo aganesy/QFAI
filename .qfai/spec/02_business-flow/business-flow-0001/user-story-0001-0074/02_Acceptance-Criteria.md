@@ -21,4 +21,10 @@ Feature: Worker-Scoped Credential-Reuse Guidance
     Given the credential-reuse guidance artifact
     When its scope statement is read
     Then the credential-class script-naming rule — a credential-free lane and a credentialed lane MUST be reachable by different script names — appears as adopter guidance only, the artifact states that QFAI keeps its own script names and that QFAI's own suite has zero credentials so none of this is dogfooded here, and the guidance obliges the E2E / API / Integration layers only, introducing no unit or component obligation (RJ-0008-0001).
+
+  # AC-0001-0074-04
+  Scenario: Optional Runner Recipes Ship Beside the Rule Set
+    Given the `/qfai-implement` test runner recipes reference
+    When an adopter with a Playwright or Vitest suite reads it
+    Then it carries a Vitest session cache keyed by the run's private directory, the pool slot and the actor, a Playwright setup, fixture and teardown with one account and storage state per worker, the adapters the application supplies, owned business data, database hooks scoped to the groups that need them, shared and exclusive admission, credential directory hygiene, a CI aggregate job that fails on a failed, cancelled or unexpectedly skipped required lane, deterministic business time per clock profile, and an adoption checklist; it states that QFAI does not execute the recipes; the `implement-credentials` and `implement-acceptance` steps point to it; and the credential-reuse rule set itself still names no backend.
 ```
