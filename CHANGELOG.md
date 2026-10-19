@@ -37,7 +37,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `.qfai/assistant/`, or writes `.claude/settings.json` or `.codex/hooks.json`,
   the summary now has one line saying to restart the session or invoke the
   skill again. A dry run, and a run that changed none of those files, print no
-  such line. Fixes #3536.
+  such line. Refs #3536.
 
 - **A project that runs tests in CI only records Red and Green `ci-deferred`.**
   Where the Standard commands write the Test entry `CI only: <check name>`,
