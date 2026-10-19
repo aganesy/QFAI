@@ -184,6 +184,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   now has one line saying to restart any running agent session. A dry run, and
   a run that changed none of those files, print no such line. Refs #3536.
 
+- **`qfai init` says that it does not write `CLAUDE.md`.** Claude Code reads a
+  project's `CLAUDE.md` or `CLAUDE.local.md` instead of `AGENTS.md`, so in a
+  project that has one the rules `qfai init` cites from `AGENTS.md` did not reach
+  Claude Code, and nothing in the run said so. Every run, `--dry-run` included,
+  now prints one line asking a project with either file to add the line
+  `@AGENTS.md` to it, and saying that `qfai init` writes neither. The line is
+  printed whether or not the files exist: `qfai init` still neither reads nor
+  edits them. Fixes #3490.
+
 - **The `qfai-run` extraction guide decides whether a changed default is a
   deprecation or a behaviour change.** `deprecation` already covered a published surface given a new
   default, so a changed default could read as either intent. The guide now says
