@@ -258,12 +258,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - **`qfai atdd scaffold` writes `node:test` tests in a `node --test` project.**
   It wrote tests that import from `vitest` whatever runner the project used.
-  It now reads the nearest `package.json` above the destination, so a workspace
-  member decides for its own tests: a project that declares vitest keeps the vitest
-  test, one whose scripts run `node --test` without vitest gets a test that
-  imports `describe` and `it` from `node:test`, and one that declares only jest
-  or names no runner is refused with exit 2, the supported runners and how to
-  declare one. A project with no `package.json` still gets the vitest test.
+  It now reads the nearest `package.json` above the destination that names a
+  runner, so a workspace member decides for its own tests. A project that
+  declares vitest or runs it from a script keeps the vitest test, one whose
+  scripts run `node --test` without vitest gets a test that imports `describe`
+  and `it` from `node:test`, and one that declares only jest or names no runner
+  is refused with exit 2, the supported runners and how to declare one. A
+  project with no `package.json` still gets the vitest test.
   Fixes #3826.
 
 - **A DESIGN.md violation every screen shares is reported once.** The

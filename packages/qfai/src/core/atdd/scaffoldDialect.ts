@@ -35,7 +35,7 @@ type ScaffoldDialectTemplate = {
   /** Naming conventions in preference order; the first match wins. */
   readonly namings: readonly ScaffoldNaming[];
   /** Body lines emitted below the annotation header. */
-  buildBody(targetId: string): string[];
+  readonly buildBody: (targetId: string) => string[];
 };
 
 /** A dialect with one naming convention bound to it — what the writer uses. */
@@ -169,7 +169,27 @@ const NODE_VALUE_OPTIONS: ReadonlySet<string> = new Set([
   "--loader",
   "--experimental-loader",
   "--env-file",
+  "--test-reporter",
+  "--test-reporter-destination",
+  "--test-name-pattern",
+  "--test-skip-pattern",
+  "--test-concurrency",
+  "--test-shard",
+  "--test-timeout",
+  "--conditions",
+  "-C",
 ]);
+
+/** `vitest` as a command word, a path allowed before it. */
+const VITEST_COMMAND = /^(?:.*[/\\])?vitest(?:\.cmd|\.exe)?$/;
+
+/** A script's words, split at whitespace and shell operators, quotes dropped. */
+function scriptWords(script: string): string[] {
+  return script
+    .split(/[\s;&|()]+/)
+    .map((word) => word.replace(/^["']|["']$/g, ""))
+    .filter((word) => word !== "");
+}
 
 /**
  * Whether a script runs `node --test`: a `node` command word followed by
@@ -177,17 +197,13 @@ const NODE_VALUE_OPTIONS: ReadonlySet<string> = new Set([
  * options, so `node build.mjs --test` hands `--test` to the script instead.
  */
 function runsNodeTest(script: string): boolean {
-  // Quotes around a word are dropped, so `"/usr/bin/node" --test` still reads.
-  const words = script
-    .split(/[\s;&|()]+/)
-    .map((word) => word.replace(/^["']|["']$/g, ""))
-    .filter((word) => word !== "");
+  const words = scriptWords(script);
   for (let start = 0; start < words.length; start += 1) {
     if (!NODE_COMMAND.test(words[start] ?? "")) continue;
     for (let index = start + 1; index < words.length; index += 1) {
       const word = words[index] ?? "";
       if (word === "--test") return true;
-      if (!word.startsWith("-")) break;
+      if (word === "--" || !word.startsWith("-")) break;
       if (NODE_VALUE_OPTIONS.has(word)) index += 1;
     }
   }
@@ -196,8 +212,9 @@ function runsNodeTest(script: string): boolean {
 
 /**
  * Read the runner from a parsed `package.json`. vitest in `dependencies` or
- * `devDependencies` wins, so a vitest project's output does not change; then a
- * script that runs `node --test`; then jest.
+ * `devDependencies`, or a script that runs `vitest`, wins, so a vitest
+ * project's output does not change; then a script that runs `node --test`;
+ * then jest.
  */
 export function detectJsTestRunner(manifest: unknown): JsTestRunner {
   if (!isRecord(manifest)) return "none";
@@ -205,14 +222,15 @@ export function detectJsTestRunner(manifest: unknown): JsTestRunner {
     [manifest["dependencies"], manifest["devDependencies"]].some(
       (deps) => isRecord(deps) && Object.hasOwn(deps, name),
     );
-  if (declares("vitest")) return "vitest";
-  const scripts = manifest["scripts"];
+  const scripts = isRecord(manifest["scripts"]) ? Object.values(manifest["scripts"]) : [];
+  const texts = scripts.filter((script) => typeof script === "string");
   if (
-    isRecord(scripts) &&
-    Object.values(scripts).some((script) => typeof script === "string" && runsNodeTest(script))
+    declares("vitest") ||
+    texts.some((script) => scriptWords(script).some((word) => VITEST_COMMAND.test(word)))
   ) {
-    return "node:test";
+    return "vitest";
   }
+  if (texts.some(runsNodeTest)) return "node:test";
   return declares("jest") ? "jest" : "none";
 }
 
@@ -932,7 +950,7 @@ export function applyJsRunner(
     dialect: {
       ...dialect,
       runner: template.runner,
-      buildBody: (targetId: string) => template.buildBody(targetId),
+      buildBody: template.buildBody,
     },
   };
 }

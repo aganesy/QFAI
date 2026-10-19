@@ -210,7 +210,7 @@ describe("a step that may pass with evidence", () => {
     );
     expect(procedure).toMatch(/the command never overwrites an existing test/i);
     expect(procedure).toMatch(
-      /nearest `package.json` names no vitest and no `node --test` script: declare the runner there/i,
+      /no `package.json` above the tests names vitest or a `node --test` script: declare the runner there/i,
     );
   });
 

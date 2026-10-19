@@ -42,11 +42,14 @@ function targetsForStory(
 }
 
 /**
- * The runner the nearest `package.json` declares, searched from `fromDir` up
- * to `root`, so a workspace member's manifest decides for its own tests.
- * `unknown` when there is none on that path.
+ * The runner the nearest deciding `package.json` declares, searched from
+ * `fromDir` up to `root`, so a workspace member's manifest decides for its own
+ * tests. A manifest naming no runner leaves the answer to the next one up:
+ * `none` when every manifest on the path named none, `unknown` when the path
+ * holds no manifest.
  */
 async function readJsTestRunner(root: string, fromDir: string): Promise<JsTestRunner> {
+  let found: JsTestRunner = "unknown";
   for (let dir = fromDir; ; dir = path.dirname(dir)) {
     const manifestPath = path.join(dir, "package.json");
     let text: string | undefined;
@@ -65,9 +68,11 @@ async function readJsTestRunner(root: string, fromDir: string): Promise<JsTestRu
           { cause: caught },
         );
       }
-      return detectJsTestRunner(manifest);
+      const runner = detectJsTestRunner(manifest);
+      if (runner !== "none") return runner;
+      found = runner;
     }
-    if (path.relative(root, dir) === "" || path.dirname(dir) === dir) return "unknown";
+    if (path.relative(root, dir) === "" || path.dirname(dir) === dir) return found;
   }
 }
 

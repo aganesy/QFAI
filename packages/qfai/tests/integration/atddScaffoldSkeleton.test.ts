@@ -170,7 +170,7 @@ describe("atdd scaffold story-tree targets", () => {
     expect(await readFile(file, "utf8")).toContain(`QFAI:${acIds[0]}`);
   });
 
-  // QFAI:EX-0001-0073-04
+  // QFAI:EX-0001-0073-08
   it("writes a node:test test into a project whose test script runs node --test", async () => {
     await seedStory();
     await writeNodeTestProject({ scripts: { test: "node --test tests/" } });
@@ -193,6 +193,7 @@ describe("atdd scaffold story-tree targets", () => {
     expect(body).toContain(`import { describe, it } from "vitest";`);
   });
 
+  // QFAI:EX-0001-0073-09
   it("refuses a package.json that names no test runner, before writing", async () => {
     await seedStory();
     await writeNodeTestProject({ scripts: { build: "node build.mjs && echo --test" } });
@@ -210,6 +211,7 @@ describe("atdd scaffold story-tree targets", () => {
     await expect(readdir(path.join(root, "tests"))).rejects.toMatchObject({ code: "ENOENT" });
   });
 
+  // QFAI:EX-0001-0073-09
   it("refuses a jest project, naming the supported runners, before writing", async () => {
     await seedStory();
     await writeNodeTestProject({ devDependencies: { jest: "^29.0.0" } });
@@ -256,35 +258,100 @@ describe("atdd scaffold story-tree targets", () => {
     expect(body).toContain(`import { describe, it } from "node:test";`);
   });
 
+  // QFAI:EX-0001-0073-10
   it("decides the runner from the workspace member that holds the destination", async () => {
     await seedStory();
-    const member = path.join(root, "packages", "app");
-    await mkdir(member, { recursive: true });
-    await writeFile(
-      path.join(root, "package.json"),
-      JSON.stringify({ scripts: { test: "pnpm -r test" } }),
+    await writeWorkspace(
+      { scripts: { test: "pnpm -r test" } },
+      { devDependencies: { vitest: "^3.0.0" } },
     );
-    await writeFile(
-      path.join(member, "package.json"),
-      JSON.stringify({ devDependencies: { vitest: "^3.0.0" } }),
+    expect(await scaffoldedMemberFlowTest()).toContain(`import { describe, it } from "vitest";`);
+  });
+
+  // QFAI:EX-0001-0073-10
+  it("reads a member script that runs vitest as vitest", async () => {
+    await seedStory();
+    await writeWorkspace(
+      { devDependencies: { vitest: "^3.0.0" } },
+      { scripts: { test: "vitest run" } },
     );
+    expect(await scaffoldedMemberFlowTest()).toContain(`import { describe, it } from "vitest";`);
+  });
+
+  // QFAI:EX-0001-0073-10
+  it("walks past a member package.json that names no runner", async () => {
+    await seedStory();
+    await writeWorkspace({ scripts: { test: "node --test" } }, { scripts: { build: "tsc" } });
+    expect(await scaffoldedMemberFlowTest()).toContain(`import { describe, it } from "node:test";`);
+  });
+
+  it("stops the walk at the project root", async () => {
+    const outer = root;
+    root = path.join(outer, "project");
+    await mkdir(root, { recursive: true });
+    await writeFile(
+      path.join(outer, "package.json"),
+      JSON.stringify({ devDependencies: { jest: "^29.0.0" } }),
+    );
+    try {
+      await seedStory();
+      expect(await runAtddScaffold({ root, flowId, write: () => {}, writeErr: () => {} })).toBe(0);
+      const body = await readFile(path.join(root, "tests", "e2e", `${flowId}.test.ts`), "utf8");
+      expect(body).toContain(`import { describe, it } from "vitest";`);
+    } finally {
+      root = outer;
+    }
+  });
+
+  it("does not read package.json for a Python project", async () => {
+    await seedStory([acIds[0] ?? ""]);
+    await writeFile(path.join(root, "package.json"), "{ not json");
     await writeFile(
       path.join(root, "qfai.config.yaml"),
-      [
-        "paths:",
-        "  testsDir: packages/app/tests",
-        "validation:",
-        "  traceability:",
-        "    testFileGlobs:",
-        "      - packages/app/tests/**/*.test.ts",
-        "",
-      ].join("\n"),
+      ["validation:", "  traceability:", "    testFileGlobs:", "      - tests/**/*.py", ""].join(
+        "\n",
+      ),
     );
-    expect(await runAtddScaffold({ root, flowId, write: () => {}, writeErr: () => {} })).toBe(0);
-    const body = await readFile(path.join(member, "tests", "e2e", `${flowId}.test.ts`), "utf8");
-    expect(body).toContain(`import { describe, it } from "vitest";`);
+    expect(await runAtddScaffold({ root, storyId, write: () => {}, writeErr: () => {} })).toBe(0);
+    const file = path.join(
+      root,
+      "tests",
+      "integration",
+      storyId,
+      `test_${acIds[0]?.toLowerCase().replace(/-/g, "_")}.py`,
+    );
+    expect(await readFile(file, "utf8")).toContain("import unittest");
   });
 });
+
+/** A root and a `packages/app` member manifest, with tests inside the member. */
+async function writeWorkspace(
+  rootManifest: Record<string, unknown>,
+  memberManifest: Record<string, unknown>,
+): Promise<void> {
+  const member = path.join(root, "packages", "app");
+  await mkdir(member, { recursive: true });
+  await writeFile(path.join(root, "package.json"), JSON.stringify(rootManifest));
+  await writeFile(path.join(member, "package.json"), JSON.stringify(memberManifest));
+  await writeFile(
+    path.join(root, "qfai.config.yaml"),
+    [
+      "paths:",
+      "  testsDir: packages/app/tests",
+      "validation:",
+      "  traceability:",
+      "    testFileGlobs:",
+      "      - packages/app/tests/**/*.test.ts",
+      "",
+    ].join("\n"),
+  );
+}
+
+/** Scaffold the flow test into the workspace member and return its text. */
+async function scaffoldedMemberFlowTest(): Promise<string> {
+  expect(await runAtddScaffold({ root, flowId, write: () => {}, writeErr: () => {} })).toBe(0);
+  return readFile(path.join(root, "packages", "app", "tests", "e2e", `${flowId}.test.ts`), "utf8");
+}
 
 /** A package.json with `manifest`, and globs that collect `tests/**\/*.test.mjs`. */
 async function writeNodeTestProject(manifest: Record<string, unknown>): Promise<void> {

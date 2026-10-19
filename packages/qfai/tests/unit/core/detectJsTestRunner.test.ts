@@ -23,6 +23,10 @@ describe("detectJsTestRunner", () => {
     ["node build.mjs --test", "none"],
     ["echo --test", "none"],
     ["node --test-reporter spec build.mjs", "none"],
+    ["node --test-reporter spec --test", "node:test"],
+    ["node -- --test", "none"],
+    ["vitest run", "vitest"],
+    ["npx vitest --run", "vitest"],
   ])("reads the script %j as %s", (script, runner) => {
     expect(detectJsTestRunner({ scripts: { test: script } })).toBe(runner);
   });
