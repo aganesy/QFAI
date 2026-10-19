@@ -806,23 +806,61 @@ describe("qfai-run", () => {
     expect(work).toMatch(/no agent reviews its own work/i);
   });
 
-  it("starts every finder, griller and reviewer itself, never through a stage worker", async () => {
+  it("runs each step that starts a finder, griller or reviewer at the orchestrator", async () => {
     const work = flat(sectionOf(await readShipped(RUN), "## The work"));
-    expect(work).toMatch(/a stage worker you delegate to starts no agent of its own/i);
-    expect(work).toMatch(/you start every finder, griller and reviewer a step calls for/i);
+    expect(work).toMatch(
+      /a worker starts no finder, griller or reviewer: run each step that starts one yourself/i,
+    );
+    const protocol = flat(
+      sectionOf(
+        await readShipped("rule/shared-skill-delegation-baseline.md"),
+        "### Orchestrator Protocol",
+      ),
+    );
+    expect(protocol).toMatch(
+      /the orchestrator runs every step that starts a finder, griller or reviewer, and starts those agents itself/i,
+    );
+    for (const step of [
+      "sdd-cycle",
+      "common-review-cycle",
+      "prototyping-grill",
+      "prototyping-loop",
+    ]) {
+      expect(protocol).toContain("`" + step + "`");
+    }
+    expect(protocol).toMatch(/any step with a pre-draft grilling checkpoint/i);
+    expect(protocol).toMatch(/starts no finder, griller or reviewer/i);
+    expect(protocol).toMatch(/a finder is a review someone other than the author has to do/i);
     const owners: ReadonlyArray<readonly [string, RegExp]> = [
       ["step/sdd-cycle/STEP.md", /the orchestrator starts it, never a stage worker/i],
-      [
-        "step/sdd-triage/STEP.md",
-        /the orchestrator starts the griller of a delegated session, never a stage worker/i,
-      ],
+      ["step/sdd-triage/STEP.md", /the orchestrator starts the griller, never a stage worker/i],
       [
         "step/common-review-cycle/STEP.md",
         /a stage worker the orchestrator delegated to dispatches no reviewer/i,
       ],
+      [
+        "step/prototyping-grill/STEP.md",
+        /the orchestrator starts the griller, never a stage worker/i,
+      ],
+      [
+        "step/prototyping-loop/STEP.md",
+        /the orchestrator starts every role in the table below, the generator included, and never a stage worker/i,
+      ],
+      [
+        "skill/qfai-sdd/references/sdd-pre-draft-grilling.md",
+        /the orchestrator starts the griller; a stage worker starts none/i,
+      ],
+      [
+        "skill/qfai-sdd/references/concrete-abstract-cycle.md",
+        /the orchestrator starts it; a stage worker starts none/i,
+      ],
+      [
+        "skill/qfai-sdd/references/sdd-execution-playbook.md",
+        /started by the orchestrator and never by a stage worker/i,
+      ],
     ];
-    for (const [step, owner] of owners) {
-      expect(flat(await readShipped(step)), step).toMatch(owner);
+    for (const [file, owner] of owners) {
+      expect(flat(await readShipped(file)), file).toMatch(owner);
     }
   });
 
