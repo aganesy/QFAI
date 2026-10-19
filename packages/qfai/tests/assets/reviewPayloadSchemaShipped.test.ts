@@ -76,7 +76,7 @@ describe("shipped reviewer payload schema", () => {
   // A violation every screen shares was repeated in each payload, so one fix
   // read as one entry per screen.
   it("records a screen-independent DESIGN.md violation in the summary only", async () => {
-    for (const schema of await readShipped(SCHEMA_REL)) {
+    for (const schema of (await readShipped(SCHEMA_REL)).map(flatten)) {
       expect(schema).toContain(
         "only the violations specific to this screen, since a screen-independent one is recorded once in the per-iteration summary and in no payload",
       );

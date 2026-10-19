@@ -92,6 +92,9 @@ one screen alone. Fold every `(UI contract, screen)` pair of this iteration:
 - `designMdViolations` — every screen-independent violation, recorded here
   and in no payload, plus the **union** of the pairs' arrays, deduplicated on
   `(kind, found)`.
+- `proseCritique`, four ordinal `scores`, and `pivotDirective` describe the
+  iteration as a whole. The six bounded `impressions.*Feel` fields remain on each
+  per-screen payload; do not add rating keys to that closed schema.
 
 A violation is screen-independent when its source is shared by every screen of
 the iteration: a shared stylesheet, the Tailwind configuration, the page layout,
@@ -100,10 +103,6 @@ repeating it in each payload multiplies one fix into one entry per screen. A
 pair's payload lists only the violations whose source is that screen. When the
 iteration reviews one screen, nothing is screen-independent and its payload
 keeps every violation.
-
-- `proseCritique`, four ordinal `scores`, and `pivotDirective` describe the
-  iteration as a whole. The six bounded `impressions.*Feel` fields remain on each
-  per-screen payload; do not add rating keys to that closed schema.
 
 This keeps the summary findings aligned with the per-screen payloads. The
 user reads the summary before confirming the prototype, so a summary built
