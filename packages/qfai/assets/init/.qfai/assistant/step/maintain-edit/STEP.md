@@ -17,7 +17,8 @@ agent does: wording, a typo, a code comment, prose in a document.
 ## Non-goals
 
 - A behaviour change of any size. That is another route's work.
-- A story-tree file, a contract, or a row of `decisions.md` or `open-questions.md`.
+- A story-tree file, a contract, or a row of `decisions.md` or `open-questions.md`,
+  except as [Resolving conflicts](#resolving-conflicts) allows.
 - A file outside the write scope the request or the work order gives.
 
 ## Never a maintenance edit
@@ -37,6 +38,17 @@ A file extension alone never makes a change a maintenance edit.
 A procedure's actions, required values, commands and order govern what a person
 does. Changing any of them has a semantic effect, even when only Markdown
 changes.
+
+## Resolving conflicts
+
+In the `resolve-conflicts` route, the edit resolves the conflicts of a merge or
+a branch update, or renumbers a colliding ID, and keeps every record's meaning.
+There the step may edit any file the conflict touches, a story-tree file, a
+contract, a row of `decisions.md` or `open-questions.md` and the files listed
+above included, but each edit only keeps what one side already had: both sides
+of a conflicting row or block, or an ID renumbered together with every reference
+to it. Content neither side had is a semantic effect: stop before it as
+[A semantic effect](#a-semantic-effect) says.
 
 ## Reads
 

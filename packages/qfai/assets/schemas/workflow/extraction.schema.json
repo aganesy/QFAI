@@ -83,6 +83,7 @@
           "visual-open",
           "prototype-requested",
           "owned-temporary-cleanup",
+          "meaning-preserving",
           "session-answerable"
         ]
       }
@@ -313,6 +314,7 @@
               "visual-open",
               "prototype-requested",
               "owned-temporary-cleanup",
+              "meaning-preserving",
               "session-answerable"
             ]
           }

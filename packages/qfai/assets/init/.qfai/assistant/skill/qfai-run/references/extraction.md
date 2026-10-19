@@ -237,6 +237,7 @@ only after reading what it depends on.
 - `mixed-bundle`, with `bundle`: The bundled findings differ in kind. Findings that share one intent take that intent instead.
 - `human-run`, with `order`: Only a person can run the operation: it is paid, bound to a host, or needs credentials the session does not hold.
 - `owned-temporary-cleanup`, with `order`: Existing user authority permits deleting specific repository-local, Git-ignored temporary directories the current task owns, without a tracked change or files still needed for a deliverable.
+- `meaning-preserving`, with `stale-record` or `order`: The change keeps every record's meaning. It only resolves the conflicts of a merge or a branch update, or renumbers a colliding ID, and adds no content neither side had.
 - `distribution-incident`, with `release`: A published key, certificate, feed or package is broken.
 - `settled-design`, with `upstream`: The cited record exists, is in force, and settles the design.
 - `red-since-change`, with `ci`: CI fails since a named change, and a correct existing test catches it.
@@ -347,5 +348,6 @@ Each request is followed by its extraction. Fields not shown are empty.
 - "Remove the configuration key nothing reads." → `{ intent: unenforced, qualifiers: [mechanism-inert, removal-requested], artifacts: [code, tests, config], risks: [breaking], confidence: high }`
 - An approved change request cited with a task section and a done-when block → `{ intent: order, entryFlags: [upstream], qualifiers: [settled-design], signals: [approved-record-task], artifacts: [spec, contract], confidence: high }`
 - "The import fails and the `catch` logs nothing, so the cause cannot be read; log the error there." → `{ intent: defect, entryFlags: [cause, fix, expect], artifacts: [code, tests], confidence: high }`
+- "Merging main left conflicts in the decision register; renumber our colliding rows and keep both sides." → `{ intent: stale-record, qualifiers: [meaning-preserving], artifacts: [spec], confidence: high }`
 - "Support multiple tenants across the product." → `{ intent: epic, entryFlags: [decision], confidence: high }`
 - "Turn off branch creation in the hosted database dashboard, add its access token as a repository secret, and update the workflow to use it." → `{ intent: ci, entryFlags: [env], artifacts: [ci, docs], confidence: high }`

@@ -128,6 +128,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   plans `{ intent: order, artifacts: [] }` through the same decision rules, and
   `qfai-run` uses it for such operations. Fixes #3791.
 
+- **A request that only resolves merge conflicts takes a short route.** The
+  extraction gains the qualifier `meaning-preserving`, on `stale-record` or
+  `order`, for a change that only resolves the conflicts of a merge or a branch
+  update, or renumbers a colliding ID. It routes the new route
+  `resolve-conflicts`: one `maintain-edit` stage with the code review, then the
+  verify block. There `maintain-edit` may edit story-tree files, contracts and
+  register rows, but keeps only what one side already had and stops on content
+  neither side had. Fixes #3541.
+
 - **A critical decision found while writing the discussion pack goes back to
   the user.** `discussion-pack` and `discussion-oq` now reopen the ended session
   for that one node: they stop writing, ask the user one round, and resume. The
