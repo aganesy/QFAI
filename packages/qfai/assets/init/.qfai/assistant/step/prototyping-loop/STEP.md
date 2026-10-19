@@ -74,8 +74,13 @@ the project already runs, keeping their screens, fields and behaviour. A
 `restyle` iteration is the live app restyled in place. The generator edits
 the project's stylesheet and motion entry points and writes
 `iter-NN/index.html` as a list of the live routes in scope, one link per
-declared screen. The build owner also runs the project's app, so each link
-answers, and the reviewer drives those routes directly.
+declared screen. Each link carries the route's absolute URL and the setup it
+needs, such as a login or seed data. The build owner also runs the project's
+app, so each link answers, and the reviewer drives those routes directly.
+
+A restyle's edits are product code. The route's implement stage carries them:
+there they are change-noted, gated, tested and committed. So a restyle is not
+offered the `narrow` scope, which stops after the prototype stage.
 
 ## Procedure
 

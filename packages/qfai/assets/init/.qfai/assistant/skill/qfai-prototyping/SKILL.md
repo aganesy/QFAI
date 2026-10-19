@@ -42,8 +42,9 @@ no `prototyping` command group, and no command or check certifies the result:
 prototyping completes when the user confirms the prototype.
 
 Every file the loop writes stays under `.qfai/prototype/`: the session record,
-each iteration and its reviews, and the handoff. No `qfai` command writes
-there. The one file a command reads is the handoff record
+each iteration and its reviews, and the handoff. A `restyle` loop also edits
+the project's stylesheet and motion entry points its handoff names. No `qfai`
+command writes there. The one file a command reads is the handoff record
 `.qfai/prototype/final/handoff.json`, which
 `npx qfai validate --profile saas-package` checks against the CLI-HANDOFF schema.
 
@@ -59,12 +60,12 @@ When unsure, read inputs in this order:
 
 ## Steps
 
-| Step                    | Runs                                                                                 |
-| ----------------------- | ------------------------------------------------------------------------------------ |
-| `prototyping-grill`     | Always, first: fixes the scope and settles by talking what the prototype is for      |
-| `prototyping-preflight` | Always: checks the UI contracts, root `DESIGN.md` and the Playwright environment     |
-| `prototyping-loop`      | Always: build, review, and put each reviewed prototype to the user until they accept |
-| `prototyping-handoff`   | Only after the user confirmed the prototype: copy it and write the handoff           |
+| Step                    | Runs                                                                                                      |
+| ----------------------- | --------------------------------------------------------------------------------------------------------- |
+| `prototyping-grill`     | Always, first: fixes the scope and settles by talking what the prototype is for                           |
+| `prototyping-preflight` | Always: checks the UI contracts, root `DESIGN.md` and the Playwright environment                          |
+| `prototyping-loop`      | Always: build, review, and put each reviewed prototype to the user until they accept                      |
+| `prototyping-handoff`   | Only after the user confirmed the prototype: copy it and write the handoff (restyle: `handoff.json` only) |
 
 A step's gate that ends the run ends the invocation: zero UI-bearing contracts
 at preflight, an escalated decision before the first iteration, or a stop or a
@@ -113,4 +114,4 @@ no question. Under a no-question mode, list any remaining actions instead.
 project_memory:
 
 - Prototyping completes on the user's confirmation; no command certifies it.
-- Every file the loop writes is under `.qfai/prototype/`; a `qfai` command reads only `final/handoff.json`.
+- Every file the loop writes is under `.qfai/prototype/`, except the stylesheet and motion entry points a `restyle` loop edits; a `qfai` command reads only `final/handoff.json`.

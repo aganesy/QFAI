@@ -2,15 +2,16 @@
  * SSOT-sync pair manifest for the CLI-HANDOFF canonical schema (Pair IV).
  *
  * The schema source-of-truth lives at
- * `packages/qfai/src/core/schemas/handoff.ts`. Every skill writer that
- * persists a `.qfai/handoff.yaml` MUST reference the canonical fields from
- * that schema (via import or a literal write of the same fields).
+ * `packages/qfai/src/core/schemas/handoff.ts`. Every skill writer of a
+ * handoff record, such as `.qfai/prototype/final/handoff.json`, MUST
+ * reference the canonical fields from that schema (via import or a literal
+ * write of the same fields).
  *
  * The pair check is structural: when the schema source declares field X
- * in `HANDOFF_MINIMUM_FIELDS`, every registered writer file must also
- * mention field X verbatim (substring containment, no regex). Asymmetric
- * edits — schema-side add without writer update, or writer-side write
- * of a field NOT in the schema — fire `QFAI-HANDOFF-001`.
+ * in `HANDOFF_MINIMUM_FIELDS` or `HANDOFF_RESTYLE_FIELDS`, every registered
+ * writer that names schema fields must also mention field X as a code span
+ * (substring containment). A schema-side add without a writer update fires
+ * `QFAI-HANDOFF-001`.
  *
  * Tokens are short, stable substrings so the check stays deterministic.
  */
@@ -30,8 +31,9 @@ export type HandoffWriterPair = {
   readonly writerToken: string;
   /**
    * When true, the writer must also name every field the schema lists in
-   * `HANDOFF_MINIMUM_FIELDS` and `HANDOFF_RESTYLE_FIELDS`, each as a code span. A prose writer has no
-   * type to import, so its field list is what has to move with the schema.
+   * `HANDOFF_MINIMUM_FIELDS` and `HANDOFF_RESTYLE_FIELDS`, each as a code
+   * span. A prose writer has no type to import, so its field list is what
+   * has to move with the schema.
    */
   readonly namesSchemaFields: boolean;
 };

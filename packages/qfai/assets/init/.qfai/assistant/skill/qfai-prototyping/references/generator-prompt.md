@@ -271,6 +271,19 @@ match the routing shape to what the server in use does with an unknown
 path: a path route needs a server that falls back to `index.html`, and a
 hash route (`/#/settings`) works on any static server.
 
+### Restyle iterations
+
+In a `restyle` iteration the project's app is the prototype. The HTML
+envelope, the one self-contained file, the `<link rel="stylesheet">` ban and
+"nothing else" above do not apply:
+
+- Edit only the project's stylesheet and motion entry points, and record each
+  file edited for the handoff. Values that root `DESIGN.md` does not declare
+  are still findings.
+- Write `iter-NN/index.html` as the list of live routes in scope: one link
+  per declared screen, each with its absolute URL and the setup it needs, such
+  as a login or seed data.
+
 ## The first iteration (seed)
 
 Produce one self-contained `iter-00/index.html` that satisfies the spec

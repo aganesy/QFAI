@@ -104,9 +104,45 @@ describe.each(TREES)("%s", (tree) => {
       "In a `restyle` iteration, the iteration page lists the live routes in scope: open each listed route in the running app and review it there.",
     );
     expect(handoff).toContain("In a `restyle` loop, copy nothing: the iteration is the live app.");
+    expect(loop).toContain(
+      "Each link carries the route's absolute URL and the setup it needs, such as a login or seed data.",
+    );
+    const preflight = flat(await read(tree, "step/prototyping-preflight/STEP.md"));
+    expect(preflight).toContain(
+      "For a `restyle` request, also run `npx qfai doctor --profile prototyping --target-url <url>` against the live app's URL",
+    );
+    const generator = section(
+      await read(tree, "skill/qfai-prototyping/references/generator-prompt.md"),
+      "Output layout",
+    );
+    const restyle = flat(generator.slice(generator.indexOf("### Restyle iterations")));
+    expect(restyle).toContain(
+      'The HTML envelope, the one self-contained file, the `<link rel="stylesheet">` ban and "nothing else" above do not apply:',
+    );
+    expect(restyle).toContain("Edit only the project's stylesheet and motion entry points");
+    expect(restyle).toContain(
+      "Write `iter-NN/index.html` as the list of live routes in scope: one link per declared screen, each with its absolute URL and the setup it needs",
+    );
     expect(flat(section(await read(tree, "step/prototyping-handoff/STEP.md"), "Gate"))).toContain(
       "or, in a `restyle` loop, when `handoff.json` exists.",
     );
+  });
+
+  // QFAI:AC-0001-0228-03
+  // QFAI:EX-0001-0228-06
+  it("lets a restyle edit only the entry points its handoff names, carried by implement", async () => {
+    const skill = flat(await read(tree, "skill/qfai-prototyping/SKILL.md"));
+    const loop = flat(await read(tree, "step/prototyping-loop/STEP.md"));
+    expect(skill).toContain(
+      "A `restyle` loop also edits the project's stylesheet and motion entry points its handoff names.",
+    );
+    expect(skill).toContain(
+      "except the stylesheet and motion entry points a `restyle` loop edits; a `qfai` command reads only `final/handoff.json`.",
+    );
+    expect(loop).toContain(
+      "A restyle's edits are product code. The route's implement stage carries them: there they are change-noted, gated, tested and committed.",
+    );
+    expect(loop).toContain("a restyle is not offered the `narrow` scope");
   });
 
   // QFAI:AC-0001-0228-02
@@ -367,6 +403,10 @@ describe.each(TREES)("%s", (tree) => {
     expect(handoff).toContain(
       "`final/handoff.json` takes this short form in place of `finalArtifact` and `procurement`:",
     );
+    const restyleRead =
+      "or, for a `restyle` handoff, its `liveRoutes` (compare in the running app) and `entryPoints`";
+    expect(flat(await read(tree, "agent/product-surface-reviewer.md"))).toContain(restyleRead);
+    expect(flat(await read(tree, "rule/ui-definition-protocol.md"))).toContain(restyleRead);
     const implement = flat(await read(tree, "skill/qfai-implement/references/ui-affecting.md"));
     expect(implement).toContain(
       "or, for a restyle, its live routes, its stylesheet and motion entry points and the implementation notes.",

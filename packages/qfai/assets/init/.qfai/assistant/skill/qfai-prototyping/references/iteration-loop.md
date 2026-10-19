@@ -6,7 +6,7 @@
 [Build]   iteration NN: generate iter-NN/index.html under DESIGN.md tokens
 [Review]  iteration NN: the reviewer operates Playwright and returns the reviews
 [Ask]     iteration NN: the user confirms the prototype, or answers with a change
-[Handoff] confirmed:    final/index.html + final/handoff.json
+[Handoff] confirmed:    final/index.html + final/handoff.json (restyle: handoff.json only)
 ```
 
 ## Per-iteration files
@@ -60,7 +60,8 @@ prototype. It is neutral with respect to AI behavior.
 
 ## Produced after the loop
 
-- `.qfai/prototype/final/index.html` and `.qfai/prototype/final/handoff.json`.
+- `.qfai/prototype/final/index.html` and `.qfai/prototype/final/handoff.json`
+  (restyle: `handoff.json` only).
   The `prototyping-handoff` step defines its fields.
 
 ## Brand identity

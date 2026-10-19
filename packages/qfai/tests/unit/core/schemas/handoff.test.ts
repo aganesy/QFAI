@@ -85,6 +85,7 @@ describe("validateHandoff checks the short form of a restyle handoff", () => {
     expect(HANDOFF_RESTYLE_FIELDS).toEqual(["iterationKind", "liveRoutes", "entryPoints"]);
   });
 
+  // QFAI:EX-0001-0095-02
   it("reports a restyle record that lacks its live routes or its entry points", () => {
     const fields = (record: Record<string, unknown>): (string | undefined)[] =>
       validateHandoff(record).map((issue) => issue.field);
@@ -101,6 +102,15 @@ describe("validateHandoff checks the short form of a restyle handoff", () => {
   it("checks no restyle field on a record of another kind", () => {
     expect(validateHandoff({ finalArtifact: ".qfai/prototype/final/index.html" })).toEqual([]);
     expect(validateHandoff({ iterationKind: "prototype" })).toEqual([]);
+  });
+
+  it("reports an iteration kind that is neither prototype nor restyle", () => {
+    for (const iterationKind of ["redesign", "", 1]) {
+      const issues = validateHandoff({ iterationKind });
+      expect(issues.map((issue) => [issue.code, issue.field])).toEqual([
+        ["HANDOFF-SCHEMA-FIELD-TYPE", "iterationKind"],
+      ]);
+    }
   });
 });
 

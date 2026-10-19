@@ -91,28 +91,46 @@ export function validateHandoff(input: unknown): HandoffValidationIssue[] {
       });
     }
   }
-  if (obj.iterationKind === "restyle") issues.push(...restyleIssues(obj));
+  issues.push(...restyleIssues(obj));
   return issues;
 }
 
-/** A restyle record names at least one live route and both lists of entry points. */
+/** The prototyping loop's iteration kinds a handoff record may name. */
+const ITERATION_KINDS: readonly unknown[] = ["prototype", "restyle"];
+
+/**
+ * An `iterationKind` names a known kind, and a restyle record names at least
+ * one live route and both lists of entry points.
+ */
 function restyleIssues(obj: Record<string, unknown>): HandoffValidationIssue[] {
+  const [kindField, routesField, entryField] = HANDOFF_RESTYLE_FIELDS;
+  const kind = obj[kindField];
+  if (kind === undefined) return [];
+  if (!ITERATION_KINDS.includes(kind)) {
+    return [
+      {
+        code: "HANDOFF-SCHEMA-FIELD-TYPE",
+        message: `Field "${kindField}" must be "prototype" or "restyle".`,
+        field: kindField,
+      },
+    ];
+  }
+  if (kind !== "restyle") return [];
   const issues: HandoffValidationIssue[] = [];
-  const routes = obj.liveRoutes;
+  const routes = obj[routesField];
   if (!isStringList(routes) || routes.length === 0) {
     issues.push({
       code: "HANDOFF-SCHEMA-FIELD-TYPE",
-      message: 'A restyle handoff needs "liveRoutes", a non-empty list of route strings.',
-      field: "liveRoutes",
+      message: `A restyle handoff needs "${routesField}", a non-empty list of route strings.`,
+      field: routesField,
     });
   }
-  const entry = obj.entryPoints;
+  const entry = obj[entryField];
   if (!isRecord(entry) || !isStringList(entry.stylesheet) || !isStringList(entry.motion)) {
     issues.push({
       code: "HANDOFF-SCHEMA-FIELD-TYPE",
-      message:
-        'A restyle handoff needs "entryPoints" with "stylesheet" and "motion" lists of paths.',
-      field: "entryPoints",
+      message: `A restyle handoff needs "${entryField}" with "stylesheet" and "motion" lists of paths.`,
+      field: entryField,
     });
   }
   return issues;

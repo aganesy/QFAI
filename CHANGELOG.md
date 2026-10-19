@@ -38,8 +38,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **Prototyping has a `restyle` iteration kind for restyling a running app.**
   When a request changes only the styles and motion of screens the project
   already runs, the loop records `iterationKind: restyle` in `progress.md`.
-  Each iteration then restyles the live app in place and lists the live routes
-  in scope, and the reviewer opens those routes in the running app. The handoff
+  Each iteration then edits only the project's stylesheet and motion entry
+  points and lists the live routes in scope with their absolute URLs, and the
+  reviewer opens those routes in the running app. The route's implement stage
+  carries those edits to a tested commit. The handoff
   copies no prototype and writes a short `handoff.json` with `liveRoutes` and
   the stylesheet and motion `entryPoints` instead of `finalArtifact` and
   `procurement`. `qfai validate --profile saas-package` reports a restyle record

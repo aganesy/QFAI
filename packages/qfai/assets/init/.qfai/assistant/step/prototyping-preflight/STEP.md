@@ -42,6 +42,9 @@ Nothing. The CLI checks are read-only.
 - Confirm a dev server or a static file server can serve
   `.qfai/prototype/` at the URL passed to
   `npx qfai doctor --profile prototyping --target-url <url>`.
+- For a `restyle` request, also run
+  `npx qfai doctor --profile prototyping --target-url <url>` against the live
+  app's URL, so the running app answers before the first iteration.
 - Doctor sends one `GET` to exactly the URL it is given, without following a
   redirect, and waits 3 seconds. A status from 200 to 399 passes; a 404 or any
   other status fails the check, and so does no answer. It probes that one URL,
