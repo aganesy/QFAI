@@ -4,8 +4,8 @@
     "preToolUse": [
       {
         "type": "command",
-        "bash": "node .qfai/tools/graph-hook.mjs shared",
-        "powershell": "node .qfai/tools/graph-hook.mjs shared",
+        "bash": "node -e \"const f=require('path').resolve(process.argv[1]),s=require('fs');if(s.existsSync(f))import(require('url').pathToFileURL(f).href);else{try{s.readFileSync(0)}catch{}console.error('QFAI graph hook skipped: .qfai/tools/graph-hook.mjs is missing. Run qfai init in this checkout.')}\" .qfai/tools/graph-hook.mjs shared",
+        "powershell": "node -e \"const f=require('path').resolve(process.argv[1]),s=require('fs');if(s.existsSync(f))import(require('url').pathToFileURL(f).href);else{try{s.readFileSync(0)}catch{}console.error('QFAI graph hook skipped: .qfai/tools/graph-hook.mjs is missing. Run qfai init in this checkout.')}\" .qfai/tools/graph-hook.mjs shared",
         "timeoutSec": 10
       }
     ]

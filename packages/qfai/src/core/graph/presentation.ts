@@ -3,6 +3,13 @@ import { graphRuntimePaths, type GraphPreparation } from "./prepare.js";
 import type { GraphHostProtection } from "./hosts.js";
 import { DOCUMENT_PROCESSING_SETUP } from "./documents.js";
 
+/**
+ * The host settings are committed while `.qfai/tools/` is not, so another clone or worktree has the
+ * hook entries without the script they run.
+ */
+const GRAPH_TOOLS_LOCAL_NOTE =
+  ".qfai/tools/ is local to this checkout: run qfai init in each other clone or worktree.";
+
 export async function renderGraphPreview(root: string): Promise<string> {
   const paths = graphRuntimePaths(root);
   const codegraph = (await safeLstat(paths.codegraph)) !== undefined;
@@ -44,6 +51,7 @@ export function renderGraphPreparation(
   }
   lines.push(
     "Configuration alone does not verify search protection. Check trust and runtime verification for each host.",
+    GRAPH_TOOLS_LOCAL_NOTE,
   );
   if (preparation.failedStep) {
     lines.push(

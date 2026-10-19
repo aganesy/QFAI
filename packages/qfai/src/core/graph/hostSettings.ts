@@ -3,6 +3,11 @@ import path from "node:path";
 import { isEnoent } from "../fs/errno.js";
 import { findUnsafeHostFileComponent, readPinnedRegularFile } from "../init/fsGuards.js";
 import { composeAdditionalGraphDenialHooks } from "./denialSettings.js";
+import {
+  CLAUDE_GRAPH_HOOK_GROUP,
+  GRAPH_HOOK_MARKER,
+  isEarlierGraphHookGroup,
+} from "./hookCommands.js";
 
 export interface GraphSettingsComposition {
   files: string[];
@@ -63,37 +68,26 @@ async function composeClaudeDenialHook(root: string): Promise<GraphSettingsCompo
   const groups = hooks.PreToolUse === undefined ? [] : hooks.PreToolUse;
   if (!Array.isArray(groups)) return conflict;
   const currentGroups: unknown[] = groups;
-  const marker = "QFAI graph exploration";
-  const managed = {
-    matcher: "Bash|PowerShell|Grep",
-    hooks: [
-      {
-        type: "command",
-        statusMessage: marker,
-        command: "node",
-        args: ["${CLAUDE_PROJECT_DIR}/.qfai/tools/graph-hook.mjs", "claude"],
-      },
-    ],
-  };
+  const managed = CLAUDE_GRAPH_HOOK_GROUP;
   const existing = currentGroups.filter(
     (group: unknown) =>
       isObject(group) &&
       Array.isArray(group.hooks) &&
-      group.hooks.some((hook: unknown) => isObject(hook) && hook.statusMessage === marker),
+      group.hooks.some(
+        (hook: unknown) => isObject(hook) && hook.statusMessage === GRAPH_HOOK_MARKER,
+      ),
   );
-  if (existing.length > 0) {
+  let next = [...currentGroups, managed];
+  if (existing.length === 1 && isEarlierGraphHookGroup(existing[0]))
+    next = currentGroups.map((group: unknown) => (group === existing[0] ? managed : group));
+  else if (existing.length > 0)
     return existing.length === 1 && JSON.stringify(existing[0]) === JSON.stringify(managed)
       ? { files: [], conflicts: [] }
       : conflict;
-  }
   await mkdir(path.dirname(file), { recursive: true });
   await writeFile(
     file,
-    JSON.stringify(
-      { ...parsed, hooks: { ...hooks, PreToolUse: [...currentGroups, managed] } },
-      null,
-      2,
-    ) + "\n",
+    JSON.stringify({ ...parsed, hooks: { ...hooks, PreToolUse: next } }, null, 2) + "\n",
   );
   return { files: [relative], conflicts: [] };
 }

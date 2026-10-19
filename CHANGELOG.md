@@ -452,6 +452,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   project with no `package.json` still gets the vitest test.
   Fixes #3826.
 
+- **The graph hook no longer fails in a checkout that has not run `qfai init`.**
+  The hook entries in `.claude/settings.json`, `.codex/hooks.json` and
+  `.github/hooks/qfai-graph.json` are committed, but `.qfai/tools/` is
+  git-ignored, so a fresh clone or a new worktree printed a raw Node error before
+  every Bash, PowerShell and Grep call. Each command now checks for the script
+  first: where it is missing it prints one line asking you to run
+  `npx qfai init` and exits 0. `qfai init` replaces the entries an earlier
+  release wrote, the init summary says `.qfai/tools/` is local to each
+  checkout, and `qfai doctor` warns when the entries point at a missing
+  script. Fixes #3750. Fixes #3805.
+
 - **A DESIGN.md violation every screen shares is reported once.** The
   prototyping reviewer repeated a violation whose source every screen shares,
   such as a shared stylesheet or component, in each screen's review payload, so
