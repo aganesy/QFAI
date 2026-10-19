@@ -1602,6 +1602,148 @@ describe("story-tree drift", () => {
   });
 });
 
+describe("protected files whose content is unchanged", () => {
+  const contract = `${specs}/03_contract/ui/ui-0001-form.yaml`;
+  const policy = `${specs}/01_policy/glossary.md`;
+  const front = `${specs}/01_policy/front.md`;
+  const notes = `${specs}/01_policy/notes.md`;
+  const flows = `${specs}/02_business-flow/business-flows.md`;
+  const criteria = `${specs}/02_business-flow/business-flow-0001/user-story-0001-0001/02_Acceptance-Criteria.md`;
+  const plainRule = "  name: Required. At most 40 characters. Trimmed before saving.\n";
+  const yamlBase = `# QFAI-CONTRACT-ID: UI-0001\nscreen: form\nrules:\n${plainRule}  max: 17\n  flag: yes\nbig: 12345678901234567891\n1: a\n`;
+  const markdownBase =
+    "# Terms\n\nA term is defined once and used\neverywhere else.\n\n| Term | Meaning |\n| --- | --- |\n| A | First |\n| B | Second |\n\n- one\n- two\n";
+  const frontBase = "---\ntitle: Terms\nowner: docs\n---\n\nText.\n";
+  const notesBase = "> # H\nbar\n\n<pre>\na\n\nb\nc\n</pre>\n";
+  const gherkinBase =
+    "# Acceptance Criteria\n\n```gherkin\nFeature: Form\n  Scenario: A name is checked\n    Then the name is required and is at most 40 characters\n```\n";
+
+  async function commitBase(): Promise<void> {
+    git("config", "core.autocrlf", "false");
+    await put(decisions, table);
+    await put(contract, yamlBase);
+    await put(policy, markdownBase);
+    await put(front, frontBase);
+    await put(notes, notesBase);
+    await put(criteria, gherkinBase);
+    await put(flows, "# Flows\n\nEach flow is listed\nhere.\n");
+    git("add", ".");
+    git("commit", "-m", "base");
+    git("checkout", "-b", "topic");
+  }
+
+  async function upstreamEdits(): Promise<(string | undefined)[]> {
+    git("add", ".");
+    git("commit", "-m", "edit");
+    const findings = await validateStoryTreeDrift(root, config(), "tdd");
+    return findings
+      .filter((item) => item.code === "QFAI-DRIFT-001")
+      .map((item) => item.file)
+      .sort();
+  }
+
+  // QFAI:EX-0001-0054-23
+  it("needs no change request for a re-laid-out YAML or Markdown file", async () => {
+    await commitBase();
+    await put(
+      contract,
+      yamlBase.replace(
+        plainRule,
+        "  name: >-\n    Required.\n    At most 40 characters.\n    Trimmed before saving.\n",
+      ),
+    );
+    // Re-wrapped, re-padded, with trailing whitespace, and stored with CRLF line endings.
+    await put(
+      policy,
+      "# Terms  \n\nA term is defined once\nand used everywhere else.   \n\n| Term | Meaning |\n| ---- | ------- |\n| A    | First   |\n| B    | Second  |\n\n- one\n- two\n".replace(
+        /\n/g,
+        "\r\n",
+      ),
+    );
+    expect(await upstreamEdits()).toEqual([]);
+    // The working tree gets the same treatment: an uncommitted re-wrap is not named.
+    await put(flows, "# Flows\n\nEach flow is listed here.\n");
+    const findings = await validateStoryTreeDrift(root, config(), "tdd");
+    expect(findings.filter((item) => item.code === "QFAI-DRIFT-004")).toEqual([]);
+  });
+
+  // QFAI:EX-0001-0054-24
+  it.each([
+    ["a YAML value whose case changed", contract, yamlBase.replace("Required.", "required.")],
+    ["a YAML file that no longer parses", contract, `${yamlBase}  : broken: [\n`],
+    ["a changed contract ID comment", contract, yamlBase.replace("UI-0001", "UI-0002")],
+    ["an unknown YAML tag", contract, yamlBase.replace("screen: form", "screen: !page form")],
+    ["017 in place of 17", contract, yamlBase.replace("max: 17", "max: 017")],
+    ['"yes" in place of yes', contract, yamlBase.replace("flag: yes", 'flag: "yes"')],
+    [
+      "a large integer changed past double precision",
+      contract,
+      yamlBase.replace("567891", "567892"),
+    ],
+    ["a key 1 quoted as '1'", contract, yamlBase.replace("\n1: a\n", "\n'1': a\n")],
+    ["prose whose punctuation changed", policy, markdownBase.replace("once and", "once, and")],
+    ["prose whose case changed", policy, markdownBase.replace("A term", "a term")],
+    ["prose whose inner spacing changed", policy, markdownBase.replace("once and", "once  and")],
+    ["a hard break of two spaces", policy, markdownBase.replace("used\n", "used  \n")],
+    ["a hard break of a backslash", policy, markdownBase.replace("used\n", "used\\\n")],
+    ["two list items joined into one", policy, markdownBase.replace("- one\n- two", "- one - two")],
+    ["two list items swapped", policy, markdownBase.replace("- one\n- two", "- two\n- one")],
+    [
+      "two table rows swapped",
+      policy,
+      markdownBase.replace("| A | First |\n| B | Second |", "| B | Second |\n| A | First |"),
+    ],
+    ["two front matter lines joined", front, frontBase.replace("Terms\nowner", "Terms owner")],
+    ["a quoted heading joined to the next line", notes, notesBase.replace("# H\nbar", "# H bar")],
+    [
+      "two lines joined inside a pre element with a blank line",
+      notes,
+      notesBase.replace("b\nc\n</pre>", "b c\n</pre>"),
+    ],
+    [
+      "a step split inside a fenced block",
+      criteria,
+      gherkinBase.replace("required and is", "required\n    And the name is"),
+    ],
+    [
+      "a step re-wrapped inside a fenced block",
+      criteria,
+      gherkinBase.replace("required and is", "required and\n    is"),
+    ],
+  ])("still reports %s", async (_case, file, content) => {
+    await commitBase();
+    await put(file, content);
+    expect(await upstreamEdits()).toEqual([file]);
+  });
+
+  // QFAI:EX-0001-0054-24
+  it("still reports a protected path that HEAD holds as a symlink", async () => {
+    await commitBase();
+    const blob = execFileSync("git", ["hash-object", "-w", "--stdin"], {
+      cwd: root,
+      input: "front.md",
+      encoding: "utf8",
+    }).trim();
+    // Only the index changes, so the committed path is a symlink on every platform.
+    git("update-index", "--cacheinfo", `120000,${blob},${policy}`);
+    git("commit", "-m", "symlink");
+    const findings = await validateStoryTreeDrift(root, config(), "tdd");
+    expect(
+      findings.filter((item) => item.code === "QFAI-DRIFT-001").map((item) => item.file),
+    ).toEqual([policy]);
+  });
+
+  // QFAI:EX-0001-0054-24
+  it("still names an uncommitted change of text", async () => {
+    await commitBase();
+    await put(flows, "# Flows\n\nEach flow is listed there.\n");
+    const findings = await validateStoryTreeDrift(root, config(), "tdd");
+    expect(
+      findings.filter((item) => item.code === "QFAI-DRIFT-004").flatMap((item) => item.refs),
+    ).toEqual([flows]);
+  });
+});
+
 describe("relocated inherited raw decision rows", () => {
   // QFAI:EX-0001-0054-19
   it.each(["line ending", "stored padding", "authorised Status only"])(

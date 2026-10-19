@@ -459,6 +459,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the per-iteration summary, and each screen's payload keeps the violations that
   come from that screen. Fixes #3666.
 
+- **A layout-only edit of a protected story-tree file needs no change request.**
+  `qfai validate` no longer raises `QFAI-DRIFT-001` for a protected file whose
+  content is unchanged since the base: a YAML file whose two sides parse with no
+  error or warning to deep-equal values under YAML 1.2 and 1.1 and keep the same
+  comments, such as a plain scalar rewritten as a folded block scalar, or a
+  Markdown file that differs only in line endings, trailing whitespace, table
+  cell padding or the line breaks inside one paragraph. A change of
+  case, punctuation, spacing or order, a hard line break, a changed YAML comment
+  such as the contract ID, a line inside a fenced block such as a Gherkin step,
+  front matter or an HTML block, or a YAML side that does not parse cleanly
+  still needs a change request row. Fixes #3806.
+
 - **The `decision` flag puts a decision point in the plan of a flagged extraction.**
   An extraction with the `decision` flag set on a route whose plan names no
   decision point, such as `change-tooling` for `intent: ci`, returned
