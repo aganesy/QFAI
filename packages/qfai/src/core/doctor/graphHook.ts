@@ -1,6 +1,7 @@
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
+import { isEnoent } from "../fs/errno.js";
 import { GRAPH_HOOK_MARKER, GRAPH_HOOK_SCRIPT } from "../graph/hookCommands.js";
 
 /** The committed host settings init writes a graph hook entry into, root-relative. */
@@ -18,12 +19,14 @@ export type GraphHookCheck = {
   details: { script: string; settings: string[] };
 };
 
-async function exists(target: string): Promise<boolean> {
+/** `true` when the file exists, `false` when it does not, and the error text when it cannot be checked. */
+async function exists(target: string): Promise<boolean | string> {
   try {
     await stat(target);
     return true;
-  } catch {
-    return false;
+  } catch (cause: unknown) {
+    if (isEnoent(cause)) return false;
+    return cause instanceof Error ? cause.message : String(cause);
   }
 }
 
@@ -67,12 +70,21 @@ export async function checkGraphHookScript(root: string): Promise<GraphHookCheck
   if (settings.length === 0) return undefined;
   const title = `Graph hook script (${GRAPH_HOOK_SCRIPT})`;
   const details = { script: GRAPH_HOOK_SCRIPT, settings };
-  if (await exists(path.join(root, ...GRAPH_HOOK_SCRIPT.split("/"))))
+  const script = await exists(path.join(root, ...GRAPH_HOOK_SCRIPT.split("/")));
+  if (script === true)
     return {
       id: "graph.hookScript",
       severity: "ok",
       title,
       message: "the graph hook script is installed",
+      details,
+    };
+  if (typeof script === "string")
+    return {
+      id: "graph.hookScript",
+      severity: "warning",
+      title,
+      message: `${GRAPH_HOOK_SCRIPT} could not be checked: ${script}`,
       details,
     };
   return {

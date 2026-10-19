@@ -204,7 +204,7 @@ const MISSING_HOOK_LINE =
   "QFAI graph hook skipped: .qfai/tools/graph-hook.mjs is missing. Run npx qfai init in this checkout.";
 
 // QFAI:EX-0001-0237-23
-// Mutation: packages/qfai/src/core/graph/hookCommands.ts `require('fs').existsSync(f)?` -> `true?` fails "passes each host's graph hook with one reminder line where the script is missing"
+// Mutation: packages/qfai/src/core/graph/hookCommands.ts `if(s.existsSync(f))` -> `if(true)` fails "passes each host's graph hook with one reminder line where the script is missing"
 it("passes each host's graph hook with one reminder line where the script is missing", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-hook-missing-"));
   try {
@@ -236,6 +236,71 @@ it("passes each host's graph hook with one reminder line where the script is mis
     await removeTempTree(root);
   }
 });
+
+// QFAI:EX-0001-0237-23
+// Mutation: packages/qfai/src/core/graph/hookCommands.ts `else{try{s.readFileSync(0)}catch{}` -> `else{` fails "reads a large tool input before it passes where the script is missing"
+it("reads a large tool input before it passes where the script is missing", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-hook-stdin-"));
+  try {
+    await composeGraphDenialHooks(root);
+    const input = JSON.stringify({ tool_input: { command: "x".repeat(400 * 1024) } });
+    for (const hook of await graphHookCommands(root)) {
+      const result = runGraphHook(hook, root, input);
+      expect(result.error, hook.host).toBeUndefined();
+      expect(result.status, hook.host).toBe(0);
+      expect(result.stderr.trim().split(/\r?\n/), hook.host).toEqual([MISSING_HOOK_LINE]);
+    }
+  } finally {
+    await removeTempTree(root);
+  }
+});
+
+// QFAI:EX-0001-0237-23
+// Mutation: packages/qfai/src/core/graph/hookCommands.ts `else{try{s.readFileSync(0)}catch{}` -> `else{try{s.readFileSync(0)}catch{}process.stdout.write('$')` fails "keeps each graph hook shell line free of characters a hook shell expands"
+it("keeps each graph hook shell line free of characters a hook shell expands", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-hook-shell-"));
+  try {
+    await composeGraphDenialHooks(root);
+    for (const hook of await graphHookCommands(root)) {
+      const guard =
+        hook.args === undefined ? /^node -e "(.*)" \S+ \S+$/.exec(hook.command)?.[1] : hook.args[1];
+      expect(guard, hook.host).toBeDefined();
+      expect(guard, hook.host).not.toMatch(/["$`%!\\]/);
+    }
+  } finally {
+    await removeTempTree(root);
+  }
+});
+
+// QFAI:EX-0001-0237-23
+// Mutation: packages/qfai/src/core/graph/hookCommands.ts `else{try{s.readFileSync(0)}catch{}` -> `else{process.exitCode=1;` fails "passes the shared graph hook under Windows PowerShell where the script is missing"
+it.runIf(process.platform === "win32")(
+  "passes the shared graph hook under Windows PowerShell where the script is missing",
+  async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-hook-powershell-"));
+    try {
+      await composeGraphDenialHooks(root);
+      const shared: unknown = JSON.parse(
+        await readFile(path.join(root, ".github", "hooks", "qfai-graph.json"), "utf8"),
+      );
+      const entries = record(record(shared).hooks).preToolUse;
+      if (!Array.isArray(entries)) throw new Error("No preToolUse entries.");
+      const line = record(entries[0]).powershell;
+      if (typeof line !== "string") throw new Error("No PowerShell line.");
+      const result = spawnSync("powershell", ["-NoProfile", "-Command", line], {
+        cwd: root,
+        input: "{}",
+        encoding: "utf8",
+        timeout: 60000,
+      });
+      expect(result.error).toBeUndefined();
+      expect(result.status).toBe(0);
+      expect(result.stderr.trim().split(/\r?\n/)).toEqual([MISSING_HOOK_LINE]);
+    } finally {
+      await removeTempTree(root);
+    }
+  },
+);
 
 // QFAI:EX-0001-0237-24
 // Mutation: packages/qfai/src/core/graph/hostSettings.ts `if (existing.length === 1 && isEarlierGraphHookGroup(existing[0]))` -> `if (false)` fails "replaces the graph hook entries an earlier release wrote with the guarded ones"
@@ -330,7 +395,7 @@ it("says in the init summary that the graph tools are local to each checkout", (
 });
 
 // QFAI:EX-0001-0237-26
-// Mutation: packages/qfai/src/core/doctor/graphHook.ts `if (await exists(path.join(root, ...GRAPH_HOOK_SCRIPT.split("/"))))` -> `if (true)` fails "warns in doctor when committed graph hook entries point at a missing script"
+// Mutation: packages/qfai/src/core/doctor/graphHook.ts `if (script === true)` -> `if (true)` fails "warns in doctor when committed graph hook entries point at a missing script"
 it("warns in doctor when committed graph hook entries point at a missing script", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-hook-doctor-"));
   const check = async () =>
@@ -354,3 +419,26 @@ it("warns in doctor when committed graph hook entries point at a missing script"
     await removeTempTree(root);
   }
 });
+
+// QFAI:EX-0001-0237-26
+// Mutation: packages/qfai/src/core/doctor/graphHook.ts `if (isEnoent(cause)) return false;` -> `return false;` fails "names the error in doctor when the graph hook script cannot be checked"
+// Windows reports a path through a regular file as missing, so the case needs a POSIX `ENOTDIR`.
+it.runIf(process.platform !== "win32")(
+  "names the error in doctor when the graph hook script cannot be checked",
+  async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-hook-doctor-stat-"));
+    try {
+      await composeGraphDenialHooks(root);
+      await mkdir(path.join(root, ".qfai"));
+      await writeFile(path.join(root, ".qfai", "tools"), "not a directory\n");
+      const check = (await createDoctorData({ startDir: root, rootExplicit: true })).checks.find(
+        (entry) => entry.id === "graph.hookScript",
+      );
+      expect(check?.severity).toBe("warning");
+      expect(check?.message).toContain(".qfai/tools/graph-hook.mjs could not be checked");
+      expect(check?.message).toContain("ENOTDIR");
+    } finally {
+      await removeTempTree(root);
+    }
+  },
+);

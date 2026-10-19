@@ -1312,13 +1312,13 @@ export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
  */
 export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // The generated shared denial hook is pinned independently of workflow templates.
-  // Re-pinned when every graph hook command began with a `node -e` guard that exits 0 with one
-  // line naming `npx qfai init` where the git-ignored script is missing, and otherwise imports it.
-  // Derived by serialising the composed file as the composition code does; the unguarded command
+  // Re-pinned when every graph hook command began with a `node -e` guard that reads and discards
+  // stdin, then exits 0 with one line naming `npx qfai init`, where the git-ignored script is
+  // missing, and otherwise imports it. Derived by serialising the composed file as the composition code does; the unguarded command
   // reproduces `e807d0ca…` byte for byte.
   [
     ".github/hooks/qfai-graph.json",
-    "be3aa16a014edcc4a83fb53d3e5ad0e88d87a190c7714d389c8cc97b93d641f5",
+    "01a5bd7cf9e4fb25f9cc1f82f8d88426686b1834ea9a7f66283f174fc918e801",
   ],
   [
     // Re-pinned when the cross-AI rules block was restated for the tree it is written into. Three
@@ -1516,7 +1516,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // Re-pinned for the guarded graph hook group init appends after the template's groups: the same
   // matcher and marker, with `-e` and the guard before the script path. Restoring the unguarded
   // group reproduces `6d3610ad…` byte for byte.
-  [".claude/settings.json", "6286146e8247f070786c89572ea09d89fcfe0f9759e7c758155ee4fd4639e055"],
+  [".claude/settings.json", "d1033f826da8cc970e0cc4fe41792f616384252c3d219cb900a4d613888103be"],
   // Inside `.codex/`, and pinned for the reason `.claude/settings.json` is: its commands are a
   // program an adopter's agent runs. Two `UserPromptSubmit` groups, structured-question and
   // free-text entry. Codex takes one command string, so each runs the same `node -e` reader
@@ -1563,7 +1563,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // after the first eligible call. Restoring the five programs reproduces `252e94e4…`.
   // Re-pinned for the same guarded graph hook group as `.claude/settings.json`, one line with no
   // character a hook shell expands. Restoring the unguarded command reproduces `49a89560…`.
-  [".codex/hooks.json", "1625fdb6b0a5a554ed9f889c36d2ff2f9c1b5d1c693eb38cd6aa40fc3948d33f"],
+  [".codex/hooks.json", "f835f7cfed3c727b7ab47d6722e523c157ff2ed68a0e7e731211345ef5eda371"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`
