@@ -4,12 +4,15 @@
  * init wrote as written, without removing or editing it. The review directive is the only line init still prepends.
  */
 // QFAI:AC-0001-0196-03
-import { lstat, readFile, readlink, symlink, writeFile } from "node:fs/promises";
+import { access, lstat, readFile, readlink, symlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
 import { initQuietly, withEmptyRepo } from "./upgradeStates.js";
+
+const CLAUDE_MD_LINE =
+  "qfai init does not write CLAUDE.md. Where a project has one, Claude Code reads it instead of AGENTS.md: add the line @AGENTS.md to it.";
 
 const ENTRY_POINTS = ["AGENTS.md"];
 const COPILOT = ".github/copilot-instructions.md";
@@ -134,6 +137,24 @@ describe("the entry line", () => {
       expect((await lstat(path.join(root, "AGENTS.md"))).isSymbolicLink()).toBe(true);
       expect(await readlink(path.join(root, "AGENTS.md"))).toBe("shared.md");
       expect(await readFile(target, "utf-8")).toBe(PROJECT_TEXT);
+    });
+  });
+});
+
+describe("the CLAUDE.md line", () => {
+  const claudeLines = (output: string): string[] =>
+    output.split(/\r?\n/).filter((line) => line.includes("CLAUDE.md"));
+
+  // QFAI:EX-0001-0196-75
+  it("Init prints it once whether or not CLAUDE.md exists, and leaves CLAUDE.md alone", async () => {
+    await withEmptyRepo(async (root) => {
+      expect(claudeLines(await initQuietly(root))).toEqual([CLAUDE_MD_LINE]);
+      await expect(access(path.join(root, "CLAUDE.md"))).rejects.toThrow();
+
+      await writeFile(path.join(root, "CLAUDE.md"), PROJECT_TEXT, "utf-8");
+      expect(claudeLines(await initQuietly(root))).toEqual([CLAUDE_MD_LINE]);
+      expect(claudeLines(await initQuietly(root, false, true, true))).toEqual([CLAUDE_MD_LINE]);
+      expect(await read(root, "CLAUDE.md")).toBe(PROJECT_TEXT);
     });
   });
 });
