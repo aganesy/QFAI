@@ -125,9 +125,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **A dependency update whose checks name a contract to change moves to the
   route that edits the spec.** When `validate`, or another check the update
   runs, reports a finding that names a spec contract, `implement-dep-bump` now
-  leaves the contract unchanged and reports `contract-finding`, and the
-  `bump-dependency` plan moves the work to `apply-settled`, whose settled triage
-  edits the contract under its change request. Such an update no longer needs
+  leaves the contract unchanged, finishes the rest of the update, and puts the
+  finding to the operator. On approval it appends the change request row and
+  reports `contract-finding` citing it, and the work moves to `apply-settled`,
+  whose `spec` stage edits the contract under its change request. Such an update no longer needs
   the `stale-record` reading, whose route starts with a diagnosis that had
   nothing to find. The `dependency` intent in the extraction reference now
   covers that contract edit.

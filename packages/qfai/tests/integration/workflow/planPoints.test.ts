@@ -25,7 +25,6 @@ import {
   parsePlan,
   type PlanBranchPoint,
 } from "../../../src/core/workflow/plans.js";
-import { flat, readShipped } from "../../helpers/shippedAssistant.js";
 import { extraction } from "../../helpers/workflowExtraction.js";
 import { minimalProject, removeProjects } from "./workflowProject.js";
 
@@ -283,19 +282,9 @@ it("apply-settled moves to decide-design when sdd-triage reports outside-record"
 
 // QFAI:EX-0001-0215-18
 it("bump-dependency moves to apply-settled when implement-dep-bump reports a finding that names a contract", async () => {
-  const step = flat(await readShipped("step/implement-dep-bump/STEP.md"));
-
-  expect({
-    destination: destinations(
-      await planned("bump-dependency"),
-      "implement-dep-bump",
-      "contract-finding",
-    ),
-    leavesContract:
-      /leave the contract unchanged and report `branch: \{ outcome: contract-finding \}`/i.test(
-        step,
-      ),
-  }).toEqual({ destination: ["apply-settled"], leavesContract: true });
+  expect(
+    destinations(await planned("bump-dependency"), "implement-dep-bump", "contract-finding"),
+  ).toEqual(["apply-settled"]);
 });
 
 // QFAI:EX-0001-0215-09
