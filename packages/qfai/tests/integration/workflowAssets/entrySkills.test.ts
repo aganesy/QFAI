@@ -314,6 +314,9 @@ describe("qfai-run", () => {
     );
     expect(kinds).toMatch(/\b(?:independent|separate) new request\b.*\bplan(?:ned)?\b/i);
     expect(kinds).toContain("`references/operator-screens.md`");
+    expect(kinds).toContain(
+      "An automated notice (task, wake-up, CI) is no request; one that delivers a requested result resumes the waiting step.",
+    );
   });
 
   // QFAI:EX-0001-0196-43

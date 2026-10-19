@@ -26,7 +26,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Its full and brief messages now say that an automated notice, such as a
   finished background task, a wake-up or a CI event, starts no `qfai-run`, so
   an agent already in a run is not told to start a second one when the host
-  attaches the reminder to such a turn. Refs #3693.
+  attaches the reminder to such a turn. The `qfai-run` skill says the same, and
+  that a notice delivering a requested result resumes the waiting step.
+  Refs #3693.
 - **The README links the release notes.** The upgrade section now points to
   the GitHub Releases page, whose bodies are the release notes, and the
   `@jackchuka/mdschema` section says a release that moves its exact pin says so

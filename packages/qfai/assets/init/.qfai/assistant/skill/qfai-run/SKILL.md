@@ -48,8 +48,8 @@ values plan nothing.
 
 - For independent targets under one goal, read `references/operator-screens.md`
   before planning or switching during a wait.
-- Plan changes, questions, proposals to decide and reports to close.
-  Questions plan answers without changes; nonrequests get no plan.
+- Plan changes, questions, proposals to decide and reports to close. Questions plan answers without changes; nonrequests get no plan.
+  An automated notice (task, wake-up, CI) is no request; one that delivers a requested result resumes the waiting step.
 - Replies with a requested answer or result, including failure, resume the same step without
   a new invocation. An independent new request is planned; read `references/operator-screens.md`
   for replies.
