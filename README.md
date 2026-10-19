@@ -596,8 +596,8 @@ workflow:
       reason: We run our own docs lane.
 ```
 
-An entry without a reason, or with an empty one, is a configuration error and
-accepts nothing.
+An entry without a reason or with an empty one, or a file outside the shipped
+set or listed twice, is a configuration error and accepts nothing.
 
 On any other CI platform, configure the job yourself and run:
 

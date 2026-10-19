@@ -164,6 +164,7 @@ describe("qfai doctor reports a shipped workflow that differs from the shipped t
 
     expect(await driftFindings(root)).toEqual([]);
   });
+
   // QFAI:EX-0003-0011-32
   it("names a pinned action whose version differs, with both versions", async () => {
     // QFAI:AC-0003-0011-14
@@ -178,6 +179,25 @@ describe("qfai doctor reports a shipped workflow that differs from the shipped t
 
     expect(found?.message).toContain(
       `; pinned actions that differ: actions/setup-node (installed v4, shipped ${pinned ?? ""})`,
+    );
+  });
+
+  // QFAI:EX-0003-0011-32
+  it("shows the version comment beside a pin and a bare SHA as it is", async () => {
+    // QFAI:AC-0003-0011-14
+    const shipped = await readFile(packagedPath("qfai-tests.yml"), "utf-8");
+    const pinned = SETUP_NODE.exec(shipped)?.[1] ?? "";
+    const root = await project({
+      "qfai-tests.yml": shipped.replace(
+        SETUP_NODE,
+        "uses: actions/setup-node@0123456789abcdef0123456789abcdef01234567 # v4.1.0",
+      ),
+    });
+
+    const [found] = await driftFindings(root);
+
+    expect(found?.message).toContain(
+      `actions/setup-node (installed 0123456789abcdef0123456789abcdef01234567 (v4.1.0), shipped ${pinned})`,
     );
   });
 
@@ -221,6 +241,7 @@ describe("qfai doctor reads an accepted drift from qfai.config.yaml", () => {
       "    - file: qfai-docs.yml\n",
       '    - file: qfai-docs.yml\n      reason: "  "\n',
       "    - file: qfai-orphan.yml\n      reason: Ours.\n",
+      "    - file: qfai-docs.yml\n      reason: Ours.\n    - file: qfai-docs.yml\n      reason: Again.\n",
       "    - qfai-docs.yml\n",
     ]) {
       const root = await project(

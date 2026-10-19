@@ -29,6 +29,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   drops from about 36 KB to about 21 KB with the same values and wording.
   Fixes #3780.
 
+- **`qfai-run` plans each item of a standing queue instruction separately.**
+  The extraction reference now gives "merge the open pull requests oldest
+  first, then the issues" as an example of one goal covering independent
+  targets, so each pull request or issue gets its own extraction and plan
+  instead of being worked without one. Fixes #3781.
+
 - **The `sdd-triage` step says how a replaced decision is recorded.** Its
   decision-row rules now say that when a later decision replaces a row, that
   row's Status changes to `SUPERSEDED (by DEC-NNNN)`, or to
@@ -104,13 +110,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   pending approval row first.
   Fixes #3551.
 
+- **A critical decision found while writing the discussion pack goes back to
+  the user.** `discussion-pack` and `discussion-oq` now reopen the ended session
+  for that one node: they stop writing, ask the user one round, and resume. The
+  stage report's `## Grilling Session` table gains one row for that round, and
+  the earlier rows stay as written. Only a no-question mode may record the
+  decision as an assumption. Fixes #3794.
+
 - **`qfai doctor` says what a shipped workflow changed, and a project can accept a
   difference with a reason.** The `workflows.drift.*` warning now also names each
   action both files use whose pinned version differs, with the version on each
   side. A file listed under `workflow.acceptedDrift` in `qfai.config.yaml`, each
   entry with a `file` and a `reason`, is reported as `info` with that reason
-  instead of a warning; an entry without a reason, or with an empty one, is a
-  configuration error and accepts nothing. The README upgrade steps now cover
+  instead of a warning; an entry without a reason or with an empty one, or a file outside
+  the shipped set or listed twice, is a configuration error and accepts nothing. The README upgrade steps now cover
   the workflows `init --force` leaves alone.
   Fixes #3751.
 

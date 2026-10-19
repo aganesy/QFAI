@@ -74,5 +74,5 @@ Feature: Shipped workflow checks
     Given a project whose `qfai.config.yaml` lists a differing shipped workflow under `workflow.acceptedDrift` with a reason
     When `qfai doctor` runs
     Then that workflow is reported as `info` with the reason, and every other differing workflow is still a `warning`
-    And an entry without a reason, with an empty reason or naming a file outside the shipped set is a configuration error and accepts no workflow
+    And an entry without a reason or with an empty reason, or a file outside the shipped set or listed twice, is a configuration error and accepts no workflow
 ```

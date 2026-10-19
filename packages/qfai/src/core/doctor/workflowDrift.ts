@@ -78,13 +78,18 @@ function linesWithoutCounterpart(lines: readonly string[], others: readonly stri
   return missing;
 }
 
-const USES_LINE = /^\s*(?:-\s*)?uses:\s*["']?([^@\s"']+)@([^\s"'#]+)/gm;
+const USES_LINE =
+  /^\s*(?:-\s*)?uses:\s*["']?([^@\s"']+)@([^\s"'#]+)["']?[ \t]*(?:#[ \t]*(v\d[^\s]*))?/gm;
 
-/** The refs each action is pinned to in a workflow text, by action name. */
+/**
+ * The refs each action is pinned to in a workflow text, by action name. A ref followed by a
+ * `# vX.Y.Z` comment reads `ref (vX.Y.Z)`; a bare ref reads as it is.
+ */
 function pinnedActions(text: string): Map<string, string> {
   const refs = new Map<string, Set<string>>();
-  for (const [, action = "", ref = ""] of withLf(text).matchAll(USES_LINE)) {
-    refs.set(action, (refs.get(action) ?? new Set()).add(ref));
+  for (const [, action = "", ref = "", version] of withLf(text).matchAll(USES_LINE)) {
+    const shown = version === undefined ? ref : `${ref} (${version})`;
+    refs.set(action, (refs.get(action) ?? new Set()).add(shown));
   }
   return new Map([...refs].map(([action, set]) => [action, [...set].sort().join(", ")]));
 }
@@ -155,11 +160,12 @@ export async function checkWorkflowDrift(
     if (installed === undefined || packaged === undefined) continue;
     if (withLf(installed) === withLf(packaged)) continue;
     const installedPath = [...WORKFLOWS_DIR, name].join("/");
+    const id = `workflows.drift.${name.replace(/\.yml$/, "")}`;
     const difference = describeWorkflowDifference(installed, packaged);
     const acceptedReason = accepted.get(name);
     if (acceptedReason !== undefined) {
       findings.push({
-        id: `workflows.drift.${name.replace(/\.yml$/, "")}`,
+        id,
         severity: "info",
         title: `Shipped workflow differs, accepted (${installedPath})`,
         message:
@@ -170,7 +176,7 @@ export async function checkWorkflowDrift(
       continue;
     }
     findings.push({
-      id: `workflows.drift.${name.replace(/\.yml$/, "")}`,
+      id,
       severity: "warning",
       title: `Shipped workflow differs (${installedPath})`,
       message:
