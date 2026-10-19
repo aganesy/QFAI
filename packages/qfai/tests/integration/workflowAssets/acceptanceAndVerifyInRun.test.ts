@@ -317,3 +317,37 @@ describe("acceptance scaffold evidence in the human report", () => {
     ]);
   });
 });
+
+describe("the run report recipe in the human report", () => {
+  const repoGate = "step/verify-repo-gate/STEP.md";
+  const recipeHeading = "### Run report";
+
+  // QFAI:AC-0001-0208-08
+  // QFAI:EX-0001-0208-09
+  it("lists what a run report records and keeps it apart from semantic coverage", async () => {
+    const recipe = sectionOf(await readShipped(repoGate), recipeHeading);
+    expect(recipe).not.toBe("");
+    expect(rowOf(recipe, "| Revision and run")).toMatch(/commit.*run ID.*attempt.*deployed/u);
+    expect(rowOf(recipe, "| Counts per layer")).toMatch(
+      /each layer.*runner.*command.*collected, passed, failed and skipped.*report/u,
+    );
+    expect(rowOf(recipe, "| Skips")).toMatch(/skipped case.*reason.*intended/u);
+    expect(rowOf(recipe, "| Fresh or cached")).toMatch(
+      /restored from a cache.*not reported as a fresh execution/u,
+    );
+    expect(rowOf(recipe, "| Retries")).toMatch(/retried case counts once.*final outcome/u);
+    expect(rowOf(recipe, "| Support cases")).toMatch(/Setup, teardown.*apart from/u);
+    const unknown = rowOf(recipe, "| UNKNOWN and UNRUN");
+    expect(unknown).toMatch(/UNKNOWN/u);
+    expect(unknown).toMatch(/report is missing.*collected no cases.*UNRUN/u);
+    expect(unknown).toMatch(/physical device/u);
+    expect(unknown).toMatch(/Neither is a pass/u);
+
+    const coverage = flat(recipe);
+    expect(coverage).toMatch(
+      /annotation, an assertion and a passing case do not prove every clause of a requirement/u,
+    );
+    expect(coverage).toMatch(/semantic coverage.*apart from the run report/u);
+    expect(coverage).toMatch(/no JSON field, gate status, parser or runner/u);
+  });
+});
