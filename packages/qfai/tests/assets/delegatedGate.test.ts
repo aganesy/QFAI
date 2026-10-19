@@ -81,6 +81,9 @@ describe("a gate the project runs in CI only is recorded as delegated", () => {
       expect(gates).toContain(
         "A gate that looks unrelated to the change is still run and its result recorded; `verify.json` has no status for a gate that does not apply to the change.",
       );
+      expect(gates).toContain(
+        "A conditional gate whose condition is false is left out of `gates` with its reason, as `common-gate-run` step 1 says.",
+      );
     });
 
     it(`${tree}: the gate step, the repository gate, the commit step and the contract agree`, async () => {

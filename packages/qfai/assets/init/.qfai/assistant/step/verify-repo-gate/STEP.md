@@ -47,7 +47,9 @@ commands entry named after the colon:
 
 Run listed commands and record outputs. A gate that looks unrelated to the
 change is still run and its result recorded; `verify.json` has no status for a
-gate that does not apply to the change. A gate whose Standard commands entry
+gate that does not apply to the change. A conditional gate whose condition is
+false is left out of `gates` with its reason, as `common-gate-run` step 1
+says. A gate whose Standard commands entry
 is `CI only: <check name>` is not run here: record it `DELEGATED` with that
 check name. This requires an actual CI check covering the same gate and scope;
 local environment failure alone creates no delegation. Retain observed FAIL or
