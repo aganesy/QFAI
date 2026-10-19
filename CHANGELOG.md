@@ -34,10 +34,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   skills or hooks.** A running session keeps the skill and hook text it loaded
   at start, so after `qfai init --force` it went on acting on the old text.
   When a run writes a file under the skill, step, agent or rule trees of
-  `.qfai/assistant/`, or writes `.claude/settings.json` or `.codex/hooks.json`,
-  the summary now has one line saying to restart the session or invoke the
-  skill again. A dry run, and a run that changed none of those files, print no
-  such line. Refs #3536.
+  `.qfai/assistant/`, a Codex agent profile under `.codex/agents/`, a rule
+  master under `.agents/rules/` (`reminders.json` aside, which the hooks read
+  on every run), `.claude/settings.json` or `.codex/hooks.json`, the summary
+  now has one line saying to restart any running agent session. A dry run, and
+  a run that changed none of those files, print no such line. Refs #3536.
 
 - **A project that runs tests in CI only records Red and Green `ci-deferred`.**
   Where the Standard commands write the Test entry `CI only: <check name>`,

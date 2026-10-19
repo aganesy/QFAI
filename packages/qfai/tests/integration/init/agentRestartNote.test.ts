@@ -2,7 +2,7 @@
  * Integration: init prints one line asking the user to restart a running agent session when it
  * wrote a skill or hook file, and nothing when it wrote none.
  */
-import { readFile, writeFile } from "node:fs/promises";
+import { readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
@@ -10,7 +10,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { initQuietly, SKILLS, withEmptyRepo } from "./upgradeStates.js";
 
 const RESTART_LINE =
-  "Skill or hook files changed: restart any running agent session, or invoke the skill again, so it uses the new text.";
+  "Skill or hook files changed: restart any running agent session so it uses the new text.";
 
 const SKILL_FILE = path.join(SKILLS, "qfai-run", "SKILL.md");
 
@@ -43,12 +43,46 @@ describe("the agent restart note", () => {
     });
   });
 
-  it("is printed when a hook file is written again", async () => {
+  it.each([
+    [".codex", "hooks.json"],
+    [".claude", "settings.json"],
+  ])("is printed when the hook file %s/%s is written again", async (dir, file) => {
     await withEmptyRepo(async (root) => {
       await initQuietly(root);
-      await writeFile(path.join(root, ".codex", "hooks.json"), "{}\n", "utf-8");
+      await writeFile(path.join(root, dir, file), "{}\n", "utf-8");
 
       expect(restartLines(await initQuietly(root))).toEqual([RESTART_LINE]);
+    });
+  });
+
+  it("is printed by --force when it regenerates an edited Codex agent profile", async () => {
+    await withEmptyRepo(async (root) => {
+      await initQuietly(root);
+      const profileDir = path.join(root, ".codex", "agents");
+      const [name] = (await readdir(profileDir)).filter((entry) => entry.endsWith(".toml"));
+      expect(name).toBeDefined();
+      const profile = path.join(profileDir, name ?? "");
+      const generated = await readFile(profile, "utf-8");
+      await writeFile(profile, `${generated}\n# A local edit.\n`, "utf-8");
+
+      const output = await initQuietly(root, true);
+
+      expect(await readFile(profile, "utf-8")).toBe(generated);
+      expect(restartLines(output)).toEqual([RESTART_LINE]);
+    });
+  });
+
+  it("is printed by --force when it overwrites an edited rule master", async () => {
+    await withEmptyRepo(async (root) => {
+      await initQuietly(root);
+      const rule = path.join(root, ".agents", "rules", "grilling.md");
+      const shipped = await readFile(rule, "utf-8");
+      await writeFile(rule, `${shipped}\nA local edit.\n`, "utf-8");
+
+      const output = await initQuietly(root, true);
+
+      expect(await readFile(rule, "utf-8")).toBe(shipped);
+      expect(restartLines(output)).toEqual([RESTART_LINE]);
     });
   });
 
