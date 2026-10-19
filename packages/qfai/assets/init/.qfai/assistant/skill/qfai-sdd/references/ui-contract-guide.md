@@ -272,8 +272,9 @@ judged against the task by the reviewer; validate compares ids and exact wording
 only.
 
 A contract written before these keys was valid without them. Add
-`supplements` to each screen: `supplements: []` is the answer for a screen that
-shows nothing beyond its title and labels. Keep `structure` out while the screen
+`supplements` to each screen, listing each text it shows beyond its title, group
+headings and labels; `supplements: []` is only for a screen that shows no such
+text. Keep `structure` out while the screen
 shows no heading beyond its title; the first such heading needs its group.
 
 Two contracts that state the same screen `id` each hold their own `supplements`
@@ -322,9 +323,10 @@ Render the element with that marker, or remove the marker from the contract.
 **A label does not match.** Update the contract label, then the rendered text or
 marker mapping. Updating one side leaves the two out of step.
 
-**`QFAI-CONTRACT-043` names a screen with no `supplements`.** Add `supplements: []`
-if the screen shows no text beyond its title, group headings and labels, or list each
-text with its `near`, `when`, `text` and `why`.
+**`QFAI-CONTRACT-043` names a screen with no `supplements`.** List each text the
+screen shows beyond its title, group headings and labels, one entry with `id`,
+`near`, `when`, `text` and `why`; write `supplements: []` only if it shows no
+such text.
 
 **`QFAI-CONTRACT-045` warns that a supplement repeats a label.** Delete the supplement,
 or word it so it tells the user something the label does not.
