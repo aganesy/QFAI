@@ -57,3 +57,5 @@ the next one against.
   Because: an adopter's shipped validate workflow runs `qfai validate` as its own job, which reports a duplicate register ID; only this repository runs it late, in the build job.
 - SHIPPED-CI: not-applicable for package.json
   Because: the lane this entry adds checks the relative links of this repository's own `.instruction/` tree, which `qfai init` does not write into an adopter's project.
+- SHIPPED-CI: not-applicable for package.json
+  Because: the lane this entry adds holds this repository's own `.qfai/assistant/VERSION` to the package version; in an adopter's project `qfai validate` checks it.

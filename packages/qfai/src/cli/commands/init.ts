@@ -308,6 +308,8 @@ export async function runInit(
     await requireSymlinkCreation(symlinkRuntime);
   }
   await requireReadableShippedAssets(assistantAssets);
+  // Asked before any copy: a tree this run creates is wholly this release's.
+  const assistantTreeIsNew = (await safeLstat(path.join(destRoot, ASSISTANT_DIR))) === undefined;
 
   // A shipped workflow is written only where no file of that name exists, and
   // never through a `.github` or `.github/workflows` that is a symlink: `copyFile`
@@ -435,7 +437,11 @@ export async function runInit(
     dryRun: options.dryRun,
     conflictPolicy: "skip",
   });
-  const versionResult = await writeAssistantVersion(destRoot, options);
+  const versionResult = await writeAssistantVersion(destRoot, {
+    force: options.force,
+    dryRun: options.dryRun,
+    wholeTreeIsThisRelease: assistantTreeIsNew || skillsResult.kept.length === 0,
+  });
   reportRefusedWrites(
     [
       ...workflowResult.refused,
@@ -609,16 +615,26 @@ export async function runInit(
 }
 
 /**
- * Records the release that wrote the assistant tree in `.qfai/assistant/VERSION`, on the terms of
- * the shipped assistant files: written where absent, rewritten under `--force`, and kept as it is
- * otherwise. A file that already records this release is skipped as identical. Nothing is written
- * through a linked or non-directory parent, or over an entry that is not a regular file.
+ * Records the release that wrote the assistant tree in `.qfai/assistant/VERSION`.
+ *
+ * `--force` rewrites it, since the run rewrites every shipped assistant file. Without `--force` it
+ * is written only where it is absent and the whole tree holds this release's text: the tree is new
+ * or the run kept no shipped file that differs. After a run that kept an older file, the file
+ * would name a release that wrote only part of the tree, so it is reported as kept instead. An
+ * existing file that records another version is kept the same way, and one that already records
+ * this release is skipped as identical. Nothing is written through a linked or non-directory
+ * parent, or over an entry that is not a regular file.
  */
 async function writeAssistantVersion(
   destRoot: string,
-  options: { force: boolean; dryRun: boolean },
+  options: { force: boolean; dryRun: boolean; wholeTreeIsThisRelease: boolean },
 ): Promise<CopyResult> {
   const result: CopyResult = { copied: [], skipped: [], refused: [], kept: [] };
+  const keep = (target: string): CopyResult => {
+    result.skipped.push(target);
+    result.kept.push(target);
+    return result;
+  };
   const version = await resolveToolVersion();
   if (!isRecordableVersion(version)) return result;
   const target = assistantVersionPath(destRoot);
@@ -629,24 +645,18 @@ async function writeAssistantVersion(
   }
   const existing = await safeLstat(target);
   if (existing !== undefined) {
-    const current = existing.isFile() ? await readFile(target, "utf-8") : undefined;
-    if (current === content) {
+    if (!existing.isFile()) return keep(target);
+    if ((await readFile(target, "utf-8")) === content) {
       result.skipped.push(target);
       return result;
     }
-    if (!options.force || !existing.isFile()) {
-      result.skipped.push(target);
-      result.kept.push(target);
-      return result;
-    }
+    if (!options.force) return keep(target);
+  } else if (!options.force && !options.wholeTreeIsThisRelease) {
+    return keep(target);
   }
   if (!options.dryRun) {
     await mkdir(path.dirname(target), { recursive: true });
-    if (!(await writeGeneratedProfile(target, content))) {
-      result.skipped.push(target);
-      result.kept.push(target);
-      return result;
-    }
+    if (!(await writeGeneratedProfile(target, content))) return keep(target);
   }
   result.copied.push(target);
   return result;

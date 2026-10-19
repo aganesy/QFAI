@@ -101,10 +101,11 @@ job's result. The endpoint meanings are in the
 
 **It does not write the release text.** Whoever makes each change adds to
 `## [Unreleased]` in `CHANGELOG.md` as the change lands, so the only thing decided
-at release time is where to cut. Prepare release does only the following three
+at release time is where to cut. Prepare release does only the following four
 things and generates no prose.
 
 - Syncs `packages/qfai/package.json#version`
+- Writes the same version to `.qfai/assistant/VERSION`
 - Renames `## [Unreleased]` to `## [X.Y.Z] - <date>`
   (the date is **the day you ran Prepare release**. The tag is created when the
   PR is merged, so if you merge on a later day, fix the date inside that PR.

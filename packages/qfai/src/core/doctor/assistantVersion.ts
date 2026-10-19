@@ -3,6 +3,7 @@ import {
   assistantVersionRepair,
   compareAssistantVersion,
   describeAssistantVersionMismatch,
+  recordedVersion,
 } from "../assistantVersion.js";
 
 export type AssistantVersionCheck = {
@@ -15,9 +16,9 @@ export type AssistantVersionCheck = {
 
 /**
  * A warning when the running qfai is not the release `.qfai/assistant/VERSION`
- * records, the version file included when it records none. Nothing is written,
- * and a project with no assistant tree, or one that records the running
- * version, gets no check.
+ * records, including a version file that records none or is not a regular file.
+ * Nothing is written, and a project with no assistant tree, or one that records
+ * the running version, gets no check.
  */
 export async function checkAssistantVersion(
   root: string,
@@ -32,6 +33,6 @@ export async function checkAssistantVersion(
     message:
       `${describeAssistantVersionMismatch(mismatch)} Doctor changes nothing. ` +
       assistantVersionRepair(mismatch),
-    details: { path: ASSISTANT_VERSION_FILE, recorded: mismatch.recorded, running },
+    details: { path: ASSISTANT_VERSION_FILE, recorded: recordedVersion(mismatch), running },
   };
 }

@@ -21,6 +21,7 @@ import {
   lowestVersionOfRange,
   resolveToolVersion,
 } from "../../src/core/version.js";
+import { recordAssistantVersion } from "../helpers/assistantVersion.js";
 
 /**
  * The project sits under the operating system's temporary directory, not under
@@ -59,9 +60,10 @@ async function withProject(
       ].join("\n"),
       "utf-8",
     );
-    if (recorded !== null) {
-      const version = recorded === "running" ? await resolveToolVersion() : recorded;
-      await writeFile(path.join(root, ".qfai", "assistant", "VERSION"), `${version}\n`, "utf-8");
+    if (recorded === "running") {
+      await recordAssistantVersion(root);
+    } else if (recorded !== null) {
+      await writeFile(path.join(root, ".qfai", "assistant", "VERSION"), `${recorded}\n`, "utf-8");
     }
     await writeFile(
       path.join(root, "package.json"),
@@ -172,6 +174,23 @@ describe("the running qfai is not the release that wrote the assistant tree", ()
         expect(issues[0]?.suggested_action).toContain("qfai init --force");
       },
       true,
+      null,
+    );
+  });
+
+  // QFAI:EX-0001-0039-21
+  it("names removing a version entry that is not a regular file as the repair", async () => {
+    await withProject(
+      null,
+      async (root) => {
+        await mkdir(path.join(root, ".qfai", "assistant", "VERSION"));
+        const first = (await findings(root))[0];
+        expect(first?.code).toBe("QFAI-TOOL-004");
+        expect(first?.file).toBe(".qfai/assistant/VERSION");
+        expect(first?.message).toContain("is not a regular file");
+        expect(first?.suggested_action).toContain("Remove the entry at .qfai/assistant/VERSION");
+      },
+      false,
       null,
     );
   });

@@ -26,6 +26,7 @@ import {
   slugifyHeading,
   validateAssistantAnchorReferences,
 } from "../../src/core/validators/assistantAnchorReferences.js";
+import { recordAssistantVersion } from "../helpers/assistantVersion.js";
 
 async function withAssistantTree(
   files: Record<string, string>,
@@ -38,6 +39,7 @@ async function withAssistantTree(
       await mkdir(path.dirname(absolute), { recursive: true });
       await writeFile(absolute, body, "utf-8");
     }
+    await recordAssistantVersion(root);
     await task(root);
   } finally {
     await rm(root, { recursive: true, force: true });

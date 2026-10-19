@@ -15,6 +15,7 @@ import {
   validateStoryTreeObligations,
 } from "../../src/core/validators/storyTreeObligations.js";
 import { createSymlinkFixture } from "../helpers/symlinkFixture.js";
+import { recordAssistantVersion } from "../helpers/assistantVersion.js";
 
 describe("story-tree test scan", () => {
   it("fails closed when a configured test glob cannot be scanned", async () => {
@@ -296,6 +297,7 @@ describe("forbidden identifiers through validate", () => {
     for (const profile of profiles) expectMatch(await scan(root, profile));
     await put(root, ".qfai/waivers.yml", "version: 1\nwaivers: []\n");
     await put(root, ".qfai/assistant/skill", "not a directory\n");
+    await recordAssistantVersion(root);
     await put(root, ".claude/skills/qfai-implement/SKILL.md", "# Fixture wrapper\n");
     const damaged = await validateProject(root, await loadConfig(root), { profile: "sdd" });
     expect(damaged.profileValidatorsRan).toBe(false);

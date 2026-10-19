@@ -1,4 +1,4 @@
-import { readFile, stat } from "node:fs/promises";
+import { lstat, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { ASSISTANT_DIR } from "./paths/assistantPaths.js";
@@ -8,8 +8,7 @@ import { ASSISTANT_DIR } from "./paths/assistantPaths.js";
  *
  * It holds the released version from the package manifest and nothing else,
  * so it is that version and not a second counter beside it. `qfai init` writes
- * it where it is absent and rewrites it under `--force`, the same terms as the
- * shipped assistant files it describes.
+ * it into a new tree, and rewrites it under `--force`.
  */
 export const ASSISTANT_VERSION_FILE = `${ASSISTANT_DIR}/VERSION`;
 
@@ -30,11 +29,20 @@ export function isRecordableVersion(version: string): boolean {
   return version.length > 0 && version !== UNKNOWN_VERSION;
 }
 
+/**
+ * What the version file holds: a version; `none` when it is absent, empty or
+ * unreadable; or `not-a-file` when the entry at its path is not a regular file,
+ * which nothing will write over.
+ */
+export type AssistantVersionRecord =
+  | { readonly kind: "version"; readonly version: string }
+  | { readonly kind: "none" }
+  | { readonly kind: "not-a-file" };
+
 /** The running qfai and what the assistant tree records, when the two differ. */
 export type AssistantVersionMismatch = {
   readonly running: string;
-  /** `null` when the tree has no version file. */
-  readonly recorded: string | null;
+  readonly record: AssistantVersionRecord;
 };
 
 async function isDirectory(target: string): Promise<boolean> {
@@ -46,17 +54,20 @@ async function isDirectory(target: string): Promise<boolean> {
 }
 
 /**
- * What `.qfai/assistant/VERSION` records: the version, `null` when the tree
- * exists and the file records none (absent, empty or unreadable), and
- * `undefined` when there is no tree to ask.
+ * What `.qfai/assistant/VERSION` records, or `undefined` when there is no tree
+ * to ask.
  */
-export async function readAssistantVersion(root: string): Promise<string | null | undefined> {
+export async function readAssistantVersion(
+  root: string,
+): Promise<AssistantVersionRecord | undefined> {
   if (!(await isDirectory(path.join(root, ...ASSISTANT_DIR.split("/"))))) return undefined;
+  const file = assistantVersionPath(root);
   try {
-    const recorded = (await readFile(assistantVersionPath(root), "utf-8")).trim();
-    return recorded.length > 0 ? recorded : null;
+    if (!(await lstat(file)).isFile()) return { kind: "not-a-file" };
+    const version = (await readFile(file, "utf-8")).trim();
+    return version.length > 0 ? { kind: "version", version } : { kind: "none" };
   } catch {
-    return null;
+    return { kind: "none" };
   }
 }
 
@@ -70,27 +81,59 @@ export async function compareAssistantVersion(
   running: string,
 ): Promise<AssistantVersionMismatch | null> {
   if (!isRecordableVersion(running)) return null;
-  const recorded = await readAssistantVersion(root);
-  if (recorded === undefined || recorded === running) return null;
-  return { running, recorded };
+  const record = await readAssistantVersion(root);
+  if (record === undefined) return null;
+  if (record.kind === "version" && record.version === running) return null;
+  return { running, record };
+}
+
+/** The recorded version, or `null` when the file records none. */
+export function recordedVersion(mismatch: AssistantVersionMismatch): string | null {
+  return mismatch.record.kind === "version" ? mismatch.record.version : null;
 }
 
 /** One sentence naming the mismatch, for the start of a finding. */
 export function describeAssistantVersionMismatch(mismatch: AssistantVersionMismatch): string {
-  return mismatch.recorded === null
-    ? `${ASSISTANT_VERSION_FILE} records no version, so nothing says which qfai wrote the ` +
-        `assistant tree; the running qfai is ${mismatch.running}.`
-    : `The assistant tree was written by qfai ${mismatch.recorded} (${ASSISTANT_VERSION_FILE}), ` +
-        `and the running qfai is ${mismatch.running}.`;
+  const { record, running } = mismatch;
+  switch (record.kind) {
+    case "version":
+      return (
+        `The assistant tree was written by qfai ${record.version} (${ASSISTANT_VERSION_FILE}), ` +
+        `and the running qfai is ${running}.`
+      );
+    case "none":
+      return (
+        `${ASSISTANT_VERSION_FILE} records no version, so nothing says which qfai wrote the ` +
+        `assistant tree; the running qfai is ${running}.`
+      );
+    case "not-a-file":
+      return (
+        `${ASSISTANT_VERSION_FILE} is not a regular file, so nothing says which qfai wrote the ` +
+        `assistant tree; the running qfai is ${running}.`
+      );
+  }
 }
 
 /** The repair for the mismatch. */
 export function assistantVersionRepair(mismatch: AssistantVersionMismatch): string {
-  return mismatch.recorded === null
-    ? `Run qfai init --force to rewrite the assistant tree with qfai ${mismatch.running}, ` +
-        "which also writes the version file, then run again."
-    : "Run the install command (`npm ci` / `pnpm install`) in this working tree so the " +
-        `installed qfai is the version this project uses. If that is ${mismatch.running}, run ` +
+  const { record, running } = mismatch;
+  switch (record.kind) {
+    case "version":
+      return (
+        "Run the install command (`npm ci` / `pnpm install`) in this working tree so the " +
+        `installed qfai is the version this project uses. If that is ${running}, run ` +
         "qfai init --force to rewrite the assistant tree with it. Then run again, and do not " +
-        "edit generated files to clear a finding before that.";
+        "edit generated files to clear a finding before that."
+      );
+    case "none":
+      return (
+        `Run qfai init --force to rewrite the assistant tree with qfai ${running}, ` +
+        "which also writes the version file, then run again."
+      );
+    case "not-a-file":
+      return (
+        `Remove the entry at ${ASSISTANT_VERSION_FILE}, then run qfai init --force to rewrite ` +
+        `the assistant tree with qfai ${running}, which writes the version file, and run again.`
+      );
+  }
 }

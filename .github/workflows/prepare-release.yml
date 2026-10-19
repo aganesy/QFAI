@@ -184,6 +184,9 @@ jobs:
             process.exit(1);
           }
           writeFileSync(manifestPath, bumped, "utf8");
+          // The assistant tree records the release that wrote it, and `ci:gate:ssot` on the tag
+          // fails when the record and the manifest disagree.
+          writeFileSync(".qfai/assistant/VERSION", `${version}\n`, "utf8");
 
           const changelogPath = "CHANGELOG.md";
           const changelog = readFileSync(changelogPath, "utf8");
@@ -217,7 +220,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -b "${RELEASE_BRANCH}"
-          git add CHANGELOG.md packages/qfai/package.json
+          # SHIPPED-CI: not-applicable
+          # Because: this commits the version record of this repository's own assistant tree for a
+          # release of the qfai package, and the shipped templates neither build nor release it.
+          git add CHANGELOG.md packages/qfai/package.json .qfai/assistant/VERSION
           git commit -m "chore(release): qfai ${RELEASE_VERSION}"
 
           # The remote is re-pointed at the token, because the checkout above deliberately kept no
@@ -261,9 +267,10 @@ jobs:
           {
             echo "Prepared by the \`Prepare release\` workflow from a version a human supplied."
             echo ""
-            echo "This changes three things and writes no prose:"
+            echo "This changes four things and writes no prose:"
             echo ""
             echo "- \`packages/qfai/package.json#version\` is now \`${RELEASE_VERSION}\`"
+            echo "- \`.qfai/assistant/VERSION\` records \`${RELEASE_VERSION}\`"
             echo "- \`CHANGELOG.md\`'s \`## [Unreleased]\` is closed as \`## [${RELEASE_VERSION}]\`"
             echo "- an empty \`## [Unreleased]\` is reopened above it"
             echo ""

@@ -40,6 +40,7 @@ import {
 } from "./version.js";
 import { applyWaivers } from "./waivers.js";
 import {
+  ASSISTANT_VERSION_FILE,
   assistantVersionRepair,
   compareAssistantVersion,
   describeAssistantVersionMismatch,
@@ -455,7 +456,7 @@ function buildAssistantVersionIssues(mismatch: AssistantVersionMismatch | null):
       `${describeAssistantVersionMismatch(mismatch)} A finding below about a generated file ` +
         `may come from the version difference and not from the file.`,
       "warning",
-      undefined,
+      ASSISTANT_VERSION_FILE,
       "toolProvenance.assistantVersion",
       undefined,
       "canonical",
