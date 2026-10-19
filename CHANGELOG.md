@@ -501,7 +501,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   when `--force` overwrote it, so a plain upgrade that created a new master
   under `.agents/rules/`, or rewrote `AGENTS.md` or
   `.github/copilot-instructions.md` to cite one, printed no line, although an
-  agent loads both at session start. Both writes now print it. Fixes #3851.
+  agent loads both at session start. Both writes now print it, as does a
+  `--force` rewrite of `.github/copilot-instructions.md`, and the line now
+  reads "Agent instruction files changed: restart any running agent session so
+  it uses the new text." Fixes #3851.
 
 - **A DESIGN.md violation every screen shares is reported once.** The
   prototyping reviewer repeated a violation whose source every screen shares,
