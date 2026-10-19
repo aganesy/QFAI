@@ -284,9 +284,11 @@ Each artifact is followed by what it covers.
 - `config`: Shipped default configuration and project configuration files.
 - `ci`: CI workflows, lint lanes, build configuration, repository scripts, the test harness.
 - `deps`: Dependency manifests, lockfiles, toolchain versions.
-- `data`: Persisted user data or state, stored formats, migrations.
+- `data`: Persisted user data or state, stored formats, migrations, shipped seed and sample data.
 - `release`: The changelog, release notes, the version field, release branches, signing, packages.
 - `assistant`: The assistant instructions the project keeps: skills, rules, templates, agent definitions.
+
+A fixture that only a test reads stays under `tests`, not `data`.
 
 ## Risks
 
