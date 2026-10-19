@@ -172,13 +172,13 @@ describe("qfai doctor reports a shipped workflow that differs from the shipped t
     const pinned = SETUP_NODE.exec(shipped)?.[1];
     expect(pinned).toBeDefined();
     const root = await project({
-      "qfai-tests.yml": shipped.replace(SETUP_NODE, "uses: actions/setup-node@v4"),
+      "qfai-tests.yml": shipped.replace(SETUP_NODE, "uses: actions/setup-node@main"),
     });
 
     const [found] = await driftFindings(root);
 
     expect(found?.message).toContain(
-      `; pinned actions that differ: actions/setup-node (installed v4, shipped ${pinned ?? ""})`,
+      `; pinned actions that differ: actions/setup-node (installed main, shipped ${pinned ?? ""})`,
     );
   });
 
