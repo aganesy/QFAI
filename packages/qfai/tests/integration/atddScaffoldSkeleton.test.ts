@@ -193,12 +193,21 @@ describe("atdd scaffold story-tree targets", () => {
     expect(body).toContain(`import { describe, it } from "vitest";`);
   });
 
-  it("keeps vitest when package.json names no test runner", async () => {
+  it("refuses a package.json that names no test runner, before writing", async () => {
     await seedStory();
     await writeNodeTestProject({ scripts: { build: "node build.mjs && echo --test" } });
-    expect(await runAtddScaffold({ root, flowId, write: () => {}, writeErr: () => {} })).toBe(0);
-    const body = await readFile(path.join(root, "tests", "e2e", `${flowId}.test.mjs`), "utf8");
-    expect(body).toContain(`import { describe, it } from "vitest";`);
+    const messages: string[] = [];
+    expect(
+      await runAtddScaffold({
+        root,
+        flowId,
+        write: () => {},
+        writeErr: (message) => messages.push(message),
+      }),
+    ).toBe(2);
+    expect(messages.join("\n")).toContain("names no test runner");
+    expect(messages.join("\n")).toContain("vitest, node:test");
+    await expect(readdir(path.join(root, "tests"))).rejects.toMatchObject({ code: "ENOENT" });
   });
 
   it("refuses a jest project, naming the supported runners, before writing", async () => {

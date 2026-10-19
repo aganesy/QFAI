@@ -151,11 +151,12 @@ export const SCAFFOLD_RUNNERS: readonly string[] = [
 ].map((dialect) => dialect.runner);
 
 /**
- * The JS/TS runner a project's `package.json` declares. `unknown` when it
- * declares none this reads, which keeps the vitest skeleton the command always
- * wrote; `jest` is a runner this command has no skeleton for.
+ * The JS/TS runner a project's `package.json` declares. `none` when it
+ * declares no runner this reads, and `jest` a runner with no skeleton here;
+ * both are refused. `unknown` is a project with no `package.json`, which keeps
+ * the vitest skeleton the command always wrote.
  */
-export type JsTestRunner = "vitest" | "node:test" | "jest" | "unknown";
+export type JsTestRunner = "vitest" | "node:test" | "jest" | "none" | "unknown";
 
 /** `node --test` as a script runs it, flags allowed between the two words. */
 const NODE_TEST_SCRIPT = /(?:^|[\s;&|(])node(?:\.exe)?\s+(?:[^\s;&|]+\s+)*?--test(?=$|[\s;&|)"'])/;
@@ -166,7 +167,7 @@ const NODE_TEST_SCRIPT = /(?:^|[\s;&|(])node(?:\.exe)?\s+(?:[^\s;&|]+\s+)*?--tes
  * script that runs `node --test`; then jest.
  */
 export function detectJsTestRunner(manifest: unknown): JsTestRunner {
-  if (!isRecord(manifest)) return "unknown";
+  if (!isRecord(manifest)) return "none";
   const declares = (name: string): boolean =>
     [manifest["dependencies"], manifest["devDependencies"]].some(
       (deps) => isRecord(deps) && Object.hasOwn(deps, name),
@@ -181,7 +182,7 @@ export function detectJsTestRunner(manifest: unknown): JsTestRunner {
   ) {
     return "node:test";
   }
-  return declares("jest") ? "jest" : "unknown";
+  return declares("jest") ? "jest" : "none";
 }
 
 /** Bind one naming convention to its template — the writer's view of a dialect. */
@@ -214,8 +215,8 @@ export const DEFAULT_SCAFFOLD_DIALECT: ScaffoldDialect = bindNaming(
 /** Outcome of matching a project's configured globs against this table. */
 export type ScaffoldDialectResolution =
   | { readonly outcome: "resolved"; readonly dialect: ScaffoldDialect }
-  /** The globs chose JS/TS, and the project runs a runner with no skeleton here. */
-  | { readonly outcome: "unsupported-runner"; readonly runner: string }
+  /** The globs chose JS/TS, and package.json names no runner, or one with no skeleton here. */
+  | { readonly outcome: "unsupported-runner"; readonly runner: "jest" | "none" }
   /** Extensions were recovered, but qfai has no skeleton shape for any of them. */
   | { readonly outcome: "unsupported-stack" }
   /**
@@ -895,7 +896,9 @@ function resolveFor(
   if (template !== JS_TS_DIALECT) {
     return { outcome: "resolved", dialect: bindNaming(template, naming) };
   }
-  if (jsRunner === "jest") return { outcome: "unsupported-runner", runner: jsRunner };
+  if (jsRunner === "jest" || jsRunner === "none") {
+    return { outcome: "unsupported-runner", runner: jsRunner };
+  }
   const runnerTemplate = jsRunner === "node:test" ? NODE_TEST_DIALECT : JS_TS_DIALECT;
   return { outcome: "resolved", dialect: bindNaming(runnerTemplate, naming) };
 }

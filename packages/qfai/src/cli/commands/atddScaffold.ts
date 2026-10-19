@@ -40,7 +40,7 @@ function targetsForStory(
     .map((id) => ({ id, kind: "AC" as const, storyId }));
 }
 
-/** The runner the project's package.json declares; `unknown` when it has none. */
+/** The runner the project's package.json declares; `unknown` when there is no package.json. */
 async function readJsTestRunner(root: string): Promise<JsTestRunner> {
   let text: string;
   try {
@@ -119,7 +119,7 @@ export async function runAtddScaffold(options: AtddScaffoldOptions): Promise<num
     }
     if (resolution.outcome === "unsupported-runner") {
       writeErr(
-        `qfai atdd scaffold: package.json runs tests with ${resolution.runner}, which has no skeleton dialect; supported runners: ${SCAFFOLD_RUNNERS.join(", ")}.`,
+        `qfai atdd scaffold: ${resolution.runner === "none" ? "package.json names no test runner" : `package.json runs tests with ${resolution.runner}, which has no skeleton dialect`}; supported runners: ${SCAFFOLD_RUNNERS.join(", ")}.`,
       );
       return 2;
     }
