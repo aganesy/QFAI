@@ -126,6 +126,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `No newline at end of file`. The file now ends with exactly one newline.
   Fixes #3748.
 
+- **A request to file follow-up issues plans a step that files them.** It was
+  read as leftovers to sort again, whose plan files no issue. The `qfai-run`
+  extraction reference now says an explicit request to file issues is an
+  operation the session carries out, extracted as `order` with no artifacts,
+  and gives it as an example. Leftovers to sort without filing stay
+  `follow-up`. Fixes #3753.
+
 - **`implement-tdd` says where a UI test's annotations go.** Its UI paragraph
   now says a component test carries only `QFAI:EX` annotations, a UI acceptance
   criterion's `QFAI:AC` annotation goes in an integration or API test, and a
