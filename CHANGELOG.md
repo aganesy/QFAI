@@ -166,9 +166,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   contracts name a `screen_id` that matches no `screens[].id` of the project's UI
   contracts, or when its Design Direction records an `adopted_theme` or
   `brand_accent`, and rejects a `design_direction` other than `new` or `inherit`. Fixes #3829.
-
-||||||| 20f78d448
-
 - **A dependency update whose checks name a contract to change moves to the
   route that edits the spec.** When `validate`, or another check the update
   runs, reports a finding that names a spec contract, `implement-dep-bump` now
