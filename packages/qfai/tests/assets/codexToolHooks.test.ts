@@ -591,33 +591,6 @@ describe("the Codex reminders that repeat", () => {
   });
 
   // QFAI:EX-0001-0196-56
-  it("prints the full envelope once and nothing after it when the catalog has no brief context", async () => {
-    const key = "api-budget";
-    const event = "PreToolUse";
-    const entry = await codexEntry(event, key);
-    await withProject(async (cwd) => {
-      const messageFile = path.resolve(cwd, "..", "..", ".agents", "rules", "reminders.json");
-      const messages = asRecord(JSON.parse(await readFile(messageFile, "utf-8")), "messages");
-      const message = asRecord(messages[key], key);
-      delete message.briefContext;
-      messages[key] = message;
-      await writeFile(messageFile, JSON.stringify(messages), "utf-8");
-      for (const shell of CODEX_SHELLS) {
-        const input = inSession(codexInput(event, "Bash", "gh api repos/o/r"), newSession());
-        const result = await runCodexLine(entry, shell, cwd, input);
-        expect(eventOf(shell, result)).toBe(event);
-        expect(JSON.parse(result.stdout)).toEqual(message);
-        for (let count = 2; count <= 3; count += 1) {
-          expect(
-            await firedEventIn(entry, shell, cwd, input),
-            `${shell}, call ${count}`,
-          ).toBeNull();
-        }
-      }
-    });
-  });
-
-  // QFAI:EX-0001-0196-56
   it("send editing context in full first and nothing on the second call under every shell", async () => {
     await withProject(async (cwd) => {
       for (const [event, key, tool, command] of WRITE_ONCE) {

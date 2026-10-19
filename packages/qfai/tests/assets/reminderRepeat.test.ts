@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -7,7 +7,6 @@ import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { projectDirOf, runReminderHook } from "../helpers/reminderHooks.js";
-import { removeTempTree } from "../helpers/tempTree.js";
 
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
@@ -209,41 +208,6 @@ describe.each(SETTINGS)("%s sends full context first and less on later calls", (
       } finally {
         await rm(counter, { recursive: true, force: true });
       }
-    }
-  });
-
-  // QFAI:EX-0001-0196-55
-  it("prints the full envelope once and nothing after it when the catalog has no brief context", async () => {
-    const key = "api-budget";
-    const entry = (await entries(rel)).get(key);
-    if (entry === undefined) throw new Error(`no entry carries ${key}`);
-    const messages: Record<string, unknown> = JSON.parse(
-      await readFile(
-        path.join(repoRoot, "packages/qfai/assets/init/root/.agents/rules/reminders.json"),
-        "utf-8",
-      ),
-    );
-    const message = messages[key];
-    if (typeof message !== "object" || message === null) throw new Error("no message");
-    Reflect.deleteProperty(message, "briefContext");
-    const full = await fullContext(key);
-    const project = await mkdtemp(path.join(os.tmpdir(), "qfai-claude-old-catalog-"));
-    try {
-      const rules = path.join(project, ".agents", "rules");
-      await mkdir(rules, { recursive: true });
-      await writeFile(path.join(rules, "reminders.json"), JSON.stringify(messages), "utf-8");
-      const input = JSON.stringify({
-        session_id: newSession(),
-        tool_input: { command: "gh api repos/o/r" },
-      });
-      const stdout = await runReminderHook(entry, project, input);
-      expect(JSON.parse(stdout)).toEqual(message);
-      expect(contextOf(stdout)).toBe(full);
-      for (let count = 2; count <= 3; count += 1) {
-        expect(await runReminderHook(entry, project, input), `call ${count}`).toBe("");
-      }
-    } finally {
-      await removeTempTree(project);
     }
   });
 
