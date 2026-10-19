@@ -123,6 +123,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   off, text inside a shell command, script or recipe, or a package's own
   version or any value a release, tag or publish job reads. Fixes #3766.
 
+- **A colliding decision ID is renumbered once, at merge time.** The
+  `qfai-sdd` triage reference now says a branch keeps its decision IDs while
+  its pull request is open, and the session that merges it runs
+  `qfai sdd renumber-decision` against the fetched base only when that base
+  declares an ID the branch added, renumbering every branch-added row from the
+  lowest colliding one upward. Because the shipped `.gitattributes` union-merges
+  `decisions.md`, a collision never conflicts, so the reference says to check
+  the base before merging, to undo an unpushed merge with
+  `git reset --merge ORIG_HEAD` before renumbering, and to abort a merge that
+  stopped on other conflicts.
+  Fixes #3778.
+
 - **A critical decision found while writing the discussion pack goes back to
   the user.** `discussion-pack` and `discussion-oq` now reopen the ended session
   for that one node: they stop writing, ask the user one round, and resume. The
