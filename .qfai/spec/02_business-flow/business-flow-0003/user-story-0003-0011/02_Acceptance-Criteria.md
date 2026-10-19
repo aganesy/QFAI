@@ -71,8 +71,9 @@ Feature: Shipped workflow checks
 
   # AC-0003-0011-15
   Scenario: A project accepts the difference of a shipped workflow with a reason
-    Given a project whose `qfai.config.yaml` lists a differing shipped workflow under `workflow.acceptedDrift` with a reason
+    Given a project whose `qfai.config.yaml` lists a differing shipped workflow under `workflow.acceptedDrift` with the digest the drift warning printed and a reason
     When `qfai doctor` runs
-    Then that workflow is reported as `info` with the reason, and every other differing workflow is still a `warning`
-    And an entry without a reason or with an empty reason, or a file outside the shipped set or listed twice, is a configuration error and accepts no workflow
+    Then that workflow is reported as `info` with the reason while its digest stays the recorded one, and every other differing workflow is still a `warning` that prints its current digest
+    And once the accepted file changes again it is a `warning` again, saying it changed since it was accepted
+    And an entry without a digest or with a malformed one, without a reason or with an empty reason, or a file outside the shipped set or listed twice, is a configuration error and accepts no workflow
 ```
