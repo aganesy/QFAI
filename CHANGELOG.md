@@ -281,6 +281,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the per-iteration summary, and each screen's payload keeps the violations that
   come from that screen. Fixes #3666.
 
+- **The orchestrator starts every finder, griller and reviewer itself.** A
+  stage worker that ran a whole `sdd` stage often could not start agents of its
+  own, so the concrete-abstract cycle's finder and the delegated grilling were
+  skipped and the worker decided alone. The shared delegation baseline now has
+  the orchestrator run every step that starts a finder, griller or reviewer and
+  hand a worker only steps that start none; `qfai-run` points to it, and the
+  `sdd` and prototyping steps and references that start such agents say the
+  orchestrator starts them. Fixes #3793.
+
 - **`QFAI-CONTRACT-043` no longer steers a screen with body text to
   `supplements: []`.** When a screen has no `supplements`, the fix now says to
   list each text the screen shows beyond its title, group headings and labels,
