@@ -130,6 +130,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   stopped on other conflicts.
   Fixes #3778.
 
+- **`npx qfai workflow plan --order` plans an operation on finished work with
+  no extraction file.** A push, a pull request or another operation the user
+  names after a finished run no longer needs its own extraction file: `--order`
+  plans `{ intent: order, artifacts: [] }` through the same decision rules, and
+  `qfai-run` uses it for such operations. Fixes #3791.
+
 - **A critical decision found while writing the discussion pack goes back to
   the user.** `discussion-pack` and `discussion-oq` now reopen the ended session
   for that one node: they stop writing, ask the user one round, and resume. The
@@ -285,6 +291,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   several patterns fail in one section, so `QFAI-DOCSCHEMA-001` names the item
   to fix. It keeps the heading position when the document cannot be read or
   the pattern cannot be translated. Fixes #3821.
+
+- **A stub finding in a `node:test` file names `node:test`.** `QFAI-TEST-001`
+  and `QFAI-TEST-003` said a stub or skipped test was silent in vitest/jest
+  even in a file that imports from `node:test`. Such a file now gets
+  `node:test` in the message, as a file that imports `@playwright/test` already
+  gets Playwright. Fixes #3878.
 
 - **The Markdown-schema check no longer reports `0 file(s) conform`.** When no
   spec or contract document is in scope, for example when only operational
