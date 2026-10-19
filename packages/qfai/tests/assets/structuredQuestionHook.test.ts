@@ -135,6 +135,8 @@ describe("the structured-question reminder", () => {
     expect(payload).toContain("does the next step need the user's answer? Only then ask");
     // The fallback, so a host without the tool is not read as an exemption.
     expect(payload).toContain("or that rule's fallback where it is not callable");
+    // The boundary the brief form also states: a report that waits or completes asks nothing.
+    expect(payload).toContain("waiting and completion reports need none");
     // The reply language, which drifts toward the language of the tool output in a long session.
     expect(payload).toContain("reply in the user's working language");
     expect(payload).toContain(".qfai/assistant/rule/communication.md");

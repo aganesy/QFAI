@@ -100,7 +100,7 @@ Feature: Install or upgrade and get the free-text entry
     And the minimal-implementation reminder after a write fires only for a file that is product source: not a test, a file under `tmp/`, a document, a configuration file or a file outside the project
     And the API-budget reminder fires only for a shell command that names the forge's CLI or its API host
     And in each host that supports their event, the API-budget, three grilling, minimal-implementation and documentation-clarity after-write/edit keys print the full message on their first eligible invocation and nothing on any later invocation, using the existing counter for each session, optional agent and key
-    And each full reminder is one or two sentences naming its rule or skill and the action it asks for
+    And every full reminder in the catalog is one or two sentences under 500 characters that names what it points at and the action it asks for
     And no brief reminder tells the agent to read its file again, and a full reminder that asks for its rule or skill to be read asks for it once per session
     And command filters run before counting, so a skipped call consumes no first display
     And a new session, agent or key starts its own sequence; missing session identity or counter-storage failure prints the full message and exits 0

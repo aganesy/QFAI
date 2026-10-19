@@ -228,7 +228,7 @@ describe("the free-text entry reminder", () => {
       projectDirOf(repoRoot, SHIPPED_SETTINGS),
     );
     expect(contextOf(stdout)).toContain(
-      "invoke the `qfai-run` skill before any other work, or stop and say so if it cannot start;",
+      "invoke the `qfai-run` skill before any other work, or stop and say so if it cannot start, never answering without it;",
     );
   });
 

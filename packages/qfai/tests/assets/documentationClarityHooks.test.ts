@@ -264,7 +264,8 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
     const entry = (hooks.get("PostToolUse") ?? [])[1]?.hooks[0];
     const text =
       entry === undefined ? "" : await runReminderHook(entry, projectDirOf(repoRoot, rel));
-    expect(text).toContain("keep what § 2 of that rule lists");
+    expect(text).toContain("keep what § 2 lists");
+    expect(text).toContain("mark a shortcut with its ceiling and lifting condition");
     expect(text).not.toContain("error handling that prevents data loss");
     expect(text).toContain("is it already in this codebase");
   });
@@ -456,7 +457,8 @@ describe("the shipped reminder catalog", () => {
             /\bread the (?:rule|skill) once per session\b/i,
           );
         }
-        // One or two sentences: the rule or skill it names holds the detail.
+        // One or two sentences: the rule or skill it names holds the detail. The split is a rough
+        // guard; the 500-character cap below is the real bound on what a reminder may carry.
         const sentences = full.split(/[.?!](?:\s|$)/).filter((part) => part.trim() !== "");
         expect(sentences.length, `${key} is longer than two sentences`).toBeLessThanOrEqual(2);
         expect(full.length, `${key} is longer than two lines`).toBeLessThan(500);
