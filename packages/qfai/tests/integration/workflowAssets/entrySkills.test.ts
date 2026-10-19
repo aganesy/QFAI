@@ -148,6 +148,7 @@ const EXTRACTION_VOCABULARIES: Record<string, string[]> = {
     "visual-open",
     "prototype-requested",
     "owned-temporary-cleanup",
+    "meaning-preserving",
     "session-answerable",
   ],
   signals: [
@@ -1259,6 +1260,18 @@ describe("qfai-maintain", () => {
       /no stage of the route serves the finding's owner, so the run is `blocked`, naming the finding and the owner skill to invoke by name/i,
     );
     expect(effect).not.toMatch(/reclassified/i);
+  });
+
+  // QFAI:EX-0001-0220-53
+  it("lets the resolve-conflicts route keep each side's records and stops on content neither side had", async () => {
+    const skill = await readShipped(MAINTAIN_EDIT);
+    expect(flat(sectionOf(skill, "## Non-goals"))).toMatch(
+      /except as \[Resolving conflicts\]\(#resolving-conflicts\) allows/i,
+    );
+    const resolving = flat(sectionOf(skill, "## Resolving conflicts"));
+    expect(resolving).toMatch(/in the `resolve-conflicts` route/i);
+    expect(resolving).toMatch(/each edit only keeps what one side already had/i);
+    expect(resolving).toMatch(/content neither side had is a semantic effect/i);
   });
 });
 

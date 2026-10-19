@@ -93,6 +93,10 @@ const CATALOG: [string, string][] = [
     "Stages in order — `move` (implement): `implement-refactor`; `tests` (test_fix): `implement-test-fix°`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points none; release point none; branch points `implement-refactor`, `behaviour-change` to `add-feature` or `change-compatibility`",
   ],
   [
+    "resolve-conflicts",
+    "Stages in order — `edit` (maintenance, then the code review): `maintain-edit`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points none; release point none; branch points none",
+  ],
+  [
     "edit-text",
     "Stages in order — `edit` (maintenance): `maintain-edit`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points none; release point none; branch points none",
   ],
@@ -247,6 +251,7 @@ for (const [route, expected] of CATALOG) {
   // QFAI:EX-0001-0220-39
   // QFAI:EX-0001-0220-41
   // QFAI:EX-0001-0220-42
+  // QFAI:EX-0001-0220-53
   it(route, async () => {
     const plan = (await loadBuiltInPlans()).find((each) => each.route === route);
 
