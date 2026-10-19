@@ -117,6 +117,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the earlier rows stay as written. Only a no-question mode may record the
   decision as an assumption. Fixes #3794.
 
+- **`qfai init --dry-run` marks each path it would write as `new` or
+  `changed`.** A `changed` path holds a file the run would replace, so the
+  preview of an `init --force` upgrade shows what it would overwrite. A file
+  that already matches is not written and stays under `skipped`. Fixes #3752.
+
 - **Shipped seed and sample data now have an artifact to fall under.** The
   `qfai-run` extraction reference files them under `data` rather than `config`,
   and `qfai-sdd` triage passes a seed or sample data change whose values no

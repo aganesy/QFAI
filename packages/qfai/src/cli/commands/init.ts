@@ -482,7 +482,7 @@ export async function runInit(
     info("Reference: https://docs.github.com/en/copilot/using-github-copilot/code-review");
   }
 
-  report(
+  await report(
     [
       ...rootResult.copied,
       ...qfaiResult.copied,
@@ -1324,6 +1324,18 @@ function listReportPaths(relativePaths: string[]): void {
 }
 
 /**
+ * The paths a dry run would write, each after its state: `new` where nothing is at the path yet,
+ * `changed` where something is and would be replaced. A path whose content already matches is
+ * never in this list, because every writer books it as skipped.
+ */
+async function listPlannedPaths(relativePaths: string[], baseDir: string): Promise<void> {
+  for (const relative of relativePaths) {
+    const state = (await pathExists(path.join(baseDir, relative))) ? "changed" : "new";
+    info(`    - ${state.padEnd("changed".length)} ${formatReportPath(relative)}`);
+  }
+}
+
+/**
  * The run report. The `copied` side is the one worth detailing.
  *
  * `--dry-run` exists to answer "what will this touch?", so `copied` is listed
@@ -1331,6 +1343,9 @@ function listReportPaths(relativePaths: string[]): void {
  * contrast, is the "nothing to do here" case: a no-op rerun on an initialized
  * directory puts every shipped asset there. By default it is folded into a
  * count, and the list sits behind `--verbose`.
+ *
+ * A dry run puts each path's state before it (`listPlannedPaths`), so the preview of an upgrade
+ * says which files it would replace.
  *
  * The headings are `written` / `would write` because `copied` is not only newly
  * created files. Regenerating skills/agents with `--force` and appending the
@@ -1351,7 +1366,7 @@ function listReportPaths(relativePaths: string[]): void {
  * working tree (`core.symlinks` in `configureGitSymlinks`) does not belong
  * here, so that write discloses itself.
  */
-function report(
+async function report(
   copied: string[],
   skipped: string[],
   removed: string[],
@@ -1359,7 +1374,7 @@ function report(
   label: string,
   baseDir: string,
   verbose: boolean,
-): void {
+): Promise<void> {
   const writtenPaths = toReportPaths(copied, baseDir);
   const skippedPaths = excludeWritten(toReportPaths(skipped, baseDir), writtenPaths);
   const removedPaths = toReportPaths(removed, baseDir);
@@ -1373,8 +1388,13 @@ function report(
   info(`qfai ${label}: ${dryRun ? "dry-run" : "done"} (dest=${formatReportPath(baseDir)})`);
   if (writtenPaths.length > 0) {
     info(`  ${dryRun ? "would write" : "written"}: ${writtenPaths.length}`);
-    info(dryRun ? "  would write paths:" : "  written paths:");
-    listReportPaths(writtenPaths);
+    if (dryRun) {
+      info("  would write paths:");
+      await listPlannedPaths(writtenPaths, baseDir);
+    } else {
+      info("  written paths:");
+      listReportPaths(writtenPaths);
+    }
   }
   if (skippedPaths.length > 0) {
     info(`  skipped: ${skippedPaths.length}`);
