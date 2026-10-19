@@ -1313,12 +1313,12 @@ export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
 export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // The generated shared denial hook is pinned independently of workflow templates.
   // Re-pinned when every graph hook command began with a `node -e` guard that reads and discards
-  // stdin, then exits 0 with one line naming `npx qfai init`, where the git-ignored script is
+  // stdin, then exits 0 with one line naming `qfai init`, where the git-ignored script is
   // missing, and otherwise imports it. Derived by serialising the composed file as the composition code does; the unguarded command
   // reproduces `e807d0ca…` byte for byte.
   [
     ".github/hooks/qfai-graph.json",
-    "01a5bd7cf9e4fb25f9cc1f82f8d88426686b1834ea9a7f66283f174fc918e801",
+    "c9a207d6a31ca4ccd146eeea9953c801ddd7a65bb870aff373b1c3cda08bd004",
   ],
   [
     // Re-pinned when the cross-AI rules block was restated for the tree it is written into. Three
@@ -1516,7 +1516,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // Re-pinned for the guarded graph hook group init appends after the template's groups: the same
   // matcher and marker, with `-e` and the guard before the script path. Restoring the unguarded
   // group reproduces `6d3610ad…` byte for byte.
-  [".claude/settings.json", "d1033f826da8cc970e0cc4fe41792f616384252c3d219cb900a4d613888103be"],
+  [".claude/settings.json", "3cbebe52cc7f9786d2b3ce101e3f31f2404bb88a3f0cced0976420adbfd83f07"],
   // Inside `.codex/`, and pinned for the reason `.claude/settings.json` is: its commands are a
   // program an adopter's agent runs. Two `UserPromptSubmit` groups, structured-question and
   // free-text entry. Codex takes one command string, so each runs the same `node -e` reader
@@ -1563,7 +1563,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // after the first eligible call. Restoring the five programs reproduces `252e94e4…`.
   // Re-pinned for the same guarded graph hook group as `.claude/settings.json`, one line with no
   // character a hook shell expands. Restoring the unguarded command reproduces `49a89560…`.
-  [".codex/hooks.json", "f835f7cfed3c727b7ab47d6722e523c157ff2ed68a0e7e731211345ef5eda371"],
+  [".codex/hooks.json", "a3cb9f3fe0bbba3b612c6a73316fc750b93f6cd93f1efd57350184ee20437ab7"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`

@@ -93,7 +93,7 @@ export async function checkGraphHookScript(root: string): Promise<GraphHookCheck
     title,
     message:
       `${settings.join(", ")} run ${GRAPH_HOOK_SCRIPT}, which this checkout does not have. ` +
-      ".qfai/tools/ is git-ignored and created per checkout: run npx qfai init here.",
+      ".qfai/tools/ is git-ignored and created per checkout: run qfai init here.",
     details,
   };
 }

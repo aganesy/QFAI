@@ -201,7 +201,7 @@ function record(value: unknown): Record<string, unknown> {
 }
 
 const MISSING_HOOK_LINE =
-  "QFAI graph hook skipped: .qfai/tools/graph-hook.mjs is missing. Run npx qfai init in this checkout.";
+  "QFAI graph hook skipped: .qfai/tools/graph-hook.mjs is missing. Run qfai init in this checkout.";
 
 // QFAI:EX-0001-0237-23
 // Mutation: packages/qfai/src/core/graph/hookCommands.ts `if(s.existsSync(f))` -> `if(true)` fails "passes each host's graph hook with one reminder line where the script is missing"
@@ -390,7 +390,7 @@ it("says in the init summary that the graph tools are local to each checkout", (
     documents: "documents-not-ready",
   });
   expect(output.split("\n")).toContain(
-    ".qfai/tools/ is local to this checkout: run npx qfai init in each other clone or worktree.",
+    ".qfai/tools/ is local to this checkout: run qfai init in each other clone or worktree.",
   );
 });
 
@@ -411,7 +411,7 @@ it("warns in doctor when committed graph hook entries point at a missing script"
     expect(missing?.message).toContain(".codex/hooks.json");
     expect(missing?.message).toContain(".github/hooks/qfai-graph.json");
     expect(missing?.message).toContain(".qfai/tools/graph-hook.mjs");
-    expect(missing?.message).toContain("npx qfai init");
+    expect(missing?.message).toContain("run qfai init here");
     await mkdir(path.join(root, ".qfai", "tools"), { recursive: true });
     await writeFile(path.join(root, ".qfai", "tools", "graph-hook.mjs"), "\n");
     expect((await check())?.severity).toBe("ok");

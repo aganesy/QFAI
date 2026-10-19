@@ -8,7 +8,7 @@ import { DOCUMENT_PROCESSING_SETUP } from "./documents.js";
  * hook entries without the script they run.
  */
 const GRAPH_TOOLS_LOCAL_NOTE =
-  ".qfai/tools/ is local to this checkout: run npx qfai init in each other clone or worktree.";
+  ".qfai/tools/ is local to this checkout: run qfai init in each other clone or worktree.";
 
 export async function renderGraphPreview(root: string): Promise<string> {
   const paths = graphRuntimePaths(root);

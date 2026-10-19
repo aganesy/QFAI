@@ -6,7 +6,7 @@
  * `qfai init`, so a fresh clone or a new worktree runs a hook whose script is absent. Each command
  * therefore starts a short `node -e` guard. Where the script is absent the guard reads and discards
  * stdin, so a large tool input cannot fail the host's write, then prints one line to stderr naming
- * `npx qfai init` and exits 0, because the graph hook steers exploration and stopping
+ * `qfai init` and exits 0, because the graph hook steers exploration and stopping
  * every tool call adds no safety. Where it is present the guard imports it in the same process,
  * which keeps the hook's argument, stdin, stdout and exit code.
  *
@@ -24,7 +24,7 @@ const GUARD =
   "const f=require('path').resolve(process.argv[1]),s=require('fs');" +
   "if(s.existsSync(f))import(require('url').pathToFileURL(f).href);" +
   "else{try{s.readFileSync(0)}catch{}" +
-  `console.error('QFAI graph hook skipped: ${GRAPH_HOOK_SCRIPT} is missing. Run npx qfai init in this checkout.')}`;
+  `console.error('QFAI graph hook skipped: ${GRAPH_HOOK_SCRIPT} is missing. Run qfai init in this checkout.')}`;
 
 function shellLine(host: string): string {
   return `node -e "${GUARD}" ${GRAPH_HOOK_SCRIPT} ${host}`;
