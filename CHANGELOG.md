@@ -155,6 +155,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   stopped on other conflicts.
   Fixes #3778.
 
+- **Each hook reminder is one or two sentences.** Every full message in
+  `.agents/rules/reminders.json` now names its rule or skill and the action or
+  question the agent applies there, and leaves the rest to that file, so a long
+  session repeats far less text. The grilling reminders drop their unused brief
+  form. When each reminder prints is unchanged. A project with an unedited copy
+  receives the new text on the next `npx qfai init`. Fixes #3788, #3882.
 - **A dependency update whose checks name a contract to change moves to the
   route that edits the spec.** When `validate`, or another check the update
   runs, reports a finding that names a spec contract, `implement-dep-bump` now
