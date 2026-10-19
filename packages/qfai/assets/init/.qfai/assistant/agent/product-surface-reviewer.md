@@ -39,7 +39,10 @@ specialization_tags:
 - Audit visual design, token alignment, and service-level UX coherence.
 - Reconcile sidecar artifacts (screen contracts), design tokens, mermaid flows, and rendered output consistency.
   HTML mock is optional fallback evidence only. Design tokens are supporting input.
-- For UI implementation, compare rendered output against the prototype handoff, canonical prototype screenshots, HTML snapshots, and the final prototype the handoff's `finalArtifact` names (`.qfai/prototype/final/index.html`), or, for a `restyle` handoff, its `liveRoutes` (compare in the running app) and `entryPoints`.
+- For UI implementation, compare rendered output against the prototype handoff, canonical prototype
+  screenshots, HTML snapshots, and the final prototype the handoff's `finalArtifact` names
+  (`.qfai/prototype/final/index.html`), or, for a `restyle` handoff, its `liveRoutes` (compare in
+  the running app) and `entryPoints`.
 - Check the implementation against the handoff's `procurement` (a restyle handoff has none) before judging
   resemblance: a region the manifest says was procured and the code rebuilt is a finding
   with a name, and an authored region the manifest does not list is one too.
@@ -81,7 +84,9 @@ specialization_tags:
 - UI contract files: every `.yaml` / `.yml` under `<paths.contractsDir>/ui/**`, walked recursively.
   `paths.contractsDir` comes from `qfai.config.yaml` (default `.qfai/spec/03_contract`).
   Read the same contracts that routed the review here (`skill/qfai-implement/references/ui-affecting.md`).
-- Prototype handoff at `.qfai/prototype/final/handoff.json` when a prototyping loop ran: the final prototype, `procurement` and implementation notes, or, for a `restyle` handoff, its `liveRoutes` (compare in the running app) and `entryPoints`.
+- Prototype handoff at `.qfai/prototype/final/handoff.json` when a prototyping loop ran: the final
+  prototype, `procurement` and implementation notes, or, for a `restyle` handoff, its `liveRoutes`
+  (compare in the running app) and `entryPoints`.
   Read it in the checkout that ran the loop.
 - Root `DESIGN.md` for the brand tokens.
 - Runtime screenshots / HTML evidence / relevant diffs
