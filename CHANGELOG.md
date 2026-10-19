@@ -22,6 +22,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   drops from about 36 KB to about 21 KB with the same values and wording.
   Fixes #3780.
 
+- **The free-text entry reminder applies only to a message the user wrote.**
+  Its full and brief messages now say that an automated notice, such as a
+  finished background task, a wake-up or a CI event, starts no `qfai-run`, so
+  an agent already in a run is not told to start a second one when the host
+  attaches the reminder to such a turn. Refs #3693.
+
 - **The `qfai-run` final report lists every plan step with its status.** A
   step-status table gives one row per plan step and planned review, each marked
   `ran`, `passed`, `delegated`, `not run` or `not reached`, with a reason for

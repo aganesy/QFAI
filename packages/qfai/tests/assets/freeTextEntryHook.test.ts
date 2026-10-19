@@ -216,6 +216,23 @@ describe("the free-text entry reminder", () => {
     );
   });
 
+  it("applies only to a message the user wrote, not to an automated notice", async () => {
+    const entry = promptEntry(await readGroups(SHIPPED_SETTINGS), FREE_TEXT_ENTRY_HOOK_MARKER);
+    const project = projectDirOf(repoRoot, SHIPPED_SETTINGS);
+    const sessionInput = JSON.stringify({
+      hook_event_name: "UserPromptSubmit",
+      prompt: "fix the login bug",
+      session_id: `free-text-scope-${process.pid}-${Date.now()}`,
+    });
+    const full = contextOf(await runReminderHook(entry, project, sessionInput));
+    expect(full).toContain(
+      "Only a message the user wrote is a request: an automated notice (task, wake-up or CI) starts no run;",
+    );
+    const brief = contextOf(await runReminderHook(entry, project, sessionInput));
+    expect(brief).toContain("For new requests the user wrote, use qfai-run to plan;");
+    expect(brief).toContain("automated notices start no run");
+  });
+
   /** What the hook prints for a `UserPromptSubmit` carrying `prompt`, or for raw `input`. */
   async function printedFor(rel: string, input: string): Promise<string> {
     const entry = promptEntry(await readGroups(rel), FREE_TEXT_ENTRY_HOOK_MARKER);
