@@ -268,7 +268,7 @@ describe("parseArgs", () => {
         "qfai discussion: unknown or missing subcommand. Expected: list|use",
       );
       expect(parseArgs(["sdd"], cwd).invalidReason).toBe(
-        "qfai sdd: unknown or missing subcommand. Expected: preflight|renumber-decision",
+        "qfai sdd: unknown or missing subcommand. Expected: preflight|renumber-decision|next-id",
       );
     });
 
