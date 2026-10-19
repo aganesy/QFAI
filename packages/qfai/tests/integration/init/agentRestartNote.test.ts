@@ -2,6 +2,7 @@
  * Integration: init prints one line asking the user to restart a running agent session when it
  * wrote a skill or hook file, and nothing when it wrote none.
  */
+// QFAI:AC-0001-0196-19
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
