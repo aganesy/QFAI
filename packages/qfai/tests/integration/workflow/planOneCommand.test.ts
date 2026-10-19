@@ -448,3 +448,46 @@ it("--order plans an operation on finished work with no extraction file", async 
     stray: [2, [{ reason: "invalid-input", subject: "x" }]],
   });
 });
+
+// QFAI:EX-0001-0222-17
+it("The decision flag puts a decision point on the first step that writes when the route names none", async () => {
+  const root = await minimalProject();
+  const pointsOf = (fields: Parameters<typeof extraction>[0]) => {
+    const planned = workflow(root, ["plan", "--in", "-"], JSON.stringify(extraction(fields)));
+    const candidates = field(planned.json, "candidates");
+    return [
+      planned.status,
+      ...(Array.isArray(candidates)
+        ? candidates.map((each) => [field(each, "route"), field(each, "decisionPoints")])
+        : [field(planned.json, "route"), field(planned.json, "decisionPoints")]),
+    ];
+  };
+  const named = workflow(root, ["plan", "--route", "change-tooling"]);
+  const reading = { entryFlags: ["decision" as const], qualifiers: [], signals: [] };
+
+  expect([
+    pointsOf({ intent: "ci", entryFlags: ["decision", "expect"], artifacts: ["ci", "tests"] }),
+    pointsOf({ intent: "dependency", entryFlags: ["decision"], artifacts: ["deps"] }),
+    pointsOf({ intent: "defect", entryFlags: ["decision"] }),
+    pointsOf({ intent: "performance", entryFlags: ["measured", "decision"] }),
+    pointsOf({ intent: "ci", artifacts: ["ci", "tests"] }),
+    pointsOf({ intent: "question-how", entryFlags: ["decision"], artifacts: [] }),
+    pointsOf({
+      intent: "ci",
+      entryFlags: ["decision"],
+      artifacts: ["ci", "tests"],
+      confidence: "low",
+      alternatives: [{ ...reading, intent: "design" }],
+    }),
+    [named.status, field(named.json, "route"), field(named.json, "decisionPoints")],
+  ]).toEqual([
+    [0, "change-tooling", ["implement-tooling"]],
+    [0, "bump-dependency", ["implement-dep-bump"]],
+    [0, "fix-defect", ["implement-diagnose"]],
+    [0, "improve-performance", ["implement-diagnose"]],
+    [0, "change-tooling", []],
+    [0, "answer-question", []],
+    [0, ["decide-design", ["discussion-interview"]], ["change-tooling", ["implement-tooling"]]],
+    [0, "change-tooling", []],
+  ]);
+});
