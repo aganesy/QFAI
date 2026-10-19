@@ -49,10 +49,13 @@ Run listed commands and record outputs. A gate that looks unrelated to the
 change is still run and its result recorded; `verify.json` has no status for a
 gate that does not apply to the change. A conditional gate whose condition is
 false is left out of `gates` with its reason, as `common-gate-run` step 1
-says. A gate whose Standard commands entry
-is `CI only: <check name>` is not run here: record it `DELEGATED` with that
-check name. This requires an actual CI check covering the same gate and scope;
-local environment failure alone creates no delegation. Retain observed FAIL or
+says. A gate is not run here, and is recorded `DELEGATED` with its check name,
+when its Standard commands entry is `CI only: <check name>`, or when the
+user's instruction for this run delegates that gate to CI. A delegation by
+instruction holds for this run only; record the instruction as its basis.
+Either requires an actual CI check covering the same gate and scope;
+local environment failure alone creates no delegation, and the agent never
+delegates a gate on its own judgment. Retain observed FAIL or
 UNRUN results. Where the environment cannot run any other command, ask the user
 to run it and provide the output. Never assume PASS without evidence.
 
@@ -183,6 +186,19 @@ explicitly declared matching CI-only check, never a stage this run did not
 cover. Delegation does not claim that its validation profile has already run. Fields, the closed `scope` enum, a conforming example and what must
 never be written are in
 `.qfai/assistant/skill/qfai-verify/references/verify-output-contract.md`.
+
+## After CI
+
+When a delegated check's result is observed for the head the verdict was
+written for, update `.qfai/report/verify.json`:
+
+- set that gate's `ci` to the observed state;
+- when the check is red, set `status` to `"FAIL"`;
+- the gate stays `DELEGATED` and is never rewritten `PASS`.
+
+Name the run, check and head in the stage report. A result for another head
+changes nothing. Formal completion still needs every required check green on
+the current head.
 
 ## Stage report
 

@@ -198,6 +198,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   printed whether or not the files exist: `qfai init` still neither reads nor
   edits them. Fixes #3490.
 
+- **A user can hand a gate to CI for one run.** A gate could be recorded
+  `DELEGATED` only when the project's Standard commands declared it
+  `CI only: <check name>`, so a user who runs tests only in CI saw the verify
+  stage run them locally or stop the commit. The user's instruction for a run
+  that delegates a gate to an actual named CI check now counts the same way for
+  that run, with the instruction recorded as its basis; the agent still never
+  delegates a gate on its own judgment. `verify-repo-gate` also says how to
+  update the verdict once the check reports: the gate keeps `DELEGATED` with
+  the observed state, a red check makes the verdict `FAIL`, and the gate is
+  never rewritten `PASS`. Fixes #3554. Fixes #3785.
+
 - **The `qfai-run` extraction guide decides whether a changed default is a
   deprecation or a behaviour change.** `deprecation` already covered a published surface given a new
   default, so a changed default could read as either intent. The guide now says

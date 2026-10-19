@@ -46,13 +46,14 @@ Each entry of `gates` is `{ name, status, command }`, plus these optional fields
 
 ## CI-only checks
 
-A gate the project's Standard commands declare `CI only: <check name>` is
-recorded `"DELEGATED"` with its `check` and `ci` for the candidate being evaluated.
+A gate the project's Standard commands declare `CI only: <check name>`, or the
+user's instruction for this run delegates to an actual CI check,
+is recorded `"DELEGATED"` with its `check` and `ci` for the candidate being evaluated.
 `check` names the actual CI check and `ci` its observed state.
 A `"red"` check makes the top-level `status` `"FAIL"` for that candidate.
 A `"pending"` one does not, and `summary` names it. A runnable local gate is
-never delegated to avoid running it. Retain an observed FAIL or
-UNRUN; neither becomes PASS or DELEGATED because a verification commit is wanted.
+never delegated to avoid running it on the agent's own judgment. Retain an
+observed FAIL or UNRUN; neither becomes PASS or DELEGATED because a verification commit is wanted.
 
 A `"PASS"` verdict with pending delegated checks supports only the existing
 verification-commit allowance under a user instruction or project policy

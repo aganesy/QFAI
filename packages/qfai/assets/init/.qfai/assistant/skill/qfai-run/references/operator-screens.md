@@ -274,8 +274,9 @@ live files or checkout-dependent execution must finish. A read-only reviewer
 using only `git show <fixed SHA>:<path>` may continue across a clean orchestrator switch;
 the reviewer never switches the checkout. CI-only pending gates use the
 existing DELEGATED commit allowance only under a user instruction or project
-policy covering that verification commit and its tracked paths. The project
-must declare the gate CI-only and name its actual check. Every nondelegated gate
+policy covering that verification commit and its tracked paths. The gate must
+be declared CI-only by the project, or delegated to CI for this run by the
+user's instruction, and its actual check named. Every nondelegated gate
 must pass. A delegated red check stops transport of the same unchanged candidate.
 Explicit CI-only delegation covering transport may instead carry actual changes
 addressing that failure through the existing planned fix into a new candidate,
