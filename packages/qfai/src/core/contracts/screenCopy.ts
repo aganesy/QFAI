@@ -141,7 +141,7 @@ function readSupplements(value: unknown, report: Report): Supplement[] {
   if (value === undefined) {
     report(
       "`supplements` is absent.",
-      "Add `supplements`: the text the screen shows beyond its title, group headings and labels, or `supplements: []` when it shows none.",
+      'List under `supplements` each text the screen shows beyond its title, group headings and labels, one entry per text with `id`, `near`, `when`, `text` and `why`; write `supplements: []` only for a screen that shows no such text. See "Purposeful copy: `supplements` and `structure`" in `.qfai/assistant/skill/qfai-sdd/references/ui-contract-guide.md`.',
     );
     return [];
   }
