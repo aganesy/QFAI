@@ -32,6 +32,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and how to answer, and the answer is mapped to an option before it is acted
   on. Fixes #3705. Fixes #3706.
 
+- **The free-text entry reminder applies only to a message the user wrote.**
+  Its full and brief messages now say that an automated notice, such as a
+  finished background task, a wake-up or a CI event, starts no `qfai-run`, so
+  an agent already in a run is not told to start a second one when the host
+  attaches the reminder to such a turn. The `qfai-run` skill says the same, and
+  that a notice delivering a requested result resumes the waiting step.
+  Refs #3693.
 - **The README links the release notes.** The upgrade section now points to
   the GitHub Releases page, whose bodies are the release notes, and the
   `@jackchuka/mdschema` section says a release that moves its exact pin says so
@@ -56,6 +63,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   extraction.
   Fixes #3498.
 
+- **A release change produced outside the run no longer needs its own pull
+  request for the approval row.** When a release workflow or bot produces the
+  release change, `qfai-run`, its stage points and `triage-close` record the
+  release approval in the final report with the same four items and list the
+  row as a pending follow-up; the next change that touches `decisions.md`
+  appends it, and the next `qfai-run` that writes `decisions.md` appends any
+  pending approval row first.
+  Fixes #3551.
+
 - **`qfai init` asks you to restart a running agent session after it rewrites
   skills or hooks.** A running session keeps the skill and hook text it loaded
   at start, so after `qfai init --force` it went on acting on the old text.
@@ -74,6 +90,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   before the fix and confirms it fails there. A run allowed to push and open a
   pull request may instead observe Red in CI on a commit holding only the test
   and record the run URL. Fixes #3470.
+
+- **Delivery after a change plan runs as its own operation plan.** When the
+  user asks for a push, a pull request, a merge or a branch update after a
+  change plan ends, `qfai-run` now plans it next as an operation on finished
+  work, which `triage-operate` carries out, instead of doing it outside any
+  plan. `triage-operate` now waits for the checks a merge needs, polling no
+  faster than they change, and after a merge confirms the target branch holds
+  the merge commit and its checks pass. Two route-evaluation seeds cover the
+  request. Refs #3553.
 
 - **A failed launcher preflight stops every `npx qfai` call, not only gates.**
   The shared baseline's launcher rules now name every `npx qfai` call, gates
@@ -136,6 +161,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Markdown outside the story tree changed, it now says that nothing was checked,
   so the line is not taken as passing evidence. The exit code is unchanged.
   Refs #3765.
+
+- **A DESIGN.md violation every screen shares is reported once.** The
+  prototyping reviewer repeated a violation whose source every screen shares,
+  such as a shared stylesheet or component, in each screen's review payload, so
+  one fix read as one entry per screen. Such a violation is now recorded only in
+  the per-iteration summary, and each screen's payload keeps the violations that
+  come from that screen. Fixes #3666.
 
 - **`QFAI-CONTRACT-043` no longer steers a screen with body text to
   `supplements: []`.** When a screen has no `supplements`, the fix now says to

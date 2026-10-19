@@ -75,7 +75,8 @@ below and are relative to the project root.
    the block below.
 
 The two share `blockingFindings`, `layoutAntiPatternsDetected` and
-`designMdViolations`. `proseCritique` / `pivotDirective` exist on
+`designMdViolations`, except that a screen-independent `designMdViolations`
+entry is recorded in the summary only. `proseCritique` / `pivotDirective` exist on
 the summary only — putting them in a
 `<screen>.review.json` fails the closed schema.
 
@@ -88,11 +89,20 @@ one screen alone. Fold every `(UI contract, screen)` pair of this iteration:
   prefixed with the screen it belongs to.
 - `layoutAntiPatternsDetected` — the **union** of the pairs' arrays,
   deduplicated by ID.
-- `designMdViolations` — the **union**, deduplicated on
+- `designMdViolations` — every screen-independent violation, recorded here
+  and in no payload, plus the **union** of the pairs' arrays, deduplicated on
   `(kind, found)`.
 - `proseCritique`, four ordinal `scores`, and `pivotDirective` describe the
   iteration as a whole. The six bounded `impressions.*Feel` fields remain on each
   per-screen payload; do not add rating keys to that closed schema.
+
+A violation is screen-independent when its source is shared by every screen of
+the iteration: a shared stylesheet, the Tailwind configuration, the page layout,
+or a component every screen renders. It reads the same on every screen, so
+repeating it in each payload multiplies one fix into one entry per screen. A
+pair's payload lists only the violations whose source is that screen. When the
+iteration reviews one screen, nothing is screen-independent and its payload
+keeps every violation.
 
 This keeps the summary findings aligned with the per-screen payloads. The
 user reads the summary before confirming the prototype, so a summary built
@@ -127,7 +137,8 @@ type Review = {
 
 Fill `designMdViolations` yourself: one entry per distinct value the
 prototype uses that root `DESIGN.md` does not declare, in the categories
-the generator prompt lists.
+the generator prompt lists. The summary is the only place a
+screen-independent violation is recorded.
 
 ## The four ordinal UX axes
 

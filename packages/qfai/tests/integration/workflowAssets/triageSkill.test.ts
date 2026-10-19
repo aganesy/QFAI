@@ -233,7 +233,9 @@ describe("a question answered without a change", () => {
 
     expect(gate).toMatch(/\bno tracked file (?:was )?changed by (?:any|a|the) triage step\b/i);
     expect(gate).toMatch(/\bonly (?:exception|exclusion|tracked-file changes allowed)\b/i);
-    expect(gate).toMatch(/\brequired approval row\b/i);
+    expect(gate).toMatch(
+      /\bthe approval row, if any, that `qfai-run` writes in `decisions\.md` under its step 7\b/i,
+    );
     expect(gate).toContain("`decisions.md`");
     expect(gate).toMatch(/`qfai-run`.*\b(?:records|writes)\b.*\bbefore\b.*`triage-handoff`/i);
 
@@ -242,6 +244,9 @@ describe("a question answered without a change", () => {
         /No file git tracks/,
       );
     }
+    expect(flat(sectionOf(await step("triage-close"), "## What it writes"))).toMatch(
+      /when the release change is produced outside this run \(by a release workflow or bot\), the stage report records the release approval with what was approved, who approved it, when, and the chosen option's label, and lists the row as a pending follow-up; the next change that touches `decisions\.md` appends its row/i,
+    );
     const handoff = await step("triage-handoff");
     expect(flat(sectionOf(handoff, "## Procedure"))).toMatch(
       /run none of the operation here: no push, publication, tag or change to an account/i,
@@ -286,6 +291,22 @@ describe("a question answered without a change", () => {
     expect(flat(sectionOf(operate, "## Gate"))).toMatch(/no tracked file changed/);
     expect(flat(sectionOf(await readShipped(SKILL), "## Steps"))).toMatch(
       /`triage-operate` +\| Runs the operation the user named on finished work/,
+    );
+  });
+
+  // QFAI:AC-0001-0220-06
+  it("waits for the checks a merge needs and checks the merged result", async () => {
+    const procedure = flat(sectionOf(await step("triage-operate"), "## Procedure"));
+    expect(procedure).toMatch(/Wait for checks still running before a merge/);
+    expect(procedure).toMatch(/Poll no faster than the checks change/);
+    expect(procedure).toMatch(
+      /A failing check that a rerun does not clear stops the operation as a tracked change it needs/,
+    );
+    expect(procedure).toMatch(
+      /After a merge, check the merged result: the target branch holds the merge commit, and, when the user asked to see them pass or the project's policy requires it, the checks the project runs on that branch pass/,
+    );
+    expect(procedure).toMatch(
+      /A failure there is reported as `needs-change`, naming the merge commit, since the merge itself stands/,
     );
   });
 

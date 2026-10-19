@@ -314,6 +314,9 @@ describe("qfai-run", () => {
     );
     expect(kinds).toMatch(/\b(?:independent|separate) new request\b.*\bplan(?:ned)?\b/i);
     expect(kinds).toContain("`references/operator-screens.md`");
+    expect(kinds).toContain(
+      "An automated notice (task, wake-up, CI) is no request; one that delivers a requested result resumes the waiting step.",
+    );
   });
 
   // QFAI:EX-0001-0196-43
@@ -570,6 +573,18 @@ describe("qfai-run", () => {
       "answer-in-session",
       "run-operation",
     ]);
+  });
+
+  // QFAI:AC-0001-0211-05
+  it("plans the delivery the user asks for after a change plan as an operation", async () => {
+    const commit = flat(sectionOf(await readShipped(RUN), "## The work"));
+    expect(commit).toMatch(
+      /A push, pull request, merge or branch update the user asks for after the plan ends is planned next as `\{ intent: order, artifacts: \[\] \}`, and its `triage-operate` delivers it/,
+    );
+    const outcome = routingOutcome({
+      ...extraction({ intent: "order", artifacts: [], confidence: "high" }),
+    });
+    expect("taken" in outcome ? outcome.taken.route : undefined).toBe("run-operation");
   });
 
   // QFAI:AC-0001-0211-05
@@ -853,6 +868,9 @@ describe("qfai-run", () => {
     );
     expect(work).toMatch(/a decision you took appends no row/i);
     expect(work).toMatch(/, in the `qfai-sdd` decisions template's form\./i);
+    expect(work).toMatch(
+      /when the release change is produced outside this run \(by a release workflow or bot\), record its approval in the final report with the same four items and list the row as a pending follow-up; the next change that touches `decisions\.md` appends the row, and a `qfai-run` that writes `decisions\.md` appends any pending approval row first/i,
+    );
     // The template's release-approval example is a valid Approach cell as it stands.
     const template = await readShipped("skill/qfai-sdd/templates/spec/decisions.md");
     const example = template.split("\n").find((line) => line.startsWith("- Evidence:"));
@@ -860,7 +878,10 @@ describe("qfai-run", () => {
     expect(approachProblems(example ?? "")).toEqual([]);
     expect(release).toMatch(/which authorizes no push, merge, tag or publication/i);
     expect(release).toMatch(
-      /`qfai-run`.*\b(?:records|writes)\b.*`decisions\.md`.*\bbefore\b.*`triage-handoff`/i,
+      /record the approval as step 7 of `SKILL\.md` says: a `decisions\.md` row the run writes, or, when the release change is produced outside this run, the final report, with the row appended by the next change that touches `decisions\.md`/i,
+    );
+    expect(release).toMatch(
+      /after approval at a handoff release point, `qfai-run` records the approval as step 7 says before `triage-handoff` runs/i,
     );
   });
 
