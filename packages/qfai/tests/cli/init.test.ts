@@ -20,7 +20,8 @@ import fg from "fast-glob";
 import { describe, expect, it } from "vitest";
 
 import { getInitAssetsDir } from "../../src/shared/assets.js";
-import { runInit } from "../helpers/legacyInit.js";
+import { legacyGraphProcess, runInit } from "../helpers/legacyInit.js";
+import type { GraphProcess } from "../../src/core/graph/process.js";
 import { copyTemplateTree } from "../../src/core/fs/templateCopy.js";
 import { captureStdout } from "../helpers/stdout.js";
 import {
@@ -807,15 +808,56 @@ describe("qfai init", () => {
       });
 
       const noteIndex = output.indexOf("git config: core.symlinks=true");
-      // The summary, not the bare `qfai init:` prefix: init now opens with a
+      // The file report, not the bare `qfai init:` prefix: init now opens with a
       // `qfai init: dest=` disclosure line, so the prefix alone matches at
       // index 0 and the ordering this case exists to pin goes untested.
-      const summaryIndex = output.indexOf("qfai init: done");
+      const summaryIndex = output.indexOf("qfai init: files");
       expect(noteIndex).toBeGreaterThanOrEqual(0);
       expect(summaryIndex).toBeGreaterThanOrEqual(0);
       expect(noteIndex).toBeLessThan(summaryIndex);
     } finally {
       await removeTempTree(root);
+    }
+  });
+
+  // QFAI:EX-0001-0237-22
+  it("prints the done line after graph preparation, and none when preparation fails", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-done-"));
+    const failedRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-init-graph-failed-"));
+    const installerOutput = "INSTALLER-OUTPUT-SENTINEL token=secret";
+    const failingDownload: GraphProcess = (command, args, options) =>
+      command === "uv" && args[0] === "pip"
+        ? Promise.resolve({ exitCode: 1, stdout: installerOutput })
+        : legacyGraphProcess(command, args, options);
+    try {
+      const output = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+      const graphIndex = output.indexOf("Graph tools\n");
+      expect(graphIndex).toBeGreaterThanOrEqual(0);
+      expect(output.indexOf("qfai init: done")).toBeGreaterThan(graphIndex);
+
+      let failure: unknown;
+      const failedOutput = await captureStdout(async () => {
+        await runInit(
+          { dir: failedRoot, force: false, dryRun: false, yes: true },
+          {},
+          failingDownload,
+        ).catch((cause: unknown) => {
+          failure = cause;
+        });
+      });
+      expect(failure).toBeInstanceOf(Error);
+      expect(String(failure)).toContain(
+        "Graph preparation failed at Graphify download. Follow the recovery above, then run qfai init again.",
+      );
+      expect(failedOutput).toContain("Recovery: Run uv pip install");
+      expect(`${failedOutput}${String(failure)}`).not.toContain(installerOutput);
+      expect(failedOutput).not.toContain("qfai init: done");
+      expect(`${failedOutput}${String(failure)}`).not.toContain("reported cause");
+    } finally {
+      await removeTempTree(root);
+      await removeTempTree(failedRoot);
     }
   });
 
