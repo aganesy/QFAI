@@ -15,6 +15,7 @@ import { fileURLToPath } from "node:url";
 import type * as FsPromises from "node:fs/promises";
 import { afterEach, expect, it, vi } from "vitest";
 
+import { parseDesignMd, validateDesignMd } from "../../../src/core/design/designMd.js";
 import { loadBuiltInPlans, WORKFLOW_ROUTES } from "../../../src/core/workflow/plans.js";
 
 import {
@@ -24,6 +25,13 @@ import {
   UnknownFactKeyError,
 } from "../../helpers/routingEval.js";
 import { buildBase, FACT_OVERLAYS, REFUSED_FACT_KEYS } from "../../helpers/routingEvalOverlays.js";
+import {
+  DESIGN_MD,
+  DESIGN_OUTCOMES,
+  DESIGN_OVERLAYS,
+  isDesignSeed,
+  type DesignSeed,
+} from "../../helpers/designAuthoringEval.js";
 import {
   routeEvalVerdict,
   scoreRouteSeeds,
@@ -624,3 +632,56 @@ it("A record where every seed lands as expected passes, and one security seed on
     missed: [false, [security?.id]],
   });
 });
+
+async function designSeeds(): Promise<DesignSeed[]> {
+  const lines = (await fixtureText("design-authoring-seeds.jsonl")).split("\n").filter(Boolean);
+  return lines.map((line): unknown => JSON.parse(line)).filter(isDesignSeed);
+}
+
+// What the root DESIGN.md of a built fixture is, before any host runs: an authored file must
+// parse and validate, so a run that leaves it unchanged left a valid file unchanged.
+async function designStateOf(root: string): Promise<string> {
+  const text = await readFile(path.join(root, DESIGN_MD), "utf8").catch(() => null);
+  if (text === null) return "absent";
+  if (text.includes("QFAI-SAMPLE-DESIGN-MD")) return "sample";
+  const parsed = parseDesignMd(text);
+  if ("error" in parsed) return "unparsed";
+  return validateDesignMd(parsed.data).length === 0 ? "authored" : "invalid";
+}
+
+it("The design-authoring seeds cover each file outcome case and build from the qfai init base", async () => {
+  const seeds = await designSeeds();
+  const base = await tempRoot("qfai-eval-base-");
+  buildBase(base);
+  const built: Record<string, string> = {};
+  for (const each of seeds) {
+    const root = await tempRoot("qfai-eval-seed-");
+    await cp(base, root, { recursive: true });
+    await buildSeedFixture(root, each, DESIGN_OVERLAYS);
+    built[each.id] = await designStateOf(root);
+  }
+  const facts = (id: string) => seeds.find((each) => each.id === id)?.repoFacts ?? {};
+
+  expect({
+    ids: seeds.map((each) => each.id),
+    outcomes: seeds.every((each) => DESIGN_OUTCOMES.includes(each.expected.designMd)),
+    built,
+    changeRequests: seeds.map((each) =>
+      Reflect.get(Object(facts(each.id).changeRequest), "status"),
+    ),
+    packs: seeds.map((each) => facts(each.id).discussionPack),
+  }).toEqual({
+    ids: ["DESIGN-001", "DESIGN-002", "DESIGN-003", "DESIGN-004", "DESIGN-005", "DESIGN-006"],
+    outcomes: true,
+    built: {
+      "DESIGN-001": "authored",
+      "DESIGN-002": "authored",
+      "DESIGN-003": "authored",
+      "DESIGN-004": "sample",
+      "DESIGN-005": "absent",
+      "DESIGN-006": "authored",
+    },
+    changeRequests: ["WIP", "WIP", "DONE", undefined, undefined, undefined],
+    packs: ["web", "web", "web", "web", "web-no-direction", "cli"],
+  });
+}, 300_000);

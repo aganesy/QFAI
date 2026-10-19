@@ -18,6 +18,7 @@ Feature: TDD Micro-Cycle Execution
     And GREEN and Refactor observe the same selected behavior succeeding on the intended input; an expected-failure inversion is reported separately and is not ordinary behavior success
     And the normal verify run records the full intended collection and actual execution, reconciles comparable case membership and intentional input differences, leaves unknown expected counts unknown and refuses unexplained omissions as full-scope proof
     And Standard Test quoting is preserved, no extra full run is required per focused cycle, and no evidence ledger, JSON field, gate status, runtime parser or runner is introduced
+    And where the Test entry of the Standard commands is `CI only: <check name>`, Red and Green are recorded `ci-deferred` without a local run, and the route's code review confirms by reading that the test fails against the code before the fix
 
   # AC-0001-0091-02
   Scenario: Minimal Code In Phase Green

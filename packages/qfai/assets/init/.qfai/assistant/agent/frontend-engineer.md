@@ -67,7 +67,7 @@ specialization_tags:
 - Frontend implementation summary
 - Changed files and affected flows
 - Local verification notes
-- Test path, selector, observed RED/GREEN/Refactor results and changed files, in the stage report
+- Test path, selector, observed RED/GREEN/Refactor results (or `ci-deferred`) and changed files, in the stage report
 - Notes on how simplicity, necessity, and reuse were preserved in the chosen implementation
 
 ## Stop conditions

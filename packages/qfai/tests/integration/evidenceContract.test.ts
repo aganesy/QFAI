@@ -405,6 +405,65 @@ describe("focused evidence guidance", () => {
       /existing human[\s\S]*report[\s\S]*no permanent inventory, ledger, JSON field, gate status, runtime[\s\S]*parser or runner/,
     );
   });
+
+  // QFAI:AC-0001-0091-01
+  // QFAI:EX-0001-0091-16
+  it("records Red and Green ci-deferred where the Test entry is CI only, and the code review reads the test against the pre-fix code", async () => {
+    const [admissibility, implement, diagnose, review, reviewer, backend, frontend] =
+      await Promise.all([
+        readGuide("skill/qfai-implement/references/red-admissibility.md"),
+        readGuide("step/implement-tdd/STEP.md"),
+        readGuide("step/implement-diagnose/STEP.md"),
+        readGuide("step/common-review-cycle/STEP.md"),
+        readGuide("agent/implementation-reviewer.md"),
+        readGuide("agent/backend-engineer.md"),
+        readGuide("agent/frontend-engineer.md"),
+      ]);
+    const ciOnly = flat(sectionOf(admissibility, "## CI-only Test gate"));
+    expect(ciOnly).toContain("`CI only: <check name>`");
+    expect(ciOnly).toMatch(/Write the test before any production code[^.]*do not run it/);
+    expect(ciOnly).toContain(
+      "In the example's `### EX-NNNN-NNNN-NN` section, the stage report says `red: ci-deferred`, `green: ci-deferred` and `refactor: ci-deferred`",
+    );
+    expect(flat(implement)).toContain(
+      "Where the Test entry is `CI only: <check name>`, keep that test's `ci-deferred` Red and do not run it.",
+    );
+    expect(flat(sectionOf(implement, "## Report"))).toContain(
+      "For a `ci-deferred` phase, the test path, its selector and the check name take the place of the command, the observed result and the receipt.",
+    );
+    expect(flat(diagnose)).toContain(
+      "For a `ci-deferred` Red, record the test path, its selector and the check name.",
+    );
+    expect(flat(reviewer)).toContain(
+      "A `ci-deferred` Red or Green is not a missing observation: read the test against the code before the fix instead",
+    );
+    expect(flat(reviewer)).toContain("red-admissibility.md#ci-only-test-gate");
+    for (const card of [backend, frontend]) {
+      expect(flat(card)).toContain("observed RED/GREEN/Refactor results (or `ci-deferred`)");
+    }
+    expect(ciOnly).toMatch(
+      /report label, not a gate status: no gate counts it, and it is not a pass/,
+    );
+    expect(ciOnly).toMatch(
+      /code review reads the test against the code before the fix and confirms that its assertion fails there/,
+    );
+    expect(ciOnly).toMatch(/pass both before and after the fix is a finding/);
+    expect(ciOnly).toMatch(
+      /authority to push and open a pull request[\s\S]*commit that holds only the test[\s\S]*record the run URL as the Red/,
+    );
+    expect(ciOnly).toMatch(/A run without that authority does not push to observe Red/);
+    for (const step of [implement, diagnose, review]) {
+      expect(flat(step)).toContain("red-admissibility.md#ci-only-test-gate");
+      expect(flat(step)).toMatch(/ci-deferred/);
+    }
+    expect(flat(sectionOf(implement, "## Gate"))).toMatch(
+      /recorded `ci-deferred` where the Test entry is `CI only: <check name>`/,
+    );
+    expect(flat(sectionOf(diagnose, "## Gate"))).toMatch(
+      /its `ci-deferred` Red where the Test entry is `CI only: <check name>`/,
+    );
+    expect(flat(review)).toMatch(/name each test the run recorded `red: ci-deferred`/);
+  });
 });
 
 const DELIVERY_GUIDE = "skill/qfai-run/references/evidence-delivery.md";

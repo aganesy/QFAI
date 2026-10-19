@@ -52,6 +52,29 @@ The normal verify run establishes full collection coverage; no extra full suite 
 required for each focused cycle. This receipt adds no ledger, JSON field,
 gate status, runtime parser or runner.
 
+## CI-only Test gate
+
+Where the Standard commands entry for Test is written `CI only: <check name>`,
+the project runs its tests in CI alone, and no focused Red, Green or Refactor
+invocation runs locally. Record those phases `ci-deferred` instead:
+
+- Write the test before any production code, as for an observed Red, and do
+  not run it.
+- In the example's `### EX-NNNN-NNNN-NN` section, the stage report says
+  `red: ci-deferred`, `green: ci-deferred` and `refactor: ci-deferred`, with
+  the test path, its selector and the check name.
+  This is a report label, not a gate status: no gate counts it, and it is not
+  a pass. The Test gate stays DELEGATED to that check in the verify stage.
+- The route's code review reads the test against the code before the fix and
+  confirms that its assertion fails there on the stated behavior. A test that
+  would pass both before and after the fix is a finding.
+
+Where the run has authority to push and open a pull request, from the user's
+instruction or the project's policy, it may observe Red in CI instead: push a
+commit that holds only the test, for example on a draft pull request, confirm
+that the named check fails on the new test's assertion, and record the run URL
+as the Red. A run without that authority does not push to observe Red.
+
 ## Assertion control
 
 Temporarily neutralize only the example assertion while keeping the test compilable and runnable. The same command must pass. Capture the changed lines and result, then restore the assertion before recording RED. This control shows that the reported failure came from the assertion.

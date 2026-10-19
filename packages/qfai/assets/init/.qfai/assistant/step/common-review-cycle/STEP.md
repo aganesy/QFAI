@@ -58,6 +58,10 @@ them; it is the procedure that applies them.
    focus. Put the answers an earlier stage recorded on the same artifact into
    this review's request before dispatching reviewers, under
    `.qfai/assistant/rule/review-convergence.md#answered-demands-must`.
+   For the code review, name each test the run recorded `red: ci-deferred`:
+   the reviewer reads it against the code before the fix and confirms that
+   its assertion fails there
+   (`.qfai/assistant/skill/qfai-implement/references/red-admissibility.md#ci-only-test-gate`).
 2. **Dispatch.** Send each reviewer a work order in the shared template. An
    agent that authored, edited or recommended a decision in the reviewed
    artifact is not its independent reviewer. The session report names its
