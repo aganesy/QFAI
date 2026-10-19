@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -27,6 +27,22 @@ async function inProject(
 const policy = ".qfai/spec/01_policy/principle.md";
 const decisions = ".qfai/spec/decisions.md";
 const contract = ".qfai/spec/03_contract/cli/cli-0001-example.md";
+const decisionsTemplate = path.resolve(
+  import.meta.dirname,
+  "..",
+  "..",
+  "..",
+  "..",
+  "assets",
+  "init",
+  ".qfai",
+  "assistant",
+  "skill",
+  "qfai-sdd",
+  "templates",
+  "spec",
+  "decisions.md",
+);
 
 // QFAI:EX-0001-0051-10
 describe("validateExternalReferences", () => {
@@ -83,6 +99,30 @@ describe("validateExternalReferences", () => {
       },
       async (root) => {
         expect(await validateExternalReferences(root, defaultConfig)).toEqual([]);
+      },
+    );
+  });
+
+  // QFAI:EX-0001-0051-NEXT
+  it("counts no path in a decision's Evidence item or a change request's Content", async () => {
+    const template = await readFile(decisionsTemplate, "utf8");
+    const release =
+      "| DEC-0001 | Release 1.2.0 approved by Pat on 2026-10-01, option \"Ship\" | - Evidence: file:CHANGELOG.md; command:npm test → passed - Grounds: the checks pass - Residual risk: none — checked - Rollback: revert the tag | DONE |";
+    const inherited =
+      "| DEC-0002 | Change request: `src/core/a.ts`, [b](src/core/b.ts), `.qfai/spec/decisions.md` | - Evidence: file:`src/core/a.ts`; `tests/a.test.ts`; [c](docs/c.md) - Grounds: UPDATE the rule. - Residual risk: none — kept - Rollback: none — kept | DONE |";
+    const grounds =
+      "| DEC-0003 | Note | - Evidence: file:`src/core/a.ts` - Grounds: `src/core/c.ts` now owns it - Residual risk: none — kept - Rollback: none — kept | DONE |";
+    await inProject(
+      {
+        [decisions]: `${template.trimEnd()}\n${release}\n${inherited}\n${grounds}\n`,
+        [policy]: "- Evidence: `docs/need.md`\n",
+      },
+      async (root) => {
+        const findings = await validateExternalReferences(root, defaultConfig);
+        expect(findings.map(({ message }) => message)).toEqual([
+          "The policy tree has 1 line in 1 file naming a path outside .qfai",
+          "The decision and open-question tree has 1 line in 1 file naming a path outside .qfai",
+        ]);
       },
     );
   });
