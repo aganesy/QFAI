@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -7,7 +7,6 @@ import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { projectDirOf, runReminderHook } from "../helpers/reminderHooks.js";
-import { removeTempTree } from "../helpers/tempTree.js";
 
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
@@ -18,22 +17,27 @@ const SETTINGS = [".claude/settings.json", "packages/qfai/assets/init/.claude/se
 type Entry = { readonly command?: string; readonly args?: readonly string[] };
 type Group = { readonly hooks: readonly Entry[] };
 
-/** Editing reminders use the same first-full, later-pointer delivery. */
-const WRITE_POINTERS = [
-  ["minimal-implementation", ".agents/rules/minimal-implementation.md"],
-  ["documentation-clarity-after-write", ".agents/rules/documentation-clarity.md"],
-  ["documentation-clarity-after-edit", ".agents/rules/documentation-clarity.md"],
+/** Editing reminders print in full on a session's first eligible call and nothing after it. */
+const WRITE_ONCE = [
+  "minimal-implementation",
+  "documentation-clarity-after-write",
+  "documentation-clarity-after-edit",
 ] as const;
 const EVERY_CALL = ["documentation-clarity-before-post"];
+/** Every tool-time reminder with a per-session schedule. */
+const FIRST_ONLY = [
+  "api-budget",
+  "grilling-design-artifact",
+  "grilling-delegation",
+  "grilling-plan",
+  ...WRITE_ONCE,
+] as const;
+/** The prompt-time reminders, which follow the full form with a one-line pointer. */
 const POINTERS = [
-  ["api-budget", ".agents/rules/api-budget.md"],
-  ["grilling-design-artifact", ".agents/rules/grilling.md"],
-  ["grilling-delegation", ".agents/rules/grilling.md"],
-  ["grilling-plan", ".agents/rules/grilling.md"],
   ["free-text-entry", "qfai-run"],
   ["structured-question", ".agents/rules/user-questions.md"],
-  ...WRITE_POINTERS,
 ] as const;
+const SCHEDULED = [...POINTERS.map(([key]) => key), ...FIRST_ONLY];
 
 /** Repeated delivery is checked through invocation twenty-one. */
 const PERIOD = 20;
@@ -109,10 +113,6 @@ function expectPointer(context: string, full: string, reference: string): void {
   expect(context.trim()).not.toBe("");
   expect(context).not.toMatch(/[\r\n\u2028\u2029]/);
   expect(context.length).toBeLessThan(full.length);
-  if (reference.endsWith("minimal-implementation.md")) {
-    expect(context).toMatch(/§\s*2|\b(?:floor|non-removable)\b/i);
-    expect(context).toContain(".agents/rules/interface-clarity.md");
-  }
   if (reference === "qfai-run") {
     expect(context).toMatch(/\bnew requests?\b.*\bplan\b/i);
     expect(context).toMatch(
@@ -123,9 +123,8 @@ function expectPointer(context: string, full: string, reference: string): void {
   }
 }
 
-describe.each(SETTINGS)("%s sends full context first and pointers on later tool calls", (rel) => {
+describe.each(SETTINGS)("%s sends full context first and less on later calls", (rel) => {
   // QFAI:EX-0001-0196-55
-  // QFAI:EX-0001-0196-56
   it.each(POINTERS)(
     "prints %s in full once, then a one-line pointer on every relevant trigger",
     async (key, reference) => {
@@ -140,22 +139,39 @@ describe.each(SETTINGS)("%s sends full context first and pointers on later tool 
     },
   );
 
+  // QFAI:EX-0001-0196-56
+  it.each(FIRST_ONLY)(
+    "prints %s in full once, then nothing on every later relevant call",
+    async (key) => {
+      const entry = (await entries(rel)).get(key);
+      if (entry === undefined) throw new Error(`no entry carries ${key}`);
+      const input = { session_id: newSession(), tool_input: { command: "gh api repos/o/r" } };
+      expect(contextOf(await call(rel, entry, input))).toBe(await fullContext(key));
+      for (let count = 2; count <= PERIOD + 1; count += 1) {
+        expect(await call(rel, entry, input), `${key}, call ${count}`).toBe("");
+      }
+    },
+  );
+
   // QFAI:EX-0001-0196-55
   // QFAI:EX-0001-0196-56
-  it("keeps pointer counters separate by session, optional agent and message key", async () => {
+  it("keeps counters separate by session, optional agent and message key", async () => {
     const byKey = await entries(rel);
     const session_id = newSession();
-    for (const [key, reference] of POINTERS) {
+    for (const key of SCHEDULED) {
       const entry = byKey.get(key);
       if (entry === undefined) throw new Error(`no entry carries ${key}`);
       const full = await fullContext(key);
+      const pointer = POINTERS.find(([prompt]) => prompt === key);
       for (const input of [
         { session_id },
         { session_id, agent_id: "helper" },
         { session_id: newSession() },
       ]) {
         expect(contextOf(await call(rel, entry, input))).toBe(full);
-        expectPointer(contextOf(await call(rel, entry, input)), full, reference);
+        const second = await call(rel, entry, input);
+        if (pointer === undefined) expect(second, key).toBe("");
+        else expectPointer(contextOf(second), full, pointer[1]);
       }
     }
   });
@@ -164,7 +180,7 @@ describe.each(SETTINGS)("%s sends full context first and pointers on later tool 
   // QFAI:EX-0001-0196-56
   it("falls back to full context on every selected trigger without a usable identity", async () => {
     const byKey = await entries(rel);
-    for (const [key] of POINTERS) {
+    for (const key of SCHEDULED) {
       const entry = byKey.get(key);
       if (entry === undefined) throw new Error(`no entry carries ${key}`);
       for (const input of [{}, { session_id: 7 }]) {
@@ -179,7 +195,7 @@ describe.each(SETTINGS)("%s sends full context first and pointers on later tool 
   // QFAI:EX-0001-0196-56
   it("falls back to full context and exit zero when selected counters cannot be stored", async () => {
     const byKey = await entries(rel);
-    for (const [key] of POINTERS) {
+    for (const key of SCHEDULED) {
       const entry = byKey.get(key);
       if (entry === undefined) throw new Error(`no entry carries ${key}`);
       const session_id = newSession();
@@ -192,40 +208,6 @@ describe.each(SETTINGS)("%s sends full context first and pointers on later tool 
       } finally {
         await rm(counter, { recursive: true, force: true });
       }
-    }
-  });
-
-  // QFAI:EX-0001-0196-55
-  it("keeps the full envelope on repeated tool calls when the catalog has no brief context", async () => {
-    const key = "api-budget";
-    const entry = (await entries(rel)).get(key);
-    if (entry === undefined) throw new Error(`no entry carries ${key}`);
-    const messages: Record<string, unknown> = JSON.parse(
-      await readFile(
-        path.join(repoRoot, "packages/qfai/assets/init/root/.agents/rules/reminders.json"),
-        "utf-8",
-      ),
-    );
-    const message = messages[key];
-    if (typeof message !== "object" || message === null) throw new Error("no message");
-    Reflect.deleteProperty(message, "briefContext");
-    const full = await fullContext(key);
-    const project = await mkdtemp(path.join(os.tmpdir(), "qfai-claude-old-catalog-"));
-    try {
-      const rules = path.join(project, ".agents", "rules");
-      await mkdir(rules, { recursive: true });
-      await writeFile(path.join(rules, "reminders.json"), JSON.stringify(messages), "utf-8");
-      const input = JSON.stringify({
-        session_id: newSession(),
-        tool_input: { command: "gh api repos/o/r" },
-      });
-      for (let count = 1; count <= 3; count += 1) {
-        const stdout = await runReminderHook(entry, project, input);
-        expect(JSON.parse(stdout)).toEqual(message);
-        expect(contextOf(stdout)).toBe(full);
-      }
-    } finally {
-      await removeTempTree(project);
     }
   });
 
@@ -319,9 +301,9 @@ describe.each(SETTINGS)("%s sends full context first and pointers on later tool 
     }
   });
   // QFAI:EX-0001-0196-56
-  it("prints editing reminders in full first and as pointers on the second eligible call", async () => {
+  it("prints editing reminders in full first and nothing on the second eligible call", async () => {
     const byKey = await entries(rel);
-    for (const [key, reference] of WRITE_POINTERS) {
+    for (const key of WRITE_ONCE) {
       const entry = byKey.get(key);
       if (entry === undefined) throw new Error(`no entry carries ${key}`);
       const session_id = newSession();
@@ -333,13 +315,13 @@ describe.each(SETTINGS)("%s sends full context first and pointers on later tool 
       };
       const full = await fullContext(key);
       expect(contextOf(await call(rel, entry, input)), `${key}, first call`).toBe(full);
-      expectPointer(contextOf(await call(rel, entry, input)), full, reference);
+      expect(await call(rel, entry, input), `${key}, second call`).toBe("");
     }
   });
 
   // QFAI:EX-0001-0196-53
   // QFAI:EX-0001-0196-56
-  it("keeps implementation pointers on every call through invocation twenty-one", async () => {
+  it("prints nothing for implementation on every later call through invocation twenty-one", async () => {
     const entry = (await entries(rel)).get("minimal-implementation");
     if (entry === undefined) throw new Error("no entry carries minimal-implementation");
     const session_id = newSession();
@@ -351,9 +333,9 @@ describe.each(SETTINGS)("%s sends full context first and pointers on later tool 
       tool_input: { file_path: "src/a.ts" },
     };
     for (let n = 1; n <= PERIOD + 1; n += 1) {
-      const context = contextOf(await call(rel, entry, input));
-      if (n === 1) expect(context).toBe(full);
-      else expectPointer(context, full, ".agents/rules/minimal-implementation.md");
+      const stdout = await call(rel, entry, input);
+      if (n === 1) expect(contextOf(stdout)).toBe(full);
+      else expect(stdout, `call ${n}`).toBe("");
     }
   });
 
@@ -369,17 +351,13 @@ describe.each(SETTINGS)("%s sends full context first and pointers on later tool 
       { session_id: newSession() },
     ]) {
       expect(contextOf(await call(rel, entry, input))).toBe(full);
-      expectPointer(
-        contextOf(await call(rel, entry, input)),
-        full,
-        ".agents/rules/minimal-implementation.md",
-      );
+      expect(await call(rel, entry, input)).toBe("");
     }
   });
 
   it("prints on every call when the input names no session", async () => {
     const byKey = await entries(rel);
-    for (const [key] of WRITE_POINTERS) {
+    for (const key of WRITE_ONCE) {
       const entry = byKey.get(key);
       if (entry === undefined) throw new Error(`no entry carries ${key}`);
       for (const input of [{}, { session_id: 7 }]) {
@@ -419,11 +397,7 @@ describe.each(SETTINGS)("%s sends full context first and pointers on later tool 
     }
     const full = await fullContext("minimal-implementation");
     expect(contextOf(await call(rel, entry, input("src/a.ts")))).toBe(full);
-    expectPointer(
-      contextOf(await call(rel, entry, input("src/a.ts"))),
-      full,
-      ".agents/rules/minimal-implementation.md",
-    );
+    expect(await call(rel, entry, input("src/a.ts"))).toBe("");
   });
 
   // QFAI:EX-0001-0196-56
@@ -433,7 +407,7 @@ describe.each(SETTINGS)("%s sends full context first and pointers on later tool 
       const entry = byKey.get(key);
       if (entry === undefined) throw new Error(`no entry carries ${key}`);
       const session_id = newSession();
-      for (const [editKey] of WRITE_POINTERS) {
+      for (const editKey of WRITE_ONCE) {
         const editing = byKey.get(editKey);
         if (editing === undefined) throw new Error(`no entry carries ${editKey}`);
         await call(rel, editing, { session_id });

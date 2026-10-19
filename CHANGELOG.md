@@ -148,6 +148,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the earlier rows stay as written. Only a no-question mode may record the
   decision as an assumption. Fixes #3794.
 
+- **Tool-time reminders print once per session.** The grilling, API-budget,
+  minimal-implementation and documentation-clarity after-write or after-edit
+  hooks in `.claude/settings.json` and `.codex/hooks.json` print their full
+  message on a session's first eligible call and nothing after it, where they
+  printed a one-line pointer on every later call. The prompt-time free-text
+  entry and question-form reminders keep their short line each turn, and
+  `qfai init` replaces the earlier groups in place unless the project edited
+  them. Fixes #3762.
+
 - **`qfai doctor` says what a shipped workflow changed, and a project can accept a
   difference with a reason.** The `workflows.drift.*` warning now also names each
   action both files use whose pinned version differs, with the version on each
