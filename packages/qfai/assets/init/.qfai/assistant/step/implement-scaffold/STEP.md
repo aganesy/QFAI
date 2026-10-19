@@ -1,7 +1,7 @@
 ---
 name: implement-scaffold
 owner: qfai-implement
-purpose: "Write, with `npx qfai atdd scaffold`, the E2E test of each business flow and the integration test of each acceptance criterion the flow lacks, each with an empty body."
+purpose: "Write, with `npx qfai atdd scaffold` or, in a project with purpose-named test files, by hand, the E2E test of each business flow and the integration test of each acceptance criterion the flow lacks, each with an empty body."
 requires: [common-gate-run]
 roles: [test-design-analyst]
 routing-profile: default
@@ -37,10 +37,10 @@ the system's shape has settled.
    `common-gate-run` says, and list the BF and AC items no test annotates.
    Drop from that list each item a `Test exception:` row at DONE names: it is
    owed no test.
-2. When the flow is still on that list, run
-   `npx qfai atdd scaffold --flow BF-NNNN`. It writes
+2. Unless § Purpose-named test files applies, when the flow is still on that
+   list, run `npx qfai atdd scaffold --flow BF-NNNN`. It writes
    `<testsDir>/e2e/<BF-ID>.test.<ext>`.
-3. For each story with an acceptance criterion still on that list, run
+3. Under the same condition, for each story with an acceptance criterion still on that list, run
    `npx qfai atdd scaffold --story US-NNNN-NNNN`. It writes one test per
    criterion under `<testsDir>/integration/<US-ID>/`, so delete each test it
    reports as created for a criterion the list dropped.
@@ -56,21 +56,23 @@ first, one example at a time.
 
 ## Purpose-named test files
 
-Read the acceptance tests the project already has. Where they are files named
-for what they test, each carrying its `QFAI:` annotations, run no
-`npx qfai atdd scaffold` for the flow. Write each listed item's test, with an
-empty body, into an existing or a new purpose-named file instead.
+Where the flow's existing acceptance tests are purpose-named files, each
+carrying its `QFAI:` annotations, run no `npx qfai atdd scaffold` for the
+flow. Write each listed item's test, with an empty body, into an existing or a
+new purpose-named file instead. Where they are not, run the scaffold as
+§ Procedure items 2 and 3 say.
 
-- A `QFAI:AC-NNNN-NNNN-NN` test goes in a file under the integration or API
-  layer directory, and a `QFAI:BF-NNNN` test in one under the E2E directory,
-  as `.qfai/assistant/rule/test-layers.md` routes them. The file must be one
+- A `QFAI:AC-NNNN-NNNN-NN` test goes in a file under `<testsDir>/integration/`
+  or `<testsDir>/api/`, and a `QFAI:BF-NNNN` test in one under
+  `<testsDir>/e2e/`, as `.qfai/assistant/rule/test-layers.md` routes them. The file must be one
   the configured globs select.
 - An AC or BF annotation counts anywhere in such a file. Put it on the comment
   line directly before the test it marks, so the pass can name that test.
 - Change no existing test in the file: add no assertion, and move or remove no
   annotation already there.
 
-The step then passes as Passes when states.
+The step then passes as Passes when states. Procedure items 1 and 4 still
+apply.
 
 ## Passes when
 

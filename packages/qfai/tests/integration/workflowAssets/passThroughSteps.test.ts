@@ -194,12 +194,29 @@ describe("a step that may pass with evidence", () => {
         "## Purpose-named test files",
       ),
     );
-    expect(section).toMatch(/run no `npx qfai atdd scaffold` for the flow/i);
+    expect(section).toMatch(
+      /where the flow's existing acceptance tests are purpose-named files, each carrying its `QFAI:` annotations, run no `npx qfai atdd scaffold` for the flow/i,
+    );
+    expect(section).toMatch(
+      /where they are not, run the scaffold as § Procedure items 2 and 3 say/i,
+    );
     expect(section).toMatch(/into an existing or a new purpose-named file instead/i);
-    expect(section).toMatch(/under the integration or API layer directory/i);
+    expect(section).toMatch(
+      /under `<testsDir>\/integration\/` or `<testsDir>\/api\/`, and a `QFAI:BF-NNNN` test in one under `<testsDir>\/e2e\/`/i,
+    );
     expect(section).toMatch(/an AC or BF annotation counts anywhere in such a file/i);
     expect(section).toMatch(/change no existing test in the file/i);
-    expect(section).toMatch(/the step then passes as Passes when states/i);
+    expect(section).toMatch(
+      /the step then passes as Passes when states\. Procedure items 1 and 4 still apply\./i,
+    );
+    const procedure = flat(
+      sectionOf(await readShipped("step/implement-scaffold/STEP.md"), "## Procedure"),
+    );
+    expect(procedure).toMatch(/2\. Unless § Purpose-named test files applies, when the flow/i);
+    expect(procedure).toMatch(/3\. Under the same condition, for each story/i);
+    expect(frontMatterOf(await readShipped("step/implement-scaffold/STEP.md")).purpose).toMatch(
+      /or, in a project with purpose-named test files, by hand/i,
+    );
   });
 
   it("leaves no step with a skip condition a plan predicate decided", async () => {
