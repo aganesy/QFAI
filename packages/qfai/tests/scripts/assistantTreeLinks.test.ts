@@ -299,6 +299,19 @@ describe("link-assistant-tree --check", () => {
     expect(lstatSync(path.join(assistant, "rule")).isSymbolicLink()).toBe(true);
   });
 
+  it("accepts the generated version file at the tree root and still reports another root-only file", async () => {
+    const { root, script, assistant } = await makeIsolatedTree();
+    await writeFile(path.join(assistant, "VERSION"), "1.2.3\n", "utf-8");
+    expect(runIsolated(script, root, false).status).toBe(0);
+    expect(runIsolated(script, root, true).status).toBe(0);
+
+    await writeFile(path.join(assistant, "NOTES"), "local\n", "utf-8");
+    const checked = runIsolated(script, root, true);
+    expect(checked.status).toBe(1);
+    expect(checked.output).toContain(".qfai/assistant/NOTES exists here and nowhere");
+    expect(checked.output).not.toContain(".qfai/assistant/VERSION");
+  });
+
   // QFAI:EX-0002-0022-01
   it("follows the root mirror after a native Git worktree checkout and preserves its primary", async () => {
     const { root, script, assistant } = await makeIsolatedTree();

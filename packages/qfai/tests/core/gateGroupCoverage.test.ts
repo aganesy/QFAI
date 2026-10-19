@@ -88,6 +88,7 @@ const PROFILE_INDEPENDENT_CODES: ReadonlyMap<string, Exemption> = new Map([
     "QFAI-TOOL-001": "which copy of qfai is running — a property of the invocation, not of a gate",
     "QFAI-TOOL-002": "as QFAI-TOOL-001",
     "QFAI-TOOL-003": "as QFAI-TOOL-001",
+    "QFAI-TOOL-004": "as QFAI-TOOL-001",
   }),
   ...raisedBy("src/core/config.ts", {
     "QFAI-CFG-001": "the `qfai.config.yaml` read, which every profile needs first",

@@ -312,6 +312,7 @@
     "tests/integration/initForceNoLock.test.ts",
     "tests/integration/initDryRunPathStates.test.ts",
     "tests/integration/initKeptAssistantNote.test.ts",
+    "tests/integration/initAssistantVersion.test.ts",
     "tests/integration/validateTimingsLine.test.ts",
     "tests/helpers/doctorFixtures.ts",
     "tests/integration/shippedWorkflowPins.test.ts",
