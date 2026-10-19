@@ -128,6 +128,10 @@ export const DECISION_RULES: readonly DecisionRule[] = [
       "run-owned-cleanup",
     ),
     clause(
+      (input) => is("order")(input) && qualified(input, "meaning-preserving"),
+      "resolve-conflicts",
+    ),
+    clause(
       (input) =>
         flag(input, "upstream") && qualified(input, "settled-design") && prototypeChange(input),
       "apply-settled-prototype",
@@ -166,7 +170,14 @@ export const DECISION_RULES: readonly DecisionRule[] = [
     ),
   ),
   rule(20, clause(is("surface-contradiction", "model-gap", "unenforced"), "repair-consistency")),
-  rule(21, clause(is("stale-record"), "restate-records")),
+  rule(
+    21,
+    clause(
+      (input) => is("stale-record")(input) && qualified(input, "meaning-preserving"),
+      "resolve-conflicts",
+    ),
+    clause(is("stale-record"), "restate-records"),
+  ),
   rule(
     22,
     clause((input) => is("defect-regression")(input) && !envWithoutRepro(input), "fix-defect"),

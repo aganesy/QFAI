@@ -40,8 +40,11 @@ them; it is the procedure that applies them.
   reviewer. A side is reviewed when it is on the default branch or a review of
   this route or its pull request covered its commits. A resolution that adds
   content neither side had is not conflict-only. The stage report names the
-  merge and why no reviewer ran. A parent skill invoked by name uses the
-  reviewers its own `## Review` section names, such as `qfai-discussion`'s.
+  merge and why no reviewer ran. In the `resolve-conflicts` route, a
+  resolution that touches a story-tree file, a contract, or `decisions.md` or
+  `open-questions.md` is not exempt: it gets the code review, and
+  `architecture-reviewer` too for a contract. A parent skill invoked by name
+  uses the reviewers its own `## Review` section names, such as `qfai-discussion`'s.
 
   In a route, a code review whose target replaces at most five lines, a
   replaced line counting once, and no line added or removed, each changing
