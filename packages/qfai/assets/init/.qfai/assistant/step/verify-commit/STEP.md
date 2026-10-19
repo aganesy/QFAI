@@ -33,16 +33,22 @@ covering that action, target and scope. Commit authority alone covers none of th
 1. Stop at an ordinary FAIL or UNRUN, and say which gate. A gate that
    fails the same way on the base commit is still a failed gate: the final
    report names its baseline, and the commit waits for the user's instruction.
-   The existing pending-CI allowance applies only when the project declares
-   the gate `CI only: <check name>` and a user instruction or project policy
-   covers the verification commit and its paths. Record it `DELEGATED`, name
+   The existing pending-CI allowance applies only when the gate is delegated
+   and a user instruction or project policy covers the verification commit
+   and its paths. A gate is delegated when the project declares it
+   `CI only: <check name>`, or when the user's instruction for this run
+   delegates that gate to a named CI check, quoted as `verify-repo-gate`'s `## Report`
+   says; that delegation holds for this run only. Without an instruction that
+   can be quoted, the gate is not delegated and stops the commit as UNRUN.
+   Record a delegated gate `DELEGATED`, name
    the actual check, and retain its pending state. A gate
    recorded `DELEGATED` does not stop the commit while its named CI check
    is pending under that authority. This permits that commit, not a
    verification-complete claim.
    Every nondelegated gate must pass.
    A delegated red check stops transport of the same unchanged candidate.
-   Under explicit CI-only delegation covering the transport commit, the
+   Under explicit delegation (CI-only or by instruction) covering the
+   transport commit, the
    existing planned fix may produce actual changes addressing that failure.
    Commit those changes to obtain the new candidate's CI result even while
    HEAD still names the failed commit. Preserve the prior head, check, run and
@@ -50,7 +56,8 @@ covering that action, target and scope. Commit authority alone covers none of th
    actual fix and, after the commit, its new head and resume condition. No run
    yet means no result, and the new candidate remains unverified until its own
    CI results are observed. This exception covers neither an ordinary FAIL or
-   UNRUN nor a locally runnable gate delegated merely to avoid running it.
+   UNRUN nor a locally runnable gate the agent delegates on its own judgment
+   to avoid running it.
 2. Stage exactly the authorized tracked deliverables the run wrote, with
    `git add <those paths>`. Never `git add -A`, `git add .` or `git add -f`,
    and never a file git ignores, such as `.qfai/report/*`. A file that was
@@ -68,6 +75,7 @@ Before formal verification completion or merge, every required check must have
 actual passing evidence for the current target and head. Pending, missing,
 mismatched or red evidence stops completion; repair needs its own covered authority.
 The verification commit and pending report satisfy this step's gate while CI waits.
+When the delegated check reports, `verify-repo-gate`'s `## After CI` updates the verdict.
 
 ## Gate
 
@@ -75,4 +83,8 @@ The verification commit and pending report satisfy this step's gate while CI wai
 - Pending CI is named in the report with the target, current head, run ID or URL
   when available, check, observed outcome and counts, blocker and resume condition.
   If no run exists, say so; invent no run ID or result.
+- The report names the verification commit, the commit `verify-repo-gate`'s
+  `## After CI` compares against. With a delegated check pending, the resume
+  condition reads: when `<check>` reports for `<head>`, follow
+  `verify-repo-gate` `## After CI`.
 - Nothing was pushed, and no pull request or merge was made by this step.

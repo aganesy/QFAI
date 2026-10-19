@@ -54,7 +54,8 @@ Neither is restated here.
    An entry written `CI only: <check name>` instead of a command is not run
    here: record the gate DELEGATED with that check name. Record its `ci` state
    as `green`, `red` or `pending` from the pull request when one exists; with no
-   result yet, record `pending`.
+   result yet, record `pending`. Where the user's instruction for this run
+   delegates that gate to a named CI check, record it the same way, as `verify-repo-gate` says.
 4. **Run it** on the tree the stage will hand to its reviewer, in the
    environment the `Runtime` and `Platform` rows declare.
 5. **Report** in the stage report: the exact
@@ -161,12 +162,12 @@ This human receipt changes no gate status or JSON field and adds no runner.
 
 ## Outcomes
 
-| Outcome     | Means                                                              |
-| ----------- | ------------------------------------------------------------------ |
-| `PASS`      | The command ran on the reviewed tree and exited 0 with zero errors |
-| `FAIL`      | The command ran and reported an error or a non-zero exit           |
-| `UNRUN`     | No command, no launcher, or no environment to run it in            |
-| `DELEGATED` | The project runs the gate in CI only, by the check its entry names |
+| Outcome     | Means                                                                                                                                              |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PASS`      | The command ran on the reviewed tree and exited 0 with zero errors                                                                                 |
+| `FAIL`      | The command ran and reported an error or a non-zero exit                                                                                           |
+| `UNRUN`     | No command, no launcher, or no environment to run it in                                                                                            |
+| `DELEGATED` | The project runs the gate in CI only, by the check its entry names, or the user's instruction for this run delegates that gate to a named CI check |
 
 Only `PASS` satisfies a gate here. A `DELEGATED` gate is satisfied by its CI
 check, which runs on the pull request: it is not a pass, and it is not a
