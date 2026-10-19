@@ -66,6 +66,13 @@ Feature: Shipped workflow checks
   Scenario: A differing shipped workflow says how it differs
     Given a project whose `.github/workflows/` holds a shipped workflow whose text differs from the copy in the package
     When `qfai doctor` runs
-    Then the warning gives the number of lines on only one side, split into the installed file and the shipped copy, and names the jobs whose definition differs
+    Then the warning gives the number of lines on only one side, split into the installed file and the shipped copy, names the jobs whose definition differs, and names each action both files use whose pinned version differs with both versions
     And a difference outside the jobs names no job, and the message says that copying the shipped file over the installed one replaces every local change
+
+  # AC-0003-0011-15
+  Scenario: A project accepts the difference of a shipped workflow with a reason
+    Given a project whose `qfai.config.yaml` lists a differing shipped workflow under `workflow.acceptedDrift` with a reason
+    When `qfai doctor` runs
+    Then that workflow is reported as `info` with the reason, and every other differing workflow is still a `warning`
+    And an entry without a reason, with an empty reason or naming a file outside the shipped set is a configuration error and accepts no workflow
 ```

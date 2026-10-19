@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { loadConfig } from "../../src/core/config.js";
+import { loadConfig, readAcceptedDrift } from "../../src/core/config.js";
 
 // QFAI:EX-0001-0038-05
 describe("story-tree default paths", () => {
@@ -414,6 +414,60 @@ describe("retired validation.traceability keys", () => {
 
       const { issues } = await loadConfig(root);
       expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("workflow.acceptedDrift", () => {
+  // QFAI:EX-0003-0011-33
+  it("reads each listed shipped workflow with its reason, and an absent key as none", () => {
+    expect(readAcceptedDrift({})).toEqual(new Map());
+    expect(readAcceptedDrift({ workflow: { acceptedDrift: [] } })).toEqual(new Map());
+    expect(
+      readAcceptedDrift({
+        workflow: { acceptedDrift: [{ file: "qfai-docs.yml", reason: " Our own lane. " }] },
+      }),
+    ).toEqual(new Map([["qfai-docs.yml", "Our own lane."]]));
+  });
+
+  // QFAI:EX-0003-0011-34
+  it("reads a value with a missing or empty reason, an unknown file or a repeated file as invalid", () => {
+    for (const acceptedDrift of [
+      "qfai-docs.yml",
+      ["qfai-docs.yml"],
+      [{ file: "qfai-docs.yml" }],
+      [{ file: "qfai-docs.yml", reason: "" }],
+      [{ file: "qfai-docs.yml", reason: "   " }],
+      [{ file: "qfai-docs.yml", reason: 1 }],
+      [{ file: "qfai-orphan.yml", reason: "Ours." }],
+      [
+        { file: "qfai-docs.yml", reason: "Ours." },
+        { file: "qfai-docs.yml", reason: "Again." },
+      ],
+    ]) {
+      expect(
+        readAcceptedDrift({ workflow: { acceptedDrift } }),
+        JSON.stringify(acceptedDrift),
+      ).toBeNull();
+    }
+  });
+
+  // QFAI:EX-0003-0011-34
+  it("raises one config issue for an entry without a reason", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-accepted-drift-"));
+    try {
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        "workflow:\n  acceptedDrift:\n    - file: qfai-docs.yml\n",
+        "utf-8",
+      );
+      const { issues } = await loadConfig(root);
+      const named = issues.filter((issue) => issue.message.includes("workflow.acceptedDrift"));
+      expect(named).toHaveLength(1);
+      expect(named[0]?.code).toBe("QFAI-CFG-002");
+      expect(named[0]?.severity).toBe("error");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

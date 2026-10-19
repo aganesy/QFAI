@@ -583,6 +583,22 @@ cp node_modules/qfai/assets/init/root/.github/workflows/qfai-docs.yml .github/wo
 Read your own edits out of the old copy before you replace it. Neither route
 merges them.
 
+`npx qfai doctor` warns about each installed workflow whose text differs from
+the packaged copy. The warning gives the number of differing lines, the jobs
+that differ and each pinned action whose version differs. To keep a difference
+on purpose, list the file with a reason in `qfai.config.yaml`; doctor then
+reports it as `info` with that reason instead of a warning:
+
+```yaml
+workflow:
+  acceptedDrift:
+    - file: qfai-docs.yml
+      reason: We run our own docs lane.
+```
+
+An entry without a reason, or with an empty one, is a configuration error and
+accepts nothing.
+
 On any other CI platform, configure the job yourself and run:
 
 ```bash
@@ -886,8 +902,12 @@ To upgrade by hand:
    afterwards.
 4. Delete the files the release notes of the new version list as retired, once
    nothing you keep reads them.
-5. Run `npx qfai doctor` and `npx qfai validate`, and fix what they report.
-6. Commit the result in one change.
+5. `init --force` does not touch the workflows under `.github/workflows/`. For
+   each one `npx qfai doctor` reports as differing, copy the packaged file over
+   it, or list it under `workflow.acceptedDrift` with a reason if you keep your
+   own version.
+6. Run `npx qfai doctor` and `npx qfai validate`, and fix what they report.
+7. Commit the result in one change.
 
 An agent asked to upgrade `qfai` follows these steps as a dependency update.
 
