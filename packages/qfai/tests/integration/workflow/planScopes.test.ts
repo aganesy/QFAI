@@ -8,6 +8,8 @@ import path from "node:path";
 import { afterEach, expect, it } from "vitest";
 
 import type { WorkflowExtraction } from "../../../src/core/workflow/extraction.js";
+import type { PlanStage, PlanStep } from "../../../src/core/workflow/planFormat.js";
+import { scopesOf } from "../../../src/core/workflow/scopes.js";
 import { extraction } from "../../helpers/workflowExtraction.js";
 import {
   field,
@@ -106,14 +108,29 @@ it("Each candidate carries its own scopes", async () => {
   expect(byRoute).toEqual({
     "decide-design": [{ scope: "broad", stages: ["discussion", "close"], recommended: true }],
     "add-feature": [
-      { scope: "narrow", stages: ["sdd", "implement", "note", "verify"], recommended: true },
-      {
-        scope: "broad",
-        stages: ["sdd", "implement", "docs", "note", "verify"],
-        recommended: false,
-      },
+      { scope: "broad", stages: ["sdd", "implement", "docs", "note", "verify"], recommended: true },
     ],
   });
+});
+
+// QFAI:EX-0001-0229-09
+it("A scope is not offered when the next wider one adds only pass-through stages", () => {
+  const stage = (id: string, kind: string, ...steps: PlanStep[]): PlanStage => ({
+    id,
+    kind,
+    steps,
+  });
+  const passing = (name: string): PlanStep => ({ name, passThrough: true });
+  const stages = [
+    stage("sdd", "sdd", { name: "sdd-story" }),
+    stage("implement", "implement", { name: "implement-tdd" }),
+    stage("note", "verify", passing("verify-change-note")),
+  ];
+
+  expect(scopesOf(stages, ["spec"])).toEqual([
+    { scope: "medium", stages: ["sdd", "note"], recommended: true },
+    { scope: "broad", stages: ["sdd", "implement", "note"], recommended: false },
+  ]);
 });
 
 // QFAI:EX-0001-0229-13
