@@ -1,0 +1,9 @@
+# Examples
+
+## Examples
+
+| EX-ID           | AC-Ref          | Input                                                                                                                                                                        | Expected                                                                                                                                              |
+| --------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| EX-0002-0028-01 | AC-0002-0028-01 | A project-facts file with a reference definition to a deleted shipped template, an inline link with a fragment to a missing source, and a link that leaves the repository    | Exit 1 with one `<file>:<line>: <target> does not exist.` line per broken link and one line of repair advice; a link whose target exists is not named |
+| EX-0002-0028-02 | AC-0002-0028-02 | A tree whose relative links resolve, beside a URL, a mail link, a same-file anchor, a code span and a fenced block holding broken links; then a tree with no `.instruction/` | The first exits 0 counting only the relative links outside code; the second exits 2 naming `.instruction`                                             |
+| EX-0002-0028-03 | AC-0002-0028-01 | This repository's `.instruction/` tree and the `ci:lint:scans` script                                                                                                        | The check exits 0 on the tree, and `ci:lint:scans` runs it                                                                                            |

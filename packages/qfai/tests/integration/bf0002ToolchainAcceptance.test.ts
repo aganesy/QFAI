@@ -2131,3 +2131,54 @@ describe("the optional Windows full-suite acceptance", () => {
     ).toBe(false);
   });
 });
+
+describe("instruction-tree link acceptance", () => {
+  const LINK_CHECK = path.join(REPO_ROOT, "scripts", "check-instruction-links.mjs");
+
+  function runLinkCheck(root: string): { status: number | null; output: string } {
+    const result = spawnSync(process.execPath, [LINK_CHECK], { cwd: root, encoding: "utf8" });
+    return { status: result.status, output: result.stdout + result.stderr };
+  }
+
+  // QFAI:AC-0002-0028-01
+  it("fails the lint lane on a link whose target is gone, naming the file, line and target", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-bf0002-links-"));
+    try {
+      await mkdir(path.join(root, ".instruction", "02_project"), { recursive: true });
+      await writeFile(
+        path.join(root, ".instruction", "02_project", "development.md"),
+        "Shipped [CLAUDE][claude].\n\n[claude]: ../../assets/root/CLAUDE.md\n",
+        "utf8",
+      );
+      const run = runLinkCheck(root);
+      expect(run.status, run.output).toBe(1);
+      expect(run.output).toContain(
+        ".instruction/02_project/development.md:3: ../../assets/root/CLAUDE.md does not exist.",
+      );
+    } finally {
+      await removeTempTree(root);
+    }
+    const manifest = JSON.parse(readText("package.json")) as { scripts: Record<string, string> };
+    expect(manifest.scripts["ci:lint:scans"]).toContain(
+      "node ./scripts/check-instruction-links.mjs",
+    );
+  });
+
+  // QFAI:AC-0002-0028-02
+  it("passes this repository's tree and fails closed on a missing tree", async () => {
+    const pass = runLinkCheck(REPO_ROOT);
+    expect(pass.status, pass.output).toBe(0);
+    expect(pass.output).toMatch(
+      /Every relative link under \.instruction\/ resolves \(\d+ links\)\./,
+    );
+
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-bf0002-links-"));
+    try {
+      const missing = runLinkCheck(root);
+      expect(missing.status, missing.output).toBe(2);
+      expect(missing.output).toContain(".instruction could not be read.");
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+});
