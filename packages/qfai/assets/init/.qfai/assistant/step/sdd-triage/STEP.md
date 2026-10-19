@@ -84,7 +84,10 @@ Content begins `Change request:` and names the
 affected repository-relative paths; its Approach names the operation, the affected BF or US,
 its source as `discussion-<id>#REQ-NNNN` when that source exists, and who
 approved it, when, and the option chosen. A declined change request is appended at
-REJECTED, recording who declined it and when. A decision the agent took
+REJECTED, recording who declined it and when. When a later decision replaces a
+row, change that row's Status to `SUPERSEDED (by DEC-NNNN)`, naming the later
+row, or to `PARTLY SUPERSEDED (by DEC-NNNN)` when it replaces only part of it.
+A decision the agent took
 appends no row. Do not write a second decision-record
 directory or a retired story file. Listed pages are members of the same register, not a second decision home.
 
