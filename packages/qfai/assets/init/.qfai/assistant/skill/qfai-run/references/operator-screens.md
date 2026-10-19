@@ -72,6 +72,9 @@ condition holds, write nothing and record the reason in the stage report.
 Do not skip the step. The planned independent review still runs, even when the
 step is only two lines.
 
+When a step ends, note its status for the step-status table of the final
+report.
+
 ## The scope question
 
 The scopes are the plan's, or the chosen candidate's after the candidate
@@ -321,6 +324,13 @@ reset, a stash, a branch switch or a worktree removal.
   is not a push or pull request, and passing repository checks do not prove a
   deployment, package publication or other external effect occurred.
 - Name `common-policy-check` and its outcome, or that it did not run and why.
+- Give a step-status table: one row per plan step in plan order, and one per
+  planned review, each with its status and, for every status but `ran`, the
+  reason. A status is `ran`; `passed`, a pass-through whose Passes when
+  condition held, so it wrote nothing; `delegated`, to CI or a person, with
+  where its result appears; `not run`, a reached step that did not run; or
+  `not reached`, a step outside the chosen scope or after the work stopped. No
+  gate reads the table.
 - A gate shows its verdict only.
 - An external effect nobody requested is listed as not requested.
 - The report does not restate the history of the work.

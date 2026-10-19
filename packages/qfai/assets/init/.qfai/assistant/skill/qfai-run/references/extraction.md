@@ -86,6 +86,11 @@ instructions keeps its owning consistency intent; Markdown is not permission
 to change those surfaces. A request for actual code changes keeps its code
 artifacts and checks, even when it also asks for instructions.
 
+A change that only adds or corrects diagnostic output, such as a log line in an
+error path so a cause can be read, is `defect` when the missing or wrong output
+is what the request reports, and `feature` when it asks for new output and
+reports nothing wrong.
+
 Labels on an issue are hints, not evidence: `bug` and `enhancement` do not
 separate intents.
 
@@ -169,7 +174,7 @@ Each flag is followed by what the request does when it is set, then, where one a
 - `bundle`: holds two or more independent findings, each fixable alone. Not when the parts are steps of one fix.
 - `vague`: gives too little to act on: no version, no steps, no expected result, empty template fields, "it stopped working". Not when the text is only short.
 - `last-good`: names a version, commit or change where it worked, a version pair or a bisect result. Not when it only says "recently".
-- `env`: depends on something the project cannot reproduce locally: an operating system, a device, hardware, a hosted service, production only, a CI-only runner. Not when the platform is only mentioned and the failure is generic.
+- `env`: depends on something the project cannot reproduce locally: an operating system, a device, hardware, a hosted service, production only, a CI-only runner. Not when the platform is only mentioned and the failure is generic. On a defect without `repro`, it adds a stage before diagnosis that asks the reporter for what only their environment shows, and a stage after verification that confirms the fix there. When the request already holds that evidence, such as an attached production log, the first of them asks nothing and reports so.
 - `intermittent`: fails sometimes: a race, under load, passed on rerun.
 - `trace`: includes a stack trace, a panic, a sanitizer report or a crash log.
 - `bot`: was filed by automation: a bot author, "created automatically", fuzzer output.
@@ -294,5 +299,6 @@ Each request is followed by its extraction. Fields not shown are empty.
 - "The validator and the template disagree on the column name." → `{ intent: defect, confidence: low, alternatives: [{ intent: surface-contradiction }] }`
 - "Remove the configuration key nothing reads." → `{ intent: unenforced, qualifiers: [mechanism-inert, removal-requested], artifacts: [code, tests, config], risks: [breaking], confidence: high }`
 - An approved change request cited with a task section and a done-when block → `{ intent: order, entryFlags: [upstream], qualifiers: [settled-design], signals: [approved-record-task], artifacts: [spec, contract], confidence: high }`
+- "The import fails and the `catch` logs nothing, so the cause cannot be read; log the error there." → `{ intent: defect, entryFlags: [cause, fix, expect], artifacts: [code, tests], confidence: high }`
 - "Support multiple tenants across the product." → `{ intent: epic, entryFlags: [decision], confidence: high }`
 - "Turn off branch creation in the hosted database dashboard, add its access token as a repository secret, and update the workflow to use it." → `{ intent: ci, entryFlags: [env], artifacts: [ci, docs], confidence: high }`
