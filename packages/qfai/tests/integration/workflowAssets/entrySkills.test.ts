@@ -709,10 +709,10 @@ describe("qfai-run", () => {
     );
   });
 
-  it("separates a changed default on a published surface from a deliberate behaviour change", async () => {
+  it("separates a changed default on a published surface from one no published surface exposes", async () => {
     const intents = flat(sectionOf(await readShipped(EXTRACTION), "## Intent"));
     expect(intents).toContain(
-      "A changed default is `deprecation` when the default belongs to a published surface, such as a public API, a CLI flag or a configuration key, and `behaviour-change` when it is a deliberate change to how the product behaves.",
+      "A changed default is `deprecation` when the default belongs to a published surface, such as a public API, a CLI flag or a configuration key, and `behaviour-change` otherwise, when it changes a default that no published surface exposes.",
     );
   });
 

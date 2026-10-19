@@ -148,7 +148,8 @@ Each intent below is followed by when to set it.
 
 A changed default is `deprecation` when the default belongs to a published
 surface, such as a public API, a CLI flag or a configuration key, and
-`behaviour-change` when it is a deliberate change to how the product behaves.
+`behaviour-change` otherwise, when it changes a default that no published
+surface exposes.
 
 ### Operations
 
