@@ -27,8 +27,8 @@ fail=0
 #   - packages/qfai/tests/helpers/distributedSurfaceScan.ts
 #     pattern array (smoke against `qfai init` output)
 # Updating a regex here (e.g. adding a new internal ID class) requires
-# updating both other sites in the same change. The guard table in `.agents/rules/distributed-surface.md`
-# lists the layers.
+# updating both other sites in the same change. The guard table in
+# `.agents/rules/distributed-surface.md` lists the layers.
 #
 # The same forbidden classes are applied twice per surface: once to file
 # CONTENT and once to file NAMES (see the loop at the bottom). The smoke
@@ -52,10 +52,10 @@ INTERNAL_SPEC_RE='[sS][pP][eE][cC]-0*[1-9][0-9]+'
 # Internal version markers: any "vN.M" or "vN.M.P" outside of
 # package.json version, plus the "v1.x" sentinel. Deliberately broad:
 # this regex rejects a third-party version written with a leading "v"
-# too (e.g. "Claude Code v2.1.277", "TypeScript v5.4"), whatever
-# precedes it, because a private marker such as a `# v6.1.0` comment
-# trailer looks exactly like a third-party one and no context rule
-# tells them apart. A shipped file writes another tool's version
+# too (e.g. "Claude Code v2.1.277", "TypeScript v5.4") wherever it
+# stands as its own token, because a private marker such as a
+# `# v6.1.0` comment trailer looks exactly like a third-party one and
+# no context rule tells them apart. A shipped file writes another tool's version
 # without the "v" ("Claude Code 2.1.277"), which does not match.
 #
 # Keep it broad: the shipped spelling adapts to this guard, never the

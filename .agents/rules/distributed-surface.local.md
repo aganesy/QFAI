@@ -83,12 +83,12 @@ The version of this project a shipped file presents as current is
 A version that belongs to something else is not covered by the rule — a
 dependency, a runtime such as Node.js, a tool such as Claude Code, a protocol,
 or a past release a migration note is about. The guards still reject it when it
-is written with a leading `v`: they match every `vN.M` and `vN.M.P` whatever
-precedes it, because a private marker such as a `# v6.1.0` comment trailer looks
-exactly like a third-party one. Write such a version without the `v`, as in
-`Claude Code 2.1.277` or `Node.js 20`, so it passes. The shipped spelling adapts
-to the guards; never narrow the matcher, add a context exemption or add an
-allow-list entry to let a `v` spelling through.
+is written with a leading `v`: they match a `vN.M` or `vN.M.P` wherever it
+stands as its own token, because a private marker such as a `# v6.1.0` comment
+trailer looks exactly like a third-party one. Write such a version without the
+`v`, as in `Claude Code 2.1.277` or `Node.js 20.10`, so it passes. The shipped
+spelling adapts to the guards; never narrow the matcher, add a context
+exemption or add an allow-list entry to let a `v` spelling through.
 
 ## Four guards
 
