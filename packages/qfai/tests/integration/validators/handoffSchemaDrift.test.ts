@@ -123,6 +123,29 @@ describe("TC-0015-0024: detectHandoffSchemaDrift fires on asymmetric Pair IV edi
     expect(findings[0]?.message).not.toContain('"companyName"');
   });
 
+  it("fires naming a restyle field the prototyping handoff reference does not list", async () => {
+    const PROTOTYPING_HANDOFF_REL =
+      "packages/qfai/assets/init/.qfai/assistant/skill/qfai-prototyping/references/handoff.md";
+    await writeAt(
+      HANDOFF_SCHEMA_REL,
+      `${SCHEMA_WITH_FIELDS}export const HANDOFF_RESTYLE_FIELDS = ["iterationKind", "liveRoutes"] as const;\n`,
+    );
+    const named = ["companyName", "primaryUiContract", "iterationKind"].map((f) => `\`${f}\``);
+    for (const pair of HANDOFF_WRITER_PAIRS) {
+      const body =
+        pair.writerRel === PROTOTYPING_HANDOFF_REL
+          ? `A ${pair.writerToken} record: ${named.join(", ")}.\n`
+          : `references ${pair.writerToken}\n`;
+      await writeAt(pair.writerRel, body);
+    }
+    const findings = (await detectHandoffSchemaDrift(root)).filter(
+      (i) => i.code === "QFAI-HANDOFF-001",
+    );
+    expect(findings.map((f) => f.file)).toEqual([PROTOTYPING_HANDOFF_REL]);
+    expect(findings[0]?.message).toContain('"liveRoutes"');
+    expect(findings[0]?.message).not.toContain('"iterationKind"');
+  });
+
   it("does NOT fire when schema does not yet export the canonical field set (symmetric absent)", async () => {
     await writeAt(HANDOFF_SCHEMA_REL, SCHEMA_WITHOUT_FIELDS);
     for (const pair of HANDOFF_WRITER_PAIRS) {

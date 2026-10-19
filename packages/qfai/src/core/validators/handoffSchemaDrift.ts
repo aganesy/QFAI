@@ -24,10 +24,15 @@ const FINDING_CODE = "QFAI-HANDOFF-001";
 /** Stable token whose presence in the schema source proves the canonical field set is exported. */
 const SCHEMA_TOKEN = "HANDOFF_MINIMUM_FIELDS";
 
-/** The field names the schema source lists in its `HANDOFF_MINIMUM_FIELDS` array literal. */
+/**
+ * The field names the schema source lists in its `HANDOFF_MINIMUM_FIELDS` and
+ * `HANDOFF_RESTYLE_FIELDS` array literals.
+ */
 function schemaFields(schemaText: string): string[] {
-  const list = /HANDOFF_MINIMUM_FIELDS\s*=\s*\[([^\]]*)\]/.exec(schemaText)?.[1] ?? "";
-  return [...list.matchAll(/["']([^"']+)["']/g)].flatMap((m) => (m[1] ? [m[1]] : []));
+  const lists = schemaText.matchAll(/HANDOFF_(?:MINIMUM|RESTYLE)_FIELDS\s*=\s*\[([^\]]*)\]/g);
+  return [...lists].flatMap((list) =>
+    [...(list[1] ?? "").matchAll(/["']([^"']+)["']/g)].flatMap((m) => (m[1] ? [m[1]] : [])),
+  );
 }
 
 /**
@@ -39,7 +44,8 @@ function schemaFields(schemaText: string): string[] {
  *     fire `QFAI-HANDOFF-001` naming the writer file as the
  *     un-paired counterpart.
  *   - When the pair names the schema fields, the same finding fires for
- *     every field the schema lists that the writer does not name.
+ *     every field the schema lists, the restyle short form's included,
+ *     that the writer does not name.
  *   - When neither source file exists in the repo (consumer install
  *     without source), no finding is emitted.
  */
