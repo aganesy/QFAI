@@ -276,6 +276,10 @@ Each artifact is followed by what it covers.
 - `release`: The changelog, release notes, the version field, release branches, signing, packages.
 - `assistant`: The assistant instructions the project keeps: skills, rules, templates, agent definitions.
 
+Shipped seed and sample data, the records a project ships for a fresh install
+or a demonstration, fall under `data`, not `config`. A fixture that only a
+test reads stays under `tests`.
+
 ## Risks
 
 Zero or more.

@@ -689,6 +689,17 @@ describe("qfai-run", () => {
     );
   });
 
+  it("files shipped seed and sample data under data, and lets triage pass a change no story sets", async () => {
+    const artifacts = flat(sectionOf(await readShipped(EXTRACTION), "## Artifacts"));
+    expect(artifacts).toMatch(
+      /shipped seed and sample data, .* fall under `data`, not `config`\. a fixture that only a test reads stays under `tests`/i,
+    );
+    const completion = flat(sectionOf(await readShipped(SDD_TRIAGE), "## Completion of triage"));
+    expect(completion).toMatch(
+      /a change to shipped seed or sample data whose values no story, br or contract sets changes no story-tree file: triage states that in one line of its report and passes with no operation and no decision row/i,
+    );
+  });
+
   it("routes an env-bound defect without repro to fix-env-bound, says what that adds, and reads a diagnostics-only change", async () => {
     const reference = await readShipped(EXTRACTION);
     expect(flat(sectionOf(reference, "## Entry flags"))).toMatch(

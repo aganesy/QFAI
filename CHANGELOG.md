@@ -72,6 +72,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   pending approval row first.
   Fixes #3551.
 
+- **Shipped seed and sample data now have an artifact to fall under.** The
+  `qfai-run` extraction reference files them under `data` rather than `config`,
+  and `qfai-sdd` triage passes a seed or sample data change whose values no
+  story, BR or contract sets with a one-line note and no decision row.
+  Fixes #3779.
+
 - **`qfai init` asks you to restart a running agent session after it rewrites
   skills or hooks.** A running session keeps the skill and hook text it loaded
   at start, so after `qfai init --force` it went on acting on the old text.
