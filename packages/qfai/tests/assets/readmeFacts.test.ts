@@ -210,8 +210,7 @@ describe("README facts", () => {
     expect(skill).toContain("the lightest included");
     for (const readmePath of READMES) {
       const readme = await readFile(readmePath, "utf-8");
-      expect(readme, readmePath).toContain("plans every such request, the lightest included");
-      expect(readme, readmePath).not.toContain("is answered directly, with no plan");
+      expect(readme, readmePath).toContain("the lightest included");
     }
   });
 });

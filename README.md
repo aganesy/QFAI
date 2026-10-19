@@ -114,8 +114,9 @@ asks you only the decisions that are yours and each release. You type no stage n
 `npx qfai init` adds a hook that repeats this on every prompt: a request that names no skill goes
 to `qfai-run`. Claude Code reads it from `.claude/settings.json` and Codex from `.codex/hooks.json`.
 `qfai-run` plans every such request, the lightest included: a question that one command or one
-file read answers still gets a plan, and a question about the project plans an answer without
-changes. A message that is no request, such as an automated notice, gets no plan.
+file read answers gets a plan too, and a question about the project plans an answer without
+changes. A message that is not a request, such as an automated notice, gets no plan; a notice that
+delivers a result a step was waiting for resumes that step.
 An existing `.codex/hooks.json` gains the hooks the way `.claude/settings.json` does.
 Codex runs a project's hooks only after you review and trust them with `/hooks`.
 

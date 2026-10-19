@@ -604,7 +604,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **The README no longer promises an answer with no plan.** Both READMEs said
   a question that one command or one file read answers is answered directly,
   but the shipped `qfai-run` skill plans every request that names no skill, the
-  lightest included. The README now says so, and says that a message that is no
+  lightest included. The README now says so, and says that a message that is not a
   request gets no plan. Fixes #3896.
 
 - **The orchestrator starts every finder, griller and reviewer itself.** A
