@@ -649,6 +649,27 @@ describe("qfai-run", () => {
   });
 
   // QFAI:AC-0001-0211-05
+  it("reads a device operation the session runs itself, with no repository change, as an operation", async () => {
+    const line = sectionOf(await readShipped(EXTRACTION), "## Examples")
+      .split("\n")
+      .find((each) =>
+        each.startsWith(
+          '- "Restart the app on the test phone connected to this machine", which the session runs itself and which deletes nothing → ',
+        ),
+      );
+    const parsed: unknown = parse(/→ `(\{.*\})`$/.exec(line ?? "")?.[1] ?? "null");
+    expect(parsed).toEqual({ intent: "order", artifacts: [], confidence: "high" });
+    const pinned: unknown = { ...extraction(), ...(isRecord(parsed) ? parsed : {}) };
+    if (!isExtraction(pinned)) throw new Error("the pinned example is not an extraction");
+    const routeOf = (outcome: ReturnType<typeof routingOutcome>) =>
+      "taken" in outcome ? outcome.taken.route : undefined;
+    expect([
+      routeOf(routingOutcome(pinned)),
+      routeOf(routingOutcome({ ...pinned, qualifiers: ["human-run"] })),
+    ]).toEqual(["run-operation", "hand-off-operation"]);
+  });
+
+  // QFAI:AC-0001-0211-05
   // QFAI:EX-0001-0211-35
   it("reads a request to raise qfai itself as a dependency change, whose step carries the upgrade", async () => {
     const intents = sectionOf(await readShipped(EXTRACTION), "## Intent");

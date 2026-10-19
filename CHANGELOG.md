@@ -63,6 +63,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   extraction.
   Fixes #3498.
 
+- **`qfai-run` shows how to read a request that operates a device and changes
+  nothing in the repository.** The extraction reference gains an example: an
+  operation on a connected device that the session runs itself and that deletes
+  nothing is an `order` with no artifacts, so it takes the existing operation
+  route. A device only a person can operate keeps the `human-run` qualifier.
+  Fixes #3768.
+
 - **A release change produced outside the run no longer needs its own pull
   request for the approval row.** When a release workflow or bot produces the
   release change, `qfai-run`, its stage points and `triage-close` record the

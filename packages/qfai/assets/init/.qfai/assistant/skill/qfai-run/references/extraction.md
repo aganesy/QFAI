@@ -318,6 +318,7 @@ Each request is followed by its extraction. Fields not shown are empty.
 - "Is the work complete?", asked of the session that did it → `{ intent: question-why, qualifiers: [session-answerable], confidence: high }`
 - "Merge the pull request." → `{ intent: order, confidence: high }`
 - "File issues for everything this task left over." → `{ intent: order, artifacts: [], confidence: high }`
+- "Restart the app on the test phone connected to this machine", which the session runs itself and which deletes nothing → `{ intent: order, artifacts: [], confidence: high }`
 - "How do I export the results as CSV?" → `{ intent: question-how, confidence: high }`
 - "Remove this task's completed temporary directory under the repository's ignored tmp root", with current user authority and ownership evidence → `{ intent: order, qualifiers: [owned-temporary-cleanup], artifacts: [], risks: [data-loss], confidence: high }`
 - "Last night's deploy failed.", with no cause given → `{ intent: question-why, confidence: high }`
