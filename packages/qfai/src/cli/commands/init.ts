@@ -117,12 +117,12 @@ const STANDARD_ASSET_PATHS: readonly string[] = REFRESHED_ASSISTANT_LAYERS.map(
 );
 
 /**
- * Printed when the run wrote skill, step, agent, rule or hook files, a Codex agent profile or a
- * rule master. A running agent session keeps the text it loaded at start, so it acts on the old
- * text until it restarts.
+ * Printed when the run wrote skill, step, agent, rule or hook files, a Codex agent profile, a
+ * rule master or an agent entry point. A running agent session keeps the text it loaded at start,
+ * so it acts on the old text until it restarts.
  */
 const AGENT_RESTART_NOTE =
-  "Skill or hook files changed: restart any running agent session so it uses the new text.";
+  "Agent instruction files changed: restart any running agent session so it uses the new text.";
 
 /**
  * Printed on every run. Init never reads or writes `CLAUDE.md`, and Claude Code reads that file
@@ -564,10 +564,16 @@ export async function runInit(
   // `reminders.json` sits with the rule masters but is read by the hooks on every run, so a
   // running session picks up its new text without a restart.
   const codexProfileDir = path.join(destRoot, ...CODEX_AGENT_WRAPPER_DIR.split("/"));
+  const copilotInstructions = path.join(destRoot, ...COPILOT_INSTRUCTIONS_ENTRY.split("/"));
   const agentTextWritten = [
     ...skillsResult.copied,
-    ...wrappersResult.copied.filter((dest) => path.dirname(dest) === codexProfileDir),
-    ...rulesForced.copied.filter((dest) => path.extname(dest) === ".md"),
+    ...wrappersResult.copied.filter(
+      (dest) => path.dirname(dest) === codexProfileDir || dest === copilotInstructions,
+    ),
+    ...[...rulesCreated.copied, ...rulesForced.copied].filter(
+      (dest) => path.extname(dest) === ".md",
+    ),
+    ...entryPointRulesResult.copied,
     ...claudeHooksResult.copied,
     ...codexHooksResult.copied,
   ];
