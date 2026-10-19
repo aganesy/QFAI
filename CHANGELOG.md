@@ -122,6 +122,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   pending approval row first.
   Fixes #3551.
 
+- **`qfai validate` text output now counts findings per code.** A `codes:`
+  line after `counts:` follows each severity's count with the count of each
+  of its codes, most frequent first, for example
+  `codes: error=94 (QFAI-STORY-006: 94) warning=0 info=0`, so a reader sees at
+  once whether a run holds anything but an expected code. A script that read
+  the line after `counts:` as `fail-on:` must skip the new line.
+  Fixes #3797.
+
 - **A colliding decision ID is renumbered once, at merge time.** The
   `qfai-sdd` triage reference now says a branch keeps its decision IDs while
   its pull request is open, and the session that merges it runs

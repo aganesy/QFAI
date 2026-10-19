@@ -670,6 +670,7 @@ export function emitText(result: ValidationResult, failOn: FailOn): void {
   process.stdout.write(
     `counts: info=${result.counts.info} warning=${result.counts.warning} error=${result.counts.error}\n`,
   );
+  process.stdout.write(`${formatCodeCounts(result.issues)}\n`);
   // The effective failOn appeared only in the `--format github` summary line,
   // so a reviewer reading the default text output could not see why the exit
   // code is what it is.
@@ -678,6 +679,30 @@ export function emitText(result: ValidationResult, failOn: FailOn): void {
   if (overruns) {
     process.stdout.write(`${overruns}\n`);
   }
+}
+
+/**
+ * The `codes:` line: each severity's count followed by its codes, most frequent
+ * first, so a reader sees at once whether a run holds anything but one expected
+ * code. Suppressed issues are left out, as in the `counts:` line.
+ */
+function formatCodeCounts(issues: readonly Issue[]): string {
+  const parts = (["error", "warning", "info"] as const).map((severity) => {
+    const byCode = new Map<string, number>();
+    for (const item of issues) {
+      if (item.severity === severity && item.suppressed !== true) {
+        byCode.set(item.code, (byCode.get(item.code) ?? 0) + 1);
+      }
+    }
+    const total = [...byCode.values()].reduce((sum, count) => sum + count, 0);
+    const codes = [...byCode.entries()]
+      .sort(([leftCode, left], [rightCode, right]) =>
+        right === left ? (leftCode < rightCode ? -1 : 1) : right - left,
+      )
+      .map(([code, count]) => `${code}: ${count}`);
+    return codes.length > 0 ? `${severity}=${total} (${codes.join(", ")})` : `${severity}=0`;
+  });
+  return `codes: ${parts.join(" ")}`;
 }
 
 /**
