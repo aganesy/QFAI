@@ -137,6 +137,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the earlier rows stay as written. Only a no-question mode may record the
   decision as an assumption. Fixes #3794.
 
+- **`qfai doctor` says what a shipped workflow changed, and a project can accept a
+  difference with a reason.** The `workflows.drift.*` warning now also names each
+  action both files use whose pinned version differs, with the version on each
+  side. A file listed under `workflow.acceptedDrift` in `qfai.config.yaml`, each
+  entry with a `file` and a `reason`, is reported as `info` with that reason
+  instead of a warning; an entry without a reason or with an empty one, or a file outside
+  the shipped set or listed twice, is a configuration error and accepts nothing. The README upgrade steps now cover
+  the workflows `init --force` leaves alone.
+  Fixes #3751.
+
 - **Shipped seed and sample data now have an artifact to fall under.** The
   `qfai-run` extraction reference files them under `data` rather than `config`,
   and `qfai-sdd` triage passes a seed or sample data change whose values no
