@@ -76,7 +76,7 @@ values plan nothing.
 5. **Run the stages.** Run each stage in plan order, and each of its steps in
    order, as `.qfai/assistant/rule/shared-skill-operating-baseline.md#running-steps-mandatory` says.
    Note each step's status for the final report; when a step is short or passes without edits, read `references/operator-screens.md`.
-   Write artifacts yourself or delegate independent parallel work or review.
+   Write artifacts yourself or delegate independent parallel work or review. A worker starts no finder, griller or reviewer: run each step that starts one yourself, as the delegation baseline's Orchestrator Protocol says.
    At a step the plan marks with a point, follow `references/stage-points.md`:
    - **Release point.** Ask the user to approve the release before the step `releasePoint` names.
    - **Decision point.** Put each critical decision at a step `decisionPoints` names to the user.

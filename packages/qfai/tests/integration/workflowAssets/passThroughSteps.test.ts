@@ -209,6 +209,9 @@ describe("a step that may pass with evidence", () => {
       /for each story with an acceptance criterion still on that list, run `npx qfai atdd scaffold --story US-NNNN-NNNN`/i,
     );
     expect(procedure).toMatch(/the command never overwrites an existing test/i);
+    expect(procedure).toMatch(
+      /no `package.json` above the tests names vitest or a `node --test` script: declare the runner there/i,
+    );
   });
 
   it("scaffolds no test for a BF or AC that a test exception at DONE names", async () => {

@@ -97,8 +97,9 @@ user's behalf — with more evidence than before, and still not the user's answe
    that re-opens a frozen requirement produces an answer that drifts from it.
    What is left is what the session is for.
 3. Run the session. **It is delegated** (`.agents/rules/grilling.md` § Two
-   kinds of session): a griller interviews the agents that generate and review
-   the prototype, and each decision that is not critical takes its
+   kinds of session). The orchestrator starts the griller, never a stage
+   worker. The griller interviews the agents that generate and review the
+   prototype, and each decision that is not critical takes its
    recommendation. `DESIGN.md` is frozen from the discussion stage's answers, so
    a question of taste or purpose it already answers is adopted from it. One it
    leaves open is product intent, which is critical, and goes to the user.
