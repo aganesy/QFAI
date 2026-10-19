@@ -108,6 +108,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   so the line is not taken as passing evidence. The exit code is unchanged.
   Refs #3765.
 
+- **`QFAI-CONTRACT-043` no longer steers a screen with body text to
+  `supplements: []`.** When a screen has no `supplements`, the fix now says to
+  list each text the screen shows beyond its title, group headings and labels,
+  to write `supplements: []` only for a screen that shows no such text, and
+  where the UI contract guide explains the key. The check and its severity are
+  unchanged. Fixes #3528.
+
 - **`QFAI-VALIDATE-017` lists only `full` and `verify` as full-scan profiles.**
   It named `tdd` and `sdd` as full-scan too, while their own `QFAI-PROFILE-001`
   notice says they are partial. The suggested action still lists all four as
