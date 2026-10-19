@@ -481,13 +481,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   gets Playwright. Fixes #3878.
 
 - **`node:test`'s own ways of parking a test are reported.** In a file that
-  imports from `node:test`, `QFAI-TEST-003` now reports a test with the
-  `skip` option set to `true` or a reason, `t.skip()` inside a test, and a
-  `.skip` call whose first argument is the test function or that has no
-  argument. `QFAI-TEST-001` reports the `todo` option and `t.todo()`. An
-  option set to a run-time condition is not reported, and a `.skip` with a
-  condition in a Playwright file is still read as Playwright's run-time guard.
-  Fixes #3888.
+  imports from `node:test`, `QFAI-TEST-003` now reports a test, suite or
+  subtest with the `skip` option set to `true` or a reason, `t.skip()` as the
+  first statement of a test, `suite.skip`, and a `.skip` call whose first
+  argument is the test function or that has no argument. `QFAI-TEST-001`
+  reports the `todo` option, `t.todo()` as the first statement and
+  `suite.todo`. A run-time guard is not reported: an option set to a
+  condition, a `t.skip()` or `t.todo()` inside an `if` or after other
+  statements, and a `.skip` with a condition in a Playwright file. Fixes #3888.
 
 - **The Markdown-schema check no longer reports `0 file(s) conform`.** When no
   spec or contract document is in scope, for example when only operational

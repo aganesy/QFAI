@@ -6,8 +6,8 @@
  * `pytest.skip` / `@pytest.mark.skip` in Python, `t.Skip` in Go, `@Disabled` /
  * `@Ignore` in JUnit, `#[ignore]` in Rust, `skip`/`pending` in Ruby,
  * `[Ignore]` in .NET. A file that imports `node:test` adds that runner's own
- * forms: the `skip` / `todo` options, `t.skip()` / `t.todo()` and a `.skip`
- * with no name. They neither pass nor fail, so they do not block CI by
+ * forms: the `skip` / `todo` options, `t.skip()` / `t.todo()` opening a test,
+ * `suite.skip` / `suite.todo` and a `.skip` with no name. They neither pass nor fail, so they do not block CI by
  * default and rot as stale work-not-done markers.
  *
  * `QFAI-TEST-001` is the stub proper. The vitest/jest `.skip` form carries its
@@ -635,6 +635,12 @@ const NODE_TEST_IMPORT = /\bfrom\s*(['"])node:test\1|\brequire\(\s*(['"])node:te
  * A `node:test` call on the test context that parks the running test:
  * `t.skip()` and `t.todo()` inside a test body.
  *
+ * Only a call that is the **first statement** of the test function is a parked
+ * test. One inside an `if`, or after other statements, is a run-time guard: the
+ * test runs and stops early only when the guard is reached, exactly as
+ * Playwright's `test.skip(condition)` and an option set to a condition do, so
+ * none of the three is reported. See {@link NODE_TEST_BODY_OPENING}.
+ *
  * Ceiling: only the context named `t`, the name the Node documentation uses,
  * is read. A context parameter given another name is not followed; reading the
  * callback's first parameter lifts this once a project parks a test that way.
@@ -642,18 +648,52 @@ const NODE_TEST_IMPORT = /\bfrom\s*(['"])node:test\1|\brequire\(\s*(['"])node:te
 const NODE_TEST_CONTEXT_CALL = /(?<![\w$.])t\s*\.\s*(skip|todo)\s*\(/g;
 
 /**
+ * What the masked text ends with right before a call that opens a test body:
+ * an arrow (`(t) => t.skip()`, `(t) => {`) or a `function (t) {` header. Anything
+ * else, a statement or an `if (…) {`, means the call is not the first thing the
+ * test does. Read over a bounded window before the call, so the check costs
+ * the same however long the file is.
+ */
+const NODE_TEST_BODY_OPENING = /(?:=>\s*\{?|\bfunction\b[^(){};]*\([^()]*\)\s*\{)\s*$/;
+
+/** How far back {@link NODE_TEST_BODY_OPENING} looks for the body opening. */
+const NODE_TEST_BODY_WINDOW = 400;
+
+/**
+ * `suite` is `node:test`'s own name for `describe`, and the shared chain does not
+ * know it: `suite.skip(…)` and `suite.todo(…)`.
+ */
+const NODE_TEST_SUITE_STUB = /(?<![\w$.])suite\s*\.\s*(skip|todo)\s*\(/g;
+
+/**
  * A `node:test` call whose options object is its first or second argument:
- * `test("x", { skip: true }, fn)`, `test({ todo: true }, fn)`. Group 1 is the
- * root, group 2 the object's body. The first argument is matched in the masked
- * text, where a name is already blank. Ceiling: an options object that holds a
- * nested object or a template substitution is not read; balancing the braces
- * lifts this once a project writes its options that way.
+ * `test("x", { skip: true }, fn)`, `test({ todo: true }, fn)`, a subtest
+ * `t.test(…)` and the `.only` form. Group 1 is the root, group 2 the object's
+ * body. The first argument is matched in the masked text, where a name is
+ * already blank.
+ *
+ * The lookbehind refuses a member call (`schema.test({ skip: true })`) except
+ * the one on the test context. The blanks before the object sit after the
+ * optional first argument rather than before it: on the other side, a long
+ * run of blanks was tried once per possible split, which is quadratic in the
+ * length of the argument.
+ *
+ * Ceiling: an options object that holds a nested object, a modifier other
+ * than `.only` and a quoted key (`{ "skip": true }`) are not read; balancing
+ * the braces, and reading the chain and the key the way the shared chain
+ * reads its own, lift this once a project writes its options that way.
  */
 const NODE_TEST_OPTIONS_CALL =
-  /(?<![\w$])(it|test|describe|suite)\s*\(\s*(?:[^,(){}]*,\s*)?\{([^{}]*)\}/g;
+  /(?<![\w$.])(?:t\s*\.\s*)?(it|test|describe|suite)(?:\s*\.\s*only)?\s*\((?:[^,(){}]*,)?\s*\{([^{}]*)\}/g;
 
 /** A `skip` or `todo` key inside an options object. */
 const NODE_TEST_OPTION_KEY = /(?<![\w$])(skip|todo)\s*:/g;
+
+/** An option value of `true`, read in place at an offset. */
+const OPTION_TRUE = /\s*true\s*(?=[,}])/y;
+
+/** An option value the mask blanked whole, read in place at an offset. */
+const OPTION_BLANKED = /\s*(?=[,}])/y;
 
 /** One parked test found in a file, before its line is worked out. */
 type StubHit = { index: number; kind: string; isSkip: boolean };
@@ -662,35 +702,51 @@ type StubHit = { index: number; kind: string; isSkip: boolean };
  * Whether an option's value parks the test. `true` and a string literal (the
  * reason shown in the report) do; `false` does not, and any other expression
  * is a condition evaluated at run time, which is left alone as Playwright's
- * runtime guard is.
+ * runtime guard is. Both matchers are sticky, so no copy of the rest of the
+ * file is made per key.
  */
 function isParkingOptionValue(valueStart: number, scannable: string, content: string): boolean {
-  const rest = scannable.slice(valueStart);
-  if (/^\s*true\b/.test(rest)) return true;
+  OPTION_TRUE.lastIndex = valueStart;
+  if (OPTION_TRUE.test(scannable)) return true;
   // The mask blanked a string literal one character for one, so a value that
   // is blank up to the next `,` or `}` was a literal; the unmasked file
   // still holds its quote.
-  const blank = /^\s*(?=[,}])/.exec(rest);
-  if (blank === null) return false;
-  return /['"`]/.test(content.slice(valueStart, valueStart + blank[0].length));
+  OPTION_BLANKED.lastIndex = valueStart;
+  if (!OPTION_BLANKED.test(scannable)) return false;
+  return /['"`]/.test(content.slice(valueStart, OPTION_BLANKED.lastIndex));
+}
+
+/** Whether the call at `index` is the first statement of a test function. */
+function opensTestBody(index: number, scannable: string): boolean {
+  const before = scannable.slice(Math.max(0, index - NODE_TEST_BODY_WINDOW), index);
+  return NODE_TEST_BODY_OPENING.test(before);
 }
 
 /** The forms `node:test` parks a test with that the shared chain does not. */
 function nodeTestHits(scannable: string, content: string): StubHit[] {
   const hits: StubHit[] = [];
   for (const match of scannable.matchAll(NODE_TEST_CONTEXT_CALL)) {
+    if (!opensTestBody(match.index, scannable)) continue;
     const token = match[1] ?? "";
     hits.push({ index: match.index, kind: `t.${token}`, isSkip: token === "skip" });
+  }
+  for (const match of scannable.matchAll(NODE_TEST_SUITE_STUB)) {
+    const token = match[1] ?? "";
+    hits.push({ index: match.index, kind: `suite.${token}`, isSkip: token === "skip" });
   }
   for (const match of scannable.matchAll(NODE_TEST_OPTIONS_CALL)) {
     const body = match[2] ?? "";
     // The body ends one character before the match does, at the closing brace.
     const bodyStart = match.index + match[0].length - 1 - body.length;
+    // One finding per token and call: a key written twice is one parked test.
+    const tokens = new Set<string>();
     for (const key of body.matchAll(NODE_TEST_OPTION_KEY)) {
       const token = key[1] ?? "";
+      if (tokens.has(token)) continue;
       if (!isParkingOptionValue(bodyStart + key.index + key[0].length, scannable, content)) {
         continue;
       }
+      tokens.add(token);
       const kind = `${match[1] ?? "test"}({ ${token} })`;
       hits.push({ index: match.index, kind, isSkip: token === "skip" });
     }

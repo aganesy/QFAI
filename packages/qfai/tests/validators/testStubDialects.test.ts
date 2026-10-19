@@ -1182,4 +1182,93 @@ describe("node:test parks a test in forms of its own", () => {
       expect(await stubCodes(root)).toEqual([]);
     });
   });
+
+  it.each([
+    ["describe", "QFAI-TEST-003", "{ skip: true }"],
+    ["it", "QFAI-TEST-001", "{ todo: 'later' }"],
+    ["suite", "QFAI-TEST-003", "{ skip: true }"],
+    ["test.only", "QFAI-TEST-003", "{ skip: true }"],
+  ])("reports the option form on %s", async (root, code, options) => {
+    expect(await findings(file(`${root}("s", ${options}, () => {});`))).toEqual([[code, 3]]);
+  });
+
+  it.each([
+    [`suite${SKIP}("s", () => {});`, "QFAI-TEST-003"],
+    [`suite${TODO}("s");`, "QFAI-TEST-001"],
+  ])("reports %s, node:test's own name for describe", async (line, code) => {
+    expect(await findings(file(line))).toEqual([[code, 3]]);
+  });
+
+  it("reports the option form on a subtest, at the context's column", async () => {
+    const body = file(
+      'test("a", async (t) => {',
+      '  await t.test("s", { skip: true }, () => {});',
+      "});",
+    );
+    await withTests({ "tests/a.test.mjs": body }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+      expect(issues.map((i) => [i.code, i.loc?.line, i.loc?.column])).toEqual([
+        ["QFAI-TEST-003", 4, 9],
+      ]);
+    });
+  });
+
+  it.each([
+    ["a call that is not a test", "const cfg = makeConfig({ skip: true });"],
+    ["a member call named test", "schema.test({ skip: true });"],
+    ["a comment", `// t${SKIP}() and test("s", { skip: true }, () => {});`],
+    ["a string", `const text = 't${SKIP}() test("s", { todo: true })';`],
+  ])("says nothing about %s", async (_name, line) => {
+    expect(await findings(file(line))).toEqual([]);
+  });
+
+  it.each([
+    [
+      "inside an if",
+      ['  if (process.platform === "win32") {', `    t${SKIP}("posix");`, "    return;", "  }"],
+    ],
+    ["after another statement", ["  const ready = probe();", `  t${TODO}();`]],
+  ])("says nothing about a context call %s, which is a run-time guard", async (_name, lines) => {
+    expect(await findings(file('test("s", (t) => {', ...lines, "});"))).toEqual([]);
+  });
+
+  it("reports a context call that is the whole body of an arrow or a function", async () => {
+    const body = file(`test("a", (t) => t${SKIP}());`, `test("b", function (t) { t${TODO}(); });`);
+    expect(await findings(body)).toEqual([
+      ["QFAI-TEST-003", 3],
+      ["QFAI-TEST-001", 4],
+    ]);
+  });
+
+  it("reports both tokens when one options object sets skip and todo", async () => {
+    const body = file('test("s", { skip: true, todo: true }, () => {});');
+    await withTests({ "tests/a.test.mjs": body }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+      expect(issues.map((i) => [i.code, i.loc?.line, i.loc?.column])).toEqual([
+        ["QFAI-TEST-003", 3, 1],
+        ["QFAI-TEST-001", 3, 1],
+      ]);
+    });
+  });
+
+  it("gives each finding its column", async () => {
+    const body = file(`   test("s", { skip: true }); test${SKIP}(() => {});`);
+    await withTests({ "tests/a.test.mjs": body }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+      expect(issues.map((i) => [i.code, i.loc?.line, i.loc?.column])).toEqual([
+        ["QFAI-TEST-003", 3, 4],
+        ["QFAI-TEST-003", 3, 31],
+      ]);
+    });
+  });
+
+  it("reads a long blank first argument in linear time", async () => {
+    // The blanks before the options object once sat in front of the optional
+    // first argument, and every split of a long blank run was tried: an 80k
+    // character argument took seconds.
+    const body = file(`test(${" ".repeat(80_000)}, () => {});`);
+    const started = performance.now();
+    expect(await findings(body)).toEqual([]);
+    expect(performance.now() - started).toBeLessThan(2_000);
+  });
 });
