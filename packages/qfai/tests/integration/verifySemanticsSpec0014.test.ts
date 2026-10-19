@@ -176,3 +176,102 @@ describe("TC-0014-0019: removed compatibility surface", () => {
     expect(typesSrc).not.toContain('"compatibility"');
   });
 });
+
+// QFAI:AC-0001-0019-02
+describe("a UI-bearing pack that inherits the current DESIGN.md", () => {
+  const RESEARCH_CODES = ["QFAI-THREELAYER-002", "QFAI-TREND-004", "QFAI-RESEARCH-013"];
+
+  /** A project with one UI contract declaring `SCR-001`, and one web pack holding `uiux/00_index.md` only. */
+  async function createProject(contextLines: string[]): Promise<{ root: string; packDir: string }> {
+    const root = await newTempDir();
+    await writeFile(path.join(root, "qfai.config.yaml"), "workflow:\n  mode: active\n", "utf-8");
+    const uiDir = path.join(root, ".qfai", "spec", "03_contract", "ui");
+    await mkdir(uiDir, { recursive: true });
+    await writeFile(
+      path.join(uiDir, "ui-0001-login.yaml"),
+      ["screens:", "  - id: SCR-001", "    route: /login", ""].join("\n"),
+      "utf-8",
+    );
+    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
+    await mkdir(path.join(packDir, "uiux"), { recursive: true });
+    await writeFile(path.join(packDir, "uiux", "00_index.md"), "# UI index\n", "utf-8");
+    await writeFile(path.join(packDir, "04_Sources.md"), "# 04 Sources\n", "utf-8");
+    await writeFile(
+      path.join(packDir, "01_Context.md"),
+      [
+        "# Context",
+        "",
+        "## UI-bearing Classification",
+        "",
+        "- ui_bearing: true",
+        "- primary_surface: web",
+        "- secondary_surfaces:",
+        "- classification_rationale: Adds a login section to existing screens.",
+        ...contextLines,
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    return { root, packDir };
+  }
+
+  async function codesOf(root: string): Promise<string[]> {
+    const result = await validateProject(root, undefined, { profile: "verify" });
+    return result.issues.filter((issue) => issue.severity === "error").map((issue) => issue.code);
+  }
+
+  // QFAI:EX-0001-0019-03
+  it("owes no screen contracts, review bundle, Trend Scan or reference count", async () => {
+    const inheriting = await createProject(["- design_direction: inherit"]);
+    const declaring = await createProject([]);
+
+    const inheritingCodes = await codesOf(inheriting.root);
+    const declaringCodes = await codesOf(declaring.root);
+
+    for (const code of RESEARCH_CODES) {
+      expect(inheritingCodes, `${code} with the declaration`).not.toContain(code);
+      expect(declaringCodes, `${code} without the declaration`).toContain(code);
+    }
+  });
+
+  // QFAI:EX-0001-0019-04
+  it("refuses the declaration on a pack that adds a screen or records its own direction", async () => {
+    const addsScreen = await createProject(["- design_direction: inherit"]);
+    await writeFile(
+      path.join(addsScreen.packDir, "uiux", "40_screen_contracts.md"),
+      "# Screen Contracts\n\n### Screen: New\n\n- screen_id: SCR-NEW\n",
+      "utf-8",
+    );
+    const ownDirection = await createProject([
+      "- design_direction: inherit",
+      "",
+      "## Design Direction",
+      "",
+      "- adopted_theme: Material 3",
+    ]);
+    await writeFile(
+      path.join(ownDirection.packDir, "uiux", "40_screen_contracts.md"),
+      "# Screen Contracts\n\n### Screen: Login\n\n- screen_id: SCR-001\n",
+      "utf-8",
+    );
+    const clean = await createProject(["- design_direction: inherit"]);
+    await writeFile(
+      path.join(clean.packDir, "uiux", "40_screen_contracts.md"),
+      "# Screen Contracts\n\n### Screen: Login\n\n- screen_id: SCR-001\n",
+      "utf-8",
+    );
+
+    const refusalOf = async (root: string) =>
+      (await validateProject(root, undefined, { profile: "verify" })).issues.filter(
+        (issue) => issue.code === "QFAI-CLASSIFICATION-011",
+      );
+
+    const [screen] = await refusalOf(addsScreen.root);
+    expect(screen?.severity).toBe("error");
+    expect(screen?.message).toContain("SCR-NEW");
+    const [direction] = await refusalOf(ownDirection.root);
+    expect(direction?.severity).toBe("error");
+    expect(direction?.message).toContain("adopted_theme");
+    await expect(refusalOf(clean.root)).resolves.toEqual([]);
+  });
+});

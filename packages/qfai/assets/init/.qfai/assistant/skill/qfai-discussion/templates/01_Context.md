@@ -11,6 +11,7 @@ Classification determines whether UI/UX sidecar artifacts are required.
 - secondary_surfaces:
   - [optional]
 - classification_rationale: [Why this classification was chosen]
+- design_direction: [new|inherit]
 
 Notes:
 
@@ -19,10 +20,12 @@ Notes:
 - `cli` is a UI-bearing surface. When classified as `cli`, set `ui_bearing: true`. `cli` is not a visual-prototyping surface, so a **cli-only** pack — `primary_surface: cli` with no `web`/`mobile`/`desktop`/`mixed` entry in `secondary_surfaces` — gets no root `DESIGN.md` (see `references/ui-bearing-playbook.md#visual-prototyping-surfaces-vs-cli`). A visual `secondary_surfaces` entry still requires one.
 - Prototyping **execution** surfaces (used in `prototyping.yaml`) are a strict subset: `web|mobile|desktop|mixed`.
 - `cli` and `non-ui` are classification-only values and never appear in `prototyping.yaml`. `/qfai-prototyping` rejects them, so a cli-only pack emits none.
+- `design_direction: inherit` declares that the pack keeps the current root `DESIGN.md`: it changes existing screens only and sets no direction of its own. Such a pack owes no Trend Scan, no minimum count of competitive or catalogue references, and no `uiux/40_screen_contracts.md` or `uiux/50_review_input_bundle.md`.
+- `npx qfai validate` refuses `inherit` when `uiux/40_screen_contracts.md` names a `screen_id` that matches no `screens[].id` of the project's UI contracts, or when Design Direction below records an `adopted_theme` or `brand_accent`. Use `new` for anything else.
 
 ## Design Direction
 
-Required when a classified surface is `web`, `mobile`, `desktop` or `mixed`. Omit for cli-only and non-ui.
+Required when a classified surface is `web`, `mobile`, `desktop` or `mixed`. Omit for cli-only and non-ui, and when the classification declares `design_direction: inherit`.
 
 The user chooses this; `references/design-dna-intake.md` says how to put the choice to them. `/qfai-sdd`'s `common-design-md` step authors root `DESIGN.md` from it, and asks nothing further.
 

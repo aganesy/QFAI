@@ -70,6 +70,22 @@ shadows:
   handoff to read for a cli-only target, leaving
   `<paths.contractsDir>/ui/*.yaml` as its UI contract input.
 
+### Inheriting the current DESIGN.md
+
+A pack that changes existing screens and keeps the current root `DESIGN.md`
+may declare `design_direction: inherit` in the classification block of
+`01_Context.md`. It then records no Design Direction and owes no Trend Scan,
+no minimum count of competitive or catalogue references, and no
+`uiux/40_screen_contracts.md` or `uiux/50_review_input_bundle.md`. A reference
+or screen contract it does write is still checked. An existing screen is one
+whose `screen_id` equals the `screens[].id` of a UI contract under
+`<paths.contractsDir>/ui/`.
+
+The declaration is not allowed when the pack adds a screen or changes the
+design direction. `npx qfai validate` reports `QFAI-CLASSIFICATION-011` when the
+screen contracts name a `screen_id` no UI contract's `screens[].id` declares, or when
+Design Direction records an `adopted_theme` or `brand_accent`.
+
 ### Trend Scan SSOT
 
 Trend Scan is **not** a sidecar file. Trend Scan lives at

@@ -4,6 +4,7 @@ import type { QfaiConfig } from "../../config.js";
 import type { Issue, IssueSeverity } from "../../types.js";
 import { isUiBearingSpec } from "../uixDetection.js";
 import { readSafe } from "../utils.js";
+import { packInheritsDesign } from "./designInheritance.js";
 
 // Brand-level inputs (product intent / brand signals / anti-goals / reference
 // pool) live in root DESIGN.md and are validated separately via
@@ -19,6 +20,12 @@ export const CANONICAL_REQUIRED_SIDECAR_FILES = [
   "40_screen_contracts.md",
   "50_review_input_bundle.md",
 ] as const;
+
+/** The members a pack that inherits the current `DESIGN.md` may leave out. */
+const OMITTED_WHEN_INHERITED: ReadonlySet<string> = new Set([
+  "40_screen_contracts.md",
+  "50_review_input_bundle.md",
+]);
 
 function threeLayerIssue(
   code: string,
@@ -48,8 +55,10 @@ export async function validateThreeLayerFamilyCompleteness(
   // on absence made the gate unable to report the very file it triggered on —
   // and disabled the checks for the other two members along with it.
   // `isUiBearingSpec` above is what scopes this check.
+  const inherited = await packInheritsDesign(root);
   const issues: Issue[] = [];
   for (const required of CANONICAL_REQUIRED_SIDECAR_FILES) {
+    if (inherited && OMITTED_WHEN_INHERITED.has(required)) continue;
     const content = await readSafe(path.join(root, "uiux", required));
     if (!content) {
       issues.push(

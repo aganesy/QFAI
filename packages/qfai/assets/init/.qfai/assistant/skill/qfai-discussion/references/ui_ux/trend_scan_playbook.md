@@ -60,7 +60,9 @@ Reject a trend when:
 ## Competitive Reference Registry Expectations
 
 Register at least `uiux.competitive_refs_min` references (default: 3) by
-repeating the `### Reference:` block in `04_Sources.md`. For each meaningful
+repeating the `### Reference:` block in `04_Sources.md`. A pack whose
+classification declares `design_direction: inherit` owes no count and no Trend
+Scan, under the conditions of the inheriting section of the UI-bearing playbook. For each meaningful
 competitor or reference pattern, capture:
 
 - what was adopted

@@ -111,3 +111,31 @@ describe("the design direction is the user's decision", () => {
     });
   }
 });
+
+describe("a pack may inherit the current DESIGN.md", () => {
+  for (const tree of QFAI_TREES) {
+    it(`${tree}: the classification block offers the declaration and says when it is refused`, async () => {
+      const template = flat(await read(tree, CONTEXT_TEMPLATE));
+      const playbook = flat(
+        await read(tree, `${SKILLS}/qfai-discussion/references/ui-bearing-playbook.md`),
+      );
+
+      expect(template).toContain("- design_direction: [new|inherit]");
+      expect(template).toContain(
+        "owes no Trend Scan, no minimum count of competitive or catalogue references",
+      );
+      expect(playbook).toContain("### Inheriting the current DESIGN.md");
+      const matrix = flat(await read(tree, MATRIX));
+      expect(matrix).toContain("## Inheriting Packs");
+      expect(matrix).toContain("UI-bearing items 1 and 5 do not apply");
+      const packStep = flat(await read(tree, "assistant/step/discussion-pack/STEP.md"));
+      expect(packStep).toContain(
+        "A pack whose classification declares `design_direction: inherit` records no direction and skips the registries and the 40/50 sidecars",
+      );
+      expect(packStep).toContain("ui-bearing-playbook.md#inheriting-the-current-designmd");
+      expect(playbook).toContain(
+        "The declaration is not allowed when the pack adds a screen or changes the design direction.",
+      );
+    });
+  }
+});

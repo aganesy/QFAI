@@ -113,6 +113,19 @@ async function readUiContractDocuments(
   return documents;
 }
 
+/**
+ * Every `screens[].id` the project's UI contracts declare, whether or not the
+ * entry has a route: a screen exists once a contract names it.
+ */
+export async function readUiContractScreenIds(
+  root: string,
+  contractsDirRelative: string,
+): Promise<Set<string>> {
+  const uiDir = path.resolve(root, contractsDirRelative, "ui");
+  const documents = await readUiContractDocuments(uiDir, root);
+  return new Set(documents.flatMap(({ parsed }) => screenIdsOf(parsed)));
+}
+
 /** The `id` of every `screens[]` entry a parsed contract holds that has one. */
 function screenIdsOf(parsed: unknown): string[] {
   if (!parsed || typeof parsed !== "object" || !("screens" in parsed)) return [];
