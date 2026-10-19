@@ -612,7 +612,7 @@ describe("qfai-run", () => {
   it("keeps person-only operations and deletions on the extraction reference", async () => {
     const extract = flat(sectionOf(await readShipped(RUN), "## The work"));
     expect(extract).toMatch(
-      /an operation on finished work that the session runs itself and that deletes nothing is `\{ intent: order, artifacts: \[\] \}`/i,
+      /an operation on finished work, or on a device or system the session reaches, that the session runs itself and that deletes nothing is `\{ intent: order, artifacts: \[\] \}`/i,
     );
     const qualifiers = sectionOf(await readShipped(EXTRACTION), "## Qualifiers");
     expect(itemOf(qualifiers, "human-run")).toMatch(/with `order`: only a person can run/i);
@@ -648,6 +648,52 @@ describe("qfai-run", () => {
       routeOf(routingOutcome(pinned)),
       routeOf(routingOutcome(extraction({ intent: "follow-up", artifacts: [] }))),
     ]).toEqual(["run-operation", "retriage-bundle"]);
+  });
+
+  // QFAI:AC-0001-0211-05
+  it("reads a device operation the session runs itself, with no repository change, as an operation", async () => {
+    const reference = await readShipped(EXTRACTION);
+    expect(flat(sectionOf(reference, "## Intent"))).toContain(
+      "An operation the session runs on a device or system outside the repository, such as restarting an app on a connected phone, changes no tracked file: extract it as `order` with no artifacts. One that deletes something there needs the user's explicit instruction first. A request only to read that device's state is a question: `question-why` with `session-answerable`.",
+    );
+    const line = sectionOf(reference, "## Examples")
+      .split("\n")
+      .find((each) =>
+        each.startsWith(
+          '- "Restart the app on the test phone connected to this machine", which the session runs itself and which deletes nothing → ',
+        ),
+      );
+    const parsed: unknown = parse(/→ `(\{.*\})`$/.exec(line ?? "")?.[1] ?? "null");
+    expect(parsed).toEqual({ intent: "order", artifacts: [], confidence: "high" });
+    const pinned: unknown = { ...extraction(), ...(isRecord(parsed) ? parsed : {}) };
+    if (!isExtraction(pinned)) throw new Error("the pinned example is not an extraction");
+    const routeOf = (outcome: ReturnType<typeof routingOutcome>) =>
+      "taken" in outcome ? outcome.taken.route : undefined;
+    expect([
+      routeOf(routingOutcome(pinned)),
+      routeOf(routingOutcome({ ...pinned, qualifiers: ["human-run"] })),
+    ]).toEqual(["run-operation", "hand-off-operation"]);
+  });
+
+  // QFAI:AC-0001-0211-05
+  it("reads a request to read a device's state as a question the session answers", async () => {
+    const line = sectionOf(await readShipped(EXTRACTION), "## Examples")
+      .split("\n")
+      .find((each) =>
+        each.startsWith(
+          '- "Which app version is installed on the test phone connected to this machine?", which the session can read itself → ',
+        ),
+      );
+    const parsed: unknown = parse(/→ `(\{.*\})`$/.exec(line ?? "")?.[1] ?? "null");
+    expect(parsed).toEqual({
+      intent: "question-why",
+      qualifiers: ["session-answerable"],
+      confidence: "high",
+    });
+    const pinned: unknown = { ...extraction(), ...(isRecord(parsed) ? parsed : {}) };
+    if (!isExtraction(pinned)) throw new Error("the pinned example is not an extraction");
+    const outcome = routingOutcome(pinned);
+    expect("taken" in outcome ? outcome.taken.route : undefined).toBe("answer-in-session");
   });
 
   // QFAI:AC-0001-0211-05
@@ -709,6 +755,17 @@ describe("qfai-run", () => {
     expect(artifacts).not.toMatch(/whenever behaviour changes/i);
     expect(flat(await readShipped(EXTRACTION))).toMatch(
       /6. list the `artifacts` the request asks to change./i,
+    );
+  });
+
+  it("files shipped seed and sample data under data, and lets triage pass a change no story sets", async () => {
+    const artifacts = flat(sectionOf(await readShipped(EXTRACTION), "## Artifacts"));
+    expect(artifacts).toMatch(
+      /- `data`: persisted user data or state, stored formats, migrations, shipped seed and sample data\..*a fixture that only a test reads stays under `tests`, not `data`\./i,
+    );
+    const completion = flat(sectionOf(await readShipped(SDD_TRIAGE), "## Completion of triage"));
+    expect(completion).toMatch(
+      /the one exception: a change to shipped seed or sample data whose values no story, br or contract sets changes no story-tree file\. triage states that in one line of its report and passes with no operation and no decision row, and the later sdd steps then have nothing to write/i,
     );
   });
 

@@ -190,6 +190,7 @@ describe("the free-text entry reminder", () => {
     );
   });
 
+  // QFAI:EX-0001-0196-74
   it("names the worktree's copy of qfai-run as the one to follow, in the reminder and the skill", async () => {
     const stdout = await runReminderHook(
       {
@@ -234,6 +235,7 @@ describe("the free-text entry reminder", () => {
     );
   });
 
+  // QFAI:EX-0001-0196-74
   it("applies only to a message the user wrote, not to an automated notice", async () => {
     const entry = promptEntry(await readGroups(SHIPPED_SETTINGS), FREE_TEXT_ENTRY_HOOK_MARKER);
     const project = projectDirOf(repoRoot, SHIPPED_SETTINGS);

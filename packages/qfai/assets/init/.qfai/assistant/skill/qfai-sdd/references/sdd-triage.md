@@ -309,3 +309,8 @@ A move to another BF changes the story's US ID and all child AC and EX IDs. It f
 ## Completion of triage
 
 Every requirement has a target, an approved or approval-free operation, and a recorded impact path. Every product ambiguity has an OQ. The next stage may write only the approved scope. A rejected option stays excluded until an explicit reopening decision is appended.
+
+The one exception: a change to shipped seed or sample data whose values no
+story, BR or contract sets changes no story-tree file. Triage states that in one
+line of its report and passes with no operation and no decision row, and the
+later sdd steps then have nothing to write.
