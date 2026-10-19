@@ -1271,7 +1271,7 @@ describe("qfai-maintain", () => {
     const resolving = flat(sectionOf(skill, "## Resolving conflicts"));
     expect(resolving).toMatch(/in the `resolve-conflicts` route/i);
     expect(resolving).toContain(
-      "On a clean tree, before the merge, renumber each `decisions.md` row the branch added whose ID the fetched base now declares, by the `npx qfai sdd renumber-decision` procedure in `.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md` (two branches taking the same ID), and commit after each run.",
+      "Fetch the base (`git fetch`), then on a clean tree, before the merge, renumber every `decisions.md` row the branch added, from the lowest one whose ID the fetched base now declares upward, lowest first, by the `npx qfai sdd renumber-decision` procedure in `.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md` (two branches taking the same ID), and commit after each run.",
     );
     expect(resolving).toContain(
       "When a merge has already stopped with conflicts, run `git merge --abort`, renumber, and merge again.",
@@ -1286,7 +1286,7 @@ describe("qfai-maintain", () => {
       "When both sides changed the same record, keeping both is a semantic effect: stop.",
     );
     expect(resolving).toContain(
-      "An ID that both histories had already committed for two records before this merge is a semantic effect: stop.",
+      "An ID that two records already share on one history before this merge, carried in by an earlier merge, is a semantic effect: stop.",
     );
     expect(resolving).toContain("A conflict in code, or in a file listed under");
     expect(resolving).toContain("such as a generated file or a lockfile, stops");
@@ -1297,16 +1297,23 @@ describe("qfai-maintain", () => {
       "except a renumber [Resolving conflicts](#resolving-conflicts) allows",
     );
     expect(flat(sectionOf(skill, "## Stage report"))).toContain(
-      "the base, each renumber as old → new, and the combined diff of each resolved path, taken with `git diff` before it is staged. Every added line is inside one side's text, except the ID changes that list names.",
+      "the base, each renumber as old → new, and the combined diff of each resolved path, taken with `git diff` before it is staged, and `git diff` of every path the renumbers touched. Every added line is inside one side's text, except the ID changes that list names.",
     );
     expect(flat(sectionOf(skill, "## Gate"))).toContain(
       "The combined diff passes the added-line check before `verify-commit` commits.",
     );
     const commit = flat(await readShipped("step/verify-commit/STEP.md"));
     expect(commit).toContain(
-      "first confirm that the combined diff in the stage report passed the added-line check, then stage the resolved paths and conclude the merge in progress with `git commit` and a message that names the base and each renumber as old → new.",
+      "first confirm that the combined diff in the stage report passed the added-line check, then stage the resolved paths and conclude the merge in progress with `git commit` and a message that names the base and gives each renumber as old → new with the renamed record's subject or path.",
     );
     expect(commit).not.toContain("--no-edit");
+    expect(commit).toContain("3. Otherwise, commit with a message in the project's convention");
+    expect(flat(sectionOf(await readShipped("step/verify-commit/STEP.md"), "## Writes"))).toContain(
+      "In the `resolve-conflicts` route, also each renumber commit the run made, including one left after `git reset --merge ORIG_HEAD`.",
+    );
+    expect(flat(sectionOf(await readShipped("step/verify-commit/STEP.md"), "## Gate"))).toContain(
+      "The final report names each renumber commit the run made, including one left after `git reset --merge ORIG_HEAD`.",
+    );
     expect(commit).toContain(
       "Record `git show --remerge-diff` of that commit in the stage report.",
     );

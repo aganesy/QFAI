@@ -44,8 +44,9 @@ changes.
 In the `resolve-conflicts` route, the step merges the named base into the
 branch and keeps every record's meaning. `verify-commit` concludes the merge.
 
-1. On a clean tree, before the merge, renumber each `decisions.md` row the
-   branch added whose ID the fetched base now declares, by the
+1. Fetch the base (`git fetch`), then on a clean tree, before the merge,
+   renumber every `decisions.md` row the branch added, from the lowest one
+   whose ID the fetched base now declares upward, lowest first, by the
    `npx qfai sdd renumber-decision` procedure in
    `.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md` (two branches
    taking the same ID), and commit after each run. The union merge of
@@ -64,8 +65,8 @@ of these:
 - Content neither side had is a semantic effect.
 - When both sides changed the same record, keeping both is a semantic effect:
   stop.
-- An ID that both histories had already committed for two records before this
-  merge is a semantic effect: stop.
+- An ID that two records already share on one history before this merge,
+  carried in by an earlier merge, is a semantic effect: stop.
 - A conflict in code, or in a file listed under
   [Never a maintenance edit](#never-a-maintenance-edit), such as a generated
   file or a lockfile, stops: its owner route resolves or regenerates it.
@@ -127,8 +128,8 @@ edit changes none. Any other entry under
 - The lint and link checks run, and their results.
 - In the `resolve-conflicts` route: the base, each renumber as old → new, and
   the combined diff of each resolved path, taken with `git diff` before it is
-  staged. Every added line is inside one side's text, except the ID changes
-  that list names.
+  staged, and `git diff` of every path the renumbers touched. Every added line
+  is inside one side's text, except the ID changes that list names.
 
 ## Gate
 
