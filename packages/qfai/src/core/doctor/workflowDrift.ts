@@ -10,10 +10,10 @@ const WORKFLOWS_DIR = [".github", "workflows"] as const;
 
 export type WorkflowDriftCheck = {
   id: string;
-  severity: "warning";
+  severity: "warning" | "info";
   title: string;
   message: string;
-  details: { path: string; packagedCopy: string };
+  details: { path: string; packagedCopy: string; acceptedReason?: string };
 };
 
 export async function readText(target: string): Promise<string | undefined> {
@@ -78,10 +78,40 @@ function linesWithoutCounterpart(lines: readonly string[], others: readonly stri
   return missing;
 }
 
+const USES_LINE =
+  /^\s*(?:-\s*)?uses:\s*["']?([^@\s"']+)@([^\s"'#]+)["']?[ \t]*(?:#[ \t]*(v\d[^\s]*))?/gm;
+
+/**
+ * The refs each action is pinned to in a workflow text, by action name. A ref followed by a
+ * `# vX.Y.Z` comment reads `ref (vX.Y.Z)`; a bare ref reads as it is.
+ */
+function pinnedActions(text: string): Map<string, string> {
+  const refs = new Map<string, Set<string>>();
+  for (const [, action = "", ref = "", version] of withLf(text).matchAll(USES_LINE)) {
+    const shown = version === undefined ? ref : `${ref} (${version})`;
+    refs.set(action, (refs.get(action) ?? new Set()).add(shown));
+  }
+  return new Map([...refs].map(([action, set]) => [action, [...set].sort().join(", ")]));
+}
+
+/** Each action both texts use whose pinned refs differ, with the refs on each side. */
+function pinsThatDiffer(installed: string, packaged: string): string[] {
+  const here = pinnedActions(installed);
+  const shipped = pinnedActions(packaged);
+  return [...here.keys()]
+    .filter((action) => shipped.has(action) && shipped.get(action) !== here.get(action))
+    .sort()
+    .map(
+      (action) =>
+        `${action} (installed ${here.get(action) ?? ""}, shipped ${shipped.get(action) ?? ""})`,
+    );
+}
+
 /**
  * A short statement of how the installed workflow differs from the shipped one: the number of
- * lines on only one side, and the jobs whose definition differs, so a reader can tell a stale
- * copy from a deliberate change without opening both files.
+ * lines on only one side, the jobs whose definition differs and the actions both files use whose
+ * pinned version differs, so a reader can tell a stale copy from a deliberate change without
+ * opening both files.
  *
  * Lines are compared as a multiset, not in order: a moved block reads as unchanged. A change
  * outside the jobs (the triggers, a comment) names no job.
@@ -93,22 +123,33 @@ export function describeWorkflowDifference(installed: string, packaged: string):
   const onlyShipped = linesWithoutCounterpart(shipped, here);
   const changed = onlyHere + onlyShipped;
   const lines = `${changed} ${changed === 1 ? "line" : "lines"} (${onlyHere} only in the installed file, ${onlyShipped} only in the shipped copy)`;
+  const parts = [lines];
   const hereJobs = jobsOf(installed);
   const shippedJobs = jobsOf(packaged);
   if (hereJobs === undefined || shippedJobs === undefined) {
-    return `${lines}; jobs not compared: ${hereJobs === undefined ? "the installed file does" : "the shipped copy does"} not parse`;
+    parts.push(
+      `jobs not compared: ${hereJobs === undefined ? "the installed file does" : "the shipped copy does"} not parse`,
+    );
+  } else {
+    const names = [...new Set([...Object.keys(hereJobs), ...Object.keys(shippedJobs)])].sort();
+    const jobs = names.filter((name) => hereJobs[name] !== shippedJobs[name]);
+    if (jobs.length > 0) parts.push(`jobs that differ: ${jobs.join(", ")}`);
   }
-  const names = [...new Set([...Object.keys(hereJobs), ...Object.keys(shippedJobs)])].sort();
-  const jobs = names.filter((name) => hereJobs[name] !== shippedJobs[name]);
-  return jobs.length === 0 ? lines : `${lines}; jobs that differ: ${jobs.join(", ")}`;
+  const pins = pinsThatDiffer(installed, packaged);
+  if (pins.length > 0) parts.push(`pinned actions that differ: ${pins.join(", ")}`);
+  return parts.join("; ");
 }
 
 /**
  * A warning for each shipped workflow installed in the project whose text is not the text this
- * package ships. Both copies are read and nothing is written. A workflow the project does not have
- * raises no finding here.
+ * package ships, and an `info` finding instead for one `accepted` names, carrying its reason.
+ * Both copies are read and nothing is written. A workflow the project does not have raises no
+ * finding here.
  */
-export async function checkWorkflowDrift(root: string): Promise<WorkflowDriftCheck[]> {
+export async function checkWorkflowDrift(
+  root: string,
+  accepted: ReadonlyMap<string, string>,
+): Promise<WorkflowDriftCheck[]> {
   const packagedDir = packagedWorkflowsDir();
   if (packagedDir === undefined) return [];
   const findings: WorkflowDriftCheck[] = [];
@@ -119,15 +160,31 @@ export async function checkWorkflowDrift(root: string): Promise<WorkflowDriftChe
     if (installed === undefined || packaged === undefined) continue;
     if (withLf(installed) === withLf(packaged)) continue;
     const installedPath = [...WORKFLOWS_DIR, name].join("/");
+    const id = `workflows.drift.${name.replace(/\.yml$/, "")}`;
+    const difference = describeWorkflowDifference(installed, packaged);
+    const acceptedReason = accepted.get(name);
+    if (acceptedReason !== undefined) {
+      findings.push({
+        id,
+        severity: "info",
+        title: `Shipped workflow differs, accepted (${installedPath})`,
+        message:
+          `${installedPath} differs from the copy this qfai package ships in ${difference}. ` +
+          `workflow.acceptedDrift in qfai.config.yaml accepts the difference: ${acceptedReason}`,
+        details: { path: installedPath, packagedCopy, acceptedReason },
+      });
+      continue;
+    }
     findings.push({
-      id: `workflows.drift.${name.replace(/\.yml$/, "")}`,
+      id,
       severity: "warning",
       title: `Shipped workflow differs (${installedPath})`,
       message:
         `${installedPath} differs from the copy this qfai package ships in ` +
-        `${describeWorkflowDifference(installed, packaged)}. ` +
+        `${difference}. ` +
         `Doctor changes nothing. To take the shipped text, copy ${packagedCopy} over it; ` +
-        `that replaces every local change.`,
+        `that replaces every local change. To keep the difference, list the file with a reason ` +
+        `under workflow.acceptedDrift in qfai.config.yaml.`,
       details: { path: installedPath, packagedCopy },
     });
   }
