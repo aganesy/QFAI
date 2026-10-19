@@ -476,7 +476,11 @@ describe("validate --format text matches the validate contract's text output gra
       const lines = output.trimEnd().split("\n");
 
       expect(JSON.stringify(result)).toBe(originalJson);
-      expect(lines.slice(-2)).toEqual(["counts: info=3 warning=3 error=8", `fail-on: ${failOn}`]);
+      expect(lines.slice(-3)).toEqual([
+        "counts: info=3 warning=3 error=8",
+        "codes: error=8 (QFAI-TEST-021: 7, QFAI-TEST-020: 1) warning=3 (QFAI-TEST-023: 2, QFAI-TEST-022: 1) info=3 (QFAI-TEST-025: 2, QFAI-TEST-024: 1)",
+        `fail-on: ${failOn}`,
+      ]);
       expect(lines.filter((line) => /^\[(error|warning|info)\] /.test(line))).toEqual([
         ...errors.slice(0, 5).map((issue) => renderFromGrammar(grammar, issue)),
         extractGroupTail(guideline)
@@ -607,6 +611,24 @@ describe("validate --format text matches the validate contract's text output gra
       "codes: error=4 (QFAI-STORY-006: 3, QFAI-AGENT-015: 1) warning=0 info=1 (QFAI-TEST-001: 1)",
     );
     expect(lines[counts + 2]).toBe("fail-on: error");
+  });
+
+  // QFAI:EX-0001-0039-20
+  it("breaks a tie between codes by code order", async () => {
+    const output = await captureStdout(() => {
+      emitText(
+        resultOf([
+          ...manyOfOneCode("QFAI-TEST-031", "warning", 1),
+          ...manyOfOneCode("QFAI-TEST-030", "warning", 1),
+        ]),
+        DEFAULT_FAIL_ON,
+      );
+      return Promise.resolve();
+    });
+
+    expect(output).toContain(
+      "codes: error=0 warning=2 (QFAI-TEST-030: 1, QFAI-TEST-031: 1) info=0\n",
+    );
   });
 
   // QFAI:EX-0001-0039-20
