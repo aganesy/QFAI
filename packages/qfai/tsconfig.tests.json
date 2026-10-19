@@ -408,6 +408,7 @@
     "tests/unit/core/doctor/cleanRunLogsPartialFailure.test.ts",
     "tests/unit/core/doctor/integrationLinks.test.ts",
     "tests/unit/core/atddScaffoldUnreadable.test.ts",
+    "tests/unit/core/detectJsTestRunner.test.ts",
     "tests/unit/core/globBraceRange.test.ts",
     "tests/unit/core/instructionLanguageRules.test.ts",
     "tests/unit/core/testGlobExtensions.test.ts",

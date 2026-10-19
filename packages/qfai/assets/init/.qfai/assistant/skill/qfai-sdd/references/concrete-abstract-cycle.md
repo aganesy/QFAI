@@ -30,7 +30,8 @@ No cycle runs when:
 ## The finder
 
 The finder is a sub-agent, such as a `test-design-analyst`, that wrote none of
-the BRs it reads. It reads:
+the BRs it reads. The orchestrator starts it; a stage worker starts none. It
+reads:
 
 - each BR whose Statement or Examples cell this invocation wrote or changed;
 - the EXs each of those BRs cites;
