@@ -35,6 +35,13 @@ classified by the taxonomy below before any response.
   Where the stage's ledger or a seam makes an ordering mandatory, carrying on
   does not override it.
 - On Codex, read `.qfai/assistant/rule/references/codex-delegation.md` before delegating.
+- The orchestrator runs every step that starts a finder, griller or reviewer,
+  and starts those agents itself: `sdd-cycle`, `common-review-cycle`,
+  `prototyping-grill`, `prototyping-loop` and any step that holds a
+  delegated grilling session, such as a pre-draft grilling checkpoint. A worker it delegates to gets only steps that start
+  none, and starts no finder, griller or reviewer. A finder is a review
+  someone other than the author has to do; where it cannot be delegated, the
+  failure handling below applies.
 - A review is done by an agent that did not author what it reviews. The
   orchestrator never reviews its own work and never approves it for
   convenience.

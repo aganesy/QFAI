@@ -198,9 +198,10 @@ rule over the tree, not a new command.
 ## Pre-draft grilling
 
 Before this step's first mutation, run the checkpoint for `Triage and records`
-in `.qfai/assistant/skill/qfai-sdd/references/sdd-pre-draft-grilling.md`. Put
-each critical decision it holds to the user, and list each decision it adopted
-in the final report. Each later design-writing step runs its own checkpoint the
+in `.qfai/assistant/skill/qfai-sdd/references/sdd-pre-draft-grilling.md`. The
+orchestrator starts the griller, never a stage worker. Put each critical
+decision it holds to the user, and list each decision it adopted in the final
+report. Each later design-writing step runs its own checkpoint the
 same way.
 
 ## A change to the story tree
