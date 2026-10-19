@@ -23,6 +23,7 @@ describe("graph exploration rule", () => {
       "human approval of that destination and document scope",
       ".qfai/graph-processing.json",
       "No human search approval is needed.",
+      "for a failed download, run the command `qfai init` names to see the cause.",
       "Hidden scripts",
       "Incomplete coverage does not establish absence",
       "independent writable copies",
