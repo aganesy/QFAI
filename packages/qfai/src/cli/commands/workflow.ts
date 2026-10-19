@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { orderExtraction } from "../../core/workflow/extraction.js";
 import { planOf, refusal, type PlanDocument } from "../../core/workflow/plan.js";
 import { EXIT_CODES } from "../lib/exitCodes.js";
 
@@ -9,12 +10,14 @@ import { EXIT_CODES } from "../lib/exitCodes.js";
 export const WORKFLOW_HELP = [
   "plan --in <path|->   Print the route plan for the request extraction in the file, or on stdin",
   "plan --route <route> Print the plan of the named route",
+  "plan --order         Print the plan of an operation on finished work, with no extraction",
 ].join("\n");
 
 export interface WorkflowOptions {
   root: string;
   inPath?: string;
   route?: string;
+  order?: boolean;
 }
 
 // Every invocation but help (`--help`, `-h`) and version (`--version`, `-V`) prints exactly one
@@ -58,8 +61,11 @@ async function readExtraction(root: string, inPath: string): Promise<Read> {
   }
 }
 
-// `npx qfai workflow plan`, given exactly one of `--in` and `--route`.
+// `npx qfai workflow plan`, given exactly one of `--in`, `--route` and `--order`.
 export async function runWorkflowPlan(options: WorkflowOptions): Promise<number> {
+  if (options.order === true) {
+    return emitPlanDocument(await planOf(options.root, { extraction: orderExtraction() }));
+  }
   if (options.route !== undefined) {
     return emitPlanDocument(await planOf(options.root, { route: options.route }));
   }
