@@ -33,6 +33,7 @@ Feature: Install or upgrade and get the free-text entry
     And the review directive is still prepended, only where `REVIEW.md` exists
     And a rerun adds nothing
     And the shipped Markdown lint accepts a directive above the level-1 heading
+    And the summary has one line, whether or not `CLAUDE.md` exists, saying init does not write `CLAUDE.md` and that a project with one adds `@AGENTS.md` to it
 
   # AC-0001-0196-04
   Scenario: Init names the mode in force and writes no mode key
