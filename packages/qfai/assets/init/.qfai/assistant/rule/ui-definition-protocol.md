@@ -36,7 +36,8 @@ A downstream skill reads the UI definition in this order.
 
 4. **Prototype handoff** (`.qfai/prototype/final/handoff.json`, when a
    prototyping loop ran): the final prototype, procurement and implementation
-   notes
+   notes, or, for a `restyle` handoff, its `liveRoutes` (compare in the running
+   app) and `entryPoints`
 
 The supplements and structure are required input: implementation adds no text the
 contract does not declare, and surface review compares the rendered text with them.
