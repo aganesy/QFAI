@@ -1504,7 +1504,12 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // Re-pinned for the `Stop` group marked `QFAI session feedback reminder`, and again when it was
   // removed: the file has no `Stop` event, and restoring that group reproduces `f751cc6e…` byte
   // for byte. Derived the same way.
-  [".claude/settings.json", "396c26ac251f5a15dece062a75f75f5fc04c1d72eca708ce1721765a8cd77dd6"],
+  // Re-pinned when the tool-time reminders stopped printing after a session's first eligible call:
+  // the grilling, API-budget, documentation-clarity after-write/edit and minimal-implementation
+  // programs print nothing once the counter passes one, where they printed a one-line pointer.
+  // Events, matchers, markers and message keys are unchanged; the previous groups are listed as
+  // superseded so the merge refreshes them. Restoring the six programs reproduces `396c26ac…`.
+  [".claude/settings.json", "6d3610ad29dff7bf19710d85b8b0fe0f4791385b793b83eb9b60076939c7b96e"],
   // Inside `.codex/`, and pinned for the reason `.claude/settings.json` is: its commands are a
   // program an adopter's agent runs. Two `UserPromptSubmit` groups, structured-question and
   // free-text entry. Codex takes one command string, so each runs the same `node -e` reader
@@ -1547,7 +1552,9 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // merge refreshes them. Derived the same way.
   // Re-pinned for the same `Stop` group, and again when it was removed: restoring that group
   // reproduces `e973ebb8…` byte for byte. Derived the same way.
-  [".codex/hooks.json", "252e94e4a2d0f08c155dcf5b85321c783da67a45bde82ac8c0b59f28234655f7"],
+  // Re-pinned for the same change as `.claude/settings.json` that stopped the tool-time reminders
+  // after the first eligible call. Restoring the five programs reproduces `252e94e4…`.
+  [".codex/hooks.json", "49a8956034f4b08d8717fc06d2fa6f67490d0baf4bae664ddd7eaaa698e7abfd"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`

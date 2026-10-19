@@ -50,28 +50,24 @@
     "hookSpecificOutput": {
       "hookEventName": "PostToolUse",
       "additionalContext": "QFAI documentation clarity (.agents/rules/documentation-clarity.md). For the changed source and ordinary Markdown: no issue or PR numbers, ticket IDs or team-local jargon; keep the rule's existing exceptions. Ordinary specifications and change descriptions omit design and implementation history. Only when the user expressly requests an incident, event or work record, include necessary observed events, evidence, uncertainty, current impact and next action. Put the conclusion first. Cut self-evident, repeated or wordy text, announcements, recaps and empty intensifiers. Use ordinary words, name who acts, one claim per sentence, short lines, and lists or tables for parallel items. Also mark what is unverified. Re-read every changed line and rewrite literal translations or anything that matches a pattern in the rule."
-    },
-    "briefContext": "QFAI documentation clarity (.agents/rules/documentation-clarity.md): hold every changed line to it, keeping its exceptions and marking what is unverified."
+    }
   },
   "documentation-clarity-after-edit": {
     "hookSpecificOutput": {
       "hookEventName": "PostToolUse",
       "additionalContext": "QFAI documentation clarity (.agents/rules/documentation-clarity.md). For the changed source and ordinary Markdown: no issue or PR numbers, ticket IDs or team-local jargon; keep the rule's existing exceptions. Ordinary specifications and change descriptions omit design and implementation history. Only when the user expressly requests an incident, event or work record, include necessary observed events, evidence, uncertainty, current impact and next action. Put the conclusion first. Cut self-evident, repeated or wordy text, announcements, recaps and empty intensifiers. Use ordinary words, name who acts, one claim per sentence, short lines, and lists or tables for parallel items. Also mark what is unverified. Re-read every changed line and rewrite literal translations or anything that matches a pattern in the rule."
-    },
-    "briefContext": "QFAI documentation clarity (.agents/rules/documentation-clarity.md): hold every changed line to it, keeping its exceptions and marking what is unverified."
+    }
   },
   "minimal-implementation": {
     "hookSpecificOutput": {
       "hookEventName": "PostToolUse",
       "additionalContext": "QFAI minimal implementation (.agents/rules/minimal-implementation.md). A source file just changed, which is this reminder's trigger and not the rule's scope: could it not exist at all, is it already in this codebase, or does the standard library, the platform or an already-installed dependency do it? The same rungs run at a design stage that decides where a capability or a body of data comes from. Otherwise the least code that works. Mark a deliberate shortcut with both its ceiling and the condition that lifts it. The ladder never removes what § 2 of that rule lists. For a change to a screen or to terminal output, .agents/rules/interface-clarity.md governs what may appear."
-    },
-    "briefContext": "QFAI minimal implementation (.agents/rules/minimal-implementation.md, .agents/rules/interface-clarity.md): the least code that works, never below the mandatory floor in § 2."
+    }
   },
   "api-budget": {
     "hookSpecificOutput": {
       "hookEventName": "PreToolUse",
       "additionalContext": "QFAI API budget (.agents/rules/api-budget.md). Before this call: can git answer it instead? Then REST, then GraphQL — the forge's own pull-request and issue subcommands take the GraphQL path, a separate allowance counted in points. One call for the whole set, not one per branch. Save a payload once and search the file; a second grep is not a second download. Poll no faster than the thing being polled changes. A rate-limit endpoint misreports the budget: read the remaining count off this response's own headers. The allowance belongs to the account, and every session and sub-agent draws on it at once. Read the rule once per session rather than working from this line."
-    },
-    "briefContext": "QFAI API budget (.agents/rules/api-budget.md): git before REST before GraphQL; reuse saved results."
+    }
   }
 }
