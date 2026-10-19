@@ -28,6 +28,9 @@ describe("graph exploration rule", () => {
       "independent writable copies",
       "outside Git",
       "Exclude secret files",
+      "depends on the model you select, and QFAI does not evaluate it",
+      "Restoration is proven only on Windows x64, for CodeGraph on Node.js 24.16.0 and for Graphify on Python 3.12.13",
+      "runtime versions are unverified and use local generation",
     ])
       expect(text).toContain(clause);
     for (const entry of [
