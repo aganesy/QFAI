@@ -573,6 +573,18 @@ describe("qfai-run", () => {
   });
 
   // QFAI:AC-0001-0211-05
+  it("plans the delivery the user asks for after a change plan as an operation", async () => {
+    const commit = flat(sectionOf(await readShipped(RUN), "## The work"));
+    expect(commit).toMatch(
+      /A push, pull request, merge or branch update the user asks for after the plan ends is planned next as `\{ intent: order, artifacts: \[\] \}`, and its `triage-operate` delivers it/,
+    );
+    const outcome = routingOutcome({
+      ...extraction({ intent: "order", artifacts: [], confidence: "high" }),
+    });
+    expect("taken" in outcome ? outcome.taken.route : undefined).toBe("run-operation");
+  });
+
+  // QFAI:AC-0001-0211-05
   it("reads no reference up front, and says when each one is read", async () => {
     const skill = await readShipped(RUN);
     const head = skill.slice(0, skill.indexOf("## What this skill never does"));
