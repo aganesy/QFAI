@@ -660,13 +660,6 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
           .find((block) => enumerates.test(block));
         if (bullet !== undefined && !/CHANGELOG/i.test(bullet)) contradicting.push(rel);
       }
-      const reminders: Record<string, { hookSpecificOutput: { additionalContext: string } }> =
-        JSON.parse(
-          await readFile(
-            path.join(ROOT, "packages/qfai/assets/init/root/.agents/rules/reminders.json"),
-            "utf-8",
-          ),
-        );
       const communication = await readFile(
         path.join(ROOT, "packages/qfai/assets/init/.qfai/assistant/rule/communication.md"),
         "utf-8",
@@ -675,14 +668,9 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /^- Keep out issue or pull-request numbers[^\r\n]*(?:\r?\n[ \t]+[^\r\n]*)*/m.exec(
           communication,
         )?.[0];
+      // The reminder before a post enumerates no identifiers; it permits numbers and links in
+      // pull request and issue bodies, which `tests/assets/documentationClarityHooks.test.ts` checks.
       const shippedSummaries = [
-        {
-          name: "documentation-clarity-before-post",
-          text: reminders["documentation-clarity-before-post"]?.hookSpecificOutput
-            .additionalContext,
-          sourceBan:
-            "No issue or PR numbers, ticket IDs or team-local jargon in source or ordinary Markdown;",
-        },
         {
           name: "communication.md identifier bullet",
           text: communicationBullet,
